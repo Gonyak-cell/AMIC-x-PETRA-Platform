@@ -1,0 +1,127 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { cn } from "@/lib/cn";
+import { Sidebar } from "./Sidebar";
+import { MobileMenuButton } from "./MobileMenuButton";
+import { SidebarOverlay } from "./SidebarOverlay";
+
+export interface AppShellContextValue {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  isMobile: boolean;
+}
+
+const AppShellContext = createContext<AppShellContextValue | null>(null);
+
+export function useAppShell() {
+  const context = useContext(AppShellContext);
+  if (!context) throw new Error("useAppShell must be used within AppShell");
+  return context;
+}
+
+export interface AppShellProps {
+  children: ReactNode;
+}
+
+export default function AppShell({ children }: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 768px breakpoint detection
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setSidebarOpen(false); // Close drawer on desktop
+    };
+
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  // ESC key to close sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && sidebarOpen) setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobile, sidebarOpen]);
+
+  return (
+    <AppShellContext.Provider value={{ sidebarOpen, setSidebarOpen, isMobile }}>
+      {/* Skip Navigation */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100]
+                   focus:bg-amic focus:text-white focus:px-4 focus:py-2 focus:rounded-lg
+                   focus:outline-none focus:ring-2 focus:ring-accent"
+      >
+        Skip to main content
+      </a>
+
+      <div className="flex min-h-screen">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+
+        {/* Mobile Sidebar (Drawer) */}
+        {isMobile && (
+          <>
+            <SidebarOverlay
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
+            <div
+              id="mobile-sidebar"
+              className={cn(
+                "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300",
+                sidebarOpen ? "translate-x-0" : "-translate-x-full"
+              )}
+            >
+              <Sidebar onNavItemClick={() => setSidebarOpen(false)} />
+            </div>
+          </>
+        )}
+
+        {/* Main Content */}
+        <main id="main-content" className="flex-1 bg-bg-cool">
+          {/* Mobile Header */}
+          {isMobile && (
+            <div className="sticky top-0 z-40 flex items-center gap-4 bg-amic px-4 py-3">
+              <MobileMenuButton
+                isOpen={sidebarOpen}
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              />
+              <span className="text-white font-heading font-semibold">
+                AMIC x PETRA Platform
+              </span>
+            </div>
+          )}
+          <div className="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </AppShellContext.Provider>
+  );
+}

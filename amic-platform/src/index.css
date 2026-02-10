@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Pretendard', 'Inter', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg-cool text-text-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', 'Pretendard', 'Noto Sans KR', sans-serif;
+    @apply text-text-dark;
+  }
+
+  /* 숫자/KPI용 폰트 */
+  .font-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* 스크롤바 스타일링 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-cool;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-secondary;
+  }
+}
+
+@layer utilities {
+  /* tabular-nums for numeric columns */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

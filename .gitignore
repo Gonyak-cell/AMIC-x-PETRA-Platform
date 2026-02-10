@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+amic-platform/dist/
+amic-platform/assets/
+
+# Windows artifact
+nul
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local config
+CLAUDE.local.md
+
+# Logs
+*.log
+npm-debug.log*
