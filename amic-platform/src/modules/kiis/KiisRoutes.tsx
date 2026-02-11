@@ -11,6 +11,11 @@ import NewsDetailPage from "./pages/NewsDetailPage";
 import DealSourcingPage from "./pages/DealSourcingPage";
 import SanctionListPage from "./pages/SanctionListPage";
 import WatchlistPage from "./pages/WatchlistPage";
+import PortfolioPage from "./pages/PortfolioPage";
+import ManagerListPage from "./pages/ManagerListPage";
+import ManagerProfilePage from "./pages/ManagerProfilePage";
+import EntityResolutionPage from "./pages/EntityResolutionPage";
+import DisclosurePage from "./pages/DisclosurePage";
 
 export default function KiisRoutes() {
   return (
@@ -26,6 +31,11 @@ export default function KiisRoutes() {
       <Route path="news/:articleId" element={<NewsDetailPage />} />
       <Route path="deals" element={<DealSourcingPage />} />
       <Route path="sanctions" element={<SanctionListPage />} />
+      <Route path="portfolio" element={<PortfolioPage />} />
+      <Route path="managers" element={<ManagerListPage />} />
+      <Route path="managers/:managerName" element={<ManagerProfilePage />} />
+      <Route path="entities" element={<EntityResolutionPage />} />
+      <Route path="disclosures" element={<DisclosurePage />} />
       <Route path="watchlist" element={<WatchlistPage />} />
       <Route path="*" element={<Navigate to="/kiis" replace />} />
     </Routes>

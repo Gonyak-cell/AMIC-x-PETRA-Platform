@@ -12,6 +12,16 @@ const AdminRoutes = React.lazy(() => import("@/pages/admin/AdminRoutes"));
 const SettingsRoutes = React.lazy(
   () => import("@/pages/settings/SettingsRoutes"),
 );
+const AnalyticsRoutes = React.lazy(
+  () => import("@/pages/analytics/AnalyticsRoutes"),
+);
+const HelpRoutes = React.lazy(() => import("@/pages/help/HelpRoutes"));
+const CalendarRoutes = React.lazy(
+  () => import("@/pages/calendar/CalendarRoutes"),
+);
+const ExportsRoutes = React.lazy(
+  () => import("@/pages/exports/ExportsRoutes"),
+);
 
 function ModuleFallback() {
   return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -73,6 +83,38 @@ export default function App() {
           element={
             <Suspense fallback={<ModuleFallback />}>
               <SettingsRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="analytics/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <AnalyticsRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="help/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <HelpRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="calendar/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <CalendarRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="exports/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <ExportsRoutes />
             </Suspense>
           }
         />

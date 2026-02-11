@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { User, Lock, Settings, Shield } from "lucide-react";
+import { User, Lock, Settings, Shield, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUpdateProfile, useChangePassword } from "@/hooks/useProfile";
 import { usePreferences } from "@/hooks/usePreferences";
+import {
+  useEmailPreferences,
+  useUpdateEmailPreferences,
+} from "@/hooks/useIntegrations";
 import { ROLE_PERMISSIONS } from "@/types/auth";
 import { Card, Input, Select, Button, Badge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
@@ -39,6 +43,8 @@ export default function ProfilePage() {
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
   const { preferences, updatePreferences } = usePreferences();
+  const { data: emailPrefs } = useEmailPreferences();
+  const updateEmailPrefs = useUpdateEmailPreferences();
 
   const [displayName, setDisplayName] = useState(user?.display_name ?? "");
   const [passwordForm, setPasswordForm] = useState({
@@ -212,6 +218,46 @@ export default function ProfilePage() {
               })
             }
           />
+        </div>
+      </Card>
+
+      {/* Email Notifications */}
+      <Card>
+        <SectionTitle icon={Bell}>Email Notifications</SectionTitle>
+        <div className="space-y-3">
+          {(
+            [
+              { key: "deal_updates", label: "Deal Updates", desc: "Receive email when deals are created or status changes" },
+              { key: "watchlist_alerts", label: "Watchlist Alerts", desc: "Get notified about watchlist company changes" },
+              { key: "im_completion", label: "IM Completion", desc: "Email when IM document generation completes" },
+              { key: "weekly_digest", label: "Weekly Digest", desc: "Summary of platform activity every Monday" },
+            ] as const
+          ).map((item) => (
+            <label
+              key={item.key}
+              className="flex items-center justify-between p-3 border border-gray-border rounded-lg hover:bg-bg-cool transition-colors cursor-pointer"
+            >
+              <div>
+                <div className="text-sm font-medium text-text-dark">
+                  {item.label}
+                </div>
+                <div className="text-xs text-text-secondary">{item.desc}</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={emailPrefs?.[item.key] ?? false}
+                onChange={(e) => {
+                  if (emailPrefs) {
+                    updateEmailPrefs.mutate({
+                      ...emailPrefs,
+                      [item.key]: e.target.checked,
+                    });
+                  }
+                }}
+                className="rounded border-gray-border h-4 w-4"
+              />
+            </label>
+          ))}
         </div>
       </Card>
 

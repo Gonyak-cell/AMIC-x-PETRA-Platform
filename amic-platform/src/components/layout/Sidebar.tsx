@@ -24,6 +24,14 @@ import {
   Home,
   Users,
   ClipboardList,
+  Activity,
+  UserSearch,
+  GitCompare,
+  ScrollText,
+  BarChart2,
+  Calendar,
+  Download,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -71,6 +79,10 @@ const KIIS_NAV = [
   { to: "/kiis/news", label: "News & Sentiment", icon: Newspaper },
   { to: "/kiis/deals", label: "Deal Sourcing", icon: TrendingUp },
   { to: "/kiis/sanctions", label: "Sanctions", icon: ShieldAlert },
+  { to: "/kiis/portfolio", label: "Portfolio", icon: Activity },
+  { to: "/kiis/managers", label: "Managers", icon: UserSearch },
+  { to: "/kiis/entities", label: "Entity Match", icon: GitCompare },
+  { to: "/kiis/disclosures", label: "Disclosures", icon: ScrollText },
   { to: "/kiis/watchlist", label: "Watchlist", icon: Star },
 ];
 
@@ -113,13 +125,25 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
         </div>
       </div>
 
-      {/* Home Link */}
-      <div className="px-3 pt-3 pb-1">
+      {/* Home Link + Portal Nav */}
+      <div className="px-3 pt-3 pb-1 space-y-1">
         <SidebarNavItem
           to="/"
           label="Home"
           icon={Home}
           end
+          onClick={onNavItemClick}
+        />
+        <SidebarNavItem
+          to="/calendar"
+          label="Calendar"
+          icon={Calendar}
+          onClick={onNavItemClick}
+        />
+        <SidebarNavItem
+          to="/exports"
+          label="Exports"
+          icon={Download}
           onClick={onNavItemClick}
         />
       </div>
@@ -250,8 +274,26 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                 onClick={onNavItemClick}
               />
             )}
+            {hasPermission("audit:view") && (
+              <SidebarNavItem
+                to="/analytics"
+                label="Analytics"
+                icon={BarChart2}
+                onClick={onNavItemClick}
+              />
+            )}
           </SidebarSection>
         )}
+
+        {/* Help */}
+        <div className="mt-2">
+          <SidebarNavItem
+            to="/help"
+            label="Help"
+            icon={HelpCircle}
+            onClick={onNavItemClick}
+          />
+        </div>
       </div>
 
       {/* User Info + Logout */}

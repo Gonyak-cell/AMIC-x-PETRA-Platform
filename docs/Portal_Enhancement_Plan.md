@@ -22,7 +22,7 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 | **Wave 1** | Portal Foundation (P0) | **COMPLETE** | Dashboard, Admin, Settings |
 | **Wave 2** | Productivity (P1 전반) | **COMPLETE** | Search, Favorites, Notifications |
 | **Wave 3** | Compliance & Collaboration (P1 후반) | **COMPLETE** | Activity Log, Team Collaboration |
-| **Wave 4** | Intelligence & Enhancement (P2) | **미구현** | Analytics, Help, Calendar 등 |
+| **Wave 4** | Intelligence & Enhancement (P2) | **COMPLETE** | Analytics, Help, Calendar, Export, Integrations, E2E |
 | 추가 | KIIS 모듈 전체 구현 | **COMPLETE** | 10 pages, 10 hooks, 10 types, 5 components |
 | 추가 | IM 모듈 전체 구현 | **COMPLETE** | 4 pages, 2 hooks, 2 types, 3 components |
 
@@ -40,11 +40,12 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 | **P1** | Activity Log / Audit Trail | L | **DONE** | `src/pages/admin/ActivityLogPage.tsx` |
 | **P1** | Team Collaboration | L | **DONE** | `src/components/collaboration/`, `src/hooks/useComments.ts` |
 | **P2** | Favorites / Recent Items | S | **DONE** | `src/components/SidebarFavorites.tsx`, `src/hooks/useFavorites.ts` |
-| **P2** | Cross-Module Analytics | L | 미구현 | - |
-| **P2** | Help Center / Onboarding | S | 미구현 | - |
-| **P2** | Data Export Hub | M | 미구현 | - |
-| **P2** | Calendar / Timeline | M | 미구현 | - |
-| **P2** | External Integrations | L | 미구현 | - |
+| **P2** | Cross-Module Analytics | L | **DONE** | `src/pages/analytics/`, `src/hooks/useAnalytics.ts` |
+| **P2** | Help Center / Onboarding | S | **DONE** | `src/pages/help/`, `src/lib/glossary.ts` |
+| **P2** | Data Export Hub | M | **DONE** | `src/pages/exports/`, `src/hooks/useExports.ts` |
+| **P2** | Calendar / Timeline | M | **DONE** | `src/pages/calendar/`, `src/hooks/useCalendar.ts` |
+| **P2** | External Integrations | L | **DONE** | `src/pages/settings/WebhooksPage.tsx`, `src/hooks/useIntegrations.ts` |
+| **P2** | E2E Testing (Playwright) | M | **DONE** | `e2e/tests/`, `playwright.config.ts` |
 
 ---
 
@@ -267,7 +268,12 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 
 ```text
 /                    -> DashboardPage (Portal Home)
+/analytics/*         -> AnalyticsRoutes (admin-only, audit:view)
+/help/*              -> HelpRoutes (전체 사용자)
+/calendar/*          -> CalendarRoutes (전체 사용자)
+/exports/*           -> ExportsRoutes (전체 사용자)
 /settings/profile    -> ProfilePage
+/settings/webhooks   -> WebhooksPage (admin-only)
 /admin/users         -> UserManagementPage (user:manage 권한)
 /admin/activity      -> ActivityLogPage (audit:view 권한)
 /fdd/*               -> FddRoutes (14 pages)
@@ -282,6 +288,8 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 [AMIC x PETRA Platform]
 -----
 [Home]                              (항상 표시, "/" 링크)
+[Calendar]                          (/calendar)
+[Exports]                           (/exports)
 -----
 [Module Switcher: FDD / KIIS / IM]
 [모듈별 내비게이션]
@@ -292,6 +300,9 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 [Admin]                             (user:manage 또는 audit:view 권한 시)
   - Users
   - Activity Log
+  - Analytics                       (/analytics, audit:view 권한)
+-----
+[Help]                              (/help, 전체 사용자)
 -----
 [User Info -> Settings]             (클릭 시 /settings/profile)
 [Sign Out]
@@ -354,40 +365,143 @@ src/
 
 ---
 
-## 11. Wave 4: 미구현 기능 (향후 계획)
+## 11. Wave 4: Intelligence & Enhancement (COMPLETE)
 
-### 11.1 Cross-Module Analytics
+> 구현 완료: 2026-02-11 14:54:06
 
-- 관리자용 실적 현황판 (`/analytics`)
-- 모듈별 KPI 집계, 시계열 차트 (Recharts)
-- FDD: 딜 수, 평균 사이클, 이슈 분포 / KIIS: 모니터링 기업 수, DART 처리량 / IM: 문서 생성 수
-- 기존 FinancialBarChart, TrendLineChart 재사용
+### 11.1 Cross-Module Analytics (DONE)
 
-### 11.2 Help Center / Onboarding
+**경로:** `/analytics` (admin-only, `audit:view` 권한)
 
-- 첫 로그인 가이드 투어 (react-joyride 등)
-- FDD/KIIS/IM 도메인 용어집 (QoE, NWC, DART, KOFIA 등)
-- 키보드 단축키 레퍼런스 모달
-- 릴리즈 변경사항
+**구현 내용:**
 
-### 11.3 Calendar / Timeline
+- 모듈별 KPI 집계 (FDD: 딜/이슈/사이클, KIIS: 기업/펀드/리츠, IM: 문서/완료/실패)
+- 시계열 차트 (TrendLineChart + FinancialBarChart)
+- 시간 범위 필터 (7d/30d/90d/1y) + 모듈 필터
 
-- 딜 마일스톤 캘린더 뷰 (`/calendar`)
-- Deal의 reference_date, period_start, period_end 활용
-- 월간 뷰 + 수평 Gantt 타임라인
+**구현 파일:**
 
-### 11.4 Data Export Hub
+| 파일 | 역할 |
+| --- | --- |
+| `src/types/analytics.ts` | AnalyticsKpis, TimeSeriesPoint, AnalyticsFilter |
+| `src/hooks/useAnalytics.ts` | useAnalyticsKpis(), useAnalyticsTimeSeries() — useQueries() 크로스 모듈 |
+| `src/components/analytics/AnalyticsFilterBar.tsx` | 시간 범위 + 모듈 필터 |
+| `src/components/analytics/ModuleKpiSection.tsx` | 모듈별 KpiCard 행 |
+| `src/components/analytics/AnalyticsChartPanel.tsx` | 차트 패널 |
+| `src/pages/analytics/AnalyticsPage.tsx` | 메인 페이지 |
+| `src/pages/analytics/AnalyticsRoutes.tsx` | 라우트 컨테이너 |
 
-- 모듈간 통합 내보내기 이력 (`/exports`)
-- FDD Reports, KIIS Research, IM Documents 통합 관리
-- 재다운로드, 배치 다운로드(ZIP)
+### 11.2 Help Center (DONE)
 
-### 11.5 External Integrations
+**경로:** `/help`
 
-- 이메일 SMTP 알림
-- 캘린더 동기화 (.ics export)
-- SSO/SAML 연동
-- API Webhook
+**구현 내용:**
+
+- 4-탭 페이지: Getting Started, Glossary, Shortcuts, Release Notes
+- 검색 가능한 도메인 용어집 (21개 용어, 모듈별 필터)
+- 키보드 단축키 레퍼런스 (6개 단축키)
+- 릴리스 변경사항 (v0.1.0 ~ v0.5.0)
+- 참고: react-joyride는 React 19 비호환으로 가이드 투어 미포함
+
+**구현 파일:**
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/types/help.ts` | GlossaryTerm, KeyboardShortcut, ReleaseNote |
+| `src/lib/glossary.ts` | 정적 용어 데이터 |
+| `src/lib/shortcuts.ts` | 정적 단축키 배열 |
+| `src/lib/releaseNotes.ts` | 정적 릴리스 노트 |
+| `src/components/help/KeyboardShortcutsModal.tsx` | 단축키 모달 |
+| `src/components/help/GlossaryList.tsx` | 용어집 목록 |
+| `src/components/help/ReleaseNotes.tsx` | 릴리스 노트 |
+| `src/pages/help/HelpPage.tsx` | 탭 기반 메인 페이지 |
+| `src/pages/help/HelpRoutes.tsx` | 라우트 컨테이너 |
+
+### 11.3 Calendar / Timeline (DONE)
+
+**경로:** `/calendar`
+
+**구현 내용:**
+
+- 월별 7열 그리드 + 이벤트 dot + 클릭 시 이벤트 목록
+- 가로 Gantt 타임라인 (6개월 범위, 모듈별 색상)
+- Calendar/Gantt 뷰 토글
+- 모듈 필터 + 월/연도 탐색
+- .ics 파일 내보내기 (iCalendar 표준)
+
+**구현 파일:**
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/types/calendar.ts` | CalendarEvent, GanttItem, CalendarFilter |
+| `src/hooks/useCalendar.ts` | useCalendarEvents() — FDD/IM 타임스탬프 집계 |
+| `src/lib/ics.ts` | .ics 파일 생성 + 다운로드 유틸리티 |
+| `src/components/calendar/CalendarFilterBar.tsx` | 월 탐색 + 모듈 토글 + 뷰 모드 |
+| `src/components/calendar/CalendarGrid.tsx` | 월별 그리드 + 이벤트 사이드바 |
+| `src/components/calendar/GanttTimeline.tsx` | 가로 바 차트 타임라인 |
+| `src/pages/calendar/CalendarPage.tsx` | 메인 페이지 |
+| `src/pages/calendar/CalendarRoutes.tsx` | 라우트 컨테이너 |
+
+### 11.4 Data Export Hub (DONE)
+
+**경로:** `/exports`
+
+**구현 내용:**
+
+- 모듈간 통합 내보내기 이력 DataTable
+- 체크박스 선택 + 일괄 ZIP 다운로드
+- 개별 재다운로드 + 삭제
+- KPI 행 (총 내보내기, 완료, 실패, 총 크기)
+- 모듈/상태 필터
+
+**구현 파일:**
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/types/export.ts` | ExportRecord, ExportListParams, PaginatedExports |
+| `src/hooks/useExports.ts` | useExports(), useRedownload(), useBatchDownload(), useDeleteExport() |
+| `src/components/exports/ExportFilterBar.tsx` | 모듈/상태 필터 |
+| `src/components/exports/ExportTable.tsx` | DataTable + 체크박스 선택 |
+| `src/pages/exports/ExportsPage.tsx` | 메인 페이지 |
+| `src/pages/exports/ExportsRoutes.tsx` | 라우트 컨테이너 |
+
+### 11.5 External Integrations (DONE)
+
+**구현 내용:**
+
+- Email 알림 설정: ProfilePage에 알림 토글 4종 추가 (deal_updates, watchlist_alerts, im_completion, weekly_digest)
+- Webhook 관리: admin 전용 CRUD (DataTable + 생성 Modal, 테스트/삭제)
+- .ics Export: Calendar 기능에 포함
+
+**구현 파일:**
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/types/integrations.ts` | EmailNotificationPreference, WebhookConfig |
+| `src/hooks/useIntegrations.ts` | 이메일 설정 + webhook CRUD 훅 |
+| `src/pages/settings/WebhooksPage.tsx` | Webhook 관리 페이지 |
+| `src/pages/settings/ProfilePage.tsx` | 이메일 알림 토글 추가 (수정) |
+| `src/pages/settings/SettingsRoutes.tsx` | `/settings/webhooks` 라우트 추가 (수정) |
+
+### 11.6 E2E Testing — Playwright (DONE)
+
+**구현 내용:**
+
+- Playwright 설정 (chromium + firefox, localhost:5173)
+- Auth fixture (로그인 후 storage state 저장)
+- Page Object Models 4종 (login, dashboard, sidebar, fdd-deals)
+- 테스트 스위트 8종 (auth, dashboard, navigation, fdd, kiis, im, cross-module, admin)
+
+**구현 파일:**
+
+| 파일 | 역할 |
+| --- | --- |
+| `playwright.config.ts` | Playwright 설정 |
+| `e2e/fixtures/auth.fixture.ts` | 로그인 + 상태 저장 |
+| `e2e/fixtures/test-data.ts` | 테스트 상수 |
+| `e2e/tests/global-setup.ts` | Auth 글로벌 셋업 |
+| `e2e/pages/*.page.ts` | Page Object Models (4개) |
+| `e2e/tests/*.spec.ts` | 테스트 스위트 (8개) |
 
 ---
 
