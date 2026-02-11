@@ -1,11 +1,33 @@
-import { Building2 } from "lucide-react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import DashboardPage from "./pages/DashboardPage";
+import CompanyListPage from "./pages/CompanyListPage";
+import CompanyDetailPage from "./pages/CompanyDetailPage";
+import FundListPage from "./pages/FundListPage";
+import FundDetailPage from "./pages/FundDetailPage";
+import ReitListPage from "./pages/ReitListPage";
+import ReitDetailPage from "./pages/ReitDetailPage";
+import NewsListPage from "./pages/NewsListPage";
+import NewsDetailPage from "./pages/NewsDetailPage";
+import DealSourcingPage from "./pages/DealSourcingPage";
+import SanctionListPage from "./pages/SanctionListPage";
+import WatchlistPage from "./pages/WatchlistPage";
 
 export default function KiisRoutes() {
   return (
-    <div className="flex flex-col items-center justify-center h-64 text-content-secondary">
-      <Building2 className="h-12 w-12 mb-4 opacity-40" />
-      <h2 className="text-lg font-heading font-semibold mb-2">KIIS Module</h2>
-      <p className="text-sm">Investment Intelligence - Phase 2</p>
-    </div>
+    <Routes>
+      <Route index element={<DashboardPage />} />
+      <Route path="companies" element={<CompanyListPage />} />
+      <Route path="companies/:corpCode" element={<CompanyDetailPage />} />
+      <Route path="funds" element={<FundListPage />} />
+      <Route path="funds/:fundCode" element={<FundDetailPage />} />
+      <Route path="reits" element={<ReitListPage />} />
+      <Route path="reits/:reitsCode" element={<ReitDetailPage />} />
+      <Route path="news" element={<NewsListPage />} />
+      <Route path="news/:articleId" element={<NewsDetailPage />} />
+      <Route path="deals" element={<DealSourcingPage />} />
+      <Route path="sanctions" element={<SanctionListPage />} />
+      <Route path="watchlist" element={<WatchlistPage />} />
+      <Route path="*" element={<Navigate to="/kiis" replace />} />
+    </Routes>
   );
 }
