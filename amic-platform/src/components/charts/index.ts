@@ -1,7 +1,7 @@
 /**
  * Chart Components Barrel Export
  *
- * AMIC 스타일 Recharts 기반 차트 컴포넌트
+ * AMIC x PETRA Platform 스타일 Recharts 기반 차트 컴포넌트
  */
 
 // Colors & Constants

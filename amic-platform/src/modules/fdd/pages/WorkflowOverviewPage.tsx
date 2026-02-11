@@ -1,7 +1,7 @@
-import { useParams } from "react-router-dom";
-import { User, Building2, Activity, GitBranch } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { User, Building2, Activity, GitBranch, FileText } from "lucide-react";
 import { useDeal } from "@/modules/fdd/hooks/useDeals";
-import { Card, KpiCard, Spinner } from "@/components/ui";
+import { Card, KpiCard, Button, Spinner } from "@/components/ui";
 import { WorkflowStepper } from "@/components/workflow";
 import type { DealPhase } from "@/modules/fdd/types/deal";
 
@@ -54,6 +54,7 @@ const NEXT_STEPS: Record<DealPhase, { title: string; items: string[] }> = {
 };
 
 export default function WorkflowOverviewPage() {
+  const navigate = useNavigate();
   const { dealId } = useParams<{ dealId: string }>();
   const { data: deal, isLoading } = useDeal(dealId!);
 
@@ -73,11 +74,20 @@ export default function WorkflowOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          {deal.name}
-        </h1>
-        <p className="text-text-secondary mt-1">Workflow Overview</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-text-dark">
+            {deal.name}
+          </h1>
+          <p className="text-text-secondary mt-1">Workflow Overview</p>
+        </div>
+        <Button
+          variant="secondary"
+          icon={FileText}
+          onClick={() => navigate("/im/new")}
+        >
+          IM 생성
+        </Button>
       </div>
 
       {/* Workflow Stepper */}

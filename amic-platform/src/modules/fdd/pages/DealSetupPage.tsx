@@ -4,11 +4,16 @@ import { toast } from "sonner";
 import { useDeal, useUpdateDeal } from "@/modules/fdd/hooks/useDeals";
 import { Card, Button, Input, Spinner } from "@/components/ui";
 import ScopeSelector from "@/modules/fdd/components/deal/ScopeSelector";
+import { TeamAssignment } from "@/components/collaboration/TeamAssignment";
+import { useTeamMembers, useUpdateTeamAssignment } from "@/hooks/useTeamMembers";
+import type { TeamAssignmentData } from "@/types/collaboration";
 
 export default function DealSetupPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const { data: deal, isLoading } = useDeal(dealId!);
   const updateDeal = useUpdateDeal(dealId!);
+  const { partners, managers, analysts, members } = useTeamMembers();
+  const updateTeam = useUpdateTeamAssignment(dealId!);
 
   const [formData, setFormData] = useState({
     client_name: "",
@@ -136,13 +141,23 @@ export default function DealSetupPage() {
         </div>
       </Card>
 
-      {/* Team (placeholder) */}
+      {/* Team Assignment */}
       <Card title="Team">
-        <div className="py-4 text-center">
-          <p className="text-text-secondary text-sm">
-            Team selection will be added in a future update.
-          </p>
-        </div>
+        <TeamAssignment
+          assignment={{
+            partner_id: deal.team_partner_id,
+            manager_id: deal.team_manager_id,
+            analysts: [],
+          }}
+          partners={partners}
+          managers={managers}
+          analysts={analysts}
+          allMembers={members}
+          onUpdate={(update: Partial<TeamAssignmentData>) => {
+            updateTeam.mutate(update);
+          }}
+          isUpdating={updateTeam.isPending}
+        />
       </Card>
 
       {/* FDD Scope */}

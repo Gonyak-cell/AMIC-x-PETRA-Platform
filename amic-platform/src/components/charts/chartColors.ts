@@ -1,5 +1,5 @@
 /**
- * AMIC 스타일 차트 컬러 팔레트
+ * AMIC x PETRA Platform 스타일 차트 컬러 팔레트
  * Tailwind config와 일치하는 색상 상수
  */
 export const CHART_COLORS = {

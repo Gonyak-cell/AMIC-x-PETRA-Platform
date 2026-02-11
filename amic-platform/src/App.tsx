@@ -1,12 +1,17 @@
 import React, { Suspense } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import LoginPage from "@/pages/LoginPage";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui";
 
+const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
 const KiisRoutes = React.lazy(() => import("@/modules/kiis/KiisRoutes"));
 const ImRoutes = React.lazy(() => import("@/modules/im/ImRoutes"));
+const AdminRoutes = React.lazy(() => import("@/pages/admin/AdminRoutes"));
+const SettingsRoutes = React.lazy(
+  () => import("@/pages/settings/SettingsRoutes"),
+);
 
 function ModuleFallback() {
   return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -23,7 +28,14 @@ export default function App() {
           </AppShell>
         }
       >
-        <Route index element={<Navigate to="/fdd/deals" replace />} />
+        <Route
+          index
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <DashboardPage />
+            </Suspense>
+          }
+        />
         <Route
           path="fdd/*"
           element={
@@ -45,6 +57,22 @@ export default function App() {
           element={
             <Suspense fallback={<ModuleFallback />}>
               <ImRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="admin/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <AdminRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="settings/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <SettingsRoutes />
             </Suspense>
           }
         />

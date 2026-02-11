@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronDown, BarChart3, Briefcase, FileText } from "lucide-react";
+import { ChevronDown, BarChart3, Briefcase, FileText, Layers } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface ModuleConfig {
@@ -16,10 +16,12 @@ const MODULES: ModuleConfig[] = [
   { id: "im", label: "IM Generator", icon: FileText, path: "/im" },
 ];
 
-function getCurrentModule(pathname: string): ModuleConfig {
+function getCurrentModule(pathname: string): ModuleConfig | null {
   if (pathname.startsWith("/kiis")) return MODULES[1];
   if (pathname.startsWith("/im")) return MODULES[2];
-  return MODULES[0]; // default FDD
+  if (pathname.startsWith("/fdd")) return MODULES[0];
+  // Portal-level routes (/, /admin, /settings) have no active module
+  return null;
 }
 
 export function ModuleSwitcher() {
@@ -58,8 +60,17 @@ export function ModuleSwitcher() {
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <current.icon className="h-4 w-4 flex-shrink-0" />
-        <span className="flex-1 text-left font-medium">{current.label}</span>
+        {current ? (
+          <>
+            <current.icon className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1 text-left font-medium">{current.label}</span>
+          </>
+        ) : (
+          <>
+            <Layers className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1 text-left font-medium text-white/70">Select Module</span>
+          </>
+        )}
         <ChevronDown
           className={cn(
             "h-4 w-4 transition-transform",
@@ -78,14 +89,14 @@ export function ModuleSwitcher() {
             <button
               key={mod.id}
               role="option"
-              aria-selected={mod.id === current.id}
+              aria-selected={current?.id === mod.id}
               onClick={() => {
                 navigate(mod.path);
                 setOpen(false);
               }}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors",
-                mod.id === current.id
+                current?.id === mod.id
                   ? "bg-white/15 text-white"
                   : "text-white/70 hover:bg-white/10 hover:text-white",
               )}

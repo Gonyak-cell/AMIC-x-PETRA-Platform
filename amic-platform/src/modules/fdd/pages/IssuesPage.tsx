@@ -29,6 +29,7 @@ import {
   EmptyState,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
+import { CommentThread } from "@/components/collaboration/CommentThread";
 
 const SEVERITY_VARIANTS: Record<IssueSeverity, "error" | "warning" | "info" | "success"> = {
   CRITICAL: "error",
@@ -199,7 +200,7 @@ function IssueRow({
           )}
 
           {issue.status === "OPEN" && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-4">
               <Button
                 variant="accent"
                 size="sm"
@@ -226,6 +227,14 @@ function IssueRow({
               </Button>
             </div>
           )}
+
+          {/* Comments */}
+          <div
+            className="border-t border-gray-border pt-4 mt-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CommentThread entityType="issue" entityId={issue.id} />
+          </div>
         </div>
       )}
     </div>

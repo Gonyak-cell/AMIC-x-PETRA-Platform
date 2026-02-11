@@ -3,12 +3,18 @@ import {
   useContext,
   useState,
   useEffect,
+  lazy,
+  Suspense,
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { MobileMenuButton } from "./MobileMenuButton";
 import { SidebarOverlay } from "./SidebarOverlay";
+import { DesktopHeader } from "@/components/DesktopHeader";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+
+const CommandPalette = lazy(() => import("@/components/search/CommandPalette"));
 
 export interface AppShellContextValue {
   sidebarOpen: boolean;
@@ -31,6 +37,7 @@ export interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   // 768px breakpoint detection
   useEffect(() => {
@@ -53,6 +60,18 @@ export default function AppShell({ children }: AppShellProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sidebarOpen]);
+
+  // Cmd/Ctrl+K to open command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Lock body scroll when mobile sidebar is open
   useEffect(() => {
@@ -115,13 +134,32 @@ export default function AppShell({ children }: AppShellProps) {
               <span className="text-white font-heading font-semibold">
                 AMIC x PETRA Platform
               </span>
+              <div className="ml-auto text-white">
+                <NotificationBell />
+              </div>
             </div>
+          )}
+          {/* Desktop Header */}
+          {!isMobile && (
+            <DesktopHeader
+              onSearchClick={() => setCommandPaletteOpen(true)}
+            />
           )}
           <div className="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Command Palette (Global Search) */}
+      {commandPaletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={commandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+          />
+        </Suspense>
+      )}
     </AppShellContext.Provider>
   );
 }

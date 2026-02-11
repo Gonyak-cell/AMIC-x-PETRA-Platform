@@ -18,6 +18,8 @@ import {
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { TeamAvatars } from "@/components/collaboration/TeamAvatars";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 
 const INITIAL_FORM: DealCreate = {
   name: "",
@@ -44,6 +46,7 @@ export default function DealListPage() {
   const navigate = useNavigate();
   const { data: deals, isLoading } = useDeals();
   const createDeal = useCreateDeal();
+  const { members } = useTeamMembers();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<DealCreate>(INITIAL_FORM);
 
@@ -108,6 +111,20 @@ export default function DealListPage() {
       align: "center",
       width: "140px",
       render: (row) => formatDate(row.reference_date, "month"),
+    },
+    {
+      key: "team_partner_id",
+      header: "Team",
+      width: "120px",
+      render: (row) => {
+        const teamIds = [row.team_partner_id, row.team_manager_id].filter(
+          Boolean,
+        ) as string[];
+        const teamMembers = teamIds
+          .map((id) => members.find((m) => m.user_id === id))
+          .filter(Boolean) as typeof members;
+        return <TeamAvatars members={teamMembers} max={3} />;
+      },
     },
     {
       key: "status",

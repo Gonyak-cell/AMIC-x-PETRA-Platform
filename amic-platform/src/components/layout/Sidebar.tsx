@@ -1,4 +1,4 @@
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   Briefcase,
   Eye,
@@ -21,12 +21,16 @@ import {
   Star,
   PlusCircle,
   Layout,
+  Home,
+  Users,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { ModuleSwitcher } from "./ModuleSwitcher";
 import { Badge } from "@/components/ui";
+import { SidebarFavorites } from "@/components/SidebarFavorites";
 
 // ── FDD Navigation ──
 
@@ -85,12 +89,14 @@ export interface SidebarProps {
 
 export function Sidebar({ className, onNavItemClick }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { dealId } = useParams<{ dealId: string }>();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
 
   const isFdd = location.pathname.startsWith("/fdd");
   const isKiis = location.pathname.startsWith("/kiis");
   const isIm = location.pathname.startsWith("/im");
+  const isAdmin = location.pathname.startsWith("/admin");
   const isInDealWorkspace =
     isFdd && location.pathname.startsWith("/fdd/deals/") && dealId;
 
@@ -107,8 +113,21 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
         </div>
       </div>
 
+      {/* Home Link */}
+      <div className="px-3 pt-3 pb-1">
+        <SidebarNavItem
+          to="/"
+          label="Home"
+          icon={Home}
+          end
+          onClick={onNavItemClick}
+        />
+      </div>
+
       {/* Module Switcher */}
-      <ModuleSwitcher />
+      <div className="border-t border-white/10">
+        <ModuleSwitcher />
+      </div>
 
       {/* Module-Specific Navigation */}
       <div className="flex-1 overflow-y-auto py-2 px-3">
@@ -208,18 +227,50 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             ))}
           </nav>
         )}
+
+        {/* Favorites & Recent */}
+        <SidebarFavorites onNavItemClick={onNavItemClick} />
+
+        {/* Admin Navigation */}
+        {(isAdmin || hasPermission("user:manage") || hasPermission("audit:view")) && (
+          <SidebarSection title="Admin">
+            {hasPermission("user:manage") && (
+              <SidebarNavItem
+                to="/admin/users"
+                label="Users"
+                icon={Users}
+                onClick={onNavItemClick}
+              />
+            )}
+            {hasPermission("audit:view") && (
+              <SidebarNavItem
+                to="/admin/activity"
+                label="Activity Log"
+                icon={ClipboardList}
+                onClick={onNavItemClick}
+              />
+            )}
+          </SidebarSection>
+        )}
       </div>
 
       {/* User Info + Logout */}
       {user && (
         <div className="border-t border-white/10 px-4 py-4">
-          <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={() => {
+              navigate("/settings/profile");
+              onNavItemClick?.();
+            }}
+            className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label="Open profile settings"
+          >
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
                 {user.display_name?.charAt(0).toUpperCase() || "U"}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <div className="text-white text-sm font-medium truncate">
                 {user.display_name}
               </div>
@@ -227,7 +278,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                 {user.role}
               </Badge>
             </div>
-          </div>
+          </button>
           <button
             onClick={logout}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
