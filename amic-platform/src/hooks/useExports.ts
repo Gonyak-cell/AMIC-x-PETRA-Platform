@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import api from "@/api/client";
 import type {
   ExportRecord,
@@ -6,22 +7,38 @@ import type {
   PaginatedExports,
 } from "@/types/export";
 
+const EMPTY_EXPORTS: PaginatedExports = { items: [], total: 0, page: 1, size: 20 };
+
 export function useExports(params: ExportListParams = {}) {
-  return useQuery<PaginatedExports>({
+  const endpointAvailableRef = useRef(true);
+
+  const query = useQuery<PaginatedExports>({
     queryKey: ["exports", params],
     queryFn: async () => {
       try {
         const { data } = await api.get<PaginatedExports>("/exports", {
           params,
         });
+        endpointAvailableRef.current = true;
         return data;
-      } catch {
-        // Fallback: backend endpoint may not exist yet
-        return { items: [], total: 0, page: 1, size: 20 };
+      } catch (error: unknown) {
+        const status =
+          error && typeof error === "object" && "response" in error
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+        if (status === 404 || status === 405) {
+          endpointAvailableRef.current = false;
+        }
+        return EMPTY_EXPORTS;
       }
     },
     staleTime: 30_000,
   });
+
+  return {
+    ...query,
+    endpointAvailable: endpointAvailableRef.current,
+  };
 }
 
 export function useRedownload() {

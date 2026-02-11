@@ -12,14 +12,22 @@ import {
   XCircle,
 } from "lucide-react";
 import { KpiCard, KpiCardSkeleton } from "@/components/ui";
-import type { AnalyticsKpis } from "@/types/analytics";
+import type { AnalyticsKpis, AnalyticsModule } from "@/types/analytics";
+import type { AnalyticsKpiErrors } from "@/hooks/useAnalytics";
 
 interface ModuleKpiSectionProps {
   kpis: AnalyticsKpis;
   isLoading: boolean;
+  selectedModule?: AnalyticsModule;
+  errors?: AnalyticsKpiErrors;
 }
 
-export function ModuleKpiSection({ kpis, isLoading }: ModuleKpiSectionProps) {
+export function ModuleKpiSection({
+  kpis,
+  isLoading,
+  selectedModule,
+  errors,
+}: ModuleKpiSectionProps) {
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -38,100 +46,148 @@ export function ModuleKpiSection({ kpis, isLoading }: ModuleKpiSectionProps) {
     );
   }
 
+  const showFdd = !selectedModule || selectedModule === "fdd";
+  const showKiis = !selectedModule || selectedModule === "kiis";
+  const showIm = !selectedModule || selectedModule === "im";
+
   return (
     <div className="space-y-6">
       {/* FDD KPIs */}
-      <div>
-        <h3 className="text-sm font-medium text-text-secondary mb-2">
-          Auto FDD
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            label="Total Deals"
-            value={String(kpis.fdd.totalDeals)}
-            icon={Briefcase}
-          />
-          <KpiCard
-            label="Active Deals"
-            value={String(kpis.fdd.activeDeals)}
-            icon={TrendingUp}
-            variant="positive"
-          />
-          <KpiCard
-            label="Avg Cycle (days)"
-            value={String(kpis.fdd.avgCycleDays)}
-            icon={Clock}
-            variant="caution"
-          />
-          <KpiCard
-            label="Draft Deals"
-            value={String(kpis.fdd.draftDeals)}
-            icon={AlertTriangle}
-            variant="negative"
-          />
+      {showFdd && (
+        <div>
+          <h3 className="label-uppercase mb-2">Auto FDD</h3>
+          {errors?.fdd ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              FDD backend is unreachable. Data may be unavailable.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Total Deals"
+                value={String(kpis.fdd.totalDeals)}
+                icon={Briefcase}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Active Deals"
+                value={String(kpis.fdd.activeDeals)}
+                icon={TrendingUp}
+                variant="positive"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Avg Cycle (days)"
+                value={String(kpis.fdd.avgCycleDays)}
+                icon={Clock}
+                variant="caution"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Draft Deals"
+                value={String(kpis.fdd.draftDeals)}
+                icon={AlertTriangle}
+                variant="negative"
+                hoverLift
+                generous
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* KIIS KPIs */}
-      <div>
-        <h3 className="text-sm font-medium text-text-secondary mb-2">KIIS</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            label="Companies"
-            value={String(kpis.kiis.totalCompanies)}
-            icon={Building2}
-          />
-          <KpiCard
-            label="Funds"
-            value={String(kpis.kiis.totalFunds)}
-            icon={Wallet}
-            variant="positive"
-          />
-          <KpiCard
-            label="REITs"
-            value={String(kpis.kiis.totalReits)}
-            icon={Building}
-          />
-          <KpiCard
-            label="News (7d)"
-            value={String(kpis.kiis.newsLast7Days)}
-            icon={Newspaper}
-            variant="caution"
-          />
+      {showKiis && (
+        <div>
+          <h3 className="label-uppercase mb-2">KIIS</h3>
+          {errors?.kiis ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              KIIS backend is unreachable. Data may be unavailable.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Companies"
+                value={String(kpis.kiis.totalCompanies)}
+                icon={Building2}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Funds"
+                value={String(kpis.kiis.totalFunds)}
+                icon={Wallet}
+                variant="positive"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="REITs"
+                value={String(kpis.kiis.totalReits)}
+                icon={Building}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="News (7d)"
+                value={String(kpis.kiis.newsLast7Days)}
+                icon={Newspaper}
+                variant="caution"
+                hoverLift
+                generous
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* IM KPIs */}
-      <div>
-        <h3 className="text-sm font-medium text-text-secondary mb-2">
-          IM Generator
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            label="Total Documents"
-            value={String(kpis.im.totalDocuments)}
-            icon={FileText}
-          />
-          <KpiCard
-            label="Completed"
-            value={String(kpis.im.completed)}
-            icon={CheckCircle}
-            variant="positive"
-          />
-          <KpiCard
-            label="In Progress"
-            value={String(kpis.im.inProgress)}
-            icon={Clock}
-            variant="caution"
-          />
-          <KpiCard
-            label="Failed"
-            value={String(kpis.im.failed)}
-            icon={XCircle}
-            variant="negative"
-          />
+      {showIm && (
+        <div>
+          <h3 className="label-uppercase mb-2">IM Generator</h3>
+          {errors?.im ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              IM backend is unreachable. Data may be unavailable.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Total Documents"
+                value={String(kpis.im.totalDocuments)}
+                icon={FileText}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Completed"
+                value={String(kpis.im.completed)}
+                icon={CheckCircle}
+                variant="positive"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="In Progress"
+                value={String(kpis.im.inProgress)}
+                icon={Clock}
+                variant="caution"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Failed"
+                value={String(kpis.im.failed)}
+                icon={XCircle}
+                variant="negative"
+                hoverLift
+                generous
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

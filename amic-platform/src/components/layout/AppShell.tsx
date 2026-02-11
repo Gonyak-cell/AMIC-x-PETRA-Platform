@@ -131,9 +131,11 @@ export default function AppShell({ children }: AppShellProps) {
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               />
-              <span className="text-white font-heading font-semibold">
-                AMIC x PETRA Platform
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-white font-heading font-bold text-sm tracking-[0.18em]">AMIC</span>
+                <span className="text-white/40 text-xs font-light">&amp;</span>
+                <span className="text-accent font-heading font-bold text-xs tracking-[0.08em]">PETRABRIDGE PARTNERS</span>
+              </div>
               <div className="ml-auto text-white">
                 <NotificationBell />
               </div>

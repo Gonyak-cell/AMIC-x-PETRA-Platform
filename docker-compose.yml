@@ -1,0 +1,303 @@
+# ============================================================
+# AMIC x PETRA Platform — Development Docker Compose
+# ============================================================
+# 사용법: docker compose up -d --build
+# 접속:   http://localhost:3000 (nginx) / http://localhost:5173 (Vite)
+# ============================================================
+
+services:
+  # ======================== FRONTEND ========================
+  frontend:
+    build:
+      context: ./amic-platform
+      dockerfile: Dockerfile.dev
+    container_name: amic-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./amic-platform:/app
+      - /app/node_modules
+    depends_on:
+      - fdd-api
+      - kiis-api
+      - im-api
+    networks:
+      - amic-network
+
+  # ======================== NGINX (dev reverse proxy) ========================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: amic-nginx
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - fdd-api
+      - kiis-api
+      - im-api
+    networks:
+      - amic-network
+
+  # ======================== FDD BACKEND ========================
+  fdd-api:
+    build:
+      context: ../Auto FDD/backend
+    container_name: amic-fdd-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://autofdd:${FDD_DB_PASSWORD:-autofdd_dev}@fdd-db:5432/autofdd
+      PPTX_SERVICE_URL: http://fdd-pptx:3100
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    depends_on:
+      fdd-db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ../Auto FDD/backend:/app
+    networks:
+      - amic-network
+
+  fdd-db:
+    image: postgres:16-alpine
+    container_name: amic-fdd-db
+    environment:
+      POSTGRES_USER: autofdd
+      POSTGRES_PASSWORD: ${FDD_DB_PASSWORD:-autofdd_dev}
+      POSTGRES_DB: autofdd
+    ports:
+      - "5433:5432"
+    volumes:
+      - fdd_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autofdd"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - amic-network
+
+  fdd-pptx:
+    build:
+      context: ../Auto FDD/pptx-service
+    container_name: amic-fdd-pptx
+    ports:
+      - "3100:3100"
+    networks:
+      - amic-network
+
+  # ======================== KIIS BACKEND ========================
+  kiis-api:
+    build:
+      context: ../KIIS
+    container_name: amic-kiis-api
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kiis_user:${KIIS_DB_PASSWORD:-kiis_dev_password}@kiis-db:5432/kiis
+      REDIS_URL: redis://kiis-redis:6379/0
+      ELASTICSEARCH_URL: http://kiis-es:9200
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ../KIIS:/app
+      - /app/__pycache__
+    depends_on:
+      kiis-db:
+        condition: service_healthy
+      kiis-redis:
+        condition: service_healthy
+      kiis-es:
+        condition: service_healthy
+    networks:
+      - amic-network
+
+  kiis-db:
+    image: postgres:16-alpine
+    container_name: amic-kiis-db
+    environment:
+      POSTGRES_DB: kiis
+      POSTGRES_USER: kiis_user
+      POSTGRES_PASSWORD: ${KIIS_DB_PASSWORD:-kiis_dev_password}
+    ports:
+      - "5434:5432"
+    volumes:
+      - kiis_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kiis_user -d kiis"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
+  kiis-redis:
+    image: redis:7-alpine
+    container_name: amic-kiis-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - kiis_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
+  kiis-es:
+    image: elasticsearch:8.12.0
+    container_name: amic-kiis-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - kiis_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - amic-network
+
+  # ======================== IM BACKEND ========================
+  im-api:
+    build:
+      context: ../IM Module/auto-im-generator
+    container_name: amic-im-api
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD:-postgres}@im-db:5432/imgen
+      REDIS_URL: redis://im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://im-redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      im-db:
+        condition: service_healthy
+      im-redis:
+        condition: service_healthy
+    volumes:
+      - ../IM Module/auto-im-generator:/app
+      - /app/__pycache__
+      - im_output_data:/app/output
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - amic-network
+
+  im-db:
+    image: postgres:16-alpine
+    container_name: amic-im-db
+    environment:
+      POSTGRES_DB: imgen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${IM_DB_PASSWORD:-postgres}
+    ports:
+      - "5435:5432"
+    volumes:
+      - im_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
+  im-redis:
+    image: redis:7-alpine
+    container_name: amic-im-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - im_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
+  im-celery-worker:
+    build:
+      context: ../IM Module/auto-im-generator
+    container_name: amic-im-celery-worker
+    command: >
+      celery -A src.api.tasks.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --max-memory-per-child=500000
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD:-postgres}@im-db:5432/imgen
+      REDIS_URL: redis://im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://im-redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+    volumes:
+      - im_output_data:/app/output
+    depends_on:
+      im-db:
+        condition: service_healthy
+      im-redis:
+        condition: service_healthy
+    networks:
+      - amic-network
+
+  im-celery-beat:
+    build:
+      context: ../IM Module/auto-im-generator
+    container_name: amic-im-celery-beat
+    command: >
+      celery -A src.api.tasks.celery_app beat
+      --loglevel=info
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD:-postgres}@im-db:5432/imgen
+      REDIS_URL: redis://im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://im-redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+    depends_on:
+      im-db:
+        condition: service_healthy
+      im-redis:
+        condition: service_healthy
+    networks:
+      - amic-network
+
+# ======================== NETWORKS ========================
+networks:
+  amic-network:
+    driver: bridge
+
+# ======================== VOLUMES ========================
+volumes:
+  fdd_pgdata:
+  kiis_pgdata:
+  kiis_redis_data:
+  kiis_es_data:
+  im_pgdata:
+  im_redis_data:
+  im_output_data:

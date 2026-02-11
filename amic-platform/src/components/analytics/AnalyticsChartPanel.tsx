@@ -65,8 +65,8 @@ export function AnalyticsChartPanel({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* FDD Deal Creation Trend */}
-      <Card>
-        <h4 className="text-sm font-medium text-text-dark mb-3">
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
           FDD Deals Created (Monthly)
         </h4>
         {fddTrendData.length > 0 ? (
@@ -85,8 +85,8 @@ export function AnalyticsChartPanel({
       </Card>
 
       {/* KIIS Deal Trends (Yearly) */}
-      <Card>
-        <h4 className="text-sm font-medium text-text-dark mb-3">
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
           KIIS Deal Trends (Yearly)
         </h4>
         {yearlyTrendData.length > 0 ? (
@@ -105,8 +105,8 @@ export function AnalyticsChartPanel({
       </Card>
 
       {/* KIIS Sector Distribution */}
-      <Card>
-        <h4 className="text-sm font-medium text-text-dark mb-3">
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
           KIIS Deals by Sector
         </h4>
         {sectorBarData.length > 0 ? (
@@ -124,8 +124,8 @@ export function AnalyticsChartPanel({
       </Card>
 
       {/* IM Document Generation Trend */}
-      <Card>
-        <h4 className="text-sm font-medium text-text-dark mb-3">
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
           IM Documents Generated (Monthly)
         </h4>
         {imTrendData.length > 0 ? (

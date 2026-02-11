@@ -16,15 +16,15 @@ export const CHART_COLORS = {
   waterfallTotal: "#0F3A32", // 시작/종료 합계
   waterfallIncrease: "#26C260", // Add-backs
   waterfallDecrease: "#BC2C1A", // Deductions
-  waterfallIntermediate: "#F4F6F8", // 중간 소계
+  waterfallIntermediate: "#F7F8FA", // 중간 소계
 
   // Grid & Axis
-  gridColor: "#E0E0E0", // gray-border
-  axisColor: "#777777", // text-secondary
+  gridColor: "#E5E7EB", // gray-border
+  axisColor: "#6B7280", // text-secondary
 
   // Tooltip
   tooltipBg: "#FFFFFF",
-  tooltipBorder: "#E0E0E0",
+  tooltipBorder: "#E5E7EB",
 } as const;
 
 /**
@@ -36,7 +36,7 @@ export const CATEGORY_COLORS = [
   "#26C260", // accent
   "#0091DA", // info blue
   "#EF6C00", // caution
-  "#777777", // secondary
+  "#6B7280", // secondary
 ] as const;
 
 /**

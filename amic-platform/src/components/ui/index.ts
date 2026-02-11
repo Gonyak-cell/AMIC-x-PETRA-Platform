@@ -7,7 +7,7 @@ export type { BadgeProps, BadgeVariant } from "./Badge";
 export { getStatusVariant } from "@/lib/statusVariant";
 
 export { Card } from "./Card";
-export type { CardProps } from "./Card";
+export type { CardProps, CardVariant } from "./Card";
 
 export { KpiCard } from "./KpiCard";
 export type { KpiCardProps } from "./KpiCard";

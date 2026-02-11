@@ -16,6 +16,7 @@ import ManagerListPage from "./pages/ManagerListPage";
 import ManagerProfilePage from "./pages/ManagerProfilePage";
 import EntityResolutionPage from "./pages/EntityResolutionPage";
 import DisclosurePage from "./pages/DisclosurePage";
+import GallerySamplePage from "./pages/GallerySamplePage";
 
 export default function KiisRoutes() {
   return (
@@ -37,6 +38,7 @@ export default function KiisRoutes() {
       <Route path="entities" element={<EntityResolutionPage />} />
       <Route path="disclosures" element={<DisclosurePage />} />
       <Route path="watchlist" element={<WatchlistPage />} />
+      <Route path="gallery" element={<GallerySamplePage />} />
       <Route path="*" element={<Navigate to="/kiis" replace />} />
     </Routes>
   );

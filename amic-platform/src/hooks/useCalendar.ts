@@ -1,10 +1,18 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import api from "@/api/client";
+import { kiisApi } from "@/api/kiisClient";
 import { imApi } from "@/api/imClient";
 import type { Deal } from "@/modules/fdd/types/deal";
+import type { DealItem } from "@/modules/kiis/types/deal";
 import type { Document } from "@/modules/im/types/document";
 import type { CalendarEvent, GanttItem, CalendarFilter } from "@/types/calendar";
+
+export interface CalendarErrors {
+  fdd: boolean;
+  kiis: boolean;
+  im: boolean;
+}
 
 export function useCalendarEvents(filter: CalendarFilter) {
   const results = useQueries({
@@ -29,11 +37,33 @@ export function useCalendarEvents(filter: CalendarFilter) {
         staleTime: 60_000,
         enabled: filter.modules.includes("im"),
       },
+      {
+        queryKey: ["calendar", "kiis-deals"],
+        queryFn: async () => {
+          try {
+            const { data } = await kiisApi.get<{ items: DealItem[] }>("/deals", {
+              params: { size: 200 },
+            });
+            return data.items;
+          } catch {
+            // KIIS may not have a /deals listing endpoint
+            return [];
+          }
+        },
+        staleTime: 60_000,
+        enabled: filter.modules.includes("kiis"),
+      },
     ],
   });
 
-  const [dealsQuery, docsQuery] = results;
+  const [dealsQuery, docsQuery, kiisDealsQuery] = results;
   const isLoading = results.some((r) => r.isLoading);
+
+  const errors: CalendarErrors = {
+    fdd: dealsQuery.isError,
+    kiis: kiisDealsQuery.isError,
+    im: docsQuery.isError,
+  };
 
   const events = useMemo<CalendarEvent[]>(() => {
     const items: CalendarEvent[] = [];
@@ -112,8 +142,27 @@ export function useCalendarEvents(filter: CalendarFilter) {
       }
     }
 
+    // KIIS deal events
+    if (kiisDealsQuery.data) {
+      for (const deal of kiisDealsQuery.data) {
+        if (deal.deal_date) {
+          items.push({
+            id: `kiis-deal-${deal.id}`,
+            module: "kiis",
+            type: "audit_date",
+            title: `${deal.target_company} — Deal${deal.round_stage ? ` (${deal.round_stage})` : ""}`,
+            date: deal.deal_date,
+            entityId: String(deal.id),
+            entityPath: deal.target_company_id
+              ? `/kiis/companies/${deal.target_company_id}`
+              : "/kiis",
+          });
+        }
+      }
+    }
+
     return items;
-  }, [dealsQuery.data, docsQuery.data]);
+  }, [dealsQuery.data, docsQuery.data, kiisDealsQuery.data]);
 
   const ganttItems = useMemo<GanttItem[]>(() => {
     const items: GanttItem[] = [];
@@ -159,8 +208,26 @@ export function useCalendarEvents(filter: CalendarFilter) {
       }
     }
 
-    return items.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [dealsQuery.data, docsQuery.data]);
+    // KIIS deals as single-day milestones in Gantt
+    if (kiisDealsQuery.data) {
+      for (const deal of kiisDealsQuery.data) {
+        if (deal.deal_date) {
+          items.push({
+            id: `gantt-kiis-${deal.id}`,
+            label: `${deal.target_company}${deal.round_stage ? ` (${deal.round_stage})` : ""}`,
+            module: "kiis",
+            startDate: deal.deal_date,
+            endDate: deal.deal_date,
+            entityPath: deal.target_company_id
+              ? `/kiis/companies/${deal.target_company_id}`
+              : "/kiis",
+          });
+        }
+      }
+    }
 
-  return { events, ganttItems, isLoading };
+    return items.sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }, [dealsQuery.data, docsQuery.data, kiisDealsQuery.data]);
+
+  return { events, ganttItems, isLoading, errors };
 }

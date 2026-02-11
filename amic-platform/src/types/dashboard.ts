@@ -7,6 +7,12 @@ export interface PortalKpis {
   pendingIssues: number;
 }
 
+export interface PortalKpiErrors {
+  fdd: boolean;
+  kiis: boolean;
+  im: boolean;
+}
+
 export interface QuickAction {
   label: string;
   to: string;

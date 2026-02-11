@@ -5,11 +5,14 @@ import { Skeleton } from "./Skeleton";
 
 export interface Column<T> {
   key: string;
-  header: string;
+  /** Column heading text — accepts either `header` or `label` */
+  header?: string;
+  label?: string;
   align?: "left" | "center" | "right";
   width?: string;
   render?: (row: T, index: number) => ReactNode;
   mono?: boolean;
+  sortable?: boolean;
 }
 
 export interface SectionHeaderConfig {
@@ -28,6 +31,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   sectionHeaders?: SectionHeaderConfig[];
   footer?: ReactNode;
+  uppercaseHeaders?: boolean;
   className?: string;
 }
 
@@ -48,6 +52,7 @@ export function DataTable<T extends object>({
   onRowClick,
   sectionHeaders = [],
   footer,
+  uppercaseHeaders = false,
   className,
 }: DataTableProps<T>) {
   const cellPadding = compact ? "px-3 py-2" : "px-4 py-3";
@@ -105,13 +110,14 @@ export function DataTable<T extends object>({
                 <th
                   key={col.key}
                   className={cn(
-                    "text-white font-heading font-semibold text-sub-header",
+                    "text-white font-heading font-semibold text-sub-header tracking-wide",
+                    uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"]
                   )}
                   style={{ width: col.width }}
                 >
-                  {col.header}
+                  {col.header ?? col.label}
                 </th>
               ))}
             </tr>
@@ -142,13 +148,14 @@ export function DataTable<T extends object>({
                 <th
                   key={col.key}
                   className={cn(
-                    "text-white font-heading font-semibold text-sub-header",
+                    "text-white font-heading font-semibold text-sub-header tracking-wide",
+                    uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"]
                   )}
                   style={{ width: col.width }}
                 >
-                  {col.header}
+                  {col.header ?? col.label}
                 </th>
               ))}
             </tr>
@@ -168,13 +175,14 @@ export function DataTable<T extends object>({
               <th
                 key={col.key}
                 className={cn(
-                  "text-white font-heading font-semibold text-sub-header",
+                  "text-white font-heading font-semibold text-sub-header tracking-wide",
+                    uppercaseHeaders && "uppercase tracking-[0.15em]",
                   cellPadding,
                   alignStyles[col.align || "left"]
                 )}
                 style={{ width: col.width }}
               >
-                {col.header}
+                {col.header ?? col.label}
               </th>
             ))}
           </tr>

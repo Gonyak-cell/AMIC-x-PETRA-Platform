@@ -147,6 +147,7 @@ export function ExportTable({
         columns={columns}
         keyField="id"
         emptyMessage="No exports found."
+        uppercaseHeaders
       />
     </div>
   );

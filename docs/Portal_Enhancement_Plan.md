@@ -25,6 +25,7 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 | **Wave 4** | Intelligence & Enhancement (P2) | **COMPLETE** | Analytics, Help, Calendar, Export, Integrations, E2E |
 | 추가 | KIIS 모듈 전체 구현 | **COMPLETE** | 10 pages, 10 hooks, 10 types, 5 components |
 | 추가 | IM 모듈 전체 구현 | **COMPLETE** | 4 pages, 2 hooks, 2 types, 3 components |
+| 추가 | Sidebar UX 개선 | **COMPLETE** | Collapsible sections, KIIS 그룹핑, 우측 인디케이터 |
 
 ---
 
@@ -293,6 +294,16 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 -----
 [Module Switcher: FDD / KIIS / IM]
 [모듈별 내비게이션]
+  KIIS:
+    Dashboard                       (항상 표시)
+    ▸ Research                      (접힘/펼침: Companies, Funds, REITs, News)
+    ▸ Deal Pipeline                 (접힘/펼침: Deal Sourcing, Sanctions)
+    ▸ Portfolio Mgmt                (접힘/펼침: Portfolio, Managers, Entity, Disclosures, Watchlist)
+  FDD (Deal Workspace):
+    Workflow                        (항상 표시)
+    ▸ Setup                         (접힘/펼침)
+    ▸ Analysis                      (접힘/펼침)
+    ▸ Report                        (접힘/펼침)
 -----
 [Favorites]                         (즐겨찾기 항목이 있을 때 표시)
 [Recent]                            (최근 방문 항목이 있을 때 표시)
@@ -306,6 +317,9 @@ M&A 자문사 실무자들은 동시에 3~10개 딜을 관리하며, FDD 분석 
 -----
 [User Info -> Settings]             (클릭 시 /settings/profile)
 [Sign Out]
+
+활성 인디케이터: 우측 border-r-2 (accent 색상)
+섹션 접힘 상태: localStorage 저장 (새로고침 시 유지)
 ```
 
 ### 9.3 전체 파일 목록 (포털 기능)
@@ -520,3 +534,56 @@ FDD 백엔드에 다음 API가 추가되었는지 별도 확인 필요:
 
 > 현재 프론트엔드에서 일부 API는 기존 엔드포인트를 우회 사용 중 (예: deactivate를 PUT is_active=false로 처리).
 > 백엔드에 전용 엔드포인트가 추가되면 프론트엔드 훅도 맞춰 업데이트 필요.
+
+---
+
+## 13. Sidebar UX 개선 (COMPLETE)
+
+> 구현 완료: 2026-02-11 15:07:35
+
+### 배경
+
+KIIS 모듈이 12개 항목을 한번에 표시하여 사이드바가 길어지는 문제. DESIGNNAS 레퍼런스에서 접힘/펼침 패턴과 우측 활성 인디케이터를 도입하되, 다크 그린 브랜딩은 유지.
+
+### 13.1 Collapsible Sections (DONE)
+
+**SidebarSection 컴포넌트 확장:**
+
+- 새 props: `collapsible?: boolean`, `defaultOpen?: boolean`, `storageKey?: string`
+- ChevronDown 아이콘 (접힌 상태: -90도 회전)
+- localStorage에 열림/닫힘 상태 저장 (새로고침 시 유지)
+- `max-height` + `opacity` transition 애니메이션
+- `aria-expanded` 접근성 속성
+- 하위 호환: `collapsible` 미지정 시 기존 동작 유지
+
+### 13.2 KIIS 네비게이션 섹션 그룹핑 (DONE)
+
+기존 12개 flat list → 4개 그룹으로 분리:
+
+| 그룹 | 항목 | Collapsible |
+| --- | --- | --- |
+| Overview | Dashboard | No (항상 표시) |
+| Research | Companies, Funds, REITs, News & Sentiment | Yes |
+| Deal Pipeline | Deal Sourcing, Sanctions | Yes |
+| Portfolio Mgmt | Portfolio, Managers, Entity Match, Disclosures, Watchlist | Yes |
+
+### 13.3 FDD Collapsible 적용 (DONE)
+
+Deal Workspace 섹션에 collapsible 적용:
+
+- Setup (collapsible, defaultOpen)
+- Analysis (collapsible, defaultOpen)
+- Report (collapsible, defaultOpen)
+- Workflow: 항목 1개라 collapsible 미적용
+
+### 13.4 우측 활성 인디케이터 (DONE)
+
+- 변경: `border-l-2` → `border-r-2` (좌측→우측)
+- DESIGNNAS 레퍼런스 스타일 반영
+
+### 수정 파일
+
+| 파일 | 변경 내용 |
+| --- | --- |
+| `src/components/layout/SidebarNavItem.tsx` | SidebarSection collapsible 기능 + 활성 인디케이터 우측 변경 |
+| `src/components/layout/Sidebar.tsx` | KIIS 섹션 그룹핑 + FDD collapsible 적용 |

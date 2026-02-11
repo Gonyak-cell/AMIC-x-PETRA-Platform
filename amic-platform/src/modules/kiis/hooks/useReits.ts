@@ -36,10 +36,10 @@ export function useReitAssets(reitsCode: string) {
   return useQuery<REITsAssetItem[]>({
     queryKey: ["kiis", "reits", reitsCode, "assets"],
     queryFn: async () => {
-      const { data } = await kiisApi.get<REITsAssetItem[]>(
+      const { data } = await kiisApi.get(
         `/reits/${reitsCode}/assets`,
       );
-      return data;
+      return data.items;
     },
     enabled: !!reitsCode,
   });

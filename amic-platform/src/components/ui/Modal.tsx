@@ -94,7 +94,7 @@ export function Modal({
         <div
           ref={contentRef}
           className={cn(
-            "bg-white rounded-lg shadow-xl w-full",
+            "bg-white rounded-corporate shadow-xl w-full",
             sizeStyles[size]
           )}
           onClick={(e) => e.stopPropagation()}
@@ -102,7 +102,7 @@ export function Modal({
           {/* 헤더 */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-border">
             <h2 id="modal-title" className="text-lg font-heading font-semibold text-text-dark">
-              <span className="border-l-4 border-amic pl-3">{title}</span>
+              <span className="border-l-4 border-accent pl-3">{title}</span>
             </h2>
             <Button
               variant="ghost"
@@ -120,7 +120,7 @@ export function Modal({
 
           {/* 푸터 */}
           {footer && (
-            <div className="px-5 py-4 border-t border-gray-border bg-bg-cool rounded-b-lg flex justify-end gap-3">
+            <div className="px-5 py-4 border-t border-gray-border bg-bg-cool rounded-b-corporate flex justify-end gap-3">
               {footer}
             </div>
           )}

@@ -36,10 +36,10 @@ export function useFundManagers(params: { company_name?: string } = {}) {
   return useQuery<FundManagerItem[]>({
     queryKey: ["kiis", "managers", params],
     queryFn: async () => {
-      const { data } = await kiisApi.get<FundManagerItem[]>("/kofia/managers", {
+      const { data } = await kiisApi.get("/kofia/managers", {
         params,
       });
-      return data;
+      return data.items;
     },
   });
 }

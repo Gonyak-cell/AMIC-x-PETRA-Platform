@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { GlossaryList } from "@/components/help/GlossaryList";
 import { ReleaseNotes } from "@/components/help/ReleaseNotes";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
@@ -65,29 +65,35 @@ export default function HelpPage() {
               This platform integrates three modules for investment analysis:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-border">
-                <div className="font-medium text-text-dark mb-1">Auto FDD</div>
-                <p className="text-xs text-text-secondary">
-                  Automated Financial Due Diligence — upload financial data, map
-                  accounts, and generate QoE/NWC/Net Debt analysis.
-                </p>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-border">
-                <div className="font-medium text-text-dark mb-1">KIIS</div>
-                <p className="text-xs text-text-secondary">
-                  Korea Investment Intelligence System — monitor companies,
-                  funds, REITs, news, and deal sourcing from DART/KOFIA.
-                </p>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-border">
-                <div className="font-medium text-text-dark mb-1">
-                  IM Generator
+              <Card variant="forest-lift">
+                <div className="p-4">
+                  <div className="font-medium text-text-dark mb-1">Auto FDD</div>
+                  <p className="text-xs text-text-secondary">
+                    Automated Financial Due Diligence — upload financial data, map
+                    accounts, and generate QoE/NWC/Net Debt analysis.
+                  </p>
                 </div>
-                <p className="text-xs text-text-secondary">
-                  Investment Memorandum Generator — auto-generate PPTX/PDF
-                  investment memos from corporate data.
-                </p>
-              </div>
+              </Card>
+              <Card variant="forest-lift">
+                <div className="p-4">
+                  <div className="font-medium text-text-dark mb-1">KIIS</div>
+                  <p className="text-xs text-text-secondary">
+                    Korea Investment Intelligence System — monitor companies,
+                    funds, REITs, news, and deal sourcing from DART/KOFIA.
+                  </p>
+                </div>
+              </Card>
+              <Card variant="forest-lift">
+                <div className="p-4">
+                  <div className="font-medium text-text-dark mb-1">
+                    IM Generator
+                  </div>
+                  <p className="text-xs text-text-secondary">
+                    Investment Memorandum Generator — auto-generate PPTX/PDF
+                    investment memos from corporate data.
+                  </p>
+                </div>
+              </Card>
             </div>
           </div>
 

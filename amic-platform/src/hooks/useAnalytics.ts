@@ -12,6 +12,7 @@ import type {
   KiisAnalytics,
   ImAnalytics,
   AnalyticsFilter,
+  AnalyticsTimeRange,
   TimeSeriesPoint,
 } from "@/types/analytics";
 
@@ -22,6 +23,26 @@ const IM_IN_PROGRESS_STATUSES = [
   "GENERATING",
   "RENDERING",
 ];
+
+function getTimeRangeCutoff(range: AnalyticsTimeRange): Date | null {
+  const days: Record<AnalyticsTimeRange, number> = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+    all: 0,
+  };
+  const d = days[range];
+  return d > 0 ? new Date(Date.now() - d * 86_400_000) : null;
+}
+
+function filterByDate<T extends { created_at: string }>(
+  items: T[],
+  cutoff: Date | null,
+): T[] {
+  if (!cutoff) return items;
+  return items.filter((item) => new Date(item.created_at) >= cutoff);
+}
 
 function computeFddAnalytics(deals: Deal[]): FddAnalytics {
   const active = deals.filter((d) => d.status === "ACTIVE");
@@ -81,8 +102,41 @@ function computeImAnalytics(docs: Document[]): ImAnalytics {
   };
 }
 
-export function useAnalyticsKpis(_filter?: AnalyticsFilter) {
-  void _filter;
+const EMPTY_FDD: FddAnalytics = {
+  totalDeals: 0,
+  activeDeals: 0,
+  completedDeals: 0,
+  draftDeals: 0,
+  avgCycleDays: 0,
+  byPhase: {},
+};
+
+const EMPTY_KIIS: KiisAnalytics = {
+  totalCompanies: 0,
+  totalFunds: 0,
+  totalReits: 0,
+  totalDeals: 0,
+  newsLast7Days: 0,
+};
+
+const EMPTY_IM: ImAnalytics = {
+  totalDocuments: 0,
+  inProgress: 0,
+  completed: 0,
+  failed: 0,
+  avgGenerationMinutes: 0,
+};
+
+export interface AnalyticsKpiErrors {
+  fdd: boolean;
+  kiis: boolean;
+  im: boolean;
+}
+
+export function useAnalyticsKpis(filter?: AnalyticsFilter) {
+  const cutoff = filter ? getTimeRangeCutoff(filter.timeRange) : null;
+  const moduleFilter = filter?.module;
+
   const results = useQueries({
     queries: [
       {
@@ -119,52 +173,50 @@ export function useAnalyticsKpis(_filter?: AnalyticsFilter) {
   const isLoading = results.some((r) => r.isLoading);
   const isError = results.every((r) => r.isError);
 
+  const errors: AnalyticsKpiErrors = {
+    fdd: dealsQuery.isError,
+    kiis: kiisQuery.isError,
+    im: docsQuery.isError,
+  };
+
   const kpis = useMemo<AnalyticsKpis>(() => {
-    const fdd: FddAnalytics = dealsQuery.data
-      ? computeFddAnalytics(dealsQuery.data)
-      : {
-          totalDeals: 0,
-          activeDeals: 0,
-          completedDeals: 0,
-          draftDeals: 0,
-          avgCycleDays: 0,
-          byPhase: {},
-        };
+    const fdd: FddAnalytics =
+      !moduleFilter || moduleFilter === "fdd"
+        ? dealsQuery.data
+          ? computeFddAnalytics(filterByDate(dealsQuery.data, cutoff))
+          : EMPTY_FDD
+        : EMPTY_FDD;
 
-    const kiis: KiisAnalytics = kiisQuery.data
-      ? {
-          totalCompanies: kiisQuery.data.total_companies,
-          totalFunds: kiisQuery.data.total_funds,
-          totalReits: kiisQuery.data.total_reits,
-          totalDeals: kiisQuery.data.total_deals,
-          newsLast7Days: kiisQuery.data.news_last_7days,
-        }
-      : {
-          totalCompanies: 0,
-          totalFunds: 0,
-          totalReits: 0,
-          totalDeals: 0,
-          newsLast7Days: 0,
-        };
+    // KIIS summary is pre-aggregated; time range filter cannot be applied
+    const kiis: KiisAnalytics =
+      !moduleFilter || moduleFilter === "kiis"
+        ? kiisQuery.data
+          ? {
+              totalCompanies: kiisQuery.data.total_companies,
+              totalFunds: kiisQuery.data.total_funds,
+              totalReits: kiisQuery.data.total_reits,
+              totalDeals: kiisQuery.data.total_deals,
+              newsLast7Days: kiisQuery.data.news_last_7days,
+            }
+          : EMPTY_KIIS
+        : EMPTY_KIIS;
 
-    const im: ImAnalytics = docsQuery.data
-      ? computeImAnalytics(docsQuery.data.items)
-      : {
-          totalDocuments: 0,
-          inProgress: 0,
-          completed: 0,
-          failed: 0,
-          avgGenerationMinutes: 0,
-        };
+    const im: ImAnalytics =
+      !moduleFilter || moduleFilter === "im"
+        ? docsQuery.data
+          ? computeImAnalytics(filterByDate(docsQuery.data.items, cutoff))
+          : EMPTY_IM
+        : EMPTY_IM;
 
     return { fdd, kiis, im };
-  }, [dealsQuery.data, kiisQuery.data, docsQuery.data]);
+  }, [dealsQuery.data, kiisQuery.data, docsQuery.data, cutoff, moduleFilter]);
 
-  return { kpis, isLoading, isError };
+  return { kpis, isLoading, isError, errors };
 }
 
-export function useAnalyticsTimeSeries(_filter?: AnalyticsFilter) {
-  void _filter;
+export function useAnalyticsTimeSeries(filter?: AnalyticsFilter) {
+  const cutoff = filter ? getTimeRangeCutoff(filter.timeRange) : null;
+
   const results = useQueries({
     queries: [
       {
@@ -193,27 +245,29 @@ export function useAnalyticsTimeSeries(_filter?: AnalyticsFilter) {
 
   const fddTimeSeries = useMemo<TimeSeriesPoint[]>(() => {
     if (!dealsQuery.data) return [];
+    const filtered = filterByDate(dealsQuery.data, cutoff);
     const byMonth = new Map<string, number>();
-    for (const deal of dealsQuery.data) {
+    for (const deal of filtered) {
       const month = deal.created_at.slice(0, 7); // YYYY-MM
       byMonth.set(month, (byMonth.get(month) ?? 0) + 1);
     }
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([period, value]) => ({ period, value }));
-  }, [dealsQuery.data]);
+  }, [dealsQuery.data, cutoff]);
 
   const imTimeSeries = useMemo<TimeSeriesPoint[]>(() => {
     if (!docsQuery.data) return [];
+    const filtered = filterByDate(docsQuery.data, cutoff);
     const byMonth = new Map<string, number>();
-    for (const doc of docsQuery.data) {
+    for (const doc of filtered) {
       const month = doc.created_at.slice(0, 7);
       byMonth.set(month, (byMonth.get(month) ?? 0) + 1);
     }
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([period, value]) => ({ period, value }));
-  }, [docsQuery.data]);
+  }, [docsQuery.data, cutoff]);
 
   return { fddTimeSeries, imTimeSeries, isLoading };
 }

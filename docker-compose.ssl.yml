@@ -1,0 +1,32 @@
+# ============================================================
+# AMIC x PETRA Platform — SSL/HTTPS Override
+# ============================================================
+# 도메인 + SSL 인증서가 준비되면 사용:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.ssl.yml up -d
+#
+# 사전 준비:
+#   1. nginx/prod.conf에서 platform.example.com을 실제 도메인으로 변경
+#   2. certbot으로 SSL 인증서 발급
+#   3. .env의 DOMAIN, SSL_CERT_EMAIL, *_CORS_ORIGINS를 https://도메인으로 변경
+# ============================================================
+
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: amic-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/logs:/var/log/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - amic-network

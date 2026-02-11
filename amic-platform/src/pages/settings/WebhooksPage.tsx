@@ -213,6 +213,7 @@ export default function WebhooksPage() {
             columns={columns}
             keyField="id"
             emptyMessage="No webhooks"
+            uppercaseHeaders
           />
         </Card>
       )}
@@ -246,7 +247,7 @@ export default function WebhooksPage() {
             onChange={(e) => setUrl(e.target.value)}
           />
           <div>
-            <label className="block text-sm font-medium text-text-dark mb-1.5">
+            <label className="label-uppercase mb-2 block">
               Events
             </label>
             <div className="flex flex-wrap gap-2">

@@ -30,7 +30,8 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
         error.response.status !== 401 ||
         original._retry ||
         original.url === "/auth/login" ||
-        original.url === "/auth/refresh"
+        original.url === "/auth/refresh" ||
+        original.url === "/auth/me"
       ) {
         return Promise.reject(error);
       }

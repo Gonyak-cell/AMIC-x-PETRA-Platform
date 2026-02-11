@@ -1,9 +1,20 @@
 import { http, HttpResponse } from "msw";
-import { mockDeals, mockCompanies, mockDocuments, mockUser } from "./data";
+import {
+  mockDeals,
+  mockCompanies,
+  mockDocuments,
+  mockUser,
+  mockDashboardSummary,
+  mockSectorData,
+  mockDealTrends,
+  mockKiisSearchResults,
+  mockNotifications,
+  mockExports,
+} from "./data";
 
 export const handlers = [
   // ── Auth ──
-  http.post("/api/fdd/auth/login", () => {
+  http.post("*/api/fdd/auth/login", () => {
     return HttpResponse.json({
       access_token: "mock-access-token",
       refresh_token: "mock-refresh-token",
@@ -12,26 +23,30 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/fdd/auth/me", () => {
+  http.get("*/api/fdd/auth/me", ({ request }) => {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new HttpResponse(null, { status: 401 });
+    }
     return HttpResponse.json(mockUser);
   }),
 
-  http.get("/api/fdd/auth/users", () => {
+  http.get("*/api/fdd/auth/users", () => {
     return HttpResponse.json([]);
   }),
 
   // ── FDD Deals ──
-  http.get("/api/fdd/deals", () => {
+  http.get("*/api/fdd/deals", () => {
     return HttpResponse.json(mockDeals);
   }),
 
-  http.get("/api/fdd/deals/:dealId", ({ params }) => {
+  http.get("*/api/fdd/deals/:dealId", ({ params }) => {
     const deal = mockDeals.find((d) => d.id === params.dealId);
     if (!deal) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(deal);
   }),
 
-  http.post("/api/fdd/deals", async ({ request }) => {
+  http.post("*/api/fdd/deals", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       {
@@ -57,16 +72,16 @@ export const handlers = [
   }),
 
   // ── FDD Health ──
-  http.get("/api/fdd/health", () => {
+  http.get("*/api/fdd/health", () => {
     return HttpResponse.json({ status: "ok" });
   }),
 
   // ── KIIS Companies ──
-  http.get("/api/kiis/companies", () => {
+  http.get("*/api/kiis/companies", () => {
     return HttpResponse.json(mockCompanies);
   }),
 
-  http.get("/api/kiis/companies/:corpCode", ({ params }) => {
+  http.get("*/api/kiis/companies/:corpCode", ({ params }) => {
     const company = mockCompanies.items.find(
       (c) => c.corp_code === params.corpCode,
     );
@@ -85,26 +100,26 @@ export const handlers = [
   }),
 
   // ── KIIS Health & Alerts ──
-  http.get("/api/kiis/health", () => {
+  http.get("*/api/kiis/health", () => {
     return HttpResponse.json({ status: "ok" });
   }),
 
-  http.get("/api/kiis/alerts/unread-count", () => {
+  http.get("*/api/kiis/alerts/unread-count", () => {
     return HttpResponse.json({ count: 3 });
   }),
 
   // ── IM Documents ──
-  http.get("/api/im/documents", () => {
+  http.get("*/api/im/documents", () => {
     return HttpResponse.json(mockDocuments);
   }),
 
-  http.get("/api/im/documents/:documentId", ({ params }) => {
+  http.get("*/api/im/documents/:documentId", ({ params }) => {
     const doc = mockDocuments.items.find((d) => d.id === params.documentId);
     if (!doc) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(doc);
   }),
 
-  http.post("/api/im/documents", async ({ request }) => {
+  http.post("*/api/im/documents", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       {
@@ -129,7 +144,78 @@ export const handlers = [
   }),
 
   // ── IM Health ──
-  http.get("/api/im/health", () => {
+  http.get("*/api/im/health", () => {
     return HttpResponse.json({ status: "ok" });
+  }),
+
+  // ── KIIS Dashboard/Search/Deals ──
+  http.get("*/api/kiis/dashboard/summary", () => {
+    return HttpResponse.json(mockDashboardSummary);
+  }),
+
+  http.get("*/api/kiis/search", () => {
+    return HttpResponse.json(mockKiisSearchResults);
+  }),
+
+  http.get("*/api/kiis/deals/by-sector", () => {
+    return HttpResponse.json(mockSectorData);
+  }),
+
+  http.get("*/api/kiis/deals/trends", () => {
+    return HttpResponse.json(mockDealTrends);
+  }),
+
+  // ── Notifications ──
+  http.get("*/api/fdd/notifications", () => {
+    return HttpResponse.json(mockNotifications);
+  }),
+
+  // ── Exports ──
+  http.get("*/api/fdd/exports", () => {
+    return HttpResponse.json(mockExports);
+  }),
+
+  // ── Audit Logs ──
+  http.get("*/api/fdd/audit-logs/export", () => {
+    const csv =
+      "Timestamp,User,Action,Entity Type,Entity ID,Deal ID,IP Address,Changed Fields\n";
+    return new HttpResponse(csv, {
+      headers: { "Content-Type": "text/csv" },
+    });
+  }),
+
+  http.get("*/api/fdd/audit-logs", ({ request }) => {
+    const url = new URL(request.url);
+    const limit = Number(url.searchParams.get("limit") ?? 20);
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+
+    const mockItems = Array.from({ length: 3 }, (_, i) => ({
+      id: `audit-${i + 1}`,
+      deal_id: null,
+      entity_type: "deal",
+      entity_id: `entity-${i + 1}`,
+      action: ["CREATE", "UPDATE", "DELETE"][i % 3],
+      actor: `user${i}@fdd.dev`,
+      old_value: null,
+      new_value: null,
+      user_id: `user-${i + 1}`,
+      user_email: `user${i}@fdd.dev`,
+      user_role: "ADMIN",
+      ip_address: "127.0.0.1",
+      before_state: null,
+      after_state: null,
+      changed_fields: null,
+      session_id: null,
+      request_id: null,
+      expires_at: null,
+      created_at: new Date().toISOString(),
+    }));
+
+    return HttpResponse.json({
+      total: mockItems.length,
+      items: mockItems.slice(offset, offset + limit),
+      limit,
+      offset,
+    });
   }),
 ];

@@ -44,7 +44,7 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { kpis, isLoading: kpisLoading } = usePortalKpis();
+  const { kpis, isLoading: kpisLoading, errors } = usePortalKpis();
   const { data: health } = useModuleHealth();
 
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -77,26 +77,35 @@ export default function DashboardPage() {
           <>
             <KpiCard
               label="Active FDD Deals"
-              value={String(kpis.activeDeals)}
+              value={errors.fdd ? "—" : String(kpis.activeDeals)}
               icon={Briefcase}
-              variant="positive"
+              variant={errors.fdd ? "negative" : "positive"}
+              hoverLift
+              generous
             />
             <KpiCard
               label="Watchlist Alerts"
-              value={String(kpis.watchlistAlerts)}
+              value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
               icon={Bell}
+              variant={errors.kiis ? "negative" : "default"}
+              hoverLift
+              generous
             />
             <KpiCard
               label="IM In Progress"
-              value={String(kpis.imInProgress)}
+              value={errors.im ? "—" : String(kpis.imInProgress)}
               icon={FileText}
-              variant="caution"
+              variant={errors.im ? "negative" : "caution"}
+              hoverLift
+              generous
             />
             <KpiCard
               label="Draft Deals"
-              value={String(kpis.pendingIssues)}
+              value={errors.fdd ? "—" : String(kpis.pendingIssues)}
               icon={AlertTriangle}
               variant="negative"
+              hoverLift
+              generous
             />
           </>
         )}
@@ -104,9 +113,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-lg font-heading font-semibold text-text-dark mb-3">
-          Quick Actions
-        </h2>
+        <h2 className="label-uppercase mb-3">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {QUICK_ACTIONS.map((action) => (
             <div
@@ -119,10 +126,10 @@ export default function DashboardPage() {
                 if (e.key === "Enter" || e.key === " ") navigate(action.to);
               }}
             >
-              <Card className="hover:shadow-md transition-shadow">
+              <Card variant="forest-lift">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amic/10 rounded-lg">
-                    <action.icon className="h-5 w-5 text-amic" />
+                  <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
+                    <action.icon className="w-5 h-5 text-amic" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-text-dark group-hover:text-amic transition-colors flex items-center gap-1">
@@ -142,9 +149,7 @@ export default function DashboardPage() {
 
       {/* Module Status */}
       <div>
-        <h2 className="text-lg font-heading font-semibold text-text-dark mb-3">
-          Module Status
-        </h2>
+        <h2 className="label-uppercase mb-3">Module Status</h2>
         <Card>
           <div className="flex flex-wrap gap-6">
             {health ? (
@@ -177,9 +182,7 @@ export default function DashboardPage() {
 
       {/* Module Navigation Shortcuts */}
       <div>
-        <h2 className="text-lg font-heading font-semibold text-text-dark mb-3">
-          Modules
-        </h2>
+        <h2 className="label-uppercase mb-3">Modules</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div
             role="button"
@@ -190,10 +193,10 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/fdd/deals");
             }}
           >
-            <Card className="hover:shadow-md transition-shadow">
+            <Card variant="forest-lift">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Briefcase className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-amic" />
                 </div>
                 <div>
                   <div className="font-medium text-text-dark">Auto FDD</div>
@@ -213,10 +216,10 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/kiis");
             }}
           >
-            <Card className="hover:shadow-md transition-shadow">
+            <Card variant="forest-lift">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-50 rounded-lg">
-                  <Search className="h-5 w-5 text-emerald-600" />
+                <div className="w-10 h-10 rounded-lg bg-accent-light flex items-center justify-center">
+                  <Search className="w-5 h-5 text-accent" />
                 </div>
                 <div>
                   <div className="font-medium text-text-dark">KIIS</div>
@@ -236,10 +239,10 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/im");
             }}
           >
-            <Card className="hover:shadow-md transition-shadow">
+            <Card variant="forest-lift">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <FileText className="h-5 w-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-amic-500" />
                 </div>
                 <div>
                   <div className="font-medium text-text-dark">IM Generator</div>

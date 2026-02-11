@@ -19,7 +19,7 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
 
   const filter = { modules, month, year };
-  const { events, ganttItems, isLoading } = useCalendarEvents(filter);
+  const { events, ganttItems, isLoading, errors } = useCalendarEvents(filter);
 
   const handlePrevMonth = useCallback(() => {
     setMonth((prev) => {
@@ -83,11 +83,42 @@ export default function CalendarPage() {
         onExportIcs={handleExportIcs}
       />
 
+      {/* Error banners for unreachable modules */}
+      {(errors.fdd || errors.kiis || errors.im) && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+          Some modules are unreachable:{" "}
+          {[
+            errors.fdd && "FDD",
+            errors.kiis && "KIIS",
+            errors.im && "IM",
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          . Their events may be missing.
+        </div>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <Skeleton className="h-96 w-full rounded-lg" />
       ) : viewMode === "calendar" ? (
-        <CalendarGrid year={year} month={month} events={events} />
+        <>
+          <CalendarGrid year={year} month={month} events={events} />
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amic" />
+              <span className="text-text-secondary">FDD Deadline</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <span className="text-text-secondary">KIIS Deal</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-accent" />
+              <span className="text-text-secondary">IM Due Date</span>
+            </div>
+          </div>
+        </>
       ) : (
         <GanttTimeline items={ganttItems} year={year} month={month} />
       )}

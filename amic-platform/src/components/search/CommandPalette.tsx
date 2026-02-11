@@ -51,6 +51,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const {
     results,
     isLoading,
+    failedModules,
     recentSearches,
     addRecentSearch,
     clearRecentSearches,
@@ -270,6 +271,14 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   })}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Failed modules warning */}
+          {failedModules.length > 0 && hasQuery && (
+            <div className="mx-2 mt-1 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+              Some modules could not be searched:{" "}
+              {failedModules.map((m) => MODULE_LABELS[m]).join(", ")}
             </div>
           )}
 

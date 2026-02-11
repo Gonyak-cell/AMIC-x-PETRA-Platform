@@ -99,7 +99,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Avatar + Basic Info */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-amic rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 bg-gradient-to-br from-amic to-amic-700 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-xl">
                 {user.display_name?.charAt(0).toUpperCase() ?? "U"}
               </span>

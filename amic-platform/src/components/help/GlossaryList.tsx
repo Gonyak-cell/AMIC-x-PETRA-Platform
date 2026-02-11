@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Input, Badge, Button } from "@/components/ui";
+import { Input, Badge, Button, Card } from "@/components/ui";
 import { GLOSSARY } from "@/lib/glossary";
 import type { GlossaryTerm } from "@/types/help";
 
@@ -76,23 +76,22 @@ export function GlossaryList() {
           </p>
         ) : (
           filtered.map((term) => (
-            <div
-              key={term.term}
-              className="p-4 border border-gray-border rounded-lg"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-text-dark">{term.term}</span>
-                {term.abbreviation && (
-                  <span className="text-xs font-mono text-text-secondary bg-bg-cool px-1.5 py-0.5 rounded">
-                    {term.abbreviation}
-                  </span>
-                )}
-                <Badge variant={MODULE_BADGE_VARIANT[term.module]}>
-                  {term.module.toUpperCase()}
-                </Badge>
+            <Card key={term.term} variant="forest-lift">
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-text-dark">{term.term}</span>
+                  {term.abbreviation && (
+                    <span className="text-xs font-mono text-text-secondary bg-bg-cool px-1.5 py-0.5 rounded">
+                      {term.abbreviation}
+                    </span>
+                  )}
+                  <Badge variant={MODULE_BADGE_VARIANT[term.module]}>
+                    {term.module.toUpperCase()}
+                  </Badge>
+                </div>
+                <p className="text-sm text-text-secondary">{term.definition}</p>
               </div>
-              <p className="text-sm text-text-secondary">{term.definition}</p>
-            </div>
+            </Card>
           ))
         )}
       </div>

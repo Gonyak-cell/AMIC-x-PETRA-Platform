@@ -6,7 +6,7 @@ import { imApi } from "@/api/imClient";
 import { getItem, setItem } from "@/lib/storage";
 import type { Deal } from "@/modules/fdd/types/deal";
 import type { Document } from "@/modules/im/types/document";
-import type { GlobalSearchResult } from "@/types/search";
+import type { GlobalSearchResult, SearchModule } from "@/types/search";
 
 const RECENT_KEY = "recent_searches";
 const MAX_RECENT = 5;
@@ -89,10 +89,22 @@ export function useGlobalSearch(query: string) {
       {
         queryKey: ["global-search", "im", debouncedQuery],
         queryFn: async () => {
-          const { data } = await imApi.get<{ items: Document[] }>("/documents", {
-            params: { search: debouncedQuery },
-          });
-          return normalizeDocuments(data.items);
+          try {
+            const { data } = await imApi.get<{ items: Document[] }>("/documents", {
+              params: { search: debouncedQuery },
+            });
+            return normalizeDocuments(data.items);
+          } catch {
+            // Fallback: fetch all and filter client-side if search param unsupported
+            const { data } = await imApi.get<{ items: Document[] }>("/documents");
+            const q = debouncedQuery.toLowerCase();
+            const filtered = data.items.filter(
+              (d) =>
+                d.company_name.toLowerCase().includes(q) ||
+                (d.project_name?.toLowerCase().includes(q) ?? false),
+            );
+            return normalizeDocuments(filtered);
+          }
         },
         enabled,
         staleTime: 10_000,
@@ -105,6 +117,13 @@ export function useGlobalSearch(query: string) {
   const results: GlobalSearchResult[] = queryResults.flatMap(
     (r) => r.data ?? [],
   );
+
+  const MODULE_NAMES: SearchModule[] = ["fdd", "kiis", "im"];
+  const failedModules: SearchModule[] = enabled
+    ? queryResults
+        .map((r, i) => (r.isError ? MODULE_NAMES[i] : null))
+        .filter((m): m is SearchModule => m !== null)
+    : [];
 
   // Recent searches management
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
@@ -128,6 +147,7 @@ export function useGlobalSearch(query: string) {
   return {
     results,
     isLoading,
+    failedModules,
     recentSearches,
     addRecentSearch,
     clearRecentSearches,

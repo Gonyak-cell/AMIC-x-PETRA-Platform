@@ -46,7 +46,8 @@ interface NotificationPanelProps {
 
 export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
   const navigate = useNavigate();
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead, endpointAvailable } =
+    useNotifications();
 
   if (!open) return null;
 
@@ -74,7 +75,11 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
 
       {/* Notification List */}
       <div className="max-h-96 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {!endpointAvailable ? (
+          <div className="p-6 text-center text-sm text-text-secondary">
+            Notification service is not yet available
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="p-6 text-center text-sm text-text-secondary">
             No notifications yet
           </div>

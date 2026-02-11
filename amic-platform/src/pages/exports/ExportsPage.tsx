@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileOutput, CheckCircle, XCircle, HardDrive } from "lucide-react";
+import { FileOutput, CheckCircle, XCircle, HardDrive, AlertCircle } from "lucide-react";
 import { useExports, useRedownload, useBatchDownload, useDeleteExport } from "@/hooks/useExports";
 import { ExportFilterBar } from "@/components/exports/ExportFilterBar";
 import { ExportTable } from "@/components/exports/ExportTable";
@@ -10,7 +10,7 @@ export default function ExportsPage() {
   const [module, setModule] = useState<ExportModule | undefined>();
   const [status, setStatus] = useState<ExportStatus | undefined>();
 
-  const { data, isLoading } = useExports({ module, status });
+  const { data, isLoading, endpointAvailable } = useExports({ module, status });
   const redownload = useRedownload();
   const batchDownload = useBatchDownload();
   const deleteExport = useDeleteExport();
@@ -50,18 +50,24 @@ export default function ExportsPage() {
               label="Total Exports"
               value={String(data?.total ?? 0)}
               icon={FileOutput}
+              hoverLift
+              generous
             />
             <KpiCard
               label="Completed"
               value={String(completedCount)}
               icon={CheckCircle}
               variant="positive"
+              hoverLift
+              generous
             />
             <KpiCard
               label="Failed"
               value={String(failedCount)}
               icon={XCircle}
               variant="negative"
+              hoverLift
+              generous
             />
             <KpiCard
               label="Storage Used"
@@ -71,6 +77,8 @@ export default function ExportsPage() {
                   : `${(totalSize / 1024).toFixed(1)} KB`
               }
               icon={HardDrive}
+              hoverLift
+              generous
             />
           </>
         )}
@@ -85,7 +93,12 @@ export default function ExportsPage() {
       />
 
       {/* Table */}
-      {records.length === 0 && !isLoading ? (
+      {!endpointAvailable ? (
+        <EmptyState
+          title="Export service is not yet available"
+          description="The export backend endpoint is being set up. Exports will appear here once ready."
+        />
+      ) : records.length === 0 && !isLoading ? (
         <EmptyState
           title="No exports yet"
           description="Exports from FDD reports, KIIS research, and IM documents will appear here."
@@ -100,6 +113,12 @@ export default function ExportsPage() {
           isBatchDownloading={batchDownload.isPending}
         />
       )}
+
+      {/* Retention notice */}
+      <div className="flex items-center gap-2 text-sm text-text-secondary pt-4 border-t border-gray-border">
+        <AlertCircle className="w-4 h-4" />
+        <span>Exports are retained for 30 days before auto-deletion</span>
+      </div>
     </div>
   );
 }

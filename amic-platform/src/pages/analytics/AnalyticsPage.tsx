@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
   >("all");
 
   const filter = { timeRange, module: selectedModule === "all" ? undefined : selectedModule };
-  const { kpis, isLoading: kpisLoading } = useAnalyticsKpis(filter);
+  const { kpis, isLoading: kpisLoading, errors } = useAnalyticsKpis(filter);
   const { fddTimeSeries, imTimeSeries, isLoading: tsLoading } =
     useAnalyticsTimeSeries(filter);
   const { data: sectorData } = useDealsBySector();
@@ -47,13 +47,16 @@ export default function AnalyticsPage() {
       />
 
       {/* KPI Cards */}
-      <ModuleKpiSection kpis={kpis} isLoading={kpisLoading} />
+      <ModuleKpiSection
+        kpis={kpis}
+        isLoading={kpisLoading}
+        selectedModule={selectedModule === "all" ? undefined : selectedModule}
+        errors={errors}
+      />
 
       {/* Charts */}
       <div>
-        <h2 className="text-lg font-heading font-semibold text-text-dark mb-3">
-          Trends & Distributions
-        </h2>
+        <h2 className="label-uppercase mb-3">Trends & Distributions</h2>
         <AnalyticsChartPanel
           fddTimeSeries={fddTimeSeries}
           imTimeSeries={imTimeSeries}

@@ -38,6 +38,8 @@ const ACTION_BADGE_VARIANT: Record<string, "success" | "warning" | "error" | "in
   login: "neutral",
   logout: "neutral",
   view: "neutral",
+  lock: "warning",
+  purge: "error",
 };
 
 export default function ActivityLogPage() {
@@ -72,36 +74,37 @@ export default function ActivityLogPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // Client-side CSV generation as fallback
-      const rows = items.map((item) =>
-        [
-          item.created_at,
-          item.user_name,
-          item.module,
-          item.action,
-          item.entity_type,
-          item.entity_name ?? "",
-          item.description,
-        ].join(","),
-      );
-      const csv = [
-        "Timestamp,User,Module,Action,Entity Type,Entity Name,Description",
-        ...rows,
-      ].join("\n");
-
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `activity-log-${today}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-
+      await exportFn(filters);
       toast.success("Activity log exported");
     } catch {
-      // Try server-side export as fallback
       try {
-        await exportFn(filters);
+        const escapeCsv = (v: string) =>
+          `"${v.replace(/"/g, '""')}"`;
+        const rows = items.map((item) =>
+          [
+            item.created_at,
+            item.user_name,
+            item.module,
+            item.action,
+            item.entity_type,
+            item.entity_name ?? "",
+            item.description,
+          ]
+            .map(escapeCsv)
+            .join(","),
+        );
+        const csv = [
+          "Timestamp,User,Module,Action,Entity Type,Entity Name,Description",
+          ...rows,
+        ].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `activity-log-${today}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
         toast.success("Activity log exported");
       } catch {
         toast.error("Export not available");
@@ -237,22 +240,30 @@ export default function ActivityLogPage() {
           label="Total Activities"
           value={String(totalCount)}
           icon={ClipboardList}
+          hoverLift
+          generous
         />
         <KpiCard
           label="Today"
           value={String(todayCount)}
           icon={Activity}
           variant={todayCount > 0 ? "positive" : "default"}
+          hoverLift
+          generous
         />
         <KpiCard
           label="Active Users"
           value={String(uniqueUsers)}
           icon={Users}
+          hoverLift
+          generous
         />
         <KpiCard
           label="Export"
           value="CSV"
           icon={Download}
+          hoverLift
+          generous
         />
       </div>
 
@@ -286,6 +297,7 @@ export default function ActivityLogPage() {
               data={items}
               keyField="id"
               striped
+              uppercaseHeaders
             />
           )}
         </Card>

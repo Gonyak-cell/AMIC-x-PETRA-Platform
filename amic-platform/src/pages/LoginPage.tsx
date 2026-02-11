@@ -1,17 +1,18 @@
-/** 로그인 페이지 (AMIC x PETRA Platform 브랜딩 좌우 분할 레이아웃) */
+/** 로그인 페이지 (TM CI 기반 리디자인 — 숲 배경 + 세리프/산세리프 브랜딩) */
 
 import { useState, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input } from "@/components/ui";
 import { LogIn } from "lucide-react";
+import brochureCover from "@/assets/images/brochure-cover.png";
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from
-    ?.pathname ?? "/deals";
+    ?.pathname ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,42 +41,31 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - AMIC x PETRA Platform Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-amic flex-col justify-center px-16">
-        <div className="max-w-md">
-          <h1 className="text-white font-heading font-bold text-3xl mb-2">
-            AMIC x PETRA Platform
-          </h1>
-          <h2 className="text-white/80 font-heading text-xl mb-8">
-            AMIC Law & PetraBridge Partners
-          </h2>
-
-          <div className="border-l-4 border-accent pl-4 mb-8">
-            <p className="text-white/90 text-lg leading-relaxed">
-              FDD · KIIS · IM<br />
-              Unified Analysis Platform
-            </p>
-          </div>
-
-          <p className="text-white/60 text-sm leading-relaxed">
-            Auto FDD, KIIS, IM Generator를 하나로 통합한 플랫폼.
-            <br />
-            딜 실행 속도를 높이고 분석 품질을 향상시킵니다.
-          </p>
-        </div>
+      {/* Left Panel — Brochure Cover */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img
+          src={brochureCover}
+          alt="AMIC & Petrabridge Partners"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel — Login Form */}
       <div className="flex-1 flex items-center justify-center bg-white px-6 lg:px-16">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <h1 className="text-amic font-heading font-bold text-2xl">
-              AMIC x PETRA Platform
-            </h1>
-            <p className="text-text-secondary text-sm mt-1">
-              AMIC Law & PetraBridge Partners
-            </p>
+          <div className="lg:hidden mb-10">
+            <div className="flex items-start justify-center gap-3">
+              <span className="text-amic font-serif font-bold text-[26px] tracking-[0.2em] leading-none mt-0.5">
+                AMIC
+              </span>
+              <span className="text-amic/25 text-2xl font-extralight leading-none">&amp;</span>
+              <div className="text-accent font-heading font-bold leading-[1.15]">
+                <div className="text-lg tracking-[0.1em]">PETRABRIDGE</div>
+                <div className="text-lg tracking-[0.1em]">PARTNERS</div>
+              </div>
+            </div>
+            <div className="mt-4 mx-auto h-px w-20 bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
           </div>
 
           <div className="mb-8">
@@ -89,7 +79,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="text-sm text-negative bg-red-50 border border-negative/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-negative bg-red-50 border border-negative/20 rounded-corporate px-4 py-3">
                 {error}
               </div>
             )}
@@ -114,7 +104,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              variant="accent"
+              variant="primary"
               size="lg"
               className="w-full"
               loading={loading}
@@ -124,8 +114,8 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-footnote text-text-secondary">
-            AMIC x PETRA Platform v1.0 | AMIC Law & PetraBridge Partners
+          <p className="mt-8 text-center text-footnote text-text-muted">
+            AMIC x PETRA Platform v1.0
           </p>
         </div>
       </div>

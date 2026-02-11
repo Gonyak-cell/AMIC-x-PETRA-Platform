@@ -39,6 +39,7 @@ import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { ModuleSwitcher } from "./ModuleSwitcher";
 import { Badge } from "@/components/ui";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
+import logoAmicPetra from "@/assets/images/logo-amic-petra.png";
 
 // ── FDD Navigation ──
 
@@ -71,14 +72,23 @@ const FDD_REPORT_NAV = [
 
 // ── KIIS Navigation ──
 
-const KIIS_NAV = [
+const KIIS_OVERVIEW = [
   { to: "/kiis", label: "Dashboard", icon: BarChart3 },
+];
+
+const KIIS_RESEARCH = [
   { to: "/kiis/companies", label: "Companies", icon: Building2 },
   { to: "/kiis/funds", label: "Funds", icon: Wallet },
   { to: "/kiis/reits", label: "REITs", icon: Building },
   { to: "/kiis/news", label: "News & Sentiment", icon: Newspaper },
+];
+
+const KIIS_PIPELINE = [
   { to: "/kiis/deals", label: "Deal Sourcing", icon: TrendingUp },
   { to: "/kiis/sanctions", label: "Sanctions", icon: ShieldAlert },
+];
+
+const KIIS_PORTFOLIO = [
   { to: "/kiis/portfolio", label: "Portfolio", icon: Activity },
   { to: "/kiis/managers", label: "Managers", icon: UserSearch },
   { to: "/kiis/entities", label: "Entity Match", icon: GitCompare },
@@ -114,15 +124,17 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
   return (
     <aside
-      className={cn("w-64 bg-amic min-h-screen flex flex-col", className)}
+      className={cn("w-64 bg-amic min-h-screen flex flex-col shadow-sidebar", className)}
       role="navigation"
       aria-label="Main navigation"
     >
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-white/10">
-        <div className="text-white font-heading font-bold text-lg">
-          AMIC x PETRA Platform
-        </div>
+      <div className="relative bg-white px-4 pt-5 pb-4">
+        <img
+          src={logoAmicPetra}
+          alt="AMIC & PETRABRIDGE PARTNERS"
+          className="w-full h-auto"
+        />
       </div>
 
       {/* Home Link + Portal Nav */}
@@ -170,71 +182,107 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               ))}
             </nav>
 
-            {isInDealWorkspace && (
-              <>
-                <SidebarSection title="Workflow">
-                  {FDD_WORKFLOW_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      end={item.end}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection title="Setup">
-                  {FDD_SETUP_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection title="Analysis">
-                  {FDD_ANALYSIS_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection title="Report">
-                  {FDD_REPORT_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-              </>
-            )}
+            <SidebarSection title="Workflow">
+              {FDD_WORKFLOW_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={isInDealWorkspace ? `/fdd/deals/${dealId}/${item.to}` : "#"}
+                  label={item.label}
+                  icon={item.icon}
+                  end={item.end}
+                  disabled={!isInDealWorkspace}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+            <SidebarSection title="Setup" collapsible defaultOpen storageKey="fdd-setup">
+              {FDD_SETUP_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={isInDealWorkspace ? `/fdd/deals/${dealId}/${item.to}` : "#"}
+                  label={item.label}
+                  icon={item.icon}
+                  disabled={!isInDealWorkspace}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+            <SidebarSection title="Analysis" collapsible defaultOpen storageKey="fdd-analysis">
+              {FDD_ANALYSIS_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={isInDealWorkspace ? `/fdd/deals/${dealId}/${item.to}` : "#"}
+                  label={item.label}
+                  icon={item.icon}
+                  disabled={!isInDealWorkspace}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+            <SidebarSection title="Report" collapsible defaultOpen storageKey="fdd-report">
+              {FDD_REPORT_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={isInDealWorkspace ? `/fdd/deals/${dealId}/${item.to}` : "#"}
+                  label={item.label}
+                  icon={item.icon}
+                  disabled={!isInDealWorkspace}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
           </>
         )}
 
         {/* KIIS Navigation */}
         {isKiis && (
-          <nav className="space-y-1" aria-label="KIIS navigation">
-            {KIIS_NAV.map((item) => (
-              <SidebarNavItem
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                icon={item.icon}
-                onClick={onNavItemClick}
-              />
-            ))}
-          </nav>
+          <>
+            <nav className="space-y-1" aria-label="KIIS navigation">
+              {KIIS_OVERVIEW.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  end
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </nav>
+            <SidebarSection title="Research" collapsible defaultOpen storageKey="kiis-research">
+              {KIIS_RESEARCH.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+            <SidebarSection title="Deal Pipeline" collapsible defaultOpen storageKey="kiis-pipeline">
+              {KIIS_PIPELINE.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+            <SidebarSection title="Portfolio Mgmt" collapsible defaultOpen storageKey="kiis-portfolio">
+              {KIIS_PORTFOLIO.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+          </>
         )}
 
         {/* IM Navigation */}
@@ -307,7 +355,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
             aria-label="Open profile settings"
           >
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
                 {user.display_name?.charAt(0).toUpperCase() || "U"}
               </span>
@@ -322,7 +370,10 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             </div>
           </button>
           <button
-            onClick={logout}
+            onClick={() => {
+              logout();
+              navigate("/login", { replace: true });
+            }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
           >
             <LogOut className="h-4 w-4" />

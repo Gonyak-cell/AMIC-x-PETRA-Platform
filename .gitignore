@@ -37,3 +37,8 @@ amic-platform/e2e/.auth/
 amic-platform/e2e/.env.test
 amic-platform/playwright-report/
 amic-platform/test-results/
+
+# Docker / Infrastructure
+certbot/
+ssl/
+.env.production

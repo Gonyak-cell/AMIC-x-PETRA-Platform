@@ -12,7 +12,7 @@ export function useWatchlist() {
     queryKey: ["kiis", "watchlist"],
     queryFn: async () => {
       const { data } = await kiisApi.get("/watchlist");
-      return data;
+      return data.items;
     },
   });
 }

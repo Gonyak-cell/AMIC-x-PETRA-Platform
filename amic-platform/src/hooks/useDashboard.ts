@@ -4,7 +4,7 @@ import { kiisApi } from "@/api/kiisClient";
 import { imApi } from "@/api/imClient";
 import type { Deal } from "@/modules/fdd/types/deal";
 import type { Document } from "@/modules/im/types/document";
-import type { PortalKpis, ModuleHealth } from "@/types/dashboard";
+import type { PortalKpis, PortalKpiErrors, ModuleHealth } from "@/types/dashboard";
 
 export function usePortalKpis() {
   const results = useQueries({
@@ -68,7 +68,13 @@ export function usePortalKpis() {
       : 0,
   };
 
-  return { kpis, isLoading, isError };
+  const errors: PortalKpiErrors = {
+    fdd: dealsQuery.isError,
+    kiis: alertsQuery.isError,
+    im: docsQuery.isError,
+  };
+
+  return { kpis, isLoading, isError, errors };
 }
 
 export function useModuleHealth() {

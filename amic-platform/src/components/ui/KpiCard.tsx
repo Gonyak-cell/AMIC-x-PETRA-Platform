@@ -3,18 +3,22 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 export interface KpiCardProps {
-  label: string;
+  /** KPI name — accepts either `label` or `title` */
+  label?: string;
+  title?: string;
   value: string;
   trend?: "up" | "down" | "flat";
   trendValue?: string;
   variant?: "default" | "positive" | "negative" | "caution";
   subtitle?: string;
   icon?: LucideIcon;
+  hoverLift?: boolean;
+  generous?: boolean;
   className?: string;
 }
 
 const variantStyles = {
-  default: "border-gray-border",
+  default: "border-gray-border border-t-2 border-t-amic/10",
   positive: "border-positive/30 bg-bg-light-green/30",
   negative: "border-negative/30 bg-red-50/30",
   caution: "border-caution/30 bg-amber-50/30",
@@ -34,20 +38,26 @@ const TrendIcons = {
 
 export function KpiCard({
   label,
+  title,
   value,
   trend,
   trendValue,
   variant = "default",
   subtitle,
   icon: Icon,
+  hoverLift = false,
+  generous = false,
   className,
 }: KpiCardProps) {
+  const displayLabel = label ?? title ?? "";
   const TrendIcon = trend ? TrendIcons[trend] : null;
 
   return (
     <div
       className={cn(
-        "bg-white rounded-lg border p-4 shadow-card",
+        "bg-white rounded-corporate border shadow-card",
+        generous ? "p-6" : "p-4",
+        hoverLift && "hover-lift cursor-pointer",
         variantStyles[variant],
         className
       )}
@@ -55,7 +65,7 @@ export function KpiCard({
       {/* 라벨 + 아이콘 */}
       <div className="flex items-center gap-2 mb-2">
         {Icon && <Icon className="h-4 w-4 text-text-secondary" />}
-        <span className="text-kpi-label text-text-secondary">{label}</span>
+        <span className="text-kpi-label text-text-secondary">{displayLabel}</span>
       </div>
 
       {/* KPI 값 (IBM Plex Mono) */}

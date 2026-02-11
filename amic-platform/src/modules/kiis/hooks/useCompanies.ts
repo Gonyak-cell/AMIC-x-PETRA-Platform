@@ -61,11 +61,14 @@ export function useCompanyDisclosures(corpCode: string) {
 }
 
 export function useDisclosureLink(rceptNo: string) {
-  return useQuery<{ viewer_url: string; pdf_url: string }>({
+  return useQuery<{ viewer_url: string; pdf_url: string | null }>({
     queryKey: ["kiis", "disclosures", "link", rceptNo],
     queryFn: async () => {
       const { data } = await kiisApi.get(`/disclosures/link/${rceptNo}`);
-      return data;
+      return {
+        viewer_url: data.dart_viewer_url,
+        pdf_url: data.dart_pdf_url ?? null,
+      };
     },
     enabled: !!rceptNo,
   });

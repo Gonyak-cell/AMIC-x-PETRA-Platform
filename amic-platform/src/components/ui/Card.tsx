@@ -1,11 +1,15 @@
 import { cn } from "@/lib/cn";
 
+export type CardVariant = "default" | "forest-lift" | "accent-left" | "elevated";
+
 export interface CardProps {
   title?: string;
   headerBar?: boolean;
   actions?: React.ReactNode;
   children: React.ReactNode;
   padding?: "none" | "sm" | "md" | "lg";
+  variant?: CardVariant;
+  hoverEffect?: boolean;
   className?: string;
 }
 
@@ -16,25 +20,39 @@ const paddingStyles = {
   lg: "p-6",
 };
 
+const cardVariantStyles: Record<CardVariant, string> = {
+  default: "shadow-card",
+  "forest-lift": "shadow-forest-card hover-lift",
+  "accent-left": "shadow-card border-accent-left",
+  elevated: "shadow-elevated",
+};
+
 export function Card({
   title,
   headerBar = false,
   actions,
   children,
   padding = "md",
+  variant = "default",
+  hoverEffect = false,
   className,
 }: CardProps) {
   return (
     <div
       className={cn(
-        "bg-white rounded-lg border border-gray-border shadow-card",
+        "bg-white rounded-corporate border border-gray-border",
+        cardVariantStyles[variant],
+        hoverEffect && variant !== "forest-lift" && "transition-shadow duration-200 hover:shadow-card-hover",
         className
       )}
     >
-      {/* 다크그린 헤더바 */}
+      {/* 헤더바 */}
       {headerBar && title && (
-        <div className="bg-amic text-white px-5 py-3 rounded-t-lg flex items-center justify-between">
-          <h3 className="font-heading font-semibold">{title}</h3>
+        <div className="bg-white px-5 py-3 border-b border-gray-border rounded-t-corporate flex items-center justify-between">
+          <h3 className="font-heading font-semibold text-amic flex items-center gap-2">
+            <span className="inline-block w-1 h-4 bg-accent rounded-full" />
+            {title}
+          </h3>
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       )}

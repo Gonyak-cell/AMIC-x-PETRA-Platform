@@ -127,7 +127,15 @@ export default function UserManagementPage() {
       key: "display_name",
       header: "Name",
       render: (row) => (
-        <span className="font-medium text-text-dark">{row.display_name}</span>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-amic-100 flex items-center justify-center text-sm font-medium text-amic">
+            {row.display_name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </div>
+          <span className="font-medium text-text-dark">{row.display_name}</span>
+        </div>
       ),
     },
     {
@@ -201,22 +209,30 @@ export default function UserManagementPage() {
           label="Total Users"
           value={String(kpis.total)}
           icon={Users}
+          hoverLift
+          generous
         />
         <KpiCard
           label="Admins"
           value={String(kpis.admins)}
           icon={ShieldCheck}
           variant="positive"
+          hoverLift
+          generous
         />
         <KpiCard
           label="Managers"
           value={String(kpis.managers)}
           icon={UserCheck}
+          hoverLift
+          generous
         />
         <KpiCard
           label="Analysts & Viewers"
           value={String(kpis.others)}
           icon={Eye}
+          hoverLift
+          generous
         />
       </div>
 
@@ -237,6 +253,7 @@ export default function UserManagementPage() {
             keyField="id"
             loading={isLoading}
             striped
+            uppercaseHeaders
           />
         )}
       </Card>
