@@ -1,11 +1,20 @@
-import { FileText } from "lucide-react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ImErrorBoundary } from "@/modules/im/components/ImErrorBoundary";
+import DocumentListPage from "@/modules/im/pages/DocumentListPage";
+import CreateDocumentPage from "@/modules/im/pages/CreateDocumentPage";
+import DocumentDetailPage from "@/modules/im/pages/DocumentDetailPage";
+import TemplatesPage from "@/modules/im/pages/TemplatesPage";
 
 export default function ImRoutes() {
   return (
-    <div className="flex flex-col items-center justify-center h-64 text-content-secondary">
-      <FileText className="h-12 w-12 mb-4 opacity-40" />
-      <h2 className="text-lg font-heading font-semibold mb-2">IM Module</h2>
-      <p className="text-sm">Information Memorandum Generator - Phase 3</p>
-    </div>
+    <ImErrorBoundary>
+      <Routes>
+        <Route index element={<DocumentListPage />} />
+        <Route path="new" element={<CreateDocumentPage />} />
+        <Route path="documents/:documentId" element={<DocumentDetailPage />} />
+        <Route path="templates" element={<TemplatesPage />} />
+        <Route path="*" element={<Navigate to="/im" replace />} />
+      </Routes>
+    </ImErrorBoundary>
   );
 }
