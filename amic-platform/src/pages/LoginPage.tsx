@@ -1,4 +1,4 @@
-/** 로그인 페이지 (AMIC 브랜딩 좌우 분할 레이아웃) */
+/** 로그인 페이지 (AMIC x PETRA Platform 브랜딩 좌우 분할 레이아웃) */
 
 import { useState, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -40,27 +40,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - AMIC Branding */}
+      {/* Left Panel - AMIC x PETRA Platform Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-amic flex-col justify-center px-16">
         <div className="max-w-md">
           <h1 className="text-white font-heading font-bold text-3xl mb-2">
-            AMIC 법무법인 아믹
+            AMIC x PETRA Platform
           </h1>
           <h2 className="text-white/80 font-heading text-xl mb-8">
-            Auto FDD
+            AMIC Law & PetraBridge Partners
           </h2>
 
           <div className="border-l-4 border-accent pl-4 mb-8">
             <p className="text-white/90 text-lg leading-relaxed">
-              Financial Due Diligence<br />
-              Automation Platform
+              FDD · KIIS · IM<br />
+              Unified Analysis Platform
             </p>
           </div>
 
           <p className="text-white/60 text-sm leading-relaxed">
-            전문적이고 체계적인 FDD 분석을 위한 올인원 플랫폼.
-            <br />
-            QoE Bridge, Net Debt, Working Capital 분석을 자동화하여
+            Auto FDD, KIIS, IM Generator를 하나로 통합한 플랫폼.
             <br />
             딜 실행 속도를 높이고 분석 품질을 향상시킵니다.
           </p>
@@ -73,10 +71,10 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <h1 className="text-amic font-heading font-bold text-2xl">
-              Auto FDD
+              AMIC x PETRA Platform
             </h1>
             <p className="text-text-secondary text-sm mt-1">
-              AMIC Law Financial Due Diligence
+              AMIC Law & PetraBridge Partners
             </p>
           </div>
 
@@ -85,7 +83,7 @@ export default function LoginPage() {
               Welcome
             </h2>
             <p className="text-text-secondary mt-2">
-              Sign in to Auto FDD to continue
+              Sign in to continue
             </p>
           </div>
 
@@ -127,7 +125,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-8 text-center text-footnote text-text-secondary">
-            Auto FDD v1.0 | AMIC Law & PetraBridge Partners
+            AMIC x PETRA Platform v1.0 | AMIC Law & PetraBridge Partners
           </p>
         </div>
       </div>
