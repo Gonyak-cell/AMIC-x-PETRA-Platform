@@ -6,15 +6,14 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/api/client";
-import {
-  getAccessToken,
-  clearTokens,
-} from "@/hooks/useAuth";
+import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 import type { AuthUser, AuthState } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -25,36 +24,42 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setState(next);
   }, []);
 
-  // On mount: check for existing token and fetch user profile
+  // M9: Listen for force-logout events from interceptor
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      // No token — try unauthenticated /me (works when AUTH_ENABLED=False)
+    const handler = () => {
+      // 쿠키는 백엔드가 삭제함
+      queryClient.clear();
+      setState({ user: null, isAuthenticated: false, isLoading: false });
+    };
+    window.addEventListener(AUTH_LOGOUT_EVENT, handler);
+    return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handler);
+  }, [queryClient]);
+
+  // On mount: check for existing token and fetch user profile (M12: AbortController cleanup)
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const fetchMe = () => {
       api
-        .get<AuthUser>("/auth/me")
+        .get<AuthUser>("/auth/me", { signal: controller.signal })
         .then(({ data }) => {
-          setState({
-            user: data,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+          if (cancelled) return;
+          setState({ user: data, isAuthenticated: true, isLoading: false });
         })
         .catch(() => {
+          if (cancelled) return;
+          // 쿠키가 없거나 만료되면 401 반환, 로그아웃 상태로 전환
           setState({ user: null, isAuthenticated: false, isLoading: false });
         });
-      return;
-    }
+    };
 
-    // Token exists — validate by fetching /me
-    api
-      .get<AuthUser>("/auth/me")
-      .then(({ data }) => {
-        setState({ user: data, isAuthenticated: true, isLoading: false });
-      })
-      .catch(() => {
-        clearTokens();
-        setState({ user: null, isAuthenticated: false, isLoading: false });
-      });
+    fetchMe();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, []);
 
   return (
