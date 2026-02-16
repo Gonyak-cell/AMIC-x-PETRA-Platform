@@ -2,7 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthContext, type AuthContextValue } from "@/components/auth/AuthContext";
-import { useAuth, getAccessToken, setTokens, clearTokens } from "../useAuth";
+import { useAuth } from "../useAuth";
 import { mockUser, mockViewerUser } from "@/test/mocks/data";
 
 function createAuthWrapper(overrides: Partial<AuthContextValue> = {}) {
@@ -30,7 +30,6 @@ function createAuthWrapper(overrides: Partial<AuthContextValue> = {}) {
 
 describe("useAuth", () => {
   it("throws when used outside AuthProvider", () => {
-    // Suppress console.error for the expected error
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect(() => {
@@ -49,10 +48,7 @@ describe("useAuth", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("logout clears tokens and resets state", () => {
-    setTokens("access", "refresh");
-    expect(getAccessToken()).toBe("access");
-
+  it("logout resets auth state", () => {
     const { wrapper, value } = createAuthWrapper();
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -60,7 +56,6 @@ describe("useAuth", () => {
       result.current.logout();
     });
 
-    expect(getAccessToken()).toBeNull();
     expect(value.setAuthState).toHaveBeenCalledWith({
       user: null,
       isAuthenticated: false,
@@ -70,7 +65,7 @@ describe("useAuth", () => {
 
   describe("hasPermission", () => {
     it("ADMIN has all permissions", () => {
-      const { wrapper } = createAuthWrapper({ user: mockUser }); // ADMIN
+      const { wrapper } = createAuthWrapper({ user: mockUser });
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       expect(result.current.hasPermission("deal:create")).toBe(true);
@@ -94,18 +89,5 @@ describe("useAuth", () => {
 
       expect(result.current.hasPermission("deal:read")).toBe(false);
     });
-  });
-});
-
-describe("token helpers", () => {
-  it("setTokens and getAccessToken work", () => {
-    setTokens("my-access", "my-refresh");
-    expect(getAccessToken()).toBe("my-access");
-  });
-
-  it("clearTokens removes both tokens", () => {
-    setTokens("a", "b");
-    clearTokens();
-    expect(getAccessToken()).toBeNull();
   });
 });

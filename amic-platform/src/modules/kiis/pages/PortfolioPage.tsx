@@ -131,7 +131,7 @@ export default function PortfolioPage() {
       width: "120px",
       render: (row) => (
         <Badge variant={statusVariant[row.survival_status] ?? "neutral"}>
-          {row.survival_status.replaceAll("_", " ")}
+          {row.survival_status.replace(/_/g, " ")}
         </Badge>
       ),
     },

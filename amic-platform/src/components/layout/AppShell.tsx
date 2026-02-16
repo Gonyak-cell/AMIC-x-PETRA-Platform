@@ -132,7 +132,7 @@ export default function AppShell({ children }: AppShellProps) {
         <main
           id="main-content"
           className="flex-1 bg-bg-cool"
-          {...(isMobile && sidebarOpen ? { inert: "" } : {})}
+          {...(isMobile && sidebarOpen ? { inert: true } : {})}
         >
           {/* Mobile Header */}
           {isMobile && (
