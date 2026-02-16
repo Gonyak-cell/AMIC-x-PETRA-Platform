@@ -21,8 +21,8 @@ export function Badge({ variant = "neutral", pill = false, children, className }
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2 py-0.5 text-xs font-medium transition-colors duration-200",
-        pill ? "rounded-full" : "rounded",
+        "inline-flex items-center px-2 py-0.5 text-xs font-medium tracking-wide transition-colors duration-200",
+        pill ? "rounded-full" : "rounded-md",
         variantStyles[variant],
         className
       )}

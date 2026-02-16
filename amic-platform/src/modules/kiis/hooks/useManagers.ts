@@ -7,6 +7,8 @@ import type {
   TrackResponse,
 } from "@/modules/kiis/types/manager";
 
+const CORP_CODE_RE = /^\d{8}$/;
+
 export function useManagerMovements(params: ManagerMovementParams = {}) {
   return useQuery<ManagerMovementListResponse>({
     queryKey: ["kiis", "managers", "movements", params],
@@ -22,7 +24,7 @@ export function useManagerMovements(params: ManagerMovementParams = {}) {
 
 export function useManagerMovementsByCompany(
   corpCode: string,
-  params: ManagerMovementParams = {},
+  params: { page?: number; size?: number } = {},
 ) {
   return useQuery<ManagerMovementListResponse>({
     queryKey: ["kiis", "managers", "movements", "by-company", corpCode, params],
@@ -33,7 +35,7 @@ export function useManagerMovementsByCompany(
       );
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
@@ -52,7 +54,7 @@ export function useManagerProfile(managerName: string) {
 
 export function useTrackManagers() {
   const queryClient = useQueryClient();
-  return useMutation<TrackResponse>({
+  return useMutation<TrackResponse, Error, void>({
     mutationFn: async () => {
       const { data } = await kiisApi.post("/managers/track");
       return data;

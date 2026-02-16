@@ -9,6 +9,8 @@ import {
   Select,
   Badge,
   EmptyState,
+  Pagination,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { Company, CorpCls } from "@/modules/kiis/types/company";
@@ -49,15 +51,17 @@ const columns: Column<Company>[] = [
     header: "Market",
     align: "center",
     width: "100px",
-    render: (row) => (
-      <Badge variant="info">{CORP_CLS_LABELS[row.corp_cls]}</Badge>
-    ),
+    render: (row) =>
+      row.corp_cls ? (
+        <Badge variant="info">{CORP_CLS_LABELS[row.corp_cls]}</Badge>
+      ) : (
+        "-"
+      ),
   },
-  { key: "ceo_nm", header: "CEO", render: (row) => row.ceo_nm ?? "-" },
   {
-    key: "address",
-    header: "Industry",
-    render: (row) => row.address ?? "-",
+    key: "stock_name",
+    header: "Stock Name",
+    render: (row) => row.stock_name ?? "-",
   },
 ];
 
@@ -76,9 +80,11 @@ export default function CompanyListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Companies
-      </h1>
+      <PageHero
+        title="Companies"
+        subtitle="Search and browse listed companies"
+        compact
+      />
 
       {/* Filters */}
       <div className="flex gap-3 items-end">
@@ -124,28 +130,11 @@ export default function CompanyListPage() {
         )}
       </Card>
 
-      {/* Pagination */}
-      {data && data.total > 20 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-text-secondary">
-            Page {page} of {Math.ceil(data.total / 20)}
-          </span>
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page >= Math.ceil(data.total / 20)}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={data ? Math.ceil(data.total / 20) : 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

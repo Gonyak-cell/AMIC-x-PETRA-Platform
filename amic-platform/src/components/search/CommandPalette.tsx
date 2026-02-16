@@ -41,10 +41,14 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const paletteRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -69,13 +73,38 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   const flatResults = results;
 
-  // Focus input when opened
+  // Focus input when opened + body scroll lock
   useEffect(() => {
     if (open) {
       setQuery("");
       setActiveIndex(-1);
+      document.body.style.overflow = "hidden";
       requestAnimationFrame(() => inputRef.current?.focus());
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!open) return;
+    const handleFocusTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !paletteRef.current) return;
+      const focusable = paletteRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleFocusTrap);
+    return () => document.removeEventListener("keydown", handleFocusTrap);
   }, [open]);
 
   // Navigate to result
@@ -155,6 +184,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
       {/* Palette */}
       <div
+        ref={paletteRef}
         className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
@@ -229,16 +259,18 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
           {/* Grouped Results */}
           {showResults && (
             <div className="p-2">
-              {(Object.keys(grouped) as SearchModule[]).map((module) => (
-                <div key={module} className="mb-2">
-                  <div className="px-2 py-1.5">
-                    <Badge variant={MODULE_BADGE_VARIANTS[module]}>
-                      {MODULE_LABELS[module]}
-                    </Badge>
-                  </div>
-                  {grouped[module].map((result) => {
-                    const globalIdx = flatResults.indexOf(result);
-                    const Icon = TYPE_ICONS[result.type] ?? FileText;
+              {(() => {
+                let cumulativeIdx = 0;
+                return (Object.keys(grouped) as SearchModule[]).map((module) => (
+                  <div key={module} className="mb-2">
+                    <div className="px-2 py-1.5">
+                      <Badge variant={MODULE_BADGE_VARIANTS[module]}>
+                        {MODULE_LABELS[module]}
+                      </Badge>
+                    </div>
+                    {grouped[module].map((result) => {
+                      const globalIdx = cumulativeIdx++;
+                      const Icon = TYPE_ICONS[result.type] ?? FileText;
                     return (
                       <button
                         key={`${result.module}-${result.id}`}
@@ -270,7 +302,8 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                     );
                   })}
                 </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
 

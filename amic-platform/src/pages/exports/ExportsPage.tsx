@@ -3,7 +3,7 @@ import { FileOutput, CheckCircle, XCircle, HardDrive, AlertCircle } from "lucide
 import { useExports, useRedownload, useBatchDownload, useDeleteExport } from "@/hooks/useExports";
 import { ExportFilterBar } from "@/components/exports/ExportFilterBar";
 import { ExportTable } from "@/components/exports/ExportTable";
-import { KpiCard, KpiCardSkeleton, EmptyState } from "@/components/ui";
+import { KpiCard, KpiCardSkeleton, EmptyState, PageHero } from "@/components/ui";
 import type { ExportModule, ExportStatus, ExportRecord } from "@/types/export";
 
 export default function ExportsPage() {
@@ -25,15 +25,12 @@ export default function ExportsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Data Export Hub
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Unified export history across FDD, KIIS, and IM modules
-        </p>
-      </div>
+      {/* Hero Section */}
+      <PageHero
+        title="Data Export Hub"
+        subtitle="Unified export history across FDD, KIIS, and IM modules"
+        compact
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

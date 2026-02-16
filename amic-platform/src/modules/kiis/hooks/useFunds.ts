@@ -4,6 +4,7 @@ import type {
   FundDetailResponse,
   FundListResponse,
   FundManagerItem,
+  FundManagerListResponse,
   FundListParams,
 } from "@/modules/kiis/types/fund";
 
@@ -32,11 +33,18 @@ export function useFundDetail(fundCode: string) {
   });
 }
 
-export function useFundManagers(params: { company_name?: string } = {}) {
+export function useFundManagers(
+  params: {
+    company_name?: string;
+    fund_code?: string;
+    page?: number;
+    size?: number;
+  } = {},
+) {
   return useQuery<FundManagerItem[]>({
-    queryKey: ["kiis", "managers", params],
+    queryKey: ["kiis", "fund-managers", params],
     queryFn: async () => {
-      const { data } = await kiisApi.get("/kofia/managers", {
+      const { data } = await kiisApi.get<FundManagerListResponse>("/kofia/managers", {
         params,
       });
       return data.items;

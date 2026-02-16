@@ -58,6 +58,16 @@ export interface AdjustmentItemApprove {
   approved_by: string;
 }
 
+// ── Category Breakdown ──────────────────────────────────
+
+export interface QoECategoryBreakdown {
+  [category: string]: {
+    count: number;
+    total_amount: string;
+    items?: string[];
+  };
+}
+
 // ── QoE Calculation ─────────────────────────────────────
 
 export interface QoECalculationRead {
@@ -75,7 +85,7 @@ export interface QoECalculationRead {
   total_adjustments: string;
   adjusted_ebitda: string;
   balance_check_error: string;
-  category_breakdown: Record<string, unknown>;
+  category_breakdown: QoECategoryBreakdown;
   engine_version: string;
   status: QoEStatus;
   adjustments: AdjustmentItemRead[];

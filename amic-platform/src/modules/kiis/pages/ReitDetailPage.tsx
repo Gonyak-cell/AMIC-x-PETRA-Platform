@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { Home, Package, Building2, Percent, PieChart, CheckCircle } from "lucide-react";
 import { useReitDetail } from "@/modules/kiis/hooks/useReits";
-import { Card, DataTable, Badge, KpiCard, Spinner, EmptyState } from "@/components/ui";
+import { Card, DataTable, KpiCard, Spinner, EmptyState, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { REITsAssetItem } from "@/modules/kiis/types/reit";
 import { formatAmount, formatPercent } from "@/lib/format";
@@ -34,7 +34,8 @@ const assetColumns: Column<REITsAssetItem>[] = [
 
 export default function ReitDetailPage() {
   const { reitsCode } = useParams<{ reitsCode: string }>();
-  const { data, isLoading } = useReitDetail(reitsCode!);
+  const code = reitsCode ?? "";
+  const { data, isLoading } = useReitDetail(code);
 
   const reit = data?.reits;
   const assets = data?.assets ?? [];
@@ -62,28 +63,15 @@ export default function ReitDetailPage() {
       </div>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          {reit.reits_name}
-        </h1>
-        <div className="mt-1 flex items-center gap-3 text-sm text-text-secondary">
-          <Badge variant="info">
-            {reit.reits_type === "self_managed" ? "Self-Managed" : "Entrusted"}
-          </Badge>
-          <Badge
-            variant={
-              reit.status === "operating"
-                ? "success"
-                : reit.status === "authorized"
-                  ? "info"
-                  : "neutral"
-            }
-          >
-            {reit.status}
-          </Badge>
-          {reit.management_company && <span>{reit.management_company}</span>}
-        </div>
-      </div>
+      <PageHero
+        title={reit.reits_name}
+        subtitle={[
+          reit.reits_type === "self_managed" ? "Self-Managed" : "Entrusted",
+          reit.status,
+          reit.management_company,
+        ].filter(Boolean).join(" | ")}
+        compact
+      />
 
       {/* KPI Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

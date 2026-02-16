@@ -8,6 +8,7 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type {
@@ -15,12 +16,7 @@ import type {
   ManagerDeal,
 } from "@/modules/kiis/types/manager";
 import { formatDate } from "@/lib/format";
-
-const movementVariant: Record<string, "info" | "warning" | "success"> = {
-  transfer: "info",
-  resignation: "warning",
-  appointment: "success",
-};
+import { MOVEMENT_VARIANT } from "@/modules/kiis/constants/variants";
 
 const movementColumns: Column<ManagerMovement>[] = [
   {
@@ -39,7 +35,7 @@ const movementColumns: Column<ManagerMovement>[] = [
     align: "center",
     width: "120px",
     render: (row) => (
-      <Badge variant={movementVariant[row.movement_type] ?? "neutral"}>
+      <Badge variant={MOVEMENT_VARIANT[row.movement_type] ?? "neutral"}>
         {row.movement_type}
       </Badge>
     ),
@@ -84,11 +80,16 @@ const dealColumns: Column<ManagerDeal>[] = [
 
 export default function ManagerProfilePage() {
   const { managerName } = useParams<{ managerName: string }>();
-  const decodedName = decodeURIComponent(managerName ?? "");
-  const { data: profile, isLoading } = useManagerProfile(decodedName);
+  let decodedName: string;
+  try {
+    decodedName = decodeURIComponent(managerName ?? "");
+  } catch {
+    decodedName = managerName ?? "";
+  }
+  const { data: profile, isLoading, isError } = useManagerProfile(decodedName);
 
   if (isLoading) return <Spinner />;
-  if (!profile) {
+  if (isError || !profile) {
     return (
       <EmptyState
         icon={UserSearch}
@@ -110,17 +111,14 @@ export default function ManagerProfilePage() {
       </div>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          {profile.manager_name}
-        </h1>
-        <div className="mt-1 flex gap-4 text-sm text-text-secondary">
-          {profile.current_company && (
-            <span>Company: {profile.current_company}</span>
-          )}
-          {profile.current_fund && <span>Fund: {profile.current_fund}</span>}
-        </div>
-      </div>
+      <PageHero
+        title={profile.manager_name}
+        subtitle={[
+          profile.current_company && `Company: ${profile.current_company}`,
+          profile.current_fund && `Fund: ${profile.current_fund}`,
+        ].filter(Boolean).join(" | ") || undefined}
+        compact
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -9,6 +9,8 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useDeal } from "@/modules/fdd/hooks/useDeals";
 import {
   useDebtCalculations,
   useRunDebt,
@@ -33,6 +35,7 @@ import {
   Select,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column, SelectOption } from "@/components/ui";
 import { formatAmount } from "@/lib/format";
@@ -57,10 +60,12 @@ function BridgeTable({
   bridge,
   onRecalculate,
   isRecalculating,
+  currency,
 }: {
   bridge: NetDebtBridgeSummary;
   onRecalculate: () => void;
   isRecalculating: boolean;
+  currency: string;
 }) {
   const rows: { label: string; value: string; bold: boolean; indent: boolean }[] = [
     { label: "Gross Debt", value: bridge.gross_debt, bold: false, indent: false },
@@ -78,7 +83,7 @@ function BridgeTable({
       actions={
         <div className="flex items-center gap-2">
           <Badge variant={bridge.is_balanced ? "success" : "error"}>
-            {bridge.is_balanced ? "Balanced" : `Error: ${formatAmount(bridge.balance_check_error, "KRW")}`}
+            {bridge.is_balanced ? "Balanced" : `Error: ${formatAmount(bridge.balance_check_error, currency)}`}
           </Badge>
           <Button
             variant="secondary"
@@ -105,7 +110,7 @@ function BridgeTable({
               <td
                 className={`py-2 text-right font-mono tabular-nums ${r.bold ? "font-semibold text-text-dark" : ""}`}
               >
-                {formatAmount(r.value, "KRW")}
+                {formatAmount(r.value, currency)}
               </td>
             </tr>
           ))}
@@ -121,10 +126,12 @@ function DebtItemsTable({
   items,
   onApprove,
   isApproving,
+  currency,
 }: {
   items: DebtItemRead[];
   onApprove: (itemId: string) => void;
   isApproving: boolean;
+  currency: string;
 }) {
   const sorted = [...items].sort((a, b) => a.display_order - b.display_order);
 
@@ -172,7 +179,7 @@ function DebtItemsTable({
       align: "right",
       width: "140px",
       mono: true,
-      render: (row) => formatAmount(row.amount, "KRW"),
+      render: (row) => formatAmount(row.amount, currency),
     },
     {
       key: "detection_method",
@@ -295,16 +302,24 @@ function AddItemForm({
 
 export default function NetDebtPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  const { data: debtList = [], isLoading } = useDebtCalculations(dealId!);
-  const runMutation = useRunDebt(dealId!);
+  const { user } = useAuth();
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
+
+  const { data: deal } = useDeal(dealId);
+  const currency = deal?.base_currency ?? "KRW";
+  const { data: debtList = [], isLoading } = useDebtCalculations(dealId);
+  const runMutation = useRunDebt(dealId);
 
   const latestCalc = debtList.length > 0 ? debtList[0] : null;
 
-  const { data: bridge } = useDebtBridge(dealId!, latestCalc?.id ?? "");
+  const { data: bridge } = useDebtBridge(dealId, latestCalc?.id ?? "");
 
-  const approveMutation = useApproveDebtItem(dealId!, latestCalc?.id ?? "");
-  const recalcMutation = useRecalculateDebt(dealId!, latestCalc?.id ?? "");
-  const addItemMutation = useAddDebtItem(dealId!, latestCalc?.id ?? "");
+  const approveMutation = useApproveDebtItem(dealId, latestCalc?.id ?? "");
+  const recalcMutation = useRecalculateDebt(dealId, latestCalc?.id ?? "");
+  const addItemMutation = useAddDebtItem(dealId, latestCalc?.id ?? "");
 
   const [snapshotId, setSnapshotId] = useState("");
   const [includeLease, setIncludeLease] = useState(false);
@@ -325,10 +340,11 @@ export default function NetDebtPage() {
   };
 
   const handleApprove = async (itemId: string) => {
+    if (!latestCalc?.id || !user?.email) return;
     try {
       await approveMutation.mutateAsync({
         itemId,
-        body: { approved_by: "analyst" },
+        body: { approved_by: user.email },
       });
       toast.success("Item approved");
     } catch {
@@ -337,6 +353,7 @@ export default function NetDebtPage() {
   };
 
   const handleRecalculate = async () => {
+    if (!latestCalc?.id) return;
     try {
       await recalcMutation.mutateAsync();
       toast.success("Net Debt recalculated");
@@ -350,6 +367,7 @@ export default function NetDebtPage() {
     description: string;
     amount: string;
   }) => {
+    if (!latestCalc?.id) return;
     try {
       await addItemMutation.mutateAsync(item);
       toast.success("Item added successfully");
@@ -369,73 +387,74 @@ export default function NetDebtPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">Net Debt Analysis</h1>
-          <p className="text-text-secondary mt-1">Net Debt Bridge & Adjustments</p>
-        </div>
-        {!latestCalc && (
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="Snapshot ID"
-              value={snapshotId}
-              onChange={(e) => setSnapshotId(e.target.value)}
-              className="w-64"
-            />
-            <label className="flex items-center gap-2 text-sm text-text-body cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeLease}
-                onChange={(e) => setIncludeLease(e.target.checked)}
-                className="rounded border-gray-border text-amic focus:ring-amic"
+      <PageHero
+        title="Net Debt Analysis"
+        subtitle="Net Debt Bridge & Adjustments"
+        compact
+        actions={
+          (!latestCalc || runMutation.isError) ? (
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Snapshot ID"
+                value={snapshotId}
+                onChange={(e) => setSnapshotId(e.target.value)}
+                className="w-64"
               />
-              IFRS 16
-            </label>
-            <label className="flex items-center gap-2 text-sm text-text-body cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeDeferredRev}
-                onChange={(e) => setIncludeDeferredRev(e.target.checked)}
-                className="rounded border-gray-border text-amic focus:ring-amic"
-              />
-              Deferred Rev
-            </label>
-            <Button
-              variant="accent"
-              icon={Calculator}
-              onClick={handleRun}
-              loading={runMutation.isPending}
-              disabled={!snapshotId.trim()}
-            >
-              Calculate Net Debt
-            </Button>
-          </div>
-        )}
-      </div>
+              <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeLease}
+                  onChange={(e) => setIncludeLease(e.target.checked)}
+                  className="rounded border-white/30 text-amic focus:ring-amic"
+                />
+                IFRS 16
+              </label>
+              <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeDeferredRev}
+                  onChange={(e) => setIncludeDeferredRev(e.target.checked)}
+                  className="rounded border-white/30 text-amic focus:ring-amic"
+                />
+                Deferred Rev
+              </label>
+              <Button
+                variant="accent"
+                icon={Calculator}
+                onClick={handleRun}
+                loading={runMutation.isPending}
+                disabled={!snapshotId.trim()}
+              >
+                Calculate Net Debt
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* KPI Cards */}
       {latestCalc && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Gross Debt"
-            value={formatAmount(latestCalc.gross_debt, "KRW")}
+            value={formatAmount(latestCalc.gross_debt, currency)}
             icon={Landmark}
             variant="negative"
           />
           <KpiCard
             label="Cash & Equivalents"
-            value={formatAmount(latestCalc.cash_and_equivalents, "KRW")}
+            value={formatAmount(latestCalc.cash_and_equivalents, currency)}
             icon={Wallet}
             variant="positive"
           />
           <KpiCard
             label="Net Debt"
-            value={formatAmount(latestCalc.net_debt, "KRW")}
+            value={formatAmount(latestCalc.net_debt, currency)}
             variant={Number(latestCalc.net_debt) > 0 ? "negative" : "positive"}
           />
           <KpiCard
             label="Adjusted Net Debt"
-            value={formatAmount(latestCalc.adjusted_net_debt, "KRW")}
+            value={formatAmount(latestCalc.adjusted_net_debt, currency)}
             variant={Number(latestCalc.adjusted_net_debt) > 0 ? "negative" : "positive"}
             subtitle={`v${latestCalc.engine_version}`}
           />
@@ -457,7 +476,7 @@ export default function NetDebtPage() {
       {/* Error */}
       {runMutation.isError && (
         <div className="bg-red-50 border border-negative/20 rounded-lg p-4 text-sm text-negative">
-          Error: {runMutation.error.message}
+          Error: {runMutation.error instanceof Error ? runMutation.error.message : "Calculation failed. Please try again."}
         </div>
       )}
 
@@ -480,6 +499,7 @@ export default function NetDebtPage() {
               bridge={bridge}
               onRecalculate={handleRecalculate}
               isRecalculating={recalcMutation.isPending}
+              currency={currency}
             />
           )}
 
@@ -488,6 +508,7 @@ export default function NetDebtPage() {
             items={latestCalc.items}
             onApprove={handleApprove}
             isApproving={approveMutation.isPending}
+            currency={currency}
           />
 
           {/* Add Manual Item */}

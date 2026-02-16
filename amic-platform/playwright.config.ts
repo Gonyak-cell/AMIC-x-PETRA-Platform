@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e/tests",
+  timeout: 60_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -16,7 +17,7 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
+    timeout: process.env.CI ? 60_000 : 30_000,
   },
   projects: [
     {
@@ -38,6 +39,27 @@ export default defineConfig({
         storageState: "e2e/.auth/user.json",
       },
       dependencies: ["setup"],
+    },
+    {
+      name: "chromium-mocked",
+      testMatch: /.*-deep\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        // Block MSW service worker so page.route() can intercept API requests
+        serviceWorkers: "block",
+        storageState: {
+          cookies: [],
+          origins: [
+            {
+              origin: "http://localhost:5173",
+              localStorage: [
+                { name: "autofdd_access_token", value: "mock-token" },
+              ],
+            },
+          ],
+        },
+      },
+      // No setup dependency — api-mocks handles auth/me
     },
   ],
 });

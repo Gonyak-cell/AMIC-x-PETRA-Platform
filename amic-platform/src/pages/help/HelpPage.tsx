@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PageHero } from "@/components/ui";
 import { GlossaryList } from "@/components/help/GlossaryList";
 import { ReleaseNotes } from "@/components/help/ReleaseNotes";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
@@ -27,15 +27,12 @@ export default function HelpPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Help Center
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Guides, glossary, keyboard shortcuts, and release notes
-        </p>
-      </div>
+      {/* Hero Section */}
+      <PageHero
+        title="Help Center"
+        subtitle="Guides, glossary, keyboard shortcuts, and release notes"
+        compact
+      />
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-gray-border">

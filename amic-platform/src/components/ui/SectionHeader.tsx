@@ -12,7 +12,7 @@ export function SectionHeader({ title, actions, uppercase = false, leftAccent = 
   return (
     <div
       className={cn(
-        "bg-white border border-gray-border border-b-0 px-5 py-2.5 rounded-t-lg flex items-center justify-between",
+        "bg-white border border-gray-border border-b-0 px-5 py-2.5 rounded-t-dr flex items-center justify-between",
         leftAccent && "border-accent-left",
         className
       )}

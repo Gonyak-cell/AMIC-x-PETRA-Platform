@@ -3,51 +3,57 @@ import {
   Landmark,
   Newspaper,
   TrendingUp,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardSummary } from "@/modules/kiis/hooks/useDashboard";
-import { Card, KpiCard, DataTable, Spinner, EmptyState } from "@/components/ui";
+import { Card, KpiCard, DataTable, Spinner, EmptyState, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { DealItem } from "@/modules/kiis/types/deal";
-import type { ReputationScore } from "@/modules/kiis/types/analysis";
+import type { RecentDeal, RiskCompany, DataCount } from "@/modules/kiis/types/dashboard";
 import SearchBar from "@/modules/kiis/components/SearchBar";
 import ReputationBadge from "@/modules/kiis/components/ReputationBadge";
-import { formatAmount, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
-const dealColumns: Column<DealItem>[] = [
+/** 백엔드 DashboardSummary.counts 라벨 (변경 시 여기만 수정) */
+const LABEL_COMPANIES = "기업";
+const LABEL_FUNDS = "펀드";
+const LABEL_DEALS = "딜";
+
+function getCount(counts: DataCount[] | undefined, label: string): number {
+  return counts?.find((c) => c.label === label)?.count ?? 0;
+}
+
+const dealColumns: Column<RecentDeal>[] = [
   {
-    key: "investor_name",
-    header: "Investor",
+    key: "target_company",
+    header: "Target",
     render: (row) => (
-      <span className="font-medium text-text-dark">{row.investor_name}</span>
+      <span className="font-medium text-text-dark">{row.target_company}</span>
     ),
   },
-  { key: "target_company", header: "Target" },
   {
-    key: "amount",
+    key: "amount_display",
     header: "Amount",
     align: "right",
     mono: true,
-    render: (row) => formatAmount(row.amount, "KRW"),
+    render: (row) => row.amount_display ?? "-",
   },
-  { key: "round_stage", header: "Round", align: "center", width: "100px" },
+  { key: "sector", header: "Sector", render: (row) => row.sector ?? "-" },
   {
     key: "deal_date",
     header: "Date",
     align: "center",
     width: "120px",
-    render: (row) => formatDate(row.deal_date, "short"),
+    render: (row) => (row.deal_date ? formatDate(row.deal_date, "short") : "-"),
   },
 ];
 
-const riskColumns: Column<ReputationScore>[] = [
+const riskColumns: Column<RiskCompany>[] = [
   {
     key: "corp_name",
     header: "Company",
     render: (row) => (
-      <span className="font-medium text-text-dark">
-        {row.corp_name ?? row.corp_code}
-      </span>
+      <span className="font-medium text-text-dark">{row.corp_name}</span>
     ),
   },
   {
@@ -72,41 +78,49 @@ const riskColumns: Column<ReputationScore>[] = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { data: summary, isLoading } = useDashboardSummary();
+  const { data: summary, isLoading, isError } = useDashboardSummary();
 
   if (isLoading) return <Spinner />;
+  if (isError) {
+    return (
+      <EmptyState
+        icon={Building2}
+        title="Failed to load dashboard"
+        description="Could not load dashboard data. Please try again later."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          KIIS Dashboard
-        </h1>
-        <SearchBar />
-      </div>
+      <PageHero
+        title="KIIS Dashboard"
+        subtitle="Korea Investment Intelligence System"
+        compact
+        actions={<SearchBar />}
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Companies"
-          value={String(summary?.total_companies ?? 0)}
+          value={String(getCount(summary?.counts, LABEL_COMPANIES))}
           icon={Building2}
         />
         <KpiCard
           label="Funds"
-          value={String(summary?.total_funds ?? 0)}
+          value={String(getCount(summary?.counts, LABEL_FUNDS))}
           icon={Landmark}
         />
         <KpiCard
-          label="News (7 Days)"
-          value={String(summary?.news_last_7days ?? 0)}
+          label="News (Recent)"
+          value={String(summary?.recent_news_count ?? 0)}
           icon={Newspaper}
           variant="positive"
         />
         <KpiCard
           label="Total Deals"
-          value={String(summary?.total_deals ?? 0)}
+          value={String(getCount(summary?.counts, LABEL_DEALS))}
           icon={TrendingUp}
         />
       </div>
@@ -122,8 +136,8 @@ export default function DashboardPage() {
         ) : (
           <DataTable
             columns={dealColumns}
-            data={summary.recent_deals}
-            keyField="investor_name"
+            data={summary.recent_deals.map((d, i) => ({ ...d, _key: `${d.target_company}-${d.deal_date ?? "no-date"}-${i}` }))}
+            keyField="_key"
             striped
             compact
           />
@@ -149,6 +163,33 @@ export default function DashboardPage() {
           />
         )}
       </Card>
+
+      {/* Data Freshness */}
+      {summary?.data_freshness && summary.data_freshness.length > 0 && (
+        <Card title="Data Freshness" headerBar>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {summary.data_freshness.map((item) => (
+              <div
+                key={item.entity}
+                className="flex items-center gap-2 p-2 rounded border border-gray-border"
+              >
+                <Clock className="h-4 w-4 text-text-secondary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-text-dark truncate">
+                    {item.entity}
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    {item.count} items
+                    {item.latest_at && (
+                      <> &middot; {formatDate(item.latest_at, "short")}</>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

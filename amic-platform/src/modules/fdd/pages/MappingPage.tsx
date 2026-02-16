@@ -9,6 +9,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useDeal } from "@/modules/fdd/hooks/useDeals";
 import {
   useMappings,
   useSuggestMappings,
@@ -31,6 +33,7 @@ import {
   Badge,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatAmount } from "@/lib/format";
@@ -55,10 +58,12 @@ function SuggestionsTable({
   suggestions,
   onSaveAll,
   isSaving,
+  currency,
 }: {
   suggestions: MappingSuggestion[];
   onSaveAll: () => void;
   isSaving: boolean;
+  currency: string;
 }) {
   const columns: Column<MappingSuggestion>[] = [
     {
@@ -118,7 +123,7 @@ function SuggestionsTable({
       align: "right",
       width: "120px",
       mono: true,
-      render: (row) => formatAmount(row.affected_amount, "KRW"),
+      render: (row) => formatAmount(row.affected_amount, currency),
     },
   ];
 
@@ -160,11 +165,13 @@ function MappingsTable({
   onApprove,
   onApproveAll,
   isApproving,
+  currency,
 }: {
   mappings: AccountMappingRead[];
   onApprove: (mappingId: string) => void;
   onApproveAll: () => void;
   isApproving: boolean;
+  currency: string;
 }) {
   const proposed = mappings.filter((m) => m.status === "PROPOSED");
 
@@ -222,7 +229,7 @@ function MappingsTable({
       align: "right",
       width: "120px",
       mono: true,
-      render: (row) => formatAmount(row.affected_amount, "KRW"),
+      render: (row) => formatAmount(row.affected_amount, currency),
     },
     {
       key: "actions",
@@ -277,7 +284,7 @@ function MappingsTable({
 
 // ── Tie-out Results ─────────────────────────────────────
 
-function TieOutSection({ dealId }: { dealId: string }) {
+function TieOutSection({ dealId, currency }: { dealId: string; currency: string }) {
   const { data: results } = useTieOutResults(dealId);
 
   if (!results || results.length === 0) {
@@ -324,19 +331,19 @@ function TieOutSection({ dealId }: { dealId: string }) {
                 <div>
                   <dt className="text-text-secondary">TB Total</dt>
                   <dd className="font-mono tabular-nums font-medium">
-                    {formatAmount(r.tb_total, "KRW")}
+                    {formatAmount(r.tb_total, currency)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-text-secondary">Reconstructed</dt>
                   <dd className="font-mono tabular-nums font-medium">
-                    {formatAmount(r.reconstructed_total, "KRW")}
+                    {formatAmount(r.reconstructed_total, currency)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-text-secondary">Variance</dt>
                   <dd className="font-mono tabular-nums font-medium">
-                    {formatAmount(r.variance, "KRW")}
+                    {formatAmount(r.variance, currency)}
                   </dd>
                 </div>
                 <div>
@@ -352,7 +359,7 @@ function TieOutSection({ dealId }: { dealId: string }) {
                 <div>
                   <dt className="text-text-secondary">Unmapped Total</dt>
                   <dd className="font-mono tabular-nums font-medium">
-                    {formatAmount(r.unmapped_total, "KRW")}
+                    {formatAmount(r.unmapped_total, currency)}
                   </dd>
                 </div>
               </dl>
@@ -368,6 +375,9 @@ function TieOutSection({ dealId }: { dealId: string }) {
 
 export default function MappingPage() {
   const { dealId } = useParams<{ dealId: string }>();
+  const { user } = useAuth();
+  const { data: deal } = useDeal(dealId!);
+  const currency = deal?.base_currency ?? "KRW";
   const [suggestions, setSuggestions] = useState<MappingSuggestion[]>([]);
 
   const { data: mappings = [], isLoading } = useMappings(dealId!);
@@ -416,7 +426,7 @@ export default function MappingPage() {
     try {
       await approveMutation.mutateAsync({
         mappingId,
-        body: { approved_by: "user" },
+        body: { approved_by: user?.email ?? "unknown" },
       });
       toast.success("Mapping approved");
     } catch {
@@ -426,7 +436,7 @@ export default function MappingPage() {
 
   const handleApproveAll = async () => {
     try {
-      await approveAllMutation.mutateAsync({ approved_by: "user" });
+      await approveAllMutation.mutateAsync({ approved_by: user?.email ?? "unknown" });
       toast.success("All mappings approved");
     } catch {
       toast.error("Failed to approve all mappings");
@@ -449,24 +459,21 @@ export default function MappingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            Account Mapping
-          </h1>
-          <p className="text-text-secondary mt-1">
-            {lineItems?.length ?? 0} standard line items available
-          </p>
-        </div>
-        <Button
-          variant="accent"
-          icon={Wand2}
-          onClick={handleSuggest}
-          loading={suggestMutation.isPending}
-        >
-          Auto-Suggest Mappings
-        </Button>
-      </div>
+      <PageHero
+        title="Account Mapping"
+        subtitle={`${lineItems?.length ?? 0} standard line items available`}
+        compact
+        actions={
+          <Button
+            variant="accent"
+            icon={Wand2}
+            onClick={handleSuggest}
+            loading={suggestMutation.isPending}
+          >
+            Auto-Suggest Mappings
+          </Button>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -505,6 +512,7 @@ export default function MappingPage() {
           suggestions={suggestions}
           onSaveAll={handleSaveAll}
           isSaving={saveMutation.isPending}
+          currency={currency}
         />
       )}
 
@@ -515,6 +523,7 @@ export default function MappingPage() {
           onApprove={handleApprove}
           onApproveAll={handleApproveAll}
           isApproving={approveMutation.isPending || approveAllMutation.isPending}
+          currency={currency}
         />
       )}
 
@@ -532,7 +541,7 @@ export default function MappingPage() {
       )}
 
       {/* Tie-out Results */}
-      <TieOutSection dealId={dealId!} />
+      <TieOutSection dealId={dealId!} currency={currency} />
     </div>
   );
 }

@@ -31,8 +31,8 @@ export function DocumentStatusBadge({
   className,
 }: DocumentStatusBadgeProps) {
   return (
-    <Badge variant={STATUS_VARIANT[status]} className={className}>
-      {STATUS_LABEL[status]}
+    <Badge variant={STATUS_VARIANT[status] ?? "neutral"} className={className}>
+      {STATUS_LABEL[status] ?? status}
     </Badge>
   );
 }

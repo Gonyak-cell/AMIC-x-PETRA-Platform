@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useDeal, useUpdateDeal } from "@/modules/fdd/hooks/useDeals";
-import { Card, Button, Input, Spinner } from "@/components/ui";
+import { Card, Button, Input, Spinner, PageHero } from "@/components/ui";
 import ScopeSelector from "@/modules/fdd/components/deal/ScopeSelector";
 import { TeamAssignment } from "@/components/collaboration/TeamAssignment";
 import { useTeamMembers, useUpdateTeamAssignment } from "@/hooks/useTeamMembers";
@@ -78,15 +78,7 @@ export default function DealSetupPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Deal Setup
-        </h1>
-        <p className="text-text-secondary mt-1">
-          Edit deal information, client details, and FDD scope.
-        </p>
-      </div>
+      <PageHero title="Deal Setup" subtitle="Edit deal information, client details, and FDD scope." compact />
 
       {/* Deal Info (read-only) */}
       <Card title="Deal Information" headerBar>

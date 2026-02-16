@@ -1,23 +1,25 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FileText, Briefcase, BarChart3, Layers, Settings2 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
-import type { IMStyle } from "@/modules/im/types/document";
+import { Button, Card, PageHero } from "@/components/ui";
+import type { IMStyle, SectionId } from "@/modules/im/types/document";
+import { SECTION_LABEL_MAP } from "@/modules/im/types/document";
 
 interface TemplateInfo {
   style: IMStyle;
   name: string;
   description: string;
   icon: typeof FileText;
-  sections: string[];
+  sections: SectionId[] | null;
 }
 
+/** Backend preset sections — must match im_document.py TITAN_SECTIONS / COVENANT_SECTIONS / FULL_SECTIONS */
 const TEMPLATES: TemplateInfo[] = [
   {
     style: "TITAN",
     name: "Titan",
     description: "Concise investment summary focused on key highlights, financials overview, and deal rationale.",
     icon: Briefcase,
-    sections: ["Cover", "Executive Summary", "Company Overview", "Financial Highlights", "Investment Rationale"],
+    sections: ["cover", "disclaimer", "toc_divider", "executive_summary", "company_overview", "financial_analysis", "contact"],
   },
   {
     style: "COVENANT",
@@ -25,8 +27,9 @@ const TEMPLATES: TemplateInfo[] = [
     description: "Enhanced financial analysis with detailed covenant compliance, debt structure, and risk assessment.",
     icon: BarChart3,
     sections: [
-      "Cover", "Executive Summary", "Company Overview", "Industry Analysis",
-      "Financial Analysis", "Debt Structure", "Covenant Compliance", "Risk Assessment",
+      "cover", "disclaimer", "toc_divider", "deal_overview", "executive_summary",
+      "company_overview", "market_overview", "financial_analysis", "valuation",
+      "transaction_structure", "contact",
     ],
   },
   {
@@ -35,9 +38,11 @@ const TEMPLATES: TemplateInfo[] = [
     description: "Comprehensive IM covering all sections including market analysis, management, and projections.",
     icon: Layers,
     sections: [
-      "Cover", "Executive Summary", "Company Overview", "Industry Analysis",
-      "Financial Analysis", "Management Team", "Market Position",
-      "Growth Strategy", "Risk Factors", "Projections", "Appendix",
+      "cover", "disclaimer", "toc_divider", "deal_overview", "executive_summary",
+      "investment_highlights", "company_overview", "business_model", "market_overview",
+      "business_overview", "value_creation", "growth_strategy", "financial_analysis",
+      "valuation", "management_team", "shareholder_structure", "transaction_structure",
+      "appendix", "contact",
     ],
   },
   {
@@ -45,7 +50,7 @@ const TEMPLATES: TemplateInfo[] = [
     name: "Custom",
     description: "Build your own IM by selecting specific sections tailored to your needs.",
     icon: Settings2,
-    sections: ["User-selected sections"],
+    sections: null,
   },
 ];
 
@@ -56,14 +61,11 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          IM Templates
-        </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Choose a template style for your Investment Memorandum.
-        </p>
-      </div>
+      <PageHero
+        title="IM Templates"
+        subtitle="Choose a template style for your Investment Memorandum"
+        compact
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {TEMPLATES.map((template) => (
@@ -86,14 +88,20 @@ export default function TemplatesPage() {
                     Sections
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {template.sections.map((section) => (
-                      <span
-                        key={section}
-                        className="px-2 py-0.5 text-xs rounded bg-bg-cool text-text-secondary"
-                      >
-                        {section}
+                    {template.sections ? (
+                      template.sections.map((sectionId) => (
+                        <span
+                          key={sectionId}
+                          className="px-2 py-0.5 text-xs rounded bg-bg-cool text-text-secondary"
+                        >
+                          {SECTION_LABEL_MAP[sectionId] ?? sectionId}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs rounded bg-bg-cool text-text-secondary italic">
+                        User-selected sections
                       </span>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>

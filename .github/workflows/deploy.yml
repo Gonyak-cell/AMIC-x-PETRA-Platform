@@ -1,0 +1,63 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment target
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - staging
+  workflow_run:
+    workflows: ["CI"]
+    branches: [master]
+    types: [completed]
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'master')
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            PREV_COMMIT=$(git rev-parse HEAD)
+            git pull origin master
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend nginx
+
+            # Health check with rollback on failure
+            sleep 10
+            HEALTH_OK=true
+            curl -sf http://localhost/api/fdd/health || { echo "ERROR: FDD health check failed"; HEALTH_OK=false; }
+            curl -sf http://localhost/api/kiis/health || { echo "ERROR: KIIS health check failed"; HEALTH_OK=false; }
+            curl -sf http://localhost/api/im/health || { echo "ERROR: IM health check failed"; HEALTH_OK=false; }
+
+            if [ "$HEALTH_OK" = false ]; then
+              echo "Rolling back to $PREV_COMMIT"
+              git checkout "$PREV_COMMIT"
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend nginx
+              echo "Rollback complete"
+              exit 1
+            fi
+            echo "Deployment complete — all health checks passed"

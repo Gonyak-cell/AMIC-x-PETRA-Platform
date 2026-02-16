@@ -84,7 +84,7 @@ describe("useCreateDeal", () => {
     });
 
     // Pre-populate the deals cache
-    queryClient.setQueryData(["deals"], mockDeals);
+    queryClient.setQueryData(["fdd", "deals"], mockDeals);
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -108,7 +108,7 @@ describe("useCreateDeal", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.id).toBe("deal-new");
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["deals"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["fdd", "deals"] });
 
     invalidateSpy.mockRestore();
   });

@@ -4,7 +4,7 @@ import { CalendarFilterBar } from "@/components/calendar/CalendarFilterBar";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { GanttTimeline } from "@/components/calendar/GanttTimeline";
 import { downloadIcs } from "@/lib/ics";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, PageHero } from "@/components/ui";
 import type { CalendarEventModule, CalendarViewMode } from "@/types/calendar";
 
 export default function CalendarPage() {
@@ -59,15 +59,12 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Calendar & Timeline
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Deal milestones, portfolio dates, and document timelines across modules
-        </p>
-      </div>
+      {/* Hero Section */}
+      <PageHero
+        title="Calendar & Timeline"
+        subtitle="Deal milestones, portfolio dates, and document timelines across modules"
+        compact
+      />
 
       {/* Filter bar */}
       <CalendarFilterBar

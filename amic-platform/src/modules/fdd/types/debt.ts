@@ -56,6 +56,16 @@ export interface DebtItemApprove {
   approved_by: string;
 }
 
+// ── Category Breakdown ──────────────────────────────────
+
+export interface DebtCategoryBreakdown {
+  [category: string]: {
+    total_amount: string;
+    item_type: DebtItemType;
+    items?: string[];
+  };
+}
+
 // ── Net Debt Calculation ────────────────────────────────
 
 export interface NetDebtCalculationRead {
@@ -71,7 +81,7 @@ export interface NetDebtCalculationRead {
   include_lease_liabilities: boolean;
   include_deferred_revenue: boolean;
   balance_check_error: string;
-  category_breakdown: Record<string, unknown>;
+  category_breakdown: DebtCategoryBreakdown;
   engine_version: string;
   status: DebtStatus;
   items: DebtItemRead[];

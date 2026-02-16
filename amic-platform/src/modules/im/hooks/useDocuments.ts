@@ -1,22 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { imApi } from "@/api/imClient";
 import type {
   Document,
   DocumentCreate,
   DocumentListParams,
-  DocumentStatus,
 } from "@/modules/im/types/document";
+import { IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
 
-const IN_PROGRESS_STATUSES: DocumentStatus[] = [
-  "PENDING",
-  "COLLECTING",
-  "ANALYZING",
-  "GENERATING",
-  "RENDERING",
-];
+const POLL_INTERVAL_MS = 3_000;
+
+/** Strip unsafe characters from downloaded filename. */
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^\w.\-가-힣 ]/g, "_").slice(0, 255);
+}
 
 export function useDocuments(params: DocumentListParams = {}) {
-  return useQuery<{ items: Document[]; total: number }>({
+  return useQuery<{ items: Document[]; total: number; offset: number; limit: number }>({
     queryKey: ["im", "documents", params],
     queryFn: async () => {
       const { data } = await imApi.get("/documents", { params });
@@ -33,10 +33,10 @@ export function useDocument(documentId: string) {
       return data;
     },
     enabled: !!documentId,
-    refetchInterval: (query) => {
+    refetchInterval: (query): number | false => {
       const status = query.state.data?.status;
       if (status && IN_PROGRESS_STATUSES.includes(status)) {
-        return 3000;
+        return POLL_INTERVAL_MS;
       }
       return false;
     },
@@ -53,9 +53,13 @@ export function useCreateDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["im", "documents"] });
     },
+    onError: () => {
+      toast.error("Failed to create IM document");
+    },
   });
 }
 
+/** Downloads a document as blob and triggers browser file save. */
 export function useDownloadDocument() {
   return useMutation({
     mutationFn: async ({
@@ -73,21 +77,45 @@ export function useDownloadDocument() {
         },
       );
 
-      const blob = new Blob([response.data]);
+      if (!(response.data instanceof Blob)) {
+        throw new Error("Expected Blob response from download endpoint");
+      }
+
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
 
-      const contentDisposition = response.headers["content-disposition"];
-      const filename = contentDisposition
-        ? contentDisposition.split("filename=")[1]?.replace(/"/g, "")
-        : `document.${format}`;
+      try {
+        link.href = url;
 
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+        const contentDisposition = response.headers["content-disposition"];
+        let filename = `document.${format}`;
+        if (contentDisposition) {
+          // RFC 5987: filename*=UTF-8''encoded_name
+          const utf8Match = contentDisposition.match(/filename\*=UTF-8''(.+?)(?:;|$)/i);
+          // Standard: filename="name" or filename=name
+          const stdMatch = contentDisposition.match(/filename="?([^";\n]+)"?/i);
+          const raw = utf8Match?.[1] ?? stdMatch?.[1];
+          if (raw) {
+            filename = sanitizeFilename(
+              utf8Match ? decodeURIComponent(raw) : raw.trim(),
+            );
+          }
+        }
+
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+      } finally {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+        // Delay revoke to ensure browser has started the download
+        setTimeout(() => window.URL.revokeObjectURL(url), 200);
+      }
+    },
+    onError: () => {
+      toast.error("Document download failed");
     },
   });
 }

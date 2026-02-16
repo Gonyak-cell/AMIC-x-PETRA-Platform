@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { imApi } from "@/api/imClient";
 import type { Company } from "@/modules/im/types/company";
 
+const POLL_INTERVAL_MS = 3_000;
+
 export function useCompany(corpCode: string) {
   return useQuery<Company>({
     queryKey: ["im", "companies", corpCode],
@@ -10,9 +12,9 @@ export function useCompany(corpCode: string) {
       return data;
     },
     enabled: !!corpCode,
-    refetchInterval: (query) => {
+    refetchInterval: (query): number | false => {
       const status = query.state.data?.fetch_status;
-      return status && ["PENDING", "COLLECTING"].includes(status) ? 3000 : false;
+      return status && ["PENDING", "REFRESHING"].includes(status) ? POLL_INTERVAL_MS : false;
     },
   });
 }

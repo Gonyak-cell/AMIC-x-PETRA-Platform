@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { kiisApi } from "@/api/kiisClient";
 import type {
   Company,
@@ -6,10 +6,16 @@ import type {
   CompanyListParams,
   FinancialStatement,
   FinancialParams,
-  Disclosure,
+  FinancialListResponse,
   PaginatedResponse,
 } from "@/modules/kiis/types/company";
-import type { ReputationScore } from "@/modules/kiis/types/analysis";
+import type {
+  ReputationScore,
+  ReputationHistoryItem,
+  ReputationHistoryResponse,
+} from "@/modules/kiis/types/analysis";
+
+const CORP_CODE_RE = /^\d{8}$/;
 
 export function useCompanies(params: CompanyListParams = {}) {
   return useQuery<PaginatedResponse<Company>>({
@@ -28,64 +34,24 @@ export function useCompanyDetail(corpCode: string) {
       const { data } = await kiisApi.get(`/companies/${corpCode}`);
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
 export function useCompanyFinancials(
   corpCode: string,
-  params: FinancialParams = {},
+  params: FinancialParams,
 ) {
   return useQuery<FinancialStatement[]>({
     queryKey: ["kiis", "companies", corpCode, "financials", params],
     queryFn: async () => {
-      const { data } = await kiisApi.get(
+      const { data } = await kiisApi.get<FinancialListResponse>(
         `/dart/companies/${corpCode}/financials`,
         { params },
       );
-      return data;
+      return data.items;
     },
-    enabled: !!corpCode,
-  });
-}
-
-export function useCompanyDisclosures(corpCode: string) {
-  return useQuery<Disclosure[]>({
-    queryKey: ["kiis", "companies", corpCode, "disclosures"],
-    queryFn: async () => {
-      const { data } = await kiisApi.get(`/disclosures/${corpCode}`);
-      return data;
-    },
-    enabled: !!corpCode,
-  });
-}
-
-export function useDisclosureLink(rceptNo: string) {
-  return useQuery<{ viewer_url: string; pdf_url: string | null }>({
-    queryKey: ["kiis", "disclosures", "link", rceptNo],
-    queryFn: async () => {
-      const { data } = await kiisApi.get(`/disclosures/link/${rceptNo}`);
-      return {
-        viewer_url: data.dart_viewer_url,
-        pdf_url: data.dart_pdf_url ?? null,
-      };
-    },
-    enabled: !!rceptNo,
-  });
-}
-
-export function useSyncDisclosures(corpCode: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const { data } = await kiisApi.post(`/disclosures/${corpCode}/sync`);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["kiis", "companies", corpCode, "disclosures"],
-      });
-    },
+    enabled: CORP_CODE_RE.test(corpCode) && !!params.bsns_year,
   });
 }
 
@@ -96,19 +62,23 @@ export function useReputationScore(corpCode: string) {
       const { data } = await kiisApi.get(`/analysis/reputation/${corpCode}`);
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
-export function useReputationHistory(corpCode: string) {
-  return useQuery<ReputationScore[]>({
-    queryKey: ["kiis", "analysis", "reputation", corpCode, "history"],
+export function useReputationHistory(
+  corpCode: string,
+  params: { limit?: number } = {},
+) {
+  return useQuery<ReputationHistoryItem[]>({
+    queryKey: ["kiis", "analysis", "reputation", corpCode, "history", params],
     queryFn: async () => {
-      const { data } = await kiisApi.get(
+      const { data } = await kiisApi.get<ReputationHistoryResponse>(
         `/analysis/reputation/${corpCode}/history`,
+        { params },
       );
-      return data;
+      return data.items;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }

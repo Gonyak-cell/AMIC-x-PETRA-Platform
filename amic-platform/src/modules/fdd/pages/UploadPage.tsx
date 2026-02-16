@@ -26,6 +26,7 @@ import {
   Badge,
   Select,
   Spinner,
+  PageHero,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
 
@@ -282,12 +283,12 @@ function UploadCard({
         <div className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
           <CheckCircle className="h-4 w-4 text-positive" />
           <span>
-            {(upload.validation_summary as Record<string, number>).rows_ingested ?? 0} rows
+            {upload.validation_summary.rows_ingested ?? 0} rows
             ingested
           </span>
-          {((upload.validation_summary as Record<string, number>).total_warnings ?? 0) > 0 && (
+          {(upload.validation_summary.total_warnings ?? 0) > 0 && (
             <Badge variant="warning">
-              {(upload.validation_summary as Record<string, number>).total_warnings} warnings
+              {upload.validation_summary.total_warnings} warnings
             </Badge>
           )}
         </div>
@@ -363,14 +364,11 @@ export default function UploadPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Data Uploads
-        </h1>
-        <p className="text-text-secondary mt-1">
-          Upload Excel files for FDD analysis
-        </p>
-      </div>
+      <PageHero
+        title="Data Uploads"
+        subtitle="Upload Excel files for FDD analysis"
+        compact
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -433,8 +431,9 @@ export default function UploadPage() {
             type="file"
             accept=".xlsx,.xls"
             onChange={(e) => handleFiles(e.target.files)}
-            className="hidden"
+            className="sr-only"
             id="file-upload"
+            aria-label="Upload Excel file"
             disabled={uploadFile.isPending}
           />
           <label htmlFor="file-upload">

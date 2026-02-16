@@ -9,7 +9,7 @@ import type {
 
 export function useDebtCalculations(dealId: string) {
   return useQuery<NetDebtCalculationRead[]>({
-    queryKey: ["debt", dealId],
+    queryKey: ["fdd", "debt", dealId],
     queryFn: async () => {
       const { data } = await api.get(`/deals/${dealId}/debt`);
       return data;
@@ -26,18 +26,21 @@ export function useRunDebt(dealId: string) {
       include_lease_liabilities?: boolean;
       include_deferred_revenue?: boolean;
     }) => {
-      const { data } = await api.post(`/deals/${dealId}/debt/run`, body);
+      const { data } = await api.post(`/deals/${dealId}/debt/calculate`, body);
       return data as NetDebtCalculationRead;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["debt", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "debt", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useRunDebt failed:", error);
     },
   });
 }
 
 export function useDebtBridge(dealId: string, calcId: string) {
   return useQuery<NetDebtBridgeSummary>({
-    queryKey: ["debt", dealId, calcId, "bridge"],
+    queryKey: ["fdd", "debt", dealId, calcId, "bridge"],
     queryFn: async () => {
       const { data } = await api.get(
         `/deals/${dealId}/debt/${calcId}/bridge`
@@ -58,14 +61,17 @@ export function useApproveDebtItem(dealId: string, calcId: string) {
       itemId: string;
       body: { approved_by: string };
     }) => {
-      const { data } = await api.put(
+      const { data } = await api.post(
         `/deals/${dealId}/debt/${calcId}/items/${itemId}/approve`,
         body
       );
       return data as DebtItemRead;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["debt", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "debt", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useApproveDebtItem failed:", error);
     },
   });
 }
@@ -75,13 +81,15 @@ export function useRecalculateDebt(dealId: string, calcId: string) {
   return useMutation({
     mutationFn: async () => {
       const { data } = await api.post(
-        `/deals/${dealId}/debt/${calcId}/recalculate`,
-        {}
+        `/deals/${dealId}/debt/${calcId}/recalculate`
       );
       return data as NetDebtCalculationRead;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["debt", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "debt", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useRecalculateDebt failed:", error);
     },
   });
 }
@@ -97,7 +105,10 @@ export function useAddDebtItem(dealId: string, calcId: string) {
       return data as DebtItemRead;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["debt", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "debt", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useAddDebtItem failed:", error);
     },
   });
 }

@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Eye, Bell, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -7,7 +8,7 @@ import {
   useMarkAlertRead,
   useUnreadAlertCount,
 } from "@/modules/kiis/hooks/useWatchlist";
-import { Card, DataTable, Badge, Button, EmptyState, Spinner } from "@/components/ui";
+import { Card, DataTable, Badge, Button, EmptyState, Spinner, Pagination, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { WatchlistItem, Alert } from "@/modules/kiis/types/watchlist";
 import { formatDate } from "@/lib/format";
@@ -16,40 +17,50 @@ import { cn } from "@/lib/cn";
 const alertTypeVariant: Record<string, "error" | "warning" | "info" | "neutral"> = {
   sanction: "error",
   reputation: "warning",
+  reputation_change: "warning",
   news: "info",
   disclosure: "neutral",
+  new_disclosure: "neutral",
 };
 
 export default function WatchlistPage() {
-  const { data: watchlist, isLoading: wlLoading } = useWatchlist();
-  const { data: alerts, isLoading: alertsLoading } = useAlerts();
+  const [alertPage, setAlertPage] = useState(1);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const { data: watchlistData, isLoading: wlLoading } = useWatchlist();
+  const watchlist = watchlistData?.items;
+  const { data: alertsData, isLoading: alertsLoading } = useAlerts({ page: alertPage, size: 20 });
+  const alerts = alertsData?.items;
+  const alertTotalPages = alertsData ? Math.ceil(alertsData.total / 20) : 0;
   const { data: unread } = useUnreadAlertCount();
   const removeItem = useRemoveFromWatchlist();
   const markRead = useMarkAlertRead();
 
-  const handleRemove = (companyId: string) => {
+  const handleRemove = (companyId: number) => {
+    setRemovingId(companyId);
     removeItem.mutate(companyId, {
-      onSuccess: () => toast.success("Removed from watchlist"),
-      onError: () => toast.error("Failed to remove"),
+      onSuccess: () => { toast.success("Removed from watchlist"); setRemovingId(null); },
+      onError: () => { toast.error("Failed to remove"); setRemovingId(null); },
     });
   };
 
-  const handleMarkRead = (alertId: string) => {
+  const handleMarkRead = (alertId: number) => {
     markRead.mutate(alertId);
   };
 
-  const watchlistColumns: Column<WatchlistItem>[] = [
+  const watchlistColumns: Column<WatchlistItem>[] = useMemo(() => [
     {
-      key: "corp_name",
+      key: "company_name",
       header: "Company",
-      render: (row) => (
-        <span className="font-medium text-text-dark">{row.corp_name}</span>
+      render: (row: WatchlistItem) => (
+        <span className="font-medium text-text-dark">
+          {row.company_name ?? "-"}
+        </span>
       ),
     },
     {
       key: "alert_types",
       header: "Alerts",
-      render: (row) => (
+      render: (row: WatchlistItem) => (
         <div className="flex gap-1 flex-wrap">
           {row.alert_types.map((t) => (
             <Badge key={t} variant={alertTypeVariant[t] ?? "neutral"}>
@@ -60,18 +71,18 @@ export default function WatchlistPage() {
       ),
     },
     {
-      key: "added_at",
+      key: "created_at",
       header: "Added",
-      align: "center",
+      align: "center" as const,
       width: "120px",
-      render: (row) => formatDate(row.added_at, "short"),
+      render: (row: WatchlistItem) => formatDate(row.created_at, "short"),
     },
     {
       key: "actions",
       header: "",
-      align: "center",
+      align: "center" as const,
       width: "60px",
-      render: (row) => (
+      render: (row: WatchlistItem) => (
         <Button
           variant="ghost"
           size="sm"
@@ -80,49 +91,65 @@ export default function WatchlistPage() {
             e.stopPropagation();
             handleRemove(row.company_id);
           }}
+          loading={removingId === row.company_id}
         />
       ),
     },
-  ];
+  ], [removingId]);
 
-  const alertColumns: Column<Alert>[] = [
+  const alertColumns: Column<Alert>[] = useMemo(() => [
     {
-      key: "type",
+      key: "alert_type",
       header: "Type",
       width: "100px",
-      render: (row) => (
-        <Badge variant={alertTypeVariant[row.type] ?? "neutral"}>
-          {row.type}
+      render: (row: Alert) => (
+        <Badge variant={alertTypeVariant[row.alert_type] ?? "neutral"}>
+          {row.alert_type}
         </Badge>
+      ),
+    },
+    {
+      key: "title",
+      header: "Title",
+      render: (row: Alert) => (
+        <span className={cn(!row.is_read && "font-medium text-text-dark")}>
+          {row.title}
+        </span>
       ),
     },
     {
       key: "message",
       header: "Message",
-      render: (row) => (
-        <span className={cn(!row.is_read && "font-medium text-text-dark")}>
-          {row.message}
+      render: (row: Alert) => (
+        <span className="text-text-secondary text-sm">
+          {row.message ?? "-"}
         </span>
       ),
     },
-    { key: "company_name", header: "Company", width: "140px" },
+    {
+      key: "company_name",
+      header: "Company",
+      width: "140px",
+      render: (row: Alert) => row.company_name ?? "-",
+    },
     {
       key: "created_at",
       header: "Date",
-      align: "center",
+      align: "center" as const,
       width: "120px",
-      render: (row) => formatDate(row.created_at, "short"),
+      render: (row: Alert) => formatDate(row.created_at, "short"),
     },
     {
       key: "is_read",
       header: "Status",
-      align: "center",
+      align: "center" as const,
       width: "80px",
-      render: (row) =>
+      render: (row: Alert) =>
         row.is_read ? (
           <span className="text-xs text-text-secondary">Read</span>
         ) : (
           <button
+            aria-label={`Mark "${row.title}" as read`}
             className="text-xs text-accent hover:underline"
             onClick={(e) => {
               e.stopPropagation();
@@ -133,13 +160,15 @@ export default function WatchlistPage() {
           </button>
         ),
     },
-  ];
+  ], []);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Watchlist
-      </h1>
+      <PageHero
+        title="Watchlist"
+        subtitle="Monitor companies and receive alerts"
+        compact
+      />
 
       {/* Watchlist */}
       <Card title="Watched Companies" headerBar padding="none">
@@ -184,6 +213,10 @@ export default function WatchlistPage() {
           />
         )}
       </Card>
+
+      {alertTotalPages > 1 && (
+        <Pagination page={alertPage} totalPages={alertTotalPages} onPageChange={setAlertPage} />
+      )}
     </div>
   );
 }

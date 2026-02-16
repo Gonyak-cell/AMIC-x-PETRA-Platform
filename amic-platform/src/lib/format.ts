@@ -1,7 +1,7 @@
 /**
  * 금액 포맷팅 (중복 코드 제거용 공통 유틸리티)
  * KRW: 소수점 없음, 천 단위 콤마
- * USD/EUR/JPY: 소수점 2자리 (또는 지정된 자릿수)
+ * USD/EUR: 소수점 2자리, JPY: 소수점 없음 (또는 지정된 자릿수)
  */
 export function formatAmount(
   value: number | string | null | undefined,
@@ -13,12 +13,12 @@ export function formatAmount(
   }
 
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) {
+  if (!isFinite(num)) {
     return "-";
   }
 
-  // KRW는 소수점 없음
-  const dp = decimals ?? (currency === "KRW" ? 0 : 2);
+  // KRW/JPY는 소수점 없음
+  const dp = decimals ?? (currency === "KRW" || currency === "JPY" ? 0 : 2);
 
   // 음수 괄호 표기
   if (num < 0) {
@@ -46,7 +46,7 @@ export function formatPercent(
   }
 
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) {
+  if (!isFinite(num)) {
     return "-";
   }
 
@@ -74,18 +74,28 @@ export function formatDate(
         day: "numeric",
       });
     case "month":
-      return date.toLocaleDateString("en-US", {
+      return date.toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "short",
       });
     case "short":
     default:
-      return date.toLocaleDateString("en-US", {
+      return date.toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       });
   }
+}
+
+/**
+ * 파일 크기 포맷팅 (bytes → human-readable)
+ */
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
@@ -97,7 +107,7 @@ export function formatCompact(value: number | string | null | undefined): string
   }
 
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "-";
+  if (!isFinite(num)) return "-";
 
   const absNum = Math.abs(num);
 

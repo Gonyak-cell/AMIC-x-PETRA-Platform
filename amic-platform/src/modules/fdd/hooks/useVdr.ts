@@ -4,7 +4,7 @@ import type { VdrFolder } from "@/modules/fdd/types/vdr";
 
 export function useVdrFolders(dealId: string) {
   return useQuery<VdrFolder[]>({
-    queryKey: ["vdr", dealId],
+    queryKey: ["fdd", "vdr", dealId],
     queryFn: async () => {
       const { data } = await api.get(`/deals/${dealId}/vdr/folders`);
       return data;
@@ -21,7 +21,10 @@ export function useInitializeVdr(dealId: string) {
       return data as VdrFolder[];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vdr", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "vdr", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useInitializeVdr failed:", error);
     },
   });
 }
@@ -34,7 +37,10 @@ export function useCreateVdrFolder(dealId: string) {
       return data as VdrFolder;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vdr", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "vdr", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useCreateVdrFolder failed:", error);
     },
   });
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Landmark, AlertCircle } from "lucide-react";
 import { useFunds } from "@/modules/kiis/hooks/useFunds";
-import { Card, DataTable, Input, Select, Badge, EmptyState } from "@/components/ui";
+import { Card, DataTable, Input, Select, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { FundListItem, FundType } from "@/modules/kiis/types/fund";
 import { formatAmount } from "@/lib/format";
@@ -74,7 +74,11 @@ export default function FundListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">Funds</h1>
+      <PageHero
+        title="Funds"
+        subtitle="PE & VC fund registry"
+        compact
+      />
 
       <div className="flex gap-3 items-end">
         <div className="flex-1 max-w-sm">
@@ -118,27 +122,11 @@ export default function FundListPage() {
         )}
       </Card>
 
-      {data && data.total > 20 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-text-secondary">
-            Page {page} of {Math.ceil(data.total / 20)}
-          </span>
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page >= Math.ceil(data.total / 20)}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={data ? Math.ceil(data.total / 20) : 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

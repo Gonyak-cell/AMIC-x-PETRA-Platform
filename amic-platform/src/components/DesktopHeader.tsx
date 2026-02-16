@@ -7,11 +7,11 @@ interface DesktopHeaderProps {
 
 export function DesktopHeader({ onSearchClick }: DesktopHeaderProps) {
   return (
-    <div className="hidden md:flex items-center justify-end gap-2 max-w-7xl mx-auto px-6 pt-4 pb-1">
+    <div className="hidden md:flex sticky top-0 z-30 items-center justify-end gap-2 max-w-7xl mx-auto px-6 pt-4 pb-1 bg-white/80 backdrop-blur-md border-b border-gray-border/50">
       {/* Search Trigger */}
       <button
         onClick={onSearchClick}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-white border border-gray-border rounded-corporate hover:border-amic/30 hover:text-text-dark transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-white border border-gray-border rounded-dr shadow-dr-sm hover:border-amic/30 hover:text-text-dark transition-colors"
         aria-label="Open search"
       >
         <Search className="h-4 w-4" />

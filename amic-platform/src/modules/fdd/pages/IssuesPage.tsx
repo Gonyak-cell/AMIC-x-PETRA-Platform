@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -11,6 +11,7 @@ import {
   ScanLine,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useIssues,
   useIssueSummary,
@@ -27,6 +28,7 @@ import {
   Select,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
 import { CommentThread } from "@/components/collaboration/CommentThread";
@@ -47,9 +49,10 @@ const SEVERITY_ICONS: Record<IssueSeverity, typeof AlertCircle> = {
 
 const STATUS_VARIANTS: Record<IssueStatus, "success" | "warning" | "error" | "info" | "neutral"> = {
   OPEN: "info",
-  IN_REVIEW: "warning",
+  UNDER_REVIEW: "warning",
   RESOLVED: "success",
-  DISMISSED: "neutral",
+  FALSE_POSITIVE: "neutral",
+  ACKNOWLEDGED: "neutral",
 };
 
 const SEVERITY_OPTIONS: SelectOption[] = [
@@ -63,21 +66,26 @@ const SEVERITY_OPTIONS: SelectOption[] = [
 const STATUS_OPTIONS: SelectOption[] = [
   { value: "", label: "All Statuses" },
   { value: "OPEN", label: "Open" },
-  { value: "IN_REVIEW", label: "In Review" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
   { value: "RESOLVED", label: "Resolved" },
-  { value: "DISMISSED", label: "Dismissed" },
+  { value: "FALSE_POSITIVE", label: "False Positive" },
+  { value: "ACKNOWLEDGED", label: "Acknowledged" },
 ];
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "", label: "All Categories" },
-  { value: "QOE_ADJUSTMENT", label: "QoE Adjustment" },
-  { value: "TIMING_ANOMALY", label: "Timing Anomaly" },
-  { value: "AMOUNT_ANOMALY", label: "Amount Anomaly" },
+  { value: "ANOMALY", label: "Anomaly" },
   { value: "DATA_QUALITY", label: "Data Quality" },
-  { value: "MISSING_EVIDENCE", label: "Missing Evidence" },
-  { value: "CLASSIFICATION_ERROR", label: "Classification Error" },
-  { value: "OTHER", label: "Other" },
+  { value: "MAPPING", label: "Mapping" },
+  { value: "CALCULATION", label: "Calculation" },
+  { value: "AI_SUGGESTION", label: "AI Suggestion" },
 ];
+
+function formatRiskScore(raw: string | null): string {
+  if (!raw) return "-";
+  const n = parseFloat(raw);
+  return Number.isNaN(n) ? "-" : `${n.toFixed(1)}%`;
+}
 
 // ── Issue Row ────────────────────────────────────────────
 
@@ -137,7 +145,7 @@ function IssueRow({
 
         {/* Risk Score */}
         <div className="w-20 text-sm font-mono tabular-nums text-right">
-          {issue.risk_score ? `${parseFloat(issue.risk_score).toFixed(1)}%` : "-"}
+          {formatRiskScore(issue.risk_score)}
         </div>
 
         {/* Expand Icon */}
@@ -183,7 +191,9 @@ function IssueRow({
                     key={idx}
                     className="px-2 py-1 bg-bg-cool border border-gray-border rounded text-xs text-text-body"
                   >
-                    {JSON.stringify(factor)}
+                    {Object.entries(factor)
+                      .map(([k, v]) => `${k}: ${String(v)}`)
+                      .join(", ")}
                   </span>
                 ))}
               </div>
@@ -245,22 +255,28 @@ function IssueRow({
 
 export default function IssuesPage() {
   const { dealId } = useParams<{ dealId: string }>();
+  const { user } = useAuth();
   const [filters, setFilters] = useState({
     severity: "",
     status: "",
     category: "",
   });
 
+  const issueFilters = useMemo(
+    () => ({
+      severity: filters.severity || undefined,
+      status: filters.status || undefined,
+      category: filters.category || undefined,
+      limit: 100,
+    }),
+    [filters.severity, filters.status, filters.category],
+  );
+
   const {
     data: issuesData,
     isLoading: issuesLoading,
     error: issuesError,
-  } = useIssues(dealId!, {
-    severity: filters.severity || undefined,
-    status: filters.status || undefined,
-    category: filters.category || undefined,
-    limit: 100,
-  });
+  } = useIssues(dealId!, issueFilters);
 
   const { data: summary, isLoading: summaryLoading } = useIssueSummary(dealId!);
 
@@ -276,34 +292,37 @@ export default function IssuesPage() {
     try {
       await runDetection.mutateAsync({ threshold: "50.0" });
       toast.success("Anomaly detection completed");
-    } catch {
+    } catch (err) {
+      console.error("Anomaly detection failed:", err);
       toast.error("Failed to run anomaly detection");
     }
   };
 
-  const handleResolve = async (issueId: string) => {
+  const handleResolve = useCallback(async (issueId: string) => {
     try {
       await resolveIssue.mutateAsync({
         issueId,
-        resolved_by: "user",
+        resolved_by: user?.email ?? "unknown",
       });
       toast.success("Issue resolved");
-    } catch {
+    } catch (err) {
+      console.error("Resolve issue failed:", err);
       toast.error("Failed to resolve issue");
     }
-  };
+  }, [resolveIssue, user?.email]);
 
-  const handleDismiss = async (issueId: string) => {
+  const handleDismiss = useCallback(async (issueId: string) => {
     try {
       await dismissIssue.mutateAsync({
         issueId,
-        resolution_note: "Dismissed by user",
+        resolution_note: `Dismissed by ${user?.email ?? "unknown"}`,
       });
       toast.success("Issue dismissed");
-    } catch {
+    } catch (err) {
+      console.error("Dismiss issue failed:", err);
       toast.error("Failed to dismiss issue");
     }
-  };
+  }, [dismissIssue, user?.email]);
 
   if (!dealId) {
     return (
@@ -330,24 +349,21 @@ export default function IssuesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            Issue Log
-          </h1>
-          <p className="text-text-secondary mt-1">
-            Track and manage FDD findings
-          </p>
-        </div>
-        <Button
-          variant="accent"
-          icon={ScanLine}
-          onClick={handleRunDetection}
-          loading={runDetection.isPending}
-        >
-          Run Anomaly Detection
-        </Button>
-      </div>
+      <PageHero
+        title="Issue Log"
+        subtitle="Track and manage FDD findings"
+        compact
+        actions={
+          <Button
+            variant="accent"
+            icon={ScanLine}
+            onClick={handleRunDetection}
+            loading={runDetection.isPending}
+          >
+            Run Anomaly Detection
+          </Button>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

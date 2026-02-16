@@ -4,7 +4,7 @@ import { Newspaper, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useNewsList, useCollectNews } from "@/modules/kiis/hooks/useNews";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, Button, Input, Select, Badge, EmptyState, Spinner } from "@/components/ui";
+import { Card, Button, Input, Select, Badge, EmptyState, Spinner, Pagination, PageHero } from "@/components/ui";
 import SentimentIndicator from "@/modules/kiis/components/SentimentIndicator";
 import type { NewsSource } from "@/modules/kiis/types/news";
 import { formatDate } from "@/lib/format";
@@ -19,16 +19,14 @@ export default function NewsListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [source, setSource] = useState("");
-  const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useNewsList({
     source: (source as NewsSource) || undefined,
-    search: search || undefined,
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
     page,
     size: 20,
   });
@@ -37,42 +35,43 @@ export default function NewsListPage() {
 
   const handleCollect = () => {
     collectNews.mutate(undefined, {
-      onSuccess: () => toast.success("News collection started"),
-      onError: () => toast.error("Failed to collect news"),
+      onSuccess: (res) => {
+        const total = Array.isArray(res)
+          ? res.reduce((sum, r) => sum + r.collected, 0)
+          : 0;
+        toast.success(
+          total > 0
+            ? `${total} articles collected`
+            : "News collection started",
+        );
+      },
+      onError: (err: Error) =>
+        toast.error(`News collection failed: ${err.message}`),
     });
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          News
-        </h1>
-        {user?.role === "ADMIN" && (
-          <Button
-            variant="accent"
-            icon={Download}
-            onClick={handleCollect}
-            loading={collectNews.isPending}
-          >
-            Collect News
-          </Button>
-        )}
-      </div>
+      <PageHero
+        title="News"
+        subtitle="PE & VC industry news and analysis"
+        compact
+        actions={
+          user?.role === "ADMIN" ? (
+            <Button
+              variant="accent"
+              icon={Download}
+              onClick={handleCollect}
+              loading={collectNews.isPending}
+            >
+              Collect News
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex-1 max-w-sm">
-          <Input
-            label="Search"
-            placeholder="Search articles..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
         <Select
           label="Source"
           options={SOURCE_OPTIONS}
@@ -85,18 +84,18 @@ export default function NewsListPage() {
         <Input
           label="From"
           type="date"
-          value={startDate}
+          value={dateFrom}
           onChange={(e) => {
-            setStartDate(e.target.value);
+            setDateFrom(e.target.value);
             setPage(1);
           }}
         />
         <Input
           label="To"
           type="date"
-          value={endDate}
+          value={dateTo}
           onChange={(e) => {
-            setEndDate(e.target.value);
+            setDateTo(e.target.value);
             setPage(1);
           }}
         />
@@ -109,20 +108,17 @@ export default function NewsListPage() {
         <EmptyState
           icon={Newspaper}
           title="No news articles"
-          description="Try adjusting your search or filters."
+          description="Try adjusting your filters."
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {data.items.map((article) => (
-            <div
+            <button
               key={article.id}
-              className="cursor-pointer"
+              type="button"
+              aria-label={`View article: ${article.title.slice(0, 60)}${article.title.length > 60 ? "…" : ""}`}
+              className="cursor-pointer w-full text-left"
               onClick={() => navigate(`/kiis/news/${article.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") navigate(`/kiis/news/${article.id}`);
-              }}
             >
               <Card
                 padding="md"
@@ -139,40 +135,20 @@ export default function NewsListPage() {
                   </div>
                   <div className="flex items-center gap-3 text-xs text-text-secondary">
                     <span>{formatDate(article.published_at, "short")}</span>
-                    <SentimentIndicator
-                      sentiment={article.sentiment}
-                      score={article.sentiment_score}
-                    />
+                    <SentimentIndicator score={article.sentiment_score} />
                   </div>
                 </div>
               </Card>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
-      {/* Pagination */}
-      {data && data.total > 20 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-text-secondary">
-            Page {page} of {Math.ceil(data.total / 20)}
-          </span>
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page >= Math.ceil(data.total / 20)}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={data ? Math.ceil(data.total / 20) : 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

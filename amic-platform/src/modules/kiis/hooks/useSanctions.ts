@@ -1,21 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kiisApi } from "@/api/kiisClient";
 import type {
-  ClassifiedSanctionItem,
   ClassifiedSanctionListResponse,
+  SanctionClassifyResponse,
+  SanctionListParams,
   SanctionSummaryResponse,
 } from "@/modules/kiis/types/sanction";
 
-export function useClassifiedSanctions(corpCode: string) {
-  return useQuery<ClassifiedSanctionItem[]>({
-    queryKey: ["kiis", "sanctions", "classified", corpCode],
+const CORP_CODE_RE = /^\d{8}$/;
+
+export function useClassifiedSanctions(
+  corpCode: string,
+  params: SanctionListParams = {},
+) {
+  return useQuery<ClassifiedSanctionListResponse>({
+    queryKey: ["kiis", "sanctions", "classified", corpCode, params],
     queryFn: async () => {
       const { data } = await kiisApi.get<ClassifiedSanctionListResponse>(
         `/sanctions/classified/${corpCode}`,
+        { params },
       );
-      return data.items;
+      return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
@@ -28,15 +35,15 @@ export function useSanctionSummary(corpCode: string) {
       );
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
 export function useClassifySanctions(corpCode: string) {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useMutation<SanctionClassifyResponse>({
     mutationFn: async () => {
-      const { data } = await kiisApi.post(
+      const { data } = await kiisApi.post<SanctionClassifyResponse>(
         `/sanctions/classify/${corpCode}`,
       );
       return data;

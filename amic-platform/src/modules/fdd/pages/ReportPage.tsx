@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileOutput,
   Eye,
   Download,
   FileJson,
+  FileText,
   Presentation,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import {
   DataTable,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { useReportVersions } from "@/modules/fdd/hooks/useReportVersions";
@@ -36,6 +38,7 @@ interface ReportSection {
 
 export default function ReportPage() {
   const { dealId } = useParams<{ dealId: string }>();
+  const queryClient = useQueryClient();
   const { data: versions = [] } = useReportVersions(dealId!);
   const [preview, setPreview] = useState<ReportPreview | null>(null);
   const [options, setOptions] = useState({
@@ -72,21 +75,25 @@ export default function ReportPage() {
   // Generate mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
+      const isBlobFormat = options.format === "pptx" || options.format === "docx";
       const response = await api.post(
         `/deals/${dealId}/reports/generate`,
         { ...options },
-        { responseType: options.format === "pptx" ? "blob" : "json" }
+        { responseType: isBlobFormat ? "blob" : "json" }
       );
 
-      if (options.format === "pptx") {
-        // Download PPTX file
+      if (isBlobFormat) {
+        const mimeTypes: Record<string, string> = {
+          pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        };
         const blob = new Blob([response.data], {
-          type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          type: mimeTypes[options.format],
         });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `FDD_Report_${dealId}.pptx`;
+        a.download = `FDD_Report_${dealId}.${options.format}`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -96,8 +103,9 @@ export default function ReportPage() {
       return response.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fdd", "report-versions", dealId] });
       toast.success(
-        options.format === "pptx"
+        options.format !== "json"
           ? "Report downloaded successfully"
           : "Report IR generated"
       );
@@ -139,14 +147,11 @@ export default function ReportPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Report Generation
-        </h1>
-        <p className="text-text-secondary mt-1">
-          Generate FDD report in PowerPoint or JSON format
-        </p>
-      </div>
+      <PageHero
+        title="Report Generation"
+        subtitle="Generate FDD report in PowerPoint, Word, or JSON format"
+        compact
+      />
 
       {/* Options */}
       <Card title="Report Options" headerBar>
@@ -238,6 +243,34 @@ export default function ReportPage() {
                 <div>
                   <div className="font-medium text-text-dark">PowerPoint</div>
                   <div className="text-xs text-text-secondary">.pptx file</div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center gap-3 text-sm cursor-pointer p-4 rounded-lg border-2 transition-colors ${
+                  options.format === "docx"
+                    ? "border-amic bg-bg-light-green"
+                    : "border-gray-border hover:border-amic-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="format"
+                  value="docx"
+                  checked={options.format === "docx"}
+                  onChange={(e) =>
+                    setOptions({ ...options, format: e.target.value })
+                  }
+                  className="sr-only"
+                />
+                <FileText
+                  className={`h-5 w-5 ${
+                    options.format === "docx" ? "text-amic" : "text-text-secondary"
+                  }`}
+                />
+                <div>
+                  <div className="font-medium text-text-dark">Word</div>
+                  <div className="text-xs text-text-secondary">.docx file</div>
                 </div>
               </label>
 

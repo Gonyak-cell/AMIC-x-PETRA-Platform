@@ -3,19 +3,22 @@ import {
   ExternalLink,
   RefreshCw,
   Plus,
+  Check,
   AlertTriangle,
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCompanyDetail,
-  useCompanyDisclosures,
-  useSyncDisclosures,
   useReputationScore,
 } from "@/modules/kiis/hooks/useCompanies";
+import {
+  useDisclosures,
+  useSyncDartDisclosures,
+} from "@/modules/kiis/hooks/useDisclosures";
 import { useDealsByCompany } from "@/modules/kiis/hooks/useDeals";
 import { useClassifiedSanctions } from "@/modules/kiis/hooks/useSanctions";
-import { useAddToWatchlist } from "@/modules/kiis/hooks/useWatchlist";
+import { useAddToWatchlist, useWatchlist } from "@/modules/kiis/hooks/useWatchlist";
 import {
   Card,
   Button,
@@ -24,16 +27,18 @@ import {
   Spinner,
   EmptyState,
   KpiCard,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import CompanyFinancials from "@/modules/kiis/components/CompanyFinancials";
 import ReputationBadge from "@/modules/kiis/components/ReputationBadge";
-import type { Disclosure } from "@/modules/kiis/types/company";
+import type { DisclosureItem } from "@/modules/kiis/types/disclosure";
 import type { DealItem } from "@/modules/kiis/types/deal";
-import type { ClassifiedSanctionItem } from "@/modules/kiis/types/sanction";
-import { formatDate, formatAmount } from "@/lib/format";
+import type { ClassifiedSanctionListItem } from "@/modules/kiis/types/sanction";
+import { formatDate } from "@/lib/format";
+import { SEVERITY_VARIANT } from "@/modules/kiis/constants/variants";
 
-const disclosureColumns: Column<Disclosure>[] = [
+const disclosureColumns: Column<DisclosureItem>[] = [
   {
     key: "report_nm",
     header: "Report",
@@ -46,18 +51,29 @@ const disclosureColumns: Column<Disclosure>[] = [
     header: "Filed",
     align: "center",
     width: "120px",
-    render: (row) => formatDate(row.rcept_dt, "short"),
+    render: (row) => (row.rcept_dt ? formatDate(row.rcept_dt, "short") : "-"),
   },
-  { key: "flr_nm", header: "Filer" },
   {
-    key: "viewer_url",
+    key: "disclosure_type",
+    header: "Type",
+    render: (row) => row.disclosure_type ?? "-",
+  },
+  {
+    key: "source",
+    header: "Source",
+    align: "center",
+    width: "80px",
+    render: (row) => <Badge variant="info">{row.source}</Badge>,
+  },
+  {
+    key: "dart_viewer_url",
     header: "Link",
     align: "center",
     width: "80px",
     render: (row) =>
-      row.viewer_url ? (
+      row.dart_viewer_url ? (
         <a
-          href={row.viewer_url}
+          href={row.dart_viewer_url}
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:underline inline-flex items-center gap-1"
@@ -80,11 +96,11 @@ const dealColumns: Column<DealItem>[] = [
     ),
   },
   {
-    key: "amount",
+    key: "amount_display",
     header: "Amount",
     align: "right",
     mono: true,
-    render: (row) => formatAmount(row.amount, "KRW"),
+    render: (row) => row.amount_display ?? "-",
   },
   { key: "round_stage", header: "Round", align: "center", width: "100px" },
   {
@@ -96,13 +112,7 @@ const dealColumns: Column<DealItem>[] = [
   },
 ];
 
-const severityVariant: Record<string, "error" | "warning" | "info"> = {
-  critical: "error",
-  warning: "warning",
-  caution: "info",
-};
-
-const sanctionColumns: Column<ClassifiedSanctionItem>[] = [
+const sanctionColumns: Column<ClassifiedSanctionListItem>[] = [
   {
     key: "sanctions_type",
     header: "Type",
@@ -110,14 +120,18 @@ const sanctionColumns: Column<ClassifiedSanctionItem>[] = [
       <span className="font-medium text-text-dark">{row.sanctions_type}</span>
     ),
   },
-  { key: "sanctions_agency", header: "Agency" },
+  {
+    key: "category",
+    header: "Category",
+    render: (row) => row.category ?? "-",
+  },
   {
     key: "severity",
     header: "Severity",
     align: "center",
     width: "100px",
     render: (row) => (
-      <Badge variant={severityVariant[row.severity] ?? "neutral"}>
+      <Badge variant={SEVERITY_VARIANT[row.severity] ?? "neutral"}>
         {row.severity}
       </Badge>
     ),
@@ -127,23 +141,29 @@ const sanctionColumns: Column<ClassifiedSanctionItem>[] = [
     header: "Date",
     align: "center",
     width: "120px",
-    render: (row) => formatDate(row.sanctions_date, "short"),
+    render: (row) =>
+      row.sanctions_date ? formatDate(row.sanctions_date, "short") : "-",
   },
 ];
 
 export default function CompanyDetailPage() {
   const navigate = useNavigate();
   const { corpCode } = useParams<{ corpCode: string }>();
-  const { data: company, isLoading } = useCompanyDetail(corpCode!);
-  const { data: reputation } = useReputationScore(corpCode!);
-  const { data: disclosures } = useCompanyDisclosures(corpCode!);
-  const { data: deals } = useDealsByCompany(corpCode!);
-  const { data: sanctions } = useClassifiedSanctions(corpCode!);
-  const syncDisclosures = useSyncDisclosures(corpCode!);
+  const code = corpCode ?? "";
+  const { data: company, isLoading, isError } = useCompanyDetail(code);
+  const { data: reputation, isLoading: reputationLoading } = useReputationScore(code);
+  const { data: disclosureData } = useDisclosures(code, { size: 5 });
+  const disclosures = disclosureData?.items;
+  const { data: deals } = useDealsByCompany(code, { size: 5 });
+  const { data: sanctionsData } = useClassifiedSanctions(code, { size: 5 });
+  const sanctions = sanctionsData?.items;
+  const syncDisclosures = useSyncDartDisclosures(code);
   const addToWatchlist = useAddToWatchlist();
+  const { data: watchlistData, isLoading: watchlistLoading } = useWatchlist();
+  const isWatched = watchlistData?.items.some((w) => w.company_id === company?.id);
 
   if (isLoading) return <Spinner />;
-  if (!company) {
+  if (isError || !company) {
     return (
       <EmptyState
         icon={AlertTriangle}
@@ -156,13 +176,13 @@ export default function CompanyDetailPage() {
   const handleAddWatchlist = () => {
     addToWatchlist.mutate(
       {
-        company_id: company.corp_code,
-        corp_code: company.corp_code,
-        alert_types: ["sanction", "news", "disclosure"],
+        company_id: company.id,
+        alert_types: ["new_disclosure", "reputation_change"],
       },
       {
         onSuccess: () => toast.success("Added to watchlist"),
-        onError: () => toast.error("Failed to add to watchlist"),
+        onError: (err: Error) =>
+          toast.error(`Failed to add to watchlist: ${err.message}`),
       },
     );
   };
@@ -186,47 +206,41 @@ export default function CompanyDetailPage() {
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            {company.corp_name}
-          </h1>
-          <div className="mt-1 text-sm text-text-secondary space-x-4">
-            {company.stock_code && <span>Stock: {company.stock_code}</span>}
-            {company.ceo_nm && <span>CEO: {company.ceo_nm}</span>}
-            {company.homepage && (
-              <a
-                href={company.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent hover:underline inline-flex items-center gap-1"
-              >
-                Website <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="primary"
-            icon={FileText}
-            onClick={() => navigate(`/im/new?corpCode=${corpCode}`)}
-          >
-            IM 생성
-          </Button>
-          <Button
-            variant="secondary"
-            icon={Plus}
-            onClick={handleAddWatchlist}
-            loading={addToWatchlist.isPending}
-          >
-            Watchlist
-          </Button>
-        </div>
-      </div>
+      <PageHero
+        title={company.corp_name}
+        subtitle={[
+          company.stock_code && `Stock: ${company.stock_code}`,
+          company.ceo_nm && `CEO: ${company.ceo_nm}`,
+        ].filter(Boolean).join(" | ") || undefined}
+        compact
+        actions={
+          <>
+            <Button
+              variant="primary"
+              icon={FileText}
+              onClick={() => navigate(`/im/new?corpCode=${corpCode}`)}
+            >
+              IM 생성
+            </Button>
+            <Button
+              variant={isWatched ? "ghost" : "secondary"}
+              icon={isWatched ? Check : Plus}
+              onClick={isWatched ? undefined : handleAddWatchlist}
+              disabled={isWatched || watchlistLoading}
+              loading={addToWatchlist.isPending}
+            >
+              {isWatched ? "Watched" : "Watchlist"}
+            </Button>
+          </>
+        }
+      />
 
       {/* Reputation */}
-      {reputation && (
+      {reputationLoading ? (
+        <Card title="Reputation Score" headerBar>
+          <Spinner />
+        </Card>
+      ) : reputation ? (
         <Card title="Reputation Score" headerBar>
           <div className="flex items-center gap-6">
             <ReputationBadge
@@ -250,10 +264,10 @@ export default function CompanyDetailPage() {
             </div>
           </div>
         </Card>
-      )}
+      ) : null}
 
       {/* Financials */}
-      <CompanyFinancials corpCode={corpCode!} />
+      <CompanyFinancials corpCode={code} />
 
       {/* Disclosures */}
       <Card
@@ -261,15 +275,23 @@ export default function CompanyDetailPage() {
         headerBar
         padding="none"
         actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={RefreshCw}
-            onClick={handleSyncDisclosures}
-            loading={syncDisclosures.isPending}
-          >
-            Sync
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={RefreshCw}
+              onClick={handleSyncDisclosures}
+              loading={syncDisclosures.isPending}
+            >
+              Sync
+            </Button>
+            <Link
+              to={`/kiis/disclosures?corpCode=${corpCode}`}
+              className="text-sm text-accent hover:underline self-center"
+            >
+              View all
+            </Link>
+          </div>
         }
       >
         {!disclosures?.length ? (
@@ -290,7 +312,19 @@ export default function CompanyDetailPage() {
       </Card>
 
       {/* Related Deals */}
-      <Card title="Related Deals" headerBar padding="none">
+      <Card
+        title="Related Deals"
+        headerBar
+        padding="none"
+        actions={
+          <Link
+            to="/kiis/deals"
+            className="text-sm text-accent hover:underline"
+          >
+            View all
+          </Link>
+        }
+      >
         {!deals?.length ? (
           <EmptyState
             icon={AlertTriangle}
@@ -309,7 +343,19 @@ export default function CompanyDetailPage() {
       </Card>
 
       {/* Sanctions */}
-      <Card title="Sanctions" headerBar padding="none">
+      <Card
+        title="Sanctions"
+        headerBar
+        padding="none"
+        actions={
+          <Link
+            to={`/kiis/sanctions`}
+            className="text-sm text-accent hover:underline"
+          >
+            View all
+          </Link>
+        }
+      >
         {!sanctions?.length ? (
           <EmptyState
             icon={AlertTriangle}

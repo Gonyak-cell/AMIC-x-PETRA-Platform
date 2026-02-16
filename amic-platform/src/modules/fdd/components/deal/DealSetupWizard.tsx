@@ -4,19 +4,9 @@ import { toast } from "sonner";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { useCreateDeal } from "@/modules/fdd/hooks/useDeals";
 import ScopeSelector from "./ScopeSelector";
-import type { DealType } from "@/modules/fdd/types/deal";
-
-const DEAL_TYPE_OPTIONS = [
-  { value: "COMPLETION_ACCOUNTS", label: "Completion Accounts" },
-  { value: "LOCKED_BOX", label: "Locked Box" },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: "KRW", label: "KRW (원)" },
-  { value: "USD", label: "USD ($)" },
-  { value: "EUR", label: "EUR" },
-  { value: "JPY", label: "JPY (¥)" },
-];
+import type { DealType, IndustryType } from "@/modules/fdd/types/deal";
+import { FDD_INDUSTRY_OPTIONS } from "@/types/industry";
+import { DEAL_TYPE_OPTIONS, CURRENCY_OPTIONS } from "@/modules/fdd/constants";
 
 interface FormData {
   name: string;
@@ -29,6 +19,7 @@ interface FormData {
   client_contact_name: string;
   client_contact_email: string;
   target_company_name: string;
+  industry: IndustryType;
   scope_qoe: boolean;
   scope_nwc: boolean;
   scope_debt: boolean;
@@ -45,6 +36,7 @@ const INITIAL_FORM: FormData = {
   client_contact_name: "",
   client_contact_email: "",
   target_company_name: "",
+  industry: "general",
   scope_qoe: true,
   scope_nwc: true,
   scope_debt: true,
@@ -67,10 +59,33 @@ export default function DealSetupWizard() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, 3));
+  const validateStep = (s: number): boolean => {
+    if (s === 0) {
+      if (!formData.name || !formData.reference_date || !formData.period_start || !formData.period_end) {
+        toast.error("Please fill in all required fields");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep(step)) return;
+    setStep((s) => Math.min(s + 1, 3));
+  };
   const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleSubmit = async () => {
+    // Client-side date validation
+    if (formData.period_start && formData.period_end && formData.period_end < formData.period_start) {
+      toast.error("Period End must be on or after Period Start");
+      return;
+    }
+    if (formData.reference_date && formData.period_end && formData.reference_date < formData.period_end) {
+      toast.error("Reference Date must be on or after Period End");
+      return;
+    }
+
     try {
       const result = await createDeal.mutateAsync({
         name: formData.name,
@@ -83,6 +98,7 @@ export default function DealSetupWizard() {
         client_contact_name: formData.client_contact_name || undefined,
         client_contact_email: formData.client_contact_email || undefined,
         target_company_name: formData.target_company_name || undefined,
+        industry: formData.industry,
         scope_qoe: formData.scope_qoe,
         scope_nwc: formData.scope_nwc,
         scope_debt: formData.scope_debt,
@@ -135,12 +151,18 @@ export default function DealSetupWizard() {
             placeholder="Enter deal name"
             required
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Select
               label="Deal Type"
               options={DEAL_TYPE_OPTIONS}
               value={formData.deal_type}
               onChange={(e) => updateField("deal_type", e.target.value as DealType)}
+            />
+            <Select
+              label="Industry"
+              options={FDD_INDUSTRY_OPTIONS}
+              value={formData.industry}
+              onChange={(e) => updateField("industry", e.target.value as IndustryType)}
             />
             <Select
               label="Base Currency"
@@ -253,7 +275,7 @@ export default function DealSetupWizard() {
             variant="accent"
             onClick={handleSubmit}
             loading={createDeal.isPending}
-            disabled={!formData.name || !formData.reference_date}
+            disabled={!formData.name || !formData.reference_date || !formData.period_start || !formData.period_end}
           >
             Create Deal
           </Button>

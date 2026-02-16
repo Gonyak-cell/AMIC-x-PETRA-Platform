@@ -3,6 +3,7 @@ import { kiisApi } from "@/api/kiisClient";
 import type {
   DealItem,
   DealListResponse,
+  DealByCompanyParams,
   SectorAggregation,
   SectorAggregationResponse,
   StageAggregation,
@@ -10,22 +11,32 @@ import type {
   YearlyTrend,
   TrendResponse,
   DealAggregationParams,
+  DealTrendParams,
 } from "@/modules/kiis/types/deal";
 
-export function useDealsByCompany(corpCode: string) {
+const CORP_CODE_RE = /^\d{8}$/;
+
+export function useDealsByCompany(
+  corpCode: string,
+  params: DealByCompanyParams = {},
+) {
   return useQuery<DealItem[]>({
-    queryKey: ["kiis", "deals", "by-company", corpCode],
+    queryKey: ["kiis", "deals", "by-company", corpCode, params],
     queryFn: async () => {
       const { data } = await kiisApi.get<DealListResponse>(
         `/deals/by-company/${corpCode}`,
+        { params },
       );
       return data.items;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
-export function useDealsBySector(params: DealAggregationParams = {}) {
+export function useDealsBySector(
+  params: DealAggregationParams = {},
+  options?: { enabled?: boolean },
+) {
   return useQuery<SectorAggregation[]>({
     queryKey: ["kiis", "deals", "by-sector", params],
     queryFn: async () => {
@@ -35,10 +46,14 @@ export function useDealsBySector(params: DealAggregationParams = {}) {
       );
       return data.items;
     },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
 }
 
-export function useDealsByStage(params: DealAggregationParams = {}) {
+export function useDealsByStage(
+  params: DealAggregationParams = {},
+  options?: { enabled?: boolean },
+) {
   return useQuery<StageAggregation[]>({
     queryKey: ["kiis", "deals", "by-stage", params],
     queryFn: async () => {
@@ -48,10 +63,14 @@ export function useDealsByStage(params: DealAggregationParams = {}) {
       );
       return data.items;
     },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
 }
 
-export function useDealTrends(params: DealAggregationParams = {}) {
+export function useDealTrends(
+  params: DealTrendParams = {},
+  options?: { enabled?: boolean },
+) {
   return useQuery<YearlyTrend[]>({
     queryKey: ["kiis", "deals", "trends", params],
     queryFn: async () => {
@@ -60,5 +79,6 @@ export function useDealTrends(params: DealAggregationParams = {}) {
       });
       return data.items;
     },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
 }

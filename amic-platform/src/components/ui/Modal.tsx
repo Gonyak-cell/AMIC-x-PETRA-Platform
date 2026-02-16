@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useId } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
@@ -30,6 +30,7 @@ export function Modal({
   footer,
   size = "md",
 }: ModalProps) {
+  const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -65,17 +66,6 @@ export function Modal({
     });
   }, [onClose]);
 
-  // ESC 키로 닫기
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        handleClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, handleClose]);
-
   if (!open) return null;
 
   return (
@@ -83,25 +73,29 @@ export function Modal({
       ref={dialogRef}
       className={cn(
         "fixed inset-0 z-50 bg-transparent p-0 m-0 max-w-none max-h-none w-full h-full",
-        "backdrop:bg-black/50"
+        "backdrop:bg-amic-900/70 backdrop:backdrop-blur-sm"
       )}
+      onCancel={(e) => {
+        e.preventDefault();
+        handleClose();
+      }}
       onClick={(e) => {
         if (e.target === dialogRef.current) handleClose();
       }}
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
     >
       <div className="flex items-center justify-center min-h-screen p-4">
         <div
           ref={contentRef}
           className={cn(
-            "bg-white rounded-corporate shadow-xl w-full",
+            "bg-white rounded-dr shadow-dr-xl w-full animate-fade-in-up",
             sizeStyles[size]
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 헤더 */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-border">
-            <h2 id="modal-title" className="text-lg font-heading font-semibold text-text-dark">
+            <h2 id={titleId} className="text-lg font-heading font-semibold text-text-dark">
               <span className="border-l-4 border-accent pl-3">{title}</span>
             </h2>
             <Button
@@ -116,11 +110,11 @@ export function Modal({
           </div>
 
           {/* 콘텐츠 */}
-          <div className="px-5 py-4" role="document">{children}</div>
+          <div className="px-5 py-4">{children}</div>
 
           {/* 푸터 */}
           {footer && (
-            <div className="px-5 py-4 border-t border-gray-border bg-bg-cool rounded-b-corporate flex justify-end gap-3">
+            <div className="px-5 py-4 border-t border-gray-border bg-bg-cool rounded-b-dr flex justify-end gap-3">
               {footer}
             </div>
           )}

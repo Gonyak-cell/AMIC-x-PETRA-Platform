@@ -10,7 +10,7 @@ import type {
 
 export function useMappings(dealId: string) {
   return useQuery<AccountMappingRead[]>({
-    queryKey: ["mappings", dealId],
+    queryKey: ["fdd", "mappings", dealId],
     queryFn: async () => {
       const { data } = await api.get(`/deals/${dealId}/mappings`);
       return data;
@@ -20,17 +20,15 @@ export function useMappings(dealId: string) {
 }
 
 export function useSuggestMappings(dealId: string) {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { snapshot_id?: string } | void = {}) => {
+    mutationFn: async () => {
       const { data } = await api.post(
-        `/deals/${dealId}/mappings/suggest`,
-        body ?? {}
+        `/deals/${dealId}/mappings/suggest`
       );
       return data as MappingSuggestion[];
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mappings", dealId] });
+    onError: (error: Error) => {
+      console.error("useSuggestMappings failed:", error);
     },
   });
 }
@@ -39,12 +37,15 @@ export function useSaveMappings(dealId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { mappings: AccountMappingCreate[] }) => {
-      const { data } = await api.put(`/deals/${dealId}/mappings`, body);
+      const { data } = await api.post(`/deals/${dealId}/mappings`, body);
       return data as AccountMappingRead[];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mappings", dealId] });
-      queryClient.invalidateQueries({ queryKey: ["tie-out", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "mappings", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "tie-out", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useSaveMappings failed:", error);
     },
   });
 }
@@ -59,14 +60,18 @@ export function useApproveMapping(dealId: string) {
       mappingId: string;
       body: { approved_by: string };
     }) => {
-      const { data } = await api.put(
+      const { data } = await api.post(
         `/deals/${dealId}/mappings/${mappingId}/approve`,
         body
       );
       return data as AccountMappingRead;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mappings", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "mappings", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "tie-out", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useApproveMapping failed:", error);
     },
   });
 }
@@ -75,31 +80,36 @@ export function useApproveAllMappings(dealId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { approved_by: string }) => {
-      const { data } = await api.put(
+      const { data } = await api.post(
         `/deals/${dealId}/mappings/approve-all`,
         body
       );
       return data as AccountMappingRead[];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mappings", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "mappings", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["fdd", "tie-out", dealId] });
+    },
+    onError: (error: Error) => {
+      console.error("useApproveAllMappings failed:", error);
     },
   });
 }
 
 export function useStandardLineItems() {
   return useQuery<StandardLineItem[]>({
-    queryKey: ["standard-line-items"],
+    queryKey: ["fdd", "standard-line-items"],
     queryFn: async () => {
       const { data } = await api.get("/standard-line-items");
       return data;
     },
+    staleTime: 60 * 60 * 1000, // 1 hour — reference data rarely changes
   });
 }
 
 export function useTieOutResults(dealId: string) {
   return useQuery<TieOutResultRead[]>({
-    queryKey: ["tie-out", dealId],
+    queryKey: ["fdd", "tie-out", dealId],
     queryFn: async () => {
       const { data } = await api.get(`/deals/${dealId}/tie-out`);
       return data;

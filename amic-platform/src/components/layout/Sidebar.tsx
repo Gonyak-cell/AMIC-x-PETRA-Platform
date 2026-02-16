@@ -39,6 +39,7 @@ import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { ModuleSwitcher } from "./ModuleSwitcher";
 import { Badge } from "@/components/ui";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
+import { HealthIndicator } from "@/components/layout/HealthIndicator";
 import logoAmicPetra from "@/assets/images/logo-amic-petra.png";
 
 // ── FDD Navigation ──
@@ -124,7 +125,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
   return (
     <aside
-      className={cn("w-64 bg-amic min-h-screen flex flex-col shadow-sidebar", className)}
+      className={cn("w-64 bg-gradient-to-b from-amic-800 via-amic to-amic-700 min-h-screen flex flex-col shadow-sidebar", className)}
       role="navigation"
       aria-label="Main navigation"
     >
@@ -136,6 +137,8 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
           className="w-full h-auto"
         />
       </div>
+      {/* Gradient Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       {/* Home Link + Portal Nav */}
       <div className="px-3 pt-3 pb-1 space-y-1">
@@ -344,6 +347,9 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
         </div>
       </div>
 
+      {/* Health Status (admin only) */}
+      <HealthIndicator />
+
       {/* User Info + Logout */}
       {user && (
         <div className="border-t border-white/10 px-4 py-4">
@@ -355,7 +361,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
             aria-label="Open profile settings"
           >
-            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-accent/25 rounded-full flex items-center justify-center ring-1 ring-accent/30">
               <span className="text-white font-medium text-sm">
                 {user.display_name?.charAt(0).toUpperCase() || "U"}
               </span>

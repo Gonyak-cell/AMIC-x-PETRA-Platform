@@ -8,8 +8,13 @@ import {
   mockSectorData,
   mockDealTrends,
   mockKiisSearchResults,
+  mockWatchlistItems,
+  mockAlerts,
   mockNotifications,
   mockExports,
+  mockIndustries,
+  mockDealSummary,
+  mockImCompany,
 } from "./data";
 
 export const handlers = [
@@ -51,7 +56,6 @@ export const handlers = [
     return HttpResponse.json(
       {
         id: "deal-new",
-        ...body,
         status: "DRAFT",
         created_by: "user-1",
         created_at: new Date().toISOString(),
@@ -65,10 +69,29 @@ export const handlers = [
         scope_qoe: false,
         scope_nwc: false,
         scope_debt: false,
+        industry: "general",
         current_phase: "MOU",
+        ...body,
       },
       { status: 201 },
     );
+  }),
+
+  // ── FDD Industries ──
+  http.get("*/api/fdd/industries", () => {
+    return HttpResponse.json(mockIndustries);
+  }),
+
+  // ── FDD Deal Summary (cross-module) ──
+  http.get("*/api/fdd/deals/:dealId/summary", ({ params }) => {
+    const deal = mockDeals.find((d) => d.id === params.dealId);
+    if (!deal) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({
+      ...mockDealSummary,
+      deal_id: deal.id,
+      deal_name: deal.name,
+      industry: deal.industry,
+    });
   }),
 
   // ── FDD Health ──
@@ -88,12 +111,15 @@ export const handlers = [
     if (!company) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({
       ...company,
-      industry: null,
-      est_dt: null,
-      homepage: null,
+      corp_name_eng: null,
+      ceo_nm: null,
+      adres: null,
+      hm_url: null,
       ir_url: null,
       phn_no: null,
-      fax_no: null,
+      induty_code: null,
+      est_dt: null,
+      acc_mt: null,
       jurir_no: null,
       bizr_no: null,
     });
@@ -104,8 +130,57 @@ export const handlers = [
     return HttpResponse.json({ status: "ok" });
   }),
 
+  http.get("*/api/kiis/watchlist", () => {
+    return HttpResponse.json(mockWatchlistItems);
+  }),
+
+  http.post("*/api/kiis/watchlist", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      {
+        id: 3,
+        user_id: 1,
+        company_id: body.company_id,
+        company_name: "새 회사",
+        alert_types: (body.alert_types as string[]) ?? [],
+        is_active: true,
+        created_at: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.delete("*/api/kiis/watchlist/:companyId", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.get("*/api/kiis/alerts", () => {
+    return HttpResponse.json(mockAlerts);
+  }),
+
+  http.post("*/api/kiis/alerts/:alertId/read", () => {
+    return HttpResponse.json({ success: true });
+  }),
+
   http.get("*/api/kiis/alerts/unread-count", () => {
     return HttpResponse.json({ count: 3 });
+  }),
+
+  // ── IM Companies ──
+  http.get("*/api/im/companies/:corpCode", ({ params }) => {
+    if (params.corpCode === "00126380") {
+      return HttpResponse.json(mockImCompany);
+    }
+    return new HttpResponse(null, { status: 404 });
+  }),
+
+  http.post("*/api/im/companies", async ({ request }) => {
+    const body = (await request.json()) as { corp_code: string };
+    return HttpResponse.json({
+      ...mockImCompany,
+      corp_code: body.corp_code,
+      fetch_status: "PENDING",
+    });
   }),
 
   // ── IM Documents ──
@@ -128,6 +203,7 @@ export const handlers = [
         company_name: "Test Company",
         project_name: null,
         sections: [],
+        industry: "general",
         status: "PENDING",
         progress_pct: 0,
         celery_task_id: null,
@@ -139,7 +215,7 @@ export const handlers = [
         completed_at: null,
         ...body,
       },
-      { status: 201 },
+      { status: 202 },
     );
   }),
 

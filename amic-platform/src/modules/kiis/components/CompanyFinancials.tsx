@@ -7,12 +7,11 @@ import type { FinancialStatement } from "@/modules/kiis/types/company";
 import { formatAmount } from "@/lib/format";
 import { BarChart3 } from "lucide-react";
 
-const YEAR_OPTIONS = [
-  { value: "2024", label: "2024" },
-  { value: "2023", label: "2023" },
-  { value: "2022", label: "2022" },
-  { value: "2021", label: "2021" },
-];
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 4 }, (_, i) => {
+  const y = String(currentYear - i);
+  return { value: y, label: y };
+});
 
 const REPORT_OPTIONS = [
   { value: "11011", label: "Annual Report" },
@@ -21,6 +20,11 @@ const REPORT_OPTIONS = [
   { value: "11014", label: "Q3 Report" },
 ];
 
+function parseAmount(s: string): number | null {
+  const n = Number(s);
+  return isNaN(n) ? null : n;
+}
+
 interface CompanyFinancialsProps {
   corpCode: string;
 }
@@ -28,10 +32,10 @@ interface CompanyFinancialsProps {
 export default function CompanyFinancials({
   corpCode,
 }: CompanyFinancialsProps) {
-  const [year, setYear] = useState("2024");
+  const [year, setYear] = useState(String(currentYear));
   const [reportCode, setReportCode] = useState("11011");
 
-  const { data: financials, isLoading } = useCompanyFinancials(corpCode, {
+  const { data: financials, isLoading, isError } = useCompanyFinancials(corpCode, {
     bsns_year: year,
     reprt_code: reportCode,
   });
@@ -49,28 +53,28 @@ export default function CompanyFinancials({
       header: "Current",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.thstrm_amount, "KRW"),
+      render: (row) => formatAmount(parseAmount(row.thstrm_amount), "KRW"),
     },
     {
       key: "frmtrm_amount",
       header: "Previous",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.frmtrm_amount, "KRW"),
+      render: (row) => formatAmount(parseAmount(row.frmtrm_amount), "KRW"),
     },
     {
       key: "bfefrmtrm_amount",
       header: "2 Years Ago",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.bfefrmtrm_amount, "KRW"),
+      render: (row) => formatAmount(parseAmount(row.bfefrmtrm_amount), "KRW"),
     },
   ];
 
   const chartData = (financials ?? []).slice(0, 8).map((f) => ({
     name: f.account_nm,
-    value: f.thstrm_amount ?? 0,
-    displayValue: formatAmount(f.thstrm_amount, "KRW"),
+    value: parseAmount(f.thstrm_amount) ?? 0,
+    displayValue: formatAmount(parseAmount(f.thstrm_amount), "KRW"),
   }));
 
   return (
@@ -92,6 +96,12 @@ export default function CompanyFinancials({
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <EmptyState
+          icon={BarChart3}
+          title="Failed to load financials"
+          description="An error occurred while fetching financial data. Please try again."
+        />
       ) : !financials || financials.length === 0 ? (
         <EmptyState
           icon={BarChart3}

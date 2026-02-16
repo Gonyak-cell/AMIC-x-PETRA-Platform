@@ -81,7 +81,7 @@ export function ModuleSwitcher() {
 
       {open && (
         <div
-          className="absolute left-3 right-3 top-full mt-1 bg-amic-800 border border-white/10 rounded-lg shadow-elevated z-50 overflow-hidden"
+          className="absolute left-3 right-3 top-full mt-1 bg-amic-800 border border-white/10 rounded-dr shadow-dr-lg z-50 overflow-hidden"
           role="listbox"
           aria-label="Select module"
         >

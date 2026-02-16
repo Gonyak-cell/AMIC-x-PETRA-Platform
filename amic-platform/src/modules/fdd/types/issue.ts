@@ -1,17 +1,20 @@
 // ── Enums ────────────────────────────────────────────────
 
 export type IssueCategory =
-  | "QOE_ADJUSTMENT"
-  | "TIMING_ANOMALY"
-  | "AMOUNT_ANOMALY"
+  | "ANOMALY"
   | "DATA_QUALITY"
-  | "MISSING_EVIDENCE"
-  | "CLASSIFICATION_ERROR"
-  | "OTHER";
+  | "MAPPING"
+  | "CALCULATION"
+  | "AI_SUGGESTION";
 
 export type IssueSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
-export type IssueStatus = "OPEN" | "IN_REVIEW" | "RESOLVED" | "DISMISSED";
+export type IssueStatus =
+  | "OPEN"
+  | "UNDER_REVIEW"
+  | "RESOLVED"
+  | "FALSE_POSITIVE"
+  | "ACKNOWLEDGED";
 
 // ── Issue ────────────────────────────────────────────────
 

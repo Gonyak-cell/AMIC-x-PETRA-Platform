@@ -6,6 +6,7 @@ import { useDealsBySector, useDealTrends } from "@/modules/kiis/hooks/useDeals";
 import { AnalyticsFilterBar } from "@/components/analytics/AnalyticsFilterBar";
 import { ModuleKpiSection } from "@/components/analytics/ModuleKpiSection";
 import { AnalyticsChartPanel } from "@/components/analytics/AnalyticsChartPanel";
+import { PageHero } from "@/components/ui";
 import type { AnalyticsTimeRange, AnalyticsModule } from "@/types/analytics";
 
 export default function AnalyticsPage() {
@@ -28,15 +29,12 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Cross-Module Analytics
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Aggregated KPIs and trends across FDD, KIIS, and IM modules
-        </p>
-      </div>
+      {/* Hero Section */}
+      <PageHero
+        title="Cross-Module Analytics"
+        subtitle="Aggregated KPIs and trends across FDD, KIIS, and IM modules"
+        compact
+      />
 
       {/* Filters */}
       <AnalyticsFilterBar

@@ -99,11 +99,24 @@ export function useCreate{Resource}() {
 ```
 
 ## Agent Orchestration
-- @component-reviewer: UI 컴포넌트 코드 리뷰 (접근성, 패턴 준수)
-- @api-integration-debugger: API 연동 디버깅 (프록시, CORS, 인증)
+
+### 코드 리뷰 에이전트 (Verified Claim Protocol 적용)
+- @code-reviewer: 프론트엔드 코드 리뷰 (패턴, 상태관리, 에러처리, a11y, TypeScript, 성능, UX)
+- @api-auditor: FE-BE API 통합 리뷰 (프록시, 인증, 타입 일치, URL 경로)
+- @security-auditor: 보안 리뷰 (인증, 입력검증, LLM 보안, CORS, 시크릿, 데이터보호)
+- @test-auditor: 테스트 품질 리뷰 (유닛+E2E, Mock 정확성, 커버리지 갭)
+- @perf-auditor: 성능 리뷰 (번들, 렌더링, 네트워크, CSS, Vite)
+- @infra-auditor: 인프라 리뷰 (Docker, Nginx, CI/CD, 환경변수)
+- @review-verifier: 코드 리뷰 검증 (5단계 판정, 허위 양성 6종 분류, 인라인 교차 검증)
+
+### 기존 에이전트 (VCP 임베드됨)
 - @type-checker: TypeScript 타입 안전성 검증
-- @test-runner: 테스트 실행 및 커버리지 분석
 - @accessibility-auditor: WCAG 2.1 접근성 감사
+- @test-runner: 테스트 실행 및 커버리지 분석
+
+### 하위 호환 (deprecated → 포워드)
+- @component-reviewer → @code-reviewer
+- @api-integration-debugger → @api-auditor
 
 ## Skill References
 - 새 모듈 페이지 → `new-module-page`
@@ -111,6 +124,25 @@ export function useCreate{Resource}() {
 - API 훅 생성 → `api-hook`
 - 모듈 스캐폴딩 → `module-scaffold`
 - API 디버깅 → `debug-api`
+- 코드 리뷰 검증 → `verify-review` (`/verify-review`)
+- 코드 리뷰 오케스트레이션 → `review-orchestrate` (내부 사용)
+
+## Review Commands
+- `/review [scope]` — 기본 코드 리뷰 (code-reviewer 단일)
+- `/review-full [scope]` — 멀티 에이전트 전체 리뷰
+- `/review-security [scope]` — 보안 집중 리뷰
+- `/review-test [scope]` — 테스트 품질 리뷰
+- `/review-perf [scope]` — 성능/번들 리뷰
+- `/review-infra [scope]` — 인프라/배포 리뷰
+
+## 작업 방식 규칙 — LLM 코드 리뷰 검증 필수
+
+- IMPORTANT: 코드 리뷰 항목을 수정하기 전, 반드시 `/verify-review`로 소스 대조 검증을 수행
+- IMPORTANT: 검증 없이 리뷰 이슈를 수정하는 것을 절대 금지 — 허위 양성 수정은 코드 품질을 오히려 저하시킴
+- IMPORTANT: 코드 리뷰 작성 시에도 반드시 Read/Grep으로 실제 코드를 확인한 뒤 클레임할 것
+- 주의 유형: "없다" 클레임(실제로는 존재), 코드 스니펫 환각(실제와 다른 코드 인용), 라인 번호 오류(±5 이상 이동)
+- 허위 양성 판정 기준: 이미 구현됨(FP-IMPL), 코드 환각(FP-HALLUC), 라인 오류(FP-LINE), 로직 오해(FP-LOGIC), 컨텍스트 누락(FP-CTX), 심각도 과장(FP-SEV)
+- 검증 결과 유효 이슈(정확 + 부분 정확)만 수정 대상으로 진행
 
 ## 작업 방식 규칙 — 컨텍스트 한계 관리
 - IMPORTANT: 컨텍스트 윈도우가 부족해질 것으로 예상되면 즉시 작업을 중단

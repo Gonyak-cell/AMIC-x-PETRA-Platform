@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import { Skeleton } from "./Skeleton";
 
 export interface Column<T> {
-  key: string;
+  key: Extract<keyof T, string> | (string & {});
   /** Column heading text — accepts either `header` or `label` */
   header?: string;
   label?: string;
@@ -25,6 +25,7 @@ export interface DataTableProps<T> {
   data: T[];
   keyField: string;
   loading?: boolean;
+  skeletonRows?: number;
   emptyMessage?: string;
   striped?: boolean;
   compact?: boolean;
@@ -46,6 +47,7 @@ export function DataTable<T extends object>({
   data,
   keyField,
   loading = false,
+  skeletonRows = 5,
   emptyMessage = "No data available",
   striped = true,
   compact = false,
@@ -102,10 +104,10 @@ export function DataTable<T extends object>({
 
   if (loading) {
     return (
-      <div className={cn("border border-gray-border rounded-lg overflow-hidden", className)}>
+      <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
         <table className="w-full">
           <thead>
-            <tr className="bg-table-header">
+            <tr className="bg-gradient-to-r from-amic to-amic-500">
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -123,7 +125,7 @@ export function DataTable<T extends object>({
             </tr>
           </thead>
           <tbody>
-            {[...Array(5)].map((_, i) => (
+            {[...Array(skeletonRows)].map((_, i) => (
               <tr key={i} className={striped && i % 2 === 1 ? "bg-table-alt" : "bg-white"}>
                 {columns.map((col) => (
                   <td key={col.key} className={cellPadding}>
@@ -140,10 +142,10 @@ export function DataTable<T extends object>({
 
   if (!data.length) {
     return (
-      <div className={cn("border border-gray-border rounded-lg overflow-hidden", className)}>
+      <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
         <table className="w-full">
           <thead>
-            <tr className="bg-table-header">
+            <tr className="bg-gradient-to-r from-amic to-amic-500">
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -167,10 +169,10 @@ export function DataTable<T extends object>({
   }
 
   return (
-    <div className={cn("border border-gray-border rounded-lg overflow-hidden", className)}>
+    <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
       <table className="w-full">
         <thead>
-          <tr className="bg-table-header">
+          <tr className="bg-gradient-to-r from-amic to-amic-500">
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -214,7 +216,7 @@ export function DataTable<T extends object>({
                   aria-label={onRowClick ? `Row ${rowIndex + 1}` : undefined}
                   className={cn(
                     striped && rowIndex % 2 === 1 ? "bg-table-alt" : "bg-white",
-                    onRowClick && "cursor-pointer hover:bg-bg-light-green transition-colors",
+                    onRowClick && "cursor-pointer hover:bg-accent/5 transition-colors",
                     onRowClick && "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent",
                     focusedRowIndex === rowIndex && "ring-2 ring-inset ring-accent"
                   )}

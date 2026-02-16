@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -11,22 +11,20 @@ import {
 import { useDocument, useCreateDocument, useDownloadDocument } from "@/modules/im/hooks/useDocuments";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import { ProgressTracker } from "@/modules/im/components/ProgressTracker";
-import { Button, Card, Breadcrumbs, Skeleton, SkeletonCard } from "@/components/ui";
+import { SECTION_LABEL_MAP, IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
+import { formatBytes } from "@/lib/format";
+import { Button, Card, Breadcrumbs, Skeleton, SkeletonCard, PageHero } from "@/components/ui";
 import type { BreadcrumbItem } from "@/components/ui";
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export default function DocumentDetailPage() {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
-  const { data: doc, isLoading } = useDocument(documentId!);
+  const { data: doc, isLoading } = useDocument(documentId ?? "");
   const downloadDocument = useDownloadDocument();
   const createDocument = useCreateDocument();
   const [downloadingFormat, setDownloadingFormat] = useState<"pptx" | "pdf" | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   if (isLoading) {
     return (
@@ -57,13 +55,7 @@ export default function DocumentDetailPage() {
     );
   }
 
-  const isInProgress = [
-    "PENDING",
-    "COLLECTING",
-    "ANALYZING",
-    "GENERATING",
-    "RENDERING",
-  ].includes(doc.status);
+  const isInProgress = IN_PROGRESS_STATUSES.includes(doc.status);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "IM Projects", href: "/im" },
@@ -74,11 +66,11 @@ export default function DocumentDetailPage() {
     setDownloadingFormat(format);
     try {
       await downloadDocument.mutateAsync({ documentId: doc.id, format });
-      toast.success(`${format.toUpperCase()} download started`);
+      if (mountedRef.current) toast.success(`${format.toUpperCase()} download started`);
     } catch {
-      toast.error(`Failed to download ${format.toUpperCase()}`);
+      if (mountedRef.current) toast.error(`Failed to download ${format.toUpperCase()}`);
     } finally {
-      setDownloadingFormat(null);
+      if (mountedRef.current) setDownloadingFormat(null);
     }
   };
 
@@ -89,6 +81,7 @@ export default function DocumentDetailPage() {
         project_name: doc.project_name || undefined,
         im_style: doc.im_style,
         sections: doc.sections.length > 0 ? doc.sections : undefined,
+        industry: doc.industry || undefined,
       });
       toast.success("Regeneration started");
       navigate(`/im/documents/${result.id}`);
@@ -103,28 +96,28 @@ export default function DocumentDetailPage() {
       <Breadcrumbs items={breadcrumbs} />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <PageHero
+        title={doc.project_name || doc.company_name}
+        compact
+        actions={
           <Button
             variant="ghost"
             size="sm"
             icon={ArrowLeft}
             onClick={() => navigate("/im")}
-          />
-          <div>
-            <h1 className="text-2xl font-heading font-bold text-text-dark">
-              {doc.project_name || doc.company_name}
-            </h1>
-            <div className="flex items-center gap-3 mt-1">
-              <DocumentStatusBadge status={doc.status} />
-              {isInProgress && (
-                <span className="text-xs text-text-secondary animate-pulse">
-                  Auto-refreshing...
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+          >
+            Back
+          </Button>
+        }
+      />
+
+      <div className="flex items-center gap-3">
+        <DocumentStatusBadge status={doc.status} />
+        {isInProgress && (
+          <span className="text-xs text-text-secondary animate-pulse">
+            Auto-refreshing...
+          </span>
+        )}
       </div>
 
       {/* Document Info */}
@@ -145,6 +138,12 @@ export default function DocumentDetailPage() {
             <span className="text-text-secondary block">IM Style</span>
             <span className="text-text-dark">{doc.im_style}</span>
           </div>
+          {doc.industry && (
+            <div>
+              <span className="text-text-secondary block">Industry</span>
+              <span className="text-text-dark">{doc.industry}</span>
+            </div>
+          )}
           <div className="flex items-start gap-2">
             <Calendar className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
             <div>
@@ -242,7 +241,7 @@ export default function DocumentDetailPage() {
                 key={section}
                 className="px-3 py-1 text-sm rounded-lg bg-bg-cool text-text-secondary"
               >
-                {section}
+                {SECTION_LABEL_MAP[section] ?? section}
               </span>
             ))}
           </div>

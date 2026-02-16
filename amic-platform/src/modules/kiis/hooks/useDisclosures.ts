@@ -6,6 +6,8 @@ import type {
   DisclosureSyncResponse,
 } from "@/modules/kiis/types/disclosure";
 
+const CORP_CODE_RE = /^\d{8}$/;
+
 export function useDisclosures(
   corpCode: string,
   params: DisclosureListParams = {},
@@ -19,15 +21,23 @@ export function useDisclosures(
       );
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
 export function useSyncDartDisclosures(corpCode: string) {
   const queryClient = useQueryClient();
-  return useMutation<DisclosureSyncResponse>({
-    mutationFn: async () => {
-      const { data } = await kiisApi.post(`/disclosures/${corpCode}/sync`);
+  return useMutation<
+    DisclosureSyncResponse,
+    Error,
+    { bgn_de?: string; end_de?: string } | void
+  >({
+    mutationFn: async (vars) => {
+      const { data } = await kiisApi.post(
+        `/disclosures/${corpCode}/sync`,
+        null,
+        { params: vars ?? {} },
+      );
       return data;
     },
     onSuccess: () => {
@@ -40,7 +50,7 @@ export function useSyncDartDisclosures(corpCode: string) {
 
 export function useSyncKofiaDisclosures(fundCode: string) {
   const queryClient = useQueryClient();
-  return useMutation<DisclosureSyncResponse>({
+  return useMutation<DisclosureSyncResponse, Error, void>({
     mutationFn: async () => {
       const { data } = await kiisApi.post(
         `/disclosures/kofia/${fundCode}/sync`,

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   Plus,
@@ -10,7 +9,12 @@ import {
   Hash,
 } from "lucide-react";
 import { toast } from "sonner";
-import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  useDefinitions,
+  useCreateDefinition,
+  useApproveDefinition,
+} from "@/modules/fdd/hooks/useDefinitions";
 import type { DealDefinition, DefinitionData } from "@/modules/fdd/types/deal";
 import {
   Card,
@@ -20,6 +24,7 @@ import {
   Select,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
 
@@ -29,16 +34,16 @@ const DEFAULT_DEFINITION: DefinitionData = {
   debt_like: [],
   cash_like: [],
   nwc: { include: [], exclude: [] },
-  target_nwc: { method: "6M_AVG", value: null },
+  target_nwc: { method: "LTM_AVERAGE", value: null },
   lease_ifrs16: { include_in_debt: false },
 };
 
 const NWC_METHOD_OPTIONS: SelectOption[] = [
-  { value: "6M_AVG", label: "6M Average" },
-  { value: "12M_AVG", label: "12M Average" },
-  { value: "TTM_AVG", label: "TTM Average" },
-  { value: "RECENT_3M_WEIGHTED", label: "Recent 3M Weighted" },
-  { value: "SEASONAL_EXCLUDED", label: "Seasonal Excluded" },
+  { value: "LTM_AVERAGE", label: "LTM Average (12M)" },
+  { value: "TTM", label: "TTM" },
+  { value: "LAST_MONTH", label: "Last Month" },
+  { value: "MAX", label: "Maximum" },
+  { value: "MIN", label: "Minimum" },
   { value: "CUSTOM", label: "Custom" },
 ];
 
@@ -85,6 +90,7 @@ function TagInput({
               type="button"
               onClick={() => onChange(values.filter((x) => x !== v))}
               className="text-amic hover:text-negative transition-colors"
+              aria-label={`Remove ${v}`}
             >
               <X className="h-3 w-3" />
             </button>
@@ -350,50 +356,12 @@ function DefinitionCard({
 
 export default function DefinitionPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
 
-  const { data: definitions, isLoading } = useQuery<DealDefinition[]>({
-    queryKey: ["definitions", dealId],
-    queryFn: async () => {
-      const { data } = await api.get(`/deals/${dealId}/definitions`);
-      return data;
-    },
-  });
-
-  const createDef = useMutation({
-    mutationFn: async (defData: DefinitionData) => {
-      const { data } = await api.post(`/deals/${dealId}/definitions`, {
-        definition_data: defData,
-      });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["definitions", dealId] });
-      setShowForm(false);
-      toast.success("Definition created successfully");
-    },
-    onError: () => {
-      toast.error("Failed to create definition");
-    },
-  });
-
-  const approveDef = useMutation({
-    mutationFn: async (version: number) => {
-      const { data } = await api.put(
-        `/deals/${dealId}/definitions/${version}/approve`,
-        { approved_by: "system" }
-      );
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["definitions", dealId] });
-      toast.success("Definition approved");
-    },
-    onError: () => {
-      toast.error("Failed to approve definition");
-    },
-  });
+  const { data: definitions, isLoading, isError } = useDefinitions(dealId!);
+  const createDef = useCreateDefinition(dealId!);
+  const approveDef = useApproveDefinition(dealId!);
 
   if (isLoading) {
     return (
@@ -403,33 +371,46 @@ export default function DefinitionPage() {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="bg-red-50 border border-negative/20 rounded-lg p-4 text-sm text-negative">
+        Failed to load definitions.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            Deal Definitions
-          </h1>
-          <p className="text-text-secondary mt-1">
-            Configure FDD analysis parameters
-          </p>
-        </div>
-        {!showForm && (
-          <Button
-            variant="accent"
-            icon={Plus}
-            onClick={() => setShowForm(true)}
-          >
-            New Version
-          </Button>
-        )}
-      </div>
+      <PageHero
+        title="Deal Definitions"
+        subtitle="Configure FDD analysis parameters"
+        compact
+        actions={
+          !showForm ? (
+            <Button
+              variant="accent"
+              icon={Plus}
+              onClick={() => setShowForm(true)}
+            >
+              New Version
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Create Form */}
       {showForm && (
         <DefinitionForm
-          onSubmit={(data) => createDef.mutate(data)}
+          onSubmit={async (data) => {
+            try {
+              await createDef.mutateAsync(data);
+              setShowForm(false);
+              toast.success("Definition created successfully");
+            } catch {
+              toast.error("Failed to create definition");
+            }
+          }}
           onCancel={() => setShowForm(false)}
           isSubmitting={createDef.isPending}
         />
@@ -455,7 +436,17 @@ export default function DefinitionPage() {
             <DefinitionCard
               key={def.id}
               definition={def}
-              onApprove={(version) => approveDef.mutate(version)}
+              onApprove={async (version) => {
+                try {
+                  await approveDef.mutateAsync({
+                    version,
+                    approved_by: user?.email ?? "unknown",
+                  });
+                  toast.success("Definition approved");
+                } catch {
+                  toast.error("Failed to approve definition");
+                }
+              }}
               isApproving={approveDef.isPending}
             />
           ))}

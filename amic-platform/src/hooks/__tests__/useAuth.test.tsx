@@ -1,5 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthContext, type AuthContextValue } from "@/components/auth/AuthContext";
 import { useAuth, getAccessToken, setTokens, clearTokens } from "../useAuth";
 import { mockUser, mockViewerUser } from "@/test/mocks/data";
@@ -13,10 +14,16 @@ function createAuthWrapper(overrides: Partial<AuthContextValue> = {}) {
     ...overrides,
   };
 
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   return {
     value,
     wrapper: ({ children }: { children: ReactNode }) => (
-      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+      </QueryClientProvider>
     ),
   };
 }

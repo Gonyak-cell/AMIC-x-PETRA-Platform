@@ -76,8 +76,24 @@ export interface TrendResponse {
   items: YearlyTrend[];
 }
 
+/** Deal 집계 공통 파라미터 (by-sector, by-stage) */
 export interface DealAggregationParams {
+  year?: number;
   years?: number;
+  corp_code?: string;
+}
+
+/** Deal 트렌드 파라미터 (GET /deals/trends — year 미지원) */
+export interface DealTrendParams {
+  years?: number;
+  corp_code?: string;
+}
+
+/** Deal by-company 조회 파라미터 */
+export interface DealByCompanyParams {
+  years?: number;
+  sector?: string;
+  stage?: string;
   page?: number;
   size?: number;
 }

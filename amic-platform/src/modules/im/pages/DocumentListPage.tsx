@@ -9,9 +9,13 @@ import {
   DataTable,
   KpiCard,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { Document } from "@/modules/im/types/document";
+import type { Document, DocumentStatus } from "@/modules/im/types/document";
+import { IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
+
+type StatusFilter = "ALL" | "IN_PROGRESS" | DocumentStatus;
 
 const columns: Column<Document>[] = [
   {
@@ -71,62 +75,92 @@ const PAGE_SIZE = 20;
 export default function DocumentListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const { data, isLoading } = useDocuments({ offset: page * PAGE_SIZE, limit: PAGE_SIZE });
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const { data, isLoading, isError } = useDocuments({ offset: page * PAGE_SIZE, limit: PAGE_SIZE });
 
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+  const items = data?.items ?? [];
 
-  const kpis = useMemo(() => {
-    const items = data?.items ?? [];
-    return {
-      total,
-      inProgress: items.filter((d) =>
-        ["PENDING", "COLLECTING", "ANALYZING", "GENERATING", "RENDERING"].includes(d.status),
-      ).length,
-      completed: items.filter((d) => d.status === "COMPLETED").length,
-      failed: items.filter((d) => d.status === "FAILED").length,
-    };
-  }, [data, total]);
+  const filteredItems = useMemo(() => {
+    if (statusFilter === "ALL") return items;
+    if (statusFilter === "IN_PROGRESS")
+      return items.filter((d) => IN_PROGRESS_STATUSES.includes(d.status));
+    return items.filter((d) => d.status === statusFilter);
+  }, [items, statusFilter]);
+
+  const kpis = useMemo(() => ({
+    total: data?.total ?? 0,
+    inProgress: items.filter((d) =>
+      IN_PROGRESS_STATUSES.includes(d.status),
+    ).length,
+    completed: items.filter((d) => d.status === "COMPLETED").length,
+    failed: items.filter((d) => d.status === "FAILED").length,
+  }), [data?.total, items]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          IM Projects
-        </h1>
-        <Button
-          variant="accent"
-          icon={Plus}
-          onClick={() => navigate("/im/new")}
-        >
-          New IM
-        </Button>
-      </div>
+      <PageHero
+        title="IM Projects"
+        subtitle="Investment Memorandum generation and management"
+        compact
+        actions={
+          <Button
+            variant="accent"
+            icon={Plus}
+            onClick={() => navigate("/im/new")}
+          >
+            New IM
+          </Button>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Projects" value={String(kpis.total)} icon={FileText} />
-        <KpiCard label="In Progress" value={String(kpis.inProgress)} icon={Loader2} />
-        <KpiCard label="Completed" value={String(kpis.completed)} icon={CheckCircle} />
-        <KpiCard label="Failed" value={String(kpis.failed)} icon={AlertTriangle} />
+        <KpiCard label="Total" value={String(kpis.total)} icon={FileText} />
+        <KpiCard label="In Progress" value={String(kpis.inProgress)} icon={Loader2} variant="caution" />
+        <KpiCard label="Completed" value={String(kpis.completed)} icon={CheckCircle} variant="positive" />
+        <KpiCard label="Failed" value={String(kpis.failed)} icon={AlertTriangle} variant="negative" />
+      </div>
+
+      {/* Status Filters */}
+      <div className="flex gap-2">
+        {(["ALL", "IN_PROGRESS", "COMPLETED", "FAILED"] as const).map((s) => (
+          <Button
+            key={s}
+            variant={statusFilter === s ? "accent" : "ghost"}
+            size="sm"
+            onClick={() => { setStatusFilter(s); setPage(0); }}
+          >
+            {s === "ALL" ? "All" : s === "IN_PROGRESS" ? "In Progress" : s.charAt(0) + s.slice(1).toLowerCase()}
+          </Button>
+        ))}
       </div>
 
       {/* Table */}
       <Card title="All Projects" headerBar padding="none">
-        {!isLoading && (!data?.items || data.items.length === 0) ? (
+        {isError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load projects"
+            description="Could not fetch IM projects. Please try again later."
+          />
+        ) : !isLoading && filteredItems.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No IM projects yet"
-            description="Create your first Investment Memorandum to get started."
-            actionLabel="Create IM"
-            onAction={() => navigate("/im/new")}
+            title={statusFilter === "ALL" ? "No IM projects yet" : "No matching projects"}
+            description={statusFilter === "ALL"
+              ? "Create your first Investment Memorandum to get started."
+              : "No projects match the selected status filter."}
+            actionLabel={statusFilter === "ALL" ? "Create IM" : undefined}
+            onAction={statusFilter === "ALL" ? () => navigate("/im/new") : undefined}
           />
         ) : (
           <>
             <DataTable
               columns={columns}
-              data={data?.items ?? []}
+              data={filteredItems}
               keyField="id"
               loading={isLoading}
               onRowClick={(row) => navigate(`/im/documents/${row.id}`)}
@@ -135,7 +169,9 @@ export default function DocumentListPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-gray-border">
                 <span className="text-sm text-text-secondary">
-                  Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+                  {statusFilter === "ALL"
+                    ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} of ${total}`
+                    : `${filteredItems.length} matching on this page (${total} total)`}
                 </span>
                 <div className="flex gap-2">
                   <Button

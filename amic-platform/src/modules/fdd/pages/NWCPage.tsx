@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Wallet, Calculator, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { useDeal } from "@/modules/fdd/hooks/useDeals";
 import {
   useNWCCalculations,
   useRunNWC,
@@ -26,6 +27,7 @@ import {
   Select,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatAmount } from "@/lib/format";
@@ -50,7 +52,7 @@ const PEG_METHOD_LABELS: Record<PegMethod, string> = {
 
 // ── NWC Summary Card ────────────────────────────────────
 
-function NWCSummaryCard({ nwc }: { nwc: NWCCalculationRead }) {
+function NWCSummaryCard({ nwc, currency }: { nwc: NWCCalculationRead; currency: string }) {
   const nwcValue = Number(nwc.net_working_capital);
   const delta = Number(nwc.peg_delta);
 
@@ -60,19 +62,19 @@ function NWCSummaryCard({ nwc }: { nwc: NWCCalculationRead }) {
         <div className="text-center">
           <p className="text-text-secondary text-kpi-label">Current Assets</p>
           <p className="font-mono text-kpi-value tabular-nums">
-            {formatAmount(nwc.total_current_assets, "KRW")}
+            {formatAmount(nwc.total_current_assets, currency)}
           </p>
         </div>
         <div className="text-center">
           <p className="text-text-secondary text-kpi-label">Current Liabilities</p>
           <p className="font-mono text-kpi-value tabular-nums">
-            {formatAmount(nwc.total_current_liabilities, "KRW")}
+            {formatAmount(nwc.total_current_liabilities, currency)}
           </p>
         </div>
         <div className="text-center">
           <p className="text-text-secondary text-kpi-label">Net Working Capital</p>
           <p className={`font-mono text-kpi-value tabular-nums font-bold ${nwcValue < 0 ? "text-negative" : "text-amic"}`}>
-            {formatAmount(nwc.net_working_capital, "KRW")}
+            {formatAmount(nwc.net_working_capital, currency)}
           </p>
         </div>
       </div>
@@ -85,13 +87,13 @@ function NWCSummaryCard({ nwc }: { nwc: NWCCalculationRead }) {
         <div>
           <span className="text-text-secondary">Peg Target: </span>
           <span className="font-mono font-medium tabular-nums">
-            {formatAmount(nwc.peg_target, "KRW")}
+            {formatAmount(nwc.peg_target, currency)}
           </span>
         </div>
         <div>
           <span className="text-text-secondary">Delta: </span>
           <span className={`font-mono font-medium tabular-nums ${delta >= 0 ? "text-positive" : "text-negative"}`}>
-            {delta >= 0 ? "+" : ""}{formatAmount(nwc.peg_delta, "KRW")}
+            {delta >= 0 ? "+" : ""}{formatAmount(nwc.peg_delta, currency)}
           </span>
         </div>
       </div>
@@ -105,16 +107,26 @@ function NWCSummaryCard({ nwc }: { nwc: NWCCalculationRead }) {
 
 // ── Line Items Table ────────────────────────────────────
 
+const CLASS_ORDER: Record<string, number> = { ABOVE_LINE: 0, BELOW_LINE: 1, EXCLUDED: 2 };
+
 function LineItemsTable({
   items,
   onClassify,
   isUpdating,
+  currency,
 }: {
   items: NWCLineItemRead[];
   onClassify: (itemId: string, classification: NWCClassification) => void;
   isUpdating: boolean;
+  currency: string;
 }) {
-  const sorted = [...items].sort((a, b) => a.display_order - b.display_order);
+  const sorted = useMemo(
+    () => [...items].sort((a, b) => {
+      const classCompare = (CLASS_ORDER[a.classification] ?? 99) - (CLASS_ORDER[b.classification] ?? 99);
+      return classCompare !== 0 ? classCompare : a.display_order - b.display_order;
+    }),
+    [items],
+  );
 
   const columns: Column<NWCLineItemRead>[] = [
     { key: "account_code", header: "Code", width: "100px" },
@@ -131,7 +143,7 @@ function LineItemsTable({
       align: "right",
       width: "140px",
       mono: true,
-      render: (row) => formatAmount(row.amount, "KRW"),
+      render: (row) => formatAmount(row.amount, currency),
     },
     {
       key: "classification",
@@ -181,10 +193,12 @@ function PegSimulationPanel({
   dealId,
   nwcId,
   currentMethod,
+  currency,
 }: {
   dealId: string;
   nwcId: string;
   currentMethod: PegMethod;
+  currency: string;
 }) {
   const { data: pegData, isLoading } = usePegSimulation(dealId, nwcId);
   const recalcMutation = useRecalculatePeg(dealId, nwcId);
@@ -233,7 +247,7 @@ function PegSimulationPanel({
       header: "Target NWC",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.target_nwc, "KRW"),
+      render: (row) => formatAmount(row.target_nwc, currency),
     },
     {
       key: "delta",
@@ -244,7 +258,7 @@ function PegSimulationPanel({
         const delta = Number(row.delta);
         return (
           <span className={delta >= 0 ? "text-positive" : "text-negative"}>
-            {delta >= 0 ? "+" : ""}{formatAmount(row.delta, "KRW")}
+            {delta >= 0 ? "+" : ""}{formatAmount(row.delta, currency)}
           </span>
         );
       },
@@ -273,7 +287,7 @@ function PegSimulationPanel({
       headerBar
       actions={
         <span className="text-white/70 text-sm">
-          Reference NWC: <span className="font-mono font-medium">{formatAmount(pegData.reference_nwc, "KRW")}</span>
+          Reference NWC: <span className="font-mono font-medium">{formatAmount(pegData.reference_nwc, currency)}</span>
         </span>
       }
       padding="none"
@@ -288,6 +302,7 @@ function PegSimulationPanel({
         <span className="text-sm text-text-secondary">Custom Peg Value:</span>
         <Input
           placeholder="e.g. 500000"
+          type="number"
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           className="w-40"
@@ -296,7 +311,7 @@ function PegSimulationPanel({
           variant="secondary"
           size="sm"
           onClick={() => handleApplyMethod("CUSTOM")}
-          disabled={recalcMutation.isPending || !customValue.trim()}
+          disabled={recalcMutation.isPending || !customValue.trim() || isNaN(Number(customValue))}
         >
           Apply Custom
         </Button>
@@ -307,7 +322,7 @@ function PegSimulationPanel({
 
 // ── Monthly Trend Table ─────────────────────────────────
 
-function MonthlyTrendTable({ nwc }: { nwc: NWCCalculationRead }) {
+function MonthlyTrendTable({ nwc, currency }: { nwc: NWCCalculationRead; currency: string }) {
   const months = Object.keys(nwc.monthly_trend).sort();
 
   if (months.length === 0) {
@@ -333,14 +348,14 @@ function MonthlyTrendTable({ nwc }: { nwc: NWCCalculationRead }) {
       header: "Current Assets",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.current_assets, "KRW"),
+      render: (row) => formatAmount(row.current_assets, currency),
     },
     {
       key: "current_liabilities",
       header: "Current Liabilities",
       align: "right",
       mono: true,
-      render: (row) => formatAmount(row.current_liabilities, "KRW"),
+      render: (row) => formatAmount(row.current_liabilities, currency),
     },
     {
       key: "nwc",
@@ -351,7 +366,7 @@ function MonthlyTrendTable({ nwc }: { nwc: NWCCalculationRead }) {
         const nwcVal = Number(row.nwc);
         return (
           <span className={`font-medium ${nwcVal < 0 ? "text-negative" : ""}`}>
-            {formatAmount(row.nwc, "KRW")}
+            {formatAmount(row.nwc, currency)}
           </span>
         );
       },
@@ -369,12 +384,19 @@ function MonthlyTrendTable({ nwc }: { nwc: NWCCalculationRead }) {
 
 export default function NWCPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  const { data: nwcList = [], isLoading } = useNWCCalculations(dealId!);
-  const runMutation = useRunNWC(dealId!);
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
+
+  const { data: deal } = useDeal(dealId);
+  const currency = deal?.base_currency ?? "KRW";
+  const { data: nwcList = [], isLoading } = useNWCCalculations(dealId);
+  const runMutation = useRunNWC(dealId);
 
   const latestNWC = nwcList.length > 0 ? nwcList[0] : null;
 
-  const updateItemMutation = useUpdateNWCLineItem(dealId!, latestNWC?.id ?? "");
+  const updateItemMutation = useUpdateNWCLineItem(dealId, latestNWC?.id ?? "");
 
   const [snapshotId, setSnapshotId] = useState("");
   const [pegMethod, setPegMethod] = useState<PegMethod>("LTM_AVERAGE");
@@ -390,6 +412,7 @@ export default function NWCPage() {
   };
 
   const handleClassify = async (itemId: string, classification: NWCClassification) => {
+    if (!latestNWC?.id) return;
     try {
       await updateItemMutation.mutateAsync({ itemId, body: { classification } });
       toast.success("Classification updated");
@@ -409,59 +432,58 @@ export default function NWCPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            Net Working Capital
-          </h1>
-          <p className="text-text-secondary mt-1">Working Capital Analysis & Peg Simulation</p>
-        </div>
-        {!latestNWC && (
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="Snapshot ID"
-              value={snapshotId}
-              onChange={(e) => setSnapshotId(e.target.value)}
-              className="w-72"
-            />
-            <Select
-              options={PEG_METHOD_OPTIONS}
-              value={pegMethod}
-              onChange={(e) => setPegMethod(e.target.value as PegMethod)}
-            />
-            <Button
-              variant="accent"
-              icon={Calculator}
-              onClick={handleRun}
-              loading={runMutation.isPending}
-              disabled={!snapshotId.trim()}
-            >
-              Calculate NWC
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHero
+        title="Net Working Capital"
+        subtitle="Working Capital Analysis & Peg Simulation"
+        compact
+        actions={
+          !latestNWC ? (
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Snapshot ID"
+                value={snapshotId}
+                onChange={(e) => setSnapshotId(e.target.value)}
+                className="w-72"
+              />
+              <Select
+                options={PEG_METHOD_OPTIONS}
+                value={pegMethod}
+                onChange={(e) => setPegMethod(e.target.value as PegMethod)}
+              />
+              <Button
+                variant="accent"
+                icon={Calculator}
+                onClick={handleRun}
+                loading={runMutation.isPending}
+                disabled={!snapshotId.trim()}
+              >
+                Calculate NWC
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* KPI Cards */}
       {latestNWC && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Current Assets"
-            value={formatAmount(latestNWC.total_current_assets, "KRW")}
+            value={formatAmount(latestNWC.total_current_assets, currency)}
             icon={Wallet}
           />
           <KpiCard
             label="Current Liabilities"
-            value={formatAmount(latestNWC.total_current_liabilities, "KRW")}
+            value={formatAmount(latestNWC.total_current_liabilities, currency)}
           />
           <KpiCard
             label="Net Working Capital"
-            value={formatAmount(latestNWC.net_working_capital, "KRW")}
+            value={formatAmount(latestNWC.net_working_capital, currency)}
             variant={Number(latestNWC.net_working_capital) >= 0 ? "positive" : "negative"}
           />
           <KpiCard
             label="Target NWC"
-            value={formatAmount(latestNWC.peg_target, "KRW")}
+            value={formatAmount(latestNWC.peg_target, currency)}
             icon={TrendingUp}
           />
         </div>
@@ -470,7 +492,7 @@ export default function NWCPage() {
       {/* Error */}
       {runMutation.isError && (
         <div className="bg-red-50 border border-negative/20 rounded-lg p-4 text-sm text-negative">
-          Error: {runMutation.error.message}
+          Error: {runMutation.error instanceof Error ? runMutation.error.message : "Calculation failed"}
         </div>
       )}
 
@@ -486,24 +508,26 @@ export default function NWCPage() {
       ) : (
         <>
           {/* NWC Summary */}
-          <NWCSummaryCard nwc={latestNWC} />
+          <NWCSummaryCard nwc={latestNWC} currency={currency} />
 
           {/* Line Items Table */}
           <LineItemsTable
             items={latestNWC.line_items}
             onClassify={handleClassify}
             isUpdating={updateItemMutation.isPending}
+            currency={currency}
           />
 
           {/* Peg Simulation */}
           <PegSimulationPanel
-            dealId={dealId!}
+            dealId={dealId}
             nwcId={latestNWC.id}
             currentMethod={latestNWC.peg_method}
+            currency={currency}
           />
 
           {/* Monthly Trend */}
-          <MonthlyTrendTable nwc={latestNWC} />
+          <MonthlyTrendTable nwc={latestNWC} currency={currency} />
         </>
       )}
     </div>

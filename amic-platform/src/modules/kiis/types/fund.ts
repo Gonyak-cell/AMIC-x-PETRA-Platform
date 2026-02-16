@@ -51,6 +51,11 @@ export interface FundListResponse {
   items: FundListItem[];
 }
 
+export interface FundManagerListResponse {
+  total: number;
+  items: FundManagerItem[];
+}
+
 export interface FundListParams {
   company_name?: string;
   fund_type?: FundType;

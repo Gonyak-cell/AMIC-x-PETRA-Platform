@@ -1,6 +1,6 @@
 import { cn } from "@/lib/cn";
 
-export type CardVariant = "default" | "forest-lift" | "accent-left" | "elevated";
+export type CardVariant = "default" | "forest-lift" | "accent-left" | "elevated" | "hero";
 
 export interface CardProps {
   title?: string;
@@ -10,6 +10,7 @@ export interface CardProps {
   padding?: "none" | "sm" | "md" | "lg";
   variant?: CardVariant;
   hoverEffect?: boolean;
+  headingLevel?: "h2" | "h3" | "h4" | "h5";
   className?: string;
 }
 
@@ -21,10 +22,11 @@ const paddingStyles = {
 };
 
 const cardVariantStyles: Record<CardVariant, string> = {
-  default: "shadow-card",
-  "forest-lift": "shadow-forest-card hover-lift",
-  "accent-left": "shadow-card border-accent-left",
+  default: "shadow-dr-sm",
+  "forest-lift": "shadow-forest-card hover-glow",
+  "accent-left": "shadow-dr-sm border-accent-left",
   elevated: "shadow-elevated",
+  hero: "bg-white/[0.06] border-white/[0.08] backdrop-blur-sm shadow-dr-md",
 };
 
 export function Card({
@@ -35,24 +37,25 @@ export function Card({
   padding = "md",
   variant = "default",
   hoverEffect = false,
+  headingLevel: HeadingTag = "h3",
   className,
 }: CardProps) {
   return (
     <div
       className={cn(
-        "bg-white rounded-corporate border border-gray-border",
+        "bg-white rounded-dr border border-gray-border",
         cardVariantStyles[variant],
-        hoverEffect && variant !== "forest-lift" && "transition-shadow duration-200 hover:shadow-card-hover",
+        hoverEffect && variant !== "forest-lift" && "transition-shadow duration-200 hover:shadow-dr-md",
         className
       )}
     >
       {/* 헤더바 */}
       {headerBar && title && (
-        <div className="bg-white px-5 py-3 border-b border-gray-border rounded-t-corporate flex items-center justify-between">
-          <h3 className="font-heading font-semibold text-amic flex items-center gap-2">
+        <div className="bg-white px-5 py-3 border-b border-gray-border rounded-t-dr flex items-center justify-between">
+          <HeadingTag className="font-heading font-semibold text-amic flex items-center gap-2">
             <span className="inline-block w-1 h-4 bg-accent rounded-full" />
             {title}
-          </h3>
+          </HeadingTag>
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       )}
@@ -60,7 +63,7 @@ export function Card({
       {/* 일반 헤더 (headerBar 없을 때) */}
       {!headerBar && title && (
         <div className="px-5 py-4 border-b border-gray-border flex items-center justify-between">
-          <h3 className="font-heading font-semibold text-text-dark">{title}</h3>
+          <HeadingTag className="font-heading font-semibold text-text-dark">{title}</HeadingTag>
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       )}

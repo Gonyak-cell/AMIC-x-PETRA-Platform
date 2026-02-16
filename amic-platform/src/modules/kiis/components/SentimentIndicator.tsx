@@ -1,9 +1,9 @@
-import type { SentimentType } from "@/modules/kiis/types/news";
 import { cn } from "@/lib/cn";
 
+type SentimentType = "positive" | "neutral" | "negative";
+
 interface SentimentIndicatorProps {
-  sentiment: SentimentType | null;
-  score?: number | null;
+  score: number | null;
   className?: string;
 }
 
@@ -19,15 +19,24 @@ const SENTIMENT_LABELS: Record<SentimentType, string> = {
   negative: "Negative",
 };
 
+function deriveSentiment(score: number): SentimentType {
+  if (score > 0) return "positive";
+  if (score < 0) return "negative";
+  return "neutral";
+}
+
 export default function SentimentIndicator({
-  sentiment,
   score,
   className,
 }: SentimentIndicatorProps) {
-  if (!sentiment) return <span className="text-text-secondary text-xs">-</span>;
+  if (score == null) return <span className="text-text-secondary text-xs">-</span>;
+
+  const sentiment = deriveSentiment(score);
 
   return (
     <span
+      role="status"
+      aria-label={`Sentiment: ${SENTIMENT_LABELS[sentiment]} (${(score * 100).toFixed(0)}%)`}
       className={cn(
         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
         SENTIMENT_STYLES[sentiment],
@@ -35,11 +44,9 @@ export default function SentimentIndicator({
       )}
     >
       {SENTIMENT_LABELS[sentiment]}
-      {score != null && (
-        <span className="font-mono text-[10px]">
-          ({(score * 100).toFixed(0)}%)
-        </span>
-      )}
+      <span className="font-mono text-[10px]">
+        ({(score * 100).toFixed(0)}%)
+      </span>
     </span>
   );
 }

@@ -16,6 +16,7 @@ import {
   Button,
   EmptyState,
   getStatusVariant,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 
@@ -150,16 +151,11 @@ export default function SamplePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            FDD Sample Page
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Mock 데이터로 구성된 샘플 페이지입니다 (백엔드 불필요)
-          </p>
-        </div>
-      </div>
+      <PageHero
+        title="FDD Sample Page"
+        subtitle="Mock 데이터로 구성된 샘플 페이지입니다 (백엔드 불필요)"
+        compact
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

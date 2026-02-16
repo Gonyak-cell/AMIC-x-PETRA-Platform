@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Calculator, TrendingUp, RefreshCw, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useDeal } from "@/modules/fdd/hooks/useDeals";
 import {
   useQoECalculations,
   useRunQoE,
@@ -23,6 +25,7 @@ import {
   Input,
   Spinner,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatAmount } from "@/lib/format";
@@ -44,7 +47,7 @@ const STATUS_VARIANTS: Record<AdjustmentStatus, "success" | "warning" | "error" 
 
 // ── EBITDA Summary Card ─────────────────────────────────
 
-function EBITDASummaryCard({ qoe }: { qoe: QoECalculationRead }) {
+function EBITDASummaryCard({ qoe, currency }: { qoe: QoECalculationRead; currency: string }) {
   const rows = [
     { label: "Revenue", value: qoe.revenue, bold: false, indent: false },
     { label: "(-) COGS", value: qoe.cogs, bold: false, indent: true },
@@ -74,7 +77,7 @@ function EBITDASummaryCard({ qoe }: { qoe: QoECalculationRead }) {
               <td
                 className={`py-2 text-right font-mono tabular-nums ${r.bold ? "font-semibold text-text-dark" : ""}`}
               >
-                {formatAmount(r.value, "KRW")}
+                {formatAmount(r.value, currency)}
               </td>
             </tr>
           ))}
@@ -93,13 +96,15 @@ function BridgeTable({
   qoe,
   onRecalculate,
   isRecalculating,
+  currency,
 }: {
   qoe: QoECalculationRead;
   onRecalculate: () => void;
   isRecalculating: boolean;
+  currency: string;
 }) {
   const approvedAdjs = qoe.adjustments.filter((a) => a.status === "APPROVED");
-  const isBalanced = Number(qoe.balance_check_error) === 0;
+  const isBalanced = Math.abs(Number(qoe.balance_check_error)) < 0.01;
 
   return (
     <Card
@@ -129,7 +134,7 @@ function BridgeTable({
           <tr className="border-b border-gray-border">
             <td className="py-2 font-semibold text-text-dark">Reported EBITDA</td>
             <td className="py-2 text-right font-mono tabular-nums font-semibold">
-              {formatAmount(qoe.reported_ebitda, "KRW")}
+              {formatAmount(qoe.reported_ebitda, currency)}
             </td>
           </tr>
 
@@ -150,7 +155,7 @@ function BridgeTable({
                   {adj.description}
                 </td>
                 <td className="py-2 text-right font-mono tabular-nums">
-                  {formatAmount(adj.amount, "KRW")}
+                  {formatAmount(adj.amount, currency)}
                 </td>
               </tr>
             ))
@@ -160,7 +165,7 @@ function BridgeTable({
           <tr className="border-b border-gray-border">
             <td className="py-2 font-medium text-text-dark">Total Adjustments</td>
             <td className="py-2 text-right font-mono tabular-nums font-medium">
-              {formatAmount(qoe.total_adjustments, "KRW")}
+              {formatAmount(qoe.total_adjustments, currency)}
             </td>
           </tr>
 
@@ -168,7 +173,7 @@ function BridgeTable({
           <tr className="border-t-2 border-amic">
             <td className="py-3 font-bold text-lg text-text-dark">Adjusted EBITDA</td>
             <td className="py-3 text-right font-mono tabular-nums font-bold text-lg text-amic">
-              {formatAmount(qoe.adjusted_ebitda, "KRW")}
+              {formatAmount(qoe.adjusted_ebitda, currency)}
             </td>
           </tr>
         </tbody>
@@ -183,10 +188,12 @@ function AdjustmentCandidatesTable({
   adjustments,
   onApprove,
   isApproving,
+  currency,
 }: {
   adjustments: AdjustmentItemRead[];
   onApprove: (adjId: string) => void;
   isApproving: boolean;
+  currency: string;
 }) {
   const pending = adjustments.filter(
     (a) => a.status === "CANDIDATE" || a.status === "PROPOSED"
@@ -246,7 +253,7 @@ function AdjustmentCandidatesTable({
       align: "right",
       width: "140px",
       mono: true,
-      render: (row) => formatAmount(row.amount, "KRW"),
+      render: (row) => formatAmount(row.amount, currency),
     },
     {
       key: "status",
@@ -296,13 +303,22 @@ function AdjustmentCandidatesTable({
 
 export default function QoEPage() {
   const { dealId } = useParams<{ dealId: string }>();
-  const { data: qoeList = [], isLoading } = useQoECalculations(dealId!);
-  const runMutation = useRunQoE(dealId!);
+  const { user } = useAuth();
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
+
+  const { data: deal } = useDeal(dealId);
+  const currency = deal?.base_currency ?? "KRW";
+  const { data: qoeList = [], isLoading } = useQoECalculations(dealId);
+  const runMutation = useRunQoE(dealId);
 
   const latestQoE = qoeList.length > 0 ? qoeList[0] : null;
 
-  const approveMutation = useApproveAdjustment(dealId!, latestQoE?.id ?? "");
-  const recalcMutation = useRecalculateBridge(dealId!, latestQoE?.id ?? "");
+  const qoeId = latestQoE?.id ?? "";
+  const approveMutation = useApproveAdjustment(dealId, qoeId);
+  const recalcMutation = useRecalculateBridge(dealId, qoeId);
 
   const [snapshotId, setSnapshotId] = useState("");
 
@@ -311,29 +327,34 @@ export default function QoEPage() {
     try {
       await runMutation.mutateAsync({ snapshot_id: snapshotId });
       toast.success("QoE calculation completed");
-    } catch {
-      toast.error("Failed to calculate QoE");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(detail ?? "Failed to calculate QoE");
     }
   };
 
   const handleApprove = async (adjId: string) => {
+    if (!qoeId || !user?.email) return;
     try {
       await approveMutation.mutateAsync({
         adjustmentId: adjId,
-        body: { approved_by: "analyst" },
+        body: { approved_by: user!.email },
       });
       toast.success("Adjustment approved");
-    } catch {
-      toast.error("Failed to approve adjustment");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(detail ?? "Failed to approve adjustment");
     }
   };
 
   const handleRecalculate = async () => {
+    if (!qoeId) return;
     try {
       await recalcMutation.mutateAsync();
       toast.success("Bridge recalculated");
-    } catch {
-      toast.error("Failed to recalculate bridge");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(detail ?? "Failed to recalculate bridge");
     }
   };
 
@@ -348,54 +369,53 @@ export default function QoEPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            Quality of Earnings
-          </h1>
-          <p className="text-text-secondary mt-1">Adjusted EBITDA Analysis</p>
-        </div>
-        {!latestQoE && (
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="Snapshot ID"
-              value={snapshotId}
-              onChange={(e) => setSnapshotId(e.target.value)}
-              className="w-72"
-            />
-            <Button
-              variant="accent"
-              icon={Calculator}
-              onClick={handleRun}
-              loading={runMutation.isPending}
-              disabled={!snapshotId.trim()}
-            >
-              Calculate QoE
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHero
+        title="Quality of Earnings"
+        subtitle="Adjusted EBITDA Analysis"
+        compact
+        actions={
+          !latestQoE ? (
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Snapshot ID"
+                value={snapshotId}
+                onChange={(e) => setSnapshotId(e.target.value)}
+                className="w-72"
+              />
+              <Button
+                variant="accent"
+                icon={Calculator}
+                onClick={handleRun}
+                loading={runMutation.isPending}
+                disabled={!snapshotId.trim()}
+              >
+                Calculate QoE
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* KPI Cards */}
       {latestQoE && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Revenue"
-            value={formatAmount(latestQoE.revenue, "KRW")}
+            value={formatAmount(latestQoE.revenue, currency)}
             icon={TrendingUp}
           />
           <KpiCard
             label="Reported EBITDA"
-            value={formatAmount(latestQoE.reported_ebitda, "KRW")}
+            value={formatAmount(latestQoE.reported_ebitda, currency)}
           />
           <KpiCard
             label="Adjusted EBITDA"
-            value={formatAmount(latestQoE.adjusted_ebitda, "KRW")}
+            value={formatAmount(latestQoE.adjusted_ebitda, currency)}
             variant="positive"
           />
           <KpiCard
             label="Total Adjustments"
-            value={formatAmount(latestQoE.total_adjustments, "KRW")}
+            value={formatAmount(latestQoE.total_adjustments, currency)}
             variant={Number(latestQoE.total_adjustments) >= 0 ? "positive" : "negative"}
           />
         </div>
@@ -423,11 +443,12 @@ export default function QoEPage() {
         <>
           {/* EBITDA Summary + Bridge */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <EBITDASummaryCard qoe={latestQoE} />
+            <EBITDASummaryCard qoe={latestQoE} currency={currency} />
             <BridgeTable
               qoe={latestQoE}
               onRecalculate={handleRecalculate}
               isRecalculating={recalcMutation.isPending}
+              currency={currency}
             />
           </div>
 
@@ -436,6 +457,7 @@ export default function QoEPage() {
             adjustments={latestQoE.adjustments}
             onApprove={handleApprove}
             isApproving={approveMutation.isPending}
+            currency={currency}
           />
         </>
       )}

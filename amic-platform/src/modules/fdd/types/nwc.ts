@@ -33,6 +33,16 @@ export interface NWCLineItemUpdate {
   classification: NWCClassification;
 }
 
+// ── Category Breakdown ──────────────────────────────────
+
+export interface NWCCategoryBreakdown {
+  [category: string]: {
+    total_amount: string;
+    classification: NWCClassification;
+    items?: string[];
+  };
+}
+
 // ── NWC Calculation ─────────────────────────────────────
 
 export interface NWCCalculationRead {
@@ -46,7 +56,7 @@ export interface NWCCalculationRead {
   peg_target: string;
   peg_delta: string;
   monthly_trend: Record<string, MonthlyTrendEntry>;
-  category_breakdown: Record<string, unknown>;
+  category_breakdown: NWCCategoryBreakdown;
   engine_version: string;
   status: NWCStatus;
   line_items: NWCLineItemRead[];

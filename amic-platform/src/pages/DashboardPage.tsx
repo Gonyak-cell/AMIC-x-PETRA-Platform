@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortalKpis, useModuleHealth } from "@/hooks/useDashboard";
-import { KpiCard, Card, KpiCardSkeleton } from "@/components/ui";
+import { KpiCard, Card, KpiCardSkeleton, PageHero } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 const QUICK_ACTIONS = [
@@ -56,62 +56,64 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Welcome, {user?.display_name ?? "User"}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">{today}</p>
-      </div>
+      {/* Dark Hero Section */}
+      <PageHero
+        title={`Welcome, ${user?.display_name ?? "User"}`}
+        subtitle={today}
+      >
+        {/* Glass Card KPIs (stagger animation) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+          {kpisLoading ? (
+            <>
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+            </>
+          ) : (
+            <>
+              <KpiCard
+                label="Active FDD Deals"
+                value={errors.fdd ? "—" : String(kpis.activeDeals)}
+                icon={Briefcase}
+                variant={errors.fdd ? "negative" : "positive"}
+                hoverLift
+                generous
+                className="glass-card"
+              />
+              <KpiCard
+                label="Watchlist Alerts"
+                value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
+                icon={Bell}
+                variant={errors.kiis ? "negative" : "default"}
+                hoverLift
+                generous
+                className="glass-card"
+              />
+              <KpiCard
+                label="IM In Progress"
+                value={errors.im ? "—" : String(kpis.imInProgress)}
+                icon={FileText}
+                variant={errors.im ? "negative" : "caution"}
+                hoverLift
+                generous
+                className="glass-card"
+              />
+              <KpiCard
+                label="Draft Deals"
+                value={errors.fdd ? "—" : String(kpis.pendingIssues)}
+                icon={AlertTriangle}
+                variant="negative"
+                hoverLift
+                generous
+                className="glass-card"
+              />
+            </>
+          )}
+        </div>
+      </PageHero>
 
-      {/* Cross-module KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpisLoading ? (
-          <>
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-          </>
-        ) : (
-          <>
-            <KpiCard
-              label="Active FDD Deals"
-              value={errors.fdd ? "—" : String(kpis.activeDeals)}
-              icon={Briefcase}
-              variant={errors.fdd ? "negative" : "positive"}
-              hoverLift
-              generous
-            />
-            <KpiCard
-              label="Watchlist Alerts"
-              value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
-              icon={Bell}
-              variant={errors.kiis ? "negative" : "default"}
-              hoverLift
-              generous
-            />
-            <KpiCard
-              label="IM In Progress"
-              value={errors.im ? "—" : String(kpis.imInProgress)}
-              icon={FileText}
-              variant={errors.im ? "negative" : "caution"}
-              hoverLift
-              generous
-            />
-            <KpiCard
-              label="Draft Deals"
-              value={errors.fdd ? "—" : String(kpis.pendingIssues)}
-              icon={AlertTriangle}
-              variant="negative"
-              hoverLift
-              generous
-            />
-          </>
-        )}
-      </div>
-
-      {/* Quick Actions */}
+      {/* Quick Actions (hover-glow-green) */}
       <div>
         <h2 className="label-uppercase mb-3">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -126,13 +128,13 @@ export default function DashboardPage() {
                 if (e.key === "Enter" || e.key === " ") navigate(action.to);
               }}
             >
-              <Card variant="forest-lift">
+              <Card className="hover-glow-green">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
-                    <action.icon className="w-5 h-5 text-amic" />
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <action.icon className="w-5 h-5 text-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-text-dark group-hover:text-amic transition-colors flex items-center gap-1">
+                    <div className="font-medium text-text-dark group-hover:text-accent transition-colors flex items-center gap-1">
                       {action.label}
                       <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -147,7 +149,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Module Status */}
+      {/* Module Status (Slim Bar) */}
       <div>
         <h2 className="label-uppercase mb-3">Module Status</h2>
         <Card>
@@ -162,7 +164,7 @@ export default function DashboardPage() {
                     )}
                     aria-label={m.healthy ? "Connected" : "Disconnected"}
                   />
-                  <span className="text-sm text-text-dark">{m.label}</span>
+                  <span className="text-sm text-text-dark font-medium">{m.label}</span>
                   <span className="text-xs text-text-secondary">
                     {m.healthy ? "Connected" : "Unreachable"}
                   </span>
@@ -180,7 +182,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Module Navigation Shortcuts */}
+      {/* Modules (Gradient Background Cards) */}
       <div>
         <h2 className="label-uppercase mb-3">Modules</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -193,14 +195,14 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/fdd/deals");
             }}
           >
-            <Card variant="forest-lift">
+            <Card className="hover-glow bg-gradient-to-br from-amic to-amic-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-amic" />
+                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-medium text-text-dark">Auto FDD</div>
-                  <p className="text-xs text-text-secondary">
+                  <div className="font-semibold text-white">Auto FDD</div>
+                  <p className="text-xs text-white/70">
                     Financial Due Diligence
                   </p>
                 </div>
@@ -216,14 +218,14 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/kiis");
             }}
           >
-            <Card variant="forest-lift">
+            <Card className="hover-glow bg-gradient-to-br from-accent to-accent-hover">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent-light flex items-center justify-center">
-                  <Search className="w-5 h-5 text-accent" />
+                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <Search className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-medium text-text-dark">KIIS</div>
-                  <p className="text-xs text-text-secondary">
+                  <div className="font-semibold text-white">KIIS</div>
+                  <p className="text-xs text-white/70">
                     Korea Investment Intelligence
                   </p>
                 </div>
@@ -239,14 +241,14 @@ export default function DashboardPage() {
               if (e.key === "Enter" || e.key === " ") navigate("/im");
             }}
           >
-            <Card variant="forest-lift">
+            <Card className="hover-glow bg-gradient-to-br from-amic-500 to-amic">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amic-100 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-amic-500" />
+                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-medium text-text-dark">IM Generator</div>
-                  <p className="text-xs text-text-secondary">
+                  <div className="font-semibold text-white">IM Generator</div>
+                  <p className="text-xs text-white/70">
                     Investment Memorandum
                   </p>
                 </div>

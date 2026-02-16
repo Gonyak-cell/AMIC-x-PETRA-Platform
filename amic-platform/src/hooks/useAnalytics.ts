@@ -60,7 +60,7 @@ function computeFddAnalytics(deals: Deal[]): FddAnalytics {
     const totalDays = completed.reduce((sum, d) => {
       const created = new Date(d.created_at).getTime();
       const updated = new Date(d.updated_at).getTime();
-      return sum + (updated - created) / (1000 * 60 * 60 * 24);
+      return sum + Math.max(0, updated - created) / (1000 * 60 * 60 * 24);
     }, 0);
     avgCycleDays = Math.round(totalDays / completed.length);
   }
@@ -146,6 +146,7 @@ export function useAnalyticsKpis(filter?: AnalyticsFilter) {
           return data;
         },
         staleTime: 60_000,
+        enabled: !moduleFilter || moduleFilter === "fdd",
       },
       {
         queryKey: ["analytics", "kiis-summary"],
@@ -155,6 +156,7 @@ export function useAnalyticsKpis(filter?: AnalyticsFilter) {
           return data;
         },
         staleTime: 60_000,
+        enabled: !moduleFilter || moduleFilter === "kiis",
       },
       {
         queryKey: ["analytics", "im-documents"],
@@ -165,13 +167,14 @@ export function useAnalyticsKpis(filter?: AnalyticsFilter) {
           return data;
         },
         staleTime: 60_000,
+        enabled: !moduleFilter || moduleFilter === "im",
       },
     ],
   });
 
   const [dealsQuery, kiisQuery, docsQuery] = results;
   const isLoading = results.some((r) => r.isLoading);
-  const isError = results.every((r) => r.isError);
+  const isError = results.some((r) => r.isError);
 
   const errors: AnalyticsKpiErrors = {
     fdd: dealsQuery.isError,
@@ -188,15 +191,18 @@ export function useAnalyticsKpis(filter?: AnalyticsFilter) {
         : EMPTY_FDD;
 
     // KIIS summary is pre-aggregated; time range filter cannot be applied
+    const kiisData = kiisQuery.data;
+    const getCount = (label: string) =>
+      kiisData?.counts?.find((c) => c.label === label)?.count ?? 0;
     const kiis: KiisAnalytics =
       !moduleFilter || moduleFilter === "kiis"
-        ? kiisQuery.data
+        ? kiisData
           ? {
-              totalCompanies: kiisQuery.data.total_companies,
-              totalFunds: kiisQuery.data.total_funds,
-              totalReits: kiisQuery.data.total_reits,
-              totalDeals: kiisQuery.data.total_deals,
-              newsLast7Days: kiisQuery.data.news_last_7days,
+              totalCompanies: getCount("기업"),
+              totalFunds: getCount("펀드"),
+              totalReits: getCount("리츠"),
+              totalDeals: getCount("딜"),
+              newsLast7Days: kiisData.recent_news_count,
             }
           : EMPTY_KIIS
         : EMPTY_KIIS;
@@ -216,32 +222,36 @@ export function useAnalyticsKpis(filter?: AnalyticsFilter) {
 
 export function useAnalyticsTimeSeries(filter?: AnalyticsFilter) {
   const cutoff = filter ? getTimeRangeCutoff(filter.timeRange) : null;
+  const moduleFilter = filter?.module;
 
   const results = useQueries({
     queries: [
       {
-        queryKey: ["analytics", "fdd-deals-ts"],
+        queryKey: ["analytics", "fdd-deals"],
         queryFn: async () => {
           const { data } = await api.get<Deal[]>("/deals");
           return data;
         },
         staleTime: 60_000,
+        enabled: !moduleFilter || moduleFilter === "fdd",
       },
       {
-        queryKey: ["analytics", "im-documents-ts"],
+        queryKey: ["analytics", "im-documents"],
         queryFn: async () => {
           const { data } = await imApi.get<{ items: Document[]; total: number }>(
             "/documents",
           );
-          return data.items;
+          return data;
         },
         staleTime: 60_000,
+        enabled: !moduleFilter || moduleFilter === "im",
       },
     ],
   });
 
   const [dealsQuery, docsQuery] = results;
   const isLoading = results.some((r) => r.isLoading);
+  const isError = results.some((r) => r.isError);
 
   const fddTimeSeries = useMemo<TimeSeriesPoint[]>(() => {
     if (!dealsQuery.data) return [];
@@ -258,7 +268,7 @@ export function useAnalyticsTimeSeries(filter?: AnalyticsFilter) {
 
   const imTimeSeries = useMemo<TimeSeriesPoint[]>(() => {
     if (!docsQuery.data) return [];
-    const filtered = filterByDate(docsQuery.data, cutoff);
+    const filtered = filterByDate(docsQuery.data.items, cutoff);
     const byMonth = new Map<string, number>();
     for (const doc of filtered) {
       const month = doc.created_at.slice(0, 7);
@@ -269,5 +279,5 @@ export function useAnalyticsTimeSeries(filter?: AnalyticsFilter) {
       .map(([period, value]) => ({ period, value }));
   }, [docsQuery.data, cutoff]);
 
-  return { fddTimeSeries, imTimeSeries, isLoading };
+  return { fddTimeSeries, imTimeSeries, isLoading, isError };
 }

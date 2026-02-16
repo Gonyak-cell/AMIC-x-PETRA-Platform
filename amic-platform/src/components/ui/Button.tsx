@@ -13,21 +13,21 @@ export interface ButtonProps
 
 const variantStyles = {
   primary:
-    "bg-amic text-white hover:bg-amic-700 focus:ring-amic-600 disabled:bg-amic-200 shadow-sm",
+    "bg-amic text-white hover:bg-amic-700 focus:ring-amic-600 disabled:bg-amic-200 shadow-dr-sm hover:shadow-dr-md",
   secondary:
     "bg-white text-amic border border-amic/20 hover:border-amic/40 hover:bg-amic-50 focus:ring-amic-600",
   ghost:
     "bg-transparent text-text-secondary hover:bg-bg-cool hover:text-text-body",
   danger:
-    "bg-negative text-white hover:bg-red-700 focus:ring-negative shadow-sm",
+    "bg-negative text-white hover:bg-red-700 focus:ring-negative shadow-dr-sm",
   accent:
-    "bg-accent text-white hover:bg-accent-hover focus:ring-accent shadow-sm",
+    "bg-accent text-white hover:bg-accent-hover focus:ring-accent shadow-dr-sm hover:shadow-glow-green",
 };
 
 const sizeStyles = {
   sm: "px-3 py-1.5 text-xs",
   md: "px-4 py-2 text-sm",
-  lg: "px-5 py-2.5 text-base",
+  lg: "px-6 py-3 text-base",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -51,14 +51,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-corporate font-medium transition-all duration-200",
+          "inline-flex items-center justify-center gap-2 rounded-dr-sm font-medium transition-all duration-200",
           "focus:outline-none focus:ring-2 focus:ring-offset-2",
           "disabled:opacity-50 disabled:cursor-not-allowed",
+          "active:scale-[0.98]",
           variantStyles[variant],
           sizeStyles[size],
           className
         )}
         disabled={isDisabled}
+        aria-busy={loading || undefined}
         {...props}
       >
         {loading ? (

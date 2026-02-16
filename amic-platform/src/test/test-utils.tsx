@@ -8,7 +8,7 @@ import { mockUser } from "./mocks/data";
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 0, staleTime: Infinity },
       mutations: { retry: false },
     },
   });
@@ -56,10 +56,11 @@ export function renderWithProviders(
   options: WrapperOptions & Omit<RenderOptions, "wrapper"> = {},
 ) {
   const { queryClient, authContext, initialEntries, ...renderOptions } = options;
-  const wrapper = createWrapper({ queryClient, authContext, initialEntries });
+  const client = queryClient ?? createTestQueryClient();
+  const wrapper = createWrapper({ queryClient: client, authContext, initialEntries });
   return {
     ...render(ui, { wrapper, ...renderOptions }),
-    queryClient: queryClient ?? createTestQueryClient(),
+    queryClient: client,
   };
 }
 

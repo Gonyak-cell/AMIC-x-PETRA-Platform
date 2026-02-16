@@ -4,6 +4,10 @@ export type DefinitionStatus = "DRAFT" | "APPROVED" | "LOCKED";
 export type SnapshotStatus = "RUNNING" | "SUCCESS" | "FAILED";
 export type DealPhase = "MOU" | "VDR_SETUP" | "DATA_UPLOAD" | "ANALYSIS" | "REPORTING";
 
+import type { IndustryId } from "@/types/industry";
+/** @deprecated Use IndustryId from @/types/industry directly */
+export type IndustryType = IndustryId;
+
 export interface Deal {
   id: string;
   name: string;
@@ -25,6 +29,7 @@ export interface Deal {
   scope_qoe: boolean;
   scope_nwc: boolean;
   scope_debt: boolean;
+  industry: IndustryType;
   current_phase: DealPhase;
 }
 
@@ -44,6 +49,7 @@ export interface DealCreate {
   scope_qoe?: boolean;
   scope_nwc?: boolean;
   scope_debt?: boolean;
+  industry?: IndustryType;
 }
 
 export interface DefinitionData {
@@ -92,6 +98,13 @@ export type IngestionStatus =
   | "FAILED";
 export type ValidationSeverity = "ERROR" | "WARNING";
 
+export interface ValidationSummary {
+  rows_ingested?: number;
+  total_warnings?: number;
+  total_errors?: number;
+  [key: string]: unknown;
+}
+
 export interface UploadFile {
   id: string;
   deal_id: string;
@@ -106,7 +119,7 @@ export interface UploadFile {
   rows_processed: number | null;
   sheet_name: string | null;
   error_message: string | null;
-  validation_summary: Record<string, unknown> | null;
+  validation_summary: ValidationSummary | null;
   uploaded_by: string;
   created_at: string;
   updated_at: string;

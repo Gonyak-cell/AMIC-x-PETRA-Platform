@@ -1,16 +1,27 @@
 import { useParams, Link } from "react-router-dom";
-import { Newspaper, ExternalLink } from "lucide-react";
+import { Newspaper } from "lucide-react";
 import { useNewsDetail } from "@/modules/kiis/hooks/useNews";
-import { Card, Badge, Spinner, EmptyState } from "@/components/ui";
+import { Card, Spinner, EmptyState, PageHero } from "@/components/ui";
 import SentimentIndicator from "@/modules/kiis/components/SentimentIndicator";
 import { formatDate } from "@/lib/format";
 
 export default function NewsDetailPage() {
   const { articleId } = useParams<{ articleId: string }>();
-  const { data: article, isLoading } = useNewsDetail(articleId!);
+  const numId = Number(articleId);
+  const { data: article, isLoading, isError } = useNewsDetail(numId);
+
+  if (isNaN(numId)) {
+    return (
+      <EmptyState
+        icon={Newspaper}
+        title="Invalid article ID"
+        description="The article ID in the URL is not valid."
+      />
+    );
+  }
 
   if (isLoading) return <Spinner />;
-  if (!article) {
+  if (isError || !article) {
     return (
       <EmptyState
         icon={Newspaper}
@@ -32,34 +43,30 @@ export default function NewsDetailPage() {
       </div>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          {article.title}
-        </h1>
-        <div className="mt-2 flex items-center gap-3 text-sm text-text-secondary">
-          <Badge variant="info">{article.source}</Badge>
-          <span>{formatDate(article.published_at, "long")}</span>
-          {article.url && (
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:underline inline-flex items-center gap-1"
-            >
-              Original <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
-        </div>
-      </div>
+      <PageHero
+        title={article.title}
+        subtitle={[
+          article.source,
+          article.author && `by ${article.author}`,
+          formatDate(article.published_at, "long"),
+        ].filter(Boolean).join(" | ")}
+        compact
+      />
 
       {/* Sentiment */}
       <Card title="Sentiment Analysis" headerBar>
         <SentimentIndicator
-          sentiment={article.sentiment}
           score={article.sentiment_score}
           className="text-sm"
         />
       </Card>
+
+      {/* Summary */}
+      {article.summary && (
+        <Card title="Summary" headerBar>
+          <p className="text-text-body text-sm">{article.summary}</p>
+        </Card>
+      )}
 
       {/* Content */}
       <Card title="Article" headerBar>
@@ -68,19 +75,22 @@ export default function NewsDetailPage() {
         </div>
       </Card>
 
-      {/* Related Companies */}
-      {article.company_associations?.length > 0 && (
-        <Card title="Related Companies" headerBar>
+      {/* Keywords */}
+      {article.keywords && (
+        <Card title="Keywords" headerBar>
           <div className="flex flex-wrap gap-2">
-            {article.company_associations.map((company) => (
-              <Link
-                key={company}
-                to={`/kiis/companies/${company}`}
-                className="px-3 py-1 text-sm bg-bg-cool rounded-full text-text-dark hover:bg-gray-200 transition-colors"
-              >
-                {company}
-              </Link>
-            ))}
+            {article.keywords
+              .split(",")
+              .map((kw) => kw.trim())
+              .filter(Boolean)
+              .map((kw) => (
+                <span
+                  key={kw}
+                  className="px-3 py-1 text-sm bg-bg-cool rounded-full text-text-dark"
+                >
+                  {kw}
+                </span>
+              ))}
           </div>
         </Card>
       )}

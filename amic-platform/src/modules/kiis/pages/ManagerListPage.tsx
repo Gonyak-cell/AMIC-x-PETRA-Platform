@@ -14,16 +14,13 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  Pagination,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { ManagerMovement } from "@/modules/kiis/types/manager";
 import { formatDate } from "@/lib/format";
-
-const movementVariant: Record<string, "info" | "warning" | "success"> = {
-  transfer: "info",
-  resignation: "warning",
-  appointment: "success",
-};
+import { MOVEMENT_VARIANT } from "@/modules/kiis/constants/variants";
 
 const columns: Column<ManagerMovement>[] = [
   {
@@ -49,7 +46,7 @@ const columns: Column<ManagerMovement>[] = [
     align: "center",
     width: "120px",
     render: (row) => (
-      <Badge variant={movementVariant[row.movement_type] ?? "neutral"}>
+      <Badge variant={MOVEMENT_VARIANT[row.movement_type] ?? "neutral"}>
         {row.movement_type}
       </Badge>
     ),
@@ -96,19 +93,21 @@ export default function ManagerListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Manager Movements
-        </h1>
-        <Button
-          variant="secondary"
-          icon={Radar}
-          onClick={handleTrack}
-          loading={trackManagers.isPending}
-        >
-          Track
-        </Button>
-      </div>
+      <PageHero
+        title="Manager Movements"
+        subtitle="Track fund manager career movements"
+        compact
+        actions={
+          <Button
+            variant="secondary"
+            icon={Radar}
+            onClick={handleTrack}
+            loading={trackManagers.isPending}
+          >
+            Track
+          </Button>
+        }
+      />
 
       <div className="max-w-sm">
         <Input
@@ -146,29 +145,7 @@ export default function ManagerListPage() {
         )}
       </Card>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-text-secondary self-center">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

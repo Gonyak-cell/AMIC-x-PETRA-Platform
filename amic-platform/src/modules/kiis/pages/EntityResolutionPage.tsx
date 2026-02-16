@@ -15,6 +15,7 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type {
@@ -70,6 +71,7 @@ export default function EntityResolutionPage() {
   });
   const createAlias = useCreateAlias();
   const deleteAlias = useDeleteAlias();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleResolve = () => {
     const name = nameInput.trim();
@@ -94,9 +96,10 @@ export default function EntityResolutionPage() {
   };
 
   const handleDeleteAlias = (aliasId: number) => {
+    setDeletingId(aliasId);
     deleteAlias.mutate(aliasId, {
-      onSuccess: () => toast.success("Alias deleted"),
-      onError: () => toast.error("Failed to delete alias"),
+      onSuccess: () => { toast.success("Alias deleted"); setDeletingId(null); },
+      onError: () => { toast.error("Failed to delete alias"); setDeletingId(null); },
     });
   };
 
@@ -141,11 +144,12 @@ export default function EntityResolutionPage() {
         <Button
           variant="ghost"
           size="sm"
+          aria-label={`Delete alias: ${row.alias_name}`}
           onClick={(e) => {
             e.stopPropagation();
             handleDeleteAlias(row.id);
           }}
-          loading={deleteAlias.isPending}
+          loading={deletingId === row.id}
           className="text-negative hover:text-red-700"
         >
           <Trash2 className="h-4 w-4" />
@@ -156,9 +160,7 @@ export default function EntityResolutionPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Entity Resolution
-      </h1>
+      <PageHero title="Entity Resolution" subtitle="Resolve company names and manage aliases" compact />
 
       {/* Resolve Section */}
       <Card>

@@ -61,12 +61,18 @@ export default function AppShell({ children }: AppShellProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sidebarOpen]);
 
-  // Cmd/Ctrl+K to open command palette
+  // Cmd/Ctrl+K to open command palette (excludes input/textarea/contentEditable)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key === "k" &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
         e.preventDefault();
-        setCommandPaletteOpen(true);
+        setCommandPaletteOpen((prev) => !prev);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -123,10 +129,14 @@ export default function AppShell({ children }: AppShellProps) {
         )}
 
         {/* Main Content */}
-        <main id="main-content" className="flex-1 bg-bg-cool">
+        <main
+          id="main-content"
+          className="flex-1 bg-bg-cool"
+          {...(isMobile && sidebarOpen ? { inert: "" } : {})}
+        >
           {/* Mobile Header */}
           {isMobile && (
-            <div className="sticky top-0 z-40 flex items-center gap-4 bg-amic px-4 py-3">
+            <div className="sticky top-0 z-40 flex items-center gap-4 bg-amic backdrop-blur-md px-4 py-3">
               <MobileMenuButton
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -147,7 +157,7 @@ export default function AppShell({ children }: AppShellProps) {
               onSearchClick={() => setCommandPaletteOpen(true)}
             />
           )}
-          <div className="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+          <div className="max-w-7xl mx-auto px-4 py-4 md:px-8 md:py-6">
             {children}
           </div>
         </main>

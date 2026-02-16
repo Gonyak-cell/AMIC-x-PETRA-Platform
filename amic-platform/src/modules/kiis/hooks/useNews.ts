@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kiisApi } from "@/api/kiisClient";
-import type { NewsArticle, NewsListParams } from "@/modules/kiis/types/news";
-import type { PaginatedResponse } from "@/modules/kiis/types/company";
+import type {
+  NewsDetail,
+  NewsListParams,
+  NewsListResponse,
+  NewsCollectResponse,
+} from "@/modules/kiis/types/news";
 
 export function useNewsList(params: NewsListParams = {}) {
-  return useQuery<PaginatedResponse<NewsArticle>>({
+  return useQuery<NewsListResponse>({
     queryKey: ["kiis", "news", params],
     queryFn: async () => {
       const { data } = await kiisApi.get("/news", { params });
@@ -13,8 +17,8 @@ export function useNewsList(params: NewsListParams = {}) {
   });
 }
 
-export function useNewsDetail(articleId: string) {
-  return useQuery<NewsArticle>({
+export function useNewsDetail(articleId: number) {
+  return useQuery<NewsDetail>({
     queryKey: ["kiis", "news", articleId],
     queryFn: async () => {
       const { data } = await kiisApi.get(`/news/${articleId}`);
@@ -26,9 +30,11 @@ export function useNewsDetail(articleId: string) {
 
 export function useCollectNews() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const { data } = await kiisApi.post("/news/collect");
+  return useMutation<NewsCollectResponse[], Error, { source?: string } | void>({
+    mutationFn: async (vars) => {
+      const { data } = await kiisApi.post("/news/collect", null, {
+        params: vars ?? {},
+      });
       return data;
     },
     onSuccess: () => {

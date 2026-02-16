@@ -22,6 +22,8 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  Pagination,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type {
@@ -51,12 +53,13 @@ const statusVariant: Record<string, "success" | "warning" | "error" | "info" | "
 
 export default function PortfolioPage() {
   const [corpCode, setCorpCode] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<SurvivalStatus | "">("");
   const [page, setPage] = useState(1);
   const [modalItem, setModalItem] = useState<PortfolioItem | null>(null);
+  const [checkingId, setCheckingId] = useState<number | null>(null);
 
   const { data, isLoading } = usePortfolio(corpCode, {
-    status: (status as SurvivalStatus) || undefined,
+    status: status || undefined,
     page,
     size: 20,
   });
@@ -79,12 +82,18 @@ export default function PortfolioPage() {
   };
 
   const handleCheckSurvival = (item: PortfolioItem) => {
+    setCheckingId(item.id);
     checkSurvival.mutate(item.id, {
-      onSuccess: (res) =>
+      onSuccess: (res) => {
         toast.success(
           `${item.target_company_name}: ${res.previous_status} → ${res.new_status}`,
-        ),
-      onError: () => toast.error("Survival check failed"),
+        );
+        setCheckingId(null);
+      },
+      onError: () => {
+        toast.error("Survival check failed");
+        setCheckingId(null);
+      },
     });
   };
 
@@ -122,7 +131,7 @@ export default function PortfolioPage() {
       width: "120px",
       render: (row) => (
         <Badge variant={statusVariant[row.survival_status] ?? "neutral"}>
-          {row.survival_status.replace("_", " ")}
+          {row.survival_status.replaceAll("_", " ")}
         </Badge>
       ),
     },
@@ -167,7 +176,7 @@ export default function PortfolioPage() {
               e.stopPropagation();
               handleCheckSurvival(row);
             }}
-            loading={checkSurvival.isPending}
+            loading={checkingId === row.id}
           >
             Check
           </Button>
@@ -191,9 +200,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Portfolio
-      </h1>
+      <PageHero title="Portfolio" subtitle="Track investor portfolio companies" compact />
 
       <div className="flex gap-3 items-end flex-wrap">
         <CorpCodeInput
@@ -207,7 +214,7 @@ export default function PortfolioPage() {
             options={STATUS_OPTIONS}
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value);
+              setStatus(e.target.value as SurvivalStatus | "");
               setPage(1);
             }}
           />
@@ -283,28 +290,8 @@ export default function PortfolioPage() {
         )}
       </Card>
 
-      {corpCode && totalPages > 1 && (
-        <div className="flex justify-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-text-secondary self-center">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
+      {corpCode && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       )}
 
       <ValuationModal

@@ -5,7 +5,7 @@ import {
   useDealsBySector,
   useDealsByStage,
 } from "@/modules/kiis/hooks/useDeals";
-import { Card, DataTable, Select, Spinner, EmptyState } from "@/components/ui";
+import { Card, DataTable, Select, Spinner, EmptyState, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import DealTrendChart from "@/modules/kiis/components/DealTrendChart";
 import type { SectorAggregation, StageAggregation } from "@/modules/kiis/types/deal";
@@ -72,15 +72,18 @@ export default function DealSourcingPage() {
   const [tab, setTab] = useState<Tab>("trends");
   const [years, setYears] = useState("5");
 
-  const { data: trends, isLoading: trendsLoading } = useDealTrends({
-    years: Number(years),
-  });
-  const { data: sectors, isLoading: sectorsLoading } = useDealsBySector({
-    years: Number(years),
-  });
-  const { data: stages, isLoading: stagesLoading } = useDealsByStage({
-    years: Number(years),
-  });
+  const { data: trends, isLoading: trendsLoading } = useDealTrends(
+    { years: Number(years) },
+    { enabled: tab === "trends" },
+  );
+  const { data: sectors, isLoading: sectorsLoading } = useDealsBySector(
+    { years: Number(years) },
+    { enabled: tab === "sector" },
+  );
+  const { data: stages, isLoading: stagesLoading } = useDealsByStage(
+    { years: Number(years) },
+    { enabled: tab === "stage" },
+  );
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "trends", label: "Trends" },
@@ -90,23 +93,27 @@ export default function DealSourcingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Deal Sourcing
-        </h1>
-        <Select
-          label="Lookback"
-          options={YEARS_OPTIONS}
-          value={years}
-          onChange={(e) => setYears(e.target.value)}
-        />
-      </div>
+      <PageHero
+        title="Deal Sourcing"
+        subtitle="Analyze deal trends, sectors, and stages"
+        compact
+        actions={
+          <Select
+            label="Lookback"
+            options={YEARS_OPTIONS}
+            value={years}
+            onChange={(e) => setYears(e.target.value)}
+          />
+        }
+      />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-border">
+      <div className="flex gap-1 border-b border-gray-border" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               tab === t.key

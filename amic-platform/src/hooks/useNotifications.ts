@@ -1,26 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
+import axios from "axios";
 import api from "@/api/client";
 import type { NotificationItem } from "@/types/notification";
 
 export function useNotifications() {
   const queryClient = useQueryClient();
-  const endpointAvailableRef = useRef(true);
+  const [endpointAvailable, setEndpointAvailable] = useState(true);
 
   const { data: notifications = [], isLoading } = useQuery<NotificationItem[]>({
     queryKey: ["notifications"],
     queryFn: async () => {
       try {
         const { data } = await api.get<NotificationItem[]>("/notifications");
-        endpointAvailableRef.current = true;
+        setEndpointAvailable(true);
         return data;
       } catch (error: unknown) {
-        const status =
-          error && typeof error === "object" && "response" in error
-            ? (error as { response?: { status?: number } }).response?.status
-            : undefined;
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
         if (status === 404 || status === 405) {
-          endpointAvailableRef.current = false;
+          setEndpointAvailable(false);
         }
         return [];
       }
@@ -56,7 +54,7 @@ export function useNotifications() {
     notifications,
     unreadCount,
     isLoading,
-    endpointAvailable: endpointAvailableRef.current,
+    endpointAvailable,
     markAsRead: markAsRead.mutate,
     markAllAsRead: markAllAsRead.mutate,
   };

@@ -36,8 +36,8 @@ export function SidebarNavItem({ to, label, icon: Icon, end, disabled, onClick }
           "flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors",
           "min-h-[44px]", // WCAG 2.5.5 touch target
           isActive
-            ? "bg-white/[0.08] text-white relative before:absolute before:right-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-accent before:rounded-l-full"
-            : "text-white/60 hover:bg-white/5 hover:text-white"
+            ? "bg-white/[0.08] text-white relative before:absolute before:right-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-accent before:rounded-l-full before:shadow-[0_0_8px_rgba(38,194,96,0.4)]"
+            : "text-white/60 hover:bg-white/[0.07] hover:text-white"
         )
       }
     >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -7,10 +7,18 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { Button, Card, Input, Select, Spinner } from "@/components/ui";
+import { Button, Card, Input, PageHero, Select, Spinner } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { useCreateDocument } from "@/modules/im/hooks/useDocuments";
 import { useCompany, useFetchCompany } from "@/modules/im/hooks/useCompanies";
-import type { IMStyle } from "@/modules/im/types/document";
+import type { IMStyle, IndustryId, SectionId } from "@/modules/im/types/document";
+import {
+  CONTENT_SECTIONS,
+  STRUCTURAL_SECTIONS,
+  SECTION_LABEL_MAP,
+  isIMStyle,
+} from "@/modules/im/types/document";
+import { INDUSTRY_OPTIONS, isIndustryId } from "@/types/industry";
 
 const STYLE_OPTIONS = [
   { value: "TITAN", label: "Titan - Concise Summary" },
@@ -19,32 +27,46 @@ const STYLE_OPTIONS = [
   { value: "CUSTOM", label: "Custom - Select Sections" },
 ];
 
-const INDUSTRY_OPTIONS = [
-  { value: "general", label: "General" },
-  { value: "finance", label: "Finance" },
-  { value: "technology", label: "Technology" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "real_estate", label: "Real Estate" },
-  { value: "energy", label: "Energy" },
-  { value: "consumer", label: "Consumer" },
-];
+/** DART 산업명 → 백엔드 industry ID 매핑 (정확 매칭 + 부분 매칭 지원) */
+const DART_INDUSTRY_MAP: Record<string, IndustryId> = {
+  소프트웨어: "tech",
+  "정보통신업": "tech",
+  "정보통신": "tech",
+  IT: "tech",
+  제조: "manufacturing",
+  "제조업": "manufacturing",
+  의료: "healthcare",
+  "제약": "healthcare",
+  바이오: "healthcare",
+  운송: "logistics",
+  물류: "logistics",
+  "운수업": "logistics",
+  금융: "financial_services",
+  은행: "financial_services",
+  보험: "financial_services",
+  증권: "financial_services",
+  "금융업": "financial_services",
+  부동산: "real_estate",
+  "부동산업": "real_estate",
+  에너지: "energy",
+  유통: "consumer",
+  소비재: "consumer",
+};
 
-const AVAILABLE_SECTIONS = [
-  "Cover",
-  "Executive Summary",
-  "Company Overview",
-  "Industry Analysis",
-  "Financial Analysis",
-  "Management Team",
-  "Market Position",
-  "Growth Strategy",
-  "Risk Factors",
-  "Debt Structure",
-  "Covenant Compliance",
-  "Projections",
-  "Appendix",
-];
+/** DART 산업명을 IndustryId로 매핑 — 정확 매칭 우선, 실패 시 키워드 포함 여부로 부분 매칭 */
+function matchDartIndustry(dartIndustry: string): IndustryId | undefined {
+  const exact = DART_INDUSTRY_MAP[dartIndustry];
+  if (exact) return exact;
+  // 길이 내림차순 정렬 → 더 구체적인 키워드 우선 매칭 (e.g. "정보통신업" > "IT")
+  const sorted = Object.entries(DART_INDUSTRY_MAP).sort(
+    ([a], [b]) => b.length - a.length,
+  );
+  for (const [keyword, id] of sorted) {
+    if (dartIndustry.includes(keyword)) return id;
+  }
+  return undefined;
+}
+
 
 const STEP_TITLES = ["Company", "IM Settings", "Confirm"];
 
@@ -52,8 +74,8 @@ interface FormData {
   corp_code: string;
   project_name: string;
   im_style: IMStyle;
-  industry: string;
-  sections: string[];
+  industry: IndustryId;
+  sections: SectionId[];
   pdf_password: string;
 }
 
@@ -69,7 +91,8 @@ const INITIAL_FORM: FormData = {
 export default function CreateDocumentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialStyle = (searchParams.get("style") as IMStyle) || "FULL";
+  const styleParam = searchParams.get("style");
+  const initialStyle: IMStyle = styleParam && isIMStyle(styleParam) ? styleParam : "FULL";
   const urlCorpCode = searchParams.get("corpCode") || "";
 
   const [step, setStep] = useState(0);
@@ -84,32 +107,38 @@ export default function CreateDocumentPage() {
   const { data: company, isLoading: companyLoading } = useCompany(formData.corp_code);
 
   // Auto-fetch company when corpCode is provided via URL (cross-module navigation)
+  const lastFetchedCorpCode = useRef("");
+  const fetchCompanyMutate = fetchCompany.mutateAsync;
   useEffect(() => {
-    if (urlCorpCode && urlCorpCode.length === 8) {
-      fetchCompany
-        .mutateAsync(urlCorpCode)
-        .then(() => {
-          setFormData((prev) => ({ ...prev, corp_code: urlCorpCode }));
-          toast.success("Company data fetch initiated");
-        })
-        .catch(() => {
-          toast.error("Failed to fetch company data");
-        });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!urlCorpCode || !/^\d{8}$/.test(urlCorpCode)) return;
+    if (urlCorpCode === lastFetchedCorpCode.current) return;
+    lastFetchedCorpCode.current = urlCorpCode;
+    let cancelled = false;
+    fetchCompanyMutate(urlCorpCode)
+      .then(() => {
+        if (cancelled) return;
+        setFormData((prev) => ({ ...prev, corp_code: urlCorpCode, industry: "general" }));
+        toast.success("Company data fetch initiated");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        toast.error("Failed to fetch company data");
+      });
+    return () => { cancelled = true; };
+  }, [urlCorpCode, fetchCompanyMutate]);
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFetchCompany = async () => {
-    if (!corpCodeInput || corpCodeInput.length !== 8) {
-      toast.error("Please enter a valid 8-digit corp code");
+    if (!corpCodeInput || !/^\d{8}$/.test(corpCodeInput)) {
+      toast.error("Please enter a valid 8-digit numeric corp code");
       return;
     }
     try {
       await fetchCompany.mutateAsync(corpCodeInput);
-      setFormData((prev) => ({ ...prev, corp_code: corpCodeInput }));
+      setFormData((prev) => ({ ...prev, corp_code: corpCodeInput, industry: "general" }));
       toast.success("Company data fetch initiated");
     } catch {
       toast.error("Failed to fetch company data");
@@ -121,11 +150,22 @@ export default function CreateDocumentPage() {
 
   const handleSubmit = async () => {
     try {
+      // For CUSTOM style, always include structural sections alongside user picks
+      const sections =
+        formData.im_style === "CUSTOM"
+          ? [
+              ...STRUCTURAL_SECTIONS,
+              ...formData.sections.filter(
+                (s) => !(STRUCTURAL_SECTIONS as string[]).includes(s),
+              ),
+            ]
+          : undefined;
+
       const result = await createDocument.mutateAsync({
         corp_code: formData.corp_code,
         project_name: formData.project_name || undefined,
         im_style: formData.im_style,
-        sections: formData.im_style === "CUSTOM" ? formData.sections : undefined,
+        sections,
         industry: formData.industry || undefined,
         pdf_password: formData.pdf_password || undefined,
       });
@@ -136,24 +176,42 @@ export default function CreateDocumentPage() {
     }
   };
 
-  // Auto-populate industry from company data
+  // Auto-populate industry from company data (DART 산업명 → backend ID 매핑)
+  // Track which corp_code's industry was already auto-set to allow re-population on company change
+  const industrySetForCorpCode = useRef("");
   useEffect(() => {
-    if (company?.industry && formData.industry === "general") {
-      const match = INDUSTRY_OPTIONS.find(
-        (opt) => opt.value === company.industry || opt.label === company.industry,
-      );
-      if (match) {
-        updateField("industry", match.value);
-      }
+    if (!company?.industry || !formData.corp_code) return;
+    if (industrySetForCorpCode.current === formData.corp_code) return;
+    // Only auto-populate when industry is still default
+    if (formData.industry !== "general") return;
+    // 1. INDUSTRY_OPTIONS value/label 직접 매칭
+    const directMatch = INDUSTRY_OPTIONS.find(
+      (opt) => opt.value === company.industry || opt.label === company.industry,
+    );
+    if (directMatch && isIndustryId(directMatch.value)) {
+      industrySetForCorpCode.current = formData.corp_code;
+      updateField("industry", directMatch.value);
+      return;
     }
-  }, [company?.industry]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 2. DART 산업명 매핑 (정확 매칭 + 부분 매칭)
+    const mapped = matchDartIndustry(company.industry);
+    if (mapped) {
+      industrySetForCorpCode.current = formData.corp_code;
+      updateField("industry", mapped);
+    } else {
+      // 매핑 실패 — ref 업데이트로 재시도 방지 (사용자가 수동 선택)
+      industrySetForCorpCode.current = formData.corp_code;
+    }
+  }, [company?.industry, formData.corp_code, formData.industry]);
 
-  const canProceedStep0 = formData.corp_code && company?.fetch_status === "COMPLETED";
+  const canProceedStep0 =
+    formData.corp_code &&
+    (company?.fetch_status === "COMPLETED" || company?.fetch_status === "REFRESHING");
   const canProceedStep1 =
     formData.im_style &&
     (formData.im_style !== "CUSTOM" || formData.sections.length > 0);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: SectionId) => {
     setFormData((prev) => ({
       ...prev,
       sections: prev.sections.includes(section)
@@ -164,23 +222,19 @@ export default function CreateDocumentPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Create New IM
-        </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Generate an Investment Memorandum in 3 simple steps.
-        </p>
-      </div>
+      <PageHero
+        title="Create New IM"
+        subtitle="Generate an Investment Memorandum in 3 simple steps"
+        compact
+      />
 
       <Card>
         {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-6" role="list" aria-label="Creation steps">
+        <ol className="flex items-center gap-2 mb-6 list-none p-0 m-0" aria-label="Creation steps">
           {STEP_TITLES.map((title, i) => (
-            <div
+            <li
               key={title}
               className="flex items-center gap-2"
-              role="listitem"
               aria-current={i === step ? "step" : undefined}
             >
               <div
@@ -205,9 +259,9 @@ export default function CreateDocumentPage() {
               {i < STEP_TITLES.length - 1 && (
                 <div className="w-8 h-px bg-gray-200 hidden sm:block" aria-hidden="true" />
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
 
         {/* Step 1: Company Selection */}
         {step === 0 && (
@@ -217,9 +271,10 @@ export default function CreateDocumentPage() {
                 <Input
                   label="Corp Code (8-digit)"
                   value={corpCodeInput}
-                  onChange={(e) => setCorpCodeInput(e.target.value)}
+                  onChange={(e) => setCorpCodeInput(e.target.value.replace(/\D/g, ""))}
                   placeholder="e.g. 00126380"
                   maxLength={8}
+                  inputMode="numeric"
                 />
               </div>
               <Button
@@ -271,7 +326,21 @@ export default function CreateDocumentPage() {
                       {company.industry && (
                         <div>
                           <span className="text-text-secondary">Industry</span>
-                          <p className="text-text-dark">{company.industry}</p>
+                          <p className="text-text-dark">
+                            {company.industry}
+                            {formData.industry === "general" && (
+                              <span className={cn(
+                                "ml-2 text-xs",
+                                company.fetch_status === "COMPLETED"
+                                  ? "text-text-secondary"
+                                  : "text-amic animate-pulse",
+                              )}>
+                                {company.fetch_status === "COMPLETED"
+                                  ? "Select industry manually"
+                                  : "Detecting industry..."}
+                              </span>
+                            )}
+                          </p>
                         </div>
                       )}
                       <div>
@@ -321,13 +390,19 @@ export default function CreateDocumentPage() {
                 label="IM Style"
                 options={STYLE_OPTIONS}
                 value={formData.im_style}
-                onChange={(e) => updateField("im_style", e.target.value as IMStyle)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (isIMStyle(v)) updateField("im_style", v);
+                }}
               />
               <Select
                 label="Industry"
                 options={INDUSTRY_OPTIONS}
                 value={formData.industry}
-                onChange={(e) => updateField("industry", e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (isIndustryId(v)) updateField("industry", v);
+                }}
               />
             </div>
 
@@ -337,30 +412,36 @@ export default function CreateDocumentPage() {
                 <label className="block text-sm font-medium text-text-dark mb-2">
                   Select Sections
                 </label>
+                <p className="text-xs text-text-secondary mb-3">
+                  Cover, Disclaimer, Table of Contents, and Contact are always
+                  included.
+                </p>
                 <div
                   className="grid grid-cols-2 sm:grid-cols-3 gap-2"
                   role="group"
                   aria-label="IM document sections"
                 >
-                  {AVAILABLE_SECTIONS.map((section) => (
+                  {CONTENT_SECTIONS.map(({ id, label }) => (
                     <button
-                      key={section}
+                      key={id}
                       type="button"
-                      onClick={() => toggleSection(section)}
-                      aria-pressed={formData.sections.includes(section)}
+                      onClick={() => toggleSection(id)}
+                      aria-pressed={formData.sections.includes(id)}
                       className={`px-3 py-2 text-sm rounded-lg border transition-colors text-left ${
-                        formData.sections.includes(section)
+                        formData.sections.includes(id)
                           ? "border-amic bg-amic/10 text-amic font-medium"
                           : "border-gray-border bg-white text-text-secondary hover:border-amic/50"
                       }`}
                     >
-                      {section}
+                      {label}
                     </button>
                   ))}
                 </div>
                 {formData.sections.length > 0 && (
                   <p className="mt-2 text-xs text-text-secondary">
-                    {formData.sections.length} section(s) selected
+                    {formData.sections.length} content section(s) +{" "}
+                    {STRUCTURAL_SECTIONS.length} structural ={" "}
+                    {formData.sections.length + STRUCTURAL_SECTIONS.length} total
                   </p>
                 )}
               </div>
@@ -408,7 +489,7 @@ export default function CreateDocumentPage() {
                         key={s}
                         className="px-2 py-0.5 text-xs rounded bg-white text-text-dark"
                       >
-                        {s}
+                        {SECTION_LABEL_MAP[s] ?? s}
                       </span>
                     ))}
                   </div>

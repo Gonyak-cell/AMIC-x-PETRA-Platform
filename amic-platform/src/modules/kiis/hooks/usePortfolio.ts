@@ -10,6 +10,8 @@ import type {
   ValuationUpdateResponse,
 } from "@/modules/kiis/types/portfolio";
 
+const CORP_CODE_RE = /^\d{8}$/;
+
 export function usePortfolio(corpCode: string, params: PortfolioListParams = {}) {
   return useQuery<PortfolioListResponse>({
     queryKey: ["kiis", "portfolio", corpCode, params],
@@ -20,7 +22,7 @@ export function usePortfolio(corpCode: string, params: PortfolioListParams = {})
       );
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
@@ -33,13 +35,13 @@ export function usePortfolioSummary(corpCode: string) {
       );
       return data;
     },
-    enabled: !!corpCode,
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 
 export function useSyncPortfolio(corpCode: string) {
   const queryClient = useQueryClient();
-  return useMutation<SyncResponse>({
+  return useMutation<SyncResponse, Error, void>({
     mutationFn: async () => {
       const { data } = await kiisApi.post(
         `/portfolio/by-investor/${corpCode}/sync`,

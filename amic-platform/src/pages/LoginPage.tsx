@@ -1,7 +1,7 @@
 /** 로그인 페이지 (TM CI 기반 리디자인 — 숲 배경 + 세리프/산세리프 브랜딩) */
 
 import { useState, type FormEvent } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input } from "@/components/ui";
 import { LogIn } from "lucide-react";
@@ -21,8 +21,7 @@ export default function LoginPage() {
 
   // Already authenticated — redirect
   if (isAuthenticated) {
-    navigate(from, { replace: true });
-    return null;
+    return <Navigate to={from} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {

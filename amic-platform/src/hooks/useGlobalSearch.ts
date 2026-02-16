@@ -94,9 +94,14 @@ export function useGlobalSearch(query: string) {
               params: { search: debouncedQuery },
             });
             return normalizeDocuments(data.items);
-          } catch {
-            // Fallback: fetch all and filter client-side if search param unsupported
-            const { data } = await imApi.get<{ items: Document[] }>("/documents");
+          } catch (err) {
+            // Fallback: only on 400/422 (search param unsupported) — not on 500/network errors
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status !== 400 && status !== 422) throw err;
+
+            const { data } = await imApi.get<{ items: Document[] }>("/documents", {
+              params: { limit: 200 },
+            });
             const q = debouncedQuery.toLowerCase();
             const filtered = data.items.filter(
               (d) =>

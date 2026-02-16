@@ -55,9 +55,9 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "bg-white rounded-corporate border shadow-card",
-        generous ? "p-6" : "p-4",
-        hoverLift && "hover-lift cursor-pointer",
+        "bg-white rounded-dr border shadow-dr-sm transition-all duration-300",
+        generous ? "p-7" : "p-4",
+        hoverLift && "hover-glow",
         variantStyles[variant],
         className
       )}

@@ -1,7 +1,11 @@
 import type { CalendarEvent } from "@/types/calendar";
 
 function formatIcsDate(date: string): string {
-  return date.replace(/-/g, "") + "T000000";
+  return date.replace(/-/g, "");
+}
+
+function formatIcsDtStamp(): string {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
 function escapeIcsText(text: string): string {
@@ -22,9 +26,10 @@ export function generateIcs(events: CalendarEvent[]): string {
   for (const event of events) {
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${event.id}@amic-petra`);
-    lines.push(`DTSTART:${formatIcsDate(event.date)}`);
+    lines.push(`DTSTAMP:${formatIcsDtStamp()}`);
+    lines.push(`DTSTART;VALUE=DATE:${formatIcsDate(event.date)}`);
     if (event.endDate) {
-      lines.push(`DTEND:${formatIcsDate(event.endDate)}`);
+      lines.push(`DTEND;VALUE=DATE:${formatIcsDate(event.endDate)}`);
     }
     lines.push(`SUMMARY:${escapeIcsText(event.title)}`);
     lines.push(

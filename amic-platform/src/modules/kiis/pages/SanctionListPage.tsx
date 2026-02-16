@@ -15,18 +15,15 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  Pagination,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { ClassifiedSanctionItem } from "@/modules/kiis/types/sanction";
+import type { ClassifiedSanctionListItem } from "@/modules/kiis/types/sanction";
 import { formatDate } from "@/lib/format";
+import { SEVERITY_VARIANT } from "@/modules/kiis/constants/variants";
 
-const severityVariant: Record<string, "error" | "warning" | "info"> = {
-  critical: "error",
-  warning: "warning",
-  caution: "info",
-};
-
-const columns: Column<ClassifiedSanctionItem>[] = [
+const columns: Column<ClassifiedSanctionListItem>[] = [
   {
     key: "sanctions_type",
     header: "Type",
@@ -34,8 +31,6 @@ const columns: Column<ClassifiedSanctionItem>[] = [
       <span className="font-medium text-text-dark">{row.sanctions_type}</span>
     ),
   },
-  { key: "sanctions_detail", header: "Detail" },
-  { key: "sanctions_agency", header: "Agency", width: "140px" },
   {
     key: "sanctions_date",
     header: "Date",
@@ -49,7 +44,7 @@ const columns: Column<ClassifiedSanctionItem>[] = [
     align: "center",
     width: "100px",
     render: (row) => (
-      <Badge variant={severityVariant[row.severity] ?? "neutral"}>
+      <Badge variant={SEVERITY_VARIANT[row.severity] ?? "neutral"}>
         {row.severity}
       </Badge>
     ),
@@ -65,13 +60,17 @@ const columns: Column<ClassifiedSanctionItem>[] = [
 export default function SanctionListPage() {
   const [corpCode, setCorpCode] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(1);
 
-  const { data: sanctions, isLoading } = useClassifiedSanctions(corpCode);
+  const { data: sanctions, isLoading } = useClassifiedSanctions(corpCode, { page, size: 20 });
   const { data: summary } = useSanctionSummary(corpCode);
   const classify = useClassifySanctions(corpCode);
 
+  const totalPages = sanctions ? Math.ceil(sanctions.total / 20) : 0;
+
   const handleSearch = () => {
     setCorpCode(searchInput.trim());
+    setPage(1);
   };
 
   const handleClassify = () => {
@@ -84,16 +83,14 @@ export default function SanctionListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Sanctions
-      </h1>
+      <PageHero title="Sanctions" subtitle="Search and classify company sanctions" compact />
 
       {/* Search */}
       <div className="flex gap-3 items-end">
         <div className="flex-1 max-w-sm">
           <Input
-            label="Company Code / Name"
-            placeholder="Enter corp code..."
+            label="Company Code"
+            placeholder="Enter corp code (e.g. 00126380)..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -143,11 +140,11 @@ export default function SanctionListPage() {
           <EmptyState
             icon={ShieldAlert}
             title="Search for a company"
-            description="Enter a company code or name to view sanctions."
+            description="Enter a company code to view sanctions."
           />
         ) : isLoading ? (
           <Spinner />
-        ) : !sanctions?.length ? (
+        ) : !sanctions?.items.length ? (
           <EmptyState
             icon={ShieldAlert}
             title="No sanctions found"
@@ -156,12 +153,16 @@ export default function SanctionListPage() {
         ) : (
           <DataTable
             columns={columns}
-            data={sanctions}
+            data={sanctions.items}
             keyField="id"
             striped
           />
         )}
       </Card>
+
+      {corpCode && totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      )}
     </div>
   );
 }

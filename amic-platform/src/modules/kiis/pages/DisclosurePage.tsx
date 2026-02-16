@@ -13,6 +13,8 @@ import {
   Badge,
   EmptyState,
   Spinner,
+  Pagination,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type {
@@ -36,8 +38,11 @@ const TYPE_OPTIONS = [
 const typeVariant: Record<string, "info" | "success" | "warning" | "error" | "neutral"> = {
   annual_report: "info",
   audit_report: "success",
+  quarterly: "info",
+  semi_annual: "info",
   material: "warning",
   sanction: "error",
+  other: "neutral",
 };
 
 const columns: Column<DisclosureItem>[] = [
@@ -79,7 +84,7 @@ const columns: Column<DisclosureItem>[] = [
     width: "80px",
     render: (row) => (
       <Badge variant={row.source === "dart" ? "info" : "neutral"}>
-        {row.source.toUpperCase()}
+        {(row.source ?? "").toUpperCase() || "-"}
       </Badge>
     ),
   },
@@ -136,9 +141,11 @@ export default function DisclosurePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">
-        Disclosures
-      </h1>
+      <PageHero
+        title="Disclosures"
+        subtitle="DART and KOFIA disclosure filings"
+        compact
+      />
 
       <div className="flex gap-3 items-end flex-wrap">
         <CorpCodeInput onSearch={handleSearch} />
@@ -190,28 +197,8 @@ export default function DisclosurePage() {
         )}
       </Card>
 
-      {corpCode && totalPages > 1 && (
-        <div className="flex justify-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-text-secondary self-center">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
+      {corpCode && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       )}
     </div>
   );

@@ -42,7 +42,7 @@ services:
     environment:
       DATABASE_URL: postgresql://autofdd:${FDD_DB_PASSWORD}@fdd-db:5432/autofdd
       PPTX_SERVICE_URL: http://fdd-pptx:3100
-      CORS_ORIGINS: ${FDD_CORS_ORIGINS:-https://platform.example.com}
+      CORS_ORIGINS: ${FDD_CORS_ORIGINS}
       JWT_SECRET: ${FDD_JWT_SECRET}
       LOG_LEVEL: ${FDD_LOG_LEVEL:-INFO}
     restart: unless-stopped
@@ -82,11 +82,12 @@ services:
   # ======================== KIIS BACKEND ========================
   kiis-api:
     ports: []
+    volumes: []
     environment:
       DATABASE_URL: postgresql+asyncpg://kiis_user:${KIIS_DB_PASSWORD}@kiis-db:5432/kiis
-      REDIS_URL: redis://:${KIIS_REDIS_PASSWORD:-}@kiis-redis:6379/0
-      ELASTICSEARCH_URL: http://kiis-es:9200
-      CORS_ORIGINS: ${KIIS_CORS_ORIGINS:-https://platform.example.com}
+      REDIS_URL: redis://:${KIIS_REDIS_PASSWORD:-redis}@kiis-redis:6379/0
+      ELASTICSEARCH_URL: http://elastic:${KIIS_ES_PASSWORD:-changeme}@kiis-es:9200
+      CORS_ORIGINS: ${KIIS_CORS_ORIGINS}
       SECRET_KEY: ${KIIS_SECRET_KEY}
       WORKERS: 4
       LOG_LEVEL: ${KIIS_LOG_LEVEL:-WARNING}
@@ -136,7 +137,8 @@ services:
     ports: []
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${KIIS_ES_PASSWORD:-changeme}
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     restart: unless-stopped
     deploy:
@@ -148,11 +150,12 @@ services:
   im-api:
     command: gunicorn -c gunicorn.conf.py src.api.main:app
     ports: []
+    volumes: []
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/1
-      CORS_ORIGINS: ${IM_CORS_ORIGINS:-https://platform.example.com}
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
+      CORS_ORIGINS: ${IM_CORS_ORIGINS}
       SECRET_KEY: ${IM_SECRET_KEY}
       DEBUG: "false"
       LOG_LEVEL: ${IM_LOG_LEVEL:-WARNING}
@@ -222,8 +225,8 @@ services:
       --soft-time-limit=3300
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/1
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -234,8 +237,8 @@ services:
   im-celery-beat:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-}@im-redis:6379/1
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
     restart: unless-stopped
     logging:
       driver: "json-file"

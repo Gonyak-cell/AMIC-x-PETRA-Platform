@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { FolderOpen, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { Card, Spinner, EmptyState } from "@/components/ui";
+import { Card, Spinner, EmptyState, PageHero } from "@/components/ui";
 import { useVdrFolders, useInitializeVdr } from "@/modules/fdd/hooks/useVdr";
 import VdrFolderTree from "@/modules/fdd/components/vdr/VdrFolderTree";
 
@@ -31,15 +31,7 @@ export default function VdrPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Virtual Data Room
-        </h1>
-        <p className="text-text-secondary mt-1">
-          Manage VDR folder structure and uploaded files.
-        </p>
-      </div>
+      <PageHero title="Virtual Data Room" subtitle="Manage VDR folder structure and uploaded files." compact />
 
       {folders.length === 0 ? (
         /* Empty state — VDR not initialized */

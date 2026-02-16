@@ -47,5 +47,11 @@ export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 
+export { Pagination } from "./Pagination";
+export type { PaginationProps } from "./Pagination";
+
 export { LiveRegionProvider, useLiveAnnounce } from "./LiveRegion";
 export type { LiveRegionProviderProps } from "./LiveRegion";
+
+export { PageHero } from "./PageHero";
+export type { PageHeroProps } from "./PageHero";

@@ -52,7 +52,7 @@ export interface REITsListResponse {
 }
 
 export interface ReitListParams {
-  type?: ReitType;
+  reits_type?: ReitType;
   status?: ReitStatus;
   page?: number;
   size?: number;

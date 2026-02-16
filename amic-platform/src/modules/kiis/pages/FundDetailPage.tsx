@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { Landmark, Users } from "lucide-react";
 import { useFundDetail } from "@/modules/kiis/hooks/useFunds";
-import { Card, KpiCard, DataTable, Badge, Spinner, EmptyState } from "@/components/ui";
+import { Card, KpiCard, DataTable, Badge, Spinner, EmptyState, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { FundManagerItem } from "@/modules/kiis/types/fund";
 import { formatAmount, formatPercent } from "@/lib/format";
@@ -48,13 +48,13 @@ const managerColumns: Column<FundManagerItem>[] = [
 
 export default function FundDetailPage() {
   const { fundCode } = useParams<{ fundCode: string }>();
-  const { data, isLoading } = useFundDetail(fundCode!);
+  const { data, isLoading, isError } = useFundDetail(fundCode ?? "");
 
   const fund = data?.fund;
   const managers = data?.managers ?? [];
 
   if (isLoading) return <Spinner />;
-  if (!fund) {
+  if (isError || !fund) {
     return (
       <EmptyState
         icon={Landmark}
@@ -76,17 +76,11 @@ export default function FundDetailPage() {
       </div>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          {fund.fund_name}
-        </h1>
-        <div className="mt-1 text-sm text-text-secondary space-x-4">
-          <Badge variant={fund.fund_type === "blind" ? "info" : "neutral"}>
-            {fund.fund_type}
-          </Badge>
-          <span>{fund.company_name}</span>
-        </div>
-      </div>
+      <PageHero
+        title={fund.fund_name}
+        subtitle={fund.company_name}
+        compact
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -120,8 +114,8 @@ export default function FundDetailPage() {
         ) : (
           <DataTable
             columns={managerColumns}
-            data={managers}
-            keyField="manager_name"
+            data={managers.map((m) => ({ ...m, _id: `${m.manager_name}-${m.position ?? ""}-${m.appointed_date ?? ""}` }))}
+            keyField="_id"
             compact
             striped
           />

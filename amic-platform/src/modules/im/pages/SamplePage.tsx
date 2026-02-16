@@ -7,6 +7,7 @@ import {
   Download,
   Eye,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Card,
   KpiCard,
@@ -14,6 +15,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 
@@ -41,7 +43,7 @@ const MOCK_DOCUMENTS: SampleDocument[] = [
     im_style: "TITAN",
     status: "COMPLETED",
     progress_pct: 100,
-    sections: ["overview", "financials", "valuation", "appendix"],
+    sections: ["executive_summary", "financial_analysis", "valuation", "appendix"],
     created_at: "2025-01-10T08:00:00Z",
     file_size_bytes: 2_048_000,
   },
@@ -53,7 +55,7 @@ const MOCK_DOCUMENTS: SampleDocument[] = [
     im_style: "FULL",
     status: "GENERATING",
     progress_pct: 65,
-    sections: ["overview", "financials"],
+    sections: ["executive_summary", "financial_analysis"],
     created_at: "2025-02-01T10:00:00Z",
     file_size_bytes: null,
   },
@@ -65,7 +67,7 @@ const MOCK_DOCUMENTS: SampleDocument[] = [
     im_style: "TITAN",
     status: "PENDING",
     progress_pct: 0,
-    sections: ["overview", "financials", "valuation"],
+    sections: ["executive_summary", "financial_analysis", "valuation"],
     created_at: "2025-02-05T14:00:00Z",
     file_size_bytes: null,
   },
@@ -74,10 +76,10 @@ const MOCK_DOCUMENTS: SampleDocument[] = [
     project_name: "Kakao IM",
     company_name: "카카오",
     corp_code: "00234567",
-    im_style: "COMPACT",
+    im_style: "COVENANT",
     status: "FAILED",
     progress_pct: 30,
-    sections: ["overview"],
+    sections: ["executive_summary"],
     created_at: "2025-01-20T11:00:00Z",
     file_size_bytes: null,
   },
@@ -89,7 +91,7 @@ const MOCK_DOCUMENTS: SampleDocument[] = [
     im_style: "FULL",
     status: "COMPLETED",
     progress_pct: 100,
-    sections: ["overview", "financials", "valuation"],
+    sections: ["executive_summary", "financial_analysis", "valuation"],
     created_at: "2025-01-15T09:00:00Z",
     file_size_bytes: 3_500_000,
   },
@@ -204,16 +206,11 @@ export default function SamplePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-text-dark">
-            IM Sample Page
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Mock 데이터로 구성된 IM 샘플 페이지입니다 (백엔드 불필요)
-          </p>
-        </div>
-      </div>
+      <PageHero
+        title="IM Sample Page"
+        subtitle="Mock 데이터로 구성된 IM 샘플 페이지입니다 (백엔드 불필요)"
+        compact
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -270,7 +267,7 @@ export default function SamplePage() {
             data={docs}
             keyField="id"
             onRowClick={(row) =>
-              alert(`Document: ${row.project_name}\nStatus: ${row.status}\nProgress: ${row.progress_pct}%`)
+              toast.info(`${row.project_name} — ${row.status} (${row.progress_pct}%)`)
             }
             striped
           />
@@ -281,7 +278,7 @@ export default function SamplePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="IM Style Distribution">
           <div className="space-y-3">
-            {["TITAN", "FULL", "COMPACT"].map((style) => {
+            {["TITAN", "FULL", "COVENANT"].map((style) => {
               const count = MOCK_DOCUMENTS.filter(
                 (d) => d.im_style === style,
               ).length;
@@ -326,7 +323,7 @@ export default function SamplePage() {
                     variant="ghost"
                     size="sm"
                     icon={Eye}
-                    onClick={() => alert(`Preview: ${doc.project_name}`)}
+                    onClick={() => toast.info(`Preview: ${doc.project_name}`)}
                   >
                     View
                   </Button>
@@ -334,7 +331,7 @@ export default function SamplePage() {
                     variant="ghost"
                     size="sm"
                     icon={Download}
-                    onClick={() => alert(`Download: ${doc.project_name}`)}
+                    onClick={() => toast.info(`Download: ${doc.project_name}`)}
                   >
                     Download
                   </Button>

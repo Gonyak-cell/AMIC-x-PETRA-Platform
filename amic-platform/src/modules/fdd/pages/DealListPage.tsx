@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Briefcase, CheckCircle, FileEdit, Archive, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useDeals, useCreateDeal } from "@/modules/fdd/hooks/useDeals";
-import type { DealCreate, DealType, Deal } from "@/modules/fdd/types/deal";
+import type { DealCreate, DealType, Deal, IndustryType } from "@/modules/fdd/types/deal";
+import { INDUSTRY_LIST, FDD_INDUSTRY_OPTIONS } from "@/types/industry";
 import {
   Button,
   Card,
@@ -15,11 +16,13 @@ import {
   Badge,
   getStatusVariant,
   EmptyState,
+  PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { TeamAvatars } from "@/components/collaboration/TeamAvatars";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { DEAL_TYPE_OPTIONS, CURRENCY_OPTIONS } from "@/modules/fdd/constants";
 
 const INITIAL_FORM: DealCreate = {
   name: "",
@@ -28,19 +31,8 @@ const INITIAL_FORM: DealCreate = {
   reference_date: "",
   period_start: "",
   period_end: "",
+  industry: "general",
 };
-
-const DEAL_TYPE_OPTIONS = [
-  { value: "COMPLETION_ACCOUNTS", label: "Completion Accounts" },
-  { value: "LOCKED_BOX", label: "Locked Box" },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: "KRW", label: "KRW" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "JPY", label: "JPY" },
-];
 
 export default function DealListPage() {
   const navigate = useNavigate();
@@ -100,6 +92,19 @@ export default function DealListPage() {
       ),
     },
     {
+      key: "industry",
+      header: "Industry",
+      width: "140px",
+      render: (row) => {
+        const ind = INDUSTRY_LIST.find((i) => i.id === row.industry);
+        return (
+          <Badge variant={row.industry === "general" ? "neutral" : "info"}>
+            {ind?.name_en ?? "General"}
+          </Badge>
+        );
+      },
+    },
+    {
       key: "base_currency",
       header: "Currency",
       align: "center",
@@ -140,18 +145,16 @@ export default function DealListPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-text-dark">
-          Deals
-        </h1>
-        <Button
-          variant="accent"
-          icon={Plus}
-          onClick={() => setShowModal(true)}
-        >
-          New Deal
-        </Button>
-      </div>
+      <PageHero
+        title="Deals"
+        subtitle="Financial Due Diligence deal management"
+        compact
+        actions={
+          <Button variant="accent" icon={Plus} onClick={() => setShowModal(true)}>
+            New Deal
+          </Button>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -214,7 +217,8 @@ export default function DealListPage() {
             </Button>
             <Button
               variant="accent"
-              onClick={handleSubmit}
+              type="submit"
+              form="create-deal-form"
               loading={createDeal.isPending}
             >
               Create Deal
@@ -222,7 +226,7 @@ export default function DealListPage() {
           </>
         }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="create-deal-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Deal Name"
             required
@@ -249,6 +253,15 @@ export default function DealListPage() {
               }
             />
           </div>
+
+          <Select
+            label="Industry"
+            options={FDD_INDUSTRY_OPTIONS}
+            value={form.industry ?? "general"}
+            onChange={(e) =>
+              setForm({ ...form, industry: e.target.value as IndustryType })
+            }
+          />
 
           <Input
             label="Reference Date"

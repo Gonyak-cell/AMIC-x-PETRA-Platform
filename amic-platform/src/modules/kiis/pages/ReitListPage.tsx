@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, AlertTriangle } from "lucide-react";
 import { useReits } from "@/modules/kiis/hooks/useReits";
-import { Card, DataTable, Select, Badge, EmptyState } from "@/components/ui";
+import { Card, DataTable, Select, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { REITsListItem, ReitType, ReitStatus } from "@/modules/kiis/types/reit";
 import { formatAmount, formatPercent } from "@/lib/format";
@@ -20,10 +20,15 @@ const STATUS_OPTIONS = [
   { value: "dissolved", label: "Dissolved" },
 ];
 
-const statusVariant: Record<ReitStatus, "info" | "success" | "neutral"> = {
+const statusVariant: Record<string, "info" | "success" | "neutral"> = {
   authorized: "info",
   operating: "success",
   dissolved: "neutral",
+};
+
+const REIT_TYPE_LABELS: Record<string, string> = {
+  self_managed: "Self-Managed",
+  entrusted: "Entrusted",
 };
 
 const columns: Column<REITsListItem>[] = [
@@ -41,7 +46,7 @@ const columns: Column<REITsListItem>[] = [
     width: "120px",
     render: (row) => (
       <Badge variant="info">
-        {row.reits_type === "self_managed" ? "Self-Managed" : "Entrusted"}
+        {REIT_TYPE_LABELS[row.reits_type] ?? row.reits_type}
       </Badge>
     ),
   },
@@ -51,7 +56,7 @@ const columns: Column<REITsListItem>[] = [
     align: "center",
     width: "110px",
     render: (row) => (
-      <Badge variant={statusVariant[row.status as ReitStatus]}>{row.status}</Badge>
+      <Badge variant={statusVariant[row.status] ?? "neutral"}>{row.status}</Badge>
     ),
   },
   {
@@ -90,7 +95,7 @@ export default function ReitListPage() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useReits({
-    type: (type as ReitType) || undefined,
+    reits_type: (type as ReitType) || undefined,
     status: (status as ReitStatus) || undefined,
     page,
     size: 20,
@@ -98,7 +103,7 @@ export default function ReitListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-text-dark">REITs</h1>
+      <PageHero title="REITs" subtitle="Browse and filter REIT listings" compact />
 
       <div className="flex gap-3 items-end">
         <Select
@@ -140,27 +145,11 @@ export default function ReitListPage() {
         )}
       </Card>
 
-      {data && data.total > 20 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-text-secondary">
-            Page {page} of {Math.ceil(data.total / 20)}
-          </span>
-          <button
-            className="px-3 py-1 text-sm rounded border border-gray-border disabled:opacity-40"
-            disabled={page >= Math.ceil(data.total / 20)}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={data ? Math.ceil(data.total / 20) : 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
