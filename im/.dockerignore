@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Documentation
+docs/
+*.md
+README.md
+CHANGELOG.md
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+
+# Output and temporary files
+output/
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Test files
+tests/
+
+# Keep these (do NOT exclude):
+# alembic/
+# templates/
+# src/
+# requirements.txt
+# gunicorn.conf.py
+# pyproject.toml

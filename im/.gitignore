@@ -1,0 +1,61 @@
+# Environment
+.env
+.env.local
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output
+output/
+*.pptx
+*.pdf
+!templates/*.pptx
+
+# Data
+data/
+*.xlsx
+*.csv
+
+# Logs
+logs/
+*.log
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary
+*.tmp
+*.temp
+*.bak

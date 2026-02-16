@@ -1,0 +1,59 @@
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+!.env.production.template
+
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.venv/
+venv/
+
+# Testing
+.pytest_cache
+htmlcov/
+.coverage
+tests/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# Documentation
+docs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (if any frontend assets exist)
+node_modules/
+
+# Ruff cache
+.ruff_cache/
+
+# Migration cache files
+migrations/versions/__pycache__
+migrations/__pycache__
+
+# Misc project files
+*.md
+!alembic.ini
+*.pdf
+_ul

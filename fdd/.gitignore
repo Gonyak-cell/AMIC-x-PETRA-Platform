@@ -1,0 +1,90 @@
+# ── Python ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.cover
+
+# ── Node.js ─────────────────────────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+
+# ── Environment ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+
+# ── IDE / Editor ────────────────────────────────────
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+nul
+
+# ── Docker ──────────────────────────────────────────
+pgdata/
+
+# ── Uploads (runtime data) ──────────────────────────
+backend/uploads/
+backups/
+
+# ── E2E test assets (generated, large files) ───────
+e2e/test-assets/*.xlsx
+e2e/playwright-report/
+e2e/test-results/
+
+# ── Alembic (keep versions/, ignore temp) ───────────
+*.pyc
+
+# ── MCP (may contain credentials) ──────────────────
+.mcp.json
+
+# ── Claude Code (local settings) ──────────────────
+.claude/settings.local.json
+
+# ── Temp scripts ──────────────────────────────────
+_hydrate*.ps1
+_fix_cloud.sh
+_add_remaining.sh
+_find_cloud.ps1
+
+# ── OneDrive sync conflict copies ─────────────────
+*-JWS_AMIC*
+
+# ── Temp: OneDrive cloud-only (re-add when synced) ─
+# These files are stored as cloud-only by OneDrive and cannot be indexed by git.
+# Remove entries below once files are synced locally.
+.env.example
+.github/workflows/ci.yml
+backend/.dockerignore
+backend/=2.2.0
+backend/alembic/script.py.mako
+docs/plan/remaining-development-roadmap.md
+docs/plan/sprint-12-beta-release.md
+docs/plan/sprint-7-plan.md
+frontend/.dockerignore
+frontend/.prettierrc.json
+frontend/Dockerfile
+frontend/index.html
+frontend/src/index.css
+frontend/package-lock.json
+pptx-service/.dockerignore

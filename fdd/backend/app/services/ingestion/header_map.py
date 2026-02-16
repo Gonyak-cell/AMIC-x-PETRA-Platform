@@ -1,0 +1,111 @@
+"""Header normalization and required-field schemas for upload types."""
+
+# Korean → canonical English field name mapping
+HEADER_SYNONYMS: dict[str, str] = {
+    # --- Korean TB/GL common ---
+    "계정코드": "account_code",
+    "계정과목코드": "account_code",
+    "코드": "account_code",
+    "계정명": "account_name",
+    "계정과목": "account_name",
+    "계정과목명": "account_name",
+    "차변": "debit",
+    "차변금액": "debit",
+    "대변": "credit",
+    "대변금액": "credit",
+    "잔액": "balance",
+    "기말잔액": "balance",
+    "기초잔액": "opening_balance",
+    # --- GL specific ---
+    "전표번호": "entry_id",
+    "분개번호": "entry_id",
+    "전표일자": "entry_date",
+    "기표일자": "entry_date",
+    "일자": "entry_date",
+    "적요": "description",
+    "거래처": "counterparty",
+    "거래처명": "counterparty",
+    "라인번호": "line_id",
+    "라인": "line_id",
+    # --- AR/AP ---
+    "고객명": "counterparty",
+    "거래처코드": "counterparty_code",
+    "공급자명": "counterparty",
+    "송장번호": "invoice_id",
+    "인보이스": "invoice_id",
+    "만기일": "due_date",
+    "만기일자": "due_date",
+    # --- Bank ---
+    "거래일": "entry_date",
+    "거래일자": "entry_date",
+    "입금": "debit",
+    "출금": "credit",
+    # --- Debt/Lease ---
+    "대출기관": "lender",
+    "원금": "amount",
+    "이자율": "interest_rate",
+    "만기": "maturity_date",
+    "리스시작일": "lease_start",
+    "리스료": "amount",
+    # --- Common ---
+    "통화": "currency",
+    "금액": "amount",
+    "비고": "remarks",
+    # --- English pass-through (lowercased) ---
+    "account_code": "account_code",
+    "account code": "account_code",
+    "account_name": "account_name",
+    "account name": "account_name",
+    "debit": "debit",
+    "credit": "credit",
+    "balance": "balance",
+    "entry_id": "entry_id",
+    "journal_id": "entry_id",
+    "journal id": "entry_id",
+    "entry_date": "entry_date",
+    "posting_date": "entry_date",
+    "posting date": "entry_date",
+    "date": "entry_date",
+    "description": "description",
+    "memo": "description",
+    "counterparty": "counterparty",
+    "vendor": "counterparty",
+    "customer": "counterparty",
+    "amount": "amount",
+    "currency": "currency",
+    "line_id": "line_id",
+    "line id": "line_id",
+}
+
+# Required fields per upload type (canonical names)
+REQUIRED_FIELDS: dict[str, list[str]] = {
+    "TB": ["account_code", "account_name"],
+    "GL": ["account_code", "entry_date", "entry_id"],
+    "AR": ["counterparty", "amount"],
+    "AP": ["counterparty", "amount"],
+    "BANK": ["entry_date", "amount"],
+    "DEBT": ["amount"],
+    "LEASE": ["amount"],
+}
+
+# Signature fields for auto-detection scoring
+TYPE_SIGNATURES: dict[str, set[str]] = {
+    "TB": {"account_code", "account_name", "balance"},
+    "GL": {"entry_id", "entry_date", "account_code", "debit", "credit"},
+    "AR": {"counterparty", "amount", "due_date"},
+    "AP": {"counterparty", "amount", "due_date"},
+    "BANK": {"entry_date", "description", "amount"},
+    "DEBT": {"lender", "amount", "maturity_date", "interest_rate"},
+    "LEASE": {"amount", "lease_start"},
+}
+
+# Keywords that boost type detection confidence (sheet name / cell content)
+TYPE_KEYWORDS: dict[str, list[str]] = {
+    "TB": ["trial balance", "시산표", "잔액시산표", "tb"],
+    "GL": ["general ledger", "총계정원장", "전표", "gl", "journal"],
+    "AR": ["매출채권", "accounts receivable", "receivable", "ar aging", "ar"],
+    "AP": ["매입채무", "accounts payable", "payable", "ap aging", "ap"],
+    "BANK": ["bank", "은행", "통장", "예금"],
+    "DEBT": ["debt", "차입금", "borrowing", "loan"],
+    "LEASE": ["lease", "리스", "임대차", "ifrs 16", "ifrs16"],
+}

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CoA Mapper Output",
+  "description": "CoA 매핑 제안 결과 스키마",
+  "type": "object",
+  "required": ["mapping_suggestions"],
+  "properties": {
+    "mapping_suggestions": {
+      "type": "array",
+      "description": "매핑 제안 리스트",
+      "items": {
+        "type": "object",
+        "required": ["source_account_code", "suggested_target_code", "rationale", "confidence"],
+        "properties": {
+          "source_account_code": {
+            "type": "string",
+            "description": "원본 계정 코드"
+          },
+          "source_account_name": {
+            "type": "string",
+            "description": "원본 계정명"
+          },
+          "suggested_target_code": {
+            "type": "string",
+            "description": "제안된 표준 라인아이템 코드"
+          },
+          "suggested_target_name": {
+            "type": "string",
+            "description": "제안된 표준 라인아이템명"
+          },
+          "rationale": {
+            "type": "string",
+            "description": "매핑 근거 설명"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "신뢰도 (0-1)"
+          },
+          "alternative_mappings": {
+            "type": "array",
+            "description": "대안 매핑",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {"type": "string"},
+                "confidence": {"type": "number"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "경고 메시지"
+    }
+  }
+}

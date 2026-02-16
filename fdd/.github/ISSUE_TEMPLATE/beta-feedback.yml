@@ -1,0 +1,139 @@
+name: "\U0001F4CB Beta Pilot Feedback"
+description: "Auto FDD Beta Pilot 사용 후 피드백을 제출해 주세요."
+title: "[Beta Feedback] "
+labels: ["beta", "feedback"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Auto FDD Beta Pilot에 참여해 주셔서 감사합니다.
+        아래 양식을 작성하여 사용 경험을 공유해 주세요.
+
+  - type: input
+    id: partner-name
+    attributes:
+      label: "파트너사명"
+      description: "소속 회사/팀 이름"
+      placeholder: "예: ABC회계법인"
+    validations:
+      required: true
+
+  - type: input
+    id: deal-info
+    attributes:
+      label: "딜 ID / 이름"
+      description: "테스트에 사용한 딜 정보"
+      placeholder: "예: DEAL-001 / Sample Corp FDD"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow-completion
+    attributes:
+      label: "전체 워크플로 완료 여부"
+      description: "업로드 → 매핑 → QoE → NWC/Debt → 보고서 전체를 완료했나요?"
+      options:
+        - "전체 완료"
+        - "일부 완료 (아래에 세부 사항 기재)"
+        - "미완료 (오류 발생)"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### 사용성 평가 (1=매우 불만족 ~ 5=매우 만족)
+
+  - type: dropdown
+    id: rating-overall
+    attributes:
+      label: "1. 전체 편의성"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-upload
+    attributes:
+      label: "2. 업로드/인제스트"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-mapping
+    attributes:
+      label: "3. 자동 매핑 (CoA Mapping)"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-qoe
+    attributes:
+      label: "4. QoE 분석 (Adjusted EBITDA)"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-nwc-debt
+    attributes:
+      label: "5. NWC / Net Debt 분석"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-report
+    attributes:
+      label: "6. 보고서 품질 (PPT/Word)"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rating-speed
+    attributes:
+      label: "7. 응답 속도"
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+
+  - type: textarea
+    id: issues-found
+    attributes:
+      label: "발견된 문제점"
+      description: "우선순위별로 작성해 주세요 (P0=Critical, P1=Major, P2=Minor, P3=Cosmetic)"
+      placeholder: |
+        - [P1] 매핑 화면에서 계정 검색이 느림
+        - [P2] QoE 차트 범례가 잘림
+    validations:
+      required: false
+
+  - type: textarea
+    id: improvement-suggestions
+    attributes:
+      label: "개선 제안"
+      description: "사용 중 개선되었으면 하는 점을 자유롭게 작성해 주세요"
+    validations:
+      required: false
+
+  - type: textarea
+    id: overall-opinion
+    attributes:
+      label: "종합 의견"
+      description: "Auto FDD에 대한 전반적인 의견"
+    validations:
+      required: false
+
+  - type: input
+    id: avg-deal-time
+    attributes:
+      label: "평균 딜 처리 시간"
+      description: "Auto FDD로 1개 딜을 처리하는 데 소요된 시간"
+      placeholder: "예: 약 2시간"
+    validations:
+      required: false

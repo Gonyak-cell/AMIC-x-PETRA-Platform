@@ -1,0 +1,193 @@
+"""인증 API — /api/v1/auth/*.
+
+FDD-1701 (RBAC) + FDD-1704 (세션/토큰 관리).
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, Query, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+from app.auth.dependencies import CurrentUser, get_current_user, require_permission
+from app.auth.rbac import Permission
+from app.auth.token import decode_access_token
+from app.config import settings
+from app.database import get_db
+from app.schemas.user import (
+    LoginRequest,
+    RefreshRequest,
+    TokenResponse,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
+from app.services.auth_service import (
+    authenticate_user,
+    list_users,
+    logout_user,
+    refresh_tokens,
+    register_user,
+    update_user,
+)
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/login")
+def login(
+    body: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """사용자 로그인 — JWT 토큰을 httpOnly 쿠키로 설정."""
+    access, refresh = authenticate_user(db, body.email, body.password)
+
+    # Access Token 쿠키 설정 (15분)
+    response.set_cookie(
+        key="access_token",
+        value=access,
+        httponly=True,
+        secure=True,  # HTTPS only
+        samesite="strict",
+        max_age=settings.access_token_expire_minutes * 60,
+    )
+
+    # Refresh Token 쿠키 설정 (7일)
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+    )
+
+    return {"message": "로그인 성공"}
+
+
+@router.post("/refresh")
+def refresh(
+    body: RefreshRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Access Token 갱신 — 새 토큰을 httpOnly 쿠키로 설정."""
+    access, refresh_tok = refresh_tokens(db, body.refresh_token)
+
+    # Access Token 쿠키 설정
+    response.set_cookie(
+        key="access_token",
+        value=access,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.access_token_expire_minutes * 60,
+    )
+
+    # Refresh Token 쿠키 설정
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_tok,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+    )
+
+    return {"message": "토큰 갱신 성공"}
+
+
+@router.post("/logout", status_code=204)
+def logout(
+    response: Response,
+    current_user: CurrentUser = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> Response:
+    """현재 Access Token을 무효화한다 (로그아웃)."""
+    # 쿠키 삭제
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+
+    if credentials is None:
+        return response
+
+    payload = decode_access_token(credentials.credentials)
+    jti = payload.get("jti")
+    if not jti:
+        # jti 없는 레거시 토큰은 블랙리스트 등록 불가
+        return response
+
+    token_exp = datetime.fromtimestamp(payload.get("exp", 0), tz=UTC)
+    logout_user(db, current_user.id, jti, token_exp, current_user.email)
+    return response
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """현재 로그인 사용자 프로필 조회."""
+    from app.models.user import User
+
+    user = db.get(User, current_user.id)
+    if user is None:
+        # dev 모드에서는 임시 응답 (DB에 사용자가 없음)
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC)
+        return UserRead(
+            id=current_user.id,
+            email=current_user.email,
+            display_name=current_user.display_name,
+            role=current_user.role,
+            is_active=True,
+            last_login_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+    return user
+
+
+@router.get("/users", response_model=list[UserRead])
+def get_users(
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+):
+    """전체 사용자 목록 조회 (Admin 전용)."""
+    return list_users(db)
+
+
+@router.post("/users", response_model=UserRead, status_code=201)
+def create_user(
+    body: UserCreate,
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+):
+    """새 사용자 생성 (Admin 전용)."""
+    return register_user(db, body.email, body.password, body.display_name, body.role)
+
+
+@router.put("/users/{user_id}", response_model=UserRead)
+def update_user_endpoint(
+    user_id: uuid.UUID,
+    body: UserUpdate,
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+):
+    """사용자 정보 수정 (Admin 전용)."""
+    return update_user(
+        db,
+        user_id,
+        display_name=body.display_name,
+        role=body.role,
+        is_active=body.is_active,
+        actor_email=current_user.email,
+    )

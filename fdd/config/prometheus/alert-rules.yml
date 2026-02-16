@@ -1,0 +1,60 @@
+groups:
+  - name: auto-fdd-alerts
+    rules:
+      # ── Availability ──
+      - alert: BackendDown
+        expr: up{job="auto-fdd-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service is down"
+          description: "Backend has been unreachable for over 1 minute."
+
+      # ── Error Rate ──
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Error rate exceeds 1%"
+          description: "5xx error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate exceeds 5%"
+          description: "5xx error rate is {{ $value | humanizePercentage }}. Immediate attention required."
+
+      # ── Latency ──
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency exceeds 5 seconds"
+          description: "95th percentile latency is {{ $value }}s."
+
+      - alert: CriticalLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 30
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API p95 latency exceeds 30 seconds"
+          description: "95th percentile latency is {{ $value }}s. Service may be unresponsive."
+
+      # ── Request Rate ──
+      - alert: NoTraffic
+        expr: rate(http_requests_total[15m]) == 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "No API traffic for 30 minutes"
+          description: "No requests received in the last 30 minutes during pilot."

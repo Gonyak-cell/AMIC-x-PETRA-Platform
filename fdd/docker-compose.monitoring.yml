@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: auto-fdd-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - auto-fdd-backup_default
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: auto-fdd-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - auto-fdd-backup_default
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  auto-fdd-backup_default:
+    external: true

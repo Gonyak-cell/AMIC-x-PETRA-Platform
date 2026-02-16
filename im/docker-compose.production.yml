@@ -1,0 +1,125 @@
+# Auto-IM Generator — Production Docker Compose 오버라이드
+# > 마지막 수정: 2026-02-10 22:10:00
+#
+# 사용법: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# 참고: 방화벽에서 포트 8000 직접 접근을 차단하세요 (Nginx를 통해서만 접근).
+
+services:
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: auto-im-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - im_output_data:/var/www/output:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+
+  # API 서비스 (Production 설정)
+  api:
+    command: gunicorn -c gunicorn.conf.py src.api.main:app
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - DEBUG=false
+      - LOG_LEVEL=WARNING
+
+  # Celery Worker (Production 설정)
+  celery-worker:
+    command: >
+      celery -A src.api.tasks.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      --max-tasks-per-child=100
+      --time-limit=3600
+      --soft-time-limit=3300
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Celery Beat (Production 설정)
+  celery-beat:
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL (Production 설정)
+  db:
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+
+  # Redis (Production 설정)
+  redis:
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:-redis}
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --appendonly
+      - "yes"
+
+  # Certbot (SSL 인증서 자동 갱신)
+  certbot:
+    image: certbot/certbot:latest
+    container_name: auto-im-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/logs:/var/log/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"

@@ -43,7 +43,7 @@ services:
   # ======================== FDD BACKEND ========================
   fdd-api:
     build:
-      context: ../Auto FDD/backend
+      context: ./fdd/backend
     container_name: amic-fdd-api
     ports:
       - "8000:8000"
@@ -57,7 +57,7 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ../Auto FDD/backend:/app
+      - ./fdd/backend:/app
     networks:
       - amic-network
 
@@ -82,7 +82,7 @@ services:
 
   fdd-pptx:
     build:
-      context: ../Auto FDD/pptx-service
+      context: ./fdd/pptx-service
     container_name: amic-fdd-pptx
     ports:
       - "3100:3100"
@@ -92,7 +92,7 @@ services:
   # ======================== KIIS BACKEND ========================
   kiis-api:
     build:
-      context: ../KIIS
+      context: ./kiis
     container_name: amic-kiis-api
     ports:
       - "8001:8000"
@@ -106,7 +106,7 @@ services:
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ../KIIS:/app
+      - ./kiis:/app
       - /app/__pycache__
     depends_on:
       kiis-db:
@@ -174,7 +174,7 @@ services:
   # ======================== IM BACKEND ========================
   im-api:
     build:
-      context: ../IM Module/auto-im-generator
+      context: ./im
     container_name: amic-im-api
     ports:
       - "8002:8000"
@@ -193,7 +193,7 @@ services:
       im-redis:
         condition: service_healthy
     volumes:
-      - ../IM Module/auto-im-generator:/app
+      - ./im:/app
       - /app/__pycache__
       - im_output_data:/app/output
     healthcheck:
@@ -241,7 +241,7 @@ services:
 
   im-celery-worker:
     build:
-      context: ../IM Module/auto-im-generator
+      context: ./im
     container_name: amic-im-celery-worker
     command: >
       celery -A src.api.tasks.celery_app worker
@@ -267,7 +267,7 @@ services:
 
   im-celery-beat:
     build:
-      context: ../IM Module/auto-im-generator
+      context: ./im
     container_name: amic-im-celery-beat
     command: >
       celery -A src.api.tasks.celery_app beat

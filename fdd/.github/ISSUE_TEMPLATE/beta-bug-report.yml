@@ -1,0 +1,90 @@
+name: "\U0001F41B Beta Bug Report"
+description: "Beta Pilot 중 발견한 버그를 보고해 주세요."
+title: "[Beta Bug] "
+labels: ["beta", "bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Beta Pilot 중 버그를 발견하셨군요. 아래 양식을 작성해 주시면 빠르게 대응하겠습니다.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "심각도 (Severity)"
+      description: "버그의 심각도를 선택해 주세요"
+      options:
+        - "P0 Critical — 시스템 장애, 데이터 손실"
+        - "P1 Major — 핵심 기능 불가, 워크어라운드 없음"
+        - "P2 Minor — 기능 이상, 워크어라운드 존재"
+        - "P3 Cosmetic — UI/UX 개선 사항"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: "버그 설명"
+      description: "무엇이 문제인지 간략히 설명해 주세요"
+      placeholder: "예: QoE 분석 실행 시 Adjusted EBITDA가 음수로 표시됨"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "재현 절차"
+      description: "버그를 재현하는 단계를 작성해 주세요"
+      placeholder: |
+        1. 딜 상세 페이지에서 'QoE 분석' 탭 클릭
+        2. '분석 실행' 버튼 클릭
+        3. 결과 테이블에서 Adjusted EBITDA 값 확인
+        4. 음수 값(-123,456)이 표시됨
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "예상 동작"
+      description: "정상적으로 동작했다면 어떤 결과가 나와야 하나요?"
+      placeholder: "예: Adjusted EBITDA가 양수(1,234,567)로 표시되어야 함"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: "실제 동작"
+      description: "실제로 발생한 결과를 작성해 주세요"
+      placeholder: "예: Adjusted EBITDA가 -123,456으로 표시됨"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: "브라우저 / OS"
+      description: "사용 중인 브라우저와 운영체제"
+      placeholder: "예: Chrome 120 / Windows 11"
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-log
+    attributes:
+      label: "에러 로그"
+      description: "콘솔 에러나 서버 로그가 있다면 붙여넣기 해주세요"
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: "스크린샷"
+      description: "관련 스크린샷이 있다면 첨부해 주세요 (드래그 앤 드롭)"
+    validations:
+      required: false

@@ -1,0 +1,17 @@
+# Backend financial engines (critical accuracy)
+/backend/app/engines/ @tech-lead
+/backend/app/services/qoe/ @tech-lead
+/backend/app/services/nwc/ @tech-lead
+/backend/app/services/debt/ @tech-lead
+
+# Database migrations
+/backend/alembic/versions/ @tech-lead
+
+# Authentication & security
+/backend/app/auth/ @tech-lead
+/backend/app/services/audit/ @tech-lead
+
+# Infrastructure
+/.github/ @devops
+/scripts/ @devops
+/docker-compose*.yml @devops

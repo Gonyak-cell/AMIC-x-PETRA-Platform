@@ -1,0 +1,456 @@
+{
+  "version": 1,
+  "preset": "FULL",
+  "total_slides": 19,
+  "slides": [
+    {
+      "index": 0,
+      "shape_count": 3,
+      "text_content": [
+        "Project FULL",
+        "Information Memorandum\n2026-02-08"
+      ],
+      "shape_types": [
+        "picture",
+        "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 45
+    },
+    {
+      "index": 1,
+      "shape_count": 2,
+      "text_content": [
+        "Disclaimer",
+        "본 자료는 정보 제공 목적으로만 작성되었으며, 투자 권유를 구성하지 않습니다. 본 자료에 포함된 정보의 정확성, 완전성 또는 신뢰성에 대해 어떠한 보증도 하지 않습니다."
+      ],
+      "shape_types": [
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 104
+    },
+    {
+      "index": 2,
+      "shape_count": 5,
+      "text_content": [
+        "본 딜은...",
+        "딜 구조",
+        "매각주체: 테스트PE",
+        "매각 지분율: 60.0%",
+        "거래 유형: M&A",
+        "거래 배경: 전략적 포트폴리오 재구성",
+        "밸류에이션: EV/EBITDA",
+        "밸류에이션 범위: 500,000 ~ 700,000억원"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 110
+    },
+    {
+      "index": 3,
+      "shape_count": 9,
+      "text_content": [
+        "150,000억원",
+        "매출액 (2024)",
+        "28,000억원",
+        "영업이익 (2024)",
+        "35,000억원",
+        "EBITDA (2024)",
+        "20,000억원",
+        "순이익 (2024)",
+        "22.5%",
+        "매출 CAGR (3Y)",
+        "23.3%",
+        "EBITDA 마진율",
+        "테스트기업은 국내 IT 서비스 시장의 선도기업으로..."
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 139
+    },
+    {
+      "index": 4,
+      "shape_count": 4,
+      "text_content": [
+        "투자 하이라이트...",
+        "• 1. 매출 CAGR 22.5%",
+        "• 2. 업계 최고 영업이익률",
+        "• 3. 안정적 현금흐름"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 58
+    },
+    {
+      "index": 5,
+      "shape_count": 7,
+      "text_content": [
+        "회사 개요...",
+        "회사 정보",
+        "회사명: 테스트기업",
+        "설립일: 2010-03-15",
+        "본사: 서울특별시 강남구",
+        "임직원 수: 500명",
+        "주요 제품/서비스",
+        "• 클라우드 인프라",
+        "• 데이터 분석"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 89
+    },
+    {
+      "index": 6,
+      "shape_count": 7,
+      "text_content": [
+        "비즈니스 모델...",
+        "비즈니스 모델",
+        "B2B IT 서비스",
+        "밸류 체인",
+        "기획 → 개발 → 운영"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 44
+    },
+    {
+      "index": 7,
+      "shape_count": 9,
+      "text_content": [
+        "500,000억원",
+        "TAM",
+        "200,000억원",
+        "SAM",
+        "50,000억원",
+        "SOM",
+        "12.0%",
+        "시장 CAGR",
+        "국내 IT 서비스 시장은...",
+        "산업 트렌드",
+        "• 클라우드 전환 가속",
+        "• AI 기반 자동화"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 92
+    },
+    {
+      "index": 8,
+      "shape_count": 3,
+      "text_content": [
+        "사업 개요..."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 8
+    },
+    {
+      "index": 9,
+      "shape_count": 9,
+      "text_content": [
+        "가치 창출...",
+        "유기적 성장",
+        "• 기존 사업 확대",
+        "신규 사업",
+        "• AI SaaS 플랫폼",
+        "M&A 전략",
+        "• 보안 스타트업 인수"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 60
+    },
+    {
+      "index": 10,
+      "shape_count": 11,
+      "text_content": [
+        "성장 전략...",
+        "유기적 성장",
+        "• 기존 사업 확대",
+        "신규 사업",
+        "• AI SaaS 플랫폼",
+        "M&A 전략",
+        "• 보안 스타트업 인수",
+        "로드맵",
+        "2026: AI 플랫폼 베타",
+        "2027: 글로벌 론칭"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 90
+    },
+    {
+      "index": 11,
+      "shape_count": 10,
+      "text_content": [
+        "150,000",
+        "매출액 (2024)",
+        "28,000",
+        "영업이익 (2024)",
+        "35,000",
+        "EBITDA (2024)",
+        "20,000",
+        "순이익 (2024)",
+        "18.7%",
+        "영업이익률",
+        "23.3%",
+        "EBITDA 마진율",
+        "22.5%",
+        "매출 CAGR (3Y)",
+        "최근 3개년 매출은 연평균 22.5% 성장하였으며..."
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 141
+    },
+    {
+      "index": 12,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 13,
+      "shape_count": 3,
+      "text_content": [
+        "밸류에이션 요약: EV/EBITDA 10.0x 기준..."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 31
+    },
+    {
+      "index": 14,
+      "shape_count": 4,
+      "text_content": [
+        "이대표 (CEO)",
+        "대표이사",
+        "• 前 삼성전자 VP",
+        "• 서울대 경영학과",
+        "박부사장 (CFO)",
+        "부사장",
+        "• 前 JP Morgan",
+        "• 고려대 경제학과"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 70
+    },
+    {
+      "index": 15,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 16,
+      "shape_count": 6,
+      "text_content": [
+        "M&A",
+        "거래 유형",
+        "60.0%",
+        "매각 지분율",
+        "거래 상세",
+        "밸류에이션 방법론: EV/EBITDA",
+        "밸류에이션 범위: 500,000 ~ 700,000억원",
+        "거래 배경: 전략적 포트폴리오 재구성",
+        "예비입찰: 2026-03",
+        "본입찰: 2026-05"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 118
+    },
+    {
+      "index": 17,
+      "shape_count": 4,
+      "text_content": [
+        "출처 및 참고자료",
+        "• 금융감독원 전자공시시스템 (2026-02-08)",
+        "• 한국IDC 보고서 — 2025 IT 서비스 시장 전망 (2026-01)"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 78
+    },
+    {
+      "index": 18,
+      "shape_count": 3,
+      "text_content": [
+        "Contact",
+        "홍길동",
+        "Managing Director",
+        "hong@amic.co.kr | 02-1234-5678"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 57
+    }
+  ],
+  "total_shape_count": 105,
+  "total_text_length": 1334,
+  "section_slide_counts": {
+    "cover": 1,
+    "disclaimer": 1,
+    "toc_divider": 0,
+    "deal_overview": 1,
+    "executive_summary": 1,
+    "investment_highlights": 1,
+    "company_overview": 1,
+    "business_model": 1,
+    "market_overview": 1,
+    "business_overview": 1,
+    "value_creation": 1,
+    "growth_strategy": 1,
+    "financial_analysis": 2,
+    "valuation": 1,
+    "management_team": 1,
+    "shareholder_structure": 1,
+    "transaction_structure": 1,
+    "appendix": 1,
+    "contact": 1
+  }
+}

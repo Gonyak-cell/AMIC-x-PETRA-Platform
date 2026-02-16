@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "preset": "COVENANT",
+  "total_slides": 10,
+  "slides": [
+    {
+      "index": 0,
+      "shape_count": 3,
+      "text_content": [
+        "Project COVENANT",
+        "Information Memorandum\n2026-02-08"
+      ],
+      "shape_types": [
+        "picture",
+        "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 49
+    },
+    {
+      "index": 1,
+      "shape_count": 2,
+      "text_content": [
+        "Disclaimer",
+        "본 자료는 정보 제공 목적으로만 작성되었으며, 투자 권유를 구성하지 않습니다. 본 자료에 포함된 정보의 정확성, 완전성 또는 신뢰성에 대해 어떠한 보증도 하지 않습니다."
+      ],
+      "shape_types": [
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 104
+    },
+    {
+      "index": 2,
+      "shape_count": 9,
+      "text_content": [
+        "150,000억원",
+        "매출액 (2024)",
+        "28,000억원",
+        "영업이익 (2024)",
+        "35,000억원",
+        "EBITDA (2024)",
+        "20,000억원",
+        "순이익 (2024)",
+        "22.5%",
+        "매출 CAGR (3Y)",
+        "23.3%",
+        "EBITDA 마진율",
+        "테스트기업은..."
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 118
+    },
+    {
+      "index": 3,
+      "shape_count": 4,
+      "text_content": [
+        "투자 하이라이트...",
+        "• 1. 전략적 파트너십을 통한 시너지",
+        "• 2. 디지털 전환 선도"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 46
+    },
+    {
+      "index": 4,
+      "shape_count": 3,
+      "text_content": [
+        "가치 창출 전략은..."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 12
+    },
+    {
+      "index": 5,
+      "shape_count": 7,
+      "text_content": [
+        "회사 개요...",
+        "회사 정보",
+        "회사명: 테스트기업",
+        "임직원 수: 300명",
+        "주요 제품/서비스",
+        "• 클라우드 인프라"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 53
+    },
+    {
+      "index": 6,
+      "shape_count": 7,
+      "text_content": [
+        "500,000억원",
+        "TAM",
+        "200,000억원",
+        "SAM",
+        "50,000억원",
+        "SOM",
+        "8.0%",
+        "시장 성장률",
+        "시장 개요..."
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 53
+    },
+    {
+      "index": 7,
+      "shape_count": 10,
+      "text_content": [
+        "150,000",
+        "매출액 (2024)",
+        "28,000",
+        "영업이익 (2024)",
+        "35,000",
+        "EBITDA (2024)",
+        "20,000",
+        "순이익 (2024)",
+        "18.7%",
+        "영업이익률",
+        "23.3%",
+        "EBITDA 마진율",
+        "22.5%",
+        "매출 CAGR (3Y)",
+        "재무 분석..."
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 119
+    },
+    {
+      "index": 8,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 9,
+      "shape_count": 3,
+      "text_content": [
+        "Contact",
+        "김철수",
+        "Partner",
+        "kim@amic.co.kr"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 31
+    }
+  ],
+  "total_shape_count": 51,
+  "total_text_length": 585,
+  "section_slide_counts": {
+    "cover": 1,
+    "disclaimer": 1,
+    "toc_divider": 0,
+    "executive_summary": 1,
+    "investment_highlights": 1,
+    "value_creation": 1,
+    "company_overview": 1,
+    "market_overview": 1,
+    "financial_analysis": 2,
+    "contact": 1
+  }
+}

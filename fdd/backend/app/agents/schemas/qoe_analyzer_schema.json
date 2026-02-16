@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QoE Analyzer Output",
+  "description": "QoE 조정항목 분석 결과 스키마",
+  "type": "object",
+  "required": ["analysis_results"],
+  "properties": {
+    "analysis_results": {
+      "type": "array",
+      "description": "분석 결과 리스트",
+      "items": {
+        "type": "object",
+        "required": ["entry_id", "assessment", "rationale", "confidence", "recommended_action"],
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "description": "원본 GL 전표 ID"
+          },
+          "assessment": {
+            "type": "string",
+            "enum": ["NON_RECURRING", "NORMALIZATION", "OPERATING", "UNCLEAR"],
+            "description": "조정 분류"
+          },
+          "rationale": {
+            "type": "string",
+            "description": "분류 근거 설명"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "신뢰도 (0-1)"
+          },
+          "recommended_action": {
+            "type": "string",
+            "enum": ["ADD_BACK", "EXCLUDE", "REVIEW_REQUIRED"],
+            "description": "권장 조치"
+          },
+          "additional_context_needed": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "추가 필요 정보"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "분석 요약"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "경고 메시지"
+    }
+  }
+}
