@@ -1,9 +1,9 @@
 """IM 문서 생성 마스터 태스크 (T-I12).
 
-> 마지막 수정: 2026-02-10 17:39:59
+> 마지막 수정: 2026-02-17 22:55:00
 
 Celery Chord 패턴으로 5단계 파이프라인을 오케스트레이션한다.
-Stage 1: 데이터 수집 (group) → merge
+Stage 1: 데이터 수집 (group) → merge  |  수동 입력  |  Excel 로드
 Stage 2: 재무 분석 (chain)
 Stage 3: 콘텐츠 생성 (chain)
 Stage 4: 문서 렌더링 (chain)
@@ -75,15 +75,17 @@ def handle_pipeline_error(
 def generate_im_task(
     self: Any,
     document_id: str,
-    corp_code: str,
+    corp_code: str | None,
     config: dict[str, Any] | None = None,
+    data_source: str = "DART",
 ) -> dict[str, Any]:
-    """마스터 태스크: Chord 5단계 파이프라인을 dispatch한다.
+    """마스터 태스크: 데이터 소스에 따라 파이프라인을 dispatch한다.
 
     Args:
         document_id: 문서 UUID 문자열.
-        corp_code: DART 기업 코드.
+        corp_code: DART 기업 코드 (None 가능).
         config: 생성 설정 dict.
+        data_source: 데이터 소스 ("DART", "MANUAL", "EXCEL").
 
     Returns:
         chord_id, document_id를 포함하는 dict.
@@ -95,17 +97,25 @@ def generate_im_task(
 
     error_cb = handle_pipeline_error.s(document_id)
 
-    # Stage 1: 데이터 수집 (chord) — callback에 on_error 적용
-    collection = chord(
-        group(
-            fetch_dart_task.s(corp_code),
-            fetch_web_task.s(corp_code),
-            extract_brand_task.s(corp_code, website_url),
-        ),
-        merge_collected_data.s(document_id).on_error(error_cb),
-    )
+    # Stage 1: 데이터 소스별 분기
+    if data_source == "DART" and corp_code:
+        # 경로 A: DART 파이프라인 (기존 방식)
+        collection = chord(
+            group(
+                fetch_dart_task.s(corp_code),
+                fetch_web_task.s(corp_code),
+                extract_brand_task.s(corp_code, website_url),
+            ),
+            merge_collected_data.s(document_id).on_error(error_cb),
+        )
+    elif data_source == "EXCEL":
+        # 경로 B: Excel 업로드 데이터 로드
+        collection = load_excel_data_task.si(document_id).on_error(error_cb)
+    else:
+        # 경로 C: 수동 입력 (최소 데이터)
+        collection = build_manual_data_task.si(document_id).on_error(error_cb)
 
-    # Stage 2-5: 처리 체인 — 각 태스크에 on_error 적용
+    # Stage 2-5: 처리 체인 — 데이터 소스와 무관하게 동일
     processing = chain(
         analyze_financials_task.s(document_id).on_error(error_cb),
         generate_content_task.s(document_id).on_error(error_cb),
@@ -116,6 +126,11 @@ def generate_im_task(
     pipeline = collection | processing
     result = pipeline.apply_async(link_error=error_cb)
     return {"chord_id": result.id, "document_id": document_id}
+
+
+# ---------------------------------------------------------------------------
+# Stage 1 태스크: DART 수집 (기존)
+# ---------------------------------------------------------------------------
 
 
 @celery_app.task(bind=True, name="fetch_dart", base=PipelineTask, max_retries=3, acks_late=True)
@@ -221,6 +236,107 @@ def merge_collected_data(
 
     merged["_document_id"] = document_id
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Stage 1 태스크: 수동 입력 / Excel 로드 (신규)
+# ---------------------------------------------------------------------------
+
+
+def _load_document_from_db(document_id: str) -> dict[str, Any]:
+    """DB에서 Document를 동기적으로 조회하여 기본 정보를 반환한다."""
+    from src.api.db.session import get_sync_session
+
+    with get_sync_session() as session:
+        from src.api.db.models.document import Document
+
+        doc = session.get(Document, document_id)
+        if doc is None:
+            raise ValueError(f"Document not found: {document_id}")
+        return {
+            "company_name_kr": doc.company_name,
+            "company_name_en": "",
+            "corp_code": doc.corp_code or "",
+            "industry": (doc.generation_config or {}).get("industry", "general"),
+            "project_name": doc.project_name or "",
+            "_document_id": document_id,
+        }
+
+
+@celery_app.task(bind=True, name="build_manual_data", base=PipelineTask, max_retries=0, acks_late=True)
+def build_manual_data_task(self: Any, document_id: str) -> dict[str, Any]:
+    """수동 입력 모드: DB에서 기본 정보를 읽어 최소 im_data_dict를 구성한다.
+
+    Args:
+        document_id: 문서 UUID 문자열.
+
+    Returns:
+        최소 im_data dict (재무데이터 없음).
+    """
+    update_progress(self, document_id, "COLLECTING", 25)
+
+    im_data = _load_document_from_db(document_id)
+    im_data["financial_statements"] = {}
+    im_data["data_source"] = "MANUAL"
+    return im_data
+
+
+@celery_app.task(bind=True, name="load_excel_data", base=PipelineTask, max_retries=1, acks_late=True)
+def load_excel_data_task(self: Any, document_id: str) -> dict[str, Any]:
+    """Excel 업로드 모드: 업로드된 Excel 파일에서 재무데이터를 파싱한다.
+
+    Args:
+        document_id: 문서 UUID 문자열.
+
+    Returns:
+        재무데이터가 포함된 im_data dict.
+    """
+    update_progress(self, document_id, "COLLECTING", 15)
+
+    im_data = _load_document_from_db(document_id)
+
+    # generation_config에서 Excel 파일 경로 확인
+    excel_path = (im_data.get("_generation_config") or {}).get("excel_file_path")
+    if not excel_path:
+        # DB에서 직접 조회
+        from src.api.db.session import get_sync_session
+
+        with get_sync_session() as session:
+            from src.api.db.models.document import Document
+
+            doc = session.get(Document, document_id)
+            if doc:
+                excel_path = (doc.generation_config or {}).get("excel_file_path")
+
+    if excel_path:
+        try:
+            from src.data_ingestor.parsers.excel_parser import ExcelParser
+
+            parser = ExcelParser(data_only=True)
+            workbook = _run_async(parser.parse(excel_path))
+            # 첫 번째 시트를 재무데이터로 사용
+            sheet = workbook.get_sheet_by_index(0)
+            if sheet:
+                im_data["financial_statements"] = {
+                    "_raw_excel": sheet.to_dict_list(),
+                    "_sheet_name": sheet.name,
+                }
+            else:
+                im_data["financial_statements"] = {}
+        except Exception as exc:
+            logger.error("Excel 파싱 실패: %s", exc)
+            im_data["financial_statements"] = {}
+    else:
+        im_data["financial_statements"] = {}
+
+    update_progress(self, document_id, "COLLECTING", 25)
+    im_data["data_source"] = "EXCEL"
+    return im_data
+
+
+# ---------------------------------------------------------------------------
+# Stage 2-5: 처리 체인 (데이터 소스와 무관)
+# ---------------------------------------------------------------------------
 
 
 @celery_app.task(bind=True, name="analyze_financials", base=PipelineTask, max_retries=3, acks_late=True)

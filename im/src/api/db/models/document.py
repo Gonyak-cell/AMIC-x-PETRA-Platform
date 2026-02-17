@@ -1,6 +1,6 @@
 """Document ORM 모델 (T-I04).
 
-> 마지막 수정: 2026-02-10 16:29:08
+> 마지막 수정: 2026-02-17 22:55:00
 
 IM 문서 생성 작업 상태 및 결과를 저장한다.
 """
@@ -47,9 +47,9 @@ class Document(Base):
         ForeignKey("users.id"),
         nullable=False,
     )
-    corp_code: Mapped[str] = mapped_column(
+    corp_code: Mapped[str | None] = mapped_column(
         String(8),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     company_name: Mapped[str] = mapped_column(
@@ -59,6 +59,10 @@ class Document(Base):
     project_name: Mapped[str | None] = mapped_column(
         String(200),
         nullable=True,
+    )
+    data_source: Mapped[str] = mapped_column(
+        String(20),
+        default="DART",
     )
 
     # 생성 설정
@@ -143,6 +147,7 @@ class Document(Base):
             "corp_code",
             unique=True,
             postgresql_where=text(
+                "corp_code IS NOT NULL AND "
                 "status IN ('PENDING', 'COLLECTING', 'ANALYZING', "
                 "'GENERATING', 'RENDERING')"
             ),

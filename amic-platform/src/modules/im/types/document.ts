@@ -1,6 +1,7 @@
 import type { IndustryId } from "@/types/industry";
 
 export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "CUSTOM";
+export type DataSource = "DART" | "MANUAL" | "EXCEL";
 
 // Re-export shared IndustryId from common types
 export type { IndustryId };
@@ -95,9 +96,10 @@ export const SECTION_LABEL_MAP: Record<SectionId, string> = {
 export interface Document {
   id: string;
   owner_id: string;
-  corp_code: string;
+  corp_code: string | null;
   company_name: string;
   project_name: string | null;
+  data_source: DataSource;
   im_style: IMStyle;
   sections: SectionId[];
   industry: IndustryId | null;
@@ -113,8 +115,10 @@ export interface Document {
 }
 
 export interface DocumentCreate {
-  corp_code: string;
-  project_name?: string;
+  company_name: string;
+  project_name: string;
+  corp_code?: string;
+  data_source?: DataSource;
   im_style: IMStyle;
   sections?: SectionId[];
   industry?: IndustryId;

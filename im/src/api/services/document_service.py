@@ -1,6 +1,6 @@
 """Document 서비스 레이어 (T-I18).
 
-> 마지막 수정: 2026-02-10 23:30:00
+> 마지막 수정: 2026-02-17 22:55:00
 
 DB CRUD + Celery 태스크 디스패치 + 권한 검증.
 """
@@ -45,7 +45,7 @@ class DocumentService:
         """
         from src.api.tasks.generate_im import generate_im_task
 
-        # Fix #3: 동일 corp_code로 진행 중인 문서가 있는지 확인
+        # corp_code가 있는 경우에만 진행 중 문서 중복 체크
         in_progress_statuses = [
             DocumentStatus.PENDING.value,
             DocumentStatus.COLLECTING.value,
@@ -53,23 +53,25 @@ class DocumentService:
             DocumentStatus.GENERATING.value,
             DocumentStatus.RENDERING.value,
         ]
-        existing = await self.db.execute(
-            select(Document).where(
-                Document.corp_code == create_data.corp_code,
-                Document.status.in_(in_progress_statuses),
+        if create_data.corp_code:
+            existing = await self.db.execute(
+                select(Document).where(
+                    Document.corp_code == create_data.corp_code,
+                    Document.status.in_(in_progress_statuses),
+                )
             )
-        )
-        if existing.scalar_one_or_none():
-            raise ConflictError(
-                "Document",
-                f"corp_code={create_data.corp_code} (이미 진행 중인 문서가 있습니다)",
-            )
+            if existing.scalar_one_or_none():
+                raise ConflictError(
+                    "Document",
+                    f"corp_code={create_data.corp_code} (이미 진행 중인 문서가 있습니다)",
+                )
 
         document = Document(
             owner_id=owner_id,
             corp_code=create_data.corp_code,
-            company_name="",
+            company_name=create_data.company_name,
             project_name=create_data.project_name,
+            data_source=create_data.data_source,
             im_style=create_data.im_style,
             sections=create_data.sections,
             generation_config={
@@ -99,6 +101,7 @@ class DocumentService:
                 str(document.id),
                 create_data.corp_code,
                 document.generation_config,
+                create_data.data_source,
             )
             document.celery_task_id = task.id
             await self.db.commit()
@@ -166,13 +169,15 @@ class DocumentService:
 
         if search:
             pattern = f"%{search}%"
-            base_query = base_query.where(
-                or_(
-                    Document.company_name.ilike(pattern),
-                    Document.project_name.ilike(pattern),
-                    Document.corp_code.ilike(pattern),
-                )
+            filters = [
+                Document.company_name.ilike(pattern),
+                Document.project_name.ilike(pattern),
+            ]
+            # corp_code는 nullable이므로 IS NOT NULL 조건 포함
+            filters.append(
+                Document.corp_code.isnot(None) & Document.corp_code.ilike(pattern)
             )
+            base_query = base_query.where(or_(*filters))
 
         count_result = await self.db.execute(
             select(func.count()).select_from(base_query.subquery())

@@ -12,7 +12,7 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { Document, DocumentStatus } from "@/modules/im/types/document";
+import type { Document, DocumentStatus, DataSource } from "@/modules/im/types/document";
 import { IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
 
 type StatusFilter = "ALL" | "IN_PROGRESS" | DocumentStatus;
@@ -33,11 +33,23 @@ const columns: Column<Document>[] = [
     render: (row) => row.company_name,
   },
   {
-    key: "corp_code",
-    header: "Corp Code",
+    key: "data_source",
+    header: "Source",
     align: "center",
-    width: "120px",
-    mono: true,
+    width: "100px",
+    render: (row) => {
+      const badge: Record<DataSource, { label: string; cls: string }> = {
+        DART: { label: "DART", cls: "bg-blue-100 text-blue-700" },
+        MANUAL: { label: "Manual", cls: "bg-gray-100 text-gray-600" },
+        EXCEL: { label: "Excel", cls: "bg-emerald-100 text-emerald-700" },
+      };
+      const b = badge[row.data_source] ?? badge.MANUAL;
+      return (
+        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
+          {b.label}
+        </span>
+      );
+    },
   },
   {
     key: "im_style",

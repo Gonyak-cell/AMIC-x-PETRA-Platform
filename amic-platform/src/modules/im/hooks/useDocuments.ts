@@ -59,6 +59,24 @@ export function useCreateDocument() {
   });
 }
 
+export function useUploadFinancials() {
+  return useMutation({
+    mutationFn: async ({ documentId, file }: { documentId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await imApi.post(
+        `/documents/${documentId}/upload-financials`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return data as { status: string; filename: string; size: number };
+    },
+    onError: () => {
+      toast.error("Failed to upload financial data");
+    },
+  });
+}
+
 /** Downloads a document as blob and triggers browser file save. */
 export function useDownloadDocument() {
   return useMutation({

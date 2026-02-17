@@ -1,8 +1,9 @@
 """Document 관련 엔드포인트 (T-I16).
 
-> 마지막 수정: 2026-02-10 23:30:00
+> 마지막 수정: 2026-02-17 22:55:00
 
 POST /api/v1/documents — IM 문서 생성 시작
+POST /api/v1/documents/{id}/upload-financials — 재무데이터 Excel 업로드
 GET  /api/v1/documents/{id} — 상태/결과 조회
 GET  /api/v1/documents/{id}/download — 파일 다운로드
 GET  /api/v1/documents — 목록 조회 (pagination)
@@ -10,9 +11,11 @@ GET  /api/v1/documents — 목록 조회 (pagination)
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +30,9 @@ from src.api.schemas.documents import (
 )
 from src.api.services.document_service import DocumentService
 
+_ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".csv"}
+_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 
@@ -35,7 +41,7 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
     response_model=DocumentResponse,
     status_code=202,
     summary="IM 문서 생성 시작",
-    description="DART 데이터 수집 → 분석 → 생성 → 렌더링 파이프라인을 비동기로 시작한다.",
+    description="데이터 소스(DART/MANUAL/EXCEL)에 따라 파이프라인을 비동기로 시작한다.",
 )
 async def create_document(
     data: DocumentCreate,
@@ -49,6 +55,57 @@ async def create_document(
         create_data=data,
     )
     return DocumentResponse.model_validate(document)
+
+
+@router.post(
+    "/{document_id}/upload-financials",
+    summary="재무데이터 Excel/CSV 업로드",
+    description="생성 전 문서에 재무데이터 파일을 첨부한다. data_source=EXCEL인 문서 전용.",
+)
+async def upload_financial_data(
+    document_id: UUID,
+    file: UploadFile,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Excel/CSV 재무데이터를 업로드한다."""
+    service = DocumentService(session)
+    document = await service.get_document(document_id, current_user)
+
+    if document.data_source != "EXCEL":
+        raise HTTPException(
+            status_code=400,
+            detail="data_source가 EXCEL인 문서만 파일 업로드가 가능합니다",
+        )
+
+    # 파일 확장자 검증
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일명이 없습니다")
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"허용 확장자: {', '.join(_ALLOWED_EXTENSIONS)}",
+        )
+
+    # 파일 크기 검증
+    content = await file.read()
+    if len(content) > _MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다")
+
+    # 파일 저장
+    upload_dir = Path("uploads") / "financials" / str(document_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    dest = upload_dir / f"financials{ext}"
+    dest.write_bytes(content)
+
+    # generation_config에 경로 기록
+    config = document.generation_config or {}
+    config["excel_file_path"] = str(dest)
+    document.generation_config = config
+    await session.commit()
+
+    return {"status": "uploaded", "filename": file.filename, "size": len(content)}
 
 
 @router.get(

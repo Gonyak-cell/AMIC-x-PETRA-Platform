@@ -77,8 +77,10 @@ export default function DocumentDetailPage() {
   const handleRegenerate = async () => {
     try {
       const result = await createDocument.mutateAsync({
-        corp_code: doc.corp_code,
-        project_name: doc.project_name || undefined,
+        company_name: doc.company_name,
+        project_name: doc.project_name || doc.company_name,
+        corp_code: doc.corp_code ?? undefined,
+        data_source: doc.data_source,
         im_style: doc.im_style,
         sections: doc.sections.length > 0 ? doc.sections : undefined,
         industry: doc.industry || undefined,
@@ -131,9 +133,15 @@ export default function DocumentDetailPage() {
             </div>
           </div>
           <div>
-            <span className="text-text-secondary block">Corp Code</span>
-            <span className="font-mono text-text-dark">{doc.corp_code}</span>
+            <span className="text-text-secondary block">Data Source</span>
+            <span className="text-text-dark">{doc.data_source}</span>
           </div>
+          {doc.corp_code && (
+            <div>
+              <span className="text-text-secondary block">Corp Code</span>
+              <span className="font-mono text-text-dark">{doc.corp_code}</span>
+            </div>
+          )}
           <div>
             <span className="text-text-secondary block">IM Style</span>
             <span className="text-text-dark">{doc.im_style}</span>

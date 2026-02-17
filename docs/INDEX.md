@@ -1,12 +1,12 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-17 21:54
+> 최종 업데이트: 2026-02-17 23:07
 
 ## 폴더 구조
 
 | 카테고리 | 폴더 | 설명 | 문서 수 |
 |---------|------|------|--------|
-| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계 | 6 |
+| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우 | 7 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 22 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트 | 3 |
@@ -18,7 +18,7 @@
 
 ---
 
-## architecture/ — 아키텍처 및 통합 계획 (6)
+## architecture/ — 아키텍처 및 통합 계획 (7)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -28,6 +28,7 @@
 | `Full_Integration_Plan.md` | 전체 통합 계획 (영문) |
 | `Portal_Enhancement_Plan.md` | 포털 UX 개선 Wave별 계획 |
 | `claude-config-gap-fill-plan.md` | Claude Code 설정 갭 분석 및 표준화 |
+| `20260217_2304_MA_Workflow_Implementation_Plan.md` | 7단계 M&A 워크플로우 상세 구현 계획 (deal-mgmt 서비스, Phase 0~1) |
 
 ## code-review/ — 코드 리뷰 (22)
 

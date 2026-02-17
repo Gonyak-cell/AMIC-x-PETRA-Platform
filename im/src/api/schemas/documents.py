@@ -1,6 +1,6 @@
 """Document 관련 스키마 (T-I15).
 
-> 마지막 수정: 2026-02-12 10:39:21
+> 마지막 수정: 2026-02-17 22:55:00
 
 IM 문서 생성 요청/응답 Pydantic v2 스키마를 정의한다.
 """
@@ -10,10 +10,11 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 _VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "CUSTOM"}
+_VALID_DATA_SOURCES = {"DART", "MANUAL", "EXCEL"}
 
 # 전용 산업 모듈이 등록된 산업
 _SUPPORTED_INDUSTRIES = {
@@ -27,11 +28,18 @@ _ALL_VALID_INDUSTRIES = _SUPPORTED_INDUSTRIES | _BASIC_INDUSTRIES
 class DocumentCreate(BaseModel):
     """IM 문서 생성 요청."""
 
-    corp_code: str = Field(
-        min_length=8, max_length=8, description="법인 코드 (8자리 숫자)"
+    company_name: str = Field(
+        min_length=1, max_length=200, description="대상 회사명"
     )
-    project_name: str | None = Field(
-        default=None, max_length=200, description="프로젝트명"
+    project_name: str = Field(
+        min_length=1, max_length=200, description="프로젝트명"
+    )
+    corp_code: str | None = Field(
+        default=None, min_length=8, max_length=8,
+        description="법인 코드 (8자리 숫자, DART 연동 시 필수)",
+    )
+    data_source: str = Field(
+        default="MANUAL", description="데이터 소스 (DART/MANUAL/EXCEL)"
     )
     im_style: str = Field(
         default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/CUSTOM)"
@@ -51,10 +59,18 @@ class DocumentCreate(BaseModel):
 
     @field_validator("corp_code")
     @classmethod
-    def validate_corp_code(cls, v: str) -> str:
-        """corp_code가 8자리 숫자인지 검증한다."""
-        if not v.isdigit():
+    def validate_corp_code(cls, v: str | None) -> str | None:
+        """corp_code가 8자리 숫자인지 검증한다 (None이면 스킵)."""
+        if v is not None and not v.isdigit():
             raise ValueError("corp_code는 8자리 숫자여야 합니다")
+        return v
+
+    @field_validator("data_source")
+    @classmethod
+    def validate_data_source(cls, v: str) -> str:
+        """data_source가 유효한 값인지 검증한다."""
+        if v not in _VALID_DATA_SOURCES:
+            raise ValueError(f"data_source는 {_VALID_DATA_SOURCES} 중 하나여야 합니다")
         return v
 
     @field_validator("im_style")
@@ -75,6 +91,13 @@ class DocumentCreate(BaseModel):
             )
         return v
 
+    @model_validator(mode="after")
+    def validate_dart_requires_corp_code(self) -> DocumentCreate:
+        """data_source가 DART이면 corp_code 필수."""
+        if self.data_source == "DART" and not self.corp_code:
+            raise ValueError("DART 모드에서는 corp_code가 필수입니다")
+        return self
+
 
 class DocumentResponse(BaseModel):
     """IM 문서 응답."""
@@ -83,9 +106,10 @@ class DocumentResponse(BaseModel):
 
     id: UUID
     owner_id: UUID
-    corp_code: str
+    corp_code: str | None
     company_name: str
     project_name: str | None
+    data_source: str
     im_style: str
     sections: list[str]
     industry: str | None = None
