@@ -13,6 +13,7 @@ import type {
   ReputationScore,
   ReputationHistoryItem,
   ReputationHistoryResponse,
+  QualitativeReputationResponse,
 } from "@/modules/kiis/types/analysis";
 
 const CORP_CODE_RE = /^\d{8}$/;
@@ -80,5 +81,23 @@ export function useReputationHistory(
       return data.items;
     },
     enabled: CORP_CODE_RE.test(corpCode),
+  });
+}
+
+export function useQualitativeReputation(
+  corpCode: string,
+  params: { months?: number } = {},
+  options?: { enabled?: boolean },
+) {
+  return useQuery<QualitativeReputationResponse>({
+    queryKey: ["kiis", "analysis", "reputation", corpCode, "qualitative", params],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<QualitativeReputationResponse>(
+        `/analysis/reputation/${corpCode}/qualitative`,
+        { params },
+      );
+      return data;
+    },
+    enabled: (options?.enabled ?? true) && CORP_CODE_RE.test(corpCode),
   });
 }

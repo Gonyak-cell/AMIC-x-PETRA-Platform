@@ -44,6 +44,15 @@
 }
 
 @layer utilities {
+  /* 스크롤바 숨기기 (가로 스크롤 탭 등) */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* tabular-nums for numeric columns */
   .tabular-nums {
     font-variant-numeric: tabular-nums;

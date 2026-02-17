@@ -64,7 +64,11 @@ from src.narrative_generator.prompts import (
     get_industry_variant,
 )
 from src.narrative_generator.prompts.base import PromptRegistry
+from src.narrative_generator.prompts.slot_fill import SlotFillPromptBuilder
 from src.narrative_generator.rag.retriever import ContextRetriever, RetrievedContext
+from src.narrative_generator.templates.registry import TemplateRegistry
+from src.narrative_generator.templates.renderer import TemplateRenderer
+from src.narrative_generator.engine.slot_parser import SlotResponseParser
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +172,7 @@ class NarrativeOrchestrator:
         retriever: ContextRetriever | None = None,
         llm_client: Any | None = None,
         model_router: ModelRouter | None = None,
+        template_registry: TemplateRegistry | None = None,
     ) -> None:
         self._config = config or get_config()
         self._registry = registry or create_default_registry()
@@ -178,6 +183,30 @@ class NarrativeOrchestrator:
         self._confidence_scorer = ConfidenceScorer(
             threshold=self._config.confidence_threshold,
         )
+
+        # 템플릿 시스템 (슬롯 채우기 방식)
+        self._template_registry: TemplateRegistry | None = None
+        self._template_renderer: TemplateRenderer | None = None
+        self._slot_fill_builder: SlotFillPromptBuilder | None = None
+        self._slot_parser: SlotResponseParser | None = None
+
+        if template_registry is not None:
+            self._template_registry = template_registry
+            self._template_renderer = TemplateRenderer()
+            self._slot_fill_builder = SlotFillPromptBuilder()
+            self._slot_parser = SlotResponseParser()
+        elif self._config.template_enabled:
+            template_dir = self._config.template_dir
+            if not template_dir:
+                # 기본 경로: 패키지 내 templates/ 디렉터리
+                from pathlib import Path
+                template_dir = str(
+                    Path(__file__).resolve().parent.parent / "templates"
+                )
+            self._template_registry = TemplateRegistry(template_dir)
+            self._template_renderer = TemplateRenderer()
+            self._slot_fill_builder = SlotFillPromptBuilder()
+            self._slot_parser = SlotResponseParser()
 
         # LLM 라우팅 설정
         if model_router is not None:
@@ -362,6 +391,40 @@ class NarrativeOrchestrator:
     ) -> SectionNarrative:
         """단일 섹션 내러티브 생성 (내부 구현).
 
+        템플릿이 있으면 슬롯 채우기 방식, 없으면 기존 자유 생성 방식.
+        """
+        # 템플릿 분기: 템플릿이 있으면 슬롯 채우기
+        if (
+            self._template_registry is not None
+            and self._template_registry.has(section_id)
+        ):
+            return self._generate_section_template(
+                section_id=section_id,
+                data=data,
+                industry=industry,
+                industry_context=industry_context,
+                cost_tracker=cost_tracker,
+            )
+
+        # 기존 자유 생성 방식 (레거시)
+        return self._generate_section_legacy(
+            section_id=section_id,
+            data=data,
+            industry=industry,
+            industry_context=industry_context,
+            cost_tracker=cost_tracker,
+        )
+
+    def _generate_section_legacy(
+        self,
+        section_id: str,
+        data: IMDocumentData,
+        industry: str,
+        industry_context: str,
+        cost_tracker: CostTracker | None = None,
+    ) -> SectionNarrative:
+        """기존 자유 생성 방식 (레거시).
+
         Steps:
         1. 프롬프트 조회
         2. RAG 컨텍스트 검색 (선택적)
@@ -397,7 +460,8 @@ class NarrativeOrchestrator:
         # 4. LLM 호출
         raw_response = self._call_llm(
             system_prompt, user_prompt,
-            section_id=section_id, cost_tracker=cost_tracker,
+            section_id=section_id, industry=industry,
+            cost_tracker=cost_tracker,
         )
 
         # 5. 응답 파싱
@@ -409,6 +473,7 @@ class NarrativeOrchestrator:
         user_prompt: str,
         *,
         section_id: str = "",
+        industry: str = "",
         cost_tracker: CostTracker | None = None,
     ) -> str:
         """LLM API를 호출하여 텍스트를 생성한다.
@@ -421,6 +486,7 @@ class NarrativeOrchestrator:
                 section_id=section_id,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
+                industry=industry,
                 temperature=self._config.narrative_temperature,
                 max_tokens=self._config.narrative_max_tokens,
             )
@@ -466,6 +532,84 @@ class NarrativeOrchestrator:
         except ImportError:
             logger.warning("openai 패키지 미설치 — LLM 호출 불가")
             return _NullLLMClient()
+
+    def _generate_section_template(
+        self,
+        section_id: str,
+        data: IMDocumentData,
+        industry: str,
+        industry_context: str,
+        cost_tracker: CostTracker | None = None,
+    ) -> SectionNarrative:
+        """템플릿 기반 슬롯 채우기 방식으로 내러티브를 생성한다.
+
+        Steps:
+        1. 템플릿 로드 (산업별 오버라이드 포함)
+        2. L3 슬롯 확인
+        3. L3 슬롯이 있으면 LLM 호출 (슬롯 채우기 프롬프트)
+        4. TemplateRenderer로 L1/L2/L3/L4 조합
+        5. SectionNarrative 반환
+        """
+        assert self._template_registry is not None
+        assert self._template_renderer is not None
+        assert self._slot_fill_builder is not None
+        assert self._slot_parser is not None
+
+        # 1. 템플릿 로드
+        template = self._template_registry.get(section_id, industry=industry)
+        if template is None:
+            raise LLMError(f"템플릿 로드 실패: section={section_id}")
+
+        # 2. L3 슬롯 확인
+        l3_slots = template.l3_slots
+        llm_slots: dict[str, str] = {}
+
+        # 3. L3 슬롯이 있으면 LLM 호출
+        if l3_slots:
+            system_prompt = self._slot_fill_builder.build_system_prompt(
+                industry_context=industry_context,
+            )
+            user_prompt = self._slot_fill_builder.build_user_prompt(
+                template, data, industry_context=industry_context,
+            )
+
+            raw_response = self._call_llm(
+                system_prompt,
+                user_prompt,
+                section_id=section_id,
+                industry=industry,
+                cost_tracker=cost_tracker,
+            )
+
+            expected = list(l3_slots.keys())
+            llm_slots = self._slot_parser.parse(raw_response, expected)
+
+            # 파싱 실패한 슬롯 경고
+            missing = set(expected) - set(llm_slots.keys())
+            if missing:
+                logger.warning(
+                    "슬롯 파싱 일부 실패: section=%s, missing=%s",
+                    section_id,
+                    missing,
+                )
+
+        # 4. 렌더링
+        base_blocks = self._template_registry.base_blocks
+        rendered_text = self._template_renderer.render(
+            template=template,
+            data=data,
+            llm_slots=llm_slots,
+            industry=industry,
+            base_blocks=base_blocks,
+        )
+
+        # 5. SectionNarrative 반환
+        return SectionNarrative(
+            section_id=section_id,
+            text=rendered_text,
+            key_claims=[],
+            metadata={"mode": "template", "l3_slots_filled": len(llm_slots)},
+        )
 
     @staticmethod
     def _build_rag_query(section_id: str, data: IMDocumentData) -> str:

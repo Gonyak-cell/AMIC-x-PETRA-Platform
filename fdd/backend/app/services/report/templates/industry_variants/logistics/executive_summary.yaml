@@ -1,0 +1,24 @@
+section_id: executive_summary
+version: "1.0"
+source_reference: "Logistics FDD Override"
+
+slots:
+  fleet_note:
+    level: L3
+    type: sentence
+    hint: >-
+      Comment on fleet economics and network efficiency metrics
+      relevant to the FDD assessment, such as utilization rates,
+      fuel cost normalization, and route optimization effects.
+    max_tokens: 80
+    data_keys:
+      - qoe.category_breakdown
+
+conditional_blocks:
+  - condition: "industry == 'logistics'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      The logistics sector analysis accounts for fleet economics
+      (utilization rates, fuel cost hedging), network density effects,
+      and IFRS 16 lease treatment impacts on EBITDA and Net Debt.
+      {{fleet_note}}

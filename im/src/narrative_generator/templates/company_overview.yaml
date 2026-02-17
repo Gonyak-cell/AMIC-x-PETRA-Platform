@@ -1,0 +1,127 @@
+# Company Overview (회사 개요) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 7개 (직접 치환) + L3 4개 (LLM 생성)
+# 조건부 블록: L4 3개 (산업별)
+section_id: company_overview
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  company_name_en:
+    level: L2
+    source: company_name_en
+    default: ""
+
+  established_date:
+    level: L2
+    source: company_overview.established_date
+    format: date
+    default: ""
+
+  headquarters:
+    level: L2
+    source: company_overview.headquarters
+    default: ""
+
+  employee_count:
+    level: L2
+    source: company_overview.employee_count
+    format: count
+    default: ""
+
+  key_products:
+    level: L2
+    source: company_overview.key_products
+    default: ""
+
+  certifications:
+    level: L2
+    source: company_overview.certifications
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  business_identity:
+    level: L3
+    type: paragraph
+    hint: >-
+      기업의 설립 배경과 현재 사업 영역을 소개.
+      어떤 문제를 해결하기 위해 설립되었는지, 현재 어떤 분야에서 활동하는지 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - company_overview.business_model
+      - company_overview.established_date
+      - company_overview.headquarters
+
+  business_model_description:
+    level: L3
+    type: paragraph
+    hint: >-
+      대상회사의 비즈니스 모델과 핵심 경쟁력을 설명.
+      수익 구조, 차별화 요소, 진입장벽을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.value_chain
+      - company_overview.key_products
+
+  growth_story:
+    level: L3
+    type: paragraph
+    hint: >-
+      주요 연혁을 바탕으로 성장 스토리를 서술.
+      설립 이후 핵심 마일스톤과 사업 확장 과정을 2-3문장으로 요약.
+    max_tokens: 120
+    data_keys:
+      - company_overview.history
+      - financial_statements.revenue
+
+  value_chain_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      가치사슬(Value Chain) 내 대상회사의 포지션과 역할을 설명.
+      업스트림/다운스트림 관계와 수직 통합 수준을 1-2문장으로 분석.
+    max_tokens: 80
+    data_keys:
+      - company_overview.value_chain
+      - company_overview.key_products
+
+body: |
+  {{company_name}}(이하 "대상회사")은 {{business_identity}}
+
+  대상회사는 {{established_date}}에 설립되어 현재 {{headquarters}}에 본사를 두고 있으며,
+  약 {{employee_count}}의 임직원이 근무하고 있습니다. 주요 사업 영역은 {{key_products}}이며,
+  {{certifications}} 등의 인증을 보유하고 있습니다.
+
+  비즈니스 모델 측면에서, {{business_model_description}}
+  이러한 사업 모델은 대상회사의 안정적인 수익 창출 기반을 형성하고 있습니다.
+
+  대상회사의 성장 과정을 살펴보면, {{growth_story}}
+  이러한 성장 궤적은 대상회사의 시장 적응력과 실행력을 보여주고 있습니다.
+
+  가치사슬 내에서, {{value_chain_analysis}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: business_model_description
+    text: >-
+      특히, 기술 기반의 확장성(Scalability)과 높은 고객 전환 비용(Switching Cost)은
+      대상회사의 장기적 경쟁 우위를 강화하는 핵심 요소입니다.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: business_model_description
+    text: >-
+      특히, 축적된 생산 노하우와 설비 투자를 통한 원가 경쟁력은
+      신규 진입자 대비 뚜렷한 경쟁 우위를 형성하고 있습니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: business_model_description
+    text: >-
+      특히, 규제 승인 절차와 임상 데이터 축적에 따른 높은 진입장벽은
+      대상회사의 시장 지위를 보호하는 핵심 요인입니다.

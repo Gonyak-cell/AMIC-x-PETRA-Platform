@@ -1,0 +1,109 @@
+section_id: qoe_analysis
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  deal_name:
+    level: L2
+    source: deal_name
+
+  reported_ebitda:
+    level: L2
+    source: qoe.reported_ebitda
+
+  adjusted_ebitda:
+    level: L2
+    source: qoe.adjusted_ebitda
+
+  total_adjustments:
+    level: L2
+    source: qoe.total_adjustments
+
+  adjustment_count:
+    level: L2
+    source: qoe.adjustment_count
+    format: count
+
+  # ── L3: LLM 생성 ──
+  adjustment_classification:
+    level: L3
+    type: paragraph
+    hint: >-
+      Classify the adjustment items by category (non-recurring, normalization,
+      operating). For each category, state the total adjustment amount and
+      1-2 representative items. Reference only the provided data.
+    max_tokens: 150
+    data_keys:
+      - qoe.top_adjustments
+      - qoe.category_breakdown
+      - qoe.total_adjustments
+
+  ebitda_quality_assessment:
+    level: L3
+    type: paragraph
+    hint: >-
+      Assess the quality of Adjusted EBITDA in 2-3 sentences. Comment on
+      the adjustment ratio (total adjustments / Reported EBITDA),
+      the recurrence risk of key adjustments, and the sustainability
+      of the adjusted earnings level.
+    max_tokens: 120
+    data_keys:
+      - qoe.reported_ebitda
+      - qoe.adjusted_ebitda
+      - qoe.total_adjustments
+      - qoe.adjustment_count
+
+  revenue_quality_note:
+    level: L3
+    type: sentence
+    hint: >-
+      Comment on revenue recognition quality in 1 sentence.
+      Note any unusual revenue patterns or one-off revenue items if present.
+    max_tokens: 60
+    data_keys:
+      - qoe.gross_profit
+      - qoe.reported_ebitda
+
+body: |
+  {{@transition_qoe}}
+
+  QUALITY OF EARNINGS ANALYSIS — {{deal_name}}
+
+  The Target Company's Reported EBITDA was {{reported_ebitda}} million KRW.
+  A total of {{adjustment_count}} adjustment items were identified,
+  amounting to {{total_adjustments}} million KRW in aggregate,
+  resulting in an Adjusted EBITDA of {{adjusted_ebitda}} million KRW.
+
+  Adjustment Classification:
+
+  {{adjustment_classification}}
+
+  {{@fdd_currency_note}}
+
+  EBITDA Quality Assessment:
+
+  {{ebitda_quality_assessment}}
+
+  {{revenue_quality_note}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: adjustment_classification
+    text: >-
+      In line with technology/SaaS industry practices, the analysis
+      specifically addressed R&D capitalization (K-IFRS 1038),
+      stock-based compensation (SBC) expenses, and customer acquisition
+      cost (CAC) normalization as key adjustment categories.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: adjustment_classification
+    text: >-
+      For the manufacturing sector, particular attention was given to
+      capital expenditure classification (maintenance vs. growth CAPEX),
+      raw material price volatility impacts, and production capacity
+      utilization effects on cost absorption.
+
+includes:
+  - transition_qoe
+  - fdd_currency_note

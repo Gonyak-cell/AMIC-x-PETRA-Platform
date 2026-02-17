@@ -14,6 +14,8 @@ services:
     container_name: amic-frontend
     ports:
       - "5173:5173"
+    environment:
+      VITE_DISABLE_MSW: "true"
     volumes:
       - ./amic-platform:/app
       - /app/node_modules
@@ -99,6 +101,8 @@ services:
     env_file:
       - .env
     environment:
+      DEBUG: "true"
+      SECRET_KEY: ${KIIS_SECRET_KEY:-dev-kiis-secret-change-in-production}
       DATABASE_URL: postgresql+asyncpg://kiis_user:${KIIS_DB_PASSWORD:-kiis_dev_password}@kiis-db:5432/kiis
       REDIS_URL: redis://kiis-redis:6379/0
       ELASTICSEARCH_URL: http://kiis-es:9200

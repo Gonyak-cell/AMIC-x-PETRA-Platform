@@ -82,6 +82,13 @@ class Deal(TimestampMixin, Base):
         comment="투자사(GP) 기업 ID",
     )
 
+    # 펀드 정보 (펀드 단위 딜 추적)
+    fund_id: Mapped[int | None] = mapped_column(
+        ForeignKey("funds.id", ondelete="SET NULL"),
+        index=True,
+        comment="펀드 ID (펀드 단위 딜 추적)",
+    )
+
     # 피투자사 정보
     target_company: Mapped[str] = mapped_column(String(300), index=True, comment="피투자사명")
     target_company_id: Mapped[int | None] = mapped_column(
@@ -124,3 +131,6 @@ class Deal(TimestampMixin, Base):
         foreign_keys=[target_company_id]
     )
     news_article: Mapped["NewsArticle | None"] = relationship()  # noqa: F821
+    fund: Mapped["Fund | None"] = relationship(  # noqa: F821
+        foreign_keys=[fund_id], back_populates="deals"
+    )

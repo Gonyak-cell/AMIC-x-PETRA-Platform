@@ -13,7 +13,7 @@ from typing import Any
 
 from app.core.logging import get_logger
 from app.agents.guardrails import validate_narrative_claims
-from app.services.llm.routing import FDDModelRouter, FDDModelRouter as _
+from app.services.llm.routing import FDDModelRouter
 
 logger = get_logger(__name__)
 
@@ -23,10 +23,14 @@ class FDDNarrativeGenerator:
 
     Args:
         router: FDD 모델 라우터 인스턴스
+        industry_context: 산업별 프롬프트 컨텍스트 문자열
+        industry_id: 산업 식별자 (산업별 LLM 라우팅용)
     """
 
-    def __init__(self, router: FDDModelRouter):
+    def __init__(self, router: FDDModelRouter, industry_context: str = "", industry_id: str = ""):
         self._router = router
+        self._industry_context = industry_context
+        self._industry_id = industry_id
 
     def generate_executive_summary(
         self,
@@ -72,6 +76,8 @@ class FDDNarrativeGenerator:
             "Do NOT invent or calculate any numbers — only reference the data provided. "
             "Write in English. Keep it under 300 words."
         )
+        if self._industry_context:
+            system_prompt += f"\n\n## Industry Context\n{self._industry_context}"
         user_prompt = (
             f"Deal: {deal_name}\n"
             f"Industry: {industry_name}\n\n"
@@ -81,6 +87,7 @@ class FDDNarrativeGenerator:
 
         response = self._router.generate(
             "executive_summary",
+            industry=self._industry_id,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.3,
@@ -124,6 +131,8 @@ class FDDNarrativeGenerator:
             "Reference the exact numbers provided. Do NOT calculate new values. "
             "Write 2-3 concise paragraphs in English."
         )
+        if self._industry_context:
+            system_prompt += f"\n\n## Industry Context\n{self._industry_context}"
         user_prompt = (
             f"Industry: {industry_name}\n"
             f"Reported EBITDA: {reported_ebitda}\n"
@@ -134,6 +143,7 @@ class FDDNarrativeGenerator:
 
         response = self._router.generate(
             "qoe_analysis_narrative",
+            industry=self._industry_id,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.2,
@@ -173,6 +183,8 @@ class FDDNarrativeGenerator:
             "Describe the standard FDD methodology steps professionally. "
             "Keep it factual and under 200 words. Write in English."
         )
+        if self._industry_context:
+            system_prompt += f"\n\n## Industry Context\n{self._industry_context}"
         user_prompt = (
             f"Deal: {deal_name}\n"
             f"Industry: {industry_name}\n"
@@ -182,6 +194,7 @@ class FDDNarrativeGenerator:
 
         response = self._router.generate(
             "methodology_description",
+            industry=self._industry_id,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.1,
@@ -217,6 +230,8 @@ class FDDNarrativeGenerator:
             "Summarize the key risks identified during the analysis. "
             "Be professional and actionable. Write in English. Under 250 words."
         )
+        if self._industry_context:
+            system_prompt += f"\n\n## Industry Context\n{self._industry_context}"
         user_prompt = (
             f"Industry: {industry_name}\n"
             f"Issues Identified ({len(issues)} total):\n{issue_summary}\n\n"
@@ -225,6 +240,7 @@ class FDDNarrativeGenerator:
 
         response = self._router.generate(
             "risk_narrative",
+            industry=self._industry_id,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.3,

@@ -10,6 +10,10 @@ IM의 IndustryModule 패턴을 FDD 분석 도메인에 맞게 재설계.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.industry.korea.models import FDDKoreaOverlayData
 
 from app.industry.models import (
     FDDAdjustmentRule,
@@ -78,6 +82,51 @@ class FDDIndustryModule(ABC):
             FDDNarrativeTemplate 리스트.
         """
         return []
+
+    def format_narrative_context(self, section_id: str | None = None) -> str:
+        """산업별 프롬프트 컨텍스트를 포맷팅된 문자열로 반환한다.
+
+        Args:
+            section_id: 특정 섹션만 필터링 (None이면 전체)
+
+        Returns:
+            LLM 시스템 프롬프트에 삽입할 산업 컨텍스트 문자열.
+            템플릿이 없으면 빈 문자열.
+        """
+        templates = self.get_narrative_templates()
+        if not templates:
+            return ""
+        if section_id:
+            templates = [t for t in templates if t.section_id == section_id]
+        if not templates:
+            return ""
+
+        parts = [f"### {self.industry_name_en} ({self.industry_name_kr}) 산업 분석 가이드\n"]
+        for tmpl in templates:
+            if tmpl.emphasis_areas:
+                parts.append("#### 핵심 분석 영역")
+                for area in tmpl.emphasis_areas:
+                    parts.append(f"- {area}")
+            if tmpl.terminology_overrides:
+                parts.append("\n#### 산업 특화 용어")
+                for general, specific in tmpl.terminology_overrides.items():
+                    parts.append(f"- {general} -> {specific}")
+            if tmpl.template_text:
+                parts.append(f"\n#### 추가 지침\n{tmpl.template_text}")
+        return "\n".join(parts)
+
+    def get_korea_overlay(self) -> FDDKoreaOverlayData | None:
+        """한국 PE FDD 특수성 오버레이 데이터를 반환한다.
+
+        Returns:
+            FDDKoreaOverlayData 인스턴스. 데이터가 없으면 None.
+        """
+        try:
+            from app.industry.korea import get_fdd_korea_overlay_data
+
+            return get_fdd_korea_overlay_data(self.industry_id)
+        except ImportError:
+            return None
 
     def get_context(self) -> FDDIndustryContext:
         """산업 컨텍스트 요약 객체를 반환한다.

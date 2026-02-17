@@ -1,0 +1,76 @@
+# Contact (연락처) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 10개 (직접 치환만, LLM 호출 불필요)
+section_id: contact
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 (모두 IMDocumentData에서 직접 참조) ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  project_name:
+    level: L2
+    source: project_name
+    default: "본 프로젝트"
+
+  report_date:
+    level: L2
+    source: date
+    format: date
+    default: "2026년"
+
+  contact_name_1:
+    level: L2
+    source: contacts.0.name
+    default: "[담당자명]"
+
+  contact_title_1:
+    level: L2
+    source: contacts.0.title
+    default: "[직위]"
+
+  contact_email_1:
+    level: L2
+    source: contacts.0.email
+    default: "[이메일]"
+
+  contact_phone_1:
+    level: L2
+    source: contacts.0.phone
+    default: "[연락처]"
+
+  contact_company_1:
+    level: L2
+    source: contacts.0.company
+    default: "[소속]"
+
+  contact_name_2:
+    level: L2
+    source: contacts.1.name
+    default: ""
+
+  contact_title_2:
+    level: L2
+    source: contacts.1.title
+    default: ""
+
+body: |
+  {{@confidentiality}}
+
+  본 Information Memorandum ("{{project_name}}")과 관련한 문의사항이 있으시면
+  아래 담당자에게 연락하여 주시기 바랍니다.
+
+  {{contact_company_1}}
+  {{contact_name_1}} {{contact_title_1}}
+  Tel: {{contact_phone_1}}
+  E-mail: {{contact_email_1}}
+
+  {{@disclaimer_short}}
+
+includes:
+  - confidentiality
+  - disclaimer_short

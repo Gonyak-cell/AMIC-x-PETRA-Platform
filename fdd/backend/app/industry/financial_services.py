@@ -9,6 +9,7 @@ from app.industry.models import (
     FDDAdjustmentRule,
     FDDDebtClassification,
     FDDKPIBenchmark,
+    FDDNarrativeTemplate,
     FDDNWCNorm,
 )
 from app.industry.registry import register_fdd_industry
@@ -107,6 +108,30 @@ class FDDFinancialServicesModule(FDDIndustryModule):
                     "CUSTOMER_DEPOSITS": "예수금은 영업부채 — debt-like 제외 (NWC 항목)",
                     "REPO_LIABILITIES": "RP 매도는 단기 자금조달 — debt-like 판단 필요",
                     "REGULATORY_CAPITAL": "규제자본 요건 충족 여부 별도 분석 필요",
+                },
+            ),
+        ]
+
+    def get_narrative_templates(self) -> list[FDDNarrativeTemplate]:
+        return [
+            FDDNarrativeTemplate(
+                section_id="executive_summary",
+                template_text=(
+                    "금융서비스 FDD 분석 시 고려 사항:\n"
+                    "- 대손충당금 정상화 (경기 순환 반영, TTC 관점)\n"
+                    "- 트레이딩/투자 손익의 EBITDA 제외 여부\n"
+                    "- 규제자본 비율이 사업 지속성에 미치는 영향"
+                ),
+                emphasis_areas=[
+                    "대손충당금(ECL) 정상화 및 Through-the-Cycle 분석",
+                    "트레이딩 P&L vs 핵심 영업이익 구분",
+                    "BIS 자본비율 / 규제자본 충족 여부",
+                    "순이자마진(NIM) 추세 및 금리 민감도",
+                ],
+                terminology_overrides={
+                    "매출액": "영업수익 (이자수익 + 비이자수익)",
+                    "재고": "해당 없음 (금융서비스)",
+                    "EBITDA": "Pre-Provision Operating Profit (PPOP)",
                 },
             ),
         ]

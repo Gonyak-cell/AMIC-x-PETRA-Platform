@@ -1,0 +1,29 @@
+section_id: debt_analysis
+version: "1.0"
+source_reference: "Financial Services FDD Override"
+
+slots:
+  regulatory_capital_note:
+    level: L3
+    type: paragraph
+    hint: >-
+      Comment on the regulatory capital framework: BIS ratio, CET1,
+      and how regulatory capital requirements affect the net debt
+      assessment. Note any capital buffers or shortfalls.
+    max_tokens: 100
+    data_keys:
+      - debt.net_debt
+      - debt.total_debt
+
+conditional_blocks:
+  - condition: "industry == 'financial_services'"
+    insert_after: debt_structure_analysis
+    text: >-
+      Regulatory Capital Context:
+
+      {{regulatory_capital_note}}
+
+      For financial services companies, the traditional Net Debt
+      framework requires supplementary analysis of regulatory capital
+      adequacy (BIS/CET1 ratios), provision sufficiency (NPL/ECL),
+      and license-related balance sheet requirements.

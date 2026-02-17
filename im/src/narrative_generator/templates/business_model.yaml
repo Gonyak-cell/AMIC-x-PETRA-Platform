@@ -1,0 +1,149 @@
+# Business Model (비즈니스 모델) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 4개 (직접 치환) + L3 5개 (LLM 생성)
+# 조건부 블록: L4 4개 (산업별)
+section_id: business_model
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  key_products:
+    level: L2
+    source: company_overview.key_products
+    default: ""
+
+  key_customers:
+    level: L2
+    source: key_customers
+    default: ""
+
+  certifications:
+    level: L2
+    source: company_overview.certifications
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  business_model_overview:
+    level: L3
+    type: paragraph
+    hint: >-
+      비즈니스 모델의 핵심 구조를 2-3문장으로 소개. 어떤 고객에게
+      어떤 가치를 어떻게 제공하는지 명확히 설명.
+    max_tokens: 100
+    data_keys:
+      - company_overview.business_model
+      - company_overview.key_products
+      - company_overview.value_chain
+
+  revenue_structure:
+    level: L3
+    type: paragraph
+    hint: >-
+      수익 모델과 매출 구조를 상세히 분석. 매출원별 구성 비율,
+      반복 매출 vs 일회성 매출, 가격 정책 등을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - segment_revenue
+      - financial_statements.revenue
+      - financial_statements.gross_profit
+      - company_overview.business_model
+
+  competitive_moats:
+    level: L3
+    type: paragraph
+    hint: >-
+      경쟁 우위 및 진입장벽(Moat)을 분석. 기술 역량, 브랜드 가치,
+      네트워크 효과, 규제 장벽, 고객 잠금 효과 등을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.certifications
+      - market_data.competitors
+      - investment_highlights
+
+  value_chain_position:
+    level: L3
+    type: paragraph
+    hint: >-
+      가치사슬 내 대상회사의 포지션을 분석. 업스트림/다운스트림 관계,
+      수직 통합 수준, 공급망 내 교섭력을 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - company_overview.value_chain
+      - company_overview.key_products
+      - key_customers
+
+  scalability_assessment:
+    level: L3
+    type: sentence
+    hint: >-
+      비즈니스 모델의 확장성(Scalability)을 1-2문장으로 평가.
+      한계비용 체감, 플랫폼 효과, 지역 확장 가능성 등.
+    max_tokens: 60
+    data_keys:
+      - company_overview.business_model
+      - market_data.tam
+      - derived_metrics
+
+body: |
+  {{@transition_business_model}}
+
+  {{company_name}}(이하 "대상회사")의 비즈니스 모델을 수익 구조, 경쟁 우위,
+  가치사슬, 확장성의 관점에서 분석하면 다음과 같습니다.
+
+  1. 비즈니스 모델 개요
+
+  {{business_model_overview}}
+  주요 제품/서비스는 {{key_products}}이며, {{certifications}} 등의 인증을 보유하고 있습니다.
+
+  2. 수익 구조 (Revenue Model)
+
+  {{revenue_structure}}
+  주요 고객사로는 {{key_customers}} 등이 있으며,
+  안정적인 수익 기반을 형성하고 있습니다.
+
+  3. 경쟁 우위 및 진입장벽 (Competitive Moats)
+
+  {{competitive_moats}}
+  이러한 경쟁 우위 요인은 대상회사의 시장 지위를 장기적으로 보호하는 핵심 자산입니다.
+
+  4. 가치사슬 내 포지션
+
+  {{value_chain_position}}
+
+  종합하면, {{scalability_assessment}}
+  대상회사의 비즈니스 모델은 견고한 수익 기반과 구조적 성장성을 동시에 보유하고 있습니다.
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: revenue_structure
+    text: >-
+      특히, SaaS/플랫폼 모델의 특성상 높은 매출총이익률(Gross Margin)과
+      한계비용 체감에 따른 영업 레버리지(Operating Leverage)가 핵심 구조적 강점입니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: competitive_moats
+    text: >-
+      특히, 특허/IP 포트폴리오와 규제 승인(허가)에 기반한 진입장벽은
+      바이오/헬스케어 기업의 가장 강력한 경쟁 해자(Moat)입니다.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: value_chain_position
+    text: >-
+      제조업 특성상, 원재료 조달력과 생산 설비 역량이 가치사슬 내 교섭력을 결정하며,
+      대상회사는 안정적인 공급망 네트워크를 확보하고 있습니다.
+
+  - condition: "industry == 'financial_services'"
+    insert_after: competitive_moats
+    text: >-
+      금융업 특성상, 규제 라이선스(인허가)와 자본 적정성 요건이
+      가장 강력한 진입장벽을 형성하고 있으며, 대상회사는 이를 충족하고 있습니다.
+
+includes:
+  - transition_business_model

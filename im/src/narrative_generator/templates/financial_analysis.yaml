@@ -1,0 +1,179 @@
+# Financial Analysis (재무 분석) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 10개 (직접 치환) + L3 5개 (LLM 생성)
+# 조건부 블록: L4 4개 (산업별)
+section_id: financial_analysis
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  revenue:
+    level: L2
+    source: financial_statements.revenue
+    default: ""
+
+  operating_income:
+    level: L2
+    source: financial_statements.operating_income
+    default: ""
+
+  ebitda:
+    level: L2
+    source: financial_statements.ebitda
+    default: ""
+
+  net_income:
+    level: L2
+    source: financial_statements.net_income
+    default: ""
+
+  total_assets:
+    level: L2
+    source: financial_statements.total_assets
+    default: ""
+
+  total_liabilities:
+    level: L2
+    source: financial_statements.total_liabilities
+    default: ""
+
+  total_equity:
+    level: L2
+    source: financial_statements.total_equity
+    default: ""
+
+  operating_cash_flow:
+    level: L2
+    source: financial_statements.operating_cash_flow
+    default: ""
+
+  free_cash_flow:
+    level: L2
+    source: financial_statements.free_cash_flow
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  revenue_profitability_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      매출 및 수익성 트렌드를 분석. 매출 성장률(YoY/CAGR),
+      EBITDA 마진 추이, 영업이익률 변화를 수치와 함께 3-4문장으로 심층 분석.
+      단순 나열이 아닌, 성장의 원인과 시사점을 포함.
+    max_tokens: 150
+    data_keys:
+      - financial_statements.revenue
+      - financial_statements.operating_income
+      - financial_statements.ebitda
+      - financial_statements.gross_profit
+      - financial_statements.sga_expenses
+      - derived_metrics
+
+  balance_sheet_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      재무 건전성을 분석. 부채비율, 유동성, 차입금 구조,
+      자본 적정성을 수치와 함께 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.total_assets
+      - financial_statements.total_liabilities
+      - financial_statements.total_equity
+      - financial_statements.total_debt
+      - financial_statements.cash_and_equivalents
+      - derived_metrics
+
+  cash_flow_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      현금흐름 동향을 분석. 영업활동CF, CAPEX, FCF의 추이와
+      현금 창출 능력의 지속 가능성을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.operating_cash_flow
+      - financial_statements.capex
+      - financial_statements.free_cash_flow
+      - derived_metrics
+
+  key_metrics_summary:
+    level: L3
+    type: paragraph
+    hint: >-
+      핵심 재무 지표를 종합 요약. ROE, CAGR, EBITDA 마진 등
+      투자 판단에 핵심이 되는 지표를 2-3문장으로 정리.
+    max_tokens: 100
+    data_keys:
+      - derived_metrics
+
+  financial_outlook:
+    level: L3
+    type: sentence
+    hint: >-
+      재무 실적을 바탕으로 한 향후 전망을 1-2문장으로 요약.
+      과도한 낙관을 지양하고 객관적 근거에 기반.
+    max_tokens: 60
+    data_keys:
+      - derived_metrics
+      - financial_statements.revenue
+
+body: |
+  {{@transition_financial}}
+
+  {{company_name}}(이하 "대상회사")의 재무 실적을 다각도로 분석하면 다음과 같습니다.
+
+  1. 매출 및 수익성 분석
+
+  {{revenue_profitability_analysis}}
+  {{@financial_note}}
+
+  2. 재무 건전성 분석
+
+  {{balance_sheet_analysis}}
+  대상회사의 재무 구조는 안정적인 사업 운영의 기반을 제공하고 있습니다.
+
+  3. 현금흐름 분석
+
+  {{cash_flow_analysis}}
+  지속적인 잉여현금흐름(FCF) 창출 능력은 대상회사의 재무적 유연성을 뒷받침하고 있습니다.
+
+  4. 핵심 지표 종합
+
+  {{key_metrics_summary}}
+  {{financial_outlook}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: revenue_profitability_analysis
+    text: >-
+      SaaS 기업의 핵심 지표인 ARR(Annual Recurring Revenue), NRR(Net Revenue Retention),
+      CAC Payback Period 관점에서도 대상회사의 성과는 업계 우수 수준에 해당합니다.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: revenue_profitability_analysis
+    text: >-
+      제조업 특성상, 설비 가동률과 원재료 비용 비중이 수익성에 미치는 영향이 크며,
+      대상회사는 효율적인 원가 관리를 통해 안정적인 마진을 유지하고 있습니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: revenue_profitability_analysis
+    text: >-
+      바이오/헬스케어 기업의 특성상, R&D 투자 비용과 규제 승인 일정이
+      단기 수익성에 영향을 미칠 수 있으나, 파이프라인 가치를 고려할 필요가 있습니다.
+
+  - condition: "industry == 'financial_services'"
+    insert_after: balance_sheet_analysis
+    text: >-
+      금융업 특성상, 자본 적정성(BIS 비율)과 충당금 적립률이
+      재무 건전성 평가의 핵심 지표이며, 대상회사는 규제 기준을 충족하고 있습니다.
+
+includes:
+  - transition_financial
+  - financial_note

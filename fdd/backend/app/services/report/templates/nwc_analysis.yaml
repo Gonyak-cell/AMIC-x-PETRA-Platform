@@ -1,0 +1,105 @@
+section_id: nwc_analysis
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  deal_name:
+    level: L2
+    source: deal_name
+
+  total_nwc:
+    level: L2
+    source: nwc.total_nwc
+
+  peg_target:
+    level: L2
+    source: nwc.peg_target
+
+  line_item_count:
+    level: L2
+    source: nwc.line_item_count
+    format: count
+
+  industry_name:
+    level: L2
+    source: industry_name
+
+  # ── L3: LLM 생성 ──
+  nwc_composition_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      Analyze the composition of NWC in 2-3 sentences. Discuss the
+      balance between current assets and current liabilities,
+      and highlight any material items or unusual trends.
+    max_tokens: 120
+    data_keys:
+      - nwc.total_nwc
+      - nwc.line_item_count
+      - nwc.peg_scenarios
+
+  peg_assessment:
+    level: L3
+    type: paragraph
+    hint: >-
+      Assess the NWC peg target appropriateness in 2 sentences.
+      Compare actual NWC to the peg target and note the potential
+      purchase price adjustment direction and magnitude.
+    max_tokens: 100
+    data_keys:
+      - nwc.total_nwc
+      - nwc.peg_target
+      - nwc.peg_scenarios
+
+  seasonality_note:
+    level: L3
+    type: sentence
+    hint: >-
+      Comment on NWC seasonality in 1 sentence. Note whether the
+      reference date NWC is representative of normal operating levels.
+    max_tokens: 60
+    data_keys:
+      - nwc.total_nwc
+      - nwc.peg_target
+
+body: |
+  {{@transition_nwc}}
+
+  NET WORKING CAPITAL ANALYSIS — {{deal_name}}
+
+  Net Working Capital for the Target Company is {{total_nwc}} million KRW,
+  based on {{line_item_count}} classified line items.
+  The NWC peg target is {{peg_target}} million KRW.
+
+  NWC Composition:
+
+  {{nwc_composition_analysis}}
+
+  {{@fdd_currency_note}}
+
+  Peg Assessment:
+
+  {{peg_assessment}}
+
+  {{seasonality_note}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: nwc_composition_analysis
+    text: >-
+      SaaS/technology companies typically operate with negative NWC due to
+      deferred revenue structures. This is a business model strength
+      (subscription-based prepayment) rather than a concern.
+      Normal NWC range for the sector: -30 to +15 days.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: nwc_composition_analysis
+    text: >-
+      Manufacturing companies typically carry higher inventory levels
+      with seasonal variations. The NWC analysis accounts for raw material
+      cycle times and production lead times specific to the sector.
+
+includes:
+  - transition_nwc
+  - fdd_currency_note

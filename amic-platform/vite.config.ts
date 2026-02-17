@@ -33,7 +33,29 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true,
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
+      // Health 전용 프록시 (루트 /health로 리라이트)
+      "/api/fdd/health": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: () => "/health",
+      },
+      "/api/kiis/health": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+        rewrite: () => "/health",
+      },
+      "/api/im/health": {
+        target: "http://localhost:8002",
+        changeOrigin: true,
+        rewrite: () => "/health",
+      },
+      // 범용 API 프록시
       "/api/fdd": {
         target: "http://localhost:8000",
         changeOrigin: true,

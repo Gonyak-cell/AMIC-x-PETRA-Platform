@@ -55,3 +55,9 @@ export type { LiveRegionProviderProps } from "./LiveRegion";
 
 export { PageHero } from "./PageHero";
 export type { PageHeroProps } from "./PageHero";
+
+export { Tabs } from "./Tabs";
+export type { TabsProps, TabItem } from "./Tabs";
+
+export { CheckboxGroup } from "./CheckboxGroup";
+export type { CheckboxGroupProps, CheckboxGroupOption } from "./CheckboxGroup";

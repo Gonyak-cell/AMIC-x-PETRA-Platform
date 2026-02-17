@@ -1,0 +1,24 @@
+section_id: executive_summary
+version: "1.0"
+source_reference: "Healthcare/Biotech FDD Override"
+
+slots:
+  pipeline_note:
+    level: L3
+    type: sentence
+    hint: >-
+      Comment on the R&D pipeline and its relevance to the FDD
+      assessment, particularly regarding capitalized development costs
+      and clinical trial expense classification.
+    max_tokens: 80
+    data_keys:
+      - qoe.category_breakdown
+
+conditional_blocks:
+  - condition: "industry == 'healthcare'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      The biotech/healthcare analysis considered the impact of
+      clinical trial costs, regulatory compliance expenses, and
+      R&D pipeline valuation on earnings quality.
+      {{pipeline_note}}

@@ -90,6 +90,7 @@ class AnthropicClient(LLMClient):
 
     def __init__(self) -> None:
         self._api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self._model = os.getenv("ANTHROPIC_MODEL_NAME", self.DEFAULT_MODEL)
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -114,7 +115,7 @@ class AnthropicClient(LLMClient):
         timeout_seconds: int = 60,
     ) -> LLMResponse:
         client = self._get_client()
-        model = model or self.DEFAULT_MODEL
+        model = model or self._model
 
         messages = [{"role": "user", "content": user_prompt}]
 
@@ -166,6 +167,7 @@ class OpenAIClient(LLMClient):
 
     def __init__(self) -> None:
         self._api_key = os.getenv("OPENAI_API_KEY", "")
+        self._model = os.getenv("OPENAI_MODEL_NAME", self.DEFAULT_MODEL)
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -190,7 +192,7 @@ class OpenAIClient(LLMClient):
         timeout_seconds: int = 60,
     ) -> LLMResponse:
         client = self._get_client()
-        model = model or self.DEFAULT_MODEL
+        model = model or self._model
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -237,6 +239,7 @@ class GeminiClient(LLMClient):
 
     def __init__(self) -> None:
         self._api_key = os.getenv("GOOGLE_API_KEY", "")
+        self._model = os.getenv("GOOGLE_MODEL_NAME", self.DEFAULT_MODEL)
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -262,7 +265,7 @@ class GeminiClient(LLMClient):
         timeout_seconds: int = 60,
     ) -> LLMResponse:
         genai = self._get_client()
-        model_name = model or self.DEFAULT_MODEL
+        model_name = model or self._model
 
         generation_config: dict[str, Any] = {
             "temperature": temperature,

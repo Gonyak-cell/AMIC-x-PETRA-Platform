@@ -14,7 +14,18 @@ initSentry();
 
 function handleGlobalError(error: Error) {
   const message = error.message || "요청 처리 중 오류가 발생했습니다";
-  toast.error(message);
+  // DEBUG: API 에러 시 요청 URL 포함하여 표시
+  const axiosErr = error as { config?: { method?: string; url?: string; baseURL?: string } };
+  const url = axiosErr.config?.url;
+  const base = axiosErr.config?.baseURL;
+  const method = axiosErr.config?.method?.toUpperCase();
+  if (url) {
+    const fullPath = base ? `${base}${url}` : url;
+    console.error(`[API Error] ${method} ${fullPath}:`, message);
+    toast.error(`${message}\n${method} ${fullPath}`);
+  } else {
+    toast.error(message);
+  }
 }
 
 const queryClient = new QueryClient({
@@ -29,47 +40,41 @@ const queryClient = new QueryClient({
   },
 });
 
-async function enableMocking() {
-  if (!import.meta.env.DEV || import.meta.env.VITE_DISABLE_MSW === "true") {
-    return;
-  }
-  try {
-    const { worker } = await import("./test/mocks/browser");
-    await worker.start({
-      onUnhandledRequest: "bypass",
-      quiet: false,
-    });
-    console.log("[MSW] Mocking enabled successfully");
-  } catch (err) {
-    console.warn("[MSW] Failed to start:", err);
-  }
+// 기존 MSW 서비스 워커가 남아있을 수 있으므로 해제
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const reg of registrations) {
+      if (reg.active?.scriptURL.includes("mockServiceWorker")) {
+        reg.unregister();
+        console.log("[MSW] Stale service worker unregistered");
+      }
+    }
+  });
 }
 
-enableMocking().then(() => {
-  createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <SentryErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <AuthProvider>
-              <LiveRegionProvider>
-                <App />
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    className: "font-body",
-                    style: {
-                      fontFamily: "'Pretendard', 'Inter', sans-serif",
-                    },
-                  }}
-                  richColors
-                  closeButton
-                />
-              </LiveRegionProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </SentryErrorBoundary>
-    </StrictMode>,
-  );
-});
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <SentryErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <LiveRegionProvider>
+              <App />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  className: "font-body",
+                  style: {
+                    fontFamily: "'Pretendard', 'Inter', sans-serif",
+                  },
+                }}
+                richColors
+                closeButton
+              />
+            </LiveRegionProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </SentryErrorBoundary>
+  </StrictMode>,
+);

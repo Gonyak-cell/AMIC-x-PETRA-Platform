@@ -94,7 +94,7 @@ export default function ReitListPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useReits({
+  const { data, isLoading, isError } = useReits({
     reits_type: (type as ReitType) || undefined,
     status: (status as ReitStatus) || undefined,
     page,
@@ -127,7 +127,13 @@ export default function ReitListPage() {
       </div>
 
       <Card padding="none">
-        {!isLoading && (!data?.items || data.items.length === 0) ? (
+        {isError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load REITs"
+            description="An error occurred while fetching REIT data."
+          />
+        ) : !isLoading && (!data?.items || data.items.length === 0) ? (
           <EmptyState
             icon={Home}
             title="No REITs found"

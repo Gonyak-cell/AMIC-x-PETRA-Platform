@@ -7,9 +7,12 @@ from pydantic import BaseModel, Field
 from app.models.deal import (
     DealPhase,
     DealStatus,
+    DealStructure,
     DealType,
     DefinitionStatus,
     IndustryType,
+    InvestmentType,
+    SellerType,
     SnapshotStatus,
 )
 
@@ -18,24 +21,29 @@ from app.models.deal import (
 
 class DealCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    deal_type: DealType
+    target_company_name: str = Field(..., min_length=1, max_length=255)
+    deal_type: DealType = DealType.COMPLETION_ACCOUNTS
     base_currency: str = Field(default="KRW", max_length=10)
-    reference_date: date
-    period_start: date
-    period_end: date
+    reference_date: date | None = None
+    period_start: date | None = None
+    period_end: date | None = None
     created_by: str = Field(default="system", max_length=100)
 
     # Workflow fields (optional at creation)
     client_name: str | None = Field(default=None, max_length=255)
     client_contact_name: str | None = Field(default=None, max_length=255)
     client_contact_email: str | None = Field(default=None, max_length=255)
-    target_company_name: str | None = Field(default=None, max_length=255)
     team_partner_id: uuid.UUID | None = None
     team_manager_id: uuid.UUID | None = None
     scope_qoe: bool = True
     scope_nwc: bool = True
     scope_debt: bool = True
     industry: IndustryType = IndustryType.GENERAL
+
+    # Deal classification
+    deal_structure: DealStructure | None = None
+    investment_type: InvestmentType | None = None
+    seller_type: SellerType | None = None
 
 
 class DealUpdate(BaseModel):
@@ -60,15 +68,20 @@ class DealUpdate(BaseModel):
     industry: IndustryType | None = None
     current_phase: DealPhase | None = None
 
+    # Deal classification
+    deal_structure: DealStructure | None = None
+    investment_type: InvestmentType | None = None
+    seller_type: SellerType | None = None
+
 
 class DealRead(BaseModel):
     id: uuid.UUID
     name: str
     deal_type: DealType
     base_currency: str
-    reference_date: date
-    period_start: date
-    period_end: date
+    reference_date: date | None = None
+    period_start: date | None = None
+    period_end: date | None = None
     status: DealStatus
     created_by: str
     created_at: datetime
@@ -86,6 +99,11 @@ class DealRead(BaseModel):
     scope_debt: bool = True
     industry: IndustryType = IndustryType.GENERAL
     current_phase: DealPhase = DealPhase.MOU
+
+    # Deal classification
+    deal_structure: DealStructure | None = None
+    investment_type: InvestmentType | None = None
+    seller_type: SellerType | None = None
 
     model_config = {"from_attributes": True}
 

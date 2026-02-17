@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Response, status
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -6,6 +8,9 @@ from app.core.security import get_current_active_user
 from app.models.user import User
 from app.schemas.auth import Token, TokenRefresh, UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
+
+_is_production = os.getenv("ENV", "").lower() in ("production", "prod")
+_cookie_secure = _is_production
 
 router = APIRouter()
 
@@ -40,8 +45,8 @@ async def login(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=15 * 60,  # 15분
     )
 
@@ -50,8 +55,8 @@ async def login(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=7 * 24 * 60 * 60,  # 7일
     )
 
@@ -60,21 +65,27 @@ async def login(
 
 @router.post("/refresh", summary="토큰 갱신")
 async def refresh(
-    token_refresh: TokenRefresh,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
     service: AuthService = Depends(get_auth_service),
 ) -> dict[str, str]:
     """리프레시 토큰으로 새로운 액세스 토큰과 리프레시 토큰을 httpOnly 쿠키로 설정."""
-    access_token, refresh_token = await service.refresh_token(db, token_refresh.refresh_token)
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found in cookies",
+        )
+    access_token, refresh_token = await service.refresh_token(db, refresh_token)
 
     # Access Token 쿠키 설정
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=15 * 60,  # 15분
     )
 
@@ -83,8 +94,8 @@ async def refresh(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=7 * 24 * 60 * 60,  # 7일
     )
 

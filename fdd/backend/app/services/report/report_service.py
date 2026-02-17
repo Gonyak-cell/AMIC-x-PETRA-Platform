@@ -148,6 +148,7 @@ def build_report_ir(
     include_debt: bool = True,
     include_issues: bool = True,
     use_llm_narratives: bool = False,
+    use_template_slotfill: bool = False,
 ) -> ReportIR:
     """Deal에 대한 FDD Report IR을 생성.
 
@@ -173,6 +174,9 @@ def build_report_ir(
     industry_module = get_fdd_industry_module_safe(industry_id)
     industry_ctx = industry_module.get_context()
 
+    # 한국 오버레이 로드
+    korea_overlay = industry_module.get_korea_overlay()
+
     # LLM 내러티브 생성기 (선택적)
     narrator = None
     if use_llm_narratives:
@@ -182,7 +186,17 @@ def build_report_ir(
 
             router = create_fdd_model_router()
             if router.available_providers:
-                narrator = FDDNarrativeGenerator(router)
+                industry_narrative_ctx = industry_module.format_narrative_context()
+                # 한국 오버레이 컨텍스트를 LLM에도 전달
+                if korea_overlay:
+                    overlay_ctx = korea_overlay.format_overlay_context()
+                    if overlay_ctx:
+                        industry_narrative_ctx += f"\n\n{overlay_ctx}"
+                narrator = FDDNarrativeGenerator(
+                    router,
+                    industry_context=industry_narrative_ctx,
+                    industry_id=industry_id,
+                )
         except Exception as e:
             logger.warning(f"LLM narrator init failed, skipping narratives: {e}")
 
@@ -297,10 +311,10 @@ def build_report_ir(
     if industry_ctx.kpi_benchmarks and industry_id != "general":
         benchmark_bullets = []
         for bm in industry_ctx.kpi_benchmarks:
-            low = f"{bm.range_low}" if bm.range_low is not None else "N/A"
-            high = f"{bm.range_high}" if bm.range_high is not None else "N/A"
+            low = f"{bm.benchmark_range[0]}"
+            high = f"{bm.benchmark_range[1]}"
             benchmark_bullets.append(
-                f"{bm.kpi_name}: {low} ~ {high}{bm.unit} ({bm.description})"
+                f"{bm.name_en}: {low} ~ {high}{bm.unit} ({bm.formula})"
             )
         sections.append(
             build_text_block(
@@ -440,6 +454,36 @@ def build_report_ir(
     # 7. Multi-Entity Sections (entity structure, FX rates)
     _build_multi_entity_sections(db, deal_id, sections)
 
+    # 7.5 Korea Overlay (K-IFRS, 규제, 세무)
+    if korea_overlay and industry_id != "general":
+        korea_bullets = []
+
+        if korea_overlay.kifrs_notes:
+            korea_bullets.append("**K-IFRS 조정 사항**")
+            for note in korea_overlay.kifrs_notes:
+                korea_bullets.append(
+                    f"K-IFRS {note.standard_number} ({note.topic_kr}): {note.ebitda_impact}"
+                )
+
+        if korea_overlay.regulatory_items:
+            korea_bullets.append("**규제 검토 사항**")
+            for reg in korea_overlay.regulatory_items:
+                korea_bullets.append(f"{reg.law_name_kr} ({reg.authority}): {reg.fdd_impact}")
+
+        if korea_overlay.tax_items:
+            korea_bullets.append("**세무 검토 사항**")
+            for tax in korea_overlay.tax_items:
+                korea_bullets.append(f"{tax.description_kr}: {tax.fdd_consideration}")
+
+        if korea_bullets:
+            sections.append(
+                build_text_block(
+                    f"한국 PE FDD 특수 고려사항 ({industry_module.industry_name_kr})",
+                    title="Korea Regulatory & Accounting Overlay",
+                    bullet_points=korea_bullets,
+                )
+            )
+
     # 8. Issue Log
     if include_issues:
         issues = (
@@ -472,8 +516,21 @@ def build_report_ir(
                 build_issue_summary_table_block("Issue Summary", issue_list[:10])
             )
 
-    # 8.5 LLM-Generated Narratives (optional)
-    if narrator:
+    # 8.5a Template SlotFill Narratives (new)
+    if use_template_slotfill:
+        _build_slotfill_narratives(
+            sections,
+            deal,
+            qoe_calc,
+            nwc_calc,
+            debt_calc,
+            issues if include_issues else [],
+            industry_module,
+            industry_id,
+        )
+
+    # 8.5b LLM-Generated Narratives (legacy)
+    elif narrator:
         try:
             # Executive Summary narrative
             qoe_summary = None
@@ -557,6 +614,210 @@ def build_report_ir(
     sections.append(build_methodology_block(methodology_steps, limitations=limitations))
 
     return ReportIR(metadata=metadata, sections=sections)
+
+
+# ---------------------------------------------------------------------------
+# Template SlotFill helpers
+# ---------------------------------------------------------------------------
+
+_SECTION_TITLES: dict[str, str] = {
+    "executive_summary": "Executive Summary",
+    "qoe_analysis": "Quality of Earnings Commentary",
+    "nwc_analysis": "Net Working Capital Commentary",
+    "debt_analysis": "Net Debt Commentary",
+    "risk_narrative": "Risk Assessment",
+    "methodology": "Methodology",
+}
+
+
+def _build_fdd_data_dict(
+    deal: Deal,
+    qoe_calc: QoECalculation | None,
+    nwc_calc: NWCCalculation | None,
+    debt_calc: NetDebtCalculation | None,
+    issues: list,
+    industry_module: object | None = None,
+) -> dict:
+    """FDD 분석 데이터를 렌더러에 전달할 dict로 구성한다."""
+    data: dict = {
+        "deal_name": deal.name,
+        "industry_name": getattr(industry_module, "industry_name_en", "General"),
+        "industry_name_kr": getattr(industry_module, "industry_name_kr", "일반"),
+        "analysis_period": "FY2024 - FY2025",
+        "scope_items": "Quality of Earnings, Net Working Capital, Net Debt",
+    }
+
+    if qoe_calc:
+        top_adjs = []
+        for adj in (qoe_calc.adjustment_items or [])[:5]:
+            top_adjs.append({
+                "description": adj.description or "",
+                "amount": _format_currency(adj.amount),
+                "category": adj.category.value if adj.category else "",
+            })
+        data["qoe"] = {
+            "reported_ebitda": _format_currency(qoe_calc.reported_ebitda),
+            "adjusted_ebitda": _format_currency(qoe_calc.adjusted_ebitda),
+            "total_adjustments": _format_currency(qoe_calc.total_adjustments),
+            "adjustment_count": len(qoe_calc.adjustment_items or []),
+            "gross_profit": _format_currency(qoe_calc.gross_profit),
+            "top_adjustments": top_adjs,
+            "category_breakdown": qoe_calc.category_breakdown or {},
+        }
+
+    if nwc_calc:
+        data["nwc"] = {
+            "total_nwc": _format_currency(nwc_calc.total_nwc),
+            "peg_target": _format_currency(nwc_calc.peg_target)
+            if hasattr(nwc_calc, "peg_target") and nwc_calc.peg_target
+            else "N/A",
+            "line_item_count": len(nwc_calc.line_items or []),
+            "peg_scenarios": nwc_calc.peg_scenarios or {},
+        }
+
+    if debt_calc:
+        data["debt"] = {
+            "net_debt": _format_currency(debt_calc.net_debt),
+            "total_debt": _format_currency(debt_calc.total_debt),
+            "total_cash": _format_currency(debt_calc.total_cash),
+            "debt_like_total": _format_currency(debt_calc.debt_like_total),
+            "cash_like_total": _format_currency(debt_calc.cash_like_total),
+        }
+
+    issue_list = []
+    for issue in (issues or []):
+        issue_list.append({
+            "title": issue.title or "",
+            "severity": issue.severity.value if issue.severity else "medium",
+            "category": issue.category.value if issue.category else "",
+            "description": issue.description or "",
+        })
+    data["issues"] = issue_list
+
+    return data
+
+
+def _extract_known_values(fdd_data: dict) -> dict[str, str]:
+    """Guardrail 교차검증을 위한 known_values dict를 구성한다."""
+    known: dict[str, str] = {}
+    for section_key in ("qoe", "nwc", "debt"):
+        section = fdd_data.get(section_key)
+        if isinstance(section, dict):
+            for k, v in section.items():
+                if isinstance(v, str) and v not in ("N/A", ""):
+                    known[k] = v
+    return known
+
+
+def _build_slotfill_narratives(
+    sections: list,
+    deal: Deal,
+    qoe_calc: QoECalculation | None,
+    nwc_calc: NWCCalculation | None,
+    debt_calc: NetDebtCalculation | None,
+    issues: list,
+    industry_module: object,
+    industry_id: str,
+) -> None:
+    """템플릿 슬롯 채우기 방식으로 내러티브를 생성하고 sections에 추가한다."""
+    from pathlib import Path
+
+    from app.agents.guardrails import validate_narrative_claims
+    from app.services.report.slot_fill import (
+        FDDSlotFillPromptBuilder,
+        FDDTemplateRenderer,
+        SlotResponseParser,
+        TemplateRegistry,
+    )
+
+    # 1. 인프라 초기화
+    templates_dir = Path(__file__).parent / "templates"
+    registry = TemplateRegistry(templates_dir)
+    renderer = FDDTemplateRenderer()
+    prompt_builder = FDDSlotFillPromptBuilder()
+    parser = SlotResponseParser()
+    base_blocks = registry.base_blocks
+
+    # 2. FDD 데이터 dict 구성
+    fdd_data = _build_fdd_data_dict(
+        deal, qoe_calc, nwc_calc, debt_calc, issues, industry_module,
+    )
+
+    # 3. LLM 라우터 (L3 슬롯용)
+    router = None
+    try:
+        from app.services.llm.routing import create_fdd_model_router
+
+        router = create_fdd_model_router()
+        if not router.available_providers:
+            router = None
+    except Exception as e:
+        logger.warning("LLM router init failed for slotfill, L2-only mode: %s", e)
+
+    # 4. 산업 내러티브 컨텍스트
+    industry_ctx = ""
+    if hasattr(industry_module, "format_narrative_context"):
+        industry_ctx = industry_module.format_narrative_context()
+
+    # 5. 섹션별 렌더링
+    section_order = [
+        "executive_summary",
+        "qoe_analysis",
+        "nwc_analysis",
+        "debt_analysis",
+        "risk_narrative",
+        "methodology",
+    ]
+
+    for section_id in section_order:
+        if not registry.has(section_id):
+            continue
+
+        template = registry.get(section_id, industry=industry_id)
+        if template is None:
+            continue
+
+        try:
+            # L3 슬롯이 있고 라우터가 있으면 LLM 호출
+            llm_slots: dict[str, str] = {}
+            if template.l3_slots and router:
+                system = prompt_builder.build_system_prompt(
+                    industry_context=industry_ctx,
+                )
+                user = prompt_builder.build_user_prompt(template, fdd_data)
+                response = router.generate(
+                    section_id,
+                    system_prompt=system,
+                    user_prompt=user,
+                    temperature=0.2,
+                    max_tokens=512,
+                )
+                llm_slots = parser.parse(
+                    response.text, list(template.l3_slots.keys()),
+                )
+
+            # 렌더링
+            text = renderer.render(
+                template,
+                fdd_data,
+                llm_slots,
+                industry=industry_id,
+                base_blocks=base_blocks,
+            )
+
+            # Guardrail
+            known_values = _extract_known_values(fdd_data)
+            warnings = validate_narrative_claims(text, known_values)
+            if warnings:
+                logger.warning(
+                    "SlotFill guardrail warnings [%s]: %s", section_id, warnings,
+                )
+
+            title = _SECTION_TITLES.get(section_id, section_id.replace("_", " ").title())
+            sections.append(build_text_block(text, title=title))
+
+        except Exception as e:
+            logger.error("SlotFill failed for section '%s': %s", section_id, e)
 
 
 async def generate_pptx(

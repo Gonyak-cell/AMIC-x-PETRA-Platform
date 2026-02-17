@@ -1,0 +1,75 @@
+section_id: risk_narrative
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  issue_count:
+    level: L2
+    source: issues
+    format: count_items
+    default: "0"
+
+  # ── L3: LLM 생성 ──
+  risk_categorization:
+    level: L3
+    type: paragraph
+    hint: >-
+      Categorize the identified issues by theme (e.g., revenue recognition,
+      cost structure, data quality, related party) in 2-3 sentences.
+      Summarize the severity distribution (critical/high/medium/low).
+    max_tokens: 120
+    data_keys:
+      - issues
+
+  mitigation_suggestions:
+    level: L3
+    type: bullet_list
+    hint: >-
+      Provide 3-4 actionable mitigation suggestions for the key risks
+      as bullet points. Each should be specific and practical.
+    max_tokens: 100
+    data_keys:
+      - issues
+
+  deal_impact:
+    level: L3
+    type: sentence
+    hint: >-
+      Assess the overall deal impact in 1 sentence.
+      Indicate whether the risks are manageable or require
+      significant purchase price adjustments.
+    max_tokens: 60
+    data_keys:
+      - issues
+
+body: |
+  {{@transition_risk}}
+
+  RISK ASSESSMENT
+
+  A total of {{issue_count}} issues were identified during the
+  Financial Due Diligence process.
+
+  Risk Summary:
+
+  {{risk_categorization}}
+
+  Recommended Actions:
+
+  {{mitigation_suggestions}}
+
+  Deal Impact:
+
+  {{deal_impact}}
+
+conditional_blocks:
+  - condition: "has_high_severity_issues"
+    insert_after: risk_categorization
+    text: >-
+      ATTENTION: Critical or high-severity issues have been identified
+      that may require immediate management attention and could
+      materially affect the transaction valuation.
+
+includes:
+  - transition_risk

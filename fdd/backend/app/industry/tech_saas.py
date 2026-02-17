@@ -9,6 +9,7 @@ from app.industry.models import (
     FDDAdjustmentRule,
     FDDDebtClassification,
     FDDKPIBenchmark,
+    FDDNarrativeTemplate,
     FDDNWCNorm,
 )
 from app.industry.registry import register_fdd_industry
@@ -113,6 +114,30 @@ class FDDTechSaaSModule(FDDIndustryModule):
                 special_treatments={
                     "LEASE_LIABILITIES": "사무실 리스 — 일반적으로 유의미",
                     "DEFERRED_REVENUE": "선수수익은 NWC 항목으로 분류 (debt-like 제외)",
+                },
+            ),
+        ]
+
+    def get_narrative_templates(self) -> list[FDDNarrativeTemplate]:
+        return [
+            FDDNarrativeTemplate(
+                section_id="executive_summary",
+                template_text=(
+                    "SaaS/구독 모델 특성을 반영한 FDD 분석:\n"
+                    "- ARR/MRR 기반 수익 지속성 평가\n"
+                    "- 높은 R&D 비중의 EBITDA 정상화 관점\n"
+                    "- 음의 NWC 구조(선수수익)의 긍정적 해석"
+                ),
+                emphasis_areas=[
+                    "ARR/MRR 성장률 및 NRR (순매출유지율)",
+                    "R&D 자본화/SBC 조정의 EBITDA 영향",
+                    "CAC 회수 기간 및 LTV/CAC 비율",
+                    "이탈률(Churn Rate) 추세와 수익 지속성",
+                ],
+                terminology_overrides={
+                    "매출액": "ARR 또는 매출액",
+                    "재고": "해당 없음 (소프트웨어/서비스)",
+                    "설비투자": "R&D 투자 및 클라우드 인프라",
                 },
             ),
         ]

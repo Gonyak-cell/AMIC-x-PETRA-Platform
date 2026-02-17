@@ -1,0 +1,77 @@
+# Investment Highlights — 헬스케어/바이오 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 파이프라인 가치 평가 및 규제 해자 분석 추가
+section_id: investment_highlights
+version: "1.0"
+source_reference: "헬스케어/바이오 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 바이오 투자 특화 ──
+  pipeline_value_assessment:
+    level: L3
+    type: paragraph
+    hint: >-
+      파이프라인 가치를 투자 관점에서 평가. 각 파이프라인의 임상 단계,
+      성공 확률(PoS), rNPV 기반 가치 추정, 특허 잔여 수명,
+      적응증 확장 가능성을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.key_products
+      - derived_metrics
+
+  regulatory_moat_assessment:
+    level: L3
+    type: sentence
+    hint: >-
+      규제 기반 진입장벽의 투자 가치를 1-2문장으로 평가.
+      FDA/MFDS 승인, 데이터 독점권(Data Exclusivity),
+      바이오시밀러 진입 시차 등.
+    max_tokens: 80
+    data_keys:
+      - company_overview.certifications
+      - company_overview.business_model
+
+body: |
+  {{@transition_investment}}
+
+  {{company_name}}(이하 "대상회사")에 대한 본 {{transaction_type}} 기회의
+  핵심 투자 하이라이트를 헬스케어/바이오 관점에서 제시하면 다음과 같습니다.
+
+  {{highlights_overview}}
+
+  1. 파이프라인 가치 및 성장 잠재력
+
+  {{pipeline_value_assessment}}
+  파이프라인의 단계별 진전은 기업 가치의 비선형적 상승을 견인하는 핵심 동인이며,
+  다수의 파이프라인 보유는 리스크 분산 효과를 제공합니다.
+
+  2. 규제 기반 경쟁 해자
+
+  {{highlight_market_position}}
+  {{regulatory_moat_assessment}}
+  규제 승인 및 IP 포트폴리오에 기반한 높은 진입장벽은
+  경쟁사의 시장 진입을 효과적으로 억제하는 핵심 방어 자산입니다.
+
+  3. 재무적 건전성 및 수익성
+
+  {{highlight_financial_strength}}
+  R&D 집중 투자 단계에서도 핵심 사업의 현금 창출 능력은 사업 지속성을 뒷받침하고 있습니다.
+
+  4. 성장 잠재력
+
+  {{highlight_growth_potential}}
+  글로벌 라이선스 아웃(License-out)과 적응증 확장은 바이오 기업의 가치를
+  비선형적으로 증대시킬 수 있는 핵심 성장 경로입니다.
+
+  5. 리스크 완화 요인
+
+  {{highlight_risk_mitigation}}
+  이러한 구조적 방어 요인은 투자 리스크를 효과적으로 완화하고 있습니다.
+
+  {{@closing_positive}}
+
+includes:
+  - transition_investment
+  - closing_positive

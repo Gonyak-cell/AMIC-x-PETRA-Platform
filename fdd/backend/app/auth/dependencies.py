@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -45,23 +45,32 @@ _DEV_USER = CurrentUser(
 
 
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     db: Session = Depends(get_db),
 ) -> CurrentUser:
     """JWT 토큰에서 현재 사용자를 추출하고 검증한다.
 
+    쿠키 또는 Authorization 헤더에서 토큰을 읽는다.
     AUTH_ENABLED=False이면 Admin 권한의 dev 사용자를 반환한다.
     """
     if not settings.auth_enabled:
         return _DEV_USER
 
-    if credentials is None:
+    # 1) Authorization 헤더에서 토큰 추출
+    token: str | None = credentials.credentials if credentials else None
+
+    # 2) 헤더 없으면 쿠키에서 토큰 추출
+    if token is None:
+        token = request.cookies.get("access_token")
+
+    if token is None:
         raise AuthenticationError(
             ErrorCode.AUTH_TOKEN_INVALID,
-            "Authorization header required",
+            "Authentication required",
         )
 
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(token)
 
     # jti가 있으면 블랙리스트 확인 (레거시 토큰은 jti 없으므로 스킵)
     jti = payload.get("jti")

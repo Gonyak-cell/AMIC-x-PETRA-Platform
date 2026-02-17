@@ -1,0 +1,31 @@
+section_id: qoe_analysis
+version: "1.0"
+source_reference: "Tech/SaaS FDD Override"
+
+slots:
+  saas_metrics_note:
+    level: L3
+    type: paragraph
+    hint: >-
+      Analyze SaaS-specific metrics relevant to QoE: ARR vs revenue,
+      net dollar retention, gross margin by product line.
+      Connect these metrics to EBITDA quality and sustainability.
+    max_tokens: 100
+    data_keys:
+      - qoe.category_breakdown
+      - qoe.reported_ebitda
+      - qoe.adjusted_ebitda
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: ebitda_quality_assessment
+    text: >-
+      SaaS Metrics Context:
+
+      {{saas_metrics_note}}
+
+      Key adjustment categories for technology companies include:
+      (1) R&D capitalization normalization under K-IFRS 1038,
+      (2) Stock-based compensation (SBC) add-back,
+      (3) Customer acquisition cost (CAC) capitalization assessment,
+      (4) One-time cloud migration or hosting transition costs.

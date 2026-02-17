@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Landmark, AlertCircle } from "lucide-react";
 import { useFunds } from "@/modules/kiis/hooks/useFunds";
-import { Card, DataTable, Input, Select, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
+import { useFundFilters } from "@/modules/kiis/hooks/useFundFilters";
+import { Card, DataTable, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { FundListItem, FundType } from "@/modules/kiis/types/fund";
+import type { FundListItem } from "@/modules/kiis/types/fund";
 import { formatAmount } from "@/lib/format";
-
-const FUND_TYPE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "blind", label: "Blind" },
-  { value: "project", label: "Project" },
-];
+import { FundFilterPanel } from "@/modules/kiis/components/FundFilterPanel";
+import {
+  ASSET_CLASS_BADGE_VARIANT,
+  ASSET_CLASS_LABELS,
+  FUND_STATUS_BADGE_VARIANT,
+  FUND_STATUS_LABELS,
+} from "@/modules/kiis/constants/fundFilters";
 
 const columns: Column<FundListItem>[] = [
   {
@@ -29,6 +31,28 @@ const columns: Column<FundListItem>[] = [
     render: (row) => (
       <Badge variant={row.fund_type === "blind" ? "info" : "neutral"}>
         {row.fund_type}
+      </Badge>
+    ),
+  },
+  {
+    key: "asset_class",
+    header: "Class",
+    align: "center",
+    width: "90px",
+    render: (row) => (
+      <Badge variant={ASSET_CLASS_BADGE_VARIANT[row.asset_class] ?? "neutral"}>
+        {ASSET_CLASS_LABELS[row.asset_class] ?? row.asset_class}
+      </Badge>
+    ),
+  },
+  {
+    key: "fund_status",
+    header: "Status",
+    align: "center",
+    width: "90px",
+    render: (row) => (
+      <Badge variant={FUND_STATUS_BADGE_VARIANT[row.fund_status] ?? "neutral"}>
+        {FUND_STATUS_LABELS[row.fund_status] ?? row.fund_status}
       </Badge>
     ),
   },
@@ -61,47 +85,57 @@ const columns: Column<FundListItem>[] = [
 
 export default function FundListPage() {
   const navigate = useNavigate();
-  const [companyName, setCompanyName] = useState("");
-  const [fundType, setFundType] = useState("");
-  const [page, setPage] = useState(1);
-
-  const { data, isLoading } = useFunds({
-    company_name: companyName || undefined,
-    fund_type: (fundType as FundType) || undefined,
+  const {
+    params,
+    setFilter,
+    getSelected,
+    setPage,
+    resetFilters,
+    activeFilterCount,
     page,
-    size: 20,
-  });
+  } = useFundFilters();
+
+  // 로컬 텍스트 입력 상태 (디바운스용)
+  const [companyName, setCompanyName] = useState(params.company_name ?? "");
+  const [fundName, setFundName] = useState(params.fund_name ?? "");
+
+  const { data, isLoading } = useFunds(params);
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="text-sm text-text-secondary">
+        <Link to="/kiis/funds" className="hover:text-accent">
+          ← GP 목록으로 돌아가기
+        </Link>
+      </div>
+
       <PageHero
-        title="Funds"
-        subtitle="PE & VC fund registry"
+        title="All Funds"
+        subtitle="전체 펀드 목록 · PE & VC fund registry"
         compact
       />
 
-      <div className="flex gap-3 items-end">
-        <div className="flex-1 max-w-sm">
-          <Input
-            label="Manager Company"
-            placeholder="Search by manager name..."
-            value={companyName}
-            onChange={(e) => {
-              setCompanyName(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <Select
-          label="Fund Type"
-          options={FUND_TYPE_OPTIONS}
-          value={fundType}
-          onChange={(e) => {
-            setFundType(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
+      <FundFilterPanel
+        companyName={companyName}
+        fundName={fundName}
+        onCompanyNameChange={setCompanyName}
+        onFundNameChange={setFundName}
+        fundTypes={getSelected("fund_type")}
+        legalTypes={getSelected("legal_type")}
+        assetClasses={getSelected("asset_class")}
+        fundStatuses={getSelected("fund_status")}
+        vintageFrom={params.vintage_from?.toString() ?? ""}
+        vintageTo={params.vintage_to?.toString() ?? ""}
+        amountPreset={new URLSearchParams(window.location.search).get("amount_preset") ?? ""}
+        onSetFilter={setFilter}
+        onReset={() => {
+          resetFilters();
+          setCompanyName("");
+          setFundName("");
+        }}
+        activeFilterCount={activeFilterCount}
+      />
 
       <Card padding="none">
         {!isLoading && (!data?.items || data.items.length === 0) ? (

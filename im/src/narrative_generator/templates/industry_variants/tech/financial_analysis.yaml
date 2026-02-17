@@ -1,0 +1,82 @@
+# Financial Analysis — Tech/SaaS 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 SaaS 핵심 지표(ARR, NRR, Unit Economics) 분석 섹션 추가
+section_id: financial_analysis
+version: "1.0"
+source_reference: "테크/SaaS IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: SaaS 핵심 지표 ──
+  saas_metrics_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      SaaS 핵심 지표를 분석. ARR(Annual Recurring Revenue), MRR, NRR(Net Revenue Retention),
+      월간 이탈률(Churn Rate), 구독 기반 반복 매출 비중을 수치와 함께 3-4문장으로 서술.
+      Rule of 40 (매출성장률 + EBITDA 마진) 관점의 평가도 포함.
+    max_tokens: 150
+    data_keys:
+      - financial_statements.revenue
+      - derived_metrics
+      - segment_revenue
+      - company_overview.business_model
+
+  unit_economics_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      SaaS 유닛 이코노믹스를 분석. CAC(Customer Acquisition Cost),
+      LTV(Customer Lifetime Value), LTV/CAC 비율, CAC Payback Period를
+      수치와 함께 2-3문장으로 서술. 업계 벤치마크 대비 평가.
+    max_tokens: 120
+    data_keys:
+      - derived_metrics
+      - financial_statements.sga_expenses
+      - financial_statements.revenue
+
+body: |
+  {{@transition_financial}}
+
+  {{company_name}}(이하 "대상회사")의 재무 실적을 SaaS 기업 특성을 반영하여 다각도로 분석하면 다음과 같습니다.
+
+  1. 매출 및 수익성 분석
+
+  {{revenue_profitability_analysis}}
+  {{@financial_note}}
+
+  2. SaaS 핵심 지표 (Key SaaS Metrics)
+
+  {{saas_metrics_analysis}}
+  SaaS 비즈니스의 핵심인 반복 매출의 질적 수준과 고객 유지력은 대상회사의 장기 수익 가시성을 좌우하는 핵심 요소입니다.
+
+  3. 유닛 이코노믹스 (Unit Economics)
+
+  {{unit_economics_analysis}}
+  건전한 유닛 이코노믹스는 대상회사의 성장 투자가 경제적으로 합리적임을 입증하며, 규모 확대에 따른 수익성 개선을 기대할 수 있는 근거입니다.
+
+  4. 재무 건전성 분석
+
+  {{balance_sheet_analysis}}
+  SaaS 기업 특성상, 선수수익(Deferred Revenue) 구조에 따른 음의 순운전자본(NWC)은 사업 모델의 강점으로 해석됩니다.
+
+  5. 현금흐름 분석
+
+  {{cash_flow_analysis}}
+  구독 기반 모델의 예측 가능한 현금흐름은 대상회사의 재무적 안정성과 성장 투자 여력을 뒷받침하고 있습니다.
+
+  6. 핵심 지표 종합
+
+  {{key_metrics_summary}}
+  {{financial_outlook}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: saas_metrics_analysis
+    text: >-
+      특히, NRR이 100%를 상회하는 것은 기존 고객 기반만으로도
+      순매출 성장이 가능함을 의미하며, 이는 SaaS 기업의 가장 강력한 성장 지표입니다.
+
+includes:
+  - transition_financial
+  - financial_note

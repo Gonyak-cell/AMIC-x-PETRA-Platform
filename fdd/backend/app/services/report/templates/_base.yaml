@@ -1,0 +1,47 @@
+version: "1.0"
+
+blocks:
+  - name: fdd_disclaimer
+    text: >-
+      This analysis is based on information and data provided by the management
+      of the target company and does not constitute an independent audit.
+      The findings should be read in conjunction with the full report.
+
+  - name: fdd_currency_note
+    text: "(Note: All amounts in million KRW unless otherwise stated)"
+
+  - name: fdd_confidential
+    text: >-
+      This document is strictly confidential and is intended solely for the
+      use of the addressee. It may not be reproduced or distributed without
+      prior written consent.
+
+  - name: transition_qoe
+    text: >-
+      The following section presents the Quality of Earnings (QoE) analysis,
+      identifying adjustments to arrive at Adjusted EBITDA.
+
+  - name: transition_nwc
+    text: >-
+      The following section presents the Net Working Capital (NWC) analysis,
+      assessing the normalized level of working capital.
+
+  - name: transition_debt
+    text: >-
+      The following section presents the Net Debt analysis,
+      identifying debt-like and cash-like items.
+
+  - name: transition_risk
+    text: >-
+      The following section summarizes the key risks and issues identified
+      during the Financial Due Diligence process.
+
+  - name: fdd_methodology_note
+    text: >-
+      The methodology follows internationally recognized Financial Due Diligence
+      standards and best practices.
+
+  - name: fdd_scope_note
+    text: >-
+      The scope of this analysis covers Quality of Earnings, Net Working Capital,
+      and Net Debt assessments as agreed in the engagement letter.

@@ -2,6 +2,8 @@
 
 > **필수 참조**: 모든 코드 리뷰 에이전트는 **Verified Claim Protocol** (`.claude/rules/verified-claim-protocol.md`)을 적용합니다.
 > 이 파일의 6개 원칙은 VCP의 보충 규칙으로 함께 적용됩니다.
+>
+> **문서화 필수**: 모든 오류 수정 및 리뷰 내역은 **Review Documentation Rule** (`.claude/rules/review-documentation.md`)에 따라 `review/{카테고리}/` 폴더에 기록합니다.
 
 ## 코드 리뷰 시 할루시네이션 방지 규칙
 
@@ -35,3 +37,9 @@
 - "수정됨" 판정 시 반드시 현재 코드를 Read하여 확인
 - 이전 리뷰의 수정 여부를 추측하지 않고 실제 검증
 - git diff가 가능하면 커밋 내역도 확인
+
+### 7. 수정 내역 문서화
+- 오류 수정 후 반드시 `review/{카테고리}/` 폴더에 수정 내역 문서 작성
+- 카테고리 폴더가 없으면 자동 생성 (`mkdir -p review/{카테고리}`)
+- 문서 작성 후 `review/INDEX.md` 업데이트
+- 상세 규칙: `.claude/rules/review-documentation.md` 참조

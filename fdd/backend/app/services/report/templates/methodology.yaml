@@ -1,0 +1,71 @@
+section_id: methodology
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  deal_name:
+    level: L2
+    source: deal_name
+
+  industry_name:
+    level: L2
+    source: industry_name
+
+  industry_name_kr:
+    level: L2
+    source: industry_name_kr
+
+  scope_items:
+    level: L2
+    source: scope_items
+    default: "Quality of Earnings, Net Working Capital, Net Debt"
+
+  analysis_period:
+    level: L2
+    source: analysis_period
+    default: "FY2024 - FY2025"
+
+body: |
+  METHODOLOGY
+
+  {{@fdd_methodology_note}}
+
+  The Financial Due Diligence analysis for {{deal_name}} was conducted
+  following a structured seven-step process:
+
+  1. Data Collection
+     Collected Trial Balance, General Ledger, and supporting schedules
+     from the Target Company's management for the period {{analysis_period}}.
+
+  2. Account Mapping
+     Mapped source accounts to the standardized FDD chart of accounts
+     to enable consistent analysis across periods.
+
+  3. Quality of Earnings Analysis
+     Calculated reported EBITDA and identified adjustment candidates
+     using {{industry_name}} ({{industry_name_kr}})-specific adjustment rules.
+
+  4. Net Working Capital Analysis
+     Analyzed current assets and current liabilities (excluding cash
+     and debt items) to determine the normalized NWC level and peg target.
+
+  5. Net Debt Analysis
+     Identified and classified all debt-like and cash-like items
+     to calculate the adjusted Net Debt position.
+
+  6. Issue Identification
+     Documented all material findings, exceptions, and areas requiring
+     further investigation during the analysis.
+
+  7. Reporting
+     Compiled findings into this Financial Due Diligence report,
+     covering: {{scope_items}}.
+
+  {{@fdd_scope_note}}
+
+conditional_blocks: []
+
+includes:
+  - fdd_methodology_note
+  - fdd_scope_note

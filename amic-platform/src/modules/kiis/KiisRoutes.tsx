@@ -5,6 +5,8 @@ import DashboardPage from "./pages/DashboardPage";
 
 const CompanyListPage = lazy(() => import("./pages/CompanyListPage"));
 const CompanyDetailPage = lazy(() => import("./pages/CompanyDetailPage"));
+const GPListPage = lazy(() => import("./pages/GPListPage"));
+const GPDetailPage = lazy(() => import("./pages/GPDetailPage"));
 const FundListPage = lazy(() => import("./pages/FundListPage"));
 const FundDetailPage = lazy(() => import("./pages/FundDetailPage"));
 const ReitListPage = lazy(() => import("./pages/ReitListPage"));
@@ -28,7 +30,9 @@ export default function KiisRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="companies" element={<CompanyListPage />} />
         <Route path="companies/:corpCode" element={<CompanyDetailPage />} />
-        <Route path="funds" element={<FundListPage />} />
+        <Route path="funds" element={<GPListPage />} />
+        <Route path="funds/all" element={<FundListPage />} />
+        <Route path="funds/gp/:companyCode" element={<GPDetailPage />} />
         <Route path="funds/:fundCode" element={<FundDetailPage />} />
         <Route path="reits" element={<ReitListPage />} />
         <Route path="reits/:reitsCode" element={<ReitDetailPage />} />

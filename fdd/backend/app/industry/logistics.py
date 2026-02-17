@@ -9,6 +9,7 @@ from app.industry.models import (
     FDDAdjustmentRule,
     FDDDebtClassification,
     FDDKPIBenchmark,
+    FDDNarrativeTemplate,
     FDDNWCNorm,
 )
 from app.industry.registry import register_fdd_industry
@@ -116,6 +117,30 @@ class FDDLogisticsModule(FDDIndustryModule):
                 special_treatments={
                     "LEASE_LIABILITIES": "운송수단 리스가 주요 — 운영리스 vs 금융리스 구분 필수",
                     "FUEL_HEDGING": "유류 헤지 파생상품은 시가평가 후 net debt 판단",
+                },
+            ),
+        ]
+
+    def get_narrative_templates(self) -> list[FDDNarrativeTemplate]:
+        return [
+            FDDNarrativeTemplate(
+                section_id="executive_summary",
+                template_text=(
+                    "물류 산업 FDD 분석 시 고려 사항:\n"
+                    "- 유류비 변동의 EBITDA 정상화 (유가 노이즈 제거)\n"
+                    "- 운송수단(차량/선박) 리스부채의 Net Debt 포함 여부\n"
+                    "- 차량가동률과 고정비 레버리지 효과"
+                ),
+                emphasis_areas=[
+                    "유류비/매출 비율 추세 및 유가 정상화",
+                    "차량가동률(Fleet Utilization) 및 고정비 구조",
+                    "IFRS 16 리스부채의 Net Debt 분류",
+                    "톤·km당 매출 및 네트워크 효율성",
+                ],
+                terminology_overrides={
+                    "매출액": "운임수익 (화물 + 택배 + 포워딩)",
+                    "설비투자": "차량·선박·항공기 구입 및 교체",
+                    "감가상각": "운송수단 감가상각 (내용연수 검토 필수)",
                 },
             ),
         ]

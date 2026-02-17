@@ -1,0 +1,80 @@
+# Business Model — 제조업 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 생산 역량 및 공급망 분석 추가
+section_id: business_model
+version: "1.0"
+source_reference: "제조업 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 제조업 특화 ──
+  production_capability:
+    level: L3
+    type: paragraph
+    hint: >-
+      생산 역량을 분석. 설비종합효율(OEE), 생산 CAPA와 실제 가동률,
+      수율(Yield Rate), 생산 라인 수와 자동화 수준,
+      스마트 팩토리 도입 현황을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.key_products
+      - derived_metrics
+
+  supply_chain_structure:
+    level: L3
+    type: paragraph
+    hint: >-
+      공급망 구조를 분석. 핵심 원재료 조달 구조, 공급업체 다변화 수준,
+      글로벌 공급망 리스크 관리, 물류 네트워크 효율성을
+      2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - company_overview.value_chain
+      - company_overview.key_products
+      - key_customers
+
+body: |
+  {{@transition_business_model}}
+
+  {{company_name}}(이하 "대상회사")의 비즈니스 모델을 제조업의 관점에서
+  수익 구조, 생산 역량, 공급망, 경쟁 우위, 확장성의 관점으로 분석하면 다음과 같습니다.
+
+  1. 비즈니스 모델 개요
+
+  {{business_model_overview}}
+  주요 제품은 {{key_products}}이며, {{certifications}} 등의 인증을 보유하고 있습니다.
+
+  2. 수익 구조 (Revenue Model)
+
+  {{revenue_structure}}
+  주요 고객사로는 {{key_customers}} 등이 있으며,
+  안정적인 거래 관계를 기반으로 수익 기반을 형성하고 있습니다.
+
+  3. 생산 역량 (Production Capability)
+
+  {{production_capability}}
+  높은 설비 가동률과 수율은 제조업 기업의 원가 경쟁력을 좌우하는 핵심 지표이며,
+  스마트 팩토리 도입을 통한 추가 효율화 잠재력이 존재합니다.
+
+  4. 공급망 구조 (Supply Chain)
+
+  {{supply_chain_structure}}
+  안정적인 원재료 조달력과 공급업체 다변화는 제조업 기업의 사업 연속성을 보장하는 핵심 요소입니다.
+
+  5. 경쟁 우위 및 진입장벽 (Competitive Moats)
+
+  {{competitive_moats}}
+  축적된 생산 노하우와 설비 투자에 따른 원가 경쟁력은
+  신규 진입자 대비 뚜렷한 구조적 경쟁 해자입니다.
+
+  6. 가치사슬 내 포지션
+
+  {{value_chain_position}}
+
+  종합하면, {{scalability_assessment}}
+  대상회사의 비즈니스 모델은 축적된 생산 역량과 안정적 공급망을 기반으로
+  규모의 경제(Economies of Scale)에 따른 수익성 개선이 기대됩니다.
+
+includes:
+  - transition_business_model

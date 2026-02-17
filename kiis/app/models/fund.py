@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -19,6 +19,12 @@ class Fund(TimestampMixin, Base):
         Integer, ForeignKey("companies.id", ondelete="SET NULL"), index=True, comment="운용사 기업 ID"
     )
     fund_type: Mapped[str] = mapped_column(String(20), comment="펀드 유형 (blind/project)")
+    legal_type: Mapped[str | None] = mapped_column(
+        String(30), index=True, comment="법률상 유형 (professional_private/general_private/public)"
+    )
+    asset_class: Mapped[str | None] = mapped_column(
+        String(30), index=True, comment="자산 유형 (vc/pef/real_estate/infra/mezzanine/fund_of_funds)"
+    )
     fund_category: Mapped[str | None] = mapped_column(String(50), comment="펀드 분류 (VC/PEF)")
     company_name: Mapped[str] = mapped_column(String(200), index=True, comment="운용사명")
     company_code: Mapped[str | None] = mapped_column(String(50), comment="운용사 코드")
@@ -32,9 +38,15 @@ class Fund(TimestampMixin, Base):
     is_maturity_alert: Mapped[bool] = mapped_column(Boolean, default=False, comment="회수 집중 구간 여부 (7~10년차)")
     description: Mapped[str | None] = mapped_column(Text, comment="펀드 설명")
     source_url: Mapped[str | None] = mapped_column(String(500), comment="출처 URL")
+    kofia_last_synced: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, comment="KOFIA 마지막 동기화 시각"
+    )
 
     company: Mapped["Company | None"] = relationship(back_populates="funds")  # noqa: F821
     managers: Mapped[list["FundManager"]] = relationship(back_populates="fund", cascade="all, delete-orphan")
+    deals: Mapped[list["Deal"]] = relationship(  # noqa: F821
+        foreign_keys="Deal.fund_id", back_populates="fund"
+    )
 
 
 class FundManager(TimestampMixin, Base):

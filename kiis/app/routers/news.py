@@ -14,7 +14,7 @@ def get_news_service() -> NewsService:
     return NewsService()
 
 
-@router.get("/", response_model=NewsListResponse, summary="뉴스 목록 조회")
+@router.get("", response_model=NewsListResponse, summary="뉴스 목록 조회")
 async def list_news(
     source: str | None = Query(None, max_length=50, description="출처 필터 (platum, dealsite)"),
     date_from: str | None = Query(None, max_length=10, description="시작일 (YYYY-MM-DD)"),

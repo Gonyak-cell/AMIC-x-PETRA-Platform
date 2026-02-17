@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     KOFIA_RATE_LIMIT_PER_MINUTE: int = 20  # 3초 간격 = 분당 20회
     KOFIA_RATE_LIMIT_PER_DAY: int = 1000
     KOFIA_REQUEST_DELAY: float = 3.0  # robots.txt 준수 최소 간격 (초)
+    KOFIA_DB_FRESHNESS_HOURS: int = 24  # DB 데이터 최신 판별 기준 (시간)
 
     # Slack
     SLACK_WEBHOOK_URL: str = ""

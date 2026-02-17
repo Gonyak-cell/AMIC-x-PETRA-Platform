@@ -9,7 +9,7 @@ from app.schemas.company import CompanyItem, CompanyListItem, CompanyListRespons
 router = APIRouter()
 
 
-@router.get("/", response_model=CompanyListResponse, summary="기업 목록 조회")
+@router.get("", response_model=CompanyListResponse, summary="기업 목록 조회")
 async def list_companies(
     search: str | None = Query(None, description="기업명 검색어"),
     corp_cls: str | None = Query(None, description="법인구분 (Y/K/N/E)"),

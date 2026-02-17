@@ -9,25 +9,59 @@ import type { AuthUser } from "@/types/auth";
 import type { NotificationItem } from "@/types/notification";
 import type { PaginatedExports } from "@/types/export";
 
-// ── Auth Fixtures ──
+// ── Auth Fixtures (시드 계정 — scripts/seed-users.py 동기화) ──
 
-export const mockUser: AuthUser = {
-  id: "user-1",
-  email: "admin@amic.co.kr",
-  display_name: "Admin User",
-  role: "ADMIN",
-  is_active: true,
-  created_at: "2025-01-01T00:00:00Z",
-};
+export interface SeedAccount {
+  email: string;
+  password: string;
+  user: AuthUser;
+}
 
-export const mockViewerUser: AuthUser = {
-  id: "user-2",
-  email: "viewer@amic.co.kr",
-  display_name: "Viewer User",
-  role: "VIEWER",
-  is_active: true,
-  created_at: "2025-01-01T00:00:00Z",
-};
+export const SEED_ACCOUNTS: SeedAccount[] = [
+  {
+    email: "jwsuh@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-1", email: "jwsuh@amic.kr", display_name: "서지원",
+      role: "ADMIN", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+  {
+    email: "ytkim@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-2", email: "ytkim@amic.kr", display_name: "김용태",
+      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+  {
+    email: "yhlim@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-3", email: "yhlim@amic.kr", display_name: "임영훈",
+      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+  {
+    email: "wsjo@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-4", email: "wsjo@amic.kr", display_name: "조원석",
+      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+  {
+    email: "bj.park@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-5", email: "bj.park@amic.kr", display_name: "박병준",
+      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+];
+
+// 기본 mockUser (하위 호환)
+export const mockUser: AuthUser = SEED_ACCOUNTS[0].user;
 
 // ── FDD Fixtures ──
 

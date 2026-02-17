@@ -54,6 +54,9 @@ class FundListItem(BaseModel):
     fund_code: str = Field(..., description="펀드 표준코드")
     fund_name: str = Field(..., description="펀드명")
     fund_type: str = Field(..., description="펀드 유형 (blind/project)")
+    legal_type: str = Field("", description="법률 유형 (professional_private/general_private/public)")
+    asset_class: str = Field("", description="자산 클래스 (vc/pef/real_estate/infra/mezzanine/fund_of_funds)")
+    fund_status: str = Field("active", description="펀드 상태 (active/harvest/liquidated)")
     company_name: str = Field(..., description="운용사명")
     total_amount: Decimal | None = Field(None, description="설정액 (원)")
     vintage_year: int | None = Field(None, description="빈티지 연도")
@@ -74,3 +77,26 @@ class FundDetailResponse(BaseModel):
 
     fund: FundItem
     managers: list[FundManagerItem] = Field(default_factory=list, description="운용 전문인력 목록")
+
+
+# --- GP(운용사) 집계 ---
+class GPListItem(BaseModel):
+    """운용사(GP) 집계 정보"""
+
+    company_name: str = Field(..., description="운용사명")
+    company_code: str = Field("", description="운용사 코드 (KOFIA)")
+    fund_count: int = Field(..., description="운용 펀드 수")
+    active_fund_count: int = Field(0, description="운용중 펀드 수")
+    total_aum: Decimal | None = Field(None, description="총 AUM — 설정액 합계 (원)")
+    asset_classes: list[str] = Field(default_factory=list, description="자산 클래스 목록")
+    vintage_range: str | None = Field(None, description="빈티지 범위 (예: 2018~2024)")
+    has_maturity_alert: bool = Field(False, description="만기 경고 펀드 존재 여부")
+
+
+class GPListResponse(BaseModel):
+    """운용사(GP) 목록 응답"""
+
+    total: int
+    page: int
+    size: int
+    items: list[GPListItem]

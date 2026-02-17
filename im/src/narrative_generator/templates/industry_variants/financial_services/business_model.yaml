@@ -1,0 +1,74 @@
+# Business Model — 금융서비스 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 규제 프레임워크 및 수수료 수익 구조 분석 추가
+section_id: business_model
+version: "1.0"
+source_reference: "금융서비스 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 금융서비스 특화 ──
+  regulatory_framework:
+    level: L3
+    type: paragraph
+    hint: >-
+      규제 프레임워크와 라이선스 구조를 분석. 보유 라이선스/인허가 종류,
+      감독 당국(금융위/금감원) 관계, 규제 준수 체계,
+      규제 변화에 대한 대응 역량을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.certifications
+      - company_overview.business_model
+
+  fee_income_structure:
+    level: L3
+    type: paragraph
+    hint: >-
+      수수료 수익 구조와 다변화 수준을 분석. 이자수익 vs 비이자수익 비중,
+      자산관리(WM) 수수료, 투자은행(IB) 수수료, 결제/송금 수수료 등
+      수익원 다변화를 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - segment_revenue
+      - financial_statements.revenue
+      - company_overview.business_model
+
+body: |
+  {{@transition_business_model}}
+
+  {{company_name}}(이하 "대상회사")의 비즈니스 모델을 금융서비스업의 관점에서
+  수익 구조, 규제 프레임워크, 경쟁 우위, 가치사슬, 확장성의 관점으로 분석하면 다음과 같습니다.
+
+  1. 비즈니스 모델 개요
+
+  {{business_model_overview}}
+  주요 금융 서비스는 {{key_products}}이며, {{certifications}} 등의 라이선스를 보유하고 있습니다.
+
+  2. 수익 구조 (Revenue Model)
+
+  {{revenue_structure}}
+  {{fee_income_structure}}
+  주요 고객층으로는 {{key_customers}} 등이 있으며,
+  다변화된 수익 기반은 경기 변동에 대한 안정성을 제공합니다.
+
+  3. 규제 프레임워크 (Regulatory Framework)
+
+  {{regulatory_framework}}
+  금융업 라이선스에 기반한 규제 진입장벽은 가장 강력한 구조적 해자(Moat)이며,
+  규제 준수 역량은 사업 지속성의 전제 조건입니다.
+
+  4. 경쟁 우위 및 진입장벽 (Competitive Moats)
+
+  {{competitive_moats}}
+  이러한 경쟁 우위 요인은 대상회사의 시장 지위를 장기적으로 보호하는 핵심 자산입니다.
+
+  5. 가치사슬 내 포지션
+
+  {{value_chain_position}}
+
+  종합하면, {{scalability_assessment}}
+  대상회사의 비즈니스 모델은 규제 기반 진입장벽과 다변화된 수익 구조를 기반으로
+  안정적인 수익 창출과 성장 가능성을 동시에 보유하고 있습니다.
+
+includes:
+  - transition_business_model

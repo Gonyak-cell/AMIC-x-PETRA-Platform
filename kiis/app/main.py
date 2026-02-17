@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +50,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 _INSECURE_DEFAULT_KEY = "change-this-to-a-random-secret-key"
 
+# Alembic 프로젝트 루트 (kiis/)
+_ALEMBIC_DIR = Path(__file__).resolve().parent.parent
+
+
+async def _run_alembic_upgrade() -> None:
+    """서버 시작 시 Alembic 마이그레이션을 자동 실행한다."""
+
+    def _upgrade() -> None:
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config(str(_ALEMBIC_DIR / "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", str(_ALEMBIC_DIR / "migrations"))
+        command.upgrade(alembic_cfg, "head")
+
+    try:
+        await asyncio.to_thread(_upgrade)
+        logger.info("Alembic migration completed (upgrade to head)")
+    except Exception as e:
+        logger.warning("Alembic migration skipped: %s", e)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,13 +101,18 @@ async def lifespan(app: FastAPI):
         if not settings.DART_API_KEY:
             logger.warning("DART_API_KEY is empty — DART API calls will fail")
 
-    # Startup
+    # Startup — Auto-migrate DB
+    await _run_alembic_upgrade()
+
     await init_redis()
     await init_elasticsearch()
     await init_scheduler()
     logger.info("KIIS application started")
     yield
     # Shutdown
+    from app.routers.kofia import close_kofia_service
+
+    await close_kofia_service()
     await close_scheduler()
     await close_elasticsearch()
     await close_redis()

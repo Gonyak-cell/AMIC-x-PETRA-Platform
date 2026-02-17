@@ -6,6 +6,7 @@ import {
   Check,
   AlertTriangle,
   FileText,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -19,6 +20,7 @@ import {
 import { useDealsByCompany } from "@/modules/kiis/hooks/useDeals";
 import { useClassifiedSanctions } from "@/modules/kiis/hooks/useSanctions";
 import { useAddToWatchlist, useWatchlist } from "@/modules/kiis/hooks/useWatchlist";
+import { useGPs } from "@/modules/kiis/hooks/useGPs";
 import {
   Card,
   Button,
@@ -162,6 +164,12 @@ export default function CompanyDetailPage() {
   const { data: watchlistData, isLoading: watchlistLoading } = useWatchlist();
   const isWatched = watchlistData?.items.some((w) => w.company_id === company?.id);
 
+  // KOFIA GP 매칭: 기업명으로 운용사 검색
+  const { data: gpData } = useGPs(
+    company ? { company_name: company.corp_name, size: 1 } : { size: 0 },
+  );
+  const matchedGP = gpData?.items?.[0];
+
   if (isLoading) return <Spinner />;
   if (isError || !company) {
     return (
@@ -215,6 +223,15 @@ export default function CompanyDetailPage() {
         compact
         actions={
           <>
+            {matchedGP && (
+              <Link
+                to={`/kiis/funds/gp/${encodeURIComponent(matchedGP.company_code || matchedGP.company_name)}?name=${encodeURIComponent(matchedGP.company_name)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-dr-sm text-sm font-medium text-accent border border-accent/30 hover:bg-accent/10 transition-colors"
+              >
+                <Wallet className="h-4 w-4" />
+                KOFIA 펀드 ({matchedGP.fund_count})
+              </Link>
+            )}
             <Button
               variant="primary"
               icon={FileText}

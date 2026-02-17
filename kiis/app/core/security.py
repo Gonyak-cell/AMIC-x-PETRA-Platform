@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -79,6 +79,7 @@ def _is_uuid(value: str) -> bool:
 
 
 async def get_jwt_claims(
+    request: Request,
     token: str | None = Depends(oauth2_scheme),
 ) -> JWTClaims:
     """JWT 토큰에서 클레임만 추출한다 (DB 조회 없음).
@@ -91,6 +92,9 @@ async def get_jwt_claims(
         detail="인증 정보가 유효하지 않습니다",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # Authorization 헤더 없으면 쿠키 폴백
+    if token is None:
+        token = request.cookies.get("access_token")
     if token is None:
         raise credentials_exception
     try:
@@ -109,6 +113,7 @@ async def get_jwt_claims(
 
 
 async def get_current_user(
+    request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -122,6 +127,9 @@ async def get_current_user(
         detail="인증 정보가 유효하지 않습니다",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # Authorization 헤더 없으면 쿠키 폴백
+    if token is None:
+        token = request.cookies.get("access_token")
     if token is None:
         raise credentials_exception
 
@@ -142,7 +150,23 @@ async def get_current_user(
             user = result.scalar_one_or_none()
             if user is not None:
                 return user
-        # KIIS DB에 해당 email의 유저가 없으면 401
+            # Cross-backend federation: FDD 토큰 정보로 KIIS 사용자 자동 생성
+            role = payload.get("role", "analyst")
+            # FDD 역할 → KIIS 역할 매핑 (대소문자 통일)
+            role_lower = role.lower() if role else "analyst"
+            if role_lower not in ("admin", "analyst", "viewer"):
+                role_lower = "analyst"
+            user = User(
+                username=email.split("@")[0],
+                email=email,
+                hashed_password="federated:no-local-password",
+                role=role_lower,
+                is_active=True,
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            return user
         raise credentials_exception
 
     # 3. KIIS 자체 토큰 → username으로 조회 (기존 로직)

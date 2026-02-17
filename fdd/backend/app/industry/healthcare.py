@@ -9,6 +9,7 @@ from app.industry.models import (
     FDDAdjustmentRule,
     FDDDebtClassification,
     FDDKPIBenchmark,
+    FDDNarrativeTemplate,
     FDDNWCNorm,
 )
 from app.industry.registry import register_fdd_industry
@@ -110,6 +111,30 @@ class FDDHealthcareModule(FDDIndustryModule):
                 special_treatments={
                     "CONTINGENT_CONSIDERATION": "공정가치 평가 필요 — NPV 방식",
                     "GOVERNMENT_GRANTS": "환급 의무 여부에 따라 NWC vs Debt-like 판단",
+                },
+            ),
+        ]
+
+    def get_narrative_templates(self) -> list[FDDNarrativeTemplate]:
+        return [
+            FDDNarrativeTemplate(
+                section_id="executive_summary",
+                template_text=(
+                    "헬스케어/바이오 FDD 분석 시 고려 사항:\n"
+                    "- 파이프라인 가치 및 임상 단계별 성공 확률 반영\n"
+                    "- R&D 비용 자본화 여부의 EBITDA 영향\n"
+                    "- 마일스톤/기술이전 수익의 비경상 처리"
+                ),
+                emphasis_areas=[
+                    "R&D/매출 비율 및 파이프라인 rNPV",
+                    "임상시험 단계별 비용 정상화",
+                    "특허 잔여 수명 및 제네릭 리스크",
+                    "규제 인허가(FDA/MFDS) 비용의 비경상 판단",
+                ],
+                terminology_overrides={
+                    "매출액": "제품 매출 + 기술이전/로열티 수익",
+                    "재고": "원료의약품·완제의약품 (유효기간 관리)",
+                    "R&D": "임상시험 비용 + 기초연구 비용",
                 },
             ),
         ]

@@ -99,11 +99,12 @@ class ModelRouter:
             ProviderName.GOOGLE,
         ]
 
-    def resolve(self, section_id: str) -> RoutingDecision:
+    def resolve(self, section_id: str, *, industry: str = "") -> RoutingDecision:
         """섹션에 대한 프로바이더를 결정한다 (폴백 포함).
 
         Args:
             section_id: 섹션 식별자.
+            industry: 산업 식별자 (복합 키 라우팅용, 예: "healthcare").
 
         Returns:
             RoutingDecision.
@@ -111,6 +112,18 @@ class ModelRouter:
         Raises:
             LLMAPIError: 사용 가능한 프로바이더가 없을 때.
         """
+        # 0. 복합 키 (industry:section_id) 조회
+        if industry:
+            compound_key = f"{industry}:{section_id}"
+            compound_target = self._routing_map.get(compound_key)
+            if compound_target is not None:
+                provider = self._providers.get(compound_target)
+                if provider and provider.is_available:
+                    return RoutingDecision(
+                        section_id=section_id,
+                        provider=compound_target,
+                    )
+
         # 1. 라우팅 맵에서 지정된 프로바이더 확인
         target = self._routing_map.get(section_id, ProviderName.OPENAI)
         provider = self._providers.get(target)
@@ -157,6 +170,7 @@ class ModelRouter:
         system_prompt: str,
         user_prompt: str,
         *,
+        industry: str = "",
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> LLMResponse:
@@ -166,13 +180,14 @@ class ModelRouter:
             section_id: 섹션 식별자.
             system_prompt: 시스템 프롬프트.
             user_prompt: 유저 프롬프트.
+            industry: 산업 식별자 (복합 키 라우팅용).
             temperature: 생성 온도.
             max_tokens: 최대 응답 토큰 수.
 
         Returns:
             LLMResponse.
         """
-        decision = self.resolve(section_id)
+        decision = self.resolve(section_id, industry=industry)
         provider = self._providers[decision.provider]
 
         if decision.was_fallback:

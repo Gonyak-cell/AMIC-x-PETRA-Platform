@@ -70,21 +70,20 @@ def cache(ttl: int = 3600, prefix: str = "", model=None):
     return decorator
 
 
+def _to_serializable(obj: Any) -> Any:
+    """객체를 JSON 직렬화 가능한 형태로 재귀 변환한다."""
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if isinstance(obj, (list, tuple)):
+        return [_to_serializable(item) for item in obj]
+    if isinstance(obj, dict):
+        return {k: _to_serializable(v) for k, v in obj.items()}
+    return obj
+
+
 def _serialize(obj: Any) -> str:
     """객체를 JSON 문자열로 직렬화한다."""
-    if hasattr(obj, "model_dump"):
-        return json.dumps(obj.model_dump(), default=str, ensure_ascii=False)
-    if isinstance(obj, list):
-        items = []
-        for item in obj:
-            if hasattr(item, "model_dump"):
-                items.append(item.model_dump())
-            else:
-                items.append(item)
-        return json.dumps(items, default=str, ensure_ascii=False)
-    if isinstance(obj, dict):
-        return json.dumps(obj, default=str, ensure_ascii=False)
-    return json.dumps(obj, default=str, ensure_ascii=False)
+    return json.dumps(_to_serializable(obj), default=str, ensure_ascii=False)
 
 
 def _deserialize(data: Any, model=None) -> Any:

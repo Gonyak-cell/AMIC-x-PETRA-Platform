@@ -4,6 +4,10 @@ export type DefinitionStatus = "DRAFT" | "APPROVED" | "LOCKED";
 export type SnapshotStatus = "RUNNING" | "SUCCESS" | "FAILED";
 export type DealPhase = "MOU" | "VDR_SETUP" | "DATA_UPLOAD" | "ANALYSIS" | "REPORTING";
 
+export type DealStructure = "SHARE_ACQUISITION" | "ASSET_ACQUISITION" | "MERGER" | "CORPORATE_SPLIT" | "MBO" | "OTHER";
+export type InvestmentType = "EQUITY" | "DEBT" | "MEZZANINE" | "CONVERTIBLE" | "OTHER";
+export type SellerType = "INDIVIDUAL" | "CORPORATE" | "INSTITUTIONAL" | "PE_FUND" | "MANAGEMENT" | "OTHER";
+
 import type { IndustryId } from "@/types/industry";
 /** @deprecated Use IndustryId from @/types/industry directly */
 export type IndustryType = IndustryId;
@@ -13,9 +17,9 @@ export interface Deal {
   name: string;
   deal_type: DealType;
   base_currency: string;
-  reference_date: string;
-  period_start: string;
-  period_end: string;
+  reference_date: string | null;
+  period_start: string | null;
+  period_end: string | null;
   status: DealStatus;
   created_by: string;
   created_at: string;
@@ -31,25 +35,31 @@ export interface Deal {
   scope_debt: boolean;
   industry: IndustryType;
   current_phase: DealPhase;
+  deal_structure: DealStructure | null;
+  investment_type: InvestmentType | null;
+  seller_type: SellerType | null;
 }
 
 export interface DealCreate {
   name: string;
-  deal_type: DealType;
-  base_currency: string;
-  reference_date: string;
-  period_start: string;
-  period_end: string;
+  target_company_name: string;
+  deal_type?: DealType;
+  base_currency?: string;
+  reference_date?: string;
+  period_start?: string;
+  period_end?: string;
   client_name?: string;
   client_contact_name?: string;
   client_contact_email?: string;
-  target_company_name?: string;
   team_partner_id?: string;
   team_manager_id?: string;
   scope_qoe?: boolean;
   scope_nwc?: boolean;
   scope_debt?: boolean;
   industry?: IndustryType;
+  deal_structure?: DealStructure;
+  investment_type?: InvestmentType;
+  seller_type?: SellerType;
 }
 
 export interface DefinitionData {

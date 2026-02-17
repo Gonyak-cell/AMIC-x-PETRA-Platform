@@ -50,3 +50,35 @@ export interface ReputationListResponse {
   size: number;
   items: ReputationListItem[];
 }
+
+/* ─── 정성적 평판 (GET /analysis/reputation/{corpCode}/qualitative) ─── */
+
+/** 정성적 평판 - 기사 아이템 */
+export interface ReputationArticle {
+  title: string;
+  url: string;
+  source: string;
+  published_at: string | null;
+  sentiment_label: string | null;
+}
+
+/** 정성적 평판 - 테마별 그룹 */
+export interface ReputationTheme {
+  theme_code: string;
+  theme_name: string;
+  sentiment: "positive" | "negative";
+  article_count: number;
+  description: string;
+  articles: ReputationArticle[];
+}
+
+/** 정성적 평판 응답 */
+export interface QualitativeReputationResponse {
+  corp_code: string;
+  months: number;
+  total_articles: number;
+  positive_count: number;
+  negative_count: number;
+  themes: ReputationTheme[];
+  risk_absences: string[];
+}

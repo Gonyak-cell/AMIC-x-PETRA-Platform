@@ -104,7 +104,7 @@ export function DataTable<T extends object>({
 
   if (loading) {
     return (
-      <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
+      <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
         <table className="w-full">
           <thead>
             <tr className="bg-gradient-to-r from-amic to-amic-500">
@@ -142,7 +142,7 @@ export function DataTable<T extends object>({
 
   if (!data.length) {
     return (
-      <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
+      <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
         <table className="w-full">
           <thead>
             <tr className="bg-gradient-to-r from-amic to-amic-500">
@@ -169,7 +169,7 @@ export function DataTable<T extends object>({
   }
 
   return (
-    <div className={cn("border border-gray-border rounded-dr overflow-hidden", className)}>
+    <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
       <table className="w-full">
         <thead>
           <tr className="bg-gradient-to-r from-amic to-amic-500">

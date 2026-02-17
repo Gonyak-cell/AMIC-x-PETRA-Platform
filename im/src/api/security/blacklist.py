@@ -36,7 +36,7 @@ async def blacklist_token(jti: str, exp: datetime) -> None:
     try:
         await redis.setex(f"blacklist:jti:{jti}", ttl_seconds, "1")
     finally:
-        await redis.aclose()
+        await redis.close()
 
 
 async def is_blacklisted(jti: str) -> bool:
@@ -53,4 +53,4 @@ async def is_blacklisted(jti: str) -> bool:
         result = await redis.exists(f"blacklist:jti:{jti}")
         return bool(result)
     finally:
-        await redis.aclose()
+        await redis.close()

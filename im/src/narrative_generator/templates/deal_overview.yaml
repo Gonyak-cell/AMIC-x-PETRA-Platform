@@ -1,0 +1,119 @@
+# Deal Overview (거래 개요) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 8개 (직접 치환) + L3 3개 (LLM 생성)
+# 조건부 블록: L4 2개 (거래 유형별)
+section_id: deal_overview
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  transaction_type:
+    level: L2
+    source: deal_structure.transaction_type
+    default: "M&A"
+
+  seller:
+    level: L2
+    source: deal_structure.seller
+    default: "[매각주체]"
+
+  stake_pct:
+    level: L2
+    source: deal_structure.stake_pct
+    format: percent
+    default: ""
+
+  valuation_method:
+    level: L2
+    source: deal_structure.valuation_method
+    default: ""
+
+  old_shares:
+    level: L2
+    source: deal_structure.old_shares
+    format: currency
+    default: ""
+
+  new_shares:
+    level: L2
+    source: deal_structure.new_shares
+    format: currency
+    default: ""
+
+  valuation_range:
+    level: L2
+    source: ""
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  deal_background:
+    level: L3
+    type: paragraph
+    hint: >-
+      거래의 배경과 목적을 설명. 매각자의 매각 동기, 대상회사의 성장 단계,
+      자금 사용 계획 등을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - deal_structure.deal_background
+      - deal_structure.transaction_type
+      - deal_structure.seller
+
+  deal_structure_description:
+    level: L3
+    type: paragraph
+    hint: >-
+      거래 구조를 상세히 설명. 구주/신주 비율, 지분 구조,
+      밸류에이션 접근 방법을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - deal_structure.old_shares
+      - deal_structure.new_shares
+      - deal_structure.stake_pct
+      - deal_structure.valuation_low
+      - deal_structure.valuation_high
+      - deal_structure.valuation_method
+
+  timeline_description:
+    level: L3
+    type: paragraph
+    hint: >-
+      거래 예상 일정과 프로세스를 설명. 예비입찰, 본입찰, 실사,
+      계약 체결 등 주요 마일스톤을 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - deal_structure.timeline
+
+body: |
+  {{@transition_deal}}
+
+  본 거래는 {{company_name}}(이하 "대상회사")에 대한 {{transaction_type}} 거래로,
+  {{seller}}이(가) 보유 지분 {{stake_pct}}를 매각하는 구조입니다.
+
+  거래 배경을 살펴보면, {{deal_background}}
+  이러한 배경 하에 본 거래가 추진되고 있습니다.
+
+  거래 구조 측면에서, {{deal_structure_description}}
+  밸류에이션은 {{valuation_method}} 방법론을 기반으로 산정되었습니다.
+
+  거래 일정과 관련하여, {{timeline_description}}
+  관심 있는 투자자께서는 상기 일정에 맞추어 참여를 검토하시기 바랍니다.
+
+conditional_blocks:
+  - condition: "has_deal_structure"
+    insert_after: deal_structure_description
+    text: ""
+
+  - condition: "industry == 'tech'"
+    insert_after: deal_background
+    text: >-
+      기술 기업의 특성상, 본 거래는 대상회사의 높은 성장 잠재력과
+      확장 가능한 플랫폼 가치를 반영하여 구조화되었습니다.
+
+includes:
+  - transition_deal

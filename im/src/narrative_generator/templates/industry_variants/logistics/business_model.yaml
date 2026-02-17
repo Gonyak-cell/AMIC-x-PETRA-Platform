@@ -1,0 +1,80 @@
+# Business Model — 물류 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 물류 네트워크 및 자동화 분석 추가
+section_id: business_model
+version: "1.0"
+source_reference: "물류 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 물류 특화 ──
+  logistics_network:
+    level: L3
+    type: paragraph
+    hint: >-
+      물류 네트워크 구조를 분석. 허브-스포크(Hub-Spoke) 모델,
+      거점 배치 전략, 라스트마일 배송 인프라, 콜드체인/특수물류 역량,
+      네트워크 커버리지와 밀도를 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.key_products
+      - company_overview.value_chain
+
+  automation_technology:
+    level: L3
+    type: paragraph
+    hint: >-
+      물류 자동화 및 기술 역량을 분석. 창고 자동화(WMS/WCS),
+      배송 자동화(자율주행/드론), TMS(운송관리시스템), 실시간 추적,
+      데이터 기반 최적화 기술을 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - company_overview.business_model
+      - company_overview.certifications
+
+body: |
+  {{@transition_business_model}}
+
+  {{company_name}}(이하 "대상회사")의 비즈니스 모델을 물류업의 관점에서
+  수익 구조, 네트워크, 자동화, 경쟁 우위, 확장성의 관점으로 분석하면 다음과 같습니다.
+
+  1. 비즈니스 모델 개요
+
+  {{business_model_overview}}
+  주요 물류 서비스는 {{key_products}}이며, {{certifications}} 등의 인증을 보유하고 있습니다.
+
+  2. 수익 구조 (Revenue Model)
+
+  {{revenue_structure}}
+  주요 화주/고객으로는 {{key_customers}} 등이 있으며,
+  장기 계약 기반의 안정적 운임 수익 기반을 형성하고 있습니다.
+
+  3. 물류 네트워크 (Logistics Network)
+
+  {{logistics_network}}
+  물류 네트워크의 밀도와 효율성은 규모의 경제와 서비스 품질을 동시에 결정하며,
+  네트워크 확대에 따른 고정비 레버리지가 수익성 개선의 핵심 동인입니다.
+
+  4. 자동화 및 기술 역량
+
+  {{automation_technology}}
+  물류 기술 투자는 인건비 절감과 처리 능력 확대를 통해
+  장기적 경쟁력 강화에 기여합니다.
+
+  5. 경쟁 우위 및 진입장벽 (Competitive Moats)
+
+  {{competitive_moats}}
+  물류 인프라 구축에 소요되는 대규모 초기 투자와 네트워크 효과는
+  신규 진입자 대비 유의미한 진입장벽을 형성합니다.
+
+  6. 가치사슬 내 포지션
+
+  {{value_chain_position}}
+
+  종합하면, {{scalability_assessment}}
+  대상회사의 비즈니스 모델은 네트워크 밀도와 기술 역량을 기반으로
+  물량 증가에 따른 구조적 수익성 개선이 기대됩니다.
+
+includes:
+  - transition_business_model

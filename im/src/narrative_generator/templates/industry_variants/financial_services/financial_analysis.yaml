@@ -1,0 +1,82 @@
+# Financial Analysis — 금융서비스 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 규제자본 분석 및 자산건전성 섹션 추가
+# 금융업 특수성: EBITDA → PPOP, NWC → 규제자본
+section_id: financial_analysis
+version: "1.0"
+source_reference: "금융서비스 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 금융서비스 특화 ──
+  capital_adequacy_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      규제자본 적정성을 분석. BIS 자본비율, 기본자본비율(Tier 1),
+      보통주자본비율(CET1), 규제 요건 대비 여유 수준,
+      자본 관리 전략을 수치와 함께 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.total_equity
+      - financial_statements.total_assets
+      - derived_metrics
+
+  credit_quality_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      자산 건전성을 분석. 고정이하여신비율(NPL Ratio), 대손충당금 적립률,
+      기대신용손실(ECL) 모델 적용 현황, 대손비용률(Credit Cost Ratio)의
+      추이를 수치와 함께 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.total_assets
+      - financial_statements.operating_income
+      - derived_metrics
+
+body: |
+  {{@transition_financial}}
+
+  {{company_name}}(이하 "대상회사")의 재무 실적을 금융기관의 특수성을
+  반영하여 다각도로 분석하면 다음과 같습니다.
+
+  1. 수익성 분석 (순이자마진 및 비이자수익)
+
+  {{revenue_profitability_analysis}}
+  금융업 특성상, 순이자마진(NIM)과 비이자수익(Fee Income) 비중의 균형이
+  수익 안정성을 결정하는 핵심 요소입니다.
+  {{@financial_note}}
+
+  2. 규제자본 적정성 (Capital Adequacy)
+
+  {{capital_adequacy_analysis}}
+  규제자본 비율은 금융기관의 사업 지속성과 성장 여력을 결정하는 가장 핵심적인 지표이며,
+  규제 요건 대비 충분한 버퍼(Buffer)를 유지하는 것이 중요합니다.
+
+  3. 자산 건전성 (Asset Quality)
+
+  {{credit_quality_analysis}}
+  대손충당금의 적정성과 자산 건전성 지표의 추이는
+  경기 순환에 따른 실적 변동성을 예측하는 핵심 선행 지표입니다.
+
+  4. 재무 건전성 분석
+
+  {{balance_sheet_analysis}}
+  금융업의 특성상, 전통적 부채비율보다 규제자본 비율과
+  유동성 커버리지 비율(LCR)이 더 유의미한 건전성 지표입니다.
+
+  5. 현금흐름 분석
+
+  {{cash_flow_analysis}}
+  금융기관의 현금흐름은 대출/투자 활동에 크게 영향을 받으며,
+  핵심 영업활동에서의 안정적 현금 창출 능력이 중요합니다.
+
+  6. 핵심 지표 종합
+
+  {{key_metrics_summary}}
+  {{financial_outlook}}
+
+includes:
+  - transition_financial
+  - financial_note

@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.company import Company
 from app.schemas.deal import (
+    AmountBucket,
+    DealAmountStats,
     DealExtractRequest,
     DealItem,
     DealListResponse,
@@ -183,6 +185,91 @@ async def get_deal_trends(
     return TrendResponse(corp_code=corp_code, corp_name=corp_name, items=items)
 
 
+@router.get(
+    "/by-fund/{fund_code}",
+    response_model=DealListResponse,
+    summary="펀드별 딜 목록",
+)
+async def get_deals_by_fund(
+    fund_code: str,
+    years: int = Query(5, ge=1, le=10, description="조회 기간 (년)"),
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
+    db: AsyncSession = Depends(get_db),
+    service: DealService = Depends(get_deal_service),
+):
+    """특정 펀드의 딜 목록을 조회한다."""
+    deals, total, fund = await service.get_deals_by_fund(
+        db=db,
+        fund_code=fund_code,
+        years=years,
+        page=page,
+        size=size,
+    )
+
+    if fund is None:
+        raise HTTPException(status_code=404, detail=f"펀드를 찾을 수 없습니다: {fund_code}")
+
+    items = [
+        DealItem(
+            id=deal.id,
+            company_id=deal.company_id,
+            investor_name=fund.company_name,
+            target_company=deal.target_company,
+            target_company_id=deal.target_company_id,
+            amount=deal.amount,
+            amount_display=deal.amount_display,
+            round_stage=deal.round_stage,
+            sector=deal.sector,
+            deal_date=deal.deal_date,
+            deal_year=deal.deal_year,
+            source_url=deal.source_url,
+            source_type=deal.source_type,
+            is_lead_investor=deal.is_lead_investor,
+            fund_id=deal.fund_id,
+            fund_code=fund.fund_code,
+            fund_name=fund.fund_name,
+        )
+        for deal in deals
+    ]
+
+    return DealListResponse(total=total, page=page, size=size, items=items)
+
+
+@router.get(
+    "/stats",
+    response_model=DealAmountStats,
+    summary="투자 규모 통계",
+)
+async def get_deal_stats(
+    corp_code: str | None = Query(None, max_length=20, description="운용사 DART 코드"),
+    years: int = Query(5, ge=1, le=10, description="조회 기간 (년)"),
+    db: AsyncSession = Depends(get_db),
+    service: DealService = Depends(get_deal_service),
+):
+    """투자 규모 통계(평균, 중앙값, 분포)를 조회한다."""
+    stats = await service.get_amount_stats(db=db, corp_code=corp_code, years=years)
+
+    return DealAmountStats(
+        total_deals=stats["total_deals"],
+        total_amount=stats["total_amount"],
+        avg_amount=stats["avg_amount"],
+        median_amount=stats["median_amount"],
+        min_amount=stats["min_amount"],
+        max_amount=stats["max_amount"],
+        distribution=[
+            AmountBucket(
+                bucket_label=b["bucket_label"],
+                bucket_min=b["bucket_min"],
+                bucket_max=b["bucket_max"],
+                deal_count=b["deal_count"],
+                total_amount=b["total_amount"],
+            )
+            for b in stats["distribution"]
+        ],
+    )
+
+
 @router.post(
     "/extract",
     response_model=DealItem,
@@ -199,6 +286,7 @@ async def extract_deal_from_news(
         db=db,
         news_article_id=request.news_article_id,
         investor_corp_code=request.investor_corp_code,
+        fund_code=request.fund_code,
     )
 
     if not deal:

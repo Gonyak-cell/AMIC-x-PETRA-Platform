@@ -109,6 +109,7 @@ def update_deal(
         "client_name", "client_contact_name", "client_contact_email",
         "target_company_name", "team_partner_id", "team_manager_id",
         "scope_qoe", "scope_nwc", "scope_debt", "industry", "current_phase",
+        "deal_structure", "investment_type", "seller_type",
     }
 
     old_values = {}

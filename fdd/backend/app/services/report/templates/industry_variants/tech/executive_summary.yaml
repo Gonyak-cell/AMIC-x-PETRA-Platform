@@ -1,0 +1,23 @@
+section_id: executive_summary
+version: "1.0"
+source_reference: "Tech/SaaS FDD Override"
+
+slots:
+  arr_highlight:
+    level: L3
+    type: sentence
+    hint: >-
+      Highlight ARR/MRR scale and growth rate, Net Revenue Retention,
+      and Rule of 40 compliance if data is available.
+      Reference only provided numbers.
+    max_tokens: 80
+    data_keys:
+      - qoe.category_breakdown
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      The SaaS metrics analysis reveals that recurring revenue
+      stability supports the quality of Adjusted EBITDA.
+      {{arr_highlight}}

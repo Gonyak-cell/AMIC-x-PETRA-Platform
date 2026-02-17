@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,15 +27,17 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     token: str | None = Depends(oauth2_scheme),
     api_key: str | None = Depends(api_key_header),
     session: AsyncSession = Depends(get_async_session),
 ) -> User:
     """현재 인증된 사용자를 반환한다.
 
-    JWT 우선 검증 → API Key 폴백 → 둘 다 없으면 401.
+    JWT 우선 검증 → 쿠키 폴백 → API Key 폴백 → 모두 없으면 401.
 
     Args:
+        request: FastAPI Request (쿠키 접근용).
         token: Bearer JWT 토큰 (Authorization 헤더).
         api_key: API 키 (X-API-Key 헤더).
         session: 비동기 DB 세션.
@@ -46,6 +48,10 @@ async def get_current_user(
     Raises:
         AuthenticationError: 인증 정보가 없거나 유효하지 않은 경우.
     """
+    # Authorization 헤더 없으면 쿠키 폴백
+    if token is None:
+        token = request.cookies.get("access_token")
+
     # JWT 우선
     if token is not None:
         payload = verify_token(token, expected_type="access")
@@ -81,17 +87,24 @@ async def get_current_user(
                 options={"verify_exp": False},
             )
             email = decoded.get("email", f"{payload.sub}@federated")
-            user = User(
-                id=user_id,
-                email=email,
-                hashed_password="federated:no-local-password",
-                full_name=email.split("@")[0],
-                role=payload.role or "USER",
-                is_active=True,
-            )
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
+
+            # 이메일로 기존 사용자 조회 (ID가 달라도 동일 이메일이면 재사용)
+            email_stmt = select(User).where(User.email == email)
+            email_result = await session.execute(email_stmt)
+            user = email_result.scalar_one_or_none()
+
+            if user is None:
+                user = User(
+                    id=user_id,
+                    email=email,
+                    hashed_password="federated:no-local-password",
+                    full_name=email.split("@")[0],
+                    role=payload.role or "USER",
+                    is_active=True,
+                )
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
         return user
 
     # API Key 폴백

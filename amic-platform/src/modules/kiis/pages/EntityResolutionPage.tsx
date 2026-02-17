@@ -66,7 +66,7 @@ export default function EntityResolutionPage() {
   const [aliasFilter, setAliasFilter] = useState("");
 
   const resolveEntity = useResolveEntity();
-  const { data: aliases, isLoading: aliasesLoading } = useAliases({
+  const { data: aliases, isLoading: aliasesLoading, isError: aliasesError } = useAliases({
     corp_code: aliasFilter || undefined,
   });
   const createAlias = useCreateAlias();
@@ -80,7 +80,10 @@ export default function EntityResolutionPage() {
       { name },
       {
         onSuccess: (res) => setResolveResult(res),
-        onError: () => toast.error("Resolution failed"),
+        onError: () => {
+          setResolveResult(null);
+          toast.error("Resolution failed");
+        },
       },
     );
   };
@@ -255,6 +258,12 @@ export default function EntityResolutionPage() {
 
         {aliasesLoading ? (
           <Spinner />
+        ) : aliasesError ? (
+          <EmptyState
+            icon={GitCompare}
+            title="Failed to load aliases"
+            description="An error occurred while fetching aliases."
+          />
         ) : !aliases?.items.length ? (
           <EmptyState
             icon={GitCompare}

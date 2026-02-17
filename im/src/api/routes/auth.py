@@ -9,7 +9,9 @@ POST /api/v1/auth/logout   — 로그아웃
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response
+import os
+
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,9 @@ from src.api.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
 from src.api.security.auth import verify_token
 from src.api.security.blacklist import blacklist_token
 from src.api.services.auth_service import AuthService
+
+_is_production = os.getenv("ENV", "").lower() in ("production", "prod")
+_cookie_secure = _is_production
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -47,8 +52,8 @@ async def login(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=15 * 60,  # 15분
     )
 
@@ -57,8 +62,8 @@ async def login(
         key="refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=7 * 24 * 60 * 60,  # 7일
     )
 
@@ -71,21 +76,29 @@ async def login(
     description="Refresh 토큰으로 새 Access/Refresh 토큰을 httpOnly 쿠키로 설정.",
 )
 async def refresh(
-    data: RefreshRequest,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, str]:
-    """Refresh 토큰으로 새 토큰 발급."""
+    """Refresh 토큰으로 새 토큰 발급 — httpOnly 쿠키에서 refresh_token을 읽는다."""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        from src.api.exceptions import AuthenticationError
+
+        raise AuthenticationError(
+            message="Refresh token not found in cookies",
+            details={"reason": "no_refresh_token"},
+        )
     service = AuthService(session)
-    tokens = service.refresh(data.refresh_token)
+    tokens = service.refresh(refresh_token)
 
     # Access Token 쿠키 설정
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=15 * 60,  # 15분
     )
 
@@ -94,8 +107,8 @@ async def refresh(
         key="refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=7 * 24 * 60 * 60,  # 7일
     )
 

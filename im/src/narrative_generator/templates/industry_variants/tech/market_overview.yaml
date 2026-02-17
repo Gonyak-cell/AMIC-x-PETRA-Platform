@@ -1,0 +1,56 @@
+# Market Overview — Tech/SaaS 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 기술 트렌드 및 디지털 전환 영향 분석 추가
+section_id: market_overview
+version: "1.0"
+source_reference: "테크/SaaS IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 테크 시장 특화 ──
+  tech_disruption_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      기술 패러다임 전환이 대상회사 시장에 미치는 영향을 분석.
+      AI/ML, 클라우드 네이티브, API 이코노미, 데이터 기반 의사결정 등
+      핵심 기술 트렌드와 대상회사의 포지션을 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - market_data.industry_trends
+      - market_data.market_growth_rate
+      - company_overview.business_model
+
+body: |
+  {{@transition_market}}
+
+  {{company_name}}(이하 "대상회사")이 영위하는 기술/SaaS 시장의 규모 및 성장성,
+  경쟁 구도, 주요 트렌드를 분석하면 다음과 같습니다.
+
+  1. 시장 규모 및 성장성
+
+  {{market_size_analysis}}
+  대상회사가 속한 시장의 전체 규모(TAM)는 {{tam}} 수준이며,
+  유효 시장(SAM) {{sam}}, 획득 가능 시장(SOM) {{som}}으로 추산됩니다.
+  시장 성장률은 {{market_growth_rate}} 수준으로, 양호한 성장세를 보이고 있습니다.
+
+  2. 경쟁 구도
+
+  {{competitive_landscape}}
+  SaaS 시장의 특성상, Winner-takes-most 역학이 작용하며,
+  선도적 시장 포지션 확보가 장기 경쟁 우위의 핵심입니다.
+
+  3. 산업 트렌드
+
+  {{industry_trends_analysis}}
+
+  4. 기술 패러다임 전환 및 대상회사 포지션
+
+  {{tech_disruption_analysis}}
+  이러한 기술 진화는 대상회사의 핵심 역량과 직접적으로 연결되며,
+  구조적 수혜가 기대되는 영역입니다.
+
+  종합하면, {{market_position_assessment}}
+
+includes:
+  - transition_market

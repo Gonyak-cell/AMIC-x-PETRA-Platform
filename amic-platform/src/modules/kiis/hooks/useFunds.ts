@@ -8,6 +8,10 @@ import type {
   FundListParams,
 } from "@/modules/kiis/types/fund";
 
+const FUND_LIST_STALE_TIME = 5 * 60 * 1000; // 5분
+const FUND_DETAIL_STALE_TIME = 10 * 60 * 1000; // 10분
+const FUND_GC_TIME = 30 * 60 * 1000; // 30분
+
 export function useFunds(params: FundListParams = {}) {
   return useQuery<FundListResponse>({
     queryKey: ["kiis", "funds", params],
@@ -17,6 +21,8 @@ export function useFunds(params: FundListParams = {}) {
       });
       return data;
     },
+    staleTime: FUND_LIST_STALE_TIME,
+    gcTime: FUND_GC_TIME,
   });
 }
 
@@ -30,6 +36,8 @@ export function useFundDetail(fundCode: string) {
       return data;
     },
     enabled: !!fundCode,
+    staleTime: FUND_DETAIL_STALE_TIME,
+    gcTime: FUND_GC_TIME,
   });
 }
 
@@ -49,5 +57,7 @@ export function useFundManagers(
       });
       return data.items;
     },
+    staleTime: FUND_LIST_STALE_TIME,
+    gcTime: FUND_GC_TIME,
   });
 }

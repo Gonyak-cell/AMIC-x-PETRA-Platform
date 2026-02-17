@@ -1,0 +1,137 @@
+# Value Creation (가치 창출 방안) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 2개 (직접 치환) + L3 5개 (LLM 생성)
+# 조건부 블록: L4 4개 (산업별)
+section_id: value_creation
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  transaction_type:
+    level: L2
+    source: deal_structure.transaction_type
+    default: "투자"
+
+  # ── L3: LLM 생성 ──
+  value_creation_overview:
+    level: L3
+    type: paragraph
+    hint: >-
+      가치 창출 전략의 전체 개요를 2-3문장으로 서술.
+      투자 이후 핵심 가치 창출 레버(매출 성장, 수익성 개선, 전략적 시너지)를 종합적으로 소개.
+    max_tokens: 100
+    data_keys:
+      - investment_highlights
+      - growth_strategy.organic_growth
+      - growth_strategy.new_business
+      - derived_metrics
+
+  revenue_enhancement:
+    level: L3
+    type: paragraph
+    hint: >-
+      매출 성장 관점의 가치 창출 방안을 서술. 기존 사업 확대,
+      신규 시장 진입, 교차 판매 기회 등을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - growth_strategy.organic_growth
+      - growth_strategy.new_business
+      - market_data.tam
+      - market_data.market_growth_rate
+
+  operational_improvement:
+    level: L3
+    type: paragraph
+    hint: >-
+      운영 효율화 관점의 가치 창출 방안을 서술. 원가 절감, 프로세스 최적화,
+      디지털 전환 등 EBITDA 마진 개선 방안을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.ebitda
+      - financial_statements.sga_expenses
+      - financial_statements.operating_income
+      - derived_metrics
+
+  strategic_initiatives:
+    level: L3
+    type: paragraph
+    hint: >-
+      전략적 이니셔티브 관점의 가치 창출 방안을 서술. M&A, 전략적 제휴,
+      기술 투자 등 비유기적 성장 기회를 2-3문장으로 분석.
+    max_tokens: 100
+    data_keys:
+      - growth_strategy.ma_targets
+      - growth_strategy.new_business
+      - investment_highlights
+
+  value_creation_summary:
+    level: L3
+    type: sentence
+    hint: >-
+      가치 창출 방안을 종합하여 기대 효과를 1-2문장으로 요약.
+      구체적인 수치 목표보다는 전략적 방향성 강조.
+    max_tokens: 60
+    data_keys:
+      - investment_highlights
+      - derived_metrics
+
+body: |
+  {{@transition_value_creation}}
+
+  본 {{transaction_type}}를 통해 {{company_name}}(이하 "대상회사")의 기업 가치를
+  극대화하기 위한 핵심 가치 창출 방안을 제시하면 다음과 같습니다.
+
+  {{value_creation_overview}}
+
+  1. 매출 성장 전략
+
+  {{revenue_enhancement}}
+  이러한 매출 성장 전략의 실행은 대상회사의 탑라인(Top-line) 확대에 직접적으로 기여할 것입니다.
+
+  2. 운영 효율화 및 수익성 개선
+
+  {{operational_improvement}}
+  운영 효율화를 통한 비용 구조 최적화는 EBITDA 마진 개선의 핵심 레버입니다.
+
+  3. 전략적 이니셔티브
+
+  {{strategic_initiatives}}
+  이러한 전략적 이니셔티브는 대상회사의 사업 포트폴리오 강화와 시너지 창출에 기여할 것입니다.
+
+  종합하면, {{value_creation_summary}}
+  {{@projection_caveat}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: revenue_enhancement
+    text: >-
+      특히, SaaS 기업의 특성상 기존 고객 기반의 업셀(Upsell)과 크로스셀(Cross-sell)을 통한
+      NRR(Net Revenue Retention) 개선이 가장 효율적인 매출 성장 레버입니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: strategic_initiatives
+    text: >-
+      특히, 파이프라인 확대와 글로벌 라이선스 아웃(License-out)은
+      바이오/헬스케어 기업의 가치를 비선형적으로 증대시킬 수 있는 핵심 전략입니다.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: operational_improvement
+    text: >-
+      특히, 스마트 팩토리 도입과 공급망 최적화를 통한 원가 절감은
+      제조업 기업의 수익성 개선에 가장 직접적이고 가시적인 효과를 제공합니다.
+
+  - condition: "industry == 'financial_services'"
+    insert_after: revenue_enhancement
+    text: >-
+      특히, 디지털 채널 확대를 통한 고객 접점 다변화와 자산 운용 규모(AUM) 확대는
+      금융업 기업의 수수료 수익 기반을 강화하는 핵심 레버입니다.
+
+includes:
+  - transition_value_creation
+  - projection_caveat

@@ -1,0 +1,95 @@
+section_id: debt_analysis
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  deal_name:
+    level: L2
+    source: deal_name
+
+  net_debt:
+    level: L2
+    source: debt.net_debt
+
+  total_debt:
+    level: L2
+    source: debt.total_debt
+
+  total_cash:
+    level: L2
+    source: debt.total_cash
+
+  debt_like_total:
+    level: L2
+    source: debt.debt_like_total
+
+  # ── L3: LLM 생성 ──
+  debt_structure_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      Analyze the Net Debt structure in 2-3 sentences. Break down
+      the key components: traditional debt, debt-like items,
+      cash and cash equivalents, and cash-like items.
+      Reference the specific amounts provided.
+    max_tokens: 120
+    data_keys:
+      - debt.net_debt
+      - debt.total_debt
+      - debt.total_cash
+      - debt.debt_like_total
+      - debt.cash_like_total
+
+  leverage_assessment:
+    level: L3
+    type: sentence
+    hint: >-
+      Assess the leverage position in 1-2 sentences.
+      Comment on whether the Net Debt level is manageable
+      relative to the Adjusted EBITDA.
+    max_tokens: 80
+    data_keys:
+      - debt.net_debt
+      - debt.total_debt
+
+body: |
+  {{@transition_debt}}
+
+  NET DEBT ANALYSIS — {{deal_name}}
+
+  The Target Company's Net Debt position is {{net_debt}} million KRW,
+  comprising total debt of {{total_debt}} million KRW offset by
+  cash of {{total_cash}} million KRW. Debt-like items amount to
+  {{debt_like_total}} million KRW.
+
+  Debt Structure:
+
+  {{debt_structure_analysis}}
+
+  {{@fdd_currency_note}}
+
+  Leverage Assessment:
+
+  {{leverage_assessment}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: debt_structure_analysis
+    text: >-
+      For technology companies, convertible bonds (CB), SAFE agreements,
+      and venture debt instruments require careful classification as
+      debt-like items, particularly regarding conversion triggers and
+      implied interest costs.
+
+  - condition: "industry == 'financial_services'"
+    insert_after: leverage_assessment
+    text: >-
+      For financial services companies, the Net Debt analysis should be
+      read in conjunction with regulatory capital requirements (BIS ratio,
+      CET1) and provision adequacy, which materially affect the balance
+      sheet assessment.
+
+includes:
+  - transition_debt
+  - fdd_currency_note

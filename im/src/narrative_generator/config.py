@@ -44,7 +44,7 @@ class NarrativeConfig(BaseSettings):
         description="Anthropic API 키",
     )
     anthropic_model_name: str = Field(
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-5-20250929",
         description="Anthropic 기본 모델명",
     )
 
@@ -141,6 +141,29 @@ class NarrativeConfig(BaseSettings):
     llm_fallback_order: str = Field(
         default="openai,anthropic,google",
         description="LLM 프로바이더 폴백 우선순위 (쉼표 구분)",
+    )
+
+    # ── Template (슬롯 채우기) ──
+    template_enabled: bool = Field(
+        default=False,
+        description=(
+            "YAML 부동문자 템플릿 + 슬롯 채우기 모드 활성화. "
+            "True이면 템플릿이 존재하는 섹션은 슬롯 채우기 방식, "
+            "나머지는 기존 자유 생성 방식으로 동작한다."
+        ),
+    )
+    template_dir: str = Field(
+        default="",
+        description=(
+            "YAML 템플릿 디렉터리 경로. "
+            "빈 문자열이면 기본 경로(src/narrative_generator/templates/) 사용."
+        ),
+    )
+    slot_fill_temperature: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=2.0,
+        description="슬롯 채우기 LLM 온도 (자유 생성보다 낮게 설정 권장)",
     )
 
     # ── General ──

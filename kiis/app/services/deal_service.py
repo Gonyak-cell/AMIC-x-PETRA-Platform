@@ -19,6 +19,7 @@ from app.models.deal import (
     DealSector,
     DealStage,
 )
+from app.models.fund import Fund
 from app.models.news import NewsArticle
 from app.services.nlp_service import NLPService
 
@@ -231,6 +232,7 @@ class DealService:
         db: AsyncSession,
         news_article_id: int,
         investor_corp_code: str | None = None,
+        fund_code: str | None = None,
     ) -> Deal | None:
         """뉴스 기사에서 딜 정보를 추출한다.
 
@@ -293,9 +295,19 @@ class DealService:
             except (ValueError, TypeError):
                 deal_date = article.published_at.date() if article.published_at else None
 
+        # 펀드 조회 (fund_code가 있는 경우)
+        fund_id = None
+        if fund_code:
+            fund_stmt = select(Fund).where(Fund.fund_code == fund_code)
+            fund_result = await db.execute(fund_stmt)
+            fund = fund_result.scalar_one_or_none()
+            if fund:
+                fund_id = fund.id
+
         # Deal 생성
         deal = Deal(
             company_id=company_id,
+            fund_id=fund_id,
             target_company=target_company,
             amount=amount,
             amount_display=self.format_amount_display(amount),
@@ -522,3 +534,179 @@ class DealService:
             )
 
         return trends
+
+    # 금액 구간 정의 (억원)
+    AMOUNT_BUCKETS: list[tuple[str, int, int | None]] = [
+        ("10억 미만", 0, 10),
+        ("10~50억", 10, 50),
+        ("50~100억", 50, 100),
+        ("100~300억", 100, 300),
+        ("300~1000억", 300, 1000),
+        ("1000억 이상", 1000, None),
+    ]
+
+    async def get_amount_stats(
+        self,
+        db: AsyncSession,
+        corp_code: str | None = None,
+        years: int = 5,
+    ) -> dict:
+        """투자 규모 통계를 산출한다.
+
+        Args:
+            db: DB 세션
+            corp_code: 운용사 DART 고유번호 (None이면 전체)
+            years: 조회 기간 (년)
+
+        Returns:
+            통계 dict (total_deals, avg/median/min/max_amount, distribution)
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=years * 365)
+
+        base_filter = [
+            Deal.amount.isnot(None),
+            Deal.amount > 0,
+            Deal.deal_date >= cutoff.date(),
+        ]
+
+        # 운용사 필터
+        if corp_code:
+            company = await self._get_company(db, corp_code)
+            if not company:
+                return {
+                    "total_deals": 0,
+                    "total_amount": None,
+                    "avg_amount": None,
+                    "median_amount": None,
+                    "min_amount": None,
+                    "max_amount": None,
+                    "distribution": [],
+                }
+            base_filter.append(Deal.company_id == company.id)
+
+        # 집계 쿼리
+        agg_query = select(
+            func.count(Deal.id).label("deal_count"),
+            func.sum(Deal.amount).label("total_amount"),
+            func.avg(Deal.amount).label("avg_amount"),
+            func.min(Deal.amount).label("min_amount"),
+            func.max(Deal.amount).label("max_amount"),
+        ).where(*base_filter)
+
+        agg_result = await db.execute(agg_query)
+        agg_row = agg_result.one()
+
+        total_deals = agg_row.deal_count or 0
+        if total_deals == 0:
+            return {
+                "total_deals": 0,
+                "total_amount": None,
+                "avg_amount": None,
+                "median_amount": None,
+                "min_amount": None,
+                "max_amount": None,
+                "distribution": [],
+            }
+
+        # 중앙값: 금액 목록을 가져와서 Python 측에서 계산
+        amounts_query = (
+            select(Deal.amount)
+            .where(*base_filter)
+            .order_by(Deal.amount)
+        )
+        amounts_result = await db.execute(amounts_query)
+        amounts = [row[0] for row in amounts_result.all()]
+
+        median_amount = None
+        if amounts:
+            n = len(amounts)
+            mid = n // 2
+            median_amount = (
+                amounts[mid]
+                if n % 2 == 1
+                else (amounts[mid - 1] + amounts[mid]) / 2
+            )
+
+        # 구간별 분포
+        eok = Decimal("100_000_000")  # 1억 = 100,000,000원
+        distribution = []
+        for label, bucket_min, bucket_max in self.AMOUNT_BUCKETS:
+            min_won = Decimal(bucket_min) * eok
+            conditions = [*base_filter, Deal.amount >= min_won]
+            if bucket_max is not None:
+                max_won = Decimal(bucket_max) * eok
+                conditions.append(Deal.amount < max_won)
+
+            bucket_query = select(
+                func.count(Deal.id).label("deal_count"),
+                func.sum(Deal.amount).label("total_amount"),
+            ).where(*conditions)
+            bucket_result = await db.execute(bucket_query)
+            bucket_row = bucket_result.one()
+
+            distribution.append(
+                {
+                    "bucket_label": label,
+                    "bucket_min": bucket_min,
+                    "bucket_max": bucket_max,
+                    "deal_count": bucket_row.deal_count or 0,
+                    "total_amount": bucket_row.total_amount,
+                }
+            )
+
+        return {
+            "total_deals": total_deals,
+            "total_amount": agg_row.total_amount,
+            "avg_amount": agg_row.avg_amount,
+            "median_amount": median_amount,
+            "min_amount": agg_row.min_amount,
+            "max_amount": agg_row.max_amount,
+            "distribution": distribution,
+        }
+
+    async def get_deals_by_fund(
+        self,
+        db: AsyncSession,
+        fund_code: str,
+        years: int = 5,
+        page: int = 1,
+        size: int = 20,
+    ) -> tuple[list[Deal], int, Fund | None]:
+        """펀드 단위 딜 목록을 조회한다.
+
+        Args:
+            db: DB 세션
+            fund_code: 펀드 표준코드
+            years: 조회 기간 (년)
+            page: 페이지 번호
+            size: 페이지당 건수
+
+        Returns:
+            (딜 목록, 총 건수, 펀드 객체)
+        """
+        # 펀드 조회
+        fund_stmt = select(Fund).where(Fund.fund_code == fund_code)
+        fund_result = await db.execute(fund_stmt)
+        fund = fund_result.scalar_one_or_none()
+
+        if not fund:
+            return [], 0, None
+
+        cutoff = datetime.now(UTC) - timedelta(days=years * 365)
+
+        base_query = select(Deal).where(
+            Deal.fund_id == fund.id,
+            Deal.deal_date >= cutoff.date(),
+        )
+
+        # 총 건수
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # 페이지네이션
+        query = base_query.order_by(Deal.deal_date.desc()).offset((page - 1) * size).limit(size)
+        result = await db.execute(query)
+        deals = list(result.scalars().all())
+
+        return deals, total, fund

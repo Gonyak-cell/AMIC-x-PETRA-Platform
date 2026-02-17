@@ -1,0 +1,30 @@
+section_id: qoe_analysis
+version: "1.0"
+source_reference: "Manufacturing FDD Override"
+
+slots:
+  capex_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      Analyze CAPEX classification: distinguish maintenance CAPEX
+      from growth CAPEX and their EBITDA normalization implications.
+      Comment on equipment utilization rates if relevant.
+    max_tokens: 100
+    data_keys:
+      - qoe.category_breakdown
+      - qoe.total_adjustments
+
+conditional_blocks:
+  - condition: "industry == 'manufacturing'"
+    insert_after: ebitda_quality_assessment
+    text: >-
+      Manufacturing CAPEX & Cost Analysis:
+
+      {{capex_analysis}}
+
+      Key manufacturing-specific adjustment categories include:
+      (1) Maintenance vs growth CAPEX classification,
+      (2) Raw material price normalization for commodity volatility,
+      (3) Production capacity utilization adjustments,
+      (4) One-time factory expansion or relocation costs.

@@ -1,0 +1,75 @@
+# Business Model — Tech/SaaS 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 플랫폼 다이나믹스 및 SaaS 가격 모델 분석 추가
+section_id: business_model
+version: "1.0"
+source_reference: "테크/SaaS IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 플랫폼/SaaS 특화 ──
+  platform_dynamics:
+    level: L3
+    type: paragraph
+    hint: >-
+      플랫폼 비즈니스의 핵심 역학을 분석. 네트워크 효과(Network Effects),
+      생태계 확장성, 사용자 잠금 효과(Lock-in), API/인테그레이션 전략을
+      2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - company_overview.business_model
+      - company_overview.key_products
+      - market_data.competitors
+
+  saas_pricing_model:
+    level: L3
+    type: paragraph
+    hint: >-
+      SaaS 가격 모델과 수익화 전략을 분석. 프리미엄/프리미엄+,
+      사용량 기반(Usage-based), 시트 기반(Per-seat) 등 가격 체계와
+      업셀/크로스셀 전략을 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - company_overview.business_model
+      - segment_revenue
+      - financial_statements.revenue
+
+body: |
+  {{@transition_business_model}}
+
+  {{company_name}}(이하 "대상회사")의 비즈니스 모델을 SaaS/플랫폼 기업의 관점에서
+  수익 구조, 플랫폼 역학, 경쟁 우위, 가치사슬, 확장성의 관점으로 분석하면 다음과 같습니다.
+
+  1. 비즈니스 모델 개요
+
+  {{business_model_overview}}
+  주요 제품/서비스는 {{key_products}}이며, {{certifications}} 등의 인증을 보유하고 있습니다.
+
+  2. SaaS 수익 구조 및 가격 모델
+
+  {{revenue_structure}}
+  {{saas_pricing_model}}
+  주요 고객사로는 {{key_customers}} 등이 있으며,
+  구독 기반의 안정적인 반복 매출(Recurring Revenue) 기반을 형성하고 있습니다.
+
+  3. 플랫폼 다이나믹스 (Platform Dynamics)
+
+  {{platform_dynamics}}
+  플랫폼 기반의 네트워크 효과는 사용자 기반 확대에 따라 가치가 비선형적으로 증가하는 구조적 강점입니다.
+
+  4. 경쟁 우위 및 진입장벽 (Competitive Moats)
+
+  {{competitive_moats}}
+  특히, 높은 고객 전환 비용(Switching Cost)과 데이터 축적에 따른 제품 고도화는
+  SaaS 기업의 가장 강력한 경쟁 해자입니다.
+
+  5. 가치사슬 내 포지션
+
+  {{value_chain_position}}
+
+  종합하면, {{scalability_assessment}}
+  대상회사의 SaaS 비즈니스 모델은 높은 매출총이익률과 영업 레버리지를 기반으로
+  규모 확대에 따른 수익성 개선이 구조적으로 내재되어 있습니다.
+
+includes:
+  - transition_business_model

@@ -51,6 +51,38 @@ class IndustryType(str, enum.Enum):
     LOGISTICS = "logistics"
 
 
+class DealStructure(str, enum.Enum):
+    """거래구조"""
+
+    SHARE_ACQUISITION = "SHARE_ACQUISITION"
+    ASSET_ACQUISITION = "ASSET_ACQUISITION"
+    MERGER = "MERGER"
+    CORPORATE_SPLIT = "CORPORATE_SPLIT"
+    MBO = "MBO"
+    OTHER = "OTHER"
+
+
+class InvestmentType(str, enum.Enum):
+    """투자 유형"""
+
+    EQUITY = "EQUITY"
+    DEBT = "DEBT"
+    MEZZANINE = "MEZZANINE"
+    CONVERTIBLE = "CONVERTIBLE"
+    OTHER = "OTHER"
+
+
+class SellerType(str, enum.Enum):
+    """매도인 유형"""
+
+    INDIVIDUAL = "INDIVIDUAL"
+    CORPORATE = "CORPORATE"
+    INSTITUTIONAL = "INSTITUTIONAL"
+    PE_FUND = "PE_FUND"
+    MANAGEMENT = "MANAGEMENT"
+    OTHER = "OTHER"
+
+
 class DealPhase(str, enum.Enum):
     MOU = "MOU"
     VDR_SETUP = "VDR_SETUP"
@@ -70,9 +102,9 @@ class Deal(Base):
     base_currency: Mapped[str] = mapped_column(
         String(10), nullable=False, default="KRW"
     )
-    reference_date: Mapped[date] = mapped_column(Date, nullable=False)
-    period_start: Mapped[date] = mapped_column(Date, nullable=False)
-    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    reference_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    period_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[DealStatus] = mapped_column(
         Enum(DealStatus), nullable=False, default=DealStatus.DRAFT
     )
@@ -94,8 +126,18 @@ class Deal(Base):
 
     # Workflow: industry classification
     industry: Mapped[IndustryType] = mapped_column(
-        Enum(IndustryType), nullable=False, default=IndustryType.GENERAL
+        Enum(
+            IndustryType,
+            values_callable=lambda cls: [e.value for e in cls],
+        ),
+        nullable=False,
+        default=IndustryType.GENERAL,
     )
+
+    # Workflow: deal classification
+    deal_structure: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    investment_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    seller_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Workflow: team composition
     team_partner_id: Mapped[uuid.UUID | None] = mapped_column(

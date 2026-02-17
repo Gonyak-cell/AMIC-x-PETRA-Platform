@@ -1,0 +1,141 @@
+# Growth Strategy (성장 전략) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 2개 (직접 치환) + L3 5개 (LLM 생성)
+# 조건부 블록: L4 4개 (산업별)
+section_id: growth_strategy
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  key_products:
+    level: L2
+    source: company_overview.key_products
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  strategy_overview:
+    level: L3
+    type: paragraph
+    hint: >-
+      성장 전략의 전체 방향성을 2-3문장으로 서술.
+      유기적 성장과 비유기적 성장의 균형, 단기/중장기 전략 구분.
+    max_tokens: 100
+    data_keys:
+      - growth_strategy.organic_growth
+      - growth_strategy.new_business
+      - growth_strategy.ma_targets
+      - investment_highlights
+
+  organic_growth_plan:
+    level: L3
+    type: paragraph
+    hint: >-
+      유기적 성장 전략을 상세히 서술. 기존 사업 강화,
+      시장 침투율 확대, 제품/서비스 고도화 전략을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - growth_strategy.organic_growth
+      - company_overview.key_products
+      - market_data.market_growth_rate
+      - financial_statements.revenue
+
+  new_market_expansion:
+    level: L3
+    type: paragraph
+    hint: >-
+      신규 시장 및 사업 확장 전략을 서술. 신규 고객 세그먼트 진출,
+      지역 확장, 인접 사업 영역 진출 계획을 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - growth_strategy.new_business
+      - market_data.tam
+      - market_data.industry_trends
+
+  ma_strategy:
+    level: L3
+    type: paragraph
+    hint: >-
+      M&A 및 전략적 제휴 전략을 서술. 인수 대상 기준,
+      시너지 기대 효과, 실행 역량을 2-3문장으로 분석.
+      M&A 계획이 없는 경우 전략적 파트너십 가능성 위주로 서술.
+    max_tokens: 100
+    data_keys:
+      - growth_strategy.ma_targets
+      - company_overview.business_model
+      - financial_statements.cash_and_equivalents
+
+  roadmap_summary:
+    level: L3
+    type: paragraph
+    hint: >-
+      중장기 성장 로드맵을 요약. 연도별 핵심 마일스톤과
+      기대 성과를 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - growth_strategy.roadmap
+      - growth_strategy.organic_growth
+      - growth_strategy.new_business
+
+body: |
+  {{@transition_strategy}}
+
+  {{company_name}}(이하 "대상회사")의 성장 전략을 유기적 성장, 신규 시장 확장,
+  M&A/전략적 제휴의 세 축으로 분석하면 다음과 같습니다.
+
+  {{strategy_overview}}
+
+  1. 유기적 성장 (Organic Growth)
+
+  {{organic_growth_plan}}
+  현재 핵심 사업 영역인 {{key_products}}을 중심으로
+  시장 침투율 확대와 고객 가치 극대화를 추구하고 있습니다.
+
+  2. 신규 시장 및 사업 확장
+
+  {{new_market_expansion}}
+  이러한 확장 전략은 대상회사의 매출 기반 다변화와 중장기 성장 동력 확보에 기여할 것입니다.
+
+  3. M&A 및 전략적 제휴
+
+  {{ma_strategy}}
+  선별적 M&A와 전략적 파트너십은 유기적 성장을 보완하는 핵심 전략 수단입니다.
+
+  4. 중장기 로드맵
+
+  {{roadmap_summary}}
+  {{@projection_caveat}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: organic_growth_plan
+    text: >-
+      특히, 기술 기업의 특성상 제품 로드맵의 지속적 확장과 플랫폼 생태계 강화를 통한
+      유저 기반 확대가 유기적 성장의 핵심 동인입니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: organic_growth_plan
+    text: >-
+      특히, R&D 파이프라인의 단계별 진전과 임상 마일스톤 달성이
+      유기적 성장의 핵심 가치 동인이며, 파이프라인 다각화를 통한 리스크 분산이 중요합니다.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: new_market_expansion
+    text: >-
+      제조업 특성상, 생산 능력(CAPA) 확대를 위한 설비 투자와
+      글로벌 공급망 네트워크 구축이 신규 시장 확장의 전제 조건입니다.
+
+  - condition: "industry == 'logistics'"
+    insert_after: organic_growth_plan
+    text: >-
+      특히, 물류 자동화 기술 도입과 라스트마일 배송 네트워크 확충이
+      서비스 품질 향상과 원가 경쟁력 확보의 핵심 레버입니다.
+
+includes:
+  - transition_strategy
+  - projection_caveat

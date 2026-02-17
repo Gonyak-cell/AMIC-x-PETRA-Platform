@@ -78,8 +78,8 @@ const KIIS_OVERVIEW = [
 ];
 
 const KIIS_RESEARCH = [
+  { to: "/kiis/funds", label: "GPs & Funds", icon: Wallet },
   { to: "/kiis/companies", label: "Companies", icon: Building2 },
-  { to: "/kiis/funds", label: "Funds", icon: Wallet },
   { to: "/kiis/reits", label: "REITs", icon: Building },
   { to: "/kiis/news", label: "News & Sentiment", icon: Newspaper },
 ];

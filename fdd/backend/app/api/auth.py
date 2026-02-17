@@ -5,10 +5,11 @@ FDD-1701 (RBAC) + FDD-1704 (세션/토큰 관리).
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -16,10 +17,11 @@ from app.auth.dependencies import CurrentUser, get_current_user, require_permiss
 from app.auth.rbac import Permission
 from app.auth.token import decode_access_token
 from app.config import settings
+from app.core.errors import ErrorCode
+from app.core.exceptions import AuthenticationError
 from app.database import get_db
 from app.schemas.user import (
     LoginRequest,
-    RefreshRequest,
     TokenResponse,
     UserCreate,
     UserRead,
@@ -35,6 +37,8 @@ from app.services.auth_service import (
 )
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+_is_production = os.getenv("ENV", "").lower() in ("production", "prod")
+_cookie_secure = _is_production  # HTTPS only in production
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,8 +57,8 @@ def login(
         key="access_token",
         value=access,
         httponly=True,
-        secure=True,  # HTTPS only
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=settings.access_token_expire_minutes * 60,
     )
 
@@ -63,8 +67,8 @@ def login(
         key="refresh_token",
         value=refresh,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 
@@ -73,20 +77,26 @@ def login(
 
 @router.post("/refresh")
 def refresh(
-    body: RefreshRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ):
-    """Access Token 갱신 — 새 토큰을 httpOnly 쿠키로 설정."""
-    access, refresh_tok = refresh_tokens(db, body.refresh_token)
+    """Access Token 갱신 — httpOnly 쿠키에서 refresh_token을 읽어 갱신."""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID,
+            "Refresh token not found in cookies",
+        )
+    access, refresh_tok = refresh_tokens(db, refresh_token)
 
     # Access Token 쿠키 설정
     response.set_cookie(
         key="access_token",
         value=access,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=settings.access_token_expire_minutes * 60,
     )
 
@@ -95,8 +105,8 @@ def refresh(
         key="refresh_token",
         value=refresh_tok,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=_cookie_secure,
+        samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 

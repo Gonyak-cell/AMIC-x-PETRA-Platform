@@ -59,7 +59,8 @@ export interface PaginatedResponse<T> {
 
 export interface CompanyListParams {
   search?: string;
-  corp_cls?: CorpCls;
+  /** 쉼표 구분 복수 선택 가능 (예: "Y,K") */
+  corp_cls?: string;
   page?: number;
   size?: number;
 }

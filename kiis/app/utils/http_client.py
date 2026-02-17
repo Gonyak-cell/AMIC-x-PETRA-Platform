@@ -33,6 +33,7 @@ class AsyncHTTPClient:
                 timeout=httpx.Timeout(self.timeout),
                 headers=self._headers,
                 follow_redirects=True,
+                cookies=httpx.Cookies(),
             )
         return self._client
 
@@ -43,19 +44,23 @@ class AsyncHTTPClient:
         *,
         params: dict | None = None,
         json: dict | None = None,
-        data: dict | None = None,
+        data: dict | bytes | None = None,
+        content: bytes | None = None,
     ) -> httpx.Response:
         client = await self._get_client()
         last_exception: Exception | None = None
 
         for attempt in range(self.max_retries):
             try:
+                kwargs: dict = {"params": params, "json": json}
+                if content is not None:
+                    kwargs["content"] = content
+                else:
+                    kwargs["data"] = data
                 response = await client.request(
                     method,
                     url,
-                    params=params,
-                    json=json,
-                    data=data,
+                    **kwargs,
                 )
                 response.raise_for_status()
                 return response
@@ -78,7 +83,15 @@ class AsyncHTTPClient:
     async def get(self, url: str, *, params: dict | None = None) -> httpx.Response:
         return await self.request("GET", url, params=params)
 
-    async def post(self, url: str, *, json: dict | None = None, data: dict | None = None) -> httpx.Response:
+    async def post(
+        self,
+        url: str,
+        *,
+        json: dict | None = None,
+        data: dict | bytes | None = None,
+    ) -> httpx.Response:
+        if isinstance(data, bytes):
+            return await self.request("POST", url, content=data)
         return await self.request("POST", url, json=json, data=data)
 
     async def close(self) -> None:

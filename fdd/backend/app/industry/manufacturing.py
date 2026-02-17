@@ -9,6 +9,7 @@ from app.industry.models import (
     FDDAdjustmentRule,
     FDDDebtClassification,
     FDDKPIBenchmark,
+    FDDNarrativeTemplate,
     FDDNWCNorm,
 )
 from app.industry.registry import register_fdd_industry
@@ -113,6 +114,30 @@ class FDDManufacturingModule(FDDIndustryModule):
                 special_treatments={
                     "LEASE_LIABILITIES": "공장·설비 리스가 주요 — IFRS 16 적용 판단 필수",
                     "CAPEX_COMMITMENTS": "미이행 CAPEX 약정은 debt-like 고려",
+                },
+            ),
+        ]
+
+    def get_narrative_templates(self) -> list[FDDNarrativeTemplate]:
+        return [
+            FDDNarrativeTemplate(
+                section_id="executive_summary",
+                template_text=(
+                    "제조업 FDD 분석 시 고려 사항:\n"
+                    "- CAPEX 구분 (유지보수 vs 성장) 및 EBITDA 영향\n"
+                    "- 재고 3단계(원재료·재공품·완제품) 평가 적정성\n"
+                    "- 설비 가동률과 감가상각 정상화"
+                ),
+                emphasis_areas=[
+                    "CAPEX/매출 비율 및 유지보수 CAPEX 수준",
+                    "재고회전율 추세 및 진부화 위험",
+                    "설비종합효율(OEE) 및 가동률",
+                    "원재료 가격 변동의 EBITDA 영향",
+                ],
+                terminology_overrides={
+                    "매출원가": "제조원가 (원재료+노무+제조경비)",
+                    "설비투자": "CAPEX (유지보수 + 성장)",
+                    "재고": "원재료·재공품·완제품 3단계 재고",
                 },
             ),
         ]

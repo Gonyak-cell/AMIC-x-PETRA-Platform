@@ -77,15 +77,18 @@ class FDDModelRouter:
     Args:
         providers: {provider_name: LLMClient} 맵
         routing_map: 섹션별 프로바이더 맵 (기본: DEFAULT_FDD_ROUTING)
+        fallback_order: 커스텀 폴백 순서 (None이면 FALLBACK_CHAIN 사용)
     """
 
     def __init__(
         self,
         providers: dict[str, LLMClient],
         routing_map: dict[str, str] | None = None,
+        fallback_order: list[str] | None = None,
     ):
         self._providers = providers
         self._routing_map = routing_map or DEFAULT_FDD_ROUTING
+        self._fallback_order = fallback_order
 
     @property
     def available_providers(self) -> list[str]:
@@ -97,11 +100,12 @@ class FDDModelRouter:
         """현재 라우팅 맵 (디버그용)."""
         return dict(self._routing_map)
 
-    def resolve(self, section_id: str) -> RoutingDecision:
+    def resolve(self, section_id: str, *, industry: str = "") -> RoutingDecision:
         """섹션에 대한 프로바이더를 결정한다.
 
         Args:
             section_id: 섹션/태스크 식별자
+            industry: 산업 식별자 (복합 키 라우팅용, 예: "healthcare")
 
         Returns:
             RoutingDecision (fallback 여부 포함)
@@ -109,6 +113,19 @@ class FDDModelRouter:
         Raises:
             RuntimeError: 사용 가능한 프로바이더가 전혀 없을 때
         """
+        # 1차: 복합 키 (industry:section_id) 조회
+        if industry:
+            compound_key = f"{industry}:{section_id}"
+            compound_primary = self._routing_map.get(compound_key)
+            if compound_primary:
+                client = self._providers.get(compound_primary)
+                if client and client.is_available():
+                    return RoutingDecision(
+                        section_id=section_id,
+                        provider=compound_primary,
+                    )
+
+        # 2차: 기본 키 (section_id) 조회
         primary = self._routing_map.get(section_id, "openai")
 
         # 1차: primary 프로바이더 사용 가능한지 확인
@@ -119,8 +136,11 @@ class FDDModelRouter:
                 provider=primary,
             )
 
-        # 2차: 폴백 체인 순회
-        fallbacks = FALLBACK_CHAIN.get(primary, [])
+        # 2차: 폴백 체인 순회 (커스텀 폴백 → 기본 폴백 체인)
+        if self._fallback_order:
+            fallbacks = [f for f in self._fallback_order if f != primary]
+        else:
+            fallbacks = FALLBACK_CHAIN.get(primary, [])
         for fallback_name in fallbacks:
             fallback_client = self._providers.get(fallback_name)
             if fallback_client and fallback_client.is_available():
@@ -150,6 +170,7 @@ class FDDModelRouter:
         self,
         section_id: str,
         *,
+        industry: str = "",
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.0,
@@ -161,6 +182,7 @@ class FDDModelRouter:
 
         Args:
             section_id: 섹션/태스크 식별자
+            industry: 산업 식별자 (복합 키 라우팅용)
             system_prompt: 시스템 프롬프트
             user_prompt: 사용자 프롬프트
             temperature: 온도
@@ -174,7 +196,7 @@ class FDDModelRouter:
         Raises:
             RuntimeError: 사용 가능한 프로바이더 없음
         """
-        decision = self.resolve(section_id)
+        decision = self.resolve(section_id, industry=industry)
         client = self._providers[decision.provider]
 
         logger.info(

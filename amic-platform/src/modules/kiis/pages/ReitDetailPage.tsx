@@ -35,13 +35,13 @@ const assetColumns: Column<REITsAssetItem>[] = [
 export default function ReitDetailPage() {
   const { reitsCode } = useParams<{ reitsCode: string }>();
   const code = reitsCode ?? "";
-  const { data, isLoading } = useReitDetail(code);
+  const { data, isLoading, isError } = useReitDetail(code);
 
   const reit = data?.reits;
   const assets = data?.assets ?? [];
 
   if (isLoading) return <Spinner />;
-  if (!reit) {
+  if (isError || !reit) {
     return (
       <EmptyState
         icon={Home}

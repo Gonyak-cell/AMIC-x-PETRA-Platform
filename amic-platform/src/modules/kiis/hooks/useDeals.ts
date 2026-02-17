@@ -4,6 +4,8 @@ import type {
   DealItem,
   DealListResponse,
   DealByCompanyParams,
+  DealByFundParams,
+  DealAmountStats,
   SectorAggregation,
   SectorAggregationResponse,
   StageAggregation,
@@ -12,6 +14,7 @@ import type {
   TrendResponse,
   DealAggregationParams,
   DealTrendParams,
+  TendencySummaryResponse,
 } from "@/modules/kiis/types/deal";
 
 const CORP_CODE_RE = /^\d{8}$/;
@@ -80,5 +83,58 @@ export function useDealTrends(
       return data.items;
     },
     ...(options?.enabled !== undefined && { enabled: options.enabled }),
+  });
+}
+
+export function useDealsByFund(
+  fundCode: string,
+  params: DealByFundParams = {},
+  options?: { enabled?: boolean },
+) {
+  return useQuery<DealItem[]>({
+    queryKey: ["kiis", "deals", "by-fund", fundCode, params],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<DealListResponse>(
+        `/deals/by-fund/${fundCode}`,
+        { params },
+      );
+      return data.items;
+    },
+    enabled: (options?.enabled ?? true) && fundCode.length > 0,
+  });
+}
+
+export function useDealStats(
+  corpCode: string,
+  years = 5,
+  options?: { enabled?: boolean },
+) {
+  return useQuery<DealAmountStats>({
+    queryKey: ["kiis", "deals", "stats", corpCode, years],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<DealAmountStats>("/deals/stats", {
+        params: { corp_code: corpCode, years },
+      });
+      return data;
+    },
+    enabled: (options?.enabled ?? true) && CORP_CODE_RE.test(corpCode),
+  });
+}
+
+export function useTendencySummary(
+  corpCode: string,
+  years = 3,
+  options?: { enabled?: boolean },
+) {
+  return useQuery<TendencySummaryResponse>({
+    queryKey: ["kiis", "deals", "tendency-summary", corpCode, years],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<TendencySummaryResponse>(
+        "/deals/tendency-summary",
+        { params: { corp_code: corpCode, years } },
+      );
+      return data;
+    },
+    enabled: (options?.enabled ?? true) && CORP_CODE_RE.test(corpCode),
   });
 }

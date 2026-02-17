@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   useDisclosures,
   useSyncDartDisclosures,
+  useSyncKofiaDisclosures,
 } from "@/modules/kiis/hooks/useDisclosures";
 import {
   Card,
@@ -116,24 +117,34 @@ export default function DisclosurePage() {
   const [disclosureType, setDisclosureType] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useDisclosures(corpCode, {
+  const { data, isLoading, isError } = useDisclosures(corpCode, {
     disclosure_type: (disclosureType as DisclosureType) || undefined,
     page,
     size: 20,
   });
   const syncDart = useSyncDartDisclosures(corpCode);
+  const syncKofia = useSyncKofiaDisclosures(corpCode);
 
   const handleSearch = (code: string) => {
     setCorpCode(code);
     setPage(1);
   };
 
-  const handleSync = () => {
+  const handleSyncDart = () => {
     if (!corpCode) return;
     syncDart.mutate(undefined, {
       onSuccess: (res) =>
-        toast.success(`Synced ${res.synced_count}, skipped ${res.skipped_count}`),
-      onError: () => toast.error("Sync failed"),
+        toast.success(`DART: synced ${res.synced_count}, skipped ${res.skipped_count}`),
+      onError: () => toast.error("DART sync failed"),
+    });
+  };
+
+  const handleSyncKofia = () => {
+    if (!corpCode) return;
+    syncKofia.mutate(undefined, {
+      onSuccess: (res) =>
+        toast.success(`KOFIA: synced ${res.synced_count}, skipped ${res.skipped_count}`),
+      onError: () => toast.error("KOFIA sync failed"),
     });
   };
 
@@ -161,14 +172,24 @@ export default function DisclosurePage() {
           />
         </div>
         {corpCode && (
-          <Button
-            variant="secondary"
-            icon={RefreshCw}
-            onClick={handleSync}
-            loading={syncDart.isPending}
-          >
-            Sync DART
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={RefreshCw}
+              onClick={handleSyncDart}
+              loading={syncDart.isPending}
+            >
+              Sync DART
+            </Button>
+            <Button
+              variant="secondary"
+              icon={RefreshCw}
+              onClick={handleSyncKofia}
+              loading={syncKofia.isPending}
+            >
+              Sync KOFIA
+            </Button>
+          </>
         )}
       </div>
 
@@ -181,6 +202,12 @@ export default function DisclosurePage() {
           />
         ) : isLoading ? (
           <Spinner />
+        ) : isError ? (
+          <EmptyState
+            icon={ScrollText}
+            title="Failed to load disclosures"
+            description="An error occurred while fetching disclosures."
+          />
         ) : !data?.items.length ? (
           <EmptyState
             icon={ScrollText}

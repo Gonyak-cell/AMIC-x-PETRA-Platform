@@ -1,0 +1,83 @@
+# Financial Analysis — 제조업 산업 오버라이드
+#
+# 마지막 수정: 2026-02-17
+# 기본 템플릿에 CAPEX 구분 분석 및 재고/원가 관리 섹션 추가
+section_id: financial_analysis
+version: "1.0"
+source_reference: "제조업 IM 보고서 양식"
+
+slots:
+  # ── 신규 L3: 제조업 특화 ──
+  capex_structure_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      CAPEX 구조를 분석. 유지보수 CAPEX(Maintenance CAPEX)와 성장 CAPEX(Growth CAPEX)의
+      구분, CAPEX/매출 비율, 감가상각비 대비 CAPEX 수준, 설비 투자 계획의
+      수익성 기여를 수치와 함께 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.capex
+      - financial_statements.revenue
+      - financial_statements.ebitda
+      - derived_metrics
+
+  inventory_cost_analysis:
+    level: L3
+    type: paragraph
+    hint: >-
+      재고 관리 및 원가 구조를 분석. 재고회전율, 원재료·재공품·완제품 3단계 재고 구성,
+      원재료 가격 변동의 EBITDA 영향, 설비종합효율(OEE)과 수율을
+      수치와 함께 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - financial_statements.revenue
+      - financial_statements.gross_profit
+      - financial_statements.operating_income
+      - derived_metrics
+
+body: |
+  {{@transition_financial}}
+
+  {{company_name}}(이하 "대상회사")의 재무 실적을 제조업 특수성을
+  반영하여 다각도로 분석하면 다음과 같습니다.
+
+  1. 매출 및 수익성 분석
+
+  {{revenue_profitability_analysis}}
+  제조업 특성상, 원재료 가격 변동과 설비 가동률이 수익성에 직접적 영향을 미치며,
+  대상회사는 효율적인 원가 관리를 통해 안정적인 마진을 유지하고 있습니다.
+  {{@financial_note}}
+
+  2. CAPEX 구조 분석
+
+  {{capex_structure_analysis}}
+  유지보수 CAPEX는 기존 설비의 정상 운영을 위한 필수 투자이며,
+  성장 CAPEX는 생산 능력(CAPA) 확대를 통한 매출 성장의 기반입니다.
+  CAPEX 구분은 정상화 EBITDA 산출의 핵심 요소입니다.
+
+  3. 재고 및 원가 관리
+
+  {{inventory_cost_analysis}}
+  원재료·재공품·완제품의 3단계 재고 관리 효율성은
+  제조업 기업의 운전자본 효율성과 수익성을 결정하는 핵심 요소입니다.
+
+  4. 재무 건전성 분석
+
+  {{balance_sheet_analysis}}
+  대상회사의 재무 구조는 설비 투자와 운전자본 수요를 안정적으로 지원하고 있습니다.
+
+  5. 현금흐름 분석
+
+  {{cash_flow_analysis}}
+  제조업의 높은 CAPEX 수요를 감안할 때,
+  안정적인 영업현금흐름(OCF) 창출은 자체 투자 능력을 입증하는 핵심 지표입니다.
+
+  6. 핵심 지표 종합
+
+  {{key_metrics_summary}}
+  {{financial_outlook}}
+
+includes:
+  - transition_financial
+  - financial_note

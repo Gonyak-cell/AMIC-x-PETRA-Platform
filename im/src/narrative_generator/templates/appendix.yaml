@@ -1,0 +1,104 @@
+# Appendix (부록) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 4개 (직접 치환) + L3 2개 (LLM 생성)
+# 조건부 블록: L4 2개 (산업별)
+section_id: appendix
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  report_date:
+    level: L2
+    source: date
+    format: date
+    default: "2026년"
+
+  revenue:
+    level: L2
+    source: financial_statements.revenue
+    default: ""
+
+  total_assets:
+    level: L2
+    source: financial_statements.total_assets
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  data_sources_summary:
+    level: L3
+    type: paragraph
+    hint: >-
+      본 IM에서 사용된 데이터 출처를 요약. 감사보고서, 경영진 제공 자료,
+      시장 리서치 출처 등을 2-3문장으로 설명.
+    max_tokens: 80
+    data_keys:
+      - company_name_kr
+      - date
+
+  key_assumptions:
+    level: L3
+    type: paragraph
+    hint: >-
+      본 IM에 포함된 추정치 및 전망의 핵심 전제 조건을 2-3문장으로 서술.
+      매출 성장률 가정, 시장 환경 전제, 환율 가정 등.
+    max_tokens: 80
+    data_keys:
+      - derived_metrics
+      - market_data.market_growth_rate
+
+body: |
+  {{@transition_appendix}}
+
+  본 부록에서는 {{company_name}}(이하 "대상회사")에 관한 Information Memorandum의
+  보충 자료를 수록합니다. 작성 기준일: {{report_date}}.
+
+  1. 데이터 출처
+
+  {{data_sources_summary}}
+  {{@financial_note}}
+
+  2. 핵심 전제 조건
+
+  {{key_assumptions}}
+  {{@projection_caveat}}
+
+  3. 용어 정의
+
+  - TAM (Total Addressable Market): 전체 시장 규모
+  - SAM (Serviceable Addressable Market): 유효 시장 규모
+  - SOM (Serviceable Obtainable Market): 획득 가능 시장 규모
+  - EBITDA: 이자, 세금, 감가상각비 차감 전 영업이익
+  - CAGR: 연평균 복합 성장률
+  - FCF (Free Cash Flow): 잉여현금흐름
+  - NRR (Net Revenue Retention): 순매출유지율
+
+  {{@disclaimer_full}}
+  {{@confidentiality}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: key_assumptions
+    text: >-
+      SaaS 관련 지표 정의: ARR(Annual Recurring Revenue, 연간 반복 매출),
+      MRR(Monthly Recurring Revenue, 월간 반복 매출),
+      Churn Rate(이탈률), CAC(Customer Acquisition Cost, 고객 획득 비용).
+
+  - condition: "industry == 'financial_services'"
+    insert_after: key_assumptions
+    text: >-
+      금융업 관련 지표 정의: BIS 비율(자기자본비율),
+      NIM(Net Interest Margin, 순이자마진),
+      NPL(Non-Performing Loan, 부실채권 비율).
+
+includes:
+  - transition_appendix
+  - financial_note
+  - projection_caveat
+  - disclaimer_full
+  - confidentiality

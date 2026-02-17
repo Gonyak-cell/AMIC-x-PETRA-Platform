@@ -14,6 +14,9 @@ export interface DealItem {
   source_url: string | null;
   source_type: string | null;
   is_lead_investor: boolean;
+  fund_id: number | null;
+  fund_code: string | null;
+  fund_name: string | null;
 }
 
 /** 딜 목록 아이템 (축약) */
@@ -96,4 +99,80 @@ export interface DealByCompanyParams {
   stage?: string;
   page?: number;
   size?: number;
+}
+
+/** Deal by-fund 조회 파라미터 */
+export interface DealByFundParams {
+  years?: number;
+  page?: number;
+  size?: number;
+}
+
+/** 투자 규모 분포 구간 */
+export interface AmountBucket {
+  bucket_label: string;
+  bucket_min: number;
+  bucket_max: number | null;
+  deal_count: number;
+  total_amount: string | null;
+}
+
+/** 투자 규모 통계 (GET /deals/stats) */
+export interface DealAmountStats {
+  total_deals: number;
+  total_amount: string | null;
+  avg_amount: string | null;
+  median_amount: string | null;
+  min_amount: string | null;
+  max_amount: string | null;
+  distribution: AmountBucket[];
+}
+
+/* ─── 투자성향 정성적 요약 (GET /deals/tendency-summary) ─── */
+
+/** 투자성향 - 대표 딜 아이템 */
+export interface TendencyDealItem {
+  target_company: string;
+  amount_display: string | null;
+  round_stage: string | null;
+  deal_date: string | null;
+  source_url: string | null;
+}
+
+/** 투자성향 - 섹터별 상세 */
+export interface TendencySectorDetail {
+  sector: string;
+  sector_name: string;
+  deal_count: number;
+  total_amount: string | null;
+  total_amount_display: string | null;
+  percentage: number;
+  description: string;
+  deals: TendencyDealItem[];
+}
+
+/** 투자성향 - 스테이지별 상세 */
+export interface TendencyStageDetail {
+  stage: string;
+  stage_name: string;
+  deal_count: number;
+  total_amount: string | null;
+  total_amount_display: string | null;
+  percentage: number;
+  description: string;
+  deals: TendencyDealItem[];
+}
+
+/** 투자성향 정성적 요약 응답 */
+export interface TendencySummaryResponse {
+  corp_code: string;
+  years: number;
+  total_deals: number;
+  total_amount: string | null;
+  total_amount_display: string | null;
+  summary_text: string;
+  sector_summary: string;
+  stage_summary: string;
+  sectors: TendencySectorDetail[];
+  stages: TendencyStageDetail[];
 }

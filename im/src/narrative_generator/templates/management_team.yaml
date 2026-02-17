@@ -1,0 +1,137 @@
+# Management Team (경영진) 템플릿
+#
+# 마지막 수정: 2026-02-17
+# 슬롯 구성: L2 10개 (직접 치환) + L3 3개 (LLM 생성)
+# 조건부 블록: L4 2개 (산업별)
+section_id: management_team
+version: "1.0"
+source_reference: "일반 IM 보고서 양식"
+
+slots:
+  # ── L2: 단순 치환 ──
+  company_name:
+    level: L2
+    source: company_name_kr
+
+  employee_count:
+    level: L2
+    source: company_overview.employee_count
+    format: count
+    default: ""
+
+  # 경영진 1 (대표이사/CEO)
+  exec_name_1:
+    level: L2
+    source: management_team.0.name
+    default: "[대표이사]"
+
+  exec_title_1:
+    level: L2
+    source: management_team.0.title
+    default: "[직위]"
+
+  exec_role_1:
+    level: L2
+    source: management_team.0.role
+    default: ""
+
+  # 경영진 2
+  exec_name_2:
+    level: L2
+    source: management_team.1.name
+    default: ""
+
+  exec_title_2:
+    level: L2
+    source: management_team.1.title
+    default: ""
+
+  exec_role_2:
+    level: L2
+    source: management_team.1.role
+    default: ""
+
+  # 경영진 3
+  exec_name_3:
+    level: L2
+    source: management_team.2.name
+    default: ""
+
+  exec_title_3:
+    level: L2
+    source: management_team.2.title
+    default: ""
+
+  # ── L3: LLM 생성 ──
+  team_overview:
+    level: L3
+    type: paragraph
+    hint: >-
+      경영진 전체의 역량과 강점을 종합적으로 소개. 팀 구성의 다양성,
+      업계 경험 연수, 핵심 역량을 2-3문장으로 서술.
+    max_tokens: 100
+    data_keys:
+      - management_team
+      - company_overview.business_model
+
+  ceo_profile:
+    level: L3
+    type: paragraph
+    hint: >-
+      대표이사/CEO의 경력과 리더십을 상세히 소개. 주요 경력 사항,
+      업계 전문성, 대상회사에서의 성과를 2-3문장으로 서술.
+    max_tokens: 120
+    data_keys:
+      - management_team.0.name
+      - management_team.0.career
+      - management_team.0.role
+
+  key_executives_summary:
+    level: L3
+    type: paragraph
+    hint: >-
+      핵심 경영진(CFO, CTO 등)의 역량을 종합 서술.
+      각 임원의 전문 분야와 팀 시너지를 2-3문장으로 분석.
+    max_tokens: 120
+    data_keys:
+      - management_team
+      - company_overview.business_model
+
+body: |
+  {{@transition_management}}
+
+  {{company_name}}(이하 "대상회사")의 경영진은 풍부한 업계 경험과
+  검증된 실행력을 갖춘 전문 인력으로 구성되어 있습니다.
+
+  {{team_overview}}
+
+  1. 대표이사
+
+  {{exec_name_1}} {{exec_title_1}}
+
+  {{ceo_profile}}
+  대표이사의 리더십 하에 대상회사는 지속적인 성장 궤적을 유지하고 있습니다.
+
+  2. 핵심 경영진
+
+  {{key_executives_summary}}
+  이러한 경영진 구성은 사업 운영의 안정성과 전략적 의사결정의 효율성을 담보하고 있습니다.
+
+  대상회사는 현재 약 {{employee_count}}의 임직원이 근무하고 있으며,
+  경영진의 역량과 조직의 실행력이 조화를 이루어 기업 가치 성장을 이끌고 있습니다.
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: key_executives_summary
+    text: >-
+      특히, 기술 기반 기업의 특성상 CTO/VP Engineering의 기술 리더십과
+      R&D 조직의 역량이 제품 경쟁력과 기업 가치에 직접적인 영향을 미치고 있습니다.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: key_executives_summary
+    text: >-
+      특히, 바이오/헬스케어 기업의 특성상 CSO(Chief Scientific Officer)의
+      연구 역량과 CMO(Chief Medical Officer)의 임상 전문성이 파이프라인 가치의 핵심입니다.
+
+includes:
+  - transition_management

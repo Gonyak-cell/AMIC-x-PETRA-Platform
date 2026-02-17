@@ -1,0 +1,154 @@
+section_id: executive_summary
+version: "1.0"
+source_reference: "FDD Report Standard Format"
+
+slots:
+  # ── L2: 단순 치환 ──
+  deal_name:
+    level: L2
+    source: deal_name
+
+  industry_name:
+    level: L2
+    source: industry_name
+
+  reported_ebitda:
+    level: L2
+    source: qoe.reported_ebitda
+
+  adjusted_ebitda:
+    level: L2
+    source: qoe.adjusted_ebitda
+
+  total_adjustments:
+    level: L2
+    source: qoe.total_adjustments
+
+  net_working_capital:
+    level: L2
+    source: nwc.total_nwc
+
+  net_debt:
+    level: L2
+    source: debt.net_debt
+
+  # ── L3: LLM 생성 ──
+  qoe_summary_narrative:
+    level: L3
+    type: paragraph
+    hint: >-
+      Summarize the key QoE findings in 2-3 sentences. Cover the nature of
+      major adjustments (non-recurring vs normalization) and their impact on
+      Adjusted EBITDA. Reference only the provided numbers.
+    max_tokens: 120
+    data_keys:
+      - qoe.reported_ebitda
+      - qoe.adjusted_ebitda
+      - qoe.total_adjustments
+      - qoe.adjustment_count
+      - qoe.top_adjustments
+
+  nwc_debt_summary:
+    level: L3
+    type: paragraph
+    hint: >-
+      Summarize NWC and Net Debt findings in 2 sentences. Note the NWC level
+      relative to the peg target and the key components of Net Debt.
+    max_tokens: 100
+    data_keys:
+      - nwc.total_nwc
+      - nwc.peg_target
+      - debt.net_debt
+      - debt.total_debt
+      - debt.total_cash
+
+  key_risk_summary:
+    level: L3
+    type: bullet_list
+    hint: >-
+      List the top 3 risks identified during the FDD as bullet points.
+      Each item should be one sentence including severity and category.
+    max_tokens: 100
+    data_keys:
+      - issues
+
+  overall_assessment:
+    level: L3
+    type: sentence
+    hint: >-
+      Provide an overall FDD assessment in 1 sentence. Be objective
+      and evidence-based; avoid excessive optimism or pessimism.
+    max_tokens: 60
+    data_keys:
+      - qoe.adjusted_ebitda
+      - nwc.total_nwc
+      - debt.net_debt
+      - issues
+
+body: |
+  {{@fdd_disclaimer}}
+
+  FINANCIAL DUE DILIGENCE — EXECUTIVE SUMMARY
+
+  Deal: {{deal_name}}
+  Industry: {{industry_name}}
+
+  This report presents the Financial Due Diligence findings for {{deal_name}}
+  (the "Target Company"), operating in the {{industry_name}} sector.
+
+  1. Quality of Earnings
+
+  The Target Company reported EBITDA of {{reported_ebitda}} million KRW.
+  After {{total_adjustments}} million KRW of total adjustments,
+  the Adjusted EBITDA is {{adjusted_ebitda}} million KRW.
+
+  {{qoe_summary_narrative}}
+
+  {{@fdd_currency_note}}
+
+  2. Balance Sheet Overview
+
+  Net Working Capital stands at {{net_working_capital}} million KRW,
+  and Net Debt is {{net_debt}} million KRW.
+
+  {{nwc_debt_summary}}
+
+  3. Key Risks
+
+  {{key_risk_summary}}
+
+  4. Overall Assessment
+
+  {{overall_assessment}}
+
+conditional_blocks:
+  - condition: "industry == 'tech'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      Given the SaaS/technology nature of the business, R&D capitalization
+      and stock-based compensation (SBC) are key adjustment items,
+      consistent with industry standard practices.
+
+  - condition: "industry == 'healthcare'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      For healthcare/biotech companies, clinical trial costs and regulatory
+      expenses are critical to the non-recurring assessment, and pipeline
+      value should be considered separately.
+
+  - condition: "industry == 'manufacturing'"
+    insert_after: qoe_summary_narrative
+    text: >-
+      For manufacturing companies, capital expenditure normalization and
+      raw material price volatility are key factors in the QoE analysis.
+
+  - condition: "industry == 'financial_services'"
+    insert_after: nwc_debt_summary
+    text: >-
+      For financial services companies, regulatory capital requirements
+      (BIS ratio) and provision adequacy are critical balance sheet
+      considerations requiring separate regulatory compliance analysis.
+
+includes:
+  - fdd_disclaimer
+  - fdd_currency_note
