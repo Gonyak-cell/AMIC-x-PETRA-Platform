@@ -185,7 +185,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
       {/* Palette */}
       <div
         ref={paletteRef}
-        className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-border overflow-hidden"
+        className="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-gray-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >

@@ -6,43 +6,52 @@ import type { Deal } from "@/modules/fdd/types/deal";
 import type { Document } from "@/modules/im/types/document";
 import type { PortalKpis, PortalKpiErrors, ModuleHealth } from "@/types/dashboard";
 
+/** Dashboard-specific short timeout to avoid blocking UI when a backend is down */
+const DASH_TIMEOUT = 5_000;
+
 export function usePortalKpis() {
   const results = useQueries({
     queries: [
       {
         queryKey: ["portal", "deals"],
         queryFn: async () => {
-          const { data } = await api.get<Deal[]>("/deals");
+          const { data } = await api.get<Deal[]>("/deals", { timeout: DASH_TIMEOUT });
           return data;
         },
         staleTime: 30_000,
+        retry: 0,
       },
       {
         queryKey: ["portal", "alerts-count"],
         queryFn: async () => {
           const { data } = await kiisApi.get<{ count: number }>(
             "/alerts/unread-count",
+            { timeout: DASH_TIMEOUT },
           );
           return data;
         },
         staleTime: 30_000,
+        retry: 0,
       },
       {
         queryKey: ["portal", "documents"],
         queryFn: async () => {
           const { data } = await imApi.get<{ items: Document[]; total: number }>(
             "/documents",
+            { timeout: DASH_TIMEOUT },
           );
           return data;
         },
         staleTime: 30_000,
+        retry: 0,
       },
     ],
   });
 
   const [dealsQuery, alertsQuery, docsQuery] = results;
 
-  const isLoading = results.some((r) => r.isLoading);
+  // Each query settles independently — "loading" only while ALL are still pending
+  const isLoading = results.every((r) => r.isLoading);
   const isError = results.every((r) => r.isError);
 
   const IN_PROGRESS_STATUSES = [
@@ -74,7 +83,13 @@ export function usePortalKpis() {
     im: docsQuery.isError,
   };
 
-  return { kpis, isLoading, isError, errors };
+  const loading = {
+    fdd: dealsQuery.isLoading,
+    kiis: alertsQuery.isLoading,
+    im: docsQuery.isLoading,
+  };
+
+  return { kpis, isLoading, isError, errors, loading };
 }
 
 export function useModuleHealth() {

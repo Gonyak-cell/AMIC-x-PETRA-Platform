@@ -44,7 +44,7 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { kpis, isLoading: kpisLoading, errors } = usePortalKpis();
+  const { kpis, isLoading: kpisLoading, errors, loading } = usePortalKpis();
   const { data: health } = useModuleHealth();
 
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -61,54 +61,59 @@ export default function DashboardPage() {
         title={`Welcome, ${user?.display_name ?? "User"}`}
         subtitle={today}
       >
-        {/* Glass Card KPIs (stagger animation) */}
+        {/* Glass Card KPIs — each card renders independently */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {kpisLoading ? (
-            <>
-              <KpiCardSkeleton />
-              <KpiCardSkeleton />
-              <KpiCardSkeleton />
-              <KpiCardSkeleton />
-            </>
+          {loading.fdd ? (
+            <KpiCardSkeleton />
           ) : (
-            <>
-              <KpiCard
-                label="Active FDD Deals"
-                value={errors.fdd ? "—" : String(kpis.activeDeals)}
-                icon={Briefcase}
-                variant={errors.fdd ? "negative" : "positive"}
-                hoverLift
-                generous
-                className="glass-card"
-              />
-              <KpiCard
-                label="Watchlist Alerts"
-                value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
-                icon={Bell}
-                variant={errors.kiis ? "negative" : "default"}
-                hoverLift
-                generous
-                className="glass-card"
-              />
-              <KpiCard
-                label="IM In Progress"
-                value={errors.im ? "—" : String(kpis.imInProgress)}
-                icon={FileText}
-                variant={errors.im ? "negative" : "caution"}
-                hoverLift
-                generous
-                className="glass-card"
-              />
-              <KpiCard
-                label="Draft Deals"
-                value={errors.fdd ? "—" : String(kpis.pendingIssues)}
-                icon={AlertTriangle}
-                variant="negative"
-                hoverLift
-                generous
-                className="glass-card"
-              />
-            </>
+            <KpiCard
+              label="Active FDD Deals"
+              value={errors.fdd ? "—" : String(kpis.activeDeals)}
+              icon={Briefcase}
+              variant={errors.fdd ? "negative" : "positive"}
+              hoverLift
+              generous
+              className="glass-card"
+            />
+          )}
+          {loading.kiis ? (
+            <KpiCardSkeleton />
+          ) : (
+            <KpiCard
+              label="Watchlist Alerts"
+              value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
+              icon={Bell}
+              variant={errors.kiis ? "negative" : "default"}
+              hoverLift
+              generous
+              className="glass-card"
+            />
+          )}
+          {loading.im ? (
+            <KpiCardSkeleton />
+          ) : (
+            <KpiCard
+              label="IM In Progress"
+              value={errors.im ? "—" : String(kpis.imInProgress)}
+              icon={FileText}
+              variant={errors.im ? "negative" : "caution"}
+              hoverLift
+              generous
+              className="glass-card"
+            />
+          )}
+          {loading.fdd ? (
+            <KpiCardSkeleton />
+          ) : (
+            <KpiCard
+              label="Draft Deals"
+              value={errors.fdd ? "—" : String(kpis.pendingIssues)}
+              icon={AlertTriangle}
+              variant="negative"
+              hoverLift
+              generous
+              className="glass-card"
+            />
           )}
         </div>
       </PageHero>
