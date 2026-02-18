@@ -2,6 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import api from "@/api/client";
 import { kiisApi } from "@/api/kiisClient";
 import { imApi } from "@/api/imClient";
+import { maApi } from "@/api/maClient";
 import type { Deal } from "@/modules/fdd/types/deal";
 import type { Document } from "@/modules/im/types/document";
 import type { PortalKpis, PortalKpiErrors, ModuleHealth } from "@/types/dashboard";
@@ -45,10 +46,22 @@ export function usePortalKpis() {
         staleTime: 30_000,
         retry: 0,
       },
+      {
+        queryKey: ["portal", "ma-transactions"],
+        queryFn: async () => {
+          const { data } = await maApi.get<{ items: unknown[]; total: number }>(
+            "/transactions",
+            { timeout: DASH_TIMEOUT, params: { status: "ACTIVE", limit: 100 } },
+          );
+          return data;
+        },
+        staleTime: 30_000,
+        retry: 0,
+      },
     ],
   });
 
-  const [dealsQuery, alertsQuery, docsQuery] = results;
+  const [dealsQuery, alertsQuery, docsQuery, maQuery] = results;
 
   // Each query settles independently — "loading" only while ALL are still pending
   const isLoading = results.every((r) => r.isLoading);
@@ -75,18 +88,21 @@ export function usePortalKpis() {
     pendingIssues: dealsQuery.data
       ? dealsQuery.data.filter((d) => d.status === "DRAFT").length
       : 0,
+    activeMaDeals: maQuery.data?.total ?? 0,
   };
 
   const errors: PortalKpiErrors = {
     fdd: dealsQuery.isError,
     kiis: alertsQuery.isError,
     im: docsQuery.isError,
+    ma: maQuery.isError,
   };
 
   const loading = {
     fdd: dealsQuery.isLoading,
     kiis: alertsQuery.isLoading,
     im: docsQuery.isLoading,
+    ma: maQuery.isLoading,
   };
 
   return { kpis, isLoading, isError, errors, loading };
@@ -100,6 +116,7 @@ export function useModuleHealth() {
         { module: "fdd" as const, label: "Auto FDD", fn: () => api.get("/health") },
         { module: "kiis" as const, label: "KIIS", fn: () => kiisApi.get("/health") },
         { module: "im" as const, label: "IM Generator", fn: () => imApi.get("/health") },
+        { module: "ma" as const, label: "M&A Deals", fn: () => maApi.get("/health") },
       ];
 
       const results = await Promise.allSettled(

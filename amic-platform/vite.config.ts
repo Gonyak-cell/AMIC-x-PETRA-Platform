@@ -55,6 +55,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: () => "/health",
       },
+      "/api/ma/health": {
+        target: "http://localhost:8003",
+        changeOrigin: true,
+        rewrite: () => "/health",
+      },
       // 범용 API 프록시
       "/api/fdd": {
         target: "http://localhost:8000",
@@ -70,6 +75,11 @@ export default defineConfig({
         target: "http://localhost:8002",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/im/, "/api/v1"),
+      },
+      "/api/ma": {
+        target: "http://localhost:8003",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ma/, "/api/v1"),
       },
     },
   },

@@ -5,12 +5,14 @@ export interface PortalKpis {
   watchlistAlerts: number;
   imInProgress: number;
   pendingIssues: number;
+  activeMaDeals: number;
 }
 
 export interface PortalKpiErrors {
   fdd: boolean;
   kiis: boolean;
   im: boolean;
+  ma: boolean;
 }
 
 export interface QuickAction {
@@ -21,7 +23,7 @@ export interface QuickAction {
 }
 
 export interface ModuleHealth {
-  module: "fdd" | "kiis" | "im";
+  module: "fdd" | "kiis" | "im" | "ma";
   label: string;
   healthy: boolean;
 }

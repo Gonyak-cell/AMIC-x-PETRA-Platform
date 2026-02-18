@@ -8,6 +8,7 @@ import {
   Search,
   Star,
   ArrowRight,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortalKpis, useModuleHealth } from "@/hooks/useDashboard";
@@ -15,6 +16,12 @@ import { KpiCard, Card, KpiCardSkeleton, PageHero } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 const QUICK_ACTIONS = [
+  {
+    label: "New Transaction",
+    to: "/ma/transactions/new",
+    icon: Handshake,
+    description: "Start a new M&A transaction",
+  },
   {
     label: "New Deal",
     to: "/fdd/deals/new",
@@ -32,12 +39,6 @@ const QUICK_ACTIONS = [
     to: "/kiis/companies",
     icon: Search,
     description: "Look up company information",
-  },
-  {
-    label: "Watchlist",
-    to: "/kiis/watchlist",
-    icon: Star,
-    description: "View watchlist & alerts",
   },
 ];
 
@@ -62,7 +63,20 @@ export default function DashboardPage() {
         subtitle={today}
       >
         {/* Glass Card KPIs — each card renders independently */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+          {loading.ma ? (
+            <KpiCardSkeleton />
+          ) : (
+            <KpiCard
+              label="Active M&A Deals"
+              value={errors.ma ? "—" : String(kpis.activeMaDeals)}
+              icon={Handshake}
+              variant={errors.ma ? "negative" : "positive"}
+              hoverLift
+              generous
+              className="glass-card"
+            />
+          )}
           {loading.fdd ? (
             <KpiCardSkeleton />
           ) : (
@@ -190,7 +204,30 @@ export default function DashboardPage() {
       {/* Modules (Gradient Background Cards) */}
       <div>
         <h2 className="label-uppercase mb-3">Modules</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer"
+            onClick={() => navigate("/ma/transactions")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") navigate("/ma/transactions");
+            }}
+          >
+            <Card className="hover-glow bg-gradient-to-br from-amic-700 to-amic-900">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <Handshake className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="font-semibold text-white">M&A Deals</div>
+                  <p className="text-xs text-white/70">
+                    Transaction Pipeline
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
           <div
             role="button"
             tabIndex={0}

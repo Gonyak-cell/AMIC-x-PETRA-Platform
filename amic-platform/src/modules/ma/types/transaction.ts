@@ -1,0 +1,98 @@
+export type TransactionSide = "SELL" | "BUY" | "DUAL";
+
+export type TransactionPhase =
+  | "ENGAGEMENT"
+  | "PREPARATION"
+  | "MARKETING"
+  | "BIDDING_DD"
+  | "NEGOTIATION"
+  | "CLOSING"
+  | "POST_CLOSING";
+
+export type TransactionStatus = "DRAFT" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "TERMINATED";
+
+export type DealStructure =
+  | "SHARE_ACQUISITION"
+  | "ASSET_ACQUISITION"
+  | "MERGER"
+  | "CORPORATE_SPLIT"
+  | "MBO"
+  | "OTHER";
+
+export type InvestmentType = "EQUITY" | "DEBT" | "MEZZANINE" | "CONVERTIBLE" | "OTHER";
+
+export type Currency = "KRW" | "USD" | "EUR" | "JPY" | "CNY";
+
+export interface Transaction {
+  id: string;
+  code_name: string;
+  name: string;
+  side: TransactionSide;
+  phase: TransactionPhase;
+  status: TransactionStatus;
+  target_company_name: string;
+  target_corp_code: string | null;
+  client_name: string;
+  estimated_deal_value: number | null;
+  currency: Currency;
+  deal_structure: DealStructure | null;
+  investment_type: InvestmentType | null;
+  industry: string | null;
+  lead_advisor_email: string;
+  deal_captain_email: string | null;
+  target_close_date: string | null;
+  fdd_deal_id: string | null;
+  im_document_id: string | null;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransactionCreate {
+  name: string;
+  code_name: string;
+  side: TransactionSide;
+  target_company_name: string;
+  target_corp_code?: string;
+  client_name: string;
+  estimated_deal_value?: number;
+  currency?: Currency;
+  deal_structure?: DealStructure;
+  investment_type?: InvestmentType;
+  industry?: string;
+  lead_advisor_email: string;
+  deal_captain_email?: string;
+  target_close_date?: string;
+}
+
+export interface TransactionUpdate {
+  name?: string;
+  code_name?: string;
+  target_company_name?: string;
+  target_corp_code?: string;
+  client_name?: string;
+  estimated_deal_value?: number;
+  currency?: Currency;
+  deal_structure?: DealStructure;
+  investment_type?: InvestmentType;
+  industry?: string;
+  lead_advisor_email?: string;
+  deal_captain_email?: string;
+  target_close_date?: string;
+}
+
+export interface TransactionListParams {
+  search?: string;
+  side?: TransactionSide;
+  phase?: TransactionPhase;
+  status?: TransactionStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TransactionListResponse {
+  items: Transaction[];
+  total: number;
+  limit: number;
+  offset: number;
+}

@@ -9,6 +9,7 @@ const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
 const KiisRoutes = React.lazy(() => import("@/modules/kiis/KiisRoutes"));
 const ImRoutes = React.lazy(() => import("@/modules/im/ImRoutes"));
+const MaRoutes = React.lazy(() => import("@/modules/ma/MaRoutes"));
 const AdminRoutes = React.lazy(() => import("@/pages/admin/AdminRoutes"));
 const SettingsRoutes = React.lazy(
   () => import("@/pages/settings/SettingsRoutes"),
@@ -79,6 +80,14 @@ export default function App() {
           element={
             <Suspense fallback={<ModuleFallback />}>
               <ImRoutes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="ma/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <MaRoutes />
             </Suspense>
           }
         />

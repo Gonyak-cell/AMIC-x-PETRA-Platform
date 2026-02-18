@@ -51,6 +51,7 @@ jobs:
             curl -sf http://localhost/api/fdd/health || { echo "ERROR: FDD health check failed"; HEALTH_OK=false; }
             curl -sf http://localhost/api/kiis/health || { echo "ERROR: KIIS health check failed"; HEALTH_OK=false; }
             curl -sf http://localhost/api/im/health || { echo "ERROR: IM health check failed"; HEALTH_OK=false; }
+            curl -sf http://localhost/api/ma/health || { echo "ERROR: MA health check failed"; HEALTH_OK=false; }
 
             if [ "$HEALTH_OK" = false ]; then
               echo "Rolling back to $PREV_COMMIT"

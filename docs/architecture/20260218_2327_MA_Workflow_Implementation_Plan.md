@@ -1,6 +1,7 @@
 # 7단계 M&A 워크플로우 — 적용 가능성 평가 및 상세 구현 계획
 
 **작성일**: 2026-02-17 23:04
+**최종 수정**: 2026-02-19 00:02
 **아키텍처 결정**: 새 `deal-mgmt` 서비스 신설 (port 8003)
 **통합 방향**: FDD + IM → 워크플로우 내부 흡수, KIIS → 독립 데이터 모듈 유지
 **참조 문서**: `new_workflow/AMIC_M&A_워크플로우_설계.md`, `compass_artifact_...md`, `new_workflow_system_dealroom.md`
@@ -329,16 +330,19 @@ amic-platform/src/modules/ma/           # 신규 M&A 워크플로우 모듈
 
 ## 8. 수정 대상 기존 파일
 
-| 파일 | 변경 내용 |
-|:---|:---|
-| `docker-compose.yml` | deal-mgmt-api + deal-mgmt-db 추가 |
-| `docker-compose.prod.yml` | 동일 |
-| `nginx/dev.conf` | `/api/ma/` 프록시 추가 |
-| `nginx/prod.conf` | 동일 |
-| `amic-platform/vite.config.ts` | `/api/ma` 프록시 추가 |
-| `amic-platform/src/App.tsx` | `/ma/*` 라우트 추가 |
-| `amic-platform/src/components/layout/Sidebar.tsx` | "M&A Deals" 메뉴 추가 |
-| `amic-platform/src/pages/DashboardPage.tsx` | M&A 파이프라인 위젯 추가 |
+| 파일 | 변경 내용 | 상태 |
+|:---|:---|:---:|
+
+| `docker-compose.yml` | deal-mgmt-api + deal-mgmt-db 추가 | ✅ |
+| `docker-compose.prod.yml` | 동일 | ✅ |
+| `nginx/dev.conf` | `/api/ma/` 프록시 + health 추가 | ✅ |
+| `nginx/prod-nossl.conf` | `/api/ma/` 프록시 추가 | ✅ |
+| `amic-platform/vite.config.ts` | `/api/ma` 프록시 + health 추가 | ✅ |
+| `amic-platform/src/App.tsx` | `/ma/*` 라우트 (lazy load) 추가 | ✅ |
+| `amic-platform/src/components/layout/Sidebar.tsx` | M&A Pipeline 네비게이션 추가 | ✅ |
+| `amic-platform/src/api/maClient.ts` | MA API 클라이언트 생성 | ✅ |
+| `amic-platform/src/hooks/useHealthCheck.ts` | MA 서비스 헬스 체크 추가 | ✅ |
+| `amic-platform/src/pages/DashboardPage.tsx` | M&A 파이프라인 위젯 추가 | ⬜ |
 
 ---
 
@@ -348,3 +352,74 @@ amic-platform/src/modules/ma/           # 신규 M&A 워크플로우 모듈
 2. **타입 검증**: `npx tsc --noEmit` — 에러 0
 3. **E2E 시나리오**: 딜 생성 → 1단계 → 2단계 (CIM) → 4단계 (FDD) 흐름
 4. **회귀 테스트**: `/fdd/*`, `/kiis/*`, `/im/*` 기존 라우트 정상 작동
+
+---
+
+## 10. 구현 진행 상황
+
+### Phase 0: 아키텍처 준비 — ✅ 완료 (Session 27, 2026-02-18)
+
+| 항목 | 상태 | 비고 |
+|:---|:---:|:---|
+| deal-mgmt 디렉토리 구조 | ✅ | 44개 파일 생성 |
+| FastAPI 앱 + main.py | ✅ | 6개 라우터 등록 |
+| SQLAlchemy 모델 (6개) | ✅ | transaction, engagement, working_group, buyer_candidate, timeline, audit |
+| Alembic 마이그레이션 | ✅ | `001_initial_schema.py` 생성 |
+| Dockerfile + docker-entrypoint.sh | ✅ | |
+| docker-compose.yml 통합 | ✅ | deal-mgmt-api(:8003) + deal-mgmt-db(:5436) |
+| docker-compose.prod.yml 통합 | ✅ | prod 오버라이드 완료 |
+| nginx dev/prod 프록시 | ✅ | `/api/ma/` → deal-mgmt-api |
+| Vite 프록시 | ✅ | `/api/ma` → localhost:8003 |
+| 프론트엔드 라우팅 | ✅ | `App.tsx` MaRoutes lazy load |
+| Sidebar 네비게이션 | ✅ | M&A Pipeline + New Transaction |
+| API 클라이언트 | ✅ | `maClient.ts` → `/api/ma` |
+| 헬스 체크 통합 | ✅ | useHealthCheck에 MA 서비스 추가 |
+
+### Phase 1: MVP Core — ✅ 완료 (Session 27, 2026-02-18)
+
+**Backend (deal-mgmt) — 신규 17개 파일**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Schemas** | `transaction.py` | CRUD + List response |
+| | `workflow.py` | Phase completion, transition, status change |
+| | `engagement.py` | Engagement + WGL + Conflict check |
+| | `buyer.py` | Buyer CRUD + Pipeline summary |
+| | `timeline.py` | Timeline event CRUD |
+| | `dashboard.py` | Dashboard stats |
+| **Services** | `transaction_service.py` | CRUD + soft delete + audit logging |
+| | `workflow_engine.py` | 7단계 상태 머신 (전제 조건, 1단계 앞/뒤 전환) |
+| | `audit_service.py` | 감사 로그 기록 |
+| **Routers** | `transactions.py` | `GET/POST/PATCH/DELETE /transactions` |
+| | `workflow.py` | `GET phase-status`, `POST advance`, `POST status` |
+| | `engagements.py` | Engagement CRUD + WGL CRUD + Conflict check |
+| | `buyers.py` | Buyer pipeline CRUD + summary |
+| | `timeline.py` | Timeline events CRUD |
+| | `dashboard.py` | Dashboard stats KPI |
+
+총 ~15 API 엔드포인트 등록 완료 (`main.py`).
+
+**Frontend (MA Module) — 신규 1개, 수정 3개 파일**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Hooks** | `useTransactions.ts` | 20+ TanStack Query 훅 (Transactions, Workflow, Engagement, WGL, Conflict, Buyers, Timeline, Dashboard) |
+| **Pages** | `TransactionListPage.tsx` | Pipeline view (KPI 카드, 필터/검색, DataTable, 페이지네이션) |
+| | `CreateTransactionPage.tsx` | 생성 폼 (필수/선택 필드 토글, 유효성 검사) |
+| | `TransactionWorkspacePage.tsx` | 5탭 워크스페이스 (Overview, 수임, 팀, 매수자, 타임라인) + WorkflowStepper + 모달 3개 |
+
+**검증 결과**
+
+- `tsc --noEmit`: 에러 0건 ✅
+- `vite build`: 성공 (4.82s, 2959 modules) ✅
+
+### 다음 단계 (Phase 1 후속)
+
+| 우선순위 | 작업 | 상태 |
+|:---:|:---|:---:|
+| 1 | Docker 컨테이너 빌드 + 헬스 체크 검증 | ✅ (Session 29) |
+| 2 | Alembic 마이그레이션 실행 (deal-mgmt-db) | ✅ (Session 29, auto-upgrade lifespan) |
+| 3 | MA Sidebar 워크스페이스 네비게이션 확장 | ✅ (Session 28) |
+| 4 | DashboardPage M&A 파이프라인 위젯 추가 | ✅ (이미 존재 확인) |
+| 5 | E2E 검증: 생성 → 목록 → 워크스페이스 흐름 | ✅ (Session 29, httpx 스크립트) |
+| 6 | 백엔드 pytest 기본 테스트 작성 | ✅ (Session 29, 25/25 통과) |

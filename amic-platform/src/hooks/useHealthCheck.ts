@@ -5,6 +5,7 @@ import type { AxiosInstance } from "axios";
 import api from "@/api/client";
 import { kiisApi } from "@/api/kiisClient";
 import { imApi } from "@/api/imClient";
+import { maApi } from "@/api/maClient";
 
 export type ServiceStatus = "healthy" | "degraded" | "down" | "unknown";
 
@@ -12,14 +13,16 @@ export interface HealthStatus {
   fdd: ServiceStatus;
   kiis: ServiceStatus;
   im: ServiceStatus;
+  ma: ServiceStatus;
 }
 
-const SERVICES = ["fdd", "kiis", "im"] as const;
+const SERVICES = ["fdd", "kiis", "im", "ma"] as const;
 
 const SERVICE_CLIENTS: Record<(typeof SERVICES)[number], AxiosInstance> = {
   fdd: api,
   kiis: kiisApi,
   im: imApi,
+  ma: maApi,
 };
 
 async function checkService(
@@ -49,6 +52,7 @@ export function useHealthCheck(enabled = true) {
         fdd: results[0].status === "fulfilled" ? results[0].value : "down",
         kiis: results[1].status === "fulfilled" ? results[1].value : "down",
         im: results[2].status === "fulfilled" ? results[2].value : "down",
+        ma: results[3].status === "fulfilled" ? results[3].value : "down",
       };
 
       const prev = prevStatusRef.current;

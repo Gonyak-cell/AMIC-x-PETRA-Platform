@@ -49,10 +49,12 @@ try {
     Write-Host "  FDD API:           http://localhost:8000" -ForegroundColor White
     Write-Host "  KIIS API:          http://localhost:8001" -ForegroundColor White
     Write-Host "  IM API:            http://localhost:8002" -ForegroundColor White
+    Write-Host "  MA API:            http://localhost:8003" -ForegroundColor White
     Write-Host ""
     Write-Host "  FDD DB:            localhost:5433" -ForegroundColor DarkGray
     Write-Host "  KIIS DB:           localhost:5434" -ForegroundColor DarkGray
     Write-Host "  IM DB:             localhost:5435" -ForegroundColor DarkGray
+    Write-Host "  MA DB:             localhost:5436" -ForegroundColor DarkGray
     Write-Host "  KIIS Redis:        localhost:6379" -ForegroundColor DarkGray
     Write-Host "  IM Redis:          localhost:6380" -ForegroundColor DarkGray
     Write-Host "  Elasticsearch:     localhost:9200" -ForegroundColor DarkGray
