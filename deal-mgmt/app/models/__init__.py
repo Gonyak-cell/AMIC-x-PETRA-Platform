@@ -5,11 +5,21 @@ from app.models.enums import (
     BidType,
     BuyerCandidateStatus,
     BuyerType,
+    ClosingCategory,
+    ClosingConditionStatus,
+    ContractStatus,
+    ContractType,
     DDChecklistStatus,
     DDWorkstream,
+    EarnoutMetric,
+    EarnoutStatus,
     EngagementType,
     NdaStatus,
     NdaType,
+    PMICategory,
+    PMIPriority,
+    PMITaskStatus,
+    SignatureStatus,
     TransactionPhase,
     TransactionSide,
     TransactionStatus,
@@ -25,6 +35,11 @@ from app.models.timeline import DealTimeline
 from app.models.nda import NDA
 from app.models.bid import Bid
 from app.models.dd_checklist import DDChecklist
+from app.models.contract import Contract
+from app.models.contract_version import ContractVersion
+from app.models.closing_checklist import ClosingChecklist
+from app.models.pmi_task import PMITask
+from app.models.earnout import EarnoutMilestone
 
 __all__ = [
     "Base",
@@ -37,15 +52,30 @@ __all__ = [
     "BuyerCandidate",
     "BuyerCandidateStatus",
     "BuyerType",
+    "ClosingCategory",
+    "ClosingChecklist",
+    "ClosingConditionStatus",
+    "Contract",
+    "ContractStatus",
+    "ContractType",
+    "ContractVersion",
     "DDChecklist",
     "DDChecklistStatus",
     "DDWorkstream",
     "DealTimeline",
+    "EarnoutMetric",
+    "EarnoutMilestone",
+    "EarnoutStatus",
     "Engagement",
     "EngagementType",
     "NDA",
     "NdaStatus",
     "NdaType",
+    "PMICategory",
+    "PMIPriority",
+    "PMITask",
+    "PMITaskStatus",
+    "SignatureStatus",
     "Transaction",
     "TransactionPhase",
     "TransactionSide",

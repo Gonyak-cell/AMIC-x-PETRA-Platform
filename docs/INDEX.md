@@ -1,12 +1,12 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-18 23:27
+> 최종 업데이트: 2026-02-19 00:46
 
 ## 폴더 구조
 
 | 카테고리 | 폴더 | 설명 | 문서 수 |
 |---------|------|------|--------|
-| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우 | 8 |
+| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우 | 9 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 22 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트 | 3 |
@@ -28,7 +28,8 @@
 | `Full_Integration_Plan.md` | 전체 통합 계획 (영문) |
 | `Portal_Enhancement_Plan.md` | 포털 UX 개선 Wave별 계획 |
 | `claude-config-gap-fill-plan.md` | Claude Code 설정 갭 분석 및 표준화 |
-| `20260218_2327_MA_Workflow_Implementation_Plan.md` | 7단계 M&A 워크플로우 상세 구현 계획 (deal-mgmt 서비스, Phase 0~1 완료) |
+| `20260219_0046_MA_Workflow_Implementation_Plan.md` | 7단계 M&A 워크플로우 상세 구현 계획 (deal-mgmt 서비스, Phase 0~2 완료) |
+| `20260218_2124_MA_Phase0_Implementation_Tickets.md` | MA Phase 0 구현 티켓 상세 (스캐폴딩, Docker, 프록시) |
 | `20260218_0005_MA_Branch_Strategy.md` | MA 워크플로우 브랜치 전략 (백업 태그, 작업 브랜치 가이드) |
 
 ## code-review/ — 코드 리뷰 (22)

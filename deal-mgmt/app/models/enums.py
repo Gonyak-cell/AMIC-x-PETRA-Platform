@@ -125,6 +125,99 @@ class DDChecklistStatus(str, enum.Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+# ── Phase 3: Contract / SPA ──────────────────────────
+class ContractType(str, enum.Enum):
+    SPA = "SPA"
+    AMENDMENT = "AMENDMENT"
+    SIDE_LETTER = "SIDE_LETTER"
+    SHAREHOLDERS_AGREEMENT = "SHAREHOLDERS_AGREEMENT"
+    ESCROW_AGREEMENT = "ESCROW_AGREEMENT"
+    OTHER = "OTHER"
+
+
+class ContractStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    PENDING_SIGNATURE = "PENDING_SIGNATURE"
+    PARTIALLY_SIGNED = "PARTIALLY_SIGNED"
+    FULLY_EXECUTED = "FULLY_EXECUTED"
+    TERMINATED = "TERMINATED"
+
+
+class SignatureStatus(str, enum.Enum):
+    NOT_REQUIRED = "NOT_REQUIRED"
+    PENDING = "PENDING"
+    SIGNED = "SIGNED"
+    DECLINED = "DECLINED"
+
+
+class ClosingCategory(str, enum.Enum):
+    REGULATORY = "REGULATORY"
+    LEGAL = "LEGAL"
+    FINANCIAL = "FINANCIAL"
+    CORPORATE = "CORPORATE"
+    CONDITION_PRECEDENT = "CONDITION_PRECEDENT"
+    FUND_FLOW = "FUND_FLOW"
+    OTHER = "OTHER"
+
+
+class ClosingConditionStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    WAIVED = "WAIVED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+# ── Phase 4: PMI ─────────────────────────────────────
+class PMICategory(str, enum.Enum):
+    INTEGRATION_PLAN = "INTEGRATION_PLAN"
+    DAY_ONE = "DAY_ONE"
+    FIRST_100_DAYS = "FIRST_100_DAYS"
+    SYNERGY = "SYNERGY"
+    CULTURE = "CULTURE"
+    IT_SYSTEMS = "IT_SYSTEMS"
+    HR = "HR"
+    COMMUNICATION = "COMMUNICATION"
+    OTHER = "OTHER"
+
+
+class PMITaskStatus(str, enum.Enum):
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    BLOCKED = "BLOCKED"
+    DEFERRED = "DEFERRED"
+
+
+class PMIPriority(str, enum.Enum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+# ── Phase 4: Earnout ─────────────────────────────────
+class EarnoutStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    MEASUREMENT_PERIOD = "MEASUREMENT_PERIOD"
+    ACHIEVED = "ACHIEVED"
+    PARTIALLY_ACHIEVED = "PARTIALLY_ACHIEVED"
+    MISSED = "MISSED"
+    DISPUTED = "DISPUTED"
+
+
+class EarnoutMetric(str, enum.Enum):
+    REVENUE = "REVENUE"
+    EBITDA = "EBITDA"
+    NET_INCOME = "NET_INCOME"
+    CUSTOMER_COUNT = "CUSTOMER_COUNT"
+    CONTRACT_VALUE = "CONTRACT_VALUE"
+    WORKING_CAPITAL = "WORKING_CAPITAL"
+    OTHER = "OTHER"
+
+
+# ── Audit ─────────────────────────────────────────────
 class AuditAction(str, enum.Enum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"

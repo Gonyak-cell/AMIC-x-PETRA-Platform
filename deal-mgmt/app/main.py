@@ -73,6 +73,10 @@ app = FastAPI(
         {"name": "NDAs", "description": "NDA 관리"},
         {"name": "Bids", "description": "IOI/LOI/최종제안 관리"},
         {"name": "DD Checklist", "description": "DD 워크스트림 체크리스트"},
+        {"name": "Contracts", "description": "계약/SPA 관리"},
+        {"name": "Closing", "description": "클로징 체크리스트"},
+        {"name": "PMI", "description": "PMI(인수 후 통합) 태스크"},
+        {"name": "Earnout", "description": "어닝아웃 마일스톤"},
         {"name": "Timeline", "description": "딜 타임라인 이벤트"},
         {"name": "Integrations", "description": "FDD/IM/KIIS 서비스 연동"},
         {"name": "Dashboard", "description": "M&A 대시보드 KPI"},
@@ -95,7 +99,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────
-from app.routers import bids, buyers, dashboard, dd_checklists, engagements, ndas, timeline, transactions, workflow  # noqa: E402
+from app.routers import bids, buyers, closing, contracts, dashboard, dd_checklists, earnout, engagements, integrations, ndas, pmi, timeline, transactions, workflow  # noqa: E402
 
 app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(workflow.router, prefix="/api/v1")
@@ -104,6 +108,11 @@ app.include_router(buyers.router, prefix="/api/v1")
 app.include_router(ndas.router, prefix="/api/v1")
 app.include_router(bids.router, prefix="/api/v1")
 app.include_router(dd_checklists.router, prefix="/api/v1")
+app.include_router(contracts.router, prefix="/api/v1")
+app.include_router(closing.router, prefix="/api/v1")
+app.include_router(pmi.router, prefix="/api/v1")
+app.include_router(earnout.router, prefix="/api/v1")
+app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(timeline.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
 

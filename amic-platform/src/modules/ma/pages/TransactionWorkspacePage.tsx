@@ -17,6 +17,9 @@ import {
   ClipboardCheck,
   Plus,
   Trash2,
+  Scale,
+  Flag,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -40,9 +43,17 @@ import type { BuyerCandidateCreate } from "@/modules/ma/types/buyer";
 import { useNdas, useNdaSummary, useCreateNda, useUpdateNda, useDeleteNda } from "@/modules/ma/hooks/useNdas";
 import { useBids, useBidComparison, useCreateBid, useUpdateBid, useDeleteBid } from "@/modules/ma/hooks/useBids";
 import { useDDChecklist, useDDChecklistSummary, useCreateDDChecklistItem, useUpdateDDChecklistItem, useDeleteDDChecklistItem } from "@/modules/ma/hooks/useDDChecklist";
+import { useContracts, useContractSummary, useCreateContract, useUpdateContract, useDeleteContract, useAnalyzeContract } from "@/modules/ma/hooks/useContracts";
+import { useClosingChecklist, useClosingSummary, useCreateClosingItem, useUpdateClosingItem, useDeleteClosingItem } from "@/modules/ma/hooks/useClosing";
+import { usePMITasks, usePMISummary, useCreatePMITask, useUpdatePMITask, useDeletePMITask } from "@/modules/ma/hooks/usePMI";
+import { useEarnoutMilestones, useEarnoutSummary, useCreateEarnout, useUpdateEarnout, useDeleteEarnout } from "@/modules/ma/hooks/useEarnout";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import type { BidCreate, BidType, BidStatus as BidStatusType, ValuationMethod } from "@/modules/ma/types/bid";
 import type { DDChecklistCreate, DDWorkstream, DDChecklistStatus as DDStatusType } from "@/modules/ma/types/dd_checklist";
+import type { ContractCreate, ContractStatus, SignatureStatus as SigStatus } from "@/modules/ma/types/contract";
+import type { ClosingChecklistCreate, ClosingCategory, ClosingConditionStatus } from "@/modules/ma/types/closing";
+import type { PMITaskCreate, PMICategory, PMITaskStatus, PMIPriority } from "@/modules/ma/types/pmi";
+import type { EarnoutCreate, EarnoutStatus, EarnoutMetric } from "@/modules/ma/types/earnout";
 import {
   PHASE_CONFIG,
   ENGAGEMENT_TYPE_OPTIONS,
@@ -56,6 +67,16 @@ import {
   VALUATION_METHOD_OPTIONS,
   DD_WORKSTREAM_OPTIONS,
   DD_STATUS_OPTIONS,
+  CONTRACT_TYPE_OPTIONS,
+  CONTRACT_STATUS_OPTIONS,
+  SIGNATURE_STATUS_OPTIONS,
+  CLOSING_CATEGORY_OPTIONS,
+  CLOSING_CONDITION_STATUS_OPTIONS,
+  PMI_CATEGORY_OPTIONS,
+  PMI_STATUS_OPTIONS,
+  PMI_PRIORITY_OPTIONS,
+  EARNOUT_STATUS_OPTIONS,
+  EARNOUT_METRIC_OPTIONS,
 } from "@/modules/ma/constants";
 
 import {
@@ -125,6 +146,54 @@ const DD_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info"
   NOT_APPLICABLE: "neutral",
 };
 
+const CONTRACT_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  DRAFT: "neutral",
+  UNDER_REVIEW: "info",
+  PENDING_SIGNATURE: "warning",
+  PARTIALLY_SIGNED: "warning",
+  FULLY_EXECUTED: "success",
+  TERMINATED: "error",
+};
+
+const SIGNATURE_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  NOT_REQUIRED: "neutral",
+  PENDING: "warning",
+  SIGNED: "success",
+  DECLINED: "error",
+};
+
+const CLOSING_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  PENDING: "neutral",
+  IN_PROGRESS: "info",
+  COMPLETED: "success",
+  WAIVED: "warning",
+  NOT_APPLICABLE: "neutral",
+};
+
+const PMI_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  NOT_STARTED: "neutral",
+  IN_PROGRESS: "info",
+  COMPLETED: "success",
+  BLOCKED: "error",
+  DEFERRED: "warning",
+};
+
+const PMI_PRIORITY_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  CRITICAL: "error",
+  HIGH: "warning",
+  MEDIUM: "info",
+  LOW: "neutral",
+};
+
+const EARNOUT_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+  PENDING: "neutral",
+  MEASUREMENT_PERIOD: "info",
+  ACHIEVED: "success",
+  PARTIALLY_ACHIEVED: "warning",
+  MISSED: "error",
+  DISPUTED: "error",
+};
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ko-KR");
 }
@@ -134,6 +203,9 @@ function formatAmount(amount: number | null): string {
   if (amount >= 1_0000_0000) return `${(amount / 1_0000_0000).toLocaleString()}억`;
   return amount.toLocaleString();
 }
+
+const INLINE_CLS =
+  "text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-transparent hover:bg-white focus:bg-white focus:ring-2 focus:ring-accent/30 focus:border-amic transition-colors";
 
 // ── WorkflowStepper ────────────────────────────────────
 function WorkflowStepper({ current }: { current: string }) {
@@ -178,7 +250,7 @@ export default function TransactionWorkspacePage() {
   const id = txnId!;
 
   // URL 기반 탭 결정
-  const VALID_TABS = ["engagement", "team", "buyers", "timeline", "ndas", "bids", "dd-checklist"];
+  const VALID_TABS = ["engagement", "team", "buyers", "timeline", "ndas", "bids", "dd-checklist", "contracts", "closing", "pmi", "earnout"];
   const activeTab = VALID_TABS.includes(splat ?? "") ? splat! : "overview";
 
   // 데이터 로드 — Phase 1
@@ -198,6 +270,18 @@ export default function TransactionWorkspacePage() {
   const { data: ddItems } = useDDChecklist(id);
   const { data: ddSummary } = useDDChecklistSummary(id);
 
+  // 데이터 로드 — Phase 3
+  const { data: contracts } = useContracts(id);
+  const { data: contractSummary } = useContractSummary(id);
+  const { data: closingItems } = useClosingChecklist(id);
+  const { data: closingSummary } = useClosingSummary(id);
+
+  // 데이터 로드 — Phase 4
+  const { data: pmiTasks } = usePMITasks(id);
+  const { data: pmiSummary } = usePMISummary(id);
+  const { data: earnoutMilestones } = useEarnoutMilestones(id);
+  const { data: earnoutSummary } = useEarnoutSummary(id);
+
   // Mutations — Phase 1
   const advancePhase = useAdvancePhase(id);
   const changeStatus = useChangeStatus(id);
@@ -215,6 +299,23 @@ export default function TransactionWorkspacePage() {
   const createDDItem = useCreateDDChecklistItem(id);
   const updateDDItem = useUpdateDDChecklistItem(id);
   const deleteDDItem = useDeleteDDChecklistItem(id);
+
+  // Mutations — Phase 3
+  const createContract = useCreateContract(id);
+  const updateContract = useUpdateContract(id);
+  const deleteContract = useDeleteContract(id);
+  const analyzeContract = useAnalyzeContract(id);
+  const createClosingItem = useCreateClosingItem(id);
+  const updateClosingItem = useUpdateClosingItem(id);
+  const deleteClosingItem = useDeleteClosingItem(id);
+
+  // Mutations — Phase 4
+  const createPMITask = useCreatePMITask(id);
+  const updatePMITask = useUpdatePMITask(id);
+  const deletePMITask = useDeletePMITask(id);
+  const createEarnout = useCreateEarnout(id);
+  const updateEarnout = useUpdateEarnout(id);
+  const deleteEarnout = useDeleteEarnout(id);
 
   // URL 기반 탭 전환
   const handleTabChange = (tab: string) => {
@@ -234,6 +335,14 @@ export default function TransactionWorkspacePage() {
   const [showNdaModal, setShowNdaModal] = useState(false);
   const [showBidModal, setShowBidModal] = useState(false);
   const [showDDModal, setShowDDModal] = useState(false);
+
+  // UI State — Phase 3
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [showClosingModal, setShowClosingModal] = useState(false);
+
+  // UI State — Phase 4
+  const [showPMIModal, setShowPMIModal] = useState(false);
+  const [showEarnoutModal, setShowEarnoutModal] = useState(false);
 
   // Form state — Phase 1
   const [engForm, setEngForm] = useState<EngagementCreate>({ type: "EXCLUSIVE" });
@@ -261,6 +370,45 @@ export default function TransactionWorkspacePage() {
     title: "",
   });
 
+  // Form state — Phase 3
+  const [contractForm, setContractForm] = useState<ContractCreate>({ title: "" });
+  const [closingForm, setClosingForm] = useState<ClosingChecklistCreate>({
+    category: "REGULATORY" as ClosingCategory,
+    title: "",
+  });
+
+  // Form state — Phase 4
+  const [pmiForm, setPmiForm] = useState<PMITaskCreate>({
+    category: "INTEGRATION_PLAN" as PMICategory,
+    title: "",
+  });
+  const [earnoutForm, setEarnoutForm] = useState<EarnoutCreate>({
+    title: "",
+    metric: "REVENUE" as EarnoutMetric,
+    target_value: 0,
+  });
+
+  // DD 워크스트림 필터
+  const [ddWorkstreamFilter, setDdWorkstreamFilter] = useState<string>("ALL");
+  const filteredDDItems =
+    ddWorkstreamFilter === "ALL"
+      ? ddItems
+      : ddItems?.filter((item) => item.workstream === ddWorkstreamFilter);
+
+  // 클로징 카테고리 필터
+  const [closingCategoryFilter, setClosingCategoryFilter] = useState<string>("ALL");
+  const filteredClosingItems =
+    closingCategoryFilter === "ALL"
+      ? closingItems
+      : closingItems?.filter((item) => item.category === closingCategoryFilter);
+
+  // PMI 카테고리 필터
+  const [pmiCategoryFilter, setPmiCategoryFilter] = useState<string>("ALL");
+  const filteredPmiTasks =
+    pmiCategoryFilter === "ALL"
+      ? pmiTasks
+      : pmiTasks?.filter((t) => t.category === pmiCategoryFilter);
+
   const tabs: TabItem[] = [
     { id: "overview", label: "Overview" },
     { id: "engagement", label: "수임", badge: engagements?.length },
@@ -269,6 +417,10 @@ export default function TransactionWorkspacePage() {
     { id: "ndas", label: "NDA", badge: ndas?.length },
     { id: "bids", label: "입찰", badge: bids?.length },
     { id: "dd-checklist", label: "DD 체크리스트", badge: ddItems?.length },
+    { id: "contracts", label: "계약/SPA", badge: contracts?.length },
+    { id: "closing", label: "클로징", badge: closingItems?.length },
+    { id: "pmi", label: "PMI", badge: pmiTasks?.length },
+    { id: "earnout", label: "어닝아웃", badge: earnoutMilestones?.length },
     { id: "timeline", label: "타임라인", badge: timeline?.total },
   ];
 
@@ -717,8 +869,8 @@ export default function TransactionWorkspacePage() {
                     key: "status",
                     header: "상태",
                     render: (r) => (
-                      <select
-                        className="text-xs border rounded px-1.5 py-0.5 bg-white"
+                      <Select
+                        options={NDA_STATUS_OPTIONS}
                         value={r.status}
                         onChange={(e) =>
                           updateNda.mutate({
@@ -726,18 +878,55 @@ export default function TransactionWorkspacePage() {
                             body: { status: e.target.value as NdaStatus },
                           })
                         }
-                      >
-                        {NDA_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
                     ),
                   },
-                  { key: "sent_at", header: "발송일", render: (r) => r.sent_at ?? "-" },
-                  { key: "signed_at", header: "체결일", render: (r) => r.signed_at ?? "-" },
-                  { key: "expires_at", header: "만료일", render: (r) => r.expires_at ?? "-" },
+                  {
+                    key: "sent_at",
+                    header: "발송일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-sent-${r.sent_at}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.sent_at ?? ""}
+                        onChange={(e) =>
+                          updateNda.mutate({ ndaId: r.id, body: { sent_at: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "signed_at",
+                    header: "체결일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-signed-${r.signed_at}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.signed_at ?? ""}
+                        onChange={(e) =>
+                          updateNda.mutate({ ndaId: r.id, body: { signed_at: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "expires_at",
+                    header: "만료일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-expires-${r.expires_at}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.expires_at ?? ""}
+                        onChange={(e) =>
+                          updateNda.mutate({ ndaId: r.id, body: { expires_at: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
                   {
                     key: "actions",
                     header: "",
@@ -854,8 +1043,21 @@ export default function TransactionWorkspacePage() {
                     key: "amount",
                     header: "금액",
                     align: "right",
-                    mono: true,
-                    render: (r) => formatAmount(r.amount),
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-amount-${r.amount}`}
+                        type="number"
+                        className={`${INLINE_CLS} w-28 text-right font-mono`}
+                        defaultValue={r.amount ?? ""}
+                        placeholder="금액"
+                        onBlur={(e) => {
+                          const v = e.target.value ? Number(e.target.value) : undefined;
+                          if (v !== (r.amount ?? undefined)) {
+                            updateBid.mutate({ bidId: r.id, body: { amount: v } });
+                          }
+                        }}
+                      />
+                    ),
                   },
                   {
                     key: "valuation_method",
@@ -876,8 +1078,8 @@ export default function TransactionWorkspacePage() {
                     key: "status",
                     header: "상태",
                     render: (r) => (
-                      <select
-                        className="text-xs border rounded px-1.5 py-0.5 bg-white"
+                      <Select
+                        options={BID_STATUS_OPTIONS}
                         value={r.status}
                         onChange={(e) =>
                           updateBid.mutate({
@@ -885,16 +1087,25 @@ export default function TransactionWorkspacePage() {
                             body: { status: e.target.value as BidStatusType },
                           })
                         }
-                      >
-                        {BID_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
                     ),
                   },
-                  { key: "submitted_at", header: "제출일", render: (r) => r.submitted_at ?? "-" },
+                  {
+                    key: "submitted_at",
+                    header: "제출일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-submitted-${r.submitted_at}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.submitted_at ?? ""}
+                        onChange={(e) =>
+                          updateBid.mutate({ bidId: r.id, body: { submitted_at: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
                   {
                     key: "actions",
                     header: "",
@@ -972,6 +1183,25 @@ export default function TransactionWorkspacePage() {
             </div>
           )}
 
+          {/* 워크스트림 필터 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-text-muted">워크스트림:</span>
+            {[{ value: "ALL", label: "전체" }, ...DD_WORKSTREAM_OPTIONS].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  ddWorkstreamFilter === opt.value
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-text-secondary hover:bg-gray-200"
+                }`}
+                onClick={() => setDdWorkstreamFilter(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* 체크리스트 목록 */}
           <Card
             title="DD 체크리스트"
@@ -991,6 +1221,10 @@ export default function TransactionWorkspacePage() {
                 actionLabel="항목 추가"
                 onAction={() => setShowDDModal(true)}
               />
+            ) : !filteredDDItems?.length ? (
+              <div className="p-8 text-center text-text-muted text-sm">
+                선택한 워크스트림에 해당하는 항목이 없습니다.
+              </div>
             ) : (
               <DataTable
                 columns={[
@@ -1008,8 +1242,8 @@ export default function TransactionWorkspacePage() {
                     key: "status",
                     header: "상태",
                     render: (r) => (
-                      <select
-                        className="text-xs border rounded px-1.5 py-0.5 bg-white"
+                      <Select
+                        options={DD_STATUS_OPTIONS}
                         value={r.status}
                         onChange={(e) =>
                           updateDDItem.mutate({
@@ -1017,17 +1251,44 @@ export default function TransactionWorkspacePage() {
                             body: { status: e.target.value as DDStatusType },
                           })
                         }
-                      >
-                        {DD_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
                     ),
                   },
-                  { key: "assignee_email", header: "담당자", render: (r) => r.assignee_email ?? "-" },
-                  { key: "due_date", header: "기한", render: (r) => r.due_date ?? "-" },
+                  {
+                    key: "assignee_email",
+                    header: "담당자",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-assignee-${r.assignee_email}`}
+                        type="email"
+                        className={`${INLINE_CLS} w-36`}
+                        defaultValue={r.assignee_email ?? ""}
+                        placeholder="이메일"
+                        onBlur={(e) => {
+                          const v = e.target.value || undefined;
+                          if (v !== (r.assignee_email ?? undefined)) {
+                            updateDDItem.mutate({ itemId: r.id, body: { assignee_email: v } });
+                          }
+                        }}
+                      />
+                    ),
+                  },
+                  {
+                    key: "due_date",
+                    header: "기한",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-due-${r.due_date}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.due_date ?? ""}
+                        onChange={(e) =>
+                          updateDDItem.mutate({ itemId: r.id, body: { due_date: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
                   {
                     key: "actions",
                     header: "",
@@ -1047,7 +1308,569 @@ export default function TransactionWorkspacePage() {
                     ),
                   },
                 ]}
-                data={ddItems}
+                data={filteredDDItems ?? []}
+                keyField="id"
+              />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── 계약/SPA 탭 ───────────────────────────────── */}
+      {activeTab === "contracts" && (
+        <div className="space-y-4">
+          {/* 계약 요약 KPI */}
+          {contractSummary && contractSummary.total > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard label="전체 계약" value={contractSummary.total} />
+              <KpiCard
+                label="서명 대기"
+                value={contractSummary.pending_signatures}
+                variant={contractSummary.pending_signatures > 0 ? "caution" : "neutral"}
+              />
+              <KpiCard label="체결 완료" value={contractSummary.fully_executed} variant="positive" />
+              <KpiCard
+                label="유형별"
+                value={Object.keys(contractSummary.by_type).length}
+              />
+            </div>
+          )}
+
+          {/* 계약 목록 */}
+          <Card
+            title="계약서 목록"
+            headerBar
+            padding="none"
+            actions={
+              <Button icon={Plus} onClick={() => setShowContractModal(true)} variant="ghost">
+                계약서 추가
+              </Button>
+            }
+          >
+            {!contracts?.length ? (
+              <EmptyState
+                icon={Scale}
+                title="계약서 없음"
+                description="SPA, SHA 등 계약서를 등록하세요."
+                actionLabel="계약서 추가"
+                onAction={() => setShowContractModal(true)}
+              />
+            ) : (
+              <DataTable
+                columns={[
+                  { key: "title", header: "제목" },
+                  {
+                    key: "contract_type",
+                    header: "유형",
+                    render: (r) => (
+                      <Badge variant="neutral">
+                        {CONTRACT_TYPE_OPTIONS.find((o) => o.value === r.contract_type)?.label ?? r.contract_type}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (r) => (
+                      <Select
+                        options={CONTRACT_STATUS_OPTIONS}
+                        value={r.status}
+                        onChange={(e) =>
+                          updateContract.mutate({
+                            contractId: r.id,
+                            body: { status: e.target.value as ContractStatus },
+                          })
+                        }
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
+                    ),
+                  },
+                  {
+                    key: "counterparty_name",
+                    header: "상대방",
+                    render: (r) => r.counterparty_name ?? "-",
+                  },
+                  {
+                    key: "current_version",
+                    header: "버전",
+                    align: "right",
+                    render: (r) => `v${r.current_version}`,
+                  },
+                  {
+                    key: "seller_signature",
+                    header: "매도측 서명",
+                    render: (r) => (
+                      <Select
+                        options={SIGNATURE_STATUS_OPTIONS}
+                        value={r.seller_signature}
+                        onChange={(e) =>
+                          updateContract.mutate({
+                            contractId: r.id,
+                            body: { seller_signature: e.target.value as SigStatus },
+                          })
+                        }
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
+                    ),
+                  },
+                  {
+                    key: "buyer_signature",
+                    header: "매수측 서명",
+                    render: (r) => (
+                      <Select
+                        options={SIGNATURE_STATUS_OPTIONS}
+                        value={r.buyer_signature}
+                        onChange={(e) =>
+                          updateContract.mutate({
+                            contractId: r.id,
+                            body: { buyer_signature: e.target.value as SigStatus },
+                          })
+                        }
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
+                    ),
+                  },
+                  {
+                    key: "effective_date",
+                    header: "효력일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-eff-${r.effective_date}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.effective_date ?? ""}
+                        onChange={(e) =>
+                          updateContract.mutate({
+                            contractId: r.id,
+                            body: { effective_date: e.target.value || undefined },
+                          })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "ai_actions",
+                    header: "",
+                    width: "70px",
+                    render: (r) => (
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="text-text-muted hover:text-accent p-1 rounded transition-colors"
+                          title="AI 분석"
+                          onClick={() => analyzeContract.mutate(r.id)}
+                        >
+                          <Sparkles size={14} />
+                        </button>
+                        <button
+                          className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                          title="삭제"
+                          onClick={() => {
+                            if (confirm("이 계약서를 삭제하시겠습니까?")) {
+                              deleteContract.mutate(r.id);
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ),
+                  },
+                ] as Column<(typeof contracts)[number]>[]}
+                data={contracts}
+                keyField="id"
+              />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── 클로징 탭 ─────────────────────────────────── */}
+      {activeTab === "closing" && (
+        <div className="space-y-4">
+          {/* 클로징 요약 KPI */}
+          {closingSummary && closingSummary.total > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard label="전체 항목" value={closingSummary.total} />
+              <KpiCard
+                label="완료율"
+                value={`${Math.round(closingSummary.completion_rate * 100)}%`}
+                variant={closingSummary.completion_rate >= 0.8 ? "positive" : "neutral"}
+              />
+              <KpiCard
+                label="진행 중"
+                value={closingSummary.by_status["IN_PROGRESS"] ?? 0}
+              />
+              <KpiCard
+                label="대기"
+                value={closingSummary.by_status["PENDING"] ?? 0}
+                variant={(closingSummary.by_status["PENDING"] ?? 0) > 0 ? "caution" : "neutral"}
+              />
+            </div>
+          )}
+
+          {/* 카테고리 필터 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-text-muted">카테고리:</span>
+            {[{ value: "ALL", label: "전체" }, ...CLOSING_CATEGORY_OPTIONS].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  closingCategoryFilter === opt.value
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-text-secondary hover:bg-gray-200"
+                }`}
+                onClick={() => setClosingCategoryFilter(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 체크리스트 */}
+          <Card
+            title="클로징 체크리스트"
+            headerBar
+            padding="none"
+            actions={
+              <Button icon={Plus} onClick={() => setShowClosingModal(true)} variant="ghost">
+                항목 추가
+              </Button>
+            }
+          >
+            {!closingItems?.length ? (
+              <EmptyState
+                icon={Flag}
+                title="클로징 항목 없음"
+                description="선행조건, 인허가 등 클로징 체크리스트를 추가하세요."
+                actionLabel="항목 추가"
+                onAction={() => setShowClosingModal(true)}
+              />
+            ) : !filteredClosingItems?.length ? (
+              <div className="p-8 text-center text-text-muted text-sm">
+                선택한 카테고리에 해당하는 항목이 없습니다.
+              </div>
+            ) : (
+              <DataTable
+                columns={[
+                  {
+                    key: "category",
+                    header: "카테고리",
+                    render: (r) => (
+                      <Badge variant="neutral">
+                        {CLOSING_CATEGORY_OPTIONS.find((o) => o.value === r.category)?.label ?? r.category}
+                      </Badge>
+                    ),
+                  },
+                  { key: "title", header: "항목" },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (r) => (
+                      <Select
+                        options={CLOSING_CONDITION_STATUS_OPTIONS}
+                        value={r.status}
+                        onChange={(e) =>
+                          updateClosingItem.mutate({
+                            itemId: r.id,
+                            body: { status: e.target.value as ClosingConditionStatus },
+                          })
+                        }
+                        className="!py-0.5 !px-1.5 !text-xs"
+                      />
+                    ),
+                  },
+                  {
+                    key: "responsible_party",
+                    header: "담당",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-resp-${r.responsible_party}`}
+                        type="text"
+                        className={`${INLINE_CLS} w-28`}
+                        defaultValue={r.responsible_party ?? ""}
+                        placeholder="담당자"
+                        onBlur={(e) => {
+                          const v = e.target.value || undefined;
+                          if (v !== (r.responsible_party ?? undefined)) {
+                            updateClosingItem.mutate({ itemId: r.id, body: { responsible_party: v } });
+                          }
+                        }}
+                      />
+                    ),
+                  },
+                  {
+                    key: "due_date",
+                    header: "기한",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-due-${r.due_date}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.due_date ?? ""}
+                        onChange={(e) =>
+                          updateClosingItem.mutate({ itemId: r.id, body: { due_date: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "completed_date",
+                    header: "완료일",
+                    render: (r) => (
+                      <input
+                        key={`${r.id}-comp-${r.completed_date}`}
+                        type="date"
+                        className={`${INLINE_CLS} w-32`}
+                        defaultValue={r.completed_date ?? ""}
+                        onChange={(e) =>
+                          updateClosingItem.mutate({ itemId: r.id, body: { completed_date: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    width: "40px",
+                    render: (r) => (
+                      <button
+                        className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                        title="삭제"
+                        onClick={() => {
+                          if (confirm("이 체크리스트 항목을 삭제하시겠습니까?")) {
+                            deleteClosingItem.mutate(r.id);
+                          }
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ),
+                  },
+                ] as Column<(typeof closingItems)[number]>[]}
+                data={filteredClosingItems ?? []}
+                keyField="id"
+              />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── PMI 탭 ──────────────────────────────────── */}
+      {activeTab === "pmi" && (
+        <div className="space-y-4">
+          {/* KPI 요약 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <KpiCard label="총 태스크" value={pmiSummary?.total ?? 0} />
+            <KpiCard
+              label="완료율"
+              value={`${Math.round((pmiSummary?.completion_rate ?? 0) * 100)}%`}
+              variant={
+                (pmiSummary?.completion_rate ?? 0) >= 0.8
+                  ? "positive"
+                  : (pmiSummary?.completion_rate ?? 0) >= 0.5
+                    ? "caution"
+                    : "default"
+              }
+            />
+            <KpiCard
+              label="진행 중"
+              value={pmiSummary?.by_status?.IN_PROGRESS ?? 0}
+              variant="caution"
+            />
+            <KpiCard
+              label="차단됨"
+              value={pmiSummary?.by_status?.BLOCKED ?? 0}
+              variant={(pmiSummary?.by_status?.BLOCKED ?? 0) > 0 ? "negative" : "default"}
+            />
+          </div>
+
+          {/* 카테고리 필터 칩 */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pmiCategoryFilter === "ALL" ? "bg-accent text-white" : "bg-gray-100 text-text-muted hover:bg-gray-200"}`}
+              onClick={() => setPmiCategoryFilter("ALL")}
+            >
+              전체
+            </button>
+            {PMI_CATEGORY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pmiCategoryFilter === opt.value ? "bg-accent text-white" : "bg-gray-100 text-text-muted hover:bg-gray-200"}`}
+                onClick={() => setPmiCategoryFilter(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <Card
+            title="PMI 태스크"
+            headerBar
+            actions={
+              <Button size="sm" icon={Plus} onClick={() => setShowPMIModal(true)}>
+                태스크 추가
+              </Button>
+            }
+          >
+            {!filteredPmiTasks?.length ? (
+              <EmptyState icon={Flag} title="PMI 태스크 없음" description="인수 후 통합 태스크를 추가하세요." />
+            ) : (
+              <DataTable
+                columns={[
+                  { key: "title", header: "태스크명" },
+                  {
+                    key: "category",
+                    header: "카테고리",
+                    render: (t) => <Badge variant="info">{PMI_CATEGORY_OPTIONS.find((o) => o.value === t.category)?.label ?? t.category}</Badge>,
+                  },
+                  {
+                    key: "priority",
+                    header: "우선순위",
+                    render: (t) => (
+                      <select
+                        className={INLINE_CLS}
+                        value={t.priority}
+                        onChange={(e) => updatePMITask.mutate({ taskId: t.id, body: { priority: e.target.value as PMIPriority } })}
+                      >
+                        {PMI_PRIORITY_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (t) => (
+                      <select
+                        className={INLINE_CLS}
+                        value={t.status}
+                        onChange={(e) => updatePMITask.mutate({ taskId: t.id, body: { status: e.target.value as PMITaskStatus } })}
+                      >
+                        {PMI_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    ),
+                  },
+                  { key: "assignee_name", header: "담당자", render: (t) => t.assignee_name ?? "-" },
+                  { key: "due_date", header: "마감일", render: (t) => t.due_date ?? "-" },
+                  {
+                    key: "actions",
+                    header: "",
+                    render: (t) => (
+                      <button
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => { if (confirm("삭제하시겠습니까?")) deletePMITask.mutate(t.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ),
+                  },
+                ] as Column<(typeof pmiTasks)[number]>[]}
+                data={filteredPmiTasks ?? []}
+                keyField="id"
+              />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── Earnout 탭 ───────────────────────────────── */}
+      {activeTab === "earnout" && (
+        <div className="space-y-4">
+          {/* KPI 요약 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <KpiCard label="총 마일스톤" value={earnoutSummary?.total ?? 0} />
+            <KpiCard
+              label="목표 합계"
+              value={formatAmount(earnoutSummary?.total_target ?? 0)}
+            />
+            <KpiCard
+              label="실적 합계"
+              value={formatAmount(earnoutSummary?.total_actual ?? 0)}
+              variant={
+                (earnoutSummary?.total_actual ?? 0) >= (earnoutSummary?.total_target ?? 1)
+                  ? "positive"
+                  : "caution"
+              }
+            />
+            <KpiCard
+              label="지급 합계"
+              value={formatAmount(earnoutSummary?.total_payment ?? 0)}
+            />
+          </div>
+
+          <Card
+            title="어닝아웃 마일스톤"
+            headerBar
+            actions={
+              <Button size="sm" icon={Plus} onClick={() => setShowEarnoutModal(true)}>
+                마일스톤 추가
+              </Button>
+            }
+          >
+            {!earnoutMilestones?.length ? (
+              <EmptyState icon={DollarSign} title="어닝아웃 없음" description="어닝아웃 마일스톤을 추가하세요." />
+            ) : (
+              <DataTable
+                columns={[
+                  { key: "title", header: "마일스톤" },
+                  {
+                    key: "metric",
+                    header: "지표",
+                    render: (m) => EARNOUT_METRIC_OPTIONS.find((o) => o.value === m.metric)?.label ?? m.metric,
+                  },
+                  {
+                    key: "target_value",
+                    header: "목표",
+                    render: (m) => `${formatAmount(m.target_value)} ${m.currency}`,
+                  },
+                  {
+                    key: "actual_value",
+                    header: "실적",
+                    render: (m) => m.actual_value != null ? `${formatAmount(m.actual_value)} ${m.currency}` : "-",
+                  },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (m) => (
+                      <select
+                        className={INLINE_CLS}
+                        value={m.status}
+                        onChange={(e) => updateEarnout.mutate({ milestoneId: m.id, body: { status: e.target.value as EarnoutStatus } })}
+                      >
+                        {EARNOUT_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    ),
+                  },
+                  {
+                    key: "period",
+                    header: "측정 기간",
+                    render: (m) => m.measurement_start && m.measurement_end ? `${m.measurement_start} ~ ${m.measurement_end}` : "-",
+                  },
+                  {
+                    key: "payment_amount",
+                    header: "지급액",
+                    render: (m) => m.payment_amount != null ? formatAmount(m.payment_amount) : "-",
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    render: (m) => (
+                      <button
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => { if (confirm("삭제하시겠습니까?")) deleteEarnout.mutate(m.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ),
+                  },
+                ] as Column<(typeof earnoutMilestones)[number]>[]}
+                data={earnoutMilestones ?? []}
                 keyField="id"
               />
             )}
@@ -1503,6 +2326,345 @@ export default function TransactionWorkspacePage() {
             </Button>
             <Button type="submit" loading={createBid.isPending}>
               등록
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 계약서 추가 모달 */}
+      <Modal
+        open={showContractModal}
+        onClose={() => setShowContractModal(false)}
+        title="계약서 추가"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createContract.mutate(contractForm, {
+              onSuccess: () => {
+                setShowContractModal(false);
+                setContractForm({ title: "" });
+              },
+            });
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="제목"
+            required
+            value={contractForm.title}
+            onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+            placeholder="예: 주식매매계약(SPA)"
+          />
+          <Select
+            label="계약 유형"
+            options={CONTRACT_TYPE_OPTIONS.filter((o) => o.value !== "")}
+            value={contractForm.contract_type ?? "SPA"}
+            onChange={(e) =>
+              setContractForm({ ...contractForm, contract_type: (e.target.value || undefined) as ContractCreate["contract_type"] })
+            }
+          />
+          <Input
+            label="상대방"
+            value={contractForm.counterparty_name ?? ""}
+            onChange={(e) =>
+              setContractForm({ ...contractForm, counterparty_name: e.target.value || undefined })
+            }
+            placeholder="계약 상대방"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="효력일"
+              type="date"
+              value={contractForm.effective_date ?? ""}
+              onChange={(e) =>
+                setContractForm({ ...contractForm, effective_date: e.target.value || undefined })
+              }
+            />
+            <Input
+              label="만료일"
+              type="date"
+              value={contractForm.expiry_date ?? ""}
+              onChange={(e) =>
+                setContractForm({ ...contractForm, expiry_date: e.target.value || undefined })
+              }
+            />
+          </div>
+          <Input
+            label="설명 / 비고"
+            value={contractForm.description ?? ""}
+            onChange={(e) =>
+              setContractForm({ ...contractForm, description: e.target.value || undefined })
+            }
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowContractModal(false)}>
+              취소
+            </Button>
+            <Button type="submit" loading={createContract.isPending}>
+              등록
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 클로징 체크리스트 추가 모달 */}
+      <Modal
+        open={showClosingModal}
+        onClose={() => setShowClosingModal(false)}
+        title="클로징 체크리스트 항목 추가"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createClosingItem.mutate(closingForm, {
+              onSuccess: () => {
+                setShowClosingModal(false);
+                setClosingForm({ category: "REGULATORY", title: "" });
+              },
+            });
+          }}
+          className="space-y-4"
+        >
+          <Select
+            label="카테고리"
+            options={CLOSING_CATEGORY_OPTIONS}
+            value={closingForm.category}
+            onChange={(e) =>
+              setClosingForm({ ...closingForm, category: e.target.value as ClosingCategory })
+            }
+          />
+          <Input
+            label="항목명"
+            required
+            value={closingForm.title}
+            onChange={(e) => setClosingForm({ ...closingForm, title: e.target.value })}
+            placeholder="예: 공정거래위원회 기업결합신고"
+          />
+          <Input
+            label="설명"
+            value={closingForm.description ?? ""}
+            onChange={(e) =>
+              setClosingForm({ ...closingForm, description: e.target.value || undefined })
+            }
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="담당자"
+              value={closingForm.responsible_party ?? ""}
+              onChange={(e) =>
+                setClosingForm({ ...closingForm, responsible_party: e.target.value || undefined })
+              }
+            />
+            <Input
+              label="담당자 이메일"
+              type="email"
+              value={closingForm.responsible_email ?? ""}
+              onChange={(e) =>
+                setClosingForm({ ...closingForm, responsible_email: e.target.value || undefined })
+              }
+            />
+          </div>
+          <Input
+            label="기한"
+            type="date"
+            value={closingForm.due_date ?? ""}
+            onChange={(e) =>
+              setClosingForm({ ...closingForm, due_date: e.target.value || undefined })
+            }
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowClosingModal(false)}>
+              취소
+            </Button>
+            <Button type="submit" loading={createClosingItem.isPending}>
+              추가
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* PMI 태스크 추가 모달 */}
+      <Modal
+        open={showPMIModal}
+        onClose={() => setShowPMIModal(false)}
+        title="PMI 태스크 추가"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createPMITask.mutate(pmiForm, {
+              onSuccess: () => {
+                setShowPMIModal(false);
+                setPmiForm({ category: "INTEGRATION_PLAN", title: "" });
+              },
+            });
+          }}
+          className="space-y-4"
+        >
+          <Select
+            label="카테고리"
+            options={PMI_CATEGORY_OPTIONS}
+            value={pmiForm.category}
+            onChange={(e) =>
+              setPmiForm({ ...pmiForm, category: e.target.value as PMICategory })
+            }
+          />
+          <Input
+            label="태스크명"
+            required
+            value={pmiForm.title}
+            onChange={(e) => setPmiForm({ ...pmiForm, title: e.target.value })}
+            placeholder="예: IT 시스템 통합 계획 수립"
+          />
+          <Input
+            label="설명"
+            value={pmiForm.description ?? ""}
+            onChange={(e) =>
+              setPmiForm({ ...pmiForm, description: e.target.value || undefined })
+            }
+          />
+          <Select
+            label="우선순위"
+            options={PMI_PRIORITY_OPTIONS}
+            value={pmiForm.priority ?? "MEDIUM"}
+            onChange={(e) =>
+              setPmiForm({ ...pmiForm, priority: e.target.value as PMIPriority })
+            }
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="담당자"
+              value={pmiForm.assignee_name ?? ""}
+              onChange={(e) =>
+                setPmiForm({ ...pmiForm, assignee_name: e.target.value || undefined })
+              }
+            />
+            <Input
+              label="담당자 이메일"
+              type="email"
+              value={pmiForm.assignee_email ?? ""}
+              onChange={(e) =>
+                setPmiForm({ ...pmiForm, assignee_email: e.target.value || undefined })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="시작일"
+              type="date"
+              value={pmiForm.start_date ?? ""}
+              onChange={(e) =>
+                setPmiForm({ ...pmiForm, start_date: e.target.value || undefined })
+              }
+            />
+            <Input
+              label="마감일"
+              type="date"
+              value={pmiForm.due_date ?? ""}
+              onChange={(e) =>
+                setPmiForm({ ...pmiForm, due_date: e.target.value || undefined })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowPMIModal(false)}>
+              취소
+            </Button>
+            <Button type="submit" loading={createPMITask.isPending}>
+              추가
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 어닝아웃 마일스톤 추가 모달 */}
+      <Modal
+        open={showEarnoutModal}
+        onClose={() => setShowEarnoutModal(false)}
+        title="어닝아웃 마일스톤 추가"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createEarnout.mutate(earnoutForm, {
+              onSuccess: () => {
+                setShowEarnoutModal(false);
+                setEarnoutForm({ title: "", metric: "REVENUE", target_value: 0 });
+              },
+            });
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="마일스톤명"
+            required
+            value={earnoutForm.title}
+            onChange={(e) => setEarnoutForm({ ...earnoutForm, title: e.target.value })}
+            placeholder="예: 2026년 매출 달성 조건"
+          />
+          <Input
+            label="설명"
+            value={earnoutForm.description ?? ""}
+            onChange={(e) =>
+              setEarnoutForm({ ...earnoutForm, description: e.target.value || undefined })
+            }
+          />
+          <Select
+            label="지표"
+            options={EARNOUT_METRIC_OPTIONS}
+            value={earnoutForm.metric}
+            onChange={(e) =>
+              setEarnoutForm({ ...earnoutForm, metric: e.target.value as EarnoutMetric })
+            }
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="목표 금액"
+              type="number"
+              required
+              value={earnoutForm.target_value.toString()}
+              onChange={(e) =>
+                setEarnoutForm({ ...earnoutForm, target_value: Number(e.target.value) || 0 })
+              }
+            />
+            <Select
+              label="통화"
+              options={[
+                { value: "KRW", label: "KRW (원)" },
+                { value: "USD", label: "USD ($)" },
+                { value: "EUR", label: "EUR (€)" },
+              ]}
+              value={earnoutForm.currency ?? "KRW"}
+              onChange={(e) =>
+                setEarnoutForm({ ...earnoutForm, currency: e.target.value })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="측정 시작일"
+              type="date"
+              value={earnoutForm.measurement_start ?? ""}
+              onChange={(e) =>
+                setEarnoutForm({ ...earnoutForm, measurement_start: e.target.value || undefined })
+              }
+            />
+            <Input
+              label="측정 종료일"
+              type="date"
+              value={earnoutForm.measurement_end ?? ""}
+              onChange={(e) =>
+                setEarnoutForm({ ...earnoutForm, measurement_end: e.target.value || undefined })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowEarnoutModal(false)}>
+              취소
+            </Button>
+            <Button type="submit" loading={createEarnout.isPending}>
+              추가
             </Button>
           </div>
         </form>

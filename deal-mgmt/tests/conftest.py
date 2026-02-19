@@ -92,3 +92,21 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
     """테스트용 DB 세션 (서비스 레이어 직접 테스트)."""
     async with _test_session_factory() as session:
         yield session
+
+
+@pytest.fixture
+async def transaction_id(client: AsyncClient) -> str:
+    """테스트용 트랜잭션 생성 후 ID 반환."""
+    resp = await client.post(
+        "/api/v1/transactions",
+        json={
+            "name": "Test Transaction",
+            "code_name": f"TEST-{id(client)}",
+            "target_company_name": "테스트 기업",
+            "client_name": "테스트 고객",
+            "side": "SELL",
+            "lead_advisor_email": "test@example.com",
+        },
+    )
+    assert resp.status_code == 201
+    return resp.json()["id"]

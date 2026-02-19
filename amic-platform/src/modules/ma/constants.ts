@@ -155,6 +155,99 @@ export const DD_STATUS_OPTIONS: SelectOption[] = [
   { value: "NOT_APPLICABLE", label: "해당 없음" },
 ];
 
+// ── Contract Type (Phase 3) ──────────────────────────
+export const CONTRACT_TYPE_OPTIONS: SelectOption[] = [
+  { value: "SPA", label: "SPA (주식매매계약)" },
+  { value: "AMENDMENT", label: "수정계약" },
+  { value: "SIDE_LETTER", label: "사이드레터" },
+  { value: "SHAREHOLDERS_AGREEMENT", label: "주주간계약 (SHA)" },
+  { value: "ESCROW_AGREEMENT", label: "에스크로 계약" },
+  { value: "OTHER", label: "기타" },
+];
+
+export const CONTRACT_STATUS_OPTIONS: SelectOption[] = [
+  { value: "DRAFT", label: "초안" },
+  { value: "UNDER_REVIEW", label: "검토 중" },
+  { value: "PENDING_SIGNATURE", label: "서명 대기" },
+  { value: "PARTIALLY_SIGNED", label: "일부 서명" },
+  { value: "FULLY_EXECUTED", label: "체결 완료" },
+  { value: "TERMINATED", label: "종료" },
+];
+
+export const SIGNATURE_STATUS_OPTIONS: SelectOption[] = [
+  { value: "NOT_REQUIRED", label: "불필요" },
+  { value: "PENDING", label: "대기" },
+  { value: "SIGNED", label: "서명 완료" },
+  { value: "DECLINED", label: "거절" },
+];
+
+// ── Closing Category (Phase 3) ──────────────────────
+export const CLOSING_CATEGORY_OPTIONS: SelectOption[] = [
+  { value: "REGULATORY", label: "인허가 (Regulatory)" },
+  { value: "LEGAL", label: "법률 (Legal)" },
+  { value: "FINANCIAL", label: "재무 (Financial)" },
+  { value: "CORPORATE", label: "기업 (Corporate)" },
+  { value: "CONDITION_PRECEDENT", label: "선행조건 (CP)" },
+  { value: "FUND_FLOW", label: "자금이체 (Fund Flow)" },
+  { value: "OTHER", label: "기타" },
+];
+
+export const CLOSING_CONDITION_STATUS_OPTIONS: SelectOption[] = [
+  { value: "PENDING", label: "대기" },
+  { value: "IN_PROGRESS", label: "진행 중" },
+  { value: "COMPLETED", label: "완료" },
+  { value: "WAIVED", label: "면제" },
+  { value: "NOT_APPLICABLE", label: "해당 없음" },
+];
+
+// ── PMI Category (Phase 4) ───────────────────────────
+export const PMI_CATEGORY_OPTIONS: SelectOption[] = [
+  { value: "INTEGRATION_PLAN", label: "통합 계획" },
+  { value: "DAY_ONE", label: "Day One" },
+  { value: "FIRST_100_DAYS", label: "First 100 Days" },
+  { value: "SYNERGY", label: "시너지" },
+  { value: "CULTURE", label: "기업 문화" },
+  { value: "IT_SYSTEMS", label: "IT 시스템" },
+  { value: "HR", label: "인사 (HR)" },
+  { value: "COMMUNICATION", label: "커뮤니케이션" },
+  { value: "OTHER", label: "기타" },
+];
+
+export const PMI_STATUS_OPTIONS: SelectOption[] = [
+  { value: "NOT_STARTED", label: "미시작" },
+  { value: "IN_PROGRESS", label: "진행 중" },
+  { value: "COMPLETED", label: "완료" },
+  { value: "BLOCKED", label: "차단됨" },
+  { value: "DEFERRED", label: "연기" },
+];
+
+export const PMI_PRIORITY_OPTIONS: SelectOption[] = [
+  { value: "CRITICAL", label: "긴급" },
+  { value: "HIGH", label: "높음" },
+  { value: "MEDIUM", label: "보통" },
+  { value: "LOW", label: "낮음" },
+];
+
+// ── Earnout (Phase 4) ───────────────────────────────
+export const EARNOUT_STATUS_OPTIONS: SelectOption[] = [
+  { value: "PENDING", label: "대기" },
+  { value: "MEASUREMENT_PERIOD", label: "측정 기간" },
+  { value: "ACHIEVED", label: "달성" },
+  { value: "PARTIALLY_ACHIEVED", label: "부분 달성" },
+  { value: "MISSED", label: "미달성" },
+  { value: "DISPUTED", label: "분쟁 중" },
+];
+
+export const EARNOUT_METRIC_OPTIONS: SelectOption[] = [
+  { value: "REVENUE", label: "매출액" },
+  { value: "EBITDA", label: "EBITDA" },
+  { value: "NET_INCOME", label: "순이익" },
+  { value: "CUSTOMER_COUNT", label: "고객 수" },
+  { value: "CONTRACT_VALUE", label: "계약 금액" },
+  { value: "WORKING_CAPITAL", label: "운전자본" },
+  { value: "OTHER", label: "기타" },
+];
+
 // ── 7단계 Phase 설정 ─────────────────────────────────
 export interface PhaseConfigItem {
   phase: TransactionPhase;
