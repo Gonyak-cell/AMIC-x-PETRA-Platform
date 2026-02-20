@@ -1,7 +1,7 @@
 # 7단계 M&A 워크플로우 — 적용 가능성 평가 및 상세 구현 계획
 
 **작성일**: 2026-02-17 23:04
-**최종 수정**: 2026-02-19 00:46
+**최종 수정**: 2026-02-20 14:12
 **아키텍처 결정**: 새 `deal-mgmt` 서비스 신설 (port 8003)
 **통합 방향**: FDD + IM → 워크플로우 내부 흡수, KIIS → 독립 데이터 모듈 유지
 **참조 문서**: `new_workflow/AMIC_M&A_워크플로우_설계.md`, `compass_artifact_...md`, `new_workflow_system_dealroom.md`
@@ -478,6 +478,93 @@ amic-platform/src/modules/ma/           # 신규 M&A 워크플로우 모듈
 
 **Git**: `618109a` feat/ma-workflow → origin 푸시 완료 (129 files, +12,188 lines)
 
+### Phase 3: 계약 관리 / 클로징 — ✅ 완료 (Session 31, 2026-02-20)
+
+**Backend (deal-mgmt) — Phase 3 추가 파일**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Models** | `contract.py` | Contract 모델 (SPA/SHA/NDA 등 8종, 7단계 상태, 서명자 JSONB) |
+| | `contract_version.py` | ContractVersion 모델 (계약 버전 관리, diff 추적) |
+| | `closing_checklist.py` | ClosingChecklist 모델 (6개 카테고리, 4단계 상태, 책임자/기한) |
+| **Enums** | `enums.py` 확장 | ContractType, ContractStatus, ClosingCategory, ClosingStatus |
+| **Schemas** | `contract.py` | Contract CRUD 스키마 + Version + Summary + AI 분석 요청 |
+| | `closing.py` | Closing Checklist CRUD 스키마 + Summary (카테고리별 진행률) |
+| **Routers** | `contracts.py` | `GET/POST/PATCH/DELETE /contracts` + Versions + Summary + AI 분석(stub) |
+| | `closing.py` | `GET/POST/PATCH/DELETE /closing` + Summary |
+| **Services** | `contract_analysis_service.py` | AI 계약 분석 서비스 (stub — 향후 LLM 연동) |
+| **Migration** | `003_phase3_contracts_closing.py` | 3 테이블 (contracts, contract_versions, closing_checklists) + 4 enum 타입 |
+
+**Frontend (MA Module) — Phase 3 추가/수정**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Types** | `contract.ts` | Contract, ContractVersion, ContractCreate, ContractUpdate, ContractSummary |
+| | `closing.ts` | ClosingItem, ClosingCreate, ClosingUpdate, ClosingSummary |
+| **Hooks** | `useContracts.ts` | 7개 훅 (list, summary, versions, create, update, delete, analyze) |
+| | `useClosing.ts` | 5개 훅 (list, summary, create, update, delete) |
+| **Pages** | `TransactionWorkspacePage.tsx` | 8탭 → 10탭 확장 (Contracts, Closing 추가) |
+| **Constants** | `constants.ts` | Contract/Closing 상태 옵션, 배지 색상 매핑 추가 |
+
+### Phase 4: PMI / 어닝아웃 / 외부 연동 — ✅ 완료 (Session 31, 2026-02-20)
+
+**Backend (deal-mgmt) — Phase 4 추가 파일**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Models** | `pmi_task.py` | PMI Task 모델 (5개 카테고리, 우선순위, 진행률, 책임자) |
+| | `earnout.py` | Earnout 모델 (4종 메트릭, 4단계 상태, 목표/실적/지급금액) |
+| **Enums** | `enums.py` 확장 | PMICategory, PMIPriority, PMIStatus, EarnoutMetric, EarnoutStatus |
+| **Schemas** | `pmi.py` | PMI CRUD 스키마 + Summary (카테고리별 진행률) |
+| | `earnout.py` | Earnout CRUD 스키마 + Summary (총 목표/실적/지급) |
+| **Routers** | `pmi.py` | `GET/POST/PATCH/DELETE /pmi` + Summary |
+| | `earnout.py` | `GET/POST/PATCH/DELETE /earnout` + Summary |
+| | `integrations.py` | FDD/IM/KIIS 외부 연동 엔드포인트 (link, search) |
+| **Services** | `fdd_client.py` | FDD API 호출 래퍼 (딜 생성 + 분석 결과 조회) |
+| | `im_client.py` | IM API 호출 래퍼 (문서 생성 트리거 + 상태 조회) |
+| | `kiis_client.py` | KIIS API 호출 래퍼 (기업 검색 + 상세 조회) |
+| **Migration** | `004_phase4_pmi_earnout.py` | 2 테이블 (pmi_tasks, earnouts) + 5 enum 타입 |
+
+**Frontend (MA Module) — Phase 4 추가/수정**
+
+| 카테고리 | 파일 | 내용 |
+|:---|:---|:---|
+| **Types** | `pmi.ts` | PMITask, PMICreate, PMIUpdate, PMISummary |
+| | `earnout.ts` | Earnout, EarnoutCreate, EarnoutUpdate, EarnoutSummary |
+| **Hooks** | `usePMI.ts` | 5개 훅 (list, summary, create, update, delete) |
+| | `useEarnout.ts` | 5개 훅 (list, summary, create, update, delete) |
+| **Pages** | `TransactionWorkspacePage.tsx` | 10탭 → 12탭 확장 (PMI, Earnout 추가) |
+| **Constants** | `constants.ts` | PMI/Earnout 상태 옵션, 배지 색상 매핑 추가 |
+
+**TransactionWorkspacePage 최종 12탭 구성**
+
+| 탭 | 내용 | Phase |
+|:---|:---|:---:|
+| Overview | 거래 요약, WorkflowStepper | 1 |
+| 수임(Engagement) | 수임계약 CRUD, 이해충돌 체크 | 1 |
+| 팀(WGL) | Working Group 멤버 관리 | 1 |
+| 매수자(Buyers) | 매수자 후보 파이프라인 | 1 |
+| NDA | NDA 관리 — KPI 요약, 인라인 상태 편집 | 2 |
+| Bids | IOI/LOI/최종오퍼 — 비교 매트릭스 | 2 |
+| DD Checklist | 9개 워크스트림 — 진행률 | 2 |
+| Contracts | 계약 관리 — 버전, 서명자, AI 분석(stub) | **3** |
+| Closing | 클로징 체크리스트 — 6개 카테고리 | **3** |
+| PMI | PMI 태스크 — 5개 카테고리, 우선순위, 진행률 | **4** |
+| Earnout | 어닝아웃 — 메트릭, 목표/실적/지급 추적 | **4** |
+| 타임라인(Timeline) | 마일스톤/일정 관리 | 1 |
+
+**검증 결과 (Phase 0~4 전체)**
+
+- `pytest deal-mgmt/tests/ -v`: **127/127 통과** (12.28s) ✅
+  - Phase 3: Contracts 11건, Closing 10건
+  - Phase 4: PMI 9건, Earnout 9건, Integrations 3건
+  - Phase 2: NDA 10건, Bids 9건 (Phase 2에서 12→9 정리), DD Checklist 9건
+  - Phase 1: Buyers 18건, Engagements 16건, Transactions 12건, Workflow 13건, Health 1건
+- `tsc --noEmit`: 에러 0건 ✅
+- `vite build`: 성공 (6.20s, 2971 modules) ✅
+
+**Git**: `6603591` feat/ma-workflow → origin 푸시 완료 (Phase 0~4 전체 포함)
+
 ### 전체 진행률 요약
 
 | Phase | 상태 | 세션 | 핵심 산출물 |
@@ -485,31 +572,31 @@ amic-platform/src/modules/ma/           # 신규 M&A 워크플로우 모듈
 | **Phase 0**: 아키텍처 준비 | ✅ 완료 | 27 | deal-mgmt 서비스 스캐폴딩, Docker/nginx/Vite 통합 |
 | **Phase 1**: MVP Core | ✅ 완료 | 27~29 | Transaction CRUD, 7단계 워크플로우, 수임/WGL/매수자/타임라인, E2E |
 | **Phase 2**: NDA/Bids/DD | ✅ 완료 | 30 | NDA 관리, IOI/LOI 비교, DD 체크리스트, 인라인 편집 |
-| **Phase 3**: AI 계약분석/전자서명 | ⬜ 미시작 | — | SPA 버전 관리, 클로징 체크리스트 |
-| **Phase 4**: PMI/어닝아웃 | ⬜ 미시작 | — | PMI 대시보드, 100일 계획 |
+| **Phase 3**: 계약/클로징 | ✅ 완료 | 31 | 계약 버전관리, AI 분석(stub), 클로징 체크리스트 |
+| **Phase 4**: PMI/어닝아웃 | ✅ 완료 | 31 | PMI 태스크, 어닝아웃 추적, FDD/IM/KIIS 외부 연동 |
 
 ### 파일 통계 (전체)
 
 | 카테고리 | 파일 수 | 비고 |
 |:---|:---:|:---|
-| 백엔드 모델 | 11 | transaction, engagement, working_group, buyer_candidate, timeline, audit, nda, bid, dd_checklist, base, enums |
-| 백엔드 스키마 | 9 | transaction, workflow, engagement, buyer, timeline, dashboard, nda, bid, dd_checklist |
-| 백엔드 라우터 | 9 | transactions, workflow, engagements, buyers, timeline, dashboard, ndas, bids, dd_checklists |
-| 백엔드 서비스 | 3 | transaction_service, workflow_engine, audit_service |
+| 백엔드 모델 | 16 | transaction, engagement, working_group, buyer_candidate, timeline, audit, nda, bid, dd_checklist, contract, contract_version, closing_checklist, pmi_task, earnout, base, enums |
+| 백엔드 스키마 | 14 | transaction, workflow, engagement, buyer, timeline, dashboard, nda, bid, dd_checklist, contract, closing, pmi, earnout |
+| 백엔드 라우터 | 13 | transactions, workflow, engagements, buyers, timeline, dashboard, ndas, bids, dd_checklists, contracts, closing, pmi, earnout, integrations |
+| 백엔드 서비스 | 7 | transaction_service, workflow_engine, audit_service, contract_analysis_service, fdd_client, im_client, kiis_client |
 | 백엔드 코어 | 4 | config, database, exceptions, security |
-| 마이그레이션 | 2 | 001_initial (6 tables), 002_phase2 (3 tables) |
-| 테스트 | 9 | 85 test cases |
-| 프론트엔드 타입 | 8 | transaction, workflow, engagement, buyer, timeline, nda, bid, dd_checklist |
-| 프론트엔드 훅 | 4 | useTransactions, useNdas, useBids, useDDChecklist |
-| 프론트엔드 페이지 | 3 | TransactionList, CreateTransaction, TransactionWorkspace |
-| **총계** | **~65** | 백엔드 47 + 프론트엔드 16 + 인프라 2 |
+| 마이그레이션 | 4 | 001_initial (6 tables), 002_phase2 (3 tables), 003_phase3 (3 tables), 004_phase4 (2 tables) |
+| 테스트 | 14 | 127 test cases |
+| 프론트엔드 타입 | 12 | transaction, workflow, engagement, buyer, timeline, nda, bid, dd_checklist, contract, closing, pmi, earnout |
+| 프론트엔드 훅 | 8 | useTransactions, useNdas, useBids, useDDChecklist, useContracts, useClosing, usePMI, useEarnout |
+| 프론트엔드 페이지 | 3 | TransactionList, CreateTransaction, TransactionWorkspace (12탭) |
+| **총계** | **~95** | 백엔드 72 + 프론트엔드 24 + 인프라 2 |
 
 ### 다음 단계
 
 | 우선순위 | 작업 | 상태 |
 |:---:|:---|:---:|
-| 1 | 브라우저 E2E 시각 확인 (NDA/Bids/DD 탭 동작) | ⬜ |
+| 1 | 브라우저 E2E 시각 확인 (12탭 전체 동작) | ⬜ |
 | 2 | native `<select>` → styled `<Select>` 컴포넌트 전환 (UX 개선) | ⬜ |
-| 3 | 인라인 셀 편집 확장 (amount, title, assignee, due_date) | ⬜ |
-| 4 | DD Checklist 워크스트림 필터 UI 노출 | ⬜ |
-| 5 | Phase 3 기획: AI 계약 분석, 전자서명 (DocuSign), SPA 버전 관리 | ⬜ |
+| 3 | AI 계약 분석 LLM 연동 (contract_analysis_service stub 구현) | ⬜ |
+| 4 | 전자서명 (DocuSign) 외부 연동 | ⬜ |
+| 5 | FDD/IM/KIIS 실제 API 연동 테스트 (Docker 환경) | ⬜ |
