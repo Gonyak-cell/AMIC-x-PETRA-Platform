@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Eye, Bell, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -35,17 +35,17 @@ export default function WatchlistPage() {
   const removeItem = useRemoveFromWatchlist();
   const markRead = useMarkAlertRead();
 
-  const handleRemove = (companyId: number) => {
+  const handleRemove = useCallback((companyId: number) => {
     setRemovingId(companyId);
     removeItem.mutate(companyId, {
       onSuccess: () => { toast.success("Removed from watchlist"); setRemovingId(null); },
       onError: () => { toast.error("Failed to remove"); setRemovingId(null); },
     });
-  };
+  }, [removeItem]);
 
-  const handleMarkRead = (alertId: number) => {
+  const handleMarkRead = useCallback((alertId: number) => {
     markRead.mutate(alertId);
-  };
+  }, [markRead]);
 
   const watchlistColumns: Column<WatchlistItem>[] = useMemo(() => [
     {

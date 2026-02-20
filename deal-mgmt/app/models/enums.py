@@ -1,13 +1,13 @@
 import enum
 
 
-class TransactionSide(str, enum.Enum):
+class TransactionSide(enum.StrEnum):
     SELL = "SELL"
     BUY = "BUY"
     DUAL = "DUAL"
 
 
-class TransactionPhase(str, enum.Enum):
+class TransactionPhase(enum.StrEnum):
     ENGAGEMENT = "ENGAGEMENT"
     PREPARATION = "PREPARATION"
     MARKETING = "MARKETING"
@@ -17,7 +17,7 @@ class TransactionPhase(str, enum.Enum):
     POST_CLOSING = "POST_CLOSING"
 
 
-class TransactionStatus(str, enum.Enum):
+class TransactionStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
     ON_HOLD = "ON_HOLD"
@@ -25,13 +25,13 @@ class TransactionStatus(str, enum.Enum):
     TERMINATED = "TERMINATED"
 
 
-class EngagementType(str, enum.Enum):
+class EngagementType(enum.StrEnum):
     EXCLUSIVE = "EXCLUSIVE"
     NON_EXCLUSIVE = "NON_EXCLUSIVE"
     CO_ADVISORY = "CO_ADVISORY"
 
 
-class WorkingGroupRole(str, enum.Enum):
+class WorkingGroupRole(enum.StrEnum):
     LEAD_ADVISOR = "LEAD_ADVISOR"
     LEGAL_COUNSEL = "LEGAL_COUNSEL"
     ACCOUNTING_ADVISOR = "ACCOUNTING_ADVISOR"
@@ -41,7 +41,7 @@ class WorkingGroupRole(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class BuyerCandidateStatus(str, enum.Enum):
+class BuyerCandidateStatus(enum.StrEnum):
     IDENTIFIED = "IDENTIFIED"
     CONTACTED = "CONTACTED"
     NDA_SENT = "NDA_SENT"
@@ -58,7 +58,7 @@ class BuyerCandidateStatus(str, enum.Enum):
     REJECTED = "REJECTED"
 
 
-class BuyerType(str, enum.Enum):
+class BuyerType(enum.StrEnum):
     STRATEGIC = "STRATEGIC"
     FINANCIAL_SPONSOR = "FINANCIAL_SPONSOR"
     FAMILY_OFFICE = "FAMILY_OFFICE"
@@ -67,12 +67,12 @@ class BuyerType(str, enum.Enum):
 
 
 # ── Phase 2: NDA ───────────────────────────────────────
-class NdaType(str, enum.Enum):
+class NdaType(enum.StrEnum):
     ONE_WAY = "ONE_WAY"
     MUTUAL = "MUTUAL"
 
 
-class NdaStatus(str, enum.Enum):
+class NdaStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     SENT = "SENT"
     SIGNED = "SIGNED"
@@ -81,13 +81,13 @@ class NdaStatus(str, enum.Enum):
 
 
 # ── Phase 2: Bid (IOI / LOI / Final Offer) ────────────
-class BidType(str, enum.Enum):
+class BidType(enum.StrEnum):
     IOI = "IOI"
     LOI = "LOI"
     FINAL_OFFER = "FINAL_OFFER"
 
 
-class BidStatus(str, enum.Enum):
+class BidStatus(enum.StrEnum):
     SUBMITTED = "SUBMITTED"
     UNDER_REVIEW = "UNDER_REVIEW"
     ACCEPTED = "ACCEPTED"
@@ -96,7 +96,7 @@ class BidStatus(str, enum.Enum):
     EXPIRED = "EXPIRED"
 
 
-class ValuationMethod(str, enum.Enum):
+class ValuationMethod(enum.StrEnum):
     EV_EBITDA = "EV_EBITDA"
     EV_REVENUE = "EV_REVENUE"
     PRICE_BOOK = "PRICE_BOOK"
@@ -106,7 +106,7 @@ class ValuationMethod(str, enum.Enum):
 
 
 # ── Phase 2: DD Checklist ──────────────────────────────
-class DDWorkstream(str, enum.Enum):
+class DDWorkstream(enum.StrEnum):
     FINANCIAL = "FINANCIAL"
     LEGAL = "LEGAL"
     TAX = "TAX"
@@ -118,7 +118,7 @@ class DDWorkstream(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class DDChecklistStatus(str, enum.Enum):
+class DDChecklistStatus(enum.StrEnum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -126,7 +126,7 @@ class DDChecklistStatus(str, enum.Enum):
 
 
 # ── Phase 3: Contract / SPA ──────────────────────────
-class ContractType(str, enum.Enum):
+class ContractType(enum.StrEnum):
     SPA = "SPA"
     AMENDMENT = "AMENDMENT"
     SIDE_LETTER = "SIDE_LETTER"
@@ -135,7 +135,7 @@ class ContractType(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class ContractStatus(str, enum.Enum):
+class ContractStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     UNDER_REVIEW = "UNDER_REVIEW"
     PENDING_SIGNATURE = "PENDING_SIGNATURE"
@@ -144,14 +144,14 @@ class ContractStatus(str, enum.Enum):
     TERMINATED = "TERMINATED"
 
 
-class SignatureStatus(str, enum.Enum):
+class SignatureStatus(enum.StrEnum):
     NOT_REQUIRED = "NOT_REQUIRED"
     PENDING = "PENDING"
     SIGNED = "SIGNED"
     DECLINED = "DECLINED"
 
 
-class ClosingCategory(str, enum.Enum):
+class ClosingCategory(enum.StrEnum):
     REGULATORY = "REGULATORY"
     LEGAL = "LEGAL"
     FINANCIAL = "FINANCIAL"
@@ -161,7 +161,7 @@ class ClosingCategory(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class ClosingConditionStatus(str, enum.Enum):
+class ClosingConditionStatus(enum.StrEnum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -170,7 +170,7 @@ class ClosingConditionStatus(str, enum.Enum):
 
 
 # ── Phase 4: PMI ─────────────────────────────────────
-class PMICategory(str, enum.Enum):
+class PMICategory(enum.StrEnum):
     INTEGRATION_PLAN = "INTEGRATION_PLAN"
     DAY_ONE = "DAY_ONE"
     FIRST_100_DAYS = "FIRST_100_DAYS"
@@ -182,7 +182,7 @@ class PMICategory(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class PMITaskStatus(str, enum.Enum):
+class PMITaskStatus(enum.StrEnum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -190,7 +190,7 @@ class PMITaskStatus(str, enum.Enum):
     DEFERRED = "DEFERRED"
 
 
-class PMIPriority(str, enum.Enum):
+class PMIPriority(enum.StrEnum):
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -198,7 +198,7 @@ class PMIPriority(str, enum.Enum):
 
 
 # ── Phase 4: Earnout ─────────────────────────────────
-class EarnoutStatus(str, enum.Enum):
+class EarnoutStatus(enum.StrEnum):
     PENDING = "PENDING"
     MEASUREMENT_PERIOD = "MEASUREMENT_PERIOD"
     ACHIEVED = "ACHIEVED"
@@ -207,7 +207,7 @@ class EarnoutStatus(str, enum.Enum):
     DISPUTED = "DISPUTED"
 
 
-class EarnoutMetric(str, enum.Enum):
+class EarnoutMetric(enum.StrEnum):
     REVENUE = "REVENUE"
     EBITDA = "EBITDA"
     NET_INCOME = "NET_INCOME"
@@ -218,7 +218,7 @@ class EarnoutMetric(str, enum.Enum):
 
 
 # ── Audit ─────────────────────────────────────────────
-class AuditAction(str, enum.Enum):
+class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"
     DELETE = "DELETE"
