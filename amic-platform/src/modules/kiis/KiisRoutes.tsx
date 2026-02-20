@@ -21,7 +21,6 @@ const ManagerListPage = lazy(() => import("./pages/ManagerListPage"));
 const ManagerProfilePage = lazy(() => import("./pages/ManagerProfilePage"));
 const EntityResolutionPage = lazy(() => import("./pages/EntityResolutionPage"));
 const DisclosurePage = lazy(() => import("./pages/DisclosurePage"));
-const GallerySamplePage = lazy(() => import("./pages/GallerySamplePage"));
 
 export default function KiisRoutes() {
   return (
@@ -46,7 +45,6 @@ export default function KiisRoutes() {
         <Route path="entities" element={<EntityResolutionPage />} />
         <Route path="disclosures" element={<DisclosurePage />} />
         <Route path="watchlist" element={<WatchlistPage />} />
-        <Route path="gallery" element={<GallerySamplePage />} />
         <Route path="*" element={<Navigate to="/kiis" replace />} />
       </Routes>
     </Suspense>

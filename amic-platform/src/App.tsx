@@ -24,15 +24,6 @@ const CalendarRoutes = React.lazy(
 const ExportsRoutes = React.lazy(
   () => import("@/pages/exports/ExportsRoutes"),
 );
-const PortalSamplePage = React.lazy(
-  () => import("@/pages/samples/PortalSamplePage"),
-);
-const NewsSamplePage = React.lazy(
-  () => import("@/pages/samples/NewsSamplePage"),
-);
-const DesignRefreshSamplePage = React.lazy(
-  () => import("@/pages/samples/DesignRefreshSamplePage"),
-);
 
 function ModuleFallback() {
   return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -136,30 +127,6 @@ export default function App() {
           element={
             <Suspense fallback={<ModuleFallback />}>
               <ExportsRoutes />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/portal"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <PortalSamplePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/news"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <NewsSamplePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/design-refresh"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <DesignRefreshSamplePage />
             </Suspense>
           }
         />
