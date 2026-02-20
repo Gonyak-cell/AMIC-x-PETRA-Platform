@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
-import type { TransactionCreate } from "@/modules/ma/types/transaction";
+import type { TransactionCreate, DealStructure, InvestmentType } from "@/modules/ma/types/transaction";
 import {
   TRANSACTION_SIDE_OPTIONS,
   CURRENCY_OPTIONS,
@@ -161,7 +161,7 @@ export default function CreateTransactionPage() {
                     options={DEAL_STRUCTURE_OPTIONS}
                     value={form.deal_structure ?? ""}
                     onChange={(e) =>
-                      set("deal_structure", e.target.value || undefined)
+                      set("deal_structure", (e.target.value || undefined) as DealStructure | undefined)
                     }
                   />
                   <Select
@@ -169,7 +169,7 @@ export default function CreateTransactionPage() {
                     options={INVESTMENT_TYPE_OPTIONS}
                     value={form.investment_type ?? ""}
                     onChange={(e) =>
-                      set("investment_type", e.target.value || undefined)
+                      set("investment_type", (e.target.value || undefined) as InvestmentType | undefined)
                     }
                   />
                 </div>

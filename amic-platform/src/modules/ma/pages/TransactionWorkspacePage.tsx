@@ -50,7 +50,7 @@ import type { BidCreate, BidType, BidStatus as BidStatusType, ValuationMethod } 
 import type { DDChecklistCreate, DDWorkstream, DDChecklistStatus as DDStatusType } from "@/modules/ma/types/dd_checklist";
 import type { ContractCreate, ContractStatus, SignatureStatus as SigStatus } from "@/modules/ma/types/contract";
 import type { ClosingChecklistCreate, ClosingCategory, ClosingConditionStatus } from "@/modules/ma/types/closing";
-import type { PMITaskCreate, PMICategory, PMITaskStatus, PMIPriority } from "@/modules/ma/types/pmi";
+import type { PMITask, PMITaskCreate, PMICategory, PMITaskStatus, PMIPriority } from "@/modules/ma/types/pmi";
 import type { EarnoutCreate, EarnoutStatus, EarnoutMetric } from "@/modules/ma/types/earnout";
 import {
   PHASE_CONFIG,
@@ -743,9 +743,9 @@ export default function TransactionWorkspacePage() {
           {/* NDA 요약 */}
           {ndaSummary && ndaSummary.total > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="전체" value={ndaSummary.total} />
-              <KpiCard label="체결 완료" value={ndaSummary.signed_count} variant="positive" />
-              <KpiCard label="대기 중" value={ndaSummary.pending_count} variant="neutral" />
+              <KpiCard label="전체" value={String(ndaSummary.total)} />
+              <KpiCard label="체결 완료" value={String(ndaSummary.signed_count)} variant="positive" />
+              <KpiCard label="대기 중" value={String(ndaSummary.pending_count)} variant="default" />
               <KpiCard
                 label="체결률"
                 value={ndaSummary.total > 0 ? `${Math.round((ndaSummary.signed_count / ndaSummary.total) * 100)}%` : "-"}
@@ -1065,20 +1065,20 @@ export default function TransactionWorkspacePage() {
           {ddSummary && ddSummary.total > 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KpiCard label="전체 항목" value={ddSummary.total} />
+                <KpiCard label="전체 항목" value={String(ddSummary.total)} />
                 <KpiCard
                   label="완료율"
                   value={`${Math.round(ddSummary.overall_completion_pct)}%`}
-                  variant={ddSummary.overall_completion_pct >= 80 ? "positive" : "neutral"}
+                  variant={ddSummary.overall_completion_pct >= 80 ? "positive" : "default"}
                 />
                 <KpiCard
                   label="진행 중"
-                  value={ddSummary.by_workstream.reduce((s, w) => s + w.in_progress, 0)}
+                  value={String(ddSummary.by_workstream.reduce((s, w) => s + w.in_progress, 0))}
                 />
                 <KpiCard
                   label="미시작"
-                  value={ddSummary.by_workstream.reduce((s, w) => s + w.not_started, 0)}
-                  variant={ddSummary.by_workstream.reduce((s, w) => s + w.not_started, 0) > 0 ? "negative" : "neutral"}
+                  value={String(ddSummary.by_workstream.reduce((s, w) => s + w.not_started, 0))}
+                  variant={ddSummary.by_workstream.reduce((s, w) => s + w.not_started, 0) > 0 ? "negative" : "default"}
                 />
               </div>
               {/* 워크스트림별 진행률 바 */}
@@ -1247,16 +1247,16 @@ export default function TransactionWorkspacePage() {
           {/* 계약 요약 KPI */}
           {contractSummary && contractSummary.total > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="전체 계약" value={contractSummary.total} />
+              <KpiCard label="전체 계약" value={String(contractSummary.total)} />
               <KpiCard
                 label="서명 대기"
-                value={contractSummary.pending_signatures}
-                variant={contractSummary.pending_signatures > 0 ? "caution" : "neutral"}
+                value={String(contractSummary.pending_signatures)}
+                variant={contractSummary.pending_signatures > 0 ? "caution" : "default"}
               />
-              <KpiCard label="체결 완료" value={contractSummary.fully_executed} variant="positive" />
+              <KpiCard label="체결 완료" value={String(contractSummary.fully_executed)} variant="positive" />
               <KpiCard
                 label="유형별"
-                value={Object.keys(contractSummary.by_type).length}
+                value={String(Object.keys(contractSummary.by_type).length)}
               />
             </div>
           )}
@@ -1415,20 +1415,20 @@ export default function TransactionWorkspacePage() {
           {/* 클로징 요약 KPI */}
           {closingSummary && closingSummary.total > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="전체 항목" value={closingSummary.total} />
+              <KpiCard label="전체 항목" value={String(closingSummary.total)} />
               <KpiCard
                 label="완료율"
                 value={`${Math.round(closingSummary.completion_rate * 100)}%`}
-                variant={closingSummary.completion_rate >= 0.8 ? "positive" : "neutral"}
+                variant={closingSummary.completion_rate >= 0.8 ? "positive" : "default"}
               />
               <KpiCard
                 label="진행 중"
-                value={closingSummary.by_status["IN_PROGRESS"] ?? 0}
+                value={String(closingSummary.by_status["IN_PROGRESS"] ?? 0)}
               />
               <KpiCard
                 label="대기"
-                value={closingSummary.by_status["PENDING"] ?? 0}
-                variant={(closingSummary.by_status["PENDING"] ?? 0) > 0 ? "caution" : "neutral"}
+                value={String(closingSummary.by_status["PENDING"] ?? 0)}
+                variant={(closingSummary.by_status["PENDING"] ?? 0) > 0 ? "caution" : "default"}
               />
             </div>
           )}
@@ -1586,7 +1586,7 @@ export default function TransactionWorkspacePage() {
         <div className="space-y-4">
           {/* KPI 요약 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <KpiCard label="총 태스크" value={pmiSummary?.total ?? 0} />
+            <KpiCard label="총 태스크" value={String(pmiSummary?.total ?? 0)} />
             <KpiCard
               label="완료율"
               value={`${Math.round((pmiSummary?.completion_rate ?? 0) * 100)}%`}
@@ -1600,12 +1600,12 @@ export default function TransactionWorkspacePage() {
             />
             <KpiCard
               label="진행 중"
-              value={pmiSummary?.by_status?.IN_PROGRESS ?? 0}
+              value={String(pmiSummary?.by_status?.IN_PROGRESS ?? 0)}
               variant="caution"
             />
             <KpiCard
               label="차단됨"
-              value={pmiSummary?.by_status?.BLOCKED ?? 0}
+              value={String(pmiSummary?.by_status?.BLOCKED ?? 0)}
               variant={(pmiSummary?.by_status?.BLOCKED ?? 0) > 0 ? "negative" : "default"}
             />
           </div>
@@ -1693,7 +1693,7 @@ export default function TransactionWorkspacePage() {
                       </button>
                     ),
                   },
-                ] as Column<(typeof pmiTasks)[number]>[]}
+                ] as Column<PMITask>[]}
                 data={filteredPmiTasks ?? []}
                 keyField="id"
               />
@@ -1707,7 +1707,7 @@ export default function TransactionWorkspacePage() {
         <div className="space-y-4">
           {/* KPI 요약 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <KpiCard label="총 마일스톤" value={earnoutSummary?.total ?? 0} />
+            <KpiCard label="총 마일스톤" value={String(earnoutSummary?.total ?? 0)} />
             <KpiCard
               label="목표 합계"
               value={formatAmount(earnoutSummary?.total_target ?? 0)}

@@ -97,7 +97,7 @@ export default function DealSetupWizard() {
         client_name: formData.client_name || undefined,
         client_contact_name: formData.client_contact_name || undefined,
         client_contact_email: formData.client_contact_email || undefined,
-        target_company_name: formData.target_company_name || undefined,
+        target_company_name: formData.target_company_name || "",
         industry: formData.industry,
         scope_qoe: formData.scope_qoe,
         scope_nwc: formData.scope_nwc,
