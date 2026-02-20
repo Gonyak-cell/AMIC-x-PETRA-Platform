@@ -42,6 +42,7 @@ amic-platform/test-results/
 certbot/
 ssl/
 .env.production
+backups/
 
 # Backend modules (fdd, kiis, im)
 __pycache__/
