@@ -3,8 +3,6 @@ import { Card, Badge, Spinner, EmptyState } from "@/components/ui";
 import { BarChart3 } from "lucide-react";
 import type {
   TendencySummaryResponse,
-  TendencySectorDetail,
-  TendencyStageDetail,
   TendencyDealItem,
 } from "@/modules/kiis/types/deal";
 

@@ -1,7 +1,5 @@
 """Engagement + Working Group + Conflict Check API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "프로젝트 감마",
     "code_name": "GAMMA-001",

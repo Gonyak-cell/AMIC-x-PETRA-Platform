@@ -18,9 +18,7 @@ class Contract(Base, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
     )
     contract_type: Mapped[ContractType] = mapped_column(Enum(ContractType), nullable=False, default=ContractType.SPA)
-    status: Mapped[ContractStatus] = mapped_column(
-        Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT
-    )
+    status: Mapped[ContractStatus] = mapped_column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     counterparty_name: Mapped[str | None] = mapped_column(String(200), nullable=True)

@@ -6,12 +6,10 @@ import {
   TrendingUp,
   Clock,
   DollarSign,
-  Search,
 } from "lucide-react";
 
 import {
   useTransactions,
-  useDeleteTransaction,
 } from "@/modules/ma/hooks/useTransactions";
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
@@ -77,7 +75,7 @@ export default function TransactionListPage() {
     offset: (page - 1) * pageSize,
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 

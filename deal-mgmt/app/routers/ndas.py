@@ -70,8 +70,11 @@ async def create_nda(
     db.add(nda)
     await db.flush()
     await audit_service.record(
-        db, entity_type="NDA", entity_id=nda.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="NDA",
+        entity_id=nda.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -95,8 +98,11 @@ async def update_nda(
     for k, v in update_data.items():
         setattr(nda, k, v)
     await audit_service.record(
-        db, entity_type="NDA", entity_id=nda.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="NDA",
+        entity_id=nda.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -116,8 +122,11 @@ async def delete_nda(
     if nda is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NDA를 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="NDA", entity_id=nda.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="NDA",
+        entity_id=nda.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(nda)
     await db.commit()

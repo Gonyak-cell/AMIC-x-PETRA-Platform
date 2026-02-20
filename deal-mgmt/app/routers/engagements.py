@@ -10,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims
-from app.models.enums import AuditAction
 from app.models.engagement import Engagement
-from app.models.working_group import WorkingGroupMember
+from app.models.enums import AuditAction
 from app.models.transaction import Transaction
+from app.models.working_group import WorkingGroupMember
 from app.schemas.engagement import (
     ConflictCheckResponse,
     ConflictItem,
@@ -54,8 +54,11 @@ async def create_engagement(
     db.add(eng)
     await db.flush()
     await audit_service.record(
-        db, entity_type="Engagement", entity_id=eng.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="Engagement",
+        entity_id=eng.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(),
     )
     await db.commit()
@@ -79,8 +82,11 @@ async def update_engagement(
     for k, v in update_data.items():
         setattr(eng, k, v)
     await audit_service.record(
-        db, entity_type="Engagement", entity_id=eng.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="Engagement",
+        entity_id=eng.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value=update_data,
     )
     await db.commit()
@@ -100,8 +106,11 @@ async def delete_engagement(
     if eng is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="수임계약을 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="Engagement", entity_id=eng.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="Engagement",
+        entity_id=eng.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(eng)
     await db.commit()
@@ -143,8 +152,11 @@ async def add_member(
             detail=f"이메일 '{body.email}'은(는) 이미 이 거래의 멤버입니다",
         )
     await audit_service.record(
-        db, entity_type="WorkingGroupMember", entity_id=member.id,
-        action=AuditAction.MEMBER_ADDED, actor_email=claims.email,
+        db,
+        entity_type="WorkingGroupMember",
+        entity_id=member.id,
+        action=AuditAction.MEMBER_ADDED,
+        actor_email=claims.email,
         new_value=body.model_dump(),
     )
     await db.commit()
@@ -170,8 +182,11 @@ async def update_member(
     for k, v in update_data.items():
         setattr(member, k, v)
     await audit_service.record(
-        db, entity_type="WorkingGroupMember", entity_id=member.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="WorkingGroupMember",
+        entity_id=member.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value=update_data,
     )
     await db.commit()
@@ -193,8 +208,11 @@ async def remove_member(
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="멤버를 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="WorkingGroupMember", entity_id=member.id,
-        action=AuditAction.MEMBER_REMOVED, actor_email=claims.email,
+        db,
+        entity_type="WorkingGroupMember",
+        entity_id=member.id,
+        action=AuditAction.MEMBER_REMOVED,
+        actor_email=claims.email,
     )
     await db.delete(member)
     await db.commit()
@@ -222,19 +240,26 @@ async def check_conflicts(
         # 회사명 일치
         if other.target_company_name.strip().lower() == txn.target_company_name.strip().lower():
             severity = "CRITICAL" if other.status.value == "ACTIVE" else "WARNING"
-            conflicts.append(ConflictItem(
-                severity=severity,
-                message=f"동일 대상기업 '{txn.target_company_name}'에 대한 {'진행 중인' if severity == 'CRITICAL' else '초안'} 거래가 있습니다",
-                related_transaction_id=str(other.id),
-                related_transaction_name=other.name,
-            ))
+            conflicts.append(
+                ConflictItem(
+                    severity=severity,
+                    message=(
+                        f"동일 대상기업 '{txn.target_company_name}'에 대한 "
+                        f"{'진행 중인' if severity == 'CRITICAL' else '초안'} 거래가 있습니다"
+                    ),
+                    related_transaction_id=str(other.id),
+                    related_transaction_name=other.name,
+                )
+            )
         # corp_code 일치
         elif txn.target_corp_code and other.target_corp_code == txn.target_corp_code:
-            conflicts.append(ConflictItem(
-                severity="WARNING",
-                message=f"동일 corp_code ({txn.target_corp_code})를 사용하는 거래가 있습니다",
-                related_transaction_id=str(other.id),
-                related_transaction_name=other.name,
-            ))
+            conflicts.append(
+                ConflictItem(
+                    severity="WARNING",
+                    message=f"동일 corp_code ({txn.target_corp_code})를 사용하는 거래가 있습니다",
+                    related_transaction_id=str(other.id),
+                    related_transaction_name=other.name,
+                )
+            )
 
     return ConflictCheckResponse(has_conflicts=len(conflicts) > 0, conflicts=conflicts)

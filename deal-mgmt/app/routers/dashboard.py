@@ -42,8 +42,7 @@ async def get_dashboard_stats(
             phase_counts[p][1] += float(t.estimated_deal_value)
 
     by_phase = [
-        PhaseSummary(phase=phase, count=vals[0], total_value=vals[1] or None)
-        for phase, vals in phase_counts.items()
+        PhaseSummary(phase=phase, count=vals[0], total_value=vals[1] or None) for phase, vals in phase_counts.items()
     ]
 
     # by status

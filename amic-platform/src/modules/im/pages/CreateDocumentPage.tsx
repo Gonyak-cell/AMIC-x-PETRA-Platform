@@ -6,13 +6,11 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  Upload,
   FileSpreadsheet,
   Database,
   PenLine,
 } from "lucide-react";
 import { Button, Card, Input, PageHero, Select, Spinner } from "@/components/ui";
-import { cn } from "@/lib/cn";
 import { useCreateDocument, useUploadFinancials } from "@/modules/im/hooks/useDocuments";
 import { useCompany, useFetchCompany } from "@/modules/im/hooks/useCompanies";
 import type { IMStyle, IndustryId, SectionId, DataSource } from "@/modules/im/types/document";

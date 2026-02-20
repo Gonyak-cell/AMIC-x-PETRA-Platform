@@ -39,10 +39,7 @@ async def lifespan(app: FastAPI):
     _effective_jwt_secret = settings.JWT_SECRET or settings.SECRET_KEY
     if not settings.DEBUG:
         if not _effective_jwt_secret:
-            raise RuntimeError(
-                "JWT secret is not configured. "
-                "Set JWT_SECRET or SECRET_KEY in your .env file."
-            )
+            raise RuntimeError("JWT secret is not configured. Set JWT_SECRET or SECRET_KEY in your .env file.")
     else:
         if not _effective_jwt_secret:
             logger.warning(
@@ -99,7 +96,22 @@ app.add_middleware(
 register_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────
-from app.routers import bids, buyers, closing, contracts, dashboard, dd_checklists, earnout, engagements, integrations, ndas, pmi, timeline, transactions, workflow  # noqa: E402
+from app.routers import (  # noqa: E402
+    bids,
+    buyers,
+    closing,
+    contracts,
+    dashboard,
+    dd_checklists,
+    earnout,
+    engagements,
+    integrations,
+    ndas,
+    pmi,
+    timeline,
+    transactions,
+    workflow,
+)
 
 app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(workflow.router, prefix="/api/v1")

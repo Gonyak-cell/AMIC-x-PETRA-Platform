@@ -83,8 +83,11 @@ async def create_pmi_task(
     db.add(task)
     await db.flush()
     await audit_service.record(
-        db, entity_type="PMITask", entity_id=task.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="PMITask",
+        entity_id=task.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -108,8 +111,11 @@ async def update_pmi_task(
     for k, v in update_data.items():
         setattr(task, k, v)
     await audit_service.record(
-        db, entity_type="PMITask", entity_id=task.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="PMITask",
+        entity_id=task.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -129,8 +135,11 @@ async def delete_pmi_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PMI 태스크를 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="PMITask", entity_id=task.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="PMITask",
+        entity_id=task.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(task)
     await db.commit()

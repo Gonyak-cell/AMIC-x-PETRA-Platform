@@ -77,8 +77,11 @@ async def create_earnout(
     db.add(milestone)
     await db.flush()
     await audit_service.record(
-        db, entity_type="EarnoutMilestone", entity_id=milestone.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="EarnoutMilestone",
+        entity_id=milestone.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -94,9 +97,7 @@ async def update_earnout(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    q = select(EarnoutMilestone).where(
-        EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id
-    )
+    q = select(EarnoutMilestone).where(EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id)
     milestone = (await db.execute(q)).scalar_one_or_none()
     if milestone is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="어닝아웃 마일스톤을 찾을 수 없습니다")
@@ -104,8 +105,11 @@ async def update_earnout(
     for k, v in update_data.items():
         setattr(milestone, k, v)
     await audit_service.record(
-        db, entity_type="EarnoutMilestone", entity_id=milestone.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="EarnoutMilestone",
+        entity_id=milestone.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -120,15 +124,16 @@ async def delete_earnout(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    q = select(EarnoutMilestone).where(
-        EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id
-    )
+    q = select(EarnoutMilestone).where(EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id)
     milestone = (await db.execute(q)).scalar_one_or_none()
     if milestone is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="어닝아웃 마일스톤을 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="EarnoutMilestone", entity_id=milestone.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="EarnoutMilestone",
+        entity_id=milestone.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(milestone)
     await db.commit()

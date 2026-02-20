@@ -6,7 +6,6 @@ Phase 순서: ENGAGEMENT → PREPARATION → MARKETING → BIDDING_DD → NEGOTI
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +15,8 @@ from app.models.enums import (
     AuditAction,
     TransactionPhase,
     TransactionStatus,
+)
+from app.models.enums import (
     TransactionPhase as Phase,
 )
 from app.models.timeline import DealTimeline
@@ -81,11 +82,7 @@ def get_phase_completion(txn: Transaction) -> PhaseCompletionStatus:
             prerequisites.append(PhasePrerequisite(field=field, label=label, satisfied=satisfied))
 
     all_met = all(p.satisfied for p in prerequisites) if prerequisites else True
-    can_advance = (
-        all_met
-        and next_phase is not None
-        and txn.status == TransactionStatus.ACTIVE
-    )
+    can_advance = all_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
 
     return PhaseCompletionStatus(
         current_phase=txn.phase,
@@ -116,8 +113,7 @@ async def advance_phase(
     diff = to_idx - from_idx
     if diff not in (1, -1):
         raise WorkflowError(
-            f"{txn.phase.value} → {to_phase.value} 전환은 허용되지 않습니다. "
-            "한 단계 앞/뒤로만 이동할 수 있습니다."
+            f"{txn.phase.value} → {to_phase.value} 전환은 허용되지 않습니다. 한 단계 앞/뒤로만 이동할 수 있습니다."
         )
 
     # 전진 시 전제 조건 체크
@@ -125,9 +121,7 @@ async def advance_phase(
         completion = get_phase_completion(txn)
         if not completion.all_met:
             unmet = [p.label for p in completion.prerequisites if not p.satisfied]
-            raise WorkflowError(
-                f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}"
-            )
+            raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
     from_phase = txn.phase
     txn.phase = to_phase
@@ -169,9 +163,7 @@ async def change_status(
     """거래 상태를 변경한다."""
     valid = _VALID_STATUS_TRANSITIONS.get(txn.status, set())
     if to_status not in valid:
-        raise WorkflowError(
-            f"{txn.status.value} → {to_status.value} 상태 전환은 허용되지 않습니다"
-        )
+        raise WorkflowError(f"{txn.status.value} → {to_status.value} 상태 전환은 허용되지 않습니다")
 
     from_status = txn.status
     txn.status = to_status

@@ -83,8 +83,11 @@ async def create_contract(
     db.add(contract)
     await db.flush()
     await audit_service.record(
-        db, entity_type="Contract", entity_id=contract.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="Contract",
+        entity_id=contract.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -108,8 +111,11 @@ async def update_contract(
     for k, v in update_data.items():
         setattr(contract, k, v)
     await audit_service.record(
-        db, entity_type="Contract", entity_id=contract.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="Contract",
+        entity_id=contract.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -129,8 +135,11 @@ async def delete_contract(
     if contract is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="계약서를 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="Contract", entity_id=contract.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="Contract",
+        entity_id=contract.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(contract)
     await db.commit()
@@ -185,8 +194,11 @@ async def create_version(
     db.add(version)
     await db.flush()
     await audit_service.record(
-        db, entity_type="ContractVersion", entity_id=version.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="ContractVersion",
+        entity_id=version.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()

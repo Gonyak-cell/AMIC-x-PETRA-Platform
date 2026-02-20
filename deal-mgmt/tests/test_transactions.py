@@ -1,7 +1,5 @@
 """Transaction CRUD API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "프로젝트 알파",
     "code_name": "ALPHA-001",

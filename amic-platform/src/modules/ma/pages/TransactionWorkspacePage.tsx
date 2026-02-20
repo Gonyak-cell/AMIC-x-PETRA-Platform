@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Play,
   Pause,
-  XCircle,
   Users,
   UserPlus,
   FileText,
@@ -36,7 +35,6 @@ import {
   useAddBuyer,
   useTimeline,
 } from "@/modules/ma/hooks/useTransactions";
-import type { Transaction } from "@/modules/ma/types/transaction";
 import type { EngagementCreate } from "@/modules/ma/types/engagement";
 import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
 import type { BuyerCandidateCreate } from "@/modules/ma/types/buyer";
@@ -81,7 +79,6 @@ import {
 
 import {
   Badge,
-  Breadcrumbs,
   Button,
   Card,
   DataTable,
@@ -120,78 +117,6 @@ const BUYER_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "in
   LOI_ACCEPTED: "success",
   SELECTED: "success",
   REJECTED: "error",
-};
-
-const NDA_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  DRAFT: "neutral",
-  SENT: "info",
-  SIGNED: "success",
-  EXPIRED: "warning",
-  REJECTED: "error",
-};
-
-const BID_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  SUBMITTED: "info",
-  UNDER_REVIEW: "warning",
-  ACCEPTED: "success",
-  REJECTED: "error",
-  WITHDRAWN: "neutral",
-  EXPIRED: "warning",
-};
-
-const DD_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  NOT_STARTED: "neutral",
-  IN_PROGRESS: "info",
-  COMPLETED: "success",
-  NOT_APPLICABLE: "neutral",
-};
-
-const CONTRACT_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  DRAFT: "neutral",
-  UNDER_REVIEW: "info",
-  PENDING_SIGNATURE: "warning",
-  PARTIALLY_SIGNED: "warning",
-  FULLY_EXECUTED: "success",
-  TERMINATED: "error",
-};
-
-const SIGNATURE_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  NOT_REQUIRED: "neutral",
-  PENDING: "warning",
-  SIGNED: "success",
-  DECLINED: "error",
-};
-
-const CLOSING_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  PENDING: "neutral",
-  IN_PROGRESS: "info",
-  COMPLETED: "success",
-  WAIVED: "warning",
-  NOT_APPLICABLE: "neutral",
-};
-
-const PMI_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  NOT_STARTED: "neutral",
-  IN_PROGRESS: "info",
-  COMPLETED: "success",
-  BLOCKED: "error",
-  DEFERRED: "warning",
-};
-
-const PMI_PRIORITY_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  CRITICAL: "error",
-  HIGH: "warning",
-  MEDIUM: "info",
-  LOW: "neutral",
-};
-
-const EARNOUT_STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  PENDING: "neutral",
-  MEASUREMENT_PERIOD: "info",
-  ACHIEVED: "success",
-  PARTIALLY_ACHIEVED: "warning",
-  MISSED: "error",
-  DISPUTED: "error",
 };
 
 function formatDate(iso: string): string {

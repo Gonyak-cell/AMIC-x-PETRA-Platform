@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Plus,
   Search,
-  Star,
   ArrowRight,
   Handshake,
 } from "lucide-react";
@@ -45,7 +44,7 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { kpis, isLoading: kpisLoading, errors, loading } = usePortalKpis();
+  const { kpis, errors, loading } = usePortalKpis();
   const { data: health } = useModuleHealth();
 
   const today = new Date().toLocaleDateString("ko-KR", {

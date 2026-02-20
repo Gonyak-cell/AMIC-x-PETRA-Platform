@@ -12,9 +12,7 @@ class WorkingGroupMember(Base, TimestampMixin):
     """워킹그룹 멤버 — Transaction과 N:1 관계."""
 
     __tablename__ = "working_group_members"
-    __table_args__ = (
-        UniqueConstraint("transaction_id", "email", name="uq_wg_transaction_email"),
-    )
+    __table_args__ = (UniqueConstraint("transaction_id", "email", name="uq_wg_transaction_email"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(

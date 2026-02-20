@@ -79,9 +79,7 @@ async def test_list_checklist_filter_workstream(client):
         json={"workstream": "LEGAL", "title": "법률 항목"},
     )
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FINANCIAL"}
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FINANCIAL"})
     assert len(resp.json()) == 1
     assert resp.json()[0]["workstream"] == "FINANCIAL"
 
@@ -102,9 +100,7 @@ async def test_list_checklist_filter_status(client):
         json={"workstream": "FINANCIAL", "title": "미완료 항목"},
     )
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/dd-checklist", params={"status": "COMPLETED"}
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"status": "COMPLETED"})
     assert len(resp.json()) == 1
 
 

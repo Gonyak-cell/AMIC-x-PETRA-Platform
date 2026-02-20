@@ -56,6 +56,7 @@ class BidUpdate(BaseModel):
 
 class BidComparisonItem(BaseModel):
     """비교 매트릭스 항목 — 매수자 + 최신 Bid."""
+
     buyer_id: uuid.UUID
     buyer_name: str
     buyer_type: str

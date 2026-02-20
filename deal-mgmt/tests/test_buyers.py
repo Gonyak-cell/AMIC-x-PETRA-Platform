@@ -1,7 +1,5 @@
 """Buyer Candidate Pipeline API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "프로젝트 델타",
     "code_name": "DELTA-001",
@@ -49,7 +47,8 @@ async def test_add_buyer(client):
 async def test_add_buyer_financial_sponsor(client):
     txn_id = await _create_txn(client)
     data = await _add_buyer(
-        client, txn_id,
+        client,
+        txn_id,
         company_name="MBK Partners",
         buyer_type="FINANCIAL_SPONSOR",
     )

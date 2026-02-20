@@ -13,9 +13,7 @@ from app.schemas.transaction import TransactionOut
 from app.schemas.workflow import (
     PhaseCompletionStatus,
     PhaseTransitionRequest,
-    PhaseTransitionResponse,
     StatusChangeRequest,
-    StatusChangeResponse,
 )
 from app.services import transaction_service
 from app.services.workflow_engine import advance_phase, change_status, get_phase_completion

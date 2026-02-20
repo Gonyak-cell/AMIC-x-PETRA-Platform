@@ -22,10 +22,7 @@ def _get_jwt_secret() -> str:
     """JWT 검증에 사용할 시크릿을 반환한다. JWT_SECRET 우선, 없으면 SECRET_KEY 폴백."""
     secret = settings.JWT_SECRET or settings.SECRET_KEY
     if not secret:
-        raise RuntimeError(
-            "JWT secret is not configured. "
-            "Set JWT_SECRET or SECRET_KEY in your .env file."
-        )
+        raise RuntimeError("JWT secret is not configured. Set JWT_SECRET or SECRET_KEY in your .env file.")
     return secret
 
 

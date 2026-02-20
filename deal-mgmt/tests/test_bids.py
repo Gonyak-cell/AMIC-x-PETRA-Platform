@@ -1,7 +1,5 @@
 """Bid (IOI/LOI/Final Offer) API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "입찰 테스트 거래",
     "code_name": "BID-001",

@@ -305,22 +305,22 @@ export default function QoEPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const { user } = useAuth();
 
-  if (!dealId) {
-    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
-  }
-
-  const { data: deal } = useDeal(dealId);
+  const { data: deal } = useDeal(dealId ?? "");
   const currency = deal?.base_currency ?? "KRW";
-  const { data: qoeList = [], isLoading } = useQoECalculations(dealId);
-  const runMutation = useRunQoE(dealId);
+  const { data: qoeList = [], isLoading } = useQoECalculations(dealId ?? "");
+  const runMutation = useRunQoE(dealId ?? "");
 
   const latestQoE = qoeList.length > 0 ? qoeList[0] : null;
 
   const qoeId = latestQoE?.id ?? "";
-  const approveMutation = useApproveAdjustment(dealId, qoeId);
-  const recalcMutation = useRecalculateBridge(dealId, qoeId);
+  const approveMutation = useApproveAdjustment(dealId ?? "", qoeId);
+  const recalcMutation = useRecalculateBridge(dealId ?? "", qoeId);
 
   const [snapshotId, setSnapshotId] = useState("");
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
 
   const handleRun = async () => {
     if (!snapshotId.trim()) return;

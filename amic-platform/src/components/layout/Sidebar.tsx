@@ -35,7 +35,6 @@ import {
   Handshake,
   Search,
   Scale,
-  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";

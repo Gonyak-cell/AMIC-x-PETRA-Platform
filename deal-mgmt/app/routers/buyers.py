@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -84,8 +84,11 @@ async def add_buyer(
     db.add(buyer)
     await db.flush()
     await audit_service.record(
-        db, entity_type="BuyerCandidate", entity_id=buyer.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="BuyerCandidate",
+        entity_id=buyer.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(),
     )
     await db.commit()
@@ -124,8 +127,11 @@ async def update_buyer(
     for k, v in update_data.items():
         setattr(buyer, k, v)
     await audit_service.record(
-        db, entity_type="BuyerCandidate", entity_id=buyer.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="BuyerCandidate",
+        entity_id=buyer.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         old_value={k: str(v) if v is not None else None for k, v in old_value.items()},
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
@@ -146,8 +152,11 @@ async def remove_buyer(
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="매수자 후보를 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="BuyerCandidate", entity_id=buyer.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="BuyerCandidate",
+        entity_id=buyer.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(buyer)
     await db.commit()

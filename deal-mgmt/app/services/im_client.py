@@ -21,9 +21,7 @@ class IMClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    async def create_document(
-        self, company_name: str, project_name: str, corp_code: str | None = None
-    ) -> dict:
+    async def create_document(self, company_name: str, project_name: str, corp_code: str | None = None) -> dict:
         """IM Document(CIM) 생성 요청."""
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             payload: dict = {
@@ -46,9 +44,7 @@ class IMClient:
     async def trigger_generation(self, document_id: uuid.UUID) -> dict:
         """CIM 재생성 트리거."""
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(
-                f"{self.base_url}/documents/{document_id}/regenerate"
-            )
+            resp = await client.post(f"{self.base_url}/documents/{document_id}/regenerate")
             resp.raise_for_status()
             return resp.json()
 

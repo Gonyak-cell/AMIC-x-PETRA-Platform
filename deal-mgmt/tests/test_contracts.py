@@ -1,7 +1,5 @@
 """계약/SPA 관리 API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "계약 테스트 거래",
     "code_name": "CTR-001",

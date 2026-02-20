@@ -82,8 +82,11 @@ async def create_closing_item(
     db.add(item)
     await db.flush()
     await audit_service.record(
-        db, entity_type="ClosingChecklist", entity_id=item.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="ClosingChecklist",
+        entity_id=item.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -107,8 +110,11 @@ async def update_closing_item(
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
-        db, entity_type="ClosingChecklist", entity_id=item.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="ClosingChecklist",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -128,8 +134,11 @@ async def delete_closing_item(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="클로징 항목을 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="ClosingChecklist", entity_id=item.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="ClosingChecklist",
+        entity_id=item.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(item)
     await db.commit()

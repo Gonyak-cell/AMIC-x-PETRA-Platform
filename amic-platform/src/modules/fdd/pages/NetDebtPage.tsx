@@ -304,26 +304,26 @@ export default function NetDebtPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const { user } = useAuth();
 
-  if (!dealId) {
-    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
-  }
-
-  const { data: deal } = useDeal(dealId);
+  const { data: deal } = useDeal(dealId ?? "");
   const currency = deal?.base_currency ?? "KRW";
-  const { data: debtList = [], isLoading } = useDebtCalculations(dealId);
-  const runMutation = useRunDebt(dealId);
+  const { data: debtList = [], isLoading } = useDebtCalculations(dealId ?? "");
+  const runMutation = useRunDebt(dealId ?? "");
 
   const latestCalc = debtList.length > 0 ? debtList[0] : null;
 
-  const { data: bridge } = useDebtBridge(dealId, latestCalc?.id ?? "");
+  const { data: bridge } = useDebtBridge(dealId ?? "", latestCalc?.id ?? "");
 
-  const approveMutation = useApproveDebtItem(dealId, latestCalc?.id ?? "");
-  const recalcMutation = useRecalculateDebt(dealId, latestCalc?.id ?? "");
-  const addItemMutation = useAddDebtItem(dealId, latestCalc?.id ?? "");
+  const approveMutation = useApproveDebtItem(dealId ?? "", latestCalc?.id ?? "");
+  const recalcMutation = useRecalculateDebt(dealId ?? "", latestCalc?.id ?? "");
+  const addItemMutation = useAddDebtItem(dealId ?? "", latestCalc?.id ?? "");
 
   const [snapshotId, setSnapshotId] = useState("");
   const [includeLease, setIncludeLease] = useState(false);
   const [includeDeferredRev, setIncludeDeferredRev] = useState(false);
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
 
   const handleRun = async () => {
     if (!snapshotId.trim()) return;

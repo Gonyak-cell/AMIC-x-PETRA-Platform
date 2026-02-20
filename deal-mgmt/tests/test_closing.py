@@ -1,7 +1,5 @@
 """클로징 체크리스트 API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "클로징 테스트 거래",
     "code_name": "CLS-001",

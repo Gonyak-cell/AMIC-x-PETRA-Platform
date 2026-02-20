@@ -1,7 +1,5 @@
 """NDA 관리 API 테스트."""
 
-import pytest
-
 SAMPLE_TXN = {
     "name": "NDA 테스트 거래",
     "code_name": "NDA-001",

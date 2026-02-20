@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims
 from app.models.bid import Bid
 from app.models.buyer_candidate import BuyerCandidate
-from app.models.enums import AuditAction, BidType
+from app.models.enums import AuditAction
 from app.schemas.bid import BidComparisonItem, BidCreate, BidOut, BidUpdate
 from app.services import audit_service, transaction_service
 
@@ -66,14 +66,16 @@ async def bid_comparison_matrix(
     result = []
     for buyer in buyers:
         bids_map = buyer_bids.get(buyer.id, {})
-        result.append(BidComparisonItem(
-            buyer_id=buyer.id,
-            buyer_name=buyer.company_name,
-            buyer_type=buyer.buyer_type.value,
-            ioi=BidOut.model_validate(bids_map["IOI"]) if "IOI" in bids_map else None,
-            loi=BidOut.model_validate(bids_map["LOI"]) if "LOI" in bids_map else None,
-            final_offer=BidOut.model_validate(bids_map["FINAL_OFFER"]) if "FINAL_OFFER" in bids_map else None,
-        ))
+        result.append(
+            BidComparisonItem(
+                buyer_id=buyer.id,
+                buyer_name=buyer.company_name,
+                buyer_type=buyer.buyer_type.value,
+                ioi=BidOut.model_validate(bids_map["IOI"]) if "IOI" in bids_map else None,
+                loi=BidOut.model_validate(bids_map["LOI"]) if "LOI" in bids_map else None,
+                final_offer=BidOut.model_validate(bids_map["FINAL_OFFER"]) if "FINAL_OFFER" in bids_map else None,
+            )
+        )
 
     return result
 
@@ -90,8 +92,11 @@ async def create_bid(
     db.add(bid)
     await db.flush()
     await audit_service.record(
-        db, entity_type="Bid", entity_id=bid.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="Bid",
+        entity_id=bid.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -115,8 +120,11 @@ async def update_bid(
     for k, v in update_data.items():
         setattr(bid, k, v)
     await audit_service.record(
-        db, entity_type="Bid", entity_id=bid.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="Bid",
+        entity_id=bid.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -136,8 +144,11 @@ async def delete_bid(
     if bid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="입찰을 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="Bid", entity_id=bid.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="Bid",
+        entity_id=bid.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(bid)
     await db.commit()

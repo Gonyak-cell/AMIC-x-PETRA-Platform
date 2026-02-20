@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/transactions/{txn_id}/integrations", tags=["Integrat
 
 
 # ── Request / Response schemas ───────────────────────────
+
 
 class FDDLinkRequest(BaseModel):
     target_name: str
@@ -44,6 +45,7 @@ class IntegrationResult(BaseModel):
 
 # ── FDD ──────────────────────────────────────────────────
 
+
 @router.post("/fdd/link", response_model=IntegrationResult)
 async def link_fdd(
     txn_id: uuid.UUID,
@@ -56,8 +58,11 @@ async def link_fdd(
     try:
         result = await fdd_client.create_deal(body.target_name, body.industry)
         await audit_service.record(
-            db, entity_type="Transaction", entity_id=txn.id,
-            action=AuditAction.SERVICE_LINKED, actor_email=claims.email,
+            db,
+            entity_type="Transaction",
+            entity_id=txn.id,
+            action=AuditAction.SERVICE_LINKED,
+            actor_email=claims.email,
             new_value={"service": "FDD", "result": str(result)},
         )
         await db.commit()
@@ -85,6 +90,7 @@ async def fdd_status(
 
 # ── IM ───────────────────────────────────────────────────
 
+
 @router.post("/im/link", response_model=IntegrationResult)
 async def link_im(
     txn_id: uuid.UUID,
@@ -95,12 +101,13 @@ async def link_im(
     """IM Document(CIM) 생성/연결."""
     txn = await transaction_service.get_transaction(db, txn_id)
     try:
-        result = await im_client.create_document(
-            body.company_name, body.project_name, body.corp_code
-        )
+        result = await im_client.create_document(body.company_name, body.project_name, body.corp_code)
         await audit_service.record(
-            db, entity_type="Transaction", entity_id=txn.id,
-            action=AuditAction.SERVICE_LINKED, actor_email=claims.email,
+            db,
+            entity_type="Transaction",
+            entity_id=txn.id,
+            action=AuditAction.SERVICE_LINKED,
+            actor_email=claims.email,
             new_value={"service": "IM", "result": str(result)},
         )
         await db.commit()
@@ -127,6 +134,7 @@ async def im_status(
 
 
 # ── KIIS ─────────────────────────────────────────────────
+
 
 @router.get("/kiis/company", response_model=IntegrationResult)
 async def kiis_company_search(

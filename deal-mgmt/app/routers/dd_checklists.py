@@ -67,9 +67,7 @@ async def checklist_summary(
         elif item.status == DDChecklistStatus.NOT_STARTED:
             ws_map[ws]["not_started"] += 1
 
-    by_workstream = [
-        DDWorkstreamSummary(workstream=ws, **counts) for ws, counts in ws_map.items()
-    ]
+    by_workstream = [DDWorkstreamSummary(workstream=ws, **counts) for ws, counts in ws_map.items()]
     total = len(items)
     completed = sum(1 for i in items if i.status == DDChecklistStatus.COMPLETED)
     pct = (completed / total * 100) if total > 0 else 0.0
@@ -89,8 +87,11 @@ async def create_checklist_item(
     db.add(item)
     await db.flush()
     await audit_service.record(
-        db, entity_type="DDChecklist", entity_id=item.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="DDChecklist",
+        entity_id=item.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -114,8 +115,11 @@ async def update_checklist_item(
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
-        db, entity_type="DDChecklist", entity_id=item.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="DDChecklist",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -135,8 +139,11 @@ async def delete_checklist_item(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="체크리스트 항목을 찾을 수 없습니다")
     await audit_service.record(
-        db, entity_type="DDChecklist", entity_id=item.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="DDChecklist",
+        entity_id=item.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(item)
     await db.commit()

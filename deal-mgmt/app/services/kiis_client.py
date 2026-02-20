@@ -23,9 +23,7 @@ class KIISClient:
     async def search_company(self, name: str) -> list[dict]:
         """회사명으로 DART 기업 검색."""
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.get(
-                f"{self.base_url}/companies", params={"q": name}
-            )
+            resp = await client.get(f"{self.base_url}/companies", params={"q": name})
             resp.raise_for_status()
             data = resp.json()
             return data.get("items", data) if isinstance(data, dict) else data
@@ -40,9 +38,7 @@ class KIISClient:
     async def search_gps(self, query: str) -> list[dict]:
         """GP(운용사) 검색."""
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.get(
-                f"{self.base_url}/kofia/gp", params={"search": query}
-            )
+            resp = await client.get(f"{self.base_url}/kofia/gp", params={"search": query})
             resp.raise_for_status()
             data = resp.json()
             return data.get("items", data) if isinstance(data, dict) else data

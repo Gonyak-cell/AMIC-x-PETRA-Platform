@@ -23,9 +23,7 @@ class PMITask(Base, TimestampMixin):
     status: Mapped[PMITaskStatus] = mapped_column(
         Enum(PMITaskStatus), nullable=False, default=PMITaskStatus.NOT_STARTED
     )
-    priority: Mapped[PMIPriority] = mapped_column(
-        Enum(PMIPriority), nullable=False, default=PMIPriority.MEDIUM
-    )
+    priority: Mapped[PMIPriority] = mapped_column(Enum(PMIPriority), nullable=False, default=PMIPriority.MEDIUM)
     assignee_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     assignee_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)

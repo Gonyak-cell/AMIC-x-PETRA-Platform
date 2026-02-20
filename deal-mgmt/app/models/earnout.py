@@ -28,7 +28,5 @@ class EarnoutMilestone(Base, TimestampMixin):
     measurement_end: Mapped[str | None] = mapped_column(String(10), nullable=True)
     payment_amount: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     payment_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    status: Mapped[EarnoutStatus] = mapped_column(
-        Enum(EarnoutStatus), nullable=False, default=EarnoutStatus.PENDING
-    )
+    status: Mapped[EarnoutStatus] = mapped_column(Enum(EarnoutStatus), nullable=False, default=EarnoutStatus.PENDING)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

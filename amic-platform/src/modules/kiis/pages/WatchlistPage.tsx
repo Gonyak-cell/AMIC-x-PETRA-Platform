@@ -95,7 +95,7 @@ export default function WatchlistPage() {
         />
       ),
     },
-  ], [removingId]);
+  ], [removingId, handleRemove]);
 
   const alertColumns: Column<Alert>[] = useMemo(() => [
     {
@@ -160,7 +160,7 @@ export default function WatchlistPage() {
           </button>
         ),
     },
-  ], []);
+  ], [handleMarkRead]);
 
   return (
     <div className="space-y-6">
