@@ -20,10 +20,10 @@ describe("DashboardPage", () => {
   it("renders quick action cards", async () => {
     renderWithProviders(<DashboardPage />);
 
+    expect(screen.getByText("New Transaction")).toBeInTheDocument();
     expect(screen.getByText("New Deal")).toBeInTheDocument();
     expect(screen.getByText("New IM")).toBeInTheDocument();
     expect(screen.getByText("Search Company")).toBeInTheDocument();
-    expect(screen.getByText("Watchlist")).toBeInTheDocument();
   });
 
   it("renders module navigation cards", async () => {
