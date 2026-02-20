@@ -57,7 +57,7 @@ cp .env.production.example .env
 nano .env  # 또는 vim .env
 ```
 
-### 필수 변경 항목 (24개)
+### 필수 변경 항목
 
 **비밀 키 생성** (64자 랜덤):
 ```bash
@@ -68,17 +68,15 @@ pwgen -s 64 6
 |------|------|------|
 | `DOMAIN` | 도메인 (IP 사용 시 서버 IP) | `platform.example.com` |
 | `SSL_CERT_EMAIL` | SSL 인증서 이메일 | `admin@example.com` |
+| `SHARED_JWT_SECRET` | **공유 JWT 시크릿** (4개 백엔드 공통) | `pwgen -s 64 1` |
 | `FDD_DB_PASSWORD` | FDD DB 비밀번호 | `pwgen -s 64 1` |
-| `FDD_JWT_SECRET` | FDD JWT 서명 키 | `pwgen -s 64 1` |
 | `FDD_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
 | `KIIS_DB_PASSWORD` | KIIS DB 비밀번호 | `pwgen -s 64 1` |
-| `KIIS_SECRET_KEY` | KIIS 앱 비밀 키 | `pwgen -s 64 1` |
 | `KIIS_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
 | `DART_API_KEY` | DART 공시정보 API 키 | https://opendart.fss.or.kr 에서 발급 |
 | `KIIS_REDIS_PASSWORD` | KIIS Redis 비밀번호 | `pwgen -s 32 1` |
 | `KIIS_ES_PASSWORD` | Elasticsearch 비밀번호 | `pwgen -s 32 1` |
 | `IM_DB_PASSWORD` | IM DB 비밀번호 | `pwgen -s 64 1` |
-| `IM_SECRET_KEY` | IM 앱 비밀 키 | `pwgen -s 64 1` |
 | `IM_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
 | `IM_REDIS_PASSWORD` | IM Redis 비밀번호 | `pwgen -s 32 1` |
 | `OPENAI_API_KEY` | OpenAI API 키 | https://platform.openai.com |
@@ -88,10 +86,10 @@ pwgen -s 64 6
 | `PINECONE_API_KEY` | Pinecone 벡터 DB (선택) | https://app.pinecone.io |
 | `PINECONE_ENVIRONMENT` | Pinecone 환경 | `us-east-1-aws` |
 | `MA_DB_PASSWORD` | M&A DB 비밀번호 | `pwgen -s 64 1` |
-| `MA_JWT_SECRET` | M&A JWT 서명 키 | `pwgen -s 64 1` |
-| `MA_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
+| `MA_CORS_ORIGINS` | 허용 도메인 (**JSON 배열 필수**) | `["https://platform.example.com"]` |
 
 > **주의**: `CHANGE_ME`가 남아 있으면 서비스 시작 실패. 모든 값을 실제로 변경해야 합니다.
+> **참고**: JWT 시크릿은 `SHARED_JWT_SECRET` 하나로 통합됨 — FDD에서 로그인 후 KIIS/IM/MA에서 동일 토큰 검증.
 
 ---
 
