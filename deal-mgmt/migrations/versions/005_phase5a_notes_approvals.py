@@ -19,14 +19,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── Enum types ──
-    note_type = sa.Enum("COMMENT", "DECISION", "QUESTION", "ACTION_ITEM", name="notetype")
-    approval_type = sa.Enum("PHASE_ADVANCE", "STATUS_CHANGE", "CONTRACT_SIGN", "DEAL_TERMS", name="approvaltype")
-    approval_status = sa.Enum("PENDING", "APPROVED", "REJECTED", "CANCELLED", name="approvalstatus")
-
-    note_type.create(op.get_bind(), checkfirst=True)
-    approval_type.create(op.get_bind(), checkfirst=True)
-    approval_status.create(op.get_bind(), checkfirst=True)
+    # ── Enum types via raw SQL (idempotent) ──
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE notetype AS ENUM ('COMMENT', 'DECISION', 'QUESTION', 'ACTION_ITEM');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE approvaltype AS ENUM ('PHASE_ADVANCE', 'STATUS_CHANGE', 'CONTRACT_SIGN', 'DEAL_TERMS');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE approvalstatus AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """)
 
     # ── deal_notes ──
     op.create_table(
@@ -35,7 +46,7 @@ def upgrade() -> None:
         sa.Column("transaction_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("transactions.id"), nullable=False, index=True),
         sa.Column("author_email", sa.String(255), nullable=False),
         sa.Column("content", sa.Text, nullable=False),
-        sa.Column("note_type", note_type, nullable=False, server_default="COMMENT"),
+        sa.Column("note_type", postgresql.ENUM("COMMENT", "DECISION", "QUESTION", "ACTION_ITEM", name="notetype", create_type=False), nullable=False, server_default="COMMENT"),
         sa.Column("parent_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("deal_notes.id"), nullable=True),
         sa.Column("is_pinned", sa.Boolean, nullable=False, server_default="false"),
         sa.Column("mentions", postgresql.JSONB, nullable=True),
@@ -50,10 +61,10 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("transaction_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("transactions.id"), nullable=False, index=True),
         sa.Column("requester_email", sa.String(255), nullable=False),
-        sa.Column("approval_type", approval_type, nullable=False),
+        sa.Column("approval_type", postgresql.ENUM("PHASE_ADVANCE", "STATUS_CHANGE", "CONTRACT_SIGN", "DEAL_TERMS", name="approvaltype", create_type=False), nullable=False),
         sa.Column("title", sa.String(300), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
-        sa.Column("status", approval_status, nullable=False, server_default="PENDING"),
+        sa.Column("status", postgresql.ENUM("PENDING", "APPROVED", "REJECTED", "CANCELLED", name="approvalstatus", create_type=False), nullable=False, server_default="PENDING"),
         sa.Column("approvers", postgresql.JSONB, nullable=False),
         sa.Column("deadline", sa.String(10), nullable=True),
         sa.Column("related_entity_type", sa.String(50), nullable=True),
