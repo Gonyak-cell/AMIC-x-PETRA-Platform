@@ -217,6 +217,29 @@ class EarnoutMetric(enum.StrEnum):
     OTHER = "OTHER"
 
 
+# ── Phase 5A: Notes ──────────────────────────────────
+class NoteType(enum.StrEnum):
+    COMMENT = "COMMENT"
+    DECISION = "DECISION"
+    QUESTION = "QUESTION"
+    ACTION_ITEM = "ACTION_ITEM"
+
+
+# ── Phase 5A: Approval ──────────────────────────────
+class ApprovalType(enum.StrEnum):
+    PHASE_ADVANCE = "PHASE_ADVANCE"
+    STATUS_CHANGE = "STATUS_CHANGE"
+    CONTRACT_SIGN = "CONTRACT_SIGN"
+    DEAL_TERMS = "DEAL_TERMS"
+
+
+class ApprovalStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
+
+
 # ── Audit ─────────────────────────────────────────────
 class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
@@ -227,3 +250,6 @@ class AuditAction(enum.StrEnum):
     MEMBER_ADDED = "MEMBER_ADDED"
     MEMBER_REMOVED = "MEMBER_REMOVED"
     SERVICE_LINKED = "SERVICE_LINKED"
+    APPROVAL_REQUESTED = "APPROVAL_REQUESTED"
+    APPROVAL_DECIDED = "APPROVAL_DECIDED"
+    NOTE_CREATED = "NOTE_CREATED"

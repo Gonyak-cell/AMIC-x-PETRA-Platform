@@ -75,6 +75,8 @@ app = FastAPI(
         {"name": "PMI", "description": "PMI(인수 후 통합) 태스크"},
         {"name": "Earnout", "description": "어닝아웃 마일스톤"},
         {"name": "Timeline", "description": "딜 타임라인 이벤트"},
+        {"name": "Notes", "description": "딜 내부 노트/코멘트"},
+        {"name": "Approvals", "description": "승인 워크플로우"},
         {"name": "Integrations", "description": "FDD/IM/KIIS 서비스 연동"},
         {"name": "Dashboard", "description": "M&A 대시보드 KPI"},
     ],
@@ -97,6 +99,7 @@ register_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────
 from app.routers import (  # noqa: E402
+    approvals,
     bids,
     buyers,
     closing,
@@ -107,6 +110,7 @@ from app.routers import (  # noqa: E402
     engagements,
     integrations,
     ndas,
+    notes,
     pmi,
     timeline,
     transactions,
@@ -124,6 +128,8 @@ app.include_router(contracts.router, prefix="/api/v1")
 app.include_router(closing.router, prefix="/api/v1")
 app.include_router(pmi.router, prefix="/api/v1")
 app.include_router(earnout.router, prefix="/api/v1")
+app.include_router(notes.router, prefix="/api/v1")
+app.include_router(approvals.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(timeline.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")

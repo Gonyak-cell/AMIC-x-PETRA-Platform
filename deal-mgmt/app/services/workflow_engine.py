@@ -11,7 +11,10 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import WorkflowError
+from app.models.approval import ApprovalRequest
 from app.models.enums import (
+    ApprovalStatus,
+    ApprovalType,
     AuditAction,
     TransactionPhase,
     TransactionStatus,
@@ -151,6 +154,57 @@ async def advance_phase(
     await db.commit()
     await db.refresh(txn)
     return txn
+
+
+async def request_phase_approval(
+    db: AsyncSession,
+    txn: Transaction,
+    to_phase: TransactionPhase,
+    approver_emails: list[str],
+    actor_email: str | None = None,
+    notes: str | None = None,
+) -> ApprovalRequest:
+    """단계 전환을 위한 승인 요청을 생성한다."""
+    if txn.status != TransactionStatus.ACTIVE:
+        raise WorkflowError("ACTIVE 상태의 거래만 승인을 요청할 수 있습니다")
+
+    from_idx = _PHASE_INDEX[txn.phase]
+    to_idx = _PHASE_INDEX.get(to_phase)
+    if to_idx is None or (to_idx - from_idx) != 1:
+        raise WorkflowError(f"{txn.phase.value} → {to_phase.value} 단계 전환에 대한 승인 요청은 허용되지 않습니다")
+
+    # 전제 조건 체크
+    completion = get_phase_completion(txn)
+    if not completion.all_met:
+        unmet = [p.label for p in completion.prerequisites if not p.satisfied]
+        raise WorkflowError(f"승인 요청 전 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
+
+    approvers = [{"email": e, "role": "APPROVER", "status": "PENDING", "comment": None, "decided_at": None} for e in approver_emails]
+
+    approval = ApprovalRequest(
+        transaction_id=txn.id,
+        requester_email=actor_email or "",
+        approval_type=ApprovalType.PHASE_ADVANCE,
+        title=f"단계 전환 승인: {txn.phase.value} → {to_phase.value}",
+        description=notes,
+        approvers=approvers,
+        related_entity_type="Transaction",
+        related_entity_id=txn.id,
+    )
+    db.add(approval)
+    await db.flush()
+
+    await audit_service.record(
+        db,
+        entity_type="ApprovalRequest",
+        entity_id=approval.id,
+        action=AuditAction.APPROVAL_REQUESTED,
+        actor_email=actor_email,
+        new_value={"from_phase": txn.phase.value, "to_phase": to_phase.value},
+    )
+    await db.commit()
+    await db.refresh(approval)
+    return approval
 
 
 async def change_status(

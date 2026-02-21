@@ -1,3 +1,4 @@
+from app.models.approval import ApprovalRequest
 from app.models.audit import AuditLog
 from app.models.base import Base, TimestampMixin
 from app.models.bid import Bid
@@ -9,6 +10,8 @@ from app.models.dd_checklist import DDChecklist
 from app.models.earnout import EarnoutMilestone
 from app.models.engagement import Engagement
 from app.models.enums import (
+    ApprovalStatus,
+    ApprovalType,
     AuditAction,
     BidStatus,
     BidType,
@@ -25,6 +28,7 @@ from app.models.enums import (
     EngagementType,
     NdaStatus,
     NdaType,
+    NoteType,
     PMICategory,
     PMIPriority,
     PMITaskStatus,
@@ -36,12 +40,16 @@ from app.models.enums import (
     WorkingGroupRole,
 )
 from app.models.nda import NDA
+from app.models.note import DealNote
 from app.models.pmi_task import PMITask
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
 from app.models.working_group import WorkingGroupMember
 
 __all__ = [
+    "ApprovalRequest",
+    "ApprovalStatus",
+    "ApprovalType",
     "Base",
     "TimestampMixin",
     "AuditAction",
@@ -62,6 +70,7 @@ __all__ = [
     "DDChecklist",
     "DDChecklistStatus",
     "DDWorkstream",
+    "DealNote",
     "DealTimeline",
     "EarnoutMetric",
     "EarnoutMilestone",
@@ -71,6 +80,7 @@ __all__ = [
     "NDA",
     "NdaStatus",
     "NdaType",
+    "NoteType",
     "PMICategory",
     "PMIPriority",
     "PMITask",
