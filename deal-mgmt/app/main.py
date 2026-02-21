@@ -77,6 +77,8 @@ app = FastAPI(
         {"name": "Timeline", "description": "딜 타임라인 이벤트"},
         {"name": "Notes", "description": "딜 내부 노트/코멘트"},
         {"name": "Approvals", "description": "승인 워크플로우"},
+        {"name": "Risks", "description": "리스크 레지스터 (5×4 매트릭스)"},
+        {"name": "Compliance", "description": "규제/컴플라이언스 체크리스트"},
         {"name": "Integrations", "description": "FDD/IM/KIIS 서비스 연동"},
         {"name": "Dashboard", "description": "M&A 대시보드 KPI"},
     ],
@@ -103,6 +105,7 @@ from app.routers import (  # noqa: E402
     bids,
     buyers,
     closing,
+    compliance,
     contracts,
     dashboard,
     dd_checklists,
@@ -112,6 +115,7 @@ from app.routers import (  # noqa: E402
     ndas,
     notes,
     pmi,
+    risks,
     timeline,
     transactions,
     workflow,
@@ -130,6 +134,8 @@ app.include_router(pmi.router, prefix="/api/v1")
 app.include_router(earnout.router, prefix="/api/v1")
 app.include_router(notes.router, prefix="/api/v1")
 app.include_router(approvals.router, prefix="/api/v1")
+app.include_router(risks.router, prefix="/api/v1")
+app.include_router(compliance.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(timeline.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")

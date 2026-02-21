@@ -8,20 +8,26 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import WorkflowError
 from app.models.approval import ApprovalRequest
+from app.models.compliance_item import ComplianceItem
 from app.models.enums import (
     ApprovalStatus,
     ApprovalType,
     AuditAction,
+    ComplianceStatus,
+    RiskSeverity,
+    RiskStatus,
     TransactionPhase,
     TransactionStatus,
 )
 from app.models.enums import (
     TransactionPhase as Phase,
 )
+from app.models.risk_item import RiskItem
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
 from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite
@@ -125,6 +131,10 @@ async def advance_phase(
         if not completion.all_met:
             unmet = [p.label for p in completion.prerequisites if not p.satisfied]
             raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
+
+    # NEGOTIATION → CLOSING: 리스크/컴플라이언스 게이트
+    if diff == 1 and to_phase == Phase.CLOSING:
+        await _check_risk_compliance_gate(db, txn)
 
     from_phase = txn.phase
     txn.phase = to_phase
@@ -247,3 +257,35 @@ async def change_status(
     await db.commit()
     await db.refresh(txn)
     return txn
+
+
+async def _check_risk_compliance_gate(db: AsyncSession, txn: Transaction) -> None:
+    """CLOSING 진입 시 미완화 Critical 리스크 및 non-compliant 항목 차단."""
+    # 미완화 Critical 리스크
+    q = sa_select(RiskItem).where(
+        RiskItem.transaction_id == txn.id,
+        RiskItem.severity == RiskSeverity.CRITICAL,
+        RiskItem.status.notin_([RiskStatus.MITIGATED, RiskStatus.CLOSED, RiskStatus.ACCEPTED]),
+    )
+    result = await db.execute(q)
+    critical_risks = list(result.scalars().all())
+    if critical_risks:
+        titles = [r.title for r in critical_risks[:3]]
+        raise WorkflowError(
+            f"클로징 진입 전 미완화 Critical 리스크를 해결해야 합니다: {', '.join(titles)}"
+            + (f" 외 {len(critical_risks) - 3}건" if len(critical_risks) > 3 else "")
+        )
+
+    # Non-compliant 항목
+    q2 = sa_select(ComplianceItem).where(
+        ComplianceItem.transaction_id == txn.id,
+        ComplianceItem.status == ComplianceStatus.NON_COMPLIANT,
+    )
+    result2 = await db.execute(q2)
+    nc_items = list(result2.scalars().all())
+    if nc_items:
+        reqs = [c.requirement for c in nc_items[:3]]
+        raise WorkflowError(
+            f"클로징 진입 전 미준수 컴플라이언스 항목을 해결해야 합니다: {', '.join(reqs)}"
+            + (f" 외 {len(nc_items) - 3}건" if len(nc_items) > 3 else "")
+        )

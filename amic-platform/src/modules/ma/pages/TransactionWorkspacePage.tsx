@@ -53,8 +53,12 @@ import { usePMITasks, usePMISummary, useCreatePMITask, useUpdatePMITask, useDele
 import { useEarnoutMilestones, useEarnoutSummary, useCreateEarnout, useUpdateEarnout, useDeleteEarnout } from "@/modules/ma/hooks/useEarnout";
 import { useNotes, useCreateNote, useDeleteNote } from "@/modules/ma/hooks/useNotes";
 import { useApprovals, useApprovalSummary, useCreateApproval, useDecideApproval, useCancelApproval } from "@/modules/ma/hooks/useApprovals";
+import { useRisks, useRiskSummary, useCreateRisk, useUpdateRisk, useDeleteRisk } from "@/modules/ma/hooks/useRisks";
+import { useCompliance, useComplianceSummary, useCreateCompliance, useUpdateCompliance, useDeleteCompliance } from "@/modules/ma/hooks/useCompliance";
 import type { NoteCreate, NoteType } from "@/modules/ma/types/note";
 import type { ApprovalCreate, ApprovalType as AppType, ApprovalStatus as AppStatus } from "@/modules/ma/types/approval";
+import type { RiskItemCreate, RiskCategory, RiskSeverity, RiskLikelihood } from "@/modules/ma/types/risk";
+import type { ComplianceItemCreate, ComplianceCategory as CompCat } from "@/modules/ma/types/compliance";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import type { BidCreate, BidType, BidStatus as BidStatusType, ValuationMethod } from "@/modules/ma/types/bid";
 import type { DDChecklistCreate, DDWorkstream, DDChecklistStatus as DDStatusType } from "@/modules/ma/types/dd_checklist";
@@ -88,6 +92,12 @@ import {
   NOTE_TYPE_OPTIONS,
   APPROVAL_TYPE_OPTIONS,
   APPROVAL_STATUS_OPTIONS,
+  RISK_CATEGORY_OPTIONS,
+  RISK_SEVERITY_OPTIONS,
+  RISK_LIKELIHOOD_OPTIONS,
+  RISK_STATUS_OPTIONS,
+  COMPLIANCE_CATEGORY_OPTIONS,
+  COMPLIANCE_STATUS_OPTIONS,
 } from "@/modules/ma/constants";
 
 import {
@@ -188,7 +198,7 @@ export default function TransactionWorkspacePage() {
   const id = txnId!;
 
   // URL 기반 탭 결정
-  const VALID_TABS = ["engagement", "team", "buyers", "timeline", "ndas", "bids", "dd-checklist", "contracts", "closing", "pmi", "earnout", "notes-approvals"];
+  const VALID_TABS = ["engagement", "team", "buyers", "timeline", "ndas", "bids", "dd-checklist", "contracts", "closing", "pmi", "earnout", "risks", "compliance", "notes-approvals"];
   const activeTab = VALID_TABS.includes(splat ?? "") ? splat! : "overview";
 
   // 데이터 로드 — Phase 1
@@ -224,6 +234,12 @@ export default function TransactionWorkspacePage() {
   const { data: notesData } = useNotes(id);
   const { data: approvalsData } = useApprovals(id);
   const { data: approvalSummary } = useApprovalSummary(id);
+
+  // 데이터 로드 — Phase 5B
+  const { data: risks } = useRisks(id);
+  const { data: riskSummary } = useRiskSummary(id);
+  const { data: complianceItems } = useCompliance(id);
+  const { data: complianceSummary } = useComplianceSummary(id);
 
   // Mutations — Phase 1
   const advancePhase = useAdvancePhase(id);
@@ -267,6 +283,14 @@ export default function TransactionWorkspacePage() {
   const decideApproval = useDecideApproval();
   const cancelApproval = useCancelApproval();
 
+  // Mutations — Phase 5B
+  const createRisk = useCreateRisk(id);
+  const updateRisk = useUpdateRisk(id);
+  const deleteRisk = useDeleteRisk(id);
+  const createCompliance = useCreateCompliance(id);
+  const updateCompliance = useUpdateCompliance(id);
+  const deleteCompliance = useDeleteCompliance(id);
+
   // URL 기반 탭 전환
   const handleTabChange = (tab: string) => {
     if (tab === "overview") {
@@ -297,6 +321,10 @@ export default function TransactionWorkspacePage() {
   // UI State — Phase 5A
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+
+  // UI State — Phase 5B
+  const [showRiskModal, setShowRiskModal] = useState(false);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
 
   // Form state — Phase 1
   const [engForm, setEngForm] = useState<EngagementCreate>({ type: "EXCLUSIVE" });
@@ -353,6 +381,18 @@ export default function TransactionWorkspacePage() {
     approvers: [{ email: "", role: "승인자" }],
   });
 
+  // Form state — Phase 5B
+  const [riskForm, setRiskForm] = useState<RiskItemCreate>({
+    category: "REGULATORY" as RiskCategory,
+    title: "",
+    severity: "MEDIUM" as RiskSeverity,
+    likelihood: "MEDIUM" as RiskLikelihood,
+  });
+  const [complianceForm, setComplianceForm] = useState<ComplianceItemCreate>({
+    category: "ANTITRUST" as CompCat,
+    requirement: "",
+  });
+
   // Note type 필터
   const [noteTypeFilter, setNoteTypeFilter] = useState<string>("ALL");
   const filteredNotes =
@@ -381,6 +421,20 @@ export default function TransactionWorkspacePage() {
       ? pmiTasks
       : pmiTasks?.filter((t) => t.category === pmiCategoryFilter);
 
+  // Risk 카테고리 필터
+  const [riskCategoryFilter, setRiskCategoryFilter] = useState<string>("ALL");
+  const filteredRisks =
+    riskCategoryFilter === "ALL"
+      ? risks
+      : risks?.filter((r) => r.category === riskCategoryFilter);
+
+  // Compliance 카테고리 필터
+  const [complianceCategoryFilter, setComplianceCategoryFilter] = useState<string>("ALL");
+  const filteredComplianceItems =
+    complianceCategoryFilter === "ALL"
+      ? complianceItems
+      : complianceItems?.filter((c) => c.category === complianceCategoryFilter);
+
   const tabs: TabItem[] = [
     { id: "overview", label: "Overview" },
     { id: "engagement", label: "수임", badge: engagements?.length },
@@ -393,6 +447,8 @@ export default function TransactionWorkspacePage() {
     { id: "closing", label: "클로징", badge: closingItems?.length },
     { id: "pmi", label: "PMI", badge: pmiTasks?.length },
     { id: "earnout", label: "어닝아웃", badge: earnoutMilestones?.length },
+    { id: "risks", label: "리스크", badge: risks?.length },
+    { id: "compliance", label: "컴플라이언스", badge: complianceItems?.length },
     { id: "notes-approvals", label: "노트/승인", badge: (notesData?.total ?? 0) + (approvalsData?.total ?? 0) || undefined },
     { id: "timeline", label: "타임라인", badge: timeline?.total },
   ];
@@ -1848,6 +1904,195 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+        </div>
+      )}
+
+      {/* ── Risk 탭 (Phase 5B) ─────────────────────────── */}
+      {activeTab === "risks" && (
+        <div className="space-y-4">
+          {/* KPI 요약 */}
+          {riskSummary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard label="총 리스크" value={riskSummary.total} />
+              <KpiCard label="미완화 Critical" value={riskSummary.unmitigated_critical} variant={riskSummary.unmitigated_critical > 0 ? "danger" : "default"} />
+              <KpiCard label="평균 점수" value={riskSummary.avg_risk_score} suffix="/20" />
+              <KpiCard label="카테고리" value={riskSummary.by_category.length} />
+            </div>
+          )}
+
+          <Card
+            title="리스크 레지스터"
+            headerBar
+            actions={<Button size="sm" onClick={() => setShowRiskModal(true)}><Plus size={14} className="mr-1" />리스크 추가</Button>}
+          >
+            {/* 카테고리 필터 */}
+            <div className="flex gap-2 mb-4">
+              <select className={INLINE_CLS} value={riskCategoryFilter} onChange={e => setRiskCategoryFilter(e.target.value)}>
+                <option value="ALL">전체 카테고리</option>
+                {RISK_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            {!filteredRisks?.length ? (
+              <EmptyState title="리스크 없음" description="리스크 항목을 추가하세요." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-text-muted">
+                      <th className="px-3 py-2">제목</th>
+                      <th className="px-3 py-2">카테고리</th>
+                      <th className="px-3 py-2">심각도</th>
+                      <th className="px-3 py-2">발생확률</th>
+                      <th className="px-3 py-2">점수</th>
+                      <th className="px-3 py-2">상태</th>
+                      <th className="px-3 py-2">담당</th>
+                      <th className="px-3 py-2 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRisks.map(risk => (
+                      <tr key={risk.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-2 font-medium">{risk.title}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="neutral">{RISK_CATEGORY_OPTIONS.find(o => o.value === risk.category)?.label ?? risk.category}</Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select className={INLINE_CLS} value={risk.severity} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { severity: e.target.value as RiskSeverity } })}>
+                            {RISK_SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select className={INLINE_CLS} value={risk.likelihood} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { likelihood: e.target.value as RiskLikelihood } })}>
+                            {RISK_LIKELIHOOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`font-mono font-bold ${(risk.risk_score ?? 0) >= 12 ? 'text-red-600' : (risk.risk_score ?? 0) >= 6 ? 'text-amber-600' : 'text-green-600'}`}>
+                            {risk.risk_score ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select className={INLINE_CLS} value={risk.status} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { status: e.target.value as any } })}>
+                            {RISK_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2 text-xs text-text-muted">{risk.owner_email ?? '-'}</td>
+                        <td className="px-3 py-2">
+                          <button onClick={() => { if (confirm('삭제하시겠습니까?')) deleteRisk.mutate(risk.id); }} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* 리스크 추가 모달 */}
+          <Modal open={showRiskModal} onClose={() => setShowRiskModal(false)} title="리스크 추가">
+            <div className="space-y-3">
+              <Select label="카테고리" options={RISK_CATEGORY_OPTIONS} value={riskForm.category} onChange={v => setRiskForm(f => ({ ...f, category: v as RiskCategory }))} />
+              <Input label="제목" value={riskForm.title} onChange={e => setRiskForm(f => ({ ...f, title: e.target.value }))} required />
+              <Input label="설명" value={riskForm.description ?? ""} onChange={e => setRiskForm(f => ({ ...f, description: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <Select label="심각도" options={RISK_SEVERITY_OPTIONS} value={riskForm.severity ?? "MEDIUM"} onChange={v => setRiskForm(f => ({ ...f, severity: v as RiskSeverity }))} />
+                <Select label="발생확률" options={RISK_LIKELIHOOD_OPTIONS} value={riskForm.likelihood ?? "MEDIUM"} onChange={v => setRiskForm(f => ({ ...f, likelihood: v as RiskLikelihood }))} />
+              </div>
+              <Input label="완화 전략" value={riskForm.mitigation_strategy ?? ""} onChange={e => setRiskForm(f => ({ ...f, mitigation_strategy: e.target.value }))} />
+              <Input label="담당자 이메일" value={riskForm.owner_email ?? ""} onChange={e => setRiskForm(f => ({ ...f, owner_email: e.target.value }))} />
+              <Input label="기한" type="date" value={riskForm.due_date ?? ""} onChange={e => setRiskForm(f => ({ ...f, due_date: e.target.value }))} />
+              <Button disabled={!riskForm.title} onClick={() => { createRisk.mutate(riskForm); setShowRiskModal(false); setRiskForm({ category: "REGULATORY", title: "", severity: "MEDIUM", likelihood: "MEDIUM" }); }}>추가</Button>
+            </div>
+          </Modal>
+        </div>
+      )}
+
+      {/* ── Compliance 탭 (Phase 5B) ───────────────────── */}
+      {activeTab === "compliance" && (
+        <div className="space-y-4">
+          {/* KPI 요약 */}
+          {complianceSummary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard label="총 항목" value={complianceSummary.total} />
+              <KpiCard label="준수율" value={`${complianceSummary.compliance_rate}%`} />
+              <KpiCard label="주의/미준수" value={complianceSummary.flagged_count} variant={complianceSummary.flagged_count > 0 ? "danger" : "default"} />
+              <KpiCard label="기한 초과" value={complianceSummary.overdue_count} variant={complianceSummary.overdue_count > 0 ? "danger" : "default"} />
+            </div>
+          )}
+
+          <Card
+            title="컴플라이언스 체크리스트"
+            headerBar
+            actions={<Button size="sm" onClick={() => setShowComplianceModal(true)}><Plus size={14} className="mr-1" />항목 추가</Button>}
+          >
+            {/* 카테고리 필터 */}
+            <div className="flex gap-2 mb-4">
+              <select className={INLINE_CLS} value={complianceCategoryFilter} onChange={e => setComplianceCategoryFilter(e.target.value)}>
+                <option value="ALL">전체 카테고리</option>
+                {COMPLIANCE_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            {!filteredComplianceItems?.length ? (
+              <EmptyState title="컴플라이언스 항목 없음" description="규제 요건을 추가하세요." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-text-muted">
+                      <th className="px-3 py-2">요건</th>
+                      <th className="px-3 py-2">카테고리</th>
+                      <th className="px-3 py-2">관할</th>
+                      <th className="px-3 py-2">규제 기관</th>
+                      <th className="px-3 py-2">상태</th>
+                      <th className="px-3 py-2">기한</th>
+                      <th className="px-3 py-2">담당</th>
+                      <th className="px-3 py-2 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredComplianceItems.map(item => (
+                      <tr key={item.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-2 font-medium">{item.requirement}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="neutral">{COMPLIANCE_CATEGORY_OPTIONS.find(o => o.value === item.category)?.label ?? item.category}</Badge>
+                        </td>
+                        <td className="px-3 py-2 text-xs">{item.jurisdiction ?? '-'}</td>
+                        <td className="px-3 py-2 text-xs">{item.regulatory_body ?? '-'}</td>
+                        <td className="px-3 py-2">
+                          <select className={INLINE_CLS} value={item.status} onChange={e => updateCompliance.mutate({ itemId: item.id, body: { status: e.target.value as any } })}>
+                            {COMPLIANCE_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2 text-xs">{item.due_date ?? '-'}</td>
+                        <td className="px-3 py-2 text-xs text-text-muted">{item.assignee_email ?? '-'}</td>
+                        <td className="px-3 py-2">
+                          <button onClick={() => { if (confirm('삭제하시겠습니까?')) deleteCompliance.mutate(item.id); }} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* 컴플라이언스 추가 모달 */}
+          <Modal open={showComplianceModal} onClose={() => setShowComplianceModal(false)} title="컴플라이언스 항목 추가">
+            <div className="space-y-3">
+              <Select label="카테고리" options={COMPLIANCE_CATEGORY_OPTIONS} value={complianceForm.category} onChange={v => setComplianceForm(f => ({ ...f, category: v as CompCat }))} />
+              <Input label="규제 요건" value={complianceForm.requirement} onChange={e => setComplianceForm(f => ({ ...f, requirement: e.target.value }))} required />
+              <Input label="설명" value={complianceForm.description ?? ""} onChange={e => setComplianceForm(f => ({ ...f, description: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="관할권" value={complianceForm.jurisdiction ?? ""} onChange={e => setComplianceForm(f => ({ ...f, jurisdiction: e.target.value }))} placeholder="예: 대한민국" />
+                <Input label="규제 기관" value={complianceForm.regulatory_body ?? ""} onChange={e => setComplianceForm(f => ({ ...f, regulatory_body: e.target.value }))} placeholder="예: 공정거래위원회" />
+              </div>
+              <Input label="담당자 이메일" value={complianceForm.assignee_email ?? ""} onChange={e => setComplianceForm(f => ({ ...f, assignee_email: e.target.value }))} />
+              <Input label="기한" type="date" value={complianceForm.due_date ?? ""} onChange={e => setComplianceForm(f => ({ ...f, due_date: e.target.value }))} />
+              <Button disabled={!complianceForm.requirement} onClick={() => { createCompliance.mutate(complianceForm); setShowComplianceModal(false); setComplianceForm({ category: "ANTITRUST", requirement: "" }); }}>추가</Button>
+            </div>
+          </Modal>
         </div>
       )}
 

@@ -240,6 +240,67 @@ class ApprovalStatus(enum.StrEnum):
     CANCELLED = "CANCELLED"
 
 
+# ── Phase 5B: Risk ─────────────────────────────────────
+class RiskCategory(enum.StrEnum):
+    REGULATORY = "REGULATORY"
+    FINANCIAL = "FINANCIAL"
+    LEGAL = "LEGAL"
+    OPERATIONAL = "OPERATIONAL"
+    REPUTATIONAL = "REPUTATIONAL"
+    TAX = "TAX"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
+    MARKET = "MARKET"
+    OTHER = "OTHER"
+
+
+class RiskSeverity(enum.StrEnum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RiskLikelihood(enum.StrEnum):
+    VERY_HIGH = "VERY_HIGH"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    VERY_LOW = "VERY_LOW"
+
+
+class RiskStatus(enum.StrEnum):
+    IDENTIFIED = "IDENTIFIED"
+    ASSESSING = "ASSESSING"
+    MITIGATING = "MITIGATING"
+    MITIGATED = "MITIGATED"
+    ACCEPTED = "ACCEPTED"
+    CLOSED = "CLOSED"
+
+
+# ── Phase 5B: Compliance ──────────────────────────────
+class ComplianceCategory(enum.StrEnum):
+    ANTITRUST = "ANTITRUST"
+    FOREIGN_INVESTMENT = "FOREIGN_INVESTMENT"
+    SECURITIES = "SECURITIES"
+    DATA_PRIVACY = "DATA_PRIVACY"
+    ANTI_CORRUPTION = "ANTI_CORRUPTION"
+    SANCTIONS = "SANCTIONS"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
+    LABOR = "LABOR"
+    TAX = "TAX"
+    OTHER = "OTHER"
+
+
+class ComplianceStatus(enum.StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    IN_REVIEW = "IN_REVIEW"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    FLAGGED = "FLAGGED"
+    NON_COMPLIANT = "NON_COMPLIANT"
+    WAIVED = "WAIVED"
+
+
 # ── Audit ─────────────────────────────────────────────
 class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
