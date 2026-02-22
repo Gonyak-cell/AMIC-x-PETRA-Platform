@@ -21,7 +21,6 @@ import {
   Sparkles,
   MessageSquare,
   Pin,
-  Clock,
   Check,
   X,
   Send,
@@ -56,9 +55,9 @@ import { useApprovals, useApprovalSummary, useCreateApproval, useDecideApproval,
 import { useRisks, useRiskSummary, useCreateRisk, useUpdateRisk, useDeleteRisk } from "@/modules/ma/hooks/useRisks";
 import { useCompliance, useComplianceSummary, useCreateCompliance, useUpdateCompliance, useDeleteCompliance } from "@/modules/ma/hooks/useCompliance";
 import type { NoteCreate, NoteType } from "@/modules/ma/types/note";
-import type { ApprovalCreate, ApprovalType as AppType, ApprovalStatus as AppStatus } from "@/modules/ma/types/approval";
-import type { RiskItemCreate, RiskCategory, RiskSeverity, RiskLikelihood } from "@/modules/ma/types/risk";
-import type { ComplianceItemCreate, ComplianceCategory as CompCat } from "@/modules/ma/types/compliance";
+import type { ApprovalCreate, ApprovalType as AppType } from "@/modules/ma/types/approval";
+import type { RiskItemCreate, RiskCategory, RiskSeverity, RiskLikelihood, RiskStatus } from "@/modules/ma/types/risk";
+import type { ComplianceItemCreate, ComplianceCategory as CompCat, ComplianceStatus } from "@/modules/ma/types/compliance";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import type { BidCreate, BidType, BidStatus as BidStatusType, ValuationMethod } from "@/modules/ma/types/bid";
 import type { DDChecklistCreate, DDWorkstream, DDChecklistStatus as DDStatusType } from "@/modules/ma/types/dd_checklist";
@@ -106,6 +105,8 @@ import {
   Card,
   DataTable,
   EmptyState,
+  InlineSelect,
+  INLINE_INPUT_CLS,
   Input,
   KpiCard,
   Modal,
@@ -152,8 +153,7 @@ function formatAmount(amount: number | null): string {
   return amount.toLocaleString();
 }
 
-const INLINE_CLS =
-  "text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-transparent hover:bg-white focus:bg-white focus:ring-2 focus:ring-accent/30 focus:border-amic transition-colors";
+// INLINE_INPUT_CLS는 @/components/ui에서 import
 
 // ── WorkflowStepper ────────────────────────────────────
 function WorkflowStepper({ current }: { current: string }) {
@@ -166,12 +166,12 @@ function WorkflowStepper({ current }: { current: string }) {
         return (
           <div key={p.phase} className="flex items-center">
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-dr-sm text-xs font-medium whitespace-nowrap ${
                 active
                   ? "bg-accent text-white"
                   : done
                     ? "bg-accent/10 text-accent"
-                    : "bg-gray-100 text-text-muted"
+                    : "bg-bg-cool text-text-muted"
               }`}
             >
               {done && <CheckCircle size={12} />}
@@ -181,7 +181,7 @@ function WorkflowStepper({ current }: { current: string }) {
             </div>
             {i < PHASE_CONFIG.length - 1 && (
               <div
-                className={`w-4 h-px mx-0.5 ${done ? "bg-accent" : "bg-gray-200"}`}
+                className={`w-4 h-px mx-0.5 ${done ? "bg-accent" : "bg-gray-border"}`}
               />
             )}
           </div>
@@ -918,7 +918,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-sent-${r.sent_at}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.sent_at ?? ""}
                         onChange={(e) =>
                           updateNda.mutate({ ndaId: r.id, body: { sent_at: e.target.value || undefined } })
@@ -933,7 +933,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-signed-${r.signed_at}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.signed_at ?? ""}
                         onChange={(e) =>
                           updateNda.mutate({ ndaId: r.id, body: { signed_at: e.target.value || undefined } })
@@ -948,7 +948,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-expires-${r.expires_at}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.expires_at ?? ""}
                         onChange={(e) =>
                           updateNda.mutate({ ndaId: r.id, body: { expires_at: e.target.value || undefined } })
@@ -1076,7 +1076,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-amount-${r.amount}`}
                         type="number"
-                        className={`${INLINE_CLS} w-28 text-right font-mono`}
+                        className={`${INLINE_INPUT_CLS} w-28 text-right font-mono`}
                         defaultValue={r.amount ?? ""}
                         placeholder="금액"
                         onBlur={(e) => {
@@ -1127,7 +1127,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-submitted-${r.submitted_at}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.submitted_at ?? ""}
                         onChange={(e) =>
                           updateBid.mutate({ bidId: r.id, body: { submitted_at: e.target.value || undefined } })
@@ -1219,10 +1219,10 @@ export default function TransactionWorkspacePage() {
               <button
                 key={opt.value}
                 type="button"
-                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                className={`px-3 py-1 text-xs font-medium rounded-dr-sm transition-colors ${
                   ddWorkstreamFilter === opt.value
                     ? "bg-accent text-white"
-                    : "bg-gray-100 text-text-secondary hover:bg-gray-200"
+                    : "bg-bg-cool text-text-muted hover:bg-gray-border"
                 }`}
                 onClick={() => setDdWorkstreamFilter(opt.value)}
               >
@@ -1291,7 +1291,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-assignee-${r.assignee_email}`}
                         type="email"
-                        className={`${INLINE_CLS} w-36`}
+                        className={`${INLINE_INPUT_CLS} w-36`}
                         defaultValue={r.assignee_email ?? ""}
                         placeholder="이메일"
                         onBlur={(e) => {
@@ -1310,7 +1310,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-due-${r.due_date}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.due_date ?? ""}
                         onChange={(e) =>
                           updateDDItem.mutate({ itemId: r.id, body: { due_date: e.target.value || undefined } })
@@ -1466,7 +1466,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-eff-${r.effective_date}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.effective_date ?? ""}
                         onChange={(e) =>
                           updateContract.mutate({
@@ -1544,10 +1544,10 @@ export default function TransactionWorkspacePage() {
               <button
                 key={opt.value}
                 type="button"
-                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                className={`px-3 py-1 text-xs font-medium rounded-dr-sm transition-colors ${
                   closingCategoryFilter === opt.value
                     ? "bg-accent text-white"
-                    : "bg-gray-100 text-text-secondary hover:bg-gray-200"
+                    : "bg-bg-cool text-text-muted hover:bg-gray-border"
                 }`}
                 onClick={() => setClosingCategoryFilter(opt.value)}
               >
@@ -1616,7 +1616,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-resp-${r.responsible_party}`}
                         type="text"
-                        className={`${INLINE_CLS} w-28`}
+                        className={`${INLINE_INPUT_CLS} w-28`}
                         defaultValue={r.responsible_party ?? ""}
                         placeholder="담당자"
                         onBlur={(e) => {
@@ -1635,7 +1635,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-due-${r.due_date}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.due_date ?? ""}
                         onChange={(e) =>
                           updateClosingItem.mutate({ itemId: r.id, body: { due_date: e.target.value || undefined } })
@@ -1650,7 +1650,7 @@ export default function TransactionWorkspacePage() {
                       <input
                         key={`${r.id}-comp-${r.completed_date}`}
                         type="date"
-                        className={`${INLINE_CLS} w-32`}
+                        className={`${INLINE_INPUT_CLS} w-32`}
                         defaultValue={r.completed_date ?? ""}
                         onChange={(e) =>
                           updateClosingItem.mutate({ itemId: r.id, body: { completed_date: e.target.value || undefined } })
@@ -1717,7 +1717,7 @@ export default function TransactionWorkspacePage() {
           {/* 카테고리 필터 칩 */}
           <div className="flex flex-wrap gap-2">
             <button
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pmiCategoryFilter === "ALL" ? "bg-accent text-white" : "bg-gray-100 text-text-muted hover:bg-gray-200"}`}
+              className={`px-3 py-1 rounded-dr-sm text-xs font-medium transition-colors ${pmiCategoryFilter === "ALL" ? "bg-accent text-white" : "bg-bg-cool text-text-muted hover:bg-gray-border"}`}
               onClick={() => setPmiCategoryFilter("ALL")}
             >
               전체
@@ -1725,7 +1725,7 @@ export default function TransactionWorkspacePage() {
             {PMI_CATEGORY_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pmiCategoryFilter === opt.value ? "bg-accent text-white" : "bg-gray-100 text-text-muted hover:bg-gray-200"}`}
+                className={`px-3 py-1 rounded-dr-sm text-xs font-medium transition-colors ${pmiCategoryFilter === opt.value ? "bg-accent text-white" : "bg-bg-cool text-text-muted hover:bg-gray-border"}`}
                 onClick={() => setPmiCategoryFilter(opt.value)}
               >
                 {opt.label}
@@ -1757,40 +1757,61 @@ export default function TransactionWorkspacePage() {
                     key: "priority",
                     header: "우선순위",
                     render: (t) => (
-                      <select
-                        className={INLINE_CLS}
+                      <InlineSelect
+                        options={PMI_PRIORITY_OPTIONS}
                         value={t.priority}
-                        onChange={(e) => updatePMITask.mutate({ taskId: t.id, body: { priority: e.target.value as PMIPriority } })}
-                      >
-                        {PMI_PRIORITY_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => updatePMITask.mutate({ taskId: t.id, body: { priority: v as PMIPriority } })}
+                      />
                     ),
                   },
                   {
                     key: "status",
                     header: "상태",
                     render: (t) => (
-                      <select
-                        className={INLINE_CLS}
+                      <InlineSelect
+                        options={PMI_STATUS_OPTIONS}
                         value={t.status}
-                        onChange={(e) => updatePMITask.mutate({ taskId: t.id, body: { status: e.target.value as PMITaskStatus } })}
-                      >
-                        {PMI_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => updatePMITask.mutate({ taskId: t.id, body: { status: v as PMITaskStatus } })}
+                      />
                     ),
                   },
-                  { key: "assignee_name", header: "담당자", render: (t) => t.assignee_name ?? "-" },
-                  { key: "due_date", header: "마감일", render: (t) => t.due_date ?? "-" },
+                  {
+                    key: "assignee_name",
+                    header: "담당자",
+                    render: (t) => (
+                      <input
+                        key={`${t.id}-assignee`}
+                        type="text"
+                        className={`${INLINE_INPUT_CLS} w-28`}
+                        defaultValue={t.assignee_name ?? ""}
+                        placeholder="-"
+                        onBlur={(e) => {
+                          if (e.target.value.trim() !== (t.assignee_name ?? ""))
+                            updatePMITask.mutate({ taskId: t.id, body: { assignee_name: e.target.value.trim() || undefined } });
+                        }}
+                      />
+                    ),
+                  },
+                  {
+                    key: "due_date",
+                    header: "마감일",
+                    render: (t) => (
+                      <input
+                        type="date"
+                        className={`${INLINE_INPUT_CLS} w-32`}
+                        defaultValue={t.due_date ?? ""}
+                        onChange={(e) =>
+                          updatePMITask.mutate({ taskId: t.id, body: { due_date: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
                   {
                     key: "actions",
                     header: "",
                     render: (t) => (
                       <button
-                        className="text-red-400 hover:text-red-600"
+                        className="text-text-muted hover:text-negative p-1 rounded transition-colors"
                         onClick={() => { if (confirm("삭제하시겠습니까?")) deletePMITask.mutate(t.id); }}
                       >
                         <Trash2 size={14} />
@@ -1859,21 +1880,30 @@ export default function TransactionWorkspacePage() {
                   {
                     key: "actual_value",
                     header: "실적",
-                    render: (m) => m.actual_value != null ? `${formatAmount(m.actual_value)} ${m.currency}` : "-",
+                    render: (m) => (
+                      <input
+                        key={`${m.id}-actual`}
+                        type="number"
+                        className={`${INLINE_INPUT_CLS} w-24 text-right`}
+                        defaultValue={m.actual_value ?? ""}
+                        placeholder="-"
+                        onBlur={(e) => {
+                          const v = e.target.value === "" ? undefined : Number(e.target.value);
+                          if (v !== m.actual_value)
+                            updateEarnout.mutate({ milestoneId: m.id, body: { actual_value: v } });
+                        }}
+                      />
+                    ),
                   },
                   {
                     key: "status",
                     header: "상태",
                     render: (m) => (
-                      <select
-                        className={INLINE_CLS}
+                      <InlineSelect
+                        options={EARNOUT_STATUS_OPTIONS}
                         value={m.status}
-                        onChange={(e) => updateEarnout.mutate({ milestoneId: m.id, body: { status: e.target.value as EarnoutStatus } })}
-                      >
-                        {EARNOUT_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => updateEarnout.mutate({ milestoneId: m.id, body: { status: v as EarnoutStatus } })}
+                      />
                     ),
                   },
                   {
@@ -1884,14 +1914,27 @@ export default function TransactionWorkspacePage() {
                   {
                     key: "payment_amount",
                     header: "지급액",
-                    render: (m) => m.payment_amount != null ? formatAmount(m.payment_amount) : "-",
+                    render: (m) => (
+                      <input
+                        key={`${m.id}-payment`}
+                        type="number"
+                        className={`${INLINE_INPUT_CLS} w-24 text-right`}
+                        defaultValue={m.payment_amount ?? ""}
+                        placeholder="-"
+                        onBlur={(e) => {
+                          const v = e.target.value === "" ? undefined : Number(e.target.value);
+                          if (v !== m.payment_amount)
+                            updateEarnout.mutate({ milestoneId: m.id, body: { payment_amount: v } });
+                        }}
+                      />
+                    ),
                   },
                   {
                     key: "actions",
                     header: "",
                     render: (m) => (
                       <button
-                        className="text-red-400 hover:text-red-600"
+                        className="text-text-muted hover:text-negative p-1 rounded transition-colors"
                         onClick={() => { if (confirm("삭제하시겠습니까?")) deleteEarnout.mutate(m.id); }}
                       >
                         <Trash2 size={14} />
@@ -1913,10 +1956,10 @@ export default function TransactionWorkspacePage() {
           {/* KPI 요약 */}
           {riskSummary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="총 리스크" value={riskSummary.total} />
-              <KpiCard label="미완화 Critical" value={riskSummary.unmitigated_critical} variant={riskSummary.unmitigated_critical > 0 ? "danger" : "default"} />
-              <KpiCard label="평균 점수" value={riskSummary.avg_risk_score} suffix="/20" />
-              <KpiCard label="카테고리" value={riskSummary.by_category.length} />
+              <KpiCard label="총 리스크" value={String(riskSummary.total)} />
+              <KpiCard label="미완화 Critical" value={String(riskSummary.unmitigated_critical)} variant={riskSummary.unmitigated_critical > 0 ? "danger" : "default"} />
+              <KpiCard label="평균 점수" value={String(riskSummary.avg_risk_score)} subtitle="/20" />
+              <KpiCard label="카테고리" value={String(riskSummary.by_category.length)} />
             </div>
           )}
 
@@ -1927,77 +1970,113 @@ export default function TransactionWorkspacePage() {
           >
             {/* 카테고리 필터 */}
             <div className="flex gap-2 mb-4">
-              <select className={INLINE_CLS} value={riskCategoryFilter} onChange={e => setRiskCategoryFilter(e.target.value)}>
-                <option value="ALL">전체 카테고리</option>
-                {RISK_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <Select
+                options={[{ value: "ALL", label: "전체 카테고리" }, ...RISK_CATEGORY_OPTIONS]}
+                value={riskCategoryFilter}
+                onChange={e => setRiskCategoryFilter(e.target.value)}
+                className="!py-1.5 !text-xs w-48"
+              />
             </div>
 
             {!filteredRisks?.length ? (
               <EmptyState title="리스크 없음" description="리스크 항목을 추가하세요." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-text-muted">
-                      <th className="px-3 py-2">제목</th>
-                      <th className="px-3 py-2">카테고리</th>
-                      <th className="px-3 py-2">심각도</th>
-                      <th className="px-3 py-2">발생확률</th>
-                      <th className="px-3 py-2">점수</th>
-                      <th className="px-3 py-2">상태</th>
-                      <th className="px-3 py-2">담당</th>
-                      <th className="px-3 py-2 w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRisks.map(risk => (
-                      <tr key={risk.id} className="border-b hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium">{risk.title}</td>
-                        <td className="px-3 py-2">
-                          <Badge variant="neutral">{RISK_CATEGORY_OPTIONS.find(o => o.value === risk.category)?.label ?? risk.category}</Badge>
-                        </td>
-                        <td className="px-3 py-2">
-                          <select className={INLINE_CLS} value={risk.severity} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { severity: e.target.value as RiskSeverity } })}>
-                            {RISK_SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <select className={INLINE_CLS} value={risk.likelihood} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { likelihood: e.target.value as RiskLikelihood } })}>
-                            {RISK_LIKELIHOOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className={`font-mono font-bold ${(risk.risk_score ?? 0) >= 12 ? 'text-red-600' : (risk.risk_score ?? 0) >= 6 ? 'text-amber-600' : 'text-green-600'}`}>
-                            {risk.risk_score ?? '-'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          <select className={INLINE_CLS} value={risk.status} onChange={e => updateRisk.mutate({ itemId: risk.id, body: { status: e.target.value as any } })}>
-                            {RISK_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2 text-xs text-text-muted">{risk.owner_email ?? '-'}</td>
-                        <td className="px-3 py-2">
-                          <button onClick={() => { if (confirm('삭제하시겠습니까?')) deleteRisk.mutate(risk.id); }} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  { key: "title", header: "제목", render: (risk) => <span className="font-medium">{risk.title}</span> },
+                  {
+                    key: "category",
+                    header: "카테고리",
+                    render: (risk) => <Badge variant="neutral">{RISK_CATEGORY_OPTIONS.find(o => o.value === risk.category)?.label ?? risk.category}</Badge>,
+                  },
+                  {
+                    key: "severity",
+                    header: "심각도",
+                    render: (risk) => (
+                      <InlineSelect
+                        options={RISK_SEVERITY_OPTIONS}
+                        value={risk.severity}
+                        onChange={(v) => updateRisk.mutate({ itemId: risk.id, body: { severity: v as RiskSeverity } })}
+                      />
+                    ),
+                  },
+                  {
+                    key: "likelihood",
+                    header: "발생확률",
+                    render: (risk) => (
+                      <InlineSelect
+                        options={RISK_LIKELIHOOD_OPTIONS}
+                        value={risk.likelihood}
+                        onChange={(v) => updateRisk.mutate({ itemId: risk.id, body: { likelihood: v as RiskLikelihood } })}
+                      />
+                    ),
+                  },
+                  {
+                    key: "risk_score",
+                    header: "점수",
+                    render: (risk) => (
+                      <span className={`font-mono font-bold ${(risk.risk_score ?? 0) >= 12 ? "text-negative" : (risk.risk_score ?? 0) >= 6 ? "text-caution" : "text-positive"}`}>
+                        {risk.risk_score ?? "-"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (risk) => (
+                      <InlineSelect
+                        options={RISK_STATUS_OPTIONS}
+                        value={risk.status}
+                        onChange={(v) => updateRisk.mutate({ itemId: risk.id, body: { status: v as RiskStatus } })}
+                      />
+                    ),
+                  },
+                  {
+                    key: "owner_email",
+                    header: "담당",
+                    render: (risk) => (
+                      <input
+                        key={`${risk.id}-owner`}
+                        type="text"
+                        className={`${INLINE_INPUT_CLS} w-36`}
+                        defaultValue={risk.owner_email ?? ""}
+                        placeholder="-"
+                        onBlur={(e) => {
+                          if (e.target.value.trim() !== (risk.owner_email ?? ""))
+                            updateRisk.mutate({ itemId: risk.id, body: { owner_email: e.target.value.trim() || undefined } });
+                        }}
+                      />
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    width: "40px",
+                    render: (risk) => (
+                      <button
+                        className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                        onClick={() => { if (confirm("삭제하시겠습니까?")) deleteRisk.mutate(risk.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ),
+                  },
+                ] as Column<(typeof filteredRisks)[number]>[]}
+                data={filteredRisks ?? []}
+                keyField="id"
+              />
             )}
           </Card>
 
           {/* 리스크 추가 모달 */}
           <Modal open={showRiskModal} onClose={() => setShowRiskModal(false)} title="리스크 추가">
             <div className="space-y-3">
-              <Select label="카테고리" options={RISK_CATEGORY_OPTIONS} value={riskForm.category} onChange={v => setRiskForm(f => ({ ...f, category: v as RiskCategory }))} />
+              <Select label="카테고리" options={RISK_CATEGORY_OPTIONS} value={riskForm.category} onChange={e => setRiskForm(f => ({ ...f, category: e.target.value as RiskCategory }))} />
               <Input label="제목" value={riskForm.title} onChange={e => setRiskForm(f => ({ ...f, title: e.target.value }))} required />
               <Input label="설명" value={riskForm.description ?? ""} onChange={e => setRiskForm(f => ({ ...f, description: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
-                <Select label="심각도" options={RISK_SEVERITY_OPTIONS} value={riskForm.severity ?? "MEDIUM"} onChange={v => setRiskForm(f => ({ ...f, severity: v as RiskSeverity }))} />
-                <Select label="발생확률" options={RISK_LIKELIHOOD_OPTIONS} value={riskForm.likelihood ?? "MEDIUM"} onChange={v => setRiskForm(f => ({ ...f, likelihood: v as RiskLikelihood }))} />
+                <Select label="심각도" options={RISK_SEVERITY_OPTIONS} value={riskForm.severity ?? "MEDIUM"} onChange={e => setRiskForm(f => ({ ...f, severity: e.target.value as RiskSeverity }))} />
+                <Select label="발생확률" options={RISK_LIKELIHOOD_OPTIONS} value={riskForm.likelihood ?? "MEDIUM"} onChange={e => setRiskForm(f => ({ ...f, likelihood: e.target.value as RiskLikelihood }))} />
               </div>
               <Input label="완화 전략" value={riskForm.mitigation_strategy ?? ""} onChange={e => setRiskForm(f => ({ ...f, mitigation_strategy: e.target.value }))} />
               <Input label="담당자 이메일" value={riskForm.owner_email ?? ""} onChange={e => setRiskForm(f => ({ ...f, owner_email: e.target.value }))} />
@@ -2014,10 +2093,10 @@ export default function TransactionWorkspacePage() {
           {/* KPI 요약 */}
           {complianceSummary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="총 항목" value={complianceSummary.total} />
+              <KpiCard label="총 항목" value={String(complianceSummary.total)} />
               <KpiCard label="준수율" value={`${complianceSummary.compliance_rate}%`} />
-              <KpiCard label="주의/미준수" value={complianceSummary.flagged_count} variant={complianceSummary.flagged_count > 0 ? "danger" : "default"} />
-              <KpiCard label="기한 초과" value={complianceSummary.overdue_count} variant={complianceSummary.overdue_count > 0 ? "danger" : "default"} />
+              <KpiCard label="주의/미준수" value={String(complianceSummary.flagged_count)} variant={complianceSummary.flagged_count > 0 ? "danger" : "default"} />
+              <KpiCard label="기한 초과" value={String(complianceSummary.overdue_count)} variant={complianceSummary.overdue_count > 0 ? "danger" : "default"} />
             </div>
           )}
 
@@ -2028,60 +2107,93 @@ export default function TransactionWorkspacePage() {
           >
             {/* 카테고리 필터 */}
             <div className="flex gap-2 mb-4">
-              <select className={INLINE_CLS} value={complianceCategoryFilter} onChange={e => setComplianceCategoryFilter(e.target.value)}>
-                <option value="ALL">전체 카테고리</option>
-                {COMPLIANCE_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <Select
+                options={[{ value: "ALL", label: "전체 카테고리" }, ...COMPLIANCE_CATEGORY_OPTIONS]}
+                value={complianceCategoryFilter}
+                onChange={e => setComplianceCategoryFilter(e.target.value)}
+                className="!py-1.5 !text-xs w-48"
+              />
             </div>
 
             {!filteredComplianceItems?.length ? (
               <EmptyState title="컴플라이언스 항목 없음" description="규제 요건을 추가하세요." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-text-muted">
-                      <th className="px-3 py-2">요건</th>
-                      <th className="px-3 py-2">카테고리</th>
-                      <th className="px-3 py-2">관할</th>
-                      <th className="px-3 py-2">규제 기관</th>
-                      <th className="px-3 py-2">상태</th>
-                      <th className="px-3 py-2">기한</th>
-                      <th className="px-3 py-2">담당</th>
-                      <th className="px-3 py-2 w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredComplianceItems.map(item => (
-                      <tr key={item.id} className="border-b hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium">{item.requirement}</td>
-                        <td className="px-3 py-2">
-                          <Badge variant="neutral">{COMPLIANCE_CATEGORY_OPTIONS.find(o => o.value === item.category)?.label ?? item.category}</Badge>
-                        </td>
-                        <td className="px-3 py-2 text-xs">{item.jurisdiction ?? '-'}</td>
-                        <td className="px-3 py-2 text-xs">{item.regulatory_body ?? '-'}</td>
-                        <td className="px-3 py-2">
-                          <select className={INLINE_CLS} value={item.status} onChange={e => updateCompliance.mutate({ itemId: item.id, body: { status: e.target.value as any } })}>
-                            {COMPLIANCE_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2 text-xs">{item.due_date ?? '-'}</td>
-                        <td className="px-3 py-2 text-xs text-text-muted">{item.assignee_email ?? '-'}</td>
-                        <td className="px-3 py-2">
-                          <button onClick={() => { if (confirm('삭제하시겠습니까?')) deleteCompliance.mutate(item.id); }} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  { key: "requirement", header: "요건", render: (item) => <span className="font-medium">{item.requirement}</span> },
+                  {
+                    key: "category",
+                    header: "카테고리",
+                    render: (item) => <Badge variant="neutral">{COMPLIANCE_CATEGORY_OPTIONS.find(o => o.value === item.category)?.label ?? item.category}</Badge>,
+                  },
+                  { key: "jurisdiction", header: "관할", render: (item) => <span className="text-xs">{item.jurisdiction ?? "-"}</span> },
+                  { key: "regulatory_body", header: "규제 기관", render: (item) => <span className="text-xs">{item.regulatory_body ?? "-"}</span> },
+                  {
+                    key: "status",
+                    header: "상태",
+                    render: (item) => (
+                      <InlineSelect
+                        options={COMPLIANCE_STATUS_OPTIONS}
+                        value={item.status}
+                        onChange={(v) => updateCompliance.mutate({ itemId: item.id, body: { status: v as ComplianceStatus } })}
+                      />
+                    ),
+                  },
+                  {
+                    key: "due_date",
+                    header: "기한",
+                    render: (item) => (
+                      <input
+                        type="date"
+                        className={`${INLINE_INPUT_CLS} w-32`}
+                        defaultValue={item.due_date ?? ""}
+                        onChange={(e) =>
+                          updateCompliance.mutate({ itemId: item.id, body: { due_date: e.target.value || undefined } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    key: "assignee_email",
+                    header: "담당",
+                    render: (item) => (
+                      <input
+                        key={`${item.id}-assignee`}
+                        type="text"
+                        className={`${INLINE_INPUT_CLS} w-36`}
+                        defaultValue={item.assignee_email ?? ""}
+                        placeholder="-"
+                        onBlur={(e) => {
+                          if (e.target.value.trim() !== (item.assignee_email ?? ""))
+                            updateCompliance.mutate({ itemId: item.id, body: { assignee_email: e.target.value.trim() || undefined } });
+                        }}
+                      />
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    width: "40px",
+                    render: (item) => (
+                      <button
+                        className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                        onClick={() => { if (confirm("삭제하시겠습니까?")) deleteCompliance.mutate(item.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ),
+                  },
+                ] as Column<(typeof filteredComplianceItems)[number]>[]}
+                data={filteredComplianceItems ?? []}
+                keyField="id"
+              />
             )}
           </Card>
 
           {/* 컴플라이언스 추가 모달 */}
           <Modal open={showComplianceModal} onClose={() => setShowComplianceModal(false)} title="컴플라이언스 항목 추가">
             <div className="space-y-3">
-              <Select label="카테고리" options={COMPLIANCE_CATEGORY_OPTIONS} value={complianceForm.category} onChange={v => setComplianceForm(f => ({ ...f, category: v as CompCat }))} />
+              <Select label="카테고리" options={COMPLIANCE_CATEGORY_OPTIONS} value={complianceForm.category} onChange={e => setComplianceForm(f => ({ ...f, category: e.target.value as CompCat }))} />
               <Input label="규제 요건" value={complianceForm.requirement} onChange={e => setComplianceForm(f => ({ ...f, requirement: e.target.value }))} required />
               <Input label="설명" value={complianceForm.description ?? ""} onChange={e => setComplianceForm(f => ({ ...f, description: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
@@ -2145,10 +2257,10 @@ export default function TransactionWorkspacePage() {
           {/* 승인 요약 KPI */}
           {approvalSummary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="전체 승인" value={approvalSummary.total} />
-              <KpiCard label="대기 중" value={approvalSummary.pending} variant={approvalSummary.pending > 0 ? "warning" : undefined} />
-              <KpiCard label="승인됨" value={approvalSummary.approved} variant="good" />
-              <KpiCard label="거절됨" value={approvalSummary.rejected} variant={approvalSummary.rejected > 0 ? "bad" : undefined} />
+              <KpiCard label="전체 승인" value={String(approvalSummary.total)} />
+              <KpiCard label="대기 중" value={String(approvalSummary.pending)} variant={approvalSummary.pending > 0 ? "warning" : undefined} />
+              <KpiCard label="승인됨" value={String(approvalSummary.approved)} variant="good" />
+              <KpiCard label="거절됨" value={String(approvalSummary.rejected)} variant={approvalSummary.rejected > 0 ? "bad" : undefined} />
             </div>
           )}
 
@@ -3180,13 +3292,13 @@ export default function TransactionWorkspacePage() {
             }
           />
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">
+            <label className="block text-sm font-medium text-text-body mb-1.5">
               내용
             </label>
             <textarea
               required
               rows={4}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/30"
+              className="w-full px-3 py-2 text-sm rounded-dr-sm border border-gray-border shadow-sm bg-white text-text-body placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-amic hover:border-amic-400 transition-colors"
               value={noteForm.content}
               onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
               placeholder="의사결정, 질문, 메모 등을 기록하세요..."
