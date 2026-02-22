@@ -195,6 +195,12 @@ services:
     volumes:
       - ./deal-mgmt:/app
       - /app/__pycache__
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       deal-mgmt-db:
         condition: service_healthy
