@@ -12,6 +12,9 @@ export type { CardProps, CardVariant } from "./Card";
 export { KpiCard } from "./KpiCard";
 export type { KpiCardProps } from "./KpiCard";
 
+export { InlineSelect, INLINE_INPUT_CLS } from "./InlineSelect";
+export type { InlineSelectProps, InlineSelectOption } from "./InlineSelect";
+
 export { DataTable } from "./DataTable";
 export type { DataTableProps, Column, SectionHeaderConfig } from "./DataTable";
 

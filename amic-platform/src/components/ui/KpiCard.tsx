@@ -9,7 +9,7 @@ export interface KpiCardProps {
   value: string;
   trend?: "up" | "down" | "flat";
   trendValue?: string;
-  variant?: "default" | "positive" | "negative" | "caution";
+  variant?: "default" | "positive" | "negative" | "caution" | "danger" | "good" | "bad" | "warning";
   subtitle?: string;
   icon?: LucideIcon;
   hoverLift?: boolean;
@@ -22,6 +22,11 @@ const variantStyles = {
   positive: "border-positive/30 bg-bg-light-green/30",
   negative: "border-negative/30 bg-red-50/30",
   caution: "border-caution/30 bg-amber-50/30",
+  // 별칭
+  danger: "border-negative/30 bg-red-50/30",
+  good: "border-positive/30 bg-bg-light-green/30",
+  bad: "border-negative/30 bg-red-50/30",
+  warning: "border-caution/30 bg-amber-50/30",
 };
 
 const trendColors = {
