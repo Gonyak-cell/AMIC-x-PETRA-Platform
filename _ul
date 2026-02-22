@@ -1,0 +1,5 @@
+ls: cannot access 'c:\Users\diedi\OneDrive\Documents\Coding\AMIC x PETRA Platform\.claude" 2>/dev/null || dir c:UsersdiediOneDriveDocumentsCodingAMIC': No such file or directory
+ls: cannot access 'x': No such file or directory
+ls: cannot access 'PETRA': No such file or directory
+ls: cannot access 'Platform.claude"': No such file or directory
+ls: cannot access '/B': No such file or directory

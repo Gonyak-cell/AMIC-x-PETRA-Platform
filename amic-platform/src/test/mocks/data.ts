@@ -63,6 +63,16 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
 // 기본 mockUser (하위 호환)
 export const mockUser: AuthUser = SEED_ACCOUNTS[0].user;
 
+// Viewer (read-only) 유저
+export const mockViewerUser: AuthUser = {
+  id: "user-viewer",
+  email: "viewer@amic.kr",
+  display_name: "Viewer",
+  role: "VIEWER",
+  is_active: true,
+  created_at: "2025-01-01T00:00:00Z",
+};
+
 // ── FDD Fixtures ──
 
 export const mockDeals: Deal[] = [
@@ -89,6 +99,9 @@ export const mockDeals: Deal[] = [
     scope_debt: false,
     industry: "general",
     current_phase: "ANALYSIS",
+    deal_structure: null,
+    investment_type: null,
+    seller_type: null,
   },
   {
     id: "deal-2",
@@ -113,6 +126,9 @@ export const mockDeals: Deal[] = [
     scope_debt: true,
     industry: "tech",
     current_phase: "MOU",
+    deal_structure: null,
+    investment_type: null,
+    seller_type: null,
   },
 ];
 
@@ -346,6 +362,7 @@ export const mockDocuments: { items: Document[]; total: number } = {
       corp_code: "00126380",
       company_name: "삼성전자",
       project_name: "Samsung IM",
+      data_source: "DART",
       im_style: "TITAN",
       sections: [
         "cover", "disclaimer", "toc_divider", "executive_summary",
@@ -369,6 +386,7 @@ export const mockDocuments: { items: Document[]; total: number } = {
       corp_code: "00164779",
       company_name: "SK하이닉스",
       project_name: "SK IM",
+      data_source: "DART",
       im_style: "FULL",
       sections: [],
       industry: "general",

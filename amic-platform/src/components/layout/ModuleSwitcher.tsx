@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronDown, BarChart3, Briefcase, FileText, Layers } from "lucide-react";
+import { ChevronDown, BarChart3, Briefcase, FileText, Layers, Handshake } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface ModuleConfig {
@@ -14,11 +14,13 @@ const MODULES: ModuleConfig[] = [
   { id: "fdd", label: "Auto FDD", icon: Briefcase, path: "/fdd/deals" },
   { id: "kiis", label: "KIIS", icon: BarChart3, path: "/kiis" },
   { id: "im", label: "IM Generator", icon: FileText, path: "/im" },
+  { id: "ma", label: "M&A Deals", icon: Handshake, path: "/ma" },
 ];
 
 function getCurrentModule(pathname: string): ModuleConfig | null {
   if (pathname.startsWith("/kiis")) return MODULES[1];
   if (pathname.startsWith("/im")) return MODULES[2];
+  if (pathname.startsWith("/ma")) return MODULES[3];
   if (pathname.startsWith("/fdd")) return MODULES[0];
   // Portal-level routes (/, /admin, /settings) have no active module
   return null;

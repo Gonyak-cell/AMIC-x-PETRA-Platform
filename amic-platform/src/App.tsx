@@ -9,6 +9,7 @@ const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
 const KiisRoutes = React.lazy(() => import("@/modules/kiis/KiisRoutes"));
 const ImRoutes = React.lazy(() => import("@/modules/im/ImRoutes"));
+const MaRoutes = React.lazy(() => import("@/modules/ma/MaRoutes"));
 const AdminRoutes = React.lazy(() => import("@/pages/admin/AdminRoutes"));
 const SettingsRoutes = React.lazy(
   () => import("@/pages/settings/SettingsRoutes"),
@@ -22,15 +23,6 @@ const CalendarRoutes = React.lazy(
 );
 const ExportsRoutes = React.lazy(
   () => import("@/pages/exports/ExportsRoutes"),
-);
-const PortalSamplePage = React.lazy(
-  () => import("@/pages/samples/PortalSamplePage"),
-);
-const NewsSamplePage = React.lazy(
-  () => import("@/pages/samples/NewsSamplePage"),
-);
-const DesignRefreshSamplePage = React.lazy(
-  () => import("@/pages/samples/DesignRefreshSamplePage"),
 );
 
 function ModuleFallback() {
@@ -83,6 +75,14 @@ export default function App() {
           }
         />
         <Route
+          path="ma/*"
+          element={
+            <Suspense fallback={<ModuleFallback />}>
+              <MaRoutes />
+            </Suspense>
+          }
+        />
+        <Route
           path="admin/*"
           element={
             <Suspense fallback={<ModuleFallback />}>
@@ -127,30 +127,6 @@ export default function App() {
           element={
             <Suspense fallback={<ModuleFallback />}>
               <ExportsRoutes />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/portal"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <PortalSamplePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/news"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <NewsSamplePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="samples/design-refresh"
-          element={
-            <Suspense fallback={<ModuleFallback />}>
-              <DesignRefreshSamplePage />
             </Suspense>
           }
         />

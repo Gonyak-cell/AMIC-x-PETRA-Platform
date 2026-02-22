@@ -385,21 +385,21 @@ function MonthlyTrendTable({ nwc, currency }: { nwc: NWCCalculationRead; currenc
 export default function NWCPage() {
   const { dealId } = useParams<{ dealId: string }>();
 
-  if (!dealId) {
-    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
-  }
-
-  const { data: deal } = useDeal(dealId);
+  const { data: deal } = useDeal(dealId ?? "");
   const currency = deal?.base_currency ?? "KRW";
-  const { data: nwcList = [], isLoading } = useNWCCalculations(dealId);
-  const runMutation = useRunNWC(dealId);
+  const { data: nwcList = [], isLoading } = useNWCCalculations(dealId ?? "");
+  const runMutation = useRunNWC(dealId ?? "");
 
   const latestNWC = nwcList.length > 0 ? nwcList[0] : null;
 
-  const updateItemMutation = useUpdateNWCLineItem(dealId, latestNWC?.id ?? "");
+  const updateItemMutation = useUpdateNWCLineItem(dealId ?? "", latestNWC?.id ?? "");
 
   const [snapshotId, setSnapshotId] = useState("");
   const [pegMethod, setPegMethod] = useState<PegMethod>("LTM_AVERAGE");
+
+  if (!dealId) {
+    return <EmptyState title="Invalid Deal" description="No deal ID provided." />;
+  }
 
   const handleRun = async () => {
     if (!snapshotId.trim()) return;

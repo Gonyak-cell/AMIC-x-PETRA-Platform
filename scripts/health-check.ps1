@@ -9,6 +9,7 @@ $services = @(
     @{ Name = "FDD API";          Url = "http://localhost:8000/health" },
     @{ Name = "KIIS API";         Url = "http://localhost:8001/health" },
     @{ Name = "IM API";           Url = "http://localhost:8002/health" },
+    @{ Name = "MA API";           Url = "http://localhost:8003/health" },
     @{ Name = "Elasticsearch";    Url = "http://localhost:9200/_cluster/health" }
 )
 

@@ -128,6 +128,7 @@ class APIConfig(BaseSettings):
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
         description="CORS 허용 오리진 목록",
+        alias="CORS_ORIGINS",
     )
 
     # ── Rate Limiting ──

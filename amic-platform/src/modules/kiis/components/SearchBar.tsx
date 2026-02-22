@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useId } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, useId } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Building2, Landmark, Newspaper, TrendingUp } from "lucide-react";
 import { useUnifiedSearch } from "@/modules/kiis/hooks/useSearch";
@@ -78,7 +78,7 @@ export default function SearchBar() {
   }, []);
 
   const { data: results } = useUnifiedSearch({ q: debouncedQuery });
-  const items = results?.items ?? [];
+  const items = useMemo(() => results?.items ?? [], [results?.items]);
   const hasResults = open && items.length > 0;
 
   const handleSelect = useCallback(

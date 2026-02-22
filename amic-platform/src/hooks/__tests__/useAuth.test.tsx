@@ -48,12 +48,12 @@ describe("useAuth", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("logout resets auth state", () => {
+  it("logout resets auth state", async () => {
     const { wrapper, value } = createAuthWrapper();
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    act(() => {
-      result.current.logout();
+    await act(async () => {
+      await result.current.logout();
     });
 
     expect(value.setAuthState).toHaveBeenCalledWith({

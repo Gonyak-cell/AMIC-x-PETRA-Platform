@@ -92,7 +92,7 @@ export default function DocumentListPage() {
 
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   const filteredItems = useMemo(() => {
     if (statusFilter === "ALL") return items;

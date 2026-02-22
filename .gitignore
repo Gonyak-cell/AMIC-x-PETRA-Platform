@@ -27,6 +27,10 @@ Thumbs.db
 
 # Claude local config
 CLAUDE.local.md
+.claude/settings.local*.json
+
+# Temporary files
+_ul*
 
 # Logs
 *.log
@@ -42,6 +46,7 @@ amic-platform/test-results/
 certbot/
 ssl/
 .env.production
+backups/
 
 # Backend modules (fdd, kiis, im)
 __pycache__/

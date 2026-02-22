@@ -11,6 +11,16 @@ on:
         options:
           - production
           - staging
+      scope:
+        description: What to deploy (auto = detect changes)
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - all
+          - frontend-only
+          - backend-only
   workflow_run:
     workflows: ["CI"]
     branches: [master]
@@ -39,25 +49,119 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            set -e
             cd ${{ secrets.DEPLOY_PATH }}
+            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+            SCOPE="${{ github.event.inputs.scope || 'auto' }}"
+
+            # ── 1. Pre-deploy backup ──
+            echo "=== [1/6] DB Backup ==="
+            if [ -f scripts/backup-all-dbs.sh ]; then
+              bash scripts/backup-all-dbs.sh || echo "WARN: Backup failed, continuing..."
+            fi
+
+            # ── 2. Git pull ──
+            echo "=== [2/6] Git Pull ==="
             PREV_COMMIT=$(git rev-parse HEAD)
             git pull origin master
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend nginx
+            NEW_COMMIT=$(git rev-parse HEAD)
 
-            # Health check with rollback on failure
-            sleep 10
+            if [ "$PREV_COMMIT" = "$NEW_COMMIT" ] && [ "$SCOPE" = "auto" ]; then
+              echo "No changes detected. Skipping deployment."
+              exit 0
+            fi
+
+            # ── 3. Detect changed services ──
+            echo "=== [3/6] Detect Changes ==="
+            CHANGED=$(git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" 2>/dev/null || echo "all")
+            SERVICES=""
+            MIGRATE_FDD=false
+            MIGRATE_KIIS=false
+            MIGRATE_IM=false
+            MIGRATE_MA=false
+
+            if [ "$SCOPE" = "all" ] || [ "$CHANGED" = "all" ]; then
+              SERVICES="frontend nginx fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api"
+              MIGRATE_FDD=true; MIGRATE_KIIS=true; MIGRATE_IM=true; MIGRATE_MA=true
+            elif [ "$SCOPE" = "frontend-only" ]; then
+              SERVICES="frontend nginx"
+            elif [ "$SCOPE" = "backend-only" ]; then
+              SERVICES="fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api"
+              MIGRATE_FDD=true; MIGRATE_KIIS=true; MIGRATE_IM=true; MIGRATE_MA=true
+            else
+              # auto: detect from changed files
+              echo "$CHANGED" | grep -q "amic-platform/"  && SERVICES="$SERVICES frontend nginx"
+              echo "$CHANGED" | grep -q "nginx/"           && SERVICES="$SERVICES nginx"
+              echo "$CHANGED" | grep -q "fdd/"             && SERVICES="$SERVICES fdd-api" && MIGRATE_FDD=true
+              echo "$CHANGED" | grep -q "kiis/"            && SERVICES="$SERVICES kiis-api" && MIGRATE_KIIS=true
+              echo "$CHANGED" | grep -qE "^im/"            && SERVICES="$SERVICES im-api im-celery-worker im-celery-beat" && MIGRATE_IM=true
+              echo "$CHANGED" | grep -q "deal-mgmt/"       && SERVICES="$SERVICES deal-mgmt-api" && MIGRATE_MA=true
+            fi
+
+            # Deduplicate
+            SERVICES=$(echo "$SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
+
+            if [ -z "$SERVICES" ]; then
+              echo "No relevant services to rebuild. Skipping."
+              exit 0
+            fi
+
+            echo "Services to rebuild: $SERVICES"
+
+            # ── 4. Build & restart ──
+            echo "=== [4/6] Build & Restart ==="
+            $COMPOSE build --no-cache $SERVICES
+            $COMPOSE up -d $SERVICES
+
+            # ── 5. DB Migrations ──
+            echo "=== [5/6] DB Migrations ==="
+            if [ "$MIGRATE_FDD" = true ]; then
+              echo "  Running FDD migrations..."
+              $COMPOSE exec -T fdd-api alembic upgrade head || echo "WARN: FDD migration failed"
+            fi
+            if [ "$MIGRATE_KIIS" = true ]; then
+              echo "  Running KIIS migrations..."
+              $COMPOSE exec -T kiis-api alembic upgrade head || echo "WARN: KIIS migration failed"
+            fi
+            if [ "$MIGRATE_IM" = true ]; then
+              echo "  Running IM migrations..."
+              $COMPOSE exec -T im-api alembic upgrade head || echo "WARN: IM migration failed"
+            fi
+            if [ "$MIGRATE_MA" = true ]; then
+              echo "  Running MA migrations..."
+              $COMPOSE exec -T deal-mgmt-api alembic upgrade head || echo "WARN: MA migration failed"
+            fi
+
+            # ── 6. Health check + rollback ──
+            echo "=== [6/6] Health Check ==="
+            sleep 15
             HEALTH_OK=true
-            curl -sf http://localhost/api/fdd/health || { echo "ERROR: FDD health check failed"; HEALTH_OK=false; }
-            curl -sf http://localhost/api/kiis/health || { echo "ERROR: KIIS health check failed"; HEALTH_OK=false; }
-            curl -sf http://localhost/api/im/health || { echo "ERROR: IM health check failed"; HEALTH_OK=false; }
+            for ep in fdd kiis im ma; do
+              if curl -sf --max-time 10 "http://localhost/api/$ep/health" > /dev/null 2>&1; then
+                echo "  $ep: OK"
+              else
+                echo "  $ep: FAILED"
+                HEALTH_OK=false
+              fi
+            done
+
+            # Frontend check
+            if curl -sf --max-time 10 "http://localhost/" > /dev/null 2>&1; then
+              echo "  frontend: OK"
+            else
+              echo "  frontend: FAILED"
+              HEALTH_OK=false
+            fi
 
             if [ "$HEALTH_OK" = false ]; then
-              echo "Rolling back to $PREV_COMMIT"
+              echo ""
+              echo "!!! HEALTH CHECK FAILED — Rolling back to $PREV_COMMIT !!!"
               git checkout "$PREV_COMMIT"
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend nginx
+              $COMPOSE build --no-cache $SERVICES
+              $COMPOSE up -d $SERVICES
               echo "Rollback complete"
               exit 1
             fi
-            echo "Deployment complete — all health checks passed"
+
+            echo ""
+            echo "=== Deployment complete — all health checks passed ==="

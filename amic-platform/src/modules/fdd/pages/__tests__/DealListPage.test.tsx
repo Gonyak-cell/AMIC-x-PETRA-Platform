@@ -18,7 +18,7 @@ describe("DealListPage", () => {
     renderWithProviders(<DealListPage />);
 
     expect(screen.getByText("Deals")).toBeInTheDocument();
-    expect(screen.getByText("New Deal")).toBeInTheDocument();
+    expect(screen.getByText("새 딜 생성")).toBeInTheDocument();
   });
 
   it("shows deal data after loading", async () => {
@@ -39,23 +39,21 @@ describe("DealListPage", () => {
     });
 
     // 2 deals total, 1 active, 1 draft, 0 archived
-    expect(screen.getByText("Total Deals")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Draft")).toBeInTheDocument();
-    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.getByText("전체 딜")).toBeInTheDocument();
+    expect(screen.getByText("진행 중")).toBeInTheDocument();
+    expect(screen.getByText("초안")).toBeInTheDocument();
+    expect(screen.getByText("보관")).toBeInTheDocument();
   });
 
-  it("opens create modal when clicking New Deal", async () => {
+  it("opens create modal when clicking new deal button", async () => {
     const user = userEvent.setup();
     renderWithProviders(<DealListPage />);
 
-    await user.click(screen.getByText("New Deal"));
+    await user.click(screen.getByText("새 딜 생성"));
 
     await waitFor(() => {
-      expect(screen.getByText("Create New Deal")).toBeInTheDocument();
+      expect(screen.getByLabelText(/딜 이름/i)).toBeInTheDocument();
     });
-
-    expect(screen.getByLabelText(/deal name/i)).toBeInTheDocument();
   });
 
   it("shows empty state when no deals", async () => {
@@ -68,12 +66,12 @@ describe("DealListPage", () => {
     renderWithProviders(<DealListPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No deals yet")).toBeInTheDocument();
+      expect(screen.getByText("아직 딜이 없습니다")).toBeInTheDocument();
     });
 
     expect(
       screen.getByText(
-        "Create your first deal to get started with FDD analysis.",
+        "새 딜을 생성하여 FDD 분석을 시작하세요.",
       ),
     ).toBeInTheDocument();
   });

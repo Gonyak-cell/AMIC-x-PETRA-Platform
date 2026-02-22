@@ -39,6 +39,7 @@ services:
       - fdd-api
       - kiis-api
       - im-api
+      - deal-mgmt-api
     networks:
       - amic-network
 
@@ -175,6 +176,56 @@ services:
     networks:
       - amic-network
 
+  # ======================== DEAL MANAGEMENT BACKEND ========================
+  deal-mgmt-api:
+    build:
+      context: ./deal-mgmt
+    container_name: amic-deal-mgmt-api
+    ports:
+      - "8003:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD:-deal_mgmt_dev_password}@deal-mgmt-db:5432/deal_mgmt
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      ALLOWED_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
+      FDD_API_URL: http://fdd-api:8000/api/v1
+      IM_API_URL: http://im-api:8000/api
+      KIIS_API_URL: http://kiis-api:8000/api/v1
+      DEBUG: "true"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./deal-mgmt:/app
+      - /app/__pycache__
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      deal-mgmt-db:
+        condition: service_healthy
+    networks:
+      - amic-network
+
+  deal-mgmt-db:
+    image: postgres:16-alpine
+    container_name: amic-deal-mgmt-db
+    environment:
+      POSTGRES_DB: deal_mgmt
+      POSTGRES_USER: deal_mgmt_user
+      POSTGRES_PASSWORD: ${MA_DB_PASSWORD:-deal_mgmt_dev_password}
+    ports:
+      - "5436:5432"
+    volumes:
+      - deal_mgmt_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deal_mgmt_user -d deal_mgmt"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
   # ======================== IM BACKEND ========================
   im-api:
     build:
@@ -189,7 +240,7 @@ services:
       REDIS_URL: redis://im-redis:6379/0
       REDIS_RESULT_BACKEND: redis://im-redis:6379/1
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
     command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       im-db:
@@ -305,3 +356,4 @@ volumes:
   im_pgdata:
   im_redis_data:
   im_output_data:
+  deal_mgmt_pgdata:

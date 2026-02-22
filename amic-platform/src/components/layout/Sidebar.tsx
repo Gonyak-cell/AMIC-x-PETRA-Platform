@@ -32,6 +32,9 @@ import {
   Calendar,
   Download,
   HelpCircle,
+  Handshake,
+  Search,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -97,6 +100,21 @@ const KIIS_PORTFOLIO = [
   { to: "/kiis/watchlist", label: "Watchlist", icon: Star },
 ];
 
+// ── M&A Navigation ──
+
+const MA_PIPELINE_NAV = [
+  { to: "/ma/transactions", label: "Pipeline", icon: Handshake },
+  { to: "/ma/transactions/new", label: "New Transaction", icon: PlusCircle },
+];
+
+const MA_WORKSPACE_NAV = [
+  { to: "", label: "Overview", icon: Eye, end: true },
+  { to: "engagement", label: "수임", icon: Scale },
+  { to: "team", label: "팀", icon: Users },
+  { to: "buyers", label: "매수자", icon: Search },
+  { to: "timeline", label: "타임라인", icon: Activity },
+];
+
 // ── IM Navigation ──
 
 const IM_NAV = [
@@ -119,9 +137,15 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
   const isFdd = location.pathname.startsWith("/fdd");
   const isKiis = location.pathname.startsWith("/kiis");
   const isIm = location.pathname.startsWith("/im");
+  const isMa = location.pathname.startsWith("/ma");
   const isAdmin = location.pathname.startsWith("/admin");
   const isInDealWorkspace =
     isFdd && location.pathname.startsWith("/fdd/deals/") && dealId;
+
+  // MA 워크스페이스 감지: /ma/transactions/:txnId (new 제외)
+  const maTxnMatch = location.pathname.match(/^\/ma\/transactions\/([^/]+)/);
+  const maTxnId = maTxnMatch?.[1];
+  const isInMaWorkspace = isMa && !!maTxnId && maTxnId !== "new";
 
   return (
     <aside
@@ -281,6 +305,37 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                   to={item.to}
                   label={item.label}
                   icon={item.icon}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </SidebarSection>
+          </>
+        )}
+
+        {/* M&A Navigation */}
+        {isMa && (
+          <>
+            <nav className="space-y-1" aria-label="M&A navigation">
+              {MA_PIPELINE_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </nav>
+
+            <SidebarSection title="Workspace" collapsible defaultOpen storageKey="ma-workspace">
+              {MA_WORKSPACE_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.to || "__overview"}
+                  to={isInMaWorkspace ? `/ma/transactions/${maTxnId}/${item.to}` : "#"}
+                  label={item.label}
+                  icon={item.icon}
+                  end={item.end}
+                  disabled={!isInMaWorkspace}
                   onClick={onNavItemClick}
                 />
               ))}

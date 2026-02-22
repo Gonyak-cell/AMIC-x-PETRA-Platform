@@ -112,6 +112,8 @@ describe("useCreateDocument", () => {
     const { result } = renderHook(() => useCreateDocument(), { wrapper });
 
     result.current.mutate({
+      company_name: "삼성전자",
+      project_name: "Samsung IM",
       corp_code: "00126380",
       im_style: "TITAN",
     });

@@ -701,4 +701,22 @@ export const handlers = [
       offset,
     });
   }),
+
+  // ── MA (Deal Management) ──
+  http.get("*/api/ma/health", () => {
+    return HttpResponse.json({ status: "ok" });
+  }),
+
+  http.get("*/api/ma/transactions", () => {
+    return HttpResponse.json({ items: [], total: 0, limit: 100, offset: 0 });
+  }),
+
+  http.get("*/api/ma/dashboard/stats", () => {
+    return HttpResponse.json({
+      total_transactions: 0,
+      active_transactions: 0,
+      by_phase: {},
+      by_status: {},
+    });
+  }),
 ];

@@ -4,6 +4,8 @@
 # 사용법: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # 백엔드 포트(8000-8002)는 호스트에 노출하지 않음 (nginx 경유만 허용)
 #
+# JWT 시크릿: SHARED_JWT_SECRET 하나로 모든 백엔드 통일 (크로스 모듈 인증)
+#
 # SSL/도메인 추가 시: docker-compose.ssl.yml 오버레이 사용
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.ssl.yml up -d
 # ============================================================
@@ -43,7 +45,7 @@ services:
       DATABASE_URL: postgresql://autofdd:${FDD_DB_PASSWORD}@fdd-db:5432/autofdd
       PPTX_SERVICE_URL: http://fdd-pptx:3100
       CORS_ORIGINS: ${FDD_CORS_ORIGINS}
-      JWT_SECRET: ${FDD_JWT_SECRET}
+      JWT_SECRET: ${SHARED_JWT_SECRET}
       LOG_LEVEL: ${FDD_LOG_LEVEL:-INFO}
     restart: unless-stopped
     deploy:
@@ -88,7 +90,7 @@ services:
       REDIS_URL: redis://:${KIIS_REDIS_PASSWORD:-redis}@kiis-redis:6379/0
       ELASTICSEARCH_URL: http://elastic:${KIIS_ES_PASSWORD:-changeme}@kiis-es:9200
       CORS_ORIGINS: ${KIIS_CORS_ORIGINS}
-      SECRET_KEY: ${KIIS_SECRET_KEY}
+      SECRET_KEY: ${SHARED_JWT_SECRET}
       WORKERS: 4
       LOG_LEVEL: ${KIIS_LOG_LEVEL:-WARNING}
     restart: unless-stopped
@@ -156,7 +158,7 @@ services:
       REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
       REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
       CORS_ORIGINS: ${IM_CORS_ORIGINS}
-      SECRET_KEY: ${IM_SECRET_KEY}
+      SECRET_KEY: ${SHARED_JWT_SECRET}
       DEBUG: "false"
       LOG_LEVEL: ${IM_LOG_LEVEL:-WARNING}
     restart: unless-stopped
@@ -228,6 +230,45 @@ services:
       REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
       REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ======================== DEAL MANAGEMENT BACKEND ========================
+  deal-mgmt-api:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    ports: []
+    volumes: []
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD}@deal-mgmt-db:5432/deal_mgmt
+      JWT_SECRET: ${SHARED_JWT_SECRET}
+      ALLOWED_ORIGINS: ${MA_CORS_ORIGINS}
+      FDD_API_URL: http://fdd-api:8000/api/v1
+      IM_API_URL: http://im-api:8000/api
+      KIIS_API_URL: http://kiis-api:8000/api/v1
+      DEBUG: "false"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  deal-mgmt-db:
+    ports: []
+    environment:
+      POSTGRES_PASSWORD: ${MA_DB_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     logging:
       driver: "json-file"
       options:

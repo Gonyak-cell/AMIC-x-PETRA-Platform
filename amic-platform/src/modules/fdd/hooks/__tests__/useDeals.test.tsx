@@ -98,6 +98,7 @@ describe("useCreateDeal", () => {
 
     result.current.mutate({
       name: "New Deal",
+      target_company_name: "Test Target Co",
       deal_type: "LOCKED_BOX",
       base_currency: "USD",
       reference_date: "2025-12-31",

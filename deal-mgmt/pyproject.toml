@@ -1,0 +1,47 @@
+[project]
+name = "deal-mgmt"
+version = "0.1.0"
+description = "M&A Deal Management Service — 7단계 거래 워크플로우 관리 시스템"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "httpx>=0.28.0",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-httpx>=0.35.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+    "aiosqlite>=0.20.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
