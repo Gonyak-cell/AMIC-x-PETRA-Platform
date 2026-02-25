@@ -121,7 +121,7 @@ const DEAL_STATUS_BADGE: Record<DealStatus, { label: string; cls: string }> = {
   ARCHIVED: { label: "Archived", cls: "bg-orange-100 text-orange-700" },
 };
 
-const fddColumns: Column<Deal>[] = [
+const _fddColumns: Column<Deal>[] = [
   {
     key: "name",
     header: "Deal Name",

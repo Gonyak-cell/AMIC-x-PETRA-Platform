@@ -20,7 +20,7 @@ for (const p of PHASE_CONFIG) {
   PHASE_LABEL[p.phase] = p.label;
 }
 
-export function useCalendarEvents(filter: CalendarFilter) {
+export function useCalendarEvents(_filter: CalendarFilter) {
   const txnQuery = useQuery({
     queryKey: ["calendar", "ma-transactions"],
     queryFn: async () => {

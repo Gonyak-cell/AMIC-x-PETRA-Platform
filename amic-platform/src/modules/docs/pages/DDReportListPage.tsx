@@ -7,7 +7,7 @@ import {
   FileText,
   Loader2,
   CheckCircle,
-  AlertTriangle,
+  AlertTriangle as _AlertTriangle,
   XCircle,
 } from "lucide-react";
 import {

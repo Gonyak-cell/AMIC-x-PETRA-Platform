@@ -36,11 +36,11 @@ const STATUS_COLORS: Record<ChecklistItemStatus, string> = {
   NOT_APPLICABLE: "bg-bg-cool text-text-muted",
 };
 
-const SEVERITY_VARIANTS: Record<ChecklistSeverity, "error" | "warning" | "info" | "default"> = {
+const SEVERITY_VARIANTS: Record<ChecklistSeverity, "error" | "warning" | "info" | "neutral"> = {
   HIGH: "error",
   MEDIUM: "warning",
   LOW: "info",
-  INFO: "default",
+  INFO: "neutral",
 };
 
 export default function ChecklistItemCard({
