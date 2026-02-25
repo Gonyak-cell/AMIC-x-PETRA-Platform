@@ -31,7 +31,7 @@ import type { IMStyle, IndustryId } from "@/modules/im/types/document";
 import { isIMStyle } from "@/modules/im/types/document";
 import { INDUSTRY_OPTIONS, isIndustryId } from "@/types/industry";
 import type { VdrDocument, VdrFolder } from "@/modules/ma/types/vdr";
-import { VDR_CATEGORY_LABELS, MIME_TYPE_LABELS } from "@/modules/ma/types/vdr";
+import { MIME_TYPE_LABELS } from "@/modules/ma/types/vdr";
 import heroImg from "@/assets/images/heroes/hero-arch-mono.jpg";
 
 // ── Step titles ──────────────────────────────────────────────

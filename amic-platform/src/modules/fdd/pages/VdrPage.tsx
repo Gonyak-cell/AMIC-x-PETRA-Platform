@@ -18,7 +18,7 @@ export default function VdrPage() {
 
   const handleRunAnalysis = async () => {
     try {
-      await runAnalysis.mutateAsync();
+      await runAnalysis.mutateAsync(undefined);
       toast.success("Auto analysis started — redirecting to checklist");
       navigate(`/fdd/deals/${dealId}/checklist`);
     } catch {

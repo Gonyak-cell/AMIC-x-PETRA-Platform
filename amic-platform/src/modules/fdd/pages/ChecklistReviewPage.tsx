@@ -11,7 +11,7 @@ import {
   useFinalizeChecklist,
   CATEGORY_GROUPS,
 } from "@/modules/fdd/hooks/useChecklist";
-import type { ChecklistItemStatus, ChecklistCategory } from "@/modules/fdd/hooks/useChecklist";
+import type { ChecklistItemStatus } from "@/modules/fdd/hooks/useChecklist";
 import { useRunAnalysis } from "@/modules/fdd/hooks/useAnalysis";
 import heroImg from "@/assets/images/heroes/hero-arch-teal.jpg";
 

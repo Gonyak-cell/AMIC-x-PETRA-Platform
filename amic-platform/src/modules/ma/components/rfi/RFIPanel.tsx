@@ -8,7 +8,6 @@ import { Plus, Sparkles, FileText } from "lucide-react";
 import {
   useRFIs,
   useRFISummary,
-  useDeleteRFI,
   useGenerateRFIFromDD,
   useRespondRFIItem,
   useReviewRFIItem,
@@ -34,7 +33,6 @@ interface RFIPanelProps {
 export default function RFIPanel({ txnId }: RFIPanelProps) {
   const { data: rfis, isLoading: rfisLoading, isError: rfisError } = useRFIs(txnId);
   const { data: summary, isLoading: summaryLoading } = useRFISummary(txnId);
-  const _deleteRFI = useDeleteRFI(txnId);
   const generateFromDD = useGenerateRFIFromDD(txnId);
 
   const [showCreate, setShowCreate] = useState(false);

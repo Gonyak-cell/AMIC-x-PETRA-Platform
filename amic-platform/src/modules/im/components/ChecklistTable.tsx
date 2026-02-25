@@ -5,7 +5,6 @@ import { ChecklistItemRow } from "./ChecklistItemRow";
 import type {
   ChecklistCategory,
   ChecklistItem,
-  ChecklistItemStatus,
 } from "@/modules/im/types/checklist";
 
 export interface ChecklistTableProps {

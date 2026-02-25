@@ -417,7 +417,7 @@ export default function ReportPage() {
                       latestRalphSession.status === "COMPLETED"
                         ? "success"
                         : latestRalphSession.status === "FAILED"
-                          ? "danger"
+                          ? "error"
                           : "info"
                     }
                   >

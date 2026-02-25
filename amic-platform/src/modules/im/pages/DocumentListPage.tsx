@@ -12,7 +12,7 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { Document, DocumentStatus, DataSource } from "@/modules/im/types/document";
+import type { Document, DocumentStatus } from "@/modules/im/types/document";
 import { DATA_SOURCE_BADGE } from "@/modules/im/types/document";
 import { IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
