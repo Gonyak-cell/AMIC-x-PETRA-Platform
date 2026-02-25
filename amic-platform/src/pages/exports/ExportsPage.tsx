@@ -5,6 +5,7 @@ import { ExportFilterBar } from "@/components/exports/ExportFilterBar";
 import { ExportTable } from "@/components/exports/ExportTable";
 import { KpiCard, KpiCardSkeleton, EmptyState, PageHero } from "@/components/ui";
 import type { ExportModule, ExportStatus, ExportRecord } from "@/types/export";
+import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
 export default function ExportsPage() {
   const [module, setModule] = useState<ExportModule | undefined>();
@@ -28,7 +29,9 @@ export default function ExportsPage() {
       {/* Hero Section */}
       <PageHero
         title="Data Export Hub"
-        subtitle="Unified export history across FDD, KIIS, and IM modules"
+        subtitle="Unified export history across M&A, Deal Doc Studio, and KIIS modules"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
       />
 
@@ -98,7 +101,7 @@ export default function ExportsPage() {
       ) : records.length === 0 && !isLoading ? (
         <EmptyState
           title="No exports yet"
-          description="Exports from FDD reports, KIIS research, and IM documents will appear here."
+          description="Exports from M&A deal materials, Deal Doc Studio documents, and KIIS research will appear here."
         />
       ) : (
         <ExportTable

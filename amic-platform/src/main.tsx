@@ -65,7 +65,7 @@ createRoot(document.getElementById("root")!).render(
                 toastOptions={{
                   className: "font-body",
                   style: {
-                    fontFamily: "'Pretendard', 'Inter', sans-serif",
+                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                   },
                 }}
                 richColors

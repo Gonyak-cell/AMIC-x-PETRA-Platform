@@ -1,5 +1,6 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { cn } from "@/lib/cn";
+import { gsap } from "@/lib/gsap";
 import type { LucideIcon } from "lucide-react";
 
 export interface TabItem {
@@ -28,6 +29,7 @@ export function Tabs({
   className,
 }: TabsProps) {
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const indicatorRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, index: number) => {
@@ -59,6 +61,22 @@ export function Tabs({
     [tabs, onTabChange],
   );
 
+  // Animate underline indicator to active tab position
+  useEffect(() => {
+    if (variant !== "underline" || !indicatorRef.current) return;
+
+    const activeIndex = tabs.findIndex((t) => t.id === activeTab);
+    const activeEl = tabsRef.current[activeIndex];
+    if (!activeEl) return;
+
+    gsap.to(indicatorRef.current, {
+      x: activeEl.offsetLeft,
+      width: activeEl.offsetWidth,
+      duration: 0.3,
+      ease: "power2.inOut",
+    });
+  }, [activeTab, tabs, variant]);
+
   const isUnderline = variant === "underline";
 
   return (
@@ -66,12 +84,17 @@ export function Tabs({
       role="tablist"
       aria-orientation="horizontal"
       className={cn(
-        isUnderline && "border-b border-gray-border",
+        isUnderline && "relative border-b border-gray-border",
         !isUnderline && "flex gap-1 rounded-dr bg-bg-cool p-1",
         className,
       )}
     >
-      <div className={cn(isUnderline && "flex gap-1 overflow-x-auto scrollbar-hide", !isUnderline && "flex gap-1 w-full overflow-x-auto scrollbar-hide")}>
+      <div
+        className={cn(
+          isUnderline && "flex gap-1 overflow-x-auto scrollbar-hide",
+          !isUnderline && "flex gap-1 w-full overflow-x-auto scrollbar-hide",
+        )}
+      >
         {tabs.map((tab, index) => {
           const isActive = tab.id === activeTab;
           const Icon = tab.icon;
@@ -79,7 +102,9 @@ export function Tabs({
           return (
             <button
               key={tab.id}
-              ref={(el) => { tabsRef.current[index] = el; }}
+              ref={(el) => {
+                tabsRef.current[index] = el;
+              }}
               role="tab"
               id={`tab-${tab.id}`}
               aria-selected={isActive}
@@ -93,12 +118,12 @@ export function Tabs({
                 "inline-flex items-center gap-1.5 whitespace-nowrap font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                 size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2.5",
                 tab.disabled && "opacity-40 cursor-not-allowed",
-                // Underline variant
+                // Underline variant — no static border-b, indicator handles it
                 isUnderline && [
                   "-mb-px",
                   isActive
-                    ? "border-b-2 border-accent text-accent"
-                    : "border-b-2 border-transparent text-text-secondary hover:text-text-dark hover:border-gray-300",
+                    ? "text-accent"
+                    : "text-text-secondary hover:text-text-dark",
                 ],
                 // Pill variant
                 !isUnderline && [
@@ -109,13 +134,19 @@ export function Tabs({
                 ],
               )}
             >
-              {Icon && <Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />}
+              {Icon && (
+                <Icon
+                  className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"}
+                />
+              )}
               {tab.label}
               {tab.badge != null && (
                 <span
                   className={cn(
                     "ml-1 inline-flex items-center justify-center rounded-full text-[10px] font-semibold leading-none",
-                    size === "sm" ? "h-4 min-w-4 px-1" : "h-5 min-w-5 px-1.5",
+                    size === "sm"
+                      ? "h-4 min-w-4 px-1"
+                      : "h-5 min-w-5 px-1.5",
                     isActive
                       ? "bg-accent/10 text-accent"
                       : "bg-gray-200 text-text-secondary",
@@ -128,6 +159,15 @@ export function Tabs({
           );
         })}
       </div>
+
+      {/* Sliding underline indicator */}
+      {isUnderline && (
+        <div
+          ref={indicatorRef}
+          className="absolute bottom-0 left-0 h-0.5 bg-accent rounded-full"
+          style={{ width: 0 }}
+        />
+      )}
     </div>
   );
 }

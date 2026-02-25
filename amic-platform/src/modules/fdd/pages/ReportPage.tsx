@@ -3,11 +3,18 @@ import { useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileOutput,
+  FileSpreadsheet,
   Eye,
   Download,
   FileJson,
   FileText,
   Presentation,
+  ClipboardCheck,
+  Sparkles,
+  Zap,
+  Table,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/api/client";
@@ -22,7 +29,13 @@ import {
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { useReportVersions } from "@/modules/fdd/hooks/useReportVersions";
+import { useChecklist } from "@/modules/fdd/hooks/useChecklist";
+import {
+  useFddRalphSessions,
+  useCreateFddRalphSession,
+} from "@/modules/fdd/hooks/useRalphLoop";
 import ReportVersionList from "@/modules/fdd/components/report/ReportVersionList";
+import heroImg from "@/assets/images/heroes/hero-arch-teal.jpg";
 
 interface ReportPreview {
   deal_id: string;
@@ -40,14 +53,30 @@ export default function ReportPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const queryClient = useQueryClient();
   const { data: versions = [] } = useReportVersions(dealId!);
+  const { data: checklist } = useChecklist(dealId!);
+  const { data: ralphSessions = [] } = useFddRalphSessions(dealId!);
+  const createRalphSession = useCreateFddRalphSession(dealId!);
   const [preview, setPreview] = useState<ReportPreview | null>(null);
+  const [includeChecklist, setIncludeChecklist] = useState(false);
+  const [ralphEnabled, setRalphEnabled] = useState(false);
+  const [ralphConfig, setRalphConfig] = useState({
+    max_iterations_per_section: 3,
+    max_cost_usd: 20,
+    pass_threshold: 4.0,
+  });
   const [options, setOptions] = useState({
     include_qoe: true,
     include_nwc: true,
     include_debt: true,
     include_issues: true,
+    include_financial_statements: true,
+    include_trends: true,
+    include_sales_analysis: true,
     format: "pptx",
   });
+
+  const hasFinalized = checklist?.status === "FINALIZED";
+  const latestRalphSession = ralphSessions[0] ?? null;
 
   // Preview mutation
   const previewMutation = useMutation({
@@ -57,6 +86,9 @@ export default function ReportPage() {
         include_nwc: String(options.include_nwc),
         include_debt: String(options.include_debt),
         include_issues: String(options.include_issues),
+        include_financial_statements: String(options.include_financial_statements),
+        include_trends: String(options.include_trends),
+        include_sales_analysis: String(options.include_sales_analysis),
       });
       const { data } = await api.get<ReportPreview>(
         `/deals/${dealId}/reports/preview?${params}`
@@ -75,10 +107,18 @@ export default function ReportPage() {
   // Generate mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const isBlobFormat = options.format === "pptx" || options.format === "docx";
+      const isBlobFormat = options.format === "pptx" || options.format === "docx" || options.format === "xlsx";
+      const body = {
+        ...options,
+        ...(includeChecklist && hasFinalized && checklist
+          ? { checklist_id: checklist.id }
+          : {}),
+        ralph_enabled: ralphEnabled,
+        ...(ralphEnabled ? { ralph_config: ralphConfig } : {}),
+      };
       const response = await api.post(
         `/deals/${dealId}/reports/generate`,
-        { ...options },
+        body,
         { responseType: isBlobFormat ? "blob" : "json" }
       );
 
@@ -86,6 +126,7 @@ export default function ReportPage() {
         const mimeTypes: Record<string, string> = {
           pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
           docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         };
         const blob = new Blob([response.data], {
           type: mimeTypes[options.format],
@@ -149,8 +190,10 @@ export default function ReportPage() {
       {/* Header */}
       <PageHero
         title="Report Generation"
-        subtitle="Generate FDD report in PowerPoint, Word, or JSON format"
+        subtitle="Generate FDD report in PowerPoint, Word, Excel, or JSON format"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* Options */}
@@ -209,7 +252,207 @@ export default function ReportPage() {
                 />
                 Issue Log
               </label>
+
+              <label className="flex items-center gap-3 text-sm text-text-body cursor-pointer p-3 rounded-lg border border-gray-border hover:border-amic transition-colors">
+                <input
+                  type="checkbox"
+                  checked={options.include_financial_statements}
+                  onChange={(e) =>
+                    setOptions({ ...options, include_financial_statements: e.target.checked })
+                  }
+                  className="rounded border-gray-border text-amic focus:ring-amic h-4 w-4"
+                />
+                <Table className="h-4 w-4 text-text-secondary" />
+                Financial Statements
+              </label>
+
+              <label className="flex items-center gap-3 text-sm text-text-body cursor-pointer p-3 rounded-lg border border-gray-border hover:border-amic transition-colors">
+                <input
+                  type="checkbox"
+                  checked={options.include_trends}
+                  onChange={(e) =>
+                    setOptions({ ...options, include_trends: e.target.checked })
+                  }
+                  className="rounded border-gray-border text-amic focus:ring-amic h-4 w-4"
+                />
+                <TrendingUp className="h-4 w-4 text-text-secondary" />
+                Trend Analysis
+              </label>
+
+              <label className="flex items-center gap-3 text-sm text-text-body cursor-pointer p-3 rounded-lg border border-gray-border hover:border-amic transition-colors">
+                <input
+                  type="checkbox"
+                  checked={options.include_sales_analysis}
+                  onChange={(e) =>
+                    setOptions({ ...options, include_sales_analysis: e.target.checked })
+                  }
+                  className="rounded border-gray-border text-amic focus:ring-amic h-4 w-4"
+                />
+                <BarChart3 className="h-4 w-4 text-text-secondary" />
+                Sales/Cost Analysis
+              </label>
             </div>
+
+            {/* Checklist Integration */}
+            {hasFinalized && (
+              <div className="mt-4 pt-4 border-t border-gray-border/50">
+                <label className="flex items-center gap-3 text-sm text-text-body cursor-pointer p-3 rounded-lg border border-gray-border hover:border-amic transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeChecklist}
+                    onChange={(e) => setIncludeChecklist(e.target.checked)}
+                    className="rounded border-gray-border text-amic focus:ring-amic h-4 w-4"
+                  />
+                  <ClipboardCheck className="h-4 w-4 text-amic" />
+                  <div>
+                    <span className="font-medium">Include Checklist Adjustments</span>
+                    <span className="text-xs text-text-secondary ml-2">
+                      (Finalized checklist v{checklist?.version})
+                    </span>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Ralph Loop AI Refinement */}
+          <div className="border-t border-gray-border pt-4">
+            <h4 className="text-sm font-heading font-semibold text-text-dark mb-4 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              AI Quality Refinement (Ralph Loop)
+            </h4>
+            <label className="flex items-center gap-3 text-sm text-text-body cursor-pointer p-3 rounded-lg border border-gray-border hover:border-amber-400 transition-colors">
+              <input
+                type="checkbox"
+                checked={ralphEnabled}
+                onChange={(e) => setRalphEnabled(e.target.checked)}
+                className="rounded border-gray-border text-amber-500 focus:ring-amber-500 h-4 w-4"
+              />
+              <div>
+                <span className="font-medium">Enable Ralph Loop</span>
+                <span className="text-xs text-text-secondary ml-2">
+                  Iterative AI refinement for IB-grade text quality (Pass 1)
+                </span>
+              </div>
+            </label>
+
+            {ralphEnabled && (
+              <div className="mt-3 ml-7 space-y-3 p-4 bg-amber-50/50 rounded-lg border border-amber-200/50">
+                <div>
+                  <label className="text-xs font-medium text-text-dark">
+                    Max Iterations per Section: {ralphConfig.max_iterations_per_section}
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={ralphConfig.max_iterations_per_section}
+                    onChange={(e) =>
+                      setRalphConfig({
+                        ...ralphConfig,
+                        max_iterations_per_section: Number(e.target.value),
+                      })
+                    }
+                    className="w-full mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-dark">
+                    Budget Limit: ${ralphConfig.max_cost_usd}
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={50}
+                    value={ralphConfig.max_cost_usd}
+                    onChange={(e) =>
+                      setRalphConfig({
+                        ...ralphConfig,
+                        max_cost_usd: Number(e.target.value),
+                      })
+                    }
+                    className="w-full mt-1"
+                  />
+                </div>
+                <p className="text-xs text-text-secondary">
+                  Estimated cost: $2-8 for draft pass, $0.5-2 for final pass
+                </p>
+              </div>
+            )}
+
+            {/* Pass 2: Final Report with Ralph Loop */}
+            {hasFinalized && (
+              <div className="mt-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={Zap}
+                  onClick={() =>
+                    createRalphSession.mutate({
+                      pass_type: "final",
+                      checklist_id: checklist?.id,
+                      config: {
+                        max_iterations_per_section: 2,
+                        max_cost_usd: 5,
+                        pass_threshold: 4.0,
+                      },
+                    })
+                  }
+                  loading={createRalphSession.isPending}
+                >
+                  Generate Final Report (Ralph Pass 2)
+                </Button>
+              </div>
+            )}
+
+            {/* Latest Ralph Session Status */}
+            {latestRalphSession && (
+              <div className="mt-3 p-3 bg-bg-cool rounded-lg border border-gray-border/50 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-text-dark">
+                    Latest: {latestRalphSession.pass_type === "draft" ? "Draft" : "Final"} Pass
+                  </span>
+                  <Badge
+                    variant={
+                      latestRalphSession.status === "COMPLETED"
+                        ? "success"
+                        : latestRalphSession.status === "FAILED"
+                          ? "danger"
+                          : "info"
+                    }
+                  >
+                    {latestRalphSession.status}
+                  </Badge>
+                </div>
+                {latestRalphSession.final_score > 0 && (
+                  <div className="mt-2 flex items-center gap-4 text-text-secondary">
+                    <span>Score: {latestRalphSession.final_score.toFixed(1)}/5.0</span>
+                    <span>Iterations: {latestRalphSession.total_iterations}</span>
+                    <span>Cost: ${latestRalphSession.total_cost_usd.toFixed(2)}</span>
+                  </div>
+                )}
+                {latestRalphSession.section_scores && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {Object.entries(latestRalphSession.section_scores).map(
+                      ([section, score]) => (
+                        <span
+                          key={section}
+                          className={`px-2 py-0.5 rounded text-xs ${
+                            (score as number) >= 4
+                              ? "bg-green-100 text-green-700"
+                              : (score as number) >= 3
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {section}: {(score as number).toFixed(1)}
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Format Selection */}
@@ -271,6 +514,34 @@ export default function ReportPage() {
                 <div>
                   <div className="font-medium text-text-dark">Word</div>
                   <div className="text-xs text-text-secondary">.docx file</div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center gap-3 text-sm cursor-pointer p-4 rounded-lg border-2 transition-colors ${
+                  options.format === "xlsx"
+                    ? "border-amic bg-bg-light-green"
+                    : "border-gray-border hover:border-amic-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="format"
+                  value="xlsx"
+                  checked={options.format === "xlsx"}
+                  onChange={(e) =>
+                    setOptions({ ...options, format: e.target.value })
+                  }
+                  className="sr-only"
+                />
+                <FileSpreadsheet
+                  className={`h-5 w-5 ${
+                    options.format === "xlsx" ? "text-amic" : "text-text-secondary"
+                  }`}
+                />
+                <div>
+                  <div className="font-medium text-text-dark">Excel</div>
+                  <div className="text-xs text-text-secondary">.xlsx file</div>
                 </div>
               </label>
 

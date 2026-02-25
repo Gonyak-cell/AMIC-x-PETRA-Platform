@@ -13,6 +13,7 @@ import type { Column } from "@/components/ui";
 import type { WatchlistItem, Alert } from "@/modules/kiis/types/watchlist";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import heroImg from "@/assets/images/forest-bg.jpg";
 
 const alertTypeVariant: Record<string, "error" | "warning" | "info" | "neutral"> = {
   sanction: "error",
@@ -168,6 +169,8 @@ export default function WatchlistPage() {
         title="Watchlist"
         subtitle="Monitor companies and receive alerts"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* Watchlist */}

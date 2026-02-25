@@ -4,6 +4,7 @@ GET /api/v1/industries + GET /api/v1/deals/{deal_id}/summary 검증.
 """
 
 import uuid
+from datetime import date
 
 import pytest
 
@@ -62,12 +63,12 @@ class TestDealSummaryEndpoint:
             name="Test Deal",
             deal_type=DealType.COMPLETION_ACCOUNTS,
             base_currency="KRW",
-            reference_date="2025-06-30",
-            period_start="2024-01-01",
-            period_end="2024-12-31",
+            reference_date=date(2025, 6, 30),
+            period_start=date(2024, 1, 1),
+            period_end=date(2024, 12, 31),
             status=DealStatus.ACTIVE,
             industry=IndustryType.TECH_SAAS,
-            created_by=uuid.uuid4(),
+            created_by="test@autofdd.dev",
         )
         db.add(deal)
         db.commit()

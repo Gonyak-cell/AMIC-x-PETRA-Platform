@@ -1,4 +1,4 @@
-export type ExportModule = "fdd" | "kiis" | "im";
+export type ExportModule = "ma" | "docs" | "kiis";
 export type ExportStatus = "pending" | "completed" | "failed" | "expired";
 export type ExportFormat = "pdf" | "pptx" | "xlsx" | "csv" | "zip";
 

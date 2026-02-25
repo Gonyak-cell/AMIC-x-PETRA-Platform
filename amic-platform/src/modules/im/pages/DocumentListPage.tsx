@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, CheckCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Plus, CheckCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
 import { useDocuments } from "@/modules/im/hooks/useDocuments";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import {
@@ -13,7 +13,10 @@ import {
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { Document, DocumentStatus, DataSource } from "@/modules/im/types/document";
+import { DATA_SOURCE_BADGE } from "@/modules/im/types/document";
 import { IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+import heroImg from "@/assets/images/heroes/hero-arch-wave.jpg";
 
 type StatusFilter = "ALL" | "IN_PROGRESS" | DocumentStatus;
 
@@ -38,12 +41,7 @@ const columns: Column<Document>[] = [
     align: "center",
     width: "100px",
     render: (row) => {
-      const badge: Record<DataSource, { label: string; cls: string }> = {
-        DART: { label: "DART", cls: "bg-blue-100 text-blue-700" },
-        MANUAL: { label: "Manual", cls: "bg-gray-100 text-gray-600" },
-        EXCEL: { label: "Excel", cls: "bg-emerald-100 text-emerald-700" },
-      };
-      const b = badge[row.data_source] ?? badge.MANUAL;
+      const b = DATA_SOURCE_BADGE[row.data_source] ?? DATA_SOURCE_BADGE.MANUAL;
       return (
         <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
           {b.label}
@@ -88,6 +86,8 @@ export default function DocumentListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const kpiRef = useRef<HTMLDivElement>(null);
+  useScrollReveal(kpiRef, { stagger: 0.06, y: 20 });
   const { data, isLoading, isError } = useDocuments({ offset: page * PAGE_SIZE, limit: PAGE_SIZE });
 
   const total = data?.total ?? 0;
@@ -116,20 +116,31 @@ export default function DocumentListPage() {
       <PageHero
         title="IM Projects"
         subtitle="Investment Memorandum generation and management"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
         actions={
-          <Button
-            variant="accent"
-            icon={Plus}
-            onClick={() => navigate("/im/new")}
-          >
-            New IM
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              icon={FolderOpen}
+              onClick={() => navigate("/im/new/vdr")}
+            >
+              From VDR
+            </Button>
+            <Button
+              variant="accent"
+              icon={Plus}
+              onClick={() => navigate("/im/new")}
+            >
+              New IM
+            </Button>
+          </div>
         }
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Total" value={String(kpis.total)} icon={FileText} />
         <KpiCard label="In Progress" value={String(kpis.inProgress)} icon={Loader2} variant="caution" />
         <KpiCard label="Completed" value={String(kpis.completed)} icon={CheckCircle} variant="positive" />

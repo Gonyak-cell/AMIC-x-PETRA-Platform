@@ -31,6 +31,8 @@ CLAUDE.local.md
 # Logs
 *.log
 npm-debug.log*
+logs/
+knowledge/
 
 # Playwright
 amic-platform/e2e/.auth/

@@ -35,7 +35,8 @@ import { FinancialBarChart } from "@/components/charts/FinancialBarChart";
 import type { BarChartDataPoint } from "@/components/charts/FinancialBarChart";
 import type { FundManagerItem } from "@/modules/kiis/types/fund";
 import type { DealItem } from "@/modules/kiis/types/deal";
-import { formatAmount, formatPercent, formatDate } from "@/lib/format";
+import { formatAmount, formatAmountKRW, formatPercent, formatDate } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/forestgp-news.jpg";
 
 /* ───────── Column definitions ───────── */
 
@@ -174,13 +175,13 @@ export default function FundDetailPage() {
       </div>
 
       {/* Header */}
-      <PageHero title={fund.fund_name} subtitle={fund.company_name} compact />
+      <PageHero title={fund.fund_name} subtitle={fund.company_name} compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       {/* KPI Cards (always visible) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Total Amount"
-          value={formatAmount(fund.total_amount, "KRW")}
+          value={formatAmountKRW(fund.total_amount)}
           icon={Landmark}
         />
         <KpiCard
@@ -243,15 +244,15 @@ export default function FundDetailPage() {
                 />
                 <KpiCard
                   label="Avg Amount"
-                  value={formatAmount(dealStats.avg_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.avg_amount)}
                 />
                 <KpiCard
                   label="Median Amount"
-                  value={formatAmount(dealStats.median_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.median_amount)}
                 />
                 <KpiCard
                   label="Max Amount"
-                  value={formatAmount(dealStats.max_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.max_amount)}
                 />
               </div>
 

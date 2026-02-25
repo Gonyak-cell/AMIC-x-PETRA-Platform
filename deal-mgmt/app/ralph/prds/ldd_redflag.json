@@ -1,0 +1,48 @@
+{
+  "name": "LDD Red Flag Report PRD",
+  "version": "1.0",
+  "document_type": "LDD_REDFLAG",
+  "description": "Red Flag DD 보고서 — Executive Summary + Critical/High 이슈만 포함",
+  "pass_threshold": 4.0,
+  "sections": {
+    "executive_summary": {
+      "title": "Executive Summary",
+      "required": true,
+      "criteria": {
+        "red_flags": "CRITICAL/HIGH 이슈 전수 기재",
+        "deal_breakers": "거래 중단 사유 명확 분류",
+        "quantification": "재무적 영향 금액/비율 구체화"
+      }
+    },
+    "critical_issues": {
+      "title": "Critical Issues (Red Flags)",
+      "required": true,
+      "criteria": {
+        "completeness": "10개 섹션 중 CRITICAL/HIGH 이슈 전부 포함",
+        "evidence": "각 이슈별 근거 문서 인용 필수",
+        "action_items": "즉시 조치 필요 사항 구체적 기재"
+      }
+    },
+    "risk_matrix": {
+      "title": "Risk Matrix",
+      "required": true,
+      "criteria": {
+        "visualization": "영향도 × 발생확률 매트릭스",
+        "prioritization": "이슈 우선순위 명확"
+      }
+    },
+    "recommendations": {
+      "title": "Recommendations",
+      "required": true,
+      "criteria": {
+        "actionability": "계약 조건, 추가 실사, 가격 조정 등 구체적 권고",
+        "timeline": "조치 시한 포함"
+      }
+    }
+  },
+  "global_criteria": {
+    "focus": "CRITICAL/HIGH 이슈에만 집중 — LOW/MEDIUM 제외",
+    "brevity": "5-10페이지 이내",
+    "urgency": "즉시 의사결정 필요 사항 강조"
+  }
+}

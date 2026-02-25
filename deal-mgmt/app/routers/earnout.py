@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.earnout import EarnoutMilestone
 from app.models.enums import AuditAction
 from app.schemas.earnout import EarnoutCreate, EarnoutOut, EarnoutSummary, EarnoutUpdate
@@ -23,9 +23,10 @@ router = APIRouter(prefix="/transactions/{txn_id}/earnout", tags=["Earnout"])
 async def list_earnout_milestones(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = (
         select(EarnoutMilestone)
         .where(EarnoutMilestone.transaction_id == txn_id)
@@ -39,9 +40,10 @@ async def list_earnout_milestones(
 async def earnout_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(EarnoutMilestone).where(EarnoutMilestone.transaction_id == txn_id)
     result = await db.execute(q)
     items = list(result.scalars().all())
@@ -70,7 +72,7 @@ async def create_earnout(
     txn_id: uuid.UUID,
     body: EarnoutCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     milestone = EarnoutMilestone(transaction_id=txn_id, **body.model_dump())
@@ -95,7 +97,7 @@ async def update_earnout(
     milestone_id: uuid.UUID,
     body: EarnoutUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(EarnoutMilestone).where(EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id)
     milestone = (await db.execute(q)).scalar_one_or_none()
@@ -122,7 +124,7 @@ async def delete_earnout(
     txn_id: uuid.UUID,
     milestone_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(EarnoutMilestone).where(EarnoutMilestone.id == milestone_id, EarnoutMilestone.transaction_id == txn_id)
     milestone = (await db.execute(q)).scalar_one_or_none()

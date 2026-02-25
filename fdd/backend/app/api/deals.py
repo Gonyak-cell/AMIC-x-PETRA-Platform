@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
@@ -22,6 +22,7 @@ from app.schemas.deal import (
     DealDefinitionApprove,
     DealDefinitionCreate,
     DealDefinitionRead,
+    DealListResponse,
     DealRead,
     DealSnapshotCreate,
     DealSnapshotRead,
@@ -62,21 +63,24 @@ def create_deal(
     return deal
 
 
-@router.get("/deals", response_model=list[DealRead])
+@router.get("/deals", response_model=DealListResponse)
 def list_deals(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     current_user: CurrentUser = require_permission(Permission.DEAL_READ),
     db: Session = Depends(get_db),
 ):
+    base_filter = Deal.is_deleted == False  # noqa: E712
+    total = db.scalar(select(func.count(Deal.id)).where(base_filter)) or 0
     stmt = (
         select(Deal)
-        .where(Deal.is_deleted == False)  # noqa: E712
+        .where(base_filter)
         .offset(skip)
         .limit(limit)
         .order_by(Deal.created_at.desc())
     )
-    return list(db.scalars(stmt).all())
+    items = list(db.scalars(stmt).all())
+    return DealListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
 @router.get("/deals/{deal_id}", response_model=DealRead)

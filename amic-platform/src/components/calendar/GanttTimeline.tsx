@@ -4,15 +4,11 @@ import { cn } from "@/lib/cn";
 import type { GanttItem, CalendarEventModule } from "@/types/calendar";
 
 const MODULE_BAR_COLORS: Record<CalendarEventModule, string> = {
-  fdd: "bg-blue-400",
-  kiis: "bg-emerald-400",
-  im: "bg-purple-400",
+  ma: "bg-accent",
 };
 
 const MODULE_BADGE: Record<CalendarEventModule, "info" | "success" | "warning"> = {
-  fdd: "info",
-  kiis: "success",
-  im: "warning",
+  ma: "success",
 };
 
 interface GanttTimelineProps {

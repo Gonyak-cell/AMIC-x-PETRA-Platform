@@ -1,17 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface PortalKpis {
-  activeDeals: number;
   watchlistAlerts: number;
-  imInProgress: number;
-  pendingIssues: number;
   activeMaDeals: number;
 }
 
 export interface PortalKpiErrors {
-  fdd: boolean;
   kiis: boolean;
-  im: boolean;
   ma: boolean;
 }
 
@@ -23,7 +18,15 @@ export interface QuickAction {
 }
 
 export interface ModuleHealth {
-  module: "fdd" | "kiis" | "im" | "ma";
+  module: "fdd" | "kiis" | "ma" | "im";
   label: string;
   healthy: boolean;
+}
+
+export interface AggregatedModuleHealth {
+  id: "ma" | "docs" | "kiis";
+  label: string;
+  services: { name: string; healthy: boolean }[];
+  overallHealthy: boolean;
+  healthySummary: string;
 }

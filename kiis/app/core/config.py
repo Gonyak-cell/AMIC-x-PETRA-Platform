@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Auth
+    AUTH_ENABLED: bool = True
+
+    # Logging
+    LOG_DIR: str = ""
+
     # JWT
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -49,6 +55,12 @@ class Settings(BaseSettings):
     KOFIA_RATE_LIMIT_PER_DAY: int = 1000
     KOFIA_REQUEST_DELAY: float = 3.0  # robots.txt 준수 최소 간격 (초)
     KOFIA_DB_FRESHNESS_HOURS: int = 24  # DB 데이터 최신 판별 기준 (시간)
+
+    # 공공데이터포털 (data.go.kr) — 사모펀드 GP 정보
+    DATA_GO_KR_API_KEY: str = ""
+    DATA_GO_KR_BASE_URL: str = "https://apis.data.go.kr"
+    DATA_GO_KR_RATE_LIMIT_PER_MINUTE: int = 100
+    DATA_GO_KR_RATE_LIMIT_PER_DAY: int = 10000
 
     # Slack
     SLACK_WEBHOOK_URL: str = ""

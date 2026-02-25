@@ -47,24 +47,22 @@ async def login(
     service = AuthService(session)
     tokens = await service.login(data.email, data.password)
 
-    # Access Token 쿠키 설정
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=15 * 60,  # 15분
     )
 
-    # Refresh Token 쿠키 설정
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,  # 7일
     )
 
     return {"message": "로그인 성공"}
@@ -92,24 +90,22 @@ async def refresh(
     service = AuthService(session)
     tokens = service.refresh(refresh_token)
 
-    # Access Token 쿠키 설정
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=15 * 60,  # 15분
     )
 
-    # Refresh Token 쿠키 설정
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,  # 7일
     )
 
     return {"message": "토큰 갱신 성공"}

@@ -22,7 +22,7 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
     email: "jwsuh@amic.kr",
     password: "1111",
     user: {
-      id: "user-1", email: "jwsuh@amic.kr", display_name: "서지원",
+      id: "user-1", email: "jwsuh@amic.kr", display_name: "서지원", title: "변호사",
       role: "ADMIN", is_active: true, created_at: "2025-01-01T00:00:00Z",
     },
   },
@@ -30,15 +30,15 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
     email: "ytkim@amic.kr",
     password: "1111",
     user: {
-      id: "user-2", email: "ytkim@amic.kr", display_name: "김용태",
-      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+      id: "user-2", email: "ytkim@amic.kr", display_name: "김양태", title: "대표 / 회계사",
+      role: "ADMIN", is_active: true, created_at: "2025-01-01T00:00:00Z",
     },
   },
   {
     email: "yhlim@amic.kr",
     password: "1111",
     user: {
-      id: "user-3", email: "yhlim@amic.kr", display_name: "임영훈",
+      id: "user-3", email: "yhlim@amic.kr", display_name: "임영훈", title: "변호사",
       role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
     },
   },
@@ -46,7 +46,7 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
     email: "wsjo@amic.kr",
     password: "1111",
     user: {
-      id: "user-4", email: "wsjo@amic.kr", display_name: "조원석",
+      id: "user-4", email: "wsjo@amic.kr", display_name: "조우상", title: "이사",
       role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
     },
   },
@@ -54,7 +54,15 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
     email: "bj.park@amic.kr",
     password: "1111",
     user: {
-      id: "user-5", email: "bj.park@amic.kr", display_name: "박병준",
+      id: "user-5", email: "bj.park@amic.kr", display_name: "박병준", title: "변호사",
+      role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
+    },
+  },
+  {
+    email: "tryoon@amic.kr",
+    password: "1111",
+    user: {
+      id: "user-6", email: "tryoon@amic.kr", display_name: "윤태리", title: "실장",
       role: "ANALYST", is_active: true, created_at: "2025-01-01T00:00:00Z",
     },
   },
@@ -68,6 +76,7 @@ export const mockViewerUser: AuthUser = {
   id: "user-viewer",
   email: "viewer@amic.kr",
   display_name: "Viewer",
+  title: "",
   role: "VIEWER",
   is_active: true,
   created_at: "2025-01-01T00:00:00Z",

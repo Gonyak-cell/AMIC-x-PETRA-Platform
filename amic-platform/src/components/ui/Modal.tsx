@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useId } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { gsap } from "@/lib/gsap";
 import { Button } from "./Button";
 
 export interface ModalProps {
@@ -34,6 +35,8 @@ export function Modal({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const isClosingRef = useRef(false);
 
   // 모달 열릴 때 포커스 저장 및 첫 번째 요소로 이동
   useEffect(() => {
@@ -41,29 +44,65 @@ export function Modal({
     if (!dialog) return;
 
     if (open) {
+      isClosingRef.current = false;
       // 현재 포커스된 요소 저장
       previousFocusRef.current = document.activeElement as HTMLElement;
       dialog.showModal();
 
-      // 첫 번째 포커스 가능 요소로 이동 (닫기 버튼 제외하고 콘텐츠 내 첫 요소)
+      // GSAP 진입 애니메이션
+      const tl = gsap.timeline();
+      tl.fromTo(
+        backdropRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power2.out" },
+      );
+      tl.fromTo(
+        contentRef.current,
+        { scale: 0.95, opacity: 0, y: 16 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.35, ease: "power3.out" },
+        "-=0.15",
+      );
+
+      // 첫 번째 포커스 가능 요소로 이동
       requestAnimationFrame(() => {
-        const firstFocusable = contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+        const firstFocusable =
+          contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
         if (firstFocusable) {
           firstFocusable.focus();
         }
       });
-    } else {
+    } else if (!isClosingRef.current) {
       dialog.close();
     }
   }, [open]);
 
-  // 모달 닫힐 때 이전 포커스로 복귀
+  // 모달 닫힐 때 퇴장 애니메이션 → 이전 포커스로 복귀
   const handleClose = useCallback(() => {
-    onClose();
-    // 이전에 포커스되어 있던 요소로 복귀
-    requestAnimationFrame(() => {
-      previousFocusRef.current?.focus();
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        dialogRef.current?.close();
+        onClose();
+        requestAnimationFrame(() => {
+          previousFocusRef.current?.focus();
+        });
+      },
     });
+
+    tl.to(contentRef.current, {
+      scale: 0.95,
+      opacity: 0,
+      y: 12,
+      duration: 0.25,
+      ease: "power2.in",
+    });
+    tl.to(
+      backdropRef.current,
+      { opacity: 0, duration: 0.2, ease: "power2.in" },
+      "-=0.15",
+    );
   }, [onClose]);
 
   if (!open) return null;
@@ -73,7 +112,7 @@ export function Modal({
       ref={dialogRef}
       className={cn(
         "fixed inset-0 z-50 bg-transparent p-0 m-0 max-w-none max-h-none w-full h-full",
-        "backdrop:bg-amic-900/70 backdrop:backdrop-blur-sm"
+        "backdrop:bg-transparent",
       )}
       onCancel={(e) => {
         e.preventDefault();
@@ -84,18 +123,29 @@ export function Modal({
       }}
       aria-labelledby={titleId}
     >
-      <div className="flex items-center justify-center min-h-screen p-4">
+      {/* Animated backdrop */}
+      <div
+        ref={backdropRef}
+        className="fixed inset-0 bg-amic-900/70 backdrop-blur-sm"
+        style={{ opacity: 0 }}
+      />
+
+      <div className="relative flex items-center justify-center min-h-screen p-4">
         <div
           ref={contentRef}
           className={cn(
-            "bg-white rounded-dr shadow-dr-xl w-full animate-fade-in-up",
-            sizeStyles[size]
+            "relative bg-white rounded-dr shadow-dr-xl w-full",
+            sizeStyles[size],
           )}
+          style={{ opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 헤더 */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-border">
-            <h2 id={titleId} className="text-lg font-heading font-semibold text-text-dark">
+            <h2
+              id={titleId}
+              className="text-lg font-heading font-semibold text-text-dark"
+            >
               <span className="border-l-4 border-accent pl-3">{title}</span>
             </h2>
             <Button

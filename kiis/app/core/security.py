@@ -26,6 +26,25 @@ class JWTClaims:
     role: str
 
 
+_DEV_CLAIMS = JWTClaims(
+    user_id="00000000-0000-0000-0000-000000000000",
+    email="system@autofdd.dev",
+    role="admin",
+)
+
+
+def _dev_user() -> User:
+    """AUTH_ENABLED=False일 때 반환할 dev 사용자."""
+    return User(
+        id=0,
+        username="system-dev",
+        email="system@autofdd.dev",
+        hashed_password="",
+        role="admin",
+        is_active=True,
+    )
+
+
 def _get_jwt_secret() -> str:
     """JWT 검증에 사용할 시크릿을 반환한다. JWT_SECRET 우선, 없으면 SECRET_KEY 폴백."""
     secret = settings.JWT_SECRET or settings.SECRET_KEY
@@ -87,6 +106,10 @@ async def get_jwt_claims(
     FDD 토큰을 디코딩하여 user_id, email, role을 반환한다.
     KIIS User DB를 조회하지 않으므로 경량 의존성으로 사용 가능.
     """
+    # Dev 모드: 인증 우회
+    if not settings.AUTH_ENABLED:
+        return _DEV_CLAIMS
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
@@ -122,6 +145,9 @@ async def get_current_user(
     FDD 토큰 (sub=UUID) → email로 KIIS User 조회.
     KIIS 토큰 (sub=username) → username으로 조회.
     """
+    # Dev 모드: 인증 우회
+    if not settings.AUTH_ENABLED:
+        return _dev_user()
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
@@ -154,12 +180,18 @@ async def get_current_user(
             role = payload.get("role", "analyst")
             # FDD 역할 → KIIS 역할 매핑 (대소문자 통일)
             role_lower = role.lower() if role else "analyst"
+            if role_lower == "client":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="외부 클라이언트는 KIIS 서비스에 접근할 수 없습니다",
+                )
             if role_lower not in ("admin", "analyst", "viewer"):
                 role_lower = "analyst"
             user = User(
                 username=email.split("@")[0],
                 email=email,
                 hashed_password="federated:no-local-password",
+                title="",
                 role=role_lower,
                 is_active=True,
             )

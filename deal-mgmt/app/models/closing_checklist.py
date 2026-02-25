@@ -9,7 +9,7 @@ from app.models.enums import ClosingCategory, ClosingConditionStatus
 
 
 class ClosingChecklist(Base, TimestampMixin):
-    """클로징 체크리스트 — Transaction과 1:N 관계."""
+    """Closing 체크리스트 — Transaction과 1:N 관계."""
 
     __tablename__ = "closing_checklists"
 

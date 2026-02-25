@@ -11,7 +11,7 @@ from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 from src.design_renderer.im_document import IMDocumentData
-from src.design_renderer.pdf_output.html_builder import build_slide_html
+
 from src.design_renderer.section_renderers import register_renderer
 from src.design_renderer.section_renderers.base import BaseSectionRenderer
 
@@ -56,106 +56,24 @@ class MarketOverviewRenderer(BaseSectionRenderer):
         *,
         tokens: IMDesignTokens | None = None,
     ) -> list[str]:
-        tokens = tokens or DEFAULT_TOKENS
-        c = tokens.colors
+        raise NotImplementedError("PDF output removed")
 
-        md = data.market_data
-        narrative = html_escape(data.narratives.get("market_overview", ""))
-        kpis = self._build_market_kpis(data)
-
-        # KPI 카드
-        kpi_html = ""
-        if kpis:
-            cards = ""
-            for kpi in kpis:
-                cards += (
-                    f'<div style="text-align:center;padding:0.6em;'
-                    f'background:{c.bg_light_green};border-radius:4px;">'
-                    f'<div style="font-size:9pt;color:{c.text_secondary};">'
-                    f'{html_escape(kpi["label"])}</div>'
-                    f'<div style="font-size:18pt;font-weight:bold;'
-                    f"color:{c.primary};font-family:'IBM Plex Mono',monospace;\">"
-                    f'{html_escape(kpi["value"])}</div></div>'
-                )
-            kpi_html = (
-                f'<div style="display:grid;grid-template-columns:'
-                f"repeat({min(len(kpis), 4)}, 1fr);gap:0.8em;"
-                f'margin-bottom:1em;">{cards}</div>'
-            )
-
-        # 경쟁사 테이블
-        competitor_html = ""
-        if md and md.competitors:
-            rows = ""
-            for comp in md.competitors:
-                name = html_escape(comp.get("name", ""))
-                rev = comp.get("revenue")
-                rev_str = f"{rev:,.0f}" if rev is not None else "N/A"
-                ms = comp.get("market_share")
-                ms_str = f"{ms * 100:.1f}%" if ms is not None else "N/A"
-                rows += (
-                    f"<tr>"
-                    f'<td style="padding:5px 10px;font-size:9pt;'
-                    f'color:{c.text_body};">{name}</td>'
-                    f'<td style="padding:5px 10px;font-size:9pt;'
-                    f"text-align:right;font-family:'IBM Plex Mono',monospace;"
-                    f'color:{c.text_body};">{rev_str}</td>'
-                    f'<td style="padding:5px 10px;font-size:9pt;'
-                    f"text-align:right;font-family:'IBM Plex Mono',monospace;"
-                    f'color:{c.text_body};">{ms_str}</td></tr>'
-                )
-            competitor_html = (
-                f'<div style="margin-bottom:1em;">'
-                f'<div style="font-size:11pt;font-weight:bold;'
-                f'color:{c.primary};margin-bottom:0.4em;">경쟁 환경</div>'
-                f'<table style="border-collapse:collapse;width:100%;">'
-                f"<thead><tr>"
-                f'<th style="padding:6px 10px;background:{c.table_header_bg};'
-                f'color:{c.text_white};font-size:9pt;text-align:left;">기업명</th>'
-                f'<th style="padding:6px 10px;background:{c.table_header_bg};'
-                f'color:{c.text_white};font-size:9pt;text-align:right;">매출액</th>'
-                f'<th style="padding:6px 10px;background:{c.table_header_bg};'
-                f'color:{c.text_white};font-size:9pt;text-align:right;">시장 점유율</th>'
-                f"</tr></thead>"
-                f"<tbody>{rows}</tbody></table></div>"
-            )
-
-        # 산업 트렌드
-        trends_html = ""
-        if md and md.industry_trends:
-            items = "".join(
-                f'<li style="font-size:10pt;color:{c.text_body};'
-                f'margin-bottom:0.3em;">{html_escape(t)}</li>'
-                for t in md.industry_trends
-            )
-            trends_html = (
-                f'<div style="margin-bottom:1em;">'
-                f'<div style="font-size:11pt;font-weight:bold;'
-                f'color:{c.primary};margin-bottom:0.4em;">산업 트렌드</div>'
-                f'<ul style="margin:0;padding-left:1.2em;">{items}</ul></div>'
-            )
-
-        narrative_html = ""
-        if narrative:
-            narrative_html = (
-                f'<p style="font-size:10pt;color:{c.text_body};'
-                f'line-height:1.6;margin-bottom:0.8em;">{narrative}</p>'
-            )
-
-        content = f"""
-        {kpi_html}
-        {narrative_html}
-        {competitor_html}
-        {trends_html}
-        """
-
-        slide = build_slide_html(
-            content,
-            title="시장 분석",
-            slide_class="slide-market-overview",
-            tokens=tokens,
-        )
-        return [slide]
+    def _build_competitor_table(
+        self, md: Any
+    ) -> tuple[list[str], list[dict[str, Any]]]:
+        """경쟁사 테이블 headers + rows 생성."""
+        headers = ["기업명", "매출액 (억원)", "시장 점유율"]
+        rows: list[dict[str, Any]] = []
+        for comp in md.competitors:
+            name = comp.get("name", "")
+            rev = comp.get("revenue")
+            ms = comp.get("market_share")
+            rows.append({
+                "label": name,
+                "매출액 (억원)": f"{rev:,.0f}" if rev is not None else "N/A",
+                "시장 점유율": f"{ms * 100:.1f}%" if ms is not None else "N/A",
+            })
+        return headers, rows
 
     def render_pptx(
         self,
@@ -169,23 +87,28 @@ class MarketOverviewRenderer(BaseSectionRenderer):
         lay = tokens.layout
 
         from src.design_renderer.pptx_engine.shape_builder import (
+            add_body_textbox,
             add_bullet_list,
+            add_chart_image,
+            add_financial_table,
             add_kpi_grid,
             add_sub_header_bar,
             add_summary_textbox,
         )
 
-        slide = factory.add_content_slide(title="시장 분석")
+        result: list[Any] = []
         md = data.market_data
         narrative = data.narratives.get("market_overview", "")
         kpis = self._build_market_kpis(data)
 
-        y = lay.content_top
-
-        # KPI
+        # ------------------------------------------------------------------
+        # Slide 1: Market Size KPI Dashboard
+        # ------------------------------------------------------------------
         if kpis:
+            slide1 = factory.add_content_slide(title="시장 분석")
+            y = lay.content_top
             add_kpi_grid(
-                slide,
+                slide1,
                 kpis,
                 top=y,
                 tokens=tokens,
@@ -193,16 +116,115 @@ class MarketOverviewRenderer(BaseSectionRenderer):
             )
             y += 1.6
 
+            # 시장 포지셔닝 요약이 있으면 KPI 아래에 추가
+            if md and md.market_position:
+                add_summary_textbox(
+                    slide1, md.market_position, top=y, tokens=tokens
+                )
+            result.append(slide1)
+
+        # ------------------------------------------------------------------
+        # Slide 2: Market Narrative (AI 내러티브 전문)
+        # ------------------------------------------------------------------
         if narrative:
-            add_summary_textbox(slide, narrative, top=y, tokens=tokens)
-            y += 0.7
-
-        # 산업 트렌드
-        if md and md.industry_trends:
-            add_sub_header_bar(slide, "산업 트렌드", top=y, tokens=tokens)
-            y += 0.45
-            add_bullet_list(
-                slide, md.industry_trends, top=y, height=2.0, tokens=tokens
+            slide2 = factory.add_content_slide(title="시장 분석 상세")
+            add_body_textbox(
+                slide2, narrative, top=lay.content_top, height=5.0, tokens=tokens
             )
+            result.append(slide2)
 
-        return [slide]
+        # ------------------------------------------------------------------
+        # Slide 3: Competitive Landscape (경쟁사 테이블)
+        # ------------------------------------------------------------------
+        if md and md.competitors:
+            slide3 = factory.add_content_slide(title="경쟁 환경")
+            y = lay.content_top
+
+            headers, rows = self._build_competitor_table(md)
+            add_financial_table(
+                slide3,
+                headers=headers,
+                rows=rows,
+                top=y,
+                tokens=tokens,
+                number_config=data.number_format,
+            )
+            y += 0.5 + len(rows) * 0.35  # 테이블 높이 추정
+
+            # 경쟁 우위 요소가 있으면 테이블 아래에 추가
+            if md.competitive_advantages:
+                add_sub_header_bar(
+                    slide3, "경쟁 우위", top=y, tokens=tokens
+                )
+                y += 0.45
+                add_bullet_list(
+                    slide3,
+                    md.competitive_advantages,
+                    top=y,
+                    height=2.0,
+                    tokens=tokens,
+                )
+            result.append(slide3)
+
+        # ------------------------------------------------------------------
+        # Slide 4: Industry Trends (산업 트렌드)
+        # ------------------------------------------------------------------
+        if md and md.industry_trends:
+            slide4 = factory.add_content_slide(title="산업 트렌드")
+            y = lay.content_top
+            add_bullet_list(
+                slide4,
+                md.industry_trends,
+                top=y,
+                height=4.5,
+                tokens=tokens,
+            )
+            result.append(slide4)
+
+        # ------------------------------------------------------------------
+        # Slide 5: Regulatory Environment (규제 환경)
+        # ------------------------------------------------------------------
+        if md and md.regulatory_notes:
+            slide5 = factory.add_content_slide(title="규제 환경")
+            y = lay.content_top
+            add_sub_header_bar(
+                slide5, "주요 규제 사항", top=y, tokens=tokens
+            )
+            y += 0.45
+            add_body_textbox(
+                slide5,
+                md.regulatory_notes,
+                top=y,
+                height=4.5,
+                tokens=tokens,
+            )
+            result.append(slide5)
+
+        # ------------------------------------------------------------------
+        # Slide 6: Market Charts (차트 이미지)
+        # ------------------------------------------------------------------
+        chart_list = data.charts.get("market_overview", [])
+        for chart in chart_list:
+            chart_data = chart.data
+            img = chart_data.get("image_bytes") or chart_data.get("image_path")
+            if img:
+                chart_slide = factory.add_content_slide(
+                    title=chart.title or "시장 분석 차트"
+                )
+                add_chart_image(
+                    chart_slide, img, top=lay.content_top, tokens=tokens
+                )
+                result.append(chart_slide)
+
+        # 데이터가 전혀 없는 경우 빈 슬라이드 1개라도 반환
+        if not result:
+            fallback = factory.add_content_slide(title="시장 분석")
+            add_body_textbox(
+                fallback,
+                "시장 분석 데이터가 준비되지 않았습니다.",
+                top=lay.content_top,
+                tokens=tokens,
+            )
+            result.append(fallback)
+
+        return result

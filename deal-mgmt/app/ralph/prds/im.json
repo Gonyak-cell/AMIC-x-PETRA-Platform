@@ -1,0 +1,128 @@
+{
+  "name": "Information Memorandum PRD",
+  "version": "1.0",
+  "document_type": "IM",
+  "description": "Information Memorandum 품질 요구사항 (NDA 후 상세 투자 안내)",
+  "pass_threshold": 4.0,
+  "total_slides": "50-70",
+  "sections": {
+    "cover": {
+      "title": "Cover",
+      "required": true,
+      "criteria": {
+        "branding": "Forest 테마 디자인, 프로젝트명 표기"
+      }
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "required": true,
+      "criteria": {
+        "legal": "기밀유지, 투자 권유 아님, 면책 조항 포함",
+        "nda_reference": "NDA 체결 전제 명시"
+      }
+    },
+    "executive_summary": {
+      "title": "Executive Summary",
+      "required": true,
+      "criteria": {
+        "hooks": "핵심 투자 매력 5-7개",
+        "overview": "거래 개요 1-2문장",
+        "financials": "핵심 재무 지표 요약 테이블"
+      }
+    },
+    "company_overview": {
+      "title": "Company Overview",
+      "required": true,
+      "criteria": {
+        "history": "설립 히스토리 및 주요 마일스톤",
+        "organization": "조직 구조도",
+        "locations": "사업장 현황"
+      }
+    },
+    "products_services": {
+      "title": "Products & Services",
+      "required": true,
+      "criteria": {
+        "portfolio": "제품/서비스 라인업 전체 기술",
+        "revenue_mix": "매출 구성비 포함",
+        "competitive_edge": "경쟁 우위 요소 명시"
+      }
+    },
+    "market_analysis": {
+      "title": "Market Analysis",
+      "required": true,
+      "criteria": {
+        "tam_sam": "TAM/SAM 시장 규모 (출처 포함)",
+        "growth": "시장 성장률 및 전망",
+        "trends": "핵심 트렌드 3-5개"
+      }
+    },
+    "competitive_landscape": {
+      "title": "Competitive Landscape",
+      "required": true,
+      "criteria": {
+        "positioning": "경쟁사 대비 포지셔닝",
+        "market_share": "시장점유율 (가용 시)"
+      }
+    },
+    "management_team": {
+      "title": "Management Team",
+      "required": true,
+      "criteria": {
+        "key_personnel": "핵심 경영진 프로필",
+        "retention": "거래 후 유지 계획"
+      }
+    },
+    "financial_overview": {
+      "title": "Financial Overview",
+      "required": true,
+      "criteria": {
+        "historical": "최근 3-5년 재무제표 (P&L, BS, CF)",
+        "consistency": "모든 수치 내부 정합성 (매출-영업이익-순이익 관계)",
+        "formatting": "단위 일관성, 천단위 구분 쉼표",
+        "margins": "주요 마진 추이 포함"
+      }
+    },
+    "financial_projections": {
+      "title": "Financial Projections",
+      "required": true,
+      "criteria": {
+        "assumptions": "주요 가정 명시 (성장률, 마진 등)",
+        "scenarios": "Base/Upside/Downside 시나리오",
+        "consistency": "과거 실적 대비 전망치 합리성"
+      }
+    },
+    "valuation": {
+      "title": "Valuation",
+      "required": true,
+      "criteria": {
+        "methods": "최소 2개 방법론 (EV/EBITDA, DCF 등)",
+        "comps": "비교기업 분석 포함",
+        "range": "가치 범위 제시"
+      }
+    },
+    "transaction_structure": {
+      "title": "Transaction Structure",
+      "required": true,
+      "criteria": {
+        "structure": "거래 구조 (주식/자산 양수도, 합병 등)",
+        "timeline": "거래 일정",
+        "process": "입찰 프로세스 설명"
+      }
+    },
+    "appendix": {
+      "title": "Appendix",
+      "required": false,
+      "criteria": {
+        "supplementary": "보충 자료 (상세 재무, 시장 데이터 등)"
+      }
+    }
+  },
+  "global_criteria": {
+    "slide_count": "50-70장 권장 (17개 필수 항목 포함)",
+    "design": "Forest 테마 색상/폰트 일관성",
+    "financial_consistency": "모든 재무 수치 내부 정합성 검증 (CRITICAL)",
+    "confidentiality": "NDA 체결 전제, 기밀 표시 포함",
+    "professionalism": "IB급 문서 품질 — 오타/문법 오류 없음"
+  }
+}

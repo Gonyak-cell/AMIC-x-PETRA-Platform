@@ -1,12 +1,27 @@
 export type DDWorkstream =
-  | "FINANCIAL"
-  | "LEGAL"
-  | "TAX"
-  | "COMMERCIAL"
-  | "IT"
-  | "HR"
-  | "ENVIRONMENTAL"
-  | "INSURANCE"
+  // FDD (재무실사)
+  | "FDD_FINANCIAL_STATEMENTS"
+  | "FDD_REVENUE"
+  | "FDD_WORKING_CAPITAL"
+  | "FDD_DEBT_CASH"
+  | "FDD_PROJECTIONS"
+  // LDD (법률실사)
+  | "LDD_CORPORATE"
+  | "LDD_PERMITS"
+  | "LDD_CONTRACTS"
+  | "LDD_ASSETS"
+  | "LDD_LABOR"
+  | "LDD_LITIGATION"
+  | "LDD_IP"
+  | "LDD_INSURANCE"
+  | "LDD_ENVIRONMENT"
+  // TDD (세무실사)
+  | "TDD_CORPORATE_TAX"
+  | "TDD_VAT"
+  | "TDD_TRANSFER_PRICING"
+  | "TDD_WITHHOLDING"
+  | "TDD_TAX_INCENTIVES"
+  // 기타
   | "OTHER";
 
 export type DDChecklistStatus =

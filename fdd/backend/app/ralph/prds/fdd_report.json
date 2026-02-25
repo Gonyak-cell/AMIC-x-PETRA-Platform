@@ -1,0 +1,144 @@
+{
+  "document_type": "fdd_report",
+  "version": "1.0",
+  "description": "FDD (Financial Due Diligence) Report Quality Requirements",
+  "global_criteria": {
+    "target_audience": "PE fund investment committee",
+    "quality_standard": "Big 4 accounting firm FDD report",
+    "language": "English with Korean annotations where appropriate",
+    "numerical_format": "Korean Won (백만원), commas for thousands",
+    "confidentiality": "Project codename required, no real company names in commentary"
+  },
+  "sections": {
+    "exec_summary": {
+      "id": "exec_summary",
+      "title": "Executive Summary",
+      "required": true,
+      "criteria": {
+        "min_length": 200,
+        "max_length": 800,
+        "must_include": [
+          "Target overview",
+          "Key adjusted EBITDA figure",
+          "Material adjustments summary",
+          "NWC and Net Debt highlights",
+          "Key risk factors"
+        ],
+        "tone": "Concise, factual, deal-focused"
+      }
+    },
+    "qoe_commentary": {
+      "id": "qoe_commentary",
+      "title": "Quality of Earnings Commentary",
+      "required": true,
+      "criteria": {
+        "min_length": 300,
+        "max_length": 1000,
+        "must_include": [
+          "Reported vs Adjusted EBITDA bridge",
+          "Top adjustments with amounts",
+          "Adjustment rationale for each material item",
+          "Revenue quality assessment",
+          "Margin trend analysis"
+        ],
+        "tone": "Analytical, evidence-based"
+      }
+    },
+    "nwc_commentary": {
+      "id": "nwc_commentary",
+      "title": "Net Working Capital Commentary",
+      "required": true,
+      "criteria": {
+        "min_length": 200,
+        "max_length": 800,
+        "must_include": [
+          "NWC calculation basis",
+          "Above/below the line classification rationale",
+          "Seasonal patterns if applicable",
+          "Peg target recommendation"
+        ],
+        "tone": "Structured, methodical"
+      }
+    },
+    "debt_commentary": {
+      "id": "debt_commentary",
+      "title": "Net Debt Commentary",
+      "required": true,
+      "criteria": {
+        "min_length": 200,
+        "max_length": 600,
+        "must_include": [
+          "Total debt composition",
+          "Cash and cash-like items",
+          "Debt-like items rationale",
+          "Net debt impact on enterprise value"
+        ],
+        "tone": "Precise, deal-term aware"
+      }
+    },
+    "claims": {
+      "id": "claims",
+      "title": "FDD Claims / Findings",
+      "required": false,
+      "criteria": {
+        "min_evidence_refs": 1,
+        "max_unverified_ratio": 0.2,
+        "must_include_risk_level": true,
+        "must_include_category": true
+      }
+    },
+    "issue_log": {
+      "id": "issue_log",
+      "title": "Issue Log",
+      "required": false,
+      "criteria": {
+        "must_include_recommendation": true,
+        "must_include_severity": true,
+        "recommendation_min_length": 50
+      }
+    },
+    "financial_statements": {
+      "id": "financial_statements",
+      "title": "Financial Statements (IS/BS/CF)",
+      "required": false,
+      "criteria": {
+        "required_sheets": ["IS", "BS"],
+        "optional_sheets": ["CF"],
+        "min_line_items_is": 8,
+        "min_line_items_bs": 12,
+        "must_include_subtotals": true,
+        "cross_sheet_consistency": {
+          "is_net_income_matches_bs_retained_earnings": true,
+          "bs_total_assets_equals_liabilities_plus_equity": true
+        },
+        "subtotal_total_consistency": {
+          "description": "Sum of subtotals must match the total row within 1M KRW tolerance",
+          "tolerance_millions": 1.0,
+          "applies_to": ["IS", "BS"]
+        }
+      }
+    }
+  },
+  "industry_account_requirements": {
+    "description": "Industry-specific required accounts for coverage gate",
+    "supported_industries": ["common", "manufacturing", "service", "retail"],
+    "default_industry": "common",
+    "min_coverage_ratio": 0.8,
+    "common_required": ["매출액", "매출원가", "판관비", "영업이익", "당기순이익", "유동자산", "유동부채", "자본총계"],
+    "manufacturing_required": ["매출액", "매출원가", "재고자산", "유형자산", "감가상각비", "원재료", "영업이익", "당기순이익"],
+    "service_required": ["매출액", "인건비", "판관비", "매출채권", "선수금", "영업이익", "당기순이익"],
+    "retail_required": ["매출액", "매출원가", "재고자산", "매출채권", "매입채무", "영업이익", "당기순이익"]
+  },
+  "convergence": {
+    "draft_pass": {
+      "max_iterations_per_section": 3,
+      "max_cost_usd": 20.0,
+      "pass_threshold": 4.0
+    },
+    "final_pass": {
+      "max_iterations_per_section": 2,
+      "max_cost_usd": 5.0,
+      "pass_threshold": 4.0
+    }
+  }
+}

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 SAMPLE_DEAL = {
     "name": "Entity Test Deal",
+    "target_company_name": "Entity Test Corp",
     "deal_type": "COMPLETION_ACCOUNTS",
     "base_currency": "KRW",
     "reference_date": "2025-12-31",

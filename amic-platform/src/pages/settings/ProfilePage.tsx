@@ -10,12 +10,13 @@ import {
 import { ROLE_PERMISSIONS } from "@/types/auth";
 import { Card, Input, Select, Button, Badge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { getMemberPhoto } from "@/lib/member-photos";
 
 const MODULE_OPTIONS = [
   { value: "/", label: "Dashboard" },
-  { value: "/fdd/deals", label: "Auto FDD" },
+  { value: "/ma/transactions", label: "M&A Deals" },
+  { value: "/docs", label: "Deal Doc Studio" },
   { value: "/kiis", label: "KIIS" },
-  { value: "/im", label: "IM Generator" },
 ];
 
 const DATE_FORMAT_OPTIONS = [
@@ -99,14 +100,25 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Avatar + Basic Info */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-amic to-amic-700 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xl">
-                {user.display_name?.charAt(0).toUpperCase() ?? "U"}
-              </span>
-            </div>
+            {(() => {
+              const photoUrl = getMemberPhoto(user.display_name ?? "");
+              return photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt={user.display_name ?? ""}
+                  className="w-16 h-16 rounded-full object-cover ring-2 ring-amic/20 flex-shrink-0 bg-amic-100"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gradient-to-br from-amic to-amic-700 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-xl">
+                    {user.display_name?.charAt(0).toUpperCase() ?? "U"}
+                  </span>
+                </div>
+              );
+            })()}
             <div>
               <div className="font-medium text-text-dark">
-                {user.display_name}
+                {user.display_name}{user.title ? ` ${user.title}` : ""}
               </div>
               <div className="text-sm text-text-secondary">{user.email}</div>
               <Badge variant="neutral" className="mt-1">

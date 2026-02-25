@@ -17,4 +17,5 @@ export type { SidebarOverlayProps } from "./SidebarOverlay";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
 
-export { ModuleSwitcher } from "./ModuleSwitcher";
+export { SidebarModuleGroup } from "./SidebarModuleGroup";
+export type { SidebarModuleGroupProps } from "./SidebarModuleGroup";

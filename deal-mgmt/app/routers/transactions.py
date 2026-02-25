@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.schemas.transaction import (
     TransactionCreate,
     TransactionListResponse,
@@ -29,10 +29,12 @@ async def list_transactions(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    client_email = claims.email if claims.role == "CLIENT" else None
     items, total = await transaction_service.list_transactions(
-        db, search=search, side=side, phase=phase, tx_status=status, limit=limit, offset=offset
+        db, search=search, side=side, phase=phase, tx_status=status,
+        limit=limit, offset=offset, client_email=client_email,
     )
     return TransactionListResponse(
         items=[TransactionOut.model_validate(t) for t in items],
@@ -46,9 +48,10 @@ async def list_transactions(
 async def get_transaction(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     txn = await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     return TransactionOut.model_validate(txn)
 
 
@@ -56,7 +59,7 @@ async def get_transaction(
 async def create_transaction(
     body: TransactionCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     txn = await transaction_service.create_transaction(db, body, actor_email=claims.email)
     return TransactionOut.model_validate(txn)
@@ -67,7 +70,7 @@ async def update_transaction(
     txn_id: uuid.UUID,
     body: TransactionUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     txn = await transaction_service.update_transaction(db, txn_id, body, actor_email=claims.email)
     return TransactionOut.model_validate(txn)
@@ -77,6 +80,6 @@ async def update_transaction(
 async def delete_transaction(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.delete_transaction(db, txn_id, actor_email=claims.email)

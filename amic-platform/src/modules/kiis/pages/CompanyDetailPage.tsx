@@ -39,6 +39,7 @@ import type { DealItem } from "@/modules/kiis/types/deal";
 import type { ClassifiedSanctionListItem } from "@/modules/kiis/types/sanction";
 import { formatDate } from "@/lib/format";
 import { SEVERITY_VARIANT } from "@/modules/kiis/constants/variants";
+import heroImg from "@/assets/images/heroes/forestgp-forest.jpg";
 
 const disclosureColumns: Column<DisclosureItem>[] = [
   {
@@ -221,6 +222,8 @@ export default function CompanyDetailPage() {
           company.ceo_nm && `CEO: ${company.ceo_nm}`,
         ].filter(Boolean).join(" | ") || undefined}
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <>
             {matchedGP && (

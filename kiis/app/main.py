@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from starlette.requests import Request
 from app.core.config import settings
 from app.core.elasticsearch import close_elasticsearch, init_elasticsearch
 from app.core.exceptions import register_exception_handlers
+from app.core.log_middleware import setup_request_logging
+from app.core.logging import setup_logging
 from app.core.redis import close_redis, init_redis
 from app.tasks.scheduler import close_scheduler, init_scheduler
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -29,11 +32,14 @@ from app.routers import (
     managers,
     news,
     portfolio,
+    public_data,
     reits,
     sanctions,
     search,
 )
 
+# 구조화 로깅 초기화 (통일 JSON 로그 스키마)
+setup_logging(level="INFO", json_output=not settings.DEBUG, service_name="kiis", log_dir=settings.LOG_DIR or None)
 logger = logging.getLogger(__name__)
 
 
@@ -53,9 +59,13 @@ _INSECURE_DEFAULT_KEY = "change-this-to-a-random-secret-key"
 # Alembic 프로젝트 루트 (kiis/)
 _ALEMBIC_DIR = Path(__file__).resolve().parent.parent
 
+# 마이그레이션 상태 추적 — health check에서 참조
+_migration_ok: bool = False
+
 
 async def _run_alembic_upgrade() -> None:
     """서버 시작 시 Alembic 마이그레이션을 자동 실행한다."""
+    global _migration_ok
 
     def _upgrade() -> None:
         from alembic import command
@@ -66,10 +76,12 @@ async def _run_alembic_upgrade() -> None:
         command.upgrade(alembic_cfg, "head")
 
     try:
-        await asyncio.to_thread(_upgrade)
+        await asyncio.wait_for(asyncio.to_thread(_upgrade), timeout=10)
+        _migration_ok = True
         logger.info("Alembic migration completed (upgrade to head)")
     except Exception as e:
-        logger.warning("Alembic migration skipped: %s", e)
+        _migration_ok = False
+        logger.warning("Alembic migration FAILED: %s — API may return 500 for DB operations", e)
 
 
 @asynccontextmanager
@@ -101,8 +113,9 @@ async def lifespan(app: FastAPI):
         if not settings.DART_API_KEY:
             logger.warning("DART_API_KEY is empty — DART API calls will fail")
 
-    # Startup — Auto-migrate DB
-    await _run_alembic_upgrade()
+    # Startup — Auto-migrate DB (테스트 환경에서는 conftest가 create_all 사용)
+    if os.getenv("TESTING") != "true":
+        await _run_alembic_upgrade()
 
     await init_redis()
     await init_elasticsearch()
@@ -132,6 +145,7 @@ app = FastAPI(
         {"name": "Companies", "description": "기업 정보 통합 조회"},
         {"name": "News", "description": "금융 뉴스 수집 및 NLP 분석"},
         {"name": "Entity Resolution", "description": "기업명 동일성 판별 (Entity Resolution)"},
+        {"name": "PublicData", "description": "공공데이터포털 사모펀드 GP 정보"},
         {"name": "Analysis", "description": "평판 분석 및 스코어링"},
         {"name": "Deals", "description": "딜 소싱 및 투자 DNA 분석"},
         {"name": "Disclosures", "description": "전자공시 딥링크 관리"},
@@ -156,8 +170,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+    max_age=3600,
 )
 
 # Rate Limiting (innermost - runs first on request)
@@ -169,6 +184,9 @@ app.add_middleware(
     paths=["/api/v1/auth/login"],
 )
 
+# 요청/응답 JSON 로깅 미들웨어
+setup_request_logging(app)
+
 # Exception handlers
 register_exception_handlers(app)
 
@@ -177,6 +195,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(dart.router, prefix="/api/v1/dart", tags=["DART"])
 app.include_router(kofia.router, prefix="/api/v1/kofia", tags=["KOFIA"])
 app.include_router(reits.router, prefix="/api/v1/reits", tags=["REITs"])
+app.include_router(public_data.router, prefix="/api/v1/public-data", tags=["PublicData"])
 app.include_router(company.router, prefix="/api/v1/companies", tags=["Companies"])
 app.include_router(news.router, prefix="/api/v1/news", tags=["News"])
 app.include_router(entity.router, prefix="/api/v1/entities", tags=["Entity Resolution"])
@@ -191,7 +210,10 @@ app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboar
 app.include_router(alerts.watchlist_router, prefix="/api/v1/watchlist", tags=["Watchlist"])
 app.include_router(alerts.alerts_router, prefix="/api/v1/alerts", tags=["Alerts"])
 
+from app.routers import audit as audit_router  # noqa: E402
+app.include_router(audit_router.router, prefix="/api/v1/audit", tags=["Audit"])
+
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "migration_ok": _migration_ok}

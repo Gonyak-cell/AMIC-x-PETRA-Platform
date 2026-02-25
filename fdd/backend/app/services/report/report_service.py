@@ -5,6 +5,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -21,22 +22,619 @@ from app.renderers.report_builder import (
     CoverBlock,
     ReportIR,
     ReportMetadata,
+    build_adjustment_by_category_block,
+    build_balance_sheet_block,
+    build_cash_flow_block,
+    build_cost_structure_block,
     build_fx_summary_block,
+    build_income_statement_block,
     build_issue_block,
     build_issue_summary_table_block,
     build_kpi_block,
+    build_margin_analysis_block,
     build_methodology_block,
+    build_monthly_is_block,
     build_net_debt_schedule_block,
     build_nwc_definition_table_block,
     build_nwc_peg_table_block,
+    build_nwc_trend_table_block,
     build_qoe_adjustments_table_block,
     build_qoe_table_block,
+    build_qoe_yoy_block,
+    build_reconciliation_block,
+    build_revenue_breakdown_block,
     build_scope_block,
+    build_seasonality_block,
     build_text_block,
     report_ir_to_dict,
 )
 
 logger = get_logger(__name__)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 1: Financial Statement Sections (IS / BS / CF)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_financial_statement_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+    nwc_calc: "NWCCalculation | None",
+    debt_calc: "NetDebtCalculation | None",
+) -> None:
+    """AccountMapping + StandardLineItem 기반 IS/BS/CF 재무제표 섹션 생성."""
+    from sqlalchemy import select
+
+    from app.models.account_mapping import AccountMapping, MappingStatus
+    from app.models.standard_line_item import (
+        FinancialStatement,
+        LineItemCategory,
+        StandardLineItem,
+    )
+
+    # 승인된 매핑 조회
+    mappings = list(
+        db.scalars(
+            select(AccountMapping).where(
+                AccountMapping.deal_id == deal_id,
+                AccountMapping.status == MappingStatus.APPROVED,
+            )
+        )
+    )
+
+    if not mappings:
+        logger.info("No approved account mappings for deal %s, skipping FS sheets", deal_id)
+        # 매핑이 없어도 QoE 데이터에서 최소한의 IS를 구성
+        if qoe_calc:
+            _build_is_from_qoe(sections, qoe_calc)
+        return
+
+    # 표준 라인아이템 전체 조회
+    std_items = list(
+        db.scalars(select(StandardLineItem).order_by(StandardLineItem.display_order))
+    )
+    std_map = {item.code: item for item in std_items}
+
+    # 매핑별 금액 집계: target_line_item_code → sum(affected_amount)
+    amount_by_code: dict[str, Decimal] = {}
+    for m in mappings:
+        code = m.target_line_item_code
+        amount_by_code[code] = amount_by_code.get(code, Decimal(0)) + (
+            m.affected_amount or Decimal(0)
+        )
+
+    # ── Income Statement ──
+    is_items = [
+        item for item in std_items if item.statement_type == FinancialStatement.IS
+    ]
+    if is_items:
+        is_rows = _build_fs_rows(is_items, amount_by_code)
+        # QoE 데이터로 Adjusted EBITDA 추가
+        if qoe_calc:
+            is_rows.append(
+                {
+                    "name_ko": "Reported EBITDA",
+                    "name_en": "Reported EBITDA",
+                    "amount": _decimal_to_str(qoe_calc.reported_ebitda),
+                    "indent": 0,
+                    "is_subtotal": True,
+                }
+            )
+            is_rows.append(
+                {
+                    "name_ko": "조정 합계",
+                    "name_en": "Total Adjustments",
+                    "amount": _decimal_to_str(qoe_calc.total_adjustments),
+                    "indent": 1,
+                }
+            )
+            is_rows.append(
+                {
+                    "name_ko": "Adjusted EBITDA",
+                    "name_en": "Adjusted EBITDA",
+                    "amount": _decimal_to_str(qoe_calc.adjusted_ebitda),
+                    "indent": 0,
+                    "is_total": True,
+                }
+            )
+        sections.append(build_income_statement_block(is_rows))
+
+    # ── Balance Sheet ──
+    bs_items = [
+        item for item in std_items if item.statement_type == FinancialStatement.BS
+    ]
+    if bs_items:
+        bs_rows = _build_fs_rows(bs_items, amount_by_code)
+        sections.append(build_balance_sheet_block(bs_rows))
+
+    # ── Cash Flow (간접법 도출) ──
+    if bs_items and is_items:
+        cf_rows = _derive_cash_flow(is_items, bs_items, amount_by_code, std_map, qoe_calc)
+        if cf_rows:
+            sections.append(build_cash_flow_block(cf_rows))
+
+
+def _build_is_from_qoe(sections: list, qoe_calc: "QoECalculation") -> None:
+    """QoE 계산 결과만으로 간이 IS를 구성."""
+    rows = []
+    for label_ko, label_en, value, indent, is_sub, is_tot in [
+        ("매출액", "Revenue", qoe_calc.revenue, 0, False, False),
+        ("매출원가", "COGS", qoe_calc.cogs, 1, False, False),
+        ("매출총이익", "Gross Profit", qoe_calc.gross_profit, 0, True, False),
+        ("판매관리비", "SG&A", qoe_calc.sga, 1, False, False),
+        ("감가상각비", "D&A", qoe_calc.depreciation_amortization, 1, False, False),
+        ("영업이익", "Operating Income", qoe_calc.operating_income, 0, True, False),
+        ("Reported EBITDA", "Reported EBITDA", qoe_calc.reported_ebitda, 0, True, False),
+        ("조정 합계", "Total Adjustments", qoe_calc.total_adjustments, 1, False, False),
+        ("Adjusted EBITDA", "Adjusted EBITDA", qoe_calc.adjusted_ebitda, 0, False, True),
+    ]:
+        rows.append(
+            {
+                "name_ko": label_ko,
+                "name_en": label_en,
+                "amount": _decimal_to_str(value),
+                "indent": indent,
+                "is_subtotal": is_sub,
+                "is_total": is_tot,
+            }
+        )
+    sections.append(build_income_statement_block(rows))
+
+
+def _build_fs_rows(
+    std_items: list,
+    amount_by_code: dict[str, Decimal],
+) -> list[dict[str, Any]]:
+    """StandardLineItem 리스트 → FS rows 변환."""
+    rows = []
+    for item in std_items:
+        amount = amount_by_code.get(item.code, Decimal(0))
+        indent = 0
+        if item.parent_code:
+            indent = 1
+        rows.append(
+            {
+                "code": item.code,
+                "name_ko": item.name_ko,
+                "name_en": item.name_en,
+                "amount": _decimal_to_str(amount) if amount else "",
+                "indent": indent,
+                "is_subtotal": item.is_subtotal,
+                "is_total": False,
+            }
+        )
+    return rows
+
+
+def _derive_cash_flow(
+    is_items: list,
+    bs_items: list,
+    amount_by_code: dict[str, Decimal],
+    std_map: dict[str, Any],
+    qoe_calc: "QoECalculation | None",
+) -> list[dict[str, Any]]:
+    """간접법 기반 CF 도출. BS/IS 변동에서 영업/투자/재무 CF 산출."""
+    from app.models.standard_line_item import LineItemCategory
+
+    rows = []
+
+    # 영업활동 CF
+    net_income = Decimal(0)
+    if qoe_calc and qoe_calc.operating_income:
+        net_income = qoe_calc.operating_income
+
+    da = Decimal(0)
+    if qoe_calc and qoe_calc.depreciation_amortization:
+        da = qoe_calc.depreciation_amortization
+
+    operating_cf = net_income + da
+    rows.append(
+        {"name_ko": "영업활동 현금흐름", "name_en": "Operating Activities", "amount": "", "indent": 0, "is_subtotal": True}
+    )
+    rows.append(
+        {"name_ko": "당기순이익", "name_en": "Net Income", "amount": _decimal_to_str(net_income), "indent": 1}
+    )
+    rows.append(
+        {"name_ko": "감가상각비", "name_en": "Depreciation & Amortization", "amount": _decimal_to_str(da), "indent": 1}
+    )
+    rows.append(
+        {"name_ko": "영업활동 소계", "name_en": "Operating CF Subtotal", "amount": _decimal_to_str(operating_cf), "indent": 0, "is_subtotal": True}
+    )
+
+    # 투자활동 CF (PPE + Intangibles) — category enum 기반
+    ppe_amount = Decimal(0)
+    intangible_amount = Decimal(0)
+    for item_code, amount in amount_by_code.items():
+        item = std_map.get(item_code)
+        if not item:
+            continue
+        if item.category == LineItemCategory.PPE:
+            ppe_amount += amount
+        elif item.category == LineItemCategory.INTANGIBLES:
+            intangible_amount += amount
+
+    investing_cf = -(ppe_amount + intangible_amount)
+    rows.append(
+        {"name_ko": "투자활동 현금흐름", "name_en": "Investing Activities", "amount": "", "indent": 0, "is_subtotal": True}
+    )
+    rows.append(
+        {"name_ko": "유형자산 취득", "name_en": "PPE Acquisitions", "amount": _decimal_to_str(-ppe_amount), "indent": 1}
+    )
+    rows.append(
+        {"name_ko": "무형자산 취득", "name_en": "Intangible Acquisitions", "amount": _decimal_to_str(-intangible_amount), "indent": 1}
+    )
+    rows.append(
+        {"name_ko": "투자활동 소계", "name_en": "Investing CF Subtotal", "amount": _decimal_to_str(investing_cf), "indent": 0, "is_subtotal": True}
+    )
+
+    # 재무활동 CF (Debt + Lease) — category enum 기반
+    debt_amount = Decimal(0)
+    for item_code, amount in amount_by_code.items():
+        item = std_map.get(item_code)
+        if not item:
+            continue
+        if item.category in (LineItemCategory.DEBT, LineItemCategory.LEASE_LIABILITIES):
+            debt_amount += amount
+
+    rows.append(
+        {"name_ko": "재무활동 현금흐름", "name_en": "Financing Activities", "amount": "", "indent": 0, "is_subtotal": True}
+    )
+    rows.append(
+        {"name_ko": "차입금 변동", "name_en": "Debt Changes", "amount": _decimal_to_str(debt_amount), "indent": 1}
+    )
+    rows.append(
+        {"name_ko": "재무활동 소계", "name_en": "Financing CF Subtotal", "amount": _decimal_to_str(debt_amount), "indent": 0, "is_subtotal": True}
+    )
+
+    # Free Cash Flow
+    fcf = operating_cf + investing_cf
+    rows.append(
+        {"name_ko": "Free Cash Flow (FCF)", "name_en": "Free Cash Flow", "amount": _decimal_to_str(fcf), "indent": 0, "is_total": True}
+    )
+
+    return rows
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 2: Multi-Period Trend Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_trend_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+    nwc_calc: "NWCCalculation | None",
+) -> None:
+    """NWC 월별 트렌드, 계절성, QoE YoY 비교 섹션 생성."""
+    # ── NWC Monthly Trend ──
+    if nwc_calc and nwc_calc.monthly_trend:
+        months = sorted(nwc_calc.monthly_trend.keys())
+        if months:
+            trend_rows = []
+            for label, key in [
+                ("유동자산", "ca"),
+                ("유동부채", "cl"),
+                ("순운전자본", "nwc"),
+            ]:
+                row: dict[str, Any] = {"item": label}
+                for m in months:
+                    val = nwc_calc.monthly_trend.get(m, {})
+                    row[m] = _format_currency(Decimal(str(val.get(key, 0)))) if val.get(key) else ""
+                trend_rows.append(row)
+
+            sections.append(build_nwc_trend_table_block("NWC Monthly Trend (월별 추이)", trend_rows, months))
+
+            # ── NWC Seasonality ──
+            revenue_val = None
+            if qoe_calc and qoe_calc.revenue and qoe_calc.revenue > 0:
+                revenue_val = qoe_calc.revenue
+
+            if revenue_val:
+                seasonality_rows = []
+                nwc_values = []
+                nwc_pct_row: dict[str, Any] = {"item": "NWC / Revenue"}
+                for m in months:
+                    val = nwc_calc.monthly_trend.get(m, {})
+                    nwc_val = Decimal(str(val.get("nwc", 0))) if val.get("nwc") else Decimal(0)
+                    nwc_values.append(nwc_val)
+                    pct = float(nwc_val / revenue_val * 100) if revenue_val else 0
+                    nwc_pct_row[m] = f"{pct:.1f}%"
+
+                avg_nwc = sum(nwc_values) / len(nwc_values) if nwc_values else Decimal(0)
+                avg_pct = float(avg_nwc / revenue_val * 100) if revenue_val else 0
+                nwc_pct_row["avg"] = f"{avg_pct:.1f}%"
+
+                # 표준편차
+                if len(nwc_values) > 1:
+                    mean_f = float(avg_nwc)
+                    variance = sum((float(v) - mean_f) ** 2 for v in nwc_values) / len(nwc_values)
+                    stdev_pct = float((Decimal(str(variance ** 0.5)) / revenue_val) * 100)
+                    nwc_pct_row["stdev"] = f"{stdev_pct:.1f}%"
+                else:
+                    nwc_pct_row["stdev"] = "-"
+
+                seasonality_rows.append(nwc_pct_row)
+                sections.append(build_seasonality_block("NWC Seasonality (계절성 분석)", seasonality_rows, months))
+
+    # ── QoE YoY Comparison ──
+    if qoe_calc and qoe_calc.category_breakdown:
+        # 단일 기간이면 기존 데이터만으로 구성
+        yoy_data = []
+        for category, amount in [
+            ("Revenue", qoe_calc.revenue),
+            ("COGS", qoe_calc.cogs),
+            ("Gross Profit", qoe_calc.gross_profit),
+            ("SG&A", qoe_calc.sga),
+            ("D&A", qoe_calc.depreciation_amortization),
+            ("Operating Income", qoe_calc.operating_income),
+            ("Reported EBITDA", qoe_calc.reported_ebitda),
+            ("Total Adjustments", qoe_calc.total_adjustments),
+            ("Adjusted EBITDA", qoe_calc.adjusted_ebitda),
+        ]:
+            if amount is not None:
+                yoy_data.append(
+                    {
+                        "category": category,
+                        "Current": _format_currency(amount),
+                        "change": "-",
+                        "change_pct": "-",
+                    }
+                )
+
+        if yoy_data:
+            sections.append(
+                build_qoe_yoy_block("QoE Summary by Category", yoy_data, ["Current"])
+            )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 3: Sales & Cost Analysis Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_sales_cost_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+) -> None:
+    """매출 분석, 원가 구조, 마진 분석 섹션 생성."""
+    from sqlalchemy import func as sa_func
+    from sqlalchemy import select
+
+    from app.models.journal_entry import JournalEntry
+    from app.models.account_mapping import AccountMapping, MappingStatus
+    from app.models.standard_line_item import LineItemCategory, StandardLineItem
+
+    # ── Revenue Breakdown (거래처별 매출) ──
+    # GL 데이터에서 counterparty 기반 매출 집계
+    revenue_codes = list(
+        db.scalars(
+            select(StandardLineItem.code).where(
+                StandardLineItem.category == LineItemCategory.REVENUE
+            )
+        )
+    )
+    if revenue_codes:
+        # AccountMapping을 통해 revenue로 매핑된 원천 계정코드 조회
+        rev_source_codes = list(
+            db.scalars(
+                select(AccountMapping.source_account_code).where(
+                    AccountMapping.deal_id == deal_id,
+                    AccountMapping.status == MappingStatus.APPROVED,
+                    AccountMapping.target_line_item_code.in_(revenue_codes),
+                )
+            )
+        )
+        if rev_source_codes:
+            # JournalEntry에서 counterparty별 집계
+            counterparty_results = db.execute(
+                select(
+                    JournalEntry.counterparty,
+                    sa_func.sum(JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)).label("total"),
+                )
+                .where(
+                    JournalEntry.deal_id == deal_id,
+                    JournalEntry.account_code.in_(rev_source_codes),
+                    JournalEntry.counterparty.isnot(None),
+                )
+                .group_by(JournalEntry.counterparty)
+                .order_by(sa_func.sum(JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)).desc())
+                .limit(20)
+            ).all()
+
+            if counterparty_results:
+                grand_total = sum(abs(r.total or 0) for r in counterparty_results)
+                rev_rows = []
+                cum_pct = Decimal(0)
+                for rank, r in enumerate(counterparty_results, 1):
+                    amt = abs(r.total or 0)
+                    pct = float(amt / grand_total * 100) if grand_total else 0
+                    cum_pct += Decimal(str(pct))
+                    rev_rows.append(
+                        {
+                            "rank": rank,
+                            "counterparty": r.counterparty or "(미분류)",
+                            "amount": _format_currency(Decimal(str(amt))),
+                            "pct": f"{pct:.1f}%",
+                            "cum_pct": f"{float(cum_pct):.1f}%",
+                        }
+                    )
+                sections.append(build_revenue_breakdown_block("Revenue by Counterparty (거래처별 매출)", rev_rows))
+
+    # ── Cost Structure ──
+    if qoe_calc:
+        revenue = qoe_calc.revenue or Decimal(0)
+        cost_rows = []
+        for name_ko, amount in [
+            ("매출원가 (COGS)", qoe_calc.cogs),
+            ("판매관리비 (SG&A)", qoe_calc.sga),
+            ("감가상각비 (D&A)", qoe_calc.depreciation_amortization),
+        ]:
+            if amount is not None:
+                pct = float(amount / revenue * 100) if revenue else 0
+                cost_rows.append(
+                    {
+                        "name_ko": name_ko,
+                        "amount": _format_currency(amount),
+                        "pct_of_revenue": f"{pct:.1f}%",
+                    }
+                )
+        if cost_rows:
+            sections.append(build_cost_structure_block("Cost Structure (원가 구조)", cost_rows))
+
+        # ── Margin Analysis ──
+        margin_rows = []
+        if revenue and revenue > 0:
+            for metric, value in [
+                ("매출총이익률 (Gross Margin)", qoe_calc.gross_profit),
+                ("영업이익률 (Operating Margin)", qoe_calc.operating_income),
+                ("EBITDA 마진 (EBITDA Margin)", qoe_calc.reported_ebitda),
+                ("Adjusted EBITDA 마진", qoe_calc.adjusted_ebitda),
+            ]:
+                if value is not None:
+                    pct = float(value / revenue * 100)
+                    margin_rows.append({"metric": metric, "Current": f"{pct:.1f}%"})
+            if margin_rows:
+                sections.append(build_margin_analysis_block("Margin Analysis (마진 분석)", margin_rows, ["Current"]))
+
+        # ── Adjustment by Category ──
+        if qoe_calc.adjustment_items:
+            cat_totals: dict[str, tuple[int, Decimal]] = {}
+            for adj in qoe_calc.adjustment_items:
+                cat_name = adj.category.value if adj.category else "OTHER"
+                count, total = cat_totals.get(cat_name, (0, Decimal(0)))
+                cat_totals[cat_name] = (count + 1, total + (adj.amount or Decimal(0)))
+
+            total_adj = sum(t for _, t in cat_totals.values())
+            cat_rows = []
+            for cat_name, (count, total) in sorted(cat_totals.items(), key=lambda x: -x[1][1]):
+                pct = float(total / total_adj * 100) if total_adj else 0
+                cat_rows.append(
+                    {
+                        "category": cat_name,
+                        "count": count,
+                        "total": _format_currency(total),
+                        "pct": f"{pct:.1f}%",
+                    }
+                )
+            if cat_rows:
+                sections.append(
+                    build_adjustment_by_category_block("QoE Adjustments by Category (조정 카테고리별)", cat_rows)
+                )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 6: Reconciliation & Appendix Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_reconciliation_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+    nwc_calc: "NWCCalculation | None",
+    debt_calc: "NetDebtCalculation | None",
+) -> None:
+    """검증/Reconciliation 시트 데이터 생성."""
+    from sqlalchemy import select
+
+    from app.models.upload import UploadFile
+
+    checks = []
+
+    # QoE Bridge 검증
+    if qoe_calc:
+        reported = qoe_calc.reported_ebitda or Decimal(0)
+        adjustments = qoe_calc.total_adjustments or Decimal(0)
+        adjusted = qoe_calc.adjusted_ebitda or Decimal(0)
+        expected = reported + adjustments
+        diff = adjusted - expected
+        checks.append(
+            {
+                "check": "QoE Bridge (Reported + Adj = Adjusted EBITDA)",
+                "expected": _format_currency(expected),
+                "actual": _format_currency(adjusted),
+                "difference": _format_currency(diff),
+                "status": "Pass" if abs(diff) < 1 else "Fail",
+            }
+        )
+
+        # Revenue → GP 검증
+        if qoe_calc.revenue and qoe_calc.cogs and qoe_calc.gross_profit:
+            expected_gp = qoe_calc.revenue - qoe_calc.cogs
+            diff_gp = (qoe_calc.gross_profit or Decimal(0)) - expected_gp
+            checks.append(
+                {
+                    "check": "Gross Profit (Revenue - COGS = GP)",
+                    "expected": _format_currency(expected_gp),
+                    "actual": _format_currency(qoe_calc.gross_profit),
+                    "difference": _format_currency(diff_gp),
+                    "status": "Pass" if abs(diff_gp) < 1 else "Fail",
+                }
+            )
+
+    # Net Debt 검증
+    if debt_calc:
+        total_debt = debt_calc.total_debt or Decimal(0)
+        total_cash = debt_calc.total_cash or Decimal(0)
+        expected_nd = total_debt - total_cash
+        actual_nd = debt_calc.net_debt or Decimal(0)
+        diff_nd = actual_nd - expected_nd
+        checks.append(
+            {
+                "check": "Net Debt (Total Debt - Total Cash = Net Debt)",
+                "expected": _format_currency(expected_nd),
+                "actual": _format_currency(actual_nd),
+                "difference": _format_currency(diff_nd),
+                "status": "Pass" if abs(diff_nd) < 1 else "Fail",
+            }
+        )
+
+    if checks:
+        sections.append(build_reconciliation_block("Reconciliation (검증)", checks))
+
+    # Appendix: Data Sources
+    uploads = list(
+        db.scalars(
+            select(UploadFile).where(UploadFile.deal_id == deal_id).order_by(UploadFile.created_at)
+        )
+    )
+    if uploads:
+        from app.renderers.report_builder import AlignType, TableBlock, TableColumn
+
+        source_rows = []
+        for u in uploads:
+            source_rows.append(
+                {
+                    "filename": u.original_filename,
+                    "type": (u.confirmed_type or u.detected_type or "").value
+                    if (u.confirmed_type or u.detected_type)
+                    else "",
+                    "rows": str(u.rows_processed or "-"),
+                    "status": u.status.value if u.status else "",
+                }
+            )
+        sections.append(
+            TableBlock(
+                title="Appendix: Data Sources (데이터 소스)",
+                columns=[
+                    TableColumn(key="filename", header="파일명", width=4.0, align=AlignType.LEFT),
+                    TableColumn(key="type", header="유형", width=1.0, align=AlignType.CENTER),
+                    TableColumn(key="rows", header="처리 행수", width=1.0, align=AlignType.RIGHT),
+                    TableColumn(key="status", header="상태", width=1.0, align=AlignType.CENTER),
+                ],
+                rows=source_rows,
+                zebra_stripe=True,
+                metadata={"tab_color": "999999"},
+            )
+        )
 
 
 def _build_multi_entity_sections(
@@ -147,6 +745,9 @@ def build_report_ir(
     include_nwc: bool = True,
     include_debt: bool = True,
     include_issues: bool = True,
+    include_financial_statements: bool = True,
+    include_trends: bool = True,
+    include_sales_analysis: bool = True,
     use_llm_narratives: bool = False,
     use_template_slotfill: bool = False,
 ) -> ReportIR:
@@ -284,7 +885,7 @@ def build_report_ir(
         )
         if nwc_calc:
             kpis.append(
-                ("Net Working Capital", _format_currency(nwc_calc.total_nwc), "백만원")
+                ("Net Working Capital", _format_currency(nwc_calc.net_working_capital), "백만원")
             )
 
     # Debt 데이터 수집
@@ -397,7 +998,7 @@ def build_report_ir(
             )
 
         # NWC Peg Scenarios (if available)
-        if nwc_calc.peg_scenarios:
+        if hasattr(nwc_calc, "peg_scenarios") and nwc_calc.peg_scenarios:
             peg_data = []
             for method, values in nwc_calc.peg_scenarios.items():
                 peg_data.append(
@@ -450,6 +1051,18 @@ def build_report_ir(
                 ],
             )
         )
+
+    # ═══ Phase 1: Financial Statements (IS/BS/CF from AccountMapping) ═══
+    if include_financial_statements:
+        _build_financial_statement_sections(db, deal_id, sections, qoe_calc, nwc_calc, debt_calc)
+
+    # ═══ Phase 2: Multi-Period Trends ═══
+    if include_trends:
+        _build_trend_sections(db, deal_id, sections, qoe_calc, nwc_calc)
+
+    # ═══ Phase 3: Sales & Cost Analysis ═══
+    if include_sales_analysis:
+        _build_sales_cost_sections(db, deal_id, sections, qoe_calc)
 
     # 7. Multi-Entity Sections (entity structure, FX rates)
     _build_multi_entity_sections(db, deal_id, sections)
@@ -543,7 +1156,7 @@ def build_report_ir(
             nwc_summary = None
             if nwc_calc:
                 nwc_summary = {
-                    "net_working_capital": _format_currency(nwc_calc.total_nwc),
+                    "net_working_capital": _format_currency(nwc_calc.net_working_capital),
                     "peg_target": _format_currency(nwc_calc.peg_target) if hasattr(nwc_calc, "peg_target") else "N/A",
                 }
             debt_summary = None
@@ -613,6 +1226,9 @@ def build_report_ir(
     ]
     sections.append(build_methodology_block(methodology_steps, limitations=limitations))
 
+    # ═══ Phase 6: Reconciliation & Appendix ═══
+    _build_reconciliation_sections(db, deal_id, sections, qoe_calc, nwc_calc, debt_calc)
+
     return ReportIR(metadata=metadata, sections=sections)
 
 
@@ -667,12 +1283,12 @@ def _build_fdd_data_dict(
 
     if nwc_calc:
         data["nwc"] = {
-            "total_nwc": _format_currency(nwc_calc.total_nwc),
+            "total_nwc": _format_currency(nwc_calc.net_working_capital),
             "peg_target": _format_currency(nwc_calc.peg_target)
             if hasattr(nwc_calc, "peg_target") and nwc_calc.peg_target
             else "N/A",
             "line_item_count": len(nwc_calc.line_items or []),
-            "peg_scenarios": nwc_calc.peg_scenarios or {},
+            "peg_scenarios": getattr(nwc_calc, "peg_scenarios", None) or {},
         }
 
     if debt_calc:

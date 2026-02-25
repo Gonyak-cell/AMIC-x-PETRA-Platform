@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 SAMPLE_DEAL = {
     "name": "Project Alpha",
+    "target_company_name": "Alpha Corp",
     "deal_type": "COMPLETION_ACCOUNTS",
     "base_currency": "KRW",
     "reference_date": "2025-12-31",
@@ -40,7 +41,7 @@ class TestDealCRUD:
 
         resp = client.get("/api/v1/deals")
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        assert len(resp.json()["items"]) == 2
 
     def test_get_deal(self, client: TestClient):
         create_resp = client.post("/api/v1/deals", json=SAMPLE_DEAL)

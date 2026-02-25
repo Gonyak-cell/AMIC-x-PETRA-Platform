@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from app.core.config import settings
+from app.core.log_decorators import log_error_with_input
 from app.core.exceptions import ExternalAPIError
 from app.schemas.fund import (
     FundDetailResponse,
@@ -139,6 +140,7 @@ class KOFIAService:
         self._latest_std_dt: str | None = None
         self._latest_fee_dt: str | None = None
 
+    @log_error_with_input
     async def _request_proframe(
         self,
         app_name: str,

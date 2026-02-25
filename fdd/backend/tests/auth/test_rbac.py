@@ -39,7 +39,12 @@ class TestRBAC:
 
     def test_viewer_can_only_read_and_download(self):
         perms = get_permissions(UserRole.VIEWER)
-        assert perms == {Permission.DEAL_READ, Permission.REPORT_DOWNLOAD}
+        assert perms == {
+            Permission.DEAL_READ,
+            Permission.REPORT_DOWNLOAD,
+            Permission.NOTIFICATION_READ,
+            Permission.SETTINGS_READ,
+        }
 
     def test_viewer_cannot_create_deal(self):
         assert has_permission(UserRole.VIEWER, Permission.DEAL_CREATE) is False

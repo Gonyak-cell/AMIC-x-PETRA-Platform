@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    font-family: 'SUITE Variable', 'SUITE', 'Space Grotesk', sans-serif;
+    font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -14,7 +14,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', 'SUITE Variable', 'SUITE', sans-serif;
+    font-family: 'SUITE Variable', 'SUITE', sans-serif;
     @apply text-text-dark;
     letter-spacing: -0.02em;
   }
@@ -120,7 +120,13 @@
 
   /* Glass-morphism 카드 (다크 섹션용) */
   .glass-card {
-    @apply bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm rounded-dr;
+    @apply bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm rounded-dr text-white;
+  }
+  .glass-card .text-text-secondary {
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .glass-card .text-text-dark {
+    color: #ffffff;
   }
 
   /* 업그레이드된 호버 (깊이감) */
@@ -143,20 +149,34 @@
     @apply shadow-glow-green;
   }
 
-  /* Staggered 등장 애니메이션 */
-  .stagger > * {
-    @apply opacity-0 animate-fade-in-up;
-  }
-
-  .stagger > :nth-child(1) { animation-delay: 0ms; }
-  .stagger > :nth-child(2) { animation-delay: 75ms; }
-  .stagger > :nth-child(3) { animation-delay: 150ms; }
-  .stagger > :nth-child(4) { animation-delay: 225ms; }
-  .stagger > :nth-child(5) { animation-delay: 300ms; }
-  .stagger > :nth-child(6) { animation-delay: 375ms; }
-
   /* 섹션 디바이더 (그라디언트 라인) */
   .section-divider-line {
     @apply h-px bg-gradient-to-r from-transparent via-gray-border to-transparent;
+  }
+
+  /* PDF 공식 브랜드 그라디언트 */
+  .brand-gradient {
+    background: linear-gradient(135deg, #0F3A32, #1C8F57, #26C260);
+  }
+
+  .brand-gradient-light {
+    background: linear-gradient(135deg, #A3E96B, #E6FDD6);
+  }
+
+  /* 디스플레이/로고 폰트 */
+  .font-display {
+    font-family: 'Josefin Sans', 'SUITE Variable', sans-serif;
+  }
+}
+
+/* ── Accessibility: Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

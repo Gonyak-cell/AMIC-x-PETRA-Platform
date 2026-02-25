@@ -29,6 +29,9 @@ class Permission(StrEnum):
     SETTINGS_READ = "settings:read"
     SETTINGS_UPDATE = "settings:update"
 
+    # Client role: 배정된 딜만 읽기
+    DEAL_READ_ASSIGNED = "deal:read_assigned"
+
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
     UserRole.ADMIN: set(Permission),
@@ -65,6 +68,12 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.REPORT_DOWNLOAD,
         Permission.NOTIFICATION_READ,
         Permission.SETTINGS_READ,
+    },
+    UserRole.CLIENT: {
+        Permission.DEAL_READ_ASSIGNED,
+        Permission.NOTIFICATION_READ,
+        Permission.SETTINGS_READ,
+        Permission.SETTINGS_UPDATE,
     },
 }
 

@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims
 from app.models.audit import AuditLog
+from app.models.ldd_report import LDDReport
+from app.models.legal_document import LegalDocument
+from app.models.marketing_material import MarketingMaterial
 from app.models.transaction import Transaction
 from app.schemas.dashboard import DashboardStats, PhaseSummary
 
@@ -20,9 +23,11 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """M&A 대시보드 통계."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     base = select(Transaction).where(Transaction.is_deleted.is_(False))
     result = await db.execute(base)
     transactions = list(result.scalars().all())
@@ -71,3 +76,19 @@ async def get_dashboard_stats(
         by_side=by_side,
         recent_activity_count=recent_count,
     )
+
+
+@router.get("/docs-stats")
+async def get_docs_stats(
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """Deal Document Studio 전체 문서 통계."""
+    legal = await db.scalar(select(func.count()).select_from(LegalDocument))
+    marketing = await db.scalar(select(func.count()).select_from(MarketingMaterial))
+    ldd = await db.scalar(select(func.count()).select_from(LDDReport))
+    return {
+        "total_legal": legal or 0,
+        "total_marketing": marketing or 0,
+        "total_ldd": ldd or 0,
+    }

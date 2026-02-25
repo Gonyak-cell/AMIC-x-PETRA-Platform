@@ -47,6 +47,16 @@ from src.narrative_generator.prompts.section_prompts.supporting import (
     ContactPrompt,
     ManagementTeamPrompt,
 )
+from src.narrative_generator.prompts.section_prompts.teaser import (
+    DemandDriverPrompt,
+    MarketOutlookPrompt,
+    ProformaFinancialsPrompt,
+    ProformaPlanPrompt,
+    SupplyDriverPrompt,
+    TargetHighlightsPrompt,
+    TargetOverviewPrompt,
+    TargetPositioningPrompt,
+)
 
 # ---------------------------------------------------------------------------
 # 산업별 변형 레지스트리
@@ -73,7 +83,7 @@ def get_industry_variant(industry: str) -> IndustryVariant | None:
 
 
 def create_default_registry() -> PromptRegistry:
-    """15개 섹션 프롬프트가 등록된 기본 레지스트리를 생성한다."""
+    """23개 섹션 프롬프트(IM 15종 + TM 8종)가 등록된 기본 레지스트리를 생성한다."""
     registry = PromptRegistry()
 
     # Core (T-N08)
@@ -98,6 +108,16 @@ def create_default_registry() -> PromptRegistry:
     registry.register(BusinessModelPrompt())
     registry.register(AppendixPrompt())
     registry.register(ContactPrompt())
+
+    # TM (Teaser Memorandum) 전용
+    registry.register(TargetPositioningPrompt())
+    registry.register(MarketOutlookPrompt())
+    registry.register(DemandDriverPrompt())
+    registry.register(SupplyDriverPrompt())
+    registry.register(TargetOverviewPrompt())
+    registry.register(TargetHighlightsPrompt())
+    registry.register(ProformaPlanPrompt())
+    registry.register(ProformaFinancialsPrompt())
 
     return registry
 
@@ -131,4 +151,12 @@ __all__ = [
     "BusinessModelPrompt",
     "AppendixPrompt",
     "ContactPrompt",
+    "TargetPositioningPrompt",
+    "MarketOutlookPrompt",
+    "DemandDriverPrompt",
+    "SupplyDriverPrompt",
+    "TargetOverviewPrompt",
+    "TargetHighlightsPrompt",
+    "ProformaPlanPrompt",
+    "ProformaFinancialsPrompt",
 ]

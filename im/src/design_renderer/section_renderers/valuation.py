@@ -8,37 +8,20 @@
 from __future__ import annotations
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 from src.design_renderer.im_document import IMDocumentData
-from src.design_renderer.pdf_output.html_builder import build_slide_html
+
 from src.design_renderer.section_renderers import register_renderer
 from src.design_renderer.section_renderers.base import BaseSectionRenderer
+from src.design_renderer.section_renderers.format_utils import (
+    fmt_amount,
+    fmt_multiple,
+    fmt_pct,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def _fmt_multiple(val: float | None) -> str:
-    """배수 포맷."""
-    if val is None:
-        return "N/A"
-    return f"{val:.1f}x"
-
-
-def _fmt_pct(val: float | None) -> str:
-    """백분율 포맷."""
-    if val is None:
-        return "N/A"
-    return f"{val:.1f}%"
-
-
-def _fmt_amount(val: float | int | None) -> str:
-    """금액 포맷."""
-    if val is None:
-        return "N/A"
-    return f"{val:,.0f}"
 
 
 @register_renderer
@@ -72,24 +55,24 @@ class ValuationRenderer(BaseSectionRenderer):
             latest = sorted(vd.ev_ebitda.keys())[-1]
             kpis.append({
                 "label": f"EV/EBITDA ({latest})",
-                "value": _fmt_multiple(vd.ev_ebitda[latest]),
+                "value": fmt_multiple(vd.ev_ebitda[latest]),
             })
         if vd.pe_ratio:
             latest = sorted(vd.pe_ratio.keys())[-1]
             kpis.append({
                 "label": f"P/E ({latest})",
-                "value": _fmt_multiple(vd.pe_ratio[latest]),
+                "value": fmt_multiple(vd.pe_ratio[latest]),
             })
         if vd.ev_revenue:
             latest = sorted(vd.ev_revenue.keys())[-1]
             kpis.append({
                 "label": f"EV/Revenue ({latest})",
-                "value": _fmt_multiple(vd.ev_revenue[latest]),
+                "value": fmt_multiple(vd.ev_revenue[latest]),
             })
         if vd.moic_scenarios.get("base") is not None:
             kpis.append({
                 "label": "MOIC (Base)",
-                "value": _fmt_multiple(vd.moic_scenarios["base"]),
+                "value": fmt_multiple(vd.moic_scenarios["base"]),
             })
         return kpis
 
@@ -108,11 +91,11 @@ class ValuationRenderer(BaseSectionRenderer):
             moic = vd.moic_scenarios.get(name)
             rows.append({
                 "label": name.capitalize(),
-                "Entry Multiple": _fmt_multiple(scen.get("entry_multiple")),
-                "Exit Multiple": _fmt_multiple(scen.get("exit_multiple")),
+                "Entry Multiple": fmt_multiple(scen.get("entry_multiple")),
+                "Exit Multiple": fmt_multiple(scen.get("exit_multiple")),
                 "보유기간": f"{scen.get('holding_period', 'N/A')}년",
-                "IRR": _fmt_pct(scen.get("irr")),
-                "MOIC": _fmt_multiple(moic) if moic else "N/A",
+                "IRR": fmt_pct(scen.get("irr"), already_percent=True),
+                "MOIC": fmt_multiple(moic) if moic else "N/A",
             })
         return headers, rows
 
@@ -129,10 +112,10 @@ class ValuationRenderer(BaseSectionRenderer):
         for label, ea in vd.exit_analysis.items():
             rows.append({
                 "label": label,
-                "Exit EV": _fmt_amount(ea.get("exit_ev")),
-                "Exit Equity": _fmt_amount(ea.get("exit_equity")),
-                "MOIC": _fmt_multiple(ea.get("moic")),
-                "IRR": _fmt_pct(ea.get("irr")),
+                "Exit EV": fmt_amount(ea.get("exit_ev")),
+                "Exit Equity": fmt_amount(ea.get("exit_equity")),
+                "MOIC": fmt_multiple(ea.get("moic")),
+                "IRR": fmt_pct(ea.get("irr"), already_percent=True),
             })
         return headers, rows
 
@@ -146,135 +129,7 @@ class ValuationRenderer(BaseSectionRenderer):
         *,
         tokens: IMDesignTokens | None = None,
     ) -> list[str]:
-        tokens = tokens or DEFAULT_TOKENS
-        c = tokens.colors
-        slides: list[str] = []
-
-        # 슬라이드 1: KPI + 내러티브
-        kpis = self._build_valuation_kpis(data)
-        narrative = html_escape(data.narratives.get("valuation", ""))
-
-        kpi_html = ""
-        if kpis:
-            cards = ""
-            for kpi in kpis:
-                cards += (
-                    f'<div style="text-align:center;padding:0.5em;'
-                    f'background:{c.bg_cool_grey};border-radius:4px;">'
-                    f'<div style="font-size:8pt;color:{c.text_secondary};">'
-                    f'{html_escape(kpi["label"])}</div>'
-                    f'<div style="font-size:16pt;font-weight:bold;'
-                    f"color:{c.primary};font-family:'IBM Plex Mono',monospace;\">"
-                    f'{html_escape(kpi["value"])}</div></div>'
-                )
-            kpi_html = (
-                f'<div style="display:grid;grid-template-columns:'
-                f"repeat({min(len(kpis), 4)}, 1fr);gap:0.6em;"
-                f'margin-bottom:1em;">{cards}</div>'
-            )
-
-        narrative_html = ""
-        if narrative:
-            narrative_html = (
-                f'<p style="font-size:10pt;color:{c.text_body};'
-                f'line-height:1.6;">{narrative}</p>'
-            )
-
-        slides.append(build_slide_html(
-            f"{kpi_html}{narrative_html}",
-            title="밸류에이션 요약",
-            slide_class="slide-valuation",
-            tokens=tokens,
-        ))
-
-        vd = data.valuation_data
-
-        # 슬라이드 2: IRR/MOIC 시나리오 테이블
-        if vd and vd.irr_scenarios:
-            headers, rows = self._build_scenario_table(data)
-            if rows:
-                th = "".join(
-                    f'<th style="padding:5px 8px;background:{c.table_header_bg};'
-                    f'color:{c.text_white};font-size:9pt;">'
-                    f"{html_escape(h)}</th>"
-                    for h in headers
-                )
-                tr = ""
-                for r_idx, row in enumerate(rows):
-                    bg = c.table_alt_row_bg if r_idx % 2 == 1 else c.bg_white
-                    cells = (
-                        f'<td style="padding:4px 8px;font-size:9pt;'
-                        f'font-weight:bold;color:{c.primary};background:{bg};">'
-                        f'{html_escape(row["label"])}</td>'
-                    )
-                    for h in headers[1:]:
-                        cells += (
-                            f'<td style="padding:4px 8px;font-size:9pt;'
-                            f"text-align:right;font-family:'IBM Plex Mono',monospace;"
-                            f'color:{c.text_body};background:{bg};">'
-                            f"{html_escape(str(row.get(h, 'N/A')))}</td>"
-                        )
-                    tr += f"<tr>{cells}</tr>"
-
-                slides.append(build_slide_html(
-                    f'<table style="border-collapse:collapse;width:100%;">'
-                    f"<thead><tr>{th}</tr></thead>"
-                    f"<tbody>{tr}</tbody></table>",
-                    title="IRR/MOIC 시나리오 분석",
-                    slide_class="slide-valuation-scenarios",
-                    tokens=tokens,
-                ))
-
-        # 슬라이드 3-4: 차트 슬라이드 (heatmap, waterfall)
-        for chart in data.charts.get("valuation", []):
-            chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get("image_path")
-            if img:
-                slides.append(build_slide_html(
-                    f'<div style="text-align:center;"><img src="{img}" '
-                    f'style="max-width:90%;max-height:80%;" /></div>',
-                    title=chart.title or "밸류에이션 차트",
-                    slide_class="slide-valuation-chart",
-                    tokens=tokens,
-                ))
-
-        # 슬라이드 5: Exit 전략 비교
-        if vd and vd.exit_analysis:
-            headers, rows = self._build_exit_table(data)
-            if rows:
-                th = "".join(
-                    f'<th style="padding:5px 8px;background:{c.table_header_bg};'
-                    f'color:{c.text_white};font-size:9pt;">'
-                    f"{html_escape(h)}</th>"
-                    for h in headers
-                )
-                tr = ""
-                for r_idx, row in enumerate(rows):
-                    bg = c.table_alt_row_bg if r_idx % 2 == 1 else c.bg_white
-                    cells = (
-                        f'<td style="padding:4px 8px;font-size:9pt;'
-                        f'font-weight:bold;color:{c.primary};background:{bg};">'
-                        f'{html_escape(row["label"])}</td>'
-                    )
-                    for h in headers[1:]:
-                        cells += (
-                            f'<td style="padding:4px 8px;font-size:9pt;'
-                            f"text-align:right;font-family:'IBM Plex Mono',monospace;"
-                            f'color:{c.text_body};background:{bg};">'
-                            f"{html_escape(str(row.get(h, 'N/A')))}</td>"
-                        )
-                    tr += f"<tr>{cells}</tr>"
-
-                slides.append(build_slide_html(
-                    f'<table style="border-collapse:collapse;width:100%;">'
-                    f"<thead><tr>{th}</tr></thead>"
-                    f"<tbody>{tr}</tbody></table>",
-                    title="Exit 전략 비교",
-                    slide_class="slide-valuation-exit",
-                    tokens=tokens,
-                ))
-
-        return slides
+        raise NotImplementedError("PDF output removed")
 
     # ------------------------------------------------------------------
     # PPTX 렌더링

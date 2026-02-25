@@ -38,13 +38,25 @@ def hash_password(password: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 사용자 목록
+# 사용자 목록 (6명 — 고정, 변경 금지)
 # ---------------------------------------------------------------------------
 
 USERS = [
     {
+        "email": "ytkim@amic.kr",
+        "display_name": "김양태",
+        "title": "대표 / 회계사",
+        "username": "ytkim",
+        "full_name": "김양태",
+        "fdd_role": "ADMIN",
+        "kiis_role": "admin",
+        "im_role": "ADMIN",
+        "password": "1111",
+    },
+    {
         "email": "jwsuh@amic.kr",
         "display_name": "서지원",
+        "title": "변호사",
         "username": "jwsuh",
         "full_name": "서지원",
         "fdd_role": "ADMIN",
@@ -53,18 +65,9 @@ USERS = [
         "password": "1111",
     },
     {
-        "email": "ytkim@amic.kr",
-        "display_name": "김용태",
-        "username": "ytkim",
-        "full_name": "김용태",
-        "fdd_role": "ANALYST",
-        "kiis_role": "analyst",
-        "im_role": "USER",
-        "password": "1111",
-    },
-    {
         "email": "yhlim@amic.kr",
         "display_name": "임영훈",
+        "title": "변호사",
         "username": "yhlim",
         "full_name": "임영훈",
         "fdd_role": "ANALYST",
@@ -73,20 +76,33 @@ USERS = [
         "password": "1111",
     },
     {
-        "email": "wsjo@amic.kr",
-        "display_name": "조원석",
-        "username": "wsjo",
-        "full_name": "조원석",
+        "email": "bj.park@amic.kr",
+        "display_name": "박병준",
+        "title": "변호사",
+        "username": "bjpark",
+        "full_name": "박병준",
         "fdd_role": "ANALYST",
         "kiis_role": "analyst",
         "im_role": "USER",
         "password": "1111",
     },
     {
-        "email": "bj.park@amic.kr",
-        "display_name": "박병준",
-        "username": "bjpark",
-        "full_name": "박병준",
+        "email": "wsjo@amic.kr",
+        "display_name": "조우상",
+        "title": "이사",
+        "username": "wsjo",
+        "full_name": "조우상",
+        "fdd_role": "ANALYST",
+        "kiis_role": "analyst",
+        "im_role": "USER",
+        "password": "1111",
+    },
+    {
+        "email": "tryoon@amic.kr",
+        "display_name": "윤태리",
+        "title": "실장",
+        "username": "tryoon",
+        "full_name": "윤태리",
         "fdd_role": "ANALYST",
         "kiis_role": "analyst",
         "im_role": "USER",
@@ -115,13 +131,28 @@ LOCAL_DBS = {
 
 
 # ---------------------------------------------------------------------------
+# 스키마 보장 (title 컬럼이 없으면 추가)
+# ---------------------------------------------------------------------------
+
+def ensure_title_column(cur, table: str = "users") -> None:
+    """title 컬럼이 존재하지 않으면 ALTER TABLE로 추가."""
+    cur.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = %s AND column_name = 'title'
+    """, (table,))
+    if not cur.fetchone():
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN title VARCHAR(100) NOT NULL DEFAULT ''")
+        print(f"  [SCHEMA] title 컬럼 추가됨")
+
+
+# ---------------------------------------------------------------------------
 # 시딩 함수
 # ---------------------------------------------------------------------------
 
 def seed_fdd(db_url: str) -> None:
     """FDD DB에 사용자 시딩.
 
-    스키마: id (UUID), email, hashed_password, display_name, role, is_active
+    스키마: id (UUID), email, hashed_password, display_name, title, role, is_active
     """
     print(f"\n{'='*50}")
     print(f"[FDD] 연결: {db_url}")
@@ -130,28 +161,30 @@ def seed_fdd(db_url: str) -> None:
     cur = conn.cursor()
 
     try:
+        ensure_title_column(cur)
+
         for u in USERS:
             cur.execute("SELECT id FROM users WHERE email = %s", (u["email"],))
             existing = cur.fetchone()
             if existing:
-                # 이미 존재하면 비밀번호 업데이트 (항상 로그인 가능하도록)
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    "UPDATE users SET hashed_password = %s, is_active = true, role = %s WHERE email = %s",
-                    (hashed, u["fdd_role"], u["email"]),
+                    """UPDATE users
+                       SET hashed_password = %s, display_name = %s, title = %s,
+                           is_active = true, role = %s
+                       WHERE email = %s""",
+                    (hashed, u["display_name"], u["title"], u["fdd_role"], u["email"]),
                 )
-                print(f"  [UPDATE] {u['email']} — 비밀번호 갱신, 활성화")
+                print(f"  [UPDATE] {u['email']} ({u['display_name']} {u['title']})")
             else:
                 user_id = str(uuid.uuid4())
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    """
-                    INSERT INTO users (id, email, hashed_password, display_name, role, is_active, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, true, NOW(), NOW())
-                    """,
-                    (user_id, u["email"], hashed, u["display_name"], u["fdd_role"]),
+                    """INSERT INTO users (id, email, hashed_password, display_name, title, role, is_active, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, %s, true, NOW(), NOW())""",
+                    (user_id, u["email"], hashed, u["display_name"], u["title"], u["fdd_role"]),
                 )
-                print(f"  [CREATE] {u['email']} ({u['display_name']}) — role: {u['fdd_role']}")
+                print(f"  [CREATE] {u['email']} ({u['display_name']} {u['title']}) — role: {u['fdd_role']}")
     finally:
         cur.close()
         conn.close()
@@ -162,7 +195,7 @@ def seed_fdd(db_url: str) -> None:
 def seed_kiis(db_url: str) -> None:
     """KIIS DB에 사용자 시딩.
 
-    스키마: id (serial), username, email, hashed_password, role, is_active
+    스키마: id (serial), username, email, hashed_password, title, role, is_active
     """
     print(f"\n{'='*50}")
     print(f"[KIIS] 연결: {db_url}")
@@ -171,26 +204,29 @@ def seed_kiis(db_url: str) -> None:
     cur = conn.cursor()
 
     try:
+        ensure_title_column(cur)
+
         for u in USERS:
             cur.execute("SELECT id FROM users WHERE email = %s", (u["email"],))
             existing = cur.fetchone()
             if existing:
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    "UPDATE users SET hashed_password = %s, is_active = true, role = %s WHERE email = %s",
-                    (hashed, u["kiis_role"], u["email"]),
+                    """UPDATE users
+                       SET hashed_password = %s, username = %s, title = %s,
+                           is_active = true, role = %s
+                       WHERE email = %s""",
+                    (hashed, u["username"], u["title"], u["kiis_role"], u["email"]),
                 )
-                print(f"  [UPDATE] {u['email']} — 비밀번호 갱신, 활성화")
+                print(f"  [UPDATE] {u['email']} ({u['display_name']} {u['title']})")
             else:
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    """
-                    INSERT INTO users (username, email, hashed_password, role, is_active, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, true, NOW(), NOW())
-                    """,
-                    (u["username"], u["email"], hashed, u["kiis_role"]),
+                    """INSERT INTO users (username, email, hashed_password, title, role, is_active, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, true, NOW(), NOW())""",
+                    (u["username"], u["email"], hashed, u["title"], u["kiis_role"]),
                 )
-                print(f"  [CREATE] {u['email']} (username: {u['username']}) — role: {u['kiis_role']}")
+                print(f"  [CREATE] {u['email']} ({u['display_name']} {u['title']}) — role: {u['kiis_role']}")
     finally:
         cur.close()
         conn.close()
@@ -201,7 +237,7 @@ def seed_kiis(db_url: str) -> None:
 def seed_im(db_url: str) -> None:
     """IM DB에 사용자 시딩.
 
-    스키마: id (UUID), email, hashed_password, full_name, role, is_active
+    스키마: id (UUID), email, hashed_password, full_name, title, role, is_active
     """
     print(f"\n{'='*50}")
     print(f"[IM] 연결: {db_url}")
@@ -210,27 +246,30 @@ def seed_im(db_url: str) -> None:
     cur = conn.cursor()
 
     try:
+        ensure_title_column(cur)
+
         for u in USERS:
             cur.execute("SELECT id FROM users WHERE email = %s", (u["email"],))
             existing = cur.fetchone()
             if existing:
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    "UPDATE users SET hashed_password = %s, is_active = true, role = %s WHERE email = %s",
-                    (hashed, u["im_role"], u["email"]),
+                    """UPDATE users
+                       SET hashed_password = %s, full_name = %s, title = %s,
+                           is_active = true, role = %s
+                       WHERE email = %s""",
+                    (hashed, u["full_name"], u["title"], u["im_role"], u["email"]),
                 )
-                print(f"  [UPDATE] {u['email']} — 비밀번호 갱신, 활성화")
+                print(f"  [UPDATE] {u['email']} ({u['full_name']} {u['title']})")
             else:
                 user_id = str(uuid.uuid4())
                 hashed = hash_password(u["password"])
                 cur.execute(
-                    """
-                    INSERT INTO users (id, email, hashed_password, full_name, role, is_active, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, true, NOW(), NOW())
-                    """,
-                    (user_id, u["email"], hashed, u["full_name"], u["im_role"]),
+                    """INSERT INTO users (id, email, hashed_password, full_name, title, role, is_active, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, %s, true, NOW(), NOW())""",
+                    (user_id, u["email"], hashed, u["full_name"], u["title"], u["im_role"]),
                 )
-                print(f"  [CREATE] {u['email']} ({u['full_name']}) — role: {u['im_role']}")
+                print(f"  [CREATE] {u['email']} ({u['full_name']} {u['title']}) — role: {u['im_role']}")
     finally:
         cur.close()
         conn.close()
@@ -264,7 +303,7 @@ def main() -> None:
     print("AMIC 플랫폼 — 사용자 시딩")
     print(f"대상 계정: {len(USERS)}명")
     for u in USERS:
-        print(f"  • {u['email']} ({u['display_name']}) — {u['fdd_role']}")
+        print(f"  - {u['email']} ({u['display_name']} {u['title']}) — {u['fdd_role']}")
     print("=" * 50)
 
     errors = []
@@ -293,10 +332,10 @@ def main() -> None:
     # 결과 요약
     print(f"\n{'='*50}")
     if errors:
-        print(f"⚠ 일부 DB 연결 실패: {', '.join(errors)}")
+        print(f"일부 DB 연결 실패: {', '.join(errors)}")
         print("  Docker 컨테이너가 실행 중인지 확인하세요: docker compose ps")
     else:
-        print("✓ 전체 시딩 완료!")
+        print("전체 시딩 완료!")
     print(f"{'='*50}")
 
 

@@ -133,6 +133,108 @@ export const GLOSSARY: GlossaryTerm[] = [
     module: "im",
   },
 
+  // MA Terms
+  {
+    term: "Transaction Phase",
+    abbreviation: null,
+    definition:
+      "One of seven stages in the M&A workflow: Engagement, Preparation, Marketing, Bidding/DD, Negotiation, Closing, and Post-Close. Each phase has prerequisites that must be met before advancing.",
+    module: "ma",
+  },
+  {
+    term: "Non-Disclosure Agreement",
+    abbreviation: "NDA",
+    definition:
+      "Confidentiality agreement signed by potential buyers before receiving detailed deal information. Can be one-way or mutual.",
+    module: "ma",
+  },
+  {
+    term: "Indication of Interest",
+    abbreviation: "IOI",
+    definition:
+      "A non-binding preliminary bid submitted by a potential buyer expressing interest in a transaction, typically including a valuation range.",
+    module: "ma",
+  },
+  {
+    term: "Letter of Intent",
+    abbreviation: "LOI",
+    definition:
+      "A semi-binding document outlining the principal terms and conditions of a proposed transaction, submitted after due diligence.",
+    module: "ma",
+  },
+  {
+    term: "Share Purchase Agreement",
+    abbreviation: "SPA",
+    definition:
+      "The definitive legal agreement governing the sale and purchase of shares in a target company, including representations, warranties, and indemnities.",
+    module: "ma",
+  },
+  {
+    term: "Earnout",
+    abbreviation: null,
+    definition:
+      "A contingent payment mechanism where a portion of the purchase price is paid based on the target company achieving specified financial or operational milestones post-closing.",
+    module: "ma",
+  },
+  {
+    term: "Post-Merger Integration",
+    abbreviation: "PMI",
+    definition:
+      "The process of combining two organizations after a transaction closes, including integration planning, Day One readiness, synergy realization, and cultural alignment.",
+    module: "ma",
+  },
+  {
+    term: "Condition Precedent",
+    abbreviation: "CP",
+    definition:
+      "A condition that must be satisfied or waived before a transaction can close, such as regulatory approvals, board consents, or financing confirmations.",
+    module: "ma",
+  },
+  {
+    term: "Confidential Information Memorandum",
+    abbreviation: "CIM",
+    definition:
+      "A detailed document describing the target company's business, financials, and investment highlights, distributed to potential buyers after NDA execution.",
+    module: "ma",
+  },
+  {
+    term: "Due Diligence Checklist",
+    abbreviation: null,
+    definition:
+      "A structured list of items to be investigated during due diligence, organized by workstream (FDD, LDD, TDD) with status tracking for each item.",
+    module: "ma",
+  },
+
+  // Docs Terms
+  {
+    term: "Teaser Memorandum",
+    abbreviation: "TM",
+    definition:
+      "A brief, anonymous marketing document providing a high-level overview of an investment opportunity to gauge initial buyer interest before NDA execution.",
+    module: "docs",
+  },
+  {
+    term: "Legal Due Diligence Report",
+    abbreviation: "LDD",
+    definition:
+      "A comprehensive legal review covering corporate structure, contracts, permits, litigation, intellectual property, labor, and environmental matters of the target company.",
+    module: "docs",
+  },
+  {
+    term: "Ralph Loop",
+    abbreviation: null,
+    definition:
+      "AI-powered document generation and review system that automatically drafts deal documents, validates content with vision-based quality gates, and learns from feedback patterns.",
+    module: "docs",
+  },
+  {
+    term: "Deal Document Studio",
+    abbreviation: null,
+    definition:
+      "Integrated document management hub for creating and managing all deal-related documents: marketing materials (TM/IM), legal documents (MOU/contracts), DD reports (FDD/LDD), and closing checklists.",
+    module: "docs",
+  },
+
   // General
   {
     term: "Role-Based Access Control",
@@ -146,6 +248,27 @@ export const GLOSSARY: GlossaryTerm[] = [
     abbreviation: null,
     definition:
       "Audit trail recording all user actions across the platform for compliance and accountability.",
+    module: "general",
+  },
+  {
+    term: "Webhook",
+    abbreviation: null,
+    definition:
+      "An HTTP callback that sends real-time notifications to external systems when specific events occur in the platform, such as deal status changes or document generation completions.",
+    module: "general",
+  },
+  {
+    term: "Cross-Module Analytics",
+    abbreviation: null,
+    definition:
+      "A unified dashboard aggregating KPIs and trend charts from all platform modules (MA, FDD, KIIS, IM), enabling managers to monitor overall deal pipeline health and performance.",
+    module: "general",
+  },
+  {
+    term: "Module Switcher",
+    abbreviation: null,
+    definition:
+      "Sidebar navigation control that allows quick switching between the four core modules: M&A Deals, VDR, Deal Doc Studio, and KIIS.",
     module: "general",
   },
 ];

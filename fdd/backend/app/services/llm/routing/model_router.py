@@ -35,6 +35,12 @@ DEFAULT_FDD_ROUTING: dict[str, str] = {
     "scope_description": "gemini",
     "benchmark_context": "gemini",
     "industry_context_narrative": "gemini",
+    # ── 교차검증 (Writer와 반드시 다른 프로바이더) ──
+    "cross_verify_qoe": "anthropic",
+    "cross_verify_nwc": "anthropic",
+    "cross_verify_debt": "gemini",
+    # ── 레포트 QA (분석+서술 모두에 안 쓴 프로바이더) ──
+    "report_qa": "gemini",
 }
 
 # 폴백 체인: primary → secondary → tertiary

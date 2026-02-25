@@ -664,6 +664,163 @@ class DealService:
             "distribution": distribution,
         }
 
+    async def get_tendency_summary(
+        self,
+        db: AsyncSession,
+        corp_code: str,
+        years: int = 3,
+    ) -> dict:
+        """투자성향 정성적 요약을 생성한다.
+
+        기존 aggregate_by_sector/stage + trends를 조합하여
+        섹터/스테이지별 상세 + 요약 텍스트를 반환한다.
+        """
+        company = await self._get_company(db, corp_code)
+        if not company:
+            return {
+                "corp_code": corp_code,
+                "years": years,
+                "total_deals": 0,
+                "total_amount": None,
+                "total_amount_display": None,
+                "summary_text": "투자 이력이 없습니다.",
+                "sector_summary": "",
+                "stage_summary": "",
+                "sectors": [],
+                "stages": [],
+            }
+
+        current_year = datetime.now(UTC).year
+        min_year = current_year - years + 1
+
+        # 기본 필터
+        base_filter = [
+            Deal.company_id == company.id,
+            Deal.deal_year >= min_year,
+        ]
+
+        # 전체 집계
+        agg_query = select(
+            func.count(Deal.id).label("deal_count"),
+            func.sum(Deal.amount).label("total_amount"),
+        ).where(*base_filter)
+        agg_result = await db.execute(agg_query)
+        agg_row = agg_result.one()
+        total_deals = agg_row.deal_count or 0
+        total_amount = agg_row.total_amount
+
+        # 섹터별 집계
+        sector_aggs = await self.aggregate_by_sector(db, corp_code, min_year=min_year)
+
+        # 스테이지별 집계
+        stage_aggs = await self.aggregate_by_stage(db, corp_code, min_year=min_year)
+
+        # 섹터별 상세 (대표 딜 포함)
+        sectors = []
+        for sa in sector_aggs:
+            pct = round(sa["deal_count"] / total_deals * 100, 1) if total_deals else 0
+            top_deals = await self._get_top_deals(
+                db, company.id, min_year, sector=sa["sector"], limit=3
+            )
+            sectors.append({
+                "sector": sa["sector"],
+                "sector_name": sa["sector_name"],
+                "deal_count": sa["deal_count"],
+                "total_amount": sa["total_amount"],
+                "total_amount_display": self.format_amount_display(sa["total_amount"]),
+                "percentage": pct,
+                "description": f"{sa['sector_name']} 섹터에 {sa['deal_count']}건 투자",
+                "deals": top_deals,
+            })
+
+        # 스테이지별 상세 (대표 딜 포함)
+        stages = []
+        for st in stage_aggs:
+            pct = round(st["deal_count"] / total_deals * 100, 1) if total_deals else 0
+            top_deals = await self._get_top_deals(
+                db, company.id, min_year, stage=st["stage"], limit=3
+            )
+            stages.append({
+                "stage": st["stage"],
+                "stage_name": st["stage_name"],
+                "deal_count": st["deal_count"],
+                "total_amount": st["total_amount"],
+                "total_amount_display": self.format_amount_display(st["total_amount"]),
+                "percentage": pct,
+                "description": f"{st['stage_name']} 단계에 {st['deal_count']}건 투자",
+                "deals": top_deals,
+            })
+
+        # 요약 텍스트 생성
+        top_sector = sectors[0]["sector_name"] if sectors else "N/A"
+        top_stage = stages[0]["stage_name"] if stages else "N/A"
+        amount_display = self.format_amount_display(total_amount)
+
+        summary_text = (
+            f"최근 {years}년간 총 {total_deals}건"
+            + (f" ({amount_display})" if amount_display else "")
+            + f"의 투자를 집행했습니다."
+        )
+        sector_summary = (
+            f"주력 섹터는 {top_sector}이며, "
+            + (f"상위 {min(3, len(sectors))}개 섹터가 전체의 "
+               f"{sum(s['percentage'] for s in sectors[:3]):.0f}%를 차지합니다."
+               if sectors else "섹터 정보가 없습니다.")
+        )
+        stage_summary = (
+            f"주력 투자 단계는 {top_stage}이며, "
+            + (f"상위 {min(3, len(stages))}개 단계가 전체의 "
+               f"{sum(s['percentage'] for s in stages[:3]):.0f}%를 차지합니다."
+               if stages else "단계 정보가 없습니다.")
+        )
+
+        return {
+            "corp_code": corp_code,
+            "years": years,
+            "total_deals": total_deals,
+            "total_amount": total_amount,
+            "total_amount_display": amount_display,
+            "summary_text": summary_text,
+            "sector_summary": sector_summary,
+            "stage_summary": stage_summary,
+            "sectors": sectors,
+            "stages": stages,
+        }
+
+    async def _get_top_deals(
+        self,
+        db: AsyncSession,
+        company_id: int,
+        min_year: int,
+        sector: str | None = None,
+        stage: str | None = None,
+        limit: int = 3,
+    ) -> list[dict]:
+        """특정 섹터/스테이지의 대표 딜을 조회한다."""
+        query = select(Deal).where(
+            Deal.company_id == company_id,
+            Deal.deal_year >= min_year,
+        )
+        if sector:
+            query = query.where(Deal.sector == sector)
+        if stage:
+            query = query.where(Deal.round_stage == stage)
+
+        query = query.order_by(Deal.deal_date.desc().nulls_last()).limit(limit)
+        result = await db.execute(query)
+        deals = result.scalars().all()
+
+        return [
+            {
+                "target_company": d.target_company,
+                "amount_display": d.amount_display,
+                "round_stage": d.round_stage,
+                "deal_date": d.deal_date.isoformat() if d.deal_date else None,
+                "source_url": d.source_url,
+            }
+            for d in deals
+        ]
+
     async def get_deals_by_fund(
         self,
         db: AsyncSession,

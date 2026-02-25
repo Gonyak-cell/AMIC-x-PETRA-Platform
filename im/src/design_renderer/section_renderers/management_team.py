@@ -12,6 +12,7 @@ from typing import Any
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 from src.design_renderer.im_document import IMDocumentData
 from src.design_renderer.pdf_output.html_builder import build_slide_html
+from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
 from src.design_renderer.section_renderers import register_renderer
 from src.design_renderer.section_renderers.base import BaseSectionRenderer
 
@@ -153,7 +154,7 @@ class ManagementTeamRenderer(BaseSectionRenderer):
             r.text = member.name
             if member.role:
                 r.text += f" ({member.role})"
-            r.font.name = t.font_body
+            set_font_with_ea(r, t.font_body)
             r.font.size = Pt(f.summary_text)
             r.font.bold = True
             r.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
@@ -162,7 +163,7 @@ class ManagementTeamRenderer(BaseSectionRenderer):
             p_title = tf.add_paragraph()
             r = p_title.add_run()
             r.text = member.title
-            r.font.name = t.font_body
+            set_font_with_ea(r, t.font_body)
             r.font.size = Pt(f.footnote)
             r.font.color.rgb = RGBColor.from_string(
                 c.text_secondary.lstrip("#")
@@ -173,7 +174,7 @@ class ManagementTeamRenderer(BaseSectionRenderer):
                 p_career = tf.add_paragraph()
                 r = p_career.add_run()
                 r.text = f"• {career_item}"
-                r.font.name = t.font_body
+                set_font_with_ea(r, t.font_body)
                 r.font.size = Pt(f.small_label)
                 r.font.color.rgb = RGBColor.from_string(
                     c.text_body.lstrip("#")

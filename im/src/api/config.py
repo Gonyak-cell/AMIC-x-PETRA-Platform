@@ -112,6 +112,12 @@ class APIConfig(BaseSettings):
         description="Pinecone API 키",
     )
 
+    # ── Auth ──
+    auth_enabled: bool = Field(
+        default=True,
+        description="인증 활성화 여부 (False=dev 모드, 인증 우회)",
+    )
+
     # ── App ──
     secret_key: str = Field(
         default="change-me-in-production",
@@ -125,9 +131,14 @@ class APIConfig(BaseSettings):
         default="INFO",
         description="로그 레벨 (DEBUG, INFO, WARNING, ERROR)",
     )
+    log_dir: str = Field(
+        default="",
+        description="로그 파일 저장 디렉토리 (비어있으면 파일 저장 안 함)",
+    )
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
         description="CORS 허용 오리진 목록",
+        alias="CORS_ORIGINS",
     )
 
     # ── Rate Limiting ──
@@ -147,6 +158,41 @@ class APIConfig(BaseSettings):
         default=600,
         ge=60,
         description="Celery 태스크 하드 타임아웃 (초)",
+    )
+
+    # ── Cross-Backend (VDR 연동) ──
+    deal_mgmt_internal_url: str = Field(
+        default="http://deal-mgmt-api:8003",
+        description="deal-mgmt 내부 API URL (Docker 서비스명)",
+        alias="DEAL_MGMT_INTERNAL_URL",
+    )
+    internal_service_key: str = Field(
+        default="",
+        description="내부 서비스 인증 키 (deal-mgmt 내부 API 접근용)",
+        alias="INTERNAL_SERVICE_KEY",
+    )
+
+    # ── Ralph Loop ──
+    ralph_pass_threshold: float = Field(
+        default=4.0,
+        ge=1.0,
+        le=5.0,
+        description="Ralph Loop 통과 기준 (5점 만점)",
+    )
+    ralph_max_iterations: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="섹션당 최대 반복 횟수",
+    )
+    ralph_budget_per_pass: float = Field(
+        default=5.0,
+        ge=0.0,
+        description="Pass당 비용 한도 (USD)",
+    )
+    ralph_vision_enabled: bool = Field(
+        default=True,
+        description="Vision Gate (GPT-4o) 활성화",
     )
 
     # ── File Storage ──

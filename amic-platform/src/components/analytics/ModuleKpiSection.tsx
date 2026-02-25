@@ -10,6 +10,13 @@ import {
   Building,
   CheckCircle,
   XCircle,
+  Handshake,
+  DollarSign,
+  Activity,
+  Scale,
+  Megaphone,
+  FileSearch,
+  Files,
 } from "lucide-react";
 import { KpiCard, KpiCardSkeleton } from "@/components/ui";
 import type { AnalyticsKpis, AnalyticsModule } from "@/types/analytics";
@@ -31,7 +38,7 @@ export function ModuleKpiSection({
   if (isLoading) {
     return (
       <div className="space-y-6">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
@@ -46,16 +53,112 @@ export function ModuleKpiSection({
     );
   }
 
+  const showMa = !selectedModule || selectedModule === "ma";
+  const showDocs = !selectedModule || selectedModule === "docs";
   const showFdd = !selectedModule || selectedModule === "fdd";
   const showKiis = !selectedModule || selectedModule === "kiis";
   const showIm = !selectedModule || selectedModule === "im";
 
   return (
     <div className="space-y-6">
+      {/* MA KPIs */}
+      {showMa && (
+        <div>
+          <h3 className="label-uppercase mb-2">M&A</h3>
+          {errors?.ma ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              M&A backend is unreachable. Data may be unavailable.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Total Transactions"
+                value={String(kpis.ma.totalTransactions)}
+                icon={Handshake}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Active Deals"
+                value={String(kpis.ma.activeTransactions)}
+                icon={TrendingUp}
+                variant="positive"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Total Deal Value"
+                value={
+                  kpis.ma.totalDealValue != null
+                    ? `₩${(kpis.ma.totalDealValue / 1_000_000_000).toFixed(1)}B`
+                    : "N/A"
+                }
+                icon={DollarSign}
+                variant="caution"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Recent Activity (7d)"
+                value={String(kpis.ma.recentActivityCount)}
+                icon={Activity}
+                hoverLift
+                generous
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Docs KPIs */}
+      {showDocs && (
+        <div>
+          <h3 className="label-uppercase mb-2">Docs</h3>
+          {errors?.docs ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              Docs data is unreachable. Data may be unavailable.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Legal Documents"
+                value={String(kpis.docs.totalLegalDocs)}
+                icon={Scale}
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Marketing Materials"
+                value={String(kpis.docs.totalMarketingDocs)}
+                icon={Megaphone}
+                variant="positive"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="LDD Reports"
+                value={String(kpis.docs.totalLddReports)}
+                icon={FileSearch}
+                variant="caution"
+                hoverLift
+                generous
+              />
+              <KpiCard
+                label="Total Documents"
+                value={String(kpis.docs.readyCount)}
+                icon={Files}
+                hoverLift
+                generous
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* FDD KPIs */}
       {showFdd && (
         <div>
-          <h3 className="label-uppercase mb-2">Auto FDD</h3>
+          <h3 className="label-uppercase mb-2">FDD</h3>
           {errors?.fdd ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               FDD backend is unreachable. Data may be unavailable.
@@ -146,7 +249,7 @@ export function ModuleKpiSection({
       {/* IM KPIs */}
       {showIm && (
         <div>
-          <h3 className="label-uppercase mb-2">IM Generator</h3>
+          <h3 className="label-uppercase mb-2">IM</h3>
           {errors?.im ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               IM backend is unreachable. Data may be unavailable.

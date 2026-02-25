@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useModuleHealth } from "@/hooks/useDashboard";
 import { useAnalyticsKpis, useAnalyticsTimeSeries } from "@/hooks/useAnalytics";
 import { useDealsBySector, useDealTrends } from "@/modules/kiis/hooks/useDeals";
 import { AnalyticsFilterBar } from "@/components/analytics/AnalyticsFilterBar";
@@ -8,6 +9,7 @@ import { ModuleKpiSection } from "@/components/analytics/ModuleKpiSection";
 import { AnalyticsChartPanel } from "@/components/analytics/AnalyticsChartPanel";
 import { PageHero } from "@/components/ui";
 import type { AnalyticsTimeRange, AnalyticsModule } from "@/types/analytics";
+import heroImg from "@/assets/images/heroes/hero-arch-diamond.jpg";
 
 export default function AnalyticsPage() {
   const { hasPermission } = useAuth();
@@ -16,10 +18,11 @@ export default function AnalyticsPage() {
     AnalyticsModule | "all"
   >("all");
 
+  const { data: health } = useModuleHealth();
   const filter = { timeRange, module: selectedModule === "all" ? undefined : selectedModule };
-  const { kpis, isLoading: kpisLoading, errors } = useAnalyticsKpis(filter);
-  const { fddTimeSeries, imTimeSeries, isLoading: tsLoading } =
-    useAnalyticsTimeSeries(filter);
+  const { kpis, isLoading: kpisLoading, errors } = useAnalyticsKpis(filter, health);
+  const { fddTimeSeries, imTimeSeries, maTimeSeries, isLoading: tsLoading } =
+    useAnalyticsTimeSeries(filter, health);
   const { data: sectorData } = useDealsBySector();
   const { data: trendData } = useDealTrends();
 
@@ -32,7 +35,9 @@ export default function AnalyticsPage() {
       {/* Hero Section */}
       <PageHero
         title="Cross-Module Analytics"
-        subtitle="Aggregated KPIs and trends across FDD, KIIS, and IM modules"
+        subtitle="Aggregated KPIs and trends across M&A, FDD, KIIS, IM, and Docs modules"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
       />
 
@@ -58,6 +63,9 @@ export default function AnalyticsPage() {
         <AnalyticsChartPanel
           fddTimeSeries={fddTimeSeries}
           imTimeSeries={imTimeSeries}
+          maTimeSeries={maTimeSeries}
+          maPhaseData={kpis.ma.byPhase}
+          pipelineFunnel={kpis.ma.pipelineFunnel}
           sectorData={sectorData}
           trendData={trendData}
           isLoading={tsLoading}

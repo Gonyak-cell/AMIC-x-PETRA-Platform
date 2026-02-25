@@ -5,16 +5,20 @@ import type { GlossaryTerm } from "@/types/help";
 
 const MODULE_FILTERS = [
   { value: "all", label: "All" },
+  { value: "ma", label: "M&A" },
+  { value: "docs", label: "Docs" },
   { value: "fdd", label: "FDD" },
   { value: "kiis", label: "KIIS" },
   { value: "im", label: "IM" },
   { value: "general", label: "General" },
 ] as const;
 
-const MODULE_BADGE_VARIANT: Record<string, "success" | "info" | "warning" | "neutral"> = {
+const MODULE_BADGE_VARIANT: Record<string, "success" | "info" | "warning" | "neutral" | "error"> = {
+  ma: "error",
+  docs: "warning",
   fdd: "info",
   kiis: "success",
-  im: "warning",
+  im: "neutral",
   general: "neutral",
 };
 

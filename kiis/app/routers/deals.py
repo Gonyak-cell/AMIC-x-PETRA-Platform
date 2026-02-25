@@ -18,6 +18,10 @@ from app.schemas.deal import (
     SectorAggregationResponse,
     StageAggregation,
     StageAggregationResponse,
+    TendencyDealItem,
+    TendencySectorDetail,
+    TendencyStageDetail,
+    TendencySummaryResponse,
     TrendResponse,
     YearlyTrend,
 )
@@ -234,6 +238,58 @@ async def get_deals_by_fund(
     ]
 
     return DealListResponse(total=total, page=page, size=size, items=items)
+
+
+@router.get(
+    "/tendency-summary",
+    response_model=TendencySummaryResponse,
+    summary="투자성향 정성적 요약",
+)
+async def get_tendency_summary(
+    corp_code: str = Query(..., max_length=20, description="운용사 DART 코드"),
+    years: int = Query(3, ge=1, le=10, description="조회 기간 (년)"),
+    db: AsyncSession = Depends(get_db),
+    service: DealService = Depends(get_deal_service),
+):
+    """운용사의 투자성향을 섹터/스테이지별로 정성적 요약한다."""
+    result = await service.get_tendency_summary(db=db, corp_code=corp_code, years=years)
+
+    return TendencySummaryResponse(
+        corp_code=result["corp_code"],
+        years=result["years"],
+        total_deals=result["total_deals"],
+        total_amount=result["total_amount"],
+        total_amount_display=result["total_amount_display"],
+        summary_text=result["summary_text"],
+        sector_summary=result["sector_summary"],
+        stage_summary=result["stage_summary"],
+        sectors=[
+            TendencySectorDetail(
+                sector=s["sector"],
+                sector_name=s["sector_name"],
+                deal_count=s["deal_count"],
+                total_amount=s["total_amount"],
+                total_amount_display=s["total_amount_display"],
+                percentage=s["percentage"],
+                description=s["description"],
+                deals=[TendencyDealItem(**d) for d in s["deals"]],
+            )
+            for s in result["sectors"]
+        ],
+        stages=[
+            TendencyStageDetail(
+                stage=s["stage"],
+                stage_name=s["stage_name"],
+                deal_count=s["deal_count"],
+                total_amount=s["total_amount"],
+                total_amount_display=s["total_amount_display"],
+                percentage=s["percentage"],
+                description=s["description"],
+                deals=[TendencyDealItem(**d) for d in s["deals"]],
+            )
+            for s in result["stages"]
+        ],
+    )
 
 
 @router.get(

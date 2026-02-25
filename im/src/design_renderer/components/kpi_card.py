@@ -1,6 +1,6 @@
 """KPI 카드 컴포넌트 — 핵심 지표 시각화 + 듀얼 렌더링.
 
-11pt 라벨 + 20pt 숫자 (IBM Plex Mono) 구조.
+11pt 라벨 + 20pt 숫자 (Pretendard ExtraBold) 구조.
 NumberFormatConfig로 숫자 포맷팅 + 조건부 색상 (양수=녹색, 음수=적색).
 그리드 배치 지원 (행당 최대 4개 카드).
 """
@@ -144,7 +144,7 @@ def render_kpi_grid_pptx(
         tf = shape.text_frame
         tf.word_wrap = True
 
-        # 값 (20pt, IBM Plex Mono, Bold)
+        # 값 (20pt, Pretendard ExtraBold)
         p_value = tf.paragraphs[0]
         p_value.alignment = PP_ALIGN.CENTER
         run_value = p_value.add_run()

@@ -1,7 +1,7 @@
 /** 로그인 페이지 (TM CI 기반 리디자인 — 숲 배경 + 세리프/산세리프 브랜딩) */
 
 import { useState, type FormEvent } from "react";
-import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input } from "@/components/ui";
 import { LogIn } from "lucide-react";
@@ -10,18 +10,15 @@ import brochureCover from "@/assets/images/brochure-cover.png";
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } })?.from
-    ?.pathname ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Already authenticated — redirect
+  // Already authenticated — redirect to dashboard
   if (isAuthenticated) {
-    return <Navigate to={from} replace />;
+    return <Navigate to="/" replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -30,7 +27,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login({ email, password });
-      navigate(from, { replace: true });
+      navigate("/", { replace: true });
     } catch {
       setError("Invalid email or password.");
     } finally {

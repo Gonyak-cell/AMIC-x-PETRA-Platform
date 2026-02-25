@@ -34,6 +34,7 @@ def register_user(
     password: str,
     display_name: str,
     role: UserRole = UserRole.ANALYST,
+    title: str = "",
 ) -> User:
     """새 사용자를 등록한다."""
     existing = db.scalar(select(User).where(User.email == email))
@@ -47,6 +48,7 @@ def register_user(
         email=email,
         hashed_password=hash_password(password),
         display_name=display_name,
+        title=title,
         role=role,
     )
     db.add(user)
@@ -151,6 +153,7 @@ def update_user(
     user_id: uuid.UUID,
     *,
     display_name: str | None = None,
+    title: str | None = None,
     role: UserRole | None = None,
     is_active: bool | None = None,
     actor_email: str = "system",
@@ -170,6 +173,11 @@ def update_user(
         old_values["display_name"] = user.display_name
         user.display_name = display_name
         new_values["display_name"] = display_name
+
+    if title is not None:
+        old_values["title"] = user.title
+        user.title = title
+        new_values["title"] = title
 
     if role is not None:
         old_values["role"] = user.role.value
@@ -197,6 +205,40 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+def delete_user(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    actor_email: str = "system",
+) -> None:
+    """사용자를 삭제한다 (Admin 전용)."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID,
+            "User not found",
+        )
+
+    email = user.email
+    role = user.role.value
+
+    # 감사 로그 먼저 기록 (삭제 전)
+    db.add(
+        AuditLog(
+            entity_type="user",
+            entity_id=user.id,
+            action=AuditAction.DELETE,
+            actor=actor_email,
+            user_id=None,  # 삭제될 사용자 참조 방지
+            old_value={"email": email, "role": role},
+        )
+    )
+
+    db.delete(user)
+    db.commit()
+    logger.info("User deleted", extra={"ctx": {"email": email, "actor": actor_email}})
 
 
 def logout_user(

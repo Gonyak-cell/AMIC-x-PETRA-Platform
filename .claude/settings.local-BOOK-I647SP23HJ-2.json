@@ -1,0 +1,14 @@
+{
+  "skipDangerousModePermissionPrompt": true,
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://postgres:postgres@localhost:5433/imgen\" \"c:\\\\Users\\\\diedi\\\\OneDrive\\\\Documents\\\\Coding\\\\IM Module\\\\auto-im-generator\\\\venv\\\\Scripts\\\\python.exe\" -m alembic:*)",
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://postgres:postgres@localhost:5433/imgen\" \"c:\\\\Users\\\\diedi\\\\OneDrive\\\\Documents\\\\Coding\\\\IM Module\\\\auto-im-generator\\\\venv\\\\Scripts\\\\python.exe\" -m pytest:*)",
+      "Bash(DATABASE_URL=\"postgresql://autofdd:autofdd_dev@localhost:5433/autofdd\" python -m pytest:*)",
+      "Bash(npx tsc:*)",
+      "Bash(docker compose build:*)",
+      "Bash(Select-String -Pattern \"Content-Security\")"
+    ]
+  }
+}

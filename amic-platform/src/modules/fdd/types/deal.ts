@@ -2,7 +2,7 @@ export type DealType = "COMPLETION_ACCOUNTS" | "LOCKED_BOX";
 export type DealStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 export type DefinitionStatus = "DRAFT" | "APPROVED" | "LOCKED";
 export type SnapshotStatus = "RUNNING" | "SUCCESS" | "FAILED";
-export type DealPhase = "MOU" | "VDR_SETUP" | "DATA_UPLOAD" | "ANALYSIS" | "REPORTING";
+export type DealPhase = "MOU" | "VDR_SETUP" | "DATA_UPLOAD" | "ANALYSIS" | "CHECKLIST_REVIEW" | "REPORTING";
 
 export type DealStructure = "SHARE_ACQUISITION" | "ASSET_ACQUISITION" | "MERGER" | "CORPORATE_SPLIT" | "MBO" | "OTHER";
 export type InvestmentType = "EQUITY" | "DEBT" | "MEZZANINE" | "CONVERTIBLE" | "OTHER";

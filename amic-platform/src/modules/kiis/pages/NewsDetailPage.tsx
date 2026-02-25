@@ -4,6 +4,7 @@ import { useNewsDetail } from "@/modules/kiis/hooks/useNews";
 import { Card, Spinner, EmptyState, PageHero } from "@/components/ui";
 import SentimentIndicator from "@/modules/kiis/components/SentimentIndicator";
 import { formatDate } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/forestgp-forest.jpg";
 
 export default function NewsDetailPage() {
   const { articleId } = useParams<{ articleId: string }>();
@@ -51,6 +52,8 @@ export default function NewsDetailPage() {
           formatDate(article.published_at, "long"),
         ].filter(Boolean).join(" | ")}
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* Sentiment */}

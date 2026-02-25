@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, get_jwt_claims, require_write_access
 from app.models.enums import AuditAction
 from app.services import audit_service, transaction_service
 from app.services.fdd_client import fdd_client
@@ -51,9 +51,11 @@ async def link_fdd(
     txn_id: uuid.UUID,
     body: FDDLinkRequest,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     """FDD Deal 생성/연결."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     txn = await transaction_service.get_transaction(db, txn_id)
     try:
         result = await fdd_client.create_deal(body.target_name, body.industry)
@@ -77,9 +79,11 @@ async def fdd_status(
     txn_id: uuid.UUID,
     deal_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """FDD 분석 상태 조회."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     await transaction_service.get_transaction(db, txn_id)
     try:
         result = await fdd_client.get_deal_status(deal_id)
@@ -96,9 +100,11 @@ async def link_im(
     txn_id: uuid.UUID,
     body: IMLinkRequest,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     """IM Document(CIM) 생성/연결."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     txn = await transaction_service.get_transaction(db, txn_id)
     try:
         result = await im_client.create_document(body.company_name, body.project_name, body.corp_code)
@@ -122,9 +128,11 @@ async def im_status(
     txn_id: uuid.UUID,
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """CIM 생성 상태 조회."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     await transaction_service.get_transaction(db, txn_id)
     try:
         result = await im_client.get_document_status(document_id)
@@ -141,9 +149,11 @@ async def kiis_company_search(
     txn_id: uuid.UUID,
     q: str,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """KIIS 기업 검색."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
     await transaction_service.get_transaction(db, txn_id)
     try:
         results = await kiis_client.search_company(q)

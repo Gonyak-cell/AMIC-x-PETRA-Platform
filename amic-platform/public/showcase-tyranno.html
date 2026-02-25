@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Tyranno — M&A Pipeline Showcase</title>
+<style>
+:root{--amic:#0F3A32;--amic-700:#0B2D27;--amic-800:#07201C;--amic-400:#3D7D6E;--amic-200:#A8D1C7;--accent:#0F3A32;--accent-700:#0B2D27;--accent-800:#07201C;--accent-green:#26C260;--accent-light:rgba(15,58,50,.08);--accent-mid:rgba(15,58,50,.15);--bg:#F7F8FA;--card:#FFF;--text:#1A1A1A;--text-body:#3D3D3D;--muted:#6B7280;--secondary:#9CA3AF;--border:#E5E7EB;--gray-border:#E5E7EB;--pos:#059669;--neg:#BC2C1A;--warn:#D97706;--info:#2563EB;--r:10px;--r-sm:8px;--sh:0 1px 3px rgba(0,0,0,.06);--sh-lg:0 4px 12px rgba(0,0,0,.08);--sh-btn:0 2px 8px -2px rgba(15,58,50,.08)}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'SUITE Variable','SUITE','Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text-body);line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3,h4,h5,h6{font-family:'Space Grotesk','SUITE Variable','SUITE',sans-serif;color:var(--text);letter-spacing:-.02em}
+
+/* Screen toggle */
+.screen{display:none}.screen.visible{display:block}
+
+/* ── LOGIN (matches LoginPage.tsx exactly) ── */
+.login-shell{min-height:100vh;display:flex}
+/* Left panel — brochure image area */
+.login-left{width:50%;position:relative;overflow:hidden;background:linear-gradient(160deg,#041411 0%,var(--amic) 40%,var(--amic-700) 70%,#041411 100%)}
+.login-left .brochure-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;padding:60px 40px}
+.login-left .brochure-bg{position:absolute;inset:0;z-index:1}
+.login-left .brochure-bg::after{content:'';position:absolute;top:-20%;right:-15%;width:600px;height:600px;background:radial-gradient(circle,rgba(38,194,96,.08),transparent 70%);border-radius:50%}
+.login-left .brochure-bg::before{content:'';position:absolute;bottom:-15%;left:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,255,255,.03),transparent 70%);border-radius:50%}
+.login-left .brand-block{text-align:center;position:relative;z-index:2}
+.login-left .brand-amic{font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:700;color:#fff;letter-spacing:.2em}
+.login-left .brand-amp{font-size:24px;font-weight:200;color:rgba(255,255,255,.25);margin:6px 0}
+.login-left .brand-petra{font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--accent-green);line-height:1.15;letter-spacing:.1em}
+.login-left .brand-petra div{font-size:20px}
+.login-left .brand-divider{width:80px;height:1px;margin:20px auto;background:linear-gradient(90deg,transparent,rgba(38,194,96,.4),transparent)}
+.login-left .brand-tagline{font-size:13px;color:rgba(255,255,255,.45);line-height:2;letter-spacing:.05em}
+/* Decorative geometric elements */
+.login-left .geo-line{position:absolute;z-index:1}
+.login-left .geo-line.tl{top:60px;left:40px;width:120px;height:1px;background:linear-gradient(90deg,rgba(38,194,96,.3),transparent)}
+.login-left .geo-line.tr{top:60px;right:40px;width:1px;height:120px;background:linear-gradient(180deg,rgba(38,194,96,.3),transparent)}
+.login-left .geo-line.bl{bottom:60px;left:40px;width:1px;height:120px;background:linear-gradient(0deg,rgba(38,194,96,.3),transparent)}
+.login-left .geo-line.br{bottom:60px;right:40px;width:120px;height:1px;background:linear-gradient(270deg,rgba(38,194,96,.3),transparent)}
+/* Right panel — form */
+.login-right{flex:1;display:flex;align-items:center;justify-content:center;background:#fff;padding:24px 80px}
+/* Mobile logo (hidden on desktop) */
+.login-mobile-logo{display:none;margin-bottom:40px;text-align:center}
+.login-mobile-logo .logo-row{display:flex;align-items:flex-start;justify-content:center;gap:12px}
+.login-mobile-logo .ml-amic{font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:var(--amic);letter-spacing:.2em;line-height:1;margin-top:2px}
+.login-mobile-logo .ml-amp{font-size:24px;font-weight:200;color:rgba(15,58,50,.25);line-height:1}
+.login-mobile-logo .ml-petra{font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--accent-green);line-height:1.15;letter-spacing:.1em}
+.login-mobile-logo .ml-petra div{font-size:18px}
+.login-mobile-logo .ml-divider{width:80px;height:1px;margin:16px auto 0;background:linear-gradient(90deg,transparent,rgba(38,194,96,.4),transparent)}
+/* Form box */
+.login-box{width:100%;max-width:512px}
+.login-box .form-header{margin-bottom:32px}
+.login-box .form-header h2{font-size:24px;font-weight:700;color:var(--text)}
+.login-box .form-header p{font-size:14px;color:var(--muted);margin-top:8px}
+.login-box .form-group{margin-bottom:20px}
+.login-box label{display:block;font-size:14px;font-weight:500;color:var(--text-body);margin-bottom:6px}
+.login-box input{width:100%;padding:8px 12px;font-size:14px;border:1px solid var(--gray-border);border-radius:var(--r-sm);background:#fff;color:var(--text-body);outline:none;transition:all .15s;box-shadow:0 1px 3px 0 rgba(0,0,0,.06)}
+.login-box input::placeholder{color:var(--muted)}
+.login-box input:hover{border-color:var(--amic-400)}
+.login-box input:focus{border-color:var(--amic);box-shadow:0 0 0 3px rgba(15,58,50,.12)}
+.login-box .error-msg{font-size:14px;color:var(--neg);background:rgba(188,44,26,.05);border:1px solid rgba(188,44,26,.2);border-radius:6px;padding:12px 16px;margin-bottom:20px;display:none}
+.login-box .btn-login{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;font-size:16px;font-weight:500;background:var(--amic);color:#fff;border:none;border-radius:var(--r-sm);cursor:pointer;transition:all .2s;box-shadow:var(--sh-btn);margin-top:4px}
+.login-box .btn-login:hover{background:var(--amic-700)}
+.login-box .btn-login:active{transform:scale(.98)}
+.login-box .btn-login svg{width:16px;height:16px}
+.login-box .foot{text-align:center;font-size:12px;color:var(--secondary);margin-top:32px}
+
+/* ── SHELL ── */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:256px;background:linear-gradient(180deg,var(--accent-800),var(--accent),var(--accent-700));color:#fff;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar .logo{background:#fff;padding:20px 16px 16px;text-align:center}
+.sidebar .logo h2{color:var(--accent);font-size:16px;font-weight:700;letter-spacing:-.3px}
+.sidebar .logo p{color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.sidebar .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
+.sidebar nav{padding:8px 12px;flex:1}
+.sidebar .nav-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:12px 8px 4px;font-weight:600}
+.sidebar .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,.7);cursor:pointer;transition:all .15s}
+.sidebar .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar .nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:600}
+.sidebar .health{display:flex;gap:6px;padding:8px 12px;margin:4px 12px;font-size:11px;align-items:center;flex-wrap:wrap}
+.sidebar .health .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#34D399}
+.sidebar .user-box{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;margin-top:auto}
+.sidebar .user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.sidebar .user-name{font-size:13px;font-weight:600}
+.sidebar .user-email{font-size:11px;color:rgba(255,255,255,.5)}
+.main{flex:1;padding:24px 32px;max-width:1200px;overflow-y:auto}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.card-header h3{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-header h3::before{content:'';display:inline-block;width:3px;height:18px;background:var(--accent);border-radius:2px}
+.card-body{padding:20px}
+.card-body.np{padding:0}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.badge.green{background:rgba(5,150,105,.1);color:var(--pos)}
+.badge.red{background:rgba(220,38,38,.1);color:var(--neg)}
+.badge.yellow{background:rgba(217,119,6,.1);color:var(--warn)}
+.badge.blue{background:rgba(37,99,235,.1);color:var(--info)}
+.badge.gray{background:#F3F4F6;color:var(--muted)}
+.badge.accent{background:var(--accent);color:#fff}
+.badge.outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.badge.purple{background:rgba(124,58,237,.1);color:#7C3AED}
+
+/* ── BUTTON ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.9}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── HERO ── */
+.hero-dark{background:linear-gradient(135deg,var(--accent-800),var(--accent));color:#fff;border-radius:var(--r);padding:32px;margin-bottom:24px;position:relative;overflow:hidden}
+.hero-dark::after{content:'';position:absolute;top:-60%;right:-20%;width:400px;height:400px;background:radial-gradient(circle,rgba(255,255,255,.04),transparent);border-radius:50%}
+.hero-dark h1{font-size:28px;font-weight:700;letter-spacing:-.5px;position:relative;z-index:1}
+.hero-dark .sub{color:rgba(255,255,255,.7);font-size:14px;margin-top:4px;position:relative;z-index:1}
+
+/* ── GLASS KPI ── */
+.glass{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(12px);border-radius:var(--r);padding:16px 20px;color:#fff}
+.glass .l{color:rgba(255,255,255,.7);font-size:12px;font-weight:500}
+.glass .v{font-size:28px;font-weight:700;margin-top:2px}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{padding:16px 20px;border-radius:var(--r);border:1px solid var(--border);background:var(--card)}
+.kpi .label{font-size:12px;color:var(--muted);font-weight:500}
+.kpi .value{font-size:24px;font-weight:700;margin-top:2px;letter-spacing:-.5px}
+.kpi .value.pos{color:var(--pos)}.kpi .value.neg{color:var(--neg)}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:10px 16px;font-weight:600;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border);background:#FAFBFC}
+tbody td{padding:12px 16px;border-bottom:1px solid #F3F4F6;vertical-align:middle}
+tbody tr:hover{background:#FAFBFC}
+tbody tr:last-child td{border-bottom:none}
+tr.clickable{cursor:pointer}
+tr.clickable:hover{background:var(--accent-light)}
+.mono{font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.text-right{text-align:right}
+
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.dl-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px}
+.dl-grid dt{color:var(--muted)}.dl-grid dd{font-weight:500}
+
+/* ── MODULE CARDS ── */
+.mod-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.mod-card{padding:24px;border-radius:var(--r);border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all .15s}
+.mod-card:hover{box-shadow:var(--sh-lg);border-color:var(--accent)}
+.mod-card .mc-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
+.mod-card .mc-icon.ma{background:var(--accent-light);color:var(--accent)}
+.mod-card .mc-icon.docs{background:rgba(37,99,235,.08);color:var(--info)}
+.mod-card .mc-icon.kiis{background:rgba(217,119,6,.08);color:var(--warn)}
+.mod-card .mc-icon.fdd{background:rgba(124,58,237,.08);color:#7C3AED}
+.mod-card h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.mod-card p{font-size:12px;color:var(--muted)}
+.mod-card .mc-stat{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:16px}
+.mod-card .mc-stat span{font-size:12px;color:var(--muted)}
+.mod-card .mc-stat strong{color:var(--text)}
+
+/* ── PIPELINE ── */
+.pipeline{display:flex;width:100%;margin-bottom:16px}
+.pipeline .step{flex:1;min-width:0;display:flex;align-items:center}
+.pipeline .step-btn{width:100%;height:42px;display:flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;position:relative}
+.pipeline .step-btn.active{background:var(--accent);color:#fff}
+.pipeline .step-btn.done{background:var(--accent-light);color:var(--accent)}
+.pipeline .step-btn.future{background:#F3F4F6;color:var(--muted)}
+.pipeline .step-btn .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pipeline .step-btn.active .dot{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.3)}
+.pipeline .step-btn.done .dot{background:var(--accent)}
+.pipeline .step-btn.future .dot{background:currentColor;opacity:.3}
+.step:first-child .step-btn{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%);border-radius:6px 0 0 6px}
+.step:last-child .step-btn{clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,10px 50%);border-radius:0 6px 6px 0}
+.step:not(:first-child):not(:last-child) .step-btn{clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%)}
+.pipeline .milestone{display:flex;flex-direction:column;align-items:center;margin:0 2px;flex-shrink:0}
+.pipeline .milestone span{font-size:8px;color:var(--secondary);font-weight:500;white-space:nowrap}
+.pipeline .milestone .dot-m{width:8px;height:8px;border-radius:50%;border:2px solid var(--secondary);background:#fff;margin:2px 0}
+.pipeline .milestone .dot-m.done{background:var(--accent);border-color:var(--accent)}
+.pipeline .milestone .line{width:1px;height:4px;border-left:1px dashed var(--secondary);opacity:.4}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.tab .count{background:#F3F4F6;color:var(--muted);font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600}
+.tab.active .count{background:var(--accent-light);color:var(--accent)}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── PROGRESS ── */
+.progress-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.progress-row .label{font-size:12px;font-weight:500;width:80px;flex-shrink:0}
+.progress-bar{flex:1;height:8px;background:#F3F4F6;border-radius:99px;overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.progress-row .stat{font-size:12px;color:var(--muted);width:60px;text-align:right;flex-shrink:0}
+
+/* ── CHECKLIST ── */
+.checklist-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #F3F4F6}
+.checklist-item:last-child{border-bottom:none}
+.check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px}
+.check.done{background:var(--pos);border-color:var(--pos);color:#fff}
+.check.progress{border-color:var(--info)}
+.checklist-item .item-label{font-size:13px;flex:1}
+.checklist-item .item-label.done-text{color:var(--muted);text-decoration:line-through}
+
+/* ── COMMENT THREAD ── */
+.comment-card{border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:12px;transition:border-color .15s}
+.comment-card:hover{border-color:var(--accent-mid)}
+.comment-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.comment-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;color:#fff}
+.comment-avatar.buyer{background:var(--accent)}
+.comment-avatar.internal{background:var(--info)}
+.comment-meta{flex:1}
+.comment-author{font-size:14px;font-weight:600}
+.comment-org{font-size:12px;color:var(--muted);margin-left:6px}
+.comment-date{font-size:11px;color:var(--secondary);margin-left:auto;flex-shrink:0}
+.comment-body{font-size:13px;line-height:1.7;padding-left:48px;color:var(--text)}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.qa{padding:20px;border-radius:var(--r);border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:8px}
+.qa:hover{box-shadow:var(--sh-lg);transform:translateY(-1px)}
+.qa .qa-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.qa .qa-desc{font-size:12px;color:var(--muted)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .login-left{display:none}
+  .login-mobile-logo{display:block}
+  .login-right{padding:24px 24px}
+}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{padding:16px}
+  .grid-2,.grid-4,.mod-grid,.kpi-grid{grid-template-columns:1fr}
+  .qa-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 1: LOGIN                             -->
+<!-- ════════════════════════════════════════════ -->
+<div class="screen visible" id="screen-login">
+  <div class="login-shell">
+    <div class="login-left">
+      <div class="brochure-bg"></div>
+      <div class="brochure-overlay">
+        <div class="brand-block">
+          <div class="brand-amic">AMIC</div>
+          <div class="brand-amp">&amp;</div>
+          <div class="brand-petra">
+            <div>PETRABRIDGE</div>
+            <div>PARTNERS</div>
+          </div>
+          <div class="brand-divider"></div>
+          <div class="brand-tagline">
+            M&amp;A Advisory Platform<br>
+            Deal Management &middot; Due Diligence &middot; Document Studio
+          </div>
+        </div>
+      </div>
+      <div class="geo-line tl"></div>
+      <div class="geo-line tr"></div>
+      <div class="geo-line bl"></div>
+      <div class="geo-line br"></div>
+    </div>
+    <div class="login-right">
+      <div class="login-box">
+        <div class="login-mobile-logo">
+          <div class="logo-row">
+            <span class="ml-amic">AMIC</span>
+            <span class="ml-amp">&amp;</span>
+            <div>
+              <div class="ml-petra">
+                <div>PETRABRIDGE</div>
+                <div>PARTNERS</div>
+              </div>
+            </div>
+          </div>
+          <div class="ml-divider"></div>
+        </div>
+        <div class="form-header">
+          <h2>Welcome</h2>
+          <p>Sign in to continue</p>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="user@amic.kr" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter your password">
+          </div>
+          <div class="error-msg" id="loginError">Invalid email or password.</div>
+          <button type="submit" class="btn-login">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign In
+          </button>
+        </form>
+        <div class="foot">AMIC x PETRA Platform v1.0 &middot; 2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 2: DASHBOARD                         -->
+<!-- ════════════════════════════════════════════ -->
+<div class="screen" id="screen-dashboard">
+  <div class="shell">
+    <div class="sidebar" id="sidebar-dashboard">
+      <div class="logo"><h2>AMIC & PETRABRIDGE</h2><p>Partners Platform</p></div>
+      <div class="divider"></div>
+      <nav>
+        <div class="nav-item active" onclick="showScreen('dashboard')">&#x1F3E0; Home</div>
+        <div class="nav-title">M&A Pipeline</div>
+        <div class="nav-item" onclick="showScreen('pipeline')">&#x1F91D; Pipeline</div>
+        <div class="nav-title">Deal Doc Studio</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4C4; Documents</div>
+        <div class="nav-title">Modules</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4BC; FDD</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4CA; KIIS</div>
+        <div style="padding:12px"><div class="health"><span class="dot"></span> FDD <span class="dot"></span> KIIS <span class="dot"></span> IM <span class="dot"></span> MA</div></div>
+      </nav>
+      <div class="user-box">
+        <div class="user-avatar">&#xAE40;</div>
+        <div><div class="user-name">&#xAE40;&#xC591;&#xD0DC;</div><div class="user-email">ytkim@amic.kr</div></div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="hero-dark">
+        <h1>Welcome, &#xAE40;&#xC591;&#xD0DC; &#xB300;&#xD45C; &#xB2D8;</h1>
+        <div class="sub">2026&#xB144; 2&#xC6D4; 24&#xC77C; &#xC6D4;&#xC694;&#xC77C;</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;position:relative;z-index:1">
+          <div class="glass"><div class="l">Active M&A Deals</div><div class="v">4</div></div>
+          <div class="glass"><div class="l">Pending Documents</div><div class="v">12</div></div>
+        </div>
+      </div>
+
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:12px">Quick Actions</h3>
+      <div class="qa-grid">
+        <div class="qa" onclick="showScreen('pipeline')"><div class="qa-title">&#x1F91D; M&A Pipeline</div><div class="qa-desc">&#xAC70;&#xB798; &#xD30C;&#xC774;&#xD504;&#xB77C;&#xC778; &#xAD00;&#xB9AC;</div></div>
+        <div class="qa"><div class="qa-title">&#x1F4C4; New Document</div><div class="qa-desc">IM, TM, FDD &#xBB38;&#xC11C; &#xC0DD;&#xC131;</div></div>
+        <div class="qa"><div class="qa-title">&#x1F50D; Search Company</div><div class="qa-desc">&#xAE30;&#xC5C5; &#xC815;&#xBCF4; &#xAC80;&#xC0C9;</div></div>
+      </div>
+
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:12px">Modules</h3>
+      <div class="mod-grid">
+        <div class="mod-card" onclick="showScreen('pipeline')">
+          <div class="mc-icon ma">&#x1F91D;</div>
+          <h4>M&A Pipeline</h4>
+          <p>7&#xB2E8;&#xACC4; &#xC6CC;&#xD06C;&#xD50C;&#xB85C;&#xC6B0; &#xAE30;&#xBC18; M&A &#xAC70;&#xB798; &#xAD00;&#xB9AC;</p>
+          <div class="mc-stat"><span>Active: <strong>4</strong></span><span>Total: <strong>6</strong></span></div>
+        </div>
+        <div class="mod-card">
+          <div class="mc-icon docs">&#x1F4C4;</div>
+          <h4>Deal Document Studio</h4>
+          <p>AI &#xAE30;&#xBC18; IM, TM, FDD &#xBB38;&#xC11C; &#xC790;&#xB3D9; &#xC0DD;&#xC131;</p>
+          <div class="mc-stat"><span>Documents: <strong>24</strong></span></div>
+        </div>
+        <div class="mod-card">
+          <div class="mc-icon kiis">&#x1F4CA;</div>
+          <h4>KIIS</h4>
+          <p>&#xAE30;&#xAD00; &#xD22C;&#xC790; &#xC2DC;&#xC2A4;&#xD15C; &mdash; GP, &#xD380;&#xB4DC; &#xB9AC;&#xC11C;&#xCE58;</p>
+          <div class="mc-stat"><span>GPs: <strong>2,985</strong></span></div>
+        </div>
+        <div class="mod-card">
+          <div class="mc-icon fdd">&#x1F4BC;</div>
+          <h4>FDD</h4>
+          <p>&#xC7AC;&#xBB34;&#xC2E4;&#xC0AC; QoE, NWC, Net Debt &#xBD84;&#xC11D;</p>
+          <div class="mc-stat"><span>Deals: <strong>3</strong></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 3: M&A PIPELINE LIST                 -->
+<!-- ════════════════════════════════════════════ -->
+<div class="screen" id="screen-pipeline">
+  <div class="shell">
+    <div class="sidebar" id="sidebar-pipeline">
+      <div class="logo"><h2>AMIC & PETRABRIDGE</h2><p>Partners Platform</p></div>
+      <div class="divider"></div>
+      <nav>
+        <div class="nav-item" onclick="showScreen('dashboard')">&#x1F3E0; Home</div>
+        <div class="nav-title">M&A Pipeline</div>
+        <div class="nav-item active" onclick="showScreen('pipeline')">&#x1F91D; Pipeline</div>
+        <div class="nav-item" onclick="showScreen('workspace')">&#x1F4CB; Workspace</div>
+        <div class="nav-title">Deal Doc Studio</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4C4; Documents</div>
+        <div class="nav-title">Modules</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4BC; FDD</div>
+        <div class="nav-item" style="opacity:.5;cursor:default">&#x1F4CA; KIIS</div>
+        <div style="padding:12px"><div class="health"><span class="dot"></span> FDD <span class="dot"></span> KIIS <span class="dot"></span> IM <span class="dot"></span> MA</div></div>
+      </nav>
+      <div class="user-box">
+        <div class="user-avatar">&#xAE40;</div>
+        <div><div class="user-name">&#xAE40;&#xC591;&#xD0DC;</div><div class="user-email">ytkim@amic.kr</div></div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="hero-dark">
+        <h1>M&A Pipeline</h1>
+        <div class="sub">&#xC804;&#xCCB4; &#xAC70;&#xB798; &#xD30C;&#xC774;&#xD504;&#xB77C;&#xC778; &#xAD00;&#xB9AC;</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">&#xC804;&#xCCB4;</div><div class="value">6</div></div>
+        <div class="kpi"><div class="label">&#xC9C4;&#xD589; &#xC911;</div><div class="value pos">4</div></div>
+        <div class="kpi"><div class="label">&#xC644;&#xB8CC;</div><div class="value">1</div></div>
+        <div class="kpi"><div class="label">&#xBCF4;&#xB958;</div><div class="value">1</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Transaction List</h3><button class="btn btn-primary btn-sm">+ New Transaction</button></div>
+        <div class="card-body np">
+          <table>
+            <thead><tr><th>Project</th><th>Target</th><th>Side</th><th>Phase</th><th>Status</th><th class="text-right">Deal Value</th></tr></thead>
+            <tbody>
+              <tr class="clickable" onclick="showScreen('workspace')">
+                <td style="font-weight:700;color:var(--accent)">Project Tyranno</td>
+                <td>NX3&#xAC8C;&#xC784;&#xC988;</td>
+                <td><span class="badge gray">SELL</span></td>
+                <td><span class="badge blue">&#xC785;&#xCC30;/DD</span></td>
+                <td><span class="badge green">ACTIVE</span></td>
+                <td class="mono text-right">&#x20A9;1,200&#xC5B5;</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600">Project Titan</td>
+                <td>(&#xC8FC;)&#xD0C0;&#xC774;&#xD0C4;&#xD14C;&#xD06C;</td>
+                <td><span class="badge gray">SELL</span></td>
+                <td><span class="badge yellow">&#xD611;&#xC0C1;</span></td>
+                <td><span class="badge green">ACTIVE</span></td>
+                <td class="mono text-right">&#x20A9;8,500&#xC5B5;</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600">Project Eagle</td>
+                <td>&#xC774;&#xAE00;&#xC18C;&#xD504;&#xD2B8;</td>
+                <td><span class="badge gray">SELL</span></td>
+                <td><span class="badge blue">&#xB9C8;&#xCF00;&#xD305;</span></td>
+                <td><span class="badge green">ACTIVE</span></td>
+                <td class="mono text-right">&#x20A9;3,200&#xC5B5;</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600">Project Phoenix</td>
+                <td>&#xD53C;&#xB2C9;&#xC2A4;&#xBC14;&#xC774;&#xC624;</td>
+                <td><span class="badge gray">BUY</span></td>
+                <td><span class="badge gray">&#xC218;&#xC784;</span></td>
+                <td><span class="badge green">ACTIVE</span></td>
+                <td class="mono text-right">&#x20A9;1,500&#xC5B5;</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600">Project Aurora</td>
+                <td>&#xC624;&#xB85C;&#xB77C;&#xC5D0;&#xB108;&#xC9C0;</td>
+                <td><span class="badge gray">SELL</span></td>
+                <td><span class="badge green">&#xD074;&#xB85C;&#xC9D5;</span></td>
+                <td><span class="badge blue">COMPLETED</span></td>
+                <td class="mono text-right">&#x20A9;4,200&#xC5B5;</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600">Project Mercury</td>
+                <td>&#xBA38;&#xD050;&#xB9AC;&#xB85C;&#xC9C1;</td>
+                <td><span class="badge gray">BUY</span></td>
+                <td><span class="badge gray">&#xD3EC;&#xC2A4;&#xD2B8; &#xD074;&#xB85C;&#xC9D5;</span></td>
+                <td><span class="badge yellow">ON_HOLD</span></td>
+                <td class="mono text-right">&#x20A9;2,100&#xC5B5;</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 4: TRANSACTION WORKSPACE             -->
+<!-- ════════════════════════════════════════════ -->
+<div class="screen" id="screen-workspace">
+  <div class="shell">
+    <div class="sidebar" id="sidebar-workspace">
+      <div class="logo"><h2>AMIC & PETRABRIDGE</h2><p>Partners Platform</p></div>
+      <div class="divider"></div>
+      <nav>
+        <div class="nav-item" onclick="showScreen('dashboard')">&#x1F3E0; Home</div>
+        <div class="nav-title">M&A Pipeline</div>
+        <div class="nav-item" onclick="showScreen('pipeline')">&#x1F91D; Pipeline</div>
+        <div class="nav-item active" onclick="showScreen('workspace')">&#x1F4CB; Workspace</div>
+        <div class="nav-title">Project Tyranno</div>
+        <div class="nav-item" style="font-size:12px;padding-left:20px" onclick="switchTab('overview')">Overview</div>
+        <div class="nav-item" style="font-size:12px;padding-left:20px" onclick="switchTab('buyers')">&#xB9E4;&#xC218;&#xC790;</div>
+        <div class="nav-item" style="font-size:12px;padding-left:20px" onclick="switchTab('comments')">&#xCF54;&#xBA58;&#xD2B8;</div>
+        <div class="nav-item" style="font-size:12px;padding-left:20px" onclick="switchTab('dd')">DD &#xCCB4;&#xD06C;&#xB9AC;&#xC2A4;&#xD2B8;</div>
+        <div style="padding:12px"><div class="health"><span class="dot"></span> FDD <span class="dot"></span> KIIS <span class="dot"></span> IM <span class="dot"></span> MA</div></div>
+      </nav>
+      <div class="user-box">
+        <div class="user-avatar">&#xAE40;</div>
+        <div><div class="user-name">&#xAE40;&#xC591;&#xD0DC;</div><div class="user-email">ytkim@amic.kr</div></div>
+      </div>
+    </div>
+    <div class="main">
+
+      <!-- Hero -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <h1 style="font-size:28px;font-weight:700;letter-spacing:-.5px">Project Tyranno</h1>
+          <div style="color:var(--muted);font-size:14px;margin-top:4px">TYRANNO-2026 &nbsp;|&nbsp; NX3&#xAC8C;&#xC784;&#xC988; &nbsp;|&nbsp; NX3&#xAC8C;&#xC784;&#xC988; &#xB300;&#xC8FC;&#xC8FC;</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="showScreen('pipeline')">&larr; &#xBAA9;&#xB85D;</button>
+          <button class="btn btn-primary">&#xD611;&#xC0C1; &#xB2E8;&#xACC4;&#xB85C; &rarr;</button>
+          <button class="btn btn-ghost">&#xBCF4;&#xB958;</button>
+        </div>
+      </div>
+
+      <!-- Pipeline Flow -->
+      <div class="card">
+        <div style="padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">
+          <span class="badge green">ACTIVE</span>
+          <span style="font-size:13px;color:var(--muted)">&#xD604;&#xC7AC;: <strong style="color:var(--text)">&#xC785;&#xCC30;/DD</strong></span>
+          <span style="margin-left:auto;font-size:12px;color:var(--secondary)">&#xC644;&#xB8CC; &#xC870;&#xAC74; 2/4 (50%)</span>
+          <div style="width:80px;height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden">
+            <div style="width:50%;height:100%;background:var(--accent);border-radius:99px"></div>
+          </div>
+        </div>
+        <div style="padding:12px 20px">
+          <div class="pipeline" id="pipeline"></div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="workspace-tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="engagement">&#xC218;&#xC784; <span class="count">1</span></button>
+        <button class="tab" data-tab="team">&#xD300; <span class="count">5</span></button>
+        <button class="tab" data-tab="buyers">&#xB9E4;&#xC218;&#xC790; <span class="count">6</span></button>
+        <button class="tab" data-tab="comments">&#xCF54;&#xBA58;&#xD2B8; <span class="count">5</span></button>
+        <button class="tab" data-tab="ndas">NDA <span class="count">3</span></button>
+        <button class="tab" data-tab="bids">&#xC785;&#xCC30; <span class="count">1</span></button>
+        <button class="tab" data-tab="dd">DD &#xCCB4;&#xD06C;&#xB9AC;&#xC2A4;&#xD2B8; <span class="count">12</span></button>
+        <button class="tab" data-tab="contracts">&#xACC4;&#xC57D;/SPA</button>
+        <button class="tab" data-tab="closing">&#xD074;&#xB85C;&#xC9D5; <span class="count">15</span></button>
+        <button class="tab" data-tab="risks">&#xB9AC;&#xC2A4;&#xD06C;</button>
+        <button class="tab" data-tab="timeline">&#xD0C0;&#xC784;&#xB77C;&#xC778;</button>
+      </div>
+
+      <!-- ═══ OVERVIEW TAB ═══ -->
+      <div class="tab-content active" id="tc-overview">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><h3>&#xAC70;&#xB798; &#xC815;&#xBCF4;</h3></div>
+            <div class="card-body">
+              <dl class="dl-grid">
+                <dt>&#xC720;&#xD615;</dt><dd>SELL (&#xB9E4;&#xAC01;&#xC790;&#xBB38;)</dd>
+                <dt>&#xB51C; &#xAD6C;&#xC870;</dt><dd>&#xC9C0;&#xBD84;&#xC778;&#xC218; (Share Acquisition)</dd>
+                <dt>&#xD22C;&#xC790; &#xC720;&#xD615;</dt><dd>&#xC9C0;&#xBD84;&#xD22C;&#xC790; (Equity)</dd>
+                <dt>&#xC0B0;&#xC5C5;</dt><dd>&#xAC8C;&#xC784; / &#xC5D4;&#xD130;&#xD14C;&#xC778;&#xBA3C;&#xD2B8;</dd>
+                <dt>&#xC608;&#xC0C1; &#xAE08;&#xC561;</dt><dd class="mono">&#x20A9; 120,000,000,000 (1,200&#xC5B5;&#xC6D0;)</dd>
+                <dt>&#xD1B5;&#xD654;</dt><dd>KRW</dd>
+                <dt>&#xBAA9;&#xD45C; &#xC885;&#xACB0;&#xC77C;</dt><dd>2026-06-30</dd>
+                <dt>&#xB9AC;&#xB4DC; &#xC5B4;&#xB4DC;&#xBC14;&#xC774;&#xC800;</dt><dd>ytkim@amic.kr (&#xAE40;&#xC591;&#xD0DC;)</dd>
+                <dt>&#xB51C; &#xCEA1;&#xD2F4;</dt><dd>jmpark@amic.kr (&#xBC15;&#xC815;&#xBB34;)</dd>
+              </dl>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>&#xC11C;&#xBE44;&#xC2A4; &#xC5F0;&#xB3D9;</h3></div>
+            <div class="card-body">
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <div>
+                  <div style="font-size:13px;color:var(--muted);margin-bottom:8px">&#xD22C;&#xC790; &#xC81C;&#xC548;&#xC11C; (IM / TM)</div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-ghost btn-sm">&#x1F4C4; IM &#xC0DD;&#xC131;</button>
+                    <button class="btn btn-ghost btn-sm">&#x1F4C4; TM &#xC0DD;&#xC131;</button>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:13px;color:var(--muted);margin-bottom:8px">&#xC7AC;&#xBB34;&#xC2E4;&#xC0AC; (FDD)</div>
+                  <button class="btn btn-ghost btn-sm">&#x1F4CA; FDD &#xBCF4;&#xACE0;&#xC11C; &#xC0DD;&#xC131;</button>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:12px">
+                  <dl class="dl-grid">
+                    <dt>DART Corp Code</dt><dd class="mono">00983210</dd>
+                    <dt>FDD Deal</dt><dd class="mono" style="color:var(--pos)">&#xC5F0;&#xB3D9;&#xB428; (D-2026-0052)</dd>
+                    <dt>IM Document</dt><dd class="mono" style="color:var(--secondary)">&#xBBF8;&#xC5F0;&#xB3D9;</dd>
+                    <dt>&#xC0DD;&#xC131;&#xC77C;</dt><dd>2026-02-10</dd>
+                    <dt>&#xC218;&#xC815;&#xC77C;</dt><dd>2026-02-24</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ BUYERS TAB ═══ -->
+      <div class="tab-content" id="tc-buyers">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">&#xD6C4;&#xBCF4; &#xC218;</div><div class="value">6</div></div>
+          <div class="kpi"><div class="label">IOI &#xC811;&#xC218;</div><div class="value pos">1</div></div>
+          <div class="kpi"><div class="label">NDA &#xCCB4;&#xACB0;</div><div class="value">1</div></div>
+          <div class="kpi"><div class="label">&#xAD00;&#xC2EC; &#xD655;&#xC778;</div><div class="value">1</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>&#xB9E4;&#xC218;&#xC790; &#xD6C4;&#xBCF4;</h3><button class="btn btn-ghost btn-sm">+ &#xD6C4;&#xBCF4; &#xCD94;&#xAC00;</button></div>
+          <div class="card-body np">
+            <table>
+              <thead><tr><th>&#xD68C;&#xC0AC;&#xBA85; / &#xB2F4;&#xB2F9;&#xC790;</th><th>&#xC720;&#xD615;</th><th>&#xC0C1;&#xD0DC;</th><th class="text-right">IOI (&#xC5B5;&#xC6D0;)</th><th>&#xB2F4;&#xB2F9;(AMIC)</th><th>&#xCF54;&#xBA58;&#xD2B8;</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div style="font-weight:700">ATU Partners</div><div style="font-size:11px;color:var(--muted)">&#xBC15;&#xC815;&#xBB34; &#xB300;&#xD45C;</div></td>
+                  <td><span class="badge purple">PE</span></td>
+                  <td><span class="badge yellow">IOI &#xC811;&#xC218;</span></td>
+                  <td class="mono text-right" style="font-weight:700;color:var(--accent)">1,150</td>
+                  <td class="mono">ytkim@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">&#xAC8C;&#xC784; IP &#xD3EC;&#xD2B8;&#xD3F4;&#xB9AC;&#xC624;&#xC640; &#xAE00;&#xB85C;&#xBC8C; &#xD37C;&#xBE14;&#xB9AC;&#xC2F1; &#xC5ED;&#xB7C9;&#xC5D0; &#xD070; &#xAD00;&#xC2EC;</td>
+                </tr>
+                <tr>
+                  <td><div style="font-weight:600">&#xD06C;&#xB798;&#xD504;&#xD1A4; (KRAFTON)</div><div style="font-size:11px;color:var(--muted)">&#xC804;&#xB7B5;&#xD22C;&#xC790;&#xD300;</div></td>
+                  <td><span class="badge gray">&#xC804;&#xB7B5;</span></td>
+                  <td><span class="badge outline">&#xAD00;&#xC2EC; &#xD655;&#xC778;</span></td>
+                  <td class="mono text-right">&mdash;</td>
+                  <td class="mono">sjpark@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">&#xBAA8;&#xBC14;&#xC77C; &#xAC8C;&#xC784; &#xB77C;&#xC778;&#xC5C5; &#xC2DC;&#xB108;&#xC9C0; &#xAC80;&#xD1A0; &#xC911;</td>
+                </tr>
+                <tr>
+                  <td><div style="font-weight:600">&#xB124;&#xC624;&#xC704;&#xC988;&#xD640;&#xB529;&#xC2A4;</div><div style="font-size:11px;color:var(--muted)">&#xC7AC;&#xBB34;&#xBCF8;&#xBD80;</div></td>
+                  <td><span class="badge gray">&#xC804;&#xB7B5;</span></td>
+                  <td><span class="badge blue">NDA &#xCCB4;&#xACB0;</span></td>
+                  <td class="mono text-right">&mdash;</td>
+                  <td class="mono">jmpark@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">IP &#xD3EC;&#xD2B8;&#xD3F4;&#xB9AC;&#xC624; &#xAC00;&#xCE58; &#xD3C9;&#xAC00; &#xD6C4; IOI &#xC608;&#xC815;</td>
+                </tr>
+                <tr>
+                  <td><div style="font-weight:600">&#xC2A4;&#xD2F1;&#xC778;&#xBCA0;&#xC2A4;&#xD2B8;&#xBA3C;&#xD2B8;</div><div style="font-size:11px;color:var(--muted)">&#xC774;&#xC0AC;</div></td>
+                  <td><span class="badge purple">PE</span></td>
+                  <td><span class="badge blue">CIM &#xBC1C;&#xC1A1;</span></td>
+                  <td class="mono text-right">&mdash;</td>
+                  <td class="mono">ytkim@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">&#xC5C5;&#xC885; &#xC804;&#xBB38;&#xC131; &#xD655;&#xBCF4; &#xD6C4; &#xACB0;&#xC815;</td>
+                </tr>
+                <tr>
+                  <td><div style="font-weight:600">IMM Investment</div><div style="font-size:11px;color:var(--muted)">&#xBD80;&#xC0AC;&#xC7A5;</div></td>
+                  <td><span class="badge purple">PE</span></td>
+                  <td><span class="badge gray">&#xC811;&#xCD09;</span></td>
+                  <td class="mono text-right">&mdash;</td>
+                  <td class="mono">sjpark@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">&#xC2DC;&#xC7A5; &#xB3D9;&#xD5A5; &#xD30C;&#xC545; &#xC911;</td>
+                </tr>
+                <tr>
+                  <td><div style="font-weight:600">&#xB137;&#xB9C8;&#xBE14;</div><div style="font-size:11px;color:var(--muted)">M&A&#xD300;</div></td>
+                  <td><span class="badge gray">&#xC804;&#xB7B5;</span></td>
+                  <td><span class="badge blue">NDA &#xBC1C;&#xC1A1;</span></td>
+                  <td class="mono text-right">&mdash;</td>
+                  <td class="mono">jmpark@</td>
+                  <td style="font-size:12px;color:var(--muted);max-width:200px">&#xB0B4;&#xBD80; &#xAC80;&#xD1A0; &#xC911;</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ COMMENTS TAB ═══ -->
+      <div class="tab-content" id="tc-comments">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="font-size:16px;font-weight:600">&#xD22C;&#xC790;&#xC790; &#xCF54;&#xBA58;&#xD2B8; &amp; &#xB0B4;&#xBD80; &#xBA54;&#xBAA8;</h3>
+          <button class="btn btn-primary btn-sm">+ &#xCF54;&#xBA58;&#xD2B8; &#xCD94;&#xAC00;</button>
+        </div>
+
+        <div class="comment-card">
+          <div class="comment-header">
+            <div class="comment-avatar buyer">&#xBC15;</div>
+            <div class="comment-meta">
+              <span class="comment-author">&#xBC15;&#xC815;&#xBB34;</span>
+              <span class="comment-org">ATU Partners</span>
+              <span class="badge yellow" style="margin-left:8px">IOI &#xC811;&#xC218;</span>
+            </div>
+            <span class="comment-date">2026-02-18</span>
+          </div>
+          <div class="comment-body">
+            1&#xBD84;&#xAE30; &#xC2E4;&#xC801; &#xAE30;&#xC900; EBITDA &#xBA40;&#xD2F0;&#xD50C; 8~9x &#xC218;&#xC900;&#xC758; IOI&#xB97C; &#xC900;&#xBE44; &#xC911;&#xC785;&#xB2C8;&#xB2E4;. DD &#xC77C;&#xC815; &#xC870;&#xC728; &#xBD80;&#xD0C1;&#xB4DC;&#xB9BD;&#xB2C8;&#xB2E4;.
+          </div>
+        </div>
+
+        <div class="comment-card">
+          <div class="comment-header">
+            <div class="comment-avatar buyer" style="background:var(--warn)">&#xC804;</div>
+            <div class="comment-meta">
+              <span class="comment-author">&#xC804;&#xB7B5;&#xD22C;&#xC790;&#xD300;</span>
+              <span class="comment-org">&#xD06C;&#xB798;&#xD504;&#xD1A4;</span>
+              <span class="badge outline" style="margin-left:8px">&#xAD00;&#xC2EC; &#xD655;&#xC778;</span>
+            </div>
+            <span class="comment-date">2026-02-19</span>
+          </div>
+          <div class="comment-body">
+            NX3&#xAC8C;&#xC784;&#xC988;&#xC758; '&#xB2E4;&#xD06C;&#xC5B4;&#xBE44;&#xC2A4;' IP&#xC5D0; &#xB300;&#xD55C; &#xCD94;&#xAC00; &#xC790;&#xB8CC; &#xC694;&#xCCAD;&#xB4DC;&#xB9BD;&#xB2C8;&#xB2E4;. &#xAE00;&#xB85C;&#xBC8C; &#xB9E4;&#xCD9C; &#xBE44;&#xC911;, &#xC720;&#xC800; DAU/MAU &#xCD94;&#xC774; &#xB370;&#xC774;&#xD130; &#xD3EC;&#xD568; &#xBD80;&#xD0C1;&#xB4DC;&#xB9BD;&#xB2C8;&#xB2E4;.
+          </div>
+        </div>
+
+        <div class="comment-card" style="border-left:3px solid var(--info)">
+          <div class="comment-header">
+            <div class="comment-avatar internal">&#xAE40;</div>
+            <div class="comment-meta">
+              <span class="comment-author">&#xAE40;&#xC591;&#xD0DC;</span>
+              <span class="comment-org">AMIC Partners</span>
+              <span class="badge accent" style="margin-left:8px">&#xB0B4;&#xBD80; &#xBA54;&#xBAA8;</span>
+            </div>
+            <span class="comment-date">2026-02-20</span>
+          </div>
+          <div class="comment-body">
+            ATU Partners IOI &#xC811;&#xC218; &#xC644;&#xB8CC;. &#xD06C;&#xB798;&#xD504;&#xD1A4;&#xC5D0; &#xCD94;&#xAC00; &#xC790;&#xB8CC; &#xC1A1;&#xBD80; &#xC608;&#xC815;. &#xB124;&#xC624;&#xC704;&#xC988;&#xD640;&#xB529;&#xC2A4; NDA &#xCCB4;&#xACB0; &#xD6C4; CIM &#xBC1C;&#xC1A1; &#xC608;&#xC815;.
+          </div>
+        </div>
+
+        <div class="comment-card">
+          <div class="comment-header">
+            <div class="comment-avatar buyer">&#xBC15;</div>
+            <div class="comment-meta">
+              <span class="comment-author">&#xBC15;&#xC815;&#xBB34;</span>
+              <span class="comment-org">ATU Partners</span>
+              <span class="badge yellow" style="margin-left:8px">IOI &#xC811;&#xC218;</span>
+            </div>
+            <span class="comment-date">2026-02-21</span>
+          </div>
+          <div class="comment-body">
+            DD &#xC9C4;&#xD589; &#xC2DC; &#xAE30;&#xC220;&#xD300; &#xC778;&#xD130;&#xBDF0; &#xD3EC;&#xD568; &#xC694;&#xCCAD;&#xD569;&#xB2C8;&#xB2E4;. &#xD575;&#xC2EC; &#xC778;&#xB825; &#xB9AC;&#xD150;&#xC158; &#xD50C;&#xB79C;&#xB3C4; &#xD655;&#xC778;&#xD558;&#xACE0; &#xC2F6;&#xC2B5;&#xB2C8;&#xB2E4;. &#xD2B9;&#xD788; &#xB9AC;&#xB4DC; &#xAC8C;&#xC784; &#xB514;&#xC790;&#xC774;&#xB108;&#xC640; &#xC11C;&#xBC84; &#xC544;&#xD0A4;&#xD14D;&#xD2B8; &#xD300;&#xC6D0;&#xC758; &#xACC4;&#xC57D; &#xC870;&#xAC74; &#xD655;&#xC778; &#xD544;&#xC694;.
+          </div>
+        </div>
+
+        <div class="comment-card">
+          <div class="comment-header">
+            <div class="comment-avatar buyer" style="background:var(--secondary)">&#xC7AC;</div>
+            <div class="comment-meta">
+              <span class="comment-author">&#xC7AC;&#xBB34;&#xBCF8;&#xBD80;</span>
+              <span class="comment-org">&#xB124;&#xC624;&#xC704;&#xC988;&#xD640;&#xB529;&#xC2A4;</span>
+              <span class="badge blue" style="margin-left:8px">NDA &#xCCB4;&#xACB0;</span>
+            </div>
+            <span class="comment-date">2026-02-22</span>
+          </div>
+          <div class="comment-body">
+            &#xB2F9;&#xC0AC; &#xC774;&#xC0AC;&#xD68C; &#xBCF4;&#xACE0; &#xD6C4; IOI &#xC81C;&#xCD9C; &#xC2DC;&#xAE30; &#xC548;&#xB0B4;&#xB4DC;&#xB9AC;&#xACA0;&#xC2B5;&#xB2C8;&#xB2E4;. &#xD604;&#xC7AC; &#xB0B4;&#xBD80; &#xBC38;&#xB958;&#xC5D0;&#xC774;&#xC158; &#xC9C4;&#xD589; &#xC911;&#xC774;&#xBA70;, 3&#xC6D4; &#xCCAB;&#xC9F8; &#xC8FC;&#xAE4C;&#xC9C0; &#xD68C;&#xC2E0; &#xC608;&#xC815;&#xC785;&#xB2C8;&#xB2E4;.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DD CHECKLIST TAB ═══ -->
+      <div class="tab-content" id="tc-dd">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">&#xC804;&#xCCB4; &#xD56D;&#xBAA9;</div><div class="value">12</div></div>
+          <div class="kpi"><div class="label">&#xC644;&#xB8CC;&#xC728;</div><div class="value pos">33%</div></div>
+          <div class="kpi"><div class="label">&#xC9C4;&#xD589; &#xC911;</div><div class="value">3</div></div>
+          <div class="kpi"><div class="label">&#xBBF8;&#xC2DC;&#xC791;</div><div class="value neg">5</div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-body">
+            <div class="progress-row"><span class="label">&#xC7AC;&#xBB34; (FDD)</span><div class="progress-bar"><div class="fill" style="width:40%"></div></div><span class="stat">2/5</span></div>
+            <div class="progress-row"><span class="label">&#xBC95;&#xB960; (LDD)</span><div class="progress-bar"><div class="fill" style="width:40%"></div></div><span class="stat">2/5</span></div>
+            <div class="progress-row"><span class="label">&#xC138;&#xBB34; (TDD)</span><div class="progress-bar"><div class="fill" style="width:0%"></div></div><span class="stat">0/2</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>&#xCCB4;&#xD06C;&#xB9AC;&#xC2A4;&#xD2B8;</h3><div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary">&#xC804;&#xCCB4;</button><button class="btn btn-sm btn-ghost">&#xC7AC;&#xBB34;</button><button class="btn btn-sm btn-ghost">&#xBC95;&#xB960;</button><button class="btn btn-sm btn-ghost">&#xC138;&#xBB34;</button></div></div>
+          <div class="card-body np">
+            <div class="checklist-item"><div class="check done">&#x2713;</div><span class="item-label done-text">&#xC7AC;&#xBB34;&#xC81C;&#xD45C; 3&#xAC1C;&#xB144; &#xAC80;&#xD1A0;</span><span class="badge gray">&#xC7AC;&#xBB34;</span></div>
+            <div class="checklist-item"><div class="check done">&#x2713;</div><span class="item-label done-text">&#xB9E4;&#xCD9C; &#xBC0F; &#xC218;&#xC775;&#xC131; &#xBD84;&#xC11D;</span><span class="badge gray">&#xC7AC;&#xBB34;</span></div>
+            <div class="checklist-item"><div class="check progress"></div><span class="item-label">&#xC6B4;&#xC804;&#xC790;&#xBCF8; &#xBD84;&#xC11D;</span><span class="badge blue">&#xC7AC;&#xBB34; &middot; &#xC9C4;&#xD589; &#xC911;</span></div>
+            <div class="checklist-item"><div class="check"></div><span class="item-label">&#xCC28;&#xC785;&#xAE08; &#xBC0F; &#xD604;&#xAE08;</span><span class="badge outline">&#xC7AC;&#xBB34; &middot; &#xBBF8;&#xC2DC;&#xC791;</span></div>
+            <div class="checklist-item"><div class="check progress"></div><span class="item-label">&#xC0AC;&#xC5C5;&#xACC4;&#xD68D; &#xBC0F; &#xCD94;&#xC815;</span><span class="badge blue">&#xC7AC;&#xBB34; &middot; &#xC9C4;&#xD589; &#xC911;</span></div>
+            <div class="checklist-item"><div class="check done">&#x2713;</div><span class="item-label done-text">&#xD68C;&#xC0AC;&#xC77C;&#xBC18; (&#xC815;&#xAD00;, &#xC8FC;&#xC8FC;&#xBA85;&#xBD80;)</span><span class="badge gray">&#xBC95;&#xB960;</span></div>
+            <div class="checklist-item"><div class="check done">&#x2713;</div><span class="item-label done-text">&#xC8FC;&#xC694; &#xACC4;&#xC57D; &#xAC80;&#xD1A0;</span><span class="badge gray">&#xBC95;&#xB960;</span></div>
+            <div class="checklist-item"><div class="check progress"></div><span class="item-label">&#xC9C0;&#xC2DD;&#xC7AC;&#xC0B0;&#xAD8C; (IP / &#xAC8C;&#xC784; &#xB77C;&#xC774;&#xC120;&#xC2A4;)</span><span class="badge blue">&#xBC95;&#xB960; &middot; &#xC9C4;&#xD589; &#xC911;</span></div>
+            <div class="checklist-item"><div class="check"></div><span class="item-label">&#xC778;&#xC0AC;&#xB178;&#xBB34;</span><span class="badge outline">&#xBC95;&#xB960; &middot; &#xBBF8;&#xC2DC;&#xC791;</span></div>
+            <div class="checklist-item"><div class="check"></div><span class="item-label">&#xC18C;&#xC1A1; &#xBC0F; &#xBD84;&#xC7C1;</span><span class="badge outline">&#xBC95;&#xB960; &middot; &#xBBF8;&#xC2DC;&#xC791;</span></div>
+            <div class="checklist-item"><div class="check"></div><span class="item-label">&#xBC95;&#xC778;&#xC138;</span><span class="badge outline">&#xC138;&#xBB34; &middot; &#xBBF8;&#xC2DC;&#xC791;</span></div>
+            <div class="checklist-item"><div class="check"></div><span class="item-label">&#xC774;&#xC804;&#xAC00;&#xACA9;</span><span class="badge outline">&#xC138;&#xBB34; &middot; &#xBBF8;&#xC2DC;&#xC791;</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PLACEHOLDER TABS ═══ -->
+      <div class="tab-content" id="tc-engagement">
+        <div class="card"><div class="card-header"><h3>&#xC218;&#xC784;&#xACC4;&#xC57D;</h3></div><div class="card-body np">
+          <table><thead><tr><th>&#xC720;&#xD615;</th><th>&#xCCB4;&#xACB0;&#xC77C;</th><th>&#xB9CC;&#xB8CC;&#xC77C;</th><th>&#xC218;&#xC218;&#xB8CC; &#xAD6C;&#xC870;</th></tr></thead>
+          <tbody><tr><td><span class="badge blue">&#xC7AC;&#xBB34;&#xC790;&#xBB38;</span></td><td>2026-02-10</td><td>2026-12-31</td><td>&#xC131;&#xACF5;&#xBCF4;&#xC218; 1.5% + &#xB9AC;&#xD14C;&#xC774;&#xB108; &#xC6D4; &#x20A9;25M</td></tr></tbody></table>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="tc-team">
+        <div class="card"><div class="card-header"><h3>&#xC6CC;&#xD0B9;&#xADF8;&#xB8F9;</h3></div><div class="card-body np">
+          <table><thead><tr><th>&#xC774;&#xB984;</th><th>&#xC774;&#xBA54;&#xC77C;</th><th>&#xC18C;&#xC18D;</th><th>&#xC5ED;&#xD560;</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">&#xAE40;&#xC591;&#xD0DC;</td><td class="mono">ytkim@amic.kr</td><td>AMIC Partners</td><td><span class="badge accent">&#xB9AC;&#xB4DC; &#xC5B4;&#xB4DC;&#xBC14;&#xC774;&#xC800;</span></td></tr>
+            <tr><td style="font-weight:600">&#xBC15;&#xC815;&#xBB34;</td><td class="mono">jmpark@amic.kr</td><td>AMIC Partners</td><td><span class="badge blue">&#xB51C; &#xCEA1;&#xD2F4;</span></td></tr>
+            <tr><td style="font-weight:600">&#xC774;&#xC218;&#xBBFC;</td><td class="mono">smlee@lawfirm.kr</td><td>&#xBC95;&#xBB34;&#xBC95;&#xC778; &#xC815;&#xC758;</td><td><span class="badge gray">&#xBC95;&#xB960;&#xC790;&#xBB38;</span></td></tr>
+            <tr><td style="font-weight:600">&#xC815;&#xD558;&#xC724;</td><td class="mono">hjung@bigfour.com</td><td>&#xC0BC;&#xC77C; PwC</td><td><span class="badge gray">&#xC7AC;&#xBB34;&#xC2E4;&#xC0AC;</span></td></tr>
+            <tr><td style="font-weight:600">&#xD55C;&#xC9C0;&#xC601;</td><td class="mono">jyhan@amic.kr</td><td>AMIC Partners</td><td><span class="badge gray">&#xC560;&#xB110;&#xB9AC;&#xC2A4;&#xD2B8;</span></td></tr>
+          </tbody></table>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="tc-ndas">
+        <div class="card"><div class="card-header"><h3>NDA &#xBAA9;&#xB85D;</h3></div><div class="card-body np">
+          <table><thead><tr><th>&#xB9E4;&#xC218;&#xC790;</th><th>&#xC720;&#xD615;</th><th>&#xC0C1;&#xD0DC;</th><th>&#xBC1C;&#xC1A1;&#xC77C;</th><th>&#xCCB4;&#xACB0;&#xC77C;</th></tr></thead>
+          <tbody>
+            <tr><td>ATU Partners</td><td><span class="badge gray">&#xC0C1;&#xD638;</span></td><td><span class="badge green">&#xCCB4;&#xACB0; &#xC644;&#xB8CC;</span></td><td>2026-02-08</td><td>2026-02-12</td></tr>
+            <tr><td>&#xB124;&#xC624;&#xC704;&#xC988;&#xD640;&#xB529;&#xC2A4;</td><td><span class="badge gray">&#xC77C;&#xBC29;</span></td><td><span class="badge green">&#xCCB4;&#xACB0; &#xC644;&#xB8CC;</span></td><td>2026-02-14</td><td>2026-02-17</td></tr>
+            <tr><td>&#xB137;&#xB9C8;&#xBE14;</td><td><span class="badge gray">&#xC77C;&#xBC29;</span></td><td><span class="badge yellow">&#xBC1C;&#xC1A1;&#xB428;</span></td><td>2026-02-20</td><td>&mdash;</td></tr>
+          </tbody></table>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="tc-bids">
+        <div class="card"><div class="card-header"><h3>&#xC785;&#xCC30; &#xD604;&#xD669;</h3></div><div class="card-body np">
+          <table><thead><tr><th>&#xB9E4;&#xC218;&#xC790;</th><th>&#xB77C;&#xC6B4;&#xB4DC;</th><th class="text-right">&#xC81C;&#xC548; &#xAE08;&#xC561; (&#xC5B5;&#xC6D0;)</th><th>EV/EBITDA</th><th>&#xC81C;&#xCD9C;&#xC77C;</th><th>&#xC0C1;&#xD0DC;</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">ATU Partners</td><td><span class="badge yellow">IOI</span></td><td class="mono text-right">1,150</td><td class="mono">8.5x</td><td>2026-02-18</td><td><span class="badge green">&#xC811;&#xC218;</span></td></tr>
+          </tbody></table>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="tc-contracts">
+        <div class="card"><div class="card-body" style="text-align:center;padding:40px"><p style="color:var(--muted)">&#xD611;&#xC0C1; &#xB2E8;&#xACC4; &#xC9C4;&#xC785; &#xD6C4; &#xACC4;&#xC57D;&#xC11C; &#xCD08;&#xC548;&#xC774; &#xC0DD;&#xC131;&#xB429;&#xB2C8;&#xB2E4;.</p></div></div>
+      </div>
+
+      <div class="tab-content" id="tc-closing">
+        <div class="card"><div class="card-body" style="text-align:center;padding:40px"><p style="color:var(--muted)">&#xD074;&#xB85C;&#xC9D5; &#xB2E8;&#xACC4; &#xC9C4;&#xC785; &#xD6C4; &#xD45C;&#xC900; 15&#xAC1C; &#xD56D;&#xBAA9;&#xC774; &#xC790;&#xB3D9; &#xC0DD;&#xC131;&#xB429;&#xB2C8;&#xB2E4;.</p></div></div>
+      </div>
+
+      <div class="tab-content" id="tc-risks">
+        <div class="card"><div class="card-header"><h3>&#xB9AC;&#xC2A4;&#xD06C; &#xD56D;&#xBAA9;</h3></div><div class="card-body np">
+          <table><thead><tr><th>&#xB9AC;&#xC2A4;&#xD06C;</th><th>&#xCE74;&#xD14C;&#xACE0;&#xB9AC;</th><th>&#xC2EC;&#xAC01;&#xB3C4;</th><th>&#xC0C1;&#xD0DC;</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">&#xD575;&#xC2EC; &#xC778;&#xB825; &#xC774;&#xD0C8; &#xC704;&#xD5D8;</td><td><span class="badge gray">&#xC6B4;&#xC601;</span></td><td><span class="badge red">HIGH</span></td><td><span class="badge yellow">&#xC2DD;&#xBCC4;&#xB428;</span></td></tr>
+            <tr><td style="font-weight:600">&#xAC8C;&#xC784; IP &#xB77C;&#xC774;&#xC120;&#xC2A4; &#xBD84;&#xC7C1;</td><td><span class="badge gray">&#xBC95;&#xB960;</span></td><td><span class="badge yellow">MEDIUM</span></td><td><span class="badge blue">&#xD3C9;&#xAC00; &#xC911;</span></td></tr>
+            <tr><td style="font-weight:600">&#xAC8C;&#xC784; &#xC0B0;&#xC5C5; &#xADDC;&#xC81C; &#xBCC0;&#xD654;</td><td><span class="badge gray">&#xADDC;&#xC81C;</span></td><td><span class="badge gray">LOW</span></td><td><span class="badge outline">&#xBAA8;&#xB2C8;&#xD130;&#xB9C1;</span></td></tr>
+          </tbody></table>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="tc-timeline">
+        <div class="card"><div class="card-header"><h3>&#xD0C0;&#xC784;&#xB77C;&#xC778;</h3></div><div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px"><span class="mono" style="width:100px;color:var(--muted);flex-shrink:0">2026-02-10</span><div><div style="font-size:13px;font-weight:600">&#xC218;&#xC784;&#xACC4;&#xC57D; &#xCCB4;&#xACB0;</div><div style="font-size:12px;color:var(--muted)">NX3&#xAC8C;&#xC784;&#xC988; &#xB300;&#xC8FC;&#xC8FC;&#xC640; &#xC7AC;&#xBB34;&#xC790;&#xBB38; &#xACC4;&#xC57D; &#xCCB4;&#xACB0;</div></div></div>
+            <div style="display:flex;gap:16px"><span class="mono" style="width:100px;color:var(--muted);flex-shrink:0">2026-02-12</span><div><div style="font-size:13px;font-weight:600">&#xC900;&#xBE44; &#xB2E8;&#xACC4; &#xC9C4;&#xC785;</div><div style="font-size:12px;color:var(--muted)">&#xB300;&#xC0C1;&#xC0AC; &#xBD84;&#xC11D; &#xBC0F; CIM &#xC791;&#xC131; &#xC2DC;&#xC791;</div></div></div>
+            <div style="display:flex;gap:16px"><span class="mono" style="width:100px;color:var(--muted);flex-shrink:0">2026-02-15</span><div><div style="font-size:13px;font-weight:600">&#xB9C8;&#xCF00;&#xD305; &#xB2E8;&#xACC4; &#xC9C4;&#xC785;</div><div style="font-size:12px;color:var(--muted)">TM &#xBC30;&#xD3EC; &#xBC0F; &#xB9E4;&#xC218;&#xC790; &#xC811;&#xCD09; &#xC2DC;&#xC791;</div></div></div>
+            <div style="display:flex;gap:16px"><span class="mono" style="width:100px;color:var(--muted);flex-shrink:0">2026-02-18</span><div><div style="font-size:13px;font-weight:600">ATU Partners IOI &#xC811;&#xC218;</div><div style="font-size:12px;color:var(--muted)">&#x20A9;1,150&#xC5B5;, EBITDA 8.5x</div></div></div>
+            <div style="display:flex;gap:16px"><span class="mono" style="width:100px;color:var(--muted);flex-shrink:0">2026-02-20</span><div><div style="font-size:13px;font-weight:600">&#xC785;&#xCC30;/DD &#xB2E8;&#xACC4; &#xC9C4;&#xC785;</div><div style="font-size:12px;color:var(--muted)">&#xC2E4;&#xC0AC; &#xC808;&#xCC28; &#xAC1C;&#xC2DC;</div></div></div>
+          </div>
+        </div></div>
+      </div>
+
+    </div><!-- /.main -->
+  </div><!-- /.shell -->
+</div><!-- /#screen-workspace -->
+
+<script>
+// ── Screen Management ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+  const target = document.getElementById('screen-' + id);
+  if (target) target.classList.add('visible');
+  window.scrollTo(0, 0);
+}
+
+// ── Login ──
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const pw = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  if (email === 'ytkim@amic.kr' && pw === '1111') {
+    err.style.display = 'none';
+    showScreen('dashboard');
+  } else {
+    err.style.display = 'block';
+  }
+});
+
+// ── Pipeline Flow ──
+const phases = [
+  { label: '\uC218\uC784', order: 1 },
+  { label: '\uC900\uBE44', order: 2 },
+  { label: '\uB9C8\uCF00\uD305', order: 3 },
+  { label: '\uC785\uCC30/DD', order: 4 },
+  { label: '\uD611\uC0C1', order: 5 },
+  { label: '\uD074\uB85C\uC9D5', order: 6 },
+  { label: '\uD3EC\uC2A4\uD2B8 \uD074\uB85C\uC9D5', order: 7 },
+];
+const milestones = { 3: 'LOI Signed', 6: 'Deal Closed' };
+const currentIdx = 3; // BIDDING_DD
+
+const pipeline = document.getElementById('pipeline');
+phases.forEach((p, i) => {
+  const step = document.createElement('div');
+  step.className = 'step';
+  const cls = i < currentIdx ? 'done' : i === currentIdx ? 'active' : 'future';
+  step.innerHTML = '<button class="step-btn ' + cls + '"><span class="dot"></span>' + p.order + '. ' + p.label + '</button>';
+  if (milestones[i + 1]) {
+    const done = i < currentIdx;
+    step.innerHTML += '<div class="milestone"><span>' + milestones[i + 1] + '</span><div class="line"></div><div class="dot-m ' + (done ? 'done' : '') + '"></div><div class="line"></div></div>';
+  }
+  pipeline.appendChild(step);
+});
+
+// ── Tab Switching ──
+function switchTab(tabId) {
+  document.querySelectorAll('#workspace-tabs .tab').forEach(t => {
+    t.classList.remove('active');
+    if (t.dataset.tab === tabId) t.classList.add('active');
+  });
+  document.querySelectorAll('#screen-workspace .tab-content').forEach(c => c.classList.remove('active'));
+  const target = document.getElementById('tc-' + tabId);
+  if (target) target.classList.add('active');
+}
+
+document.querySelectorAll('#workspace-tabs .tab').forEach(tab => {
+  tab.addEventListener('click', function() { switchTab(this.dataset.tab); });
+});
+</script>
+</body>
+</html>

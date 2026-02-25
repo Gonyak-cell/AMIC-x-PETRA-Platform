@@ -74,6 +74,13 @@ class DealUpdate(BaseModel):
     seller_type: SellerType | None = None
 
 
+class DealListResponse(BaseModel):
+    items: list["DealRead"]
+    total: int
+    skip: int
+    limit: int
+
+
 class DealRead(BaseModel):
     id: uuid.UUID
     name: str

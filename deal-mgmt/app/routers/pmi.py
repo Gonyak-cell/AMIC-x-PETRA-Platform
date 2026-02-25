@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import AuditAction, PMITaskStatus
 from app.models.pmi_task import PMITask
 from app.schemas.pmi import PMISummary, PMITaskCreate, PMITaskOut, PMITaskUpdate
@@ -24,9 +24,10 @@ async def list_pmi_tasks(
     category: str | None = None,
     priority: str | None = None,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(PMITask).where(PMITask.transaction_id == txn_id)
     if category:
         q = q.where(PMITask.category == category)
@@ -41,9 +42,10 @@ async def list_pmi_tasks(
 async def pmi_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(PMITask).where(PMITask.transaction_id == txn_id)
     result = await db.execute(q)
     items = list(result.scalars().all())
@@ -76,7 +78,7 @@ async def create_pmi_task(
     txn_id: uuid.UUID,
     body: PMITaskCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     task = PMITask(transaction_id=txn_id, **body.model_dump())
@@ -101,7 +103,7 @@ async def update_pmi_task(
     task_id: uuid.UUID,
     body: PMITaskUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(PMITask).where(PMITask.id == task_id, PMITask.transaction_id == txn_id)
     task = (await db.execute(q)).scalar_one_or_none()
@@ -128,7 +130,7 @@ async def delete_pmi_task(
     txn_id: uuid.UUID,
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(PMITask).where(PMITask.id == task_id, PMITask.transaction_id == txn_id)
     task = (await db.execute(q)).scalar_one_or_none()

@@ -78,6 +78,8 @@ class DocumentService:
                 "industry": create_data.industry,
                 "webhook_url": create_data.webhook_url,
                 "pdf_password": create_data.pdf_password,
+                "ppt_design_style": create_data.ppt_design_style,
+                "collab_partner_name": create_data.collab_partner_name,
             },
             status=DocumentStatus.PENDING.value,
             progress_pct=0,
@@ -193,6 +195,42 @@ class DocumentService:
         items = list(result.scalars().all())
 
         return items, total
+
+    async def delete_document(
+        self,
+        document_id: UUID,
+        current_user: User,
+    ) -> None:
+        """문서를 삭제한다 (소유자 또는 ADMIN만).
+
+        진행 중인 문서는 삭제할 수 없다.
+
+        Args:
+            document_id: 문서 ID.
+            current_user: 현재 사용자.
+
+        Raises:
+            NotFoundError: 문서가 없을 때.
+            AuthorizationError: 권한 없을 때.
+            ConflictError: 진행 중인 문서를 삭제하려 할 때.
+        """
+        document = await self.get_document(document_id, current_user)
+
+        in_progress_statuses = [
+            DocumentStatus.PENDING.value,
+            DocumentStatus.COLLECTING.value,
+            DocumentStatus.ANALYZING.value,
+            DocumentStatus.GENERATING.value,
+            DocumentStatus.RENDERING.value,
+        ]
+        if document.status in in_progress_statuses:
+            raise ConflictError(
+                "Document",
+                f"진행 중인 문서는 삭제할 수 없습니다 (status={document.status})",
+            )
+
+        await self.db.delete(document)
+        await self.db.commit()
 
     async def get_download_path(
         self,

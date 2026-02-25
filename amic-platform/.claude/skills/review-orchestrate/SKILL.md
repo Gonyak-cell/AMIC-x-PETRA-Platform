@@ -1,8 +1,8 @@
 ---
 name: review-orchestrate
 description: 멀티 에이전트 코드 리뷰 오케스트레이션. 자동 품질 검사 + 병렬 에이전트 리뷰 + 교차 검증 + 리포트 생성.
-user_invocable: false
-arguments: "type scope flags"
+user-invokable: false
+argument-hint: "type scope flags"
 ---
 
 # 코드 리뷰 오케스트레이터
@@ -152,8 +152,12 @@ Phase 1의 각 에이전트 호출 시 `gate_results`를 컨텍스트로 포함:
 2. 증거(실제 코드 스니펫) 첨부
 3. 신뢰도 점수 (HIGH/MEDIUM/LOW) 부여
 4. 가설이 반증되면 보고하지 않기
+5. **3.5단계 Self-Challenge**: 이슈 초안 완성 후 SC-1~SC-6 체크리스트 적용
+   - SC-1~SC-5 중 하나라도 ✗ → 이슈 기각 (보고하지 않음)
+   - △ 항목 수에 따라 신뢰도 자동 하향 (1개 → MEDIUM, 2개 이상 → LOW)
 
 출력은 Verified Claim Protocol 표준 형식을 따릅니다.
+이슈 헤더 형식: `[{ID}] {제목} — [{심각도}/{신뢰도}] — Priority: {P0/P1/P2/P3}`
 ```
 
 **병렬 실행 규칙**:
@@ -174,8 +178,11 @@ review-verifier 에이전트의 인라인 검증 모드로 동작하세요.
 아래 이슈들을 실제 코드와 대조 검증하세요:
 {Critical/Major 이슈 목록 — ID, 파일, 라인, 설명}
 
-각 이슈에 대해 5단계 판정(정확/허위양성/부분정확/설계리스크/라인불일치)을 부여하세요.
-허위 양성은 6종 원인 분류(FP-IMPL/FP-HALLUC/FP-LINE/FP-LOGIC/FP-CTX/FP-SEV) 필수.
+각 이슈에 대해:
+1. Phase 1 에이전트와 독립적으로 Glob + Read로 코드를 직접 확인
+2. VCP Self-Challenge(3.5단계) SC-1~SC-6 체크리스트 각 이슈에 적용
+3. 5단계 판정: CONFIRMED / FALSE_POSITIVE / PARTIAL / DESIGN_RISK / LINE_MISMATCH
+4. 허위 양성은 FP 6종 원인 분류(FP-IMPL/FP-HALLUC/FP-LINE/FP-LOGIC/FP-CTX/FP-SEV) 필수
 ```
 
 교차 검증 결과에 따라:
@@ -327,16 +334,17 @@ Phase 2B 자동 검증:
 ## Priority Matrix
 
 ### P0 — 즉시 수정 (점수: 90+, 보안/데이터 무결성)
-1. [ID]: one-line summary — file — Confidence: {HIGH/MEDIUM/LOW} (점수: {N})
+1. [ID] [Critical/HIGH]: one-line summary — file (점수: {N})
 
 ### P1 — 스프린트 우선 (점수: 60-89, 안정성/정확성)
-1. [ID]: one-line summary — file — Confidence: {HIGH/MEDIUM/LOW} (점수: {N})
+1. [ID] [Critical/MEDIUM ⚠️]: one-line summary — file (점수: {N}, 신뢰도 하향됨)
+2. [ID] [Major/HIGH]: one-line summary — file (점수: {N})
 
 ### P2 — 개선 권장 (점수: 30-59, 코드 품질)
-1. [ID]: one-line summary — file — Confidence: {HIGH/MEDIUM/LOW} (점수: {N})
+1. [ID] [Moderate/HIGH]: one-line summary — file (점수: {N})
 
 ### P3 — 저우선 (점수: <30, 개선 가능)
-1. [ID]: one-line summary — file — Confidence: {HIGH/MEDIUM/LOW} (점수: {N})
+1. [ID] [Minor/MEDIUM ⚠️]: one-line summary — file (점수: {N})
 
 ## Methodology
 

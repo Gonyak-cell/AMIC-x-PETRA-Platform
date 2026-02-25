@@ -7,7 +7,7 @@ interface DesktopHeaderProps {
 
 export function DesktopHeader({ onSearchClick }: DesktopHeaderProps) {
   return (
-    <div className="hidden md:flex sticky top-0 z-30 items-center justify-end gap-3 max-w-7xl mx-auto px-6 pt-4 pb-1 bg-white/80 backdrop-blur-md border-b border-gray-border/50">
+    <div className="hidden md:flex sticky top-0 z-30 items-center justify-end gap-3 max-w-7xl mx-auto px-6 pt-5 pb-4 bg-white/80 backdrop-blur-md border-b border-gray-border/50">
       {/* Search Trigger */}
       <button
         onClick={onSearchClick}

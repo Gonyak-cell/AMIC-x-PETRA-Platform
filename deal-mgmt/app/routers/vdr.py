@@ -1,0 +1,396 @@
+"""VDR (Virtual Data Room) 라우터 — 폴더 트리 + 문서 업로드/다운로드."""
+
+from __future__ import annotations
+
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.exceptions import DocumentNotFoundError
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
+from app.models.enums import VdrDocumentStatus
+from app.models.transaction import Transaction
+from app.models.vdr_folder import VdrFolder
+from app.schemas.vdr import (
+    VdrDocumentOut,
+    VdrDocumentUpdate,
+    VdrFolderCreate,
+    VdrFolderOut,
+    VdrFolderTreeOut,
+    VdrFolderUpdate,
+    VdrInitRequest,
+    VdrSummaryOut,
+)
+from app.services import transaction_service, vdr_service
+
+router = APIRouter(
+    prefix="/transactions/{txn_id}/vdr",
+    tags=["VDR"],
+)
+
+# 파일 저장 경로 — 경로 탐색(Path Traversal) 방어
+_SAFE_STORAGE_DIR = vdr_service.VDR_STORAGE_DIR.resolve()
+
+# 업로드 허용 MIME 타입
+_ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/msword",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "image/png",
+    "image/jpeg",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+}
+
+# 최대 파일 크기: 100MB
+_MAX_FILE_SIZE = 100 * 1024 * 1024
+
+# 확장자 → 허용 MIME 타입 매핑 (클라이언트 MIME 조작 방어)
+_EXTENSION_MIME_MAP: dict[str, set[str]] = {
+    ".pdf": {"application/pdf"},
+    ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+    ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+    ".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+    ".doc": {"application/msword"},
+    ".xls": {"application/vnd.ms-excel"},
+    ".ppt": {"application/vnd.ms-powerpoint"},
+    ".png": {"image/png"},
+    ".jpg": {"image/jpeg"},
+    ".jpeg": {"image/jpeg"},
+    ".txt": {"text/plain"},
+    ".csv": {"text/csv", "text/plain"},
+    ".zip": {"application/zip"},
+}
+_ALLOWED_EXTENSIONS = frozenset(_EXTENSION_MIME_MAP.keys())
+
+
+async def _get_and_authorize_txn(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    claims: JWTClaims,
+) -> Transaction:
+    """거래 존재 확인 및 접근 권한 검증."""
+    txn = await transaction_service.get_transaction(db, txn_id)
+    # CLIENT 역할: deal_clients 테이블 기반 접근 제어
+    if claims.role == "CLIENT":
+        await check_client_deal_access(db, txn_id, claims)
+        return txn
+    if (
+        claims.role != "ADMIN"
+        and claims.email is not None
+        and txn.lead_advisor_email != claims.email
+        and txn.deal_captain_email != claims.email
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 거래에 접근할 권한이 없습니다",
+        )
+    return txn
+
+
+# ── 요약/초기화 ─────────────────────────────────────────────
+
+
+@router.get("/summary", response_model=VdrSummaryOut)
+async def get_vdr_summary(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """VDR 요약 통계 조회."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    return await vdr_service.get_vdr_summary(db, txn_id)
+
+
+@router.post(
+    "/init",
+    response_model=list[VdrFolderOut],
+    status_code=status.HTTP_201_CREATED,
+)
+async def init_vdr(
+    txn_id: uuid.UUID,
+    body: VdrInitRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """기본 VDR 폴더 구조를 생성한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        folders = await vdr_service.init_vdr_folders(db, txn_id)
+        return [VdrFolderOut.model_validate(f) for f in folders]
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ── 폴더 CRUD ───────────────────────────────────────────────
+
+
+@router.get("/folders", response_model=list[VdrFolderTreeOut])
+async def list_folders(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """VDR 폴더 트리 조회."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    folders = await vdr_service.list_folders(db, txn_id)
+    doc_counts = await vdr_service.get_folder_document_counts(db, txn_id)
+    return _build_tree(folders, doc_counts)
+
+
+@router.post(
+    "/folders",
+    response_model=VdrFolderOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_folder(
+    txn_id: uuid.UUID,
+    body: VdrFolderCreate,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """새 VDR 폴더를 생성한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        folder = await vdr_service.create_folder(db, txn_id, body)
+        return VdrFolderOut.model_validate(folder)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.put("/folders/{folder_id}", response_model=VdrFolderOut)
+async def update_folder(
+    txn_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    body: VdrFolderUpdate,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR 폴더를 수정한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        folder = await vdr_service.update_folder(db, txn_id, folder_id, body)
+        return VdrFolderOut.model_validate(folder)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/folders/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_folder(
+    txn_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR 폴더를 삭제한다 (필수 폴더 제외)."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        await vdr_service.delete_folder(db, txn_id, folder_id)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ── 문서 CRUD ───────────────────────────────────────────────
+
+
+@router.get("/folders/{folder_id}/documents", response_model=list[VdrDocumentOut])
+async def list_documents(
+    txn_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """폴더 내 문서 목록 조회."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    docs = await vdr_service.list_documents(db, txn_id, folder_id)
+    return [VdrDocumentOut.model_validate(d) for d in docs]
+
+
+@router.post(
+    "/folders/{folder_id}/documents",
+    response_model=VdrDocumentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_document(
+    txn_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR에 파일을 업로드한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    # 1) 확장자 화이트리스트 검증
+    filename = file.filename or "untitled"
+    ext = Path(filename).suffix.lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않는 파일 확장자입니다: {ext}",
+        )
+
+    # 2) MIME 타입 화이트리스트 검증
+    content_type = file.content_type or "application/octet-stream"
+    if content_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않는 파일 형식입니다: {content_type}",
+        )
+
+    # 3) 확장자-MIME 교차 검증 (MIME 조작 방어)
+    expected_mimes = _EXTENSION_MIME_MAP.get(ext)
+    if expected_mimes and content_type not in expected_mimes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"파일 확장자({ext})와 MIME 타입({content_type})이 일치하지 않습니다.",
+        )
+
+    content = await file.read()
+    if len(content) > _MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
+        )
+
+    try:
+        doc = await vdr_service.upload_document(
+            db=db,
+            transaction_id=txn_id,
+            folder_id=folder_id,
+            original_name=file.filename or "untitled",
+            file_content=content,
+            mime_type=content_type,
+            uploaded_by_email=claims.email,
+        )
+        return VdrDocumentOut.model_validate(doc)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/documents/{doc_id}", response_model=VdrDocumentOut)
+async def get_document(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """VDR 문서 메타데이터 조회."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        doc = await vdr_service.get_document(db, txn_id, doc_id)
+        return VdrDocumentOut.model_validate(doc)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/documents/{doc_id}/download")
+async def download_document(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """VDR 문서를 다운로드한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        doc = await vdr_service.get_document(db, txn_id, doc_id)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    if doc.status != VdrDocumentStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="이 문서는 삭제 또는 아카이브되었습니다.",
+        )
+
+    file_path = Path(doc.file_path).resolve()
+    try:
+        file_path.relative_to(_SAFE_STORAGE_DIR)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="유효하지 않은 파일 경로입니다.",
+        )
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="파일을 찾을 수 없습니다.",
+        )
+
+    return FileResponse(
+        path=str(file_path),
+        filename=doc.original_name,
+        media_type=doc.mime_type,
+    )
+
+
+@router.put("/documents/{doc_id}", response_model=VdrDocumentOut)
+async def update_document(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    body: VdrDocumentUpdate,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR 문서 설명 수정 또는 폴더 이동."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        doc = await vdr_service.update_document(db, txn_id, doc_id, body)
+        return VdrDocumentOut.model_validate(doc)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR 문서를 소프트 삭제한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        await vdr_service.delete_document(db, txn_id, doc_id)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ── 헬퍼: flat → tree 변환 ───────────────────────────────────
+
+
+def _build_tree(
+    folders: list[VdrFolder],
+    doc_counts: dict[uuid.UUID, int],
+) -> list[VdrFolderTreeOut]:
+    """flat 폴더 리스트를 계층적 트리로 변환한다."""
+    node_map: dict[uuid.UUID, VdrFolderTreeOut] = {}
+
+    for folder in folders:
+        tree_node = VdrFolderTreeOut.model_validate(folder)
+        tree_node.document_count = doc_counts.get(folder.id, 0)
+        tree_node.children = []
+        node_map[folder.id] = tree_node
+
+    roots: list[VdrFolderTreeOut] = []
+    for folder in folders:
+        node = node_map[folder.id]
+        if folder.parent_id and folder.parent_id in node_map:
+            node_map[folder.parent_id].children.append(node)
+        else:
+            roots.append(node)
+
+    return roots

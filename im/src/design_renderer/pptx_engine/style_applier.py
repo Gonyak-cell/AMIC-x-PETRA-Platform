@@ -98,9 +98,9 @@ def apply_slide_style(
 ) -> None:
     """슬라이드 내 모든 텍스트 shape에 AMIC 스타일 적용.
 
-    - 제목 (idx=11): Inter, 16pt, Bold, primary
+    - 제목 (idx=11): SUITE, 16pt, Bold, primary
     - 각주 (idx=12): Pretendard, 9pt, text_secondary
-    - 페이지번호 (idx=13): IBM Plex Mono, 10pt, text_secondary
+    - 페이지번호 (idx=13): Pretendard, 10pt, text_secondary
     - 기타 shape: Pretendard, body 색상
 
     Args:
@@ -332,7 +332,7 @@ def add_watermark(
         run = p.add_run()
         run.text = text
         run.font.size = Pt(font_size)
-        run.font.name = "Inter"
+        run.font.name = "SUITE"
         run.font.bold = True
         run.font.color.rgb = RGBColor.from_string(color_hex.lstrip("#"))
 

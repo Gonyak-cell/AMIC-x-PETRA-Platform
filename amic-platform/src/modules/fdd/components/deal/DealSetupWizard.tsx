@@ -104,7 +104,7 @@ export default function DealSetupWizard() {
         scope_debt: formData.scope_debt,
       });
       toast.success("Deal created successfully");
-      navigate(`/deals/${result.id}`);
+      navigate(`/fdd/deals/${result.id}`);
     } catch {
       toast.error("Failed to create deal");
     }

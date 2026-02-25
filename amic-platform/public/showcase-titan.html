@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Titan — M&A Transaction Workspace Showcase</title>
+<style>
+  :root {
+    --accent: #1B4D3E;
+    --accent-light: rgba(27,77,62,0.08);
+    --accent-mid: rgba(27,77,62,0.15);
+    --bg: #F8F9FA;
+    --bg-card: #FFFFFF;
+    --text: #1A1A2E;
+    --text-muted: #6B7280;
+    --text-secondary: #9CA3AF;
+    --border: #E5E7EB;
+    --positive: #059669;
+    --negative: #DC2626;
+    --caution: #D97706;
+    --info: #2563EB;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height:1.5; }
+
+  /* Layout */
+  .page { max-width:1280px; margin:0 auto; padding:24px; }
+  .hero { margin-bottom:24px; }
+  .hero h1 { font-size:28px; font-weight:700; letter-spacing:-0.5px; }
+  .hero .subtitle { color:var(--text-muted); font-size:14px; margin-top:4px; }
+  .hero .actions { display:flex; gap:8px; margin-top:12px; }
+
+  /* Card */
+  .card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:16px; overflow:hidden; }
+  .card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--border); }
+  .card-header h3 { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .card-header h3::before { content:''; display:inline-block; width:3px; height:18px; background:var(--accent); border-radius:2px; }
+  .card-body { padding:20px; }
+  .card-body.no-pad { padding:0; }
+
+  /* Pipeline */
+  .pipeline { display:flex; width:100%; margin-bottom:16px; }
+  .pipeline .step { flex:1; min-width:0; display:flex; align-items:center; }
+  .pipeline .step-btn { width:100%; height:42px; display:flex; align-items:center; justify-content:center; gap:6px; border:none; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; position:relative; }
+  .pipeline .step-btn.active { background:var(--accent); color:#fff; }
+  .pipeline .step-btn.done { background:var(--accent-light); color:var(--accent); }
+  .pipeline .step-btn.future { background:#F3F4F6; color:var(--text-muted); }
+  .pipeline .step-btn.future:hover { background:#E5E7EB; }
+  .pipeline .step-btn .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .pipeline .step-btn.active .dot { background:#fff; box-shadow:0 0 0 3px rgba(255,255,255,0.3); }
+  .pipeline .step-btn.done .dot { background:var(--accent); }
+  .pipeline .step-btn.future .dot { background:currentColor; opacity:0.3; }
+  .pipeline .milestone { display:flex; flex-direction:column; align-items:center; margin:0 2px; flex-shrink:0; }
+  .pipeline .milestone span { font-size:8px; color:var(--text-secondary); font-weight:500; white-space:nowrap; }
+  .pipeline .milestone .dot-m { width:8px; height:8px; border-radius:50%; border:2px solid var(--text-secondary); background:#fff; margin:2px 0; }
+  .pipeline .milestone .dot-m.done { background:var(--accent); border-color:var(--accent); }
+  .pipeline .milestone .line { width:1px; height:4px; border-left:1px dashed var(--text-secondary); opacity:0.4; }
+
+  /* Badge */
+  .badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:600; }
+  .badge.green { background:rgba(5,150,105,0.1); color:var(--positive); }
+  .badge.red { background:rgba(220,38,38,0.1); color:var(--negative); }
+  .badge.yellow { background:rgba(217,119,6,0.1); color:var(--caution); }
+  .badge.blue { background:rgba(37,99,235,0.1); color:var(--info); }
+  .badge.gray { background:#F3F4F6; color:var(--text-muted); }
+  .badge.accent { background:var(--accent); color:#fff; }
+  .badge.outline { background:transparent; border:1px solid var(--border); color:var(--text-muted); }
+
+  /* Button */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; font-size:13px; font-weight:500; border:none; cursor:pointer; transition:all .15s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { opacity:0.9; }
+  .btn-ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); }
+  .btn-ghost:hover { background:var(--bg); }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:20px; overflow-x:auto; }
+  .tab { padding:10px 16px; font-size:13px; font-weight:500; color:var(--text-muted); border:none; background:none; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; display:flex; align-items:center; gap:6px; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  .tab .count { background:#F3F4F6; color:var(--text-muted); font-size:11px; padding:1px 7px; border-radius:999px; font-weight:600; }
+  .tab.active .count { background:var(--accent-light); color:var(--accent); }
+
+  /* Table */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; padding:10px 16px; font-weight:600; color:var(--text-muted); font-size:12px; border-bottom:1px solid var(--border); background:#FAFBFC; }
+  tbody td { padding:12px 16px; border-bottom:1px solid #F3F4F6; vertical-align:middle; }
+  tbody tr:hover { background:#FAFBFC; }
+  tbody tr:last-child td { border-bottom:none; }
+  .mono { font-family:'SF Mono',Consolas,monospace; font-size:12px; }
+  .text-right { text-align:right; }
+
+  /* KPI Grid */
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .kpi { padding:16px 20px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); }
+  .kpi .label { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .kpi .value { font-size:24px; font-weight:700; margin-top:2px; letter-spacing:-0.5px; }
+  .kpi .value.positive { color:var(--positive); }
+  .kpi .value.negative { color:var(--negative); }
+
+  /* Grid */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .dl-grid { display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:13px; }
+  .dl-grid dt { color:var(--text-muted); }
+  .dl-grid dd { font-weight:500; }
+
+  /* Progress bar */
+  .progress-row { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .progress-row .label { font-size:12px; font-weight:500; width:80px; flex-shrink:0; }
+  .progress-bar { flex:1; height:8px; background:#F3F4F6; border-radius:99px; overflow:hidden; }
+  .progress-bar .fill { height:100%; background:var(--accent); border-radius:99px; transition:width .3s; }
+  .progress-row .stat { font-size:12px; color:var(--text-muted); width:60px; text-align:right; flex-shrink:0; }
+
+  /* Timeline */
+  .timeline-item { display:flex; gap:16px; padding:12px 0; }
+  .timeline-item .time { font-size:12px; color:var(--text-muted); width:100px; flex-shrink:0; font-family:'SF Mono',Consolas,monospace; }
+  .timeline-item .dot-wrap { display:flex; flex-direction:column; align-items:center; }
+  .timeline-item .dot-tl { width:10px; height:10px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .timeline-item .line-tl { width:2px; flex:1; background:var(--border); margin-top:4px; }
+  .timeline-item .content { flex:1; }
+  .timeline-item .content .title { font-size:13px; font-weight:600; }
+  .timeline-item .content .desc { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+  /* Checklist */
+  .checklist-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid #F3F4F6; }
+  .checklist-item:last-child { border-bottom:none; }
+  .check { width:18px; height:18px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .check.done { background:var(--positive); border-color:var(--positive); color:#fff; font-size:10px; }
+  .check.progress { border-color:var(--info); }
+  .checklist-item .item-label { font-size:13px; flex:1; }
+  .checklist-item .item-label.done-text { color:var(--text-muted); text-decoration:line-through; }
+
+  /* Phase bar in card */
+  .phase-bar { display:flex; align-items:center; gap:8px; padding:12px 20px; background:var(--accent-light); border-bottom:1px solid var(--accent-mid); }
+  .phase-bar .phase-title { font-size:13px; font-weight:600; color:var(--accent); }
+  .phase-bar .phase-desc { font-size:12px; color:var(--text-muted); }
+
+  /* Hidden content */
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* Responsive */
+  @media (max-width:768px) {
+    .grid-2 { grid-template-columns:1fr; }
+    .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  }
+
+  /* Clip-path for pipeline steps */
+  .step:first-child .step-btn { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); border-radius:6px 0 0 6px; }
+  .step:last-child .step-btn { clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 10px 50%); border-radius:0 6px 6px 0; }
+  .step:not(:first-child):not(:last-child) .step-btn { clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%); }
+
+  /* Earnout chart */
+  .earnout-bar { display:flex; align-items:flex-end; gap:8px; height:120px; padding:0 20px; }
+  .earnout-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .earnout-col .bar { width:100%; border-radius:4px 4px 0 0; transition:height .3s; }
+  .earnout-col .bar.achieved { background:var(--accent); }
+  .earnout-col .bar.pending { background:#E5E7EB; }
+  .earnout-col .yr { font-size:11px; color:var(--text-muted); font-weight:500; }
+  .earnout-col .val { font-size:10px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Hero -->
+  <div class="hero">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <h1>Project Titan</h1>
+        <div class="subtitle">TITAN-2026 &nbsp;|&nbsp; (주)타이탄테크 &nbsp;|&nbsp; 삼성전자</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost">← 목록</button>
+        <button class="btn btn-primary">협상 단계로 →</button>
+        <button class="btn btn-ghost">보류</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Flow -->
+  <div class="card">
+    <div style="padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
+      <span class="badge green">ACTIVE</span>
+      <span style="font-size:13px;color:var(--text-muted);">현재: <strong style="color:var(--text);">입찰/DD</strong></span>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-secondary);">완료 조건 3/4 (75%)</span>
+      <div style="width:80px;height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden;">
+        <div style="width:75%;height:100%;background:var(--accent);border-radius:99px;"></div>
+      </div>
+    </div>
+    <div style="padding:12px 20px;">
+      <div class="pipeline" id="pipeline">
+        <!-- Steps generated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="engagement">수임 <span class="count">2</span></button>
+    <button class="tab" data-tab="team">팀 <span class="count">6</span></button>
+    <button class="tab" data-tab="marketing">마케팅 자료 <span class="count">3</span></button>
+    <button class="tab" data-tab="buyers">매수자 <span class="count">5</span></button>
+    <button class="tab" data-tab="ndas">NDA <span class="count">4</span></button>
+    <button class="tab" data-tab="bids">입찰 <span class="count">3</span></button>
+    <button class="tab" data-tab="dd">DD 체크리스트 <span class="count">24</span></button>
+    <button class="tab" data-tab="contracts">계약/SPA <span class="count">2</span></button>
+    <button class="tab" data-tab="closing">Closing <span class="count">15</span></button>
+    <button class="tab" data-tab="pmi">PMI <span class="count">8</span></button>
+    <button class="tab" data-tab="earnout">어닝아웃 <span class="count">4</span></button>
+  </div>
+
+  <!-- ═══════ Overview ═══════ -->
+  <div class="tab-content active" id="tc-overview">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><h3>거래 정보</h3></div>
+        <div class="card-body">
+          <dl class="dl-grid">
+            <dt>유형</dt><dd>SELL (매도)</dd>
+            <dt>딜 구조</dt><dd>지분인수 (Share Acquisition)</dd>
+            <dt>투자 유형</dt><dd>지분투자 (Equity)</dd>
+            <dt>산업</dt><dd>반도체 / AI 칩셋</dd>
+            <dt>예상 금액</dt><dd class="mono">₩ 850,000,000,000</dd>
+            <dt>통화</dt><dd>KRW</dd>
+            <dt>목표 종결일</dt><dd>2026-06-30</dd>
+            <dt>리드 어드바이저</dt><dd>ytkim@amic.kr</dd>
+            <dt>딜 캡틴</dt><dd>sjpark@amic.kr</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>서비스 연동</h3></div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">투자 제안서 (IM / TM)</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-ghost btn-sm">📄 IM 생성</button>
+                <button class="btn btn-ghost btn-sm">📄 TM 생성</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">재무실사 (FDD)</div>
+              <button class="btn btn-ghost btn-sm">📊 FDD 보고서 생성</button>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:12px;">
+              <dl class="dl-grid">
+                <dt>DART Corp Code</dt><dd class="mono">00126380</dd>
+                <dt>FDD Deal</dt><dd class="mono" style="color:var(--positive);">연동됨 (D-2026-0041)</dd>
+                <dt>IM Document</dt><dd class="mono" style="color:var(--positive);">연동됨 (IM-0087)</dd>
+                <dt>생성일</dt><dd>2026-02-24</dd>
+                <dt>수정일</dt><dd>2026-02-24</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 수임 ═══════ -->
+  <div class="tab-content" id="tc-engagement">
+    <div class="card">
+      <div class="card-header"><h3>수임계약</h3><button class="btn btn-ghost btn-sm">+ 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>유형</th><th>체결일</th><th>만료일</th><th>수수료 구조</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge blue">재무자문</span></td><td>2026-01-15</td><td>2026-12-31</td><td>성공보수 1.5% + 리테이너 월 ₩30M</td><td>독점 자문 계약</td></tr>
+            <tr><td><span class="badge gray">실사자문</span></td><td>2026-02-01</td><td>2026-08-31</td><td>고정 ₩200M</td><td>DD 단계 한정</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 팀 ═══════ -->
+  <div class="tab-content" id="tc-team">
+    <div class="card">
+      <div class="card-header"><h3>워킹그룹</h3><button class="btn btn-ghost btn-sm">+ 멤버 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>이름</th><th>이메일</th><th>소속</th><th>역할</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600;">김영태</td><td class="mono">ytkim@amic.kr</td><td>AMIC Partners</td><td><span class="badge accent">리드 어드바이저</span></td><td><span class="badge green">Active</span></td></tr>
+            <tr><td style="font-weight:600;">박서준</td><td class="mono">sjpark@amic.kr</td><td>AMIC Partners</td><td><span class="badge blue">딜 캡틴</span></td><td><span class="badge green">Active</span></td></tr>
+            <tr><td style="font-weight:600;">이수민</td><td class="mono">smlee@lawfirm.kr</td><td>법무법인 정의</td><td><span class="badge gray">법률자문</span></td><td><span class="badge green">Active</span></td></tr>
+            <tr><td style="font-weight:600;">정하윤</td><td class="mono">hjung@bigfour.com</td><td>삼일 PwC</td><td><span class="badge gray">재무실사</span></td><td><span class="badge green">Active</span></td></tr>
+            <tr><td style="font-weight:600;">최민호</td><td class="mono">mhchoi@taxadvisor.kr</td><td>삼정 KPMG</td><td><span class="badge gray">세무자문</span></td><td><span class="badge green">Active</span></td></tr>
+            <tr><td style="font-weight:600;">한지영</td><td class="mono">jyhan@amic.kr</td><td>AMIC Partners</td><td><span class="badge gray">애널리스트</span></td><td><span class="badge green">Active</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 마케팅 자료 ═══════ -->
+  <div class="tab-content" id="tc-marketing">
+    <div class="card">
+      <div class="card-header"><h3>마케팅 자료 (TM / DM / IM)</h3><button class="btn btn-ghost btn-sm">+ 자료 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>문서명</th><th>유형</th><th>버전</th><th>상태</th><th>생성일</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600;">Project Titan — Teaser Memo</td><td><span class="badge blue">TM</span></td><td>v2.1</td><td><span class="badge green">승인됨</span></td><td>2026-02-10</td></tr>
+            <tr><td style="font-weight:600;">Project Titan — CIM (Confidential Info Memo)</td><td><span class="badge accent">IM</span></td><td>v1.3</td><td><span class="badge green">승인됨</span></td><td>2026-02-18</td></tr>
+            <tr><td style="font-weight:600;">타이탄테크 경영진 프레젠테이션</td><td><span class="badge gray">DM</span></td><td>v1.0</td><td><span class="badge yellow">검토 중</span></td><td>2026-02-22</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 매수자 ═══════ -->
+  <div class="tab-content" id="tc-buyers">
+    <div class="card">
+      <div class="card-header"><h3>매수자 후보</h3><button class="btn btn-ghost btn-sm">+ 후보 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>회사명</th><th>유형</th><th>상태</th><th style="text-align:right">IOI (억원)</th><th style="text-align:right">LOI (억원)</th><th>담당자</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div style="font-weight:600;">Nexon Holdings</div><div style="font-size:11px;color:var(--text-muted);">James Park</div></td>
+              <td><span class="badge gray">전략적 투자자</span></td>
+              <td><span class="badge blue">DD 진행 중</span></td>
+              <td class="mono text-right">9,200</td>
+              <td class="mono text-right">8,800</td>
+              <td>sjpark@amic.kr</td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;">MBK Partners</div><div style="font-size:11px;color:var(--text-muted);">이재현</div></td>
+              <td><span class="badge gray">PE (재무적)</span></td>
+              <td><span class="badge blue">DD 진행 중</span></td>
+              <td class="mono text-right">8,500</td>
+              <td class="mono text-right">—</td>
+              <td>ytkim@amic.kr</td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;">SK Square</div><div style="font-size:11px;color:var(--text-muted);">김태영</div></td>
+              <td><span class="badge gray">전략적 투자자</span></td>
+              <td><span class="badge green">LOI 수락</span></td>
+              <td class="mono text-right">9,500</td>
+              <td class="mono text-right">9,100</td>
+              <td>sjpark@amic.kr</td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;">Hahn & Company</div><div style="font-size:11px;color:var(--text-muted);">한상원</div></td>
+              <td><span class="badge gray">PE (재무적)</span></td>
+              <td><span class="badge yellow">IOI 접수</span></td>
+              <td class="mono text-right">7,800</td>
+              <td class="mono text-right">—</td>
+              <td>ytkim@amic.kr</td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;">카카오 인베스트먼트</div><div style="font-size:11px;color:var(--text-muted);">정수연</div></td>
+              <td><span class="badge gray">전략적 투자자</span></td>
+              <td><span class="badge outline">관심 확인</span></td>
+              <td class="mono text-right">—</td>
+              <td class="mono text-right">—</td>
+              <td>jyhan@amic.kr</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ NDA ═══════ -->
+  <div class="tab-content" id="tc-ndas">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">전체</div><div class="value">4</div></div>
+      <div class="kpi"><div class="label">체결 완료</div><div class="value positive">3</div></div>
+      <div class="kpi"><div class="label">대기 중</div><div class="value">1</div></div>
+      <div class="kpi"><div class="label">체결률</div><div class="value positive">75%</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>NDA 목록</h3><button class="btn btn-ghost btn-sm">+ NDA 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>매수자</th><th>유형</th><th>상태</th><th>발송일</th><th>체결일</th><th>만료일</th></tr></thead>
+          <tbody>
+            <tr><td>Nexon Holdings</td><td><span class="badge gray">상호</span></td><td><span class="badge green">체결 완료</span></td><td>2026-02-05</td><td>2026-02-08</td><td>2027-02-08</td></tr>
+            <tr><td>MBK Partners</td><td><span class="badge gray">일방</span></td><td><span class="badge green">체결 완료</span></td><td>2026-02-06</td><td>2026-02-10</td><td>2027-02-10</td></tr>
+            <tr><td>SK Square</td><td><span class="badge gray">상호</span></td><td><span class="badge green">체결 완료</span></td><td>2026-02-03</td><td>2026-02-05</td><td>2027-02-05</td></tr>
+            <tr><td>카카오 인베스트먼트</td><td><span class="badge gray">일방</span></td><td><span class="badge yellow">발송됨</span></td><td>2026-02-20</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 입찰 ═══════ -->
+  <div class="tab-content" id="tc-bids">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">접수 IOI</div><div class="value">4</div></div>
+      <div class="kpi"><div class="label">접수 LOI</div><div class="value">2</div></div>
+      <div class="kpi"><div class="label">최고 밸류에이션</div><div class="value mono">9,500억</div></div>
+      <div class="kpi"><div class="label">평균 밸류에이션</div><div class="value mono">8,750억</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>입찰 현황</h3></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>매수자</th><th>라운드</th><th style="text-align:right">제안 금액 (억원)</th><th>EV/EBITDA</th><th>제출일</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600;">SK Square</td><td><span class="badge blue">LOI</span></td><td class="mono text-right">9,100</td><td class="mono">12.8x</td><td>2026-02-20</td><td><span class="badge green">수락</span></td></tr>
+            <tr><td style="font-weight:600;">Nexon Holdings</td><td><span class="badge blue">LOI</span></td><td class="mono text-right">8,800</td><td class="mono">12.4x</td><td>2026-02-19</td><td><span class="badge yellow">검토 중</span></td></tr>
+            <tr><td style="font-weight:600;">MBK Partners</td><td><span class="badge gray">IOI</span></td><td class="mono text-right">8,500</td><td class="mono">12.0x</td><td>2026-02-15</td><td><span class="badge green">수락</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ DD 체크리스트 ═══════ -->
+  <div class="tab-content" id="tc-dd">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">전체 항목</div><div class="value">24</div></div>
+      <div class="kpi"><div class="label">완료율</div><div class="value positive">62%</div></div>
+      <div class="kpi"><div class="label">진행 중</div><div class="value">5</div></div>
+      <div class="kpi"><div class="label">미시작</div><div class="value negative">4</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-body">
+        <div class="progress-row"><span class="label">재무 (FDD)</span><div class="progress-bar"><div class="fill" style="width:80%"></div></div><span class="stat">8/10</span></div>
+        <div class="progress-row"><span class="label">법률 (LDD)</span><div class="progress-bar"><div class="fill" style="width:57%"></div></div><span class="stat">4/7</span></div>
+        <div class="progress-row"><span class="label">세무 (Tax)</span><div class="progress-bar"><div class="fill" style="width:60%"></div></div><span class="stat">3/5</span></div>
+        <div class="progress-row"><span class="label">기술 (Tech)</span><div class="progress-bar"><div class="fill" style="width:0%"></div></div><span class="stat">0/2</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>체크리스트</h3><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-primary">전체</button><button class="btn btn-sm btn-ghost">재무</button><button class="btn btn-sm btn-ghost">법률</button><button class="btn btn-sm btn-ghost">세무</button><button class="btn btn-sm btn-ghost">기술</button></div></div>
+      <div class="card-body no-pad">
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">재무제표 3개년 검토</span><span class="badge gray">재무</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">QoE 분석 (정상 수익력)</span><span class="badge gray">재무</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">운전자본 분석</span><span class="badge gray">재무</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">순차입금 검증</span><span class="badge gray">재무</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">CAPEX / R&D 투자 분석</span><span class="badge blue">재무 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">주요 계약 검토 (고객/공급)</span><span class="badge gray">법률</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">소송/분쟁 현황</span><span class="badge gray">법률</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">IP / 특허권 분석</span><span class="badge blue">법률 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check"></div><span class="item-label">고용 계약 및 인사 리스크</span><span class="badge outline">법률 · 미시작</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">이전가격 검토</span><span class="badge gray">세무</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">세무 조사 이력 확인</span><span class="badge blue">세무 · 진행 중</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 계약/SPA ═══════ -->
+  <div class="tab-content" id="tc-contracts">
+    <div class="card">
+      <div class="card-header"><h3>계약서 목록</h3><button class="btn btn-ghost btn-sm">+ 계약 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>계약명</th><th>유형</th><th>상대방</th><th>상태</th><th>버전</th><th>최종 수정</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600;">주식매매계약서 (SPA)</td>
+              <td><span class="badge accent">SPA</span></td>
+              <td>SK Square</td>
+              <td><span class="badge yellow">협상 중</span></td>
+              <td class="mono">v3.2</td>
+              <td>2026-02-23</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">주주간계약 (SHA)</td>
+              <td><span class="badge blue">SHA</span></td>
+              <td>SK Square</td>
+              <td><span class="badge outline">초안 작성 중</span></td>
+              <td class="mono">v1.0</td>
+              <td>2026-02-22</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>SPA 주요 조건 요약</h3></div>
+      <div class="card-body">
+        <dl class="dl-grid">
+          <dt>매매 대금</dt><dd class="mono">₩ 910,000,000,000</dd>
+          <dt>가격조정</dt><dd>Completion Accounts 방식 (운전자본 + 순차입금)</dd>
+          <dt>에스크로</dt><dd>매매대금의 10% (12개월)</dd>
+          <dt>진술/보증</dt><dd>매도인 일반 R&W + 세무 특별 R&W</dd>
+          <dt>손해배상 상한</dt><dd>매매대금의 30% (일반), 100% (Fundamental)</dd>
+          <dt>경업금지</dt><dd>3년, 반도체 관련 사업</dd>
+          <dt>선행조건</dt><dd>공정위 기업결합 신고, 이사회 승인, 주요 계약 동의</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Closing ═══════ -->
+  <div class="tab-content" id="tc-closing">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">전체 항목</div><div class="value">15</div></div>
+      <div class="kpi"><div class="label">완료</div><div class="value positive">6</div></div>
+      <div class="kpi"><div class="label">진행 중</div><div class="value">5</div></div>
+      <div class="kpi"><div class="label">진행률</div><div class="value">40%</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Closing 체크리스트</h3><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-primary">전체</button><button class="btn btn-sm btn-ghost">선행조건</button><button class="btn btn-sm btn-ghost">자금</button><button class="btn btn-sm btn-ghost">행정</button></div></div>
+      <div class="card-body no-pad">
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">SPA 최종 서명</span><span class="badge gray">선행조건</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">이사회 결의</span><span class="badge gray">선행조건</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">주주총회 특별결의</span><span class="badge gray">선행조건</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">공정위 기업결합 신고</span><span class="badge blue">선행조건 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">외국인투자 신고 (산자부)</span><span class="badge blue">선행조건 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">에스크로 계좌 개설</span><span class="badge gray">자금</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">매매대금 입금 확인</span><span class="badge blue">자금 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check"></div><span class="item-label">운전자본 정산 (Completion Accounts)</span><span class="badge outline">자금 · 미시작</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">법률 의견서 수령</span><span class="badge gray">행정</span></div>
+        <div class="checklist-item"><div class="check done">✓</div><span class="item-label done-text">인감증명서 / 공증</span><span class="badge gray">행정</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">주식양도 등기</span><span class="badge blue">행정 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check progress"></div><span class="item-label">사업자등록 변경</span><span class="badge blue">행정 · 진행 중</span></div>
+        <div class="checklist-item"><div class="check"></div><span class="item-label">양도세 / 취득세 납부</span><span class="badge outline">행정 · 미시작</span></div>
+        <div class="checklist-item"><div class="check"></div><span class="item-label">Closing 메모 작성</span><span class="badge outline">행정 · 미시작</span></div>
+        <div class="checklist-item"><div class="check"></div><span class="item-label">자문사 수수료 정산</span><span class="badge outline">자금 · 미시작</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ PMI ═══════ -->
+  <div class="tab-content" id="tc-pmi">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">전체 태스크</div><div class="value">8</div></div>
+      <div class="kpi"><div class="label">완료</div><div class="value positive">2</div></div>
+      <div class="kpi"><div class="label">진행 중</div><div class="value">3</div></div>
+      <div class="kpi"><div class="label">진행률</div><div class="value">25%</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>PMI 태스크</h3><button class="btn btn-ghost btn-sm">+ 태스크 추가</button></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>태스크</th><th>카테고리</th><th>담당자</th><th>기한</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600;">Day-1 커뮤니케이션 플랜 수립</td><td><span class="badge gray">커뮤니케이션</span></td><td>박서준</td><td>D+0</td><td><span class="badge green">완료</span></td></tr>
+            <tr><td style="font-weight:600;">경영진 리텐션 패키지 확정</td><td><span class="badge gray">인사</span></td><td>김영태</td><td>D+7</td><td><span class="badge green">완료</span></td></tr>
+            <tr><td style="font-weight:600;">IT 시스템 통합 로드맵</td><td><span class="badge gray">IT</span></td><td>한지영</td><td>D+30</td><td><span class="badge blue">진행 중</span></td></tr>
+            <tr><td style="font-weight:600;">재무 보고 체계 통합</td><td><span class="badge gray">재무</span></td><td>정하윤</td><td>D+30</td><td><span class="badge blue">진행 중</span></td></tr>
+            <tr><td style="font-weight:600;">고객/공급사 사전 통보</td><td><span class="badge gray">커뮤니케이션</span></td><td>박서준</td><td>D+14</td><td><span class="badge blue">진행 중</span></td></tr>
+            <tr><td>브랜드 전략 결정</td><td><span class="badge gray">전략</span></td><td>—</td><td>D+60</td><td><span class="badge outline">미시작</span></td></tr>
+            <tr><td>조직 구조 재편안</td><td><span class="badge gray">인사</span></td><td>—</td><td>D+90</td><td><span class="badge outline">미시작</span></td></tr>
+            <tr><td>100일 성과 리뷰</td><td><span class="badge gray">전략</span></td><td>김영태</td><td>D+100</td><td><span class="badge outline">미시작</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 어닝아웃 ═══════ -->
+  <div class="tab-content" id="tc-earnout">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">전체 마일스톤</div><div class="value">4</div></div>
+      <div class="kpi"><div class="label">달성</div><div class="value positive">1</div></div>
+      <div class="kpi"><div class="label">총 어닝아웃 한도</div><div class="value mono">₩200B</div></div>
+      <div class="kpi"><div class="label">기지급액</div><div class="value mono positive">₩50B</div></div>
+    </div>
+
+    <!-- Earnout visual -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><h3>어닝아웃 달성 현황</h3></div>
+      <div class="card-body">
+        <div class="earnout-bar">
+          <div class="earnout-col"><div class="bar achieved" style="height:100%;"></div><div class="val" style="color:var(--positive);">₩50B</div><div class="yr">Y1 (2026)</div></div>
+          <div class="earnout-col"><div class="bar pending" style="height:60%;"></div><div class="val">₩50B</div><div class="yr">Y2 (2027)</div></div>
+          <div class="earnout-col"><div class="bar pending" style="height:50%;"></div><div class="val">₩50B</div><div class="yr">Y3 (2028)</div></div>
+          <div class="earnout-col"><div class="bar pending" style="height:50%;"></div><div class="val">₩50B</div><div class="yr">Y4 (2029)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>마일스톤 상세</h3></div>
+      <div class="card-body no-pad">
+        <table>
+          <thead><tr><th>마일스톤</th><th>조건</th><th>금액</th><th>기한</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600;">Y1 매출 목표</td>
+              <td>2026년 매출 ₩500B 이상</td>
+              <td class="mono text-right">₩50,000,000,000</td>
+              <td>2027-03-31</td>
+              <td><span class="badge green">달성 · 지급 완료</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">Y2 EBITDA 목표</td>
+              <td>2027년 EBITDA ₩120B 이상</td>
+              <td class="mono text-right">₩50,000,000,000</td>
+              <td>2028-03-31</td>
+              <td><span class="badge blue">측정 대기</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">기술 특허 마일스톤</td>
+              <td>AI 칩 관련 특허 10건 이상 등록</td>
+              <td class="mono text-right">₩50,000,000,000</td>
+              <td>2028-12-31</td>
+              <td><span class="badge outline">미도래</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">Y3 매출 성장률</td>
+              <td>2028년 매출 YoY 20% 이상 성장</td>
+              <td class="mono text-right">₩50,000,000,000</td>
+              <td>2029-03-31</td>
+              <td><span class="badge outline">미도래</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+// Pipeline
+const phases = [
+  { label: '수임', order: 1 },
+  { label: '준비', order: 2 },
+  { label: '마케팅', order: 3 },
+  { label: '입찰/DD', order: 4 },
+  { label: '협상', order: 5 },
+  { label: 'Closing', order: 6 },
+  { label: 'Post-Closing', order: 7 },
+];
+const milestones = { 3: 'LOI Signed', 6: 'Deal Closed' };
+const currentIdx = 3; // BIDDING_DD = index 3
+
+const pipeline = document.getElementById('pipeline');
+phases.forEach((p, i) => {
+  const step = document.createElement('div');
+  step.className = 'step';
+
+  const cls = i < currentIdx ? 'done' : i === currentIdx ? 'active' : 'future';
+  step.innerHTML = `<button class="step-btn ${cls}"><span class="dot"></span>${p.order}. ${p.label}</button>`;
+
+  if (milestones[i + 1]) {
+    const done = i < currentIdx;
+    step.innerHTML += `<div class="milestone"><span>${milestones[i + 1]}</span><div class="line"></div><div class="dot-m ${done ? 'done' : ''}"></div><div class="line"></div></div>`;
+  }
+  pipeline.appendChild(step);
+});
+
+// Tabs
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const target = document.getElementById('tc-' + tab.dataset.tab);
+    if (target) target.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

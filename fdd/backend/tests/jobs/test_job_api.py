@@ -12,7 +12,9 @@ def test_create_job_api(client, db):
         "/api/v1/deals",
         json={
             "name": "Job Test Deal",
+            "target_company_name": "Job Test Corp",
             "deal_type": "COMPLETION_ACCOUNTS",
+            "base_currency": "KRW",
             "reference_date": "2025-12-31",
             "period_start": "2025-01-01",
             "period_end": "2025-12-31",

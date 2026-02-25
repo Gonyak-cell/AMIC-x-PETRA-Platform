@@ -72,6 +72,8 @@ class TransactionUpdate(BaseModel):
     deal_captain_email: str | None = Field(None, max_length=255)
     target_close_date: str | None = Field(None, max_length=10)
     notes: str | None = None
+    fdd_deal_id: str | None = None
+    im_document_id: str | None = None
 
 
 # ── List ────────────────────────────────────────────────

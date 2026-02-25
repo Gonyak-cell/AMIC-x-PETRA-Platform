@@ -19,11 +19,24 @@ from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.exceptions import AuthenticationError
 from src.api.security.api_keys import verify_api_key
+from src.api.config import get_config
 from src.api.security.auth import verify_token
 from src.api.security.blacklist import is_blacklisted
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def _dev_user() -> User:
+    """AUTH_ENABLED=False일 때 반환할 dev 사용자."""
+    return User(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
+        email="system@autofdd.dev",
+        hashed_password="federated:no-local-password",
+        full_name="System (Dev)",
+        role="ADMIN",
+        is_active=True,
+    )
 
 
 async def get_current_user(
@@ -48,6 +61,10 @@ async def get_current_user(
     Raises:
         AuthenticationError: 인증 정보가 없거나 유효하지 않은 경우.
     """
+    # Dev 모드: 인증 우회
+    if not get_config().auth_enabled:
+        return _dev_user()
+
     # Authorization 헤더 없으면 쿠키 폴백
     if token is None:
         token = request.cookies.get("access_token")
@@ -70,14 +87,19 @@ async def get_current_user(
                 message="유효하지 않은 사용자 ID입니다.",
                 details={"reason": "invalid_sub"},
             )
+        # CLIENT 역할 차단: 외부 고객은 IM 서비스에 접근할 수 없다
+        if payload.role and payload.role.upper() == "CLIENT":
+            raise AuthenticationError(
+                message="외부 클라이언트는 IM 서비스에 접근할 수 없습니다.",
+                details={"reason": "client_role_forbidden"},
+            )
+
         stmt = select(User).where(User.id == user_id)
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
         if user is None:
             # Cross-backend federation: auto-create user from FDD JWT claims
             import jwt as _jwt
-
-            from src.api.config import get_config
 
             cfg = get_config()
             decoded = _jwt.decode(

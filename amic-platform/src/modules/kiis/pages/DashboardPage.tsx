@@ -13,6 +13,7 @@ import type { RecentDeal, RiskCompany, DataCount } from "@/modules/kiis/types/da
 import SearchBar from "@/modules/kiis/components/SearchBar";
 import ReputationBadge from "@/modules/kiis/components/ReputationBadge";
 import { formatDate } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/forestgp-forest.jpg";
 
 /** 백엔드 DashboardSummary.counts 라벨 (변경 시 여기만 수정) */
 const LABEL_COMPANIES = "기업";
@@ -97,6 +98,8 @@ export default function DashboardPage() {
         title="KIIS Dashboard"
         subtitle="Korea Investment Intelligence System"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={<SearchBar />}
       />
 

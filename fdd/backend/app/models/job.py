@@ -31,6 +31,7 @@ class JobType(str, enum.Enum):
     ANOMALY_DETECT = "ANOMALY_DETECT"
     MASKING = "MASKING"
     PURGE = "PURGE"
+    AUTO_ANALYSIS = "AUTO_ANALYSIS"
 
 
 class Job(Base):

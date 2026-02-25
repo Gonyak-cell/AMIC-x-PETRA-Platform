@@ -88,6 +88,7 @@ class DealPhase(str, enum.Enum):
     VDR_SETUP = "VDR_SETUP"
     DATA_UPLOAD = "DATA_UPLOAD"
     ANALYSIS = "ANALYSIS"
+    CHECKLIST_REVIEW = "CHECKLIST_REVIEW"
     REPORTING = "REPORTING"
 
 
@@ -141,10 +142,10 @@ class Deal(Base):
 
     # Workflow: team composition
     team_partner_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     team_manager_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     # Workflow: FDD scope flags

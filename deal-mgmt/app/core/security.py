@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+import uuid
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 
@@ -26,6 +31,13 @@ def _get_jwt_secret() -> str:
     return secret
 
 
+_DEV_CLAIMS = JWTClaims(
+    user_id="00000000-0000-0000-0000-000000000000",
+    email="system@autofdd.dev",
+    role="ADMIN",
+)
+
+
 async def get_jwt_claims(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
@@ -35,6 +47,9 @@ async def get_jwt_claims(
     FDD가 발급한 JWT를 디코딩하여 user_id, email, role을 반환한다.
     deal-mgmt는 자체 User DB가 없으므로 클레임만 사용한다.
     """
+    if not settings.AUTH_ENABLED:
+        return _DEV_CLAIMS
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
@@ -74,3 +89,48 @@ def require_role(*roles: str):
         return claims
 
     return role_checker
+
+
+# ── CLIENT 역할 접근 제어 ────────────────────────────────
+
+_CLIENT_ROLE = "CLIENT"
+
+
+def require_write_access():
+    """CLIENT 역할의 모든 쓰기(POST/PATCH/DELETE) 작업을 차단한다."""
+
+    async def checker(claims: JWTClaims = Depends(get_jwt_claims)) -> JWTClaims:
+        if claims.role == _CLIENT_ROLE:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="읽기 전용: 클라이언트는 데이터를 수정할 수 없습니다",
+            )
+        return claims
+
+    return checker
+
+
+async def check_client_deal_access(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    claims: JWTClaims,
+) -> None:
+    """CLIENT 역할일 때 해당 딜에 대한 접근 권한을 검증한다.
+
+    비-CLIENT 역할은 바로 통과한다.
+    """
+    if claims.role != _CLIENT_ROLE:
+        return
+    from app.models.deal_client import DealClient
+
+    result = await db.execute(
+        select(DealClient.id).where(
+            DealClient.transaction_id == txn_id,
+            DealClient.email == claims.email,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 거래에 접근할 권한이 없습니다",
+        )

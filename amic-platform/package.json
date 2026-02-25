@@ -20,10 +20,12 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@sentry/react": "^10.38.0",
     "@tanstack/react-query": "^5.62.0",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",
+    "gsap": "^3.14.2",
     "lucide-react": "^0.563.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

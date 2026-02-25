@@ -13,6 +13,7 @@ const STEPS: StepConfig[] = [
   { phase: "VDR_SETUP", label: "VDR 개설", description: "데이터룸 폴더 구조 생성" },
   { phase: "DATA_UPLOAD", label: "자료 업로드", description: "재무 자료 업로드" },
   { phase: "ANALYSIS", label: "자료 검토", description: "분석 수행 및 검토" },
+  { phase: "CHECKLIST_REVIEW", label: "체크리스트", description: "자동 분석 결과 검수" },
   { phase: "REPORTING", label: "보고서 작성", description: "최종 보고서 생성" },
 ];
 

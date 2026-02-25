@@ -48,10 +48,18 @@ def _status_code_for(exc: APIError) -> int:
 
 async def _api_error_handler(request: Request, exc: APIError) -> JSONResponse:
     """APIError를 JSON 응답으로 변환한다."""
-    return JSONResponse(
-        status_code=_status_code_for(exc),
-        content={"error": exc.message, "details": exc.details},
-    )
+    import logging
+
+    _logger = logging.getLogger(__name__)
+    status = _status_code_for(exc)
+    if status >= 500:
+        _logger.error("APIError [%d]: %s", status, exc.message, exc_info=exc)
+    else:
+        _logger.warning("APIError [%d]: %s", status, exc.message)
+    content: dict[str, object] = {"error": exc.message, "details": exc.details}
+    if exc.code is not None:
+        content["error_code"] = f"IM-{exc.code.value}"
+    return JSONResponse(status_code=status, content=content)
 
 
 @asynccontextmanager
@@ -68,6 +76,18 @@ def create_app() -> FastAPI:
     Returns:
         구성된 FastAPI 인스턴스.
     """
+    # 구조화 로깅 초기화 (통일 JSON 로그 스키마)
+    from src.api.config import get_config
+    from src.api.core.logging import setup_logging
+
+    cfg = get_config()
+    setup_logging(
+        level=cfg.log_level,
+        json_output=cfg.log_level != "DEBUG",
+        service_name="im",
+        log_dir=cfg.log_dir or None,
+    )
+
     app = FastAPI(
         title="Auto-IM Generator API",
         description="M&A Information Memorandum 자동 생성 REST API",
@@ -91,13 +111,13 @@ def create_app() -> FastAPI:
 
 def _setup_middleware(app: FastAPI) -> None:
     """미들웨어를 등록한다."""
+    from src.api.core.log_middleware import setup_request_logging
     from src.api.middleware.cors import setup_cors
-    from src.api.middleware.logging import setup_logging_middleware
     from src.api.middleware.rate_limit import setup_rate_limit
 
     setup_cors(app)
     setup_rate_limit(app)
-    setup_logging_middleware(app)
+    setup_request_logging(app)
 
 
 def _include_routers(app: FastAPI) -> None:
@@ -109,9 +129,16 @@ def _include_routers(app: FastAPI) -> None:
     from src.api.routes.health import router as health_router
     from src.api.routes.users import router as users_router
 
+    from src.api.routes.audit import router as audit_router
+    from src.api.routes.checklist import router as checklist_router
+    from src.api.routes.ralph import router as ralph_router
+
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(documents_router)
+    app.include_router(checklist_router)
     app.include_router(companies_router)
     app.include_router(api_keys_router)
+    app.include_router(audit_router)
+    app.include_router(ralph_router)

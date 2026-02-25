@@ -108,6 +108,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(FDDError)
     async def fdd_error_handler(request: Request, exc: FDDError) -> JSONResponse:
         body = exc.to_problem_detail()
+        logger.error(
+            "FDDError %s: %s",
+            exc.code.name,
+            exc.detail,
+            exc_info=exc,
+        )
         return JSONResponse(
             status_code=body["status"],
             content=body,

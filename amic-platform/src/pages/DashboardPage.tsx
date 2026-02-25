@@ -1,18 +1,60 @@
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import {
-  Briefcase,
   Bell,
   FileText,
-  AlertTriangle,
-  Plus,
   Search,
   ArrowRight,
   Handshake,
+  FileStack,
 } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { usePortalKpis, useModuleHealth } from "@/hooks/useDashboard";
+import { usePortalKpis, useModuleHealth, useAggregatedHealth } from "@/hooks/useDashboard";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { KpiCard, Card, KpiCardSkeleton, PageHero } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import forestCoverUrl from "@/assets/images/forest-cover.jpg";
+
+
+/* ── Module Card config (AMIC palette) ── */
+const MODULE_CARDS = [
+  {
+    id: "ma",
+    label: "M&A Deals",
+    subtitle: "Transaction Pipeline",
+    icon: Handshake,
+    to: "/ma/transactions",
+    bg: "bg-amic-800",
+  },
+  {
+    id: "docs",
+    label: "Deal Doc Studio",
+    subtitle: "FDD, IM, TM & Legal Documents",
+    icon: FileStack,
+    to: "/docs",
+    bg: "bg-amic",
+  },
+  {
+    id: "kiis",
+    label: "KIIS",
+    subtitle: "Korea Investment Intelligence",
+    icon: Search,
+    to: "/kiis",
+    bg: "bg-[#1C8F57]",
+  },
+] as const;
+
+/* ── Module Status icon/color per aggregated module ── */
+const STATUS_ICON_STYLES: Record<
+  string,
+  { icon: LucideIcon; bg: string; color: string }
+> = {
+  ma: { icon: Handshake, bg: "bg-amic-100", color: "text-amic-600" },
+  docs: { icon: FileStack, bg: "bg-amic-50", color: "text-[#1C8F57]" },
+  kiis: { icon: Search, bg: "bg-[#E8F8ED]", color: "text-accent" },
+};
 
 const QUICK_ACTIONS = [
   {
@@ -22,16 +64,10 @@ const QUICK_ACTIONS = [
     description: "Start a new M&A transaction",
   },
   {
-    label: "New Deal",
-    to: "/fdd/deals/new",
-    icon: Plus,
-    description: "Start a new FDD deal",
-  },
-  {
-    label: "New IM",
-    to: "/im/new",
+    label: "New Document",
+    to: "/docs/new",
     icon: FileText,
-    description: "Generate Investment Memorandum",
+    description: "Generate FDD, IM, or TM document",
   },
   {
     label: "Search Company",
@@ -43,9 +79,19 @@ const QUICK_ACTIONS = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { kpis, errors, loading } = usePortalKpis();
+  const { user, isClient } = useAuth();
+
+  // CLIENT 역할은 MA Pipeline으로 리다이렉트
+  if (isClient) return <Navigate to="/ma/transactions" replace />;
   const { data: health } = useModuleHealth();
+  const { data: aggregatedHealth } = useAggregatedHealth();
+  const { kpis, errors, loading } = usePortalKpis(health);
+
+  const quickActionsRef = useRef<HTMLDivElement>(null);
+  const modulesRef = useRef<HTMLDivElement>(null);
+
+  useScrollReveal(quickActionsRef, { stagger: 0.06 });
+  useScrollReveal(modulesRef, { stagger: 0.08 });
 
   const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -56,13 +102,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Dark Hero Section */}
+      {/* Dark Hero Section with Forest Cover */}
       <PageHero
-        title={`Welcome, ${user?.display_name ?? "User"}`}
+        title={`Welcome, ${user?.display_name ?? "User"}${user?.title ? ` ${user.title.split("/")[0].trim()}` : ""} 님`}
         subtitle={today}
+        backgroundImage={forestCoverUrl}
+        backgroundOpacity={0.4}
       >
         {/* Glass Card KPIs — each card renders independently */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
           {loading.ma ? (
             <KpiCardSkeleton />
           ) : (
@@ -71,19 +119,6 @@ export default function DashboardPage() {
               value={errors.ma ? "—" : String(kpis.activeMaDeals)}
               icon={Handshake}
               variant={errors.ma ? "negative" : "positive"}
-              hoverLift
-              generous
-              className="glass-card"
-            />
-          )}
-          {loading.fdd ? (
-            <KpiCardSkeleton />
-          ) : (
-            <KpiCard
-              label="Active FDD Deals"
-              value={errors.fdd ? "—" : String(kpis.activeDeals)}
-              icon={Briefcase}
-              variant={errors.fdd ? "negative" : "positive"}
               hoverLift
               generous
               className="glass-card"
@@ -102,39 +137,13 @@ export default function DashboardPage() {
               className="glass-card"
             />
           )}
-          {loading.im ? (
-            <KpiCardSkeleton />
-          ) : (
-            <KpiCard
-              label="IM In Progress"
-              value={errors.im ? "—" : String(kpis.imInProgress)}
-              icon={FileText}
-              variant={errors.im ? "negative" : "caution"}
-              hoverLift
-              generous
-              className="glass-card"
-            />
-          )}
-          {loading.fdd ? (
-            <KpiCardSkeleton />
-          ) : (
-            <KpiCard
-              label="Draft Deals"
-              value={errors.fdd ? "—" : String(kpis.pendingIssues)}
-              icon={AlertTriangle}
-              variant="negative"
-              hoverLift
-              generous
-              className="glass-card"
-            />
-          )}
         </div>
       </PageHero>
 
       {/* Quick Actions (hover-glow-green) */}
       <div>
         <h2 className="label-uppercase mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div ref={quickActionsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {QUICK_ACTIONS.map((action) => (
             <div
               key={action.to}
@@ -167,137 +176,105 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Module Status (Slim Bar) */}
+      {/* Module Status */}
       <div>
         <h2 className="label-uppercase mb-3">Module Status</h2>
-        <Card>
-          <div className="flex flex-wrap gap-6">
-            {health ? (
-              health.map((m) => (
-                <div key={m.module} className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "h-2.5 w-2.5 rounded-full",
-                      m.healthy ? "bg-positive" : "bg-negative",
-                    )}
-                    aria-label={m.healthy ? "Connected" : "Disconnected"}
-                  />
-                  <span className="text-sm text-text-dark font-medium">{m.label}</span>
-                  <span className="text-xs text-text-secondary">
-                    {m.healthy ? "Connected" : "Unreachable"}
-                  </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {aggregatedHealth ? (
+            aggregatedHealth.map((mod) => {
+              const statusColor = mod.overallHealthy
+                ? "bg-positive"
+                : mod.services.some((s) => s.healthy)
+                  ? "bg-caution"
+                  : "bg-negative";
+              const statusText = mod.overallHealthy
+                ? "Connected"
+                : mod.services.some((s) => s.healthy)
+                  ? "Degraded"
+                  : "Unreachable";
+              const iconBg = STATUS_ICON_STYLES[mod.id]?.bg ?? "bg-gray-100";
+              const iconColor = STATUS_ICON_STYLES[mod.id]?.color ?? "text-gray-600";
+              const IconComp = STATUS_ICON_STYLES[mod.id]?.icon ?? Search;
+
+              return (
+                <Card key={mod.id} padding="sm">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                        iconBg,
+                      )}
+                    >
+                      <IconComp className={cn("w-4 h-4", iconColor)} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-text-dark truncate">
+                        {mod.label}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span
+                          className={cn("h-2 w-2 rounded-full shrink-0", statusColor)}
+                          aria-label={statusText}
+                        />
+                        <span className="text-xs text-text-secondary">
+                          {statusText}
+                          <span className="text-text-muted ml-1">
+                            ({mod.healthySummary})
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          ) : (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} padding="sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
+                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-gray-300 animate-pulse" />
-                <span className="text-sm text-text-secondary">
-                  Checking module status...
-                </span>
-              </div>
-            )}
-          </div>
-        </Card>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Modules (Gradient Background Cards) */}
       <div>
         <h2 className="label-uppercase mb-3">Modules</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate("/ma/transactions")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") navigate("/ma/transactions");
-            }}
-          >
-            <Card className="hover-glow bg-gradient-to-br from-amic-700 to-amic-900">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <Handshake className="w-6 h-6 text-white" />
+        <div ref={modulesRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {MODULE_CARDS.map((mod) => (
+            <div
+              key={mod.id}
+              role="button"
+              tabIndex={0}
+              className="cursor-pointer"
+              onClick={() => navigate(mod.to)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") navigate(mod.to);
+              }}
+            >
+              <Card className={cn("hover-glow", mod.bg)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                    <mod.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">{mod.label}</div>
+                    <p className="text-xs text-white/70">{mod.subtitle}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-white">M&A Deals</div>
-                  <p className="text-xs text-white/70">
-                    Transaction Pipeline
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate("/fdd/deals")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") navigate("/fdd/deals");
-            }}
-          >
-            <Card className="hover-glow bg-gradient-to-br from-amic to-amic-700">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Auto FDD</div>
-                  <p className="text-xs text-white/70">
-                    Financial Due Diligence
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate("/kiis")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") navigate("/kiis");
-            }}
-          >
-            <Card className="hover-glow bg-gradient-to-br from-accent to-accent-hover">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <Search className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">KIIS</div>
-                  <p className="text-xs text-white/70">
-                    Korea Investment Intelligence
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate("/im")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") navigate("/im");
-            }}
-          >
-            <Card className="hover-glow bg-gradient-to-br from-amic-500 to-amic">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">IM Generator</div>
-                  <p className="text-xs text-white/70">
-                    Investment Memorandum
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          ))}
         </div>
       </div>
+
     </div>
   );
 }

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.bid import Bid
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.enums import AuditAction
@@ -26,9 +26,10 @@ async def list_bids(
     buyer_id: uuid.UUID | None = None,
     bid_type: str | None = Query(None, alias="type"),
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(Bid).where(Bid.transaction_id == txn_id)
     if buyer_id:
         q = q.where(Bid.buyer_candidate_id == buyer_id)
@@ -43,10 +44,11 @@ async def list_bids(
 async def bid_comparison_matrix(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """매수자별 IOI/LOI/최종제안 비교 매트릭스."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     # 모든 매수자
     buyers_q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
@@ -85,7 +87,7 @@ async def create_bid(
     txn_id: uuid.UUID,
     body: BidCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     bid = Bid(transaction_id=txn_id, **body.model_dump())
@@ -110,7 +112,7 @@ async def update_bid(
     bid_id: uuid.UUID,
     body: BidUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Bid).where(Bid.id == bid_id, Bid.transaction_id == txn_id)
     bid = (await db.execute(q)).scalar_one_or_none()
@@ -137,7 +139,7 @@ async def delete_bid(
     txn_id: uuid.UUID,
     bid_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Bid).where(Bid.id == bid_id, Bid.transaction_id == txn_id)
     bid = (await db.execute(q)).scalar_one_or_none()

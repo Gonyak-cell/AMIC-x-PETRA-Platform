@@ -13,6 +13,14 @@ from src.design_renderer.design_tokens import IMDesignTokens
 from src.design_renderer.im_document import IMDocumentData
 
 
+class RendererError(Exception):
+    """렌더러 관련 예외 기반 클래스."""
+
+
+class RendererNotFoundError(RendererError):
+    """미등록 섹션 렌더러 접근 시 발생."""
+
+
 class BaseSectionRenderer(ABC):
     """섹션 렌더러 추상 기반 클래스.
 

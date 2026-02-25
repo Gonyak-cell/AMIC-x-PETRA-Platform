@@ -1,4 +1,7 @@
+import os
 from collections.abc import AsyncGenerator
+
+os.environ.setdefault("TESTING", "true")
 
 import pytest
 from httpx import ASGITransport, AsyncClient

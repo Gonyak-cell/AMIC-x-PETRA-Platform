@@ -29,6 +29,7 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
+import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
 
 const UPLOAD_TYPE_OPTIONS: SelectOption[] = [
   { value: "TB", label: "TB - Trial Balance" },
@@ -368,6 +369,8 @@ export default function UploadPage() {
         title="Data Uploads"
         subtitle="Upload Excel files for FDD analysis"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* KPI Cards */}

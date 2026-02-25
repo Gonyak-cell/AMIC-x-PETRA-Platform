@@ -90,6 +90,7 @@ export function useUpdateDDChecklistItem(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "dd-checklist"],
       });
+      toast.success("체크리스트 항목이 수정되었습니다.");
     },
     onError: () => {
       toast.error("체크리스트 항목 수정에 실패했습니다.");

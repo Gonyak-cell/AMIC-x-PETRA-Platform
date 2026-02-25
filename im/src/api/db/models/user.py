@@ -44,6 +44,11 @@ class User(Base):
         String(100),
         nullable=False,
     )
+    title: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="",
+    )
     role: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

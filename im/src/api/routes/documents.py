@@ -15,13 +15,14 @@ import shutil
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.dependencies import get_current_user
+from src.api.exceptions import ValidationError
 from src.api.schemas.common import PaginationParams
 from src.api.schemas.documents import (
     DocumentCreate,
@@ -73,25 +74,25 @@ async def upload_financial_data(
     document = await service.get_document(document_id, current_user)
 
     if document.data_source != "EXCEL":
-        raise HTTPException(
-            status_code=400,
-            detail="data_source가 EXCEL인 문서만 파일 업로드가 가능합니다",
+        raise ValidationError(
+            field="data_source",
+            reason="data_source가 EXCEL인 문서만 파일 업로드가 가능합니다",
         )
 
     # 파일 확장자 검증
     if not file.filename:
-        raise HTTPException(status_code=400, detail="파일명이 없습니다")
+        raise ValidationError(field="file", reason="파일명이 없습니다")
     ext = Path(file.filename).suffix.lower()
     if ext not in _ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"허용 확장자: {', '.join(_ALLOWED_EXTENSIONS)}",
+        raise ValidationError(
+            field="file",
+            reason=f"허용 확장자: {', '.join(_ALLOWED_EXTENSIONS)}",
         )
 
     # 파일 크기 검증
     content = await file.read()
     if len(content) > _MAX_UPLOAD_SIZE:
-        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다")
+        raise ValidationError(field="file", reason="파일 크기는 10MB 이하여야 합니다")
 
     # 파일 저장
     upload_dir = Path("uploads") / "financials" / str(document_id)
@@ -154,6 +155,24 @@ async def download_document(
         media_type=media_type,
         filename=f"IM_{document_id}.{format}",
     )
+
+
+@router.delete(
+    "/{document_id}",
+    status_code=204,
+    response_class=Response,
+    summary="문서 삭제",
+    description="소유자 또는 ADMIN이 문서를 삭제한다. 진행 중인 문서는 삭제 불가.",
+)
+async def delete_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """문서를 삭제한다."""
+    service = DocumentService(session)
+    await service.delete_document(document_id, current_user)
+    return Response(status_code=204)
 
 
 @router.get(

@@ -1,0 +1,112 @@
+{
+  "name": "Financial Model PRD",
+  "version": "1.0",
+  "document_type": "financial_model",
+  "description": "M&A 재무모델 품질 요구사항 (DCF/LBO/COMPS/Projection/Full)",
+  "pass_threshold": 4.0,
+  "sections": {
+    "Legend": {
+      "title": "Legend / Color Key",
+      "required": true,
+      "criteria": {
+        "color_key": "입력(노랑), 수식(흰), 헤더(forest-dark) 범례 표시",
+        "metadata": "프로젝트명, 모델 유형, 생성일자, 통화 단위"
+      }
+    },
+    "Input": {
+      "title": "Input / Assumptions",
+      "required": true,
+      "criteria": {
+        "categories": "Revenue, Cost, WC, CAPEX, WACC 가정 모두 포함",
+        "formatting": "입력 셀은 노랑 배경, 출처 주석 포함",
+        "units": "모든 셀에 단위 명시 (KRW, %, x, 일)"
+      }
+    },
+    "IS": {
+      "title": "Income Statement",
+      "required": true,
+      "criteria": {
+        "line_items": "매출, COGS, GP, SGA, EBITDA, D&A, EBIT, 이자, 세전이익, 순이익",
+        "formulas": "모든 소계/합계 행은 수식 (SUM) 사용",
+        "margins": "GP마진, EBITDA마진, 순이익률 행 포함"
+      }
+    },
+    "BS": {
+      "title": "Balance Sheet",
+      "required": true,
+      "criteria": {
+        "balance": "총자산 = 부채+자본 (CRITICAL — 불일치 시 FAIL)",
+        "line_items": "유동/비유동자산, 유동/비유동부채, 자본",
+        "formulas": "소계/합계 수식, 이익잉여금 = 전기 + 순이익 - 배당"
+      }
+    },
+    "CF": {
+      "title": "Cash Flow Statement",
+      "required": true,
+      "criteria": {
+        "three_sections": "영업/투자/재무활동 3구분",
+        "reconciliation": "기초현금 + 순현금변동 = 기말현금 (BS 현금과 일치)",
+        "cross_ref": "순이익(IS), 감가상각(IS), CAPEX(Input) 참조"
+      }
+    },
+    "WACC": {
+      "title": "WACC Calculation",
+      "required": false,
+      "criteria": {
+        "components": "Ke(CAPM), Kd, 자본구조 비율, Tax Shield",
+        "capm": "Risk-Free Rate, Beta, MRP 명시",
+        "sensitivity": "WACC 범위 표시 (±0.5%)"
+      }
+    },
+    "DCF": {
+      "title": "DCF Valuation",
+      "required": false,
+      "criteria": {
+        "fcf": "UFCF = EBIT(1-t) + D&A - CAPEX - NWC변동",
+        "terminal": "Terminal Value 계산 (Gordon Growth 또는 Exit Multiple)",
+        "bridge": "Enterprise Value → Equity Value 브릿지"
+      }
+    },
+    "GPCM": {
+      "title": "Guideline Public Company Method",
+      "required": false,
+      "criteria": {
+        "peers": "비교기업 최소 5개, 선정 근거 명시",
+        "multiples": "EV/EBITDA, EV/Revenue, P/E 중 최소 2개",
+        "application": "Median/Mean 멀티플 → 대상회사 적용"
+      }
+    },
+    "GTM": {
+      "title": "Guideline Transaction Method",
+      "required": false,
+      "criteria": {
+        "transactions": "선례거래 최소 3개, 거래일자/규모 명시",
+        "multiples": "EV/EBITDA, EV/Revenue 중 최소 1개"
+      }
+    },
+    "Sensitivity": {
+      "title": "Sensitivity Analysis",
+      "required": false,
+      "criteria": {
+        "two_way": "2-way 민감도 테이블 (WACC x Terminal Growth 또는 Exit Multiple)",
+        "formatting": "현재 가정값 셀 하이라이트"
+      }
+    },
+    "Summary": {
+      "title": "Valuation Summary",
+      "required": true,
+      "criteria": {
+        "methods": "사용된 밸류에이션 방법론별 결과 요약",
+        "range": "밸류에이션 범위 (min-max-median) 표시",
+        "football_field": "Football Field 차트 데이터 (해당하는 경우)"
+      }
+    }
+  },
+  "global_criteria": {
+    "formula_ratio": "수식 셀 비율 >= 30% (Legend/Summary 제외)",
+    "balance_sheet": "BS 총자산 = 부채+자본 (CRITICAL)",
+    "cross_validation": "IS→BS→CF 교차 참조 정합성",
+    "formatting": "IB 표준 포매팅 (입력=노랑, 수식=흰, 헤더=forest-dark)",
+    "number_format": "KRW #,##0 / % 0.0% / 배수 0.0x 일관성"
+  }
+}

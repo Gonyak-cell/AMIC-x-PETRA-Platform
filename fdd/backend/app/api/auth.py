@@ -29,6 +29,7 @@ from app.schemas.user import (
 )
 from app.services.auth_service import (
     authenticate_user,
+    delete_user,
     list_users,
     logout_user,
     refresh_tokens,
@@ -52,24 +53,22 @@ def login(
     """사용자 로그인 — JWT 토큰을 httpOnly 쿠키로 설정."""
     access, refresh = authenticate_user(db, body.email, body.password)
 
-    # Access Token 쿠키 설정 (15분)
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=access,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=settings.access_token_expire_minutes * 60,
     )
 
-    # Refresh Token 쿠키 설정 (7일)
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=refresh,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 
     return {"message": "로그인 성공"}
@@ -90,24 +89,22 @@ def refresh(
         )
     access, refresh_tok = refresh_tokens(db, refresh_token)
 
-    # Access Token 쿠키 설정
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=access,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=settings.access_token_expire_minutes * 60,
     )
 
-    # Refresh Token 쿠키 설정
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=refresh_tok,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 
     return {"message": "토큰 갱신 성공"}
@@ -139,6 +136,39 @@ def logout(
     return response
 
 
+@router.post("/change-password", status_code=204)
+def change_password(
+    body: dict,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """현재 사용자의 비밀번호를 변경한다."""
+    from app.auth.password import hash_password, verify_password
+    from app.models.user import User
+
+    current_password = body.get("current_password", "")
+    new_password = body.get("new_password", "")
+
+    if not current_password or not new_password:
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID,
+            "Current password and new password are required",
+        )
+
+    user = db.get(User, current_user.id)
+    if user is None:
+        raise AuthenticationError(ErrorCode.AUTH_TOKEN_INVALID, "User not found")
+
+    if not verify_password(current_password, user.hashed_password):
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID, "Current password is incorrect"
+        )
+
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+    return Response(status_code=204)
+
+
 @router.get("/me", response_model=UserRead)
 def get_me(
     current_user: CurrentUser = Depends(get_current_user),
@@ -157,6 +187,7 @@ def get_me(
             id=current_user.id,
             email=current_user.email,
             display_name=current_user.display_name,
+            title="",
             role=current_user.role,
             is_active=True,
             last_login_at=None,
@@ -182,7 +213,7 @@ def create_user(
     db: Session = Depends(get_db),
 ):
     """새 사용자 생성 (Admin 전용)."""
-    return register_user(db, body.email, body.password, body.display_name, body.role)
+    return register_user(db, body.email, body.password, body.display_name, body.role, body.title)
 
 
 @router.put("/users/{user_id}", response_model=UserRead)
@@ -197,7 +228,24 @@ def update_user_endpoint(
         db,
         user_id,
         display_name=body.display_name,
+        title=body.title,
         role=body.role,
         is_active=body.is_active,
         actor_email=current_user.email,
     )
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user_endpoint(
+    user_id: uuid.UUID,
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+) -> Response:
+    """사용자를 삭제한다 (Admin 전용). 본인 삭제 방지."""
+    if current_user.id == user_id:
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID,
+            "Cannot delete your own account",
+        )
+    delete_user(db, user_id, actor_email=current_user.email)
+    return Response(status_code=204)

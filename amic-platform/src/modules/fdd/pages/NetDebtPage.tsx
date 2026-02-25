@@ -38,7 +38,8 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { Column, SelectOption } from "@/components/ui";
-import { formatAmount } from "@/lib/format";
+import { formatAmount, formatAmountCompact } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/hero-arch-mono.jpg";
 
 const STATUS_VARIANTS: Record<DebtItemStatus, "success" | "warning" | "error" | "info"> = {
   CANDIDATE: "warning",
@@ -391,6 +392,8 @@ export default function NetDebtPage() {
         title="Net Debt Analysis"
         subtitle="Net Debt Bridge & Adjustments"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           (!latestCalc || runMutation.isError) ? (
             <div className="flex items-center gap-3">
@@ -437,24 +440,24 @@ export default function NetDebtPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Gross Debt"
-            value={formatAmount(latestCalc.gross_debt, currency)}
+            value={formatAmountCompact(latestCalc.gross_debt, currency)}
             icon={Landmark}
             variant="negative"
           />
           <KpiCard
             label="Cash & Equivalents"
-            value={formatAmount(latestCalc.cash_and_equivalents, currency)}
+            value={formatAmountCompact(latestCalc.cash_and_equivalents, currency)}
             icon={Wallet}
             variant="positive"
           />
           <KpiCard
             label="Net Debt"
-            value={formatAmount(latestCalc.net_debt, currency)}
+            value={formatAmountCompact(latestCalc.net_debt, currency)}
             variant={Number(latestCalc.net_debt) > 0 ? "negative" : "positive"}
           />
           <KpiCard
             label="Adjusted Net Debt"
-            value={formatAmount(latestCalc.adjusted_net_debt, currency)}
+            value={formatAmountCompact(latestCalc.adjusted_net_debt, currency)}
             variant={Number(latestCalc.adjusted_net_debt) > 0 ? "negative" : "positive"}
             subtitle={`v${latestCalc.engine_version}`}
           />

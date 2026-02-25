@@ -4,13 +4,26 @@ import { FinancialBarChart } from "@/components/charts/FinancialBarChart";
 import { CHART_COLORS, CATEGORY_COLORS } from "@/components/charts/chartColors";
 import type { TrendDataPoint } from "@/components/charts/TrendLineChart";
 import type { BarChartDataPoint } from "@/components/charts/FinancialBarChart";
-import type { TimeSeriesPoint } from "@/types/analytics";
+import type { TimeSeriesPoint, PipelineFunnelPoint } from "@/types/analytics";
 import type { SectorAggregation } from "@/modules/kiis/types/deal";
 import type { YearlyTrend } from "@/modules/kiis/types/deal";
+
+const FUNNEL_COLORS = [
+  "#6366f1", // indigo
+  "#8b5cf6", // violet
+  "#a855f7", // purple
+  "#d946ef", // fuchsia
+  "#ec4899", // pink
+  "#f43f5e", // rose
+  "#ef4444", // red
+];
 
 interface AnalyticsChartPanelProps {
   fddTimeSeries: TimeSeriesPoint[];
   imTimeSeries: TimeSeriesPoint[];
+  maTimeSeries: TimeSeriesPoint[];
+  maPhaseData?: Record<string, number>;
+  pipelineFunnel?: PipelineFunnelPoint[];
   sectorData: SectorAggregation[] | undefined;
   trendData: YearlyTrend[] | undefined;
   isLoading: boolean;
@@ -19,6 +32,9 @@ interface AnalyticsChartPanelProps {
 export function AnalyticsChartPanel({
   fddTimeSeries,
   imTimeSeries,
+  maTimeSeries,
+  maPhaseData,
+  pipelineFunnel,
   sectorData,
   trendData,
   isLoading,
@@ -26,7 +42,7 @@ export function AnalyticsChartPanel({
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <Card key={i}>
             <div className="h-[300px] bg-gray-50 animate-pulse rounded" />
           </Card>
@@ -47,6 +63,30 @@ export function AnalyticsChartPanel({
     value: p.value,
   }));
 
+  // Transform MA time series for TrendLineChart
+  const maTrendData: TrendDataPoint[] = maTimeSeries.map((p) => ({
+    period: p.period,
+    value: p.value,
+  }));
+
+  // Transform MA phase distribution for FinancialBarChart
+  const maPhaseBarData: BarChartDataPoint[] = maPhaseData
+    ? Object.entries(maPhaseData).map(([name, value], i) => ({
+        name,
+        value,
+        fill: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      }))
+    : [];
+
+  // Transform pipeline funnel for FinancialBarChart
+  const funnelBarData: BarChartDataPoint[] = (pipelineFunnel ?? []).map(
+    (p, i) => ({
+      name: p.phaseLabel,
+      value: p.count,
+      fill: FUNNEL_COLORS[i % FUNNEL_COLORS.length],
+    }),
+  );
+
   // Transform sector data for FinancialBarChart
   const sectorBarData: BarChartDataPoint[] = (sectorData ?? [])
     .slice(0, 8)
@@ -64,10 +104,64 @@ export function AnalyticsChartPanel({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* FDD Deal Creation Trend */}
+      {/* Pipeline Funnel — full width */}
+      {funnelBarData.length > 0 && (
+        <Card variant="forest-lift" className="lg:col-span-2">
+          <h4 className="label-uppercase mb-3">
+            M&A Pipeline Funnel
+          </h4>
+          <FinancialBarChart
+            data={funnelBarData}
+            height={280}
+            colorScheme="categorical"
+            aria-label="M&A pipeline funnel by phase"
+          />
+        </Card>
+      )}
+
+      {/* MA Transaction Creation Trend */}
       <Card variant="forest-lift">
         <h4 className="label-uppercase mb-3">
-          FDD Deals Created (Monthly)
+          M&A Transactions Created (Monthly)
+        </h4>
+        {maTrendData.length > 0 ? (
+          <TrendLineChart
+            data={maTrendData}
+            height={260}
+            showArea
+            lineColor={CHART_COLORS.primary}
+            aria-label="M&A transactions created per month"
+          />
+        ) : (
+          <div className="h-[260px] flex items-center justify-center text-sm text-text-secondary">
+            No M&A transaction data available
+          </div>
+        )}
+      </Card>
+
+      {/* MA Phase Distribution */}
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
+          M&A Transactions by Phase
+        </h4>
+        {maPhaseBarData.length > 0 ? (
+          <FinancialBarChart
+            data={maPhaseBarData}
+            height={260}
+            colorScheme="categorical"
+            aria-label="M&A transaction count by phase"
+          />
+        ) : (
+          <div className="h-[260px] flex items-center justify-center text-sm text-text-secondary">
+            No phase distribution data available
+          </div>
+        )}
+      </Card>
+
+      {/* FDD Creation Trend */}
+      <Card variant="forest-lift">
+        <h4 className="label-uppercase mb-3">
+          FDD Created (Monthly)
         </h4>
         {fddTrendData.length > 0 ? (
           <TrendLineChart

@@ -1,14 +1,9 @@
-export type CalendarEventModule = "fdd" | "kiis" | "im";
+export type CalendarEventModule = "ma";
 
 export type CalendarEventType =
-  | "deal_start"
-  | "deal_end"
-  | "deal_reference"
-  | "deal_created"
-  | "audit_date"
-  | "portfolio_check"
-  | "document_created"
-  | "document_completed";
+  | "transaction_created"
+  | "target_close"
+  | "phase_current";
 
 export interface CalendarEvent {
   id: string;
@@ -19,10 +14,12 @@ export interface CalendarEvent {
   endDate?: string;
   entityId: string;
   entityPath: string;
+  phase?: string;
+  phaseLabel?: string;
+  phaseOrder?: number;
 }
 
 export interface CalendarFilter {
-  modules: CalendarEventModule[];
   month: number;
   year: number;
 }

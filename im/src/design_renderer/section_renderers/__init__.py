@@ -7,7 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from src.design_renderer.section_renderers.base import BaseSectionRenderer
+from src.design_renderer.section_renderers.base import (
+    BaseSectionRenderer,
+    RendererError,
+    RendererNotFoundError,
+)
 
 if TYPE_CHECKING:
     pass
@@ -26,10 +30,10 @@ def get_renderer(section_id: str) -> BaseSectionRenderer:
         해당 섹션의 렌더러 인스턴스.
 
     Raises:
-        KeyError: 미등록 section_id.
+        RendererNotFoundError: 미등록 section_id.
     """
     if section_id not in RENDERER_REGISTRY:
-        raise KeyError(
+        raise RendererNotFoundError(
             f"미등록 섹션 렌더러: '{section_id}'. "
             f"등록된 렌더러: {list(RENDERER_REGISTRY.keys())}"
         )
@@ -86,8 +90,28 @@ from src.design_renderer.section_renderers.valuation import ValuationRenderer
 from src.design_renderer.section_renderers.industry_kpi import IndustryKPIRenderer
 from src.design_renderer.section_renderers.industry_overview import IndustryOverviewRenderer
 
+# F-θ TM (Teaser Memorandum) 전용 렌더러
+from src.design_renderer.section_renderers.market_drivers import (
+    DemandDriverRenderer,
+    MarketOutlookRenderer,
+    SupplyDriverRenderer,
+)
+from src.design_renderer.section_renderers.proforma import (
+    ProformaFinancialsRenderer,
+    ProformaPlanRenderer,
+)
+from src.design_renderer.section_renderers.target_positioning import (
+    TargetPositioningRenderer,
+)
+from src.design_renderer.section_renderers.tm_aliases import (
+    TargetHighlightsRenderer,
+    TargetOverviewRenderer,
+)
+
 __all__ = [
     "BaseSectionRenderer",
+    "RendererError",
+    "RendererNotFoundError",
     "RENDERER_REGISTRY",
     "get_renderer",
     "register_renderer",
@@ -119,4 +143,13 @@ __all__ = [
     # F-ζ Industry
     "IndustryKPIRenderer",
     "IndustryOverviewRenderer",
+    # F-θ TM (Teaser)
+    "TargetPositioningRenderer",
+    "MarketOutlookRenderer",
+    "DemandDriverRenderer",
+    "SupplyDriverRenderer",
+    "ProformaPlanRenderer",
+    "ProformaFinancialsRenderer",
+    "TargetOverviewRenderer",
+    "TargetHighlightsRenderer",
 ]

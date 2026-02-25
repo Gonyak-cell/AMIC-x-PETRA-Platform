@@ -139,6 +139,57 @@ class DealCreateRequest(BaseModel):
     description: str | None = Field(None, description="딜 설명")
 
 
+class TendencyDealItem(BaseModel):
+    """투자성향 - 대표 딜 아이템"""
+
+    target_company: str
+    amount_display: str | None = None
+    round_stage: str | None = None
+    deal_date: date | None = None
+    source_url: str | None = None
+
+
+class TendencySectorDetail(BaseModel):
+    """투자성향 - 섹터별 상세"""
+
+    sector: str
+    sector_name: str
+    deal_count: int
+    total_amount: Decimal | None = None
+    total_amount_display: str | None = None
+    percentage: float
+    description: str
+    deals: list[TendencyDealItem] = Field(default_factory=list)
+
+
+class TendencyStageDetail(BaseModel):
+    """투자성향 - 스테이지별 상세"""
+
+    stage: str
+    stage_name: str
+    deal_count: int
+    total_amount: Decimal | None = None
+    total_amount_display: str | None = None
+    percentage: float
+    description: str
+    deals: list[TendencyDealItem] = Field(default_factory=list)
+
+
+class TendencySummaryResponse(BaseModel):
+    """투자성향 정성적 요약 응답"""
+
+    corp_code: str
+    years: int
+    total_deals: int
+    total_amount: Decimal | None = None
+    total_amount_display: str | None = None
+    summary_text: str
+    sector_summary: str
+    stage_summary: str
+    sectors: list[TendencySectorDetail] = Field(default_factory=list)
+    stages: list[TendencyStageDetail] = Field(default_factory=list)
+
+
 class DealExtractRequest(BaseModel):
     """뉴스에서 딜 추출 요청"""
 

@@ -71,7 +71,7 @@ def handle_pipeline_error(
     sync_fail_document(document_id, error=str(exc))
 
 
-@celery_app.task(bind=True, name="generate_im", max_retries=0, acks_late=True)
+@celery_app.task(bind=True, name="generate_im", max_retries=0, acks_late=True, soft_time_limit=900, time_limit=960)
 def generate_im_task(
     self: Any,
     document_id: str,
@@ -296,7 +296,7 @@ def load_excel_data_task(self: Any, document_id: str) -> dict[str, Any]:
     im_data = _load_document_from_db(document_id)
 
     # generation_config에서 Excel 파일 경로 확인
-    excel_path = (im_data.get("_generation_config") or {}).get("excel_file_path")
+    excel_path = (im_data.get("generation_config") or {}).get("excel_file_path")
     if not excel_path:
         # DB에서 직접 조회
         from src.api.db.session import get_sync_session
@@ -468,6 +468,18 @@ def finalize_document_task(
     # Celery 상태 + DB 동시 갱신
     update_progress(self, document_id, "COMPLETED", 100)
     sync_finalize_document(document_id, pptx_path=pptx_path, pdf_path=pdf_path)
+
+    # Ralph Loop Pass 1 (Draft) — PPTX 디자인 품질 개선
+    if pptx_path:
+        try:
+            from src.api.tasks.ralph_loop import run_im_ralph_loop_task
+
+            run_im_ralph_loop_task.delay(
+                document_id=document_id, pass_number=1, im_data_dict=im_data_dict,
+            )
+            logger.info("Ralph Loop Pass 1 시작: document=%s", document_id)
+        except Exception as exc:
+            logger.warning("Ralph Loop 체이닝 실패 (비필수): %s", exc)
 
     return {
         "document_id": document_id,

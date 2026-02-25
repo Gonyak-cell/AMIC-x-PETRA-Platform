@@ -1,4 +1,4 @@
-export type ActivityModule = "fdd" | "kiis" | "im" | "portal";
+export type ActivityModule = "fdd" | "kiis" | "im" | "ma" | "docs" | "vdr" | "portal";
 
 export type ActivityAction =
   | "create"

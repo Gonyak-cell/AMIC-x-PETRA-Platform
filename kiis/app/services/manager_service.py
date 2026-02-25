@@ -195,15 +195,16 @@ class ManagerService:
         total_deals = 0
         specialty_sectors: list[str] = []
 
+        # 현재 소속 펀드 1회만 조회 (N+1 방지)
+        current_fund_obj: Fund | None = None
         if current_fm:
-            # 펀드명 조회
             fund_stmt = select(Fund).where(Fund.id == current_fm.fund_id)
             fund_result = await db.execute(fund_stmt)
-            fund = fund_result.scalar_one_or_none()
+            current_fund_obj = fund_result.scalar_one_or_none()
 
-            if fund:
-                current_fund = fund.fund_name
-                current_company = fund.company_name
+            if current_fund_obj:
+                current_fund = current_fund_obj.fund_name
+                current_company = current_fund_obj.company_name
 
             career_years = current_fm.career_years
             total_deals = current_fm.total_deals_involved
@@ -232,19 +233,14 @@ class ManagerService:
         movements_result = await db.execute(movements_stmt)
         movements = list(movements_result.scalars().all())
 
-        # 관련 딜 조회 (현재 소속 기업의 딜)
+        # 관련 딜 조회 (이미 조회한 current_fund_obj 재사용)
         deals: list[Deal] = []
-        if current_fm:
-            fund_stmt = select(Fund).where(Fund.id == current_fm.fund_id)
-            fund_result = await db.execute(fund_stmt)
-            fund = fund_result.scalar_one_or_none()
-
-            if fund and fund.company_id:
-                deals_stmt = (
-                    select(Deal).where(Deal.company_id == fund.company_id).order_by(Deal.deal_date.desc()).limit(20)
-                )
-                deals_result = await db.execute(deals_stmt)
-                deals = list(deals_result.scalars().all())
+        if current_fund_obj and current_fund_obj.company_id:
+            deals_stmt = (
+                select(Deal).where(Deal.company_id == current_fund_obj.company_id).order_by(Deal.deal_date.desc()).limit(20)
+            )
+            deals_result = await db.execute(deals_stmt)
+            deals = list(deals_result.scalars().all())
 
         return {
             "manager_name": manager_name,

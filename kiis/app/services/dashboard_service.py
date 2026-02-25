@@ -85,25 +85,22 @@ class DashboardService:
     async def _get_risk_companies(self, db: AsyncSession) -> list[dict[str, Any]]:
         """Risk 상태 기업 목록을 반환한다 (점수 오름차순, 최대 10건)."""
         result = await db.execute(
-            select(ReputationScore)
+            select(ReputationScore, Company)
+            .join(Company, ReputationScore.company_id == Company.id)
             .where(ReputationScore.status_tag == "risk")
             .order_by(ReputationScore.total_score.asc())
             .limit(10)
         )
-        scores = result.scalars().all()
-        items: list[dict[str, Any]] = []
-        for s in scores:
-            company = await db.get(Company, s.company_id)
-            if company:
-                items.append(
-                    {
-                        "corp_code": company.corp_code,
-                        "corp_name": company.corp_name,
-                        "status_tag": s.status_tag,
-                        "total_score": float(s.total_score),
-                    }
-                )
-        return items
+        rows = result.all()
+        return [
+            {
+                "corp_code": company.corp_code,
+                "corp_name": company.corp_name,
+                "status_tag": score.status_tag,
+                "total_score": float(score.total_score),
+            }
+            for score, company in rows
+        ]
 
     async def _get_data_freshness(self, db: AsyncSession) -> list[dict[str, Any]]:
         """주요 엔티티별 데이터 신선도를 반환한다."""

@@ -7,19 +7,26 @@ import {
   ArrowLeft,
   Calendar,
   Building2,
+  ClipboardCheck,
+  Sparkles,
 } from "lucide-react";
 import { useDocument, useCreateDocument, useDownloadDocument } from "@/modules/im/hooks/useDocuments";
+import { useIMRalphSessions } from "@/modules/im/hooks/useIMRalphLoop";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import { ProgressTracker } from "@/modules/im/components/ProgressTracker";
-import { SECTION_LABEL_MAP, IN_PROGRESS_STATUSES } from "@/modules/im/types/document";
+import { SECTION_LABEL_MAP, IN_PROGRESS_STATUSES, DATA_SOURCE_BADGE } from "@/modules/im/types/document";
+import { RALPH_ACTIVE_STATUSES } from "@/modules/im/types/ralph";
+import type { IMRalphSession } from "@/modules/im/types/ralph";
 import { formatBytes } from "@/lib/format";
 import { Button, Card, Breadcrumbs, Skeleton, SkeletonCard, PageHero } from "@/components/ui";
 import type { BreadcrumbItem } from "@/components/ui";
+import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
 export default function DocumentDetailPage() {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
   const { data: doc, isLoading } = useDocument(documentId ?? "");
+  const { data: ralphSessions } = useIMRalphSessions(documentId);
   const downloadDocument = useDownloadDocument();
   const createDocument = useCreateDocument();
   const [downloadingFormat, setDownloadingFormat] = useState<"pptx" | "pdf" | null>(null);
@@ -100,6 +107,8 @@ export default function DocumentDetailPage() {
       {/* Header */}
       <PageHero
         title={doc.project_name || doc.company_name}
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
         actions={
           <Button
@@ -134,7 +143,14 @@ export default function DocumentDetailPage() {
           </div>
           <div>
             <span className="text-text-secondary block">Data Source</span>
-            <span className="text-text-dark">{doc.data_source}</span>
+            {(() => {
+              const b = DATA_SOURCE_BADGE[doc.data_source as keyof typeof DATA_SOURCE_BADGE] ?? DATA_SOURCE_BADGE.MANUAL;
+              return (
+                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
+                  {b.label}
+                </span>
+              );
+            })()}
           </div>
           {doc.corp_code && (
             <div>
@@ -168,6 +184,38 @@ export default function DocumentDetailPage() {
       <Card title="Generation Progress" headerBar>
         <ProgressTracker status={doc.status} progressPct={doc.progress_pct} />
       </Card>
+
+      {/* Ralph Loop Design Quality */}
+      {ralphSessions && ralphSessions.length > 0 && (
+        <Card title="Design Quality (Ralph Loop)" headerBar>
+          <div className="space-y-3">
+            {ralphSessions.map((rs: IMRalphSession) => (
+              <RalphSessionCard key={rs.id} session={rs} />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Checklist Review Link (VDR 소스만 표시) */}
+      {doc.data_source === "VDR" && <Card title="VDR Checklist" headerBar>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm text-text-dark">
+              Review and confirm data extracted from VDR documents.
+            </p>
+            <p className="text-xs text-text-secondary mt-1">
+              All checklist items must be confirmed before generating the final IM.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            icon={ClipboardCheck}
+            onClick={() => navigate(`/im/documents/${doc.id}/checklist`)}
+          >
+            Review Checklist
+          </Button>
+        </div>
+      </Card>}
 
       {/* Download Section (Completed) */}
       {doc.status === "COMPLETED" && (
@@ -254,6 +302,60 @@ export default function DocumentDetailPage() {
             ))}
           </div>
         </Card>
+      )}
+    </div>
+  );
+}
+
+function RalphSessionCard({ session }: { session: IMRalphSession }) {
+  const isActive = RALPH_ACTIVE_STATUSES.includes(session.status);
+  const passLabel = session.pass_number === 1 ? "Draft" : "Final";
+
+  const scoreColor =
+    session.final_score >= 4.0
+      ? "text-accent"
+      : session.final_score >= 3.0
+        ? "text-caution"
+        : "text-negative";
+
+  return (
+    <div className="flex items-center gap-4 p-3 rounded-lg bg-bg-cool">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Sparkles className="h-4 w-4 text-accent" />
+        <span className="text-sm font-medium text-text-dark">
+          Pass {session.pass_number} ({passLabel})
+        </span>
+      </div>
+
+      <div className="flex-1 flex items-center gap-4">
+        {isActive ? (
+          <span className="text-xs text-accent animate-pulse">
+            Improving design quality...
+          </span>
+        ) : session.status === "COMPLETED" ? (
+          <>
+            <span className={`text-sm font-bold ${scoreColor}`}>
+              {session.final_score.toFixed(1)}/5.0
+            </span>
+            <span className="text-xs text-text-secondary">
+              {session.total_iterations} iteration{session.total_iterations !== 1 ? "s" : ""}
+              {" · "}${session.total_cost_usd.toFixed(3)}
+            </span>
+          </>
+        ) : session.status === "FAILED" ? (
+          <span className="text-xs text-negative">
+            Quality check failed
+            {session.error_message ? `: ${session.error_message.slice(0, 60)}` : ""}
+          </span>
+        ) : (
+          <span className="text-xs text-text-secondary">{session.status}</span>
+        )}
+      </div>
+
+      {session.critical_flags && session.critical_flags.length > 0 && (
+        <span className="text-xs text-negative font-medium">
+          {session.critical_flags.length} flag{session.critical_flags.length !== 1 ? "s" : ""}
+        </span>
       )}
     </div>
   );

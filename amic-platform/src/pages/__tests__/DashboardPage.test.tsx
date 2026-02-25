@@ -13,7 +13,7 @@ describe("DashboardPage", () => {
     });
 
     expect(
-      screen.getByText(`Welcome, ${mockUser.display_name}`),
+      screen.getByText(`Welcome, ${mockUser.display_name} ${mockUser.title} 님`),
     ).toBeInTheDocument();
   });
 
@@ -21,29 +21,26 @@ describe("DashboardPage", () => {
     renderWithProviders(<DashboardPage />);
 
     expect(screen.getByText("New Transaction")).toBeInTheDocument();
-    expect(screen.getByText("New Deal")).toBeInTheDocument();
-    expect(screen.getByText("New IM")).toBeInTheDocument();
+    expect(screen.getByText("New Document")).toBeInTheDocument();
     expect(screen.getByText("Search Company")).toBeInTheDocument();
   });
 
   it("renders module navigation cards", async () => {
     renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByText("Auto FDD")).toBeInTheDocument();
+    expect(screen.getByText("M&A Deals")).toBeInTheDocument();
+    expect(screen.getByText("Deal Doc Studio")).toBeInTheDocument();
     expect(screen.getByText("KIIS")).toBeInTheDocument();
-    expect(screen.getByText("IM Generator")).toBeInTheDocument();
   });
 
-  it("shows KPI values after loading", async () => {
+  it("shows KPI labels after loading", async () => {
     renderWithProviders(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Active FDD Deals")).toBeInTheDocument();
+      expect(screen.getByText("Active M&A Deals")).toBeInTheDocument();
     });
 
     expect(screen.getByText("Watchlist Alerts")).toBeInTheDocument();
-    expect(screen.getByText("IM In Progress")).toBeInTheDocument();
-    expect(screen.getByText("Draft Deals")).toBeInTheDocument();
   });
 
   it("shows Module Status section", async () => {
@@ -63,6 +60,6 @@ describe("DashboardPage", () => {
       authContext: { user: null },
     });
 
-    expect(screen.getByText("Welcome, User")).toBeInTheDocument();
+    expect(screen.getByText("Welcome, User 님")).toBeInTheDocument();
   });
 });

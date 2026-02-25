@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.schemas.transaction import TransactionOut
 from app.schemas.workflow import (
     PhaseCompletionStatus,
@@ -25,10 +25,11 @@ router = APIRouter(prefix="/transactions/{txn_id}/workflow", tags=["Workflow"])
 async def get_phase_status(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """현재 단계의 완료 조건 및 전환 가능 여부를 확인한다."""
     txn = await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     return get_phase_completion(txn)
 
 
@@ -37,7 +38,7 @@ async def advance_transaction_phase(
     txn_id: uuid.UUID,
     body: PhaseTransitionRequest,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     """다음/이전 단계로 전환한다."""
     txn = await transaction_service.get_transaction(db, txn_id)
@@ -50,7 +51,7 @@ async def change_transaction_status(
     txn_id: uuid.UUID,
     body: StatusChangeRequest,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     """거래 상태를 변경한다 (DRAFT → ACTIVE → ON_HOLD/COMPLETED/TERMINATED)."""
     txn = await transaction_service.get_transaction(db, txn_id)

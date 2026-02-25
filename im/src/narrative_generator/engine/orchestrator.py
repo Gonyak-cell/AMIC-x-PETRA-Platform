@@ -33,6 +33,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from src.api.core.log_decorators import log_error_with_input
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.config import NarrativeConfig, get_config
 from src.narrative_generator.engine.structured_output import (
@@ -226,12 +227,14 @@ class NarrativeOrchestrator:
                 self._model_router = None
                 self._llm_client = self._create_llm_client()
 
+    @log_error_with_input
     def generate(
         self,
         data: IMDocumentData,
         *,
         industry: str = "",
         sections: list[str] | None = None,
+        feedback_hints: dict[str, list[str]] | None = None,
     ) -> NarrativeResult:
         """전체 IM 내러티브를 생성한다.
 
@@ -240,6 +243,9 @@ class NarrativeOrchestrator:
             industry: 산업 분류 ("tech", "healthcare", "manufacturing",
                       "financial_services"). 빈 문자열이면 일반.
             sections: 생성할 섹션 ID 리스트. None이면 data의 활성 섹션 전체.
+            feedback_hints: Ralph Loop 이전 평가 피드백.
+                ``{section_id: ["피드백1", "피드백2"]}`` 형태.
+                해당 섹션 프롬프트 끝에 피드백 블록이 추가된다.
 
         Returns:
             NarrativeResult.
@@ -282,12 +288,14 @@ class NarrativeOrchestrator:
                 break
 
             try:
+                section_feedback = (feedback_hints or {}).get(section_id)
                 section_narrative = self._generate_section(
                     section_id=section_id,
                     data=data,
                     industry=industry,
                     industry_context=industry_context,
                     cost_tracker=cost_tracker,
+                    feedback=section_feedback,
                 )
 
                 # 토큰 예산 검사 & 자르기
@@ -388,6 +396,7 @@ class NarrativeOrchestrator:
         industry: str,
         industry_context: str,
         cost_tracker: CostTracker | None = None,
+        feedback: list[str] | None = None,
     ) -> SectionNarrative:
         """단일 섹션 내러티브 생성 (내부 구현).
 
@@ -413,6 +422,7 @@ class NarrativeOrchestrator:
             industry=industry,
             industry_context=industry_context,
             cost_tracker=cost_tracker,
+            feedback=feedback,
         )
 
     def _generate_section_legacy(
@@ -422,13 +432,14 @@ class NarrativeOrchestrator:
         industry: str,
         industry_context: str,
         cost_tracker: CostTracker | None = None,
+        feedback: list[str] | None = None,
     ) -> SectionNarrative:
         """기존 자유 생성 방식 (레거시).
 
         Steps:
         1. 프롬프트 조회
         2. RAG 컨텍스트 검색 (선택적)
-        3. 시스템/유저 프롬프트 조립
+        3. 시스템/유저 프롬프트 조립 (+ 피드백 주입)
         4. LLM 호출
         5. 응답 파싱
         """
@@ -456,6 +467,13 @@ class NarrativeOrchestrator:
         # 3. 프롬프트 조립
         system_prompt = prompt.build_system_prompt(industry_context=industry_context)
         user_prompt = prompt.build_user_prompt(data, context)
+
+        # 3-1. Ralph Loop 피드백 주입
+        if feedback:
+            feedback_block = "\n\n---\n이전 평가 피드백 (반드시 반영하세요):\n"
+            for i, hint in enumerate(feedback, 1):
+                feedback_block += f"  {i}. {hint}\n"
+            user_prompt += feedback_block
 
         # 4. LLM 호출
         raw_response = self._call_llm(

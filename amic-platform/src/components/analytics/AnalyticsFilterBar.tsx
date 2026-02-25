@@ -12,9 +12,11 @@ const TIME_RANGE_OPTIONS: SelectOption[] = [
 
 const MODULES: Array<{ value: AnalyticsModule | "all"; label: string }> = [
   { value: "all", label: "All Modules" },
+  { value: "ma", label: "M&A" },
   { value: "fdd", label: "FDD" },
   { value: "kiis", label: "KIIS" },
   { value: "im", label: "IM" },
+  { value: "docs", label: "Docs" },
 ];
 
 interface AnalyticsFilterBarProps {

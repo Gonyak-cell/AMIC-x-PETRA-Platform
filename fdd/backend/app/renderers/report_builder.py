@@ -139,6 +139,9 @@ class TableBlock:
     footer_rows: list[dict[str, Any]] = field(default_factory=list)  # 합계/소계 행
     show_header: bool = True
     zebra_stripe: bool = True
+    metadata: dict[str, Any] = field(default_factory=dict)
+    # metadata hints: {"style": "financial_statement", "subtotal_rows": [3,7],
+    #   "total_rows": [10], "indent_map": {0: 0, 1: 1, ...}, "tab_color": "003366"}
     position: Position | None = None
     size: Size | None = None
 
@@ -985,6 +988,488 @@ def build_issue_block(
         title=title,
         issues=issue_items,
         show_resolved=show_resolved,
+    )
+
+
+# =============================================================================
+# Financial Statement Builders (Phase 1)
+# =============================================================================
+
+
+def build_income_statement_block(
+    line_items: list[dict[str, Any]],
+    title: str = "Income Statement (손익계산서)",
+    tab_color: str = "003366",
+) -> TableBlock:
+    """손익계산서 블록 생성.
+
+    Args:
+        line_items: 표준 IS 라인아이템 리스트.
+            [{"code": "IS-REV-001", "name_ko": "매출액", "name_en": "Revenue",
+              "amount": "10000", "indent": 0, "is_subtotal": False, "display_order": 10}]
+        title: 테이블 제목
+        tab_color: 시트 탭 색상
+
+    Returns:
+        TableBlock (metadata.style = "financial_statement")
+    """
+    columns = [
+        TableColumn(key="name", header="계정과목", width=4.0, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Account", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+    ]
+
+    rows = []
+    subtotal_rows: list[int] = []
+    total_rows: list[int] = []
+    indent_map: dict[int, int] = {}
+
+    for idx, item in enumerate(line_items):
+        indent = item.get("indent", 0)
+        prefix = "  " * indent
+        rows.append(
+            {
+                "name": f"{prefix}{item.get('name_ko', '')}",
+                "name_en": f"{prefix}{item.get('name_en', '')}",
+                "amount": item.get("amount", ""),
+            }
+        )
+        indent_map[idx] = indent
+        if item.get("is_total"):
+            total_rows.append(idx)
+        elif item.get("is_subtotal"):
+            subtotal_rows.append(idx)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": total_rows,
+            "indent_map": indent_map,
+            "tab_color": tab_color,
+        },
+    )
+
+
+def build_balance_sheet_block(
+    line_items: list[dict[str, Any]],
+    title: str = "Balance Sheet (재무상태표)",
+    tab_color: str = "003366",
+) -> TableBlock:
+    """재무상태표 블록 생성.
+
+    Args:
+        line_items: 표준 BS 라인아이템 리스트. (IS와 동일 포맷)
+        title: 테이블 제목
+        tab_color: 시트 탭 색상
+
+    Returns:
+        TableBlock (metadata.style = "financial_statement")
+    """
+    columns = [
+        TableColumn(key="name", header="계정과목", width=4.0, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Account", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+    ]
+
+    rows = []
+    subtotal_rows: list[int] = []
+    total_rows: list[int] = []
+    indent_map: dict[int, int] = {}
+
+    for idx, item in enumerate(line_items):
+        indent = item.get("indent", 0)
+        prefix = "  " * indent
+        rows.append(
+            {
+                "name": f"{prefix}{item.get('name_ko', '')}",
+                "name_en": f"{prefix}{item.get('name_en', '')}",
+                "amount": item.get("amount", ""),
+            }
+        )
+        indent_map[idx] = indent
+        if item.get("is_total"):
+            total_rows.append(idx)
+        elif item.get("is_subtotal"):
+            subtotal_rows.append(idx)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": total_rows,
+            "indent_map": indent_map,
+            "tab_color": tab_color,
+        },
+    )
+
+
+def build_cash_flow_block(
+    line_items: list[dict[str, Any]],
+    title: str = "Cash Flow Statement (현금흐름표)",
+    tab_color: str = "003366",
+) -> TableBlock:
+    """현금흐름표 블록 생성 (간접법).
+
+    Args:
+        line_items: CF 라인아이템 리스트.
+            [{"name_ko": "영업활동 현금흐름", "name_en": "Operating CF",
+              "amount": "5000", "indent": 0, "is_subtotal": True}]
+        title: 테이블 제목
+
+    Returns:
+        TableBlock (metadata.style = "financial_statement")
+    """
+    columns = [
+        TableColumn(key="name", header="계정과목", width=4.0, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Account", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+    ]
+
+    rows = []
+    subtotal_rows: list[int] = []
+    total_rows: list[int] = []
+    indent_map: dict[int, int] = {}
+
+    for idx, item in enumerate(line_items):
+        indent = item.get("indent", 0)
+        prefix = "  " * indent
+        rows.append(
+            {
+                "name": f"{prefix}{item.get('name_ko', '')}",
+                "name_en": f"{prefix}{item.get('name_en', '')}",
+                "amount": item.get("amount", ""),
+            }
+        )
+        indent_map[idx] = indent
+        if item.get("is_total"):
+            total_rows.append(idx)
+        elif item.get("is_subtotal"):
+            subtotal_rows.append(idx)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": total_rows,
+            "indent_map": indent_map,
+            "tab_color": tab_color,
+        },
+    )
+
+
+# =============================================================================
+# Multi-Period & Trend Builders (Phase 2)
+# =============================================================================
+
+
+def build_seasonality_block(
+    title: str,
+    monthly_data: list[dict[str, Any]],
+    months: list[str],
+) -> TableBlock:
+    """NWC 계절성 분석 블록.
+
+    Args:
+        title: 테이블 제목
+        monthly_data: [{"item": "NWC / Revenue", "2024-01": "15.2%", ...}]
+        months: 월 리스트
+    """
+    if not months:
+        months = []
+
+    columns = [
+        TableColumn(key="item", header="항목", width=2.5, align=AlignType.LEFT),
+    ]
+    for month in months:
+        columns.append(
+            TableColumn(
+                key=month, header=month, width=1.0, align=AlignType.RIGHT, format="percentage"
+            )
+        )
+    columns.append(
+        TableColumn(key="avg", header="평균", width=1.0, align=AlignType.RIGHT, format="percentage")
+    )
+    columns.append(
+        TableColumn(key="stdev", header="표준편차", width=1.0, align=AlignType.RIGHT, format="percentage")
+    )
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=monthly_data,
+        zebra_stripe=True,
+        metadata={"tab_color": "FF6600"},
+    )
+
+
+def build_qoe_yoy_block(
+    title: str,
+    yoy_data: list[dict[str, Any]],
+    period_columns: list[str],
+) -> TableBlock:
+    """QoE YoY 비교 블록.
+
+    Args:
+        title: 테이블 제목
+        yoy_data: [{"category": "Revenue", "FY2024": "10000", "FY2025": "11000",
+                     "change": "1000", "change_pct": "10.0%"}]
+        period_columns: ["FY2024", "FY2025"]
+    """
+    if not period_columns:
+        period_columns = []
+
+    columns = [
+        TableColumn(key="category", header="항목", width=2.5, align=AlignType.LEFT),
+    ]
+    for period in period_columns:
+        columns.append(
+            TableColumn(
+                key=period, header=period, width=1.5, align=AlignType.RIGHT, format="currency"
+            )
+        )
+    columns.append(
+        TableColumn(key="change", header="증감", width=1.5, align=AlignType.RIGHT, format="currency")
+    )
+    columns.append(
+        TableColumn(key="change_pct", header="증감율", width=1.0, align=AlignType.RIGHT)
+    )
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=yoy_data,
+        zebra_stripe=True,
+        metadata={"style": "variance", "tab_color": "2E7D32"},
+    )
+
+
+def build_monthly_is_block(
+    title: str,
+    monthly_rows: list[dict[str, Any]],
+    months: list[str],
+) -> TableBlock:
+    """월별 손익 피벗 블록.
+
+    Args:
+        title: 테이블 제목
+        monthly_rows: [{"category": "Revenue", "2024-01": "800", "2024-02": "900", ...}]
+        months: 월 리스트
+    """
+    if not months:
+        months = []
+
+    columns = [
+        TableColumn(key="category", header="항목", width=2.5, align=AlignType.LEFT),
+    ]
+    for month in months:
+        columns.append(
+            TableColumn(
+                key=month, header=month, width=1.0, align=AlignType.RIGHT, format="currency"
+            )
+        )
+    columns.append(
+        TableColumn(key="total", header="합계", width=1.2, align=AlignType.RIGHT, format="currency")
+    )
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=monthly_rows,
+        zebra_stripe=True,
+        metadata={"tab_color": "2E7D32"},
+    )
+
+
+# =============================================================================
+# Sales & Cost Analysis Builders (Phase 3)
+# =============================================================================
+
+
+def build_revenue_breakdown_block(
+    title: str,
+    breakdown_rows: list[dict[str, Any]],
+) -> TableBlock:
+    """매출 상세 분석 블록 (거래처/계정별).
+
+    Args:
+        title: 테이블 제목
+        breakdown_rows: [{"counterparty": "거래처A", "amount": "5000",
+                          "pct": "50.0%", "rank": 1}]
+    """
+    columns = [
+        TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
+        TableColumn(key="counterparty", header="거래처/분류", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="amount", header="금액", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(key="pct", header="비중", width=1.0, align=AlignType.RIGHT),
+        TableColumn(key="cum_pct", header="누적비중", width=1.0, align=AlignType.RIGHT),
+    ]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=breakdown_rows,
+        zebra_stripe=True,
+        metadata={"tab_color": "2E7D32"},
+    )
+
+
+def build_cost_structure_block(
+    title: str,
+    cost_rows: list[dict[str, Any]],
+) -> TableBlock:
+    """원가 구조 분석 블록.
+
+    Args:
+        title: 테이블 제목
+        cost_rows: [{"category": "COGS", "name_ko": "매출원가", "amount": "6000",
+                      "pct_of_revenue": "60.0%"}]
+    """
+    columns = [
+        TableColumn(key="name_ko", header="항목", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="amount", header="금액", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(key="pct_of_revenue", header="매출 대비", width=1.2, align=AlignType.RIGHT),
+    ]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=cost_rows,
+        zebra_stripe=True,
+        metadata={"tab_color": "FF6600"},
+    )
+
+
+def build_margin_analysis_block(
+    title: str,
+    margin_rows: list[dict[str, Any]],
+    period_columns: list[str],
+) -> TableBlock:
+    """마진 분석 블록.
+
+    Args:
+        title: 테이블 제목
+        margin_rows: [{"metric": "Gross Margin", "FY2024": "35.0%", "FY2025": "37.0%", ...}]
+        period_columns: 기간 컬럼명 리스트
+    """
+    if not period_columns:
+        period_columns = []
+
+    columns = [
+        TableColumn(key="metric", header="마진 지표", width=2.5, align=AlignType.LEFT),
+    ]
+    for period in period_columns:
+        columns.append(
+            TableColumn(key=period, header=period, width=1.2, align=AlignType.RIGHT)
+        )
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=margin_rows,
+        zebra_stripe=True,
+        metadata={"tab_color": "FF6600"},
+    )
+
+
+def build_adjustment_by_category_block(
+    title: str,
+    category_rows: list[dict[str, Any]],
+) -> TableBlock:
+    """QoE 조정항목 카테고리별 소계 블록.
+
+    Args:
+        title: 테이블 제목
+        category_rows: [{"category": "Non-Recurring", "count": 3, "total": "500", "pct": "40%"}]
+    """
+    columns = [
+        TableColumn(key="category", header="조정 카테고리", width=2.5, align=AlignType.LEFT),
+        TableColumn(key="count", header="항목 수", width=1.0, align=AlignType.CENTER),
+        TableColumn(
+            key="total", header="합계 금액", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(key="pct", header="비중", width=1.0, align=AlignType.RIGHT),
+    ]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=category_rows,
+        zebra_stripe=True,
+        metadata={"tab_color": "2E7D32"},
+    )
+
+
+# =============================================================================
+# Reconciliation Builder (Phase 6)
+# =============================================================================
+
+
+def build_reconciliation_block(
+    title: str,
+    checks: list[dict[str, Any]],
+) -> TableBlock:
+    """검증/Reconciliation 블록.
+
+    Args:
+        title: 테이블 제목
+        checks: [{"check": "BS Balance", "expected": "0", "actual": "0",
+                   "difference": "0", "status": "Pass"}]
+    """
+    columns = [
+        TableColumn(key="check", header="검증 항목", width=3.0, align=AlignType.LEFT),
+        TableColumn(
+            key="expected", header="기대값", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(
+            key="actual", header="실제값", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(
+            key="difference", header="차이", width=1.5, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(key="status", header="결과", width=1.0, align=AlignType.CENTER),
+    ]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=checks,
+        zebra_stripe=False,
+        metadata={"style": "reconciliation", "tab_color": "999999"},
     )
 
 

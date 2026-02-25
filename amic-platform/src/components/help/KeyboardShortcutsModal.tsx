@@ -8,6 +8,8 @@ interface KeyboardShortcutsModalProps {
 
 const CONTEXT_LABELS: Record<string, string> = {
   global: "Global",
+  ma: "M&A Deals",
+  docs: "Deal Doc Studio",
   fdd: "FDD",
   kiis: "KIIS",
   im: "IM",

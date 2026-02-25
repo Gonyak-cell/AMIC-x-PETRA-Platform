@@ -9,10 +9,12 @@ export interface UserCreate {
   display_name: string;
   password: string;
   role: UserRole;
+  title?: string;
 }
 
 export interface UserUpdate {
   display_name?: string;
+  title?: string;
   role?: UserRole;
   is_active?: boolean;
 }

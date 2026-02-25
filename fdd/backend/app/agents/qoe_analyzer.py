@@ -17,6 +17,7 @@ from app.agents.guardrails import (
     validate_entry_ids_exist,
     validate_no_calculations,
 )
+from app.core.log_decorators import log_error_with_input
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -159,6 +160,7 @@ class QoEAnalyzerAgent(BaseAgent):
 
         return errors
 
+    @log_error_with_input
     def run(
         self,
         context: dict[str, Any],

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # Production settings
     cors_origins: str = "http://localhost:5173"
     log_level: str = "INFO"
+    log_dir: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -30,7 +30,8 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import { formatAmount } from "@/lib/format";
+import { formatAmount, formatAmountCompact } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
 const PEG_METHOD_OPTIONS = [
   { value: "LTM_AVERAGE", label: "LTM Average" },
@@ -436,6 +437,8 @@ export default function NWCPage() {
         title="Net Working Capital"
         subtitle="Working Capital Analysis & Peg Simulation"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           !latestNWC ? (
             <div className="flex items-center gap-3">
@@ -469,21 +472,21 @@ export default function NWCPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Current Assets"
-            value={formatAmount(latestNWC.total_current_assets, currency)}
+            value={formatAmountCompact(latestNWC.total_current_assets, currency)}
             icon={Wallet}
           />
           <KpiCard
             label="Current Liabilities"
-            value={formatAmount(latestNWC.total_current_liabilities, currency)}
+            value={formatAmountCompact(latestNWC.total_current_liabilities, currency)}
           />
           <KpiCard
             label="Net Working Capital"
-            value={formatAmount(latestNWC.net_working_capital, currency)}
+            value={formatAmountCompact(latestNWC.net_working_capital, currency)}
             variant={Number(latestNWC.net_working_capital) >= 0 ? "positive" : "negative"}
           />
           <KpiCard
             label="Target NWC"
-            value={formatAmount(latestNWC.peg_target, currency)}
+            value={formatAmountCompact(latestNWC.peg_target, currency)}
             icon={TrendingUp}
           />
         </div>

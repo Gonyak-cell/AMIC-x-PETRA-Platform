@@ -42,6 +42,7 @@ def init_engine(config: APIConfig | None = None) -> AsyncEngine:
         pool_size=config.db_pool_size,
         max_overflow=config.db_max_overflow,
         echo=config.db_echo,
+        connect_args={"ssl": False},
     )
     AsyncSessionFactory = async_sessionmaker(
         bind=async_engine,

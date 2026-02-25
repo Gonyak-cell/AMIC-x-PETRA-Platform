@@ -16,7 +16,12 @@ from typing import Any
 
 import plotly.graph_objects as go
 
-from src.chart_engine.config import ChartColorConfig, ChartConfig
+from src.chart_engine.config import (
+    ChartConfig,
+    DEFAULT_WIDTH,
+    DEFAULT_HEIGHT,
+    chart_config_from_design_tokens,
+)
 from src.chart_engine.export.png_exporter import plotly_to_png as _ce_plotly_to_png
 from src.chart_engine.plotly import (
     create_combo_chart as _ce_combo,
@@ -32,18 +37,6 @@ from src.design_renderer.image_optimizer import compress_png
 
 logger = logging.getLogger(__name__)
 
-# 차트 상수 (하위 호환)
-CHART_DPI = 300
-DEFAULT_WIDTH = 900  # px
-DEFAULT_HEIGHT = 500  # px
-KOREAN_FONT = "NanumGothic"
-
-AMIC_CHART_COLORS = [
-    "#0F3A32", "#26C260", "#3D3D3D", "#777777",
-    "#E8F5E9", "#EF6C00", "#BC2C1A", "#4CAF50",
-    "#2196F3", "#9C27B0",
-]
-
 
 # ---------------------------------------------------------------------------
 # IMDesignTokens → ChartConfig 변환
@@ -55,29 +48,12 @@ def _tokens_to_config(
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
 ) -> ChartConfig:
-    """IMDesignTokens → ChartConfig 변환."""
+    """IMDesignTokens → ChartConfig (chart_engine 공통 어댑터 위임)."""
     tokens = tokens or DEFAULT_TOKENS
-    c = tokens.colors
-    return ChartConfig(
-        colors=ChartColorConfig(
-            primary=c.primary,
-            accent=c.accent,
-            text_body=c.text_body,
-            text_secondary=c.text_secondary,
-            positive=c.positive,
-            negative=c.negative,
-            caution=c.caution,
-            gray_medium=c.gray_medium,
-            gray_border=c.gray_border,
-            bg_light_green=c.bg_light_green,
-            bg_cool_grey=c.bg_cool_grey,
-            text_white=c.text_white,
-            text_dark=c.text_dark,
-        ),
-        width=width,
-        height=height,
-        font=tokens.typography.font_chart,
-    )
+    cfg = chart_config_from_design_tokens(tokens)
+    if width != DEFAULT_WIDTH or height != DEFAULT_HEIGHT:
+        cfg = ChartConfig(colors=cfg.colors, width=width, height=height, font=cfg.font)
+    return cfg
 
 
 # ---------------------------------------------------------------------------

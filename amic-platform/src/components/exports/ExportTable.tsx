@@ -148,6 +148,7 @@ export function ExportTable({
         keyField="id"
         emptyMessage="No exports found."
         uppercaseHeaders
+        borderless={false}
       />
     </div>
   );

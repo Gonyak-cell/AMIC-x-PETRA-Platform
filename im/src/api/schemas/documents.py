@@ -13,8 +13,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "CUSTOM"}
-_VALID_DATA_SOURCES = {"DART", "MANUAL", "EXCEL"}
+_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "TEASER", "CUSTOM"}
+_VALID_DATA_SOURCES = {"DART", "MANUAL", "EXCEL", "VDR"}
 
 # 전용 산업 모듈이 등록된 산업
 _SUPPORTED_INDUSTRIES = {
@@ -42,7 +42,7 @@ class DocumentCreate(BaseModel):
         default="MANUAL", description="데이터 소스 (DART/MANUAL/EXCEL)"
     )
     im_style: str = Field(
-        default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/CUSTOM)"
+        default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/TEASER/CUSTOM)"
     )
     sections: list[str] = Field(
         default_factory=list, description="포함 섹션 리스트"
@@ -55,6 +55,12 @@ class DocumentCreate(BaseModel):
     )
     pdf_password: str | None = Field(
         default=None, min_length=4, description="PDF 암호 (최소 4자)"
+    )
+    ppt_design_style: str | None = Field(
+        default=None, description="PPT 디자인 스타일 (AMIC/AMIC_COLLAB)"
+    )
+    collab_partner_name: str | None = Field(
+        default=None, max_length=200, description="협업 파트너명 (AMIC_COLLAB 시 필수)"
     )
 
     @field_validator("corp_code")
@@ -89,6 +95,14 @@ class DocumentCreate(BaseModel):
             raise ValueError(
                 f"industry는 {sorted(_ALL_VALID_INDUSTRIES)} 중 하나여야 합니다"
             )
+        return v
+
+    @field_validator("ppt_design_style")
+    @classmethod
+    def validate_ppt_design_style(cls, v: str | None) -> str | None:
+        """ppt_design_style이 유효한 값인지 검증한다."""
+        if v is not None and v not in {"AMIC", "AMIC_COLLAB"}:
+            raise ValueError("ppt_design_style은 AMIC 또는 AMIC_COLLAB이어야 합니다")
         return v
 
     @model_validator(mode="after")

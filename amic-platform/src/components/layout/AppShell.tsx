@@ -10,7 +10,9 @@ import {
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { MobileMenuButton } from "./MobileMenuButton";
+import amicMainWhiteUrl from "@/assets/logos/AMIC_Main_White.svg";
 import { SidebarOverlay } from "./SidebarOverlay";
+import { PageTransition } from "./PageTransition";
 import { DesktopHeader } from "@/components/DesktopHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -141,10 +143,10 @@ export default function AppShell({ children }: AppShellProps) {
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               />
-              <div className="flex items-center gap-1.5">
-                <span className="text-white font-heading font-bold text-sm tracking-[0.18em]">AMIC</span>
-                <span className="text-white/40 text-xs font-light">&amp;</span>
-                <span className="text-accent font-heading font-bold text-xs tracking-[0.08em]">PETRABRIDGE PARTNERS</span>
+              <div className="flex items-center gap-2">
+                <img src={amicMainWhiteUrl} alt="AMIC" className="h-5 w-auto" />
+                <span className="text-white/40 text-xs font-display">x</span>
+                <span className="text-accent font-display font-bold text-[10px] tracking-[0.08em]">PETRA</span>
               </div>
               <div className="ml-auto text-white">
                 <NotificationBell />
@@ -158,7 +160,7 @@ export default function AppShell({ children }: AppShellProps) {
             />
           )}
           <div className="max-w-7xl mx-auto px-4 py-4 md:px-8 md:py-6">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </div>
         </main>
       </div>

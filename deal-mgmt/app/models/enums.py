@@ -107,14 +107,29 @@ class ValuationMethod(enum.StrEnum):
 
 # ── Phase 2: DD Checklist ──────────────────────────────
 class DDWorkstream(enum.StrEnum):
-    FINANCIAL = "FINANCIAL"
-    LEGAL = "LEGAL"
-    TAX = "TAX"
-    COMMERCIAL = "COMMERCIAL"
-    IT = "IT"
-    HR = "HR"
-    ENVIRONMENTAL = "ENVIRONMENTAL"
-    INSURANCE = "INSURANCE"
+    # FDD (재무실사)
+    FDD_FINANCIAL_STATEMENTS = "FDD_FINANCIAL_STATEMENTS"
+    FDD_REVENUE = "FDD_REVENUE"
+    FDD_WORKING_CAPITAL = "FDD_WORKING_CAPITAL"
+    FDD_DEBT_CASH = "FDD_DEBT_CASH"
+    FDD_PROJECTIONS = "FDD_PROJECTIONS"
+    # LDD (법률실사)
+    LDD_CORPORATE = "LDD_CORPORATE"
+    LDD_PERMITS = "LDD_PERMITS"
+    LDD_CONTRACTS = "LDD_CONTRACTS"
+    LDD_ASSETS = "LDD_ASSETS"
+    LDD_LABOR = "LDD_LABOR"
+    LDD_LITIGATION = "LDD_LITIGATION"
+    LDD_IP = "LDD_IP"
+    LDD_INSURANCE = "LDD_INSURANCE"
+    LDD_ENVIRONMENT = "LDD_ENVIRONMENT"
+    # TDD (세무실사)
+    TDD_CORPORATE_TAX = "TDD_CORPORATE_TAX"
+    TDD_VAT = "TDD_VAT"
+    TDD_TRANSFER_PRICING = "TDD_TRANSFER_PRICING"
+    TDD_WITHHOLDING = "TDD_WITHHOLDING"
+    TDD_TAX_INCENTIVES = "TDD_TAX_INCENTIVES"
+    # 기타
     OTHER = "OTHER"
 
 
@@ -217,6 +232,164 @@ class EarnoutMetric(enum.StrEnum):
     OTHER = "OTHER"
 
 
+# ── Phase 5A: Notes ──────────────────────────────────
+class NoteType(enum.StrEnum):
+    COMMENT = "COMMENT"
+    DECISION = "DECISION"
+    QUESTION = "QUESTION"
+    ACTION_ITEM = "ACTION_ITEM"
+
+
+# ── Phase 5A: Approval ──────────────────────────────
+class ApprovalType(enum.StrEnum):
+    PHASE_ADVANCE = "PHASE_ADVANCE"
+    STATUS_CHANGE = "STATUS_CHANGE"
+    CONTRACT_SIGN = "CONTRACT_SIGN"
+    DEAL_TERMS = "DEAL_TERMS"
+
+
+class ApprovalStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
+
+
+# ── Phase 5B: Risk ─────────────────────────────────────
+class RiskCategory(enum.StrEnum):
+    REGULATORY = "REGULATORY"
+    FINANCIAL = "FINANCIAL"
+    LEGAL = "LEGAL"
+    OPERATIONAL = "OPERATIONAL"
+    REPUTATIONAL = "REPUTATIONAL"
+    TAX = "TAX"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
+    MARKET = "MARKET"
+    OTHER = "OTHER"
+
+
+class RiskSeverity(enum.StrEnum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RiskLikelihood(enum.StrEnum):
+    VERY_HIGH = "VERY_HIGH"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    VERY_LOW = "VERY_LOW"
+
+
+class RiskStatus(enum.StrEnum):
+    IDENTIFIED = "IDENTIFIED"
+    ASSESSING = "ASSESSING"
+    MITIGATING = "MITIGATING"
+    MITIGATED = "MITIGATED"
+    ACCEPTED = "ACCEPTED"
+    CLOSED = "CLOSED"
+
+
+# ── Phase 5B: Compliance ──────────────────────────────
+class ComplianceCategory(enum.StrEnum):
+    ANTITRUST = "ANTITRUST"
+    FOREIGN_INVESTMENT = "FOREIGN_INVESTMENT"
+    SECURITIES = "SECURITIES"
+    DATA_PRIVACY = "DATA_PRIVACY"
+    ANTI_CORRUPTION = "ANTI_CORRUPTION"
+    SANCTIONS = "SANCTIONS"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
+    LABOR = "LABOR"
+    TAX = "TAX"
+    PERMITS = "PERMITS"
+    OTHER = "OTHER"
+
+
+class ComplianceStatus(enum.StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    IN_REVIEW = "IN_REVIEW"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    FLAGGED = "FLAGGED"
+    NON_COMPLIANT = "NON_COMPLIANT"
+    WAIVED = "WAIVED"
+
+
+# ── Phase 6: Legal Documents ──────────────────────────
+class LegalDocType(enum.StrEnum):
+    SPA = "SPA"   # 주식매매계약
+    SHA = "SHA"   # 주주간계약
+    BTA = "BTA"   # 영업양수도계약
+    SSA = "SSA"   # 신주인수계약
+    MOU = "MOU"   # 양해각서
+
+
+class LegalDocStatus(enum.StrEnum):
+    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 렌더링 전
+    GENERATING = "GENERATING"  # docxtpl 렌더링 중
+    READY      = "READY"       # 다운로드 가능
+    FAILED     = "FAILED"      # 렌더링 실패
+
+
+# ── Marketing Materials (TM / DM / IM) ───────────────
+class MarketingDocType(enum.StrEnum):
+    TM = "TM"   # Teaser Memorandum — 매수자 접촉 전 익명 요약 PPTX
+    DM = "DM"   # Discussion Memo — 논의 사항 정리 PPTX (단계 무관)
+    IM = "IM"   # Information Memorandum — NDA 후 상세 투자 안내 PPTX
+
+
+class MarketingDocStatus(enum.StrEnum):
+    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 생성 전
+    GENERATING = "GENERATING"  # PPTX 렌더링 중
+    READY      = "READY"       # 다운로드 가능
+    FAILED     = "FAILED"      # 생성 실패
+
+
+# ── Phase 7: LDD (Legal Due Diligence) Reports ────────
+class LDDReportStatus(enum.StrEnum):
+    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 렌더링 전
+    ANALYZING  = "ANALYZING"   # Ralph Loop #1: VDR 기반 AI 초안 분석 중
+    REVIEW     = "REVIEW"      # 사용자 체크리스트 리뷰 대기
+    FINALIZING = "FINALIZING"  # Ralph Loop #2: 사용자 피드백 반영 최종 Refine 중
+    GENERATING = "GENERATING"  # docxtpl 렌더링 중
+    READY      = "READY"       # 다운로드 가능
+    FAILED     = "FAILED"      # 렌더링 실패
+
+
+class LDDReportType(enum.StrEnum):
+    FULL     = "FULL"     # 정식 전체 LDD 보고서 (10개 섹션)
+    REDFLAG  = "REDFLAG"  # Redflag DD — Executive Summary + Red/Amber 이슈만
+
+
+class LDDItemStatus(enum.StrEnum):
+    OK      = "OK"       # 이슈 없음
+    ISSUE   = "ISSUE"    # 이슈 발견
+    NA      = "NA"       # 해당 없음
+    PENDING = "PENDING"  # 미검토 (추후 확인 필요)
+
+
+class LDDIssueLevel(enum.StrEnum):
+    CRITICAL = "CRITICAL"  # 거래 중단/재구조화 필요 → Red
+    HIGH     = "HIGH"      # 가격/조건 조정 필요 → Amber
+    MEDIUM   = "MEDIUM"    # 진술보장/계약 반영 → Amber
+    LOW      = "LOW"       # 경미, 모니터링 → Green
+
+
+class LDDSectionType(enum.StrEnum):
+    GOVERNANCE  = "GOVERNANCE"   # 기업 일반 및 지배구조
+    CAPITAL     = "CAPITAL"      # 자본구조 및 주주협약
+    CONTRACTS   = "CONTRACTS"    # 주요 계약
+    LITIGATION  = "LITIGATION"   # 소송 및 분쟁
+    LABOR       = "LABOR"        # 인사 및 노무
+    IP          = "IP"           # 지식재산권
+    REAL_ESTATE = "REAL_ESTATE"  # 부동산 및 환경
+    PERMITS     = "PERMITS"      # 인허가 및 규제
+    TAX         = "TAX"          # 조세
+    DATA_IT     = "DATA_IT"      # 개인정보 및 IT
+
+
 # ── Audit ─────────────────────────────────────────────
 class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
@@ -227,3 +400,268 @@ class AuditAction(enum.StrEnum):
     MEMBER_ADDED = "MEMBER_ADDED"
     MEMBER_REMOVED = "MEMBER_REMOVED"
     SERVICE_LINKED = "SERVICE_LINKED"
+    APPROVAL_REQUESTED = "APPROVAL_REQUESTED"
+    APPROVAL_DECIDED = "APPROVAL_DECIDED"
+    NOTE_CREATED = "NOTE_CREATED"
+    CLIENT_ASSIGNED = "CLIENT_ASSIGNED"
+    CLIENT_REMOVED = "CLIENT_REMOVED"
+
+
+# ── VDR (Virtual Data Room) ──────────────────────────
+class VdrFolderCategory(enum.StrEnum):
+    """M&A VDR 기본 폴더 카테고리."""
+    CORPORATE = "CORPORATE"         # 기업 일반 (정관, 등기부 등)
+    FINANCIAL = "FINANCIAL"         # 재무 자료
+    LEGAL = "LEGAL"                 # 법률 자료
+    TAX = "TAX"                     # 세무 자료
+    HR = "HR"                       # 인사/노무
+    TECHNICAL = "TECHNICAL"         # 기술/IT
+    COMMERCIAL = "COMMERCIAL"       # 영업/마케팅
+    REAL_ESTATE = "REAL_ESTATE"     # 부동산/자산
+    ENVIRONMENT = "ENVIRONMENT"     # 환경
+    IP = "IP"                       # 지식재산권
+    INSURANCE = "INSURANCE"         # 보험
+    CUSTOM = "CUSTOM"               # 사용자 생성 폴더
+
+
+class VdrDocumentStatus(enum.StrEnum):
+    """VDR 문서 상태."""
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+    DELETED = "DELETED"
+
+
+# ── Meeting Logs (마케팅/협상 미팅 로그) ────────────────
+class MeetingPhase(enum.StrEnum):
+    MARKETING = "MARKETING"
+    NEGOTIATION = "NEGOTIATION"
+
+
+class MeetingChannel(enum.StrEnum):
+    IN_PERSON = "IN_PERSON"
+    EMAIL = "EMAIL"
+    PHONE = "PHONE"
+    VIDEO = "VIDEO"
+    HYBRID = "HYBRID"
+
+
+class MeetingStatus(enum.StrEnum):
+    SCHEDULED = "SCHEDULED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    POSTPONED = "POSTPONED"
+
+
+class AttendeeRole(enum.StrEnum):
+    SELLER_ADVISOR = "SELLER_ADVISOR"
+    BUYER_ADVISOR = "BUYER_ADVISOR"
+    LEGAL_COUNSEL = "LEGAL_COUNSEL"
+    CLIENT_REPRESENTATIVE = "CLIENT_REPRESENTATIVE"
+    COUNTERPARTY = "COUNTERPARTY"
+    OBSERVER = "OBSERVER"
+    OTHER = "OTHER"
+
+
+class ActionItemStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+# 마케팅 전용
+class BuyerReaction(enum.StrEnum):
+    VERY_POSITIVE = "VERY_POSITIVE"
+    POSITIVE = "POSITIVE"
+    NEUTRAL = "NEUTRAL"
+    NEGATIVE = "NEGATIVE"
+    VERY_NEGATIVE = "VERY_NEGATIVE"
+
+
+class ConditionMatchLevel(enum.StrEnum):
+    FULL_MATCH = "FULL_MATCH"
+    PARTIAL_MATCH = "PARTIAL_MATCH"
+    MISMATCH = "MISMATCH"
+    NOT_ASSESSED = "NOT_ASSESSED"
+
+
+# 협상 전용
+class NegotiationIssueStatus(enum.StrEnum):
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    AGREED = "AGREED"
+    DEFERRED = "DEFERRED"
+    DEADLOCKED = "DEADLOCKED"
+
+
+class NegotiationIssuePriority(enum.StrEnum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+# ── Permit Analysis (인허가 분석) ────────────────────────
+class PermitFilingType(enum.StrEnum):
+    """신고/허가 유형."""
+    CHANGE_NOTIFICATION = "CHANGE_NOTIFICATION"   # 변경신고
+    CHANGE_APPROVAL = "CHANGE_APPROVAL"           # 변경허가
+    NEW_REGISTRATION = "NEW_REGISTRATION"         # 신규등록/허가
+    RENEWAL = "RENEWAL"                           # 갱신
+
+
+class PermitTimingType(enum.StrEnum):
+    """사전/사후 신고 구분."""
+    PRE_FILING = "PRE_FILING"       # 사전신고 (거래 전)
+    POST_FILING = "POST_FILING"     # 사후신고 (거래 후)
+    BOTH = "BOTH"                   # 사전+사후 (단계별)
+
+
+class TranscriptionJobStatus(enum.StrEnum):
+    """녹음 변환 작업 상태."""
+    PENDING = "PENDING"
+    TRANSCRIBING = "TRANSCRIBING"
+    ANALYZING = "ANALYZING"
+    COMPLETED = "COMPLETED"
+    APPROVED = "APPROVED"
+    FAILED = "FAILED"
+
+
+class PermitAnalysisStatus(enum.StrEnum):
+    """인허가 분석 상태."""
+    PENDING = "PENDING"
+    ANALYZING = "ANALYZING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    MANUALLY_REVIEWED = "MANUALLY_REVIEWED"
+
+
+class PermitRequirementStatus(enum.StrEnum):
+    """개별 인허가 요건 처리 상태."""
+    IDENTIFIED = "IDENTIFIED"
+    DOCUMENTS_PREPARING = "DOCUMENTS_PREPARING"
+    FILED = "FILED"
+    APPROVED = "APPROVED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+# ── Financial Model (재무모델) ─────────────────────────
+class FinancialModelType(enum.StrEnum):
+    DCF = "DCF"                        # Discounted Cash Flow
+    LBO = "LBO"                        # Leveraged Buyout
+    COMPS = "COMPS"                    # Trading Multiples (GPCM)
+    TRANSACTION_COMPS = "TRANSACTION_COMPS"  # Transaction Multiples (GTM)
+    PROJECTION = "PROJECTION"          # Business Projection / FS Model
+    FULL = "FULL"                      # Full Valuation (DCF + Comps + Sensitivity)
+
+
+class FinancialModelStatus(enum.StrEnum):
+    DRAFT = "DRAFT"                    # 파라미터 저장 완료, 생성 전
+    GENERATING = "GENERATING"          # Ralph Loop Pass 1: 초안 생성 중
+    PENDING_REVIEW = "PENDING_REVIEW"  # 체크리스트 리뷰 대기
+    FINALIZING = "FINALIZING"          # Ralph Loop Pass 2: 최종 생성 중
+    READY = "READY"                    # 다운로드 가능
+    FAILED = "FAILED"                  # 생성 실패
+
+
+class FMChecklistStatus(enum.StrEnum):
+    GENERATING = "GENERATING"          # Reserved — DB enum 호환용, 서비스에서 미사용 (즉시 PENDING_REVIEW)
+    PENDING_REVIEW = "PENDING_REVIEW"  # 사용자 리뷰 대기
+    REVIEWED = "REVIEWED"              # Reserved — DB enum 호환용, 서비스에서 미사용 (PENDING_REVIEW → FINALIZED 직접 전환)
+    FINALIZED = "FINALIZED"            # 확정 → 최종 Excel 생성 트리거
+
+
+class FMChecklistItemStatus(enum.StrEnum):
+    AUTO_GENERATED = "AUTO_GENERATED"  # 자동 추출 (미리뷰)
+    CONFIRMED = "CONFIRMED"            # 사용자 확인
+    CORRECTED = "CORRECTED"            # 사용자 수정
+    FLAGGED = "FLAGGED"                # 이슈 플래그
+    NOT_APPLICABLE = "NOT_APPLICABLE"  # 해당 없음
+
+
+class FMChecklistCategory(enum.StrEnum):
+    # Revenue & Growth
+    REVENUE_FORECAST = "REVENUE_FORECAST"
+    GROWTH_ASSUMPTIONS = "GROWTH_ASSUMPTIONS"
+    VOLUME_PRICE_MIX = "VOLUME_PRICE_MIX"
+    # Cost Structure
+    COGS_FORECAST = "COGS_FORECAST"
+    SGA_FORECAST = "SGA_FORECAST"
+    DEPRECIATION_AMORT = "DEPRECIATION_AMORT"
+    CAPEX_FORECAST = "CAPEX_FORECAST"
+    # Working Capital & Cash Flow
+    NWC_ASSUMPTIONS = "NWC_ASSUMPTIONS"
+    FCF_DERIVATION = "FCF_DERIVATION"
+    # Capital Structure & WACC
+    FM_DEBT_SCHEDULE = "FM_DEBT_SCHEDULE"
+    WACC_COMPONENTS = "WACC_COMPONENTS"
+    TAX_RATE = "TAX_RATE"
+    # Valuation
+    DCF_PARAMETERS = "DCF_PARAMETERS"
+    TRADING_MULTIPLES = "TRADING_MULTIPLES"
+    TRANSACTION_MULTIPLES = "TRANSACTION_MULTIPLES"
+    # Scenarios & Sensitivity
+    BASE_SCENARIO = "BASE_SCENARIO"
+    UPSIDE_SCENARIO = "UPSIDE_SCENARIO"
+    DOWNSIDE_SCENARIO = "DOWNSIDE_SCENARIO"
+    SENSITIVITY_MATRIX = "SENSITIVITY_MATRIX"
+
+
+class FMChecklistSeverity(enum.StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    INFO = "INFO"
+
+
+# ── RFI (Request for Information) ─────────────────────────
+
+
+class RFIStatus(enum.StrEnum):
+    DRAFT = "DRAFT"
+    SENT = "SENT"
+    PARTIALLY_RESPONDED = "PARTIALLY_RESPONDED"
+    FULLY_RESPONDED = "FULLY_RESPONDED"
+    CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
+
+
+class RFIItemStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    RESPONDED = "RESPONDED"
+    CLARIFICATION_NEEDED = "CLARIFICATION_NEEDED"
+    ACCEPTED = "ACCEPTED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class RFIItemPriority(enum.StrEnum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RFICategory(enum.StrEnum):
+    GENERAL = "GENERAL"
+    FINANCIAL = "FINANCIAL"
+    TAX = "TAX"
+    LEGAL = "LEGAL"
+    OPERATIONAL = "OPERATIONAL"
+    COMMERCIAL = "COMMERCIAL"
+    HR = "HR"
+    IT = "IT"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
+    INSURANCE = "INSURANCE"
+    IP = "IP"
+    REAL_ESTATE = "REAL_ESTATE"
+    VALUATION = "VALUATION"
+    OTHER = "OTHER"
+
+
+class RFISourceType(enum.StrEnum):
+    MANUAL = "MANUAL"
+    IM_CHECKLIST = "IM_CHECKLIST"
+    FDD_CHECKLIST = "FDD_CHECKLIST"
+    DD_CHECKLIST = "DD_CHECKLIST"
+    EXCEL_IMPORT = "EXCEL_IMPORT"
+    AI_SUGGESTED = "AI_SUGGESTED"

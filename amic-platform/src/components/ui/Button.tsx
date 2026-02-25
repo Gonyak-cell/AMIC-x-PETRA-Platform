@@ -1,10 +1,11 @@
-import { forwardRef } from "react";
+import { forwardRef, useCallback } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { gsap } from "@/lib/gsap";
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "accent";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "accent" | "brand";
   size?: "sm" | "md" | "lg";
   icon?: LucideIcon;
   iconPosition?: "left" | "right";
@@ -22,6 +23,8 @@ const variantStyles = {
     "bg-negative text-white hover:bg-red-700 focus:ring-negative shadow-dr-sm",
   accent:
     "bg-accent text-white hover:bg-accent-hover focus:ring-accent shadow-dr-sm hover:shadow-glow-green",
+  brand:
+    "bg-gradient-to-r from-amic to-solid-green text-white hover:from-amic-700 hover:to-solid-green focus:ring-amic-600 shadow-dr-sm hover:shadow-glow-teal",
 };
 
 const sizeStyles = {
@@ -41,26 +44,63 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       loading,
       disabled,
       children,
+      onClick,
       ...props
     },
-    ref
+    ref,
   ) => {
     const isDisabled = disabled || loading;
+
+    const handleClick = useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (isDisabled) return;
+
+        // Ripple effect
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const ripple = document.createElement("span");
+        ripple.className =
+          "absolute rounded-full bg-white/30 pointer-events-none";
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        ripple.style.width = "0px";
+        ripple.style.height = "0px";
+        ripple.style.transform = "translate(-50%, -50%)";
+        btn.appendChild(ripple);
+
+        const diameter = Math.max(rect.width, rect.height) * 2;
+
+        gsap.to(ripple, {
+          width: diameter,
+          height: diameter,
+          opacity: 0,
+          duration: 0.6,
+          ease: "power2.out",
+          onComplete: () => ripple.remove(),
+        });
+
+        onClick?.(e);
+      },
+      [isDisabled, onClick],
+    );
 
     return (
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-dr-sm font-medium transition-all duration-200",
+          "relative overflow-hidden inline-flex items-center justify-center gap-2 rounded-dr-sm font-medium whitespace-nowrap transition-all duration-200",
           "focus:outline-none focus:ring-2 focus:ring-offset-2",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           "active:scale-[0.98]",
           variantStyles[variant],
           sizeStyles[size],
-          className
+          className,
         )}
         disabled={isDisabled}
         aria-busy={loading || undefined}
+        onClick={handleClick}
         {...props}
       >
         {loading ? (
@@ -93,7 +133,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
       </button>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";

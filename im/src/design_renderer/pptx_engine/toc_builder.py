@@ -33,6 +33,15 @@ SECTION_DISPLAY_NAMES: dict[str, str] = {
     "shareholder_structure": "주주 구성",
     "transaction_structure": "거래 구조",
     "appendix": "부록",
+    # TM (Teaser Memorandum) 전용
+    "target_positioning": "Target Positioning",
+    "market_outlook": "Market Outlook",
+    "demand_driver": "Key Demand Driver",
+    "supply_driver": "Key Supply Driver",
+    "target_overview": "Target Overview",
+    "target_highlights": "Target Highlights",
+    "proforma_plan": "Pro-Forma 사업계획",
+    "proforma_financials": "Pro-Forma 재무제표",
 }
 
 
@@ -215,3 +224,224 @@ def _add_highlight_bar(
         tokens.colors.accent.lstrip("#")
     )
     bar.line.fill.background()
+
+
+# ---------------------------------------------------------------------------
+# TM (Teaser Memorandum) 전용 고정 TOC
+# ---------------------------------------------------------------------------
+
+from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
+
+
+def build_tm_toc_slide(
+    slide: Any,
+    current_group: str,
+    *,
+    page_numbers: dict[str, int] | None = None,
+    tokens: IMDesignTokens | None = None,
+) -> Any:
+    """TM 전용 고정 4그룹 TOC 슬라이드 생성.
+
+    TEASER_TOC_GROUPS 기반 고정 구조를 항상 4그룹 모두 표시하고,
+    current_group에 해당하는 그룹을 하이라이트한다.
+
+    Args:
+        slide: Slide 객체 (BLANK 레이아웃).
+        current_group: 현재 활성 그룹 key.
+        page_numbers: 그룹 key → 시작 페이지 번호 매핑.
+        tokens: 디자인 토큰.
+
+    Returns:
+        slide 객체.
+    """
+    from src.design_renderer.im_document import TEASER_TOC_GROUPS
+
+    if tokens is None:
+        tokens = DEFAULT_TOKENS
+
+    c = tokens.colors
+    t = tokens.typography
+    f = tokens.font_sizes
+    page_numbers = page_numbers or {}
+
+    # "TABLE OF CONTENTS" 제목
+    title_shape = slide.shapes.add_textbox(
+        Inches(1.5), Inches(0.8), Inches(7.83), Inches(0.6),
+    )
+    tf = title_shape.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "TABLE OF CONTENTS"
+    set_font_with_ea(run, t.font_heading)
+    run.font.size = Pt(f.toc_heading)
+    run.font.bold = True
+    run.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
+
+    # 4그룹 렌더링
+    y = 1.8
+    group_height = 1.1  # 각 그룹 블록 높이
+
+    for idx, group in enumerate(TEASER_TOC_GROUPS):
+        group_key = group["key"]
+        group_title = group["title"]
+        subsections = group["subsections"]
+        is_current = group_key == current_group
+        page_num = page_numbers.get(group_key)
+
+        group_y = y + idx * group_height
+
+        # 하이라이트 바 (현재 그룹)
+        if is_current:
+            _add_highlight_bar(slide, group_y, group_height - 0.15, tokens)
+
+        # 그룹 번호
+        num_shape = slide.shapes.add_textbox(
+            Inches(1.5), Inches(group_y), Inches(0.5), Inches(0.4),
+        )
+        ntf = num_shape.text_frame
+        p_num = ntf.paragraphs[0]
+        p_num.alignment = PP_ALIGN.RIGHT
+        r_num = p_num.add_run()
+        r_num.text = f"({idx + 1})"
+        set_font_with_ea(r_num, t.font_mono)
+        r_num.font.size = Pt(f.summary_text)
+        r_num.font.bold = True
+        r_num.font.color.rgb = RGBColor.from_string(
+            (c.accent if is_current else c.text_secondary).lstrip("#")
+        )
+
+        # 그룹 제목
+        title_x = 2.2
+        name_shape = slide.shapes.add_textbox(
+            Inches(title_x), Inches(group_y), Inches(5.5), Inches(0.4),
+        )
+        stf = name_shape.text_frame
+        p_name = stf.paragraphs[0]
+        r_name = p_name.add_run()
+        r_name.text = group_title.upper() if is_current else group_title
+        set_font_with_ea(r_name, t.font_body)
+        r_name.font.size = Pt(f.summary_text)
+        r_name.font.bold = is_current
+        r_name.font.color.rgb = RGBColor.from_string(
+            (c.primary if is_current else c.text_secondary).lstrip("#")
+        )
+
+        # 페이지 번호
+        if page_num is not None:
+            pg_shape = slide.shapes.add_textbox(
+                Inches(8.0), Inches(group_y), Inches(1.5), Inches(0.4),
+            )
+            ptf = pg_shape.text_frame
+            p_pg = ptf.paragraphs[0]
+            p_pg.alignment = PP_ALIGN.RIGHT
+            r_pg = p_pg.add_run()
+            r_pg.text = f"p.{page_num}"
+            set_font_with_ea(r_pg, t.font_mono)
+            r_pg.font.size = Pt(11)
+            r_pg.font.bold = is_current
+            r_pg.font.color.rgb = RGBColor.from_string(
+                (c.accent if is_current else c.text_secondary).lstrip("#")
+            )
+
+        # 하위 섹션 목록
+        sub_y = group_y + 0.4
+        for sub_idx, (_, sub_name) in enumerate(subsections):
+            sub_shape = slide.shapes.add_textbox(
+                Inches(2.5),
+                Inches(sub_y + sub_idx * 0.22),
+                Inches(5.0),
+                Inches(0.22),
+            )
+            sub_tf = sub_shape.text_frame
+            p_sub = sub_tf.paragraphs[0]
+            r_sub = p_sub.add_run()
+            r_sub.text = f"- {sub_name}"
+            set_font_with_ea(r_sub, t.font_body)
+            r_sub.font.size = Pt(9)
+            r_sub.font.color.rgb = RGBColor.from_string(
+                (c.text_body if is_current else c.text_secondary).lstrip("#")
+            )
+
+    return slide
+
+
+def build_tm_toc_slide_html(
+    current_group: str,
+    *,
+    page_numbers: dict[str, int] | None = None,
+    tokens: IMDesignTokens | None = None,
+) -> str:
+    """TM 전용 고정 4그룹 TOC HTML 슬라이드 생성.
+
+    Args:
+        current_group: 현재 활성 그룹 key.
+        page_numbers: 그룹 key → 시작 페이지 번호 매핑.
+        tokens: 디자인 토큰.
+
+    Returns:
+        HTML 슬라이드 문자열.
+    """
+    from html import escape as html_escape
+
+    from src.design_renderer.im_document import TEASER_TOC_GROUPS
+
+    if tokens is None:
+        tokens = DEFAULT_TOKENS
+
+    c = tokens.colors
+    page_numbers = page_numbers or {}
+
+    groups_html = ""
+    for idx, group in enumerate(TEASER_TOC_GROUPS):
+        group_key = group["key"]
+        group_title = group["title"]
+        subsections = group["subsections"]
+        is_current = group_key == current_group
+        page_num = page_numbers.get(group_key)
+
+        # 그룹 스타일
+        border_left = f"3px solid {c.accent}" if is_current else "3px solid transparent"
+        bg = c.bg_light_green if is_current else "transparent"
+        title_color = c.primary if is_current else c.text_secondary
+        title_weight = "bold" if is_current else "normal"
+        title_text = html_escape(
+            group_title.upper() if is_current else group_title
+        )
+
+        # 페이지 번호
+        pg_html = ""
+        if page_num is not None:
+            pg_color = c.accent if is_current else c.text_secondary
+            pg_html = (
+                f'<span style="font-family:\'IBM Plex Mono\',monospace;'
+                f'font-size:10pt;color:{pg_color};float:right;">'
+                f"p.{page_num}</span>"
+            )
+
+        # 하위 섹션
+        subs_html = ""
+        for _, sub_name in subsections:
+            sub_color = c.text_body if is_current else c.text_secondary
+            subs_html += (
+                f'<div style="font-size:9pt;color:{sub_color};'
+                f'margin-left:1em;line-height:1.5;">'
+                f"- {html_escape(sub_name)}</div>"
+            )
+
+        groups_html += (
+            f'<div style="border-left:{border_left};background:{bg};'
+            f'padding:0.5em 0.8em;margin-bottom:0.6em;border-radius:2px;">'
+            f'<div style="font-size:12pt;font-weight:{title_weight};'
+            f'color:{title_color};">'
+            f'<span style="font-family:\'IBM Plex Mono\',monospace;'
+            f'margin-right:0.5em;">({idx + 1})</span>'
+            f"{title_text}{pg_html}</div>"
+            f"{subs_html}</div>"
+        )
+
+    return (
+        f'<div class="slide slide-toc">'
+        f'<div class="toc-heading" style="font-size:20pt;font-weight:bold;'
+        f'color:{c.primary};margin-bottom:1em;">TABLE OF CONTENTS</div>'
+        f"{groups_html}</div>"
+    )

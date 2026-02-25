@@ -5,9 +5,12 @@ import type { ActivityLogFilter, ActivityModule, ActivityAction } from "@/types/
 
 const MODULE_OPTIONS: SelectOption[] = [
   { value: "", label: "All Modules" },
+  { value: "ma", label: "M&A" },
   { value: "fdd", label: "FDD" },
   { value: "kiis", label: "KIIS" },
   { value: "im", label: "IM" },
+  { value: "docs", label: "Docs" },
+  { value: "vdr", label: "VDR" },
   { value: "portal", label: "Portal" },
 ];
 

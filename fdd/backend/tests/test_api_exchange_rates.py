@@ -11,6 +11,7 @@ D = Decimal
 
 SAMPLE_DEAL = {
     "name": "FX Rate Test Deal",
+    "target_company_name": "FX Rate Test Corp",
     "deal_type": "COMPLETION_ACCOUNTS",
     "base_currency": "KRW",
     "reference_date": "2025-12-31",

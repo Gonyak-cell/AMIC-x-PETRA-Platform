@@ -4,6 +4,7 @@ import { useDeal } from "@/modules/fdd/hooks/useDeals";
 import { Card, KpiCard, Button, Spinner, PageHero } from "@/components/ui";
 import { WorkflowStepper } from "@/components/workflow";
 import type { DealPhase } from "@/modules/fdd/types/deal";
+import heroImg from "@/assets/images/heroes/hero-arch-diamond.jpg";
 
 const NEXT_STEPS: Record<DealPhase, { title: string; items: string[] }> = {
   MOU: {
@@ -42,6 +43,16 @@ const NEXT_STEPS: Record<DealPhase, { title: string; items: string[] }> = {
       "이슈 사항을 정리하세요",
     ],
   },
+  CHECKLIST_REVIEW: {
+    title: "체크리스트 검토 단계",
+    items: [
+      "자동 분석 결과를 검토하세요",
+      "각 항목의 자동 Finding을 확인하세요",
+      "부정확한 항목을 수정(Correct)하세요",
+      "의심 항목을 플래그(Flag)하세요",
+      "체크리스트를 확정(Finalize)하세요",
+    ],
+  },
   REPORTING: {
     title: "보고서 작성 단계",
     items: [
@@ -78,6 +89,8 @@ export default function WorkflowOverviewPage() {
         title={deal.name}
         subtitle="Workflow Overview"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Button
             variant="secondary"

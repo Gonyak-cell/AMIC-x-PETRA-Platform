@@ -17,10 +17,10 @@ class TestLogin:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert data["token_type"] == "bearer"
-        assert data["expires_in"] == settings.access_token_expire_minutes * 60
+        assert data["message"] == "로그인 성공"
+        # httpOnly 쿠키로 토큰 전달
+        assert "access_token" in resp.cookies
+        assert "refresh_token" in resp.cookies
 
     def test_login_wrong_password(self, client: TestClient, test_user):
         resp = client.post(
@@ -56,18 +56,16 @@ class TestLogin:
 
 class TestRefresh:
     def test_refresh_success(self, client: TestClient, test_user):
-        login_resp = client.post(
+        # 로그인하면 TestClient가 쿠키를 자동 저장
+        client.post(
             "/api/v1/auth/login",
             json={"email": "test@autofdd.dev", "password": "testpassword123"},
         )
-        refresh_token = login_resp.json()["refresh_token"]
 
-        resp = client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": refresh_token},
-        )
+        # refresh는 쿠키에서 refresh_token을 읽음
+        resp = client.post("/api/v1/auth/refresh")
         assert resp.status_code == 200
-        assert "access_token" in resp.json()
+        assert resp.json()["message"] == "토큰 갱신 성공"
 
     def test_refresh_with_invalid_token(self, client: TestClient):
         resp = client.post(

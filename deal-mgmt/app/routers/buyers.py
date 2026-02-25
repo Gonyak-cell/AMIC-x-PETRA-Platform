@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.enums import AuditAction
 from app.schemas.buyer import (
@@ -29,9 +29,10 @@ async def list_buyers(
     buyer_status: str | None = Query(None, alias="status"),
     buyer_type: str | None = Query(None, alias="type"),
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
     if buyer_status:
         q = q.where(BuyerCandidate.status == buyer_status)
@@ -46,10 +47,11 @@ async def list_buyers(
 async def buyer_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """매수자 파이프라인 요약 통계."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
     result = await db.execute(q)
     buyers = list(result.scalars().all())
@@ -77,7 +79,7 @@ async def add_buyer(
     txn_id: uuid.UUID,
     body: BuyerCandidateCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     buyer = BuyerCandidate(transaction_id=txn_id, **body.model_dump())
@@ -101,8 +103,9 @@ async def get_buyer(
     txn_id: uuid.UUID,
     buyer_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:
@@ -116,7 +119,7 @@ async def update_buyer(
     buyer_id: uuid.UUID,
     body: BuyerCandidateUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
@@ -145,7 +148,7 @@ async def remove_buyer(
     txn_id: uuid.UUID,
     buyer_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()

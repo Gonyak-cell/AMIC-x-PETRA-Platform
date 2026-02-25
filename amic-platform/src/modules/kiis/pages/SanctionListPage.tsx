@@ -22,6 +22,7 @@ import type { Column } from "@/components/ui";
 import type { ClassifiedSanctionListItem } from "@/modules/kiis/types/sanction";
 import { formatDate } from "@/lib/format";
 import { SEVERITY_VARIANT } from "@/modules/kiis/constants/variants";
+import heroImg from "@/assets/images/heroes/forestgp-nature.jpg";
 
 const columns: Column<ClassifiedSanctionListItem>[] = [
   {
@@ -83,7 +84,7 @@ export default function SanctionListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Sanctions" subtitle="Search and classify company sanctions" compact />
+      <PageHero title="Sanctions" subtitle="Search and classify company sanctions" compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       {/* Search */}
       <div className="flex gap-3 items-end">

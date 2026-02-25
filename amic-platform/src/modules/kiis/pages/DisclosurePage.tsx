@@ -24,6 +24,7 @@ import type {
 } from "@/modules/kiis/types/disclosure";
 import { formatDate } from "@/lib/format";
 import CorpCodeInput from "@/modules/kiis/components/CorpCodeInput";
+import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
 const TYPE_OPTIONS = [
   { value: "", label: "All Types" },
@@ -156,6 +157,8 @@ export default function DisclosurePage() {
         title="Disclosures"
         subtitle="DART and KOFIA disclosure filings"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       <div className="flex gap-3 items-end flex-wrap">

@@ -10,10 +10,18 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.log_decorators import log_error_with_input
 from app.models.company import Company
 from app.models.news import NewsArticle
 from app.models.reputation import ReputationHistory, ReputationScore
 from app.services.nlp_service import NLPService
+from app.services.reputation_themes import (
+    NEGATIVE_THEME_MAP,
+    POSITIVE_THEME_MAP,
+    RISK_ABSENCE_THEMES,
+    THEME_DISPLAY_NAMES,
+    THEME_SENTIMENT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,36 +42,55 @@ class ReputationService:
     RISING_TREND_THRESHOLD = Decimal("0.6")
     RISK_THRESHOLD = Decimal("0.4")
 
-    # 성과 점수 계산 키워드
-    EXIT_KEYWORDS = ["엑시트", "EXIT", "상장", "IPO", "인수", "M&A", "매각"]
+    # 성과 점수 계산 키워드 — reputation_themes의 exit_ipo + mna 키워드 사용
+    EXIT_KEYWORDS = [k for k, v in POSITIVE_THEME_MAP.items() if v in ("exit_ipo", "mna")]
+    # 전체 감성 사전 키워드 (테마 분류에 사용)
+    _ALL_THEME_KEYWORDS = {**POSITIVE_THEME_MAP, **NEGATIVE_THEME_MAP}
 
     def __init__(self, nlp_service: NLPService | None = None) -> None:
         self.nlp_service = nlp_service or NLPService()
 
-    async def get_reputation(self, db: AsyncSession, corp_code: str) -> ReputationScore | None:
-        """기업의 현재 평판 점수를 조회한다."""
-        stmt = (
-            select(ReputationScore)
-            .join(Company, ReputationScore.company_id == Company.id)
-            .where(Company.corp_code == corp_code)
-        )
+    async def get_reputation(
+        self, db: AsyncSession, corp_code: str, *, company_id: int | None = None,
+    ) -> ReputationScore | None:
+        """기업의 현재 평판 점수를 조회한다.
+
+        company_id가 주어지면 JOIN 없이 직접 조회한다 (라우터에서 이미 Company 조회 시 사용).
+        """
+        if company_id is not None:
+            stmt = select(ReputationScore).where(ReputationScore.company_id == company_id)
+        else:
+            stmt = (
+                select(ReputationScore)
+                .join(Company, ReputationScore.company_id == Company.id)
+                .where(Company.corp_code == corp_code)
+            )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_reputation_history(
-        self, db: AsyncSession, corp_code: str, limit: int = 30
+        self, db: AsyncSession, corp_code: str, limit: int = 30, *, company_id: int | None = None,
     ) -> list[ReputationHistory]:
         """기업의 평판 이력을 조회한다."""
-        stmt = (
-            select(ReputationHistory)
-            .join(Company, ReputationHistory.company_id == Company.id)
-            .where(Company.corp_code == corp_code)
-            .order_by(ReputationHistory.recorded_at.desc())
-            .limit(limit)
-        )
+        if company_id is not None:
+            stmt = (
+                select(ReputationHistory)
+                .where(ReputationHistory.company_id == company_id)
+                .order_by(ReputationHistory.recorded_at.desc())
+                .limit(limit)
+            )
+        else:
+            stmt = (
+                select(ReputationHistory)
+                .join(Company, ReputationHistory.company_id == Company.id)
+                .where(Company.corp_code == corp_code)
+                .order_by(ReputationHistory.recorded_at.desc())
+                .limit(limit)
+            )
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    @log_error_with_input
     async def calculate_reputation(
         self,
         db: AsyncSession,
@@ -320,3 +347,46 @@ class ReputationService:
         db.add(history)
         await db.flush()
         return history
+
+    async def classify_by_theme(
+        self,
+        db: AsyncSession,
+        company_id: int,
+        months: int = 6,
+    ) -> dict:
+        """뉴스 기사를 reputation_themes로 분류하여 테마별 건수를 반환한다.
+
+        Returns:
+            {
+                "theme_counts": {"exit_ipo": 3, "mna": 5, ...},
+                "total_articles": 20,
+                "risk_absence_notices": ["법적/규제 리스크 보도 없음", ...],
+            }
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=months * 30)
+        stmt = select(NewsArticle.title, NewsArticle.content).where(
+            NewsArticle.company_id == company_id,
+            NewsArticle.published_at >= cutoff,
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        theme_counts: dict[str, int] = {}
+        for row in rows:
+            text = f"{row.title or ''} {row.content or ''}"
+            for keyword, theme_code in self._ALL_THEME_KEYWORDS.items():
+                if keyword in text:
+                    theme_counts[theme_code] = theme_counts.get(theme_code, 0) + 1
+
+        # 리스크 부재 알림 생성
+        risk_absence_notices: list[str] = []
+        for theme_code in RISK_ABSENCE_THEMES:
+            if theme_counts.get(theme_code, 0) == 0:
+                display = THEME_DISPLAY_NAMES.get(theme_code, theme_code)
+                risk_absence_notices.append(f"{display} 보도 없음")
+
+        return {
+            "theme_counts": theme_counts,
+            "total_articles": len(rows),
+            "risk_absence_notices": risk_absence_notices,
+        }

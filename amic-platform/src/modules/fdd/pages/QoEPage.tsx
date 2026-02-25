@@ -28,7 +28,8 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import { formatAmount } from "@/lib/format";
+import { formatAmount, formatAmountCompact } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/hero-arch-white-round.jpg";
 
 const CATEGORY_LABELS: Record<AdjustmentCategory, string> = {
   NON_RECURRING: "Non-Recurring",
@@ -373,6 +374,8 @@ export default function QoEPage() {
         title="Quality of Earnings"
         subtitle="Adjusted EBITDA Analysis"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           !latestQoE ? (
             <div className="flex items-center gap-3">
@@ -401,21 +404,21 @@ export default function QoEPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Revenue"
-            value={formatAmount(latestQoE.revenue, currency)}
+            value={formatAmountCompact(latestQoE.revenue, currency)}
             icon={TrendingUp}
           />
           <KpiCard
             label="Reported EBITDA"
-            value={formatAmount(latestQoE.reported_ebitda, currency)}
+            value={formatAmountCompact(latestQoE.reported_ebitda, currency)}
           />
           <KpiCard
             label="Adjusted EBITDA"
-            value={formatAmount(latestQoE.adjusted_ebitda, currency)}
+            value={formatAmountCompact(latestQoE.adjusted_ebitda, currency)}
             variant="positive"
           />
           <KpiCard
             label="Total Adjustments"
-            value={formatAmount(latestQoE.total_adjustments, currency)}
+            value={formatAmountCompact(latestQoE.total_adjustments, currency)}
             variant={Number(latestQoE.total_adjustments) >= 0 ? "positive" : "negative"}
           />
         </div>

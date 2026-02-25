@@ -8,6 +8,7 @@ import { Card, Button, Input, Select, Badge, EmptyState, Spinner, Pagination, Pa
 import SentimentIndicator from "@/modules/kiis/components/SentimentIndicator";
 import type { NewsSource } from "@/modules/kiis/types/news";
 import { formatDate } from "@/lib/format";
+import heroImg from "@/assets/images/forest-bg.jpg";
 
 const SOURCE_OPTIONS = [
   { value: "", label: "All Sources" },
@@ -56,6 +57,8 @@ export default function NewsListPage() {
         title="News"
         subtitle="PE & VC industry news and analysis"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           user?.role === "ADMIN" ? (
             <Button

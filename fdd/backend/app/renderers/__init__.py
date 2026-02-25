@@ -1,14 +1,12 @@
 """Renderers 패키지.
 
-Report IR을 PPT/Word/PDF로 변환하는 렌더러들을 포함합니다.
+Report IR을 PPT/Word/Excel로 변환하는 렌더러들을 포함합니다.
 
 현재 구현:
 - design_system: 디자인 시스템 설정 로더
 - report_builder: Report IR 구성 (dataclasses)
-
-향후 구현 (Sprint 9+):
-- pptx_renderer: PPT 렌더러 (pptx-service 연동)
-- docx_renderer: Word 렌더러 (python-docx)
+- word_renderer: Word(DOCX) 렌더러 (python-docx)
+- excel_renderer: Excel(XLSX) 렌더러 (openpyxl)
 """
 
 from app.renderers.design_system import (

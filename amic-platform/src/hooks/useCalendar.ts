@@ -1,233 +1,127 @@
 import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
-import api from "@/api/client";
-import { kiisApi } from "@/api/kiisClient";
-import { imApi } from "@/api/imClient";
-import type { Deal } from "@/modules/fdd/types/deal";
-import type { DealItem } from "@/modules/kiis/types/deal";
-import type { Document } from "@/modules/im/types/document";
+import { useQuery } from "@tanstack/react-query";
+import { maApi } from "@/api/maClient";
+import { toArray, safeStr } from "@/api/safe-parse";
+import { PHASE_CONFIG } from "@/modules/ma/constants";
+import type { Transaction } from "@/modules/ma/types/transaction";
 import type { CalendarEvent, GanttItem, CalendarFilter } from "@/types/calendar";
 
 export interface CalendarErrors {
-  fdd: boolean;
-  kiis: boolean;
-  im: boolean;
+  ma: boolean;
+}
+
+const PHASE_ORDER: Record<string, number> = {};
+for (const p of PHASE_CONFIG) {
+  PHASE_ORDER[p.phase] = p.order;
+}
+
+const PHASE_LABEL: Record<string, string> = {};
+for (const p of PHASE_CONFIG) {
+  PHASE_LABEL[p.phase] = p.label;
 }
 
 export function useCalendarEvents(filter: CalendarFilter) {
-  const results = useQueries({
-    queries: [
-      {
-        queryKey: ["calendar", "fdd-deals"],
-        queryFn: async () => {
-          const { data } = await api.get<Deal[]>("/deals");
-          return data;
-        },
-        staleTime: 60_000,
-        enabled: filter.modules.includes("fdd"),
-      },
-      {
-        queryKey: ["calendar", "im-documents"],
-        queryFn: async () => {
-          const { data } = await imApi.get<{ items: Document[]; total: number }>(
-            "/documents",
-          );
-          return data.items;
-        },
-        staleTime: 60_000,
-        enabled: filter.modules.includes("im"),
-      },
-      {
-        queryKey: ["calendar", "kiis-deals"],
-        queryFn: async () => {
-          try {
-            const { data } = await kiisApi.get<{ items: DealItem[] }>("/deals", {
-              params: { size: 200 },
-            });
-            return data.items;
-          } catch {
-            // KIIS may not have a /deals listing endpoint
-            return [];
-          }
-        },
-        staleTime: 60_000,
-        enabled: filter.modules.includes("kiis"),
-      },
-    ],
+  const txnQuery = useQuery({
+    queryKey: ["calendar", "ma-transactions"],
+    queryFn: async () => {
+      const { data } = await maApi.get("/transactions", {
+        params: { limit: 100 },
+      });
+      const raw = (data as { items?: unknown[] })?.items ?? data;
+      return toArray<Transaction>(raw);
+    },
+    staleTime: 60_000,
   });
 
-  const [dealsQuery, docsQuery, kiisDealsQuery] = results;
-  const isLoading = results.some((r) => r.isLoading);
+  const isLoading = txnQuery.isLoading;
 
   const errors: CalendarErrors = {
-    fdd: dealsQuery.isError,
-    kiis: kiisDealsQuery.isError,
-    im: docsQuery.isError,
+    ma: txnQuery.isError,
   };
 
   const events = useMemo<CalendarEvent[]>(() => {
     const items: CalendarEvent[] = [];
+    if (!txnQuery.data) return items;
 
-    // FDD deal events
-    if (dealsQuery.data) {
-      for (const deal of dealsQuery.data) {
-        if (deal.period_start) {
-          items.push({
-            id: `fdd-start-${deal.id}`,
-            module: "fdd",
-            type: "deal_start",
-            title: `${deal.name} — Period Start`,
-            date: deal.period_start,
-            entityId: deal.id,
-            entityPath: `/fdd/deals/${deal.id}`,
-          });
-        }
-        if (deal.period_end) {
-          items.push({
-            id: `fdd-end-${deal.id}`,
-            module: "fdd",
-            type: "deal_end",
-            title: `${deal.name} — Period End`,
-            date: deal.period_end,
-            entityId: deal.id,
-            entityPath: `/fdd/deals/${deal.id}`,
-          });
-        }
-        if (deal.reference_date) {
-          items.push({
-            id: `fdd-ref-${deal.id}`,
-            module: "fdd",
-            type: "deal_reference",
-            title: `${deal.name} — Reference Date`,
-            date: deal.reference_date,
-            entityId: deal.id,
-            entityPath: `/fdd/deals/${deal.id}`,
-          });
-        }
+    for (const txn of txnQuery.data) {
+      const label = txn.code_name || txn.target_company_name || txn.name;
+
+      const phaseLbl = PHASE_LABEL[txn.phase] ?? txn.phase;
+      const phaseOrd = PHASE_ORDER[txn.phase] ?? 1;
+      const phaseFields = {
+        phase: txn.phase,
+        phaseLabel: phaseLbl,
+        phaseOrder: phaseOrd,
+      };
+
+      // 거래 생성일
+      items.push({
+        id: `ma-created-${txn.id}`,
+        module: "ma",
+        type: "transaction_created",
+        title: `${label} — 거래 생성`,
+        date: safeStr(txn.created_at).slice(0, 10),
+        entityId: txn.id,
+        entityPath: `/ma/transactions/${txn.id}`,
+        ...phaseFields,
+      });
+
+      // 목표 종결일
+      if (txn.target_close_date) {
         items.push({
-          id: `fdd-created-${deal.id}`,
-          module: "fdd",
-          type: "deal_created",
-          title: `${deal.name} — Created`,
-          date: deal.created_at.slice(0, 10),
-          entityId: deal.id,
-          entityPath: `/fdd/deals/${deal.id}`,
+          id: `ma-close-${txn.id}`,
+          module: "ma",
+          type: "target_close",
+          title: `${label} — 목표 종결일`,
+          date: txn.target_close_date,
+          entityId: txn.id,
+          entityPath: `/ma/transactions/${txn.id}`,
+          ...phaseFields,
         });
       }
-    }
 
-    // IM document events
-    if (docsQuery.data) {
-      for (const doc of docsQuery.data) {
-        items.push({
-          id: `im-created-${doc.id}`,
-          module: "im",
-          type: "document_created",
-          title: `${doc.project_name ?? doc.company_name} — Created`,
-          date: doc.created_at.slice(0, 10),
-          entityId: doc.id,
-          entityPath: `/im/documents/${doc.id}`,
-        });
-        if (doc.completed_at) {
-          items.push({
-            id: `im-done-${doc.id}`,
-            module: "im",
-            type: "document_completed",
-            title: `${doc.project_name ?? doc.company_name} — Completed`,
-            date: doc.completed_at.slice(0, 10),
-            entityId: doc.id,
-            entityPath: `/im/documents/${doc.id}`,
-          });
-        }
-      }
-    }
-
-    // KIIS deal events
-    if (kiisDealsQuery.data) {
-      for (const deal of kiisDealsQuery.data) {
-        if (deal.deal_date) {
-          items.push({
-            id: `kiis-deal-${deal.id}`,
-            module: "kiis",
-            type: "audit_date",
-            title: `${deal.target_company} — Deal${deal.round_stage ? ` (${deal.round_stage})` : ""}`,
-            date: deal.deal_date,
-            entityId: String(deal.id),
-            entityPath: deal.target_company_id
-              ? `/kiis/companies/${deal.target_company_id}`
-              : "/kiis",
-          });
-        }
-      }
+      // 현재 단계
+      items.push({
+        id: `ma-phase-${txn.id}`,
+        module: "ma",
+        type: "phase_current",
+        title: `${label} — ${phaseLbl} 단계`,
+        date: safeStr(txn.updated_at).slice(0, 10),
+        entityId: txn.id,
+        entityPath: `/ma/transactions/${txn.id}`,
+        ...phaseFields,
+      });
     }
 
     return items;
-  }, [dealsQuery.data, docsQuery.data, kiisDealsQuery.data]);
+  }, [txnQuery.data]);
 
   const ganttItems = useMemo<GanttItem[]>(() => {
     const items: GanttItem[] = [];
+    if (!txnQuery.data) return items;
 
-    if (dealsQuery.data) {
-      for (const deal of dealsQuery.data) {
-        if (deal.period_start && deal.period_end) {
-          items.push({
-            id: `gantt-fdd-${deal.id}`,
-            label: deal.name,
-            module: "fdd",
-            startDate: deal.period_start,
-            endDate: deal.period_end,
-            entityPath: `/fdd/deals/${deal.id}`,
-          });
-        }
-      }
-    }
+    const today = new Date().toISOString().slice(0, 10);
 
-    if (docsQuery.data) {
-      for (const doc of docsQuery.data) {
-        if (doc.completed_at) {
-          items.push({
-            id: `gantt-im-${doc.id}`,
-            label: doc.project_name ?? doc.company_name,
-            module: "im",
-            startDate: doc.created_at.slice(0, 10),
-            endDate: doc.completed_at.slice(0, 10),
-            entityPath: `/im/documents/${doc.id}`,
-            progress: 100,
-          });
-        } else {
-          items.push({
-            id: `gantt-im-${doc.id}`,
-            label: doc.project_name ?? doc.company_name,
-            module: "im",
-            startDate: doc.created_at.slice(0, 10),
-            endDate: new Date().toISOString().slice(0, 10),
-            entityPath: `/im/documents/${doc.id}`,
-            progress: doc.progress_pct,
-          });
-        }
-      }
-    }
+    for (const txn of txnQuery.data) {
+      const label = txn.code_name || txn.target_company_name || txn.name;
+      const startDate = safeStr(txn.created_at).slice(0, 10);
+      const endDate = txn.target_close_date ?? today;
+      const order = PHASE_ORDER[txn.phase] ?? 1;
+      const progress = Math.round((order / 7) * 100);
 
-    // KIIS deals as single-day milestones in Gantt
-    if (kiisDealsQuery.data) {
-      for (const deal of kiisDealsQuery.data) {
-        if (deal.deal_date) {
-          items.push({
-            id: `gantt-kiis-${deal.id}`,
-            label: `${deal.target_company}${deal.round_stage ? ` (${deal.round_stage})` : ""}`,
-            module: "kiis",
-            startDate: deal.deal_date,
-            endDate: deal.deal_date,
-            entityPath: deal.target_company_id
-              ? `/kiis/companies/${deal.target_company_id}`
-              : "/kiis",
-          });
-        }
-      }
+      items.push({
+        id: `gantt-ma-${txn.id}`,
+        label: `${label} (${PHASE_LABEL[txn.phase] ?? txn.phase})`,
+        module: "ma",
+        startDate,
+        endDate,
+        entityPath: `/ma/transactions/${txn.id}`,
+        progress,
+      });
     }
 
     return items.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [dealsQuery.data, docsQuery.data, kiisDealsQuery.data]);
+  }, [txnQuery.data]);
 
   return { events, ganttItems, isLoading, errors };
 }

@@ -14,6 +14,7 @@ import {
   FUND_STATUS_BADGE_VARIANT,
   FUND_STATUS_LABELS,
 } from "@/modules/kiis/constants/fundFilters";
+import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
 const columns: Column<FundListItem>[] = [
   {
@@ -114,6 +115,8 @@ export default function FundListPage() {
         title="All Funds"
         subtitle="전체 펀드 목록 · PE & VC fund registry"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       <FundFilterPanel

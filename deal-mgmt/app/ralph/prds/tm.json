@@ -1,0 +1,82 @@
+{
+  "name": "Teaser Memo PRD",
+  "version": "1.0",
+  "document_type": "TM",
+  "description": "Teaser Memorandum 품질 요구사항 (매수자 접촉 전 익명 요약)",
+  "pass_threshold": 4.0,
+  "total_slides": "20-30",
+  "sections": {
+    "cover": {
+      "title": "Cover",
+      "required": true,
+      "criteria": {
+        "anonymity": "회사명 대신 프로젝트 코드명 사용 (CRITICAL)",
+        "branding": "Forest 테마 디자인 일관성"
+      }
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "required": true,
+      "criteria": {
+        "legal": "기밀유지 조항, 투자 권유 아님 명시"
+      }
+    },
+    "executive_summary": {
+      "title": "Executive Summary",
+      "required": true,
+      "criteria": {
+        "hooks": "투자 매력 포인트 3-5개 (bullet)",
+        "conciseness": "1-2 슬라이드 이내",
+        "anonymity": "회사 특정 불가능한 수준의 일반화"
+      }
+    },
+    "company_overview": {
+      "title": "Company Overview",
+      "required": true,
+      "criteria": {
+        "anonymity": "업종, 규모, 지역만 기재 — 구체적 사명/브랜드 미기재 (CRITICAL)",
+        "completeness": "설립연도, 직원수, 사업영역 등 핵심 정보 포함"
+      }
+    },
+    "industry_overview": {
+      "title": "Industry Overview",
+      "required": true,
+      "criteria": {
+        "data": "시장 규모, 성장률, 주요 트렌드 포함",
+        "sources": "출처 명시 (공개 데이터 기반)"
+      }
+    },
+    "financial_highlights": {
+      "title": "Financial Highlights",
+      "required": true,
+      "criteria": {
+        "consistency": "매출/영업이익/EBITDA 수치 내부 정합성",
+        "formatting": "천원/백만원/억원 단위 일관성",
+        "anonymity": "연도별 수치만 기재, 재무제표 비첨부"
+      }
+    },
+    "investment_highlights": {
+      "title": "Investment Highlights",
+      "required": true,
+      "criteria": {
+        "count": "핵심 투자 매력 3-5개",
+        "persuasiveness": "각 포인트별 근거 데이터 포함",
+        "anonymity": "회사 특정 불가능한 수준"
+      }
+    },
+    "transaction_overview": {
+      "title": "Transaction Overview",
+      "required": true,
+      "criteria": {
+        "structure": "거래 구조, 일정, 프로세스 개요",
+        "contact": "FA 연락처 포함"
+      }
+    }
+  },
+  "global_criteria": {
+    "anonymity": "전체 문서에서 대상회사 특정 불가능 (CRITICAL — 위반 시 자동 FAIL)",
+    "slide_count": "20-30장 권장",
+    "design": "Forest 테마 색상/폰트 일관성",
+    "financial_consistency": "모든 재무 수치 내부 정합성 검증"
+  }
+}

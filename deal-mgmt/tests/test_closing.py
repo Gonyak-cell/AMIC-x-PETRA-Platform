@@ -1,7 +1,7 @@
-"""클로징 체크리스트 API 테스트."""
+"""Closing 체크리스트 API 테스트."""
 
 SAMPLE_TXN = {
-    "name": "클로징 테스트 거래",
+    "name": "Closing 테스트 거래",
     "code_name": "CLS-001",
     "side": "SELL",
     "target_company_name": "대상기업",
@@ -62,7 +62,8 @@ async def test_list_closing_items(client):
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/closing")
     assert resp.status_code == 200
-    assert len(resp.json()) == 3
+    # 거래 생성 시 표준 15개 항목이 자동 생성되므로 15 + 3 = 18
+    assert len(resp.json()) == 18
 
 
 async def test_list_closing_filter_category(client):
@@ -81,8 +82,9 @@ async def test_list_closing_filter_category(client):
         params={"category": "REGULATORY"},
     )
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
-    assert resp.json()[0]["category"] == "REGULATORY"
+    # 자동 생성 REGULATORY 2개 + 수동 1개 = 3개
+    assert len(resp.json()) == 3
+    assert all(item["category"] == "REGULATORY" for item in resp.json())
 
 
 # ── Update ─────────────────────────────────────────────────
@@ -142,7 +144,8 @@ async def test_delete_closing_item(client):
     assert resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/transactions/{txn_id}/closing")
-    assert len(list_resp.json()) == 0
+    # 수동 1개 삭제 후 자동 생성 15개만 남음
+    assert len(list_resp.json()) == 15
 
 
 # ── Summary ────────────────────────────────────────────────
@@ -176,8 +179,9 @@ async def test_closing_summary(client):
     resp = await client.get(f"/api/v1/transactions/{txn_id}/closing/summary")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["total"] == 3
-    assert 0.3 <= data["completion_rate"] <= 0.35  # 1/3 ≈ 0.333
+    # 자동 15개 + 수동 3개 = 18, 완료 1개 → 1/18 ≈ 0.056
+    assert data["total"] == 18
+    assert 0.05 <= data["completion_rate"] <= 0.06
 
 
 async def test_closing_summary_empty(client):
@@ -185,5 +189,6 @@ async def test_closing_summary_empty(client):
     resp = await client.get(f"/api/v1/transactions/{txn_id}/closing/summary")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["total"] == 0
+    # 거래 생성 시 표준 15개가 자동 생성되므로 total == 15
+    assert data["total"] == 15
     assert data["completion_rate"] == 0

@@ -2,13 +2,13 @@ export interface GlossaryTerm {
   term: string;
   abbreviation: string | null;
   definition: string;
-  module: "fdd" | "kiis" | "im" | "general";
+  module: "fdd" | "kiis" | "im" | "ma" | "docs" | "general";
 }
 
 export interface KeyboardShortcut {
   keys: string[];
   description: string;
-  context: "global" | "fdd" | "kiis" | "im";
+  context: "global" | "fdd" | "kiis" | "im" | "ma" | "docs";
 }
 
 export interface ReleaseNote {

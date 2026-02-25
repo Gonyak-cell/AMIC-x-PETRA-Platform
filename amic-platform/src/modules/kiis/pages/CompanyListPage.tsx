@@ -11,6 +11,7 @@ import {
   CORP_CLS_BADGE_VARIANT,
   CORP_CLS_LABELS,
 } from "@/modules/kiis/constants/companyFilters";
+import heroImg from "@/assets/images/forest-bg.jpg";
 
 const columns: Column<Company>[] = [
   {
@@ -71,6 +72,8 @@ export default function CompanyListPage() {
         title="Companies"
         subtitle="Search and browse listed companies"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       <CompanyFilterPanel

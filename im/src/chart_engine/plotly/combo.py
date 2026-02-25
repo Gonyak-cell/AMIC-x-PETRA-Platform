@@ -57,6 +57,10 @@ def create_combo_chart(
     if not years or not bar_values:
         raise ChartDataError("combo", "years와 bar_values는 필수입니다.")
 
+    # line_values None 안전 처리
+    if line_values:
+        line_values = [float(v) if v is not None else 0.0 for v in line_values]
+
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     # 막대 (좌축)

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://postgres:postgres@localhost:5433/imgen\" \"c:\\\\Users\\\\diedi\\\\OneDrive\\\\Documents\\\\Coding\\\\IM Module\\\\auto-im-generator\\\\venv\\\\Scripts\\\\python.exe\" -m alembic:*)",
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://postgres:postgres@localhost:5433/imgen\" \"c:\\\\Users\\\\diedi\\\\OneDrive\\\\Documents\\\\Coding\\\\IM Module\\\\auto-im-generator\\\\venv\\\\Scripts\\\\python.exe\" -m pytest:*)",
+      "Bash(DATABASE_URL=\"postgresql://autofdd:autofdd_dev@localhost:5433/autofdd\" python -m pytest:*)",
+      "Bash(powershell.exe -NoProfile -Command \"Remove-Item -Recurse -Force ''C:\\\\Users\\\\서지원\\\\OneDrive\\\\Documents\\\\Coding\\\\platform backup\\\\AMIC x PETRA Platform'' -ErrorAction SilentlyContinue; robocopy ''C:\\\\Users\\\\서지원\\\\OneDrive\\\\Documents\\\\Coding\\\\AMIC x PETRA Platform'' ''C:\\\\Users\\\\서지원\\\\OneDrive\\\\Documents\\\\Coding\\\\platform backup\\\\AMIC x PETRA Platform'' /E /R:1 /W:1 /NP /NFL /NDL /NJH\")"
+    ]
+  }
+}

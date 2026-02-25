@@ -23,7 +23,7 @@ async def test_create_checklist_item(client):
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
         json={
-            "workstream": "FINANCIAL",
+            "workstream": "FDD_FINANCIAL_STATEMENTS",
             "title": "최근 3개년 재무제표 수집",
             "assignee_email": "analyst@example.com",
             "due_date": "2026-04-01",
@@ -31,7 +31,7 @@ async def test_create_checklist_item(client):
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["workstream"] == "FINANCIAL"
+    assert data["workstream"] == "FDD_FINANCIAL_STATEMENTS"
     assert data["title"] == "최근 3개년 재무제표 수집"
     assert data["status"] == "NOT_STARTED"
 
@@ -39,10 +39,10 @@ async def test_create_checklist_item(client):
 async def test_create_multiple_workstreams(client):
     txn_id = await _create_txn(client)
     for ws, title in [
-        ("FINANCIAL", "감사보고서 검토"),
-        ("LEGAL", "소송 이력 조사"),
-        ("TAX", "세무 조사 이력 확인"),
-        ("COMMERCIAL", "시장점유율 분석"),
+        ("FDD_FINANCIAL_STATEMENTS", "감사보고서 검토"),
+        ("LDD_LITIGATION", "소송 이력 조사"),
+        ("TDD_CORPORATE_TAX", "세무 조사 이력 확인"),
+        ("FDD_REVENUE", "매출 분석"),
     ]:
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/dd-checklist",
@@ -56,11 +56,11 @@ async def test_list_checklist(client):
     txn_id = await _create_txn(client)
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "항목 1"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "항목 1"},
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "LEGAL", "title": "항목 2"},
+        json={"workstream": "LDD_CORPORATE", "title": "항목 2"},
     )
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist")
@@ -72,23 +72,23 @@ async def test_list_checklist_filter_workstream(client):
     txn_id = await _create_txn(client)
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "재무 항목"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "재무 항목"},
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "LEGAL", "title": "법률 항목"},
+        json={"workstream": "LDD_CORPORATE", "title": "법률 항목"},
     )
 
-    resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FINANCIAL"})
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FDD_FINANCIAL_STATEMENTS"})
     assert len(resp.json()) == 1
-    assert resp.json()[0]["workstream"] == "FINANCIAL"
+    assert resp.json()[0]["workstream"] == "FDD_FINANCIAL_STATEMENTS"
 
 
 async def test_list_checklist_filter_status(client):
     txn_id = await _create_txn(client)
     item_resp = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "완료된 항목"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "완료된 항목"},
     )
     item_id = item_resp.json()["id"]
     await client.patch(
@@ -97,7 +97,7 @@ async def test_list_checklist_filter_status(client):
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "미완료 항목"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "미완료 항목"},
     )
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"status": "COMPLETED"})
@@ -109,7 +109,7 @@ async def test_update_checklist_status(client):
     txn_id = await _create_txn(client)
     create_resp = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "재무제표 검토"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "재무제표 검토"},
     )
     item_id = create_resp.json()["id"]
 
@@ -136,7 +136,7 @@ async def test_delete_checklist_item(client):
     txn_id = await _create_txn(client)
     create_resp = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "TAX", "title": "세무 항목"},
+        json={"workstream": "TDD_CORPORATE_TAX", "title": "세무 항목"},
     )
     item_id = create_resp.json()["id"]
 
@@ -148,10 +148,10 @@ async def test_delete_checklist_item(client):
 async def test_checklist_summary(client):
     txn_id = await _create_txn(client)
 
-    # FINANCIAL: 2개 (1 completed, 1 in_progress)
+    # FDD_FINANCIAL_STATEMENTS: 2개 (1 completed, 1 in_progress)
     f1 = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "재무제표 검토"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "재무제표 검토"},
     )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/dd-checklist/{f1.json()['id']}",
@@ -159,17 +159,17 @@ async def test_checklist_summary(client):
     )
     f2 = await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "FINANCIAL", "title": "세부 분석"},
+        json={"workstream": "FDD_FINANCIAL_STATEMENTS", "title": "세부 분석"},
     )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/dd-checklist/{f2.json()['id']}",
         json={"status": "IN_PROGRESS"},
     )
 
-    # LEGAL: 1개 (not_started)
+    # LDD_CORPORATE: 1개 (not_started)
     await client.post(
         f"/api/v1/transactions/{txn_id}/dd-checklist",
-        json={"workstream": "LEGAL", "title": "소송 이력"},
+        json={"workstream": "LDD_CORPORATE", "title": "소송 이력"},
     )
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist/summary")
@@ -178,11 +178,11 @@ async def test_checklist_summary(client):
     assert data["total"] == 3
     assert data["overall_completion_pct"] == pytest.approx(33.3, abs=0.1)
 
-    fin = next(w for w in data["by_workstream"] if w["workstream"] == "FINANCIAL")
+    fin = next(w for w in data["by_workstream"] if w["workstream"] == "FDD_FINANCIAL_STATEMENTS")
     assert fin["total"] == 2
     assert fin["completed"] == 1
     assert fin["in_progress"] == 1
 
-    leg = next(w for w in data["by_workstream"] if w["workstream"] == "LEGAL")
+    leg = next(w for w in data["by_workstream"] if w["workstream"] == "LDD_CORPORATE")
     assert leg["total"] == 1
     assert leg["not_started"] == 1

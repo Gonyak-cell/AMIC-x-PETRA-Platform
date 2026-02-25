@@ -32,6 +32,7 @@ import {
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
 import { CommentThread } from "@/components/collaboration/CommentThread";
+import heroImg from "@/assets/images/heroes/hero-arch-wave.jpg";
 
 const SEVERITY_VARIANTS: Record<IssueSeverity, "error" | "warning" | "info" | "success"> = {
   CRITICAL: "error",
@@ -353,6 +354,8 @@ export default function IssuesPage() {
         title="Issue Log"
         subtitle="Track and manage FDD findings"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Button
             variant="accent"

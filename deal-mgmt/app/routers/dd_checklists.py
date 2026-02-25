@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.dd_checklist import DDChecklist
 from app.models.enums import AuditAction, DDChecklistStatus
 from app.schemas.dd_checklist import (
@@ -30,9 +30,10 @@ async def list_checklist(
     workstream: str | None = None,
     checklist_status: str | None = Query(None, alias="status"),
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(DDChecklist).where(DDChecklist.transaction_id == txn_id)
     if workstream:
         q = q.where(DDChecklist.workstream == workstream)
@@ -47,9 +48,10 @@ async def list_checklist(
 async def checklist_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(DDChecklist).where(DDChecklist.transaction_id == txn_id)
     result = await db.execute(q)
     items = list(result.scalars().all())
@@ -80,7 +82,7 @@ async def create_checklist_item(
     txn_id: uuid.UUID,
     body: DDChecklistCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     item = DDChecklist(transaction_id=txn_id, **body.model_dump())
@@ -105,7 +107,7 @@ async def update_checklist_item(
     item_id: uuid.UUID,
     body: DDChecklistUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(DDChecklist).where(DDChecklist.id == item_id, DDChecklist.transaction_id == txn_id)
     item = (await db.execute(q)).scalar_one_or_none()
@@ -132,7 +134,7 @@ async def delete_checklist_item(
     txn_id: uuid.UUID,
     item_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(DDChecklist).where(DDChecklist.id == item_id, DDChecklist.transaction_id == txn_id)
     item = (await db.execute(q)).scalar_one_or_none()

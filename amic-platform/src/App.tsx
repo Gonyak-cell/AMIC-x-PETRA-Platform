@@ -1,9 +1,17 @@
 import React, { Suspense } from "react";
-import { Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate } from "react-router-dom";
 import LoginPage from "@/pages/LoginPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui";
+import { useAuth } from "@/hooks/useAuth";
+
+/** CLIENT 역할의 사내 전용 라우트 접근을 차단한다. */
+function InternalOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { isClient } = useAuth();
+  if (isClient) return <Navigate to="/ma/transactions" replace />;
+  return <>{children}</>;
+}
 
 const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
@@ -24,6 +32,13 @@ const CalendarRoutes = React.lazy(
 const ExportsRoutes = React.lazy(
   () => import("@/pages/exports/ExportsRoutes"),
 );
+const DocsRoutes = React.lazy(
+  () => import("@/modules/docs/DocsRoutes"),
+);
+const VdrRoutes = React.lazy(
+  () => import("@/modules/vdr/VdrRoutes"),
+);
+const TeamPage = React.lazy(() => import("@/pages/team/TeamPage"));
 
 function ModuleFallback() {
   return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -53,25 +68,31 @@ export default function App() {
         <Route
           path="fdd/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <FddRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <FddRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
           path="kiis/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <KiisRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <KiisRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
           path="im/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <ImRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <ImRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
@@ -85,9 +106,11 @@ export default function App() {
         <Route
           path="admin/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <AdminRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <AdminRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
@@ -101,9 +124,11 @@ export default function App() {
         <Route
           path="analytics/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <AnalyticsRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <AnalyticsRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
@@ -117,17 +142,51 @@ export default function App() {
         <Route
           path="calendar/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <CalendarRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <CalendarRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route
           path="exports/*"
           element={
-            <Suspense fallback={<ModuleFallback />}>
-              <ExportsRoutes />
-            </Suspense>
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <ExportsRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
+          }
+        />
+        <Route
+          path="vdr/*"
+          element={
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <VdrRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
+          }
+        />
+        <Route
+          path="docs/*"
+          element={
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <DocsRoutes />
+              </Suspense>
+            </InternalOnlyRoute>
+          }
+        />
+        <Route
+          path="team/*"
+          element={
+            <InternalOnlyRoute>
+              <Suspense fallback={<ModuleFallback />}>
+                <TeamPage />
+              </Suspense>
+            </InternalOnlyRoute>
           }
         />
         <Route

@@ -3,6 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import api from "@/api/client";
 import { kiisApi } from "@/api/kiisClient";
 import { imApi } from "@/api/imClient";
+import { toArray } from "@/api/safe-parse";
 import { getItem, setItem } from "@/lib/storage";
 import type { Deal } from "@/modules/fdd/types/deal";
 import type { Document } from "@/modules/im/types/document";
@@ -67,10 +68,16 @@ export function useGlobalSearch(query: string) {
       {
         queryKey: ["global-search", "fdd", debouncedQuery],
         queryFn: async () => {
-          const { data } = await api.get<Deal[]>("/deals", {
-            params: { search: debouncedQuery },
-          });
-          return normalizeDeals(data);
+          const { data } = await api.get("/deals", { params: { limit: 200 } });
+          const deals = toArray<Deal>(data);
+          const q = debouncedQuery.toLowerCase();
+          return normalizeDeals(
+            deals.filter(
+              (d) =>
+                d.name?.toLowerCase().includes(q) ||
+                (d.target_company_name?.toLowerCase().includes(q) ?? false),
+            ),
+          );
         },
         enabled,
         staleTime: 10_000,
@@ -78,10 +85,8 @@ export function useGlobalSearch(query: string) {
       {
         queryKey: ["global-search", "kiis", debouncedQuery],
         queryFn: async () => {
-          const { data } = await kiisApi.get<{
-            items: Array<{ type: string; id: string; name: string; description: string | null }>;
-          }>("/search", { params: { q: debouncedQuery } });
-          return normalizeKiisResults(data.items);
+          const { data } = await kiisApi.get("/search", { params: { q: debouncedQuery } });
+          return normalizeKiisResults(toArray(data));
         },
         enabled,
         staleTime: 10_000,
@@ -90,22 +95,23 @@ export function useGlobalSearch(query: string) {
         queryKey: ["global-search", "im", debouncedQuery],
         queryFn: async () => {
           try {
-            const { data } = await imApi.get<{ items: Document[] }>("/documents", {
+            const { data } = await imApi.get("/documents", {
               params: { search: debouncedQuery },
             });
-            return normalizeDocuments(data.items);
+            return normalizeDocuments(toArray<Document>(data));
           } catch (err) {
             // Fallback: only on 400/422 (search param unsupported) — not on 500/network errors
             const status = (err as { response?: { status?: number } })?.response?.status;
             if (status !== 400 && status !== 422) throw err;
 
-            const { data } = await imApi.get<{ items: Document[] }>("/documents", {
+            const { data } = await imApi.get("/documents", {
               params: { limit: 200 },
             });
+            const docs = toArray<Document>(data);
             const q = debouncedQuery.toLowerCase();
-            const filtered = data.items.filter(
+            const filtered = docs.filter(
               (d) =>
-                d.company_name.toLowerCase().includes(q) ||
+                d.company_name?.toLowerCase().includes(q) ||
                 (d.project_name?.toLowerCase().includes(q) ?? false),
             );
             return normalizeDocuments(filtered);

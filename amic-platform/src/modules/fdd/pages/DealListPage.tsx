@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, CheckCircle, FileEdit, Archive, Plus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { TeamAvatars } from "@/components/collaboration/TeamAvatars";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import {
@@ -37,6 +38,7 @@ import {
   INVESTMENT_TYPE_OPTIONS,
   SELLER_TYPE_OPTIONS,
 } from "@/modules/fdd/constants";
+import heroImg from "@/assets/images/heroes/hero-arch-silver.jpg";
 
 const INITIAL_FORM: DealCreate = {
   name: "",
@@ -51,6 +53,8 @@ export default function DealListPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<DealCreate>(INITIAL_FORM);
   const [showOptional, setShowOptional] = useState(false);
+  const kpiRef = useRef<HTMLDivElement>(null);
+  useScrollReveal(kpiRef, { stagger: 0.06, y: 20 });
 
   // KPI 계산
   const kpis = useMemo(() => {
@@ -98,7 +102,7 @@ export default function DealListPage() {
   };
 
   const handleRowClick = (deal: Deal) => {
-    navigate(`/deals/${deal.id}`);
+    navigate(`/fdd/deals/${deal.id}`);
   };
 
   const tbd = <span className="text-text-muted italic text-xs">선택 안함</span>;
@@ -193,6 +197,8 @@ export default function DealListPage() {
         title="Deals"
         subtitle="Financial Due Diligence 딜 관리"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Button variant="accent" icon={Plus} onClick={() => setShowModal(true)}>
             새 딜 생성
@@ -201,7 +207,7 @@ export default function DealListPage() {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="전체 딜"
           value={String(kpis.total)}

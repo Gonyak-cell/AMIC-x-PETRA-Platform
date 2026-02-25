@@ -39,13 +39,14 @@ import { FinancialBarChart } from "@/components/charts/FinancialBarChart";
 import type { BarChartDataPoint } from "@/components/charts/FinancialBarChart";
 import type { FundListItem } from "@/modules/kiis/types/fund";
 import type { DealItem } from "@/modules/kiis/types/deal";
-import { formatAmount, formatDate } from "@/lib/format";
+import { formatAmount, formatAmountKRW, formatDate } from "@/lib/format";
 import {
   ASSET_CLASS_BADGE_VARIANT,
   ASSET_CLASS_LABELS,
   FUND_STATUS_BADGE_VARIANT,
   FUND_STATUS_LABELS,
 } from "@/modules/kiis/constants/fundFilters";
+import heroImg from "@/assets/images/heroes/forestgp-news.jpg";
 
 /* ───────── Column definitions ───────── */
 
@@ -245,6 +246,8 @@ export default function GPDetailPage() {
         title={gpName}
         subtitle="운용사 프로필"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           hasCorpCode ? (
             <Link
@@ -267,7 +270,7 @@ export default function GPDetailPage() {
         />
         <KpiCard
           label="총 AUM"
-          value={formatAmount(gpMetrics.totalAum, "KRW")}
+          value={formatAmountKRW(gpMetrics.totalAum)}
           icon={Landmark}
         />
         <KpiCard
@@ -324,15 +327,15 @@ export default function GPDetailPage() {
                 />
                 <KpiCard
                   label="Avg Amount"
-                  value={formatAmount(dealStats.avg_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.avg_amount)}
                 />
                 <KpiCard
                   label="Median Amount"
-                  value={formatAmount(dealStats.median_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.median_amount)}
                 />
                 <KpiCard
                   label="Max Amount"
-                  value={formatAmount(dealStats.max_amount, "KRW")}
+                  value={formatAmountKRW(dealStats.max_amount)}
                 />
               </div>
 
@@ -465,7 +468,7 @@ export default function GPDetailPage() {
                   <Link
                     key={article.id}
                     to={`/kiis/news/${article.id}`}
-                    className="block px-4 py-3 hover:bg-surface-alt transition-colors"
+                    className="block px-4 py-3 hover:bg-white-alt transition-colors"
                   >
                     <p className="text-sm font-medium text-text-dark line-clamp-1">
                       {article.title}

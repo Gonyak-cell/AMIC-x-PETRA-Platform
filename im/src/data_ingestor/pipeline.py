@@ -21,6 +21,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from src.api.core.log_decorators import log_error_with_input
 from src.data_ingestor.aggregator import DataAggregator, IMDocumentData
 from src.data_ingestor.cache import CacheConfig, CacheManager, CachedDartClient
 from src.data_ingestor.dart.client import DartAPIClient
@@ -230,6 +231,7 @@ class DataCollectionPipeline:
             return self._cached_client
         return self._dart_client
 
+    @log_error_with_input
     async def collect(self, corp_code: str) -> CollectionResult:
         """기업 데이터를 수집합니다.
 

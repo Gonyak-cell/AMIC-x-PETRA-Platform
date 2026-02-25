@@ -43,3 +43,27 @@ export interface TimelineResponse {
   items: TimelineEvent[];
   total: number;
 }
+
+// ── Gantt Timeline ────────────────────────────────────
+
+export interface GanttPhaseBar {
+  phase: string;
+  label: string;
+  start_date: string | null;
+  end_date: string | null;
+  status: "completed" | "active" | "upcoming";
+  order: number;
+}
+
+export interface GanttMilestone {
+  label: string;
+  date: string;
+  type: string;
+}
+
+export interface GanttResponse {
+  phases: GanttPhaseBar[];
+  milestones: GanttMilestone[];
+  target_close_date: string | null;
+  deal_start_date: string;
+}

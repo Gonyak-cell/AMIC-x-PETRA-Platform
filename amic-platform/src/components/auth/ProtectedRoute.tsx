@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui";
 import type { Permission } from "@/types/auth";
@@ -11,7 +11,6 @@ export default function ProtectedRoute({
   requiredPermission?: Permission;
 }) {
   const { isAuthenticated, isLoading, hasPermission } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -26,7 +25,7 @@ export default function ProtectedRoute({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {

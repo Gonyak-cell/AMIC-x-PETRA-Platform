@@ -16,6 +16,7 @@ class UserRole(str, enum.Enum):
     MANAGER = "MANAGER"
     ANALYST = "ANALYST"
     VIEWER = "VIEWER"
+    CLIENT = "CLIENT"
 
 
 class User(Base):
@@ -27,6 +28,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole), nullable=False, default=UserRole.ANALYST
     )

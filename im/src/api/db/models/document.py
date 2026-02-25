@@ -19,6 +19,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.api.db.base import Base
 
 if TYPE_CHECKING:
+    from src.api.db.models.im_checklist import IMChecklist
+    from src.api.db.models.im_ralph_session import IMRalphSession
     from src.api.db.models.user import User
 
 
@@ -131,6 +133,15 @@ class Document(Base):
     # Relationships
     owner: Mapped[User] = relationship(
         back_populates="documents",
+    )
+    checklist: Mapped[IMChecklist | None] = relationship(
+        back_populates="document",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    ralph_sessions: Mapped[list[IMRalphSession]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
     )
 
     @property

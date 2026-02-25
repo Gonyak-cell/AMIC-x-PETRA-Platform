@@ -102,15 +102,20 @@ def ensure_ea_fonts_on_slide(
     slide: Any,
     *,
     ea_font: str = "Pretendard",
+    heading_ea_font: str = "SUITE",
+    title_ph_idx: int = 11,
 ) -> int:
     """슬라이드의 모든 text run에 a:ea 폰트를 보장한다.
 
     이미 ``<a:ea>``가 설정된 run은 건너뛴다 (기존 설정 유지).
     ``<a:ea>``가 없는 run에만 지정된 ea_font를 추가한다.
+    제목 플레이스홀더(idx=11)의 run에는 heading_ea_font를 사용한다.
 
     Args:
         slide: pptx.slide.Slide 인스턴스.
-        ea_font: 설정할 동아시아 폰트명.
+        ea_font: 본문용 동아시아 폰트명.
+        heading_ea_font: 제목용 동아시아 폰트명.
+        title_ph_idx: 제목 플레이스홀더 인덱스.
 
     Returns:
         ea 폰트가 추가된 run 수.
@@ -121,6 +126,18 @@ def ensure_ea_fonts_on_slide(
     for shape in slide.shapes:
         if not shape.has_text_frame:
             continue
+
+        # 제목 플레이스홀더 여부 판별
+        is_title = False
+        try:
+            ph_format = shape.placeholder_format
+            if ph_format is not None and ph_format.idx == title_ph_idx:
+                is_title = True
+        except (ValueError, AttributeError):
+            pass
+
+        target_ea = heading_ea_font if is_title else ea_font
+
         for paragraph in shape.text_frame.paragraphs:
             for run in paragraph.runs:
                 r_elem = run._r
@@ -133,7 +150,7 @@ def ensure_ea_fonts_on_slide(
                     continue
 
                 ea_elem = etree.SubElement(rpr, ea_tag)
-                ea_elem.set("typeface", ea_font)
+                ea_elem.set("typeface", target_ea)
                 count += 1
 
     return count

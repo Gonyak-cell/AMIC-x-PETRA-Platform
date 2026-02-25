@@ -17,9 +17,8 @@ class TestPassword:
         h2 = hash_password("samepassword")
         assert h1 != h2  # salt가 다르므로 해시값도 달라야 함
 
-    def test_hash_format_contains_salt_and_key(self):
+    def test_hash_format_is_bcrypt(self):
         hashed = hash_password("test")
-        parts = hashed.split(":")
-        assert len(parts) == 2
-        assert len(parts[0]) == 64  # 32 bytes hex = 64 chars
-        assert len(parts[1]) == 64  # SHA-256 = 32 bytes hex = 64 chars
+        # bcrypt 형식: $2b$12$...
+        assert hashed.startswith("$2b$")
+        assert len(hashed) == 60  # bcrypt always produces 60-char hash

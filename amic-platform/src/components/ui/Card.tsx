@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { useTilt } from "@/hooks/useTilt";
 
 export type CardVariant = "default" | "forest-lift" | "accent-left" | "elevated" | "hero";
 
@@ -10,6 +11,7 @@ export interface CardProps {
   padding?: "none" | "sm" | "md" | "lg";
   variant?: CardVariant;
   hoverEffect?: boolean;
+  tilt?: boolean;
   headingLevel?: "h2" | "h3" | "h4" | "h5";
   className?: string;
 }
@@ -37,17 +39,21 @@ export function Card({
   padding = "md",
   variant = "default",
   hoverEffect = false,
+  tilt = false,
   headingLevel: HeadingTag = "h3",
   className,
 }: CardProps) {
+  const tiltHandlers = useTilt(2);
+
   return (
     <div
       className={cn(
-        "bg-white rounded-dr border border-gray-border",
+        "bg-white rounded-dr border border-gray-border overflow-hidden",
         cardVariantStyles[variant],
         hoverEffect && variant !== "forest-lift" && "transition-shadow duration-200 hover:shadow-dr-md",
-        className
+        className,
       )}
+      {...(tilt ? { onMouseMove: tiltHandlers.onMouseMove, onMouseLeave: tiltHandlers.onMouseLeave, style: tiltHandlers.style } : {})}
     >
       {/* 헤더바 */}
       {headerBar && title && (

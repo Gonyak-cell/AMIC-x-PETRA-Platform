@@ -4,7 +4,8 @@ import { useReitDetail } from "@/modules/kiis/hooks/useReits";
 import { Card, DataTable, KpiCard, Spinner, EmptyState, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { REITsAssetItem } from "@/modules/kiis/types/reit";
-import { formatAmount, formatPercent } from "@/lib/format";
+import { formatAmount, formatAmountKRW, formatPercent } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/forestgp-nature.jpg";
 
 const assetColumns: Column<REITsAssetItem>[] = [
   {
@@ -71,13 +72,15 @@ export default function ReitDetailPage() {
           reit.management_company,
         ].filter(Boolean).join(" | ")}
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* KPI Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="총자산"
-          value={formatAmount(reit.total_assets, "KRW")}
+          value={formatAmountKRW(reit.total_assets)}
           icon={Building2}
         />
         <KpiCard

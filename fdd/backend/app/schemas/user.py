@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
     email: str = Field(..., min_length=5, max_length=255)
     password: str = Field(..., min_length=8, max_length=128)
     display_name: str = Field(..., min_length=1, max_length=255)
+    title: str = Field(default="", max_length=100)
     role: UserRole = UserRole.ANALYST
 
 
@@ -21,6 +22,7 @@ class UserRead(BaseModel):
     id: uuid.UUID
     email: str
     display_name: str
+    title: str
     role: UserRole
     is_active: bool
     last_login_at: datetime | None
@@ -32,6 +34,7 @@ class UserRead(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: str | None = Field(default=None, max_length=255)
+    title: str | None = Field(default=None, max_length=100)
     role: UserRole | None = None
     is_active: bool | None = None
 

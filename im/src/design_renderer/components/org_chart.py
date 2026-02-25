@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from src.chart_engine.config import ChartColorConfig, ChartConfig
+from src.chart_engine.config import chart_config_from_design_tokens
 from src.chart_engine.export.svg_exporter import graphviz_to_svg as _ce_graphviz_to_svg
 from src.chart_engine.graphviz.org_chart import create_org_chart as _ce_create_org_chart
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
@@ -22,28 +22,10 @@ from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 logger = logging.getLogger(__name__)
 
 
-def _tokens_to_config(tokens: IMDesignTokens | None = None) -> ChartConfig:
-    """IMDesignTokens → ChartConfig 변환."""
+def _tokens_to_config(tokens: IMDesignTokens | None = None) -> "ChartConfig":  # noqa: F821
+    """IMDesignTokens → ChartConfig (chart_engine 공통 어댑터 위임)."""
     tokens = tokens or DEFAULT_TOKENS
-    c = tokens.colors
-    return ChartConfig(
-        colors=ChartColorConfig(
-            primary=c.primary,
-            accent=c.accent,
-            text_body=c.text_body,
-            text_secondary=c.text_secondary,
-            positive=c.positive,
-            negative=c.negative,
-            caution=c.caution,
-            gray_medium=c.gray_medium,
-            gray_border=c.gray_border,
-            bg_light_green=c.bg_light_green,
-            bg_cool_grey=c.bg_cool_grey,
-            text_white=c.text_white,
-            text_dark=c.text_dark,
-        ),
-        font=tokens.typography.font_chart,
-    )
+    return chart_config_from_design_tokens(tokens)
 
 
 def create_org_chart(

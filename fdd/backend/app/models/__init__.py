@@ -23,8 +23,23 @@ from app.models.upload import UploadFile, UploadValidationError  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
 from app.models.vdr import VdrFolder, VdrFolderType  # noqa: F401
 
+# Phase 6: FDD Checklist & Auto Analysis
+from app.models.analysis_run import AnalysisRun, AnalysisRunStatus  # noqa: F401
+from app.models.fdd_checklist import (  # noqa: F401
+    ChecklistCategory,
+    ChecklistItemStatus,
+    ChecklistItemVdrLink,
+    ChecklistSeverity,
+    ChecklistStatus,
+    FddChecklist,
+    FddChecklistItem,
+)
+
 # Phase 5: Portal endpoints
 from app.models.email_preference import EmailPreference  # noqa: F401
 from app.models.export_record import ExportFormat, ExportModule, ExportRecord, ExportStatus  # noqa: F401
 from app.models.notification import Notification, NotificationModule  # noqa: F401
 from app.models.webhook import WebhookConfig  # noqa: F401
+
+# Ralph Loop (AI Quality Refinement)
+from app.models.ralph_session import FddRalphSession, FddRalphSessionStatus  # noqa: F401

@@ -21,11 +21,13 @@ import {
   isIMStyle,
 } from "@/modules/im/types/document";
 import { INDUSTRY_OPTIONS, isIndustryId } from "@/types/industry";
+import heroImg from "@/assets/images/heroes/hero-arch-mono.jpg";
 
 const STYLE_OPTIONS = [
   { value: "TITAN", label: "Titan - Concise Summary" },
   { value: "COVENANT", label: "Covenant - Financial Focus" },
   { value: "FULL", label: "Full - Comprehensive" },
+  { value: "TEASER", label: "Teaser - One-pager" },
   { value: "CUSTOM", label: "Custom - Select Sections" },
 ];
 
@@ -284,6 +286,8 @@ export default function CreateDocumentPage() {
       <PageHero
         title="Create New IM"
         subtitle="Generate an Investment Memorandum"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
       />
 

@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from openpyxl import load_workbook
 from sqlalchemy.orm import Session
 
+from app.core.log_decorators import log_error_with_input
 from app.core.logging import get_logger
 from app.models.journal_entry import JournalEntry
 from app.models.upload import UploadFile, UploadType
@@ -88,6 +89,7 @@ def safe_str(value: object) -> str | None:
     return s if s else None
 
 
+@log_error_with_input
 def ingest_file(
     db: Session,
     upload: UploadFile,

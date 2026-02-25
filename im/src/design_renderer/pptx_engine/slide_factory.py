@@ -49,6 +49,11 @@ class SlideFactory:
     def set_presentation(self, prs: Any) -> None:
         self._prs = prs
 
+    def add_blank_slide(self, prs: Any | None = None) -> Any:
+        """빈 BLANK 슬라이드를 추가한다."""
+        target = prs or self.prs
+        return self._manager.add_slide("blank", target)
+
     def add_cover_slide(
         self,
         *,

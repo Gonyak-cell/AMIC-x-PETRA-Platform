@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Plus,
   Briefcase,
@@ -31,6 +32,8 @@ import {
   EmptyState,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+import heroImg from "@/assets/images/heroes/hero-arch-teal.jpg";
 
 const PHASE_LABELS: Record<string, string> = Object.fromEntries(
   PHASE_CONFIG.map((p) => [p.phase, p.label]),
@@ -61,11 +64,15 @@ function formatValue(val: number | null, currency: string): string {
 
 export default function TransactionListPage() {
   const navigate = useNavigate();
+  const { canWrite, isClient } = useAuth();
   const [search, setSearch] = useState("");
   const [sideFilter, setSideFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  const kpiRef = useRef<HTMLDivElement>(null);
+  useScrollReveal(kpiRef, { stagger: 0.06, y: 20 });
 
   const { data, isLoading } = useTransactions({
     search: search || undefined,
@@ -166,20 +173,24 @@ export default function TransactionListPage() {
     <div className="space-y-6">
       <PageHero
         title="M&A Pipeline"
-        subtitle="7단계 워크플로우 기반 거래 관리"
+        subtitle={isClient ? "배정된 거래 목록" : "7단계 워크플로우 기반 거래 관리"}
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
         actions={
-          <Button
-            icon={Plus}
-            onClick={() => navigate("/ma/transactions/new")}
-          >
-            New Transaction
-          </Button>
+          canWrite() ? (
+            <Button
+              icon={Plus}
+              onClick={() => navigate("/ma/transactions/new")}
+            >
+              New Transaction
+            </Button>
+          ) : undefined
         }
       />
 
       {/* KPI 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="전체 거래"
           value={String(kpis.total)}
@@ -256,9 +267,9 @@ export default function TransactionListPage() {
           <EmptyState
             icon={Briefcase}
             title="거래가 없습니다"
-            description="새 거래를 생성하여 M&A 파이프라인을 시작하세요."
-            actionLabel="New Transaction"
-            onAction={() => navigate("/ma/transactions/new")}
+            description={canWrite() ? "새 거래를 생성하여 M&A 파이프라인을 시작하세요." : "배정된 거래가 없습니다."}
+            actionLabel={canWrite() ? "New Transaction" : undefined}
+            onAction={canWrite() ? () => navigate("/ma/transactions/new") : undefined}
           />
         ) : (
           <DataTable
@@ -268,6 +279,7 @@ export default function TransactionListPage() {
             loading={isLoading}
             onRowClick={(row) => navigate(`/ma/transactions/${row.id}`)}
             emptyMessage="조건에 맞는 거래가 없습니다"
+            borderless
           />
         )}
       </Card>

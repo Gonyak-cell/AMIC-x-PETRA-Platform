@@ -91,9 +91,17 @@ class AMICThemeFactory:
         )
 
     def get_color_sequence(self) -> list[str]:
-        """디자인 토큰 기반 차트 컬러 시퀀스 반환."""
+        """AMIC 5단계 그린 기반 차트 컬러 시퀀스 반환."""
         c = self._config.colors
-        return [c.primary, c.accent, c.text_body, c.text_secondary, c.caution, c.negative]
+        return [
+            c.primary,    # Signature Green
+            c.secondary,  # Solid Green
+            c.accent,     # Highlight Green
+            c.fresh,      # Fresh Green
+            c.gray_medium,   # 중립 그레이 (시맨틱 컬러 혼입 방지)
+            c.text_secondary,
+            c.bg_cool_grey,
+        ]
 
     def get_semantic_colors(self) -> dict[str, str]:
         """시맨틱 색상 맵 반환 (positive, negative, caution 등)."""
@@ -103,5 +111,7 @@ class AMICThemeFactory:
             "negative": c.negative,
             "caution": c.caution,
             "primary": c.primary,
+            "secondary": c.secondary,
             "accent": c.accent,
+            "fresh": c.fresh,
         }

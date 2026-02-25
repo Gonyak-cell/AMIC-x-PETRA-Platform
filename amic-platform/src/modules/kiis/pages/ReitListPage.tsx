@@ -6,6 +6,7 @@ import { Card, DataTable, Select, Badge, EmptyState, Pagination, PageHero } from
 import type { Column } from "@/components/ui";
 import type { REITsListItem, ReitType, ReitStatus } from "@/modules/kiis/types/reit";
 import { formatAmount, formatPercent } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/forestgp-background.jpg";
 
 const TYPE_OPTIONS = [
   { value: "", label: "All Types" },
@@ -103,7 +104,7 @@ export default function ReitListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="REITs" subtitle="Browse and filter REIT listings" compact />
+      <PageHero title="REITs" subtitle="Browse and filter REIT listings" compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       <div className="flex gap-3 items-end">
         <Select

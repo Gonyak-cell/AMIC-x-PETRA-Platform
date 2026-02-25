@@ -42,6 +42,30 @@ jobs:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
           JWT_SECRET: test-secret-for-ci
 
+  # ─── Stage 0B: Backend Auth Guard Test (KIIS) ───────────────────────
+  backend-kiis:
+    name: KIIS Backend Auth
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kiis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install ruff pytest pytest-asyncio httpx aiosqlite python-jose[cryptography] bcrypt
+      - name: Auth guard tests
+        run: pytest tests/test_auth_guard.py -v --tb=short
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          JWT_SECRET: test-jwt-secret
+          SECRET_KEY: test-secret-key
+          AUTH_ENABLED: "true"
+
   # ─── Stage 1: Lint + Typecheck (fast feedback) ─────────────────────
   quality:
     name: Lint & Typecheck

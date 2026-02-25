@@ -7,6 +7,7 @@ import ScopeSelector from "@/modules/fdd/components/deal/ScopeSelector";
 import { TeamAssignment } from "@/components/collaboration/TeamAssignment";
 import { useTeamMembers, useUpdateTeamAssignment } from "@/hooks/useTeamMembers";
 import type { TeamAssignmentData } from "@/types/collaboration";
+import heroImg from "@/assets/images/heroes/hero-arch-dome.jpg";
 
 export default function DealSetupPage() {
   const { dealId } = useParams<{ dealId: string }>();
@@ -78,7 +79,7 @@ export default function DealSetupPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Deal Setup" subtitle="Edit deal information, client details, and FDD scope." compact />
+      <PageHero title="Deal Setup" subtitle="Edit deal information, client details, and FDD scope." compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       {/* Deal Info (read-only) */}
       <Card title="Deal Information" headerBar>

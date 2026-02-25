@@ -1,4 +1,12 @@
-import { Briefcase, Building2, FileText, Shield } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  FileText,
+  Shield,
+  Handshake,
+  Files,
+  FolderLock,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui";
 import type { BadgeVariant } from "@/components/ui";
@@ -11,6 +19,9 @@ const MODULE_CONFIG: Record<
   fdd: { icon: Briefcase, color: "bg-blue-500", badge: "info" },
   kiis: { icon: Building2, color: "bg-emerald-500", badge: "success" },
   im: { icon: FileText, color: "bg-amber-500", badge: "warning" },
+  ma: { icon: Handshake, color: "bg-violet-500", badge: "info" },
+  docs: { icon: Files, color: "bg-teal-500", badge: "success" },
+  vdr: { icon: FolderLock, color: "bg-indigo-500", badge: "info" },
   portal: { icon: Shield, color: "bg-gray-500", badge: "neutral" },
 };
 
@@ -54,7 +65,7 @@ export function ActivityTimeline({ items, compact }: ActivityTimelineProps) {
 
       <ul className="space-y-0" role="list" aria-label="Activity timeline">
         {items.map((item) => {
-          const config = MODULE_CONFIG[item.module];
+          const config = MODULE_CONFIG[item.module] ?? MODULE_CONFIG.portal;
           const Icon = config.icon;
 
           return (

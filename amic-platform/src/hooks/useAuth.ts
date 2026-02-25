@@ -59,5 +59,15 @@ export function useAuth() {
     [user],
   );
 
-  return { user, isAuthenticated, isLoading, login, logout, hasPermission };
+  const isClient = user?.role === "CLIENT";
+
+  const canWrite = useCallback(
+    (): boolean => {
+      if (!user) return false;
+      return user.role !== "CLIENT";
+    },
+    [user],
+  );
+
+  return { user, isAuthenticated, isLoading, login, logout, hasPermission, isClient, canWrite };
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
@@ -12,6 +13,7 @@ import {
 } from "@/modules/ma/constants";
 
 import { Button, Card, Input, Select, PageHero } from "@/components/ui";
+import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
 const SIDE_OPTIONS = TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "");
 
@@ -26,7 +28,10 @@ const INITIAL: TransactionCreate = {
 
 export default function CreateTransactionPage() {
   const navigate = useNavigate();
+  const { isClient } = useAuth();
   const createTxn = useCreateTransaction();
+
+  if (isClient) return <Navigate to="/ma/transactions" replace />;
   const [form, setForm] = useState<TransactionCreate>(INITIAL);
   const [showOptional, setShowOptional] = useState(false);
 
@@ -52,7 +57,7 @@ export default function CreateTransactionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="New Transaction" subtitle="새 M&A 거래 생성" compact />
+      <PageHero title="New Transaction" subtitle="새 M&A 거래 생성" backgroundImage={heroImg} backgroundOpacity={0.18} compact />
 
       <div className="max-w-2xl mx-auto">
         <Button
@@ -130,6 +135,7 @@ export default function CreateTransactionPage() {
             {/* 선택 필드 토글 */}
             <button
               type="button"
+              aria-expanded={showOptional}
               onClick={() => setShowOptional(!showOptional)}
               className="flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
             >

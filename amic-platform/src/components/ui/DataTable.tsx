@@ -1,6 +1,7 @@
-import { Fragment, useState, useRef, useCallback } from "react";
+import { Fragment, useState, useRef, useCallback, useEffect } from "react";
 import type { ReactNode, KeyboardEvent } from "react";
 import { cn } from "@/lib/cn";
+import { gsap } from "@/lib/gsap";
 import { Skeleton } from "./Skeleton";
 
 export interface Column<T> {
@@ -33,6 +34,7 @@ export interface DataTableProps<T> {
   sectionHeaders?: SectionHeaderConfig[];
   footer?: ReactNode;
   uppercaseHeaders?: boolean;
+  borderless?: boolean;
   className?: string;
 }
 
@@ -55,11 +57,29 @@ export function DataTable<T extends object>({
   sectionHeaders = [],
   footer,
   uppercaseHeaders = false,
+  borderless = true,
   className,
 }: DataTableProps<T>) {
   const cellPadding = compact ? "px-3 py-2" : "px-4 py-3";
   const [focusedRowIndex, setFocusedRowIndex] = useState<number>(-1);
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const prevDataLen = useRef(0);
+
+  // Stagger-in rows when data changes
+  useEffect(() => {
+    if (!tbodyRef.current || !data.length || data.length === prevDataLen.current) return;
+    prevDataLen.current = data.length;
+
+    const rows = tbodyRef.current.querySelectorAll("tr");
+    if (!rows.length) return;
+
+    gsap.fromTo(
+      Array.from(rows),
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, stagger: 0.03, duration: 0.35, ease: "power2.out" },
+    );
+  }, [data]);
 
   // 섹션 헤더 인덱스 맵
   const sectionMap = new Map(sectionHeaders.map((s) => [s.index, s.label]));
@@ -104,15 +124,15 @@ export function DataTable<T extends object>({
 
   if (loading) {
     return (
-      <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
+      <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
         <table className="w-full">
           <thead>
-            <tr className="bg-gradient-to-r from-amic to-amic-500">
+            <tr className="bg-amic-50 border-b-2 border-amic">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "text-white font-heading font-semibold text-sub-header tracking-wide",
+                    "text-amic font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"]
@@ -142,15 +162,15 @@ export function DataTable<T extends object>({
 
   if (!data.length) {
     return (
-      <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
+      <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
         <table className="w-full">
           <thead>
-            <tr className="bg-gradient-to-r from-amic to-amic-500">
+            <tr className="bg-amic-50 border-b-2 border-amic">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "text-white font-heading font-semibold text-sub-header tracking-wide",
+                    "text-amic font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"]
@@ -169,15 +189,15 @@ export function DataTable<T extends object>({
   }
 
   return (
-    <div className={cn("border border-gray-border rounded-dr overflow-x-auto", className)}>
+    <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
       <table className="w-full">
         <thead>
-          <tr className="bg-gradient-to-r from-amic to-amic-500">
+          <tr className="bg-amic-50 border-b-2 border-amic">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  "text-white font-heading font-semibold text-sub-header tracking-wide",
+                  "text-amic font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                   cellPadding,
                   alignStyles[col.align || "left"]
@@ -189,7 +209,7 @@ export function DataTable<T extends object>({
             ))}
           </tr>
         </thead>
-        <tbody className="font-body text-body-text">
+        <tbody ref={tbodyRef} className="font-body text-body-text">
           {data.map((row, rowIndex) => {
             const sectionLabel = sectionMap.get(rowIndex);
             const rowKey = String((row as Record<string, unknown>)[keyField] ?? rowIndex);

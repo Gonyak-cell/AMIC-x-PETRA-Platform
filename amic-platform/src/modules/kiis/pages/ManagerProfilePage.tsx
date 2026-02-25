@@ -17,6 +17,7 @@ import type {
 } from "@/modules/kiis/types/manager";
 import { formatDate } from "@/lib/format";
 import { MOVEMENT_VARIANT } from "@/modules/kiis/constants/variants";
+import heroImg from "@/assets/images/heroes/forestgp-nature.jpg";
 
 const movementColumns: Column<ManagerMovement>[] = [
   {
@@ -118,6 +119,8 @@ export default function ManagerProfilePage() {
           profile.current_fund && `Fund: ${profile.current_fund}`,
         ].filter(Boolean).join(" | ") || undefined}
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
       />
 
       {/* KPIs */}

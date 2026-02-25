@@ -12,6 +12,7 @@ from typing import Any
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 from src.design_renderer.im_document import IMDocumentData
 from src.design_renderer.pdf_output.html_builder import build_slide_html
+from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
 from src.design_renderer.section_renderers import register_renderer
 from src.design_renderer.section_renderers.base import BaseSectionRenderer
 
@@ -171,7 +172,7 @@ class ShareholderStructureRenderer(BaseSectionRenderer):
                         PP_ALIGN.LEFT if col_idx < 2 else PP_ALIGN.RIGHT
                     )
                     for run in paragraph.runs:
-                        run.font.name = t.font_body
+                        set_font_with_ea(run, t.font_body)
                         run.font.size = Pt(f.footnote)
                         run.font.bold = True
                         run.font.color.rgb = RGBColor.from_string(
@@ -201,8 +202,9 @@ class ShareholderStructureRenderer(BaseSectionRenderer):
                     )
                     for paragraph in cell.text_frame.paragraphs:
                         for run in paragraph.runs:
-                            run.font.name = (
-                                t.font_mono if col_idx == 2 else t.font_body
+                            set_font_with_ea(
+                                run,
+                                t.font_mono if col_idx == 2 else t.font_body,
                             )
                             run.font.size = Pt(f.body)
                             run.font.color.rgb = RGBColor.from_string(

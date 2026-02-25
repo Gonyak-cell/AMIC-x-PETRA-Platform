@@ -3,6 +3,7 @@ import { FileText, Briefcase, BarChart3, Layers, Settings2 } from "lucide-react"
 import { Button, Card, PageHero } from "@/components/ui";
 import type { IMStyle, SectionId } from "@/modules/im/types/document";
 import { SECTION_LABEL_MAP } from "@/modules/im/types/document";
+import heroImg from "@/assets/images/heroes/hero-arch-purple.jpg";
 
 interface TemplateInfo {
   style: IMStyle;
@@ -64,6 +65,8 @@ export default function TemplatesPage() {
       <PageHero
         title="IM Templates"
         subtitle="Choose a template style for your Investment Memorandum"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
       />
 

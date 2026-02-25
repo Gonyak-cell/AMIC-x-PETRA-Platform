@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import AuditAction, NdaStatus
 from app.models.nda import NDA
 from app.schemas.nda import NDACreate, NDAOut, NDASummary, NDAUpdate
@@ -23,9 +23,10 @@ async def list_ndas(
     txn_id: uuid.UUID,
     buyer_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(NDA).where(NDA.transaction_id == txn_id)
     if buyer_id:
         q = q.where(NDA.buyer_candidate_id == buyer_id)
@@ -38,9 +39,10 @@ async def list_ndas(
 async def nda_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(NDA).where(NDA.transaction_id == txn_id)
     result = await db.execute(q)
     ndas = list(result.scalars().all())
@@ -63,7 +65,7 @@ async def create_nda(
     txn_id: uuid.UUID,
     body: NDACreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     nda = NDA(transaction_id=txn_id, **body.model_dump())
@@ -88,7 +90,7 @@ async def update_nda(
     nda_id: uuid.UUID,
     body: NDAUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
     nda = (await db.execute(q)).scalar_one_or_none()
@@ -115,7 +117,7 @@ async def delete_nda(
     txn_id: uuid.UUID,
     nda_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
     nda = (await db.execute(q)).scalar_one_or_none()

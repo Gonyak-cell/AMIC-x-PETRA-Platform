@@ -4,9 +4,9 @@ import type { ExportModule, ExportStatus } from "@/types/export";
 
 const MODULE_OPTIONS: SelectOption[] = [
   { value: "", label: "All Modules" },
-  { value: "fdd", label: "FDD" },
+  { value: "ma", label: "M&A" },
+  { value: "docs", label: "Deal Doc Studio" },
   { value: "kiis", label: "KIIS" },
-  { value: "im", label: "IM" },
 ];
 
 const STATUS_OPTIONS: SelectOption[] = [

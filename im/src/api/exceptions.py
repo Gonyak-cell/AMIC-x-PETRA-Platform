@@ -10,14 +10,23 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.api.core.errors import ErrorCode
+
 
 class APIError(Exception):
     """API 모듈 최상위 예외."""
 
-    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+        *,
+        code: ErrorCode | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.details = details or {}
+        self.code = code
 
 
 # ============================================================================
@@ -31,7 +40,7 @@ class AuthenticationError(APIError):
     def __init__(
         self, message: str = "인증에 실패했습니다.", details: dict[str, Any] | None = None
     ) -> None:
-        super().__init__(message=message, details=details)
+        super().__init__(message=message, details=details, code=ErrorCode.SYS_AUTH_FAILED)
 
 
 class AuthorizationError(APIError):
@@ -45,6 +54,7 @@ class AuthorizationError(APIError):
         super().__init__(
             message=message,
             details={"required_role": required_role} if required_role else {},
+            code=ErrorCode.SYS_AUTH_FORBIDDEN,
         )
 
 
@@ -60,6 +70,7 @@ class NotFoundError(APIError):
         super().__init__(
             message=f"{resource_type} '{identifier}'을(를) 찾을 수 없습니다.",
             details={"resource_type": resource_type, "identifier": identifier},
+            code=ErrorCode.DOC_NOT_FOUND,
         )
 
 
@@ -70,6 +81,7 @@ class ConflictError(APIError):
         super().__init__(
             message=f"{resource_type} '{identifier}'이(가) 이미 존재합니다.",
             details={"resource_type": resource_type, "identifier": identifier},
+            code=ErrorCode.DOC_CONFLICT,
         )
 
 
@@ -90,6 +102,7 @@ class TaskError(APIError):
         super().__init__(
             message=message,
             details={"task_id": task_id, "stage": stage},
+            code=ErrorCode.TASK_EXECUTION_FAILED,
         )
 
 
@@ -105,4 +118,5 @@ class ValidationError(APIError):
         super().__init__(
             message=f"입력 검증 실패: 필드 '{field}' — {reason}",
             details={"field": field, "reason": reason},
+            code=ErrorCode.VALIDATION_FIELD_ERROR,
         )

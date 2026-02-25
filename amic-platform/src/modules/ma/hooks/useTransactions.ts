@@ -1,6 +1,8 @@
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
+import { PHASE_CONFIG } from "@/modules/ma/constants";
 import type {
   Transaction,
   TransactionCreate,
@@ -22,7 +24,7 @@ import type {
   BuyerCandidateUpdate,
   BuyerPipelineSummary,
 } from "@/modules/ma/types/buyer";
-import type { TimelineResponse, MilestoneCreate } from "@/modules/ma/types/timeline";
+import type { TimelineResponse, MilestoneCreate, GanttResponse } from "@/modules/ma/types/timeline";
 
 // ── Transaction CRUD ───────────────────────────────────
 export function useTransactions(params?: TransactionListParams) {
@@ -135,6 +137,53 @@ export function useAdvancePhase(txnId: string) {
       toast.error(err.message || "단계 전환에 실패했습니다.");
     },
   });
+}
+
+export function useAutoAdvanceNotification(txnId: string) {
+  const prevCanAdvance = useRef<boolean | null>(null);
+  const { data: phaseStatus } = usePhaseCompletion(txnId);
+  const advancePhase = useAdvancePhase(txnId);
+  const advanceRef = useRef(advancePhase);
+  advanceRef.current = advancePhase;
+
+  useEffect(() => {
+    if (!phaseStatus) return;
+
+    // 초기 로드 시에는 알림하지 않음 (이전 값이 null)
+    if (prevCanAdvance.current === null) {
+      prevCanAdvance.current = phaseStatus.can_advance;
+      return;
+    }
+
+    // can_advance가 false → true로 전환된 시점에만 알림
+    if (phaseStatus.can_advance && !prevCanAdvance.current && phaseStatus.next_phase) {
+      const nextLabel =
+        PHASE_CONFIG.find((p) => p.phase === phaseStatus.next_phase)?.label ??
+        phaseStatus.next_phase;
+
+      if (phaseStatus.has_warnings) {
+        toast.info(`${nextLabel} 단계로 진행할 수 있습니다 (권장 항목 미완료)`, {
+          action: {
+            label: "진행하기",
+            onClick: () =>
+              advanceRef.current.mutate({ to_phase: phaseStatus.next_phase! }),
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.success(`모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`, {
+          action: {
+            label: "진행하기",
+            onClick: () =>
+              advanceRef.current.mutate({ to_phase: phaseStatus.next_phase! }),
+          },
+          duration: 10000,
+        });
+      }
+    }
+
+    prevCanAdvance.current = phaseStatus.can_advance;
+  }, [phaseStatus?.can_advance, phaseStatus?.has_warnings, phaseStatus?.next_phase]);
 }
 
 export function useChangeStatus(txnId: string) {
@@ -304,6 +353,7 @@ export function useUpdateBuyer(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "buyers"],
       });
+      toast.success("매수자 정보가 수정되었습니다.");
     },
     onError: () => {
       toast.error("매수자 정보 수정에 실패했습니다.");
@@ -317,6 +367,17 @@ export function useTimeline(txnId: string) {
     queryKey: ["ma", "transactions", txnId, "timeline"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/timeline`);
+      return data;
+    },
+    enabled: !!txnId,
+  });
+}
+
+export function useGanttTimeline(txnId: string) {
+  return useQuery<GanttResponse>({
+    queryKey: ["ma", "transactions", txnId, "timeline", "gantt"],
+    queryFn: async () => {
+      const { data } = await maApi.get(`/transactions/${txnId}/timeline/gantt`);
       return data;
     },
     enabled: !!txnId,

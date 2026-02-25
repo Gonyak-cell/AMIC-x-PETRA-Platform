@@ -5,20 +5,16 @@ import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { GanttTimeline } from "@/components/calendar/GanttTimeline";
 import { downloadIcs } from "@/lib/ics";
 import { Skeleton, PageHero } from "@/components/ui";
-import type { CalendarEventModule, CalendarViewMode } from "@/types/calendar";
+import type { CalendarViewMode } from "@/types/calendar";
+import heroImg from "@/assets/images/heroes/forestgp-background.jpg";
 
 export default function CalendarPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [modules, setModules] = useState<CalendarEventModule[]>([
-    "fdd",
-    "kiis",
-    "im",
-  ]);
   const [viewMode, setViewMode] = useState<CalendarViewMode>("calendar");
 
-  const filter = { modules, month, year };
+  const filter = { month, year };
   const { events, ganttItems, isLoading, errors } = useCalendarEvents(filter);
 
   const handlePrevMonth = useCallback(() => {
@@ -47,12 +43,6 @@ export default function CalendarPage() {
     setMonth(today.getMonth());
   }, []);
 
-  const handleToggleModule = useCallback((mod: CalendarEventModule) => {
-    setModules((prev) =>
-      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
-    );
-  }, []);
-
   const handleExportIcs = useCallback(() => {
     downloadIcs(events, `amic-calendar-${year}-${String(month + 1).padStart(2, "0")}.ics`);
   }, [events, year, month]);
@@ -62,7 +52,10 @@ export default function CalendarPage() {
       {/* Hero Section */}
       <PageHero
         title="Calendar & Timeline"
-        subtitle="Deal milestones, portfolio dates, and document timelines across modules"
+        subtitle="M&A Pipeline milestones and transaction progress"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.35}
+        backgroundPosition="bottom"
         compact
       />
 
@@ -70,28 +63,18 @@ export default function CalendarPage() {
       <CalendarFilterBar
         year={year}
         month={month}
-        modules={modules}
         viewMode={viewMode}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onToday={handleToday}
-        onToggleModule={handleToggleModule}
         onViewModeChange={setViewMode}
         onExportIcs={handleExportIcs}
       />
 
-      {/* Error banners for unreachable modules */}
-      {(errors.fdd || errors.kiis || errors.im) && (
+      {/* Error banner */}
+      {errors.ma && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-          Some modules are unreachable:{" "}
-          {[
-            errors.fdd && "FDD",
-            errors.kiis && "KIIS",
-            errors.im && "IM",
-          ]
-            .filter(Boolean)
-            .join(", ")}
-          . Their events may be missing.
+          M&A Pipeline 서비스에 연결할 수 없습니다. 이벤트가 표시되지 않을 수 있습니다.
         </div>
       )}
 
@@ -103,16 +86,8 @@ export default function CalendarPage() {
           <CalendarGrid year={year} month={month} events={events} />
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amic" />
-              <span className="text-text-secondary">FDD Deadline</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-text-secondary">KIIS Deal</span>
-            </div>
-            <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-accent" />
-              <span className="text-text-secondary">IM Due Date</span>
+              <span className="text-text-secondary">M&A Transaction</span>
             </div>
           </div>
         </>

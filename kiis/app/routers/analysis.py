@@ -1,10 +1,11 @@
 """평판 분석 API 라우터"""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.pagination import PaginationParams, paginate
 from app.models.company import Company
 from app.models.reputation import ReputationScore
 from app.schemas.analysis import (
@@ -14,8 +15,11 @@ from app.schemas.analysis import (
     ReputationListItem,
     ReputationListResponse,
     ReputationScoreResponse,
+    ReputationThemeItem,
+    ReputationThemeResponse,
 )
 from app.services.reputation_service import ReputationService
+from app.services.reputation_themes import THEME_DISPLAY_NAMES, THEME_SENTIMENT
 
 router = APIRouter()
 
@@ -32,8 +36,7 @@ def get_reputation_service() -> ReputationService:
 )
 async def list_reputations(
     status_tag: str | None = Query(None, description="상태 태그 필터 (rising/stable/risk)"),
-    page: int = Query(1, ge=1, description="페이지 번호"),
-    size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
+    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     """기업 평판 목록을 조회한다."""
@@ -49,16 +52,8 @@ async def list_reputations(
     if status_tag:
         query = query.where(ReputationScore.status_tag == status_tag)
 
-    # 총 건수
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-
-    # 페이지네이션
-    query = query.order_by(ReputationScore.total_score.desc()).offset((page - 1) * size).limit(size)
-
-    result = await db.execute(query)
-    rows = result.all()
+    query = query.order_by(ReputationScore.total_score.desc())
+    rows, total = await paginate(db, query, pagination)
 
     items = [
         ReputationListItem(
@@ -72,7 +67,7 @@ async def list_reputations(
         for row in rows
     ]
 
-    return ReputationListResponse(total=total, page=page, size=size, items=items)
+    return ReputationListResponse(total=total, page=pagination.page, size=pagination.size, items=items)
 
 
 @router.get(
@@ -94,7 +89,7 @@ async def get_reputation(
     if not company:
         raise HTTPException(status_code=404, detail=f"기업을 찾을 수 없습니다: {corp_code}")
 
-    reputation = await service.get_reputation(db, corp_code)
+    reputation = await service.get_reputation(db, corp_code, company_id=company.id)
 
     if not reputation:
         raise HTTPException(
@@ -137,7 +132,7 @@ async def get_reputation_history(
     if not company:
         raise HTTPException(status_code=404, detail=f"기업을 찾을 수 없습니다: {corp_code}")
 
-    history = await service.get_reputation_history(db, corp_code, limit)
+    history = await service.get_reputation_history(db, corp_code, limit, company_id=company.id)
 
     items = [
         ReputationHistoryItem(
@@ -204,4 +199,50 @@ async def calculate_reputation(
         scored_at=reputation.scored_at,
         news_count=reputation.news_count,
         exit_count=reputation.exit_count,
+    )
+
+
+@router.get(
+    "/reputation/{corp_code}/themes",
+    response_model=ReputationThemeResponse,
+    summary="테마별 평판 분석",
+)
+async def get_reputation_themes(
+    corp_code: str,
+    months: int = Query(6, ge=1, le=24, description="분석 기간 (개월)"),
+    db: AsyncSession = Depends(get_db),
+    service: ReputationService = Depends(get_reputation_service),
+):
+    """특정 기업의 테마별 뉴스 분포를 분석한다.
+
+    reputation_themes 감성 사전 기반으로 각 뉴스 기사를 exit_ipo, mna, financial_risk 등
+    테마 코드로 분류하여 건수를 반환한다. 리스크 부재 테마는 별도 알림 문구로 표시된다.
+    """
+    company_stmt = select(Company).where(Company.corp_code == corp_code)
+    company_result = await db.execute(company_stmt)
+    company = company_result.scalar_one_or_none()
+
+    if not company:
+        raise HTTPException(status_code=404, detail=f"기업을 찾을 수 없습니다: {corp_code}")
+
+    classified = await service.classify_by_theme(db, company.id, months=months)
+    theme_counts: dict[str, int] = classified["theme_counts"]
+
+    themes = [
+        ReputationThemeItem(
+            theme_code=code,
+            display_name=THEME_DISPLAY_NAMES.get(code, code),
+            sentiment=THEME_SENTIMENT.get(code, "neutral"),
+            count=theme_counts.get(code, 0),
+        )
+        for code in THEME_DISPLAY_NAMES
+    ]
+
+    return ReputationThemeResponse(
+        corp_code=company.corp_code,
+        corp_name=company.corp_name,
+        period_months=months,
+        themes=themes,
+        risk_absence_notices=classified["risk_absence_notices"],
+        total_articles=classified["total_articles"],
     )

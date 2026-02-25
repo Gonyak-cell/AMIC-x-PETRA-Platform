@@ -88,3 +88,23 @@ class ReputationListResponse(BaseModel):
     page: int = Field(..., description="페이지 번호")
     size: int = Field(..., description="페이지 크기")
     items: list[ReputationListItem] = Field(default_factory=list, description="평판 목록")
+
+
+class ReputationThemeItem(BaseModel):
+    """테마별 뉴스 분포 아이템"""
+
+    theme_code: str = Field(..., description="테마 코드 (exit_ipo, mna, financial_risk 등)")
+    display_name: str = Field(..., description="테마 표시명")
+    sentiment: str = Field(..., description="감성 방향 (positive / negative)")
+    count: int = Field(0, description="해당 테마 뉴스 건수")
+
+
+class ReputationThemeResponse(BaseModel):
+    """테마별 평판 분석 응답"""
+
+    corp_code: str = Field(..., description="DART 고유번호")
+    corp_name: str = Field(..., description="기업명")
+    period_months: int = Field(..., description="분석 기간 (개월)")
+    themes: list[ReputationThemeItem] = Field(default_factory=list, description="테마별 뉴스 건수 목록")
+    risk_absence_notices: list[str] = Field(default_factory=list, description="리스크 부재 알림 문구")
+    total_articles: int = Field(0, description="분석 대상 총 기사 수")

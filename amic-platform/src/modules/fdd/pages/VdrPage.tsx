@@ -1,16 +1,30 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { FolderOpen, FileText } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { FolderOpen, FileText, Play } from "lucide-react";
 import { toast } from "sonner";
-import { Card, Spinner, EmptyState, PageHero } from "@/components/ui";
+import { Card, Button, Spinner, EmptyState, PageHero } from "@/components/ui";
 import { useVdrFolders, useInitializeVdr } from "@/modules/fdd/hooks/useVdr";
+import { useRunAnalysis } from "@/modules/fdd/hooks/useAnalysis";
 import VdrFolderTree from "@/modules/fdd/components/vdr/VdrFolderTree";
+import heroImg from "@/assets/images/heroes/hero-arch-diamond.jpg";
 
 export default function VdrPage() {
+  const navigate = useNavigate();
   const { dealId } = useParams<{ dealId: string }>();
   const { data: folders = [], isLoading } = useVdrFolders(dealId!);
   const initializeVdr = useInitializeVdr(dealId!);
+  const runAnalysis = useRunAnalysis(dealId!);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  const handleRunAnalysis = async () => {
+    try {
+      await runAnalysis.mutateAsync();
+      toast.success("Auto analysis started — redirecting to checklist");
+      navigate(`/fdd/deals/${dealId}/checklist`);
+    } catch {
+      toast.error("Failed to start analysis");
+    }
+  };
 
   const handleInitialize = async () => {
     try {
@@ -31,7 +45,25 @@ export default function VdrPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Virtual Data Room" subtitle="Manage VDR folder structure and uploaded files." compact />
+      <PageHero
+        title="Virtual Data Room"
+        subtitle="Manage VDR folder structure and uploaded files."
+        compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
+        actions={
+          folders.length > 0 ? (
+            <Button
+              variant="primary"
+              icon={Play}
+              onClick={handleRunAnalysis}
+              loading={runAnalysis.isPending}
+            >
+              Run Auto Analysis
+            </Button>
+          ) : undefined
+        }
+      />
 
       {folders.length === 0 ? (
         /* Empty state — VDR not initialized */

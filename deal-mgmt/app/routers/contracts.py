@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.contract import Contract
 from app.models.contract_version import ContractVersion
 from app.models.enums import AuditAction, ContractStatus, SignatureStatus
@@ -31,9 +31,10 @@ router = APIRouter(prefix="/transactions/{txn_id}/contracts", tags=["Contracts"]
 async def list_contracts(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(Contract).where(Contract.transaction_id == txn_id).order_by(Contract.created_at.desc())
     result = await db.execute(q)
     return [ContractOut.model_validate(c) for c in result.scalars().all()]
@@ -43,9 +44,10 @@ async def list_contracts(
 async def contract_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(Contract).where(Contract.transaction_id == txn_id)
     result = await db.execute(q)
     contracts = list(result.scalars().all())
@@ -76,7 +78,7 @@ async def create_contract(
     txn_id: uuid.UUID,
     body: ContractCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     contract = Contract(transaction_id=txn_id, **body.model_dump())
@@ -101,7 +103,7 @@ async def update_contract(
     contract_id: uuid.UUID,
     body: ContractUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Contract).where(Contract.id == contract_id, Contract.transaction_id == txn_id)
     contract = (await db.execute(q)).scalar_one_or_none()
@@ -128,7 +130,7 @@ async def delete_contract(
     txn_id: uuid.UUID,
     contract_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Contract).where(Contract.id == contract_id, Contract.transaction_id == txn_id)
     contract = (await db.execute(q)).scalar_one_or_none()
@@ -153,8 +155,9 @@ async def list_versions(
     txn_id: uuid.UUID,
     contract_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     # 계약 존재 확인
     cq = select(Contract).where(Contract.id == contract_id, Contract.transaction_id == txn_id)
     if (await db.execute(cq)).scalar_one_or_none() is None:
@@ -175,7 +178,7 @@ async def create_version(
     contract_id: uuid.UUID,
     body: ContractVersionCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     cq = select(Contract).where(Contract.id == contract_id, Contract.transaction_id == txn_id)
     contract = (await db.execute(cq)).scalar_one_or_none()
@@ -214,7 +217,7 @@ async def analyze_contract(
     txn_id: uuid.UUID,
     contract_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     cq = select(Contract).where(Contract.id == contract_id, Contract.transaction_id == txn_id)
     contract = (await db.execute(cq)).scalar_one_or_none()

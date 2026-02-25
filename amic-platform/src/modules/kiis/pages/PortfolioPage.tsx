@@ -33,6 +33,7 @@ import type {
 import { formatAmount, formatDate } from "@/lib/format";
 import CorpCodeInput from "@/modules/kiis/components/CorpCodeInput";
 import ValuationModal from "@/modules/kiis/components/ValuationModal";
+import heroImg from "@/assets/images/heroes/forestgp-news.jpg";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -200,7 +201,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Portfolio" subtitle="Track investor portfolio companies" compact />
+      <PageHero title="Portfolio" subtitle="Track investor portfolio companies" compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       <div className="flex gap-3 items-end flex-wrap">
         <CorpCodeInput

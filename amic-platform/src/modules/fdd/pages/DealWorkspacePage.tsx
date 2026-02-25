@@ -12,6 +12,7 @@ import NWCPage from "./NWCPage";
 import QoEPage from "./QoEPage";
 import ReportPage from "./ReportPage";
 import UploadPage from "./UploadPage";
+import ChecklistReviewPage from "./ChecklistReviewPage";
 
 export default function DealWorkspacePage() {
   const { dealId } = useParams<{ dealId: string }>();
@@ -45,6 +46,7 @@ export default function DealWorkspacePage() {
       <Route path="nwc" element={<NWCPage />} />
       <Route path="netdebt" element={<NetDebtPage />} />
       <Route path="issues" element={<IssuesPage />} />
+      <Route path="checklist" element={<ChecklistReviewPage />} />
       <Route path="report" element={<ReportPage />} />
     </Routes>
   );

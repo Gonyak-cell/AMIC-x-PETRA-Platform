@@ -1,19 +1,21 @@
 /** 인증/인가 타입 정의 (Sprint 11). */
 
-export type UserRole = "ADMIN" | "MANAGER" | "ANALYST" | "VIEWER";
+export type UserRole = "ADMIN" | "MANAGER" | "ANALYST" | "VIEWER" | "CLIENT";
 
 export type Permission =
   | "deal:create"
   | "deal:read"
   | "deal:update"
   | "deal:delete"
+  | "deal:read_assigned"
   | "definition:approve"
   | "upload:create"
   | "mapping:approve"
   | "report:generate"
   | "report:download"
   | "audit:view"
-  | "user:manage";
+  | "user:manage"
+  | "user:delete";
 
 /** Backend ROLE_PERMISSIONS 미러링. */
 export const ROLE_PERMISSIONS: Record<UserRole, Set<Permission>> = {
@@ -29,6 +31,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<Permission>> = {
     "report:download",
     "audit:view",
     "user:manage",
+    "user:delete",
   ]),
   MANAGER: new Set<Permission>([
     "deal:create",
@@ -50,12 +53,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<Permission>> = {
     "report:download",
   ]),
   VIEWER: new Set<Permission>(["deal:read", "report:download"]),
+  CLIENT: new Set<Permission>(["deal:read_assigned"]),
 };
 
 export interface AuthUser {
   id: string;
   email: string;
   display_name: string;
+  title: string;
   role: UserRole;
   is_active: boolean;
   created_at: string;

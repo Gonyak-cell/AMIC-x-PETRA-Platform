@@ -55,10 +55,11 @@ services:
       PPTX_SERVICE_URL: http://fdd-pptx:3100
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      AUTH_ENABLED: "true"
     depends_on:
       fdd-db:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./fdd/backend:/app
     networks:
@@ -109,7 +110,9 @@ services:
       ELASTICSEARCH_URL: http://kiis-es:9200
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      AUTH_ENABLED: "true"
+      DATA_GO_KR_API_KEY: ${DATA_GO_KR_API_KEY:-}
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./kiis:/app
       - /app/__pycache__
@@ -190,13 +193,26 @@ services:
       FDD_API_URL: http://fdd-api:8000/api/v1
       IM_API_URL: http://im-api:8000/api
       KIIS_API_URL: http://kiis-api:8000/api/v1
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dev-internal-key}
+      REDIS_URL: redis://deal-mgmt-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://deal-mgmt-redis:6379/1
       DEBUG: "true"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      AUTH_ENABLED: "true"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./deal-mgmt:/app
       - /app/__pycache__
+      - vdr_storage:/app/generated/vdr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       deal-mgmt-db:
+        condition: service_healthy
+      deal-mgmt-redis:
         condition: service_healthy
     networks:
       - amic-network
@@ -220,6 +236,50 @@ services:
     networks:
       - amic-network
 
+  deal-mgmt-redis:
+    image: redis:7-alpine
+    container_name: amic-deal-mgmt-redis
+    ports:
+      - "6381:6379"
+    volumes:
+      - deal_mgmt_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amic-network
+
+  deal-mgmt-celery-worker:
+    build:
+      context: ./deal-mgmt
+    container_name: amic-deal-mgmt-celery-worker
+    command: >
+      celery -A app.tasks.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --max-memory-per-child=500000
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD:-deal_mgmt_dev_password}@deal-mgmt-db:5432/deal_mgmt
+      REDIS_URL: redis://deal-mgmt-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://deal-mgmt-redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    volumes:
+      - ./deal-mgmt:/app
+      - /app/__pycache__
+      - vdr_storage:/app/generated/vdr
+    depends_on:
+      deal-mgmt-db:
+        condition: service_healthy
+      deal-mgmt-redis:
+        condition: service_healthy
+    networks:
+      - amic-network
+
   # ======================== IM BACKEND ========================
   im-api:
     build:
@@ -234,17 +294,27 @@ services:
       REDIS_URL: redis://im-redis:6379/0
       REDIS_RESULT_BACKEND: redis://im-redis:6379/1
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
-    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
+      AUTH_ENABLED: "true"
+      DEAL_MGMT_INTERNAL_URL: http://deal-mgmt-api:8000
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dev-internal-key}
+      RALPH_PASS_THRESHOLD: "4.0"
+      RALPH_MAX_ITERATIONS: "3"
+      RALPH_BUDGET_PER_PASS: "5.0"
+      RALPH_VISION_ENABLED: "true"
+    command: sh -c "alembic upgrade head && uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       im-db:
         condition: service_healthy
       im-redis:
         condition: service_healthy
+      deal-mgmt-api:
+        condition: service_healthy
     volumes:
       - ./im:/app
       - /app/__pycache__
       - im_output_data:/app/output
+      - vdr_storage:/vdr-shared:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -304,8 +374,15 @@ services:
       REDIS_URL: redis://im-redis:6379/0
       REDIS_RESULT_BACKEND: redis://im-redis:6379/1
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
+      DEAL_MGMT_INTERNAL_URL: http://deal-mgmt-api:8000
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dev-internal-key}
+      RALPH_PASS_THRESHOLD: "4.0"
+      RALPH_MAX_ITERATIONS: "3"
+      RALPH_BUDGET_PER_PASS: "5.0"
+      RALPH_VISION_ENABLED: "true"
     volumes:
       - im_output_data:/app/output
+      - vdr_storage:/vdr-shared:ro
     depends_on:
       im-db:
         condition: service_healthy
@@ -351,3 +428,5 @@ volumes:
   im_redis_data:
   im_output_data:
   deal_mgmt_pgdata:
+  deal_mgmt_redis_data:
+  vdr_storage:

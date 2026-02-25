@@ -40,24 +40,22 @@ async def login(
     """사용자명과 비밀번호로 로그인하여 JWT 토큰을 httpOnly 쿠키로 설정."""
     access_token, refresh_token = await service.login(db, login_data.username, login_data.password)
 
-    # Access Token 쿠키 설정
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=15 * 60,  # 15분
     )
 
-    # Refresh Token 쿠키 설정
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,  # 7일
     )
 
     return {"message": "로그인 성공"}
@@ -79,24 +77,22 @@ async def refresh(
         )
     access_token, refresh_token = await service.refresh_token(db, refresh_token)
 
-    # Access Token 쿠키 설정
+    # Access Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=15 * 60,  # 15분
     )
 
-    # Refresh Token 쿠키 설정
+    # Refresh Token 세션 쿠키 설정 (브라우저 종료 시 삭제)
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=_cookie_secure,
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,  # 7일
     )
 
     return {"message": "토큰 갱신 성공"}

@@ -49,10 +49,10 @@ export function useCreateClosingItem(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "closing"],
       });
-      toast.success("클로징 항목이 생성되었습니다.");
+      toast.success("Closing 항목이 생성되었습니다.");
     },
     onError: () => {
-      toast.error("클로징 항목 생성에 실패했습니다.");
+      toast.error("Closing 항목 생성에 실패했습니다.");
     },
   });
 }
@@ -77,10 +77,10 @@ export function useUpdateClosingItem(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "closing"],
       });
-      toast.success("클로징 항목이 수정되었습니다.");
+      toast.success("Closing 항목이 수정되었습니다.");
     },
     onError: () => {
-      toast.error("클로징 항목 수정에 실패했습니다.");
+      toast.error("Closing 항목 수정에 실패했습니다.");
     },
   });
 }
@@ -95,10 +95,10 @@ export function useDeleteClosingItem(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "closing"],
       });
-      toast.success("클로징 항목이 삭제되었습니다.");
+      toast.success("Closing 항목이 삭제되었습니다.");
     },
     onError: () => {
-      toast.error("클로징 항목 삭제에 실패했습니다.");
+      toast.error("Closing 항목 삭제에 실패했습니다.");
     },
   });
 }

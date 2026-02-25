@@ -131,7 +131,7 @@ export default function ActivityLogPage() {
     {
       key: "created_at",
       header: "Time",
-      width: "160px",
+      width: "15%",
       render: (row) => (
         <span className="text-text-secondary text-xs">
           {formatDate(row.created_at, "short")}{" "}
@@ -145,7 +145,7 @@ export default function ActivityLogPage() {
     {
       key: "user_name",
       header: "User",
-      width: "140px",
+      width: "22%",
       render: (row) => (
         <span className="font-medium text-text-dark">{row.user_name}</span>
       ),
@@ -153,7 +153,7 @@ export default function ActivityLogPage() {
     {
       key: "module",
       header: "Module",
-      width: "90px",
+      width: "10%",
       align: "center",
       render: (row) => (
         <Badge
@@ -175,7 +175,7 @@ export default function ActivityLogPage() {
     {
       key: "action",
       header: "Action",
-      width: "100px",
+      width: "10%",
       align: "center",
       render: (row) => (
         <Badge
@@ -189,6 +189,7 @@ export default function ActivityLogPage() {
     {
       key: "description",
       header: "Description",
+      width: "43%",
       render: (row) => (
         <div className="min-w-0">
           <div className="text-sm text-text-body truncate">

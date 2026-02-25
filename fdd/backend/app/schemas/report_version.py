@@ -9,11 +9,14 @@ from app.models.report_version import ReportStatus
 
 
 class ReportVersionCreate(BaseModel):
-    file_format: str = Field(default="pptx", pattern=r"^(pptx|docx)$")
+    file_format: str = Field(default="pptx", pattern=r"^(pptx|docx|xlsx)$")
     include_qoe: bool = True
     include_nwc: bool = True
     include_debt: bool = True
     include_issues: bool = True
+    include_financial_statements: bool = True
+    include_trends: bool = True
+    include_sales_analysis: bool = True
     notes: str | None = None
 
 

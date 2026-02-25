@@ -12,6 +12,7 @@ engine = create_async_engine(
     max_overflow=settings.DB_POOL_MAX_OVERFLOW,
     pool_recycle=settings.DB_POOL_RECYCLE,
     pool_timeout=settings.DB_POOL_TIMEOUT,
+    connect_args={"ssl": False},
 )
 
 async_session_factory = async_sessionmaker(

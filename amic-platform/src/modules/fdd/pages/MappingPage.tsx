@@ -37,6 +37,7 @@ import {
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { formatAmount } from "@/lib/format";
+import heroImg from "@/assets/images/heroes/hero-arch-purple.jpg";
 
 const CONFIDENCE_VARIANTS: Record<MappingConfidence, "success" | "warning" | "error" | "neutral"> = {
   HIGH: "success",
@@ -463,6 +464,8 @@ export default function MappingPage() {
         title="Account Mapping"
         subtitle={`${lineItems?.length ?? 0} standard line items available`}
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Button
             variant="accent"

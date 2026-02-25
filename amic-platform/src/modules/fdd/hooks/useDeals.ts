@@ -8,7 +8,8 @@ export function useDeals(params?: { skip?: number; limit?: number }) {
     queryKey: ["fdd", "deals", params],
     queryFn: async () => {
       const { data } = await fddApi.get("/deals", { params });
-      return data;
+      // Backend returns { items, total, skip, limit } — extract the array
+      return Array.isArray(data) ? data : data.items ?? [];
     },
   });
 }

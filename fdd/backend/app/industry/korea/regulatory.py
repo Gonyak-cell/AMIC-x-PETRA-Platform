@@ -17,7 +17,7 @@ REGULATORY_ITEMS: list[FDDRegulatoryItem] = [
         law_name_kr="독점규제 및 공정거래에 관한 법률 (기업결합 심사)",
         authority="공정거래위원회",
         fdd_impact=(
-            "기업결합 심사 지연 시 클로징 일정 영향. "
+            "기업결합 심사 지연 시 Closing 일정 영향. "
             "시정 조건(사업부 매각 등) 부과 시 EBITDA 범위 변동. "
             "과징금 이력은 우발채무로 반영"
         ),

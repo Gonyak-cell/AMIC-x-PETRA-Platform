@@ -4,11 +4,22 @@ import {
   ShieldCheck,
   UserCheck,
   Eye,
+  Building2,
   Plus,
   Pencil,
+  Trash2,
+  Briefcase,
+  Info,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/useUsers";
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/useUsers";
+import {
+  useClientDeals,
+  useAdminAssignDeal,
+  useAdminUnassignDeal,
+} from "@/hooks/useClientDeals";
+import type { ClientDealAssignment } from "@/hooks/useClientDeals";
+import { useTransactions } from "@/modules/ma/hooks/useTransactions";
 import type { AdminUser, UserCreate, UserUpdate } from "@/types/admin";
 import type { UserRole } from "@/types/auth";
 import { ROLE_PERMISSIONS } from "@/types/auth";
@@ -31,6 +42,7 @@ const ROLE_OPTIONS = [
   { value: "MANAGER", label: "Manager" },
   { value: "ANALYST", label: "Analyst" },
   { value: "VIEWER", label: "Viewer" },
+  { value: "CLIENT", label: "Client (External)" },
 ];
 
 const INITIAL_CREATE_FORM: UserCreate = {
@@ -38,11 +50,13 @@ const INITIAL_CREATE_FORM: UserCreate = {
   display_name: "",
   password: "",
   role: "ANALYST",
+  title: "",
 };
 
 const ALL_PERMISSIONS = [
   "deal:create",
   "deal:read",
+  "deal:read_assigned",
   "deal:update",
   "deal:delete",
   "definition:approve",
@@ -52,22 +66,148 @@ const ALL_PERMISSIONS = [
   "report:download",
   "audit:view",
   "user:manage",
+  "user:delete",
 ] as const;
 
+// ── CLIENT 배정 딜 섹션 (Edit Modal 내부) ──────────────────────
+
+function ClientDealAssignments({
+  email,
+  displayName,
+}: {
+  email: string;
+  displayName: string;
+}) {
+  const { data: deals, isLoading } = useClientDeals(email);
+  const { data: txnList } = useTransactions({ limit: 100 });
+  const assignDeal = useAdminAssignDeal(email);
+  const unassignDeal = useAdminUnassignDeal(email);
+  const [selectedTxnId, setSelectedTxnId] = useState("");
+
+  const assignedIds = new Set(deals?.map((d) => d.transaction_id) ?? []);
+  const txnOptions = [
+    { value: "", label: "거래를 선택하세요..." },
+    ...(txnList?.items ?? [])
+      .filter((t) => !assignedIds.has(t.id))
+      .map((t) => ({ value: t.id, label: `${t.name} (${t.code_name})` })),
+  ];
+
+  const handleAssign = () => {
+    if (!selectedTxnId) return;
+    assignDeal.mutate(
+      { txnId: selectedTxnId, display_name: displayName },
+      { onSuccess: () => setSelectedTxnId("") },
+    );
+  };
+
+  const handleRemove = (deal: ClientDealAssignment) => {
+    unassignDeal.mutate({
+      txnId: deal.transaction_id,
+      clientId: deal.id,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-sm text-text-secondary py-2">
+        Loading assigned deals...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Briefcase size={14} className="text-text-secondary" />
+        <span className="text-sm font-medium text-text-dark">
+          Assigned Deals ({deals?.length ?? 0})
+        </span>
+      </div>
+
+      {!deals || deals.length === 0 ? (
+        <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <p>배정된 딜이 없습니다. 이 클라이언트는 어떤 딜도 열람할 수 없습니다.</p>
+        </div>
+      ) : (
+        <div className="rounded border border-amic-200 bg-amic-50/50 divide-y divide-amic-100">
+          {deals.map((d) => (
+            <div
+              key={d.transaction_id}
+              className="flex items-center justify-between px-3 py-2 text-sm"
+            >
+              <div>
+                <span className="font-medium text-text-dark">
+                  {d.transaction_name}
+                </span>
+                {d.codename && (
+                  <span className="ml-2 text-xs text-text-secondary">
+                    ({d.codename})
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-secondary">
+                  {formatDate(d.created_at)}
+                </span>
+                <button
+                  type="button"
+                  className="rounded p-1 text-red-500 hover:bg-red-50 transition-colors"
+                  onClick={() => handleRemove(d)}
+                  disabled={unassignDeal.isPending}
+                  aria-label={`${d.transaction_name} 배정 해제`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 새 딜 배정 */}
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Select
+            label="딜 배정"
+            options={txnOptions}
+            value={selectedTxnId}
+            onChange={(e) => setSelectedTxnId(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="accent"
+          size="sm"
+          icon={Plus}
+          onClick={handleAssign}
+          disabled={!selectedTxnId || assignDeal.isPending}
+          loading={assignDeal.isPending}
+        >
+          배정
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────
+
 export default function UserManagementPage() {
-  const { hasPermission } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const { data: users, isLoading } = useUsers();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
   const [createForm, setCreateForm] = useState<UserCreate>(INITIAL_CREATE_FORM);
   const [editForm, setEditForm] = useState<UserUpdate>({});
 
   // KPI calculations (must be before early return to satisfy hooks rules)
   const kpis = useMemo(() => {
-    if (!users) return { total: 0, admins: 0, managers: 0, others: 0 };
+    if (!users)
+      return { total: 0, admins: 0, managers: 0, others: 0, clients: 0 };
     return {
       total: users.length,
       admins: users.filter((u) => u.role === "ADMIN").length,
@@ -75,6 +215,7 @@ export default function UserManagementPage() {
       others: users.filter(
         (u) => u.role === "ANALYST" || u.role === "VIEWER",
       ).length,
+      clients: users.filter((u) => u.role === "CLIENT").length,
     };
   }, [users]);
 
@@ -113,10 +254,18 @@ export default function UserManagementPage() {
     );
   };
 
+  const handleDelete = () => {
+    if (!deletingUser) return;
+    deleteUser.mutate(deletingUser.id, {
+      onSuccess: () => setDeletingUser(null),
+    });
+  };
+
   const openEditModal = (user: AdminUser) => {
     setEditingUser(user);
     setEditForm({
       display_name: user.display_name,
+      title: user.title,
       role: user.role,
       is_active: user.is_active,
     });
@@ -141,6 +290,11 @@ export default function UserManagementPage() {
     {
       key: "email",
       header: "Email",
+    },
+    {
+      key: "title",
+      header: "Title",
+      width: "120px",
     },
     {
       key: "role",
@@ -170,19 +324,34 @@ export default function UserManagementPage() {
     {
       key: "actions" as keyof AdminUser,
       header: "",
-      width: "60px",
+      width: hasPermission("user:delete") ? "100px" : "60px",
       align: "center",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={Pencil}
-          onClick={(e) => {
-            e.stopPropagation();
-            openEditModal(row);
-          }}
-          aria-label={`Edit ${row.display_name}`}
-        />
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Pencil}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(row);
+            }}
+            aria-label={`Edit ${row.display_name}`}
+          />
+          {hasPermission("user:delete") && row.id !== currentUser?.id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Trash2}
+              className="text-negative hover:bg-negative-light"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeletingUser(row);
+              }}
+              aria-label={`Delete ${row.display_name}`}
+            />
+          )}
+        </div>
       ),
     },
   ];
@@ -204,7 +373,7 @@ export default function UserManagementPage() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard
           label="Total Users"
           value={String(kpis.total)}
@@ -234,6 +403,13 @@ export default function UserManagementPage() {
           hoverLift
           generous
         />
+        <KpiCard
+          label="Clients"
+          value={String(kpis.clients)}
+          icon={Building2}
+          hoverLift
+          generous
+        />
       </div>
 
       {/* User Table */}
@@ -254,6 +430,7 @@ export default function UserManagementPage() {
             loading={isLoading}
             striped
             uppercaseHeaders
+            borderless
           />
         )}
       </Card>
@@ -339,9 +516,18 @@ export default function UserManagementPage() {
             placeholder="John Doe"
           />
           <Input
+            label="Title"
+            value={createForm.title ?? ""}
+            onChange={(e) =>
+              setCreateForm({ ...createForm, title: e.target.value })
+            }
+            placeholder="e.g., Associate, VP, Director"
+          />
+          <Input
             label="Password"
             type="password"
             required
+            minLength={8}
             value={createForm.password}
             onChange={(e) =>
               setCreateForm({ ...createForm, password: e.target.value })
@@ -359,7 +545,50 @@ export default function UserManagementPage() {
               })
             }
           />
+          {createForm.role === "CLIENT" && (
+            <div className="flex gap-2 rounded border border-amic-200 bg-amic-50 p-3 text-sm text-text-body">
+              <Info size={16} className="shrink-0 mt-0.5 text-amic" />
+              <div>
+                <p className="font-medium text-amic mb-1">
+                  Client (External) Account
+                </p>
+                <p>
+                  Client users can only view deals they are explicitly assigned
+                  to. After creating this user, assign them to specific deals in{" "}
+                  <strong>M&A &rarr; Transaction Workspace &rarr; Client Access</strong>.
+                </p>
+              </div>
+            </div>
+          )}
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        title="Delete User"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeletingUser(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              loading={deleteUser.isPending}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-text-body">
+          Are you sure you want to delete{" "}
+          <span className="font-semibold">{deletingUser?.display_name}</span>?
+          This action cannot be undone.
+        </p>
       </Modal>
 
       {/* Edit User Modal */}
@@ -390,6 +619,14 @@ export default function UserManagementPage() {
             onChange={(e) =>
               setEditForm({ ...editForm, display_name: e.target.value })
             }
+          />
+          <Input
+            label="Title"
+            value={editForm.title ?? ""}
+            onChange={(e) =>
+              setEditForm({ ...editForm, title: e.target.value })
+            }
+            placeholder="e.g., Associate, VP, Director"
           />
           <Select
             label="Role"
@@ -424,6 +661,14 @@ export default function UserManagementPage() {
               {editForm.is_active ? "Active" : "Inactive"}
             </span>
           </div>
+
+          {/* CLIENT role: Show assigned deals */}
+          {editingUser?.role === "CLIENT" && (
+            <ClientDealAssignments
+              email={editingUser.email}
+              displayName={editingUser.display_name}
+            />
+          )}
         </form>
       </Modal>
     </div>

@@ -93,7 +93,7 @@ export function useQualitativeReputation(
     queryKey: ["kiis", "analysis", "reputation", corpCode, "qualitative", params],
     queryFn: async () => {
       const { data } = await kiisApi.get<QualitativeReputationResponse>(
-        `/analysis/reputation/${corpCode}/qualitative`,
+        `/analysis/reputation/${corpCode}/themes`,
         { params },
       );
       return data;

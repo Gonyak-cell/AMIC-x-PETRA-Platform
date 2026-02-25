@@ -21,6 +21,7 @@ import type { Column } from "@/components/ui";
 import type { ManagerMovement } from "@/modules/kiis/types/manager";
 import { formatDate } from "@/lib/format";
 import { MOVEMENT_VARIANT } from "@/modules/kiis/constants/variants";
+import heroImg from "@/assets/images/heroes/forestgp-background.jpg";
 
 const columns: Column<ManagerMovement>[] = [
   {
@@ -97,6 +98,8 @@ export default function ManagerListPage() {
         title="Manager Movements"
         subtitle="Track fund manager career movements"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Button
             variant="secondary"

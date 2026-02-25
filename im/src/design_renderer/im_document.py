@@ -35,6 +35,7 @@ class IMStyle(str, Enum):
     TITAN = "TITAN"  # 5섹션 구성
     COVENANT = "COVENANT"  # 6섹션 구성
     FULL = "FULL"  # SPEC 14섹션 전체
+    TEASER = "TEASER"  # TM (Teaser Memorandum) 고정 4그룹 구성
     CUSTOM = "CUSTOM"  # sections 필드에서 직접 지정
 
 
@@ -72,6 +73,18 @@ SECTION_IDS = [
     "contact",
 ]
 
+# TM (Teaser Memorandum) 전용 섹션 ID
+TEASER_SECTION_IDS = [
+    "target_positioning",
+    "market_outlook",
+    "demand_driver",
+    "supply_driver",
+    "target_overview",
+    "target_highlights",
+    "proforma_plan",
+    "proforma_financials",
+]
+
 # 산업별 섹션 (Phase A1)
 INDUSTRY_SECTION_IDS = [
     "industry_kpi",
@@ -79,7 +92,7 @@ INDUSTRY_SECTION_IDS = [
 ]
 
 # 전체 유효 섹션 ID (검증용)
-ALL_SECTION_IDS = SECTION_IDS + INDUSTRY_SECTION_IDS
+ALL_SECTION_IDS = SECTION_IDS + TEASER_SECTION_IDS + INDUSTRY_SECTION_IDS
 
 # 프리셋 섹션 구성
 TITAN_SECTIONS = [
@@ -105,6 +118,71 @@ COVENANT_SECTIONS = [
     "market_overview",
     "financial_analysis",
     "contact",
+]
+
+# TM (Teaser Memorandum) 고정 섹션 구성
+# toc_divider는 pipeline에서 각 그룹 앞에 자동 삽입
+TEASER_SECTIONS = [
+    "cover",
+    "disclaimer",
+    # Group 1: Executive Summary
+    "toc_divider",  # TOC (1)
+    "executive_summary",
+    "target_positioning",
+    "investment_highlights",
+    # Group 2: Market Opportunity
+    "toc_divider",  # TOC (2)
+    "market_outlook",
+    "demand_driver",
+    "supply_driver",
+    # Group 3: TARGET HIGHLIGHTS
+    "toc_divider",  # TOC (3)
+    "target_overview",
+    "target_highlights",
+    # Group 4: Financial Summary
+    "toc_divider",  # TOC (4)
+    "proforma_plan",
+    "proforma_financials",
+    # End
+    "contact",
+]
+
+# TM TOC 그룹 정의 (고정 구조)
+TEASER_TOC_GROUPS: list[dict[str, Any]] = [
+    {
+        "key": "executive_summary",
+        "title": "Executive Summary",
+        "subsections": [
+            ("executive_summary", "Executive Summary"),
+            ("target_positioning", "Target Positioning"),
+            ("investment_highlights", "Investment Highlights"),
+        ],
+    },
+    {
+        "key": "market_opportunity",
+        "title": "Market Opportunity",
+        "subsections": [
+            ("market_outlook", "Market Outlook"),
+            ("demand_driver", "Key Demand Driver"),
+            ("supply_driver", "Key Supply Driver"),
+        ],
+    },
+    {
+        "key": "target_highlights",
+        "title": "TARGET HIGHLIGHTS",
+        "subsections": [
+            ("target_overview", "Target Overview"),
+            ("target_highlights", "Target Highlights"),
+        ],
+    },
+    {
+        "key": "financial_summary",
+        "title": "Financial Summary",
+        "subsections": [
+            ("proforma_plan", "대상회사 Pro-Forma 사업계획"),
+            ("proforma_financials", "대상회사 Pro-Forma 재무제표"),
+        ],
+    },
 ]
 
 
@@ -224,6 +302,9 @@ class MarketData:
     competitors: list[dict[str, Any]] = field(default_factory=list)
     # [{"name": "경쟁사A", "revenue": 50_000, "market_share": 0.15}, ...]
     industry_trends: list[str] = field(default_factory=list)
+    market_position: Optional[str] = None  # 시장 내 포지셔닝
+    competitive_advantages: list[str] = field(default_factory=list)  # 경쟁 우위 요소
+    regulatory_notes: Optional[str] = None  # 규제 환경 상세
 
 
 @dataclass
@@ -277,12 +358,17 @@ class CompanyOverview:
     history: list[dict[str, str]] = field(default_factory=list)
     # [{"year": "2005", "event": "설립"}, ...]
     business_model: str = ""
+    business_description: str = ""  # AI 요약 또는 사업 개요 서술
     value_chain: list[str] = field(default_factory=list)
     key_products: list[str] = field(default_factory=list)
     certifications: list[str] = field(default_factory=list)
     employee_count: Optional[int] = None
     headquarters: str = ""
     established_date: str = ""
+    locations: list[str] = field(default_factory=list)  # 추가 사업장/지사 위치
+    organization: list[str] = field(default_factory=list)  # 조직 구조 (부서 리스트)
+    departments: list[dict[str, str]] = field(default_factory=list)
+    # [{"name": "개발본부", "head": "홍길동", "headcount": "50명"}, ...]
 
 
 @dataclass
@@ -411,6 +497,8 @@ class IMDocumentData:
             self.sections = list(COVENANT_SECTIONS)
         elif self.im_style == IMStyle.FULL:
             self.sections = list(SECTION_IDS)
+        elif self.im_style == IMStyle.TEASER:
+            self.sections = list(TEASER_SECTIONS)
         # CUSTOM: 사용자 지정 그대로 유지
 
     def get_active_sections(self) -> list[str]:

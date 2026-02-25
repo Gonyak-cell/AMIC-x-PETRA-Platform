@@ -11,6 +11,7 @@ import DealTrendChart from "@/modules/kiis/components/DealTrendChart";
 import type { SectorAggregation, StageAggregation } from "@/modules/kiis/types/deal";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import heroImg from "@/assets/images/heroes/forestgp-forest.jpg";
 
 const YEARS_OPTIONS = [
   { value: "3", label: "3 Years" },
@@ -97,6 +98,8 @@ export default function DealSourcingPage() {
         title="Deal Sourcing"
         subtitle="Analyze deal trends, sectors, and stages"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           <Select
             label="Lookback"

@@ -1,0 +1,61 @@
+{
+  "name": "Discussion Memo PRD",
+  "version": "1.0",
+  "document_type": "DM",
+  "description": "Discussion Memo 품질 요구사항 (논의 사항 정리)",
+  "pass_threshold": 4.0,
+  "total_slides": "10-20",
+  "sections": {
+    "cover": {
+      "title": "Cover",
+      "required": true,
+      "criteria": {
+        "branding": "Forest 테마 디자인 일관성"
+      }
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "required": true,
+      "criteria": {
+        "legal": "기밀유지 조항 포함"
+      }
+    },
+    "discussion_overview": {
+      "title": "Discussion Overview",
+      "required": true,
+      "criteria": {
+        "context": "논의 배경 및 목적 명확",
+        "agenda": "논의 항목 목록 포함"
+      }
+    },
+    "key_topics": {
+      "title": "Key Discussion Topics",
+      "required": true,
+      "criteria": {
+        "specificity": "각 논의 포인트별 구체적 데이터/근거 제시",
+        "actionability": "의사결정 필요 사항 명확 기재"
+      }
+    },
+    "financial_analysis": {
+      "title": "Financial Analysis",
+      "required": true,
+      "criteria": {
+        "accuracy": "재무 수치 정확성 및 내부 정합성",
+        "comparison": "시나리오별 비교 분석 포함"
+      }
+    },
+    "next_steps": {
+      "title": "Next Steps",
+      "required": true,
+      "criteria": {
+        "timeline": "일정 및 마일스톤 포함",
+        "responsibility": "담당자/역할 명시"
+      }
+    }
+  },
+  "global_criteria": {
+    "slide_count": "10-20장 권장",
+    "design": "Forest 테마 색상/폰트 일관성",
+    "confidentiality": "기밀 정보 취급 주의"
+  }
+}

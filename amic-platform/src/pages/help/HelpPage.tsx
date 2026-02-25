@@ -4,6 +4,7 @@ import { GlossaryList } from "@/components/help/GlossaryList";
 import { ReleaseNotes } from "@/components/help/ReleaseNotes";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
 import { KEYBOARD_SHORTCUTS } from "@/lib/shortcuts";
+import heroImg from "@/assets/images/forest-bg.jpg";
 
 type HelpTab = "getting-started" | "glossary" | "shortcuts" | "releases";
 
@@ -16,6 +17,8 @@ const TABS: Array<{ id: HelpTab; label: string }> = [
 
 const CONTEXT_LABELS: Record<string, string> = {
   global: "Global",
+  ma: "M&A Deals",
+  docs: "Deal Doc Studio",
   fdd: "FDD",
   kiis: "KIIS",
   im: "IM",
@@ -31,6 +34,8 @@ export default function HelpPage() {
       <PageHero
         title="Help Center"
         subtitle="Guides, glossary, keyboard shortcuts, and release notes"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         compact
       />
 
@@ -59,15 +64,31 @@ export default function HelpPage() {
               Welcome to AMIC x PETRA Platform
             </h2>
             <p className="text-sm text-text-secondary mb-4">
-              This platform integrates three modules for investment analysis:
+              End-to-end deal management and investment intelligence platform
+              with four core modules.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card variant="forest-lift">
                 <div className="p-4">
-                  <div className="font-medium text-text-dark mb-1">Auto FDD</div>
+                  <div className="font-medium text-text-dark mb-1">
+                    M&A Deals
+                  </div>
                   <p className="text-xs text-text-secondary">
-                    Automated Financial Due Diligence — upload financial data, map
-                    accounts, and generate QoE/NWC/Net Debt analysis.
+                    7-phase transaction pipeline (Engagement → Post-Close).
+                    Manage buyers, NDA/LOI/SPA, DD checklists, closing
+                    conditions, PMI, VDR, risks, compliance, and timeline.
+                  </p>
+                </div>
+              </Card>
+              <Card variant="forest-lift">
+                <div className="p-4">
+                  <div className="font-medium text-text-dark mb-1">
+                    Deal Doc Studio
+                  </div>
+                  <p className="text-xs text-text-secondary">
+                    Integrated document hub — Marketing (TM/IM), Legal
+                    (MOU/Contracts), Due Diligence (FDD/LDD), Checklist &
+                    Timeline. Ralph AI auto-generates and reviews documents.
                   </p>
                 </div>
               </Card>
@@ -75,22 +96,50 @@ export default function HelpPage() {
                 <div className="p-4">
                   <div className="font-medium text-text-dark mb-1">KIIS</div>
                   <p className="text-xs text-text-secondary">
-                    Korea Investment Intelligence System — monitor companies,
-                    funds, REITs, news, and deal sourcing from DART/KOFIA.
+                    Korea Investment Intelligence System — research companies,
+                    GPs & Funds, REITs, news from DART/KOFIA. Deal sourcing,
+                    portfolio monitoring, entity resolution, and watchlists.
                   </p>
                 </div>
               </Card>
               <Card variant="forest-lift">
                 <div className="p-4">
-                  <div className="font-medium text-text-dark mb-1">
-                    IM Generator
-                  </div>
+                  <div className="font-medium text-text-dark mb-1">VDR</div>
                   <p className="text-xs text-text-secondary">
-                    Investment Memorandum Generator — auto-generate PPTX/PDF
-                    investment memos from corporate data.
+                    Virtual Data Room for secure document sharing during due
+                    diligence. Folder-based organization with access controls and
+                    audit trails.
                   </p>
                 </div>
               </Card>
+            </div>
+          </div>
+
+          {/* Role-based access guide */}
+          <div className="bg-bg-cool rounded-lg p-5 border border-gray-border">
+            <h3 className="text-base font-heading font-semibold text-text-dark mb-3">
+              Access by Role
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="font-medium text-text-dark mb-1">
+                  INTERNAL Users
+                </div>
+                <p className="text-text-secondary">
+                  Full access to all modules: M&A Deals, Deal Doc Studio, KIIS,
+                  VDR, Dashboard, Analytics, Calendar, Exports, Team, and Admin.
+                </p>
+              </div>
+              <div>
+                <div className="font-medium text-text-dark mb-1">
+                  CLIENT Users
+                </div>
+                <p className="text-text-secondary">
+                  Access limited to M&A Deals module only — Pipeline and assigned
+                  Transaction Workspaces. Other modules and admin features are
+                  not available.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -103,7 +152,10 @@ export default function HelpPage() {
                 <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
                   Ctrl+K
                 </kbd>
-                <span>Open global search to find deals, companies, or documents across all modules</span>
+                <span>
+                  Open global search to find deals, companies, or documents
+                  across all modules
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
@@ -113,7 +165,53 @@ export default function HelpPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-amic shrink-0">★</span>
-                <span>Star items to add them to your favorites in the sidebar for quick access</span>
+                <span>
+                  Star items to add them to your favorites in the sidebar for
+                  quick access
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
+                  Module Switcher
+                </kbd>
+                <span>
+                  Use the dropdown in the sidebar to quickly switch between M&A,
+                  VDR, Docs, and KIIS modules
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
+                  Ctrl+Shift+T
+                </kbd>
+                <span>
+                  Create a new M&A transaction from anywhere in the MA module
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
+                  Workflow Nav
+                </kbd>
+                <span>
+                  In the MA workspace, the sidebar shows a 7-phase workflow with
+                  visual progress indicators
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
+                  Ctrl+Shift+C
+                </kbd>
+                <span>
+                  View all deal milestones and deadlines on the unified Calendar
+                  page
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <kbd className="px-1.5 py-0.5 bg-bg-cool border border-gray-border rounded text-xs font-mono shrink-0">
+                  Ctrl+Shift+A
+                </kbd>
+                <span>
+                  Cross-module KPIs and trend charts on the Analytics dashboard
+                </span>
               </li>
             </ul>
           </div>

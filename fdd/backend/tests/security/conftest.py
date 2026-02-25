@@ -120,7 +120,9 @@ def deal_by_admin(sec_client: TestClient, admin_user_obj: CurrentUser):
             "/api/v1/deals",
             json={
                 "name": "Security Test Deal",
+                "target_company_name": "Security Test Corp",
                 "deal_type": "COMPLETION_ACCOUNTS",
+                "base_currency": "KRW",
                 "reference_date": "2025-12-31",
                 "period_start": "2025-01-01",
                 "period_end": "2025-12-31",

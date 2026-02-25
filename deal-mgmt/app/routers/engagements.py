@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.engagement import Engagement
 from app.models.enums import AuditAction
 from app.models.transaction import Transaction
@@ -34,9 +34,10 @@ router = APIRouter(prefix="/transactions/{txn_id}", tags=["Engagements"])
 async def list_engagements(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = select(Engagement).where(Engagement.transaction_id == txn_id).order_by(Engagement.created_at.desc())
     result = await db.execute(q)
     return [EngagementOut.model_validate(e) for e in result.scalars().all()]
@@ -47,7 +48,7 @@ async def create_engagement(
     txn_id: uuid.UUID,
     body: EngagementCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     eng = Engagement(transaction_id=txn_id, **body.model_dump())
@@ -72,7 +73,7 @@ async def update_engagement(
     eng_id: uuid.UUID,
     body: EngagementUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Engagement).where(Engagement.id == eng_id, Engagement.transaction_id == txn_id)
     eng = (await db.execute(q)).scalar_one_or_none()
@@ -99,7 +100,7 @@ async def delete_engagement(
     txn_id: uuid.UUID,
     eng_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(Engagement).where(Engagement.id == eng_id, Engagement.transaction_id == txn_id)
     eng = (await db.execute(q)).scalar_one_or_none()
@@ -121,9 +122,10 @@ async def delete_engagement(
 async def list_members(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     q = (
         select(WorkingGroupMember)
         .where(WorkingGroupMember.transaction_id == txn_id)
@@ -138,7 +140,7 @@ async def add_member(
     txn_id: uuid.UUID,
     body: WorkingGroupMemberCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
     member = WorkingGroupMember(transaction_id=txn_id, **body.model_dump())
@@ -170,7 +172,7 @@ async def update_member(
     member_id: uuid.UUID,
     body: WorkingGroupMemberUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(WorkingGroupMember).where(
         WorkingGroupMember.id == member_id, WorkingGroupMember.transaction_id == txn_id
@@ -199,7 +201,7 @@ async def remove_member(
     txn_id: uuid.UUID,
     member_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     q = select(WorkingGroupMember).where(
         WorkingGroupMember.id == member_id, WorkingGroupMember.transaction_id == txn_id
@@ -223,10 +225,11 @@ async def remove_member(
 async def check_conflicts(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """이해충돌 체크 — 동일 대상기업을 가진 다른 ACTIVE 거래 탐지."""
     txn = await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     conflicts: list[ConflictItem] = []
 
     # 동일 대상기업 + corp_code 매칭

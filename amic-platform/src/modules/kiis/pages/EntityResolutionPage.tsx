@@ -24,6 +24,7 @@ import type {
   AliasItem,
 } from "@/modules/kiis/types/entity";
 import AliasCreateForm from "@/modules/kiis/components/AliasCreateForm";
+import heroImg from "@/assets/images/heroes/forestgp-background.jpg";
 
 const candidateColumns: Column<EntityMatchItem>[] = [
   {
@@ -163,7 +164,7 @@ export default function EntityResolutionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Entity Resolution" subtitle="Resolve company names and manage aliases" compact />
+      <PageHero title="Entity Resolution" subtitle="Resolve company names and manage aliases" compact backgroundImage={heroImg} backgroundOpacity={0.18} />
 
       {/* Resolve Section */}
       <Card>

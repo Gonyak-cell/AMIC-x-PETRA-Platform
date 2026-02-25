@@ -1,5 +1,5 @@
 export interface UserPreferences {
-  defaultModule: "/" | "/fdd/deals" | "/kiis" | "/im";
+  defaultModule: "/" | "/ma/transactions" | "/docs" | "/kiis";
   dateFormat: "short" | "long";
 }
 

@@ -30,3 +30,27 @@ class TimelineEventCreate(BaseModel):
 class TimelineResponse(BaseModel):
     items: list[TimelineEventOut]
     total: int
+
+
+# ── Gantt Timeline ────────────────────────────────────────
+
+class PhaseBar(BaseModel):
+    phase: str
+    label: str
+    start_date: str | None = None
+    end_date: str | None = None
+    status: str  # "completed" | "active" | "upcoming"
+    order: int
+
+
+class GanttMilestone(BaseModel):
+    label: str
+    date: str
+    type: str  # "PHASE_TRANSITION" | "DOCUMENT_SIGNED" | "CUSTOM"
+
+
+class GanttResponse(BaseModel):
+    phases: list[PhaseBar]
+    milestones: list[GanttMilestone]
+    target_close_date: str | None = None
+    deal_start_date: str

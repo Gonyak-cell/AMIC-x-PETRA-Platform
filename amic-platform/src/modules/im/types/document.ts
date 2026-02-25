@@ -1,7 +1,14 @@
 import type { IndustryId } from "@/types/industry";
 
-export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "CUSTOM";
-export type DataSource = "DART" | "MANUAL" | "EXCEL";
+export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "TEASER" | "CUSTOM";
+export type DataSource = "DART" | "MANUAL" | "EXCEL" | "VDR";
+
+export const DATA_SOURCE_BADGE: Record<DataSource, { label: string; cls: string }> = {
+  DART: { label: "DART", cls: "bg-blue-100 text-blue-700" },
+  MANUAL: { label: "Manual", cls: "bg-gray-100 text-gray-600" },
+  EXCEL: { label: "Excel", cls: "bg-emerald-100 text-emerald-700" },
+  VDR: { label: "VDR", cls: "bg-violet-100 text-violet-700" },
+};
 
 // Re-export shared IndustryId from common types
 export type { IndustryId };
@@ -142,7 +149,7 @@ export const IN_PROGRESS_STATUSES: DocumentStatus[] = [
   "RENDERING",
 ];
 
-const IM_STYLES = ["TITAN", "COVENANT", "FULL", "CUSTOM"] as const;
+const IM_STYLES = ["TITAN", "COVENANT", "FULL", "TEASER", "CUSTOM"] as const;
 
 export function isIMStyle(value: string): value is IMStyle {
   return (IM_STYLES as readonly string[]).includes(value);

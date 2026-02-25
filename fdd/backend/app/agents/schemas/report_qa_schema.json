@@ -1,0 +1,56 @@
+{
+  "type": "object",
+  "properties": {
+    "overall_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Overall quality score (1=Critical issues, 5=Excellent)"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "major", "minor", "info"]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["number_accuracy", "logical_consistency", "cross_reference", "completeness", "terminology"]
+          },
+          "location": {
+            "type": "string",
+            "description": "Section or area in the report where the issue was found"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of the issue"
+          },
+          "expected": {
+            "type": "string",
+            "description": "Expected value from source data"
+          },
+          "found": {
+            "type": "string",
+            "description": "Value found in the report"
+          }
+        },
+        "required": ["severity", "category", "location", "description"]
+      }
+    },
+    "passed_checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["number_accuracy", "logical_consistency", "cross_reference", "completeness", "terminology"]
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief overall assessment in Korean"
+    }
+  },
+  "required": ["overall_score", "issues", "passed_checks", "summary"]
+}

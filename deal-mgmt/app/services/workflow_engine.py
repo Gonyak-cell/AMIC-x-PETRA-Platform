@@ -8,20 +8,30 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import WorkflowError
+from app.core.log_decorators import log_error_with_input
+from app.models.approval import ApprovalRequest
+from app.models.compliance_item import ComplianceItem
 from app.models.enums import (
+    ApprovalStatus,
+    ApprovalType,
     AuditAction,
+    ComplianceStatus,
+    RiskSeverity,
+    RiskStatus,
     TransactionPhase,
     TransactionStatus,
 )
 from app.models.enums import (
     TransactionPhase as Phase,
 )
+from app.models.risk_item import RiskItem
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
-from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite
+from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite, PrerequisiteLevel
 from app.services import audit_service
 
 # 순서가 있는 7단계
@@ -37,22 +47,24 @@ _PHASE_ORDER: list[TransactionPhase] = [
 
 _PHASE_INDEX: dict[TransactionPhase, int] = {p: i for i, p in enumerate(_PHASE_ORDER)}
 
-# 단계별 최소 전제 조건 (필드 기반)
-_PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str]]] = {
+# 단계별 전제 조건 (필드, 라벨, 수준)
+# REQUIRED: 미충족 시 전진 차단
+# RECOMMENDED: 미충족 시 경고만 표시, 전진 가능
+_PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str, PrerequisiteLevel]]] = {
     Phase.ENGAGEMENT: [],
     Phase.PREPARATION: [
-        ("client_name", "클라이언트 정보"),
-        ("lead_advisor_email", "리드 어드바이저"),
+        ("client_name", "클라이언트 정보", PrerequisiteLevel.REQUIRED),
+        ("lead_advisor_email", "리드 어드바이저", PrerequisiteLevel.REQUIRED),
     ],
     Phase.MARKETING: [
-        ("target_company_name", "대상 기업 정보"),
-        ("industry", "산업 분류"),
+        ("target_company_name", "대상 기업 정보", PrerequisiteLevel.REQUIRED),
+        ("industry", "산업 분류", PrerequisiteLevel.RECOMMENDED),
     ],
     Phase.BIDDING_DD: [
-        ("deal_structure", "딜 구조"),
+        ("deal_structure", "딜 구조", PrerequisiteLevel.RECOMMENDED),
     ],
     Phase.NEGOTIATION: [
-        ("estimated_deal_value", "예상 거래 금액"),
+        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
     ],
     Phase.CLOSING: [],
     Phase.POST_CLOSING: [],
@@ -76,24 +88,31 @@ def get_phase_completion(txn: Transaction) -> PhaseCompletionStatus:
 
     prerequisites: list[PhasePrerequisite] = []
     if next_phase and next_phase in _PHASE_PREREQUISITES:
-        for field, label in _PHASE_PREREQUISITES[next_phase]:
+        for field, label, level in _PHASE_PREREQUISITES[next_phase]:
             val = getattr(txn, field, None)
             satisfied = val is not None and val != ""
-            prerequisites.append(PhasePrerequisite(field=field, label=label, satisfied=satisfied))
+            prerequisites.append(PhasePrerequisite(field=field, label=label, satisfied=satisfied, level=level))
 
     all_met = all(p.satisfied for p in prerequisites) if prerequisites else True
-    can_advance = all_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
+    required_items = [p for p in prerequisites if p.level == PrerequisiteLevel.REQUIRED]
+    recommended_items = [p for p in prerequisites if p.level == PrerequisiteLevel.RECOMMENDED]
+    required_met = all(p.satisfied for p in required_items) if required_items else True
+    has_warnings = any(not p.satisfied for p in recommended_items)
+    can_advance = required_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
 
     return PhaseCompletionStatus(
         current_phase=txn.phase,
         prerequisites=prerequisites,
         all_met=all_met,
+        required_met=required_met,
+        has_warnings=has_warnings,
         can_advance=can_advance,
         next_phase=next_phase,
         previous_phase=prev_phase,
     )
 
 
+@log_error_with_input
 async def advance_phase(
     db: AsyncSession,
     txn: Transaction,
@@ -116,12 +135,16 @@ async def advance_phase(
             f"{txn.phase.value} → {to_phase.value} 전환은 허용되지 않습니다. 한 단계 앞/뒤로만 이동할 수 있습니다."
         )
 
-    # 전진 시 전제 조건 체크
+    # 전진 시 필수(REQUIRED) 전제 조건 체크
     if diff == 1:
         completion = get_phase_completion(txn)
-        if not completion.all_met:
-            unmet = [p.label for p in completion.prerequisites if not p.satisfied]
+        if not completion.required_met:
+            unmet = [p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED]
             raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
+
+    # NEGOTIATION → CLOSING: 리스크/컴플라이언스 게이트
+    if diff == 1 and to_phase == Phase.CLOSING:
+        await _check_risk_compliance_gate(db, txn)
 
     from_phase = txn.phase
     txn.phase = to_phase
@@ -151,6 +174,57 @@ async def advance_phase(
     await db.commit()
     await db.refresh(txn)
     return txn
+
+
+async def request_phase_approval(
+    db: AsyncSession,
+    txn: Transaction,
+    to_phase: TransactionPhase,
+    approver_emails: list[str],
+    actor_email: str | None = None,
+    notes: str | None = None,
+) -> ApprovalRequest:
+    """단계 전환을 위한 승인 요청을 생성한다."""
+    if txn.status != TransactionStatus.ACTIVE:
+        raise WorkflowError("ACTIVE 상태의 거래만 승인을 요청할 수 있습니다")
+
+    from_idx = _PHASE_INDEX[txn.phase]
+    to_idx = _PHASE_INDEX.get(to_phase)
+    if to_idx is None or (to_idx - from_idx) != 1:
+        raise WorkflowError(f"{txn.phase.value} → {to_phase.value} 단계 전환에 대한 승인 요청은 허용되지 않습니다")
+
+    # 필수(REQUIRED) 전제 조건 체크
+    completion = get_phase_completion(txn)
+    if not completion.required_met:
+        unmet = [p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED]
+        raise WorkflowError(f"승인 요청 전 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
+
+    approvers = [{"email": e, "role": "APPROVER", "status": "PENDING", "comment": None, "decided_at": None} for e in approver_emails]
+
+    approval = ApprovalRequest(
+        transaction_id=txn.id,
+        requester_email=actor_email or "",
+        approval_type=ApprovalType.PHASE_ADVANCE,
+        title=f"단계 전환 승인: {txn.phase.value} → {to_phase.value}",
+        description=notes,
+        approvers=approvers,
+        related_entity_type="Transaction",
+        related_entity_id=txn.id,
+    )
+    db.add(approval)
+    await db.flush()
+
+    await audit_service.record(
+        db,
+        entity_type="ApprovalRequest",
+        entity_id=approval.id,
+        action=AuditAction.APPROVAL_REQUESTED,
+        actor_email=actor_email,
+        new_value={"from_phase": txn.phase.value, "to_phase": to_phase.value},
+    )
+    await db.commit()
+    await db.refresh(approval)
+    return approval
 
 
 async def change_status(
@@ -193,3 +267,35 @@ async def change_status(
     await db.commit()
     await db.refresh(txn)
     return txn
+
+
+async def _check_risk_compliance_gate(db: AsyncSession, txn: Transaction) -> None:
+    """CLOSING 진입 시 미완화 Critical 리스크 및 non-compliant 항목 차단."""
+    # 미완화 Critical 리스크
+    q = sa_select(RiskItem).where(
+        RiskItem.transaction_id == txn.id,
+        RiskItem.severity == RiskSeverity.CRITICAL,
+        RiskItem.status.notin_([RiskStatus.MITIGATED, RiskStatus.CLOSED, RiskStatus.ACCEPTED]),
+    )
+    result = await db.execute(q)
+    critical_risks = list(result.scalars().all())
+    if critical_risks:
+        titles = [r.title for r in critical_risks[:3]]
+        raise WorkflowError(
+            f"Closing 진입 전 미완화 Critical 리스크를 해결해야 합니다: {', '.join(titles)}"
+            + (f" 외 {len(critical_risks) - 3}건" if len(critical_risks) > 3 else "")
+        )
+
+    # Non-compliant 항목
+    q2 = sa_select(ComplianceItem).where(
+        ComplianceItem.transaction_id == txn.id,
+        ComplianceItem.status == ComplianceStatus.NON_COMPLIANT,
+    )
+    result2 = await db.execute(q2)
+    nc_items = list(result2.scalars().all())
+    if nc_items:
+        reqs = [c.requirement for c in nc_items[:3]]
+        raise WorkflowError(
+            f"Closing 진입 전 미준수 컴플라이언스 항목을 해결해야 합니다: {', '.join(reqs)}"
+            + (f" 외 {len(nc_items) - 3}건" if len(nc_items) > 3 else "")
+        )

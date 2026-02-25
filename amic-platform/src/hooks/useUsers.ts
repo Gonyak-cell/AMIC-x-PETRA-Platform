@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/api/client";
+import { extractApiError } from "@/api/errors";
 import type { AdminUser, UserCreate, UserUpdate } from "@/types/admin";
 
 export function useUsers() {
@@ -24,8 +25,8 @@ export function useCreateUser() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       toast.success("User created successfully");
     },
-    onError: () => {
-      toast.error("Failed to create user");
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to create user"));
     },
   });
 }
@@ -47,8 +48,24 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       toast.success("User updated successfully");
     },
-    onError: () => {
-      toast.error("Failed to update user");
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to update user"));
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/auth/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success("User deleted successfully");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to delete user"));
     },
   });
 }
@@ -66,8 +83,8 @@ export function useDeactivateUser() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       toast.success("User deactivated");
     },
-    onError: () => {
-      toast.error("Failed to deactivate user");
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to deactivate user"));
     },
   });
 }

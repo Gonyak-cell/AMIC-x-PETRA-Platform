@@ -27,6 +27,7 @@ import {
   PageHero,
 } from "@/components/ui";
 import type { SelectOption } from "@/components/ui";
+import heroImg from "@/assets/images/heroes/hero-arch-symmetry.jpg";
 
 const DEFAULT_DEFINITION: DefinitionData = {
   cash: { include: [], exclude: [] },
@@ -386,6 +387,8 @@ export default function DefinitionPage() {
         title="Deal Definitions"
         subtitle="Configure FDD analysis parameters"
         compact
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
         actions={
           !showForm ? (
             <Button

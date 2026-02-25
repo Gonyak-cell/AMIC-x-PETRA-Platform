@@ -1,7 +1,7 @@
-"""IM Design Tokens — AMIC 디자인 + SL Template (TITAN/COVENANT) 레이아웃.
+"""IM Design Tokens — AMIC 공식 디자인 시스템 + SL Template 레이아웃.
 
-PPTX와 PDF에서 동일한 토큰을 공유하여 시각적 일관성을 보장한다.
-Radar 프로젝트 amic_design_tokens.py dataclass 패턴 차용.
+AMIC Design vF.pdf 기반 공식 컬러 팔레트, SUITE/Pretendard 폰트 체계 적용.
+PPTX 전용 출력 (PDF 제거).
 """
 
 from __future__ import annotations
@@ -20,34 +20,42 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class IMColorPalette:
-    """AMIC IM 컬러 팔레트.
+    """AMIC 공식 컬러 팔레트 (AMIC Design vF.pdf 기준).
 
-    SL Template의 네이비/블루를 AMIC 그린 계열로 오버레이.
+    5단계 그린 시스템:
+    - Signature Green → 헤더/테이블 헤더/표지
+    - Solid Green → 보조 강조/차트 보조색
+    - Highlight Green → 긍정 지표/메인 하이라이터
+    - Fresh Green → 그래디언트/보조 차트색
+    - Light Green → 연한 배경/카드 배경
     """
 
-    # Primary
-    primary: str = "#0F3A32"  # AMIC 다크그린 (헤더/제목/서브헤더 바/테이블 헤더)
-    accent: str = "#26C260"  # AMIC 그린 (긍정 지표/강조/액센트)
+    # AMIC 그린 5단계
+    primary: str = "#0F3A32"  # Signature Green (표지/헤더/테이블 헤더)
+    secondary: str = "#1C8F57"  # Solid Green (보조 강조/차트 보조색)
+    accent: str = "#26C260"  # Highlight Green (긍정 지표/메인 하이라이터)
+    fresh: str = "#A3E96B"  # Fresh Green (그래디언트/보조 차트색)
+    light: str = "#E6FDD6"  # Light Green (연한 배경/카드 배경)
 
     # Text
-    text_body: str = "#3D3D3D"  # 본문 텍스트 (SL 원본 유지)
-    text_dark: str = "#212121"  # 진한 텍스트
+    text_body: str = "#000000"  # 본문 텍스트 (AMIC 가이드: Black)
+    text_dark: str = "#000000"  # 진한 텍스트
     text_secondary: str = "#777777"  # 캡션/출처
-    text_white: str = "#FFFFFF"  # 서브헤더 바 위 텍스트
+    text_white: str = "#FFFFFF"  # 어두운 배경 위 텍스트
 
     # Background
     bg_white: str = "#FFFFFF"
-    bg_light_green: str = "#E8F5E9"  # 라이트 배경
+    bg_light_green: str = "#E6FDD6"  # AMIC Light Green
     bg_lighter_green: str = "#F1F8E9"  # 더 밝은 배경
     bg_cool_grey: str = "#F4F6F8"  # 섹션 구분 배경
 
     # Alert / Indicator
-    positive: str = "#26C260"  # 양수/긍정 (녹색)
+    positive: str = "#26C260"  # Highlight Green (양수/긍정)
     negative: str = "#BC2C1A"  # 음수/부정/경고 (적색)
     caution: str = "#EF6C00"  # 주의/보통 (앰버)
 
     # Table
-    table_header_bg: str = "#0F3A32"  # 테이블 헤더 배경
+    table_header_bg: str = "#0F3A32"  # Signature Green 테이블 헤더
     table_alt_row_bg: str = "#F4F6F8"  # 테이블 줄무늬 배경
 
     # Gray scale
@@ -63,27 +71,27 @@ class IMColorPalette:
 
 @dataclass(frozen=True)
 class IMTypography:
-    """AMIC IM 타이포그래피.
+    """AMIC 공식 타이포그래피 (AMIC Design vF.pdf 기준).
 
     폰트 체계:
-    - 제목(영어): Inter (weight 800)
-    - 본문(한글/영어): Pretendard
-    - 숫자/KPI: IBM Plex Mono (고정폭)
+    - 제목: SUITE (Bold) — 한국어/영어 공용 제목 폰트
+    - 본문: Pretendard (Regular/Medium) — 한국어/영어 공용 본문 폰트
+    - KPI 숫자: Pretendard (ExtraBold) — 대형 숫자 표시
     - 폴백: Noto Sans KR (특수문자/광범위 한글)
     - 차트 한글: NanumGothic (Plotly/Kaleido 전용)
     """
 
     # 개별 폰트명 (PPTX 테마/run 설정용)
-    font_heading: str = "Inter"
+    font_heading: str = "SUITE"
     font_body: str = "Pretendard"
-    font_mono: str = "IBM Plex Mono"
+    font_mono: str = "Pretendard"  # KPI 숫자도 Pretendard ExtraBold
     font_fallback: str = "Noto Sans KR"
-    font_chart: str = "NanumGothic"  # Plotly/Kaleido 전용
+    font_chart: str = "Noto Sans KR"  # Plotly/Kaleido 전용 (Docker에 fonts-noto-cjk 설치)
 
-    # CSS font-stack (PDF 출력용)
-    css_heading: str = "'Inter', 'Pretendard', 'Noto Sans KR', sans-serif"
-    css_body: str = "'Pretendard', 'Inter', 'Noto Sans KR', 'Malgun Gothic', sans-serif"
-    css_mono: str = "'IBM Plex Mono', monospace"
+    # CSS font-stack (PDF 미사용, 호환성 유지)
+    css_heading: str = "'SUITE', 'Pretendard', 'Noto Sans KR', sans-serif"
+    css_body: str = "'Pretendard', 'SUITE', 'Noto Sans KR', 'Malgun Gothic', sans-serif"
+    css_mono: str = "'Pretendard', monospace"
     css_fallback: str = "'Noto Sans KR', 'Pretendard', 'Malgun Gothic', sans-serif"
 
 
@@ -218,7 +226,12 @@ class IMDesignTokens:
     # 로고 이미지 경로 (assets/images/ 기준 상대 경로)
     logo_dark_path: str = "amic_logo_dark.png"
     logo_white_path: str = "amic_logo_white.png"
-    cover_bg_path: str = "amic_cover_bg.jpeg"
+    cover_bg_path: str = "forest_cover.jpg"  # AMIC 공식 Forest Cover
+
+    # SVG 로고 경로 (assets/images/logos/ 기준)
+    logo_main_svg: str = "logos/AMIC_Main.svg"
+    logo_combined_svg: str = "logos/AMIC_n_PETRA_Main_KR.svg"
+    logo_petra_svg: str = "logos/PETRA_Main_Simple.svg"
 
     @classmethod
     def from_brand_assets(cls, brand: Any) -> IMDesignTokens:
@@ -231,13 +244,18 @@ class IMDesignTokens:
         Returns:
             브랜드 오버라이드가 적용된 IMDesignTokens 인스턴스.
         """
+        p = getattr(brand, "primary_color", IMColorPalette.primary)
+        a = getattr(brand, "secondary_color", IMColorPalette.accent)
         colors = IMColorPalette(
-            primary=getattr(brand, "primary_color", IMColorPalette.primary),
-            accent=getattr(brand, "secondary_color", IMColorPalette.accent),
+            primary=p,
+            accent=a,
+            table_header_bg=p,
+            positive=a,
         )
         return cls(
             colors=colors,
             company_name=getattr(brand, "company_name", cls.company_name),
+            footer_note=getattr(brand, "footer_note", cls.footer_note),
             logo_dark_path=getattr(brand, "logo_dark_path", cls.logo_dark_path),
             logo_white_path=getattr(brand, "logo_white_path", cls.logo_white_path),
             cover_bg_path=getattr(brand, "cover_bg_path", cls.cover_bg_path),

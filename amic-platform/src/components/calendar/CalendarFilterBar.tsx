@@ -1,12 +1,6 @@
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { CalendarEventModule, CalendarViewMode } from "@/types/calendar";
-
-const MODULES: Array<{ value: CalendarEventModule; label: string }> = [
-  { value: "fdd", label: "FDD" },
-  { value: "kiis", label: "KIIS" },
-  { value: "im", label: "IM" },
-];
+import type { CalendarViewMode } from "@/types/calendar";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -16,12 +10,10 @@ const MONTH_NAMES = [
 interface CalendarFilterBarProps {
   year: number;
   month: number;
-  modules: CalendarEventModule[];
   viewMode: CalendarViewMode;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
-  onToggleModule: (mod: CalendarEventModule) => void;
   onViewModeChange: (mode: CalendarViewMode) => void;
   onExportIcs: () => void;
 }
@@ -29,12 +21,10 @@ interface CalendarFilterBarProps {
 export function CalendarFilterBar({
   year,
   month,
-  modules,
   viewMode,
   onPrevMonth,
   onNextMonth,
   onToday,
-  onToggleModule,
   onViewModeChange,
   onExportIcs,
 }: CalendarFilterBarProps) {
@@ -54,20 +44,6 @@ export function CalendarFilterBar({
         <Button variant="ghost" size="sm" onClick={onToday}>
           Today
         </Button>
-      </div>
-
-      {/* Module toggles */}
-      <div className="flex gap-1">
-        {MODULES.map((m) => (
-          <Button
-            key={m.value}
-            variant={modules.includes(m.value) ? "primary" : "ghost"}
-            size="sm"
-            onClick={() => onToggleModule(m.value)}
-          >
-            {m.label}
-          </Button>
-        ))}
       </div>
 
       {/* View mode toggle */}
