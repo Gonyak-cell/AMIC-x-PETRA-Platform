@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui";
 import FMChecklistItemCard from "./FMChecklistItemCard";
 import type {

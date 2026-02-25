@@ -14,6 +14,7 @@ export interface CardProps {
   tilt?: boolean;
   headingLevel?: "h2" | "h3" | "h4" | "h5";
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
 const paddingStyles = {
@@ -42,6 +43,7 @@ export function Card({
   tilt = false,
   headingLevel: HeadingTag = "h3",
   className,
+  onClick,
 }: CardProps) {
   const tiltHandlers = useTilt(2);
 
@@ -53,6 +55,7 @@ export function Card({
         hoverEffect && variant !== "forest-lift" && "transition-shadow duration-200 hover:shadow-dr-md",
         className,
       )}
+      onClick={onClick}
       {...(tilt ? { onMouseMove: tiltHandlers.onMouseMove, onMouseLeave: tiltHandlers.onMouseLeave, style: tiltHandlers.style } : {})}
     >
       {/* 헤더바 */}

@@ -377,7 +377,7 @@ export default function AudioTranscriptionModal({ open, onClose, txnId, meetingP
             <Button
               onClick={handleStartTranscription}
               disabled={!canStartProcessing || startMutation.isPending}
-              isLoading={startMutation.isPending}
+              loading={startMutation.isPending}
             >
               변환 시작
             </Button>
@@ -416,7 +416,7 @@ export default function AudioTranscriptionModal({ open, onClose, txnId, meetingP
                         ? "info"
                         : steps.findIndex((st) => st.id === "processing") > 0
                           ? "success"
-                          : "default"
+                          : "neutral"
                     }
                     className="text-xs"
                   >
@@ -546,7 +546,7 @@ export default function AudioTranscriptionModal({ open, onClose, txnId, meetingP
             <Button
               onClick={handleApprove}
               disabled={!editMinutes.trim() || approveMutation.isPending}
-              isLoading={approveMutation.isPending}
+              loading={approveMutation.isPending}
             >
               회의록 확정
             </Button>

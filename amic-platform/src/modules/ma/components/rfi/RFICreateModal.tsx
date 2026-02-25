@@ -131,7 +131,7 @@ export default function RFICreateModal({ txnId, open, onClose }: RFICreateModalP
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
           <Button onClick={handleSubmit} disabled={!form.title.trim() || createRFI.isPending}>

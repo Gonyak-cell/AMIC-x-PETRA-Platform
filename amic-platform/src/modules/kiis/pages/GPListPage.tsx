@@ -14,7 +14,7 @@ import {
 } from "@/components/ui";
 import type { GPListParams, GPSortField } from "@/modules/kiis/types/gp";
 import type { GPRegistryItem } from "@/modules/kiis/types/gpRegistry";
-import { formatAmount, formatAmountKRW } from "@/lib/format";
+import { formatAmountKRW } from "@/lib/format";
 import {
   ASSET_CLASS_OPTIONS,
   ASSET_CLASS_BADGE_VARIANT,

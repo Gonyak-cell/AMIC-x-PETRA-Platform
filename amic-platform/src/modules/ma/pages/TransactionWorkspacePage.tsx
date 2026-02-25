@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import DealClientManager from "@/modules/ma/components/DealClientManager";
 import {
   ArrowLeft,
   ArrowRight,
@@ -227,7 +226,7 @@ function formatAmount(amount: number | null): string {
 export default function TransactionWorkspacePage() {
   const { txnId, "*": splat } = useParams<{ txnId: string; "*": string }>();
   const navigate = useNavigate();
-  const { canWrite, hasPermission, isClient } = useAuth();
+  const { canWrite, isClient } = useAuth();
   const id = txnId!;
 
   // URL 기반 탭 결정
@@ -273,7 +272,7 @@ export default function TransactionWorkspacePage() {
   const { data: phaseStatus } = usePhaseCompletion(id);
   useAutoAdvanceNotification(id);
   const { data: engagements } = useEngagements(id);
-  const { data: members } = useWorkingGroup(id);
+  const { data: _members } = useWorkingGroup(id);
   const { data: conflicts } = useConflictCheck(id);
   const { data: buyers } = useBuyers(id);
   const { data: timeline } = useTimeline(id);

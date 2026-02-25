@@ -35,7 +35,7 @@ import { FinancialBarChart } from "@/components/charts/FinancialBarChart";
 import type { BarChartDataPoint } from "@/components/charts/FinancialBarChart";
 import type { FundManagerItem } from "@/modules/kiis/types/fund";
 import type { DealItem } from "@/modules/kiis/types/deal";
-import { formatAmount, formatAmountKRW, formatPercent, formatDate } from "@/lib/format";
+import { formatAmountKRW, formatPercent, formatDate } from "@/lib/format";
 import heroImg from "@/assets/images/heroes/forestgp-news.jpg";
 
 /* ───────── Column definitions ───────── */

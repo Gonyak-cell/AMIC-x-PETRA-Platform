@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { Tabs } from "@/components/ui/Tabs";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   Send,
@@ -134,7 +133,7 @@ export default function RFIDetailView({ txnId, rfiId, onBack, onRespond, onRevie
             <>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 icon={CalendarClock}
                 onClick={() => setShowExtend(!showExtend)}
               >
@@ -142,7 +141,7 @@ export default function RFIDetailView({ txnId, rfiId, onBack, onRespond, onRevie
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 icon={X}
                 onClick={() => closeRFI.mutate(rfiId)}
                 loading={closeRFI.isPending}
@@ -153,7 +152,7 @@ export default function RFIDetailView({ txnId, rfiId, onBack, onRespond, onRevie
           )}
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             icon={RefreshCw}
             onClick={() => syncRFI.mutate(rfiId)}
             loading={syncRFI.isPending}
@@ -162,7 +161,7 @@ export default function RFIDetailView({ txnId, rfiId, onBack, onRespond, onRevie
           </Button>
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             icon={Download}
             onClick={() => exportRFI.mutate(rfiId)}
             loading={exportRFI.isPending}

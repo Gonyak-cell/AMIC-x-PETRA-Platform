@@ -34,7 +34,7 @@ interface RFIPanelProps {
 export default function RFIPanel({ txnId }: RFIPanelProps) {
   const { data: rfis, isLoading: rfisLoading, isError: rfisError } = useRFIs(txnId);
   const { data: summary, isLoading: summaryLoading } = useRFISummary(txnId);
-  const deleteRFI = useDeleteRFI(txnId);
+  const _deleteRFI = useDeleteRFI(txnId);
   const generateFromDD = useGenerateRFIFromDD(txnId);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -151,9 +151,9 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             icon={Sparkles}
-            onClick={() => generateFromDD.mutate()}
+            onClick={() => generateFromDD.mutate(undefined)}
             loading={generateFromDD.isPending}
           >
             DD에서 생성
@@ -190,7 +190,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               <Card
                 key={rfi.id}
                 padding="md"
-                hover
+                hoverEffect
                 onClick={() => setSelectedRFIId(rfi.id)}
                 className="cursor-pointer"
               >

@@ -119,7 +119,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
       {/* 액션 버튼 */}
       {isReviewState && (
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={handleApproveAll}>
+          <Button variant="secondary" size="sm" onClick={handleApproveAll}>
             미검토 항목 전체 승인
           </Button>
           <Button
@@ -265,7 +265,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
                             }
                           />
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleApprove(item)}
                             disabled={reviewItem.isPending}
@@ -273,7 +273,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
                             승인
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleReject(item)}
                             disabled={reviewItem.isPending}

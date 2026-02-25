@@ -137,7 +137,7 @@ export default function RFIItemRow({ item, onRespond, onReview }: RFIItemRowProp
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant="default"
+                  variant="primary"
                   onClick={() => {
                     onReview(item.id, "ACCEPTED", reviewComment || undefined);
                     setReviewComment("");
@@ -147,7 +147,7 @@ export default function RFIItemRow({ item, onRespond, onReview }: RFIItemRowProp
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     onReview(item.id, "CLARIFICATION_NEEDED", reviewComment || undefined);
                     setReviewComment("");
