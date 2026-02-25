@@ -64,10 +64,6 @@ import amicPetraLogoUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple.svg";
 
 // ── FDD Navigation ──
 
-const _FDD_MAIN_NAV = [
-  { to: "/fdd/deals", label: "Deals", icon: Briefcase },
-];
-
 const FDD_WORKFLOW_NAV = [
   { to: "", label: "Overview", icon: Eye, end: true },
 ];

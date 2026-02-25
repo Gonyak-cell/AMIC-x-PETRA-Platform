@@ -121,41 +121,6 @@ const DEAL_STATUS_BADGE: Record<DealStatus, { label: string; cls: string }> = {
   ARCHIVED: { label: "Archived", cls: "bg-orange-100 text-orange-700" },
 };
 
-const _fddColumns: Column<Deal>[] = [
-  {
-    key: "name",
-    header: "Deal Name",
-    render: (row) => (
-      <span className="font-medium text-text-dark">{row.name}</span>
-    ),
-  },
-  {
-    key: "target_company_name",
-    header: "Target Company",
-    render: (row) => row.target_company_name ?? "-",
-  },
-  {
-    key: "status",
-    header: "Status",
-    align: "center",
-    width: "100px",
-    render: (row) => {
-      const b = DEAL_STATUS_BADGE[row.status] ?? DEAL_STATUS_BADGE.DRAFT;
-      return (
-        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
-          {b.label}
-        </span>
-      );
-    },
-  },
-  {
-    key: "created_at",
-    header: "Created",
-    width: "140px",
-    render: (row) => new Date(row.created_at).toLocaleDateString(),
-  },
-];
-
 const PAGE_SIZE = 20;
 
 // ── Marketing Section ──
