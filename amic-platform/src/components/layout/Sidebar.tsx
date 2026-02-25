@@ -1,6 +1,5 @@
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
-  Briefcase,
   Eye,
   Settings,
   FolderOpen,

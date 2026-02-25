@@ -23,7 +23,6 @@ import { useDocuments } from "@/modules/docs/hooks/useDocuments";
 import { useFDDDeals } from "@/modules/docs/hooks/useFDDDocuments";
 import { IN_PROGRESS_STATUSES, getDocumentType } from "@/modules/docs/types/document";
 import type { Document, DocumentStatus, DataSource } from "@/modules/docs/types/document";
-import type { Deal, DealStatus } from "@/modules/fdd/types/deal";
 import {
   Button,
   Card,
@@ -112,14 +111,6 @@ const marketingColumns: Column<Document>[] = [
     render: (row) => new Date(row.created_at).toLocaleDateString(),
   },
 ];
-
-// ── FDD columns ──
-
-const DEAL_STATUS_BADGE: Record<DealStatus, { label: string; cls: string }> = {
-  DRAFT: { label: "Draft", cls: "bg-gray-100 text-gray-600" },
-  ACTIVE: { label: "Active", cls: "bg-emerald-100 text-emerald-700" },
-  ARCHIVED: { label: "Archived", cls: "bg-orange-100 text-orange-700" },
-};
 
 const PAGE_SIZE = 20;
 
