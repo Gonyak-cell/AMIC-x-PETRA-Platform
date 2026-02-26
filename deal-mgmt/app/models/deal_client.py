@@ -13,9 +13,7 @@ class DealClient(Base, TimestampMixin):
     """CLIENT 역할 사용자가 열람할 수 있는 거래를 매핑한다."""
 
     __tablename__ = "deal_clients"
-    __table_args__ = (
-        UniqueConstraint("transaction_id", "email", name="uq_deal_client_txn_email"),
-    )
+    __table_args__ = (UniqueConstraint("transaction_id", "email", name="uq_deal_client_txn_email"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(

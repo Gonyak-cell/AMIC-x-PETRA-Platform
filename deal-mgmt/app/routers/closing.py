@@ -160,9 +160,7 @@ async def init_standard_checklist(
     await transaction_service.get_transaction(db, txn_id)
 
     existing = (
-        await db.execute(
-            select(ClosingChecklist).where(ClosingChecklist.transaction_id == txn_id).limit(1)
-        )
+        await db.execute(select(ClosingChecklist).where(ClosingChecklist.transaction_id == txn_id).limit(1))
     ).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(

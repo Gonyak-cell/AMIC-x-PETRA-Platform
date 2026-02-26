@@ -1,12 +1,12 @@
 """OneDrive 프로세스 상태 및 네트워크 활동 확인."""
+
 import pathlib
 import subprocess
 
 # 1. OneDrive 프로세스 확인
 print("=== OneDrive Process ===")
 result = subprocess.run(
-    ["tasklist", "/FI", "IMAGENAME eq OneDrive.exe"],
-    capture_output=True, text=True, encoding="cp949", errors="replace"
+    ["tasklist", "/FI", "IMAGENAME eq OneDrive.exe"], capture_output=True, text=True, encoding="cp949", errors="replace"
 )
 print(result.stdout.strip())
 
@@ -28,7 +28,10 @@ if od_dir.exists():
 print("\n=== OneDrive Network Connections ===")
 result = subprocess.run(
     ["netstat", "-b", "-n"],
-    capture_output=True, text=True, encoding="cp949", errors="replace",
+    capture_output=True,
+    text=True,
+    encoding="cp949",
+    errors="replace",
     timeout=30,
 )
 lines = result.stdout.split("\n")

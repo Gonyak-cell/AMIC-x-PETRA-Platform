@@ -12,13 +12,14 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class PermitKBEntry:
     """KB 인허가 항목."""
+
     industry_code: str
     industry_label: str
     permit_name: str
     regulatory_body: str
     legal_basis: str
-    filing_type: str          # CHANGE_NOTIFICATION | CHANGE_APPROVAL | NEW_REGISTRATION | RENEWAL
-    timing_type: str          # PRE_FILING | POST_FILING | BOTH
+    filing_type: str  # CHANGE_NOTIFICATION | CHANGE_APPROVAL | NEW_REGISTRATION | RENEWAL
+    timing_type: str  # PRE_FILING | POST_FILING | BOTH
     pre_filing_days: int | None = None
     post_filing_days: int | None = None
     required_documents: list[str] = field(default_factory=list)
@@ -30,12 +31,24 @@ class PermitKBEntry:
 # ── 업종 분류 체계 ───────────────────────────────────────────
 
 INDUSTRY_OPTIONS: list[dict[str, str | list[str]]] = [
-    {"code": "FINANCE", "label": "금융업", "sub_categories": [
-        "FINANCE_BANK", "FINANCE_INSURANCE", "FINANCE_SECURITIES", "FINANCE_CREDIT",
-    ]},
-    {"code": "TELECOM", "label": "통신업", "sub_categories": [
-        "TELECOM_BASIC", "TELECOM_VALUE_ADDED",
-    ]},
+    {
+        "code": "FINANCE",
+        "label": "금융업",
+        "sub_categories": [
+            "FINANCE_BANK",
+            "FINANCE_INSURANCE",
+            "FINANCE_SECURITIES",
+            "FINANCE_CREDIT",
+        ],
+    },
+    {
+        "code": "TELECOM",
+        "label": "통신업",
+        "sub_categories": [
+            "TELECOM_BASIC",
+            "TELECOM_VALUE_ADDED",
+        ],
+    },
     {"code": "CONSTRUCTION", "label": "건설업", "sub_categories": ["CONSTRUCTION_GENERAL"]},
     {"code": "HEALTHCARE", "label": "의료업", "sub_categories": ["HEALTHCARE_HOSPITAL", "HEALTHCARE_PHARMACY"]},
     {"code": "FOOD", "label": "식품업", "sub_categories": ["FOOD_MANUFACTURING", "FOOD_RESTAURANT"]},
@@ -97,7 +110,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         ],
         notes="[주의] 외국인 투자자가 관여하는 거래에만 해당합니다. 외국인이 국내 기업 주식 10% 이상 취득 시 적용. 국방·방송 등 제한 업종은 사전 허가 필요.",
     ),
-
     # ═══ 금융업 ═══
     PermitKBEntry(
         industry_code="FINANCE_BANK",
@@ -176,7 +188,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         deal_structure_filter=["SHARE_ACQUISITION", "MERGER"],
         notes="의결권 10% 이상 주식 취득 시.",
     ),
-
     # ═══ 통신업 ═══
     PermitKBEntry(
         industry_code="TELECOM_BASIC",
@@ -213,7 +224,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         ],
         notes="부가통신사업 신고 업체의 대표자/법인명 변경 시.",
     ),
-
     # ═══ 건설업 ═══
     PermitKBEntry(
         industry_code="CONSTRUCTION_GENERAL",
@@ -233,7 +243,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         ],
         notes="건설업 등록 사항 변경(대표자, 법인명, 대주주 등) 시 30일 이내 신고.",
     ),
-
     # ═══ 의료업 ═══
     PermitKBEntry(
         industry_code="HEALTHCARE_HOSPITAL",
@@ -269,7 +278,6 @@ PERMIT_KB: list[PermitKBEntry] = [
             "품질관리자 자격 증명",
         ],
     ),
-
     # ═══ 식품업 ═══
     PermitKBEntry(
         industry_code="FOOD_MANUFACTURING",
@@ -288,7 +296,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         ],
         notes="영업자 지위 승계(양도양수) 시 14일 이내 신고.",
     ),
-
     # ═══ 환경업 ═══
     PermitKBEntry(
         industry_code="ENVIRONMENT_WASTE",
@@ -307,7 +314,6 @@ PERMIT_KB: list[PermitKBEntry] = [
             "환경영향평가서 (해당 시)",
         ],
     ),
-
     # ═══ 에너지업 ═══
     PermitKBEntry(
         industry_code="ENERGY_POWER",
@@ -327,7 +333,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         ],
         notes="발전사업 허가 사항 변경 시. 신재생에너지 발전은 별도 규정.",
     ),
-
     # ═══ 방송업 ═══
     PermitKBEntry(
         industry_code="BROADCASTING_TV",
@@ -348,7 +353,6 @@ PERMIT_KB: list[PermitKBEntry] = [
         deal_structure_filter=["SHARE_ACQUISITION", "MERGER"],
         notes="종합편성·보도전문 채널은 대주주 적격성 심사 포함. 소유제한 규정 확인 필요.",
     ),
-
     # ═══ 운송업 ═══
     PermitKBEntry(
         industry_code="TRANSPORT_FREIGHT",

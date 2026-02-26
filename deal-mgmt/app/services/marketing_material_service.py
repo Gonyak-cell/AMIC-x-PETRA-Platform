@@ -27,6 +27,7 @@ _TYPE_MAP: dict[MarketingDocType, str] = {
 
 # ── CRUD ─────────────────────────────────────────────────────────
 
+
 async def list_marketing_materials(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -117,7 +118,7 @@ async def _generate_pptx(
                 project_code=project_code,
                 output_path=str(output_path),
                 content=body.parameters,
-            )
+            ),
         )
 
         # 독립적인 새 세션으로 DB 업데이트
@@ -150,15 +151,11 @@ async def create_marketing_material_with_ralph(
     created_by_email: str | None = None,
 ) -> MarketingMaterial:
     """Ralph Loop 품질 강화 모드로 마케팅 자료를 생성한다."""
-    import logging
-
     from app.ralph.convergence import ConvergenceConfig
     from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
     from app.ralph.generators.pptx_generator import RalphMemoGenerator
     from app.ralph.orchestrator import RalphLoopOrchestrator
     from app.ralph.prd_manager import load_prd
-
-    logger = logging.getLogger(__name__)
 
     mat = MarketingMaterial(
         transaction_id=transaction_id,
@@ -189,7 +186,10 @@ async def create_marketing_material_with_ralph(
         )
 
         orchestrator = RalphLoopOrchestrator(
-            generator=generator, gates=gates, prd=prd, config=config,
+            generator=generator,
+            gates=gates,
+            prd=prd,
+            config=config,
         )
         loop_result = await orchestrator.run(source_data=body.parameters)
 
@@ -241,7 +241,7 @@ async def generate_marketing_material(
                 project_code=project_code,
                 output_path=str(output_path),
                 content=mat.parameters,
-            )
+            ),
         )
         mat.status = MarketingDocStatus.READY
         mat.file_path = result.output_path

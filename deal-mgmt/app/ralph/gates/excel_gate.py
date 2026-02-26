@@ -73,7 +73,11 @@ class ExcelProgrammaticGate(QualityGate):
             wb = load_workbook(artifact_path, data_only=False)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"Excel 로드 실패: {exc}"], [], [f"Excel 파일 손상: {exc}"],
+                start,
+                [],
+                [f"Excel 로드 실패: {exc}"],
+                [],
+                [f"Excel 파일 손상: {exc}"],
             )
 
         model_type = prd_section.get("model_type", "DCF")
@@ -118,7 +122,11 @@ class ExcelProgrammaticGate(QualityGate):
         wb.close()
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     # ── 검증 레이어 ──────────────────────────────────────────────────────
@@ -303,10 +311,7 @@ class ExcelProgrammaticGate(QualityGate):
                         if matches:
                             placeholder_count += len(matches)
                             if len(issues) < 5:
-                                issues.append(
-                                    f"시트 '{ws.title}' 행 {cell.row}: "
-                                    f"플레이스홀더 '{matches[0]}'"
-                                )
+                                issues.append(f"시트 '{ws.title}' 행 {cell.row}: 플레이스홀더 '{matches[0]}'")
 
         score = 5.0 if placeholder_count == 0 else max(1.0, 5.0 - placeholder_count)
         return score, issues
@@ -319,12 +324,12 @@ class ExcelProgrammaticGate(QualityGate):
 
         # 기대하는 숫자 포맷 패턴
         expected_formats = {
-            "#,##0",       # KRW
-            "0.0%",        # 퍼센트
-            "0.00%",       # 퍼센트 (소수 2자리)
-            '0.0"x"',      # 멀티플
-            "0",           # 일수
-            "General",     # 기본
+            "#,##0",  # KRW
+            "0.0%",  # 퍼센트
+            "0.00%",  # 퍼센트 (소수 2자리)
+            '0.0"x"',  # 멀티플
+            "0",  # 일수
+            "General",  # 기본
         }
 
         for ws in wb.worksheets:
@@ -348,9 +353,7 @@ class ExcelProgrammaticGate(QualityGate):
                             ):
                                 format_violations += 1
                                 if format_violations <= 3:
-                                    issues.append(
-                                        f"시트 '{ws.title}': 비표준 숫자 형식 '{fmt}'"
-                                    )
+                                    issues.append(f"시트 '{ws.title}': 비표준 숫자 형식 '{fmt}'")
 
         score = max(1.0, 5.0 - format_violations * 0.5)
         return score, issues

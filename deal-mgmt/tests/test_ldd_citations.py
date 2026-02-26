@@ -8,23 +8,27 @@ import pytest
 
 # ── CitationDB 테스트 ──────────────────────────────────────────────────────
 
+
 class TestCitationDB:
     """CitationDB 로드 및 조회 테스트."""
 
     def test_load_statutes(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         db.load()
         assert db.statute_count >= 80, f"최소 80개 법조문 필요, 실제: {db.statute_count}"
 
     def test_load_precedents(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         db.load()
         assert db.precedent_count >= 80, f"최소 80개 판례 필요, 실제: {db.precedent_count}"
 
     def test_lazy_load(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         # load() 없이도 get_statutes가 자동 로드
         statutes = db.get_statutes("GOVERNANCE")
@@ -32,6 +36,7 @@ class TestCitationDB:
 
     def test_get_statutes_by_section(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         for section in ["GOVERNANCE", "CAPITAL", "CONTRACTS", "LABOR", "IP", "REAL_ESTATE", "TAX", "DATA_IT"]:
             statutes = db.get_statutes(section)
@@ -39,13 +44,25 @@ class TestCitationDB:
 
     def test_get_precedents_by_section(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
-        for section in ["GOVERNANCE", "CAPITAL", "CONTRACTS", "LITIGATION", "LABOR", "IP", "REAL_ESTATE", "TAX", "DATA_IT"]:
+        for section in [
+            "GOVERNANCE",
+            "CAPITAL",
+            "CONTRACTS",
+            "LITIGATION",
+            "LABOR",
+            "IP",
+            "REAL_ESTATE",
+            "TAX",
+            "DATA_IT",
+        ]:
             precedents = db.get_precedents(section)
             assert len(precedents) > 0, f"{section}에 판례가 없음"
 
     def test_find_statute_by_id(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         s = db.find_statute("상법_382")
         assert s is not None
@@ -53,11 +70,13 @@ class TestCitationDB:
 
     def test_find_statute_not_found(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         assert db.find_statute("존재하지않는_법조문_999") is None
 
     def test_find_precedent_by_id(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         p = db.find_precedent("대법원_2017다222368")
         assert p is not None
@@ -65,23 +84,27 @@ class TestCitationDB:
 
     def test_find_precedent_not_found(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         assert db.find_precedent("서울고법_9999나99999") is None
 
     def test_get_all_statutes(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         all_s = db.get_all_statutes()
         assert len(all_s) == db.statute_count
 
     def test_get_all_precedents(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         all_p = db.get_all_precedents()
         assert len(all_p) == db.precedent_count
 
     def test_no_duplicate_statute_ids(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         all_s = db.get_all_statutes()
         ids = [s.statute_id for s in all_s]
@@ -89,6 +112,7 @@ class TestCitationDB:
 
     def test_no_duplicate_precedent_ids(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         all_p = db.get_all_precedents()
         ids = [p.precedent_id for p in all_p]
@@ -96,6 +120,7 @@ class TestCitationDB:
 
     def test_empty_section_returns_empty(self):
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         assert db.get_statutes("NONEXISTENT_SECTION") == []
         assert db.get_precedents("NONEXISTENT_SECTION") == []
@@ -103,11 +128,13 @@ class TestCitationDB:
 
 # ── StatuteEntry / PrecedentEntry 구조 테스트 ──────────────────────────────
 
+
 class TestEntries:
     """법조문 및 판례 엔트리 구조 검증."""
 
     def test_statute_fields(self):
         from app.ralph.generators.ldd.legal_citations.korean_statutes import STATUTES
+
         for s in STATUTES:
             assert s.statute_id, "statute_id 비어있음"
             assert s.law_name, "law_name 비어있음"
@@ -118,6 +145,7 @@ class TestEntries:
 
     def test_precedent_fields(self):
         from app.ralph.generators.ldd.legal_citations.korean_precedents import PRECEDENTS
+
         for p in PRECEDENTS:
             assert p.precedent_id, "precedent_id 비어있음"
             assert p.court, "court 비어있음"
@@ -129,22 +157,26 @@ class TestEntries:
 
     def test_statute_frozen(self):
         from app.ralph.generators.ldd.legal_citations.korean_statutes import STATUTES
+
         with pytest.raises(AttributeError):
             STATUTES[0].statute_id = "modified"  # type: ignore
 
     def test_precedent_frozen(self):
         from app.ralph.generators.ldd.legal_citations.korean_precedents import PRECEDENTS
+
         with pytest.raises(AttributeError):
             PRECEDENTS[0].precedent_id = "modified"  # type: ignore
 
 
 # ── CitationPromptInjector 테스트 ──────────────────────────────────────────
 
+
 class TestCitationPromptInjector:
     """법률 컨텍스트 주입기 테스트."""
 
     def test_build_legal_context_governance(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("GOVERNANCE")
         assert "관련 법률 조항" in ctx
@@ -154,18 +186,21 @@ class TestCitationPromptInjector:
 
     def test_build_legal_context_labor(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("LABOR")
         assert "근로기준법" in ctx
 
     def test_build_legal_context_empty_section(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("NONEXISTENT")
         assert "큐레이션된 법률 컨텍스트 없음" in ctx
 
     def test_max_statutes_limit(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("GOVERNANCE", max_statutes=3, max_precedents=2)
         # 제한된 수만 포함되어야 함
@@ -173,12 +208,14 @@ class TestCitationPromptInjector:
 
     def test_citation_id_tags(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("GOVERNANCE")
         assert "[cite:" in ctx or "[상법" in ctx  # ID 태그 가이드 포함
 
     def test_extract_citation_ids(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         text = "상법 제382조에 따라 [cite:상법_382] 이사는 선임된다. 또한 [cite:대법원_2017다222368] 판례 참조."
         ids = injector.extract_citation_ids(text)
@@ -187,11 +224,13 @@ class TestCitationPromptInjector:
 
     def test_extract_no_citations(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         assert injector.extract_citation_ids("법률 인용 없는 텍스트") == []
 
     def test_anti_hallucination_warning(self):
         from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
+
         injector = CitationPromptInjector()
         ctx = injector.build_legal_context("GOVERNANCE")
         assert "임의로 생성하지 마세요" in ctx
@@ -199,11 +238,13 @@ class TestCitationPromptInjector:
 
 # ── CitationVerifier 테스트 ────────────────────────────────────────────────
 
+
 class TestCitationVerifier:
     """법률 인용 검증기 테스트."""
 
     def test_verify_cite_tag_verified(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("이사회 결의가 필요하다 [cite:상법_382].")
         assert result.total_citations >= 1
@@ -213,6 +254,7 @@ class TestCitationVerifier:
 
     def test_verify_cite_tag_unverified(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("관련 규정 [cite:가짜법_999]에 의하면")
         unverified = [c for c in result.citations if c.status == "UNVERIFIED"]
@@ -221,6 +263,7 @@ class TestCitationVerifier:
 
     def test_verify_statute_pattern_match(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("상법 제382조에 따르면 이사는 주주총회에서 선임한다.")
         assert result.total_citations >= 1
@@ -228,12 +271,14 @@ class TestCitationVerifier:
 
     def test_verify_precedent_pattern(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("대법원 2017.09.21. 선고 2017다222368 판결에 의하면")
         assert result.total_citations >= 1
 
     def test_verify_no_citations(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("법률 인용이 없는 일반 텍스트입니다.")
         assert result.total_citations == 0
@@ -241,6 +286,7 @@ class TestCitationVerifier:
 
     def test_verify_multiple_citations(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         text = (
             "상법 제382조 [cite:상법_382]에 따라 이사는 선임되며, "
@@ -254,18 +300,21 @@ class TestCitationVerifier:
 
     def test_annotated_text_unverified_tag(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("위반 시 [cite:허구법_123]에 따라 처벌된다.")
         assert "[미확인]" in result.annotated_text
 
     def test_annotated_text_verified_no_tag(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("상법 제382조 [cite:상법_382]에 따른 의무.")
         assert "[미확인]" not in result.annotated_text
 
     def test_verification_result_to_dict(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("[cite:상법_382] 참조")
         d = result.to_dict()
@@ -276,6 +325,7 @@ class TestCitationVerifier:
 
     def test_verify_narrative_sections(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         narrative_sections = {
             "GOVERNANCE": [
@@ -312,20 +362,25 @@ class TestCitationVerifier:
 
     def test_verify_empty_narrative(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_narrative_sections({})
         assert result == {}
 
     def test_verify_narrative_no_blocks(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
-        result = v.verify_narrative_sections({
-            "LABOR": [{"item_id": "LAB-01", "blocks": []}],
-        })
+        result = v.verify_narrative_sections(
+            {
+                "LABOR": [{"item_id": "LAB-01", "blocks": []}],
+            }
+        )
         assert result["LABOR"][0]["citation_verification"]["total"] == 0
 
     def test_duplicate_cite_tags_counted_once(self):
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("[cite:상법_382] 이사 선임. 다시 [cite:상법_382] 참조.")
         # 동일 ID는 1회만 카운트
@@ -334,12 +389,14 @@ class TestCitationVerifier:
 
 # ── _guess_statute_id 확장 매핑 테스트 ──────────────────────────────────────
 
+
 class TestGuessStatuteIdNewMappings:
     """IS-12 수정: 추가된 12개 법률 매핑이 올바르게 작동하는지 검증."""
 
     def _verify_statute_pattern(self, law_name: str, article: str):
         """법조문 패턴이 인식되어 statute_id가 올바르게 생성되는지 검증."""
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         text = f"{law_name} 제{article}조에 따르면 관련 의무가 발생한다."
         result = v.verify_text(text)
@@ -347,9 +404,7 @@ class TestGuessStatuteIdNewMappings:
         assert result.total_citations >= 1, f"{law_name} 제{article}조 인식 실패"
         matched = result.citations[0]
         expected_id = f"{law_name}_{article}"
-        assert matched.citation_id == expected_id, (
-            f"예상 ID: {expected_id}, 실제: {matched.citation_id}"
-        )
+        assert matched.citation_id == expected_id, f"예상 ID: {expected_id}, 실제: {matched.citation_id}"
 
     def test_new_law_부정경쟁방지법(self):
         self._verify_statute_pattern("부정경쟁방지법", "2")
@@ -390,6 +445,7 @@ class TestGuessStatuteIdNewMappings:
     def test_subarticle_pattern(self):
         """조의X 패턴이 올바르게 파싱된다."""
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
         v = CitationVerifier()
         result = v.verify_text("상법 제542조의8에 따르면 사외이사 의무가 발생한다.")
         assert result.total_citations >= 1
@@ -398,6 +454,7 @@ class TestGuessStatuteIdNewMappings:
 
 
 # ── 통합 테스트 ────────────────────────────────────────────────────────────
+
 
 class TestIntegration:
     """법률 인용 시스템 통합 테스트."""
@@ -414,7 +471,7 @@ class TestIntegration:
         ctx = injector.build_legal_context("GOVERNANCE")
 
         # 컨텍스트에서 ID 추출
-        ids = injector.extract_citation_ids(ctx)
+        ids = injector.extract_citation_ids(ctx)  # noqa: F841
         # 주입된 컨텍스트에는 [cite:ID] 형식이 아니라 [ID] 형식으로 되어 있으므로
         # 검증기가 직접 사용하는 시나리오: LLM이 [cite:ID]로 인용한 텍스트 검증
         sample_text = "이사는 상법 제382조 [cite:상법_382]에 따라 선임된다."
@@ -424,10 +481,18 @@ class TestIntegration:
     def test_all_sections_have_citations(self):
         """주요 섹션에 법조문과 판례가 모두 있는지 확인."""
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         major_sections = [
-            "GOVERNANCE", "CAPITAL", "CONTRACTS", "LITIGATION",
-            "LABOR", "IP", "REAL_ESTATE", "TAX", "DATA_IT",
+            "GOVERNANCE",
+            "CAPITAL",
+            "CONTRACTS",
+            "LITIGATION",
+            "LABOR",
+            "IP",
+            "REAL_ESTATE",
+            "TAX",
+            "DATA_IT",
         ]
         for section in major_sections:
             s = db.get_statutes(section)
@@ -438,6 +503,7 @@ class TestIntegration:
     def test_citation_count_summary(self):
         """전체 인용 데이터 수량 요약."""
         from app.ralph.generators.ldd.legal_citations.citation_db import CitationDB
+
         db = CitationDB()
         print(f"\n총 법조문: {db.statute_count}개, 판례: {db.precedent_count}개")
         assert db.statute_count + db.precedent_count >= 170

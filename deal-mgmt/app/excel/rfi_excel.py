@@ -196,9 +196,17 @@ def export_rfi_to_excel(rfi: RFI) -> io.BytesIO:
 
     # 헤더 행
     headers = [
-        "No.", "우선순위\nPriority", "분류\nCategory", "요청 사항\nQuestion",
-        "상세 설명\nDetail", "응답\nResponse", "응답자료\nDocuments",
-        "응답일\nResponse Date", "상태\nStatus", "검토 의견\nReviewer Comment", "비고\nNotes",
+        "No.",
+        "우선순위\nPriority",
+        "분류\nCategory",
+        "요청 사항\nQuestion",
+        "상세 설명\nDetail",
+        "응답\nResponse",
+        "응답자료\nDocuments",
+        "응답일\nResponse Date",
+        "상태\nStatus",
+        "검토 의견\nReviewer Comment",
+        "비고\nNotes",
     ]
     ws.append(headers)
     header_row = ws.max_row
@@ -214,9 +222,7 @@ def export_rfi_to_excel(rfi: RFI) -> io.BytesIO:
     for item in items:
         docs_str = ""
         if item.response_documents:
-            docs_str = ", ".join(
-                d.get("name", "") for d in item.response_documents if isinstance(d, dict)
-            )
+            docs_str = ", ".join(d.get("name", "") for d in item.response_documents if isinstance(d, dict))
         responded_str = item.responded_at.strftime("%Y-%m-%d") if item.responded_at else ""
         row_data = [
             item.question_number,
@@ -308,9 +314,7 @@ async def import_rfi_from_excel(
 
     # 기존 아이템 조회
     existing_q = select(RFIItem).where(RFIItem.rfi_id == rfi_id, RFIItem.transaction_id == txn_id)
-    existing_items = {
-        item.question_number: item for item in (await db.execute(existing_q)).scalars().all()
-    }
+    existing_items = {item.question_number: item for item in (await db.execute(existing_q)).scalars().all()}
 
     # 다음 질문 번호
     from sqlalchemy import func

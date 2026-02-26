@@ -1,7 +1,5 @@
 """Approval Requests API 테스트 — Phase 5A."""
 
-
-
 SAMPLE_APPROVAL = {
     "approval_type": "PHASE_ADVANCE",
     "title": "마케팅 단계 전환 승인",
@@ -230,9 +228,7 @@ async def test_cancel_already_decided(client, transaction_id):
 
 # ── 404 ────────────────────────────────────────────────────
 async def test_get_nonexistent_approval(client, transaction_id):
-    resp = await client.get(
-        "/api/v1/approvals/00000000-0000-0000-0000-000000000000"
-    )
+    resp = await client.get("/api/v1/approvals/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404
 
 

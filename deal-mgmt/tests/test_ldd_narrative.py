@@ -387,9 +387,9 @@ class TestNarrativeGenerator:
         )
 
         assert len(results) == 3
-        assert len(results[0].blocks) == 6   # HIGH → 6블록
-        assert len(results[1].blocks) == 1   # OK → 1블록
-        assert len(results[2].blocks) == 0   # PENDING → 0블록
+        assert len(results[0].blocks) == 6  # HIGH → 6블록
+        assert len(results[1].blocks) == 1  # OK → 1블록
+        assert len(results[2].blocks) == 0  # PENDING → 0블록
 
     def test_format_checklist(self):
         from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
@@ -592,7 +592,7 @@ class TestNarrativeGenerator:
         """Windows/Unix 경로 모두 올바르게 파일명을 추출한다."""
         from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
 
-        gen = NarrativeGenerator()
+        gen = NarrativeGenerator()  # noqa: F841
         # _extract_filename은 generate_narrative 내부의 로컬 함수이므로
         # pathlib 기반 경로 추출을 간접 검증
         from pathlib import PurePosixPath, PureWindowsPath

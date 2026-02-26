@@ -17,26 +17,101 @@ from app.services import audit_service
 # M&A Closing에서 공통으로 요구되는 표준 체크리스트 항목
 _STANDARD_CLOSING_ITEMS: list[dict] = [
     # 선행 조건
-    {"category": ClosingCategory.CONDITION_PRECEDENT, "title": "선행 조건 충족 확인 (CP Satisfaction)", "description": "SPA에 명시된 모든 선행 조건이 충족됐는지 확인", "sort_order": 10},
-    {"category": ClosingCategory.CONDITION_PRECEDENT, "title": "진술 및 보장 재확인 (Reps & Warranties)", "description": "Closing일 기준 진술 및 보장이 여전히 진실하고 정확한지 확인", "sort_order": 20},
-    {"category": ClosingCategory.CONDITION_PRECEDENT, "title": "중요 계약 동의 획득 (Material Consents)", "description": "주요 계약의 변경통제 조항에 따른 거래상대방 동의 획득", "sort_order": 30},
+    {
+        "category": ClosingCategory.CONDITION_PRECEDENT,
+        "title": "선행 조건 충족 확인 (CP Satisfaction)",
+        "description": "SPA에 명시된 모든 선행 조건이 충족됐는지 확인",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.CONDITION_PRECEDENT,
+        "title": "진술 및 보장 재확인 (Reps & Warranties)",
+        "description": "Closing일 기준 진술 및 보장이 여전히 진실하고 정확한지 확인",
+        "sort_order": 20,
+    },
+    {
+        "category": ClosingCategory.CONDITION_PRECEDENT,
+        "title": "중요 계약 동의 획득 (Material Consents)",
+        "description": "주요 계약의 변경통제 조항에 따른 거래상대방 동의 획득",
+        "sort_order": 30,
+    },
     # 규제
-    {"category": ClosingCategory.REGULATORY, "title": "공정거래위원회 기업결합 신고", "description": "기업결합 신고 대상 여부 확인 및 해당 시 신고/승인 획득", "sort_order": 10},
-    {"category": ClosingCategory.REGULATORY, "title": "외국인투자신고 (FDI Review)", "description": "외국인 투자자 관련 신고/승인 요건 확인 및 처리", "sort_order": 20},
+    {
+        "category": ClosingCategory.REGULATORY,
+        "title": "공정거래위원회 기업결합 신고",
+        "description": "기업결합 신고 대상 여부 확인 및 해당 시 신고/승인 획득",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.REGULATORY,
+        "title": "외국인투자신고 (FDI Review)",
+        "description": "외국인 투자자 관련 신고/승인 요건 확인 및 처리",
+        "sort_order": 20,
+    },
     # 법적
-    {"category": ClosingCategory.LEGAL, "title": "SPA 최종 서명 완료", "description": "주식매매계약서(SPA) 모든 당사자 서명 완료", "sort_order": 10},
-    {"category": ClosingCategory.LEGAL, "title": "주주총회/이사회 결의", "description": "거래 승인을 위한 주주총회 및 이사회 결의 완료", "sort_order": 20},
-    {"category": ClosingCategory.LEGAL, "title": "주식 양도 관련 서류 준비", "description": "명의개서청구서 등 주식 이전 법적 서류 준비 완료", "sort_order": 30},
+    {
+        "category": ClosingCategory.LEGAL,
+        "title": "SPA 최종 서명 완료",
+        "description": "주식매매계약서(SPA) 모든 당사자 서명 완료",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.LEGAL,
+        "title": "주주총회/이사회 결의",
+        "description": "거래 승인을 위한 주주총회 및 이사회 결의 완료",
+        "sort_order": 20,
+    },
+    {
+        "category": ClosingCategory.LEGAL,
+        "title": "주식 양도 관련 서류 준비",
+        "description": "명의개서청구서 등 주식 이전 법적 서류 준비 완료",
+        "sort_order": 30,
+    },
     # 재무
-    {"category": ClosingCategory.FINANCIAL, "title": "거래대금 지급 계좌 확인", "description": "매도인 지급 계좌 정보 확인 및 검증", "sort_order": 10},
-    {"category": ClosingCategory.FINANCIAL, "title": "에스크로 계좌 설정", "description": "진술보장 손해배상 등을 위한 에스크로 계좌 개설 (해당 시)", "sort_order": 20},
-    {"category": ClosingCategory.FINANCIAL, "title": "Net Debt / Working Capital 최종 정산", "description": "Closing일 기준 순차입금 및 운전자본 확정 및 조정", "sort_order": 30},
+    {
+        "category": ClosingCategory.FINANCIAL,
+        "title": "거래대금 지급 계좌 확인",
+        "description": "매도인 지급 계좌 정보 확인 및 검증",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.FINANCIAL,
+        "title": "에스크로 계좌 설정",
+        "description": "진술보장 손해배상 등을 위한 에스크로 계좌 개설 (해당 시)",
+        "sort_order": 20,
+    },
+    {
+        "category": ClosingCategory.FINANCIAL,
+        "title": "Net Debt / Working Capital 최종 정산",
+        "description": "Closing일 기준 순차입금 및 운전자본 확정 및 조정",
+        "sort_order": 30,
+    },
     # 법인
-    {"category": ClosingCategory.CORPORATE, "title": "이사회 구성 변경 준비", "description": "인수 후 이사진 변경 서류 및 등기 준비", "sort_order": 10},
-    {"category": ClosingCategory.CORPORATE, "title": "법인등기 및 사업자등록 변경", "description": "대표이사 변경 등 법인등기 및 사업자등록 변경 준비", "sort_order": 20},
+    {
+        "category": ClosingCategory.CORPORATE,
+        "title": "이사회 구성 변경 준비",
+        "description": "인수 후 이사진 변경 서류 및 등기 준비",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.CORPORATE,
+        "title": "법인등기 및 사업자등록 변경",
+        "description": "대표이사 변경 등 법인등기 및 사업자등록 변경 준비",
+        "sort_order": 20,
+    },
     # 자금 집행
-    {"category": ClosingCategory.FUND_FLOW, "title": "Closing일 거래대금 집행", "description": "Closing 당일 거래대금 전액 집행 및 에스크로 이체 확인", "sort_order": 10},
-    {"category": ClosingCategory.FUND_FLOW, "title": "원천징수세 처리", "description": "대금 지급 시 원천징수세 처리 방법 확인 및 집행", "sort_order": 20},
+    {
+        "category": ClosingCategory.FUND_FLOW,
+        "title": "Closing일 거래대금 집행",
+        "description": "Closing 당일 거래대금 전액 집행 및 에스크로 이체 확인",
+        "sort_order": 10,
+    },
+    {
+        "category": ClosingCategory.FUND_FLOW,
+        "title": "원천징수세 처리",
+        "description": "대금 지급 시 원천징수세 처리 방법 확인 및 집행",
+        "sort_order": 20,
+    },
 ]
 
 
@@ -60,11 +135,7 @@ async def list_transactions(
     base = select(Transaction).where(Transaction.is_deleted.is_(False))
 
     if client_email is not None:
-        base = base.where(
-            Transaction.id.in_(
-                select(DealClient.transaction_id).where(DealClient.email == client_email)
-            )
-        )
+        base = base.where(Transaction.id.in_(select(DealClient.transaction_id).where(DealClient.email == client_email)))
 
     if search:
         pattern = f"%{search}%"

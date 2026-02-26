@@ -36,6 +36,7 @@ sys.path.insert(0, str(DEAL_MGMT_DIR))
 # ── .env 로드 ──
 try:
     from dotenv import load_dotenv
+
     load_dotenv(DEAL_MGMT_DIR / ".env")
 except ImportError:
     print("[WARN] python-dotenv 미설치 — 환경변수를 직접 설정하세요")
@@ -134,6 +135,7 @@ def print_header():
 
 # ── Stage 0: 소스 파일 스캔 + 파싱 ──
 
+
 def stage0_scan(source_dir: str) -> list[dict]:
     """소스 디렉토리를 스캔하여 지원 파일 목록을 반환한다."""
     from app.ralph.parsers.file_classifier import scan_directory
@@ -201,7 +203,7 @@ def stage0_parse(file_list: list[dict]) -> list:
         print("  1. 파일 탐색기에서 실사자료 폴더 우클릭")
         print("     → '이 디바이스에 항상 유지' 선택")
         print("  2. 또는 폴더를 로컬 경로로 복사:")
-        print("     xcopy /E /I \"원본폴더\" \"C:\\temp\\실사자료\"")
+        print('     xcopy /E /I "원본폴더" "C:\\temp\\실사자료"')
         print()
         print("  파일 다운로드 후 스크립트를 다시 실행하세요.")
         print("  (일부 읽기 가능한 파일만으로 계속하려면 Enter)")
@@ -225,7 +227,7 @@ def stage0_parse(file_list: list[dict]) -> list:
     for i, info in enumerate(file_list):
         pct = (i + 1) * 100 // total
         if pct != last_pct and pct % 5 == 0:
-            print(f"  파싱 중... {pct}% ({i+1}/{total})", end="\r")
+            print(f"  파싱 중... {pct}% ({i + 1}/{total})", end="\r")
             last_pct = pct
 
         try:
@@ -244,8 +246,7 @@ def stage0_parse(file_list: list[dict]) -> list:
     valid = sum(1 for pf in parsed_files if pf.is_valid)
     invalid_with_error = sum(1 for pf in parsed_files if pf.parse_error)
     print(f"\n  파싱 완료: {len(parsed_files)}개 ({elapsed:.1f}s)")
-    print(f"  유효: {valid}개, 파싱 에러: {invalid_with_error}개, "
-          f"예외: {failed}개, 클라우드 전용: {cloud_errors}개")
+    print(f"  유효: {valid}개, 파싱 에러: {invalid_with_error}개, 예외: {failed}개, 클라우드 전용: {cloud_errors}개")
 
     if valid == 0 and cloud_errors > 0:
         print()
@@ -329,6 +330,7 @@ def print_parse_summary(source_map: dict[str, list], sections_config: list[dict]
 
 # ── LLM 초기화 ──
 
+
 def init_llm(provider: str | None = None):
     """RalphLLMClient + LDDModelRouter를 초기화한다.
 
@@ -385,6 +387,7 @@ def init_llm(provider: str | None = None):
 
 
 # ── 메인 파이프라인 실행 ──
+
 
 async def run_pipeline(
     llm_client,
@@ -493,25 +496,25 @@ def print_result_summary(result):
     # 듀얼 리스크
     if result.dual_risk_summary:
         drs = result.dual_risk_summary
-        print(f"\n  [듀얼 리스크] 분석 {drs.get('total_analyzed', 0)}건, "
-              f"자동해결 {drs.get('auto_resolved', 0)}건, "
-              f"검토필요 {drs.get('needs_human_review', 0)}건")
+        print(
+            f"\n  [듀얼 리스크] 분석 {drs.get('total_analyzed', 0)}건, "
+            f"자동해결 {drs.get('auto_resolved', 0)}건, "
+            f"검토필요 {drs.get('needs_human_review', 0)}건"
+        )
 
     # 갭 탐지
     if result.gap_detection:
         gd = result.gap_detection
-        print(f"  [누락 탐지] 체크리스트 {gd.get('total_checklist', 0)}건, "
-              f"자유탐색 {gd.get('total_freeform', 0)}건, "
-              f"유니크 {gd.get('total_unique', 0)}건")
+        print(
+            f"  [누락 탐지] 체크리스트 {gd.get('total_checklist', 0)}건, "
+            f"자유탐색 {gd.get('total_freeform', 0)}건, "
+            f"유니크 {gd.get('total_unique', 0)}건"
+        )
 
     # 서술
     if result.narrative_sections:
         ns = result.narrative_sections
-        total_blocks = sum(
-            len(item.get("blocks", []))
-            for items in ns.values()
-            for item in items
-        )
+        total_blocks = sum(len(item.get("blocks", [])) for items in ns.values() for item in items)
         print(f"  [서술] {len(ns)}개 섹션, {total_blocks}개 블록")
 
     # QA
@@ -521,15 +524,19 @@ def print_result_summary(result):
             print(f"  [QA] 점수 {qa['overall_score']}/5.0")
         if "narrative_quality" in qa:
             nq = qa["narrative_quality"]
-            print(f"  [서술 품질] {nq.get('passed_items', 0)}/{nq.get('total_items', 0)} 통과, "
-                  f"점수 {nq.get('overall_score', 0)}/5.0")
+            print(
+                f"  [서술 품질] {nq.get('passed_items', 0)}/{nq.get('total_items', 0)} 통과, "
+                f"점수 {nq.get('overall_score', 0)}/5.0"
+            )
 
     # Guardrails
     if result.guardrail_result:
         gr = result.guardrail_result
-        print(f"  [Guardrails] 에러 {gr.get('error_count', 0)}, "
-              f"경고 {gr.get('warning_count', 0)}, "
-              f"통과 {gr.get('passed_rules', 0)}")
+        print(
+            f"  [Guardrails] 에러 {gr.get('error_count', 0)}, "
+            f"경고 {gr.get('warning_count', 0)}, "
+            f"통과 {gr.get('passed_rules', 0)}"
+        )
 
     print()
 
@@ -581,16 +588,18 @@ def render_docx(result, output_dir: Path, template_name: str = "ldd_full_templat
         return
 
     # 컨텍스트 빌드 (서비스 의존 없이 직접 구성)
-    sections = list(result.sections.values()) if isinstance(result.sections, dict) else result.sections
+    sections = list(result.sections.values()) if isinstance(result.sections, dict) else result.sections  # noqa: F841
 
     # sections를 dict 리스트로 변환
     sections_list = []
     for section_type, items in result.sections.items():
-        sections_list.append({
-            "section_type": section_type,
-            "title": section_type,
-            "items": items,
-        })
+        sections_list.append(
+            {
+                "section_type": section_type,
+                "title": section_type,
+                "items": items,
+            }
+        )
 
     # 이슈 집계
     all_issues = []
@@ -626,20 +635,12 @@ def render_docx(result, output_dir: Path, template_name: str = "ldd_full_templat
         "total_items": total_items,
         "issue_count": issue_count,
         "red_count": len(red_issues),
-        "amber_count": sum(
-            1 for i in all_issues if i.get("issue_level") == "MEDIUM"
-        ),
-        "green_count": sum(
-            1 for i in all_issues if i.get("issue_level") == "LOW"
-        ),
+        "amber_count": sum(1 for i in all_issues if i.get("issue_level") == "MEDIUM"),
+        "green_count": sum(1 for i in all_issues if i.get("issue_level") == "LOW"),
         "ok_count": ok_count,
         "na_count": na_count,
         "pending_count": pending_count,
-        "rfi_count": sum(
-            1 for s in sections_list
-            for i in s.get("items", [])
-            if i.get("rfi_required")
-        ),
+        "rfi_count": sum(1 for s in sections_list for i in s.get("items", []) if i.get("rfi_required")),
         "sections": sections_list,
         "all_issues": all_issues,
         "red_issues": red_issues,
@@ -651,9 +652,7 @@ def render_docx(result, output_dir: Path, template_name: str = "ldd_full_templat
 
     # 별첨
     if result.appendices and result.appendices.get("tables"):
-        ctx["appendix_tables"] = [
-            t for t in result.appendices["tables"] if t.get("row_count", 0) > 0
-        ]
+        ctx["appendix_tables"] = [t for t in result.appendices["tables"] if t.get("row_count", 0) > 0]
 
     output_dir.mkdir(parents=True, exist_ok=True)
     tpl = DocxTemplate(str(template_path))
@@ -666,6 +665,7 @@ def render_docx(result, output_dir: Path, template_name: str = "ldd_full_templat
 
 
 # ── 메인 ──
+
 
 async def main():
     args = parse_args()
@@ -683,9 +683,11 @@ async def main():
 
     # 섹션 구성 (체크리스트)
     from app.ralph.generators.ldd.templates import TemplateRegistry
+
     sections_config = TemplateRegistry.get_sections_dict(args.deal_type)
     if sections_config is None:
         from app.ralph.generators.ldd.section_analyzer import DEFAULT_LDD_SECTIONS  # noqa: F401
+
         # DEFAULT_LDD_SECTIONS가 없을 수 있으므로 직접 구성
         print(f"  [WARN] 템플릿 미등록: {args.deal_type} — 기본 STOCK_ACQUISITION 사용")
         sections_config = TemplateRegistry.get_sections_dict("STOCK_ACQUISITION")

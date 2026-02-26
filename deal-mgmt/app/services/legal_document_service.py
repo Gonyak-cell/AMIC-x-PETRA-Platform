@@ -15,11 +15,12 @@ from app.models.legal_document import LegalDocument
 from app.schemas.legal_document import LegalDocumentCreate
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templates" / "legal"
-OUTPUT_DIR   = Path(__file__).resolve().parent.parent.parent / "generated" / "legal"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "legal"
 TEMPLATE_VERSION = "1.0"
 
 
 # ── CRUD ─────────────────────────────────────────────────────────────────────
+
 
 async def list_legal_documents(
     db: AsyncSession,
@@ -94,6 +95,7 @@ async def delete_legal_document(
 
 # ── docxtpl 렌더링 ────────────────────────────────────────────────────────────
 
+
 async def generate_document(
     db: AsyncSession,
     legal_doc: LegalDocument,
@@ -115,9 +117,9 @@ async def generate_document(
         await db.refresh(legal_doc)
         return legal_doc
 
-    doc_id   = legal_doc.id
+    doc_id = legal_doc.id
     doc_type = legal_doc.doc_type
-    params   = legal_doc.parameters or {}
+    params = legal_doc.parameters or {}
 
     def _render() -> tuple[str, str, int]:
         """동기 렌더링 — 별도 스레드에서 실행."""
@@ -127,7 +129,7 @@ async def generate_document(
         tpl = DocxTemplate(str(template_path))
         tpl.render(params)
         fname = f"{doc_type}_{doc_id}.docx"
-        out   = OUTPUT_DIR / fname
+        out = OUTPUT_DIR / fname
         tpl.save(str(out))
         return fname, str(out), out.stat().st_size
 
@@ -137,13 +139,13 @@ async def generate_document(
 
     try:
         fname, fpath, fsize = await asyncio.to_thread(_render)
-        legal_doc.status          = LegalDocStatus.READY
-        legal_doc.file_name       = fname
-        legal_doc.file_path       = fpath
+        legal_doc.status = LegalDocStatus.READY
+        legal_doc.file_name = fname
+        legal_doc.file_path = fpath
         legal_doc.file_size_bytes = fsize
-        legal_doc.error_message   = None
+        legal_doc.error_message = None
     except Exception as exc:
-        legal_doc.status        = LegalDocStatus.FAILED
+        legal_doc.status = LegalDocStatus.FAILED
         legal_doc.error_message = str(exc)
 
     await db.commit()
@@ -170,8 +172,8 @@ async def regenerate_document(
         except OSError:
             pass
 
-    doc.file_path       = None
-    doc.file_name       = None
+    doc.file_path = None
+    doc.file_name = None
     doc.file_size_bytes = None
 
     return await generate_document(db, doc)

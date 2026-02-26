@@ -53,7 +53,9 @@ class AppendixGenerator:
 
         for appendix_type in AppendixType:
             table = self._build_table(
-                appendix_type, section_results, include_ok=include_ok,
+                appendix_type,
+                section_results,
+                include_ok=include_ok,
             )
             tables.append(table)
 
@@ -105,117 +107,132 @@ class AppendixGenerator:
 
 # ── 별첨별 데이터 추출 함수 ─────────────────────────────────────────────────
 
+
 def _extract_litigation(item: dict, row_num: int) -> AppendixRow:
     """소송/분쟁 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "사건번호": item.get("case_number", "-"),
-        "관할법원": item.get("court", "-"),
-        "소송유형": item.get("litigation_type", item.get("name", "-")),
-        "당사자": item.get("parties", "-"),
-        "소송물가액": item.get("claim_amount", "-"),
-        "현재상태": item.get("status_detail", item.get("status", "-")),
-        "예상결과": item.get("expected_outcome", "-"),
-        "리스크등급": item.get("issue_level", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "사건번호": item.get("case_number", "-"),
+            "관할법원": item.get("court", "-"),
+            "소송유형": item.get("litigation_type", item.get("name", "-")),
+            "당사자": item.get("parties", "-"),
+            "소송물가액": item.get("claim_amount", "-"),
+            "현재상태": item.get("status_detail", item.get("status", "-")),
+            "예상결과": item.get("expected_outcome", "-"),
+            "리스크등급": item.get("issue_level", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_ip(item: dict, row_num: int) -> AppendixRow:
     """지식재산권 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "권리유형": item.get("ip_type", item.get("name", "-")),
-        "등록번호": item.get("registration_number", "-"),
-        "명칭": item.get("ip_name", item.get("name", "-")),
-        "출원일": item.get("application_date", "-"),
-        "등록일": item.get("registration_date", "-"),
-        "권리자": item.get("holder", "-"),
-        "존속기간": item.get("expiry_date", "-"),
-        "실시계약": item.get("license_info", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "권리유형": item.get("ip_type", item.get("name", "-")),
+            "등록번호": item.get("registration_number", "-"),
+            "명칭": item.get("ip_name", item.get("name", "-")),
+            "출원일": item.get("application_date", "-"),
+            "등록일": item.get("registration_date", "-"),
+            "권리자": item.get("holder", "-"),
+            "존속기간": item.get("expiry_date", "-"),
+            "실시계약": item.get("license_info", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_real_estate(item: dict, row_num: int) -> AppendixRow:
     """부동산 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "소재지": item.get("location", "-"),
-        "면적(㎡)": item.get("area", "-"),
-        "용도지역": item.get("zoning", "-"),
-        "소유형태": item.get("ownership_type", "-"),
-        "등기사항": item.get("registry_info", "-"),
-        "담보설정": item.get("collateral", "-"),
-        "임차현황": item.get("lease_info", "-"),
-        "감정가(원)": item.get("appraised_value", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "소재지": item.get("location", "-"),
+            "면적(㎡)": item.get("area", "-"),
+            "용도지역": item.get("zoning", "-"),
+            "소유형태": item.get("ownership_type", "-"),
+            "등기사항": item.get("registry_info", "-"),
+            "담보설정": item.get("collateral", "-"),
+            "임차현황": item.get("lease_info", "-"),
+            "감정가(원)": item.get("appraised_value", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_contracts(item: dict, row_num: int) -> AppendixRow:
     """주요 계약 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "계약명": item.get("contract_name", item.get("name", "-")),
-        "계약상대방": item.get("counterparty", "-"),
-        "계약유형": item.get("contract_type", "-"),
-        "계약금액": item.get("contract_amount", "-"),
-        "계약기간": item.get("contract_period", "-"),
-        "해지조건": item.get("termination_clause", "-"),
-        "COC조항": item.get("coc_clause", "-"),
-        "리스크등급": item.get("issue_level", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "계약명": item.get("contract_name", item.get("name", "-")),
+            "계약상대방": item.get("counterparty", "-"),
+            "계약유형": item.get("contract_type", "-"),
+            "계약금액": item.get("contract_amount", "-"),
+            "계약기간": item.get("contract_period", "-"),
+            "해지조건": item.get("termination_clause", "-"),
+            "COC조항": item.get("coc_clause", "-"),
+            "리스크등급": item.get("issue_level", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_insurance(item: dict, row_num: int) -> AppendixRow:
     """보험 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "보험유형": item.get("insurance_type", item.get("name", "-")),
-        "보험회사": item.get("insurer", "-"),
-        "보험기간": item.get("coverage_period", "-"),
-        "보험가입금액": item.get("coverage_amount", "-"),
-        "보험료": item.get("premium", "-"),
-        "주요면책사항": item.get("exclusions", "-"),
-        "갱신여부": item.get("renewable", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "보험유형": item.get("insurance_type", item.get("name", "-")),
+            "보험회사": item.get("insurer", "-"),
+            "보험기간": item.get("coverage_period", "-"),
+            "보험가입금액": item.get("coverage_amount", "-"),
+            "보험료": item.get("premium", "-"),
+            "주요면책사항": item.get("exclusions", "-"),
+            "갱신여부": item.get("renewable", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_permits(item: dict, row_num: int) -> AppendixRow:
     """인허가 별첨 행 추출."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "인허가명": item.get("permit_name", item.get("name", "-")),
-        "관할기관": item.get("authority", "-"),
-        "허가번호": item.get("permit_number", "-"),
-        "허가일": item.get("issue_date", "-"),
-        "유효기간": item.get("expiry_date", "-"),
-        "갱신여부": item.get("renewable", "-"),
-        "양도가능성": item.get("transferable", "-"),
-        "리스크등급": item.get("issue_level", "-"),
-        "비고": _truncate(item.get("description", ""), 100),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "인허가명": item.get("permit_name", item.get("name", "-")),
+            "관할기관": item.get("authority", "-"),
+            "허가번호": item.get("permit_number", "-"),
+            "허가일": item.get("issue_date", "-"),
+            "유효기간": item.get("expiry_date", "-"),
+            "갱신여부": item.get("renewable", "-"),
+            "양도가능성": item.get("transferable", "-"),
+            "리스크등급": item.get("issue_level", "-"),
+            "비고": _truncate(item.get("description", ""), 100),
+        }
+    )
 
 
 def _extract_generic(item: dict, row_num: int) -> AppendixRow:
     """범용 별첨 행 추출 (특정 추출기가 없을 때)."""
-    return AppendixRow(values={
-        "연번": str(row_num),
-        "항목": item.get("name", "-"),
-        "상태": item.get("status", "-"),
-        "리스크등급": item.get("issue_level", "-"),
-        "설명": _truncate(item.get("description", ""), 200),
-    })
+    return AppendixRow(
+        values={
+            "연번": str(row_num),
+            "항목": item.get("name", "-"),
+            "상태": item.get("status", "-"),
+            "리스크등급": item.get("issue_level", "-"),
+            "설명": _truncate(item.get("description", ""), 200),
+        }
+    )
 
 
 def _truncate(text: str, max_len: int) -> str:
     """텍스트를 최대 길이로 자른다."""
     if len(text) <= max_len:
         return text
-    return text[:max_len - 3] + "..."
+    return text[: max_len - 3] + "..."
 
 
 # ── 추출기 매핑 ─────────────────────────────────────────────────────────────

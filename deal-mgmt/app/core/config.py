@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_RESULT_BACKEND: str = "redis://localhost:6379/1"
-    CELERY_TASK_SOFT_TIME_LIMIT: int = 1800   # 30분
-    CELERY_TASK_HARD_TIME_LIMIT: int = 3600   # 60분
+    CELERY_TASK_SOFT_TIME_LIMIT: int = 1800  # 30분
+    CELERY_TASK_HARD_TIME_LIMIT: int = 3600  # 60분
 
     # Ralph Loop — Model Configuration
     RALPH_PRIMARY_MODEL: str = "claude-sonnet-4-20250514"
@@ -66,14 +66,14 @@ class Settings(BaseSettings):
     RALPH_MAX_COST_PER_DOC: float = 10.0
 
     # LDD Multi-LLM Pipeline
-    LDD_MULTI_LLM_ENABLED: bool = False        # 멀티 LLM 파이프라인 활성화
-    LDD_STAGE3_DUAL_RISK: bool = True           # 듀얼 리스크 분석
-    LDD_STAGE4_GAP_DETECTION: bool = True       # 누락 탐지
-    LDD_STAGE5_JURISDICTION: bool = False       # 관할권 교차 (크로스보더 시만)
-    LDD_STAGE6_NARRATIVE: bool = False          # 6블록 서술 생성 (비용 ~$2-4 추가)
-    LDD_STAGE7_QA: bool = True                  # 최종 QA
-    LDD_RISK_GAP_AUTO_RESOLVE: int = 1          # gap≤N 자동 해결
-    LDD_MAX_COST_USD: float = 15.0              # 세션 비용 한도
+    LDD_MULTI_LLM_ENABLED: bool = False  # 멀티 LLM 파이프라인 활성화
+    LDD_STAGE3_DUAL_RISK: bool = True  # 듀얼 리스크 분석
+    LDD_STAGE4_GAP_DETECTION: bool = True  # 누락 탐지
+    LDD_STAGE5_JURISDICTION: bool = False  # 관할권 교차 (크로스보더 시만)
+    LDD_STAGE6_NARRATIVE: bool = False  # 6블록 서술 생성 (비용 ~$2-4 추가)
+    LDD_STAGE7_QA: bool = True  # 최종 QA
+    LDD_RISK_GAP_AUTO_RESOLVE: int = 1  # gap≤N 자동 해결
+    LDD_MAX_COST_USD: float = 15.0  # 세션 비용 한도
 
 
 settings = Settings()
@@ -88,6 +88,4 @@ if _effective_jwt == _DEV_SECRET or (not _effective_jwt):
             "CRITICAL: JWT_SECRET must be set in production. "
             "Generate a strong secret (≥32 chars) and set the JWT_SECRET env var."
         )
-    _logger.warning(
-        "Using default dev JWT secret. Set JWT_SECRET env var for production."
-    )
+    _logger.warning("Using default dev JWT secret. Set JWT_SECRET env var for production.")

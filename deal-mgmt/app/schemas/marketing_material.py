@@ -13,16 +13,13 @@ class MarketingMaterialCreate(BaseModel):
 
     doc_type: MarketingDocType
     title: str = Field(..., min_length=1, max_length=300)
-    project_code: str | None = Field(None, max_length=100,
-                                     description="프로젝트 코드명 (예: ALPHA). 없으면 transaction에서 자동 생성.")
-    parameters: dict | None = Field(None,
-                                    description="memo_generator content JSON. 없으면 기본 템플릿 사용.")
-    enable_ralph_loop: bool = Field(False,
-                                    description="Ralph Loop 품질 강화 모드 활성화")
-    ralph_max_iterations: int = Field(3, ge=1, le=10,
-                                      description="Ralph Loop 최대 반복 횟수")
-    ralph_max_cost_usd: float = Field(10.0, ge=1.0, le=50.0,
-                                       description="Ralph Loop 최대 비용 (USD)")
+    project_code: str | None = Field(
+        None, max_length=100, description="프로젝트 코드명 (예: ALPHA). 없으면 transaction에서 자동 생성."
+    )
+    parameters: dict | None = Field(None, description="memo_generator content JSON. 없으면 기본 템플릿 사용.")
+    enable_ralph_loop: bool = Field(False, description="Ralph Loop 품질 강화 모드 활성화")
+    ralph_max_iterations: int = Field(3, ge=1, le=10, description="Ralph Loop 최대 반복 횟수")
+    ralph_max_cost_usd: float = Field(10.0, ge=1.0, le=50.0, description="Ralph Loop 최대 비용 (USD)")
 
 
 class DistributionUpdate(BaseModel):

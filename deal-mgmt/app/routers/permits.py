@@ -36,6 +36,7 @@ async def list_industries():
 
 # ── 분석 ─────────────────────────────────────────────────────
 
+
 @router.post("/analyze", response_model=PermitAnalysisOut, status_code=201)
 async def analyze_permits(
     txn_id: uuid.UUID,
@@ -46,12 +47,18 @@ async def analyze_permits(
     """인허가 분석을 실행한다."""
     txn = await transaction_service.get_transaction(db, txn_id)
     analysis = await permit_analysis_service.analyze_permits(
-        db, txn, body.business_types, [p.model_dump() for p in body.existing_permits],
+        db,
+        txn,
+        body.business_types,
+        [p.model_dump() for p in body.existing_permits],
         actor_email=claims.email,
     )
     await audit_service.record(
-        db, entity_type="PermitAnalysis", entity_id=analysis.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="PermitAnalysis",
+        entity_id=analysis.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value={"business_types": body.business_types},
     )
     await db.commit()
@@ -84,7 +91,10 @@ async def reanalyze_permits(
     """인허가를 재분석한다 (기존 분석 결과 교체)."""
     txn = await transaction_service.get_transaction(db, txn_id)
     analysis = await permit_analysis_service.analyze_permits(
-        db, txn, body.business_types, [p.model_dump() for p in body.existing_permits],
+        db,
+        txn,
+        body.business_types,
+        [p.model_dump() for p in body.existing_permits],
         actor_email=claims.email,
     )
     await db.commit()
@@ -93,6 +103,7 @@ async def reanalyze_permits(
 
 
 # ── 요건 CRUD ────────────────────────────────────────────────
+
 
 @router.get("/requirements", response_model=list[PermitRequirementOut])
 async def list_requirements(
@@ -139,11 +150,18 @@ async def create_requirement(
         )
     target_close_date = getattr(txn, "target_close_date", None)
     req = await permit_analysis_service.add_manual_requirement(
-        db, txn_id, analysis.id, body.model_dump(), target_close_date,
+        db,
+        txn_id,
+        analysis.id,
+        body.model_dump(),
+        target_close_date,
     )
     await audit_service.record(
-        db, entity_type="PermitRequirement", entity_id=req.id,
-        action=AuditAction.CREATE, actor_email=claims.email,
+        db,
+        entity_type="PermitRequirement",
+        entity_id=req.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
@@ -167,8 +185,11 @@ async def update_requirement(
     for k, v in update_data.items():
         setattr(req, k, v)
     await audit_service.record(
-        db, entity_type="PermitRequirement", entity_id=req.id,
-        action=AuditAction.UPDATE, actor_email=claims.email,
+        db,
+        entity_type="PermitRequirement",
+        entity_id=req.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
     await db.commit()
@@ -193,8 +214,11 @@ async def delete_requirement(
             detail="KB 기반 항목은 삭제할 수 없습니다. 상태를 '해당 없음'으로 변경하세요.",
         )
     await audit_service.record(
-        db, entity_type="PermitRequirement", entity_id=req.id,
-        action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="PermitRequirement",
+        entity_id=req.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(req)
     await db.commit()

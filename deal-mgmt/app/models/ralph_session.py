@@ -28,7 +28,9 @@ class RalphSession(Base, TimestampMixin):
     __tablename__ = "ralph_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
     )
     transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -42,9 +44,9 @@ class RalphSession(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default=RalphSessionStatus.PLANNING)
 
     # 반복 상태 (JSONB)
-    prd: Mapped[dict | None] = mapped_column(JSONB, nullable=True)           # PRD 수용 기준
-    progress: Mapped[dict | None] = mapped_column(JSONB, nullable=True)      # ProgressTracker 직렬화
-    config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)        # LoopConfig
+    prd: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # PRD 수용 기준
+    progress: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # ProgressTracker 직렬화
+    config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # LoopConfig
 
     # 결과 집계
     total_iterations: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

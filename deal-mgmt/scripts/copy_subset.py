@@ -1,4 +1,5 @@
 """실사자료 중 PDF 5개만 로컬에 복사하여 다운로드를 트리거한다."""
+
 import pathlib
 import subprocess
 
@@ -22,7 +23,10 @@ for p in pdfs[:2]:
     dst_path = DST / p.name
     result = subprocess.run(
         ["cmd", "/c", "copy", str(p), str(dst_path)],
-        capture_output=True, text=True, encoding="cp949", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="cp949",
+        errors="replace",
         timeout=60,
     )
     print(f"  {p.name}: rc={result.returncode}")
@@ -36,7 +40,10 @@ print("\n=== robocopy로 복사 시도 ===")
 for p in pdfs[2:4]:
     result = subprocess.run(
         ["robocopy", str(p.parent), str(DST), p.name, "/R:1", "/W:1"],
-        capture_output=True, text=True, encoding="cp949", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="cp949",
+        errors="replace",
         timeout=60,
     )
     dst_path = DST / p.name

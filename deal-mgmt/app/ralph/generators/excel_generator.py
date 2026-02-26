@@ -108,7 +108,10 @@ class RalphExcelGenerator:
         if feedback and self._llm_call:
             try:
                 effective_values = await self._refine_values_with_llm(
-                    section_id, effective_values, feedback, section_criteria,
+                    section_id,
+                    effective_values,
+                    feedback,
+                    section_criteria,
                 )
                 # 개선된 값을 축적하여 assemble_document()에서 사용
                 self.checklist_values.update(effective_values)
@@ -149,9 +152,7 @@ class RalphExcelGenerator:
         if not output_path:
             output_dir = self._temp_dir / "final"
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_path = str(
-                output_dir / f"{self.model_type.value}_{uuid.uuid4().hex[:8]}.xlsx"
-            )
+            output_path = str(output_dir / f"{self.model_type.value}_{uuid.uuid4().hex[:8]}.xlsx")
 
         # 최종 빌드 — self.checklist_values 기준 전체 워크북 재생성
         builder = FinancialModelBuilder(
@@ -180,7 +181,7 @@ class RalphExcelGenerator:
             "당신은 IB(Investment Bank)급 재무모델 전문가입니다.\n"
             f"워크시트: {section_id}\n"
             "이전 평가 피드백을 반영하여 가정값을 개선하세요.\n"
-            "반드시 JSON 형식으로 {\"key\": \"value\"} 형태로만 응답하세요."
+            '반드시 JSON 형식으로 {"key": "value"} 형태로만 응답하세요.'
         )
 
         user_prompt = (

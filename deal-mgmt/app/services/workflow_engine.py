@@ -138,7 +138,9 @@ async def advance_phase(
     if diff == 1:
         completion = get_phase_completion(txn)
         if not completion.required_met:
-            unmet = [p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED]
+            unmet = [
+                p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED
+            ]
             raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
     # NEGOTIATION → CLOSING: 리스크/컴플라이언스 게이트
@@ -198,7 +200,10 @@ async def request_phase_approval(
         unmet = [p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED]
         raise WorkflowError(f"승인 요청 전 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
-    approvers = [{"email": e, "role": "APPROVER", "status": "PENDING", "comment": None, "decided_at": None} for e in approver_emails]
+    approvers = [
+        {"email": e, "role": "APPROVER", "status": "PENDING", "comment": None, "decided_at": None}
+        for e in approver_emails
+    ]
 
     approval = ApprovalRequest(
         transaction_id=txn.id,

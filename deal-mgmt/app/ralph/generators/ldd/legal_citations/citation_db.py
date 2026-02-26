@@ -13,11 +13,11 @@ from dataclasses import dataclass, field
 class StatuteEntry:
     """법률 조항 엔트리."""
 
-    statute_id: str          # 예: "상법_374_1"
-    law_name: str            # 예: "상법"
-    article: str             # 예: "제374조 제1항"
-    title: str               # 조항 제목
-    summary: str             # 핵심 내용 요약 (1-2문장)
+    statute_id: str  # 예: "상법_374_1"
+    law_name: str  # 예: "상법"
+    article: str  # 예: "제374조 제1항"
+    title: str  # 조항 제목
+    summary: str  # 핵심 내용 요약 (1-2문장)
     section_types: list[str] = field(default_factory=list)  # 관련 섹션 유형
 
 
@@ -25,12 +25,12 @@ class StatuteEntry:
 class PrecedentEntry:
     """판례 엔트리."""
 
-    precedent_id: str        # 예: "대법원_2017다212095"
-    court: str               # 예: "대법원"
-    case_number: str         # 예: "2017다212095"
-    date: str                # 예: "2018.01.25."
-    title: str               # 판례 요지 제목
-    summary: str             # 핵심 판시 요약 (1-2문장)
+    precedent_id: str  # 예: "대법원_2017다212095"
+    court: str  # 예: "대법원"
+    case_number: str  # 예: "2017다212095"
+    date: str  # 예: "2018.01.25."
+    title: str  # 판례 요지 제목
+    summary: str  # 핵심 판시 요약 (1-2문장)
     section_types: list[str] = field(default_factory=list)
 
 

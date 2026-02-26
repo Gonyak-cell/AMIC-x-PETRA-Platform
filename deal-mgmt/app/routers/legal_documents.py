@@ -20,9 +20,7 @@ from app.services import legal_document_service, transaction_service
 router = APIRouter(prefix="/transactions/{txn_id}/legal-documents", tags=["Legal Documents"])
 
 # 경로 탐색(Path Traversal) 방어: 생성 파일은 반드시 이 디렉터리 내에 위치해야 한다
-_SAFE_OUTPUT_DIR = (
-    Path(__file__).resolve().parent.parent.parent / "generated" / "legal"
-).resolve()
+_SAFE_OUTPUT_DIR = (Path(__file__).resolve().parent.parent.parent / "generated" / "legal").resolve()
 
 
 async def _get_and_authorize_txn(
@@ -61,10 +59,7 @@ async def list_legal_documents(
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await _get_and_authorize_txn(db, txn_id, claims)
-    return [
-        LegalDocumentOut.model_validate(d)
-        for d in await legal_document_service.list_legal_documents(db, txn_id)
-    ]
+    return [LegalDocumentOut.model_validate(d) for d in await legal_document_service.list_legal_documents(db, txn_id)]
 
 
 @router.get("/{doc_id}", response_model=LegalDocumentOut)

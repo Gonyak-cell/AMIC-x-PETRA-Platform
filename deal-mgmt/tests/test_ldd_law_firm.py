@@ -35,6 +35,7 @@ class TestLawFirmTemplateGenerator:
 
     def test_import(self):
         from app.ralph.generators.ldd.law_firm_template import LawFirmTemplateGenerator
+
         assert LawFirmTemplateGenerator is not None
 
     def test_constants(self):
@@ -44,6 +45,7 @@ class TestLawFirmTemplateGenerator:
             SECTION_BAR_FILLS,
             SECTION_PLACEHOLDERS,
         )
+
         assert "26382A" in SECTION_BAR_FILLS
         assert "385623" in SECTION_BAR_FILLS
         assert RECOMMENDATION_FILL == "E2EFD9"
@@ -54,6 +56,7 @@ class TestLawFirmTemplateGenerator:
 
     def test_source_not_found(self):
         from app.ralph.generators.ldd.law_firm_template import LawFirmTemplateGenerator
+
         with pytest.raises(FileNotFoundError):
             LawFirmTemplateGenerator("/nonexistent/path.docx")
 
@@ -66,11 +69,13 @@ class TestLawFirmMapper:
 
     def test_import(self):
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmChapter, LawFirmMapper
+
         assert LawFirmMapper is not None
         assert LawFirmChapter is not None
 
     def test_empty_sections(self):
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+
         mapper = LawFirmMapper()
         chapters = mapper.map_sections({})
         assert len(chapters) == 8
@@ -81,6 +86,7 @@ class TestLawFirmMapper:
 
     def test_governance_maps_to_chapter_I(self):
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+
         mapper = LawFirmMapper()
         section_results = {
             "GOVERNANCE": [
@@ -100,6 +106,7 @@ class TestLawFirmMapper:
     def test_real_estate_split_IV_V(self):
         """REAL_ESTATE RE-01~03 → IV, RE-04~05 → V 분할 검증."""
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+
         mapper = LawFirmMapper()
         section_results = {
             "REAL_ESTATE": [
@@ -111,16 +118,19 @@ class TestLawFirmMapper:
         }
         chapters = mapper.map_sections(section_results)
         ch_IV = chapters[3]  # IV. 부동산 및 자산
-        ch_V = chapters[4]   # V. 환경
+        ch_V = chapters[4]  # V. 환경
         assert ch_IV.number == "IV"
         assert len(ch_IV.items) == 2
-        assert all(not it["item_id"].startswith("RE-04") and not it["item_id"].startswith("RE-05") for it in ch_IV.items)
+        assert all(
+            not it["item_id"].startswith("RE-04") and not it["item_id"].startswith("RE-05") for it in ch_IV.items
+        )
         assert ch_V.number == "V"
         assert len(ch_V.items) == 2
         assert all(it["item_id"].startswith("RE-04") or it["item_id"].startswith("RE-05") for it in ch_V.items)
 
     def test_litigation_maps_to_chapter_VIII(self):
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+
         mapper = LawFirmMapper()
         section_results = {
             "LITIGATION": [
@@ -134,6 +144,7 @@ class TestLawFirmMapper:
 
     def test_build_toc_data(self):
         from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+
         mapper = LawFirmMapper()
         section_results = {
             "GOVERNANCE": [{"item_id": "GOV-01", "name": "회사 일반", "status": "OK"}],
@@ -154,6 +165,7 @@ class TestLawFirmPrompts:
 
     def test_certainty_labels_in_system_prompt(self):
         from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_SYSTEM_PROMPT
+
         assert "(A)" in LAW_FIRM_SYSTEM_PROMPT
         assert "(B)" in LAW_FIRM_SYSTEM_PROMPT
         assert "(C)" in LAW_FIRM_SYSTEM_PROMPT
@@ -161,21 +173,25 @@ class TestLawFirmPrompts:
 
     def test_hallucination_zero(self):
         from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_SYSTEM_PROMPT
+
         assert "할루시네이션" in LAW_FIRM_SYSTEM_PROMPT or "hallucination" in LAW_FIRM_SYSTEM_PROMPT.lower()
 
     def test_narrative_prompt_has_3_sections(self):
         from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_NARRATIVE_PROMPT
+
         assert "status_section" in LAW_FIRM_NARRATIVE_PROMPT
         assert "review_section" in LAW_FIRM_NARRATIVE_PROMPT
         assert "recommendation_section" in LAW_FIRM_NARRATIVE_PROMPT
 
     def test_exec_summary_prompt(self):
         from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_EXEC_SUMMARY_PROMPT
+
         assert "summary_rows" in LAW_FIRM_EXEC_SUMMARY_PROMPT
         assert "overall_opinion" in LAW_FIRM_EXEC_SUMMARY_PROMPT
 
     def test_addendum_in_law_firm_prompts(self):
         from app.ralph.generators.ldd.law_firm_prompts import CERTAINTY_LABELING_ADDENDUM
+
         assert "(A)" in CERTAINTY_LABELING_ADDENDUM
         assert "(D)" in CERTAINTY_LABELING_ADDENDUM
         assert "IRL" in CERTAINTY_LABELING_ADDENDUM
@@ -190,6 +206,7 @@ class TestLawFirmNarrativeAdapter:
 
     def test_convert_item_from_6blocks(self):
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         narrative_dict = {
@@ -217,6 +234,7 @@ class TestLawFirmNarrativeAdapter:
 
     def test_convert_from_llm_response(self):
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         llm_response = {
@@ -229,7 +247,10 @@ class TestLawFirmNarrativeAdapter:
         }
 
         result = adapter.convert_from_llm_response(
-            llm_response, item_id="GOV-01", item_name="회사 일반", chapter_number="I",
+            llm_response,
+            item_id="GOV-01",
+            item_name="회사 일반",
+            chapter_number="I",
         )
         assert result.status_section == "현황 내용"
         assert result.review_section == "검토 내용"
@@ -242,18 +263,21 @@ class TestLawFirmNarrativeAdapter:
             LawFirmNarrative,
             LawFirmNarrativeAdapter,
         )
+
         adapter = LawFirmNarrativeAdapter()
 
         narratives_by_chapter = {
             "I": [
                 LawFirmNarrative(
-                    item_id="GOV-01", item_name="회사 일반",
+                    item_id="GOV-01",
+                    item_name="회사 일반",
                     irl_items=["정관 사본 요청"],
                 ),
             ],
             "III": [
                 LawFirmNarrative(
-                    item_id="CON-01", item_name="주요 계약",
+                    item_id="CON-01",
+                    item_name="주요 계약",
                     irl_items=["계약서 원본 요청", "부속합의서 요청"],
                 ),
             ],
@@ -267,6 +291,7 @@ class TestLawFirmNarrativeAdapter:
 
     def test_to_dict(self):
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrative
+
         n = LawFirmNarrative(
             item_id="GOV-01",
             item_name="회사 일반",
@@ -283,6 +308,7 @@ class TestLawFirmNarrativeAdapter:
     def test_convert_item_extracts_irl_from_d_labels(self):
         """6블록 텍스트의 (D) 라벨에서 IRL 항목을 추출하는지 검증."""
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         narrative_dict = {
@@ -308,6 +334,7 @@ class TestLawFirmNarrativeAdapter:
     def test_convert_item_extracts_cited_laws(self):
         """6블록 텍스트에서 법률 인용을 추출하는지 검증."""
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         narrative_dict = {
@@ -328,6 +355,7 @@ class TestLawFirmNarrativeAdapter:
     def test_convert_item_extracts_cited_documents(self):
         """6블록 텍스트에서 출처 문서를 추출하는지 검증."""
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         narrative_dict = {
@@ -347,6 +375,7 @@ class TestLawFirmNarrativeAdapter:
     def test_convert_item_no_d_labels_returns_empty_irl(self):
         """(D) 라벨이 없으면 IRL은 빈 리스트."""
         from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+
         adapter = LawFirmNarrativeAdapter()
 
         narrative_dict = {
@@ -369,16 +398,19 @@ class TestLawFirmRendererImport:
 
     def test_import(self):
         from app.ralph.generators.ldd.law_firm_renderer import LawFirmDocxRenderer
+
         assert LawFirmDocxRenderer is not None
 
     def test_renderer_has_render_method(self):
         from app.ralph.generators.ldd.law_firm_renderer import LawFirmDocxRenderer
+
         renderer = LawFirmDocxRenderer()
         assert callable(getattr(renderer, "render", None))
 
     def test_no_dead_code_add_paragraph_after(self):
         """데드 코드 _add_paragraph_after가 제거되었는지 검증."""
         import app.ralph.generators.ldd.law_firm_renderer as mod
+
         assert not hasattr(mod, "_add_paragraph_after")
 
 
@@ -390,11 +422,13 @@ class TestPipelineConfigLawFirmMode:
 
     def test_default_false(self):
         from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
+
         config = LDDPipelineConfig()
         assert config.law_firm_mode is False
 
     def test_explicit_true(self):
         from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
+
         config = LDDPipelineConfig(law_firm_mode=True)
         assert config.law_firm_mode is True
 

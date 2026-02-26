@@ -148,7 +148,10 @@ def main() -> None:
                 exists = local_path.exists()
                 logger.info(
                     "  [%s] %s (존재: %s, MIME: %s)",
-                    doc_id, file_path, exists, mime_type,
+                    doc_id,
+                    file_path,
+                    exists,
+                    mime_type,
                 )
             logger.info("=== DRY RUN 종료 — 실제 업로드 없음 ===")
             engine.dispose()
@@ -185,7 +188,9 @@ def main() -> None:
                 if expected_hash and actual_hash != expected_hash:
                     logger.error(
                         "해시 불일치! doc_id=%s expected=%s actual=%s",
-                        doc_id, expected_hash, actual_hash,
+                        doc_id,
+                        expected_hash,
+                        actual_hash,
                     )
                     fail_count += 1
                     continue
@@ -201,23 +206,24 @@ def main() -> None:
 
                 # 4. DB file_path 업데이트 (절대 경로 → blob_name)
                 session.execute(
-                    text(
-                        "UPDATE vdr_documents SET file_path = :blob_name "
-                        "WHERE id = :doc_id"
-                    ),
+                    text("UPDATE vdr_documents SET file_path = :blob_name WHERE id = :doc_id"),
                     {"blob_name": blob_name, "doc_id": doc_id},
                 )
 
                 success_count += 1
                 logger.info(
                     "  [OK] %s → %s (%d bytes)",
-                    doc_id, blob_name, len(data),
+                    doc_id,
+                    blob_name,
+                    len(data),
                 )
 
             except Exception as exc:
                 logger.error(
                     "  [FAIL] %s — %s: %s",
-                    doc_id, type(exc).__name__, exc,
+                    doc_id,
+                    type(exc).__name__,
+                    exc,
                 )
                 fail_count += 1
 

@@ -8,7 +8,11 @@ from httpx import AsyncClient
 
 async def test_fdd_link_returns_error_when_unavailable(client: AsyncClient, transaction_id: str):
     """FDD 서비스 미가동 시 error status 반환."""
-    with patch("app.services.fdd_client.fdd_client.create_deal", new_callable=AsyncMock, side_effect=httpx.ConnectError("Connection refused")):
+    with patch(
+        "app.services.fdd_client.fdd_client.create_deal",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Connection refused"),
+    ):
         resp = await client.post(
             f"/api/v1/transactions/{transaction_id}/integrations/fdd/link",
             json={"target_name": "테스트 기업"},
@@ -22,7 +26,11 @@ async def test_fdd_link_returns_error_when_unavailable(client: AsyncClient, tran
 
 async def test_im_link_returns_error_when_unavailable(client: AsyncClient, transaction_id: str):
     """IM 서비스 미가동 시 error status 반환."""
-    with patch("app.services.im_client.im_client.create_document", new_callable=AsyncMock, side_effect=httpx.ConnectError("Connection refused")):
+    with patch(
+        "app.services.im_client.im_client.create_document",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Connection refused"),
+    ):
         resp = await client.post(
             f"/api/v1/transactions/{transaction_id}/integrations/im/link",
             json={"company_name": "테스트 기업", "project_name": "프로젝트 A"},
@@ -35,7 +43,11 @@ async def test_im_link_returns_error_when_unavailable(client: AsyncClient, trans
 
 async def test_kiis_company_search_returns_error_when_unavailable(client: AsyncClient, transaction_id: str):
     """KIIS 서비스 미가동 시 error status 반환."""
-    with patch("app.services.kiis_client.kiis_client.search_company", new_callable=AsyncMock, side_effect=httpx.ConnectError("Connection refused")):
+    with patch(
+        "app.services.kiis_client.kiis_client.search_company",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Connection refused"),
+    ):
         resp = await client.get(
             f"/api/v1/transactions/{transaction_id}/integrations/kiis/company",
             params={"q": "삼성"},

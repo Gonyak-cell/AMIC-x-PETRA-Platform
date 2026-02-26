@@ -49,7 +49,8 @@ def run_vdr_extraction_and_ralph_task(
 
     logger.info(
         "Celery: FM Ralph Pass 1 시작 (fm=%s, txn=%s)",
-        fm_id, transaction_id,
+        fm_id,
+        transaction_id,
     )
     _run_async(
         _run_vdr_extraction_and_ralph(
@@ -80,7 +81,8 @@ def run_finalize_and_generate_task(
 
     logger.info(
         "Celery: FM Finalize + Ralph Pass 2 시작 (fm=%s, txn=%s)",
-        fm_id, transaction_id,
+        fm_id,
+        transaction_id,
     )
     _run_async(
         run_finalize_and_generate(

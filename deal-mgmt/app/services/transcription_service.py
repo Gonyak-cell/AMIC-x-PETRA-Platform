@@ -102,8 +102,7 @@ async def _run_stt(audio_file_path: str) -> str:
 
     if not clova_client_id or not clova_client_secret:
         raise RuntimeError(
-            "Clova Speech API 설정이 없습니다. "
-            ".env에 CLOVA_CLIENT_ID와 CLOVA_CLIENT_SECRET을 설정해 주세요."
+            "Clova Speech API 설정이 없습니다. .env에 CLOVA_CLIENT_ID와 CLOVA_CLIENT_SECRET을 설정해 주세요."
         )
 
     headers = {

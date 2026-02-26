@@ -44,9 +44,7 @@ class RFIItem(Base, TimestampMixin):
     reviewer_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # 상태
-    status: Mapped[RFIItemStatus] = mapped_column(
-        Enum(RFIItemStatus), nullable=False, default=RFIItemStatus.PENDING
-    )
+    status: Mapped[RFIItemStatus] = mapped_column(Enum(RFIItemStatus), nullable=False, default=RFIItemStatus.PENDING)
     assignee_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     due_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
 

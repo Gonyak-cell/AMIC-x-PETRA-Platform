@@ -13,6 +13,7 @@ from app.models.enums import LegalDocStatus, LegalDocType
 
 # ── 공통 유효성 헬퍼 ──────────────────────────────────────────────────────────
 
+
 def _validate_date_str(v: object) -> str:
     """날짜 형식(YYYY-MM-DD) 및 실제 날짜 유효성 검증."""
     if not isinstance(v, str) or not v.strip():
@@ -34,6 +35,7 @@ DateStr = Annotated[str, BeforeValidator(_validate_date_str)]
 
 # ── 응답 스키마 ───────────────────────────────────────────────────────────────
 
+
 class LegalDocumentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,6 +55,7 @@ class LegalDocumentOut(BaseModel):
 
 
 # ── 생성 스키마 ───────────────────────────────────────────────────────────────
+
 
 class LegalDocumentCreate(BaseModel):
     doc_type: LegalDocType
@@ -76,6 +79,7 @@ class LegalDocumentCreate(BaseModel):
 
 
 # ── 타입별 파라미터 스키마 ────────────────────────────────────────────────────
+
 
 class SPAParameters(BaseModel):
     """주식매매계약 (Stock Purchase Agreement) 파라미터."""
@@ -103,8 +107,7 @@ class SPAParameters(BaseModel):
     def validate_transfer_not_exceed_total(self) -> SPAParameters:
         if self.total_shares > 0 and self.transfer_shares > self.total_shares:
             raise ValueError(
-                f"양도주식 수({self.transfer_shares:,})는 "
-                f"총발행주식 수({self.total_shares:,})를 초과할 수 없습니다"
+                f"양도주식 수({self.transfer_shares:,})는 총발행주식 수({self.total_shares:,})를 초과할 수 없습니다"
             )
         return self
 

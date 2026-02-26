@@ -17,11 +17,16 @@ class PermitRequirement(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     analysis_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("permit_analyses.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("permit_analyses.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("transactions.id"),
+        nullable=False,
+        index=True,
     )
     # 인허가 정보
     permit_name: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -38,7 +43,9 @@ class PermitRequirement(Base, TimestampMixin):
     required_documents: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     # 상태 추적
     status: Mapped[PermitRequirementStatus] = mapped_column(
-        Enum(PermitRequirementStatus), nullable=False, default=PermitRequirementStatus.IDENTIFIED,
+        Enum(PermitRequirementStatus),
+        nullable=False,
+        default=PermitRequirementStatus.IDENTIFIED,
     )
     # KB 출처 vs LLM 출처
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="KB")

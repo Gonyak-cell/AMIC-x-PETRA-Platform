@@ -62,15 +62,17 @@ class LDDSectionAnalyzer:
     ) -> dict[str, Any]:
         """단일 DDRL 항목을 분석한다."""
         # 소스 자료 포매팅
-        materials = format_source_materials([
-            {
-                "name": f.source_path.split("\\")[-1] if "\\" in f.source_path else f.source_path.split("/")[-1],
-                "text": f.text,
-                "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
-            }
-            for f in source_files
-            if f.is_valid
-        ])
+        materials = format_source_materials(
+            [
+                {
+                    "name": f.source_path.split("\\")[-1] if "\\" in f.source_path else f.source_path.split("/")[-1],
+                    "text": f.text,
+                    "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
+                }
+                for f in source_files
+                if f.is_valid
+            ]
+        )
 
         rfi_prefix = _RFI_PREFIX.get(section_type, section_type[:4].upper())
 
@@ -142,25 +144,29 @@ class LDDSectionAnalyzer:
         """LLM 호출을 수행한다. 학습 패턴이 있으면 시스템 프롬프트에 주입."""
         if self._llm_call is None:
             logger.warning("LLM 호출 함수가 설정되지 않음 — 더미 응답 반환")
-            return json.dumps({
-                "status": "PENDING",
-                "issue_level": None,
-                "risk_color": "",
-                "description": "LLM 연결 필요 — 자동 분석 미수행",
-                "deal_impact": "",
-                "recommendation": "LLM API 키를 설정하여 자동 분석을 활성화하세요",
-                "rfi_required": False,
-                "rfi_number": "",
-                "confidence": 0.0,
-                "evidence_refs": [],
-            })
+            return json.dumps(
+                {
+                    "status": "PENDING",
+                    "issue_level": None,
+                    "risk_color": "",
+                    "description": "LLM 연결 필요 — 자동 분석 미수행",
+                    "deal_impact": "",
+                    "recommendation": "LLM API 키를 설정하여 자동 분석을 활성화하세요",
+                    "rfi_required": False,
+                    "rfi_number": "",
+                    "confidence": 0.0,
+                    "evidence_refs": [],
+                }
+            )
 
         # 학습 패턴이 있으면 시스템 프롬프트에 주입
         enriched_system = system
         if self._learned_patterns:
             from app.ralph.learning.prompt_injector import LearningPromptInjector
+
             enriched_system = LearningPromptInjector().enrich_system_prompt(
-                system, self._learned_patterns,
+                system,
+                self._learned_patterns,
             )
 
         return await self._llm_call(enriched_system, user)

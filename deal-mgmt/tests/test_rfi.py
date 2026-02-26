@@ -1,6 +1,5 @@
 """RFI API 테스트."""
 
-
 SAMPLE_TXN = {
     "name": "RFI 테스트 거래",
     "code_name": "RFI-001",
@@ -290,7 +289,7 @@ async def test_rfi_counts_auto_update(client):
     txn_id = await _create_txn(client)
     rfi = await _create_rfi(client, txn_id)
     item1 = await _add_item(client, txn_id, rfi["id"], question="질문1")
-    item2 = await _add_item(client, txn_id, rfi["id"], question="질문2")
+    item2 = await _add_item(client, txn_id, rfi["id"], question="질문2")  # noqa: F841
 
     # RFI 상세 확인 — 2개 항목
     detail = (await client.get(f"/api/v1/transactions/{txn_id}/rfis/{rfi['id']}")).json()
@@ -335,7 +334,7 @@ async def test_rfi_summary(client):
     txn_id = await _create_txn(client)
     rfi = await _create_rfi(client, txn_id)
     item1 = await _add_item(client, txn_id, rfi["id"], category="FINANCIAL", question="재무 질문")
-    item2 = await _add_item(client, txn_id, rfi["id"], category="LEGAL", question="법률 질문")
+    item2 = await _add_item(client, txn_id, rfi["id"], category="LEGAL", question="법률 질문")  # noqa: F841
 
     # 1개 응답
     await client.post(f"/api/v1/transactions/{txn_id}/rfis/{rfi['id']}/send")
@@ -563,6 +562,7 @@ async def test_import_invalid_extension_fails(client):
     rfi = await _create_rfi(client, txn_id)
 
     import io
+
     fake_file = io.BytesIO(b"not an excel file")
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/rfis/{rfi['id']}/import",

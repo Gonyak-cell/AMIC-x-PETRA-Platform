@@ -69,7 +69,11 @@ async def compliance_summary(
             cat_map[cat]["approved"] += 1
         elif item.status in (ComplianceStatus.FLAGGED, ComplianceStatus.NON_COMPLIANT):
             cat_map[cat]["flagged"] += 1
-        elif item.status in (ComplianceStatus.NOT_STARTED, ComplianceStatus.IN_REVIEW, ComplianceStatus.PENDING_APPROVAL):
+        elif item.status in (
+            ComplianceStatus.NOT_STARTED,
+            ComplianceStatus.IN_REVIEW,
+            ComplianceStatus.PENDING_APPROVAL,
+        ):
             cat_map[cat]["pending"] += 1
 
     by_category = [ComplianceCategorySummary(category=cat, **counts) for cat, counts in cat_map.items()]
@@ -78,9 +82,7 @@ async def compliance_summary(
     status_counter = Counter(item.status.value for item in items)
 
     # compliance_rate
-    approved_or_waived = sum(
-        1 for item in items if item.status in (ComplianceStatus.APPROVED, ComplianceStatus.WAIVED)
-    )
+    approved_or_waived = sum(1 for item in items if item.status in (ComplianceStatus.APPROVED, ComplianceStatus.WAIVED))
     compliance_rate = (approved_or_waived / len(items) * 100) if items else 0.0
 
     # flagged & overdue counts

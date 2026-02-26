@@ -57,20 +57,22 @@ class ProgressTracker:
         best_score = 0.0
 
         for gr in gate_results:
-            gate_dicts.append({
-                "gate_name": gr.gate_name,
-                "verdict": gr.verdict,
-                "weighted_score": gr.weighted_score,
-                "issues": gr.issues,
-                "suggestions": gr.suggestions,
-                "critical_flags": gr.critical_flags,
-                "cost_usd": gr.cost_usd,
-                "duration_ms": gr.duration_ms,
-                "dimensions": [
-                    {"name": d.name, "label": d.label, "score": d.score, "weight": d.weight, "feedback": d.feedback}
-                    for d in gr.dimensions
-                ],
-            })
+            gate_dicts.append(
+                {
+                    "gate_name": gr.gate_name,
+                    "verdict": gr.verdict,
+                    "weighted_score": gr.weighted_score,
+                    "issues": gr.issues,
+                    "suggestions": gr.suggestions,
+                    "critical_flags": gr.critical_flags,
+                    "cost_usd": gr.cost_usd,
+                    "duration_ms": gr.duration_ms,
+                    "dimensions": [
+                        {"name": d.name, "label": d.label, "score": d.score, "weight": d.weight, "feedback": d.feedback}
+                        for d in gr.dimensions
+                    ],
+                }
+            )
             cost += gr.cost_usd
             best_score = max(best_score, gr.weighted_score)
 
@@ -130,10 +132,7 @@ class ProgressTracker:
     def to_dict(self) -> dict:
         """DB JSONB 직렬화."""
         return {
-            "records": {
-                sid: [r.to_dict() for r in recs]
-                for sid, recs in self._records.items()
-            },
+            "records": {sid: [r.to_dict() for r in recs] for sid, recs in self._records.items()},
             "passed_sections": sorted(self._passed_sections),
             "total_cost_usd": self._total_cost_usd,
         }
@@ -143,10 +142,7 @@ class ProgressTracker:
         """DB JSONB에서 복원."""
         tracker = cls()
         for sid, recs in data.get("records", {}).items():
-            tracker._records[sid] = [
-                IterationRecord(**{k: v for k, v in r.items()})
-                for r in recs
-            ]
+            tracker._records[sid] = [IterationRecord(**{k: v for k, v in r.items()}) for r in recs]
         tracker._passed_sections = set(data.get("passed_sections", []))
         tracker._total_cost_usd = data.get("total_cost_usd", 0.0)
         return tracker

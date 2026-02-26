@@ -79,7 +79,9 @@ async def test_list_checklist_filter_workstream(client):
         json={"workstream": "LDD_CORPORATE", "title": "법률 항목"},
     )
 
-    resp = await client.get(f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FDD_FINANCIAL_STATEMENTS"})
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/dd-checklist", params={"workstream": "FDD_FINANCIAL_STATEMENTS"}
+    )
     assert len(resp.json()) == 1
     assert resp.json()[0]["workstream"] == "FDD_FINANCIAL_STATEMENTS"
 

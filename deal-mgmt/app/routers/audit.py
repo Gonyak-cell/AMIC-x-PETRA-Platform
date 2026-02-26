@@ -71,13 +71,15 @@ async def export_audit_logs(
     writer = csv.writer(output)
     writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID"])
     for item in items:
-        writer.writerow([
-            item.created_at.isoformat() if item.created_at else "",
-            item.actor_email or "",
-            item.action.value if hasattr(item.action, "value") else str(item.action),
-            item.entity_type,
-            str(item.entity_id),
-        ])
+        writer.writerow(
+            [
+                item.created_at.isoformat() if item.created_at else "",
+                item.actor_email or "",
+                item.action.value if hasattr(item.action, "value") else str(item.action),
+                item.entity_type,
+                str(item.entity_id),
+            ]
+        )
 
     csv_bytes = output.getvalue().encode("utf-8-sig")
     filename = f"ma_audit_log_{date.today().isoformat()}.csv"

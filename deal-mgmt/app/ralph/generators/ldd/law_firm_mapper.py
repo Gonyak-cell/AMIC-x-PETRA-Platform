@@ -31,8 +31,8 @@ ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
 class LawFirmChapter:
     """법무법인 목차 단일 챕터."""
 
-    number: str          # "I", "II", ...
-    title: str           # "대상사업 일반 및 거래구조"
+    number: str  # "I", "II", ...
+    title: str  # "대상사업 일반 및 거래구조"
     ddrl_sections: list[str]  # 매핑된 DDRL 섹션 타입 목록
     items: list[dict[str, Any]] = field(default_factory=list)
     narratives: list[dict[str, Any]] = field(default_factory=list)
@@ -128,14 +128,8 @@ class LawFirmMapper:
                 narrs = narrative_sections.get(ddrl_section, [])
 
                 if item_filter:
-                    items = [
-                        it for it in items
-                        if item_filter(it.get("item_id", ""))
-                    ]
-                    narrs = [
-                        n for n in narrs
-                        if item_filter(n.get("item_id", ""))
-                    ]
+                    items = [it for it in items if item_filter(it.get("item_id", ""))]
+                    narrs = [n for n in narrs if item_filter(n.get("item_id", ""))]
 
                 chapter.items.extend(items)
                 chapter.narratives.extend(narrs)
@@ -154,10 +148,7 @@ class LawFirmMapper:
 
         logger.info(
             "법무법인 목차 매핑 완료: %s",
-            ", ".join(
-                f"{ch.number}.{ch.title}({len(ch.items)}항목)"
-                for ch in chapters
-            ),
+            ", ".join(f"{ch.number}.{ch.title}({len(ch.items)}항목)" for ch in chapters),
         )
 
         return chapters
@@ -174,9 +165,7 @@ class LawFirmMapper:
                     "title": ch.title,
                     "ddrl_sections": ch.ddrl_sections,
                     "item_count": len(ch.items),
-                    "issue_count": sum(
-                        1 for it in ch.items if it.get("status") == "ISSUE"
-                    ),
+                    "issue_count": sum(1 for it in ch.items if it.get("status") == "ISSUE"),
                     "items": [
                         {
                             "item_id": it.get("item_id", ""),

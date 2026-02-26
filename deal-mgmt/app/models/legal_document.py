@@ -21,9 +21,7 @@ class LegalDocument(Base, TimestampMixin):
     )
     doc_type: Mapped[LegalDocType] = mapped_column(Enum(LegalDocType), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
-    status: Mapped[LegalDocStatus] = mapped_column(
-        Enum(LegalDocStatus), nullable=False, default=LegalDocStatus.DRAFT
-    )
+    status: Mapped[LegalDocStatus] = mapped_column(Enum(LegalDocStatus), nullable=False, default=LegalDocStatus.DRAFT)
     parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     template_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)

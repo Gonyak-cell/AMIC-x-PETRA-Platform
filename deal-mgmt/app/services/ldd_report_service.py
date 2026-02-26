@@ -35,9 +35,9 @@ from app.schemas.ldd_report import (
 
 logger = logging.getLogger(__name__)
 
-TEMPLATE_DIR     = Path(__file__).resolve().parent.parent.parent / "templates" / "ldd"
-OUTPUT_DIR       = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
-_PROJECT_ROOT    = Path(__file__).resolve().parent.parent.parent
+TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templates" / "ldd"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_VERSION = "1.0"
 
 
@@ -68,12 +68,11 @@ def _validate_source_dir(source_dir: str) -> None:
         resolved = Path(source_dir).resolve()
         resolved.relative_to(_PROJECT_ROOT)
     except (ValueError, OSError):
-        raise ValueError(
-            f"source_dir은 프로젝트 디렉토리 내부여야 합니다: {source_dir}"
-        )
+        raise ValueError(f"source_dir은 프로젝트 디렉토리 내부여야 합니다: {source_dir}")
 
 
 # ── 집계 계산 ─────────────────────────────────────────────────────────────────
+
 
 def _compute_counts(sections: list[dict]) -> dict:
     """섹션 데이터로부터 이슈 카운트를 계산한다."""
@@ -83,7 +82,7 @@ def _compute_counts(sections: list[dict]) -> dict:
         for item in section.get("items", []):
             total += 1
             status = item.get("status", "PENDING")
-            level  = item.get("issue_level")
+            level = item.get("issue_level")
 
             if status == LDDItemStatus.OK:
                 ok += 1
@@ -104,15 +103,15 @@ def _compute_counts(sections: list[dict]) -> dict:
                 rfi += 1
 
     return {
-        "total_items":   total,
-        "issue_count":   issue,
-        "red_count":     red,
-        "amber_count":   amber,
-        "green_count":   green,
-        "ok_count":      ok,
-        "na_count":      na,
+        "total_items": total,
+        "issue_count": issue,
+        "red_count": red,
+        "amber_count": amber,
+        "green_count": green,
+        "ok_count": ok,
+        "na_count": na,
         "pending_count": pending,
-        "rfi_count":     rfi,
+        "rfi_count": rfi,
     }
 
 
@@ -169,9 +168,9 @@ def _compute_risk_colors(sections: list[dict]) -> list[dict]:
     """각 항목의 risk_color를 이슈레벨 기반으로 자동 계산한다."""
     _level_to_color = {
         LDDIssueLevel.CRITICAL: "RED",
-        LDDIssueLevel.HIGH:     "AMBER",
-        LDDIssueLevel.MEDIUM:   "AMBER",
-        LDDIssueLevel.LOW:      "GREEN",
+        LDDIssueLevel.HIGH: "AMBER",
+        LDDIssueLevel.MEDIUM: "AMBER",
+        LDDIssueLevel.LOW: "GREEN",
     }
     for section in sections:
         for item in section.get("items", []):
@@ -184,6 +183,7 @@ def _compute_risk_colors(sections: list[dict]) -> list[dict]:
 
 
 # ── docxtpl 렌더링 컨텍스트 빌드 ─────────────────────────────────────────────
+
 
 def _build_context(report: LDDReport) -> dict:
     """docxtpl에 전달할 컨텍스트 딕셔너리를 생성한다."""
@@ -208,35 +208,37 @@ def _build_context(report: LDDReport) -> dict:
                         red_issues.append(enriched)
 
         if sec_issues:
-            sections_with_issues.append({
-                "title":  section_title,
-                "issues": sec_issues,
-            })
+            sections_with_issues.append(
+                {
+                    "title": section_title,
+                    "issues": sec_issues,
+                }
+            )
 
     ctx = {
-        "title":          report.title,
+        "title": report.title,
         "target_company": report.target_company or "",
-        "dd_period":      report.dd_period or "",
-        "law_firm":       report.law_firm or "",
-        "prepared_by":    report.prepared_by or "",
-        "report_date":    date.today().strftime("%Y년 %m월 %d일"),
-        "total_items":    report.total_items,
-        "issue_count":    report.issue_count,
-        "red_count":      report.red_count,
-        "amber_count":    report.amber_count,
-        "green_count":    report.green_count,
-        "ok_count":       report.ok_count,
-        "na_count":       report.na_count,
-        "pending_count":  report.pending_count,
-        "rfi_count":      report.rfi_count,
-        "sections":       sections,
-        "all_issues":     all_issues,
-        "red_issues":     red_issues,
+        "dd_period": report.dd_period or "",
+        "law_firm": report.law_firm or "",
+        "prepared_by": report.prepared_by or "",
+        "report_date": date.today().strftime("%Y년 %m월 %d일"),
+        "total_items": report.total_items,
+        "issue_count": report.issue_count,
+        "red_count": report.red_count,
+        "amber_count": report.amber_count,
+        "green_count": report.green_count,
+        "ok_count": report.ok_count,
+        "na_count": report.na_count,
+        "pending_count": report.pending_count,
+        "rfi_count": report.rfi_count,
+        "sections": sections,
+        "all_issues": all_issues,
+        "red_issues": red_issues,
         "sections_with_issues": sections_with_issues,
         # VDR 연동 메타데이터
-        "vdr_source":     report.vdr_source,
-        "draft_score":    report.draft_score,
-        "final_score":    report.final_score,
+        "vdr_source": report.vdr_source,
+        "draft_score": report.draft_score,
+        "final_score": report.final_score,
     }
 
     # 서술(narrative) 데이터가 있으면 narrative_items 컨텍스트 추가
@@ -246,9 +248,7 @@ def _build_context(report: LDDReport) -> dict:
 
     # 별첨(appendix) 데이터 추가
     if report.appendices and report.appendices.get("tables"):
-        ctx["appendix_tables"] = [
-            t for t in report.appendices["tables"] if t.get("row_count", 0) > 0
-        ]
+        ctx["appendix_tables"] = [t for t in report.appendices["tables"] if t.get("row_count", 0) > 0]
 
     return ctx
 
@@ -312,34 +312,35 @@ def _build_narrative_items(
                 blocks = [{"title": "검토 결과", "content": item["description"]}]
 
             if blocks:
-                items_ctx.append({
-                    "item_id": item_id,
-                    "item_name": item.get("name", ""),
-                    "status": item.get("status", "PENDING"),
-                    "issue_level": item.get("issue_level", ""),
-                    "blocks": blocks,
-                })
+                items_ctx.append(
+                    {
+                        "item_id": item_id,
+                        "item_name": item.get("name", ""),
+                        "status": item.get("status", "PENDING"),
+                        "issue_level": item.get("issue_level", ""),
+                        "blocks": blocks,
+                    }
+                )
 
         if items_ctx:
-            result.append({
-                "section_title": section_title,
-                "items": items_ctx,
-            })
+            result.append(
+                {
+                    "section_title": section_title,
+                    "items": items_ctx,
+                }
+            )
 
     return result
 
 
 # ── CRUD ─────────────────────────────────────────────────────────────────────
 
+
 async def list_ldd_reports(
     db: AsyncSession,
     transaction_id: uuid.UUID,
 ) -> list[LDDReport]:
-    q = (
-        select(LDDReport)
-        .where(LDDReport.transaction_id == transaction_id)
-        .order_by(LDDReport.created_at.desc())
-    )
+    q = select(LDDReport).where(LDDReport.transaction_id == transaction_id).order_by(LDDReport.created_at.desc())
     result = await db.execute(q)
     return list(result.scalars().all())
 
@@ -381,19 +382,19 @@ async def create_ldd_report(
     counts = _compute_counts(sections_data)
 
     report = LDDReport(
-        transaction_id   = transaction_id,
-        report_type      = body.report_type,
-        deal_type        = deal_type or None,
-        template_type    = template_type,
-        title            = body.title,
-        target_company   = body.target_company,
-        dd_period        = body.dd_period,
-        law_firm         = body.law_firm,
-        prepared_by      = body.prepared_by,
-        sections         = sections_data,
-        template_version = TEMPLATE_VERSION,
-        created_by_email = created_by_email,
-        status           = LDDReportStatus.DRAFT,
+        transaction_id=transaction_id,
+        report_type=body.report_type,
+        deal_type=deal_type or None,
+        template_type=template_type,
+        title=body.title,
+        target_company=body.target_company,
+        dd_period=body.dd_period,
+        law_firm=body.law_firm,
+        prepared_by=body.prepared_by,
+        sections=sections_data,
+        template_version=TEMPLATE_VERSION,
+        created_by_email=created_by_email,
+        status=LDDReportStatus.DRAFT,
         **counts,
     )
     db.add(report)
@@ -454,6 +455,7 @@ async def delete_ldd_report(
 
 # ── docxtpl 렌더링 ────────────────────────────────────────────────────────────
 
+
 async def generate_ldd_report(
     db: AsyncSession,
     report: LDDReport,
@@ -486,9 +488,9 @@ async def generate_ldd_report(
         await db.refresh(report)
         return report
 
-    report_id   = report.id
+    report_id = report.id
     report_type = report.report_type
-    context     = _build_context(report)
+    context = _build_context(report)
 
     def _render() -> tuple[str, str, int]:
         """동기 렌더링 — 별도 스레드에서 실행."""
@@ -498,7 +500,7 @@ async def generate_ldd_report(
         tpl = DocxTemplate(str(template_path))
         tpl.render(context)
         fname = f"LDD_{report_type}_{report_id}.docx"
-        out   = OUTPUT_DIR / fname
+        out = OUTPUT_DIR / fname
         tpl.save(str(out))
         return fname, str(out), out.stat().st_size
 
@@ -508,13 +510,13 @@ async def generate_ldd_report(
 
     try:
         fname, fpath, fsize = await asyncio.to_thread(_render)
-        report.status          = LDDReportStatus.READY
-        report.file_name       = fname
-        report.file_path       = fpath
+        report.status = LDDReportStatus.READY
+        report.file_name = fname
+        report.file_path = fpath
         report.file_size_bytes = fsize
-        report.error_message   = None
+        report.error_message = None
     except Exception as exc:
-        report.status        = LDDReportStatus.FAILED
+        report.status = LDDReportStatus.FAILED
         report.error_message = str(exc)
 
     await db.commit()
@@ -542,6 +544,7 @@ async def _generate_law_firm_report(
     await db.commit()
 
     try:
+
         def _render_law_firm() -> tuple[str, str, int]:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -583,10 +586,7 @@ async def _generate_law_firm_report(
                                     ch.number,
                                 )
                             )
-                    narratives[ch.number] = [
-                        n.to_dict() if hasattr(n, "to_dict") else n
-                        for n in narr_list
-                    ]
+                    narratives[ch.number] = [n.to_dict() if hasattr(n, "to_dict") else n for n in narr_list]
 
             # Executive Summary 데이터
             exec_summary = None
@@ -673,7 +673,8 @@ async def create_ldd_report_auto(
     if not file_list:
         # 자료 없으면 빈 보고서로 생성
         return await create_ldd_report(
-            db, transaction_id,
+            db,
+            transaction_id,
             LDDReportCreate(
                 title=body.title,
                 report_type=body.report_type,
@@ -687,6 +688,7 @@ async def create_ldd_report_auto(
 
     # 2. 파일 파싱 + DDRL 섹션 매핑
     from app.ralph.parsers.base import ParsedFile
+
     source_map: dict[str, list[ParsedFile]] = {}
     for file_info in file_list:
         parsed = parse_and_classify(file_info["path"])
@@ -700,6 +702,7 @@ async def create_ldd_report_auto(
     learned_patterns: list[str] = []
     try:
         from app.ralph.learning.pattern_aggregator import PatternAggregator
+
         agg = PatternAggregator(db)
         learned_patterns = await agg.get_learned_patterns("LDD")
     except Exception as exc:
@@ -879,7 +882,9 @@ async def create_ldd_report_from_vdr(
         # 2. VDR 문서 텍스트 추출
         extractor = TextExtractionService()
         source_files = await extractor.extract_from_vdr_documents(
-            db, transaction_id, folder_ids=body.folder_ids,
+            db,
+            transaction_id,
+            folder_ids=body.folder_ids,
         )
 
         if not source_files:
@@ -916,16 +921,14 @@ async def create_ldd_report_from_vdr(
         learned_patterns: list[str] = []
         try:
             from app.ralph.learning.pattern_aggregator import PatternAggregator
+
             agg = PatternAggregator(db)
             learned_patterns = await agg.get_learned_patterns("LDD")
         except Exception as exc:
             logger.warning("학습 패턴 조회 실패 (무시): %s", exc)
 
         # ── 멀티 LLM 파이프라인 분기 ──
-        use_multi_llm = (
-            body.use_multi_llm if body.use_multi_llm is not None
-            else settings.LDD_MULTI_LLM_ENABLED
-        )
+        use_multi_llm = body.use_multi_llm if body.use_multi_llm is not None else settings.LDD_MULTI_LLM_ENABLED
 
         if use_multi_llm and llm_client.is_available:
             # ★ 멀티 LLM 7단계 파이프라인 ★
@@ -961,6 +964,7 @@ async def create_ldd_report_from_vdr(
 
             # RalphSession 레코드 생성 (멀티 LLM 학습 패턴 축적용)
             from app.models.ralph_session import RalphSession, RalphSessionStatus
+
             ralph_session = RalphSession(
                 id=uuid.uuid4(),
                 transaction_id=transaction_id,
@@ -988,8 +992,7 @@ async def create_ldd_report_from_vdr(
             ralph_session.status = RalphSessionStatus.COMPLETED.value
             ralph_session.total_cost_usd = pipeline_result.cost_usd
             ralph_session.final_score = (
-                pipeline_result.qa_result.get("overall_score")
-                if pipeline_result.qa_result else None
+                pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
             )
             ralph_session.total_iterations = 1  # 멀티 LLM은 단일 실행
 
@@ -1029,10 +1032,7 @@ async def create_ldd_report_from_vdr(
             report.appendices = pipeline_result.appendices
             report.qa_result = pipeline_result.qa_result
             report.pipeline_stages = pipeline_result.stages
-            report.draft_score = (
-                pipeline_result.qa_result.get("overall_score")
-                if pipeline_result.qa_result else None
-            )
+            report.draft_score = pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
 
             # ── 법무법인 스타일 후처리 ──
             if is_law_firm and pipeline_result.narrative_sections:
@@ -1101,6 +1101,7 @@ async def create_ldd_report_from_vdr(
 
             # 5b. RalphSession 레코드 생성 (학습 패턴 축적용)
             from app.models.ralph_session import RalphSession, RalphSessionStatus
+
             ralph_session = RalphSession(
                 id=uuid.UUID(orchestrator.session_id),
                 transaction_id=transaction_id,
@@ -1127,9 +1128,7 @@ async def create_ldd_report_from_vdr(
             ralph_session.final_score = loop_result.final_score
             ralph_session.section_scores = loop_result.section_scores
             ralph_session.critical_flags = loop_result.critical_flags
-            ralph_session.error_message = (
-                "; ".join(loop_result.errors) if loop_result.errors else None
-            )
+            ralph_session.error_message = "; ".join(loop_result.errors) if loop_result.errors else None
 
             # 6. 결과를 LDD 섹션 형식으로 변환
             merged_sections = copy.deepcopy(sections_data)
@@ -1153,9 +1152,7 @@ async def create_ldd_report_from_vdr(
             for k, v in counts.items():
                 setattr(report, k, v)
 
-            report.draft_ralph_session_id = (
-                uuid.UUID(loop_result.session_id) if loop_result.session_id else None
-            )
+            report.draft_ralph_session_id = uuid.UUID(loop_result.session_id) if loop_result.session_id else None
             report.draft_score = loop_result.final_score
             report.status = LDDReportStatus.REVIEW
             report.analysis_completed_at = datetime.now(UTC)
@@ -1210,9 +1207,7 @@ async def finalize_ldd_report(
     report = await get_ldd_report(db, transaction_id, report_id)
 
     if report.status != LDDReportStatus.REVIEW:
-        raise WorkflowError(
-            f"최종 확정은 REVIEW 상태에서만 가능합니다 (현재: {report.status})"
-        )
+        raise WorkflowError(f"최종 확정은 REVIEW 상태에서만 가능합니다 (현재: {report.status})")
 
     report.status = LDDReportStatus.FINALIZING
     report.finalize_started_at = datetime.now(UTC)
@@ -1261,6 +1256,7 @@ async def finalize_ldd_report(
         learned_patterns: list[str] = []
         try:
             from app.ralph.learning.pattern_aggregator import PatternAggregator
+
             agg = PatternAggregator(db)
             learned_patterns = await agg.get_learned_patterns("LDD")
         except Exception as exc:
@@ -1279,10 +1275,7 @@ async def finalize_ldd_report(
 
         # 5. 품질 게이트 + Ralph Loop #2
         # user_reviews: 반려된 항목 정보를 게이트에 전달하여 반영 검증
-        user_reviews = {
-            item_id: {"approved": False, "feedback": fb}
-            for item_id, fb in user_feedback.items()
-        }
+        user_reviews = {item_id: {"approved": False, "feedback": fb} for item_id, fb in user_feedback.items()}
         for item_id in approved_items:
             if item_id not in user_reviews:
                 user_reviews[item_id] = {"approved": True, "feedback": ""}
@@ -1306,6 +1299,7 @@ async def finalize_ldd_report(
 
         # 5b. RalphSession 레코드 생성 (학습 패턴 축적용)
         from app.models.ralph_session import RalphSession, RalphSessionStatus
+
         ralph_session = RalphSession(
             id=uuid.UUID(orchestrator.session_id),
             transaction_id=transaction_id,
@@ -1333,9 +1327,7 @@ async def finalize_ldd_report(
         ralph_session.final_score = loop_result.final_score
         ralph_session.section_scores = loop_result.section_scores
         ralph_session.critical_flags = loop_result.critical_flags
-        ralph_session.error_message = (
-            "; ".join(loop_result.errors) if loop_result.errors else None
-        )
+        ralph_session.error_message = "; ".join(loop_result.errors) if loop_result.errors else None
 
         # 6. 결과 반영
         if loop_result.final_artifact:
@@ -1343,7 +1335,8 @@ async def finalize_ldd_report(
                 report_data = json.loads(loop_result.final_artifact)
                 ai_sections = report_data.get("sections", {})
                 _merge_ai_results(
-                    sections, ai_sections,
+                    sections,
+                    ai_sections,
                     include_ai_meta=True,
                     approved_items=approved_items,
                 )
@@ -1357,9 +1350,7 @@ async def finalize_ldd_report(
         for k, v in counts.items():
             setattr(report, k, v)
 
-        report.final_ralph_session_id = (
-            uuid.UUID(loop_result.session_id) if loop_result.session_id else None
-        )
+        report.final_ralph_session_id = uuid.UUID(loop_result.session_id) if loop_result.session_id else None
         report.final_score = loop_result.final_score
         report.finalize_completed_at = datetime.now(UTC)
 
@@ -1396,8 +1387,8 @@ async def regenerate_ldd_report(
             Path(report.file_path).unlink(missing_ok=True)
         except OSError:
             pass
-    report.file_path       = None
-    report.file_name       = None
+    report.file_path = None
+    report.file_name = None
     report.file_size_bytes = None
 
     return await generate_ldd_report(db, report)

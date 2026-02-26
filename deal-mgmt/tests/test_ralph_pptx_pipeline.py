@@ -15,12 +15,14 @@ from app.ralph.generators.pptx_generator import RalphMemoGenerator
 
 # ── 마스터 템플릿 존재 + 레이아웃 확인 ─────────────────────────────────────────
 
+
 def _check_template_layouts() -> bool:
     """템플릿이 존재하고 필수 레이아웃(COVER, MAIN, FOREST)을 포함하는지 확인."""
     if not TEMPLATE_PATH.exists():
         return False
     try:
         from pptx import Presentation
+
         prs = Presentation(str(TEMPLATE_PATH))
         layout_names: set[str] = set()
         for master in prs.slide_masters:
@@ -140,7 +142,7 @@ class TestPPTXGateWithRealFile:
         result = await gate.evaluate(output, {"memo_type": "TM", "min_slides": 3})
 
         # 기본 콘텐츠에는 [금액], [회사명] 등 플레이스홀더가 있으므로 CRITICAL 발견
-        has_placeholder_issue = any("CRITICAL" in i for i in result.issues)
+        has_placeholder_issue = any("CRITICAL" in i for i in result.issues)  # noqa: F841
         # 기본 템플릿에 따라 플레이스홀더가 있을 수도 없을 수도 있음
         # 중요한 것은 Gate가 오류 없이 완료되는 것
         assert result.weighted_score > 0
@@ -177,6 +179,7 @@ class TestRalphMemoGeneratorPipeline:
             section_artifacts[sid] = artifact
             # JSON 파싱 가능 확인
             import json
+
             data = json.loads(artifact)
             assert "section_id" in data
             assert "slides" in data
@@ -253,6 +256,7 @@ class TestTemplateExists:
     def test_template_is_valid_pptx(self):
         """템플릿 파일이 유효한 PPTX인지."""
         from pptx import Presentation
+
         prs = Presentation(str(TEMPLATE_PATH))
         assert len(prs.slide_masters) >= 1
         # 레이아웃 목록 출력 (디버그용)

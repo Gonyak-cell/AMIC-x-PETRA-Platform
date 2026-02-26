@@ -20,9 +20,7 @@ class DealNote(Base, TimestampMixin):
     author_email: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     note_type: Mapped[NoteType] = mapped_column(Enum(NoteType), nullable=False, default=NoteType.COMMENT)
-    parent_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("deal_notes.id"), nullable=True
-    )
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("deal_notes.id"), nullable=True)
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mentions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     attachments: Mapped[list | None] = mapped_column(JSONB, nullable=True)

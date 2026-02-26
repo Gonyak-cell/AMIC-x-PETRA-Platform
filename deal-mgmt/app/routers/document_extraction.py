@@ -42,9 +42,7 @@ async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: Backg
         logger.warning("Celery 디스패치 실패, 동기 폴백: %s", exc)
         from app.core.database import async_session_factory
 
-        background_tasks.add_task(
-            _run_sync_fallback, extraction_id, async_session_factory
-        )
+        background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
 
 
 async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory) -> None:

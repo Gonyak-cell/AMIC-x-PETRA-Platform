@@ -160,9 +160,7 @@ async def test_get_marketing_material(client, _txn):
 async def test_get_marketing_material_not_found(client, _txn):
     """존재하지 않는 자료 조회 — 404."""
     txn_id = _txn["id"]
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/marketing-materials/00000000-0000-0000-0000-000000000000"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404
 
 
@@ -213,14 +211,10 @@ async def test_delete_marketing_material(client, _txn):
     )
     mat_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}"
-    )
+    del_resp = await client.delete(f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}")
     assert del_resp.status_code == 204
 
-    get_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}"
-    )
+    get_resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}")
     assert get_resp.status_code == 404
 
 
@@ -234,9 +228,7 @@ async def test_download_not_ready(client, _txn):
     )
     mat_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}/download"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}/download")
     # GENERATING 상태이므로 409
     assert resp.status_code == 409
 
@@ -254,7 +246,5 @@ async def test_cross_transaction_isolation(client, _txn, _other_txn):
     mat_id = create_resp.json()["id"]
 
     # 다른 거래 ID로 접근
-    resp = await client.get(
-        f"/api/v1/transactions/{other_txn_id}/marketing-materials/{mat_id}"
-    )
+    resp = await client.get(f"/api/v1/transactions/{other_txn_id}/marketing-materials/{mat_id}")
     assert resp.status_code == 404

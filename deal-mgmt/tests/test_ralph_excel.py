@@ -297,7 +297,14 @@ class TestExcelProgrammaticGate:
             prd_section={"model_type": "DCF"},
         )
         assert len(result.dimensions) == 6
-        expected_names = {"structure", "formula_ratio", "balance_check", "cross_validation", "completeness", "formatting"}
+        expected_names = {
+            "structure",
+            "formula_ratio",
+            "balance_check",
+            "cross_validation",
+            "completeness",
+            "formatting",
+        }
         actual_names = {d.name for d in result.dimensions}
         assert actual_names == expected_names
 
@@ -430,12 +437,14 @@ class TestLLMJudgeGateExcel:
     def test_init_ldd_mode(self):
         """doc_type='ldd'는 LDD_WEIGHTS 사용."""
         from app.ralph.gates.llm_judge_gate import LDD_WEIGHTS
+
         gate = LLMJudgeGate(doc_type="ldd")
         assert gate._weights == LDD_WEIGHTS
 
     def test_init_pptx_mode(self):
         """doc_type='pptx'는 PPTX_WEIGHTS 사용."""
         from app.ralph.gates.llm_judge_gate import PPTX_WEIGHTS
+
         gate = LLMJudgeGate(doc_type="pptx")
         assert gate._weights == PPTX_WEIGHTS
 

@@ -80,10 +80,7 @@ async def risk_summary(
     matrix_counter: Counter[tuple[str, str]] = Counter()
     for item in items:
         matrix_counter[(item.severity.value, item.likelihood.value)] += 1
-    matrix = [
-        RiskMatrixCell(severity=sev, likelihood=lik, count=cnt)
-        for (sev, lik), cnt in matrix_counter.items()
-    ]
+    matrix = [RiskMatrixCell(severity=sev, likelihood=lik, count=cnt) for (sev, lik), cnt in matrix_counter.items()]
 
     # avg score & unmitigated critical
     scores = [item.risk_score for item in items if item.risk_score is not None]
@@ -91,8 +88,7 @@ async def risk_summary(
     unmitigated_critical = sum(
         1
         for item in items
-        if item.severity == RiskSeverity.CRITICAL
-        and item.status not in (RiskStatus.MITIGATED, RiskStatus.CLOSED)
+        if item.severity == RiskSeverity.CRITICAL and item.status not in (RiskStatus.MITIGATED, RiskStatus.CLOSED)
     )
 
     return RiskSummary(

@@ -21,9 +21,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
         # 1. Request ID 설정 (X-Request-ID 헤더 또는 자동 생성)
-        request_id = set_request_id(
-            request.headers.get("x-request-id")
-        )
+        request_id = set_request_id(request.headers.get("x-request-id"))
 
         # 2. 인증된 사용자 ID (있으면 — auth 미들웨어가 먼저 실행된 경우)
         user_id = getattr(request.state, "user_id", None)

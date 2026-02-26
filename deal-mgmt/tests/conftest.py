@@ -37,11 +37,13 @@ if "celery" not in sys.modules:
 
         def task(self, *a, **kw):
             """@celery_app.task 데코레이터 — 원본 함수를 그대로 반환 + .delay = no-op."""
+
             def decorator(fn):
                 fn.delay = MagicMock(name=f"{fn.__name__}.delay")
                 fn.apply_async = MagicMock(name=f"{fn.__name__}.apply_async")
                 fn.s = MagicMock(name=f"{fn.__name__}.s")
                 return fn
+
             if len(a) == 1 and callable(a[0]) and not kw:
                 return decorator(a[0])
             return decorator
@@ -109,7 +111,6 @@ async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
 # ── 의존성 오버라이드 적용 ─────────────────────────────────
 app.dependency_overrides[get_jwt_claims] = _override_get_jwt_claims
 app.dependency_overrides[get_db] = _override_get_db
-
 
 
 # ── Fixtures ───────────────────────────────────────────────

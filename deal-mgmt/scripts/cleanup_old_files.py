@@ -66,7 +66,9 @@ def cleanup(output_dir: Path, retention_days: int, dry_run: bool) -> dict:
                 size = path.stat().st_size
                 age_days = (datetime.now(UTC) - mtime).days
                 if dry_run:
-                    print(f"  [DRY-RUN] 삭제 예정: {path.name} (수정일: {mtime.date()}, {age_days}일 경과, {size:,} bytes)")
+                    print(
+                        f"  [DRY-RUN] 삭제 예정: {path.name} (수정일: {mtime.date()}, {age_days}일 경과, {size:,} bytes)"
+                    )
                 else:
                     path.unlink()
                     stats["deleted"] += 1

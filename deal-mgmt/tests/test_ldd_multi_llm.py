@@ -77,7 +77,11 @@ class TestDualRiskAnalyzer:
     """Stage 3: 듀얼 리스크 분석 테스트."""
 
     def _make_perspective(
-        self, perspective: str, status: str, level: str | None, confidence: float = 0.8,
+        self,
+        perspective: str,
+        status: str,
+        level: str | None,
+        confidence: float = 0.8,
     ) -> PerspectiveResult:
         return PerspectiveResult(
             perspective=perspective,
@@ -152,15 +156,17 @@ class TestDualRiskAnalyzer:
     @pytest.mark.asyncio
     async def test_analyze_item_dual_with_mock(self):
         """듀얼 분석 전체 흐름 (mock LLM)."""
-        response = json.dumps({
-            "status": "ISSUE",
-            "issue_level": "HIGH",
-            "description": "테스트 분석 결과",
-            "deal_impact": "가격 조정 필요",
-            "recommendation": "추가 실사 권장",
-            "confidence": 0.85,
-            "evidence_refs": [],
-        })
+        response = json.dumps(
+            {
+                "status": "ISSUE",
+                "issue_level": "HIGH",
+                "description": "테스트 분석 결과",
+                "deal_impact": "가격 조정 필요",
+                "recommendation": "추가 실사 권장",
+                "confidence": 0.85,
+                "evidence_refs": [],
+            }
+        )
 
         client = MockLLMClient(response)
         router = MockRouter(response)
@@ -252,15 +258,17 @@ class TestGapDetector:
     @pytest.mark.asyncio
     async def test_detect_gaps_with_mock(self):
         """누락 탐지 전체 흐름 (mock LLM)."""
-        checklist_response = json.dumps([
-            {
-                "gap_id": "GAP-001",
-                "section_type": "CONTRACTS",
-                "description": "CoC 조항 검토 누락",
-                "priority": "HIGH",
-                "rationale": "주요 계약의 CoC 조항 미확인",
-            },
-        ])
+        checklist_response = json.dumps(
+            [
+                {
+                    "gap_id": "GAP-001",
+                    "section_type": "CONTRACTS",
+                    "description": "CoC 조항 검토 누락",
+                    "priority": "HIGH",
+                    "rationale": "주요 계약의 CoC 조항 미확인",
+                },
+            ]
+        )
         freeform_response = json.dumps([])
 
         call_count = 0
@@ -297,26 +305,30 @@ class TestJurisdictionAnalyzer:
     @pytest.mark.asyncio
     async def test_cross_points_detected(self):
         """같은 section_type 이슈 → 교차점 탐지."""
-        korean_response = json.dumps([
-            {
-                "point_id": "JP-001",
-                "section_type": "CONTRACTS",
-                "description": "한국법 관점 CoC 이슈",
-                "severity": "HIGH",
-                "key_regulation": "상법 제374조",
-                "recommendation": "CoC 조항 검토",
-            },
-        ])
-        english_response = json.dumps([
-            {
-                "point_id": "JP-001",
-                "section_type": "CONTRACTS",
-                "description": "English law CoC issue",
-                "severity": "HIGH",
-                "key_regulation": "SPA Clause 5.1",
-                "recommendation": "Review CoC clause",
-            },
-        ])
+        korean_response = json.dumps(
+            [
+                {
+                    "point_id": "JP-001",
+                    "section_type": "CONTRACTS",
+                    "description": "한국법 관점 CoC 이슈",
+                    "severity": "HIGH",
+                    "key_regulation": "상법 제374조",
+                    "recommendation": "CoC 조항 검토",
+                },
+            ]
+        )
+        english_response = json.dumps(
+            [
+                {
+                    "point_id": "JP-001",
+                    "section_type": "CONTRACTS",
+                    "description": "English law CoC issue",
+                    "severity": "HIGH",
+                    "key_regulation": "SPA Clause 5.1",
+                    "recommendation": "Review CoC clause",
+                },
+            ]
+        )
 
         call_count = 0
 
@@ -343,26 +355,30 @@ class TestJurisdictionAnalyzer:
     @pytest.mark.asyncio
     async def test_conflict_detected_severity_gap(self):
         """severity 차이 ≥ 2 → 충돌점."""
-        korean_response = json.dumps([
-            {
-                "point_id": "JP-001",
-                "section_type": "LABOR",
-                "description": "한국법: 근로관계 승계 리스크",
-                "severity": "CRITICAL",
-                "key_regulation": "근로기준법 제24조",
-                "recommendation": "근로관계 승계 검토",
-            },
-        ])
-        english_response = json.dumps([
-            {
-                "point_id": "JP-001",
-                "section_type": "LABOR",
-                "description": "English law: TUPE low risk",
-                "severity": "LOW",
-                "key_regulation": "TUPE 2006",
-                "recommendation": "Minimal risk",
-            },
-        ])
+        korean_response = json.dumps(
+            [
+                {
+                    "point_id": "JP-001",
+                    "section_type": "LABOR",
+                    "description": "한국법: 근로관계 승계 리스크",
+                    "severity": "CRITICAL",
+                    "key_regulation": "근로기준법 제24조",
+                    "recommendation": "근로관계 승계 검토",
+                },
+            ]
+        )
+        english_response = json.dumps(
+            [
+                {
+                    "point_id": "JP-001",
+                    "section_type": "LABOR",
+                    "description": "English law: TUPE low risk",
+                    "severity": "LOW",
+                    "key_regulation": "TUPE 2006",
+                    "recommendation": "Minimal risk",
+                },
+            ]
+        )
 
         async def mock_call(section_id, system, user):
             if "korean" in section_id:
@@ -393,21 +409,23 @@ class TestLDDReportQA:
         """QA 결과 파싱."""
         qa = LDDReportQA(llm_client=None)
 
-        raw = json.dumps({
-            "overall_score": 4,
-            "issues": [
-                {
-                    "category": "citation_accuracy",
-                    "severity": "minor",
-                    "location": "CORP-01",
-                    "description": "조항 번호 불일치",
-                    "expected": "제174조",
-                    "found": "제175조",
-                },
-            ],
-            "passed_checks": ["risk_recommendation_alignment", "completeness"],
-            "summary": "전반적으로 양호하나 인용 조항 번호 1건 확인 필요",
-        })
+        raw = json.dumps(
+            {
+                "overall_score": 4,
+                "issues": [
+                    {
+                        "category": "citation_accuracy",
+                        "severity": "minor",
+                        "location": "CORP-01",
+                        "description": "조항 번호 불일치",
+                        "expected": "제174조",
+                        "found": "제175조",
+                    },
+                ],
+                "passed_checks": ["risk_recommendation_alignment", "completeness"],
+                "summary": "전반적으로 양호하나 인용 조항 번호 1건 확인 필요",
+            }
+        )
 
         result = qa._parse_result(raw)
 
@@ -431,12 +449,14 @@ class TestLDDReportQA:
         """스코어 범위 외 값 → 클램핑."""
         qa = LDDReportQA(llm_client=None)
 
-        raw = json.dumps({
-            "overall_score": 10,  # > 5
-            "issues": [],
-            "passed_checks": [],
-            "summary": "test",
-        })
+        raw = json.dumps(
+            {
+                "overall_score": 10,  # > 5
+                "issues": [],
+                "passed_checks": [],
+                "summary": "test",
+            }
+        )
 
         result = qa._parse_result(raw)
         assert result.overall_score == 5  # max 5로 클램핑
@@ -449,7 +469,9 @@ class TestGuardrails:
     """LDD Guardrails 7개 규칙 테스트."""
 
     def _make_section(
-        self, section_type: str, items: list[dict],
+        self,
+        section_type: str,
+        items: list[dict],
     ) -> dict:
         return {"section_type": section_type, "items": items}
 
@@ -487,9 +509,14 @@ class TestGuardrails:
 
     def test_rule1_invalid_item_id(self):
         """규칙 1: 유효하지 않은 item_id 탐지."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("INVALID-01"),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("INVALID-01"),
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
@@ -498,37 +525,46 @@ class TestGuardrails:
 
     def test_rule2_issue_without_level(self):
         """규칙 2: ISSUE 상태인데 issue_level 없음."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", status="ISSUE", issue_level=None),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", status="ISSUE", issue_level=None),
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
 
-        assert any(
-            i.rule == "STATUS_LEVEL_CONSISTENCY" and "issue_level이 없음" in i.message
-            for i in result.issues
-        )
+        assert any(i.rule == "STATUS_LEVEL_CONSISTENCY" and "issue_level이 없음" in i.message for i in result.issues)
 
     def test_rule2_ok_with_level(self):
         """규칙 2: OK 상태인데 issue_level 설정됨 (경고)."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", status="OK", issue_level="HIGH"),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", status="OK", issue_level="HIGH"),
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
 
-        assert any(
-            i.rule == "STATUS_LEVEL_CONSISTENCY" and i.severity == "WARNING"
-            for i in result.issues
-        )
+        assert any(i.rule == "STATUS_LEVEL_CONSISTENCY" and i.severity == "WARNING" for i in result.issues)
 
     def test_rule3_invalid_evidence_ref(self):
         """규칙 3: VDR에 없는 문서 참조."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", evidence_refs=["nonexistent.pdf"]),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", evidence_refs=["nonexistent.pdf"]),
+                ],
+            )
+        ]
 
         g = LDDGuardrails(vdr_document_ids=["정관.pdf", "이사회의사록.pdf"])
         result = g.validate_all(sections)
@@ -537,27 +573,34 @@ class TestGuardrails:
 
     def test_rule4_unrealistic_article_number(self):
         """규칙 4: 비현실적 법률 조문 번호."""
-        sections = [self._make_section("GOVERNANCE", [
-            {
-                **self._make_item("CORP-01"),
-                "description": "제9999조에 따라 검토함",
-            },
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    {
+                        **self._make_item("CORP-01"),
+                        "description": "제9999조에 따라 검토함",
+                    },
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
 
-        assert any(
-            i.rule == "LEGAL_HALLUCINATION_CHECK" and "비현실적" in i.message
-            for i in result.issues
-        )
+        assert any(i.rule == "LEGAL_HALLUCINATION_CHECK" and "비현실적" in i.message for i in result.issues)
 
     def test_rule5_rfi_duplicate(self):
         """규칙 5: RFI 번호 중복."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", rfi_required=True, rfi_number="CORP-001"),
-            self._make_item("CORP-02", rfi_required=True, rfi_number="CORP-001"),  # 중복
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", rfi_required=True, rfi_number="CORP-001"),
+                    self._make_item("CORP-02", rfi_required=True, rfi_number="CORP-001"),  # 중복
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
@@ -566,9 +609,14 @@ class TestGuardrails:
 
     def test_rule5_rfi_wrong_prefix(self):
         """규칙 5: RFI 접두어 불일치."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", rfi_required=True, rfi_number="TAX-001"),  # GOVERNANCE인데 TAX
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", rfi_required=True, rfi_number="TAX-001"),  # GOVERNANCE인데 TAX
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)
@@ -577,9 +625,14 @@ class TestGuardrails:
 
     def test_rule7_low_confidence(self):
         """규칙 7: confidence < threshold."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", status="ISSUE", issue_level="HIGH", confidence=0.1),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", status="ISSUE", issue_level="HIGH", confidence=0.1),
+                ],
+            )
+        ]
 
         g = LDDGuardrails(confidence_threshold=0.25)
         result = g.validate_all(sections)
@@ -588,10 +641,15 @@ class TestGuardrails:
 
     def test_all_rules_pass(self):
         """모든 규칙 통과 시 passed_rules에 포함."""
-        sections = [self._make_section("GOVERNANCE", [
-            self._make_item("CORP-01", status="OK", confidence=0.9),
-            self._make_item("CORP-02", status="ISSUE", issue_level="HIGH", confidence=0.85),
-        ])]
+        sections = [
+            self._make_section(
+                "GOVERNANCE",
+                [
+                    self._make_item("CORP-01", status="OK", confidence=0.9),
+                    self._make_item("CORP-02", status="ISSUE", issue_level="HIGH", confidence=0.85),
+                ],
+            )
+        ]
 
         g = LDDGuardrails()
         result = g.validate_all(sections)

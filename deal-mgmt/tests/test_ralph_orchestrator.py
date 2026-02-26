@@ -42,20 +42,22 @@ class DummyGenerator:
         """JSON 배열 형태의 분석 결과를 반환한다."""
         items = []
         for j in range(self._item_count):
-            items.append({
-                "item_id": f"{section_id}_ITEM_{j}",
-                "name": f"항목 {j}",
-                "status": "OK",
-                "issue_level": None,
-                "risk_color": "",
-                "description": f"{section_id} 항목 {j}에 대한 분석 결과입니다.",
-                "deal_impact": "",
-                "recommendation": "",
-                "rfi_required": False,
-                "rfi_number": "",
-                "confidence": 0.85,
-                "evidence_refs": ["ref_001"],
-            })
+            items.append(
+                {
+                    "item_id": f"{section_id}_ITEM_{j}",
+                    "name": f"항목 {j}",
+                    "status": "OK",
+                    "issue_level": None,
+                    "risk_color": "",
+                    "description": f"{section_id} 항목 {j}에 대한 분석 결과입니다.",
+                    "deal_impact": "",
+                    "recommendation": "",
+                    "rfi_required": False,
+                    "rfi_number": "",
+                    "confidence": 0.85,
+                    "evidence_refs": ["ref_001"],
+                }
+            )
         return json.dumps(items, ensure_ascii=False)
 
     async def assemble_document(
@@ -137,7 +139,11 @@ class DummyAlwaysFailGate(QualityGate):
             DimensionScore("completeness", "완전성", 2.0, 0.5),
         ]
         return self._timed_result(
-            0, dims, ["품질 미달"], ["재작업 필요"], [],
+            0,
+            dims,
+            ["품질 미달"],
+            ["재작업 필요"],
+            [],
         )
 
 
@@ -419,10 +425,22 @@ class TestDOCXGateJsonMode:
     async def test_evaluate_duplicate_rfi(self):
         gate = DOCXProgrammaticGate()
         items = [
-            {"status": "ISSUE", "description": "이슈1", "rfi_number": "CORP-001",
-             "issue_level": "HIGH", "deal_impact": "영향", "recommendation": "권장"},
-            {"status": "ISSUE", "description": "이슈2", "rfi_number": "CORP-001",
-             "issue_level": "MEDIUM", "deal_impact": "영향", "recommendation": "권장"},
+            {
+                "status": "ISSUE",
+                "description": "이슈1",
+                "rfi_number": "CORP-001",
+                "issue_level": "HIGH",
+                "deal_impact": "영향",
+                "recommendation": "권장",
+            },
+            {
+                "status": "ISSUE",
+                "description": "이슈2",
+                "rfi_number": "CORP-001",
+                "issue_level": "MEDIUM",
+                "deal_impact": "영향",
+                "recommendation": "권장",
+            },
         ]
         artifact = json.dumps(items)
         result = await gate.evaluate(artifact, {})

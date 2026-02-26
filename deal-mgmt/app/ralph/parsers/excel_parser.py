@@ -25,13 +25,15 @@ def parse_excel(file_path: str) -> ParsedFile:
             return _parse_xls(file_path)
         else:
             return ParsedFile(
-                source_path=file_path, file_type="excel",
+                source_path=file_path,
+                file_type="excel",
                 parse_error=f"지원하지 않는 확장자: {ext}",
             )
     except Exception as exc:
         logger.warning("Excel 파싱 실패 %s: %s", file_path, exc)
         return ParsedFile(
-            source_path=file_path, file_type="excel",
+            source_path=file_path,
+            file_type="excel",
             parse_error=str(exc),
         )
 
@@ -79,7 +81,8 @@ def _parse_xls(file_path: str) -> ParsedFile:
         import xlrd
     except ImportError:
         return ParsedFile(
-            source_path=file_path, file_type="excel",
+            source_path=file_path,
+            file_type="excel",
             parse_error="xlrd 패키지가 설치되지 않았습니다 (pip install xlrd)",
         )
 
@@ -100,10 +103,12 @@ def _parse_xls(file_path: str) -> ParsedFile:
                     all_text.append(" | ".join(cells))
 
             if rows_data:
-                tables.append(ParsedTable(
-                    headers=rows_data[0] if rows_data else [],
-                    rows=rows_data[1:] if len(rows_data) > 1 else [],
-                ))
+                tables.append(
+                    ParsedTable(
+                        headers=rows_data[0] if rows_data else [],
+                        rows=rows_data[1:] if len(rows_data) > 1 else [],
+                    )
+                )
 
         return ParsedFile(
             source_path=file_path,

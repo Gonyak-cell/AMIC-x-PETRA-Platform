@@ -1,7 +1,6 @@
 """Deal Notes API 테스트 — Phase 5A."""
 
 
-
 # ── Create ─────────────────────────────────────────────────
 async def test_create_note(client, transaction_id):
     resp = await client.post(
@@ -138,9 +137,7 @@ async def test_list_replies(client, transaction_id):
         json={"content": "답글 2", "note_type": "COMMENT", "parent_id": parent_id},
     )
 
-    resp = await client.get(
-        f"/api/v1/transactions/{transaction_id}/notes/{parent_id}/replies"
-    )
+    resp = await client.get(f"/api/v1/transactions/{transaction_id}/notes/{parent_id}/replies")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 2
@@ -172,21 +169,15 @@ async def test_delete_note(client, transaction_id):
     )
     note_id = create.json()["id"]
 
-    resp = await client.delete(
-        f"/api/v1/transactions/{transaction_id}/notes/{note_id}"
-    )
+    resp = await client.delete(f"/api/v1/transactions/{transaction_id}/notes/{note_id}")
     assert resp.status_code == 204
 
     # 삭제 확인
-    get_resp = await client.get(
-        f"/api/v1/transactions/{transaction_id}/notes/{note_id}"
-    )
+    get_resp = await client.get(f"/api/v1/transactions/{transaction_id}/notes/{note_id}")
     assert get_resp.status_code == 404
 
 
 # ── 404 ────────────────────────────────────────────────────
 async def test_get_nonexistent_note(client, transaction_id):
-    resp = await client.get(
-        f"/api/v1/transactions/{transaction_id}/notes/00000000-0000-0000-0000-000000000000"
-    )
+    resp = await client.get(f"/api/v1/transactions/{transaction_id}/notes/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404

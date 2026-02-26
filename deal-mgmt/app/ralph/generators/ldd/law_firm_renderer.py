@@ -116,7 +116,6 @@ class LawFirmDocxRenderer:
         """표지의 프로젝트명, 날짜, 법무법인명을 실제 값으로 교체."""
         project_code = data.get("project_code", "")
         report_date = data.get("report_date", "")
-        law_firm_name = data.get("law_firm_name", "")
 
         for element in doc.element.body:
             tag = element.tag.split("}")[-1]
@@ -185,12 +184,14 @@ class LawFirmDocxRenderer:
                         text = _get_text_from_xml(cells[0])
                         if fill == RECOMMENDATION_FILL or "Recommendation" in text:
                             self._fill_recommendation_box(
-                                cells[0], current_chapter, narratives, item_idx,
+                                cells[0],
+                                current_chapter,
+                                narratives,
+                                item_idx,
                             )
 
             elif tag == "p":
                 text = _get_text_from_xml(element).strip()
-                style_id = _get_style_id_from_xml(element)
                 numId, ilvl = _get_num_info_from_xml(element)
 
                 # 대목차 플레이스홀더 → 챕터 내 항목명
@@ -198,7 +199,8 @@ class LawFirmDocxRenderer:
                     if current_chapter and item_idx < len(current_chapter.items):
                         item = current_chapter.items[item_idx]
                         narr_list = narratives.get(
-                            current_chapter.number, [],
+                            current_chapter.number,
+                            [],
                         )
 
                         if text == "[부문명 기재]":
@@ -207,7 +209,9 @@ class LawFirmDocxRenderer:
                         elif text == BODY_PLACEHOLDER:
                             # 본문: 3단 서술 또는 간략 설명 삽입
                             content = self._get_narrative_content(
-                                item, narr_list, item_idx,
+                                item,
+                                narr_list,
+                                item_idx,
                             )
                             _set_text_in_xml(element, content)
                             item_idx += 1
@@ -230,7 +234,11 @@ class LawFirmDocxRenderer:
         narr_list = narratives.get(chapter.number, [])
         if item_idx < len(narr_list):
             narr = narr_list[item_idx]
-            rec_text = narr.recommendation_section if isinstance(narr, LawFirmNarrative) else narr.get("recommendation_section", "")
+            rec_text = (
+                narr.recommendation_section
+                if isinstance(narr, LawFirmNarrative)
+                else narr.get("recommendation_section", "")
+            )
             if rec_text:
                 _set_cell_text(tc_element, f"Recommendation: {rec_text}")
 

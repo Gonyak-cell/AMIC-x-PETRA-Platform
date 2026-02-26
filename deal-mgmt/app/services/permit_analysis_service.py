@@ -38,7 +38,9 @@ async def get_requirements(db: AsyncSession, txn_id: uuid.UUID) -> list[PermitRe
 
 
 async def get_requirement(
-    db: AsyncSession, txn_id: uuid.UUID, req_id: uuid.UUID,
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    req_id: uuid.UUID,
 ) -> PermitRequirement | None:
     """단일 인허가 요건을 조회한다."""
     q = select(PermitRequirement).where(
@@ -86,7 +88,10 @@ def _kb_entry_to_requirement(
 ) -> PermitRequirement:
     """KB 항목을 PermitRequirement 모델로 변환한다."""
     deadline = _calculate_deadline(
-        target_close_date, entry.timing_type, entry.pre_filing_days, entry.post_filing_days,
+        target_close_date,
+        entry.timing_type,
+        entry.pre_filing_days,
+        entry.post_filing_days,
     )
     return PermitRequirement(
         analysis_id=analysis_id,
@@ -208,7 +213,9 @@ async def add_manual_requirement(
 
 
 async def recalculate_deadlines(
-    db: AsyncSession, txn_id: uuid.UUID, new_target_close_date: str,
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    new_target_close_date: str,
 ) -> list[PermitRequirement]:
     """Closing 예정일 변경 시 모든 인허가 기한을 재계산한다."""
     requirements = await get_requirements(db, txn_id)

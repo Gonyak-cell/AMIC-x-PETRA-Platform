@@ -17,9 +17,7 @@ class LddVdrReference(Base, TimestampMixin):
     """
 
     __tablename__ = "ldd_vdr_references"
-    __table_args__ = (
-        UniqueConstraint("ldd_report_id", "item_id", "vdr_document_id", name="uq_ldd_vdr_ref"),
-    )
+    __table_args__ = (UniqueConstraint("ldd_report_id", "item_id", "vdr_document_id", name="uq_ldd_vdr_ref"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ldd_report_id: Mapped[uuid.UUID] = mapped_column(

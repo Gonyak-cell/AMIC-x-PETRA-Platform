@@ -160,7 +160,6 @@ async def decide_approval(
         )
 
     # 전체 상태 업데이트: 전원 승인 → APPROVED, 한 명이라도 거부 → REJECTED
-    all_decided = all(a.get("status") != "PENDING" for a in approvers)
     any_rejected = any(a.get("status") == "REJECTED" for a in approvers)
     all_approved = all(a.get("status") == "APPROVED" for a in approvers)
 

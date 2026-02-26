@@ -148,8 +148,12 @@ async def send_rfi(
     rfi.status = RFIStatus.SENT
     rfi.sent_at = datetime.now(UTC)
     await audit_service.record(
-        db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
-        actor_email=actor_email, new_value={"status": "SENT"},
+        db,
+        entity_type="RFI",
+        entity_id=rfi.id,
+        action=AuditAction.UPDATE,
+        actor_email=actor_email,
+        new_value={"status": "SENT"},
     )
     await db.commit()
     await db.refresh(rfi)
@@ -172,8 +176,12 @@ async def close_rfi(
     rfi.status = RFIStatus.CLOSED
     rfi.closed_at = datetime.now(UTC)
     await audit_service.record(
-        db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
-        actor_email=actor_email, new_value={"status": "CLOSED"},
+        db,
+        entity_type="RFI",
+        entity_id=rfi.id,
+        action=AuditAction.UPDATE,
+        actor_email=actor_email,
+        new_value={"status": "CLOSED"},
     )
     await db.commit()
     await db.refresh(rfi)
@@ -203,7 +211,10 @@ async def extend_deadline(
     old_date = rfi.due_date
     rfi.due_date = new_due_date
     await audit_service.record(
-        db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
+        db,
+        entity_type="RFI",
+        entity_id=rfi.id,
+        action=AuditAction.UPDATE,
         actor_email=actor_email,
         old_value={"due_date": old_date},
         new_value={"due_date": new_due_date},
@@ -258,8 +269,12 @@ async def add_rfi_item(
     await db.flush()
     await _update_rfi_counts(db, rfi)
     await audit_service.record(
-        db, entity_type="RFIItem", entity_id=item.id, action=AuditAction.CREATE,
-        actor_email=actor_email, new_value=body.model_dump(mode="json"),
+        db,
+        entity_type="RFIItem",
+        entity_id=item.id,
+        action=AuditAction.CREATE,
+        actor_email=actor_email,
+        new_value=body.model_dump(mode="json"),
     )
     await db.commit()
     await db.refresh(item)
@@ -288,8 +303,12 @@ async def batch_add_items(
     await db.flush()
     await _update_rfi_counts(db, rfi)
     await audit_service.record(
-        db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
-        actor_email=actor_email, new_value={"batch_items_added": len(created)},
+        db,
+        entity_type="RFI",
+        entity_id=rfi.id,
+        action=AuditAction.UPDATE,
+        actor_email=actor_email,
+        new_value={"batch_items_added": len(created)},
     )
     await db.commit()
     # BE-PERF-03: 단일 IN 쿼리로 refresh 대체
@@ -312,7 +331,10 @@ async def update_rfi_item(
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
-        db, entity_type="RFIItem", entity_id=item.id, action=AuditAction.UPDATE,
+        db,
+        entity_type="RFIItem",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
         actor_email=actor_email,
         new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
     )
@@ -366,8 +388,12 @@ async def respond_to_item(
     await _update_rfi_counts(db, rfi)
     await _auto_transition_rfi_status(db, rfi)
     await audit_service.record(
-        db, entity_type="RFIItem", entity_id=item.id, action=AuditAction.UPDATE,
-        actor_email=responder_email, new_value={"status": "RESPONDED", "response": body.response[:500]},
+        db,
+        entity_type="RFIItem",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
+        actor_email=responder_email,
+        new_value={"status": "RESPONDED", "response": body.response[:500]},
     )
     await db.commit()
     await db.refresh(item)
@@ -397,8 +423,12 @@ async def review_item(
     rfi = await _get_rfi_simple(db, txn_id, rfi_id)
     await _update_rfi_counts(db, rfi)
     await audit_service.record(
-        db, entity_type="RFIItem", entity_id=item.id, action=AuditAction.UPDATE,
-        actor_email=reviewer_email, new_value={"status": body.status},
+        db,
+        entity_type="RFIItem",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
+        actor_email=reviewer_email,
+        new_value={"status": body.status},
     )
     await db.commit()
     await db.refresh(item)
@@ -421,10 +451,7 @@ async def get_rfi_summary(db: AsyncSession, txn_id: uuid.UUID) -> RFISummary:
 
     # 기한 초과
     now_str = datetime.now(UTC).strftime("%Y-%m-%d")
-    overdue = sum(
-        1 for i in all_items
-        if i.status == RFIItemStatus.PENDING and i.due_date and i.due_date < now_str
-    )
+    overdue = sum(1 for i in all_items if i.status == RFIItemStatus.PENDING and i.due_date and i.due_date < now_str)
 
     # 카테고리별
     cat_map: dict[str, dict[str, int]] = {}
@@ -440,10 +467,7 @@ async def get_rfi_summary(db: AsyncSession, txn_id: uuid.UUID) -> RFISummary:
         if item.status == RFIItemStatus.PENDING:
             cat_map[cat]["pending"] += 1
 
-    by_category = [
-        RFICategorySummary(category=RFICategory(cat), **counts)
-        for cat, counts in cat_map.items()
-    ]
+    by_category = [RFICategorySummary(category=RFICategory(cat), **counts) for cat, counts in cat_map.items()]
 
     return RFISummary(
         total_rfis=len(rfis),
@@ -531,8 +555,12 @@ async def generate_from_dd_checklist(
 
     rfi.total_items = len(dd_items)
     await audit_service.record(
-        db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.CREATE,
-        actor_email=actor_email, new_value={"auto_generated_from": "DD", "items": len(dd_items)},
+        db,
+        entity_type="RFI",
+        entity_id=rfi.id,
+        action=AuditAction.CREATE,
+        actor_email=actor_email,
+        new_value={"auto_generated_from": "DD", "items": len(dd_items)},
     )
     await db.commit()
     await db.refresh(rfi)
@@ -569,9 +597,7 @@ async def _get_rfi_simple(db: AsyncSession, txn_id: uuid.UUID, rfi_id: uuid.UUID
 
 
 async def _get_rfi_item(db: AsyncSession, txn_id: uuid.UUID, rfi_id: uuid.UUID, item_id: uuid.UUID) -> RFIItem:
-    q = select(RFIItem).where(
-        RFIItem.id == item_id, RFIItem.rfi_id == rfi_id, RFIItem.transaction_id == txn_id
-    )
+    q = select(RFIItem).where(RFIItem.id == item_id, RFIItem.rfi_id == rfi_id, RFIItem.transaction_id == txn_id)
     item = (await db.execute(q)).scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFI 항목을 찾을 수 없습니다")
@@ -590,9 +616,7 @@ async def _update_rfi_counts(db: AsyncSession, rfi: RFI) -> None:
     result = await db.execute(q)
     items = list(result.scalars().all())
     rfi.total_items = len(items)
-    rfi.responded_items = sum(
-        1 for i in items if i.status in (RFIItemStatus.RESPONDED, RFIItemStatus.ACCEPTED)
-    )
+    rfi.responded_items = sum(1 for i in items if i.status in (RFIItemStatus.RESPONDED, RFIItemStatus.ACCEPTED))
     rfi.accepted_items = sum(1 for i in items if i.status == RFIItemStatus.ACCEPTED)
 
 

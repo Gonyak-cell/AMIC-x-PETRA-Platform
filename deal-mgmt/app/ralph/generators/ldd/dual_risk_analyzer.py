@@ -36,6 +36,7 @@ DEFAULT_LEVEL_MAP: dict[str, int] = {
 
 # ── 데이터 클래스 ──────────────────────────────────────────────────
 
+
 @dataclass
 class PerspectiveResult:
     """단일 관점 분석 결과."""
@@ -119,6 +120,7 @@ JSON만 반환하세요.
 
 # ── 메인 클래스 ──────────────────────────────────────────────────
 
+
 class DualRiskAnalyzer:
     """Stage 3: 듀얼 관점 리스크 분석.
 
@@ -148,17 +150,25 @@ class DualRiskAnalyzer:
         feedback: str = "",
     ) -> DualAnalysisResult:
         """단일 항목을 듀얼 관점으로 분석한다."""
-        materials = format_source_materials([
-            {
-                "name": f.source_path.split("/")[-1].split("\\")[-1],
-                "text": f.text,
-                "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
-            }
-            for f in source_files if f.is_valid
-        ])
+        materials = format_source_materials(
+            [
+                {
+                    "name": f.source_path.split("/")[-1].split("\\")[-1],
+                    "text": f.text,
+                    "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
+                }
+                for f in source_files
+                if f.is_valid
+            ]
+        )
 
         user_prompt = self._build_user_prompt(
-            item_id, item_name, section_type, section_title, materials, feedback,
+            item_id,
+            item_name,
+            section_type,
+            section_title,
+            materials,
+            feedback,
         )
 
         # 병렬 실행: 매수인 관점 + 독립 평가
@@ -215,15 +225,20 @@ class DualRiskAnalyzer:
     # ── Private Methods ──────────────────────────────────────────
 
     async def _call_perspective(
-        self, routing_key: str, system: str, user: str,
+        self,
+        routing_key: str,
+        system: str,
+        user: str,
     ) -> str:
         """라우터로 특정 관점의 LLM을 호출한다."""
         # 학습 패턴 주입
         enriched_system = system
         if self._learned_patterns:
             from app.ralph.learning.prompt_injector import LearningPromptInjector
+
             enriched_system = LearningPromptInjector().enrich_system_prompt(
-                system, self._learned_patterns,
+                system,
+                self._learned_patterns,
             )
 
         if self._router:
@@ -270,7 +285,10 @@ JSON만 반환하세요.
 """
 
     def _parse_result(
-        self, raw_text: str, perspective: str, item_id: str,
+        self,
+        raw_text: str,
+        perspective: str,
+        item_id: str,
     ) -> PerspectiveResult:
         """LLM 응답을 PerspectiveResult로 파싱한다."""
         data = extract_json(
@@ -376,8 +394,7 @@ JSON만 반환하세요.
                 auto_resolved=False,
                 needs_human_review=True,
                 note=(
-                    f"변호사 검토 필요 (gap={gap}): "
-                    f"Buyer={buyer.issue_level}, Independent={independent.issue_level}"
+                    f"변호사 검토 필요 (gap={gap}): Buyer={buyer.issue_level}, Independent={independent.issue_level}"
                 ),
                 buyer_rationale=buyer.description,
                 independent_rationale=independent.description,
@@ -427,8 +444,14 @@ JSON만 반환하세요.
                 }
         else:
             # 미해결 → FLAGGED로 마킹, 양측 근거 모두 보존
-            higher = buyer if (DEFAULT_LEVEL_MAP.get(buyer.issue_level or "", 0)
-                              >= DEFAULT_LEVEL_MAP.get(independent.issue_level or "", 0)) else independent
+            higher = (
+                buyer
+                if (
+                    DEFAULT_LEVEL_MAP.get(buyer.issue_level or "", 0)
+                    >= DEFAULT_LEVEL_MAP.get(independent.issue_level or "", 0)
+                )
+                else independent
+            )
             return {
                 "item_id": buyer.item_id,
                 "status": "ISSUE",
@@ -438,14 +461,8 @@ JSON만 반환하세요.
                     f"--- 매수인 관점 ({buyer.issue_level}) ---\n{buyer.description}\n\n"
                     f"--- 독립 평가 ({independent.issue_level}) ---\n{independent.description}"
                 ),
-                "deal_impact": (
-                    f"매수인 관점: {buyer.deal_impact}\n"
-                    f"독립 평가: {independent.deal_impact}"
-                ),
-                "recommendation": (
-                    f"매수인 관점: {buyer.recommendation}\n"
-                    f"독립 평가: {independent.recommendation}"
-                ),
+                "deal_impact": (f"매수인 관점: {buyer.deal_impact}\n독립 평가: {independent.deal_impact}"),
+                "recommendation": (f"매수인 관점: {buyer.recommendation}\n독립 평가: {independent.recommendation}"),
                 "confidence": min(buyer.confidence, independent.confidence),
                 "evidence_refs": list(set(buyer.evidence_refs + independent.evidence_refs)),
                 "dual_analysis": {

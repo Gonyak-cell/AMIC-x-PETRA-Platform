@@ -15,9 +15,7 @@ class VdrFolder(Base, TimestampMixin):
 
     __tablename__ = "vdr_folders"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("transactions.id", ondelete="CASCADE"),
@@ -32,9 +30,7 @@ class VdrFolder(Base, TimestampMixin):
     )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category: Mapped[VdrFolderCategory] = mapped_column(
-        Enum(VdrFolderCategory), nullable=False
-    )
+    category: Mapped[VdrFolderCategory] = mapped_column(Enum(VdrFolderCategory), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)

@@ -121,30 +121,30 @@ PPTX_JUDGE_PROMPT = """아래 M&A 메모랜덤({memo_type})의 콘텐츠를 평�
 # ── 차원별 가중치 ─────────────────────────────────────────────────────────────
 
 LDD_WEIGHTS: dict[str, tuple[float, str]] = {
-    "completeness":    (0.20, "완전성"),
-    "accuracy":        (0.25, "정확성/일관성"),
-    "persuasiveness":  (0.20, "설득력"),
+    "completeness": (0.20, "완전성"),
+    "accuracy": (0.25, "정확성/일관성"),
+    "persuasiveness": (0.20, "설득력"),
     "professionalism": (0.15, "전문성"),
-    "depth":           (0.15, "분석 깊이"),
+    "depth": (0.15, "분석 깊이"),
     "confidentiality": (0.05, "기밀 준수"),
 }
 
 PPTX_WEIGHTS: dict[str, tuple[float, str]] = {
-    "completeness":    (0.20, "완전성"),
-    "accuracy":        (0.25, "정확성/일관성"),
-    "persuasiveness":  (0.20, "설득력"),
+    "completeness": (0.20, "완전성"),
+    "accuracy": (0.25, "정확성/일관성"),
+    "persuasiveness": (0.20, "설득력"),
     "professionalism": (0.15, "전문성"),
-    "depth":           (0.15, "분석 깊이"),
+    "depth": (0.15, "분석 깊이"),
     "confidentiality": (0.05, "기밀 준수"),
 }
 
 EXCEL_WEIGHTS: dict[str, tuple[float, str]] = {
     "assumptions_quality": (0.20, "가정값 합리성"),
-    "methodology":         (0.25, "밸류에이션 방법론"),
-    "consistency":         (0.20, "재무제표 정합성"),
-    "professionalism":     (0.15, "IB/PE 수준 구조"),
-    "scenario_depth":      (0.10, "시나리오 분석"),
-    "narrative":           (0.10, "가정 근거"),
+    "methodology": (0.25, "밸류에이션 방법론"),
+    "consistency": (0.20, "재무제표 정합성"),
+    "professionalism": (0.15, "IB/PE 수준 구조"),
+    "scenario_depth": (0.10, "시나리오 분석"),
+    "narrative": (0.10, "가정 근거"),
 }
 
 
@@ -187,7 +187,11 @@ class LLMJudgeGate(QualityGate):
         text = self._extract_text(artifact_path)
         if not text:
             return self._timed_result(
-                start, [], ["문서에서 텍스트를 추출할 수 없습니다"], [], [],
+                start,
+                [],
+                ["문서에서 텍스트를 추출할 수 없습니다"],
+                [],
+                [],
             )
 
         # LLM 호출
@@ -211,20 +215,27 @@ class LLMJudgeGate(QualityGate):
             dim_name = dim_data.get("name", "")
             if dim_name in self._weights:
                 weight, label = self._weights[dim_name]
-                dimensions.append(DimensionScore(
-                    name=dim_name,
-                    label=label,
-                    score=float(dim_data.get("score", 3)),
-                    weight=weight,
-                    feedback=dim_data.get("feedback", ""),
-                ))
+                dimensions.append(
+                    DimensionScore(
+                        name=dim_name,
+                        label=label,
+                        score=float(dim_data.get("score", 3)),
+                        weight=weight,
+                        feedback=dim_data.get("feedback", ""),
+                    )
+                )
 
         critical_flags = result_data.get("critical_flags", [])
         suggestions = [result_data.get("overall_feedback", "")]
         issues = [d.feedback for d in dimensions if d.score < 3 and d.feedback]
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags, cost_usd=cost,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
+            cost_usd=cost,
         )
 
     def _extract_text(self, artifact_path: str) -> str:
@@ -240,6 +251,7 @@ class LLMJudgeGate(QualityGate):
     def _extract_pptx_text(self, path: str) -> str:
         try:
             from pptx import Presentation
+
             prs = Presentation(path)
             texts = []
             for slide in prs.slides:
@@ -256,6 +268,7 @@ class LLMJudgeGate(QualityGate):
     def _extract_docx_text(self, path: str) -> str:
         try:
             from docx import Document
+
             doc = Document(path)
             texts = [p.text for p in doc.paragraphs]
             for table in doc.tables:
@@ -269,6 +282,7 @@ class LLMJudgeGate(QualityGate):
         """Excel 워크북에서 셀 텍스트를 추출한다."""
         try:
             from openpyxl import load_workbook
+
             wb = load_workbook(path, data_only=True)
             texts: list[str] = []
             for ws in wb.worksheets:
@@ -331,5 +345,9 @@ class LLMJudgeGate(QualityGate):
             dimensions.append(DimensionScore(dim_name, label, score, weight))
 
         return self._timed_result(
-            start, dimensions, ["LLM 미연결 — 규칙 기반 fallback 평가"], [], [],
+            start,
+            dimensions,
+            ["LLM 미연결 — 규칙 기반 fallback 평가"],
+            [],
+            [],
         )

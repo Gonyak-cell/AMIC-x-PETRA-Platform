@@ -17,10 +17,16 @@ class NegotiationIssue(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     meeting_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("meeting_logs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     # 이견 식별
@@ -39,10 +45,14 @@ class NegotiationIssue(Base, TimestampMixin):
 
     # 상태
     status: Mapped[NegotiationIssueStatus] = mapped_column(
-        Enum(NegotiationIssueStatus), nullable=False, default=NegotiationIssueStatus.OPEN,
+        Enum(NegotiationIssueStatus),
+        nullable=False,
+        default=NegotiationIssueStatus.OPEN,
     )
     priority: Mapped[NegotiationIssuePriority] = mapped_column(
-        Enum(NegotiationIssuePriority), nullable=False, default=NegotiationIssuePriority.MEDIUM,
+        Enum(NegotiationIssuePriority),
+        nullable=False,
+        default=NegotiationIssuePriority.MEDIUM,
     )
     resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolved_at: Mapped[str | None] = mapped_column(String(30), nullable=True)

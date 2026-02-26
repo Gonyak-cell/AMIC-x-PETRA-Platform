@@ -2,6 +2,7 @@
 
 attrib +P -U <file> 명령으로 "이 디바이스에 항상 유지" 설정.
 """
+
 import pathlib
 import subprocess
 
@@ -18,10 +19,7 @@ real_files = [f for f in files if f.is_file()]
 print(f"Total files: {len(real_files)}")
 
 for f in real_files[:5]:
-    result = subprocess.run(
-        ["attrib", str(f)],
-        capture_output=True, text=True, encoding="cp949", errors="replace"
-    )
+    result = subprocess.run(["attrib", str(f)], capture_output=True, text=True, encoding="cp949", errors="replace")
     print(f"  {result.stdout.strip()}")
 
 # Step 2: 폴더 전체 pin (attrib +P -U /S /D)
@@ -29,7 +27,10 @@ print("\n=== Step 2: 폴더 전체 pin 시도 ===")
 print(f"  대상: {BASE}")
 result = subprocess.run(
     ["attrib", "+P", "-U", "/S", "/D", str(BASE / "*")],
-    capture_output=True, text=True, encoding="cp949", errors="replace",
+    capture_output=True,
+    text=True,
+    encoding="cp949",
+    errors="replace",
     timeout=120,
 )
 print(f"  stdout: {result.stdout[:500] if result.stdout else '(empty)'}")

@@ -69,9 +69,7 @@ class FinancialModel(Base, TimestampMixin):
         uselist=False,
     )
 
-    __table_args__ = (
-        Index("ix_fm_txn_type_status", "transaction_id", "model_type", "status"),
-    )
+    __table_args__ = (Index("ix_fm_txn_type_status", "transaction_id", "model_type", "status"),)
 
 
 # ── FMChecklist ───────────────────────────────────────────────────────────

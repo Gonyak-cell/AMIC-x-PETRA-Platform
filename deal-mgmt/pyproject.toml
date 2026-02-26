@@ -52,6 +52,25 @@ extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = [
+    "E501",   # line too long — Korean text + data dicts make 120-char limit impractical
+    "UP042",  # StrEnum migration — keep str+Enum pattern for now
+]
+
+[tool.ruff.lint.per-file-ignores]
+# OOXML camelCase XML element names are conventional in python-pptx/python-docx
+"app/pptx/memo_generator.py" = ["N806"]
+"app/ralph/generators/ldd/law_firm_template.py" = ["N806"]
+"app/ralph/generators/ldd/law_firm_renderer.py" = ["N806"]
+"app/services/ldd_report_service.py" = ["N806"]
+# Excel formula alias: 'formulas as F' is intentional shorthand
+"app/excel/model_builder.py" = ["N812"]
+# HWP parser: imports used only for isinstance/availability check
+"app/ralph/parsers/hwp_parser.py" = ["F401"]
+# Test files: Korean law names trigger N802, sys.path setup requires E402, Roman numeral chapter vars N806
+"tests/*.py" = ["N802", "N806", "E402"]
+# Script files: lenient import ordering, variable naming, error handling
+"scripts/*.py" = ["E402", "E741", "E722", "N806"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

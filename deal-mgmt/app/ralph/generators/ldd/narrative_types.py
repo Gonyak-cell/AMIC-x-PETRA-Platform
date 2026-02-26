@@ -8,17 +8,19 @@ from dataclasses import dataclass, field
 
 class NarrativeBlockType(enum.StrEnum):
     """6블록 서술 유형."""
-    FACTS = "FACTS"                     # 블록 1: 사실관계
-    LEGAL_REVIEW = "LEGAL_REVIEW"       # 블록 2: 법률 검토
-    ANALYSIS = "ANALYSIS"               # 블록 3: 분석/해석
-    DEAL_IMPACT = "DEAL_IMPACT"         # 블록 4: 거래 영향
-    PENALTY = "PENALTY"                 # 블록 5: 제재/벌칙
-    RECOMMENDATION = "RECOMMENDATION"   # 블록 6: 권고사항
+
+    FACTS = "FACTS"  # 블록 1: 사실관계
+    LEGAL_REVIEW = "LEGAL_REVIEW"  # 블록 2: 법률 검토
+    ANALYSIS = "ANALYSIS"  # 블록 3: 분석/해석
+    DEAL_IMPACT = "DEAL_IMPACT"  # 블록 4: 거래 영향
+    PENALTY = "PENALTY"  # 블록 5: 제재/벌칙
+    RECOMMENDATION = "RECOMMENDATION"  # 블록 6: 권고사항
 
 
 @dataclass
 class NarrativeBlock:
     """서술 블록 하나."""
+
     block_type: NarrativeBlockType
     title: str
     content: str = ""
@@ -28,6 +30,7 @@ class NarrativeBlock:
 @dataclass
 class NarrativeResult:
     """항목 하나에 대한 전체 서술 결과."""
+
     item_id: str
     item_name: str
     section_type: str
@@ -59,12 +62,14 @@ class NarrativeResult:
         """dict에서 NarrativeResult를 복원."""
         blocks = []
         for b in data.get("blocks", []):
-            blocks.append(NarrativeBlock(
-                block_type=NarrativeBlockType(b["block_type"]),
-                title=b["title"],
-                content=b.get("content", ""),
-                word_count=b.get("word_count", 0),
-            ))
+            blocks.append(
+                NarrativeBlock(
+                    block_type=NarrativeBlockType(b["block_type"]),
+                    title=b["title"],
+                    content=b.get("content", ""),
+                    word_count=b.get("word_count", 0),
+                )
+            )
         return cls(
             item_id=data["item_id"],
             item_name=data["item_name"],

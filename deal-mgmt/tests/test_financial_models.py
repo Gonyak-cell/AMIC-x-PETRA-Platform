@@ -127,9 +127,7 @@ async def test_get_financial_model(client, _txn):
 async def test_get_financial_model_not_found(client, _txn):
     """존재하지 않는 모델 — 404."""
     txn_id = _txn["id"]
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/00000000-0000-0000-0000-000000000000"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404
 
 
@@ -156,14 +154,10 @@ async def test_delete_financial_model(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}"
-    )
+    del_resp = await client.delete(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}")
     assert del_resp.status_code == 204
 
-    get_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}"
-    )
+    get_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}")
     assert get_resp.status_code == 404
 
 
@@ -178,9 +172,7 @@ async def test_regenerate_financial_model(client, _txn):
     fm_id = create_resp.json()["id"]
     assert create_resp.json()["version"] == 1
 
-    regen_resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/regenerate"
-    )
+    regen_resp = await client.post(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/regenerate")
     assert regen_resp.status_code == 200
     data = regen_resp.json()
     assert data["version"] == 2
@@ -198,9 +190,7 @@ async def test_download_not_ready(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/download"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/download")
     assert resp.status_code == 404
 
 
@@ -216,9 +206,7 @@ async def test_cross_transaction_isolation(client, _txn, _other_txn):
     )
     fm_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{other_txn_id}/financial-models/{fm_id}"
-    )
+    resp = await client.get(f"/api/v1/transactions/{other_txn_id}/financial-models/{fm_id}")
     assert resp.status_code == 404
 
 
@@ -235,9 +223,7 @@ async def test_checklist_auto_created(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "PENDING_REVIEW"
@@ -256,9 +242,7 @@ async def test_checklist_items_have_categories(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     items = resp.json()["items"]
     categories = {item["category"] for item in items}
     assert "REVENUE_FORECAST" in categories
@@ -277,9 +261,7 @@ async def test_update_checklist_item(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     item_id = cl_resp.json()["items"][0]["id"]
 
     update_resp = await client.put(
@@ -306,9 +288,7 @@ async def test_update_checklist_item_corrected(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     item_id = cl_resp.json()["items"][0]["id"]
 
     update_resp = await client.put(
@@ -335,9 +315,7 @@ async def test_bulk_update_checklist_items(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     cl_data = cl_resp.json()
     cl_id = cl_data["id"]
     items = cl_data["items"][:3]
@@ -371,9 +349,7 @@ async def test_finalize_checklist(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     cl_id = cl_resp.json()["id"]
 
     finalize_resp = await client.post(
@@ -397,18 +373,14 @@ async def test_finalize_checklist_sets_model_status(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     cl_id = cl_resp.json()["id"]
 
     await client.post(
         f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist/{cl_id}/finalize",
     )
 
-    fm_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}"
-    )
+    fm_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}")
     assert fm_resp.status_code == 200
     assert fm_resp.json()["status"] == "FINALIZING"
 
@@ -423,9 +395,7 @@ async def test_checklist_summary_after_updates(client, _txn):
     )
     fm_id = create_resp.json()["id"]
 
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     items = cl_resp.json()["items"]
 
     # 3개 CONFIRMED, 1개 CORRECTED, 1개 FLAGGED
@@ -444,9 +414,7 @@ async def test_checklist_summary_after_updates(client, _txn):
     )
 
     # 체크리스트 다시 조회
-    cl_resp2 = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp2 = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     data = cl_resp2.json()
     assert data["confirmed_count"] == 3
     assert data["corrected_count"] == 1
@@ -466,16 +434,12 @@ async def test_delete_model_cascades_checklist(client, _txn):
     fm_id = create_resp.json()["id"]
 
     # 체크리스트 존재 확인
-    cl_resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     assert cl_resp.status_code == 200
 
     # 모델 삭제
     await client.delete(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}")
 
     # 체크리스트도 삭제됨
-    cl_resp2 = await client.get(
-        f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist"
-    )
+    cl_resp2 = await client.get(f"/api/v1/transactions/{txn_id}/financial-models/{fm_id}/checklist")
     assert cl_resp2.status_code == 404

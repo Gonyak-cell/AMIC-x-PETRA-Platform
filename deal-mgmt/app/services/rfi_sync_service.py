@@ -25,13 +25,10 @@ async def sync_accepted_to_checklists(
     현재는 DD 체크리스트만 지원 (같은 DB).
     IM/FDD는 내부 HTTP API를 통해 향후 구현.
     """
-    q = (
-        select(RFIItem)
-        .where(
-            RFIItem.rfi_id == rfi_id,
-            RFIItem.transaction_id == txn_id,
-            RFIItem.status == RFIItemStatus.ACCEPTED,
-        )
+    q = select(RFIItem).where(
+        RFIItem.rfi_id == rfi_id,
+        RFIItem.transaction_id == txn_id,
+        RFIItem.status == RFIItemStatus.ACCEPTED,
     )
     result = await db.execute(q)
     accepted_items = list(result.scalars().all())

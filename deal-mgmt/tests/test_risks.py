@@ -1,6 +1,5 @@
 """Risk Register API 테스트."""
 
-
 SAMPLE_TXN = {
     "name": "리스크 테스트",
     "code_name": "RISK-001",

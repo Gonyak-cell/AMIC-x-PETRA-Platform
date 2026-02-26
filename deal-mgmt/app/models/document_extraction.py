@@ -19,9 +19,7 @@ class DocumentExtraction(Base, TimestampMixin):
 
     __tablename__ = "document_extractions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("transactions.id", ondelete="CASCADE"),
@@ -36,12 +34,8 @@ class DocumentExtraction(Base, TimestampMixin):
     )
 
     # ── 분류 결과 ────────────────────────────────────────
-    doc_category: Mapped[DocExtractionCategory | None] = mapped_column(
-        Enum(DocExtractionCategory), nullable=True
-    )
-    classification_confidence: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )
+    doc_category: Mapped[DocExtractionCategory | None] = mapped_column(Enum(DocExtractionCategory), nullable=True)
+    classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # ── 작업 상태 ────────────────────────────────────────
     status: Mapped[ExtractionStatus] = mapped_column(
@@ -58,19 +52,11 @@ class DocumentExtraction(Base, TimestampMixin):
     target_model: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )  # "nda", "bid", "contract", "transaction"
-    target_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # ── 비용 추적 ────────────────────────────────────────
-    llm_cost_usd: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
+    llm_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     # ── 사용자 검토 ──────────────────────────────────────
-    reviewed_by_email: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
-    reviewed_at: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
+    reviewed_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewed_at: Mapped[str | None] = mapped_column(String(50), nullable=True)

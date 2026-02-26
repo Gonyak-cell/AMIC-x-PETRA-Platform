@@ -69,6 +69,7 @@ async def _create_txn(client) -> str:
 
 # ── 기본 섹션 조회 ────────────────────────────────────────────────────────────
 
+
 async def test_get_default_sections(client):
     """기본 DDRL 10개 섹션 구조를 반환해야 한다."""
     resp = await client.get("/api/v1/ldd-reports/default-sections")
@@ -87,6 +88,7 @@ async def test_get_default_sections(client):
 
 
 # ── 생성 ─────────────────────────────────────────────────────────────────────
+
 
 async def test_create_full_ldd_report_with_default_sections(client):
     """기본 섹션으로 FULL LDD 보고서를 생성해야 한다."""
@@ -163,6 +165,7 @@ async def test_create_ldd_report_invalid_txn(client):
 
 # ── 목록/단건 조회 ────────────────────────────────────────────────────────────
 
+
 async def test_list_ldd_reports(client):
     """보고서 목록을 반환해야 한다."""
     txn_id = await _create_txn(client)
@@ -171,7 +174,7 @@ async def test_list_ldd_reports(client):
     for i in range(2):
         await client.post(
             f"/api/v1/transactions/{txn_id}/ldd-reports",
-            json={"title": f"테스트 LDD {i+1}", "report_type": "FULL"},
+            json={"title": f"테스트 LDD {i + 1}", "report_type": "FULL"},
         )
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/ldd-reports")
@@ -195,6 +198,7 @@ async def test_get_ldd_report(client):
 
 
 # ── 섹션 수정 ─────────────────────────────────────────────────────────────────
+
 
 async def test_update_ldd_sections(client):
     """섹션 수정 후 이슈 카운트가 재계산되어야 한다."""
@@ -221,6 +225,7 @@ async def test_update_ldd_sections(client):
 
 # ── 재생성 ────────────────────────────────────────────────────────────────────
 
+
 async def test_regenerate_ldd_report(client):
     """보고서 재생성이 올바르게 작동해야 한다."""
     txn_id = await _create_txn(client)
@@ -230,14 +235,13 @@ async def test_regenerate_ldd_report(client):
     )
     report_id = create_resp.json()["id"]
 
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/regenerate"
-    )
+    resp = await client.post(f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/regenerate")
     assert resp.status_code == 200
     assert resp.json()["status"] in ("READY", "FAILED", "GENERATING")
 
 
 # ── 삭제 ─────────────────────────────────────────────────────────────────────
+
 
 async def test_delete_ldd_report(client):
     """보고서 삭제 후 목록에서 제거되어야 한다."""
@@ -248,9 +252,7 @@ async def test_delete_ldd_report(client):
     )
     report_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}"
-    )
+    del_resp = await client.delete(f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}")
     assert del_resp.status_code == 204
 
     # 목록에서 없어졌는지 확인
@@ -267,6 +269,7 @@ async def test_delete_nonexistent_report(client):
 
 
 # ── 리스크 색상 자동 계산 ─────────────────────────────────────────────────────
+
 
 async def test_risk_color_auto_calculation(client):
     """이슈레벨에 따라 risk_color가 자동으로 계산되어야 한다."""

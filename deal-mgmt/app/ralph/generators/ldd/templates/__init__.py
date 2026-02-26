@@ -80,12 +80,14 @@ class TemplateRegistry:
         result = []
         for deal_type, template_cls in cls._templates.items():
             t = template_cls()
-            result.append({
-                "deal_type": deal_type,
-                "display_name": t.display_name,
-                "section_count": len(t.sections),
-                "item_count": t.get_item_count(),
-            })
+            result.append(
+                {
+                    "deal_type": deal_type,
+                    "display_name": t.display_name,
+                    "section_count": len(t.sections),
+                    "item_count": t.get_item_count(),
+                }
+            )
         return result
 
     @classmethod

@@ -18,29 +18,22 @@ logger = logging.getLogger(__name__)
 DEFAULT_LDD_ROUTING: dict[str, str] = {
     # Stage 1: 문서 분류 (비용 효율)
     "document_classification": "google",
-
     # Stage 2: 조항 추출 (법률 문서 이해력)
     "clause_extraction": "anthropic",
-
     # Stage 3: 리스크 분석 (관점 다양화)
     "risk_analysis_buyer": "anthropic",
     "risk_analysis_independent": "openai",
-
     # Stage 4: 누락 탐지 (커버리지 극대화)
     "gap_detection_checklist": "anthropic",
     "gap_detection_freeform": "openai",
-
     # Stage 5: 관할권 교차 (언어별 특화)
     "jurisdiction_korean": "anthropic",
     "jurisdiction_english": "openai",
-
     # Stage 6: 레포트 생성 (톤 일관성)
     "report_generation": "anthropic",
     "executive_summary": "anthropic",
-
     # Stage 7: QA (독립 팩트체크 — 분석에 미사용 프로바이더)
     "final_qa": "google",
-
     # 기존 섹션별 분석 (단일 LLM 모드 호환)
     "governance_analysis": "anthropic",
     "capital_analysis": "anthropic",
@@ -120,7 +113,9 @@ class LDDModelRouter:
             if fallback in self._available_providers:
                 logger.info(
                     "LDD 라우터 폴백: section=%s, 원래=%s → 폴백=%s",
-                    section_id, primary, fallback,
+                    section_id,
+                    primary,
+                    fallback,
                 )
                 return RoutingDecision(
                     section_id=section_id,
@@ -130,18 +125,17 @@ class LDDModelRouter:
                 )
 
         raise RuntimeError(
-            f"LDD 라우터: '{section_id}'에 사용 가능한 프로바이더 없음. "
-            f"등록: {self.available_providers}"
+            f"LDD 라우터: '{section_id}'에 사용 가능한 프로바이더 없음. 등록: {self.available_providers}"
         )
 
     async def call_routed(self, section_id: str, system: str, user: str) -> str:
         """섹션에 맞는 프로바이더로 LLM을 호출한다."""
         decision = self.resolve(section_id)
         result = await self._llm_client.call_for_provider(
-            system, user, provider=decision.provider,
+            system,
+            user,
+            provider=decision.provider,
         )
         if not result or not result.strip():
-            raise ValueError(
-                f"LDD 라우터: '{section_id}' (provider={decision.provider}) 빈 응답 반환"
-            )
+            raise ValueError(f"LDD 라우터: '{section_id}' (provider={decision.provider}) 빈 응답 반환")
         return result

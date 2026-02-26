@@ -34,12 +34,8 @@ from app.models.enums import FinancialModelType, FMChecklistCategory
 from app.services.financial_model_service import FM_FIELD_REGISTRY
 
 # title → category 매핑 (Input 시트 카테고리별 필터링용)
-_TITLE_TO_CATEGORY: dict[str, FMChecklistCategory] = {
-    field["title"]: field["category"] for field in FM_FIELD_REGISTRY
-}
-_TITLE_TO_UNIT: dict[str, str | None] = {
-    field["title"]: field.get("unit") for field in FM_FIELD_REGISTRY
-}
+_TITLE_TO_CATEGORY: dict[str, FMChecklistCategory] = {field["title"]: field["category"] for field in FM_FIELD_REGISTRY}
+_TITLE_TO_UNIT: dict[str, str | None] = {field["title"]: field.get("unit") for field in FM_FIELD_REGISTRY}
 
 logger = logging.getLogger(__name__)
 
@@ -69,25 +65,63 @@ def _get_num(checklist_values: dict[str, str], title: str, default: float = 0.0)
 
 SHEET_CONFIG: dict[FinancialModelType, list[str]] = {
     FinancialModelType.DCF: [
-        "Legend", "Input", "IS", "BS", "CF", "WACC", "DCF", "Sensitivity", "Summary",
+        "Legend",
+        "Input",
+        "IS",
+        "BS",
+        "CF",
+        "WACC",
+        "DCF",
+        "Sensitivity",
+        "Summary",
     ],
     FinancialModelType.LBO: [
-        "Legend", "Input", "Sources & Uses", "IS", "BS", "CF",
-        "Debt Schedule", "Returns", "Sensitivity", "Summary",
+        "Legend",
+        "Input",
+        "Sources & Uses",
+        "IS",
+        "BS",
+        "CF",
+        "Debt Schedule",
+        "Returns",
+        "Sensitivity",
+        "Summary",
     ],
     FinancialModelType.COMPS: [
-        "Legend", "GPCM", "GTM", "Football Field", "Summary",
+        "Legend",
+        "GPCM",
+        "GTM",
+        "Football Field",
+        "Summary",
     ],
     FinancialModelType.TRANSACTION_COMPS: [
-        "Legend", "GTM", "Summary",
+        "Legend",
+        "GTM",
+        "Summary",
     ],
     FinancialModelType.PROJECTION: [
-        "Legend", "Input", "IS", "BS", "CF", "Revenue Build-Up",
-        "Cost Structure", "Summary",
+        "Legend",
+        "Input",
+        "IS",
+        "BS",
+        "CF",
+        "Revenue Build-Up",
+        "Cost Structure",
+        "Summary",
     ],
     FinancialModelType.FULL: [
-        "Legend", "Input", "IS", "BS", "CF", "WACC", "DCF",
-        "GPCM", "GTM", "Sensitivity", "Football Field", "Summary",
+        "Legend",
+        "Input",
+        "IS",
+        "BS",
+        "CF",
+        "WACC",
+        "DCF",
+        "GPCM",
+        "GTM",
+        "Sensitivity",
+        "Football Field",
+        "Summary",
     ],
 }
 
@@ -175,37 +209,55 @@ class FinancialModelBuilder:
         row = 4
         # 카테고리별 입력값 배치
         categories = [
-            ("Revenue & Growth", [
-                FMChecklistCategory.REVENUE_FORECAST,
-                FMChecklistCategory.GROWTH_ASSUMPTIONS,
-                FMChecklistCategory.VOLUME_PRICE_MIX,
-            ]),
-            ("Cost Structure", [
-                FMChecklistCategory.COGS_FORECAST,
-                FMChecklistCategory.SGA_FORECAST,
-                FMChecklistCategory.DEPRECIATION_AMORT,
-                FMChecklistCategory.CAPEX_FORECAST,
-            ]),
-            ("Working Capital", [
-                FMChecklistCategory.NWC_ASSUMPTIONS,
-                FMChecklistCategory.FCF_DERIVATION,
-            ]),
-            ("Capital Structure & WACC", [
-                FMChecklistCategory.FM_DEBT_SCHEDULE,
-                FMChecklistCategory.WACC_COMPONENTS,
-                FMChecklistCategory.TAX_RATE,
-            ]),
-            ("Valuation", [
-                FMChecklistCategory.DCF_PARAMETERS,
-                FMChecklistCategory.TRADING_MULTIPLES,
-                FMChecklistCategory.TRANSACTION_MULTIPLES,
-            ]),
-            ("Scenarios", [
-                FMChecklistCategory.BASE_SCENARIO,
-                FMChecklistCategory.UPSIDE_SCENARIO,
-                FMChecklistCategory.DOWNSIDE_SCENARIO,
-                FMChecklistCategory.SENSITIVITY_MATRIX,
-            ]),
+            (
+                "Revenue & Growth",
+                [
+                    FMChecklistCategory.REVENUE_FORECAST,
+                    FMChecklistCategory.GROWTH_ASSUMPTIONS,
+                    FMChecklistCategory.VOLUME_PRICE_MIX,
+                ],
+            ),
+            (
+                "Cost Structure",
+                [
+                    FMChecklistCategory.COGS_FORECAST,
+                    FMChecklistCategory.SGA_FORECAST,
+                    FMChecklistCategory.DEPRECIATION_AMORT,
+                    FMChecklistCategory.CAPEX_FORECAST,
+                ],
+            ),
+            (
+                "Working Capital",
+                [
+                    FMChecklistCategory.NWC_ASSUMPTIONS,
+                    FMChecklistCategory.FCF_DERIVATION,
+                ],
+            ),
+            (
+                "Capital Structure & WACC",
+                [
+                    FMChecklistCategory.FM_DEBT_SCHEDULE,
+                    FMChecklistCategory.WACC_COMPONENTS,
+                    FMChecklistCategory.TAX_RATE,
+                ],
+            ),
+            (
+                "Valuation",
+                [
+                    FMChecklistCategory.DCF_PARAMETERS,
+                    FMChecklistCategory.TRADING_MULTIPLES,
+                    FMChecklistCategory.TRANSACTION_MULTIPLES,
+                ],
+            ),
+            (
+                "Scenarios",
+                [
+                    FMChecklistCategory.BASE_SCENARIO,
+                    FMChecklistCategory.UPSIDE_SCENARIO,
+                    FMChecklistCategory.DOWNSIDE_SCENARIO,
+                    FMChecklistCategory.SENSITIVITY_MATRIX,
+                ],
+            ),
         ]
 
         for group_name, cats in categories:
@@ -217,16 +269,10 @@ class FinancialModelBuilder:
             row += 1
 
             for cat in cats:
-                cat_items = [
-                    (title, val) for title, val in self.values.items()
-                    if _TITLE_TO_CATEGORY.get(title) == cat
-                ]
+                cat_items = [(title, val) for title, val in self.values.items() if _TITLE_TO_CATEGORY.get(title) == cat]
                 if not cat_items:
                     # 값이 없어도 레지스트리에서 빈 행 생성 (입력 슬롯)
-                    cat_items = [
-                        (f["title"], "") for f in FM_FIELD_REGISTRY
-                        if f["category"] == cat
-                    ]
+                    cat_items = [(f["title"], "") for f in FM_FIELD_REGISTRY if f["category"] == cat]
                 # 카테고리 이름 표시
                 apply_subheader(ws.cell(row=row, column=2), cat.value.replace("_", " ").title())
                 row += 1
@@ -246,7 +292,6 @@ class FinancialModelBuilder:
     def _build_is(self, ws):
         """손익계산서 — 5년 프로젝션 수식 기반."""
         years = list(range(FORECAST_START, FORECAST_START + PROJECTION_YEARS))
-        n_cols = len(years) + 1  # 라벨 + 연도별
         set_column_widths(ws, {"A": 3, "B": 30, **{get_column_letter(i + 3): 16 for i in range(len(years))}})
         ws.sheet_properties.tabColor = "2D6A4F"
 
@@ -359,17 +404,29 @@ class FinancialModelBuilder:
 
         # 자산
         items_assets = [
-            "Cash & Equivalents", "Accounts Receivable", "Inventory",
-            "Other Current Assets", "Total Current Assets",
-            "PP&E (net)", "Intangible Assets", "Other Non-Current Assets",
-            "Total Non-Current Assets", "Total Assets",
+            "Cash & Equivalents",
+            "Accounts Receivable",
+            "Inventory",
+            "Other Current Assets",
+            "Total Current Assets",
+            "PP&E (net)",
+            "Intangible Assets",
+            "Other Non-Current Assets",
+            "Total Non-Current Assets",
+            "Total Assets",
         ]
         items_liab_eq = [
-            "Accounts Payable", "Short-term Debt", "Other Current Liabilities",
+            "Accounts Payable",
+            "Short-term Debt",
+            "Other Current Liabilities",
             "Total Current Liabilities",
-            "Long-term Debt", "Other Non-Current Liabilities",
-            "Total Non-Current Liabilities", "Total Liabilities",
-            "Common Equity", "Retained Earnings", "Total Equity",
+            "Long-term Debt",
+            "Other Non-Current Liabilities",
+            "Total Non-Current Liabilities",
+            "Total Liabilities",
+            "Common Equity",
+            "Retained Earnings",
+            "Total Equity",
             "Total Liabilities & Equity",
         ]
 
@@ -592,7 +649,9 @@ class FinancialModelBuilder:
         apply_section_title(ws.cell(row=row, column=2), "WACC")
         row += 1
         apply_label(ws.cell(row=row, column=2), "WACC")
-        apply_total(ws.cell(row=row, column=3), F.wacc(f"C{ke_row}", f"C{kd_row}", f"C{we_row}", f"C{wd_row}"), NUM_FMT_PCT_2)
+        apply_total(
+            ws.cell(row=row, column=3), F.wacc(f"C{ke_row}", f"C{kd_row}", f"C{we_row}", f"C{wd_row}"), NUM_FMT_PCT_2
+        )
 
     # ── DCF 시트 ──────────────────────────────────────────────
 
@@ -675,9 +734,19 @@ class FinancialModelBuilder:
 
     def _build_gpcm(self, ws):
         """Guideline Public Company Method (비교기업 분석)."""
-        set_column_widths(ws, {
-            "A": 3, "B": 25, "C": 15, "D": 15, "E": 15, "F": 15, "G": 15, "H": 15,
-        })
+        set_column_widths(
+            ws,
+            {
+                "A": 3,
+                "B": 25,
+                "C": 15,
+                "D": 15,
+                "E": 15,
+                "F": 15,
+                "G": 15,
+                "H": 15,
+            },
+        )
         ws.sheet_properties.tabColor = "95D5B2"
 
         apply_title(ws["B2"], "Guideline Public Company Method (GPCM)")
@@ -733,9 +802,19 @@ class FinancialModelBuilder:
 
     def _build_gtm(self, ws):
         """Guideline Transaction Method (선례거래 분석)."""
-        set_column_widths(ws, {
-            "A": 3, "B": 25, "C": 12, "D": 15, "E": 15, "F": 15, "G": 15, "H": 15,
-        })
+        set_column_widths(
+            ws,
+            {
+                "A": 3,
+                "B": 25,
+                "C": 12,
+                "D": 15,
+                "E": 15,
+                "F": 15,
+                "G": 15,
+                "H": 15,
+            },
+        )
         ws.sheet_properties.tabColor = "95D5B2"
 
         apply_title(ws["B2"], "Guideline Transaction Method (GTM)")

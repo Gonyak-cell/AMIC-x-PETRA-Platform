@@ -43,11 +43,7 @@ async def _set_report_status(async_session, report_id: str, status: str) -> None
     """DB에서 LDD 보고서 상태를 직접 변경한다 (테스트 전용)."""
     from app.models.ldd_report import LDDReport
 
-    stmt = (
-        update(LDDReport)
-        .where(LDDReport.id == uuid.UUID(report_id))
-        .values(status=status)
-    )
+    stmt = update(LDDReport).where(LDDReport.id == uuid.UUID(report_id)).values(status=status)
     await async_session.execute(stmt)
     await async_session.commit()
 
@@ -61,9 +57,7 @@ async def test_review_progress_initial(client):
     report = await _create_review_report(client, txn_id)
     report_id = report["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/review-progress"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/review-progress")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] > 0
@@ -82,9 +76,7 @@ async def test_list_references_empty(client):
     report = await _create_review_report(client, txn_id)
     report_id = report["id"]
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/references"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/references")
     assert resp.status_code == 200
     assert resp.json() == []
 
@@ -96,9 +88,7 @@ async def test_delete_nonexistent_reference(client):
     report_id = report["id"]
     fake_ref_id = "00000000-0000-0000-0000-000000000000"
 
-    resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/references/{fake_ref_id}"
-    )
+    resp = await client.delete(f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/references/{fake_ref_id}")
     assert resp.status_code == 404
 
 

@@ -42,8 +42,8 @@ FONT_EN = "Times New Roman"
 
 # ─── 공통 유틸 ────────────────────────────────────────────────────────────────
 
-def _apply_font(run, size_pt: float | None = None, bold: bool | None = None,
-                color: RGBColor | None = None) -> None:
+
+def _apply_font(run, size_pt: float | None = None, bold: bool | None = None, color: RGBColor | None = None) -> None:
     """Run에 바탕체(한글) + Times New Roman(영문) 폰트 적용."""
     run.font.name = FONT_EN
     run.font.element.rPr.rFonts.set(qn("w:eastAsia"), FONT_KO)
@@ -55,25 +55,25 @@ def _apply_font(run, size_pt: float | None = None, bold: bool | None = None,
         run.font.color.rgb = color
 
 
-def _set_margins(doc: Document, left: float = 2.54, right: float = 2.54,
-                  top: float = 3.00, bottom: float = 2.54) -> None:
+def _set_margins(
+    doc: Document, left: float = 2.54, right: float = 2.54, top: float = 3.00, bottom: float = 2.54
+) -> None:
     """A4 페이지 여백 설정 (cm 단위)."""
     for section in doc.sections:
-        section.page_width  = Cm(21.0)
+        section.page_width = Cm(21.0)
         section.page_height = Cm(29.7)
-        section.left_margin   = Cm(left)
-        section.right_margin  = Cm(right)
-        section.top_margin    = Cm(top)
+        section.left_margin = Cm(left)
+        section.right_margin = Cm(right)
+        section.top_margin = Cm(top)
         section.bottom_margin = Cm(bottom)
 
 
-def _add_title(doc: Document, text: str, size_pt: float = 16.0,
-               space_before_pt: float = 40.0) -> None:
+def _add_title(doc: Document, text: str, size_pt: float = 16.0, space_before_pt: float = 40.0) -> None:
     """문서 제목 단락 — 중앙정렬, 바탕체 Bold."""
     para = doc.add_paragraph()
     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     para.paragraph_format.space_before = Pt(space_before_pt)
-    para.paragraph_format.space_after  = Pt(12)
+    para.paragraph_format.space_after = Pt(12)
     run = para.add_run(text)
     _apply_font(run, size_pt=size_pt, bold=True)
 
@@ -91,7 +91,7 @@ def _add_section_heading(doc: Document, text: str) -> None:
     """섹션 제목 (H1 수준) — 14pt Bold."""
     para = doc.add_paragraph(style="Heading 1")
     para.paragraph_format.space_before = Pt(16)
-    para.paragraph_format.space_after  = Pt(8)
+    para.paragraph_format.space_after = Pt(8)
     run = para.add_run(text)
     _apply_font(run, size_pt=14.0, bold=True)
 
@@ -100,7 +100,7 @@ def _add_subsection_heading(doc: Document, text: str) -> None:
     """소항 제목 (H2 수준) — 12pt Bold."""
     para = doc.add_paragraph(style="Heading 2")
     para.paragraph_format.space_before = Pt(10)
-    para.paragraph_format.space_after  = Pt(6)
+    para.paragraph_format.space_after = Pt(6)
     run = para.add_run(text)
     _apply_font(run, size_pt=12.0, bold=True)
 
@@ -133,8 +133,7 @@ def _set_cell_background(cell, hex_color: str) -> None:
     tcPr.append(shd)
 
 
-def _set_cell_text(cell, text: str, size_pt: float = 10.0,
-                   bold: bool = False, center: bool = False) -> None:
+def _set_cell_text(cell, text: str, size_pt: float = 10.0, bold: bool = False, center: bool = False) -> None:
     """테이블 셀 텍스트 설정."""
     cell.text = ""
     para = cell.paragraphs[0]
@@ -145,6 +144,7 @@ def _set_cell_text(cell, text: str, size_pt: float = 10.0,
 
 
 # ─── FULL 템플릿 생성 ─────────────────────────────────────────────────────────
+
 
 def create_full_template(output_path: Path) -> None:
     """정식 전체 LDD 보고서 템플릿 (10개 섹션)."""
@@ -173,9 +173,9 @@ def create_full_template(output_path: Path) -> None:
     summary_tbl = doc.add_table(rows=2, cols=5)
     summary_tbl.style = "Table Grid"
     headers = ["구분", "Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
-    values  = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    values = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     header_colors = ["D9D9D9", "FF0000", "FF9900", "70AD47", "D9D9D9"]
-    value_colors  = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
+    value_colors = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
 
     for i, (hdr, color) in enumerate(zip(headers, header_colors)):
         cell = summary_tbl.rows[0].cells[i]
@@ -193,8 +193,14 @@ def create_full_template(output_path: Path) -> None:
     status_tbl = doc.add_table(rows=2, cols=6)
     status_tbl.style = "Table Grid"
     s_headers = ["전체", "이슈(ISSUE)", "이상없음(OK)", "해당없음(N/A)", "미검토(Pending)", "RFI 요청"]
-    s_values  = ["{{ total_items }}", "{{ issue_count }}", "{{ ok_count }}",
-                 "{{ na_count }}", "{{ pending_count }}", "{{ rfi_count }}"]
+    s_values = [
+        "{{ total_items }}",
+        "{{ issue_count }}",
+        "{{ ok_count }}",
+        "{{ na_count }}",
+        "{{ pending_count }}",
+        "{{ rfi_count }}",
+    ]
     for i, hdr in enumerate(s_headers):
         _set_cell_text(status_tbl.rows[0].cells[i], hdr, bold=True, center=True)
         _set_cell_background(status_tbl.rows[0].cells[i], "D9D9D9")
@@ -221,7 +227,7 @@ def create_full_template(output_path: Path) -> None:
     item_tbl = doc.add_table(rows=2, cols=7)
     item_tbl.style = "Table Grid"
     col_headers = ["No.", "항목명", "결과", "이슈등급", "발견사항", "거래영향", "권고사항"]
-    col_widths   = [1.0, 3.5, 1.5, 1.8, 4.5, 3.5, 4.0]
+    col_widths = [1.0, 3.5, 1.5, 1.8, 4.5, 3.5, 4.0]
 
     # 헤더 행
     for j, (hdr, w) in enumerate(zip(col_headers, col_widths)):
@@ -285,9 +291,7 @@ def create_full_template(output_path: Path) -> None:
     # docxtpl 이슈 루프
     issue_row = issue_tbl.add_row()
     issue_row.cells[0].text = ""
-    issue_row.cells[0].paragraphs[0].add_run(
-        "{%tr for issue in all_issues %}"
-    )
+    issue_row.cells[0].paragraphs[0].add_run("{%tr for issue in all_issues %}")
     for j in range(1, 6):
         issue_row.cells[j].text = ""
 
@@ -319,6 +323,7 @@ def create_full_template(output_path: Path) -> None:
 
 # ─── REDFLAG 템플릿 생성 ──────────────────────────────────────────────────────
 
+
 def create_redflag_template(output_path: Path) -> None:
     """Redflag DD 보고서 템플릿 (Executive Summary + Red/Amber 이슈만)."""
     doc = Document()
@@ -340,9 +345,12 @@ def create_redflag_template(output_path: Path) -> None:
     _add_section_heading(doc, "I. Executive Summary")
 
     _add_subsection_heading(doc, "Overall Assessment")
-    _add_body(doc, "본 Redflag DD는 대상회사 {{ target_company }}에 대한 "
-              "법률실사에서 Red(Critical) 및 Amber(High/Medium) 등급 이슈를 중심으로 "
-              "거래에 미치는 영향과 주요 권고사항을 기술한다.")
+    _add_body(
+        doc,
+        "본 Redflag DD는 대상회사 {{ target_company }}에 대한 "
+        "법률실사에서 Red(Critical) 및 Amber(High/Medium) 등급 이슈를 중심으로 "
+        "거래에 미치는 영향과 주요 권고사항을 기술한다.",
+    )
     doc.add_paragraph()
 
     # 이슈 현황 요약 테이블
@@ -350,7 +358,7 @@ def create_redflag_template(output_path: Path) -> None:
     rf_tbl = doc.add_table(rows=2, cols=4)
     rf_tbl.style = "Table Grid"
     rf_headers = ["Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
-    rf_values  = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    rf_values = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     rf_h_colors = ["FF0000", "FF9900", "70AD47", "D9D9D9"]
     rf_v_colors = ["FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
 
@@ -458,6 +466,7 @@ def create_redflag_template(output_path: Path) -> None:
 
 # ─── NARRATIVE FULL 템플릿 ──────────────────────────────────────────────────
 
+
 def create_narrative_full_template(output_path: Path) -> None:
     """서술형 정식 LDD 보고서 템플릿.
 
@@ -489,9 +498,9 @@ def create_narrative_full_template(output_path: Path) -> None:
     summary_tbl = doc.add_table(rows=2, cols=5)
     summary_tbl.style = "Table Grid"
     headers = ["구분", "Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
-    values  = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    values = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     header_colors = ["D9D9D9", "FF0000", "FF9900", "70AD47", "D9D9D9"]
-    value_colors  = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
+    value_colors = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
     for i, (hdr, color) in enumerate(zip(headers, header_colors)):
         cell = summary_tbl.rows[0].cells[i]
         _set_cell_background(cell, color)
@@ -590,6 +599,7 @@ def create_narrative_full_template(output_path: Path) -> None:
 
 # ─── NARRATIVE REDFLAG 템플릿 ────────────────────────────────────────────────
 
+
 def create_narrative_redflag_template(output_path: Path) -> None:
     """서술형 Redflag DD 템플릿.
 
@@ -612,15 +622,18 @@ def create_narrative_redflag_template(output_path: Path) -> None:
 
     # ── Executive Summary ──
     _add_section_heading(doc, "I. Executive Summary")
-    _add_body(doc, "본 Redflag DD는 대상회사 {{ target_company }}에 대한 "
-              "법률실사에서 Red(Critical) 및 Amber(High/Medium) 등급 이슈를 중심으로 "
-              "심층 서술 분석을 제공한다.")
+    _add_body(
+        doc,
+        "본 Redflag DD는 대상회사 {{ target_company }}에 대한 "
+        "법률실사에서 Red(Critical) 및 Amber(High/Medium) 등급 이슈를 중심으로 "
+        "심층 서술 분석을 제공한다.",
+    )
     doc.add_paragraph()
 
     rf_tbl = doc.add_table(rows=2, cols=4)
     rf_tbl.style = "Table Grid"
     rf_headers = ["Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
-    rf_values  = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    rf_values = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     rf_h_colors = ["FF0000", "FF9900", "70AD47", "D9D9D9"]
     rf_v_colors = ["FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
     for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors)):

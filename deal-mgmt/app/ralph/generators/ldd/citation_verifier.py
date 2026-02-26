@@ -279,7 +279,9 @@ class CitationVerifier:
         return f"{prefix}_{article}"
 
     def _annotate_unverified(
-        self, text: str, citations: list[CitationRef],
+        self,
+        text: str,
+        citations: list[CitationRef],
     ) -> str:
         """미확인 인용에 [미확인] 태그를 추가한다."""
         annotated = text

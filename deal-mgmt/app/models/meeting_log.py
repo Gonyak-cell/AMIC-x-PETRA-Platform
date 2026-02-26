@@ -17,7 +17,10 @@ class MeetingLog(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # 단계 구분
@@ -29,10 +32,14 @@ class MeetingLog(Base, TimestampMixin):
     meeting_time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # HH:MM
     location: Mapped[str | None] = mapped_column(String(500), nullable=True)
     channel: Mapped[MeetingChannel] = mapped_column(
-        Enum(MeetingChannel), nullable=False, default=MeetingChannel.IN_PERSON,
+        Enum(MeetingChannel),
+        nullable=False,
+        default=MeetingChannel.IN_PERSON,
     )
     status: Mapped[MeetingStatus] = mapped_column(
-        Enum(MeetingStatus), nullable=False, default=MeetingStatus.COMPLETED,
+        Enum(MeetingStatus),
+        nullable=False,
+        default=MeetingStatus.COMPLETED,
     )
 
     # 회의록
@@ -47,18 +54,23 @@ class MeetingLog(Base, TimestampMixin):
 
     # 마케팅 전용: 매수인 연결
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("buyer_candidates.id"), nullable=True,
+        UUID(as_uuid=True),
+        ForeignKey("buyer_candidates.id"),
+        nullable=True,
     )
 
     # 마케팅 전용: 조건 평가
     condition_match: Mapped[ConditionMatchLevel | None] = mapped_column(
-        Enum(ConditionMatchLevel), nullable=True,
+        Enum(ConditionMatchLevel),
+        nullable=True,
     )
     condition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 협상 전용: 관련 계약
     contract_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("contracts.id"), nullable=True,
+        UUID(as_uuid=True),
+        ForeignKey("contracts.id"),
+        nullable=True,
     )
 
     # 참석 인원 수 (비정규화, 빠른 조회용)

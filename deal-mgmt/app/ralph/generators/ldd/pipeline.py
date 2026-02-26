@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 # ── 파이프라인 결과 ──────────────────────────────────────────────
 
+
 @dataclass
 class StageProgress:
     """개별 Stage 진행 상태."""
@@ -48,6 +49,7 @@ class PipelineResult:
 
 
 # ── 메인 파이프라인 ──────────────────────────────────────────────
+
 
 class LDDMultiLLMPipeline:
     """LDD 10단계 멀티 LLM 파이프라인 오케스트레이터.
@@ -111,8 +113,10 @@ class LDDMultiLLMPipeline:
         def _make_llm_call(routing_key: str):
             """routing_key를 바인딩한 2-인자 LLM 콜백을 생성한다."""
             if self._router:
+
                 async def routed_call(system: str, user: str) -> str:
                     return await self._router.call_routed(routing_key, system, user)
+
                 return routed_call
             if self._llm_client and self._llm_client.is_available:
                 return self._llm_client.call
@@ -168,7 +172,8 @@ class LDDMultiLLMPipeline:
             self._update_stage(3, "running")
             try:
                 gap_result = await self._run_stage4_gap_detection(
-                    section_results, vdr_document_names or [],
+                    section_results,
+                    vdr_document_names or [],
                 )
                 result.gap_detection = {
                     "total_checklist": gap_result.total_checklist,
@@ -196,7 +201,12 @@ class LDDMultiLLMPipeline:
             gap_result = None
 
         # ── Stage 5: 관할권 교차 분석 (크로스보더 시) ──
-        if self._config.stage5_jurisdiction and self._config.is_cross_border and self._router and not self._is_cost_exceeded():
+        if (
+            self._config.stage5_jurisdiction
+            and self._config.is_cross_border
+            and self._router
+            and not self._is_cost_exceeded()
+        ):
             self._update_stage(4, "running")
             try:
                 jurisdiction_result = await self._run_stage5_jurisdiction(
@@ -250,6 +260,7 @@ class LDDMultiLLMPipeline:
             self._update_stage(6, "running")
             try:
                 from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+
                 verifier = CitationVerifier()
                 result.narrative_sections = verifier.verify_narrative_sections(
                     result.narrative_sections,
@@ -264,6 +275,7 @@ class LDDMultiLLMPipeline:
         # ── Stage 8: 별첨 데이터 수집 ──
         try:
             from app.ralph.generators.ldd.appendix_generator import AppendixGenerator
+
             self._update_stage(7, "running")
             appendix_gen = AppendixGenerator()
             appendix_result = appendix_gen.generate(section_results)
@@ -281,7 +293,9 @@ class LDDMultiLLMPipeline:
         # ── Guardrails 검증 ──
         try:
             guardrail_result = self._run_guardrails(
-                section_results, gap_result, vdr_document_names or [],
+                section_results,
+                gap_result,
+                vdr_document_names or [],
             )
             result.guardrail_result = {
                 "has_errors": guardrail_result.has_errors,
@@ -344,6 +358,7 @@ class LDDMultiLLMPipeline:
         if result.narrative_sections:
             try:
                 from app.ralph.gates.narrative_gate import NarrativeQualityGate
+
                 nq_gate = NarrativeQualityGate()
                 nq_result = nq_gate.evaluate(result.narrative_sections)
                 if result.qa_result is None:
@@ -351,7 +366,9 @@ class LDDMultiLLMPipeline:
                 result.qa_result["narrative_quality"] = nq_result.to_dict()
                 logger.info(
                     "서술 품질 게이트: %d/%d 통과 (점수 %.1f/5.0)",
-                    nq_result.passed_items, nq_result.total_items, nq_result.overall_score,
+                    nq_result.passed_items,
+                    nq_result.total_items,
+                    nq_result.overall_score,
                 )
             except Exception as exc:
                 logger.warning("서술 품질 게이트 실패 (무시): %s", exc)
@@ -359,13 +376,10 @@ class LDDMultiLLMPipeline:
         # ── 최종 결과 조립 ──
         result.sections = section_results
         result.cost_usd = (
-            self._llm_client._cost_tracker.accumulated_usd
-            if hasattr(self._llm_client, "_cost_tracker")
-            else 0.0
+            self._llm_client._cost_tracker.accumulated_usd if hasattr(self._llm_client, "_cost_tracker") else 0.0
         )
         result.stages = [
-            {"stage": s.stage, "name": s.name, "status": s.status, "progress_pct": s.progress_pct}
-            for s in self._stages
+            {"stage": s.stage, "name": s.name, "status": s.status, "progress_pct": s.progress_pct} for s in self._stages
         ]
 
         return result
@@ -393,10 +407,7 @@ class LDDMultiLLMPipeline:
         }
 
         # section_type → title 매핑
-        title_map = {
-            cfg.get("section_type", ""): cfg.get("title", "")
-            for cfg in self._sections_config
-        }
+        title_map = {cfg.get("section_type", ""): cfg.get("title", "") for cfg in self._sections_config}
 
         for section_type, items in section_results.items():
             source_files = self._source_map.get(section_type, [])
@@ -422,19 +433,22 @@ class LDDMultiLLMPipeline:
                     else:
                         summary["needs_human_review"] += 1
 
-                    summary["items"].append({
-                        "item_id": dual_result.item_id,
-                        "gap": dual_result.comparison.gap,
-                        "auto_resolved": dual_result.comparison.auto_resolved,
-                        "needs_human_review": dual_result.comparison.needs_human_review,
-                        "final_level": dual_result.comparison.final_level,
-                        "note": dual_result.comparison.note,
-                    })
+                    summary["items"].append(
+                        {
+                            "item_id": dual_result.item_id,
+                            "gap": dual_result.comparison.gap,
+                            "auto_resolved": dual_result.comparison.auto_resolved,
+                            "needs_human_review": dual_result.comparison.needs_human_review,
+                            "final_level": dual_result.comparison.final_level,
+                            "note": dual_result.comparison.note,
+                        }
+                    )
 
                 except Exception as exc:
                     logger.warning(
                         "Stage 3 항목 %s 분석 실패: %s",
-                        item.get("item_id", "?"), exc,
+                        item.get("item_id", "?"),
+                        exc,
                     )
 
         return summary
@@ -502,8 +516,10 @@ class LDDMultiLLMPipeline:
 
         # LLM 호출 함수 결정 — NarrativeGenerator는 (system, user) 2-인자 콜백 기대
         if self._router:
+
             async def narrative_llm_call(system: str, user: str) -> str:
                 return await self._router.call_routed("report_generation", system, user)
+
             llm_call = narrative_llm_call
         elif self._llm_client and self._llm_client.is_available:
             llm_call = self._llm_client.call
@@ -514,6 +530,7 @@ class LDDMultiLLMPipeline:
         system_prompt_override = None
         if self._config.law_firm_mode:
             from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_SYSTEM_PROMPT
+
             system_prompt_override = LAW_FIRM_SYSTEM_PROMPT
 
         generator = NarrativeGenerator(
@@ -525,15 +542,13 @@ class LDDMultiLLMPipeline:
         # 법률 컨텍스트 주입기 초기화
         try:
             from app.ralph.generators.ldd.legal_citations import CitationPromptInjector
+
             injector = CitationPromptInjector()
         except Exception:
             injector = None
 
         # section_type → title 매핑
-        title_map = {
-            cfg.get("section_type", ""): cfg.get("title", "")
-            for cfg in self._sections_config
-        }
+        title_map = {cfg.get("section_type", ""): cfg.get("title", "") for cfg in self._sections_config}
 
         narrative_results: dict[str, list[dict]] = {}
 
@@ -605,10 +620,12 @@ class LDDMultiLLMPipeline:
         # section_results → flat sections list 변환
         sections_list: list[dict] = []
         for section_type, items in section_results.items():
-            sections_list.append({
-                "section_type": section_type,
-                "items": items,
-            })
+            sections_list.append(
+                {
+                    "section_type": section_type,
+                    "items": items,
+                }
+            )
 
         guardrails = LDDGuardrails(
             vdr_document_ids=vdr_document_names,
@@ -633,7 +650,8 @@ class LDDMultiLLMPipeline:
         if accumulated >= self._config.max_cost_usd:
             logger.warning(
                 "비용 한도 초과 ($%.2f >= $%.2f) — 이후 Stage 스킵",
-                accumulated, self._config.max_cost_usd,
+                accumulated,
+                self._config.max_cost_usd,
             )
             return True
         return False

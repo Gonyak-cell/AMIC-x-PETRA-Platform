@@ -81,13 +81,19 @@ async def create_issue(
 ):
     await transaction_service.get_transaction(db, txn_id)
     issue = NegotiationIssue(
-        transaction_id=txn_id, created_by_email=claims.email, **body.model_dump(),
+        transaction_id=txn_id,
+        created_by_email=claims.email,
+        **body.model_dump(),
     )
     db.add(issue)
     await db.flush()
     await audit_service.record(
-        db, entity_type="NegotiationIssue", entity_id=issue.id, action=AuditAction.CREATE,
-        actor_email=claims.email, new_value={"title": body.title},
+        db,
+        entity_type="NegotiationIssue",
+        entity_id=issue.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"title": body.title},
     )
     await db.commit()
     await db.refresh(issue)
@@ -107,8 +113,12 @@ async def update_issue(
     for k, v in update_data.items():
         setattr(issue, k, v)
     await audit_service.record(
-        db, entity_type="NegotiationIssue", entity_id=issue.id, action=AuditAction.UPDATE,
-        actor_email=claims.email, new_value={k: str(v) for k, v in update_data.items()},
+        db,
+        entity_type="NegotiationIssue",
+        entity_id=issue.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={k: str(v) for k, v in update_data.items()},
     )
     await db.commit()
     await db.refresh(issue)
@@ -124,7 +134,10 @@ async def delete_issue(
 ):
     issue = await _get_issue_or_404(db, txn_id, issue_id)
     await audit_service.record(
-        db, entity_type="NegotiationIssue", entity_id=issue.id, action=AuditAction.DELETE,
+        db,
+        entity_type="NegotiationIssue",
+        entity_id=issue.id,
+        action=AuditAction.DELETE,
         actor_email=claims.email,
     )
     await db.delete(issue)
@@ -151,8 +164,12 @@ async def ai_suggest_clause(
     issue.ai_suggestion = suggestion.suggested_text
     issue.ai_suggestion_rationale = suggestion.rationale
     await audit_service.record(
-        db, entity_type="NegotiationIssue", entity_id=issue.id, action=AuditAction.UPDATE,
-        actor_email=claims.email, new_value={"action": "ai_suggest", "title": issue.title},
+        db,
+        entity_type="NegotiationIssue",
+        entity_id=issue.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={"action": "ai_suggest", "title": issue.title},
     )
     await db.commit()
     await db.refresh(issue)
@@ -161,7 +178,8 @@ async def ai_suggest_clause(
 
 async def _get_issue_or_404(db: AsyncSession, txn_id: uuid.UUID, issue_id: uuid.UUID) -> NegotiationIssue:
     q = select(NegotiationIssue).where(
-        NegotiationIssue.id == issue_id, NegotiationIssue.transaction_id == txn_id,
+        NegotiationIssue.id == issue_id,
+        NegotiationIssue.transaction_id == txn_id,
     )
     issue = (await db.execute(q)).scalar_one_or_none()
     if issue is None:

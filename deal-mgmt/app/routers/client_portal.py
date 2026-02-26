@@ -110,17 +110,21 @@ def _build_team_contacts(txn: Transaction) -> list[TeamContactForClient]:
     """거래의 담당자 정보를 추출한다."""
     contacts: list[TeamContactForClient] = []
     if txn.lead_advisor_email:
-        contacts.append(TeamContactForClient(
-            name=txn.lead_advisor_email.split("@")[0],
-            email=txn.lead_advisor_email,
-            role="Lead Advisor",
-        ))
+        contacts.append(
+            TeamContactForClient(
+                name=txn.lead_advisor_email.split("@")[0],
+                email=txn.lead_advisor_email,
+                role="Lead Advisor",
+            )
+        )
     if txn.deal_captain_email:
-        contacts.append(TeamContactForClient(
-            name=txn.deal_captain_email.split("@")[0],
-            email=txn.deal_captain_email,
-            role="Deal Captain",
-        ))
+        contacts.append(
+            TeamContactForClient(
+                name=txn.deal_captain_email.split("@")[0],
+                email=txn.deal_captain_email,
+                role="Deal Captain",
+            )
+        )
     return contacts
 
 
@@ -240,19 +244,21 @@ async def _get_buyer_summaries(db: AsyncSession, txn_id: uuid.UUID) -> list[Buye
         reaction_info = reaction_map.get(b.id, (None, None))
         next_mtg = next_meetings.get(b.id)
 
-        summaries.append(BuyerSummaryForClient(
-            buyer_id=b.id,
-            company_name=b.company_name,
-            status=b.status.value,
-            status_label=BUYER_STATUS_LABELS.get(b.status.value, b.status.value),
-            latest_reaction=reaction_info[0],
-            latest_reaction_comments=reaction_info[1],
-            condition_match=latest.condition_match.value if latest and latest.condition_match else None,
-            condition_notes=latest.condition_notes if latest else None,
-            next_meeting_date=next_mtg.meeting_date if next_mtg else None,
-            next_meeting_title=next_mtg.title if next_mtg else None,
-            meeting_count=meeting_counts.get(b.id, 0),
-        ))
+        summaries.append(
+            BuyerSummaryForClient(
+                buyer_id=b.id,
+                company_name=b.company_name,
+                status=b.status.value,
+                status_label=BUYER_STATUS_LABELS.get(b.status.value, b.status.value),
+                latest_reaction=reaction_info[0],
+                latest_reaction_comments=reaction_info[1],
+                condition_match=latest.condition_match.value if latest and latest.condition_match else None,
+                condition_notes=latest.condition_notes if latest else None,
+                next_meeting_date=next_mtg.meeting_date if next_mtg else None,
+                next_meeting_title=next_mtg.title if next_mtg else None,
+                meeting_count=meeting_counts.get(b.id, 0),
+            )
+        )
 
     return summaries
 
@@ -297,11 +303,13 @@ async def _get_recent_activity(db: AsyncSession, txn_id: uuid.UUID) -> list[Rece
         .limit(5)
     )
     for m in meeting_result.scalars().all():
-        activities.append(RecentActivityForClient(
-            event_type="MEETING_COMPLETED",
-            description=f"미팅 완료: {m.title}",
-            timestamp=m.meeting_date,
-        ))
+        activities.append(
+            RecentActivityForClient(
+                event_type="MEETING_COMPLETED",
+                description=f"미팅 완료: {m.title}",
+                timestamp=m.meeting_date,
+            )
+        )
 
     # 배포된 마케팅 자료
     mat_result = await db.execute(
@@ -315,11 +323,13 @@ async def _get_recent_activity(db: AsyncSession, txn_id: uuid.UUID) -> list[Rece
     )
     for m in mat_result.scalars().all():
         count = len(m.distributed_to) if m.distributed_to else 0
-        activities.append(RecentActivityForClient(
-            event_type="DOCUMENT_DISTRIBUTED",
-            description=f"{m.doc_type.value} 배포: {m.title} ({count}곳)",
-            timestamp=m.distributed_at or "",
-        ))
+        activities.append(
+            RecentActivityForClient(
+                event_type="DOCUMENT_DISTRIBUTED",
+                description=f"{m.doc_type.value} 배포: {m.title} ({count}곳)",
+                timestamp=m.distributed_at or "",
+            )
+        )
 
     # 시간순 정렬 (최신 먼저)
     activities.sort(key=lambda a: a.timestamp, reverse=True)

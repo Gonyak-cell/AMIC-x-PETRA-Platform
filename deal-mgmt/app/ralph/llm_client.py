@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 # 1K 토큰당 USD (2026-02 기준 추정)
 COST_PER_1K: dict[str, dict[str, float]] = {
-    "claude-sonnet-4-20250514":  {"input": 0.003, "output": 0.015},
+    "claude-sonnet-4-20250514": {"input": 0.003, "output": 0.015},
     "claude-haiku-4-5-20251001": {"input": 0.001, "output": 0.005},
-    "gpt-4o":                    {"input": 0.0025, "output": 0.01},
-    "gpt-4o-mini":               {"input": 0.00015, "output": 0.0006},
-    "gemini-2.0-flash":          {"input": 0.0001, "output": 0.0004},
+    "gpt-4o": {"input": 0.0025, "output": 0.01},
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gemini-2.0-flash": {"input": 0.0001, "output": 0.0004},
 }
 
 
@@ -65,9 +65,7 @@ class _LLMAdapter(ABC):
     def is_available(self) -> bool: ...
 
     @abstractmethod
-    async def generate(
-        self, system: str, user: str, *, model: str | None = None
-    ) -> tuple[str, str, int, int]:
+    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
         """(text, model_used, input_tokens, output_tokens)를 반환."""
         ...
 
@@ -93,13 +91,12 @@ class _AnthropicAdapter(_LLMAdapter):
             return False
         try:
             import anthropic  # noqa: F401
+
             return True
         except ImportError:
             return False
 
-    async def generate(
-        self, system: str, user: str, *, model: str | None = None
-    ) -> tuple[str, str, int, int]:
+    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
         import anthropic
 
         if self._client is None:
@@ -141,13 +138,12 @@ class _OpenAIAdapter(_LLMAdapter):
             return False
         try:
             import openai  # noqa: F401
+
             return True
         except ImportError:
             return False
 
-    async def generate(
-        self, system: str, user: str, *, model: str | None = None
-    ) -> tuple[str, str, int, int]:
+    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
         import openai
 
         if self._client is None:
@@ -192,13 +188,12 @@ class _GoogleAdapter(_LLMAdapter):
             return False
         try:
             import google.generativeai  # noqa: F401
+
             return True
         except ImportError:
             return False
 
-    async def generate(
-        self, system: str, user: str, *, model: str | None = None
-    ) -> tuple[str, str, int, int]:
+    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
         import google.generativeai as genai
 
         if not self._configured:
@@ -300,16 +295,18 @@ class RalphLLMClient:
                 self._cost_tracker.add(model_used, inp, out)
                 logger.debug(
                     "LLM 호출 성공: provider=%s, model=%s, tokens=%d+%d, cost=$%.4f",
-                    adapter.provider_name, model_used, inp, out, self._cost_tracker.accumulated_usd,
+                    adapter.provider_name,
+                    model_used,
+                    inp,
+                    out,
+                    self._cost_tracker.accumulated_usd,
                 )
                 return text
             except Exception as exc:
                 last_error = exc
                 logger.warning("LLM 호출 실패 (%s): %s — 다음 프로바이더로 폴백", adapter.provider_name, exc)
 
-        raise RuntimeError(
-            f"사용 가능한 LLM 프로바이더가 없습니다. 마지막 에러: {last_error}"
-        )
+        raise RuntimeError(f"사용 가능한 LLM 프로바이더가 없습니다. 마지막 에러: {last_error}")
 
     async def call_with_model(self, system: str, user: str, *, model: str) -> str:
         """특정 모델을 지정하여 호출한다 (Judge Panel용)."""
@@ -337,13 +334,15 @@ class RalphLLMClient:
                     self._cost_tracker.add(model_used, inp, out)
                     logger.debug(
                         "프로바이더 지정 호출 성공: provider=%s, model=%s",
-                        provider, model_used,
+                        provider,
+                        model_used,
                     )
                     return text
                 except Exception as exc:
                     logger.warning(
                         "프로바이더 지정 호출 실패 (%s): %s — 폴백 시도",
-                        provider, exc,
+                        provider,
+                        exc,
                     )
                     break
 
@@ -356,7 +355,8 @@ class RalphLLMClient:
                 self._cost_tracker.add(model_used, inp, out)
                 logger.info(
                     "프로바이더 폴백 성공: 원래=%s, 폴백=%s",
-                    provider, adapter.provider_name,
+                    provider,
+                    adapter.provider_name,
                 )
                 return text
             except Exception:

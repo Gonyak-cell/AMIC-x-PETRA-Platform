@@ -70,16 +70,11 @@ class CitationPromptInjector:
     def extract_citation_ids(self, text: str) -> list[str]:
         """텍스트에서 [cite:ID] 형식의 인용 ID를 추출한다."""
         import re
+
         return re.findall(r"\[cite:([^\]]+)\]", text)
 
     def _format_statute(self, s: StatuteEntry) -> str:
-        return (
-            f"- **[{s.statute_id}]** {s.law_name} {s.article} ({s.title}): "
-            f"{s.summary}"
-        )
+        return f"- **[{s.statute_id}]** {s.law_name} {s.article} ({s.title}): {s.summary}"
 
     def _format_precedent(self, p: PrecedentEntry) -> str:
-        return (
-            f"- **[{p.precedent_id}]** {p.court} {p.date} 선고 {p.case_number} ({p.title}): "
-            f"{p.summary}"
-        )
+        return f"- **[{p.precedent_id}]** {p.court} {p.date} 선고 {p.case_number} ({p.title}): {p.summary}"

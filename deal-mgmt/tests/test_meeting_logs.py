@@ -8,6 +8,7 @@ pytestmark = pytest.mark.anyio
 
 # ── 헬퍼 ──────────────────────────────────────────────────
 
+
 async def _create_meeting(client: AsyncClient, txn_id: str, **overrides) -> dict:
     payload = {
         "meeting_phase": "MARKETING",
@@ -22,7 +23,14 @@ async def _create_meeting(client: AsyncClient, txn_id: str, **overrides) -> dict
         "provided_materials": [{"name": "티저메모", "description": "비밀유지 전 요약본"}],
         "attendees": [
             {"name": "김어드바이저", "email": "kim@example.com", "role": "SELLER_ADVISOR"},
-            {"name": "이매수인", "email": "lee@buyer.com", "organization": "A사", "role": "COUNTERPARTY", "reaction": "POSITIVE", "comments": "밸류 적정 수준"},
+            {
+                "name": "이매수인",
+                "email": "lee@buyer.com",
+                "organization": "A사",
+                "role": "COUNTERPARTY",
+                "reaction": "POSITIVE",
+                "comments": "밸류 적정 수준",
+            },
         ],
         **overrides,
     }
@@ -32,6 +40,7 @@ async def _create_meeting(client: AsyncClient, txn_id: str, **overrides) -> dict
 
 
 # ── 미팅 로그 CRUD ────────────────────────────────────────
+
 
 async def test_create_marketing_meeting(client: AsyncClient, transaction_id: str):
     data = await _create_meeting(client, transaction_id)
@@ -43,7 +52,8 @@ async def test_create_marketing_meeting(client: AsyncClient, transaction_id: str
 
 async def test_create_negotiation_meeting(client: AsyncClient, transaction_id: str):
     data = await _create_meeting(
-        client, transaction_id,
+        client,
+        transaction_id,
         meeting_phase="NEGOTIATION",
         title="SPA 초안 협상",
         channel="VIDEO",
@@ -104,6 +114,7 @@ async def test_meeting_summary(client: AsyncClient, transaction_id: str):
 
 # ── 참석자 CRUD ──────────────────────────────────────────
 
+
 async def test_add_attendee(client: AsyncClient, transaction_id: str):
     meeting = await _create_meeting(client, transaction_id)
     resp = await client.post(
@@ -140,6 +151,7 @@ async def test_remove_attendee(client: AsyncClient, transaction_id: str):
 
 # ── 액션아이템 CRUD ──────────────────────────────────────
 
+
 async def test_create_action_item(client: AsyncClient, transaction_id: str):
     meeting = await _create_meeting(client, transaction_id)
     resp = await client.post(
@@ -175,7 +187,8 @@ async def test_404_nonexistent_meeting(client: AsyncClient, transaction_id: str)
 
 async def test_condition_match(client: AsyncClient, transaction_id: str):
     data = await _create_meeting(
-        client, transaction_id,
+        client,
+        transaction_id,
         condition_match="PARTIAL_MATCH",
         condition_notes="가격 조건은 일치하나 시기 불일치",
     )

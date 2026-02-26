@@ -31,8 +31,8 @@ class LDDFinalizeGenerator(LDDDocumentGenerator):
         approved_items: set[str],
     ):
         super().__init__(analyzer, sections_config)
-        self._user_feedback = user_feedback      # {item_id: feedback_str}
-        self._approved_items = approved_items     # 승인된 item_id 집합
+        self._user_feedback = user_feedback  # {item_id: feedback_str}
+        self._approved_items = approved_items  # 승인된 item_id 집합
         self._existing_results: dict[str, dict] = {}  # {item_id: existing_item_dict}
 
         # 기존 분석 결과 캐시 (승인된 항목 재사용용)
@@ -51,18 +51,17 @@ class LDDFinalizeGenerator(LDDDocumentGenerator):
             section_type = sec.get("section_type", sec.get("id", ""))
             items = sec.get("items", [])
 
-            needs_reanalysis = any(
-                item.get("item_id", "") not in self._approved_items
-                for item in items
-            )
+            needs_reanalysis = any(item.get("item_id", "") not in self._approved_items for item in items)
 
-            outline.append({
-                "id": section_type,
-                "section_id": section_type,
-                "title": sec.get("title", ""),
-                "item_count": len(items),
-                "needs_reanalysis": needs_reanalysis,
-            })
+            outline.append(
+                {
+                    "id": section_type,
+                    "section_id": section_type,
+                    "title": sec.get("title", ""),
+                    "item_count": len(items),
+                    "needs_reanalysis": needs_reanalysis,
+                }
+            )
 
         return outline
 
@@ -187,7 +186,8 @@ class LDDFinalizeGenerator(LDDDocumentGenerator):
             "finalize_metadata": {
                 "approved_count": len(self._approved_items),
                 "reanalyzed_count": sum(
-                    1 for sec_items in all_sections.values()
+                    1
+                    for sec_items in all_sections.values()
                     for item in sec_items
                     if item.get("item_id") not in self._approved_items
                 ),

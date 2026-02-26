@@ -106,12 +106,20 @@ class DOCXProgrammaticGate(QualityGate):
                 items = [items]
         except json.JSONDecodeError as exc:
             return self._timed_result(
-                start, [], [f"JSON 파싱 실패: {exc}"], [], [],
+                start,
+                [],
+                [f"JSON 파싱 실패: {exc}"],
+                [],
+                [],
             )
 
         if not items:
             return self._timed_result(
-                start, [], ["빈 분석 결과"], ["항목 분석을 수행하세요"], [],
+                start,
+                [],
+                ["빈 분석 결과"],
+                ["항목 분석을 수행하세요"],
+                [],
             )
 
         # 1. 항목 구조 완전성
@@ -163,7 +171,11 @@ class DOCXProgrammaticGate(QualityGate):
             suggestions.append("위 이슈들을 수정 후 재검증하세요.")
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     def _check_json_structure(self, items: list[dict]) -> tuple[float, list[str]]:
@@ -277,10 +289,7 @@ class DOCXProgrammaticGate(QualityGate):
         if not self._user_reviews:
             return 5.0, issues
 
-        rejected_ids = {
-            item_id for item_id, review in self._user_reviews.items()
-            if not review.get("approved", True)
-        }
+        rejected_ids = {item_id for item_id, review in self._user_reviews.items() if not review.get("approved", True)}
 
         if not rejected_ids:
             return 5.0, issues
@@ -291,8 +300,7 @@ class DOCXProgrammaticGate(QualityGate):
 
         if missing_reanalysis:
             issues.append(
-                f"반려 항목 {len(missing_reanalysis)}건 재분석 누락: "
-                f"{', '.join(sorted(missing_reanalysis)[:5])}"
+                f"반려 항목 {len(missing_reanalysis)}건 재분석 누락: {', '.join(sorted(missing_reanalysis)[:5])}"
             )
 
         # 반려 항목 중 여전히 PENDING인 것 확인
@@ -329,15 +337,19 @@ class DOCXProgrammaticGate(QualityGate):
 
         try:
             from docx import Document
+
             doc = Document(artifact_path)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"DOCX 로드 실패: {exc}"], [], [f"DOCX 파일 손상: {exc}"],
+                start,
+                [],
+                [f"DOCX 로드 실패: {exc}"],
+                [],
+                [f"DOCX 파일 손상: {exc}"],
             )
 
         # 전체 텍스트 추출
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        all_tables = doc.tables
 
         # 1. 섹션 구조 검증
         struct_score, struct_issues = self._check_structure(doc, prd_section)
@@ -373,7 +385,11 @@ class DOCXProgrammaticGate(QualityGate):
             suggestions.append("위 이슈들을 수정 후 재검증하세요.")
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     # ── 검증 레이어 ──────────────────────────────────────────────────────────

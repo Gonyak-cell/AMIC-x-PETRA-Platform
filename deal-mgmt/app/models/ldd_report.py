@@ -29,9 +29,7 @@ class LDDReport(Base, TimestampMixin):
     transaction_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    report_type: Mapped[LDDReportType] = mapped_column(
-        Enum(LDDReportType), nullable=False, default=LDDReportType.FULL
-    )
+    report_type: Mapped[LDDReportType] = mapped_column(Enum(LDDReportType), nullable=False, default=LDDReportType.FULL)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     status: Mapped[LDDReportStatus] = mapped_column(
         Enum(LDDReportStatus), nullable=False, default=LDDReportStatus.DRAFT
@@ -39,19 +37,22 @@ class LDDReport(Base, TimestampMixin):
 
     # 거래유형별 템플릿
     deal_type: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, index=True,
+        String(50),
+        nullable=True,
+        index=True,
         comment="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO 등)",
     )
     template_type: Mapped[str | None] = mapped_column(
-        String(50), nullable=True,
+        String(50),
+        nullable=True,
         comment="적용된 템플릿 식별자 (deal_type과 동일하거나 커스텀)",
     )
 
     # 대상 회사 정보
     target_company: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    dd_period: Mapped[str | None] = mapped_column(String(100), nullable=True)   # 예: "2026-02-01 ~ 2026-02-28"
-    law_firm: Mapped[str | None] = mapped_column(String(200), nullable=True)    # 법무법인 명칭
-    prepared_by: Mapped[str | None] = mapped_column(String(200), nullable=True) # 담당 변호사
+    dd_period: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 예: "2026-02-01 ~ 2026-02-28"
+    law_firm: Mapped[str | None] = mapped_column(String(200), nullable=True)  # 법무법인 명칭
+    prepared_by: Mapped[str | None] = mapped_column(String(200), nullable=True)  # 담당 변호사
 
     # 체크리스트 데이터 (10개 섹션, JSONB)
     sections: Mapped[list | None] = mapped_column(JSONB, nullable=True)
@@ -59,13 +60,13 @@ class LDDReport(Base, TimestampMixin):
     # 집계 카운트 (자동 계산)
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     issue_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    red_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)    # CRITICAL → Red
+    red_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # CRITICAL → Red
     amber_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # HIGH+MEDIUM → Amber
     green_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # LOW → Green
     ok_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     na_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     pending_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    rfi_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)    # RFI 요청 항목 수
+    rfi_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # RFI 요청 항목 수
 
     # 파일 정보
     template_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -88,33 +89,39 @@ class LDDReport(Base, TimestampMixin):
 
     # ── 6블록 서술(Narrative) 데이터 ─────────────────────
     narrative_sections: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="6블록 서술 결과 (section_type → [NarrativeResult])",
     )
 
     # ── 법률 인용 검증 결과 ───────────────────────────────
     legal_citations: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="법률 인용 검증 결과 (section_type → citation_verification)",
     )
 
     # ── 별첨(Appendix) 데이터 ──────────────────────────────
     appendices: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="별첨 테이블 데이터 (6종: 소송/IP/부동산/계약/보험/인허가)",
     )
 
     # ── 법무법인 스타일 (LAW_FIRM) ────────────────────────
     law_firm_toc: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="법무법인 8개 목차 구조 (I~VIII 매핑 결과)",
     )
     law_firm_sections: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="법무법인 3단 서술 결과 (section → {현황/검토/Recommendation})",
     )
     irl_items: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="D 라벨 수집: Information Request List 항목",
     )
 

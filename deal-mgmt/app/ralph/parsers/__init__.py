@@ -15,15 +15,19 @@ def parse_file(file_path: str) -> ParsedFile:
 
     if ext in (".xlsx", ".xls"):
         from app.ralph.parsers.excel_parser import parse_excel
+
         return parse_excel(file_path)
     elif ext == ".pdf":
         from app.ralph.parsers.pdf_parser import parse_pdf
+
         return parse_pdf(file_path)
     elif ext == ".docx":
         from app.ralph.parsers.docx_parser import parse_docx
+
         return parse_docx(file_path)
     elif ext in (".hwp", ".hwpx"):
         from app.ralph.parsers.hwp_parser import parse_hwp
+
         return parse_hwp(file_path)
     else:
         return ParsedFile(

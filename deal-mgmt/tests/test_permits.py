@@ -8,6 +8,7 @@ pytestmark = pytest.mark.anyio
 
 # ── KB Industries ──────────────────────────────────────────
 
+
 async def test_list_industries(client: AsyncClient):
     """업종 목록 조회."""
     resp = await client.get("/api/v1/permits/kb/industries")
@@ -21,6 +22,7 @@ async def test_list_industries(client: AsyncClient):
 
 
 # ── Analyze Permits ────────────────────────────────────────
+
 
 async def test_analyze_permits_finance(client: AsyncClient, transaction_id: str):
     """금융업 인허가 분석 — KB 기반."""
@@ -103,6 +105,7 @@ async def test_analyze_permits_universal_threshold(client: AsyncClient):
 
 # ── Get Analysis ───────────────────────────────────────────
 
+
 async def test_get_analysis_none(client: AsyncClient, transaction_id: str):
     """분석 전 조회 → null."""
     resp = await client.get(f"/api/v1/transactions/{transaction_id}/permits/analysis")
@@ -123,6 +126,7 @@ async def test_get_analysis_after_analyze(client: AsyncClient, transaction_id: s
 
 
 # ── Reanalyze ──────────────────────────────────────────────
+
 
 async def test_reanalyze_replaces_previous(client: AsyncClient, transaction_id: str):
     """재분석 시 기존 결과 교체."""
@@ -145,6 +149,7 @@ async def test_reanalyze_replaces_previous(client: AsyncClient, transaction_id: 
 
 
 # ── Manual CRUD ────────────────────────────────────────────
+
 
 async def test_manual_requirement_crud(client: AsyncClient, transaction_id: str):
     """수동 인허가 요건 추가/수정/삭제."""
@@ -199,6 +204,7 @@ async def test_create_requirement_without_analysis(client: AsyncClient, transact
 
 
 # ── KB lookup unit test ────────────────────────────────────
+
 
 def test_kb_lookup_direct():
     """KB lookup 함수 직접 테스트."""

@@ -16,6 +16,7 @@ from app.models.enums import (
 
 # ── 공통 서브 모델 ──────────────────────────────────────────
 
+
 class ExistingPermit(BaseModel):
     name: str = Field(..., min_length=1, max_length=300)
     issuer: str = Field(..., min_length=1, max_length=200)
@@ -28,6 +29,7 @@ class RequiredDocument(BaseModel):
 
 
 # ── PermitAnalysis ──────────────────────────────────────────
+
 
 class PermitAnalysisOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -47,11 +49,13 @@ class PermitAnalysisOut(BaseModel):
 
 class PermitAnalyzeRequest(BaseModel):
     """인허가 분석 실행 요청."""
+
     business_types: list[str] = Field(..., min_length=1)
     existing_permits: list[ExistingPermit] = Field(default_factory=list)
 
 
 # ── PermitRequirement ───────────────────────────────────────
+
 
 class PermitRequirementOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -80,6 +84,7 @@ class PermitRequirementOut(BaseModel):
 
 class PermitRequirementCreate(BaseModel):
     """인허가 요건 수동 추가."""
+
     permit_name: str = Field(..., min_length=1, max_length=300)
     regulatory_body: str = Field(..., min_length=1, max_length=200)
     legal_basis: str | None = Field(None, max_length=500)
@@ -93,12 +98,14 @@ class PermitRequirementCreate(BaseModel):
 
 class PermitRequirementUpdate(BaseModel):
     """인허가 요건 수정."""
+
     status: PermitRequirementStatus | None = None
     notes: str | None = None
     required_documents: list[RequiredDocument] | None = None
 
 
 # ── KB 참조 ─────────────────────────────────────────────────
+
 
 class IndustryOption(BaseModel):
     code: str

@@ -61,10 +61,15 @@ class PPTXProgrammaticGate(QualityGate):
 
         try:
             from pptx import Presentation
+
             prs = Presentation(artifact_path)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"PPTX 로드 실패: {exc}"], [], [f"PPTX 파일 손상: {exc}"],
+                start,
+                [],
+                [f"PPTX 로드 실패: {exc}"],
+                [],
+                [f"PPTX 파일 손상: {exc}"],
             )
 
         memo_type = prd_section.get("memo_type", "IM")
@@ -100,7 +105,11 @@ class PPTXProgrammaticGate(QualityGate):
         ]
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     # ── 검증 레이어 ──────────────────────────────────────────────────────────
@@ -151,9 +160,7 @@ class PPTXProgrammaticGate(QualityGate):
                     matches = re.findall(pattern, text, re.IGNORECASE)
                     if matches:
                         placeholder_count += len(matches)
-                        issues.append(
-                            f"CRITICAL: 슬라이드 {slide_idx} — 플레이스홀더 '{matches[0]}'"
-                        )
+                        issues.append(f"CRITICAL: 슬라이드 {slide_idx} — 플레이스홀더 '{matches[0]}'")
 
         score = 5.0 if placeholder_count == 0 else max(1.0, 5.0 - placeholder_count)
         return score, issues
@@ -200,7 +207,7 @@ class PPTXProgrammaticGate(QualityGate):
                     if parseable and abs(total_val - item_sum) > 0.01:
                         error_count += 1
                         issues.append(
-                            f"슬라이드 {slide_idx} 테이블: 열 {c+1} 합계={total_val}, "
+                            f"슬라이드 {slide_idx} 테이블: 열 {c + 1} 합계={total_val}, "
                             f"항목합={item_sum} (차이: {abs(total_val - item_sum):.2f})"
                         )
 
@@ -255,9 +262,7 @@ class PPTXProgrammaticGate(QualityGate):
                         if run.font.name and run.font.name not in self.ALLOWED_FONTS:
                             font_violations += 1
                             if font_violations <= 3:
-                                issues.append(
-                                    f"슬라이드 {slide_idx}: 비허용 폰트 '{run.font.name}'"
-                                )
+                                issues.append(f"슬라이드 {slide_idx}: 비허용 폰트 '{run.font.name}'")
 
                         # 색상 확인
                         if run.font.color and run.font.color.rgb:
@@ -265,9 +270,7 @@ class PPTXProgrammaticGate(QualityGate):
                             if rgb not in self.ALLOWED_COLORS:
                                 color_violations += 1
                                 if color_violations <= 3:
-                                    issues.append(
-                                        f"슬라이드 {slide_idx}: 비허용 색상 #{rgb}"
-                                    )
+                                    issues.append(f"슬라이드 {slide_idx}: 비허용 색상 #{rgb}")
 
         total_violations = font_violations + color_violations
         score = max(1.0, 5.0 - total_violations * 0.3)

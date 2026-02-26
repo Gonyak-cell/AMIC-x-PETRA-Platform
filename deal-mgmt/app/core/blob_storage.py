@@ -34,9 +34,7 @@ class BlobStorageClient:
         """BlobServiceClient를 초기화한다. 연결 문자열 없으면 로컬 모드."""
         conn_str = settings.AZURE_STORAGE_CONNECTION_STRING
         if not conn_str:
-            logger.warning(
-                "AZURE_STORAGE_CONNECTION_STRING 미설정 — 로컬 파일시스템 폴백 모드"
-            )
+            logger.warning("AZURE_STORAGE_CONNECTION_STRING 미설정 — 로컬 파일시스템 폴백 모드")
             self._is_local = True
             _LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
             return
@@ -65,7 +63,8 @@ class BlobStorageClient:
 
         logger.info(
             "Azure Blob Storage 초기화 완료: account=%s, container=%s",
-            self._account_name, container_name,
+            self._account_name,
+            container_name,
         )
 
     async def close(self) -> None:

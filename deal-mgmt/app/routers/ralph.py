@@ -54,6 +54,7 @@ async def _run_ralph_loop(
             learned_patterns: list[str] = []
             try:
                 from app.ralph.learning.pattern_aggregator import PatternAggregator
+
                 agg = PatternAggregator(db)
                 learned_patterns = await agg.get_learned_patterns(body.doc_type)
                 if learned_patterns:
@@ -63,7 +64,9 @@ async def _run_ralph_loop(
 
             # 2. Generator + Gates 조립
             generator, gates = _build_pipeline(
-                body.doc_type, llm_call, body.source_dir,
+                body.doc_type,
+                llm_call,
+                body.source_dir,
                 learned_patterns=learned_patterns,
             )
 
@@ -262,10 +265,12 @@ async def create_ralph_session(
         .where(
             RalphSession.transaction_id == transaction_id,
             RalphSession.doc_type == body.doc_type,
-            RalphSession.status.in_([
-                RalphSessionStatus.PLANNING,
-                RalphSessionStatus.GENERATING,
-            ]),
+            RalphSession.status.in_(
+                [
+                    RalphSessionStatus.PLANNING,
+                    RalphSessionStatus.GENERATING,
+                ]
+            ),
         )
         .limit(1)
     )

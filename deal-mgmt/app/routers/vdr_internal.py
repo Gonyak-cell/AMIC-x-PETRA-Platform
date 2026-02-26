@@ -35,8 +35,7 @@ router = APIRouter(
 _INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "")
 if not _INTERNAL_SERVICE_KEY:
     logger.warning(
-        "INTERNAL_SERVICE_KEY 환경변수 미설정 — 내부 API 접근이 거부됩니다. "
-        "프로덕션 배포 시 반드시 설정하세요."
+        "INTERNAL_SERVICE_KEY 환경변수 미설정 — 내부 API 접근이 거부됩니다. 프로덕션 배포 시 반드시 설정하세요."
     )
 
 # IM 백엔드에서 파싱 가능한 MIME 타입
@@ -157,11 +156,7 @@ async def list_folders(
     db: AsyncSession = Depends(get_db),
 ) -> list[VdrFolderOut]:
     """거래의 VDR 폴더 목록을 반환한다."""
-    stmt = (
-        select(VdrFolder)
-        .where(VdrFolder.transaction_id == txn_id)
-        .order_by(VdrFolder.order_index)
-    )
+    stmt = select(VdrFolder).where(VdrFolder.transaction_id == txn_id).order_by(VdrFolder.order_index)
     result = await db.execute(stmt)
     folders = result.scalars().all()
     return [VdrFolderOut.model_validate(f) for f in folders]

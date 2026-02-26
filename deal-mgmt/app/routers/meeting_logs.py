@@ -38,6 +38,7 @@ router = APIRouter(prefix="/transactions/{txn_id}/meeting-logs", tags=["Meeting 
 
 # ── 미팅 로그 CRUD ──────────────────────────────────────
 
+
 @router.get("", response_model=MeetingLogListResponse)
 async def list_meeting_logs(
     txn_id: uuid.UUID,
@@ -117,7 +118,9 @@ async def get_meeting_log(
     attendees = [MeetingAttendeeOut.model_validate(a) for a in (await db.execute(att_q)).scalars().all()]
 
     # 액션아이템 조회
-    ai_q = select(MeetingActionItem).where(MeetingActionItem.meeting_id == log_id).order_by(MeetingActionItem.created_at)
+    ai_q = (
+        select(MeetingActionItem).where(MeetingActionItem.meeting_id == log_id).order_by(MeetingActionItem.created_at)
+    )
     action_items = [MeetingActionItemOut.model_validate(a) for a in (await db.execute(ai_q)).scalars().all()]
 
     detail = MeetingLogDetail.model_validate(log)
@@ -148,8 +151,12 @@ async def create_meeting_log(
         db.add(attendee)
 
     await audit_service.record(
-        db, entity_type="MeetingLog", entity_id=log.id, action=AuditAction.CREATE,
-        actor_email=claims.email, new_value={"title": body.title, "phase": body.meeting_phase.value},
+        db,
+        entity_type="MeetingLog",
+        entity_id=log.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"title": body.title, "phase": body.meeting_phase.value},
     )
     await db.commit()
     await db.refresh(log)
@@ -169,8 +176,12 @@ async def update_meeting_log(
     for k, v in update_data.items():
         setattr(log, k, v)
     await audit_service.record(
-        db, entity_type="MeetingLog", entity_id=log.id, action=AuditAction.UPDATE,
-        actor_email=claims.email, new_value={k: str(v) for k, v in update_data.items()},
+        db,
+        entity_type="MeetingLog",
+        entity_id=log.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={k: str(v) for k, v in update_data.items()},
     )
     await db.commit()
     await db.refresh(log)
@@ -186,13 +197,18 @@ async def delete_meeting_log(
 ):
     log = await _get_log_or_404(db, txn_id, log_id)
     await audit_service.record(
-        db, entity_type="MeetingLog", entity_id=log.id, action=AuditAction.DELETE, actor_email=claims.email,
+        db,
+        entity_type="MeetingLog",
+        entity_id=log.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
     )
     await db.delete(log)
     await db.commit()
 
 
 # ── 참석자 CRUD ──────────────────────────────────────────
+
 
 @router.post("/{log_id}/attendees", response_model=MeetingAttendeeOut, status_code=201)
 async def add_attendee(
@@ -207,7 +223,8 @@ async def add_attendee(
     # 이메일 기반 중복 참석 방지
     if body.email:
         dup_q = select(MeetingAttendee).where(
-            MeetingAttendee.meeting_id == log_id, MeetingAttendee.email == body.email,
+            MeetingAttendee.meeting_id == log_id,
+            MeetingAttendee.email == body.email,
         )
         if (await db.execute(dup_q)).scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 참석자(이메일)입니다")
@@ -217,8 +234,12 @@ async def add_attendee(
     log.attendee_count = log.attendee_count + 1
     await db.flush()
     await audit_service.record(
-        db, entity_type="MeetingAttendee", entity_id=attendee.id, action=AuditAction.CREATE,
-        actor_email=claims.email, new_value={"name": body.name, "meeting_id": str(log_id)},
+        db,
+        entity_type="MeetingAttendee",
+        entity_id=attendee.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"name": body.name, "meeting_id": str(log_id)},
     )
     await db.commit()
     await db.refresh(attendee)
@@ -240,8 +261,12 @@ async def update_attendee(
     for k, v in update_data.items():
         setattr(attendee, k, v)
     await audit_service.record(
-        db, entity_type="MeetingAttendee", entity_id=attendee.id, action=AuditAction.UPDATE,
-        actor_email=claims.email, new_value={k: str(v) for k, v in update_data.items()},
+        db,
+        entity_type="MeetingAttendee",
+        entity_id=attendee.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={k: str(v) for k, v in update_data.items()},
     )
     await db.commit()
     await db.refresh(attendee)
@@ -259,7 +284,10 @@ async def remove_attendee(
     log = await _get_log_or_404(db, txn_id, log_id)
     attendee = await _get_attendee_or_404(db, log_id, att_id)
     await audit_service.record(
-        db, entity_type="MeetingAttendee", entity_id=attendee.id, action=AuditAction.DELETE,
+        db,
+        entity_type="MeetingAttendee",
+        entity_id=attendee.id,
+        action=AuditAction.DELETE,
         actor_email=claims.email,
     )
     await db.delete(attendee)
@@ -268,6 +296,7 @@ async def remove_attendee(
 
 
 # ── 액션아이템 CRUD ──────────────────────────────────────
+
 
 @router.get("/{log_id}/action-items", response_model=MeetingActionItemListResponse)
 async def list_action_items(
@@ -296,8 +325,12 @@ async def create_action_item(
     db.add(item)
     await db.flush()
     await audit_service.record(
-        db, entity_type="MeetingActionItem", entity_id=item.id, action=AuditAction.CREATE,
-        actor_email=claims.email, new_value={"title": body.title, "meeting_id": str(log_id)},
+        db,
+        entity_type="MeetingActionItem",
+        entity_id=item.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"title": body.title, "meeting_id": str(log_id)},
     )
     await db.commit()
     await db.refresh(item)
@@ -319,8 +352,12 @@ async def update_action_item(
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
-        db, entity_type="MeetingActionItem", entity_id=item.id, action=AuditAction.UPDATE,
-        actor_email=claims.email, new_value={k: str(v) for k, v in update_data.items()},
+        db,
+        entity_type="MeetingActionItem",
+        entity_id=item.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={k: str(v) for k, v in update_data.items()},
     )
     await db.commit()
     await db.refresh(item)
@@ -338,7 +375,10 @@ async def delete_action_item(
     await _get_log_or_404(db, txn_id, log_id)
     item = await _get_action_item_or_404(db, log_id, item_id)
     await audit_service.record(
-        db, entity_type="MeetingActionItem", entity_id=item.id, action=AuditAction.DELETE,
+        db,
+        entity_type="MeetingActionItem",
+        entity_id=item.id,
+        action=AuditAction.DELETE,
         actor_email=claims.email,
     )
     await db.delete(item)
@@ -346,6 +386,7 @@ async def delete_action_item(
 
 
 # ── 헬퍼 ────────────────────────────────────────────────
+
 
 async def _get_log_or_404(db: AsyncSession, txn_id: uuid.UUID, log_id: uuid.UUID) -> MeetingLog:
     q = select(MeetingLog).where(MeetingLog.id == log_id, MeetingLog.transaction_id == txn_id)

@@ -65,9 +65,11 @@ class LDDPipelineConfig:
     """LAW_FIRM 리포트 타입: 3단 서술 + A/B/C/D 불확실성 라벨링 활성화."""
 
     # ── 리스크 등급 수치화 ──
-    level_map: dict[str, int] = field(default_factory=lambda: {
-        "CRITICAL": 4,
-        "HIGH": 3,
-        "MEDIUM": 2,
-        "LOW": 1,
-    })
+    level_map: dict[str, int] = field(
+        default_factory=lambda: {
+            "CRITICAL": 4,
+            "HIGH": 3,
+            "MEDIUM": 2,
+            "LOW": 1,
+        }
+    )

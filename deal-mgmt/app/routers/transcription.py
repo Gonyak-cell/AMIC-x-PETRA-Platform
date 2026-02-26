@@ -71,14 +71,14 @@ async def start_transcription(
     save_dir.mkdir(parents=True, exist_ok=True)
     file_id = uuid.uuid4()
     ext = Path(audio.filename or "audio.mp3").suffix
-    safe_filename = re.sub(r'[^\w\-. ]', '_', audio.filename or "audio")[:255]
+    safe_filename = re.sub(r"[^\w\-. ]", "_", audio.filename or "audio")[:255]
     file_path = save_dir / f"{file_id}{ext}"
 
     content = await audio.read()
     if len(content) > MAX_AUDIO_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"파일 크기가 {MAX_AUDIO_SIZE_BYTES // (1024*1024)}MB를 초과합니다",
+            detail=f"파일 크기가 {MAX_AUDIO_SIZE_BYTES // (1024 * 1024)}MB를 초과합니다",
         )
     file_path.write_bytes(content)
 
@@ -214,6 +214,7 @@ async def approve_transcription(
     attendee_count = 0
     if job.attendees_json:
         from app.models.enums import AttendeeRole
+
         for att in job.attendees_json:
             attendee = MeetingAttendee(
                 meeting_id=meeting_log.id,
@@ -232,6 +233,7 @@ async def approve_transcription(
     # 액션아이템 생성
     if body.action_items:
         from app.models.enums import NegotiationIssuePriority
+
         for item in body.action_items:
             action = MeetingActionItem(
                 meeting_id=meeting_log.id,

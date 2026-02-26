@@ -37,8 +37,8 @@ PRESERVE_STYLES = {"11", "22", "31", "40"}
 
 # 목차 레벨별 플레이스홀더
 SECTION_PLACEHOLDERS = {
-    0: "[부문명 기재]",      # 대목차 (I, II, III...)
-    1: "[소주제명 기재]",    # 중목차 (1, 2, 3...)
+    0: "[부문명 기재]",  # 대목차 (I, II, III...)
+    1: "[소주제명 기재]",  # 중목차 (1, 2, 3...)
     2: "[세부항목명 기재]",  # 소목차 (가, 나, 다...)
 }
 
@@ -48,6 +48,7 @@ COVER_DATE_PLACEHOLDER = "[YYYY]년 [MM]월 [DD]일"
 
 
 # ─── XML 유틸리티 ────────────────────────────────────────────────────────────
+
 
 def _get_style_id_from_xml(p_element) -> str:
     """XML p 요소에서 스타일 ID 추출."""
@@ -131,6 +132,7 @@ def _clear_paragraph_text(paragraph, placeholder: str) -> None:
 
 # ─── 메인 클래스 ─────────────────────────────────────────────────────────────
 
+
 class LawFirmTemplateGenerator:
     """원본 법률실사보고서 .docx → 플레이스홀더 교체 → 빈 템플릿 생성.
 
@@ -193,7 +195,9 @@ class LawFirmTemplateGenerator:
                 self._process_paragraph(element, cover_project, cover_date)
             elif tag == "tbl":
                 section_counter = self._process_table(
-                    element, section_counter, law_firm_name,
+                    element,
+                    section_counter,
+                    law_firm_name,
                 )
 
     def _process_paragraph(
@@ -346,5 +350,8 @@ class LawFirmTemplateGenerator:
                     t.text = ""
 
         footnotes_part._blob = etree.tostring(
-            fn_root, xml_declaration=True, encoding="UTF-8", standalone=True,
+            fn_root,
+            xml_declaration=True,
+            encoding="UTF-8",
+            standalone=True,
         )

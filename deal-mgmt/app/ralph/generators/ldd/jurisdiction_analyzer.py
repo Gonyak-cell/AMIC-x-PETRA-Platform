@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 # ── 데이터 클래스 ──────────────────────────────────────────────────
 
+
 @dataclass
 class JurisdictionPoint:
     """관할권 교차/충돌 포인트."""
@@ -101,6 +102,7 @@ JSON만 반환하세요.
 
 
 # ── 메인 클래스 ──────────────────────────────────────────────────
+
 
 class JurisdictionAnalyzer:
     """Stage 5: 관할권 교차 분석 (크로스보더 M&A 전용)."""
@@ -184,30 +186,34 @@ class JurisdictionAnalyzer:
 
                 # 심각도 차이 ≥ 2 → 충돌 (관할권 간 상충 가능)
                 if abs(k_val - e_val) >= 2:
-                    conflict_points.append(JurisdictionPoint(
-                        point_id=f"JC-{counter:03d}",
-                        point_type="conflict",
-                        korean_aspect=k_item.get("description", ""),
-                        english_aspect=e_item.get("description", ""),
-                        affected_sections=[k_section],
-                        severity=max(k_sev, e_sev, key=lambda s: severity_map.get(s, 0)),
-                        recommendation=(
-                            f"한국법: {k_item.get('recommendation', '')}\n"
-                            f"영미법: {e_item.get('recommendation', '')}"
-                        ),
-                    ))
+                    conflict_points.append(
+                        JurisdictionPoint(
+                            point_id=f"JC-{counter:03d}",
+                            point_type="conflict",
+                            korean_aspect=k_item.get("description", ""),
+                            english_aspect=e_item.get("description", ""),
+                            affected_sections=[k_section],
+                            severity=max(k_sev, e_sev, key=lambda s: severity_map.get(s, 0)),
+                            recommendation=(
+                                f"한국법: {k_item.get('recommendation', '')}\n"
+                                f"영미법: {e_item.get('recommendation', '')}"
+                            ),
+                        )
+                    )
                 else:
-                    cross_points.append(JurisdictionPoint(
-                        point_id=f"JX-{counter:03d}",
-                        point_type="cross",
-                        korean_aspect=k_item.get("description", ""),
-                        english_aspect=e_item.get("description", ""),
-                        affected_sections=[k_section],
-                        severity=max(k_sev, e_sev, key=lambda s: severity_map.get(s, 0)),
-                        recommendation=(
-                            f"한국법: {k_item.get('recommendation', '')}\n"
-                            f"영미법: {e_item.get('recommendation', '')}"
-                        ),
-                    ))
+                    cross_points.append(
+                        JurisdictionPoint(
+                            point_id=f"JX-{counter:03d}",
+                            point_type="cross",
+                            korean_aspect=k_item.get("description", ""),
+                            english_aspect=e_item.get("description", ""),
+                            affected_sections=[k_section],
+                            severity=max(k_sev, e_sev, key=lambda s: severity_map.get(s, 0)),
+                            recommendation=(
+                                f"한국법: {k_item.get('recommendation', '')}\n"
+                                f"영미법: {e_item.get('recommendation', '')}"
+                            ),
+                        )
+                    )
 
         return cross_points, conflict_points

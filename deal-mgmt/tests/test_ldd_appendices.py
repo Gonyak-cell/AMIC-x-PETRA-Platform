@@ -18,6 +18,7 @@ from app.ralph.generators.ldd.appendix_types import (
 
 # ── AppendixType 테스트 ──────────────────────────────────────────────────
 
+
 class TestAppendixType:
     """별첨 타입 enum 테스트."""
 
@@ -43,6 +44,7 @@ class TestAppendixType:
 
 # ── AppendixRow 테스트 ───────────────────────────────────────────────────
 
+
 class TestAppendixRow:
     """별첨 행 테스트."""
 
@@ -58,6 +60,7 @@ class TestAppendixRow:
 
 
 # ── AppendixTable 테스트 ─────────────────────────────────────────────────
+
 
 class TestAppendixTable:
     """별첨 테이블 테스트."""
@@ -93,6 +96,7 @@ class TestAppendixTable:
 
 # ── AppendixResult 테스트 ────────────────────────────────────────────────
 
+
 class TestAppendixResult:
     """별첨 결과 테스트."""
 
@@ -124,6 +128,7 @@ class TestAppendixResult:
 
 
 # ── AppendixGenerator 테스트 ─────────────────────────────────────────────
+
 
 class TestAppendixGenerator:
     """별첨 생성기 테스트."""
@@ -277,14 +282,18 @@ class TestAppendixGenerator:
     def test_description_truncation(self):
         gen = AppendixGenerator()
         long_desc = "A" * 200
-        result = gen.generate({
-            "LITIGATION": [{
-                "item_id": "X",
-                "name": "test",
-                "status": "ISSUE",
-                "description": long_desc,
-            }],
-        })
+        result = gen.generate(
+            {
+                "LITIGATION": [
+                    {
+                        "item_id": "X",
+                        "name": "test",
+                        "status": "ISSUE",
+                        "description": long_desc,
+                    }
+                ],
+            }
+        )
         lit_table = next(t for t in result.tables if t.appendix_type == AppendixType.LITIGATION)
         assert lit_table.row_count == 1
         desc = lit_table.rows[0].values.get("비고", "")

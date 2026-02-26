@@ -17,7 +17,10 @@ class TranscriptionJob(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # 입력 메타데이터
@@ -25,7 +28,9 @@ class TranscriptionJob(Base, TimestampMixin):
     meeting_date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
     meeting_phase: Mapped[MeetingPhase] = mapped_column(Enum(MeetingPhase), nullable=False)
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("buyer_candidates.id"), nullable=True,
+        UUID(as_uuid=True),
+        ForeignKey("buyer_candidates.id"),
+        nullable=True,
     )
 
     # 참석자 (사용자 입력, JSON 배열)
@@ -38,7 +43,9 @@ class TranscriptionJob(Base, TimestampMixin):
 
     # 처리 상태
     status: Mapped[TranscriptionJobStatus] = mapped_column(
-        Enum(TranscriptionJobStatus), nullable=False, default=TranscriptionJobStatus.PENDING,
+        Enum(TranscriptionJobStatus),
+        nullable=False,
+        default=TranscriptionJobStatus.PENDING,
     )
 
     # STT 결과
@@ -49,7 +56,9 @@ class TranscriptionJob(Base, TimestampMixin):
 
     # 확정된 미팅 로그 (approve 후)
     meeting_log_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("meeting_logs.id"), nullable=True,
+        UUID(as_uuid=True),
+        ForeignKey("meeting_logs.id"),
+        nullable=True,
     )
 
     # 비용 추적

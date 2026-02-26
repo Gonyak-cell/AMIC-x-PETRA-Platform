@@ -33,7 +33,9 @@ _test_engine = create_async_engine(
     poolclass=StaticPool,
 )
 _test_session_factory = async_sessionmaker(
-    _test_engine, class_=AsyncSession, expire_on_commit=False,
+    _test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
 

@@ -66,14 +66,14 @@ ALIGN_WRAP = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
 # ── 숫자 형식 ─────────────────────────────────────────────────────────────
 
-NUM_FMT_KRW = '#,##0'
+NUM_FMT_KRW = "#,##0"
 NUM_FMT_KRW_M = '#,##0,,"백만"'
-NUM_FMT_USD = '$#,##0'
-NUM_FMT_PCT = '0.0%'
-NUM_FMT_PCT_2 = '0.00%'
-NUM_FMT_MULTIPLE = '0.0x'
-NUM_FMT_DECIMAL = '#,##0.0'
-NUM_FMT_INTEGER = '#,##0'
+NUM_FMT_USD = "$#,##0"
+NUM_FMT_PCT = "0.0%"
+NUM_FMT_PCT_2 = "0.00%"
+NUM_FMT_MULTIPLE = "0.0x"
+NUM_FMT_DECIMAL = "#,##0.0"
+NUM_FMT_INTEGER = "#,##0"
 NUM_FMT_DAYS = '#,##0"일"'
 NUM_FMT_YEAR = '0"Y"'
 
@@ -169,16 +169,25 @@ def create_named_styles(wb):
     """워크북에 Named Style을 등록한다 (셀 스타일 재사용)."""
     styles = {
         "fm_header": NamedStyle(
-            name="fm_header", font=FONT_HEADER, fill=FILL_HEADER,
-            alignment=ALIGN_CENTER, border=THIN_BORDER,
+            name="fm_header",
+            font=FONT_HEADER,
+            fill=FILL_HEADER,
+            alignment=ALIGN_CENTER,
+            border=THIN_BORDER,
         ),
         "fm_input": NamedStyle(
-            name="fm_input", font=FONT_INPUT, fill=FILL_INPUT,
-            border=INPUT_BORDER, alignment=ALIGN_RIGHT,
+            name="fm_input",
+            font=FONT_INPUT,
+            fill=FILL_INPUT,
+            border=INPUT_BORDER,
+            alignment=ALIGN_RIGHT,
         ),
         "fm_formula": NamedStyle(
-            name="fm_formula", font=FONT_FORMULA, fill=FILL_FORMULA,
-            border=THIN_BORDER, alignment=ALIGN_RIGHT,
+            name="fm_formula",
+            font=FONT_FORMULA,
+            fill=FILL_FORMULA,
+            border=THIN_BORDER,
+            alignment=ALIGN_RIGHT,
         ),
     }
     for name, style in styles.items():

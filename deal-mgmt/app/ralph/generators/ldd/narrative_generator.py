@@ -85,15 +85,17 @@ class NarrativeGenerator:
                 return PureWindowsPath(path).name
             return PurePosixPath(path).name
 
-        materials = format_source_materials([
-            {
-                "name": _extract_filename(f.source_path),
-                "text": f.text,
-                "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
-            }
-            for f in source_files
-            if f.is_valid
-        ])
+        materials = format_source_materials(
+            [
+                {
+                    "name": _extract_filename(f.source_path),
+                    "text": f.text,
+                    "tables": [{"headers": t.headers, "rows": t.rows[:3]} for t in f.tables[:3]],
+                }
+                for f in source_files
+                if f.is_valid
+            ]
+        )
 
         # 체크리스트 분석 결과 텍스트
         checklist_analysis = self._format_checklist(item)
@@ -122,7 +124,10 @@ class NarrativeGenerator:
             except Exception as exc:
                 logger.warning(
                     "블록 생성 실패 [%s/%s/%s]: %s",
-                    item_id, block_type.value, section_type, exc,
+                    item_id,
+                    block_type.value,
+                    section_type,
+                    exc,
                 )
                 content = f"(생성 실패 — 수동 작성 필요: {block_type.value})"
                 block_cost = 0.0
@@ -174,7 +179,9 @@ class NarrativeGenerator:
                 item_id = item.get("item_id", "unknown")
                 logger.warning(
                     "항목 서술 생성 실패 [%s/%s] — 빈 결과 반환: %s",
-                    section_type, item_id, exc,
+                    section_type,
+                    item_id,
+                    exc,
                 )
                 result = NarrativeResult(
                     item_id=item_id,
@@ -249,8 +256,10 @@ class NarrativeGenerator:
         if self._learned_patterns:
             try:
                 from app.ralph.learning.prompt_injector import LearningPromptInjector
+
                 system = LearningPromptInjector().enrich_system_prompt(
-                    system, self._learned_patterns,
+                    system,
+                    self._learned_patterns,
                 )
             except Exception as exc:
                 logger.debug("학습 패턴 주입 실패: %s", exc)

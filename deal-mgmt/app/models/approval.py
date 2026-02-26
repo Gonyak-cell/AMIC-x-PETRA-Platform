@@ -21,9 +21,7 @@ class ApprovalRequest(Base, TimestampMixin):
     approval_type: Mapped[ApprovalType] = mapped_column(Enum(ApprovalType), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[ApprovalStatus] = mapped_column(
-        Enum(ApprovalStatus), nullable=False, default=ApprovalStatus.PENDING
-    )
+    status: Mapped[ApprovalStatus] = mapped_column(Enum(ApprovalStatus), nullable=False, default=ApprovalStatus.PENDING)
     approvers: Mapped[list] = mapped_column(JSONB, nullable=False)
     deadline: Mapped[str | None] = mapped_column(String(10), nullable=True)
     related_entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)

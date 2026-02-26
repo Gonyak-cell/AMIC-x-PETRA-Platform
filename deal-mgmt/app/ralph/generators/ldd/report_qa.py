@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # ── 데이터 클래스 ──────────────────────────────────────────────────
 
+
 @dataclass
 class QAIssue:
     """QA에서 발견된 이슈."""
@@ -89,6 +90,7 @@ JSON만 반환하세요.
 
 # ── 메인 클래스 ──────────────────────────────────────────────────
 
+
 class LDDReportQA:
     """Stage 7: LDD 보고서 최종 QA."""
 
@@ -122,14 +124,16 @@ class LDDReportQA:
 
         issues: list[QAIssue] = []
         for issue_data in data.get("issues", []):
-            issues.append(QAIssue(
-                category=issue_data.get("category", "unknown"),
-                severity=issue_data.get("severity", "info"),
-                location=issue_data.get("location", ""),
-                description=issue_data.get("description", ""),
-                expected=issue_data.get("expected", ""),
-                found=issue_data.get("found", ""),
-            ))
+            issues.append(
+                QAIssue(
+                    category=issue_data.get("category", "unknown"),
+                    severity=issue_data.get("severity", "info"),
+                    location=issue_data.get("location", ""),
+                    description=issue_data.get("description", ""),
+                    expected=issue_data.get("expected", ""),
+                    found=issue_data.get("found", ""),
+                )
+            )
 
         score = data.get("overall_score", 0)
         if not isinstance(score, int) or score < 1 or score > 5:

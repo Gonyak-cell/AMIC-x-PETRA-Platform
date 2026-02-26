@@ -78,10 +78,14 @@ async def list_replies(
     """특정 노트의 답글 목록."""
     await check_client_deal_access(db, txn_id, claims)
     await _get_note_or_404(db, txn_id, note_id)
-    q = select(DealNote).where(
-        DealNote.transaction_id == txn_id,
-        DealNote.parent_id == note_id,
-    ).order_by(DealNote.created_at.asc())
+    q = (
+        select(DealNote)
+        .where(
+            DealNote.transaction_id == txn_id,
+            DealNote.parent_id == note_id,
+        )
+        .order_by(DealNote.created_at.asc())
+    )
     result = await db.execute(q)
     items = [NoteOut.model_validate(n) for n in result.scalars().all()]
     return NoteListResponse(items=items, total=len(items))

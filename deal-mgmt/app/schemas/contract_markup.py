@@ -29,6 +29,7 @@ class ContractMarkupOut(BaseModel):
 
 class ContractMarkupCreate(BaseModel):
     """multipart/form-data와 함께 사용 — file은 UploadFile로 별도 수신."""
+
     meeting_id: uuid.UUID | None = None
     version_label: str = Field(..., min_length=1, max_length=100)
     source_party: str | None = None

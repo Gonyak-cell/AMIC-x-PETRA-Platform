@@ -71,7 +71,7 @@ class TestVisionResponseParsing:
 
     def test_parse_json_block(self):
         """```json ... ``` 형식 파싱."""
-        response = '''Some text
+        response = """Some text
 ```json
 {
   "dimensions": [
@@ -81,7 +81,7 @@ class TestVisionResponseParsing:
   "overall_feedback": "Nice work"
 }
 ```
-More text'''
+More text"""
         result = self._gate()._parse_vision_response(response)
         assert len(result["dimensions"]) == 2
         assert result["dimensions"][0]["score"] == 4
@@ -89,9 +89,9 @@ More text'''
 
     def test_parse_plain_code_block(self):
         """``` ... ``` (언어 태그 없는) 형식 파싱."""
-        response = '''```
+        response = """```
 {"dimensions": [], "overall_feedback": "test"}
-```'''
+```"""
         result = self._gate()._parse_vision_response(response)
         assert result["overall_feedback"] == "test"
 

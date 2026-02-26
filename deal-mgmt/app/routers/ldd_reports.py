@@ -34,9 +34,7 @@ from app.services.ldd_review_service import LDDReviewService
 router = APIRouter(prefix="/transactions/{txn_id}/ldd-reports", tags=["LDD Reports"])
 
 # Path Traversal 방어: 생성 파일은 반드시 이 디렉터리 내에 위치해야 한다
-_SAFE_OUTPUT_DIR = (
-    Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
-).resolve()
+_SAFE_OUTPUT_DIR = (Path(__file__).resolve().parent.parent.parent / "generated" / "ldd").resolve()
 
 
 async def _get_and_authorize_txn(
@@ -73,10 +71,7 @@ async def list_all_ldd_reports(
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """모든 거래의 LDD 보고서 목록을 반환한다."""
-    return [
-        LDDReportOut.model_validate(r)
-        for r in await ldd_report_service.list_all_ldd_reports(db)
-    ]
+    return [LDDReportOut.model_validate(r) for r in await ldd_report_service.list_all_ldd_reports(db)]
 
 
 @_default_sections_router.get("/ldd-reports/default-sections")
@@ -87,6 +82,7 @@ async def get_default_sections():
 
 # ── CRUD 엔드포인트 ───────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=list[LDDReportOut])
 async def list_ldd_reports(
     txn_id: uuid.UUID,
@@ -95,10 +91,7 @@ async def list_ldd_reports(
 ):
     """거래에 속한 LDD 보고서 목록을 반환한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
-    return [
-        LDDReportOut.model_validate(r)
-        for r in await ldd_report_service.list_ldd_reports(db, txn_id)
-    ]
+    return [LDDReportOut.model_validate(r) for r in await ldd_report_service.list_ldd_reports(db, txn_id)]
 
 
 @router.post("", response_model=LDDReportOut, status_code=status.HTTP_201_CREATED)
@@ -189,9 +182,7 @@ async def download_ldd_report(
     report = await ldd_report_service.get_ldd_report(db, txn_id, report_id)
 
     if report.status != LDDReportStatus.READY:
-        raise DocumentNotReadyError(
-            report.status.value if hasattr(report.status, "value") else str(report.status)
-        )
+        raise DocumentNotReadyError(report.status.value if hasattr(report.status, "value") else str(report.status))
 
     if not report.file_path:
         raise HTTPException(

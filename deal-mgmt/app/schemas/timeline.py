@@ -34,6 +34,7 @@ class TimelineResponse(BaseModel):
 
 # ── Gantt Timeline ────────────────────────────────────────
 
+
 class PhaseBar(BaseModel):
     phase: str
     label: str

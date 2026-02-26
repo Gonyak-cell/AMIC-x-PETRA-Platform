@@ -114,10 +114,17 @@ class TestSectionStructure:
         assert len(t.sections) == expected_sections
         assert t.get_item_count() >= expected_min_items
 
-    @pytest.mark.parametrize("deal_type", [
-        "STOCK_ACQUISITION", "REAL_ESTATE", "IPO",
-        "CORPORATE_SPLIT", "PREFERRED_STOCK", "ASSET_ACQUISITION",
-    ])
+    @pytest.mark.parametrize(
+        "deal_type",
+        [
+            "STOCK_ACQUISITION",
+            "REAL_ESTATE",
+            "IPO",
+            "CORPORATE_SPLIT",
+            "PREFERRED_STOCK",
+            "ASSET_ACQUISITION",
+        ],
+    )
     def test_sections_dict_format(self, deal_type):
         """get_sections_dict()가 DEFAULT_LDD_SECTIONS와 동일한 형식을 반환하는지 검증."""
         sections = TemplateRegistry.get_sections_dict(deal_type)
@@ -140,10 +147,17 @@ class TestSectionStructure:
                 assert "rfi_required" in item
                 assert "evidence_refs" in item
 
-    @pytest.mark.parametrize("deal_type", [
-        "STOCK_ACQUISITION", "REAL_ESTATE", "IPO",
-        "CORPORATE_SPLIT", "PREFERRED_STOCK", "ASSET_ACQUISITION",
-    ])
+    @pytest.mark.parametrize(
+        "deal_type",
+        [
+            "STOCK_ACQUISITION",
+            "REAL_ESTATE",
+            "IPO",
+            "CORPORATE_SPLIT",
+            "PREFERRED_STOCK",
+            "ASSET_ACQUISITION",
+        ],
+    )
     def test_unique_item_ids(self, deal_type):
         """각 템플릿 내 item_id가 고유한지 검증."""
         t = TemplateRegistry.get(deal_type)
@@ -153,10 +167,17 @@ class TestSectionStructure:
                 all_ids.append(item.item_id)
         assert len(all_ids) == len(set(all_ids)), f"중복 item_id 발견: {deal_type}"
 
-    @pytest.mark.parametrize("deal_type", [
-        "STOCK_ACQUISITION", "REAL_ESTATE", "IPO",
-        "CORPORATE_SPLIT", "PREFERRED_STOCK", "ASSET_ACQUISITION",
-    ])
+    @pytest.mark.parametrize(
+        "deal_type",
+        [
+            "STOCK_ACQUISITION",
+            "REAL_ESTATE",
+            "IPO",
+            "CORPORATE_SPLIT",
+            "PREFERRED_STOCK",
+            "ASSET_ACQUISITION",
+        ],
+    )
     def test_unique_section_types(self, deal_type):
         """각 템플릿 내 section_type이 고유한지 검증."""
         t = TemplateRegistry.get(deal_type)
@@ -172,6 +193,7 @@ class TestResolveSections:
 
     def test_explicit_sections_override(self):
         from app.services.ldd_report_service import _resolve_sections
+
         explicit = [{"section_type": "CUSTOM", "title": "커스텀", "items": []}]
         sections, ttype = _resolve_sections("STOCK_ACQUISITION", explicit)
         assert sections == explicit
@@ -179,6 +201,7 @@ class TestResolveSections:
 
     def test_deal_type_template(self):
         from app.services.ldd_report_service import _resolve_sections
+
         sections, ttype = _resolve_sections("IPO")
         assert ttype == "IPO"
         assert len(sections) == 4
@@ -186,11 +209,13 @@ class TestResolveSections:
     def test_empty_deal_type_fallback(self):
         from app.schemas.ldd_report import DEFAULT_LDD_SECTIONS
         from app.services.ldd_report_service import _resolve_sections
+
         sections, ttype = _resolve_sections("")
         assert ttype == "DEFAULT"
         assert len(sections) == len(DEFAULT_LDD_SECTIONS)
 
     def test_unknown_deal_type_fallback(self):
         from app.services.ldd_report_service import _resolve_sections
+
         sections, ttype = _resolve_sections("NONEXISTENT")
         assert ttype == "DEFAULT"

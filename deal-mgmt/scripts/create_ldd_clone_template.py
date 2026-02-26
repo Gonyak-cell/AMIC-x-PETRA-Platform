@@ -53,19 +53,13 @@ PRESERVE_STYLES = {"11", "22", "31", "40"}  # TOC 스타일들
 def _get_cell_fill(cell) -> str | None:
     """셀의 배경색(fill) 값을 반환."""
     tc = cell._tc
-    tcPr = tc.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tcPr"
-    )
+    tcPr = tc.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tcPr")
     if tcPr is None:
         return None
-    shd = tcPr.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd"
-    )
+    shd = tcPr.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd")
     if shd is None:
         return None
-    return shd.get(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill"
-    )
+    return shd.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill")
 
 
 def _is_section_header_bar(table) -> bool:
@@ -134,33 +128,21 @@ def _get_paragraph_style_id(paragraph) -> str:
 
 def _get_paragraph_num_info(paragraph) -> tuple[str, str]:
     """단락의 numId, ilvl 반환."""
-    pPr = paragraph._p.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr"
-    )
+    pPr = paragraph._p.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr")
     if pPr is None:
         return "", ""
-    numPr = pPr.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr"
-    )
+    numPr = pPr.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr")
     if numPr is None:
         return "", ""
-    numId_el = numPr.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numId"
-    )
-    ilvl_el = numPr.find(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ilvl"
-    )
+    numId_el = numPr.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numId")
+    ilvl_el = numPr.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ilvl")
     numId = (
-        numId_el.get(
-            "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", ""
-        )
+        numId_el.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "")
         if numId_el is not None
         else ""
     )
     ilvl = (
-        ilvl_el.get(
-            "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", ""
-        )
+        ilvl_el.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "")
         if ilvl_el is not None
         else ""
     )
@@ -365,7 +347,7 @@ def process_document(input_path: Path, output_path: Path) -> None:
                 first_cells = rows[0].findall(f"{{{ns}}}tc")
                 if first_cells:
                     fill = _get_cell_fill_xml(first_cells[0])
-                    is_data = fill == DATA_TABLE_HEADER_FILL
+                    is_data = fill == DATA_TABLE_HEADER_FILL  # noqa: F841
 
                     for row_idx, row in enumerate(rows):
                         if row_idx == 0:
@@ -399,23 +381,17 @@ def process_document(input_path: Path, output_path: Path) -> None:
         fn_root = etree.fromstring(footnotes_part.blob)
         ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
         for footnote in fn_root.findall("w:footnote", ns):
-            fn_type = footnote.get(
-                "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
-            )
+            fn_type = footnote.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type")
             if fn_type in ("separator", "continuationSeparator"):
                 continue
             # 각주 텍스트를 플레이스홀더로 교체
-            for t in footnote.iter(
-                "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"
-            ):
+            for t in footnote.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"):
                 if t.text and t.text.strip():
                     t.text = "[각주 내용 기재]"
                     break  # 첫 텍스트 노드만 교체, 나머지는 비움
             # 첫 번째 이후의 t 요소 비우기
             first_found = False
-            for t in footnote.iter(
-                "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"
-            ):
+            for t in footnote.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"):
                 if not first_found:
                     first_found = True
                     continue

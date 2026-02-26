@@ -41,9 +41,7 @@ async def init_vdr_folders(
 ) -> list[VdrFolder]:
     """기본 VDR 폴더 구조를 생성한다. 이미 존재하면 예외 발생."""
     existing = await db.scalar(
-        select(func.count())
-        .select_from(VdrFolder)
-        .where(VdrFolder.transaction_id == transaction_id)
+        select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id)
     )
     if existing and existing > 0:
         raise ValueError("이 거래의 VDR 폴더가 이미 초기화되어 있습니다.")
@@ -273,11 +271,7 @@ async def get_vdr_summary(
 ) -> dict:
     """VDR 요약 통계."""
     folder_count = (
-        await db.scalar(
-            select(func.count())
-            .select_from(VdrFolder)
-            .where(VdrFolder.transaction_id == transaction_id)
-        )
+        await db.scalar(select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id))
         or 0
     )
 

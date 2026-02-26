@@ -80,16 +80,20 @@ class RalphMemoGenerator:
         """섹션별 콘텐츠를 생성한다 (LLM 필요)."""
         if self._llm_call is None:
             # LLM 미연결 시 스켈레톤 반환
-            return json.dumps({
-                "section_id": section_id,
-                "slides": [{
-                    "layout": "MAIN",
-                    "title": section_id.replace("_", " ").title(),
-                    "body": [
-                        {"type": "text", "content": f"[{section_id}] 콘텐츠 생성 대기 중 — LLM 연결 필요"},
+            return json.dumps(
+                {
+                    "section_id": section_id,
+                    "slides": [
+                        {
+                            "layout": "MAIN",
+                            "title": section_id.replace("_", " ").title(),
+                            "body": [
+                                {"type": "text", "content": f"[{section_id}] 콘텐츠 생성 대기 중 — LLM 연결 필요"},
+                            ],
+                        }
                     ],
-                }],
-            })
+                }
+            )
 
         prompt = self._build_section_prompt(section_id, section_criteria, source_data, feedback)
         system = (
@@ -127,13 +131,16 @@ class RalphMemoGenerator:
 
         if not output_path:
             from app.pptx.memo_generator import TEMPLATES_DIR
+
             output_dir = Path(TEMPLATES_DIR).parent.parent / "generated" / "memorandum"
             output_dir.mkdir(parents=True, exist_ok=True)
             import uuid as _uuid
+
             output_path = str(output_dir / f"{self.memo_type}_{self.project_code}_{_uuid.uuid4().hex[:8]}.pptx")
 
         try:
             from app.pptx.memo_generator import generate_memo
+
             result = generate_memo(
                 memo_type=self.memo_type,
                 project_code=self.project_code,
@@ -188,6 +195,7 @@ class RalphMemoGenerator:
 
     def _current_date(self) -> str:
         from datetime import date
+
         d = date.today()
         return d.strftime("%B %Y")
 

@@ -37,44 +37,242 @@ MAX_ERROR_LEN = 1000
 
 FM_FIELD_REGISTRY: list[dict] = [
     # Revenue & Growth
-    {"category": FMChecklistCategory.REVENUE_FORECAST, "title": "매출액 실적 (최근 3~5년)", "field_type": "currency", "unit": "KRW", "severity": "HIGH"},
-    {"category": FMChecklistCategory.REVENUE_FORECAST, "title": "세그먼트별 매출 비중", "field_type": "percentage", "unit": "%", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.GROWTH_ASSUMPTIONS, "title": "매출 성장률 가정 (향후 5년)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.GROWTH_ASSUMPTIONS, "title": "시장 성장률 참조치", "field_type": "percentage", "unit": "%", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.VOLUME_PRICE_MIX, "title": "물량 성장 vs 단가 상승 구분", "field_type": "text", "unit": None, "severity": "MEDIUM"},
+    {
+        "category": FMChecklistCategory.REVENUE_FORECAST,
+        "title": "매출액 실적 (최근 3~5년)",
+        "field_type": "currency",
+        "unit": "KRW",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.REVENUE_FORECAST,
+        "title": "세그먼트별 매출 비중",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.GROWTH_ASSUMPTIONS,
+        "title": "매출 성장률 가정 (향후 5년)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.GROWTH_ASSUMPTIONS,
+        "title": "시장 성장률 참조치",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.VOLUME_PRICE_MIX,
+        "title": "물량 성장 vs 단가 상승 구분",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
     # Cost Structure
-    {"category": FMChecklistCategory.COGS_FORECAST, "title": "매출원가율 실적/가정", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.COGS_FORECAST, "title": "원재료비 비중 및 추세", "field_type": "percentage", "unit": "%", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.SGA_FORECAST, "title": "판관비율 실적/가정", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.SGA_FORECAST, "title": "인건비 비중", "field_type": "percentage", "unit": "%", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.DEPRECIATION_AMORT, "title": "감가상각비 추정 방법", "field_type": "text", "unit": None, "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.CAPEX_FORECAST, "title": "CAPEX 가정 (매출 대비 %)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
+    {
+        "category": FMChecklistCategory.COGS_FORECAST,
+        "title": "매출원가율 실적/가정",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.COGS_FORECAST,
+        "title": "원재료비 비중 및 추세",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.SGA_FORECAST,
+        "title": "판관비율 실적/가정",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.SGA_FORECAST,
+        "title": "인건비 비중",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.DEPRECIATION_AMORT,
+        "title": "감가상각비 추정 방법",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.CAPEX_FORECAST,
+        "title": "CAPEX 가정 (매출 대비 %)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
     # Working Capital & Cash Flow
-    {"category": FMChecklistCategory.NWC_ASSUMPTIONS, "title": "매출채권 회전일수 (DSO)", "field_type": "number", "unit": "일", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.NWC_ASSUMPTIONS, "title": "재고자산 회전일수 (DIO)", "field_type": "number", "unit": "일", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.NWC_ASSUMPTIONS, "title": "매입채무 회전일수 (DPO)", "field_type": "number", "unit": "일", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.FCF_DERIVATION, "title": "Free Cash Flow 도출 방식", "field_type": "text", "unit": None, "severity": "HIGH"},
+    {
+        "category": FMChecklistCategory.NWC_ASSUMPTIONS,
+        "title": "매출채권 회전일수 (DSO)",
+        "field_type": "number",
+        "unit": "일",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.NWC_ASSUMPTIONS,
+        "title": "재고자산 회전일수 (DIO)",
+        "field_type": "number",
+        "unit": "일",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.NWC_ASSUMPTIONS,
+        "title": "매입채무 회전일수 (DPO)",
+        "field_type": "number",
+        "unit": "일",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.FCF_DERIVATION,
+        "title": "Free Cash Flow 도출 방식",
+        "field_type": "text",
+        "unit": None,
+        "severity": "HIGH",
+    },
     # Capital Structure & WACC
-    {"category": FMChecklistCategory.FM_DEBT_SCHEDULE, "title": "차입금 구조 (이자율, 만기)", "field_type": "text", "unit": None, "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "무위험이자율 (Rf)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "시장리스크프리미엄 (MRP)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "Beta (Unlevered / Levered)", "field_type": "number", "unit": "x", "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "세전 타인자본비용 (Kd pre-tax)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "자기자본비용 (Ke)", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.WACC_COMPONENTS, "title": "목표 자본구조 (D/E)", "field_type": "percentage", "unit": "%", "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.TAX_RATE, "title": "유효법인세율 가정", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
+    {
+        "category": FMChecklistCategory.FM_DEBT_SCHEDULE,
+        "title": "차입금 구조 (이자율, 만기)",
+        "field_type": "text",
+        "unit": None,
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "무위험이자율 (Rf)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "시장리스크프리미엄 (MRP)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "Beta (Unlevered / Levered)",
+        "field_type": "number",
+        "unit": "x",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "세전 타인자본비용 (Kd pre-tax)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "자기자본비용 (Ke)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.WACC_COMPONENTS,
+        "title": "목표 자본구조 (D/E)",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.TAX_RATE,
+        "title": "유효법인세율 가정",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
     # Valuation
-    {"category": FMChecklistCategory.DCF_PARAMETERS, "title": "Terminal Growth Rate", "field_type": "percentage", "unit": "%", "severity": "HIGH"},
-    {"category": FMChecklistCategory.DCF_PARAMETERS, "title": "Exit Multiple (EV/EBITDA)", "field_type": "number", "unit": "x", "severity": "HIGH"},
-    {"category": FMChecklistCategory.TRADING_MULTIPLES, "title": "비교기업 리스트 (GPCM)", "field_type": "text", "unit": None, "severity": "HIGH"},
-    {"category": FMChecklistCategory.TRADING_MULTIPLES, "title": "적용 멀티플 (EV/EBITDA median)", "field_type": "number", "unit": "x", "severity": "HIGH"},
-    {"category": FMChecklistCategory.TRANSACTION_MULTIPLES, "title": "선례거래 리스트 (GTM)", "field_type": "text", "unit": None, "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.TRANSACTION_MULTIPLES, "title": "적용 멀티플 (GTM median)", "field_type": "number", "unit": "x", "severity": "MEDIUM"},
+    {
+        "category": FMChecklistCategory.DCF_PARAMETERS,
+        "title": "Terminal Growth Rate",
+        "field_type": "percentage",
+        "unit": "%",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.DCF_PARAMETERS,
+        "title": "Exit Multiple (EV/EBITDA)",
+        "field_type": "number",
+        "unit": "x",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.TRADING_MULTIPLES,
+        "title": "비교기업 리스트 (GPCM)",
+        "field_type": "text",
+        "unit": None,
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.TRADING_MULTIPLES,
+        "title": "적용 멀티플 (EV/EBITDA median)",
+        "field_type": "number",
+        "unit": "x",
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.TRANSACTION_MULTIPLES,
+        "title": "선례거래 리스트 (GTM)",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.TRANSACTION_MULTIPLES,
+        "title": "적용 멀티플 (GTM median)",
+        "field_type": "number",
+        "unit": "x",
+        "severity": "MEDIUM",
+    },
     # Scenarios & Sensitivity
-    {"category": FMChecklistCategory.BASE_SCENARIO, "title": "Base Case 핵심 파라미터 요약", "field_type": "text", "unit": None, "severity": "HIGH"},
-    {"category": FMChecklistCategory.UPSIDE_SCENARIO, "title": "Upside Case 주요 차이점", "field_type": "text", "unit": None, "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.DOWNSIDE_SCENARIO, "title": "Downside Case 주요 차이점", "field_type": "text", "unit": None, "severity": "MEDIUM"},
-    {"category": FMChecklistCategory.SENSITIVITY_MATRIX, "title": "민감도 분석 축 (WACC × Exit Multiple)", "field_type": "text", "unit": None, "severity": "MEDIUM"},
+    {
+        "category": FMChecklistCategory.BASE_SCENARIO,
+        "title": "Base Case 핵심 파라미터 요약",
+        "field_type": "text",
+        "unit": None,
+        "severity": "HIGH",
+    },
+    {
+        "category": FMChecklistCategory.UPSIDE_SCENARIO,
+        "title": "Upside Case 주요 차이점",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.DOWNSIDE_SCENARIO,
+        "title": "Downside Case 주요 차이점",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
+    {
+        "category": FMChecklistCategory.SENSITIVITY_MATRIX,
+        "title": "민감도 분석 축 (WACC × Exit Multiple)",
+        "field_type": "text",
+        "unit": None,
+        "severity": "MEDIUM",
+    },
 ]
 
 
@@ -101,10 +299,7 @@ async def get_financial_model(
     transaction_id: uuid.UUID,
 ) -> FinancialModel:
     """재무모델을 조회한다."""
-    stmt = (
-        select(FinancialModel)
-        .where(FinancialModel.id == fm_id, FinancialModel.transaction_id == transaction_id)
-    )
+    stmt = select(FinancialModel).where(FinancialModel.id == fm_id, FinancialModel.transaction_id == transaction_id)
     fm = (await db.execute(stmt)).scalar_one_or_none()
     if fm is None:
         raise DocumentNotFoundError(f"FinancialModel {fm_id}")
@@ -144,7 +339,7 @@ async def create_financial_model(
             category=field_def["category"],
             order_index=idx,
             title=field_def["title"],
-            description=f'{field_def["title"]} — 자동 추출 또는 사용자 입력 필요',
+            description=f"{field_def['title']} — 자동 추출 또는 사용자 입력 필요",
             field_type=field_def["field_type"],
             unit=field_def["unit"],
             severity=field_def["severity"],
@@ -253,7 +448,10 @@ async def _run_vdr_extraction_and_ralph(
 
     logger.info(
         "Background: VDR extraction + Ralph Pass 1 for FM %s (txn=%s, vdr_docs=%d, type=%s)",
-        fm_id, transaction_id, len(vdr_document_ids), model_type,
+        fm_id,
+        transaction_id,
+        len(vdr_document_ids),
+        model_type,
     )
 
     try:
@@ -267,7 +465,8 @@ async def _run_vdr_extraction_and_ralph(
             ):
                 logger.warning(
                     "FM %s skipping Pass 1: unexpected status %s",
-                    fm_id, fm.status,
+                    fm_id,
+                    fm.status,
                 )
                 return
 
@@ -315,7 +514,9 @@ async def _run_vdr_extraction_and_ralph(
 
             logger.info(
                 "FM %s Ralph Pass 1 완료: score=%.2f, iterations=%d",
-                fm_id, result.final_score, result.total_iterations,
+                fm_id,
+                result.final_score,
+                result.total_iterations,
             )
 
     except Exception as e:
@@ -367,7 +568,8 @@ async def run_finalize_and_generate(
             if fm.status != FinancialModelStatus.FINALIZING:
                 logger.warning(
                     "FM %s skipping Pass 2: expected FINALIZING, got %s",
-                    fm_id, fm.status,
+                    fm_id,
+                    fm.status,
                 )
                 return
 
@@ -436,7 +638,8 @@ async def run_finalize_and_generate(
 
             logger.info(
                 "FM %s finalized: %s (%.1f KB, score=%.2f)",
-                fm_id, file_name,
+                fm_id,
+                file_name,
                 fm.file_size_bytes / 1024,
                 result.final_score,
             )

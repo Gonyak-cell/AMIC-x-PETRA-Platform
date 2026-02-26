@@ -53,10 +53,10 @@ VISION_SYSTEM_PROMPT = """당신은 M&A 투자은행(IB)의 시니어 디자이�
 """
 
 VISION_WEIGHTS: dict[str, tuple[float, str]] = {
-    "layout_balance":  (0.25, "레이아웃 균형"),
-    "color_harmony":   (0.15, "색상 조화"),
-    "typography":      (0.20, "타이포그래피"),
-    "data_viz":        (0.20, "데이터 시각화"),
+    "layout_balance": (0.25, "레이아웃 균형"),
+    "color_harmony": (0.15, "색상 조화"),
+    "typography": (0.20, "타이포그래피"),
+    "data_viz": (0.20, "데이터 시각화"),
     "professionalism": (0.20, "전문성"),
 }
 
@@ -91,7 +91,11 @@ class VisionGate(QualityGate):
 
         if not artifact_path.endswith(".pptx"):
             return self._timed_result(
-                start, [], ["Vision Gate는 PPTX 파일만 지원합니다"], [], [],
+                start,
+                [],
+                ["Vision Gate는 PPTX 파일만 지원합니다"],
+                [],
+                [],
             )
 
         if not self._api_key:
@@ -102,7 +106,11 @@ class VisionGate(QualityGate):
             pdf_path = await self._convert_to_pdf(artifact_path)
             if not pdf_path:
                 return self._timed_result(
-                    start, [], ["PDF 변환 실패 — LibreOffice가 설치되어 있는지 확인하세요"], [], [],
+                    start,
+                    [],
+                    ["PDF 변환 실패 — LibreOffice가 설치되어 있는지 확인하세요"],
+                    [],
+                    [],
                 )
 
             # 2. PDF → PNG (전략적 샘플링)
@@ -110,7 +118,11 @@ class VisionGate(QualityGate):
 
             if not images:
                 return self._timed_result(
-                    start, [], ["슬라이드 이미지 추출 실패"], [], [],
+                    start,
+                    [],
+                    ["슬라이드 이미지 추출 실패"],
+                    [],
+                    [],
                 )
 
             # 3. GPT-4o Vision 평가
@@ -132,8 +144,10 @@ class VisionGate(QualityGate):
             proc = await asyncio.create_subprocess_exec(
                 libreoffice,
                 "--headless",
-                "--convert-to", "pdf",
-                "--outdir", tmpdir,
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                tmpdir,
                 pptx_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -179,7 +193,7 @@ class VisionGate(QualityGate):
             indices = sorted(set(indices))
 
         images: list[bytes] = []
-        for idx in indices[:self._max_slides]:
+        for idx in indices[: self._max_slides]:
             page = doc[idx]
             pix = page.get_pixmap(dpi=150)
             images.append(pix.tobytes("png"))
@@ -199,10 +213,12 @@ class VisionGate(QualityGate):
         ]
         for i, img_bytes in enumerate(images):
             b64 = base64.b64encode(img_bytes).decode("utf-8")
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "low"},
-            })
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "low"},
+                }
+            )
 
         response = await client.chat.completions.create(
             model="gpt-4o",
@@ -242,13 +258,15 @@ class VisionGate(QualityGate):
             dim_name = dim_data.get("name", "")
             if dim_name in VISION_WEIGHTS:
                 weight, label = VISION_WEIGHTS[dim_name]
-                dimensions.append(DimensionScore(
-                    name=dim_name,
-                    label=label,
-                    score=float(dim_data.get("score", 3)),
-                    weight=weight,
-                    feedback=dim_data.get("feedback", ""),
-                ))
+                dimensions.append(
+                    DimensionScore(
+                        name=dim_name,
+                        label=label,
+                        score=float(dim_data.get("score", 3)),
+                        weight=weight,
+                        feedback=dim_data.get("feedback", ""),
+                    )
+                )
 
         issues = [d.feedback for d in dimensions if d.score < 3 and d.feedback]
         suggestions = [data.get("overall_feedback", "")]
@@ -256,7 +274,12 @@ class VisionGate(QualityGate):
         cost = len(dimensions) * 0.003
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, [], cost_usd=cost,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            [],
+            cost_usd=cost,
         )
 
     def _fallback_evaluate(self, start: int) -> GateResult:
@@ -266,6 +289,9 @@ class VisionGate(QualityGate):
             dimensions.append(DimensionScore(dim_name, label, 3.0, weight))
 
         return self._timed_result(
-            start, dimensions,
-            ["Vision API 미연결 — 규칙 기반 fallback 평가"], [], [],
+            start,
+            dimensions,
+            ["Vision API 미연결 — 규칙 기반 fallback 평가"],
+            [],
+            [],
         )

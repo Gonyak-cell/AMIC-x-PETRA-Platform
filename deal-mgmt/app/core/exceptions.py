@@ -92,37 +92,54 @@ def _problem_response(
 async def service_unavailable_handler(request: Request, exc: ServiceUnavailableError) -> JSONResponse:
     logger.error("ServiceUnavailableError [%s]: %s", exc.service, exc.message, exc_info=exc)
     return _problem_response(
-        502, "integration:service_unavailable", "SERVICE_UNAVAILABLE",
-        exc.message, error_code=exc.code, service=exc.service,
+        502,
+        "integration:service_unavailable",
+        "SERVICE_UNAVAILABLE",
+        exc.message,
+        error_code=exc.code,
+        service=exc.service,
     )
 
 
 async def workflow_error_handler(request: Request, exc: WorkflowError) -> JSONResponse:
     logger.error("WorkflowError: %s", exc.message, exc_info=exc)
     return _problem_response(
-        422, "workflow:transition_failed", "WORKFLOW_ERROR", exc.message,
+        422,
+        "workflow:transition_failed",
+        "WORKFLOW_ERROR",
+        exc.message,
         error_code=exc.code,
     )
 
 
 async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
     return _problem_response(
-        409, "domain:conflict", "CONFLICT_ERROR", exc.message,
+        409,
+        "domain:conflict",
+        "CONFLICT_ERROR",
+        exc.message,
         error_code=exc.code,
     )
 
 
 async def document_not_found_handler(request: Request, exc: DocumentNotFoundError) -> JSONResponse:
     return _problem_response(
-        404, "document:not_found", "DOCUMENT_NOT_FOUND", exc.message,
+        404,
+        "document:not_found",
+        "DOCUMENT_NOT_FOUND",
+        exc.message,
         error_code=exc.code,
     )
 
 
 async def document_not_ready_handler(request: Request, exc: DocumentNotReadyError) -> JSONResponse:
     return _problem_response(
-        400, "document:not_ready", "DOCUMENT_NOT_READY",
-        exc.message, error_code=exc.code, current_status=exc.current_status,
+        400,
+        "document:not_ready",
+        "DOCUMENT_NOT_READY",
+        exc.message,
+        error_code=exc.code,
+        current_status=exc.current_status,
     )
 
 

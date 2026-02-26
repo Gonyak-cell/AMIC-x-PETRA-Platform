@@ -58,6 +58,7 @@ class LDDReviewService:
 
         # risk_color 재계산 + counts 갱신 (user_override_status가 있는 경우)
         from app.services.ldd_report_service import _compute_counts, _compute_risk_colors
+
         report.sections = _compute_risk_colors(sections)
         if review.user_override_status:
             counts = _compute_counts(sections)
@@ -97,6 +98,7 @@ class LDDReviewService:
                     applied += 1
 
         from app.services.ldd_report_service import _compute_counts, _compute_risk_colors
+
         report.sections = _compute_risk_colors(sections)
         # override_status가 하나라도 있으면 counts 재계산
         has_override = any(r.user_override_status for r in body.items)
@@ -206,9 +208,7 @@ class LDDReviewService:
         """REVIEW 상태 보고서 조회 (상태 검증 포함)."""
         report = await self._get_report(db, transaction_id, report_id)
         if report.status != LDDReportStatus.REVIEW:
-            raise WorkflowError(
-                f"리뷰는 REVIEW 상태에서만 가능합니다 (현재: {report.status})"
-            )
+            raise WorkflowError(f"리뷰는 REVIEW 상태에서만 가능합니다 (현재: {report.status})")
         return report
 
     async def _get_report(

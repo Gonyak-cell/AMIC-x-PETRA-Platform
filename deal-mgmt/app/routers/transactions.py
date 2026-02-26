@@ -33,8 +33,14 @@ async def list_transactions(
 ):
     client_email = claims.email if claims.role == "CLIENT" else None
     items, total = await transaction_service.list_transactions(
-        db, search=search, side=side, phase=phase, tx_status=status,
-        limit=limit, offset=offset, client_email=client_email,
+        db,
+        search=search,
+        side=side,
+        phase=phase,
+        tx_status=status,
+        limit=limit,
+        offset=offset,
+        client_email=client_email,
     )
     return TransactionListResponse(
         items=[TransactionOut.model_validate(t) for t in items],

@@ -28,8 +28,8 @@ class LawFirmNarrative:
     item_name: str = ""
     chapter_number: str = ""
 
-    status_section: str = ""       # 1. 현황
-    review_section: str = ""       # 2. 검토 및 분석
+    status_section: str = ""  # 1. 현황
+    review_section: str = ""  # 2. 검토 및 분석
     recommendation_section: str = ""  # 3. Recommendation
 
     irl_items: list[str] = field(default_factory=list)
@@ -130,10 +130,7 @@ class LawFirmNarrativeAdapter:
         chapter_number: str = "",
     ) -> list[LawFirmNarrative]:
         """한 챕터에 속한 모든 항목의 서술을 변환."""
-        return [
-            self.convert_item(n, chapter_number)
-            for n in narrative_list
-        ]
+        return [self.convert_item(n, chapter_number) for n in narrative_list]
 
     def convert_from_llm_response(
         self,
@@ -166,10 +163,7 @@ class LawFirmNarrativeAdapter:
 
         LDDReport.law_firm_sections에 저장.
         """
-        return {
-            chapter_num: [n.to_dict() for n in narrs]
-            for chapter_num, narrs in narratives_by_chapter.items()
-        }
+        return {chapter_num: [n.to_dict() for n in narrs] for chapter_num, narrs in narratives_by_chapter.items()}
 
     def collect_irl_items(
         self,
@@ -183,12 +177,14 @@ class LawFirmNarrativeAdapter:
         for chapter_num, narrs in narratives_by_chapter.items():
             for narr in narrs:
                 for irl in narr.irl_items:
-                    irl_list.append({
-                        "chapter": chapter_num,
-                        "item_id": narr.item_id,
-                        "item_name": narr.item_name,
-                        "request": irl,
-                    })
+                    irl_list.append(
+                        {
+                            "chapter": chapter_num,
+                            "item_id": narr.item_id,
+                            "item_name": narr.item_name,
+                            "request": irl,
+                        }
+                    )
         return irl_list
 
 

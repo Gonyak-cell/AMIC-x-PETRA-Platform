@@ -101,64 +101,81 @@ async def seeded_db(async_session: AsyncSession):
         async_session.add(_make_txn(tid, idx))
     await async_session.flush()  # Transaction INSERT 먼저 확정
 
-    for i, (score, progress) in enumerate([
-        (4.8, {
-            "records": {
-                "GOVERNANCE": [
-                    {
-                        "iteration": 1,
-                        "gate_results": [
+    for i, (score, progress) in enumerate(
+        [
+            (
+                4.8,
+                {
+                    "records": {
+                        "GOVERNANCE": [
                             {
-                                "issues": ["법인등기 관련 사항이 누락되었습니다", "주주명부 날짜가 최신 정보와 불일치합니다"],
-                                "suggestions": ["등기부등본과 교차검증을 수행하세요", "주주명부 최신본을 반드시 확인하세요"],
+                                "iteration": 1,
+                                "gate_results": [
+                                    {
+                                        "issues": [
+                                            "법인등기 관련 사항이 누락되었습니다",
+                                            "주주명부 날짜가 최신 정보와 불일치합니다",
+                                        ],
+                                        "suggestions": [
+                                            "등기부등본과 교차검증을 수행하세요",
+                                            "주주명부 최신본을 반드시 확인하세요",
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                        "CAPITAL": [
+                            {
+                                "iteration": 1,
+                                "gate_results": [
+                                    {
+                                        "issues": ["자본금 변경 이력이 불완전합니다"],
+                                        "suggestions": ["정관 변경 이력과 대조 확인하세요"],
+                                    }
+                                ],
                             }
                         ],
                     }
-                ],
-                "CAPITAL": [
-                    {
-                        "iteration": 1,
-                        "gate_results": [
+                },
+            ),
+            (
+                4.6,
+                {
+                    "records": {
+                        "GOVERNANCE": [
                             {
-                                "issues": ["자본금 변경 이력이 불완전합니다"],
-                                "suggestions": ["정관 변경 이력과 대조 확인하세요"],
+                                "iteration": 1,
+                                "gate_results": [
+                                    {
+                                        "issues": ["법인등기 관련 사항이 누락되었습니다"],
+                                        "suggestions": ["등기부등본과 교차검증을 수행하세요"],
+                                    }
+                                ],
                             }
                         ],
                     }
-                ],
-            }
-        }),
-        (4.6, {
-            "records": {
-                "GOVERNANCE": [
-                    {
-                        "iteration": 1,
-                        "gate_results": [
+                },
+            ),
+            (
+                3.2,
+                {
+                    "records": {
+                        "GOVERNANCE": [
                             {
-                                "issues": ["법인등기 관련 사항이 누락되었습니다"],
-                                "suggestions": ["등기부등본과 교차검증을 수행하세요"],
+                                "iteration": 1,
+                                "gate_results": [
+                                    {
+                                        "issues": ["이사회 의사록이 첨부되지 않았습니다"],
+                                        "suggestions": ["이사회 결의 근거를 반드시 보완하세요"],
+                                    }
+                                ],
                             }
                         ],
                     }
-                ],
-            }
-        }),
-        (3.2, {
-            "records": {
-                "GOVERNANCE": [
-                    {
-                        "iteration": 1,
-                        "gate_results": [
-                            {
-                                "issues": ["이사회 의사록이 첨부되지 않았습니다"],
-                                "suggestions": ["이사회 결의 근거를 반드시 보완하세요"],
-                            }
-                        ],
-                    }
-                ],
-            }
-        }),
-    ]):
+                },
+            ),
+        ]
+    ):
         session = RalphSession(
             id=uuid.uuid4(),
             transaction_id=txn_ids[i],
@@ -177,7 +194,13 @@ async def seeded_db(async_session: AsyncSession):
         doc_type="LDD",
         status=RalphSessionStatus.FAILED,
         final_score=None,
-        progress={"records": {"GOVERNANCE": [{"iteration": 1, "gate_results": [{"issues": ["이 이슈는 무시되어야 하는 데이터입니다"]}]}]}},
+        progress={
+            "records": {
+                "GOVERNANCE": [
+                    {"iteration": 1, "gate_results": [{"issues": ["이 이슈는 무시되어야 하는 데이터입니다"]}]}
+                ]
+            }
+        },
     )
     async_session.add(failed)
 
@@ -188,7 +211,11 @@ async def seeded_db(async_session: AsyncSession):
         doc_type="TM",
         status=RalphSessionStatus.COMPLETED,
         final_score=4.5,
-        progress={"records": {"OVERVIEW": [{"iteration": 1, "gate_results": [{"issues": ["TM 관련 이슈로 다른 문서 유형입니다"]}]}]}},
+        progress={
+            "records": {
+                "OVERVIEW": [{"iteration": 1, "gate_results": [{"issues": ["TM 관련 이슈로 다른 문서 유형입니다"]}]}]
+            }
+        },
     )
     async_session.add(other)
 

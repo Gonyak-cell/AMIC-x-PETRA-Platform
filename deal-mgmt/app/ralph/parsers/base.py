@@ -20,13 +20,13 @@ class ParsedFile:
     모든 파서(Excel, PDF, DOCX, HWP)의 공통 출력 형식.
     """
 
-    source_path: str                                       # 원본 파일 경로
-    file_type: str                                         # excel, pdf, docx, hwp
-    text: str = ""                                         # 추출된 전체 텍스트
-    tables: list[ParsedTable] = field(default_factory=list) # 추출된 표
-    metadata: dict = field(default_factory=dict)           # 파일 메타데이터 (크기, 수정일 등)
-    ddrl_sections: list[str] = field(default_factory=list) # 매핑된 DDRL 섹션 타입
-    parse_error: str | None = None                         # 파싱 에러 메시지
+    source_path: str  # 원본 파일 경로
+    file_type: str  # excel, pdf, docx, hwp
+    text: str = ""  # 추출된 전체 텍스트
+    tables: list[ParsedTable] = field(default_factory=list)  # 추출된 표
+    metadata: dict = field(default_factory=dict)  # 파일 메타데이터 (크기, 수정일 등)
+    ddrl_sections: list[str] = field(default_factory=list)  # 매핑된 DDRL 섹션 타입
+    parse_error: str | None = None  # 파싱 에러 메시지
 
     @property
     def is_valid(self) -> bool:

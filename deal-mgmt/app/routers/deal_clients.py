@@ -32,9 +32,7 @@ async def list_deal_clients(
     """딜에 배정된 외부 고객 목록을 반환한다."""
     await transaction_service.get_transaction(db, txn_id)  # 404 체크
     result = await db.execute(
-        select(DealClient)
-        .where(DealClient.transaction_id == txn_id)
-        .order_by(DealClient.created_at)
+        select(DealClient).where(DealClient.transaction_id == txn_id).order_by(DealClient.created_at)
     )
     return [DealClientOut.model_validate(r) for r in result.scalars().all()]
 

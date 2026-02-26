@@ -34,19 +34,19 @@ _VAGUE_PATTERNS: list[re.Pattern] = [
 # ── 구체성 패턴 (금액/비율/기간) ──────────────────────────────────────────
 
 _SPECIFICITY_PATTERNS: list[re.Pattern] = [
-    re.compile(r"\d+[,.]?\d*\s*(억|만|천|백)\s*원"),        # 금액
-    re.compile(r"\d+[.]?\d*\s*%"),                           # 비율
-    re.compile(r"\d+\s*(년|개월|일|주|개월간|년간)"),         # 기간
-    re.compile(r"20\d{2}[-./]\d{1,2}[-./]\d{1,2}"),         # 날짜
-    re.compile(r"\d+\s*(건|개|명|호|세대)"),                  # 수량
+    re.compile(r"\d+[,.]?\d*\s*(억|만|천|백)\s*원"),  # 금액
+    re.compile(r"\d+[.]?\d*\s*%"),  # 비율
+    re.compile(r"\d+\s*(년|개월|일|주|개월간|년간)"),  # 기간
+    re.compile(r"20\d{2}[-./]\d{1,2}[-./]\d{1,2}"),  # 날짜
+    re.compile(r"\d+\s*(건|개|명|호|세대)"),  # 수량
 ]
 
 # ── 법률 인용 패턴 ─────────────────────────────────────────────────────
 
 _CITATION_PATTERNS: list[re.Pattern] = [
-    re.compile(r"\[cite:[^\]]+\]"),                           # [cite:ID] 태그
-    re.compile(r"[\w가-힣]+법\s+제\d+조"),                    # 법조문
-    re.compile(r"대법원.*?\d{4}[다두]\w+"),                    # 판례
+    re.compile(r"\[cite:[^\]]+\]"),  # [cite:ID] 태그
+    re.compile(r"[\w가-힣]+법\s+제\d+조"),  # 법조문
+    re.compile(r"대법원.*?\d{4}[다두]\w+"),  # 판례
 ]
 
 
@@ -185,7 +185,9 @@ class NarrativeQualityGate:
         )
 
     def _evaluate_item(
-        self, item_data: dict, section_type: str,
+        self,
+        item_data: dict,
+        section_type: str,
     ) -> NarrativeItemQuality:
         """단일 항목 서술을 평가한다."""
         item_id = item_data.get("item_id", "")
@@ -228,23 +230,17 @@ class NarrativeQualityGate:
         if issue_level and status == "ISSUE":
             min_chars = self._min_chars.get(issue_level, 400)
             if total_chars < min_chars:
-                quality.issues.append(
-                    f"분량 미달: {total_chars}자 < {min_chars}자 (최소 기준)"
-                )
+                quality.issues.append(f"분량 미달: {total_chars}자 < {min_chars}자 (최소 기준)")
 
         # 2. 법률 인용 검사
-        citation_count = sum(
-            len(p.findall(all_text)) for p in _CITATION_PATTERNS
-        )
+        citation_count = sum(len(p.findall(all_text)) for p in _CITATION_PATTERNS)
         quality.citation_count = citation_count
         if status == "ISSUE" and citation_count < self._min_citations_issue:
             quality.issues.append("법률 인용 없음 (ISSUE 항목은 최소 1개 인용 필요)")
 
         # 3. 블록 수 검사
         if status == "ISSUE" and block_count < self._min_blocks_issue:
-            quality.issues.append(
-                f"블록 수 부족: {block_count}개 < {self._min_blocks_issue}개 (최소 기준)"
-            )
+            quality.issues.append(f"블록 수 부족: {block_count}개 < {self._min_blocks_issue}개 (최소 기준)")
 
         # 4. 소스 문서 참조 검사
         source_refs = bool(re.search(r"(자료|문서|계약서|보고서|감사보고서|등기부|확인서)", all_text))
@@ -259,9 +255,7 @@ class NarrativeQualityGate:
             vague_found.extend(matches)
         quality.vague_expressions = vague_found
         if len(vague_found) > self._max_vague:
-            quality.issues.append(
-                f"모호한 표현 과다: {len(vague_found)}개 (허용: {self._max_vague}개)"
-            )
+            quality.issues.append(f"모호한 표현 과다: {len(vague_found)}개 (허용: {self._max_vague}개)")
 
         # 6. 구체성 검사 (DEAL_IMPACT 블록)
         deal_impact_text = ""
@@ -271,9 +265,7 @@ class NarrativeQualityGate:
                 break
 
         if deal_impact_text:
-            specificity = sum(
-                len(p.findall(deal_impact_text)) for p in _SPECIFICITY_PATTERNS
-            )
+            specificity = sum(len(p.findall(deal_impact_text)) for p in _SPECIFICITY_PATTERNS)
             quality.specificity_count = specificity
             if specificity == 0:
                 quality.issues.append("거래 영향 블록에 구체적 수치(금액/비율/기간) 없음")

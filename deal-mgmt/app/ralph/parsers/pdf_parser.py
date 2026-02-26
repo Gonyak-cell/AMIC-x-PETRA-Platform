@@ -20,13 +20,15 @@ def parse_pdf(file_path: str) -> ParsedFile:
         return _parse_with_pdfplumber(file_path)
     except ImportError:
         return ParsedFile(
-            source_path=file_path, file_type="pdf",
+            source_path=file_path,
+            file_type="pdf",
             parse_error="PyMuPDF(fitz) 또는 pdfplumber가 설치되지 않았습니다",
         )
     except Exception as exc:
         logger.warning("PDF 파싱 실패 %s: %s", file_path, exc)
         return ParsedFile(
-            source_path=file_path, file_type="pdf",
+            source_path=file_path,
+            file_type="pdf",
             parse_error=str(exc),
         )
 
@@ -52,10 +54,12 @@ def _parse_with_fitz(file_path: str) -> ParsedFile:
                 for t in page_tables:
                     data = t.extract()
                     if data:
-                        tables.append(ParsedTable(
-                            headers=data[0] if data else [],
-                            rows=data[1:] if len(data) > 1 else [],
-                        ))
+                        tables.append(
+                            ParsedTable(
+                                headers=data[0] if data else [],
+                                rows=data[1:] if len(data) > 1 else [],
+                            )
+                        )
             except Exception:
                 pass  # 표 추출 미지원 버전
 
@@ -86,10 +90,12 @@ def _parse_with_pdfplumber(file_path: str) -> ParsedFile:
             for t in page.extract_tables():
                 if t:
                     str_rows = [[str(c) if c else "" for c in row] for row in t]
-                    tables.append(ParsedTable(
-                        headers=str_rows[0] if str_rows else [],
-                        rows=str_rows[1:] if len(str_rows) > 1 else [],
-                    ))
+                    tables.append(
+                        ParsedTable(
+                            headers=str_rows[0] if str_rows else [],
+                            rows=str_rows[1:] if len(str_rows) > 1 else [],
+                        )
+                    )
 
     return ParsedFile(
         source_path=file_path,

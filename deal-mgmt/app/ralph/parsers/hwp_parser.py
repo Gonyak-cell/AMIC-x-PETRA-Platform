@@ -41,7 +41,8 @@ def _parse_with_hwp5(file_path: str) -> ParsedFile:
         from hwp5.hwp5html import open as hwp_open
     except ImportError:
         return ParsedFile(
-            source_path=file_path, file_type="hwp",
+            source_path=file_path,
+            file_type="hwp",
             parse_error="hwp5(pyhwp)가 설치되지 않았습니다 (pip install pyhwp)",
         )
 
@@ -69,7 +70,8 @@ def _parse_with_hwp5(file_path: str) -> ParsedFile:
     except Exception as exc:
         logger.debug("hwp5 파싱 실패, fallback 사용: %s", exc)
         return ParsedFile(
-            source_path=file_path, file_type="hwp",
+            source_path=file_path,
+            file_type="hwp",
             parse_error=f"hwp5 파싱 실패: {exc}",
         )
 
@@ -80,7 +82,8 @@ def _parse_with_olefile(file_path: str) -> ParsedFile:
         import olefile
     except ImportError:
         return ParsedFile(
-            source_path=file_path, file_type="hwp",
+            source_path=file_path,
+            file_type="hwp",
             parse_error="olefile이 설치되지 않았습니다 (pip install olefile)",
         )
 
@@ -108,7 +111,8 @@ def _parse_with_olefile(file_path: str) -> ParsedFile:
 
         if not text_parts:
             return ParsedFile(
-                source_path=file_path, file_type="hwp",
+                source_path=file_path,
+                file_type="hwp",
                 parse_error="HWP에서 텍스트를 추출할 수 없습니다",
             )
 
@@ -120,7 +124,8 @@ def _parse_with_olefile(file_path: str) -> ParsedFile:
         )
     except Exception as exc:
         return ParsedFile(
-            source_path=file_path, file_type="hwp",
+            source_path=file_path,
+            file_type="hwp",
             parse_error=f"olefile 파싱 실패: {exc}",
         )
 
@@ -152,6 +157,7 @@ def _parse_hwpx(file_path: str) -> ParsedFile:
         )
     except Exception as exc:
         return ParsedFile(
-            source_path=file_path, file_type="hwp",
+            source_path=file_path,
+            file_type="hwp",
             parse_error=f"HWPX 파싱 실패: {exc}",
         )

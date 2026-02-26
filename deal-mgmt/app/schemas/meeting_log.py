@@ -86,6 +86,7 @@ class MeetingLogOut(BaseModel):
 
 class MeetingLogDetail(MeetingLogOut):
     """상세 조회 — 참석자 + 액션아이템 포함."""
+
     attendees: list[MeetingAttendeeOut] = []
     action_items: list = []  # MeetingActionItemOut 사용 (순환 import 방지)
 

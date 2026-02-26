@@ -84,7 +84,9 @@ async def create_markup(
     # 파일 크기 검증
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="파일 크기가 50MB를 초과합니다")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="파일 크기가 50MB를 초과합니다"
+        )
 
     # 확장자 검증
     safe_filename = file.filename or "markup"
@@ -130,8 +132,12 @@ async def create_markup(
     db.add(markup)
     await db.flush()
     await audit_service.record(
-        db, entity_type="ContractMarkup", entity_id=markup.id, action=AuditAction.CREATE,
-        actor_email=claims.email, new_value={"version": next_ver, "label": version_label},
+        db,
+        entity_type="ContractMarkup",
+        entity_id=markup.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"version": next_ver, "label": version_label},
     )
     await db.commit()
     await db.refresh(markup)
@@ -186,7 +192,10 @@ async def delete_markup(
             file_path.unlink()
 
     await audit_service.record(
-        db, entity_type="ContractMarkup", entity_id=markup.id, action=AuditAction.DELETE,
+        db,
+        entity_type="ContractMarkup",
+        entity_id=markup.id,
+        action=AuditAction.DELETE,
         actor_email=claims.email,
     )
     await db.delete(markup)
@@ -215,7 +224,8 @@ async def _get_contract_or_404(db: AsyncSession, txn_id: uuid.UUID, contract_id:
 
 async def _get_markup_or_404(db: AsyncSession, contract_id: uuid.UUID, markup_id: uuid.UUID) -> ContractMarkup:
     q = select(ContractMarkup).where(
-        ContractMarkup.id == markup_id, ContractMarkup.contract_id == contract_id,
+        ContractMarkup.id == markup_id,
+        ContractMarkup.contract_id == contract_id,
     )
     markup = (await db.execute(q)).scalar_one_or_none()
     if markup is None:

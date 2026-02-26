@@ -189,16 +189,14 @@ if resp.status_code == 200:
 
 # 17. Compliance Summary
 print("\n=== 17. Compliance Summary ===")
-resp = httpx.get(
-    f"{BASE}/transactions/{txn_id}/compliance/summary", headers=headers
-)
+resp = httpx.get(f"{BASE}/transactions/{txn_id}/compliance/summary", headers=headers)
 check("Compliance Summary", resp, 200)
 if resp.status_code == 200:
     s = resp.json()
     print(f"  Total: {s['total']}, Rate: {s.get('compliance_rate', 'N/A')}%")
 
 # Final
-print(f"\n{'='*50}")
+print(f"\n{'=' * 50}")
 print(f"E2E RESULT: {passed} passed, {failed} failed")
 if failed == 0:
     print("ALL TESTS PASSED!")

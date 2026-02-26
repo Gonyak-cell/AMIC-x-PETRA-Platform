@@ -43,11 +43,7 @@ class FMChecklistService:
 
     async def get_checklist_by_id(self, checklist_id: UUID) -> FMChecklist:
         """ID로 체크리스트를 조회한다."""
-        stmt = (
-            select(FMChecklist)
-            .where(FMChecklist.id == checklist_id)
-            .options(joinedload(FMChecklist.items))
-        )
+        stmt = select(FMChecklist).where(FMChecklist.id == checklist_id).options(joinedload(FMChecklist.items))
         checklist = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if checklist is None:
             raise DocumentNotFoundError(f"FM Checklist {checklist_id}")
@@ -105,7 +101,8 @@ class FMChecklistService:
         if skipped:
             logger.warning(
                 "bulk_update_items: %d items skipped — %s",
-                len(skipped), ", ".join(skipped),
+                len(skipped),
+                ", ".join(skipped),
             )
 
         await self.db.flush()
@@ -128,10 +125,7 @@ class FMChecklistService:
         if checklist.status == FMChecklistStatus.FINALIZED:
             raise ValueError("Checklist is already finalized")
 
-        pending_items = [
-            i for i in checklist.items
-            if i.status == FMChecklistItemStatus.AUTO_GENERATED
-        ]
+        pending_items = [i for i in checklist.items if i.status == FMChecklistItemStatus.AUTO_GENERATED]
         if pending_items:
             logger.warning(
                 "Finalizing FM checklist %s with %d unreviewed items",

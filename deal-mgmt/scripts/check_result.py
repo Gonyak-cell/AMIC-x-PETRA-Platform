@@ -1,4 +1,5 @@
 """Pipeline 결과 JSON 확인 스크립트."""
+
 import json
 
 with open("output/pipeline_result.json", encoding="utf-8") as f:

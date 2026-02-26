@@ -148,9 +148,7 @@ async def extend_deadline(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
-    return RFIOut.model_validate(
-        await rfi_service.extend_deadline(db, txn_id, rfi_id, body.due_date, claims.email)
-    )
+    return RFIOut.model_validate(await rfi_service.extend_deadline(db, txn_id, rfi_id, body.due_date, claims.email))
 
 
 # ── RFI Item CRUD ──────────────────────────────────────────
@@ -171,8 +169,14 @@ async def list_rfi_items(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     items = await rfi_service.list_rfi_items(
-        db, txn_id, rfi_id, category=category, item_status=item_status, priority=priority,
-        limit=limit, offset=offset,
+        db,
+        txn_id,
+        rfi_id,
+        category=category,
+        item_status=item_status,
+        priority=priority,
+        limit=limit,
+        offset=offset,
     )
     return [RFIItemOut.model_validate(i) for i in items]
 
@@ -212,9 +216,7 @@ async def update_rfi_item(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
-    return RFIItemOut.model_validate(
-        await rfi_service.update_rfi_item(db, txn_id, rfi_id, item_id, body, claims.email)
-    )
+    return RFIItemOut.model_validate(await rfi_service.update_rfi_item(db, txn_id, rfi_id, item_id, body, claims.email))
 
 
 @router.delete("/{rfi_id}/items/{item_id}", status_code=204)
@@ -243,9 +245,7 @@ async def respond_to_item(
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    return RFIItemOut.model_validate(
-        await rfi_service.respond_to_item(db, txn_id, rfi_id, item_id, body, claims.email)
-    )
+    return RFIItemOut.model_validate(await rfi_service.respond_to_item(db, txn_id, rfi_id, item_id, body, claims.email))
 
 
 @router.post("/{rfi_id}/items/{item_id}/review", response_model=RFIItemOut)
@@ -258,9 +258,7 @@ async def review_item(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
-    return RFIItemOut.model_validate(
-        await rfi_service.review_item(db, txn_id, rfi_id, item_id, body, claims.email)
-    )
+    return RFIItemOut.model_validate(await rfi_service.review_item(db, txn_id, rfi_id, item_id, body, claims.email))
 
 
 # ── 자동 생성 ──────────────────────────────────────────────
@@ -294,7 +292,7 @@ async def export_rfi_excel(
 
     rfi = await rfi_service.get_rfi(db, txn_id, rfi_id)
     output = export_rfi_to_excel(rfi)
-    safe_title = re.sub(r'[^\w\s가-힣-]', '', rfi.title[:30]).strip() or "RFI"
+    safe_title = re.sub(r"[^\w\s가-힣-]", "", rfi.title[:30]).strip() or "RFI"
     filename = f"RFI_{safe_title}_{rfi.round_number}.xlsx"
     encoded = quote(filename)
     return StreamingResponse(
@@ -317,7 +315,7 @@ async def import_rfi_excel(
 ):
     await transaction_service.get_transaction(db, txn_id)
     # 확장자 검증
-    if not file.filename or not file.filename.lower().endswith(('.xlsx', '.xls')):
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Excel 파일(.xlsx, .xls)만 업로드 가능합니다")
     # 크기 검증
     content = await file.read()

@@ -119,12 +119,14 @@ def scan_directory(root_dir: str) -> list[dict]:
         sections = classify_file(str(entry))
         size_kb = entry.stat().st_size // 1024
 
-        results.append({
-            "path": str(entry),
-            "ext": ext,
-            "size_kb": size_kb,
-            "sections": sections,
-        })
+        results.append(
+            {
+                "path": str(entry),
+                "ext": ext,
+                "size_kb": size_kb,
+                "sections": sections,
+            }
+        )
 
     logger.info("스캔 완료: %d개 파일 발견 (%s)", len(results), root_dir)
     return results

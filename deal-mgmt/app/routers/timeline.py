@@ -168,14 +168,16 @@ async def get_gantt_timeline(
             start = None
             end = None
 
-        phases.append(PhaseBar(
-            phase=phase_val,
-            label=label,
-            start_date=start,
-            end_date=end,
-            status=phase_status,
-            order=idx + 1,
-        ))
+        phases.append(
+            PhaseBar(
+                phase=phase_val,
+                label=label,
+                start_date=start,
+                end_date=end,
+                status=phase_status,
+                order=idx + 1,
+            )
+        )
 
     # 주요 마일스톤 (PHASE_TRANSITION이 아닌 이벤트 중 주요 유형)
     milestone_types = {"DOCUMENT_SIGNED", "DEADLINE", "CUSTOM", "MEETING"}
@@ -188,10 +190,7 @@ async def get_gantt_timeline(
         .order_by(DealTimeline.event_date.asc())
     )
     ms_events = (await db.execute(ms_q)).scalars().all()
-    milestones = [
-        GanttMilestone(label=e.title, date=e.event_date, type=e.event_type)
-        for e in ms_events
-    ]
+    milestones = [GanttMilestone(label=e.title, date=e.event_date, type=e.event_type) for e in ms_events]
 
     return GanttResponse(
         phases=phases,

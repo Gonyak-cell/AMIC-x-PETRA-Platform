@@ -17,7 +17,10 @@ class MeetingActionItem(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     meeting_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("meeting_logs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -25,8 +28,11 @@ class MeetingActionItem(Base, TimestampMixin):
     assignee_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     due_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
     status: Mapped[ActionItemStatus] = mapped_column(
-        Enum(ActionItemStatus), nullable=False, default=ActionItemStatus.PENDING,
+        Enum(ActionItemStatus),
+        nullable=False,
+        default=ActionItemStatus.PENDING,
     )
     priority: Mapped[NegotiationIssuePriority | None] = mapped_column(
-        Enum(NegotiationIssuePriority), nullable=True,
+        Enum(NegotiationIssuePriority),
+        nullable=True,
     )

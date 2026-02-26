@@ -17,11 +17,16 @@ class PermitAnalysis(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"),
-        nullable=False, unique=True, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
     )
     status: Mapped[PermitAnalysisStatus] = mapped_column(
-        Enum(PermitAnalysisStatus), nullable=False, default=PermitAnalysisStatus.PENDING,
+        Enum(PermitAnalysisStatus),
+        nullable=False,
+        default=PermitAnalysisStatus.PENDING,
     )
     # 입력 데이터
     business_types: Mapped[list | None] = mapped_column(JSONB, nullable=True)

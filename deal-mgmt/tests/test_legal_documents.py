@@ -53,6 +53,7 @@ async def _create_txn(client) -> str:
 
 # ── Create ─────────────────────────────────────────────────────────────────────
 
+
 async def test_create_spa_document(client):
     txn_id = await _create_txn(client)
     resp = await client.post(
@@ -116,6 +117,7 @@ async def test_create_document_invalid_txn(client):
 
 # ── List ───────────────────────────────────────────────────────────────────────
 
+
 async def test_list_legal_documents(client):
     txn_id = await _create_txn(client)
 
@@ -148,6 +150,7 @@ async def test_list_legal_documents_empty(client):
 
 # ── Get ────────────────────────────────────────────────────────────────────────
 
+
 async def test_get_legal_document(client):
     txn_id = await _create_txn(client)
     create_resp = await client.post(
@@ -172,6 +175,7 @@ async def test_get_legal_document_404(client):
 
 # ── Download ───────────────────────────────────────────────────────────────────
 
+
 async def test_download_ready_document(client):
     txn_id = await _create_txn(client)
     create_resp = await client.post(
@@ -182,9 +186,7 @@ async def test_download_ready_document(client):
     doc_id = data["id"]
 
     if data["status"] == "READY":
-        resp = await client.get(
-            f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download"
-        )
+        resp = await client.get(f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download")
         assert resp.status_code == 200
         ct = resp.headers.get("content-type", "")
         assert "wordprocessingml" in ct or "octet-stream" in ct
@@ -201,15 +203,12 @@ async def test_download_not_ready_document(client):
     doc_id = data["id"]
 
     # READY면 다운로드 성공(200), FAILED면 400 반환
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download"
-    )
-    assert resp.status_code in (200, 400), (
-        f"Expected 200 (READY) or 400 (FAILED/not-ready), got {resp.status_code}"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download")
+    assert resp.status_code in (200, 400), f"Expected 200 (READY) or 400 (FAILED/not-ready), got {resp.status_code}"
 
 
 # ── Delete ─────────────────────────────────────────────────────────────────────
+
 
 async def test_delete_legal_document(client):
     txn_id = await _create_txn(client)
@@ -219,9 +218,7 @@ async def test_delete_legal_document(client):
     )
     doc_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}"
-    )
+    del_resp = await client.delete(f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}")
     assert del_resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/transactions/{txn_id}/legal-documents")
@@ -231,13 +228,12 @@ async def test_delete_legal_document(client):
 async def test_delete_legal_document_404(client):
     txn_id = await _create_txn(client)
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.delete(
-        f"/api/v1/transactions/{txn_id}/legal-documents/{fake_id}"
-    )
+    resp = await client.delete(f"/api/v1/transactions/{txn_id}/legal-documents/{fake_id}")
     assert resp.status_code == 404
 
 
 # ── Regenerate ─────────────────────────────────────────────────────────────────
+
 
 async def test_regenerate_document(client):
     txn_id = await _create_txn(client)
@@ -259,6 +255,7 @@ async def test_regenerate_document(client):
 
 
 # ── Pydantic 유효성 검증 ────────────────────────────────────────────────────────
+
 
 async def test_create_document_invalid_date_format(client):
     """잘못된 날짜 형식(YYYY/MM/DD) → 422."""
@@ -335,6 +332,7 @@ async def test_create_document_ssa_post_money_less_than_pre_money(client):
 
 # ── 다운로드 상태 코드 검증 ────────────────────────────────────────────────────
 
+
 async def test_download_failed_document_returns_400(client):
     """FAILED 상태 문서 다운로드 시 400 반환 (409 아님)."""
     txn_id = await _create_txn(client)
@@ -347,9 +345,7 @@ async def test_download_failed_document_returns_400(client):
     doc_id = data["id"]
 
     if data["status"] == "FAILED":
-        resp = await client.get(
-            f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download"
-        )
+        resp = await client.get(f"/api/v1/transactions/{txn_id}/legal-documents/{doc_id}/download")
         assert resp.status_code == 400, f"Expected 400, got {resp.status_code}"
         assert resp.status_code != 409, "Should not return 409 CONFLICT for not-ready document"
 
@@ -358,9 +354,7 @@ async def test_document_not_found_returns_404(client):
     """존재하지 않는 문서 조회 → 404."""
     txn_id = await _create_txn(client)
     fake_id = "00000000-0000-0000-0000-999999999999"
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/legal-documents/{fake_id}"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/legal-documents/{fake_id}")
     assert resp.status_code == 404
     # 커스텀 예외 핸들러 형식 확인
     body = resp.json()

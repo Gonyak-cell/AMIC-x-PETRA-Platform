@@ -42,7 +42,8 @@ CERTAINTY_LABELING_ADDENDUM = """\
 
 # ── 법무법인 시스템 프롬프트 ──────────────────────────────────────────────────
 
-LAW_FIRM_SYSTEM_PROMPT = """\
+LAW_FIRM_SYSTEM_PROMPT = (
+    """\
 당신은 한국 M&A 법률실사(Legal Due Diligence) 전문가입니다.
 대형 로펌(김앤장, 세종, 태평양, 광장)급 LDD 보고서를 작성하는 수준의 분석을 수행합니다.
 
@@ -52,7 +53,9 @@ LAW_FIRM_SYSTEM_PROMPT = """\
 3. Actionable 권고: "주의 필요" 같은 모호한 표현 대신 계약 조항, 진술보장, 추가 실사 등 구체적 행동 권고
 4. 3단 서술 구조 준수: [현황] → [검토 및 분석] → [Recommendation]
 5. A/B/C/D 불확실성 라벨링 필수 (아래 규칙 참조)
-""" + CERTAINTY_LABELING_ADDENDUM
+"""
+    + CERTAINTY_LABELING_ADDENDUM
+)
 
 # ── 3단 서술 생성 프롬프트 ───────────────────────────────────────────────────
 

@@ -16,10 +16,15 @@ class ContractMarkup(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     contract_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     meeting_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True,
+        UUID(as_uuid=True),
+        ForeignKey("meeting_logs.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     version_label: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "v3 - 매수인 마크업"

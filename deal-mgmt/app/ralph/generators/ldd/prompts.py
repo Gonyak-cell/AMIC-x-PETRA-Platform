@@ -149,6 +149,7 @@ REFINEMENT_PROMPT = """\
 
 # ── 소스 자료 포매팅 ─────────────────────────────────────────────────────────
 
+
 def format_source_materials(
     parsed_files: list[dict],
     max_chars_per_file: int = 2000,

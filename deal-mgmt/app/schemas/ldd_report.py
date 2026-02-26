@@ -17,32 +17,34 @@ from app.models.enums import (
 
 # ── 항목(Item) 스키마 ─────────────────────────────────────────────────────────
 
+
 class LDDItem(BaseModel):
     """DDRL 체크리스트 개별 항목 — Finding 기재 형식 반영."""
 
-    item_id: str = ""                   # 고유 식별자 (예: CORP-01)
-    name: str = ""                      # 항목명
+    item_id: str = ""  # 고유 식별자 (예: CORP-01)
+    name: str = ""  # 항목명
     status: LDDItemStatus = LDDItemStatus.PENDING
-    issue_level: LDDIssueLevel | None = None   # ISSUE인 경우 필수
-    risk_color: str = ""                # RED | AMBER | GREEN (자동 계산)
-    description: str = ""              # 발견 사항 (사실관계, 관련 문서)
-    deal_impact: str = ""              # 거래에 미치는 영향 (가격/구조/일정)
-    recommendation: str = ""           # 권고사항 (계약 반영, 추가 실사)
-    rfi_required: bool = False         # 추가 자료 요청 여부
-    rfi_number: str = ""               # RFI 번호 (예: CORP-001, CONTRACT-015)
+    issue_level: LDDIssueLevel | None = None  # ISSUE인 경우 필수
+    risk_color: str = ""  # RED | AMBER | GREEN (자동 계산)
+    description: str = ""  # 발견 사항 (사실관계, 관련 문서)
+    deal_impact: str = ""  # 거래에 미치는 영향 (가격/구조/일정)
+    recommendation: str = ""  # 권고사항 (계약 반영, 추가 실사)
+    rfi_required: bool = False  # 추가 자료 요청 여부
+    rfi_number: str = ""  # RFI 번호 (예: CORP-001, CONTRACT-015)
 
     # AI 분석 메타데이터
-    confidence: float = 0.0                                  # AI 신뢰도 0.0~1.0
-    evidence_refs: list[str] = Field(default_factory=list)   # VDR document ID 목록
+    confidence: float = 0.0  # AI 신뢰도 0.0~1.0
+    evidence_refs: list[str] = Field(default_factory=list)  # VDR document ID 목록
 
     # 사용자 리뷰 필드
-    user_comment: str = ""                                   # 리뷰어 코멘트
-    user_approved: bool | None = None                        # True=승인, False=반려, None=미검토
-    user_override_status: str | None = None                  # 사용자가 직접 변경한 status
-    user_override_level: str | None = None                   # 사용자가 직접 변경한 issue_level
+    user_comment: str = ""  # 리뷰어 코멘트
+    user_approved: bool | None = None  # True=승인, False=반려, None=미검토
+    user_override_status: str | None = None  # 사용자가 직접 변경한 status
+    user_override_level: str | None = None  # 사용자가 직접 변경한 issue_level
 
 
 # ── 섹션(Section) 스키마 ──────────────────────────────────────────────────────
+
 
 class LDDSection(BaseModel):
     """DDRL 10개 섹션 중 하나."""
@@ -53,6 +55,7 @@ class LDDSection(BaseModel):
 
 
 # ── 요청/응답 스키마 ──────────────────────────────────────────────────────────
+
 
 def _validate_issue_items(sections: list[LDDSection]) -> None:
     """ISSUE 상태 항목의 issue_level 필수 검증."""
@@ -70,7 +73,9 @@ class LDDReportCreate(BaseModel):
 
     title: str = Field(..., max_length=300)
     report_type: LDDReportType = LDDReportType.FULL
-    deal_type: str = Field("", description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO 등). 빈 문자열이면 기본 10개 섹션 사용.")
+    deal_type: str = Field(
+        "", description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO 등). 빈 문자열이면 기본 10개 섹션 사용."
+    )
     target_company: str | None = Field(None, max_length=200)
     dd_period: str | None = Field(None, max_length=100)
     law_firm: str | None = Field(None, max_length=200)
@@ -184,10 +189,13 @@ class LDDReportCreateFromVdr(BaseModel):
     final_max_iterations: int = Field(3, ge=1, le=10)
     max_cost_usd: float = Field(30.0, ge=1.0, le=200.0)
     # 멀티 LLM 파이프라인 옵션
-    use_multi_llm: bool | None = None      # None=서버 설정 따름, True/False=강제
-    is_cross_border: bool = False           # 크로스보더 거래 여부 (Stage 5 활성화)
-    deal_type: str = Field("", description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO, CORPORATE_SPLIT, PREFERRED_STOCK, ASSET_ACQUISITION). 빈 문자열이면 기본 10개 섹션 사용.")
-    industry: str = ""                      # 대상 산업 (식품, IT, 금융)
+    use_multi_llm: bool | None = None  # None=서버 설정 따름, True/False=강제
+    is_cross_border: bool = False  # 크로스보더 거래 여부 (Stage 5 활성화)
+    deal_type: str = Field(
+        "",
+        description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO, CORPORATE_SPLIT, PREFERRED_STOCK, ASSET_ACQUISITION). 빈 문자열이면 기본 10개 섹션 사용.",
+    )
+    industry: str = ""  # 대상 산업 (식품, IT, 금융)
 
 
 class LDDItemReview(BaseModel):
@@ -196,9 +204,7 @@ class LDDItemReview(BaseModel):
     item_id: str = Field(..., description="DDRL 항목 ID (예: CORP-01)")
     user_approved: bool
     user_comment: str = ""
-    user_override_status: str | None = Field(
-        None, description="사용자가 status를 직접 변경 (OK/ISSUE/NA/PENDING)"
-    )
+    user_override_status: str | None = Field(None, description="사용자가 status를 직접 변경 (OK/ISSUE/NA/PENDING)")
     user_override_level: str | None = Field(
         None, description="사용자가 issue_level을 직접 변경 (CRITICAL/HIGH/MEDIUM/LOW)"
     )
@@ -261,6 +267,7 @@ class LddVdrReferenceOut(BaseModel):
 
 
 # ── 기본 섹션 구조 (기재례 표준 — 10개 섹션) ──────────────────────────────────
+
 
 def _make_item(item_id: str, name: str) -> dict:
     return {

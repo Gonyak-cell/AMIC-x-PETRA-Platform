@@ -15,7 +15,8 @@ def parse_docx(file_path: str) -> ParsedFile:
         from docx import Document
     except ImportError:
         return ParsedFile(
-            source_path=file_path, file_type="docx",
+            source_path=file_path,
+            file_type="docx",
             parse_error="python-docx가 설치되지 않았습니다",
         )
 
@@ -24,7 +25,8 @@ def parse_docx(file_path: str) -> ParsedFile:
     except Exception as exc:
         logger.warning("DOCX 파싱 실패 %s: %s", file_path, exc)
         return ParsedFile(
-            source_path=file_path, file_type="docx",
+            source_path=file_path,
+            file_type="docx",
             parse_error=str(exc),
         )
 
@@ -39,10 +41,12 @@ def parse_docx(file_path: str) -> ParsedFile:
             cells = [cell.text.strip() for cell in row.cells]
             rows_data.append(cells)
         if rows_data:
-            tables.append(ParsedTable(
-                headers=rows_data[0],
-                rows=rows_data[1:] if len(rows_data) > 1 else [],
-            ))
+            tables.append(
+                ParsedTable(
+                    headers=rows_data[0],
+                    rows=rows_data[1:] if len(rows_data) > 1 else [],
+                )
+            )
 
     return ParsedFile(
         source_path=file_path,

@@ -319,86 +319,87 @@ class ComplianceStatus(enum.StrEnum):
 
 # ── Phase 6: Legal Documents ──────────────────────────
 class LegalDocType(enum.StrEnum):
-    SPA = "SPA"   # 주식매매계약
-    SHA = "SHA"   # 주주간계약
-    BTA = "BTA"   # 영업양수도계약
-    SSA = "SSA"   # 신주인수계약
-    MOU = "MOU"   # 양해각서
+    SPA = "SPA"  # 주식매매계약
+    SHA = "SHA"  # 주주간계약
+    BTA = "BTA"  # 영업양수도계약
+    SSA = "SSA"  # 신주인수계약
+    MOU = "MOU"  # 양해각서
 
 
 class LegalDocStatus(enum.StrEnum):
-    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 렌더링 전
+    DRAFT = "DRAFT"  # 파라미터 저장 완료, 렌더링 전
     GENERATING = "GENERATING"  # docxtpl 렌더링 중
-    READY      = "READY"       # 다운로드 가능
-    FAILED     = "FAILED"      # 렌더링 실패
+    READY = "READY"  # 다운로드 가능
+    FAILED = "FAILED"  # 렌더링 실패
 
 
 # ── Marketing Materials (TM / DM / IM) ───────────────
 class MarketingDocType(enum.StrEnum):
-    TM = "TM"   # Teaser Memorandum — 매수자 접촉 전 익명 요약 PPTX
-    DM = "DM"   # Discussion Memo — 논의 사항 정리 PPTX (단계 무관)
-    IM = "IM"   # Information Memorandum — NDA 후 상세 투자 안내 PPTX
+    TM = "TM"  # Teaser Memorandum — 매수자 접촉 전 익명 요약 PPTX
+    DM = "DM"  # Discussion Memo — 논의 사항 정리 PPTX (단계 무관)
+    IM = "IM"  # Information Memorandum — NDA 후 상세 투자 안내 PPTX
 
 
 class MarketingDocStatus(enum.StrEnum):
-    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 생성 전
+    DRAFT = "DRAFT"  # 파라미터 저장 완료, 생성 전
     GENERATING = "GENERATING"  # PPTX 렌더링 중
-    READY      = "READY"       # 다운로드 가능
-    FAILED     = "FAILED"      # 생성 실패
+    READY = "READY"  # 다운로드 가능
+    FAILED = "FAILED"  # 생성 실패
 
 
 # ── Phase 7: LDD (Legal Due Diligence) Reports ────────
 class LDDDealType(enum.StrEnum):
     """LDD 보고서 거래유형 — 템플릿 선택 기준."""
-    STOCK_ACQUISITION = "STOCK_ACQUISITION"   # 주식인수
-    REAL_ESTATE       = "REAL_ESTATE"         # 부동산
-    IPO               = "IPO"                 # IPO (기업공개)
-    CORPORATE_SPLIT   = "CORPORATE_SPLIT"     # 회사분할
-    PREFERRED_STOCK   = "PREFERRED_STOCK"     # 종류주식투자
-    ASSET_ACQUISITION = "ASSET_ACQUISITION"   # 사업양수도
+
+    STOCK_ACQUISITION = "STOCK_ACQUISITION"  # 주식인수
+    REAL_ESTATE = "REAL_ESTATE"  # 부동산
+    IPO = "IPO"  # IPO (기업공개)
+    CORPORATE_SPLIT = "CORPORATE_SPLIT"  # 회사분할
+    PREFERRED_STOCK = "PREFERRED_STOCK"  # 종류주식투자
+    ASSET_ACQUISITION = "ASSET_ACQUISITION"  # 사업양수도
 
 
 class LDDReportStatus(enum.StrEnum):
-    DRAFT      = "DRAFT"       # 파라미터 저장 완료, 렌더링 전
-    ANALYZING  = "ANALYZING"   # Ralph Loop #1: VDR 기반 AI 초안 분석 중
-    REVIEW     = "REVIEW"      # 사용자 체크리스트 리뷰 대기
+    DRAFT = "DRAFT"  # 파라미터 저장 완료, 렌더링 전
+    ANALYZING = "ANALYZING"  # Ralph Loop #1: VDR 기반 AI 초안 분석 중
+    REVIEW = "REVIEW"  # 사용자 체크리스트 리뷰 대기
     FINALIZING = "FINALIZING"  # Ralph Loop #2: 사용자 피드백 반영 최종 Refine 중
     GENERATING = "GENERATING"  # docxtpl 렌더링 중
-    READY      = "READY"       # 다운로드 가능
-    FAILED     = "FAILED"      # 렌더링 실패
+    READY = "READY"  # 다운로드 가능
+    FAILED = "FAILED"  # 렌더링 실패
 
 
 class LDDReportType(enum.StrEnum):
-    FULL     = "FULL"     # 정식 전체 LDD 보고서 (10개 섹션)
-    REDFLAG  = "REDFLAG"  # Redflag DD — Executive Summary + Red/Amber 이슈만
-    LAW_FIRM = "LAW_FIRM" # 법무법인 표준 양식 (I~VIII 대목차, 3단 서술, A/B/C/D 라벨링)
+    FULL = "FULL"  # 정식 전체 LDD 보고서 (10개 섹션)
+    REDFLAG = "REDFLAG"  # Redflag DD — Executive Summary + Red/Amber 이슈만
+    LAW_FIRM = "LAW_FIRM"  # 법무법인 표준 양식 (I~VIII 대목차, 3단 서술, A/B/C/D 라벨링)
 
 
 class LDDItemStatus(enum.StrEnum):
-    OK      = "OK"       # 이슈 없음
-    ISSUE   = "ISSUE"    # 이슈 발견
-    NA      = "NA"       # 해당 없음
+    OK = "OK"  # 이슈 없음
+    ISSUE = "ISSUE"  # 이슈 발견
+    NA = "NA"  # 해당 없음
     PENDING = "PENDING"  # 미검토 (추후 확인 필요)
 
 
 class LDDIssueLevel(enum.StrEnum):
     CRITICAL = "CRITICAL"  # 거래 중단/재구조화 필요 → Red
-    HIGH     = "HIGH"      # 가격/조건 조정 필요 → Amber
-    MEDIUM   = "MEDIUM"    # 진술보장/계약 반영 → Amber
-    LOW      = "LOW"       # 경미, 모니터링 → Green
+    HIGH = "HIGH"  # 가격/조건 조정 필요 → Amber
+    MEDIUM = "MEDIUM"  # 진술보장/계약 반영 → Amber
+    LOW = "LOW"  # 경미, 모니터링 → Green
 
 
 class LDDSectionType(enum.StrEnum):
-    GOVERNANCE  = "GOVERNANCE"   # 기업 일반 및 지배구조
-    CAPITAL     = "CAPITAL"      # 자본구조 및 주주협약
-    CONTRACTS   = "CONTRACTS"    # 주요 계약
-    LITIGATION  = "LITIGATION"   # 소송 및 분쟁
-    LABOR       = "LABOR"        # 인사 및 노무
-    IP          = "IP"           # 지식재산권
+    GOVERNANCE = "GOVERNANCE"  # 기업 일반 및 지배구조
+    CAPITAL = "CAPITAL"  # 자본구조 및 주주협약
+    CONTRACTS = "CONTRACTS"  # 주요 계약
+    LITIGATION = "LITIGATION"  # 소송 및 분쟁
+    LABOR = "LABOR"  # 인사 및 노무
+    IP = "IP"  # 지식재산권
     REAL_ESTATE = "REAL_ESTATE"  # 부동산 및 환경
-    PERMITS     = "PERMITS"      # 인허가 및 규제
-    TAX         = "TAX"          # 조세
-    DATA_IT     = "DATA_IT"      # 개인정보 및 IT
+    PERMITS = "PERMITS"  # 인허가 및 규제
+    TAX = "TAX"  # 조세
+    DATA_IT = "DATA_IT"  # 개인정보 및 IT
 
 
 # ── Audit ─────────────────────────────────────────────
@@ -421,22 +422,24 @@ class AuditAction(enum.StrEnum):
 # ── VDR (Virtual Data Room) ──────────────────────────
 class VdrFolderCategory(enum.StrEnum):
     """M&A VDR 기본 폴더 카테고리."""
-    CORPORATE = "CORPORATE"         # 기업 일반 (정관, 등기부 등)
-    FINANCIAL = "FINANCIAL"         # 재무 자료
-    LEGAL = "LEGAL"                 # 법률 자료
-    TAX = "TAX"                     # 세무 자료
-    HR = "HR"                       # 인사/노무
-    TECHNICAL = "TECHNICAL"         # 기술/IT
-    COMMERCIAL = "COMMERCIAL"       # 영업/마케팅
-    REAL_ESTATE = "REAL_ESTATE"     # 부동산/자산
-    ENVIRONMENT = "ENVIRONMENT"     # 환경
-    IP = "IP"                       # 지식재산권
-    INSURANCE = "INSURANCE"         # 보험
-    CUSTOM = "CUSTOM"               # 사용자 생성 폴더
+
+    CORPORATE = "CORPORATE"  # 기업 일반 (정관, 등기부 등)
+    FINANCIAL = "FINANCIAL"  # 재무 자료
+    LEGAL = "LEGAL"  # 법률 자료
+    TAX = "TAX"  # 세무 자료
+    HR = "HR"  # 인사/노무
+    TECHNICAL = "TECHNICAL"  # 기술/IT
+    COMMERCIAL = "COMMERCIAL"  # 영업/마케팅
+    REAL_ESTATE = "REAL_ESTATE"  # 부동산/자산
+    ENVIRONMENT = "ENVIRONMENT"  # 환경
+    IP = "IP"  # 지식재산권
+    INSURANCE = "INSURANCE"  # 보험
+    CUSTOM = "CUSTOM"  # 사용자 생성 폴더
 
 
 class VdrDocumentStatus(enum.StrEnum):
     """VDR 문서 상태."""
+
     ACTIVE = "ACTIVE"
     ARCHIVED = "ARCHIVED"
     DELETED = "DELETED"
@@ -515,21 +518,24 @@ class NegotiationIssuePriority(enum.StrEnum):
 # ── Permit Analysis (인허가 분석) ────────────────────────
 class PermitFilingType(enum.StrEnum):
     """신고/허가 유형."""
-    CHANGE_NOTIFICATION = "CHANGE_NOTIFICATION"   # 변경신고
-    CHANGE_APPROVAL = "CHANGE_APPROVAL"           # 변경허가
-    NEW_REGISTRATION = "NEW_REGISTRATION"         # 신규등록/허가
-    RENEWAL = "RENEWAL"                           # 갱신
+
+    CHANGE_NOTIFICATION = "CHANGE_NOTIFICATION"  # 변경신고
+    CHANGE_APPROVAL = "CHANGE_APPROVAL"  # 변경허가
+    NEW_REGISTRATION = "NEW_REGISTRATION"  # 신규등록/허가
+    RENEWAL = "RENEWAL"  # 갱신
 
 
 class PermitTimingType(enum.StrEnum):
     """사전/사후 신고 구분."""
-    PRE_FILING = "PRE_FILING"       # 사전신고 (거래 전)
-    POST_FILING = "POST_FILING"     # 사후신고 (거래 후)
-    BOTH = "BOTH"                   # 사전+사후 (단계별)
+
+    PRE_FILING = "PRE_FILING"  # 사전신고 (거래 전)
+    POST_FILING = "POST_FILING"  # 사후신고 (거래 후)
+    BOTH = "BOTH"  # 사전+사후 (단계별)
 
 
 class TranscriptionJobStatus(enum.StrEnum):
     """녹음 변환 작업 상태."""
+
     PENDING = "PENDING"
     TRANSCRIBING = "TRANSCRIBING"
     ANALYZING = "ANALYZING"
@@ -540,6 +546,7 @@ class TranscriptionJobStatus(enum.StrEnum):
 
 class PermitAnalysisStatus(enum.StrEnum):
     """인허가 분석 상태."""
+
     PENDING = "PENDING"
     ANALYZING = "ANALYZING"
     COMPLETED = "COMPLETED"
@@ -549,6 +556,7 @@ class PermitAnalysisStatus(enum.StrEnum):
 
 class PermitRequirementStatus(enum.StrEnum):
     """개별 인허가 요건 처리 상태."""
+
     IDENTIFIED = "IDENTIFIED"
     DOCUMENTS_PREPARING = "DOCUMENTS_PREPARING"
     FILED = "FILED"
@@ -558,35 +566,35 @@ class PermitRequirementStatus(enum.StrEnum):
 
 # ── Financial Model (재무모델) ─────────────────────────
 class FinancialModelType(enum.StrEnum):
-    DCF = "DCF"                        # Discounted Cash Flow
-    LBO = "LBO"                        # Leveraged Buyout
-    COMPS = "COMPS"                    # Trading Multiples (GPCM)
+    DCF = "DCF"  # Discounted Cash Flow
+    LBO = "LBO"  # Leveraged Buyout
+    COMPS = "COMPS"  # Trading Multiples (GPCM)
     TRANSACTION_COMPS = "TRANSACTION_COMPS"  # Transaction Multiples (GTM)
-    PROJECTION = "PROJECTION"          # Business Projection / FS Model
-    FULL = "FULL"                      # Full Valuation (DCF + Comps + Sensitivity)
+    PROJECTION = "PROJECTION"  # Business Projection / FS Model
+    FULL = "FULL"  # Full Valuation (DCF + Comps + Sensitivity)
 
 
 class FinancialModelStatus(enum.StrEnum):
-    DRAFT = "DRAFT"                    # 파라미터 저장 완료, 생성 전
-    GENERATING = "GENERATING"          # Ralph Loop Pass 1: 초안 생성 중
+    DRAFT = "DRAFT"  # 파라미터 저장 완료, 생성 전
+    GENERATING = "GENERATING"  # Ralph Loop Pass 1: 초안 생성 중
     PENDING_REVIEW = "PENDING_REVIEW"  # 체크리스트 리뷰 대기
-    FINALIZING = "FINALIZING"          # Ralph Loop Pass 2: 최종 생성 중
-    READY = "READY"                    # 다운로드 가능
-    FAILED = "FAILED"                  # 생성 실패
+    FINALIZING = "FINALIZING"  # Ralph Loop Pass 2: 최종 생성 중
+    READY = "READY"  # 다운로드 가능
+    FAILED = "FAILED"  # 생성 실패
 
 
 class FMChecklistStatus(enum.StrEnum):
-    GENERATING = "GENERATING"          # Reserved — DB enum 호환용, 서비스에서 미사용 (즉시 PENDING_REVIEW)
+    GENERATING = "GENERATING"  # Reserved — DB enum 호환용, 서비스에서 미사용 (즉시 PENDING_REVIEW)
     PENDING_REVIEW = "PENDING_REVIEW"  # 사용자 리뷰 대기
-    REVIEWED = "REVIEWED"              # Reserved — DB enum 호환용, 서비스에서 미사용 (PENDING_REVIEW → FINALIZED 직접 전환)
-    FINALIZED = "FINALIZED"            # 확정 → 최종 Excel 생성 트리거
+    REVIEWED = "REVIEWED"  # Reserved — DB enum 호환용, 서비스에서 미사용 (PENDING_REVIEW → FINALIZED 직접 전환)
+    FINALIZED = "FINALIZED"  # 확정 → 최종 Excel 생성 트리거
 
 
 class FMChecklistItemStatus(enum.StrEnum):
     AUTO_GENERATED = "AUTO_GENERATED"  # 자동 추출 (미리뷰)
-    CONFIRMED = "CONFIRMED"            # 사용자 확인
-    CORRECTED = "CORRECTED"            # 사용자 수정
-    FLAGGED = "FLAGGED"                # 이슈 플래그
+    CONFIRMED = "CONFIRMED"  # 사용자 확인
+    CORRECTED = "CORRECTED"  # 사용자 수정
+    FLAGGED = "FLAGGED"  # 이슈 플래그
     NOT_APPLICABLE = "NOT_APPLICABLE"  # 해당 없음
 
 
@@ -683,22 +691,24 @@ class RFISourceType(enum.StrEnum):
 
 class DocExtractionCategory(enum.StrEnum):
     """업로드 문서 AI 분류 카테고리."""
-    NDA = "NDA"                       # 비밀유지계약서
-    LOI_MOU = "LOI_MOU"               # LOI, MOU, IOI
-    SPA_BTA = "SPA_BTA"               # SPA, SHA, BTA, SSA
-    CORPORATE_DOCS = "CORPORATE_DOCS" # 등기부등본, 사업자등록증
-    TAX_FILING = "TAX_FILING"         # 세무신고서, 법인세 신고서
-    TEASER_IM = "TEASER_IM"           # Teaser, IM, CIM (향후 확장)
-    DD_REPORT = "DD_REPORT"           # FDD/LDD/TDD 보고서 (향후 확장)
-    RFI_RESPONSE = "RFI_RESPONSE"     # RFI 답변서 (향후 확장)
-    REFERENCE_ONLY = "REFERENCE_ONLY" # 기타 참고용 (추출 불필요)
+
+    NDA = "NDA"  # 비밀유지계약서
+    LOI_MOU = "LOI_MOU"  # LOI, MOU, IOI
+    SPA_BTA = "SPA_BTA"  # SPA, SHA, BTA, SSA
+    CORPORATE_DOCS = "CORPORATE_DOCS"  # 등기부등본, 사업자등록증
+    TAX_FILING = "TAX_FILING"  # 세무신고서, 법인세 신고서
+    TEASER_IM = "TEASER_IM"  # Teaser, IM, CIM (향후 확장)
+    DD_REPORT = "DD_REPORT"  # FDD/LDD/TDD 보고서 (향후 확장)
+    RFI_RESPONSE = "RFI_RESPONSE"  # RFI 답변서 (향후 확장)
+    REFERENCE_ONLY = "REFERENCE_ONLY"  # 기타 참고용 (추출 불필요)
 
 
 class ExtractionStatus(enum.StrEnum):
     """문서 AI 추출 작업 상태."""
-    PENDING = "PENDING"           # 대기
-    CLASSIFYING = "CLASSIFYING"   # 분류 중
-    EXTRACTING = "EXTRACTING"     # 데이터 추출 중
-    COMPLETED = "COMPLETED"       # 추출 완료 (사용자 검토 대기)
-    FAILED = "FAILED"             # 실패
-    CONFIRMED = "CONFIRMED"       # 사용자 검토 확정
+
+    PENDING = "PENDING"  # 대기
+    CLASSIFYING = "CLASSIFYING"  # 분류 중
+    EXTRACTING = "EXTRACTING"  # 데이터 추출 중
+    COMPLETED = "COMPLETED"  # 추출 완료 (사용자 검토 대기)
+    FAILED = "FAILED"  # 실패
+    CONFIRMED = "CONFIRMED"  # 사용자 검토 확정

@@ -27,9 +27,7 @@ router = APIRouter(
 )
 
 # 경로 탐색(Path Traversal) 방어
-_SAFE_OUTPUT_DIR = (
-    Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum"
-).resolve()
+_SAFE_OUTPUT_DIR = (Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum").resolve()
 
 
 async def _get_and_authorize_txn(
@@ -61,6 +59,7 @@ async def _get_and_authorize_txn(
 
 # ── 목록 조회 ──────────────────────────────────────────────────
 
+
 @router.get("", response_model=list[MarketingMaterialOut])
 async def list_marketing_materials(
     txn_id: uuid.UUID,
@@ -72,6 +71,7 @@ async def list_marketing_materials(
 
 
 # ── 생성 ───────────────────────────────────────────────────────
+
 
 @router.post("", response_model=MarketingMaterialOut, status_code=status.HTTP_201_CREATED)
 async def create_marketing_material(
@@ -91,12 +91,11 @@ async def create_marketing_material(
         return await marketing_material_service.create_marketing_material_with_ralph(
             db, txn_id, body, created_by_email=claims.email
         )
-    return await marketing_material_service.create_marketing_material(
-        db, txn_id, body, created_by_email=claims.email
-    )
+    return await marketing_material_service.create_marketing_material(db, txn_id, body, created_by_email=claims.email)
 
 
 # ── 단건 조회 ──────────────────────────────────────────────────
+
 
 @router.get("/{mat_id}", response_model=MarketingMaterialOut)
 async def get_marketing_material(
@@ -113,6 +112,7 @@ async def get_marketing_material(
 
 
 # ── 재생성 ────────────────────────────────────────────────────
+
 
 @router.post("/{mat_id}/regenerate", response_model=MarketingMaterialOut)
 async def regenerate_marketing_material(
@@ -131,6 +131,7 @@ async def regenerate_marketing_material(
 
 # ── 배포 업데이트 ─────────────────────────────────────────────
 
+
 @router.put("/{mat_id}/distribute", response_model=MarketingMaterialOut)
 async def update_distribution(
     txn_id: uuid.UUID,
@@ -148,6 +149,7 @@ async def update_distribution(
 
 
 # ── 다운로드 ──────────────────────────────────────────────────
+
 
 @router.get("/{mat_id}/download")
 async def download_marketing_material(
@@ -179,10 +181,9 @@ async def download_marketing_material(
 
     type_label = mat.doc_type.value  # TM / DM / IM
     # 제어문자·경로구분자만 제거 (한글 등 유니코드 허용)
-    safe_title = "".join(
-        c for c in mat.title
-        if unicodedata.category(c) not in ("Cc", "Cs") and c not in r'/\:*?"<>|'
-    )[:50].strip()
+    safe_title = "".join(c for c in mat.title if unicodedata.category(c) not in ("Cc", "Cs") and c not in r'/\:*?"<>|')[
+        :50
+    ].strip()
     download_name = f"{type_label}_{safe_title}.pptx"
 
     return FileResponse(
@@ -193,6 +194,7 @@ async def download_marketing_material(
 
 
 # ── 삭제 ─────────────────────────────────────────────────────
+
 
 @router.delete("/{mat_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_marketing_material(

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # ── 데이터 클래스 ──────────────────────────────────────────────────
 
+
 @dataclass
 class GapItem:
     """단일 누락 항목."""
@@ -139,6 +140,7 @@ JSON만 반환하고 다른 텍스트는 포함하지 마세요.
 
 # ── 메인 클래스 ──────────────────────────────────────────────────
 
+
 class GapDetector:
     """Stage 4: 누락 탐지 — 멀티 LLM 합집합."""
 
@@ -218,10 +220,7 @@ class GapDetector:
             issue = sum(1 for i in items if i.get("status") == "ISSUE")
             na = sum(1 for i in items if i.get("status") == "NA")
             pending = sum(1 for i in items if i.get("status") == "PENDING")
-            parts.append(
-                f"- {section_type}: 총 {len(items)}개 "
-                f"(OK={ok}, ISSUE={issue}, NA={na}, PENDING={pending})"
-            )
+            parts.append(f"- {section_type}: 총 {len(items)}개 (OK={ok}, ISSUE={issue}, NA={na}, PENDING={pending})")
             for item in items:
                 if item.get("status") == "ISSUE":
                     parts.append(
@@ -237,14 +236,16 @@ class GapDetector:
 
         gaps: list[GapItem] = []
         for i, item in enumerate(items):
-            gaps.append(GapItem(
-                gap_id=item.get("gap_id", f"{prefix}-{i+1:03d}"),
-                section_type=item.get("section_type", "UNKNOWN"),
-                description=item.get("description", ""),
-                priority=item.get("priority", "MEDIUM"),
-                rationale=item.get("rationale", ""),
-                source=source,
-            ))
+            gaps.append(
+                GapItem(
+                    gap_id=item.get("gap_id", f"{prefix}-{i + 1:03d}"),
+                    section_type=item.get("section_type", "UNKNOWN"),
+                    description=item.get("description", ""),
+                    priority=item.get("priority", "MEDIUM"),
+                    rationale=item.get("rationale", ""),
+                    source=source,
+                )
+            )
         return gaps
 
     def _merge_and_deduplicate(

@@ -59,9 +59,7 @@ async def get_extraction(
     extraction_id: uuid.UUID,
 ) -> DocumentExtraction | None:
     """추출 작업 단일 조회."""
-    result = await db.execute(
-        select(DocumentExtraction).where(DocumentExtraction.id == extraction_id)
-    )
+    result = await db.execute(select(DocumentExtraction).where(DocumentExtraction.id == extraction_id))
     return result.scalar_one_or_none()
 
 
@@ -97,9 +95,7 @@ async def classify_document(
 
     # mini 모델 우선 시도
     try:
-        raw = await llm_client.call_with_model(
-            CLASSIFICATION_SYSTEM, user_msg, model="gpt-4o-mini"
-        )
+        raw = await llm_client.call_with_model(CLASSIFICATION_SYSTEM, user_msg, model="gpt-4o-mini")
     except Exception:
         raw = await llm_client.call(CLASSIFICATION_SYSTEM, user_msg)
 
@@ -226,7 +222,9 @@ async def run_extraction_pipeline(
             await db.commit()
             logger.info(
                 "분류 완료 (추출 불필요): %s → %s (%.0f%%)",
-                vdr_doc.original_name, category.value, confidence * 100,
+                vdr_doc.original_name,
+                category.value,
+                confidence * 100,
             )
             return
 
@@ -407,10 +405,14 @@ async def _apply_to_contract(
             # AI 분석 전용 필드 활용
             contract.ai_analysis_summary = data.get("risk_summary")
             contract.ai_risk_flags = {
-                k: v for k, v in data.items()
-                if k in (
-                    "rw_cap_amount", "rw_cap_percentage",
-                    "indemnification_period_months", "key_conditions",
+                k: v
+                for k, v in data.items()
+                if k
+                in (
+                    "rw_cap_amount",
+                    "rw_cap_percentage",
+                    "indemnification_period_months",
+                    "key_conditions",
                     "final_purchase_price",
                 )
                 and v is not None
@@ -437,12 +439,21 @@ async def _apply_to_transaction(
 
     # 등기부등본/사업자등록증 데이터 (CORPORATE_DOCS)
     corporate_keys = {
-        "company_name", "representative_name", "establishment_date",
-        "business_registration_number", "corporate_registration_number",
-        "capital_amount", "total_shares_issued", "par_value_per_share",
-        "common_shares", "preferred_shares",
-        "business_type", "business_item", "head_office_address",
-        "directors", "corporate_purpose",
+        "company_name",
+        "representative_name",
+        "establishment_date",
+        "business_registration_number",
+        "corporate_registration_number",
+        "capital_amount",
+        "total_shares_issued",
+        "par_value_per_share",
+        "common_shares",
+        "preferred_shares",
+        "business_type",
+        "business_item",
+        "head_office_address",
+        "directors",
+        "corporate_purpose",
     }
     corporate_data = {k: v for k, v in data.items() if k in corporate_keys and v is not None}
     if corporate_data:
@@ -450,10 +461,20 @@ async def _apply_to_transaction(
 
     # 세무신고서 데이터 (TAX_FILING)
     financial_keys = {
-        "fiscal_year", "revenue", "cost_of_goods_sold", "gross_profit",
-        "sga_expenses", "operating_income", "non_operating_income",
-        "non_operating_expenses", "income_before_tax", "corporate_tax",
-        "net_income", "total_assets", "total_liabilities", "total_equity",
+        "fiscal_year",
+        "revenue",
+        "cost_of_goods_sold",
+        "gross_profit",
+        "sga_expenses",
+        "operating_income",
+        "non_operating_income",
+        "non_operating_expenses",
+        "income_before_tax",
+        "corporate_tax",
+        "net_income",
+        "total_assets",
+        "total_liabilities",
+        "total_equity",
     }
     financial_data = {k: v for k, v in data.items() if k in financial_keys and v is not None}
     if financial_data:

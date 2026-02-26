@@ -17,13 +17,18 @@ class MeetingAttendee(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     meeting_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False, index=True,
+        UUID(as_uuid=True),
+        ForeignKey("meeting_logs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     organization: Mapped[str | None] = mapped_column(String(200), nullable=True)
     role: Mapped[AttendeeRole] = mapped_column(
-        Enum(AttendeeRole), nullable=False, default=AttendeeRole.OTHER,
+        Enum(AttendeeRole),
+        nullable=False,
+        default=AttendeeRole.OTHER,
     )
 
     # 마케팅 전용: 매수인 반응·코멘트

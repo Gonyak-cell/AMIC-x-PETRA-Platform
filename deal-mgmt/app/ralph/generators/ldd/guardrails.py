@@ -16,30 +16,81 @@ logger = logging.getLogger(__name__)
 # ── 53개 DDRL 유효 항목 ID ──────────────────────────────────────
 VALID_ITEM_IDS: set[str] = {
     # GOVERNANCE
-    "CORP-01", "CORP-02", "CORP-03", "CORP-04", "CORP-05", "CORP-06",
+    "CORP-01",
+    "CORP-02",
+    "CORP-03",
+    "CORP-04",
+    "CORP-05",
+    "CORP-06",
     # CAPITAL
-    "CAP-01", "CAP-02", "CAP-03", "CAP-04", "CAP-05", "CAP-06",
+    "CAP-01",
+    "CAP-02",
+    "CAP-03",
+    "CAP-04",
+    "CAP-05",
+    "CAP-06",
     # CONTRACTS
-    "CONTRACT-01", "CONTRACT-02", "CONTRACT-03", "CONTRACT-04", "CONTRACT-05", "CONTRACT-06",
+    "CONTRACT-01",
+    "CONTRACT-02",
+    "CONTRACT-03",
+    "CONTRACT-04",
+    "CONTRACT-05",
+    "CONTRACT-06",
     # LITIGATION
-    "LIT-01", "LIT-02", "LIT-03", "LIT-04", "LIT-05",
+    "LIT-01",
+    "LIT-02",
+    "LIT-03",
+    "LIT-04",
+    "LIT-05",
     # LABOR
-    "LABOR-01", "LABOR-02", "LABOR-03", "LABOR-04", "LABOR-05", "LABOR-06",
+    "LABOR-01",
+    "LABOR-02",
+    "LABOR-03",
+    "LABOR-04",
+    "LABOR-05",
+    "LABOR-06",
     # IP
-    "IP-01", "IP-02", "IP-03", "IP-04", "IP-05",
+    "IP-01",
+    "IP-02",
+    "IP-03",
+    "IP-04",
+    "IP-05",
     # REAL_ESTATE
-    "RE-01", "RE-02", "RE-03", "RE-04", "RE-05",
+    "RE-01",
+    "RE-02",
+    "RE-03",
+    "RE-04",
+    "RE-05",
     # PERMITS
-    "PERMIT-01", "PERMIT-02", "PERMIT-03", "PERMIT-04", "PERMIT-05",
+    "PERMIT-01",
+    "PERMIT-02",
+    "PERMIT-03",
+    "PERMIT-04",
+    "PERMIT-05",
     # TAX
-    "TAX-01", "TAX-02", "TAX-03", "TAX-04", "TAX-05",
+    "TAX-01",
+    "TAX-02",
+    "TAX-03",
+    "TAX-04",
+    "TAX-05",
     # DATA_IT
-    "IT-01", "IT-02", "IT-03", "IT-04",
+    "IT-01",
+    "IT-02",
+    "IT-03",
+    "IT-04",
 }
 
 VALID_SECTION_TYPES: set[str] = {
-    "GOVERNANCE", "CAPITAL", "CONTRACTS", "LITIGATION", "LABOR",
-    "IP", "REAL_ESTATE", "PERMITS", "TAX", "DATA_IT",
+    "GOVERNANCE",
+    "CAPITAL",
+    "CONTRACTS",
+    "LITIGATION",
+    "LABOR",
+    "IP",
+    "REAL_ESTATE",
+    "PERMITS",
+    "TAX",
+    "DATA_IT",
 }
 
 VALID_STATUSES: set[str] = {"OK", "ISSUE", "NA", "PENDING"}
@@ -65,14 +116,15 @@ _KOREAN_LAW_PATTERN = re.compile(r"제\s*(\d+)\s*조(?:의\s*\d+)?")
 
 # ── 검증 결과 ──────────────────────────────────────────────────
 
+
 @dataclass
 class GuardrailIssue:
     """단일 검증 위반."""
 
-    rule: str           # 규칙명
-    severity: str       # ERROR | WARNING
-    location: str       # 위치 (item_id, section 등)
-    message: str        # 설명
+    rule: str  # 규칙명
+    severity: str  # ERROR | WARNING
+    location: str  # 위치 (item_id, section 등)
+    message: str  # 설명
 
     def __str__(self) -> str:
         return f"[{self.severity}] {self.rule} @ {self.location}: {self.message}"
@@ -100,6 +152,7 @@ class GuardrailResult:
 
 
 # ── 메인 클래스 ──────────────────────────────────────────────────
+
 
 class LDDGuardrails:
     """LDD 보고서 무결성 검증 — 7개 규칙."""
@@ -165,41 +218,49 @@ class LDDGuardrails:
         for section in sections:
             section_type = section.get("section_type", "")
             if section_type not in VALID_SECTION_TYPES:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="ERROR",
-                    location=section_type,
-                    message=f"유효하지 않은 section_type: {section_type}",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="ERROR",
+                        location=section_type,
+                        message=f"유효하지 않은 section_type: {section_type}",
+                    )
+                )
 
             for item in section.get("items", []):
                 item_id = item.get("item_id", "")
                 if item_id not in VALID_ITEM_IDS:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="ERROR",
-                        location=item_id or "(빈 ID)",
-                        message=f"유효하지 않은 item_id: {item_id}",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="ERROR",
+                            location=item_id or "(빈 ID)",
+                            message=f"유효하지 않은 item_id: {item_id}",
+                        )
+                    )
                 elif item_id in found_ids:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="ERROR",
-                        location=item_id,
-                        message=f"중복된 item_id: {item_id}",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="ERROR",
+                            location=item_id,
+                            message=f"중복된 item_id: {item_id}",
+                        )
+                    )
                 else:
                     found_ids.add(item_id)
 
         # 누락된 항목 확인
         missing = VALID_ITEM_IDS - found_ids
         if missing:
-            result.issues.append(GuardrailIssue(
-                rule=rule,
-                severity="WARNING",
-                location="DDRL",
-                message=f"{len(VALID_ITEM_IDS)}개 DDRL 항목 중 {len(missing)}개 누락: {sorted(missing)[:5]}...",
-            ))
+            result.issues.append(
+                GuardrailIssue(
+                    rule=rule,
+                    severity="WARNING",
+                    location="DDRL",
+                    message=f"{len(VALID_ITEM_IDS)}개 DDRL 항목 중 {len(missing)}개 누락: {sorted(missing)[:5]}...",
+                )
+            )
 
         if not any(i.rule == rule for i in result.issues):
             result.passed_rules.append(rule)
@@ -221,39 +282,47 @@ class LDDGuardrails:
             level = item.get("issue_level")
 
             if status == "ISSUE" and not level:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="ERROR",
-                    location=item_id,
-                    message="ISSUE 상태인데 issue_level이 없음",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="ERROR",
+                        location=item_id,
+                        message="ISSUE 상태인데 issue_level이 없음",
+                    )
+                )
                 violations += 1
 
             if status in ("OK", "NA") and level:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="WARNING",
-                    location=item_id,
-                    message=f"{status} 상태인데 issue_level={level} 설정됨 (불필요)",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="WARNING",
+                        location=item_id,
+                        message=f"{status} 상태인데 issue_level={level} 설정됨 (불필요)",
+                    )
+                )
                 violations += 1
 
             if level and level not in VALID_LEVELS:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="ERROR",
-                    location=item_id,
-                    message=f"유효하지 않은 issue_level: {level}",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="ERROR",
+                        location=item_id,
+                        message=f"유효하지 않은 issue_level: {level}",
+                    )
+                )
                 violations += 1
 
             if status and status not in VALID_STATUSES:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="ERROR",
-                    location=item_id,
-                    message=f"유효하지 않은 status: {status}",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="ERROR",
+                        location=item_id,
+                        message=f"유효하지 않은 status: {status}",
+                    )
+                )
                 violations += 1
 
         if violations == 0:
@@ -280,23 +349,27 @@ class LDDGuardrails:
             refs = item.get("evidence_refs", [])
             for ref in refs:
                 if ref not in self._vdr_doc_ids:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message=f"VDR에 존재하지 않는 문서 참조: {ref}",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message=f"VDR에 존재하지 않는 문서 참조: {ref}",
+                        )
+                    )
                     violations += 1
 
             # ISSUE 상태인데 evidence_refs 없음 → 경고
             status = item.get("status", "")
             if status == "ISSUE" and not refs:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="WARNING",
-                    location=item_id,
-                    message="ISSUE 상태인데 증거 자료(evidence_refs)가 없음",
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="WARNING",
+                        location=item_id,
+                        message="ISSUE 상태인데 증거 자료(evidence_refs)가 없음",
+                    )
+                )
                 violations += 1
 
         if violations == 0:
@@ -334,15 +407,14 @@ class LDDGuardrails:
 
                 # 비현실적 조문 번호 탐지 (한국 법률 대부분 1000조 미만)
                 if article_num > 999:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message=(
-                            f"비현실적 조문 번호 '제{article_num}조' — "
-                            "한국 법률 대부분 999조 이내"
-                        ),
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message=(f"비현실적 조문 번호 '제{article_num}조' — 한국 법률 대부분 999조 이내"),
+                        )
+                    )
                     violations += 1
 
                 # 동일 조문 번호가 여러 법률에서 참조되는지 추적
@@ -377,12 +449,14 @@ class LDDGuardrails:
 
                 # RFI가 필요한데 번호 없음
                 if rfi_required and not rfi_number:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message="rfi_required=True인데 rfi_number가 비어 있음",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message="rfi_required=True인데 rfi_number가 비어 있음",
+                        )
+                    )
                     violations += 1
                     continue
 
@@ -391,49 +465,54 @@ class LDDGuardrails:
 
                 # RFI가 불필요한데 번호 있음
                 if not rfi_required:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message=f"rfi_required=False인데 rfi_number={rfi_number} 설정됨",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message=f"rfi_required=False인데 rfi_number={rfi_number} 설정됨",
+                        )
+                    )
                     violations += 1
 
                 # 형식 검증: {PREFIX}-NNN
                 rfi_pattern = re.compile(r"^[A-Z]+-\d{3}$")
                 if not rfi_pattern.match(rfi_number):
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message=f"RFI 번호 형식 불일치: '{rfi_number}' (기대: {expected_prefix}-NNN)",
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message=f"RFI 번호 형식 불일치: '{rfi_number}' (기대: {expected_prefix}-NNN)",
+                        )
+                    )
                     violations += 1
 
                 # 접두어 검증 (섹션에 맞는 접두어인지)
                 if expected_prefix and not rfi_number.startswith(expected_prefix + "-"):
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="WARNING",
-                        location=item_id,
-                        message=(
-                            f"RFI 접두어 불일치: '{rfi_number}' "
-                            f"(섹션 {section_type} → 기대 접두어: {expected_prefix})"
-                        ),
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="WARNING",
+                            location=item_id,
+                            message=(
+                                f"RFI 접두어 불일치: '{rfi_number}' "
+                                f"(섹션 {section_type} → 기대 접두어: {expected_prefix})"
+                            ),
+                        )
+                    )
                     violations += 1
 
                 # 중복 검증
                 if rfi_number in seen_rfi:
-                    result.issues.append(GuardrailIssue(
-                        rule=rule,
-                        severity="ERROR",
-                        location=item_id,
-                        message=(
-                            f"RFI 번호 중복: '{rfi_number}' "
-                            f"(이미 {seen_rfi[rfi_number]}에서 사용)"
-                        ),
-                    ))
+                    result.issues.append(
+                        GuardrailIssue(
+                            rule=rule,
+                            severity="ERROR",
+                            location=item_id,
+                            message=(f"RFI 번호 중복: '{rfi_number}' (이미 {seen_rfi[rfi_number]}에서 사용)"),
+                        )
+                    )
                     violations += 1
                 else:
                     seen_rfi[rfi_number] = item_id
@@ -483,15 +562,14 @@ class LDDGuardrails:
                 continue
 
             if section_type not in report_section_types:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="WARNING",
-                    location=section_type,
-                    message=(
-                        f"Stage 4에서 {priority} 누락 발견됨: "
-                        f"'{description[:60]}' — 보고서에 해당 섹션 없음"
-                    ),
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="WARNING",
+                        location=section_type,
+                        message=(f"Stage 4에서 {priority} 누락 발견됨: '{description[:60]}' — 보고서에 해당 섹션 없음"),
+                    )
+                )
                 violations += 1
 
         if violations == 0:
@@ -518,15 +596,16 @@ class LDDGuardrails:
                 continue
 
             if isinstance(confidence, (int, float)) and confidence < self._confidence_threshold:
-                result.issues.append(GuardrailIssue(
-                    rule=rule,
-                    severity="WARNING",
-                    location=item_id,
-                    message=(
-                        f"AI 신뢰도 {confidence:.2f} < "
-                        f"임계값 {self._confidence_threshold} — 변호사 검증 권장"
-                    ),
-                ))
+                result.issues.append(
+                    GuardrailIssue(
+                        rule=rule,
+                        severity="WARNING",
+                        location=item_id,
+                        message=(
+                            f"AI 신뢰도 {confidence:.2f} < 임계값 {self._confidence_threshold} — 변호사 검증 권장"
+                        ),
+                    )
+                )
                 violations += 1
 
         if violations == 0:
