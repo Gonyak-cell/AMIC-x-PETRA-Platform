@@ -7,6 +7,8 @@ import {
   BarChart3,
   Info,
   PieChart,
+  Clock,
+  FileText,
 } from "lucide-react";
 import { useFundDetail } from "@/modules/kiis/hooks/useFunds";
 import { useQualitativeReputation } from "@/modules/kiis/hooks/useCompanies";
@@ -125,6 +127,7 @@ export default function FundDetailPage() {
   const fund = data?.fund;
   const managers = data?.managers ?? [];
   const corpCode = fund?.corp_code ?? "";
+  const isPef = fund?.data_source === "pef_registry";
 
   const hasCorpCode = /^\d{8}$/.test(corpCode);
   const { data: deals } = useDealsByCompany(corpCode, { size: 20 });
@@ -176,6 +179,62 @@ export default function FundDetailPage() {
 
       {/* Header */}
       <PageHero title={fund.fund_name} subtitle={fund.company_name} compact backgroundImage={heroImg} backgroundOpacity={0.18} />
+
+      {/* 기준시점 + PEF 메타 정보 */}
+      {(data?.reference_date || isPef) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {data?.reference_date && (
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <Clock className="h-3.5 w-3.5" />
+              기준시점: {data.reference_date}
+            </div>
+          )}
+          {isPef && (
+            <Badge variant="success">
+              <FileText className="h-3 w-3 mr-1" />
+              PEF 등록부
+            </Badge>
+          )}
+          {fund.is_co_gp && (
+            <Badge variant="info">
+              <Users className="h-3 w-3 mr-1" />
+              Co-GP
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* PEF GP 목록 + 설립근거법률 */}
+      {isPef && (fund.gp_list?.length || fund.legal_basis) && (
+        <Card>
+          <div className="space-y-3">
+            {fund.gp_list && fund.gp_list.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-dark mb-2">GP 구성</h4>
+                <div className="flex flex-wrap gap-2">
+                  {fund.gp_list.map((gp) => (
+                    <div
+                      key={`${gp.gp_name}-${gp.gp_role}`}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-cool border border-gray-border"
+                    >
+                      <span className="text-sm font-medium text-text-dark">{gp.gp_name}</span>
+                      <Badge variant={gp.gp_role === "gp1" ? "info" : "neutral"}>
+                        {gp.gp_role.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {fund.legal_basis && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-dark mb-1">설립근거법률</h4>
+                <p className="text-sm text-text-secondary">{fund.legal_basis}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* KPI Cards (always visible) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

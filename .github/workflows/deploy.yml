@@ -24,29 +24,38 @@ on:
           - frontend-only
           - backend-only
 
-permissions:
-  checks: read
-  contents: read
-
 concurrency:
   group: deploy-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
 jobs:
-  # ── CI 통과 대기 (push 이벤트만, workflow_dispatch는 즉시 배포) ──
+  # ── CI Build 통과 대기 (push 이벤트만, workflow_dispatch는 즉시 배포) ──
   wait-for-ci:
-    name: Wait for CI
+    name: Wait for CI Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - name: Wait for CI workflow to pass
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.sha }}
-          check-name: "Build"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 15
-          allowed-conclusions: success
+      - name: Wait for CI Build job to pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Waiting for CI 'Build' job on commit ${{ github.sha }}..."
+          for i in $(seq 1 40); do
+            # Query check runs for this commit, filter for "Build" job
+            STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+              --jq '.check_runs[] | select(.name == "Build") | .conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "CI Build passed!"
+              exit 0
+            elif [ "$STATUS" = "failure" ]; then
+              echo "CI Build failed — aborting deploy"
+              exit 1
+            fi
+            echo "  Attempt $i/40: Build status='${STATUS:-pending}', waiting 15s..."
+            sleep 15
+          done
+          echo "CI Build did not complete within 10 minutes — aborting deploy"
+          exit 1
 
   deploy:
     name: Deploy to ${{ github.event.inputs.environment || 'production' }}

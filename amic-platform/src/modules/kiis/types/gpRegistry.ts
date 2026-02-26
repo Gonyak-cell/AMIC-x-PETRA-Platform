@@ -24,6 +24,7 @@ export interface GPRegistryListResponse {
   page: number;
   size: number;
   items: GPRegistryItem[];
+  reference_date?: string | null;
 }
 
 export interface GPRegistryParams {
