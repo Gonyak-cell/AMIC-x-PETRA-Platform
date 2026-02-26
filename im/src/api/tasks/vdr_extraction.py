@@ -1,6 +1,6 @@
 """VDR 데이터 추출 Celery 태스크 — VDR 문서 → 체크리스트 아이템 자동 추출.
 
-> 마지막 수정: 2026-02-25 21:00:00
+> 마지막 수정: 2026-02-26 22:12:00
 
 VDR(Virtual Data Room) 문서를 파싱하여 체크리스트 아이템의
 추출값(extracted_value), 신뢰도(confidence), 소스 정보를 업데이트한다.
@@ -8,17 +8,19 @@ VDR(Virtual Data Room) 문서를 파싱하여 체크리스트 아이템의
 
 단계:
   1. DB에서 체크리스트 + 아이템 로드
-  2. deal-mgmt 내부 API로 VDR 문서 메타 조회 (httpx)
-  3. 공유 볼륨에서 파일 경로 확인 (/vdr-shared/...)
-  4. VdrAnalysisService.extract_from_vdr_documents() 호출
-  5. 추출 결과 → IMChecklistItem 레코드 업데이트
-  6. IMChecklist.status → REVIEW
+  2. deal-mgmt 내부 API로 VDR 문서 메타 + 콘텐츠 다운로드 (httpx)
+  3. 임시 파일에 저장 → VdrAnalysisService 파싱
+  4. 추출 결과 → IMChecklistItem 레코드 업데이트
+  5. IMChecklist.status → REVIEW
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 import uuid as uuid_mod
+from pathlib import Path
 from typing import Any
 
 from src.api.tasks.base_task import PipelineTask
@@ -26,9 +28,6 @@ from src.api.tasks.celery_app import celery_app
 from src.api.tasks.progress import update_progress
 
 logger = logging.getLogger(__name__)
-
-# VDR 공유 볼륨 기본 경로
-_VDR_SHARED_BASE = "/vdr-shared"
 
 
 def _get_sync_engine() -> Any:
@@ -42,18 +41,18 @@ def _get_sync_engine() -> Any:
     return create_engine(sync_url, pool_pre_ping=True)
 
 
-def _fetch_vdr_document_metas(
+def _download_vdr_documents(
     transaction_id: str,
     vdr_document_ids: list[str],
-) -> list[dict[str, Any]]:
-    """deal-mgmt 내부 API를 호출하여 VDR 문서 메타데이터를 조회한다.
+) -> list[tuple[str, dict[str, Any]]]:
+    """deal-mgmt 내부 API에서 VDR 문서를 다운로드하여 임시 파일로 저장한다.
 
     Args:
         transaction_id: 거래 ID.
         vdr_document_ids: VDR 문서 ID 목록.
 
     Returns:
-        VDR 문서 메타 목록 [{id, file_name, file_path, ...}, ...].
+        [(temp_file_path, metadata), ...] — 호출자가 임시 파일 정리 책임.
     """
     import httpx
 
@@ -64,91 +63,62 @@ def _fetch_vdr_document_metas(
     internal_key = config.internal_service_key
     headers = {"X-Internal-Key": internal_key} if internal_key else {}
 
-    metas: list[dict[str, Any]] = []
+    results: list[tuple[str, dict[str, Any]]] = []
 
     try:
-        with httpx.Client(timeout=30.0, headers=headers) as client:
+        with httpx.Client(timeout=60.0, headers=headers) as client:
             for doc_id in vdr_document_ids:
                 try:
-                    # 1. 문서 메타데이터 조회
-                    resp = client.get(
+                    # 1. 메타데이터 조회
+                    meta_resp = client.get(
                         f"{base_url}/api/v1/internal/vdr"
                         f"/transactions/{transaction_id}"
                         f"/documents/{doc_id}/metadata",
                     )
-                    if resp.status_code != 200:
+                    if meta_resp.status_code != 200:
                         logger.warning(
                             "VDR 문서 메타 조회 실패: doc_id=%s status=%d",
-                            doc_id, resp.status_code,
+                            doc_id, meta_resp.status_code,
                         )
                         continue
 
-                    meta = resp.json()
+                    meta = meta_resp.json()
 
-                    # 2. 파일 경로 조회 (공유 볼륨 경로)
-                    path_resp = client.get(
+                    # 2. 콘텐츠 다운로드
+                    content_resp = client.get(
                         f"{base_url}/api/v1/internal/vdr"
                         f"/transactions/{transaction_id}"
-                        f"/documents/{doc_id}/file-path",
+                        f"/documents/{doc_id}/content",
                     )
-                    if path_resp.status_code == 200:
-                        path_data = path_resp.json()
-                        dir_path = path_data.get("file_path", "")
-                        original_name = path_data.get("original_name", "")
-                        if dir_path and original_name:
-                            meta["file_path"] = f"{dir_path}/{original_name}"
-                        elif dir_path:
-                            meta["file_path"] = dir_path
+                    if content_resp.status_code != 200:
+                        logger.warning(
+                            "VDR 문서 콘텐츠 다운로드 실패: doc_id=%s status=%d",
+                            doc_id, content_resp.status_code,
+                        )
+                        continue
 
-                    metas.append(meta)
+                    # 3. 임시 파일로 저장
+                    original_name = meta.get("original_name", f"{doc_id}.bin")
+                    suffix = Path(original_name).suffix
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=suffix, prefix=f"vdr_{doc_id}_"
+                    ) as tmp:
+                        tmp.write(content_resp.content)
+                        results.append((tmp.name, meta))
+
+                    logger.debug(
+                        "VDR 문서 다운로드 완료: doc_id=%s → %s (%d bytes)",
+                        doc_id, results[-1][0], len(content_resp.content),
+                    )
                 except httpx.HTTPError as exc:
                     logger.warning(
-                        "VDR 문서 메타 조회 HTTP 에러: doc_id=%s — %s",
+                        "VDR 문서 다운로드 HTTP 에러: doc_id=%s — %s",
                         doc_id, exc,
                     )
     except Exception as exc:
         logger.error("deal-mgmt API 연결 실패: %s", exc)
 
-    return metas
-
-
-def _resolve_vdr_file_paths(
-    metas: list[dict[str, Any]],
-    transaction_id: str,
-) -> list[str]:
-    """VDR 메타에서 공유 볼륨 상의 실제 파일 경로를 확인한다.
-
-    Args:
-        metas: VDR 문서 메타 리스트.
-        transaction_id: 거래 ID.
-
-    Returns:
-        존재하는 파일 경로 목록.
-    """
-    import os
-
-    paths: list[str] = []
-
-    for meta in metas:
-        # 메타에 file_path가 있으면 우선 사용
-        file_path = meta.get("file_path")
-        if not file_path:
-            # 규약: /vdr-shared/{transaction_id}/{filename}
-            file_name = meta.get("file_name", "")
-            if file_name:
-                file_path = os.path.join(
-                    _VDR_SHARED_BASE, transaction_id, file_name,
-                )
-
-        if file_path and os.path.exists(file_path):
-            paths.append(file_path)
-        elif file_path:
-            logger.warning(
-                "VDR 파일 없음: %s (doc_id=%s)",
-                file_path, meta.get("id"),
-            )
-
-    return paths
+    return results
 
 
 @celery_app.task(
@@ -190,6 +160,7 @@ def extract_vdr_data_task(
     update_progress(self, document_id, "COLLECTING", 10)
 
     engine = _get_sync_engine()
+    downloaded_files: list[str] = []
 
     try:
         with Session(engine) as session:
@@ -204,24 +175,25 @@ def extract_vdr_data_task(
             if checklist is None:
                 raise ValueError(f"IMChecklist not found: {checklist_id}")
 
-            # 2. VDR 문서 메타 조회
+            # 2. VDR 문서 다운로드
             vdr_doc_ids = checklist.vdr_document_ids or []
             transaction_id = str(checklist.transaction_id) if checklist.transaction_id else ""
 
             update_progress(self, document_id, "COLLECTING", 20)
 
             if vdr_doc_ids and transaction_id:
-                metas = _fetch_vdr_document_metas(transaction_id, vdr_doc_ids)
+                doc_results = _download_vdr_documents(transaction_id, vdr_doc_ids)
             else:
-                metas = []
+                doc_results = []
                 logger.warning(
                     "VDR 문서 ID 또는 transaction_id 없음: "
                     "checklist=%s, vdr_docs=%d, transaction=%s",
                     checklist_id, len(vdr_doc_ids), transaction_id,
                 )
 
-            # 3. 파일 경로 확인
-            file_paths = _resolve_vdr_file_paths(metas, transaction_id)
+            # 3. 다운로드된 파일 경로 목록
+            file_paths = [path for path, _ in doc_results]
+            downloaded_files = list(file_paths)
 
             if not file_paths:
                 logger.warning(
@@ -321,4 +293,10 @@ def extract_vdr_data_task(
         )
         raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
     finally:
+        # 임시 파일 정리
+        for tmp_path in downloaded_files:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
         engine.dispose()

@@ -201,13 +201,14 @@ services:
       INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dev-internal-key}
       REDIS_URL: redis://deal-mgmt-redis:6379/0
       REDIS_RESULT_BACKEND: redis://deal-mgmt-redis:6379/1
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
       DEBUG: "true"
       AUTH_ENABLED: "true"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./deal-mgmt:/app
       - /app/__pycache__
-      - vdr_storage:/app/generated/vdr
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -274,10 +275,11 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
     volumes:
       - ./deal-mgmt:/app
       - /app/__pycache__
-      - vdr_storage:/app/generated/vdr
     depends_on:
       deal-mgmt-db:
         condition: service_healthy
@@ -321,7 +323,6 @@ services:
       - ./im:/app
       - /app/__pycache__
       - im_output_data:/app/output
-      - vdr_storage:/vdr-shared:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -390,7 +391,6 @@ services:
       RALPH_VISION_ENABLED: "true"
     volumes:
       - im_output_data:/app/output
-      - vdr_storage:/vdr-shared:ro
     depends_on:
       im-db:
         condition: service_healthy
@@ -438,4 +438,3 @@ volumes:
   im_output_data:
   deal_mgmt_pgdata:
   deal_mgmt_redis_data:
-  vdr_storage:

@@ -11,19 +11,21 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from urllib.parse import quote
 
-logger = logging.getLogger(__name__)
-
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.core.database import get_db
 from app.models.enums import VdrDocumentStatus
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import VdrDocumentOut, VdrFolderOut
-from app.services import vdr_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/internal/vdr",
@@ -72,7 +74,7 @@ async def list_parseable_documents(
         select(VdrDocument)
         .where(
             VdrDocument.transaction_id == txn_id,
-            VdrDocument.status == VdrDocumentStatus.UPLOADED,
+            VdrDocument.status == VdrDocumentStatus.ACTIVE,
             VdrDocument.mime_type.in_(_PARSEABLE_MIME_TYPES),
         )
         .order_by(VdrDocument.created_at.desc())
@@ -106,19 +108,19 @@ async def get_document_metadata(
 
 
 @router.get(
-    "/transactions/{txn_id}/documents/{doc_id}/file-path",
-    summary="VDR 문서 파일 경로 조회 (내부 전용)",
+    "/transactions/{txn_id}/documents/{doc_id}/content",
+    summary="VDR 문서 파일 콘텐츠 다운로드 (내부 전용)",
     dependencies=[Depends(_verify_internal_key)],
 )
-async def get_document_file_path(
+async def download_document_content(
     txn_id: uuid.UUID,
     doc_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
-    """VDR 문서의 실제 파일 경로를 반환한다.
+) -> Response:
+    """VDR 문서의 실제 파일 콘텐츠를 반환한다.
 
-    Docker 공유 볼륨 내 경로를 반환하므로 IM 백엔드에서
-    직접 파일을 읽을 수 있다.
+    Azure Blob 또는 로컬 스토리지에서 파일을 읽어
+    IM 백엔드 Celery 워커에서 직접 파싱할 수 있도록 한다.
     """
     stmt = select(VdrDocument).where(
         VdrDocument.id == doc_id,
@@ -129,19 +131,19 @@ async def get_document_file_path(
     if doc is None:
         raise HTTPException(status_code=404, detail="VDR 문서를 찾을 수 없습니다.")
 
-    storage_path = vdr_service.VDR_STORAGE_DIR / str(txn_id) / str(doc_id)
-    if not storage_path.exists():
-        raise HTTPException(status_code=404, detail="파일이 존재하지 않습니다.")
+    try:
+        content = await blob_client.download_blob(doc.file_path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    except Exception as exc:
+        logger.error("VDR 문서 다운로드 실패: doc_id=%s — %s", doc_id, exc)
+        raise HTTPException(status_code=502, detail="파일을 다운로드할 수 없습니다.")
 
-    # 공유 볼륨 경로로 변환
-    shared_path = f"/vdr-shared/{txn_id}/{doc_id}"
-
-    return {
-        "file_path": shared_path,
-        "original_name": doc.original_name,
-        "mime_type": doc.mime_type,
-        "file_size_bytes": str(doc.file_size_bytes),
-    }
+    return Response(
+        content=content,
+        media_type=doc.mime_type,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(doc.original_name)}"},
+    )
 
 
 @router.get(

@@ -1,12 +1,12 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 18:39:00
+> 최종 업데이트: 2026-02-26 22:12:00
 
 ## 폴더 구조
 
 | 카테고리 | 폴더 | 설명 | 문서 수 |
 |---------|------|------|--------|
-| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 33 |
+| 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 34 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 15 |
@@ -57,6 +57,7 @@
 | `20260225_1112_MA_Sprint4_5_Implementation_and_Review.md` | **MA Sprint 4~5 구현 + 코드 검증** — 3기능(매수자 필터, 녹음 변환 STT+LLM, 클라이언트 포털), 12 신규파일, 3-에이전트 검증, High 2+Medium 4 보안 수정 |
 | `20260225_1505_Cross_Module_Analytics_Activity_Log_Review_Fix.md` | **Cross-Module Analytics & Activity Log 리뷰 + 버그 수정** — 4개 백엔드 audit 통합 검증, 3-에이전트 리뷰 + 수동 교차 검증, Agent 허위 양성 4건 기각, P0 2건 + P1 1건 수정, Docs KPI 전역 엔드포인트 신설 |
 | `20260225_2056_Financial_Model_Feature_Implementation_Report.md` | **재무모델(Financial Model) 구현 리포트** — 15파일 2,660 LOC, 코드 리뷰 4.7/5 전체 수정, Celery 태스크 큐 전환(4곳), 체크리스트 워크플로우, 472 tests 통과 |
+| `20260226_2212_VDR_Azure_Blob_Storage_Migration_Plan.md` | **VDR Azure Blob Storage 마이그레이션 플랜** — Docker 로컬 볼륨 → Azure Blob, 7파일 수정+2신규, SAS URL 다운로드, IM HTTP 전환, 로컬 폴백, 월 $1~5 |
 
 ## code-review/ (24)
 

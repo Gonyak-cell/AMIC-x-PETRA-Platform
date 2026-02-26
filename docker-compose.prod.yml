@@ -255,6 +255,8 @@ services:
       KIIS_API_URL: http://kiis-api:8000/api/v1
       CLOVA_CLIENT_ID: ${CLOVA_CLIENT_ID}
       CLOVA_CLIENT_SECRET: ${CLOVA_CLIENT_SECRET}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
       DEBUG: "false"
     restart: unless-stopped
     deploy:

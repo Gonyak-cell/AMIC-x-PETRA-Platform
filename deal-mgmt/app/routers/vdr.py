@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
@@ -31,9 +33,6 @@ router = APIRouter(
     prefix="/transactions/{txn_id}/vdr",
     tags=["VDR"],
 )
-
-# 파일 저장 경로 — 경로 탐색(Path Traversal) 방어
-_SAFE_STORAGE_DIR = vdr_service.VDR_STORAGE_DIR.resolve()
 
 # 업로드 허용 MIME 타입
 _ALLOWED_MIME_TYPES = {
@@ -302,7 +301,11 @@ async def download_document(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    """VDR 문서를 다운로드한다."""
+    """VDR 문서를 다운로드한다.
+
+    Azure 모드: SAS URL로 307 리다이렉트.
+    로컬 모드: 파일 콘텐츠 직접 반환.
+    """
     await _get_and_authorize_txn(db, txn_id, claims)
     try:
         doc = await vdr_service.get_document(db, txn_id, doc_id)
@@ -315,26 +318,22 @@ async def download_document(
             detail="이 문서는 삭제 또는 아카이브되었습니다.",
         )
 
-    file_path = Path(doc.file_path).resolve()
-    try:
-        file_path.relative_to(_SAFE_STORAGE_DIR)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="유효하지 않은 파일 경로입니다.",
+    if blob_client.is_local_mode:
+        try:
+            content = await blob_client.download_blob(doc.file_path)
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="파일을 찾을 수 없습니다.",
+            )
+        return Response(
+            content=content,
+            media_type=doc.mime_type,
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(doc.original_name)}"},
         )
 
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="파일을 찾을 수 없습니다.",
-        )
-
-    return FileResponse(
-        path=str(file_path),
-        filename=doc.original_name,
-        media_type=doc.mime_type,
-    )
+    sas_url = blob_client.generate_sas_url(doc.file_path, expiry_minutes=60)
+    return RedirectResponse(url=sas_url, status_code=307)
 
 
 @router.put("/documents/{doc_id}", response_model=VdrDocumentOut)

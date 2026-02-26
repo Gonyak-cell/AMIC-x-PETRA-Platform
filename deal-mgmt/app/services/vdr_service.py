@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import uuid
 from pathlib import Path
@@ -10,14 +9,12 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import VdrDocumentStatus, VdrFolderCategory
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import VdrDocumentUpdate, VdrFolderCreate, VdrFolderUpdate
-
-# 파일 저장 기본 경로
-VDR_STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "vdr"
 
 # M&A 실사 VDR 기본 폴더 (11개)
 _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
@@ -209,7 +206,7 @@ async def upload_document(
     uploaded_by_email: str | None = None,
     description: str | None = None,
 ) -> VdrDocument:
-    """파일을 저장하고 메타데이터를 DB에 기록한다."""
+    """파일을 Azure Blob(또는 로컬 폴백)에 저장하고 메타데이터를 DB에 기록한다."""
     await get_folder(db, transaction_id, folder_id)
 
     sha256 = hashlib.sha256(file_content).hexdigest()
@@ -217,18 +214,16 @@ async def upload_document(
     ext = Path(original_name).suffix.lower()
     stored_name = f"{uuid.uuid4()}{ext}"
 
-    storage_dir = VDR_STORAGE_DIR / str(transaction_id) / str(folder_id)
-    storage_dir.mkdir(parents=True, exist_ok=True)
-    file_path = storage_dir / stored_name
-
-    await asyncio.to_thread(file_path.write_bytes, file_content)
+    # blob_name = 상대 경로 (Azure Blob key 또는 로컬 상대 경로)
+    blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
+    await blob_client.upload_blob(blob_name, file_content, mime_type)
 
     doc = VdrDocument(
         transaction_id=transaction_id,
         folder_id=folder_id,
         original_name=original_name,
         stored_name=stored_name,
-        file_path=str(file_path),
+        file_path=blob_name,
         file_size_bytes=len(file_content),
         mime_type=mime_type,
         sha256_hash=sha256,

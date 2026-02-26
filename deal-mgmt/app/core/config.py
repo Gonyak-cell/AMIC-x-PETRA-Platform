@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     CLOVA_CLIENT_ID: str = ""
     CLOVA_CLIENT_SECRET: str = ""
 
+    # Azure Blob Storage (VDR)
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_VDR_CONTAINER_NAME: str = "amic-vdr"
+
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_RESULT_BACKEND: str = "redis://localhost:6379/1"

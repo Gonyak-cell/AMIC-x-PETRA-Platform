@@ -31,6 +31,8 @@ dependencies = [
     # Task Queue
     "celery>=5.4.0",
     "redis>=5.2.0",
+    # Azure Blob Storage (VDR)
+    "azure-storage-blob[aio]>=12.20.0",
 ]
 
 [project.optional-dependencies]

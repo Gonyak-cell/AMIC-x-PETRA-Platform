@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -49,10 +48,16 @@ async def lifespan(app: FastAPI):
     # JWT secret validation is handled at import time in core/config.py
     # (raises RuntimeError if ENV=production and using dev secret)
 
+    # Azure Blob Storage 초기화 (VDR 파일 스토리지)
+    from app.core.blob_storage import blob_client
+
+    await blob_client.init()
+
     # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("Deal Management application started")
     yield
     # Shutdown
+    await blob_client.close()
     logger.info("Deal Management application stopped")
 
 
