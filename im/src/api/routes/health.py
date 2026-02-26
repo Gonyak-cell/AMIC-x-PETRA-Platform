@@ -22,6 +22,8 @@ class HealthResponse(BaseModel):
 
     status: str
     version: str
+    service: str = ""
+    db: str = ""
 
 
 class ReadinessResponse(BaseModel):
@@ -68,20 +70,15 @@ async def _check_redis() -> bool:
 
 @router.get(
     "/health",
-    response_model=HealthResponse,
     summary="Liveness probe",
     description="서버 생존 확인. 로드밸런서/쿠버네티스 liveness probe용.",
 )
 async def health() -> dict:
     """DB 연결 포함 상태를 반환한다."""
     db_ok = await _check_db()
-    result = {"status": "ok", "service": "im", "version": __version__}
     if db_ok:
-        result["db"] = "ok"
-    else:
-        result["status"] = "degraded"
-        result["db"] = "error"
-    return result
+        return {"status": "ok", "service": "im", "version": __version__, "db": "ok"}
+    return {"status": "degraded", "service": "im", "version": __version__, "db": "error"}
 
 
 @router.get(
