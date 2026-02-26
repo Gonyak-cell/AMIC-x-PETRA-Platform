@@ -45,6 +45,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
@@ -110,7 +111,7 @@ jobs:
 
             # ── 4. Build & restart ──
             echo "=== [4/6] Build & Restart ==="
-            $COMPOSE build --no-cache $SERVICES
+            $COMPOSE build $SERVICES
             $COMPOSE up -d $SERVICES
 
             # ── 5. DB Migrations ──
@@ -157,7 +158,7 @@ jobs:
               echo ""
               echo "!!! HEALTH CHECK FAILED — Rolling back to $PREV_COMMIT !!!"
               git checkout "$PREV_COMMIT"
-              $COMPOSE build --no-cache $SERVICES
+              $COMPOSE build $SERVICES
               $COMPOSE up -d $SERVICES
               echo "Rollback complete"
               exit 1
