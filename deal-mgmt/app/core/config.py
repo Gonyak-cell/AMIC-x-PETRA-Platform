@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
 
+    # Naver Clova Speech STT
+    CLOVA_CLIENT_ID: str = ""
+    CLOVA_CLIENT_SECRET: str = ""
+
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_RESULT_BACKEND: str = "redis://localhost:6379/1"
