@@ -92,6 +92,7 @@ class FinancialSearchParams(BaseModel):
 
 
 class FinancialListResponse(BaseModel):
+    source: str = Field("DART", description="데이터 출처 (DART | DATA_GO_KR | NONE)")
     items: list[FinancialStatementItem]
 
 

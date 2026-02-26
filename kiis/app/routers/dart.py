@@ -1,19 +1,72 @@
-from fastapi import APIRouter, Depends, Query
+import logging
 
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.exceptions import DARTAPIError, ExternalAPIError
+from app.models.company import Company
 from app.schemas.dart import (
     CompanyInfo,
     CompanyListResponse,
     DisclosureListResponse,
     FinancialListResponse,
+    FinancialStatementItem,
     SanctionListResponse,
 )
+from app.schemas.fina_stat import SummaryFinancialResponse
 from app.services.dart_service import DARTService
+from app.services.fina_stat_service import FinaStatService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 def get_dart_service() -> DARTService:
     return DARTService()
+
+
+# ── 헬퍼 ──
+
+
+def _normalize_fina_to_dart(
+    items: list, sj_div: str, bsns_year: str, corp_code: str
+) -> list[FinancialStatementItem]:
+    """OpenAPI FinaStatItem → DART FinancialStatementItem 형식 변환."""
+    result = []
+    for idx, item in enumerate(items):
+        result.append(
+            FinancialStatementItem(
+                rcept_no="",
+                reprt_code="",
+                bsns_year=bsns_year,
+                corp_code=corp_code,
+                sj_div=sj_div,
+                sj_nm="재무상태표" if sj_div == "BS" else "손익계산서",
+                account_id=item.acit_id,
+                account_nm=item.acit_nm,
+                account_detail="",
+                thstrm_nm=f"{bsns_year}년",
+                thstrm_amount=item.crtm_acit_amt,
+                frmtrm_nm=f"{int(bsns_year) - 1}년" if bsns_year.isdigit() else "",
+                frmtrm_amount=item.pvtr_acit_amt,
+                bfefrmtrm_nm=f"{int(bsns_year) - 2}년" if bsns_year.isdigit() else "",
+                bfefrmtrm_amount=item.bpvtr_acit_amt,
+                ord=str(idx + 1),
+            )
+        )
+    return result
+
+
+async def _get_jurir_no(db: AsyncSession, corp_code: str) -> str | None:
+    """Company 테이블에서 법인등록번호(jurir_no)를 조회."""
+    result = await db.execute(select(Company.jurir_no).where(Company.corp_code == corp_code))
+    return result.scalar_one_or_none() or None
+
+
+# ── 기업 목록/상세 ──
 
 
 @router.get("/companies", response_model=CompanyListResponse, summary="기업 목록 조회")
@@ -24,14 +77,9 @@ async def list_companies(
     size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
     service: DARTService = Depends(get_dart_service),
 ):
-    """DART에 등록된 기업 목록을 조회한다.
-
-    고유번호 ZIP 파일을 파싱하여 기업 목록을 반환한다.
-    검색어 또는 상장사 필터를 적용할 수 있다.
-    """
+    """DART에 등록된 기업 목록을 조회한다."""
     all_corps = await service.get_corp_codes()
 
-    # 필터 적용
     filtered = all_corps
     if search:
         filtered = [c for c in filtered if search in c.corp_name]
@@ -58,23 +106,118 @@ async def get_company(
     return result
 
 
-@router.get("/companies/{corp_code}/financials", response_model=FinancialListResponse, summary="재무제표 조회")
+# ── 재무제표 (DART 우선 → OpenAPI 폴백) ──
+
+
+@router.get(
+    "/companies/{corp_code}/financials",
+    response_model=FinancialListResponse,
+    summary="재무제표 조회 (DART→OpenAPI 폴백)",
+)
 async def get_financials(
     corp_code: str,
     bsns_year: str = Query(..., max_length=4, description="사업연도 (YYYY)"),
     reprt_code: str = Query("11011", max_length=10, description="보고서 코드"),
     fs_div: str = Query("CFS", max_length=3, description="개별/연결 (CFS/OFS)"),
-    service: DARTService = Depends(get_dart_service),
+    dart_service: DARTService = Depends(get_dart_service),
+    db: AsyncSession = Depends(get_db),
 ):
-    """특정 기업의 재무제표를 조회한다."""
-    items = await service.get_financial_statements(
-        corp_code=corp_code,
-        bsns_year=bsns_year,
-        reprt_code=reprt_code,
-        fs_div=fs_div,
-    )
-    await service.close()
-    return FinancialListResponse(items=items)
+    """재무제표를 조회한다. DART API 우선, 실패 시 공공데이터 OpenAPI 폴백."""
+    # 1) DART 시도
+    try:
+        items = await dart_service.get_financial_statements(
+            corp_code=corp_code,
+            bsns_year=bsns_year,
+            reprt_code=reprt_code,
+            fs_div=fs_div,
+        )
+        if items:
+            await dart_service.close()
+            return FinancialListResponse(source="DART", items=items)
+    except DARTAPIError as e:
+        logger.info("DART 재무제표 실패 (%s): %s — OpenAPI 폴백", corp_code, e.message)
+    except Exception as e:
+        logger.warning("DART 재무제표 오류 (%s): %s", corp_code, e)
+    finally:
+        await dart_service.close()
+
+    # 2) OpenAPI 폴백 — jurir_no 조회
+    jurir_no = await _get_jurir_no(db, corp_code)
+    if not jurir_no:
+        return FinancialListResponse(source="NONE", items=[])
+
+    fina_service = FinaStatService()
+    try:
+        bs_items = await fina_service.get_balance_sheet(jurir_no, bsns_year)
+        is_items = await fina_service.get_income_statement(jurir_no, bsns_year)
+        normalized = _normalize_fina_to_dart(bs_items, "BS", bsns_year, corp_code)
+        normalized += _normalize_fina_to_dart(is_items, "IS", bsns_year, corp_code)
+        if normalized:
+            return FinancialListResponse(source="DATA_GO_KR", items=normalized)
+    except ExternalAPIError as e:
+        logger.warning("OpenAPI 재무제표 실패 (%s): %s", corp_code, e.message)
+    except Exception as e:
+        logger.warning("OpenAPI 재무제표 오류 (%s): %s", corp_code, e)
+    finally:
+        await fina_service.close()
+
+    return FinancialListResponse(source="NONE", items=[])
+
+
+# ── 재무 요약 KPI ──
+
+
+@router.get(
+    "/companies/{corp_code}/financial-summary",
+    response_model=SummaryFinancialResponse,
+    summary="재무 요약 KPI",
+)
+async def get_financial_summary(
+    corp_code: str,
+    bsns_year: str = Query(..., max_length=4, description="사업연도 (YYYY)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """매출/영업이익/순이익/총자산/부채비율 등 재무 요약 KPI를 조회한다."""
+    jurir_no = await _get_jurir_no(db, corp_code)
+    if not jurir_no:
+        return SummaryFinancialResponse(source="NONE", biz_year=bsns_year)
+
+    fina_service = FinaStatService()
+    try:
+        items = await fina_service.get_summary(jurir_no, bsns_year)
+        # 연결재무제표 우선 선택
+        target = None
+        for item in items:
+            if "Consolidated" in item.fncl_dcd or "연결" in item.fncl_dcd_nm:
+                target = item
+                break
+        if not target and items:
+            target = items[0]
+
+        if target:
+            return SummaryFinancialResponse(
+                source="DATA_GO_KR",
+                biz_year=bsns_year,
+                sale_amt=target.sale_amt or None,
+                bzop_pft=target.bzop_pft or None,
+                crtm_npf=target.crtm_npf or None,
+                tast_amt=target.tast_amt or None,
+                tdbt_amt=target.tdbt_amt or None,
+                tcpt_amt=target.tcpt_amt or None,
+                cptl_amt=target.cptl_amt or None,
+                debt_rto=target.debt_rto or None,
+            )
+    except ExternalAPIError as e:
+        logger.warning("OpenAPI 요약재무 실패 (%s): %s", corp_code, e.message)
+    except Exception as e:
+        logger.warning("OpenAPI 요약재무 오류 (%s): %s", corp_code, e)
+    finally:
+        await fina_service.close()
+
+    return SummaryFinancialResponse(source="NONE", biz_year=bsns_year)
+
+
+# ── 공시 검색 ──
 
 
 @router.get("/disclosures", response_model=DisclosureListResponse, summary="공시 검색")
@@ -88,7 +231,7 @@ async def search_disclosures(
     size: int = Query(20, ge=1, le=100),
     service: DARTService = Depends(get_dart_service),
 ):
-    """공시를 검색한다. 날짜, 기업코드, 공시유형 등으로 필터링할 수 있다."""
+    """공시를 검색한다."""
     items, total_count, total_page = await service.search_disclosures(
         corp_code=corp_code,
         bgn_de=bgn_de,
@@ -112,10 +255,7 @@ async def search_disclosures(
 async def sync_companies(
     enrich: bool = Query(False, description="상장사 상세정보 enrichment 여부"),
 ):
-    """DART corpCode.xml에서 기업 목록을 가져와 DB에 동기화한다.
-
-    enrich=True이면 상장사 대상 corp_cls, stock_name 등 상세정보도 갱신한다.
-    """
+    """DART corpCode.xml에서 기업 목록을 가져와 DB에 동기화한다."""
     from app.tasks.company_sync import sync_companies_from_dart
 
     result = await sync_companies_from_dart(enrich_listed=enrich)

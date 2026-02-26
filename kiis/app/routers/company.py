@@ -12,21 +12,37 @@ router = APIRouter()
 
 @router.get("", response_model=CompanyListResponse, summary="기업 목록 조회")
 async def list_companies(
-    search: str | None = Query(None, description="기업명 검색어"),
-    corp_cls: str | None = Query(None, description="법인구분 (Y/K/N/E)"),
+    search: str | None = Query(None, description="검색어"),
+    search_type: str = Query("name", description="검색 유형: name|stock_code|jurir_no|bizr_no"),
+    corp_cls: str | None = Query(None, description="법인구분 (쉼표 구분 복수 가능: Y,K)"),
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     """통합 기업 목록을 조회한다.
 
-    기업명 검색, 법인구분 필터를 적용할 수 있다.
+    검색 유형별 검색(기업명/종목코드/법인등록번호/사업자번호)과
+    법인구분 필터(복수 선택 지원)를 적용할 수 있다.
     """
     query = select(Company)
 
     if search:
-        query = query.where(Company.corp_name.contains(search))
+        search = search.strip()
+        if search_type == "stock_code":
+            query = query.where(Company.stock_code == search)
+        elif search_type == "jurir_no":
+            query = query.where(Company.jurir_no == search)
+        elif search_type == "bizr_no":
+            query = query.where(Company.bizr_no == search)
+        else:
+            # name (기본값): 기업명 부분 일치 검색
+            query = query.where(Company.corp_name.contains(search))
+
     if corp_cls:
-        query = query.where(Company.corp_cls == corp_cls)
+        cls_list = [c.strip() for c in corp_cls.split(",") if c.strip()]
+        if len(cls_list) == 1:
+            query = query.where(Company.corp_cls == cls_list[0])
+        elif len(cls_list) > 1:
+            query = query.where(Company.corp_cls.in_(cls_list))
 
     query = query.order_by(Company.corp_name)
     rows, total = await paginate(db, query, pagination)

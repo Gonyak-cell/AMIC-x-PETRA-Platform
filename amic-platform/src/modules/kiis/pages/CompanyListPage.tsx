@@ -5,7 +5,7 @@ import { useCompanies } from "@/modules/kiis/hooks/useCompanies";
 import { useCompanyFilters } from "@/modules/kiis/hooks/useCompanyFilters";
 import { Card, DataTable, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { Company } from "@/modules/kiis/types/company";
+import type { Company, SearchType } from "@/modules/kiis/types/company";
 import { CompanyFilterPanel } from "@/modules/kiis/components/CompanyFilterPanel";
 import {
   CORP_CLS_BADGE_VARIANT,
@@ -63,6 +63,7 @@ export default function CompanyListPage() {
   } = useCompanyFilters();
 
   const [searchText, setSearchText] = useState(params.search ?? "");
+  const [searchType, setSearchType] = useState<SearchType>(params.search_type ?? "name");
 
   const { data, isLoading } = useCompanies(params);
 
@@ -79,11 +80,14 @@ export default function CompanyListPage() {
       <CompanyFilterPanel
         searchText={searchText}
         onSearchTextChange={setSearchText}
+        searchType={searchType}
+        onSearchTypeChange={setSearchType}
         corpClsList={getSelected("corp_cls")}
         onSetFilter={setFilter}
         onReset={() => {
           resetFilters();
           setSearchText("");
+          setSearchType("name");
         }}
         activeFilterCount={activeFilterCount}
       />

@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, SlidersHorizontal, ChevronDown, X, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { CORP_CLS_OPTIONS } from "@/modules/kiis/constants/companyFilters";
+import {
+  CORP_CLS_OPTIONS,
+  SEARCH_TYPE_OPTIONS,
+} from "@/modules/kiis/constants/companyFilters";
+import type { SearchType } from "@/modules/kiis/types/company";
 
 interface CompanyFilterPanelProps {
   searchText: string;
   onSearchTextChange: (value: string) => void;
+  searchType: SearchType;
+  onSearchTypeChange: (value: SearchType) => void;
   corpClsList: string[];
   onSetFilter: (key: string, value: string | undefined) => void;
   onReset: () => void;
@@ -53,6 +59,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function CompanyFilterPanel({
   searchText,
   onSearchTextChange,
+  searchType,
+  onSearchTypeChange,
   corpClsList,
   onSetFilter,
   onReset,
@@ -70,6 +78,10 @@ export function CompanyFilterPanel({
     [],
   );
 
+  const currentPlaceholder =
+    SEARCH_TYPE_OPTIONS.find((o) => o.value === searchType)?.placeholder ??
+    "검색어 입력...";
+
   const handleSearchChange = useCallback(
     (value: string) => {
       onSearchTextChange(value);
@@ -81,6 +93,18 @@ export function CompanyFilterPanel({
     [onSearchTextChange, onSetFilter],
   );
 
+  const handleSearchTypeChange = useCallback(
+    (value: string) => {
+      const st = value as SearchType;
+      onSearchTypeChange(st);
+      onSetFilter("search_type", st === "name" ? undefined : st);
+      // 검색 유형 변경 시 검색어 초기화
+      onSearchTextChange("");
+      onSetFilter("search", undefined);
+    },
+    [onSearchTypeChange, onSetFilter, onSearchTextChange],
+  );
+
   const toggleChip = (key: string, currentSelected: string[], value: string) => {
     const next = currentSelected.includes(value)
       ? currentSelected.filter((v) => v !== value)
@@ -90,23 +114,42 @@ export function CompanyFilterPanel({
 
   return (
     <div className="rounded-dr border border-gray-border bg-white shadow-dr-sm overflow-hidden">
-      {/* ── 헤더 바: 검색 + 필터 토글 ── */}
+      {/* ── 헤더 바: 검색 유형 + 검색 입력 + 필터 토글 ── */}
       <div className="px-5 py-4 flex flex-col gap-3">
-        {/* 검색 입력 */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-          <input
-            type="text"
-            placeholder="기업명 또는 종목명 검색..."
-            value={searchText}
-            onChange={(e) => handleSearchChange(e.target.value)}
+        {/* 검색 유형 드롭다운 + 검색 입력 */}
+        <div className="flex gap-2">
+          <select
+            value={searchType}
+            onChange={(e) => handleSearchTypeChange(e.target.value)}
             className={cn(
-              "w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-border",
-              "bg-bg-cool text-text-body placeholder:text-text-muted",
+              "shrink-0 px-3 py-2 text-sm rounded-lg border border-gray-border",
+              "bg-bg-cool text-text-body",
               "focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent focus:bg-white",
-              "transition-all duration-150",
+              "transition-all duration-150 cursor-pointer",
             )}
-          />
+          >
+            {SEARCH_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+            <input
+              type="text"
+              placeholder={currentPlaceholder}
+              value={searchText}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className={cn(
+                "w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-border",
+                "bg-bg-cool text-text-body placeholder:text-text-muted",
+                "focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent focus:bg-white",
+                "transition-all duration-150",
+              )}
+            />
+          </div>
         </div>
 
         {/* 필터 토글 바 */}

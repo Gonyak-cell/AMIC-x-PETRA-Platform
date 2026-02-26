@@ -1,8 +1,8 @@
 import { useSearchParams } from "react-router-dom";
 import { useMemo, useCallback } from "react";
-import type { CompanyListParams } from "@/modules/kiis/types/company";
+import type { CompanyListParams, SearchType } from "@/modules/kiis/types/company";
 
-const FILTER_KEYS = ["search", "corp_cls"] as const;
+const FILTER_KEYS = ["search", "search_type", "corp_cls"] as const;
 
 export function useCompanyFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -10,6 +10,7 @@ export function useCompanyFilters() {
   const params = useMemo<CompanyListParams>(() => {
     return {
       search: searchParams.get("search") || undefined,
+      search_type: (searchParams.get("search_type") as SearchType) || "name",
       corp_cls: searchParams.get("corp_cls") || undefined,
       page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
       size: 20,

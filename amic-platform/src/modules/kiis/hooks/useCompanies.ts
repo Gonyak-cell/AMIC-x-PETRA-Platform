@@ -4,9 +4,9 @@ import type {
   Company,
   CompanyDetail,
   CompanyListParams,
-  FinancialStatement,
   FinancialParams,
-  FinancialListResponse,
+  FinancialListResponseWithSource,
+  FinancialSummary,
   PaginatedResponse,
 } from "@/modules/kiis/types/company";
 import type {
@@ -43,16 +43,30 @@ export function useCompanyFinancials(
   corpCode: string,
   params: FinancialParams,
 ) {
-  return useQuery<FinancialStatement[]>({
+  return useQuery<FinancialListResponseWithSource>({
     queryKey: ["kiis", "companies", corpCode, "financials", params],
     queryFn: async () => {
-      const { data } = await kiisApi.get<FinancialListResponse>(
+      const { data } = await kiisApi.get<FinancialListResponseWithSource>(
         `/dart/companies/${corpCode}/financials`,
         { params },
       );
-      return data.items;
+      return data;
     },
     enabled: CORP_CODE_RE.test(corpCode) && !!params.bsns_year,
+  });
+}
+
+export function useFinancialSummary(corpCode: string, bizYear: string) {
+  return useQuery<FinancialSummary>({
+    queryKey: ["kiis", "companies", corpCode, "financial-summary", bizYear],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<FinancialSummary>(
+        `/dart/companies/${corpCode}/financial-summary`,
+        { params: { bsns_year: bizYear } },
+      );
+      return data;
+    },
+    enabled: CORP_CODE_RE.test(corpCode) && !!bizYear,
   });
 }
 

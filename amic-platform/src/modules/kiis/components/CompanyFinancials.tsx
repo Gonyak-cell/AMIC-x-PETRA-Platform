@@ -1,6 +1,17 @@
 import { useState } from "react";
-import { useCompanyFinancials } from "@/modules/kiis/hooks/useCompanies";
-import { Card, DataTable, Select, Spinner, EmptyState } from "@/components/ui";
+import {
+  useCompanyFinancials,
+  useFinancialSummary,
+} from "@/modules/kiis/hooks/useCompanies";
+import {
+  Card,
+  DataTable,
+  Select,
+  Spinner,
+  EmptyState,
+  Badge,
+  KpiCard,
+} from "@/components/ui";
 import type { Column } from "@/components/ui";
 import { FinancialBarChart } from "@/components/charts";
 import type { FinancialStatement } from "@/modules/kiis/types/company";
@@ -25,6 +36,24 @@ function parseAmount(s: string): number | null {
   return isNaN(n) ? null : n;
 }
 
+function formatKpiAmount(value: string | null | undefined): string {
+  if (!value) return "-";
+  const n = Number(value);
+  if (isNaN(n)) return "-";
+  // 억 단위 표시
+  const billions = n / 100_000_000;
+  if (Math.abs(billions) >= 1) {
+    return `${billions.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`;
+  }
+  return formatAmount(n, "KRW");
+}
+
+const SOURCE_LABEL: Record<string, string> = {
+  DART: "DART",
+  DATA_GO_KR: "공공데이터",
+  NONE: "-",
+};
+
 interface CompanyFinancialsProps {
   corpCode: string;
 }
@@ -35,10 +64,15 @@ export default function CompanyFinancials({
   const [year, setYear] = useState(String(currentYear));
   const [reportCode, setReportCode] = useState("11011");
 
-  const { data: financials, isLoading, isError } = useCompanyFinancials(corpCode, {
-    bsns_year: year,
-    reprt_code: reportCode,
-  });
+  const { data: financialData, isLoading, isError } = useCompanyFinancials(
+    corpCode,
+    { bsns_year: year, reprt_code: reportCode },
+  );
+
+  const { data: summary } = useFinancialSummary(corpCode, year);
+
+  const financials = financialData?.items;
+  const source = financialData?.source ?? summary?.source ?? "NONE";
 
   const columns: Column<FinancialStatement>[] = [
     {
@@ -77,8 +111,42 @@ export default function CompanyFinancials({
     displayValue: formatAmount(parseAmount(f.thstrm_amount), "KRW"),
   }));
 
+  const hasSummary =
+    summary && summary.source !== "NONE" && (summary.sale_amt || summary.tast_amt);
+
   return (
-    <Card title="Financial Statements" headerBar>
+    <Card
+      title="Financial Statements"
+      headerBar
+      actions={
+        source !== "NONE" ? (
+          <Badge variant={source === "DART" ? "info" : "warning"}>
+            {SOURCE_LABEL[source] ?? source}
+          </Badge>
+        ) : undefined
+      }
+    >
+      {/* 요약 KPI 그리드 */}
+      {hasSummary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <KpiCard label="매출" value={formatKpiAmount(summary.sale_amt)} />
+          <KpiCard label="영업이익" value={formatKpiAmount(summary.bzop_pft)} />
+          <KpiCard label="순이익" value={formatKpiAmount(summary.crtm_npf)} />
+          <KpiCard label="총자산" value={formatKpiAmount(summary.tast_amt)} />
+          <KpiCard label="총부채" value={formatKpiAmount(summary.tdbt_amt)} />
+          <KpiCard label="총자본" value={formatKpiAmount(summary.tcpt_amt)} />
+          <KpiCard
+            label="부채비율"
+            value={
+              summary.debt_rto
+                ? `${Number(summary.debt_rto).toFixed(1)}%`
+                : "-"
+            }
+          />
+        </div>
+      )}
+
+      {/* 연도/보고서 선택기 */}
       <div className="flex gap-3 mb-4">
         <Select
           label="Year"
@@ -94,6 +162,7 @@ export default function CompanyFinancials({
         />
       </div>
 
+      {/* 상세 재무제표 */}
       {isLoading ? (
         <Spinner />
       ) : isError ? (

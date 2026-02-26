@@ -28,3 +28,17 @@ export const CORP_CLS_LABELS: Record<string, string> = {
   N: "KONEX",
   E: "기타",
 };
+
+// --- 검색 유형 ---
+export interface SearchTypeOption {
+  value: string;
+  label: string;
+  placeholder: string;
+}
+
+export const SEARCH_TYPE_OPTIONS: SearchTypeOption[] = [
+  { value: "name", label: "기업명", placeholder: "기업명 또는 종목명 검색..." },
+  { value: "stock_code", label: "종목코드", placeholder: "종목코드 입력 (예: 005930)" },
+  { value: "jurir_no", label: "법인등록번호", placeholder: "법인등록번호 13자리 입력..." },
+  { value: "bizr_no", label: "사업자번호", placeholder: "사업자등록번호 10자리 입력..." },
+];
