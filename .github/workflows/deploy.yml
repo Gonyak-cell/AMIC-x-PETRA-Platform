@@ -115,8 +115,11 @@ jobs:
             $COMPOSE build --no-cache $SERVICES
             $COMPOSE up -d $SERVICES
 
+            # Reload nginx to pick up new upstream container IPs
+            $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
+
             # Wait for containers to be ready
-            sleep 10
+            sleep 15
 
             # ── 5. DB Migrations ──
             # Each module runs independently — one failure does not block others
