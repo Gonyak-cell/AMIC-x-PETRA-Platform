@@ -184,23 +184,22 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
                 >
                   {day}
                 </span>
-                {/* Event dots */}
+                {/* Event dots — 프로젝트(entityId)별 1개 */}
                 <div className="flex flex-wrap gap-0.5 mt-1">
-                  {dayEvents.slice(0, 4).map((ev) => (
-                    <span
-                      key={ev.id}
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        MODULE_COLORS[ev.module],
-                      )}
-                      title={ev.title}
-                    />
-                  ))}
-                  {dayEvents.length > 4 && (
-                    <span className="text-[10px] text-text-secondary">
-                      +{dayEvents.length - 4}
-                    </span>
-                  )}
+                  {Array.from(
+                    new Map(dayEvents.map((ev) => [ev.entityId, ev])).values(),
+                  )
+                    .slice(0, 4)
+                    .map((ev) => (
+                      <span
+                        key={ev.entityId}
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          MODULE_COLORS[ev.module],
+                        )}
+                        title={ev.title.split(" — ")[0]}
+                      />
+                    ))}
                 </div>
               </button>
             );
