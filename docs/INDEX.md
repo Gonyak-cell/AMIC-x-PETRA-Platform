@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 11:19:00
+> 최종 업데이트: 2026-02-26 11:39:00
 
 ## 폴더 구조
 
@@ -9,7 +9,7 @@
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 33 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
-| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드 | 7 |
+| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드 | 8 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰 | 4 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩 | 6 |
@@ -103,7 +103,7 @@
 | `20260216_2025_Security_Code_Review.md` | 보안 코드 리뷰 |
 | `20260216_2205_JWT_HTTPOnly_Cookie_Migration_Plan.md` | JWT → httpOnly 쿠키 마이그레이션 계획 |
 
-## deployment/ (7)
+## deployment/ (8)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -114,6 +114,7 @@
 | `20260226_0011_Azure_VM_Production_Deployment_Report.md` | Azure VM 프로덕션 배포 리포트 — 18개 컨테이너, 마이그레이션, 시드 |
 | `20260226_1018_CICD_Auto_Deploy_Setup.md` | CI/CD 자동 배포 설정 가이드 — GitHub Actions, Secrets, 트리거, 사용법 |
 | `20260226_1119_Production_Dashboard_Error_Fix.md` | **프로덕션 대시보드 에러 수정** — KIIS JWT_SECRET 불일치, deal-mgmt Alembic 체인 단절+중복 인덱스, IM 테이블 누락, nginx DNS 캐시 |
+| `20260226_1139_Production_CORS_JWT_DB_Password_Fix.md` | **CORS/JWT/DB 비밀번호 수정** — IM JWT_SECRET 추가, KIIS CORS 변수명 수정, .env JSON 배열 형식, PG 볼륨 비밀번호 동기화 |
 
 ## fdd/ (4)
 

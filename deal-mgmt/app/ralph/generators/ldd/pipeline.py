@@ -109,18 +109,27 @@ class LDDMultiLLMPipeline:
         self._update_stage(0, "running")
         self._update_stage(1, "running")
 
-        analyzer = LDDSectionAnalyzer(
-            llm_call=self._router.call_routed if self._router else (
-                self._llm_client.call if self._llm_client and self._llm_client.is_available else None
-            ),
-            learned_patterns=self._learned_patterns,
-        )
+        def _make_llm_call(routing_key: str):
+            """routing_key를 바인딩한 2-인자 LLM 콜백을 생성한다."""
+            if self._router:
+                async def routed_call(system: str, user: str) -> str:
+                    return await self._router.call_routed(routing_key, system, user)
+                return routed_call
+            if self._llm_client and self._llm_client.is_available:
+                return self._llm_client.call
+            return None
 
         section_results: dict[str, list[dict]] = {}
         for section_cfg in self._sections_config:
             section_type = section_cfg.get("section_type", "")
             items = section_cfg.get("items", [])
             source_files = self._source_map.get(section_type, [])
+
+            routing_key = f"{section_type.lower()}_analysis"
+            analyzer = LDDSectionAnalyzer(
+                llm_call=_make_llm_call(routing_key),
+                learned_patterns=self._learned_patterns,
+            )
 
             analyzed_items: list[dict] = []
             for item in items:
@@ -296,7 +305,11 @@ class LDDMultiLLMPipeline:
         # ── Stage 9: Executive Summary ──
         self._update_stage(8, "running")
         try:
-            exec_summary = await analyzer.generate_executive_summary(section_results)
+            exec_analyzer = LDDSectionAnalyzer(
+                llm_call=_make_llm_call("executive_summary"),
+                learned_patterns=self._learned_patterns,
+            )
+            exec_summary = await exec_analyzer.generate_executive_summary(section_results)
             result.executive_summary = exec_summary
         except Exception as exc:
             logger.warning("Executive Summary 생성 실패: %s", exc)
@@ -488,11 +501,15 @@ class LDDMultiLLMPipeline:
         """Stage 6: 항목별 6블록 서술 생성."""
         from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
 
-        # LLM 호출 함수 결정
-        llm_call = (
-            self._router.call_routed if self._router
-            else (self._llm_client.call if self._llm_client and self._llm_client.is_available else None)
-        )
+        # LLM 호출 함수 결정 — NarrativeGenerator는 (system, user) 2-인자 콜백 기대
+        if self._router:
+            async def narrative_llm_call(system: str, user: str) -> str:
+                return await self._router.call_routed("report_generation", system, user)
+            llm_call = narrative_llm_call
+        elif self._llm_client and self._llm_client.is_available:
+            llm_call = self._llm_client.call
+        else:
+            llm_call = None
 
         generator = NarrativeGenerator(
             llm_call=llm_call,

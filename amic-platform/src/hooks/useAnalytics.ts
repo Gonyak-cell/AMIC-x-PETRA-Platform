@@ -246,6 +246,7 @@ export function useAnalyticsKpis(
           return toArray<Document>(data);
         },
         staleTime: 60_000,
+        retry: false,
         enabled:
           (!moduleFilter || moduleFilter === "im") &&
           isModuleUp(health, "im"),
@@ -405,6 +406,7 @@ export function useAnalyticsTimeSeries(
           return toArray<Document>(data);
         },
         staleTime: 60_000,
+        retry: false,
         enabled:
           (!moduleFilter || moduleFilter === "im") &&
           isModuleUp(health, "im"),
