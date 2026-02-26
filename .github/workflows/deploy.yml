@@ -204,6 +204,9 @@ jobs:
                   echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
                 else
                   echo "    $LABEL: FAILED (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
+                  # Debug: dump raw response and container state for failed services
+                  echo "    DEBUG[$LABEL]: raw_response='$RESPONSE'"
+                  $COMPOSE logs "$SVC" --tail=10 2>/dev/null | head -15 || true
                   HEALTH_OK=false
                 fi
               done
