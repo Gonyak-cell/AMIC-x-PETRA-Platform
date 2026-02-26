@@ -49,9 +49,7 @@ async def lifespan(app: FastAPI):
     # JWT secret validation is handled at import time in core/config.py
     # (raises RuntimeError if ENV=production and using dev secret)
 
-    # Startup — Auto-migrate DB (테스트 환경에서는 conftest가 create_all 사용)
-    if os.getenv("TESTING") != "true":
-        await _run_alembic_upgrade()
+    # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("Deal Management application started")
     yield
     # Shutdown
@@ -199,4 +197,16 @@ app.include_router(vdr_internal.router, prefix="/api/v1")
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    return {"status": "ok", "service": "deal-mgmt", "migration_ok": _migration_ok}
+    result = {"status": "ok", "service": "deal-mgmt", "migration_ok": _migration_ok}
+    try:
+        from sqlalchemy import text
+
+        from app.core.database import async_session_factory
+
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+        result["db"] = "ok"
+    except Exception:
+        result["status"] = "degraded"
+        result["db"] = "error"
+    return result

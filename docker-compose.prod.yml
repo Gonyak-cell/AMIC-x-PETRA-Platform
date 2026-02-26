@@ -18,6 +18,7 @@ services:
     build:
       context: ./amic-platform
       dockerfile: Dockerfile
+    image: amic-frontend:latest
     ports: []
     volumes: []
     restart: unless-stopped

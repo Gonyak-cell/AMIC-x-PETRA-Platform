@@ -76,8 +76,7 @@ async def _run_alembic_upgrade() -> None:
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    if os.getenv("TESTING") != "true":
-        await _run_alembic_upgrade()
+    # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("FDD application started")
     yield
     logger.info("FDD application stopped")
@@ -164,7 +163,19 @@ logger.info("Auto FDD application initialized")
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "version": "0.1.0", "migration_ok": _migration_ok}
+    result = {"status": "ok", "service": "fdd", "version": "0.1.0", "migration_ok": _migration_ok}
+    try:
+        from sqlalchemy import text
+
+        from app.database import SessionLocal
+
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        result["db"] = "ok"
+    except Exception:
+        result["status"] = "degraded"
+        result["db"] = "error"
+    return result
 
 
 @app.get("/metrics")

@@ -113,10 +113,7 @@ async def lifespan(app: FastAPI):
         if not settings.DART_API_KEY:
             logger.warning("DART_API_KEY is empty — DART API calls will fail")
 
-    # Startup — Auto-migrate DB (테스트 환경에서는 conftest가 create_all 사용)
-    if os.getenv("TESTING") != "true":
-        await _run_alembic_upgrade()
-
+    # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     await init_redis()
     await init_elasticsearch()
     await init_scheduler()
@@ -216,4 +213,16 @@ app.include_router(audit_router.router, prefix="/api/v1/audit", tags=["Audit"])
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "migration_ok": _migration_ok}
+    result = {"status": "ok", "service": "kiis", "migration_ok": _migration_ok}
+    try:
+        from sqlalchemy import text
+
+        from app.core.database import async_session_factory
+
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+        result["db"] = "ok"
+    except Exception:
+        result["status"] = "degraded"
+        result["db"] = "error"
+    return result
