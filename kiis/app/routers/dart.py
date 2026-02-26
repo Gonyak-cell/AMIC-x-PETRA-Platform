@@ -108,6 +108,20 @@ async def search_disclosures(
     )
 
 
+@router.post("/sync-companies", summary="기업 목록 DB 동기화")
+async def sync_companies(
+    enrich: bool = Query(False, description="상장사 상세정보 enrichment 여부"),
+):
+    """DART corpCode.xml에서 기업 목록을 가져와 DB에 동기화한다.
+
+    enrich=True이면 상장사 대상 corp_cls, stock_name 등 상세정보도 갱신한다.
+    """
+    from app.tasks.company_sync import sync_companies_from_dart
+
+    result = await sync_companies_from_dart(enrich_listed=enrich)
+    return result
+
+
 @router.get("/sanctions", response_model=SanctionListResponse, summary="제재 내역 조회")
 async def get_sanctions(
     corp_code: str = Query(..., max_length=20, description="고유번호"),

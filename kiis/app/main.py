@@ -117,6 +117,32 @@ async def lifespan(app: FastAPI):
     await init_redis()
     await init_elasticsearch()
     await init_scheduler()
+
+    # Companies 테이블이 비어있으면 DART에서 자동 동기화
+    if settings.DART_API_KEY:
+        try:
+            from sqlalchemy import func, select
+
+            from app.core.database import async_session_factory
+            from app.models.company import Company
+
+            async with async_session_factory() as db:
+                count_result = await db.execute(
+                    select(func.count()).select_from(Company)
+                )
+                company_count = count_result.scalar() or 0
+
+            if company_count == 0:
+                logger.info(
+                    "Companies 테이블이 비어있습니다. DART 기업 동기화를 시작합니다..."
+                )
+                from app.tasks.company_sync import sync_companies_from_dart
+
+                result = await sync_companies_from_dart(enrich_listed=False)
+                logger.info("DART 기업 동기화 완료: %s", result)
+        except Exception:
+            logger.exception("DART 기업 자동 동기화 실패 (서비스 시작에는 영향 없음)")
+
     logger.info("KIIS application started")
     yield
     # Shutdown

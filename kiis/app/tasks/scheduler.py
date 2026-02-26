@@ -33,12 +33,22 @@ async def init_scheduler() -> None:
     _scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
     # 지연 임포트로 순환 참조 방지
+    from app.tasks.company_sync import sync_companies_from_dart
     from app.tasks.dart_sync import run_dart_sync
     from app.tasks.manager_tracking import run_manager_tracking
     from app.tasks.news_collect import run_news_collect
     from app.tasks.portfolio_check import run_portfolio_check
     from app.tasks.reputation_recalc import run_reputation_recalc
     from app.tasks.watchlist_alerts import run_watchlist_alerts
+
+    _scheduler.add_job(
+        sync_companies_from_dart,
+        "cron",
+        day_of_week="mon",
+        hour=6,
+        id="company_sync",
+        name="DART 기업목록 동기화",
+    )
 
     _scheduler.add_job(
         run_dart_sync,
