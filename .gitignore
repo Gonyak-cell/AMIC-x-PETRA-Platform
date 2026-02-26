@@ -75,3 +75,9 @@ im/.mcp.json
 fdd/CLAUDE.local.md
 kiis/CLAUDE.local.md
 im/CLAUDE.local.md
+
+# User uploads & generated data
+deal-mgmt/uploads/
+fdd/backend/generated/
+finance model/sample/
+오픈API 활용자가이드*.docx
