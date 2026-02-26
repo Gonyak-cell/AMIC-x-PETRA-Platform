@@ -11,7 +11,7 @@ export function DesktopHeader({ onSearchClick }: DesktopHeaderProps) {
       {/* Search Trigger */}
       <button
         onClick={onSearchClick}
-        className="flex items-center gap-2 w-80 lg:w-96 px-4 py-2 text-sm text-text-secondary bg-white border border-gray-border rounded-dr shadow-dr-sm hover:border-amic/30 hover:text-text-dark transition-colors"
+        className="flex items-center gap-2 w-80 lg:w-96 h-10 px-4 text-sm text-text-secondary bg-white border border-gray-border rounded-dr shadow-dr-sm hover:border-amic/30 hover:text-text-dark transition-colors"
         aria-label="Open search"
       >
         <Search className="h-4 w-4 flex-shrink-0" />
