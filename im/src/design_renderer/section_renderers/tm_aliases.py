@@ -30,23 +30,75 @@ class TargetOverviewRenderer(BaseSectionRenderer):
         *,
         tokens: IMDesignTokens | None = None,
     ) -> list[str]:
-        from src.design_renderer.section_renderers.company_overview import (
-            CompanyOverviewRenderer,
+        from html import escape as html_escape
+
+        tokens = tokens or DEFAULT_TOKENS
+        c = tokens.colors
+
+        narrative = html_escape(
+            data.narratives.get("target_overview", "")
+            or data.narratives.get("company_overview", "")
         )
+        co = data.company_overview
 
-        # TM 프롬프트가 "target_overview" 키로 생성한 내러티브를
-        # company_overview 키에도 복사 (delegate가 읽을 수 있도록)
-        if "target_overview" in data.narratives and "company_overview" not in data.narratives:
-            data.narratives["company_overview"] = data.narratives["target_overview"]
+        # 회사 정보 카드
+        info_html = ""
+        items: list[tuple[str, str]] = []
+        if data.company_name_kr:
+            items.append(("회사명", data.company_name_kr))
+        if co:
+            if co.established_date:
+                items.append(("설립일", co.established_date))
+            if co.headquarters:
+                items.append(("본사", co.headquarters))
+            if co.employee_count is not None:
+                items.append(("임직원", f"{co.employee_count:,}명"))
 
-        delegate = CompanyOverviewRenderer()
-        slides = delegate.render_html(data, tokens=tokens)
+        if items:
+            cards = ""
+            for label, value in items:
+                cards += (
+                    f'<div style="padding:0.5em;background:{c.bg_cool_grey};'
+                    f'border-radius:4px;">'
+                    f'<div style="font-size:9pt;color:{c.text_secondary};">'
+                    f"{html_escape(label)}</div>"
+                    f'<div style="font-size:12pt;font-weight:bold;'
+                    f'color:{c.primary};">{html_escape(value)}</div></div>'
+                )
+            info_html = (
+                f'<div style="display:grid;grid-template-columns:'
+                f"repeat({min(len(items), 4)}, 1fr);gap:0.6em;"
+                f'margin-bottom:1em;">{cards}</div>'
+            )
 
-        # 타이틀 치환: "회사 개요" → "Target Overview"
-        return [
-            s.replace(">회사 개요<", ">Target Overview<")
-            for s in slides
-        ]
+        narrative_html = ""
+        if narrative:
+            narrative_html = (
+                f'<p style="font-size:10pt;color:{c.text_body};'
+                f'line-height:1.6;">{narrative}</p>'
+            )
+
+        products_html = ""
+        if co and co.key_products:
+            li_items = "".join(
+                f'<li style="font-size:10pt;color:{c.text_body};'
+                f'margin-bottom:0.3em;">{html_escape(p)}</li>'
+                for p in co.key_products
+            )
+            products_html = (
+                f'<div style="margin-top:0.8em;">'
+                f'<div style="font-size:11pt;font-weight:bold;'
+                f'color:{c.primary};margin-bottom:0.4em;">주요 제품/서비스</div>'
+                f'<ul style="margin:0;padding-left:1.2em;">{li_items}</ul></div>'
+            )
+
+        content = f"{info_html}{narrative_html}{products_html}"
+        return [build_slide_html(
+            content,
+            title="Target Overview",
+            slide_class="slide-target-overview",
+            tokens=tokens,
+        )]
 
     def render_pptx(
         self,
@@ -121,23 +173,45 @@ class TargetHighlightsRenderer(BaseSectionRenderer):
         *,
         tokens: IMDesignTokens | None = None,
     ) -> list[str]:
-        from src.design_renderer.section_renderers.business_overview import (
-            BusinessOverviewRenderer,
+        from html import escape as html_escape
+
+        tokens = tokens or DEFAULT_TOKENS
+        c = tokens.colors
+
+        narrative = html_escape(
+            data.narratives.get("target_highlights", "")
+            or data.narratives.get("business_overview", "")
         )
 
-        # TM 프롬프트가 "target_highlights" 키로 생성한 내러티브를
-        # business_overview 키에도 복사 (delegate가 읽을 수 있도록)
-        if "target_highlights" in data.narratives and "business_overview" not in data.narratives:
-            data.narratives["business_overview"] = data.narratives["target_highlights"]
+        narrative_html = ""
+        if narrative:
+            narrative_html = (
+                f'<p style="font-size:10pt;color:{c.text_body};'
+                f'line-height:1.6;margin-bottom:1em;">{narrative}</p>'
+            )
 
-        delegate = BusinessOverviewRenderer()
-        slides = delegate.render_html(data, tokens=tokens)
+        # 주요 고객
+        customers_html = ""
+        if data.key_customers:
+            li_items = "".join(
+                f'<li style="font-size:10pt;color:{c.text_body};'
+                f'margin-bottom:0.3em;">{html_escape(cust)}</li>'
+                for cust in data.key_customers
+            )
+            customers_html = (
+                f'<div style="margin-bottom:1em;">'
+                f'<div style="font-size:11pt;font-weight:bold;'
+                f'color:{c.primary};margin-bottom:0.4em;">주요 고객</div>'
+                f'<ul style="margin:0;padding-left:1.2em;">{li_items}</ul></div>'
+            )
 
-        # 타이틀 치환: "사업 개요" → "Target Highlights"
-        return [
-            s.replace(">사업 개요<", ">Target Highlights<")
-            for s in slides
-        ]
+        content = f"{narrative_html}{customers_html}"
+        return [build_slide_html(
+            content,
+            title="Target Highlights",
+            slide_class="slide-target-highlights",
+            tokens=tokens,
+        )]
 
     def render_pptx(
         self,

@@ -2,6 +2,11 @@
 
 AMIC Design vF.pdf 기반 공식 컬러 팔레트, SUITE/Pretendard 폰트 체계 적용.
 PPTX 전용 출력 (PDF 제거).
+
+TM/DM 실측 데이터 반영 (2026-02-26):
+- 4개 PPTX 템플릿(NX3 DM, SPICY TM, SWITCH TM, YTN DM) XML 파싱 결과 적용
+- 불릿, 테이블, 듀얼 패널 레이아웃 사양 추가
+- 문서: docs/im/20260226_1436_TM_DM_Design_System_Manual.md
 """
 
 from __future__ import annotations
@@ -37,9 +42,9 @@ class IMColorPalette:
     fresh: str = "#A3E96B"  # Fresh Green (그래디언트/보조 차트색)
     light: str = "#E6FDD6"  # Light Green (연한 배경/카드 배경)
 
-    # Text
-    text_body: str = "#000000"  # 본문 텍스트 (AMIC 가이드: Black)
-    text_dark: str = "#000000"  # 진한 텍스트
+    # Text (TM/DM 실측: #3D3D3D 본문, #2A2A2A 테마 dk1)
+    text_body: str = "#3D3D3D"  # 본문 텍스트 (TM/DM 실측)
+    text_dark: str = "#2A2A2A"  # 진한 텍스트 (테마 dk1 일치)
     text_secondary: str = "#777777"  # 캡션/출처
     text_white: str = "#FFFFFF"  # 어두운 배경 위 텍스트
 
@@ -53,15 +58,23 @@ class IMColorPalette:
     positive: str = "#26C260"  # Highlight Green (양수/긍정)
     negative: str = "#BC2C1A"  # 음수/부정/경고 (적색)
     caution: str = "#EF6C00"  # 주의/보통 (앰버)
+    warning_red: str = "#FF3838"  # TM/DM 경고/주의 표시
 
-    # Table
-    table_header_bg: str = "#0F3A32"  # Signature Green 테이블 헤더
-    table_alt_row_bg: str = "#F4F6F8"  # 테이블 줄무늬 배경
+    # Table (TM/DM 실측: 헤더 #26C260, 강조행 #E6FDD6)
+    table_header_bg: str = "#26C260"  # Highlight Green 테이블 헤더 (TM/DM 실측)
+    table_alt_row_bg: str = "#E6FDD6"  # Light Green 강조행 (TM/DM 실측)
 
     # Gray scale
     gray_medium: str = "#757575"
     gray_dark: str = "#333333"
     gray_border: str = "#E0E0E0"  # 테이블 테두리
+    gray_arrow: str = "#B0B0B0"  # 비활성 화살표/연결선
+
+    # Section bar
+    section_bar_bg: str = "#0F3A32"  # 섹션 타이틀 바 배경 (실측: rect fill #0F3A32 최다)
+
+    # Table border
+    table_border: str = "#6A6A6A"  # 테이블 가로선 색상 (실측: 0.5pt solid/dash)
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +100,7 @@ class IMTypography:
     font_mono: str = "Pretendard"  # KPI 숫자도 Pretendard ExtraBold
     font_fallback: str = "Noto Sans KR"
     font_chart: str = "Noto Sans KR"  # Plotly/Kaleido 전용 (Docker에 fonts-noto-cjk 설치)
+    font_cover_subtitle: str = "SUIT Medium"  # 표지 부제/날짜 전용 (TM/DM 실측)
 
     # CSS font-stack (PDF 미사용, 호환성 유지)
     css_heading: str = "'SUITE', 'Pretendard', 'Noto Sans KR', sans-serif"
@@ -104,15 +118,22 @@ class IMTypography:
 class IMFontSizes:
     """TITAN/COVENANT 공통 폰트 사이즈 체계 (pt 단위)."""
 
-    cover_title: int = 40  # 표지 타이틀
-    toc_section_title: int = 28  # TOC 구분 슬라이드 섹션 제목
-    toc_heading: int = 24  # "TABLE OF CONTENT"
+    cover_title: int = 40  # 표지 타이틀 (SUITE Heavy)
+    cover_subtitle: int = 24  # 표지 부제 (SUIT Medium, TM/DM 실측)
+    cover_date: int = 16  # 표지 날짜 (SUIT Medium, TM/DM 실측)
+    confidential: int = 10  # Confidential 문구 (SUITE Heavy, TM/DM 실측)
+    toc_section_title: int = 14  # TOC 항목 (TM/DM 실측: 14pt)
+    toc_heading: int = 24  # "TABLE OF CONTENT" 제목
     slide_title: int = 16  # MAIN 레이아웃 idx=11
     summary_text: int = 14  # 슬라이드 상단 요약/설명 (Bold)
     sub_header_bar: int = 12  # 서브헤더 바 (Bold White)
     kpi_label: int = 11  # KPI 라벨
     kpi_value: int = 20  # KPI 숫자 (IBM Plex Mono)
     body: int = 10  # 본문 (가장 빈번)
+    table_header: int = 10  # 테이블 헤더 (실측: bold white on #26C260)
+    table_body: int = 10  # 테이블 데이터 (실측)
+    table_financial: int = 9  # 재무제표 표 (실측: P&L, BS)
+    table_small: int = 8  # DM 소형 표 / 캡테이블 (실측: YTN)
     footnote: int = 9  # 각주/소스
     small_label: int = 8  # 소형 라벨/데이터
     minimum: int = 7  # 최소 텍스트 (저작권 등, 오버플로우 하한)
@@ -186,11 +207,124 @@ class IMPageLayout:
 
 @dataclass(frozen=True)
 class IMPPTXLayouts:
-    """SL Template PPTX 레이아웃 이름 및 인덱스."""
+    """SL Template PPTX 레이아웃 이름 및 인덱스 (TM/DM 실측 5종).
 
-    cover: str = "COVER"
-    blank: str = "BLANK"  # TOC 구분자/면책/연락처
-    main: str = "MAIN"  # 콘텐츠 전체
+    NOTE: 현재 레이아웃 조회는 create_template._PURPOSE_TO_INDEX를 통해 수행됨.
+    이 클래스는 레이아웃 이름 상수 참조용으로 유지. 향후 통합 가능.
+    """
+
+    blank: str = "BLANK"  # 레이아웃 0: 완전 빈 슬라이드
+    forest: str = "FOREST"  # 레이아웃 1: 표지/TOC/간지/면책/연락처 (배경 이미지)
+    blank_pgno: str = "BLANK_PGNO"  # 레이아웃 2: 페이지 번호만
+    main: str = "MAIN"  # 레이아웃 3: 일반 콘텐츠 (타이틀+푸터+페이지번호)
+    main_andersen: str = "MAIN_w/Andersen"  # 레이아웃 4: Andersen 공동 브랜딩
+    cover: str = "FOREST"  # 하위 호환 alias (기존 코드 호환)
+
+
+# ---------------------------------------------------------------------------
+# Bullet Point Style (TM/DM 실측)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class IMBulletStyle:
+    """TM/DM 불릿 포인트 체계 (4개 PPTX 실측 기반).
+
+    3단계 불릿 시스템:
+    - Level 1 Primary: Wingdings ü (체크마크) 또는 § (큰 점)
+    - Level 2 Secondary: Pretendard - (하이픈)
+    - Emphasis: Pretendard → (화살표, 결론/시사점)
+    """
+
+    # Level 1 (primary)
+    level1_char: str = "\u00fc"  # Wingdings ü (체크마크)
+    level1_alt_char: str = "\u00a7"  # Wingdings § (큰 점)
+    level1_font: str = "Wingdings"
+    level1_indent_cm: float = -0.476  # 내어쓰기 (-171,450 EMU)
+    level1_margin_left_cm: float = 0.476  # 왼쪽 여백 (171,450 EMU)
+
+    # Level 2 (secondary)
+    level2_char: str = "-"  # 하이픈
+    level2_font: str = "Pretendard"
+    level2_indent_cm: float = -0.476
+    level2_margin_left_cm: float = 0.997  # L1 marL + 0.521cm
+
+    # Emphasis
+    emphasis_char: str = "\u2192"  # → 화살표 (결론/시사점)
+    emphasis_font: str = "Pretendard"
+
+    # Spacing
+    line_spacing: float = 1.1  # TM 기본 줄 간격
+    space_before_emu: int = 38100  # ≈3pt
+    space_after_emu: int = 38100  # ≈3pt
+
+
+# ---------------------------------------------------------------------------
+# Table Style (TM/DM 실측)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class IMTableStyle:
+    """TM/DM 테이블 서식 체계 (4개 PPTX 실측 기반).
+
+    특징: 미니멀 디자인 — 세로선 없음, 가로선 최소화.
+    """
+
+    cell_margin_lr_cm: float = 0.1  # 셀 좌/우 여백
+    cell_margin_tb_cm: float = 0.0  # 셀 상/하 여백
+    vertical_borders: bool = False  # 세로선 없음 (좌/우 lnL/lnR = noFill)
+    header_anchor: str = "ctr"  # 헤더 수직 중앙
+    data_anchor: str = "ctr"  # 데이터 수직 중앙
+    sub_item_margin_left_cm: float = 0.4  # 재무제표 하위 항목 들여쓰기
+    first_row: bool = True  # 헤더 행 별도 스타일
+    band_row: bool = True  # 줄무늬 행
+
+    # 테두리 상세 (실측: 가로선만 존재, 세로선 없음)
+    border_color: str = "#6A6A6A"  # 가로선 색상
+    border_width_pt: float = 0.5  # 가로선 두께
+    header_border_style: str = "solid"  # 헤더 하단 실선
+    data_border_style: str = "dash"  # 데이터 행 하단 대시선
+    last_row_border_style: str = "solid"  # 마지막 행 하단 실선 복귀
+
+
+# ---------------------------------------------------------------------------
+# Dual Panel Layout (TM/DM 실측)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class IMDualPanelLayout:
+    """듀얼 패널 레이아웃 좌표 (cm 단위, 4개 PPTX 실측 기반).
+
+    좌/우 동일 너비(12.2cm) 패널 구조, 섹션 바 + 콘텐츠 영역.
+    """
+
+    left_x: float = 1.258  # 좌측 패널 시작 X
+    right_x: float = 14.058  # 우측 패널 시작 X
+    panel_width: float = 12.2  # 각 패널 너비
+    full_width: float = 25.0  # 전폭 너비
+    gap: float = 0.6  # 패널 간 간격 (14.058 - 1.258 - 12.2)
+    section_bar_y: float = 4.723  # 섹션 바 Y 좌표
+    section_bar_height: float = 0.8  # 섹션 바 높이
+    content_start_y: float = 6.024  # 콘텐츠 시작 Y
+    content_end_y: float = 16.5  # 콘텐츠 하단 Y (근사)
+    content_height: float = 10.5  # 가용 높이 (근사)
+
+    # TOC 테이블 좌표 (실측: FOREST 레이아웃 내 목차)
+    toc_title_y: float = 3.80  # TOC 제목 Y (실측)
+    toc_x: float = 0.957  # TOC 테이블 X
+    toc_y: float = 6.024  # TOC 테이블 Y
+    toc_width: float = 9.8  # TOC 테이블 너비
+    toc_height: float = 4.4  # TOC 테이블 높이
+
+    # 커버 슬라이드 좌표 (실측: FOREST 배경 위)
+    cover_margin_x: float = 1.258  # 커버 좌측 마진
+    cover_title_y: float = 6.0  # 프로젝트명 Y
+    cover_subtitle_y: float = 9.5  # 부제/날짜 Y
+
+    # 재무제표 시작 Y (타이틀 바 없이 직접 시작)
+    financial_start_y: float = 3.325
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +348,9 @@ class IMDesignTokens:
     font_sizes: IMFontSizes = field(default_factory=IMFontSizes)
     layout: IMPageLayout = field(default_factory=IMPageLayout)
     pptx_layouts: IMPPTXLayouts = field(default_factory=IMPPTXLayouts)
+    bullets: IMBulletStyle = field(default_factory=IMBulletStyle)
+    table_style: IMTableStyle = field(default_factory=IMTableStyle)
+    dual_panel: IMDualPanelLayout = field(default_factory=IMDualPanelLayout)
 
     # 브랜딩 메타
     company_name: str = "AMIC Law & PetraBridge Partners"

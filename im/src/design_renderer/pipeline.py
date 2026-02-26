@@ -93,7 +93,7 @@ class IMPipeline:
     """IM 문서 E2E 생성 파이프라인 (PPTX 전용).
 
     IMDocumentData를 입력받아 PPTX를 생성한다.
-    26종 섹션 렌더러(IM 18종 + TM 8종)를 순차 호출하며, 보안 옵션(워터마크,
+    32종 섹션 렌더러(IM 18종 + TM 8종 + DM 6종)를 순차 호출하며, 보안 옵션(워터마크,
     편집 제한)을 후처리로 적용한다.
 
     Args:
@@ -256,9 +256,7 @@ class IMPipeline:
         ea_font = self._tokens.typography.font_body
         ea_count = ensure_ea_fonts_on_presentation(prs, ea_font=ea_font)
         if ea_count > 0:
-            result.warnings.append(
-                f"a:ea 폰트 후처리: {ea_count}개 run에 '{ea_font}' 추가"
-            )
+            logger.info(f"a:ea 폰트 후처리: {ea_count}개 run에 '{ea_font}' 추가")
 
         if self._security:
             self._apply_pptx_security(prs)
@@ -372,8 +370,8 @@ class IMPipeline:
             group_key = group["key"]
             subsections = [s[0] for s in group["subsections"]]
 
-            # TOC placeholder 슬라이드 (빈 BLANK 슬라이드)
-            toc_slide = factory.add_blank_slide(prs)
+            # TOC placeholder 슬라이드 (FOREST 배경)
+            toc_slide = factory.add_forest_slide(prs)
             toc_placeholder_slides.append((group_key, toc_slide))
             current_slide_idx += 1
 

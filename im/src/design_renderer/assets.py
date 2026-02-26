@@ -57,6 +57,7 @@ IMAGE_FILES = {
     "amic_cover_bg": "amic_cover_bg.jpeg",
     "amic_logo_dark": "amic_logo_dark.png",
     "amic_logo_white": "amic_logo_white.png",
+    "forest_cover": "forest_cover.jpg",
 }
 
 

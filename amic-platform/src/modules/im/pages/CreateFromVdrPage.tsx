@@ -47,6 +47,7 @@ const STYLE_OPTIONS = [
   { value: "COVENANT", label: "Covenant - Financial Focus" },
   { value: "FULL", label: "Full - Comprehensive" },
   { value: "TEASER", label: "Teaser - One-pager" },
+  { value: "DM", label: "Discussion Memo" },
 ];
 
 // ── Helper: flatten folder tree to get all folders ───────────

@@ -36,6 +36,7 @@ class IMStyle(str, Enum):
     COVENANT = "COVENANT"  # 6섹션 구성
     FULL = "FULL"  # SPEC 14섹션 전체
     TEASER = "TEASER"  # TM (Teaser Memorandum) 고정 4그룹 구성
+    DM = "DM"  # DM (Discussion Memorandum) 내부 분석용
     CUSTOM = "CUSTOM"  # sections 필드에서 직접 지정
 
 
@@ -85,6 +86,16 @@ TEASER_SECTION_IDS = [
     "proforma_financials",
 ]
 
+# DM (Discussion Memorandum) 전용 섹션 ID
+DM_SECTION_IDS = [
+    "dm_market_trends",
+    "dm_deal_structure",
+    "dm_investment_thesis",
+    "dm_valuation",
+    "dm_risk_assessment",
+    "dm_summary",
+]
+
 # 산업별 섹션 (Phase A1)
 INDUSTRY_SECTION_IDS = [
     "industry_kpi",
@@ -92,7 +103,7 @@ INDUSTRY_SECTION_IDS = [
 ]
 
 # 전체 유효 섹션 ID (검증용)
-ALL_SECTION_IDS = SECTION_IDS + TEASER_SECTION_IDS + INDUSTRY_SECTION_IDS
+ALL_SECTION_IDS = SECTION_IDS + TEASER_SECTION_IDS + DM_SECTION_IDS + INDUSTRY_SECTION_IDS
 
 # 프리셋 섹션 구성
 TITAN_SECTIONS = [
@@ -144,6 +155,18 @@ TEASER_SECTIONS = [
     "proforma_plan",
     "proforma_financials",
     # End
+    "contact",
+]
+
+# DM (Discussion Memorandum) 고정 섹션 구성
+DM_SECTIONS = [
+    "cover",
+    "dm_market_trends",
+    "dm_deal_structure",
+    "dm_investment_thesis",
+    "dm_valuation",
+    "dm_risk_assessment",
+    "dm_summary",
     "contact",
 ]
 
@@ -499,6 +522,8 @@ class IMDocumentData:
             self.sections = list(SECTION_IDS)
         elif self.im_style == IMStyle.TEASER:
             self.sections = list(TEASER_SECTIONS)
+        elif self.im_style == IMStyle.DM:
+            self.sections = list(DM_SECTIONS)
         # CUSTOM: 사용자 지정 그대로 유지
 
     def get_active_sections(self) -> list[str]:

@@ -13,7 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "TEASER", "CUSTOM"}
+_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "TEASER", "DM", "CUSTOM"}
 _VALID_DATA_SOURCES = {"DART", "MANUAL", "EXCEL", "VDR"}
 
 # 전용 산업 모듈이 등록된 산업
@@ -42,7 +42,7 @@ class DocumentCreate(BaseModel):
         default="MANUAL", description="데이터 소스 (DART/MANUAL/EXCEL)"
     )
     im_style: str = Field(
-        default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/TEASER/CUSTOM)"
+        default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/TEASER/DM/CUSTOM)"
     )
     sections: list[str] = Field(
         default_factory=list, description="포함 섹션 리스트"

@@ -21,6 +21,11 @@ from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
 logger = logging.getLogger(__name__)
 
 
+def shape_bottom_inches(shape: Any) -> float:
+    """shape 하단 위치를 inches로 반환 — (top + height) / 914400 EMU."""
+    return (shape.top + shape.height) / 914400
+
+
 def add_summary_textbox(
     slide: Any,
     text: str,
@@ -319,6 +324,111 @@ def add_kpi_grid(
         tokens=tokens,
         number_config=number_config,
     )
+
+
+def add_section_bar(
+    slide: Any,
+    text: str,
+    *,
+    left: float | None = None,
+    top: float | None = None,
+    width: float | None = None,
+    height: float | None = None,
+    tokens: IMDesignTokens | None = None,
+) -> Any:
+    """섹션 타이틀 바 추가 (design_tokens.colors.section_bar_bg 참조).
+
+    TM/DM 실측: #0F3A32 배경 + 12pt Bold 흰색 텍스트.
+
+    Args:
+        slide: Slide 인스턴스.
+        text: 섹션 제목.
+        left, top, width, height: 위치/크기 (inches). None이면 토큰 기본값.
+        tokens: 디자인 토큰.
+
+    Returns:
+        생성된 shape.
+    """
+    if tokens is None:
+        tokens = DEFAULT_TOKENS
+
+    lay = tokens.layout
+    c = tokens.colors
+    t = tokens.typography
+    f = tokens.font_sizes
+    dp = tokens.dual_panel
+
+    _left = left if left is not None else lay.content_left
+    _top = top if top is not None else dp.section_bar_y / 2.54  # cm→inches
+    _width = width if width is not None else lay.content_width
+    _height = height if height is not None else dp.section_bar_height / 2.54
+
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(_left),
+        Inches(_top),
+        Inches(_width),
+        Inches(_height),
+    )
+
+    # 배경색 — design_tokens.colors.section_bar_bg
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = RGBColor.from_string(
+        c.section_bar_bg.lstrip("#")
+    )
+    shape.line.fill.background()
+
+    # 텍스트
+    tf = shape.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.LEFT
+    run = p.add_run()
+    run.text = text
+    set_font_with_ea(run, t.font_body)
+    run.font.size = Pt(f.sub_header_bar)
+    run.font.bold = True
+    run.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
+
+    return shape
+
+
+def add_dual_section_bars(
+    slide: Any,
+    left_title: str,
+    right_title: str,
+    *,
+    tokens: IMDesignTokens | None = None,
+) -> tuple[Any, Any]:
+    """듀얼 패널 섹션 바 쌍 추가.
+
+    좌표는 design_tokens.dual_panel에서 참조.
+
+    Returns:
+        (좌측 shape, 우측 shape) 튜플.
+    """
+    if tokens is None:
+        tokens = DEFAULT_TOKENS
+
+    dp = tokens.dual_panel
+    bar_y = dp.section_bar_y / 2.54
+    bar_h = dp.section_bar_height / 2.54
+    panel_w = dp.panel_width / 2.54
+
+    left_bar = add_section_bar(
+        slide, left_title,
+        left=dp.left_x / 2.54, top=bar_y,
+        width=panel_w, height=bar_h,
+        tokens=tokens,
+    )
+    right_bar = add_section_bar(
+        slide, right_title,
+        left=dp.right_x / 2.54, top=bar_y,
+        width=panel_w, height=bar_h,
+        tokens=tokens,
+    )
+
+    return left_bar, right_bar
 
 
 def add_financial_table(

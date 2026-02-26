@@ -1,7 +1,8 @@
 """PPTX 마스터 템플릿 관리 — amic_im_template.pptx 로드 및 레이아웃 참조.
 
 create_template.py가 생성한 템플릿 파일을 로드하고,
-COVER/BLANK/MAIN 레이아웃 참조와 플레이스홀더 접근 API를 제공한다.
+5종 레이아웃(BLANK/FOREST/BLANK_PGNO/MAIN/MAIN_w/Andersen)
+참조와 플레이스홀더 접근 API를 제공한다.
 """
 
 from __future__ import annotations
@@ -99,16 +100,28 @@ class TemplateManager:
         return get_layout_by_purpose(presentation, purpose)
 
     def get_cover_layout(self, prs: Presentation | None = None) -> Any:
-        """COVER 레이아웃 반환."""
+        """COVER(FOREST) 레이아웃 반환."""
         return self.get_layout("cover", prs)
 
     def get_blank_layout(self, prs: Presentation | None = None) -> Any:
-        """BLANK 레이아웃 반환 (TOC 구분자/면책/연락처)."""
+        """BLANK 레이아웃 반환 (면책 등)."""
         return self.get_layout("blank", prs)
+
+    def get_forest_layout(self, prs: Presentation | None = None) -> Any:
+        """FOREST 레이아웃 반환 (커버/TOC 간지/연락처)."""
+        return self.get_layout("forest", prs)
+
+    def get_blank_pgno_layout(self, prs: Presentation | None = None) -> Any:
+        """BLANK_PGNO 레이아웃 반환 (재무제표 full-width)."""
+        return self.get_layout("blank_pgno", prs)
 
     def get_main_layout(self, prs: Presentation | None = None) -> Any:
         """MAIN 레이아웃 반환 (콘텐츠 슬라이드)."""
         return self.get_layout("main", prs)
+
+    def get_main_andersen_layout(self, prs: Presentation | None = None) -> Any:
+        """MAIN_w/Andersen 레이아웃 반환 (공동 브랜딩)."""
+        return self.get_layout("main_andersen", prs)
 
     def add_slide(self, purpose: str, prs: Presentation | None = None) -> Any:
         """레이아웃 목적에 따라 새 슬라이드 추가.

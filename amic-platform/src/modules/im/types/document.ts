@@ -1,6 +1,6 @@
 import type { IndustryId } from "@/types/industry";
 
-export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "TEASER" | "CUSTOM";
+export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "TEASER" | "DM" | "CUSTOM";
 export type DataSource = "DART" | "MANUAL" | "EXCEL" | "VDR";
 
 export const DATA_SOURCE_BADGE: Record<DataSource, { label: string; cls: string }> = {
@@ -44,7 +44,14 @@ export type SectionId =
   | "appendix"
   | "contact"
   | "industry_kpi"
-  | "industry_overview";
+  | "industry_overview"
+  // DM (Discussion Memo)
+  | "dm_market_trends"
+  | "dm_deal_structure"
+  | "dm_investment_thesis"
+  | "dm_valuation"
+  | "dm_risk_assessment"
+  | "dm_summary";
 
 /** Structural sections always included — not user-toggleable. */
 export const STRUCTURAL_SECTIONS: SectionId[] = [
@@ -98,6 +105,13 @@ export const SECTION_LABEL_MAP: Record<SectionId, string> = {
   contact: "Contact",
   industry_kpi: "Industry KPIs",
   industry_overview: "Industry Overview",
+  // DM (Discussion Memo)
+  dm_market_trends: "Market & Transaction Trends",
+  dm_deal_structure: "Deal Structure Considerations",
+  dm_investment_thesis: "Investment Thesis",
+  dm_valuation: "Valuation Analysis",
+  dm_risk_assessment: "Risk Assessment",
+  dm_summary: "Summary & Recommendations",
 };
 
 export interface Document {
@@ -149,7 +163,7 @@ export const IN_PROGRESS_STATUSES: DocumentStatus[] = [
   "RENDERING",
 ];
 
-const IM_STYLES = ["TITAN", "COVENANT", "FULL", "TEASER", "CUSTOM"] as const;
+const IM_STYLES = ["TITAN", "COVENANT", "FULL", "TEASER", "DM", "CUSTOM"] as const;
 
 export function isIMStyle(value: string): value is IMStyle {
   return (IM_STYLES as readonly string[]).includes(value);

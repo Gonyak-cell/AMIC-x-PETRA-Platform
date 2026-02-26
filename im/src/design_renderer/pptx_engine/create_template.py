@@ -1,7 +1,14 @@
 """AMIC IM PPTX 마스터 템플릿 생성 스크립트.
 
-TITAN PPTX에서 SL Template의 슬라이드 마스터/레이아웃을 추출하고,
-AMIC 디자인(폰트/컬러)을 적용하여 amic_im_template.pptx를 생성한다.
+5종 레이아웃(BLANK, FOREST, BLANK_PGNO, MAIN, MAIN_w/Andersen)을 구성하고,
+AMIC 디자인 토큰(폰트/컬러/플레이스홀더)을 적용하여 amic_im_template.pptx를 생성.
+
+레이아웃 매핑:
+  - BLANK (idx 6)       : 완전 빈 슬라이드 (disclaimer 등)
+  - FOREST (idx 0)      : 배경 이미지 슬라이드 (cover, TOC 간지, contact)
+  - BLANK_PGNO (idx 1)  : 페이지 번호만 (재무제표 full-width)
+  - MAIN (idx 5)        : 제목바 + 각주 + 페이지번호 (일반 콘텐츠)
+  - MAIN_w/Andersen (idx 2) : MAIN + 공동 브랜딩
 
 사용법:
     python -m src.design_renderer.pptx_engine.create_template
@@ -13,7 +20,6 @@ AMIC 디자인(폰트/컬러)을 적용하여 amic_im_template.pptx를 생성한
 
 from __future__ import annotations
 
-import copy
 import logging
 from pathlib import Path
 from typing import Any
@@ -28,31 +34,45 @@ from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 logger = logging.getLogger(__name__)
 
 # 경로 상수
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]  # auto-im-generator/
 _ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 _TEMPLATE_OUTPUT = _ASSETS_DIR / "templates" / "amic_im_template.pptx"
 
-# TITAN PPTX 경로 (sample IM)
-_SAMPLE_IM_DIR = _PROJECT_ROOT.parent / "sample IM"
-_TITAN_PPTX = _SAMPLE_IM_DIR / "TITAN - IM - vF 251201.pptx"
+# ---------------------------------------------------------------------------
+# 레이아웃 이름 상수
+# ---------------------------------------------------------------------------
+
+LAYOUT_BLANK = "BLANK"
+LAYOUT_FOREST = "FOREST"
+LAYOUT_BLANK_PGNO = "BLANK_PGNO"
+LAYOUT_MAIN = "MAIN"
+LAYOUT_MAIN_ANDERSEN = "MAIN_w/Andersen"
+
+# python-pptx 기본 레이아웃 인덱스 → 목적 매핑
+# 0: Title Slide → FOREST
+# 1: Title and Content → BLANK_PGNO
+# 2: Section Header → MAIN_w/Andersen
+# 5: Title Only → MAIN
+# 6: Blank → BLANK
+_PURPOSE_TO_INDEX = {
+    "blank": 6,
+    "forest": 0,
+    "cover": 0,  # alias
+    "blank_pgno": 1,
+    "main": 5,
+    "main_andersen": 2,
+}
 
 
 def create_im_template(
     *,
-    source_pptx: Path | None = None,
     output_path: Path | None = None,
     tokens: IMDesignTokens | None = None,
 ) -> Path:
     """AMIC IM PPTX 마스터 템플릿 생성.
 
-    접근법:
-    1. 새 프레젠테이션을 처음부터 생성
-    2. 슬라이드 크기 설정 (10.83" x 7.5")
-    3. 3개 레이아웃 구성 (COVER, BLANK, MAIN)
-    4. 테마 폰트/컬러 설정
+    5종 레이아웃을 구성하고 테마 폰트/컬러를 설정한다.
 
     Args:
-        source_pptx: 소스 TITAN PPTX (참조용, 현재 미사용).
         output_path: 출력 경로. None이면 기본 위치.
         tokens: 디자인 토큰.
 
@@ -77,11 +97,11 @@ def create_im_template(
     # 테마 컬러 설정
     _set_theme_colors(prs, tokens)
 
-    # 기본 레이아웃 이름 변경 및 정리
+    # 레이아웃 구성 (5종)
     _configure_layouts(prs, tokens)
 
     prs.save(str(out))
-    logger.info(f"AMIC IM 마스터 템플릿 생성: {out}")
+    logger.info(f"AMIC IM 마스터 템플릿 생성: {out} (5종 레이아웃)")
     return out
 
 
@@ -91,24 +111,9 @@ def create_im_template(
 
 
 def _set_theme_fonts(prs: Presentation, tokens: IMDesignTokens) -> None:
-    """테마 폰트를 AMIC 폰트로 교체.
-
-    Major (제목): Inter
-    Minor (본문): Pretendard
-    """
-    slide_master = prs.slide_masters[0]
-    theme = slide_master.element.find(qn("p:txStyles"))
-
-    # python-pptx에서 직접 접근이 제한적이므로 XML 레벨 수정
-    # Theme XML 접근
-    theme_part = prs.slide_masters[0].part
-    if hasattr(theme_part, "slide_master"):
-        pass  # python-pptx 내부 구조
-
-    # theme.xml 직접 수정
+    """테마 폰트를 AMIC 폰트로 교체."""
     try:
         theme_xml = prs.slide_masters[0].element
-        # majorFont, minorFont 속성 찾기
         for font_scheme in theme_xml.iter(qn("a:majorFont")):
             latin = font_scheme.find(qn("a:latin"))
             if latin is not None:
@@ -128,11 +133,7 @@ def _set_theme_fonts(prs: Presentation, tokens: IMDesignTokens) -> None:
 
 
 def _set_theme_colors(prs: Presentation, tokens: IMDesignTokens) -> None:
-    """테마 컬러를 AMIC 컬러로 교체.
-
-    dk1 (dark 1): AMIC Dark Green #0F3A32
-    accent1: AMIC Green #26C260
-    """
+    """테마 컬러를 AMIC 컬러로 교체."""
     c = tokens.colors
     color_map = {
         "dk1": c.primary,        # #0F3A32
@@ -152,7 +153,6 @@ def _set_theme_colors(prs: Presentation, tokens: IMDesignTokens) -> None:
                     if srgb is not None:
                         srgb.set("val", hex_color.lstrip("#"))
                     else:
-                        # srgbClr 요소 생성
                         for child in list(elem):
                             elem.remove(child)
                         from lxml import etree
@@ -164,44 +164,43 @@ def _set_theme_colors(prs: Presentation, tokens: IMDesignTokens) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 레이아웃 구성
+# 레이아웃 구성 (5종)
 # ---------------------------------------------------------------------------
 
 
 def _configure_layouts(prs: Presentation, tokens: IMDesignTokens) -> None:
-    """기본 레이아웃을 AMIC IM 용으로 구성.
+    """5종 레이아웃 구성.
 
-    python-pptx 기본 프레젠테이션은 여러 기본 레이아웃을 포함한다.
-    COVER(0), BLANK(6), MAIN(5 or custom) 패턴으로 매핑.
+    python-pptx 기본 레이아웃을 재활용하여 5종으로 매핑:
+    - BLANK (idx 6): 빈 슬라이드
+    - FOREST (idx 0): 커버/간지용 (배경은 슬라이드 생성 시 적용)
+    - BLANK_PGNO (idx 1): 페이지 번호만
+    - MAIN (idx 5): 제목 + 각주 + 페이지번호
+    - MAIN_w/Andersen (idx 2): 공동 브랜딩
     """
     slide_master = prs.slide_masters[0]
     layouts = slide_master.slide_layouts
-
-    # 기본 레이아웃 정보 로깅
     layout_count = len(layouts)
-    logger.info(f"기본 레이아웃 {layout_count}개 발견")
+    logger.info(f"기본 레이아웃 {layout_count}개 발견, 5종 구성 시작")
 
-    # 레이아웃 이름 매핑 (python-pptx 기본 레이아웃)
-    # Index 0: Title Slide (→ COVER로 사용)
-    # Index 5: Title Only (→ MAIN으로 사용, 제목 ph만 있음)
-    # Index 6: Blank (→ BLANK로 사용)
-
-    # MAIN 레이아웃 (Title Only)에 각주/페이지번호 플레이스홀더 추가
+    # MAIN 레이아웃 (Title Only, idx=5) — 각주/페이지번호 플레이스홀더 추가
     if layout_count > 5:
-        main_layout = layouts[5]  # Title Only
+        main_layout = layouts[5]
         _add_footer_placeholders(main_layout, tokens)
 
-    # COVER 레이아웃 (index 0) — 기본 Title Slide 그대로 활용
+    # BLANK_PGNO 레이아웃 (idx=1) — 페이지번호만
+    if layout_count > 1:
+        blank_pgno_layout = layouts[1]
+        _add_page_number_placeholder(blank_pgno_layout, tokens)
+
+    # MAIN_w/Andersen (idx=2) — 각주/페이지번호 + 로고 영역
+    if layout_count > 2:
+        andersen_layout = layouts[2]
+        _add_footer_placeholders(andersen_layout, tokens)
 
 
 def _add_footer_placeholders(layout: Any, tokens: IMDesignTokens) -> None:
-    """MAIN 레이아웃에 각주(idx=12)와 페이지번호(idx=13) 플레이스홀더 추가.
-
-    python-pptx는 커스텀 플레이스홀더 생성을 직접 지원하지 않으므로
-    XML 레벨에서 추가한다.
-    """
-    from lxml import etree
-
+    """MAIN 레이아웃에 각주(idx=12)와 페이지번호(idx=13) 플레이스홀더 추가."""
     lay = tokens.layout
 
     # 각주 플레이스홀더 (idx=12)
@@ -217,6 +216,22 @@ def _add_footer_placeholders(layout: Any, tokens: IMDesignTokens) -> None:
     )
 
     # 페이지번호 플레이스홀더 (idx=13)
+    _add_placeholder_xml(
+        layout,
+        idx=lay.ph_page_number_idx,
+        left=Inches(9.83),
+        top=Inches(6.85),
+        width=Inches(0.5),
+        height=Inches(0.4),
+        font_size=tokens.font_sizes.page_number,
+        ph_type="sldNum",
+    )
+
+
+def _add_page_number_placeholder(layout: Any, tokens: IMDesignTokens) -> None:
+    """BLANK_PGNO 레이아웃에 페이지번호(idx=13)만 추가."""
+    lay = tokens.layout
+
     _add_placeholder_xml(
         layout,
         idx=lay.ph_page_number_idx,
@@ -245,13 +260,11 @@ def _add_placeholder_xml(
 
     sp_tree = layout.element.find(qn("p:cSld")).find(qn("p:spTree"))
 
-    # <p:sp> 요소 생성
     sp = etree.SubElement(sp_tree, qn("p:sp"))
 
-    # nvSpPr (non-visual shape properties)
     nv_sp_pr = etree.SubElement(sp, qn("p:nvSpPr"))
     c_nv_pr = etree.SubElement(nv_sp_pr, qn("p:cNvPr"))
-    c_nv_pr.set("id", str(idx + 100))  # 유니크 ID
+    c_nv_pr.set("id", str(idx + 100))
     c_nv_pr.set("name", f"Placeholder {idx}")
 
     c_nv_sp_pr = etree.SubElement(nv_sp_pr, qn("p:cNvSpPr"))
@@ -263,7 +276,6 @@ def _add_placeholder_xml(
     ph.set("type", ph_type)
     ph.set("idx", str(idx))
 
-    # spPr (shape properties - position/size)
     sp_pr = etree.SubElement(sp, qn("p:spPr"))
     xfrm = etree.SubElement(sp_pr, qn("a:xfrm"))
     off = etree.SubElement(xfrm, qn("a:off"))
@@ -273,14 +285,13 @@ def _add_placeholder_xml(
     ext.set("cx", str(width))
     ext.set("cy", str(height))
 
-    # txBody (text body with default font)
     tx_body = etree.SubElement(sp, qn("p:txBody"))
-    body_pr = etree.SubElement(tx_body, qn("a:bodyPr"))
-    lst_style = etree.SubElement(tx_body, qn("a:lstStyle"))
+    etree.SubElement(tx_body, qn("a:bodyPr"))
+    etree.SubElement(tx_body, qn("a:lstStyle"))
     p_elem = etree.SubElement(tx_body, qn("a:p"))
     end_para_rpr = etree.SubElement(p_elem, qn("a:endParaRPr"))
     end_para_rpr.set("lang", "ko-KR")
-    end_para_rpr.set("sz", str(font_size * 100))  # hundredths of a point
+    end_para_rpr.set("sz", str(font_size * 100))
 
 
 # ---------------------------------------------------------------------------
@@ -291,24 +302,42 @@ def _add_placeholder_xml(
 def get_layout_by_purpose(prs: Presentation, purpose: str) -> Any:
     """목적에 따른 레이아웃 반환.
 
+    5종 레이아웃 매핑:
+    - "blank"         → Blank (idx 6)
+    - "forest"/"cover"→ Title Slide (idx 0) — 배경은 슬라이드 생성 시 적용
+    - "blank_pgno"    → Title and Content (idx 1) — 페이지번호 플레이스홀더
+    - "main"          → Title Only (idx 5) — 제목+각주+페이지번호
+    - "main_andersen"  → Section Header (idx 2) — 공동 브랜딩
+
     Args:
         prs: Presentation 객체.
-        purpose: "cover" | "blank" | "main"
+        purpose: 레이아웃 목적 식별자.
 
     Returns:
         SlideLayout 객체.
+
+    Raises:
+        ValueError: 알 수 없는 purpose.
     """
     layouts = prs.slide_masters[0].slide_layouts
     layout_count = len(layouts)
 
-    if purpose == "cover":
-        return layouts[0]  # Title Slide
-    elif purpose == "blank":
-        return layouts[6] if layout_count > 6 else layouts[-1]  # Blank
-    elif purpose == "main":
-        return layouts[5] if layout_count > 5 else layouts[1]  # Title Only
-    else:
-        raise ValueError(f"Unknown layout purpose: {purpose}")
+    idx = _PURPOSE_TO_INDEX.get(purpose)
+    if idx is None:
+        raise ValueError(
+            f"Unknown layout purpose: '{purpose}'. "
+            f"Valid: {list(_PURPOSE_TO_INDEX.keys())}"
+        )
+
+    if idx >= layout_count:
+        # 폴백: 지원하지 않는 인덱스면 Blank 사용
+        logger.warning(
+            f"레이아웃 인덱스 {idx} ('{purpose}') 없음, "
+            f"Blank 폴백 (layout_count={layout_count})"
+        )
+        return layouts[min(6, layout_count - 1)]
+
+    return layouts[idx]
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""섹션 렌더러 패키지 — 21종 섹션별 HTML/PPTX 듀얼 렌더러.
+"""섹션 렌더러 패키지 — 32종 섹션별 HTML/PPTX 듀얼 렌더러 (IM 18종 + TM 8종 + DM 6종).
 
 렌더러 레지스트리를 통해 section_id로 렌더러를 조회할 수 있다.
 """
@@ -108,6 +108,14 @@ from src.design_renderer.section_renderers.tm_aliases import (
     TargetOverviewRenderer,
 )
 
+# F-ι DM (Discussion Memorandum) 전용 렌더러
+from src.design_renderer.section_renderers.dm_market_trends import DmMarketTrendsRenderer
+from src.design_renderer.section_renderers.dm_deal_structure import DmDealStructureRenderer
+from src.design_renderer.section_renderers.dm_investment_thesis import DmInvestmentThesisRenderer
+from src.design_renderer.section_renderers.dm_valuation import DmValuationRenderer
+from src.design_renderer.section_renderers.dm_risk_assessment import DmRiskAssessmentRenderer
+from src.design_renderer.section_renderers.dm_summary import DmSummaryRenderer
+
 __all__ = [
     "BaseSectionRenderer",
     "RendererError",
@@ -152,4 +160,11 @@ __all__ = [
     "ProformaFinancialsRenderer",
     "TargetOverviewRenderer",
     "TargetHighlightsRenderer",
+    # F-ι DM (Discussion Memo)
+    "DmMarketTrendsRenderer",
+    "DmDealStructureRenderer",
+    "DmInvestmentThesisRenderer",
+    "DmValuationRenderer",
+    "DmRiskAssessmentRenderer",
+    "DmSummaryRenderer",
 ]

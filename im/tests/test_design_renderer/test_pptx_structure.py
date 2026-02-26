@@ -261,6 +261,8 @@ class TestEaFontVerification:
         "NanumGothic",
         "Noto Sans KR",
         "Malgun Gothic",
+        "SUITE",
+        "SUIT Medium",
     }
 
     def test_all_runs_have_ea_element(self, full_pptx):

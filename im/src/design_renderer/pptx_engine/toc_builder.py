@@ -2,6 +2,8 @@
 
 섹션 목록을 2열 테이블 (번호+섹션명)로 배치하고,
 현재 활성 섹션을 AMIC 컬러로 강조한다.
+
+디자인 토큰 연동: dual_panel.toc_x/y/width/height, font_sizes.toc_heading 참조.
 """
 
 from __future__ import annotations
@@ -14,8 +16,11 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
+from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
+from src.design_renderer.pptx_engine.slide_factory import cm_to_inches
 
 logger = logging.getLogger(__name__)
+
 
 # 섹션 ID → 한글 표시명 매핑
 SECTION_DISPLAY_NAMES: dict[str, str] = {
@@ -42,6 +47,13 @@ SECTION_DISPLAY_NAMES: dict[str, str] = {
     "target_highlights": "Target Highlights",
     "proforma_plan": "Pro-Forma 사업계획",
     "proforma_financials": "Pro-Forma 재무제표",
+    # DM (Discussion Memorandum) 전용
+    "dm_market_trends": "Market & Transaction Trends",
+    "dm_deal_structure": "Deal Structure Considerations",
+    "dm_investment_thesis": "Investment Thesis",
+    "dm_valuation": "Valuation Analysis",
+    "dm_risk_assessment": "Risk Assessment",
+    "dm_summary": "Summary & Recommendations",
 }
 
 
@@ -58,9 +70,11 @@ def build_toc_slide(
     BLANK 레이아웃 슬라이드에 "TABLE OF CONTENTS" 제목과
     섹션 목록을 배치한다. 현재 섹션은 ALL CAPS + AMIC 컬러.
 
+    좌표는 design_tokens.dual_panel에서 참조 (cm → inches 변환).
+
     Args:
         slide: Slide 객체 (BLANK 레이아웃).
-        sections: 표시할 섹션 ID 리스트 (cover/disclaimer/toc_divider/contact 제외).
+        sections: 표시할 섹션 ID 리스트.
         current_section: 현재 활성 섹션 ID.
         tokens: 디자인 토큰.
         section_names: 섹션 ID→표시명 매핑 오버라이드.
@@ -75,6 +89,7 @@ def build_toc_slide(
     c = tokens.colors
     t = tokens.typography
     f = tokens.font_sizes
+    dp = tokens.dual_panel
 
     # TOC에서 제외할 섹션
     excluded = {"cover", "disclaimer", "toc_divider", "contact"}
@@ -83,25 +98,30 @@ def build_toc_slide(
     if not toc_sections:
         return slide
 
-    # "TABLE OF CONTENTS" 제목
+    # 제목 좌표 (디자인 토큰 기반: TOC 테이블 위)
+    title_x = cm_to_inches(dp.toc_x)
+    title_y = cm_to_inches(dp.toc_y) - 1.0  # 테이블 위 약 1인치
+    title_w = cm_to_inches(dp.toc_width)
+
     title_shape = slide.shapes.add_textbox(
-        Inches(1.5),
-        Inches(1.0),
-        Inches(7.83),
+        Inches(title_x),
+        Inches(title_y),
+        Inches(title_w),
         Inches(0.6),
     )
     tf = title_shape.text_frame
     p = tf.paragraphs[0]
     run = p.add_run()
     run.text = "TABLE OF CONTENTS"
-    run.font.name = t.font_heading
+    set_font_with_ea(run, t.font_heading)
     run.font.size = Pt(f.toc_heading)
     run.font.bold = True
     run.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
 
-    # 섹션 목록 — 텍스트박스 기반 리스트
-    list_top = 2.0
-    item_height = 0.45
+    # 섹션 목록 (디자인 토큰 기반)
+    list_top = cm_to_inches(dp.toc_y)
+    item_height = cm_to_inches(dp.toc_height) / max(len(toc_sections), 1)
+    item_height = min(item_height, 0.45)  # 최대 높이 제한
 
     for idx, section_id in enumerate(toc_sections):
         display_name = names.get(section_id, section_id)
@@ -110,7 +130,7 @@ def build_toc_slide(
 
         # 번호
         num_shape = slide.shapes.add_textbox(
-            Inches(1.5),
+            Inches(title_x),
             Inches(y),
             Inches(0.5),
             Inches(item_height),
@@ -120,7 +140,7 @@ def build_toc_slide(
         p_num.alignment = PP_ALIGN.RIGHT
         r_num = p_num.add_run()
         r_num.text = f"{idx + 1:02d}"
-        r_num.font.name = t.font_mono
+        set_font_with_ea(r_num, t.font_mono)
         r_num.font.size = Pt(f.summary_text)
         r_num.font.bold = True
         r_num.font.color.rgb = RGBColor.from_string(
@@ -129,16 +149,16 @@ def build_toc_slide(
 
         # 섹션명
         name_shape = slide.shapes.add_textbox(
-            Inches(2.2),
+            Inches(title_x + 0.7),
             Inches(y),
-            Inches(6.0),
+            Inches(title_w - 0.7),
             Inches(item_height),
         )
         stf = name_shape.text_frame
         p_name = stf.paragraphs[0]
         r_name = p_name.add_run()
         r_name.text = display_name.upper() if is_current else display_name
-        r_name.font.name = t.font_body
+        set_font_with_ea(r_name, t.font_body)
         r_name.font.size = Pt(f.summary_text)
         r_name.font.bold = is_current
         r_name.font.color.rgb = RGBColor.from_string(
@@ -159,19 +179,7 @@ def build_toc_slide_html(
     tokens: IMDesignTokens | None = None,
     section_names: dict[str, str] | None = None,
 ) -> str:
-    """HTML TOC 구분 슬라이드 생성.
-
-    css_generator.py의 .slide-toc 클래스를 사용한다.
-
-    Args:
-        sections: 표시할 섹션 ID 리스트.
-        current_section: 현재 활성 섹션 ID.
-        tokens: 디자인 토큰.
-        section_names: 섹션 ID→표시명 매핑.
-
-    Returns:
-        <div class="slide slide-toc">...</div> HTML.
-    """
+    """HTML TOC 구분 슬라이드 생성."""
     if tokens is None:
         tokens = DEFAULT_TOKENS
 
@@ -212,9 +220,12 @@ def _add_highlight_bar(
     """현재 섹션 하이라이트용 좌측 바."""
     from pptx.enum.shapes import MSO_SHAPE
 
+    dp = tokens.dual_panel
+    bar_x = cm_to_inches(dp.toc_x) - 0.1  # 번호 왼쪽
+
     bar = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(1.3),
+        Inches(bar_x),
         Inches(y),
         Inches(0.08),
         Inches(height),
@@ -230,8 +241,6 @@ def _add_highlight_bar(
 # TM (Teaser Memorandum) 전용 고정 TOC
 # ---------------------------------------------------------------------------
 
-from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
-
 
 def build_tm_toc_slide(
     slide: Any,
@@ -244,6 +253,8 @@ def build_tm_toc_slide(
 
     TEASER_TOC_GROUPS 기반 고정 구조를 항상 4그룹 모두 표시하고,
     current_group에 해당하는 그룹을 하이라이트한다.
+
+    좌표는 design_tokens에서 참조 (toc_heading, dual_panel 등).
 
     Args:
         slide: Slide 객체 (BLANK 레이아웃).
@@ -262,11 +273,16 @@ def build_tm_toc_slide(
     c = tokens.colors
     t = tokens.typography
     f = tokens.font_sizes
+    dp = tokens.dual_panel
     page_numbers = page_numbers or {}
 
-    # "TABLE OF CONTENTS" 제목
+    # 제목 좌표 (디자인 토큰 기반)
+    title_x = cm_to_inches(dp.toc_x)
+    title_y = cm_to_inches(dp.toc_title_y)
+    title_w = cm_to_inches(dp.toc_width)
+
     title_shape = slide.shapes.add_textbox(
-        Inches(1.5), Inches(0.8), Inches(7.83), Inches(0.6),
+        Inches(title_x), Inches(title_y), Inches(title_w), Inches(0.6),
     )
     tf = title_shape.text_frame
     p = tf.paragraphs[0]
@@ -277,9 +293,9 @@ def build_tm_toc_slide(
     run.font.bold = True
     run.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
 
-    # 4그룹 렌더링
-    y = 1.8
-    group_height = 1.1  # 각 그룹 블록 높이
+    # 4그룹 렌더링 (디자인 토큰 기반 Y 좌표)
+    list_start_y = cm_to_inches(dp.toc_y)  # 실측: 6.024cm
+    group_height = cm_to_inches(dp.toc_height) / 4  # 4그룹 균등 분배
 
     for idx, group in enumerate(TEASER_TOC_GROUPS):
         group_key = group["key"]
@@ -288,7 +304,7 @@ def build_tm_toc_slide(
         is_current = group_key == current_group
         page_num = page_numbers.get(group_key)
 
-        group_y = y + idx * group_height
+        group_y = list_start_y + idx * group_height
 
         # 하이라이트 바 (현재 그룹)
         if is_current:
@@ -296,7 +312,7 @@ def build_tm_toc_slide(
 
         # 그룹 번호
         num_shape = slide.shapes.add_textbox(
-            Inches(1.5), Inches(group_y), Inches(0.5), Inches(0.4),
+            Inches(title_x), Inches(group_y), Inches(0.5), Inches(0.4),
         )
         ntf = num_shape.text_frame
         p_num = ntf.paragraphs[0]
@@ -311,9 +327,9 @@ def build_tm_toc_slide(
         )
 
         # 그룹 제목
-        title_x = 2.2
         name_shape = slide.shapes.add_textbox(
-            Inches(title_x), Inches(group_y), Inches(5.5), Inches(0.4),
+            Inches(title_x + 0.7), Inches(group_y),
+            Inches(title_w - 2.2), Inches(0.4),
         )
         stf = name_shape.text_frame
         p_name = stf.paragraphs[0]
@@ -329,7 +345,8 @@ def build_tm_toc_slide(
         # 페이지 번호
         if page_num is not None:
             pg_shape = slide.shapes.add_textbox(
-                Inches(8.0), Inches(group_y), Inches(1.5), Inches(0.4),
+                Inches(title_x + title_w - 1.5), Inches(group_y),
+                Inches(1.5), Inches(0.4),
             )
             ptf = pg_shape.text_frame
             p_pg = ptf.paragraphs[0]
@@ -347,9 +364,9 @@ def build_tm_toc_slide(
         sub_y = group_y + 0.4
         for sub_idx, (_, sub_name) in enumerate(subsections):
             sub_shape = slide.shapes.add_textbox(
-                Inches(2.5),
+                Inches(title_x + 1.0),
                 Inches(sub_y + sub_idx * 0.22),
-                Inches(5.0),
+                Inches(title_w - 1.0),
                 Inches(0.22),
             )
             sub_tf = sub_shape.text_frame
@@ -371,16 +388,7 @@ def build_tm_toc_slide_html(
     page_numbers: dict[str, int] | None = None,
     tokens: IMDesignTokens | None = None,
 ) -> str:
-    """TM 전용 고정 4그룹 TOC HTML 슬라이드 생성.
-
-    Args:
-        current_group: 현재 활성 그룹 key.
-        page_numbers: 그룹 key → 시작 페이지 번호 매핑.
-        tokens: 디자인 토큰.
-
-    Returns:
-        HTML 슬라이드 문자열.
-    """
+    """TM 전용 고정 4그룹 TOC HTML 슬라이드 생성."""
     from html import escape as html_escape
 
     from src.design_renderer.im_document import TEASER_TOC_GROUPS
@@ -399,7 +407,6 @@ def build_tm_toc_slide_html(
         is_current = group_key == current_group
         page_num = page_numbers.get(group_key)
 
-        # 그룹 스타일
         border_left = f"3px solid {c.accent}" if is_current else "3px solid transparent"
         bg = c.bg_light_green if is_current else "transparent"
         title_color = c.primary if is_current else c.text_secondary
@@ -408,7 +415,6 @@ def build_tm_toc_slide_html(
             group_title.upper() if is_current else group_title
         )
 
-        # 페이지 번호
         pg_html = ""
         if page_num is not None:
             pg_color = c.accent if is_current else c.text_secondary
@@ -418,7 +424,6 @@ def build_tm_toc_slide_html(
                 f"p.{page_num}</span>"
             )
 
-        # 하위 섹션
         subs_html = ""
         for _, sub_name in subsections:
             sub_color = c.text_body if is_current else c.text_secondary

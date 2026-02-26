@@ -57,6 +57,13 @@ from src.narrative_generator.prompts.section_prompts.teaser import (
     TargetOverviewPrompt,
     TargetPositioningPrompt,
 )
+from src.narrative_generator.prompts.section_prompts.discussion import (
+    DmDealStructurePrompt,
+    DmInvestmentThesisPrompt,
+    DmMarketTrendsPrompt,
+    DmRiskAssessmentPrompt,
+    DmSummaryPrompt,
+)
 
 # ---------------------------------------------------------------------------
 # 산업별 변형 레지스트리
@@ -83,7 +90,7 @@ def get_industry_variant(industry: str) -> IndustryVariant | None:
 
 
 def create_default_registry() -> PromptRegistry:
-    """23개 섹션 프롬프트(IM 15종 + TM 8종)가 등록된 기본 레지스트리를 생성한다."""
+    """28개 섹션 프롬프트(IM 15종 + TM 8종 + DM 5종)가 등록된 기본 레지스트리를 생성한다."""
     registry = PromptRegistry()
 
     # Core (T-N08)
@@ -118,6 +125,13 @@ def create_default_registry() -> PromptRegistry:
     registry.register(TargetHighlightsPrompt())
     registry.register(ProformaPlanPrompt())
     registry.register(ProformaFinancialsPrompt())
+
+    # DM (Discussion Memorandum) 전용
+    registry.register(DmMarketTrendsPrompt())
+    registry.register(DmDealStructurePrompt())
+    registry.register(DmInvestmentThesisPrompt())
+    registry.register(DmRiskAssessmentPrompt())
+    registry.register(DmSummaryPrompt())
 
     return registry
 
@@ -159,4 +173,10 @@ __all__ = [
     "TargetHighlightsPrompt",
     "ProformaPlanPrompt",
     "ProformaFinancialsPrompt",
+    # DM (Discussion Memo)
+    "DmMarketTrendsPrompt",
+    "DmDealStructurePrompt",
+    "DmInvestmentThesisPrompt",
+    "DmRiskAssessmentPrompt",
+    "DmSummaryPrompt",
 ]

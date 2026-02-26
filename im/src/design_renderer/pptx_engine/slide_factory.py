@@ -1,7 +1,12 @@
 """PPTX 슬라이드 팩토리 — 레이아웃별 슬라이드 생성 + 플레이스홀더 값 주입.
 
 template_manager.py의 TemplateManager를 사용하여
-Cover, Disclaimer, TOC Divider, Content, Contact 슬라이드를 생성한다.
+5종 레이아웃 기반 슬라이드를 생성한다:
+  - BLANK: 면책 등 완전 빈 슬라이드
+  - FOREST: 배경 이미지 + 녹색 오버레이 (커버/TOC 간지/연락처)
+  - BLANK_PGNO: 페이지 번호만 (재무제표 full-width)
+  - MAIN: 제목바 + 각주 + 페이지번호 (일반 콘텐츠)
+  - MAIN_w/Andersen: MAIN + 공동 브랜딩
 """
 
 from __future__ import annotations
@@ -16,9 +21,15 @@ from pptx.util import Inches, Pt
 
 from src.design_renderer.assets import image_path
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
+from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
 from src.design_renderer.pptx_engine.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
+
+
+def cm_to_inches(cm: float) -> float:
+    """센티미터를 인치로 변환."""
+    return cm / 2.54
 
 
 class SlideFactory:
@@ -54,6 +65,63 @@ class SlideFactory:
         target = prs or self.prs
         return self._manager.add_slide("blank", target)
 
+    def add_forest_slide(self, prs: Any | None = None) -> Any:
+        """FOREST 배경 슬라이드 추가.
+
+        FOREST 레이아웃 사용 + forest_cover.jpg 배경 이미지를 삽입한다.
+        커버, TOC 간지, 연락처 슬라이드에 사용.
+
+        Returns:
+            생성된 Slide 객체 (배경 이미지 포함).
+        """
+        target = prs or self.prs
+        slide = self._manager.add_slide("forest", target)
+        self._apply_forest_background(slide)
+        return slide
+
+    def add_blank_pgno_slide(self, prs: Any | None = None) -> Any:
+        """BLANK_PGNO 슬라이드 추가 (페이지 번호만).
+
+        재무제표 등 full-width 콘텐츠에 사용.
+        섹션 바 없이 전체 영역 활용.
+
+        Returns:
+            생성된 Slide 객체.
+        """
+        target = prs or self.prs
+        return self._manager.add_slide("blank_pgno", target)
+
+    def _apply_forest_background(self, slide: Any) -> None:
+        """슬라이드에 FOREST 배경 이미지 삽입.
+
+        forest_cover.jpg를 슬라이드 전체 크기로 삽입하고
+        가장 뒤(z-order 0)로 이동한다.
+        """
+        try:
+            bg_path = image_path("forest_cover")
+            if not bg_path.exists():
+                logger.warning(f"FOREST 배경 이미지 미존재: {bg_path}")
+                return
+        except ValueError:
+            logger.warning("forest_cover 이미지 미등록")
+            return
+
+        t = self._tokens
+        try:
+            pic = slide.shapes.add_picture(
+                str(bg_path),
+                Inches(0),
+                Inches(0),
+                Inches(t.layout.page_width),
+                Inches(t.layout.page_height),
+            )
+            # 배경을 z-order 맨 뒤로 이동
+            sp_tree = slide.shapes._spTree
+            sp_tree.remove(pic._element)
+            sp_tree.insert(2, pic._element)  # index 2 = spTree의 첫 shape 위치
+        except Exception as e:
+            logger.warning(f"FOREST 배경 삽입 실패: {e}")
+
     def add_cover_slide(
         self,
         *,
@@ -63,7 +131,8 @@ class SlideFactory:
     ) -> Any:
         """표지 슬라이드 생성.
 
-        COVER 레이아웃 사용. 프로젝트명, 부제, 날짜, AMIC 로고 배치.
+        FOREST 레이아웃 + 배경 이미지. 프로젝트명, 부제, 날짜, AMIC 로고 배치.
+        TM/DM 원본 실측: FOREST 배경 위 흰색 텍스트.
 
         Args:
             project_name: 프로젝트명 (예: "Project TITAN").
@@ -78,44 +147,59 @@ class SlideFactory:
         typo = t.typography
         f = t.font_sizes
 
-        slide = self._manager.add_slide("cover", self.prs)
+        slide = self.add_forest_slide()
 
-        # 프로젝트명 (Title Slide의 기본 플레이스홀더 활용)
-        if slide.placeholders:
-            # Title placeholder (보통 idx=0)
-            for ph in slide.placeholders:
-                if ph.placeholder_format.idx == 0:
-                    ph.text = ""
-                    p = ph.text_frame.paragraphs[0]
-                    p.alignment = PP_ALIGN.CENTER
-                    run = p.add_run()
-                    run.text = project_name
-                    run.font.name = typo.font_heading
-                    run.font.size = Pt(f.cover_title)
-                    run.font.bold = True
-                    run.font.color.rgb = RGBColor.from_string(
-                        c.primary.lstrip("#")
-                    )
-                elif ph.placeholder_format.idx == 1:
-                    # Subtitle placeholder
-                    ph.text = ""
-                    lines = []
-                    if subtitle:
-                        lines.append(subtitle)
-                    if date:
-                        lines.append(date)
-                    p = ph.text_frame.paragraphs[0]
-                    p.alignment = PP_ALIGN.CENTER
-                    run = p.add_run()
-                    run.text = "\n".join(lines)
-                    run.font.name = typo.font_body
-                    run.font.size = Pt(f.summary_text)
-                    run.font.color.rgb = RGBColor.from_string(
-                        c.text_body.lstrip("#")
-                    )
+        # 프로젝트명 — FOREST 배경 위 흰색 텍스트 (토큰 좌표)
+        dp = t.dual_panel
+        title_shape = slide.shapes.add_textbox(
+            Inches(cm_to_inches(dp.cover_margin_x)),
+            Inches(cm_to_inches(dp.cover_title_y)),
+            Inches(cm_to_inches(20.0)),
+            Inches(cm_to_inches(3.0)),
+        )
+        tf = title_shape.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = project_name
+        set_font_with_ea(run, typo.font_heading)
+        run.font.size = Pt(f.cover_title)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor.from_string(
+            c.text_white.lstrip("#")
+        )
 
-        # AMIC 로고 삽입
-        self._add_logo(slide, logo_type="dark", bottom=True)
+        # 부제 + 날짜 (토큰 좌표)
+        if subtitle or date:
+            sub_shape = slide.shapes.add_textbox(
+                Inches(cm_to_inches(dp.cover_margin_x)),
+                Inches(cm_to_inches(dp.cover_subtitle_y)),
+                Inches(cm_to_inches(20.0)),
+                Inches(cm_to_inches(2.0)),
+            )
+            stf = sub_shape.text_frame
+            stf.word_wrap = True
+            if subtitle:
+                p = stf.paragraphs[0]
+                run = p.add_run()
+                run.text = subtitle
+                set_font_with_ea(run, typo.font_cover_subtitle)
+                run.font.size = Pt(f.cover_subtitle)
+                run.font.color.rgb = RGBColor.from_string(
+                    c.text_white.lstrip("#")
+                )
+            if date:
+                p = stf.add_paragraph() if subtitle else stf.paragraphs[0]
+                run = p.add_run()
+                run.text = date
+                set_font_with_ea(run, typo.font_cover_subtitle)
+                run.font.size = Pt(f.cover_date)
+                run.font.color.rgb = RGBColor.from_string(
+                    c.text_white.lstrip("#")
+                )
+
+        # AMIC 로고 (흰색, 하단)
+        self._add_logo(slide, logo_type="white", bottom=True)
 
         return slide
 
@@ -219,7 +303,7 @@ class SlideFactory:
     ) -> Any:
         """연락처/종료 슬라이드 생성.
 
-        BLANK 레이아웃 사용. 담당자 정보 + AMIC 로고 배치.
+        FOREST 레이아웃 + 배경 이미지. 담당자 정보 + AMIC 로고 배치.
 
         Args:
             contacts: 연락처 리스트. 각 항목은 dict:
@@ -235,9 +319,9 @@ class SlideFactory:
         f = t.font_sizes
         lay = t.layout
 
-        slide = self._manager.add_slide("blank", self.prs)
+        slide = self.add_forest_slide()
 
-        # 제목
+        # 제목 (FOREST 배경 위 흰색)
         title_shape = slide.shapes.add_textbox(
             Inches(lay.page_width / 2 - 2),
             Inches(1.5),
@@ -249,12 +333,12 @@ class SlideFactory:
         p.alignment = PP_ALIGN.CENTER
         run = p.add_run()
         run.text = title
-        run.font.name = typo.font_heading
+        set_font_with_ea(run, typo.font_heading)
         run.font.size = Pt(f.toc_section_title)
         run.font.bold = True
-        run.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
+        run.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
-        # 연락처 정보
+        # 연락처 정보 (FOREST 배경 위 흰색)
         if contacts:
             y_pos = 2.5
             for contact in contacts:
@@ -272,10 +356,12 @@ class SlideFactory:
                 p_name.alignment = PP_ALIGN.CENTER
                 r = p_name.add_run()
                 r.text = contact.get("name", "")
-                r.font.name = typo.font_body
+                set_font_with_ea(r, typo.font_body)
                 r.font.size = Pt(f.summary_text)
                 r.font.bold = True
-                r.font.color.rgb = RGBColor.from_string(c.primary.lstrip("#"))
+                r.font.color.rgb = RGBColor.from_string(
+                    c.text_white.lstrip("#")
+                )
 
                 # 직함
                 if contact.get("title"):
@@ -283,10 +369,10 @@ class SlideFactory:
                     p_title.alignment = PP_ALIGN.CENTER
                     r = p_title.add_run()
                     r.text = contact["title"]
-                    r.font.name = typo.font_body
+                    set_font_with_ea(r, typo.font_body)
                     r.font.size = Pt(f.footnote)
                     r.font.color.rgb = RGBColor.from_string(
-                        c.text_secondary.lstrip("#")
+                        c.text_white.lstrip("#")
                     )
 
                 # 이메일/전화
@@ -300,16 +386,16 @@ class SlideFactory:
                     p_detail.alignment = PP_ALIGN.CENTER
                     r = p_detail.add_run()
                     r.text = " | ".join(details)
-                    r.font.name = typo.font_mono
+                    set_font_with_ea(r, typo.font_body)
                     r.font.size = Pt(f.body)
                     r.font.color.rgb = RGBColor.from_string(
-                        c.text_body.lstrip("#")
+                        c.text_white.lstrip("#")
                     )
 
                 y_pos += 1.1
 
-        # AMIC 로고
-        self._add_logo(slide, logo_type="dark", bottom=True)
+        # AMIC 로고 (흰색, 하단)
+        self._add_logo(slide, logo_type="white", bottom=True)
 
         return slide
 
