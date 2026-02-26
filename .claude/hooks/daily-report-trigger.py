@@ -15,6 +15,12 @@ from pathlib import Path
 
 
 def sanitize_str(value: str) -> str:
+    """Windows 한글 경로 등에서 발생하는 surrogate 문자 제거.
+
+    NOTE: .claude/skills/_shared/text_utils.py와 동일 구현.
+    훅은 독립 프로세스로 import 불가하므로 인라인 복사.
+    수정 시 text_utils.py 및 다른 훅 파일도 함께 수정할 것.
+    """
     return value.encode("utf-8", errors="replace").decode("utf-8")
 
 
@@ -69,7 +75,7 @@ def main():
             )
             if result.stdout.strip():
                 has_data = True
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
 
     if not has_data:
@@ -112,9 +118,10 @@ def main():
             with open(report_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()[:25]
             for line in lines:
-                if line.startswith("| 총 커밋") or line.startswith("| 에러 발생"):
-                    parts = line.strip().split("|")
-                    if len(parts) >= 3:
+                stripped = line.strip()
+                if stripped.startswith("| 총 커밋") or stripped.startswith("| 에러 발생") or stripped.startswith("| 에러 수정"):
+                    parts = stripped.split("|")
+                    if len(parts) >= 3 and not parts[1].strip().startswith("---"):
                         summary += f"{parts[1].strip()}: {parts[2].strip()}, "
         except Exception:
             pass

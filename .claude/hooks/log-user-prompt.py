@@ -4,7 +4,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 CATEGORY_RULES = [
@@ -39,8 +39,16 @@ def mask_sensitive(text: str) -> str:
     return text
 
 
+KST = timezone(timedelta(hours=9))
+
+
 def sanitize_str(value: str) -> str:
-    """Windows 한글 경로 등에서 발생하는 surrogate 문자 제거."""
+    """Windows 한글 경로 등에서 발생하는 surrogate 문자 제거.
+
+    NOTE: .claude/skills/_shared/text_utils.py와 동일 구현.
+    훅은 독립 프로세스로 import 불가하므로 인라인 복사.
+    수정 시 text_utils.py 및 다른 훅 파일도 함께 수정할 것.
+    """
     return value.encode("utf-8", errors="replace").decode("utf-8")
 
 
@@ -69,7 +77,7 @@ def main():
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     record = {
-        "ts": datetime.now().isoformat(timespec="seconds"),
+        "ts": datetime.now(KST).isoformat(timespec="seconds"),
         "session_id": sanitize_str(data.get("session_id", "")),
         "prompt": sanitize_str(safe_prompt),
         "prompt_len": len(prompt),

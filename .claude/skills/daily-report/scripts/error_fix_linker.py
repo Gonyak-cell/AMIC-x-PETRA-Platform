@@ -8,11 +8,16 @@
 """
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from enum import Enum
 from pathlib import Path
+
+# 공유 유틸리티 import
+sys.path.insert(0, str(Path(__file__).resolve().parent / ".." / ".." / "_shared"))
+from text_utils import sanitize_str, normalize_snippet, parse_timestamp  # noqa: E402
 
 
 class FixStatus(Enum):
@@ -42,11 +47,6 @@ class LinkedError:
     fix_context: str = ""
     recurrence_risk: RecurrenceRisk = RecurrenceRisk.MEDIUM
     link_confidence: str = "none"
-
-
-def sanitize_str(value: str) -> str:
-    """Windows 한글 경로 등에서 발생하는 surrogate 문자 제거."""
-    return value.encode("utf-8", errors="replace").decode("utf-8")
 
 
 def normalize_path(path: str) -> str:
@@ -87,8 +87,9 @@ def extract_files_from_error(error: dict) -> set:
 
     # 패턴 4: 일반 Unix 파일 경로
     for m in re.finditer(
-        r"(?:^|[\s\"])((?:/[\w.\-]+)+\.(?:py|ts|tsx|js|json|yml|yaml|conf|sh))",
+        r"(?:[\s\"]|^)((?:/[\w.\-]+)+\.(?:py|ts|tsx|js|json|yml|yaml|conf|sh))",
         combined,
+        re.MULTILINE,
     ):
         files.add(normalize_path(m.group(1)))
 
@@ -99,16 +100,6 @@ def extract_files_from_error(error: dict) -> set:
         files.add(normalize_path(m.group(1)))
 
     return files
-
-
-def normalize_snippet(snippet: str) -> str:
-    """에러 스니펫 정규화 (비교용)."""
-    text = snippet.lower()
-    text = re.sub(r"[a-z]:\\[^\s:]+", "[PATH]", text)
-    text = re.sub(r"/[\w./\-]+", "[PATH]", text)
-    text = re.sub(r"\b\d+\b", "[N]", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
 
 
 def cluster_errors(errors: list) -> list:
@@ -227,6 +218,7 @@ class ErrorFixLinker:
         return commits
 
     def _get_commit_numstat(self, commit_hash: str) -> dict:
+        # TODO: 향후 일일 요약에 추가/삭제 라인 수 표시 시 활용
         """커밋의 추가/삭제 라인 수를 가져온다."""
         cmd = ["git", "diff", "--numstat", f"{commit_hash}~1", commit_hash]
         try:
@@ -263,12 +255,22 @@ class ErrorFixLinker:
         if not error_files:
             return []
 
-        error_ts = error.get("ts", "")
+        error_ts_str = error.get("ts", "")
+        if not error_ts_str:
+            return []
+        try:
+            error_dt = parse_timestamp(error_ts_str)
+        except (ValueError, TypeError):
+            return []
         matches = []
 
         for commit in commits:
             # 에러 이후의 커밋만 (수정 커밋이므로)
-            if commit["timestamp"][:19] < error_ts[:19]:
+            try:
+                commit_dt = parse_timestamp(commit["timestamp"])
+            except (ValueError, TypeError):
+                continue
+            if commit_dt < error_dt:
                 continue
             commit_files_set = set(commit["files"])
             overlap = error_files & commit_files_set
@@ -291,21 +293,18 @@ class ErrorFixLinker:
             return []
 
         try:
-            error_ts = datetime.fromisoformat(error_ts_str)
-        except ValueError:
+            error_dt = parse_timestamp(error_ts_str)
+        except (ValueError, TypeError):
             return []
 
         candidates = []
         for commit in commits:
             try:
-                # git log timestamp: "2026-02-26 18:48:04 +0900"
-                commit_ts = datetime.fromisoformat(
-                    commit["timestamp"][:19].replace(" ", "T")
-                )
-            except ValueError:
+                commit_dt = parse_timestamp(commit["timestamp"])
+            except (ValueError, TypeError):
                 continue
 
-            delta = (commit_ts - error_ts).total_seconds() / 60
+            delta = (commit_dt - error_dt).total_seconds() / 60
             if 0 < delta <= window_min:
                 confidence = "medium" if commit["type"] == "fix" else "low"
                 candidates.append(
@@ -321,10 +320,15 @@ class ErrorFixLinker:
     def extract_session_context(self, error: dict, prompts: list) -> dict:
         """3단계: 동일 세션의 프롬프트에서 작업 맥락 추출."""
         session_id = error.get("session_id", "")
-        error_ts = error.get("ts", "")
+        error_ts_str = error.get("ts", "")
         result = {"work_context": "", "fix_context": ""}
 
-        if not session_id:
+        if not session_id or not error_ts_str:
+            return result
+
+        try:
+            error_dt = parse_timestamp(error_ts_str)
+        except (ValueError, TypeError):
             return result
 
         session_prompts = [
@@ -335,8 +339,17 @@ class ErrorFixLinker:
             and not p.get("prompt", "").startswith("<task-notification>")
         ]
 
-        before = [p for p in session_prompts if p.get("ts", "") <= error_ts]
-        after = [p for p in session_prompts if p.get("ts", "") > error_ts]
+        before = []
+        after = []
+        for p in session_prompts:
+            try:
+                p_dt = parse_timestamp(p.get("ts", "2000-01-01"))
+                if p_dt <= error_dt:
+                    before.append(p)
+                else:
+                    after.append(p)
+            except (ValueError, TypeError):
+                continue
 
         if before:
             # 에러 직전 지시에서 작업 맥락 추출

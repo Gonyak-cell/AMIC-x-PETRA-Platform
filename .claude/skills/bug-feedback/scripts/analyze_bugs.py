@@ -9,10 +9,15 @@ import json
 import os
 import re
 import shutil
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from pathlib import Path
+
+# 공유 유틸리티 import
+sys.path.insert(0, str(Path(__file__).resolve().parent / ".." / ".." / "_shared"))
+from text_utils import normalize_snippet, parse_timestamp, KST  # noqa: E402
 
 
 def load_errors(log_path: Path, days: int) -> list[dict]:
@@ -20,7 +25,7 @@ def load_errors(log_path: Path, days: int) -> list[dict]:
     if not log_path.exists():
         return []
 
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now(KST) - timedelta(days=days)
     entries = []
 
     with open(log_path, "r", encoding="utf-8") as f:
@@ -30,26 +35,13 @@ def load_errors(log_path: Path, days: int) -> list[dict]:
                 continue
             try:
                 entry = json.loads(line)
-                ts = datetime.fromisoformat(entry.get("ts", "2000-01-01"))
+                ts = parse_timestamp(entry.get("ts", "2000-01-01"))
                 if ts >= cutoff:
                     entries.append(entry)
             except (json.JSONDecodeError, ValueError):
                 continue
 
     return entries
-
-
-def normalize_snippet(snippet: str) -> str:
-    """에러 스니펫에서 경로/숫자 등 가변 부분을 정규화하여 비교용 키 생성."""
-    text = snippet.lower()
-    # 파일 경로 정규화
-    text = re.sub(r"[a-z]:\\[^\s:]+", "[PATH]", text)
-    text = re.sub(r"/[\w./\-]+", "[PATH]", text)
-    # 라인 번호/숫자 정규화
-    text = re.sub(r"\b\d+\b", "[N]", text)
-    # 연속 공백 정리
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
 
 
 def cluster_errors(entries: list[dict]) -> list[dict]:
