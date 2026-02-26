@@ -4,6 +4,7 @@ import type {
   Company,
   CompanyDetail,
   CompanyListParams,
+  CorpBasicInfo,
   FinancialParams,
   FinancialListResponseWithSource,
   FinancialSummary,
@@ -67,6 +68,19 @@ export function useFinancialSummary(corpCode: string, bizYear: string) {
       return data;
     },
     enabled: CORP_CODE_RE.test(corpCode) && !!bizYear,
+  });
+}
+
+export function useCorpBasicInfo(corpCode: string) {
+  return useQuery<CorpBasicInfo>({
+    queryKey: ["kiis", "companies", corpCode, "basic-info"],
+    queryFn: async () => {
+      const { data } = await kiisApi.get<CorpBasicInfo>(
+        `/dart/companies/${corpCode}/basic-info`,
+      );
+      return data;
+    },
+    enabled: CORP_CODE_RE.test(corpCode),
   });
 }
 

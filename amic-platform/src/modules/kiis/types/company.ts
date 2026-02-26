@@ -87,3 +87,65 @@ export interface FinancialListResponseWithSource {
   source: "DART" | "DATA_GO_KR" | "NONE";
   items: FinancialStatement[];
 }
+
+/** 기업 개요 (공공데이터포털 GetCorpBasicInfoService_V2) */
+export interface CorpOutlineItem {
+  crno: string;
+  corp_nm: string;
+  corp_nm_en: string;
+  pban_cmp_nm: string;
+  rep_nm: string;
+  mkt_dcd: string;
+  mkt_dcd_nm: string;
+  bzno: string;
+  ozpno: string;
+  bsadr: string;
+  dtadr: string;
+  hmpg_url: string;
+  tlno: string;
+  fxno: string;
+  sic_nm: string;
+  est_dt: string;
+  stac_mm: string;
+  xchg_lstg_dt: string;
+  kosdaq_lstg_dt: string;
+  krx_lstg_dt: string;
+  smenp_yn: string;
+  mntr_bnk_nm: string;
+  emp_cnt: string;
+  avg_cnwk_term: string;
+  avg_slry_amt: string;
+  audpn_nm: string;
+  audt_opnn: string;
+  main_biz_nm: string;
+  fss_corp_unq_no: string;
+}
+
+/** 계열회사 (getAffiliate_V2) */
+export interface AffiliateItem {
+  bas_dt: string;
+  crno: string;
+  afil_cmpy_nm: string;
+  afil_cmpy_crno: string;
+  lstg_yn: string;
+}
+
+/** 연결대상 종속기업 (getConsSubsComp_V2) */
+export interface SubsidiaryItem {
+  bas_dt: string;
+  crno: string;
+  sbrd_enp_nm: string;
+  sbrd_enp_estb_dt: string;
+  sbrd_enp_adr: string;
+  sbrd_enp_main_biz: string;
+  sbrd_enp_tast_amt: string;
+  dnt_rlt_bsis: string;
+  main_sbrd_enp_yn: string;
+}
+
+/** 기업 기본정보 통합 응답 */
+export interface CorpBasicInfo {
+  outline: CorpOutlineItem | null;
+  affiliates: AffiliateItem[];
+  subsidiaries: SubsidiaryItem[];
+}

@@ -83,8 +83,8 @@ class FinaStatService:
     def _check_result_code(self, data: dict) -> None:
         """응답 코드 검증."""
         header = data.get("response", {}).get("header", {})
-        code = header.get("resultCode", "")
-        if code and code != "00":
+        code = header.get("resultCode", "99")
+        if code != "00":
             msg = header.get("resultMsg", "알 수 없는 오류")
             raise ExternalAPIError(source="data.go.kr", message=f"[{code}] {msg}")
 

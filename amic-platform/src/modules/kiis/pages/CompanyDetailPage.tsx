@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
+  Building2,
   ExternalLink,
   RefreshCw,
   Plus,
@@ -11,6 +12,7 @@ import {
 import { toast } from "sonner";
 import {
   useCompanyDetail,
+  useCorpBasicInfo,
   useReputationScore,
 } from "@/modules/kiis/hooks/useCompanies";
 import {
@@ -37,8 +39,9 @@ import ReputationBadge from "@/modules/kiis/components/ReputationBadge";
 import type { DisclosureItem } from "@/modules/kiis/types/disclosure";
 import type { DealItem } from "@/modules/kiis/types/deal";
 import type { ClassifiedSanctionListItem } from "@/modules/kiis/types/sanction";
+import type { AffiliateItem, SubsidiaryItem } from "@/modules/kiis/types/company";
 import { formatDate } from "@/lib/format";
-import { SEVERITY_VARIANT } from "@/modules/kiis/constants/variants";
+import { SEVERITY_VARIANT, LISTING_STATUS_VARIANT } from "@/modules/kiis/constants/variants";
 import heroImg from "@/assets/images/heroes/forestgp-forest.jpg";
 
 const disclosureColumns: Column<DisclosureItem>[] = [
@@ -149,12 +152,76 @@ const sanctionColumns: Column<ClassifiedSanctionListItem>[] = [
   },
 ];
 
+const affiliateColumns: Column<AffiliateItem>[] = [
+  {
+    key: "afil_cmpy_nm",
+    header: "회사명",
+    render: (row) => (
+      <span className="font-medium text-text-dark">{row.afil_cmpy_nm}</span>
+    ),
+  },
+  {
+    key: "afil_cmpy_crno",
+    header: "법인등록번호",
+    width: "160px",
+    render: (row) => row.afil_cmpy_crno || "-",
+  },
+  {
+    key: "lstg_yn",
+    header: "상장여부",
+    align: "center",
+    width: "100px",
+    render: (row) => (
+      <Badge variant={LISTING_STATUS_VARIANT[row.lstg_yn] ?? "neutral"}>
+        {row.lstg_yn || "-"}
+      </Badge>
+    ),
+  },
+];
+
+const subsidiaryColumns: Column<SubsidiaryItem>[] = [
+  {
+    key: "sbrd_enp_nm",
+    header: "기업명",
+    render: (row) => (
+      <span className="font-medium text-text-dark">{row.sbrd_enp_nm}</span>
+    ),
+  },
+  {
+    key: "sbrd_enp_main_biz",
+    header: "주요사업",
+    render: (row) => row.sbrd_enp_main_biz || "-",
+  },
+  {
+    key: "sbrd_enp_tast_amt",
+    header: "총자산",
+    align: "right",
+    width: "120px",
+    mono: true,
+    render: (row) => row.sbrd_enp_tast_amt || "-",
+  },
+  {
+    key: "dnt_rlt_bsis",
+    header: "지배근거",
+    width: "140px",
+    render: (row) => row.dnt_rlt_bsis || "-",
+  },
+  {
+    key: "main_sbrd_enp_yn",
+    header: "주요여부",
+    align: "center",
+    width: "100px",
+    render: (row) => row.main_sbrd_enp_yn || "-",
+  },
+];
+
 export default function CompanyDetailPage() {
   const navigate = useNavigate();
   const { corpCode } = useParams<{ corpCode: string }>();
   const code = corpCode ?? "";
   const { data: company, isLoading, isError } = useCompanyDetail(code);
-  const { data: reputation, isLoading: reputationLoading } = useReputationScore(code);
+  const { data: basicInfo, isLoading: basicInfoLoading, isError: basicInfoError } = useCorpBasicInfo(code);
+  const { data: reputation, isLoading: reputationLoading, isError: reputationError } = useReputationScore(code);
   const { data: disclosureData } = useDisclosures(code, { size: 5 });
   const disclosures = disclosureData?.items;
   const { data: deals } = useDealsByCompany(code, { size: 5 });
@@ -256,12 +323,16 @@ export default function CompanyDetailPage() {
       />
 
       {/* Reputation */}
-      {reputationLoading ? (
-        <Card title="Reputation Score" headerBar>
+      <Card title="Reputation Score" headerBar>
+        {reputationLoading ? (
           <Spinner />
-        </Card>
-      ) : reputation ? (
-        <Card title="Reputation Score" headerBar>
+        ) : reputationError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="평판 점수 조회 실패"
+            description="평판 분석 데이터를 불러오는 중 오류가 발생했습니다."
+          />
+        ) : reputation ? (
           <div className="flex items-center gap-6">
             <ReputationBadge
               score={reputation.total_score}
@@ -283,8 +354,187 @@ export default function CompanyDetailPage() {
               />
             </div>
           </div>
-        </Card>
-      ) : null}
+        ) : (
+          <EmptyState
+            icon={AlertTriangle}
+            title="평판 점수 없음"
+            description="해당 기업의 평판 분석 데이터가 아직 없습니다."
+          />
+        )}
+      </Card>
+
+      {/* Company Overview (공공데이터포털) */}
+      <Card
+        title="Company Overview"
+        headerBar
+        actions={<Badge variant="warning">공공데이터</Badge>}
+      >
+        {basicInfoLoading ? (
+          <Spinner />
+        ) : basicInfoError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="기업 기본정보 조회 실패"
+            description="공공데이터포털에서 데이터를 불러오는 중 오류가 발생했습니다."
+          />
+        ) : basicInfo?.outline ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+            {basicInfo.outline.rep_nm && (
+              <div>
+                <span className="text-text-secondary">대표자</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.rep_nm}</p>
+              </div>
+            )}
+            {basicInfo.outline.sic_nm && (
+              <div>
+                <span className="text-text-secondary">업종</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.sic_nm}</p>
+              </div>
+            )}
+            {basicInfo.outline.emp_cnt && basicInfo.outline.emp_cnt !== "0" && (
+              <div>
+                <span className="text-text-secondary">종업원수</span>
+                <p className="font-medium text-text-dark">
+                  {Number(basicInfo.outline.emp_cnt).toLocaleString("ko-KR")}명
+                </p>
+              </div>
+            )}
+            {basicInfo.outline.est_dt && (
+              <div>
+                <span className="text-text-secondary">설립일</span>
+                <p className="font-medium text-text-dark">
+                  {formatDate(basicInfo.outline.est_dt, "short")}
+                </p>
+              </div>
+            )}
+            {basicInfo.outline.stac_mm && (
+              <div>
+                <span className="text-text-secondary">결산월</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.stac_mm}월</p>
+              </div>
+            )}
+            {basicInfo.outline.mkt_dcd_nm && (
+              <div>
+                <span className="text-text-secondary">시장구분</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.mkt_dcd_nm}</p>
+              </div>
+            )}
+            {basicInfo.outline.audpn_nm && (
+              <div>
+                <span className="text-text-secondary">회계감사인</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.audpn_nm}</p>
+              </div>
+            )}
+            {basicInfo.outline.audt_opnn && (
+              <div>
+                <span className="text-text-secondary">감사의견</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.audt_opnn}</p>
+              </div>
+            )}
+            {basicInfo.outline.mntr_bnk_nm && (
+              <div>
+                <span className="text-text-secondary">주거래은행</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.mntr_bnk_nm}</p>
+              </div>
+            )}
+            {basicInfo.outline.avg_cnwk_term && (
+              <div>
+                <span className="text-text-secondary">평균근속연수</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.avg_cnwk_term}년</p>
+              </div>
+            )}
+            {basicInfo.outline.avg_slry_amt && basicInfo.outline.avg_slry_amt !== "0" && (
+              <div>
+                <span className="text-text-secondary">1인 평균급여</span>
+                <p className="font-medium text-text-dark">
+                  {(Number(basicInfo.outline.avg_slry_amt) / 10000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}만원
+                </p>
+              </div>
+            )}
+            {basicInfo.outline.bsadr && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <span className="text-text-secondary">주소</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.bsadr}</p>
+              </div>
+            )}
+            {basicInfo.outline.main_biz_nm && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <span className="text-text-secondary">주요사업</span>
+                <p className="font-medium text-text-dark">{basicInfo.outline.main_biz_nm}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Building2}
+            title="기업 기본정보 없음"
+            description="공공데이터포털에서 해당 기업의 기본정보를 조회할 수 없습니다."
+          />
+        )}
+      </Card>
+
+      {/* Affiliates (계열회사) */}
+      <Card
+        title="계열회사 (Affiliates)"
+        headerBar
+        padding="none"
+        actions={<Badge variant="warning">공공데이터</Badge>}
+      >
+        {basicInfoLoading ? (
+          <Spinner />
+        ) : basicInfoError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="계열회사 조회 실패"
+            description="공공데이터포털에서 데이터를 불러오는 중 오류가 발생했습니다."
+          />
+        ) : basicInfo?.affiliates?.length ? (
+          <DataTable
+            columns={affiliateColumns}
+            data={basicInfo.affiliates}
+            keyField="afil_cmpy_crno"
+            compact
+            striped
+          />
+        ) : (
+          <EmptyState
+            icon={Building2}
+            title="계열회사 정보 없음"
+            description="해당 기업의 계열회사 데이터가 없습니다."
+          />
+        )}
+      </Card>
+
+      {/* Subsidiaries (종속기업) */}
+      <Card
+        title="종속기업 (Subsidiaries)"
+        headerBar
+        padding="none"
+        actions={<Badge variant="warning">공공데이터</Badge>}
+      >
+        {basicInfoLoading ? (
+          <Spinner />
+        ) : basicInfoError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="종속기업 조회 실패"
+            description="공공데이터포털에서 데이터를 불러오는 중 오류가 발생했습니다."
+          />
+        ) : basicInfo?.subsidiaries?.length ? (
+          <DataTable
+            columns={subsidiaryColumns}
+            data={basicInfo.subsidiaries}
+            compact
+            striped
+          />
+        ) : (
+          <EmptyState
+            icon={Building2}
+            title="종속기업 정보 없음"
+            description="해당 기업의 종속기업 데이터가 없습니다."
+          />
+        )}
+      </Card>
 
       {/* Financials */}
       <CompanyFinancials corpCode={code} />
@@ -295,7 +545,8 @@ export default function CompanyDetailPage() {
         headerBar
         padding="none"
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant="info">DART</Badge>
             <Button
               variant="ghost"
               size="sm"
@@ -368,12 +619,15 @@ export default function CompanyDetailPage() {
         headerBar
         padding="none"
         actions={
-          <Link
-            to={`/kiis/sanctions`}
-            className="text-sm text-accent hover:underline"
-          >
-            View all
-          </Link>
+          <div className="flex items-center gap-2">
+            <Badge variant="info">DART</Badge>
+            <Link
+              to={`/kiis/sanctions`}
+              className="text-sm text-accent hover:underline"
+            >
+              View all
+            </Link>
+          </div>
         }
       >
         {!sanctions?.length ? (

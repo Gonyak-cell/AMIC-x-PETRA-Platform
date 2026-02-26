@@ -11,3 +11,9 @@ export const MOVEMENT_VARIANT: Record<string, BadgeVariant> = {
   resignation: "warning",
   appointment: "success",
 };
+
+export const LISTING_STATUS_VARIANT: Record<string, BadgeVariant> = {
+  상장: "success",
+  비상장: "neutral",
+  폐지: "warning",
+};

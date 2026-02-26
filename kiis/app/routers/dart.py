@@ -15,7 +15,9 @@ from app.schemas.dart import (
     FinancialStatementItem,
     SanctionListResponse,
 )
+from app.schemas.corp_basic import CorpBasicInfoResponse
 from app.schemas.fina_stat import FinaStatItem, SummaryFinancialResponse
+from app.services.corp_basic_service import CorpBasicService
 from app.services.dart_service import DARTService
 from app.services.fina_stat_service import FinaStatService
 
@@ -214,6 +216,36 @@ async def get_financial_summary(
         await fina_service.close()
 
     return SummaryFinancialResponse(source="NONE", biz_year=bsns_year)
+
+
+# ── 기업 기본정보 (공공데이터포털) ──
+
+
+@router.get(
+    "/companies/{corp_code}/basic-info",
+    response_model=CorpBasicInfoResponse,
+    summary="기업 기본정보 (개요/업종/종업원 등)",
+)
+async def get_corp_basic_info(
+    corp_code: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """공공데이터포털 기업기본정보를 조회한다 (GetCorpBasicInfoService_V2)."""
+    jurir_no = await _get_jurir_no(db, corp_code)
+    if not jurir_no:
+        return CorpBasicInfoResponse(outline=None)
+
+    service = CorpBasicService()
+    try:
+        return await service.get_full_info(jurir_no)
+    except ExternalAPIError as e:
+        logger.warning("기업 기본정보 조회 실패 (%s): %s", corp_code, e.message)
+        return CorpBasicInfoResponse(outline=None)
+    except Exception as e:
+        logger.warning("기업 기본정보 오류 (%s): %s", corp_code, e)
+        return CorpBasicInfoResponse(outline=None)
+    finally:
+        await service.close()
 
 
 # ── 공시 검색 ──
