@@ -15,7 +15,7 @@ from app.schemas.dart import (
     FinancialStatementItem,
     SanctionListResponse,
 )
-from app.schemas.fina_stat import SummaryFinancialResponse
+from app.schemas.fina_stat import FinaStatItem, SummaryFinancialResponse
 from app.services.dart_service import DARTService
 from app.services.fina_stat_service import FinaStatService
 
@@ -32,7 +32,7 @@ def get_dart_service() -> DARTService:
 
 
 def _normalize_fina_to_dart(
-    items: list, sj_div: str, bsns_year: str, corp_code: str
+    items: list[FinaStatItem], sj_div: str, bsns_year: str, corp_code: str
 ) -> list[FinancialStatementItem]:
     """OpenAPI FinaStatItem → DART FinancialStatementItem 형식 변환."""
     result = []
@@ -132,7 +132,6 @@ async def get_financials(
             fs_div=fs_div,
         )
         if items:
-            await dart_service.close()
             return FinancialListResponse(source="DART", items=items)
     except DARTAPIError as e:
         logger.info("DART 재무제표 실패 (%s): %s — OpenAPI 폴백", corp_code, e.message)

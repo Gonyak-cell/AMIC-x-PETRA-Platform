@@ -46,11 +46,6 @@ export interface FinancialStatement {
   ord: string;
 }
 
-/** 재무제표 래퍼 응답 */
-export interface FinancialListResponse {
-  items: FinancialStatement[];
-}
-
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;

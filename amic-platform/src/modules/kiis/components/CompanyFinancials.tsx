@@ -41,9 +41,9 @@ function formatKpiAmount(value: string | null | undefined): string {
   const n = Number(value);
   if (isNaN(n)) return "-";
   // 억 단위 표시
-  const billions = n / 100_000_000;
-  if (Math.abs(billions) >= 1) {
-    return `${billions.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`;
+  const eok = n / 100_000_000;
+  if (Math.abs(eok) >= 1) {
+    return `${eok.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`;
   }
   return formatAmount(n, "KRW");
 }

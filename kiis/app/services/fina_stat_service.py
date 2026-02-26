@@ -90,7 +90,7 @@ class FinaStatService:
 
     # ── API 메서드 ──
 
-    @cache(ttl=86400, prefix="fina_stat:summary")
+    @cache(ttl=86400, prefix="fina_stat:summary", model=SummaryFinancialItem)
     async def get_summary(
         self, crno: str, biz_year: str, num_of_rows: int = 10
     ) -> list[SummaryFinancialItem]:
@@ -130,7 +130,7 @@ class FinaStatService:
             for item in raw_items
         ]
 
-    @cache(ttl=86400, prefix="fina_stat:bs")
+    @cache(ttl=86400, prefix="fina_stat:bs", model=FinaStatItem)
     async def get_balance_sheet(
         self, crno: str, biz_year: str, num_of_rows: int = 100
     ) -> list[FinaStatItem]:
@@ -147,7 +147,7 @@ class FinaStatService:
         self._check_result_code(data)
         return self._parse_fina_items(data)
 
-    @cache(ttl=86400, prefix="fina_stat:is")
+    @cache(ttl=86400, prefix="fina_stat:is", model=FinaStatItem)
     async def get_income_statement(
         self, crno: str, biz_year: str, num_of_rows: int = 100
     ) -> list[FinaStatItem]:
