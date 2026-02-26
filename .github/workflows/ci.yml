@@ -40,7 +40,7 @@ jobs:
         run: pytest tests/ -v --tb=short
         env:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
-          JWT_SECRET: test-secret-for-ci
+          JWT_SECRET: test-jwt-secret-key
 
   # ─── Stage 0B: Backend Auth Guard Test (KIIS) ───────────────────────
   backend-kiis:
