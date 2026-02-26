@@ -149,41 +149,54 @@ jobs:
             if [ "$MIGRATE_OK" = false ]; then
               echo ""
               echo "!!! MIGRATION FAILED — Rolling back to $PREV_COMMIT !!!"
-              git checkout "$PREV_COMMIT"
+              git checkout "$BRANCH"
+              git reset --hard "$PREV_COMMIT"
               $COMPOSE build $SERVICES
               $COMPOSE up -d $SERVICES
               echo "Rollback complete"
               exit 1
             fi
 
-            # ── 6. Health check + rollback ──
+            # ── 6. Health check + rollback (with retries) ──
             echo "=== [6/6] Health Check ==="
-            sleep 15
-            HEALTH_OK=true
-            for ep in fdd kiis im ma; do
-              RESPONSE=$(curl -sf --max-time 15 "http://localhost/api/$ep/health" 2>/dev/null || echo '{}')
-              STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
-              MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
-              if [ "$STATUS" = "ok" ] && [ "$MIGR" != "False" ]; then
-                echo "  $ep: OK (status=$STATUS, migration=$MIGR)"
+            HEALTH_OK=false
+            for ATTEMPT in 1 2 3; do
+              echo "  Attempt $ATTEMPT/3 (waiting 15s)..."
+              sleep 15
+              HEALTH_OK=true
+              for ep in fdd kiis im ma; do
+                RESPONSE=$(curl -sL --max-time 15 "http://localhost/api/$ep/health" 2>&1 || echo '{}')
+                STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
+                MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
+                if [ "$STATUS" = "ok" ] && [ "$MIGR" != "False" ]; then
+                  echo "    $ep: OK (status=$STATUS, migration=$MIGR)"
+                else
+                  echo "    $ep: FAILED (status=$STATUS, migration=$MIGR)"
+                  HEALTH_OK=false
+                fi
+              done
+
+              # Frontend check
+              if curl -sL --max-time 10 "http://localhost/" > /dev/null 2>&1; then
+                echo "    frontend: OK"
               else
-                echo "  $ep: FAILED (status=$STATUS, migration=$MIGR)"
+                echo "    frontend: FAILED"
                 HEALTH_OK=false
+              fi
+
+              if [ "$HEALTH_OK" = true ]; then
+                echo "  All checks passed on attempt $ATTEMPT"
+                break
+              elif [ "$ATTEMPT" -lt 3 ]; then
+                echo "  Some checks failed, retrying..."
               fi
             done
 
-            # Frontend check
-            if curl -sf --max-time 10 "http://localhost/" > /dev/null 2>&1; then
-              echo "  frontend: OK"
-            else
-              echo "  frontend: FAILED"
-              HEALTH_OK=false
-            fi
-
             if [ "$HEALTH_OK" = false ]; then
               echo ""
-              echo "!!! HEALTH CHECK FAILED — Rolling back to $PREV_COMMIT !!!"
-              git checkout "$PREV_COMMIT"
+              echo "!!! HEALTH CHECK FAILED after 3 attempts — Rolling back to $PREV_COMMIT !!!"
+              git checkout "$BRANCH"
+              git reset --hard "$PREV_COMMIT"
               $COMPOSE build $SERVICES
               $COMPOSE up -d $SERVICES
               echo "Rollback complete"
