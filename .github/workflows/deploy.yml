@@ -110,12 +110,11 @@ jobs:
             echo "Services to rebuild: $SERVICES"
 
             # ── 4. Build & restart ──
-            # --no-cache prevents BuildKit from swapping images between services
             echo "=== [4/6] Build & Restart ==="
-            $COMPOSE build --no-cache $SERVICES
+            $COMPOSE build $SERVICES
             $COMPOSE up -d $SERVICES
 
-            # Reload nginx to pick up new upstream container IPs
+            # Reload nginx to pick up new upstream container IPs after recreation
             $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
 
             # Wait for containers to be ready
