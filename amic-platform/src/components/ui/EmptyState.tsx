@@ -39,7 +39,7 @@ export function EmptyState({
         </p>
       )}
       {actionLabel && onAction && (
-        <Button variant="primary" onClick={onAction}>
+        <Button variant="accent" onClick={onAction}>
           {actionLabel}
         </Button>
       )}

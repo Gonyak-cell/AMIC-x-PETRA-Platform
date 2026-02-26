@@ -14,7 +14,7 @@ export interface ButtonProps
 
 const variantStyles = {
   primary:
-    "bg-amic text-white hover:bg-amic-700 focus:ring-amic-600 disabled:bg-amic-200 shadow-dr-sm hover:shadow-dr-md",
+    "bg-accent text-white hover:bg-accent-hover focus:ring-accent disabled:bg-accent/50 shadow-dr-sm hover:shadow-glow-green",
   secondary:
     "bg-white text-amic border border-amic/20 hover:border-amic/40 hover:bg-amic-50 focus:ring-amic-600",
   ghost:
