@@ -177,7 +177,7 @@ def parse_template_content_response(response_json: dict) -> TemplateContent:
                 charts=charts,
                 tables=tables,
             ))
-        except (KeyError, TypeError, ValueError) as exc:
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
             logger.warning(
                 "LLM 응답에서 슬라이드 파싱 실패: %s", exc,
             )

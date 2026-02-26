@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.api.tasks.doc_type_resolver import resolve_doc_type
+from src.ralph.doc_type_resolver import resolve_doc_type
 
 
 class TestDocTypeMapping:

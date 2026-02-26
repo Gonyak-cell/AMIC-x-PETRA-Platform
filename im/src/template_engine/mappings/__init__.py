@@ -11,7 +11,7 @@ from src.template_engine.mappings.switch_tm import SWITCH_TM_MAPPING
 from src.template_engine.mappings.ytn_dm import YTN_DM_MAPPING
 
 # 템플릿 파일명 → 매핑 데이터
-MAPPING_REGISTRY: dict[str, list] = {
+MAPPING_REGISTRY: dict[str, list[SlideMapping]] = {
     "NX3 Games - DM - 260116.pptx": NX3_DM_MAPPING,
     "SPICY - TM - 260219 vSHARE.pptx": SPICY_TM_MAPPING,
     "SWITCH - TM - 260119.pptx": SWITCH_TM_MAPPING,

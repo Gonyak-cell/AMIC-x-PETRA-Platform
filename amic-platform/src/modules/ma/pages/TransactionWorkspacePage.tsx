@@ -42,6 +42,7 @@ import { cn } from "@/lib/cn";
 import {
   useTransaction,
   useUpdateTransaction,
+  useDeleteTransaction,
   usePhaseCompletion,
   useAdvancePhase,
   useAutoAdvanceNotification,
@@ -338,6 +339,7 @@ export default function TransactionWorkspacePage() {
 
   // Mutations — Transaction 기본 정보
   const updateTxn = useUpdateTransaction(id);
+  const deleteTxn = useDeleteTransaction();
 
   // Mutations — Phase 1
   const advancePhase = useAdvancePhase(id);
@@ -686,6 +688,23 @@ export default function TransactionWorkspacePage() {
                 재개
               </Button>
             )}
+            {canWrite() && !isClient && (
+              <Button
+                variant="ghost"
+                icon={Trash2}
+                onClick={() => {
+                  if (confirm("이 거래를 삭제하시겠습니까?")) {
+                    deleteTxn.mutate(id, {
+                      onSuccess: () => navigate("/ma/transactions"),
+                    });
+                  }
+                }}
+                loading={deleteTxn.isPending}
+                className="!text-white/60 hover:!text-negative hover:!bg-white/10"
+              >
+                삭제
+              </Button>
+            )}
           </div>
         }
       />
@@ -754,6 +773,62 @@ export default function TransactionWorkspacePage() {
           {/* 거래 정보 */}
           <Card title="거래 정보" headerBar>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm p-1 items-center">
+              <dt className="text-text-muted">거래명</dt>
+              <dd>
+                <input
+                  key={`name-${txn.updated_at}`}
+                  type="text"
+                  className={cn(INLINE_INPUT_CLS, "w-64")}
+                  defaultValue={txn.name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== txn.name) updateTxn.mutate({ name: v });
+                  }}
+                  disabled={!canWrite()}
+                />
+              </dd>
+              <dt className="text-text-muted">코드네임</dt>
+              <dd>
+                <input
+                  key={`codename-${txn.updated_at}`}
+                  type="text"
+                  className={cn(INLINE_INPUT_CLS, "w-40 font-mono")}
+                  defaultValue={txn.code_name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== txn.code_name) updateTxn.mutate({ code_name: v });
+                  }}
+                  disabled={!canWrite()}
+                />
+              </dd>
+              <dt className="text-text-muted">대상기업</dt>
+              <dd>
+                <input
+                  key={`target-${txn.updated_at}`}
+                  type="text"
+                  className={cn(INLINE_INPUT_CLS, "w-48")}
+                  defaultValue={txn.target_company_name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== txn.target_company_name) updateTxn.mutate({ target_company_name: v });
+                  }}
+                  disabled={!canWrite()}
+                />
+              </dd>
+              <dt className="text-text-muted">클라이언트</dt>
+              <dd>
+                <input
+                  key={`client-${txn.updated_at}`}
+                  type="text"
+                  className={cn(INLINE_INPUT_CLS, "w-48")}
+                  defaultValue={txn.client_name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== txn.client_name) updateTxn.mutate({ client_name: v });
+                  }}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">유형</dt>
               <dd>
                 <InlineSelect

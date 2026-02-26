@@ -79,6 +79,7 @@ def run_im_ralph_loop_task(
 
     api_config = get_config()
     engine = _get_sync_engine()
+    session_id = None
 
     try:
         # 1. Document 조회 + im_style → doc_type 매핑
@@ -88,7 +89,7 @@ def run_im_ralph_loop_task(
                 raise ValueError(f"Document not found: {document_id}")
 
             pptx_path = doc.pptx_path
-            from src.api.tasks.doc_type_resolver import resolve_doc_type
+            from src.ralph.doc_type_resolver import resolve_doc_type
 
             im_style = doc.im_style or "FULL"
             doc_type = resolve_doc_type(im_style)
@@ -193,19 +194,20 @@ def run_im_ralph_loop_task(
         logger.error("IM Ralph Loop 실패: document=%s — %s", document_id, exc)
 
         # 세션을 FAILED로 업데이트
-        try:
-            with Session(engine) as session:
-                session.execute(
-                    update(IMRalphSession)
-                    .where(IMRalphSession.id == session_id)
-                    .values(
-                        status="FAILED",
-                        error_message=str(exc),
+        if session_id is not None:
+            try:
+                with Session(engine) as session:
+                    session.execute(
+                        update(IMRalphSession)
+                        .where(IMRalphSession.id == session_id)
+                        .values(
+                            status="FAILED",
+                            error_message=str(exc),
+                        )
                     )
-                )
-                session.commit()
-        except Exception:
-            logger.exception("Ralph 세션 FAILED 업데이트 실패")
+                    session.commit()
+            except Exception:
+                logger.exception("Ralph 세션 FAILED 업데이트 실패")
 
         return {
             "document_id": document_id,

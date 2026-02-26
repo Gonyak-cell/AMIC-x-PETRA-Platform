@@ -136,7 +136,7 @@ class ContentInjector:
 
         table: Table = shape.table
         num_cols = len(table.columns)
-        num_rows = len(list(table.rows))
+        num_rows = len(table.rows)
 
         # 헤더 교체 (옵션)
         start_row = 0

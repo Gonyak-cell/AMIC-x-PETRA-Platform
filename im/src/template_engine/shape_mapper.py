@@ -112,7 +112,7 @@ def _classify_shape(slide_idx: int, shape: object) -> ShapeSlot | None:
     # 테이블
     if hasattr(shape, "has_table") and shape.has_table:
         table = shape.table
-        num_rows = len(list(table.rows))
+        num_rows = len(table.rows)
         num_cols = len(table.columns)
         return ShapeSlot(
             slide_idx=slide_idx,
