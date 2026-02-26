@@ -1,0 +1,16 @@
+cd amic-platform
+
+if [ ! -d "node_modules" ]; then
+  echo "node_modules not found in amic-platform/. Run 'npm install' first."
+  exit 1
+fi
+
+echo "Pre-push: Running TypeScript type check..."
+npx tsc --noEmit
+
+if [ $? -ne 0 ]; then
+  echo "TypeScript errors found. Push aborted."
+  exit 1
+fi
+
+echo "TypeScript check passed."
