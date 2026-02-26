@@ -511,9 +511,16 @@ class LDDMultiLLMPipeline:
         else:
             llm_call = None
 
+        # 법무법인 모드: A/B/C/D 불확실성 라벨링 시스템 프롬프트 사용
+        system_prompt_override = None
+        if self._config.law_firm_mode:
+            from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_SYSTEM_PROMPT
+            system_prompt_override = LAW_FIRM_SYSTEM_PROMPT
+
         generator = NarrativeGenerator(
             llm_call=llm_call,
             learned_patterns=self._learned_patterns,
+            system_prompt_override=system_prompt_override,
         )
 
         # 법률 컨텍스트 주입기 초기화

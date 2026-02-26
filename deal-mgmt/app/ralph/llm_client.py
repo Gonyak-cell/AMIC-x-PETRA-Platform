@@ -177,7 +177,7 @@ class _OpenAIAdapter(_LLMAdapter):
 class _GoogleAdapter(_LLMAdapter):
     """Google (Gemini) 어댑터 — 동기 API를 async 래핑."""
 
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
+    def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
         self._api_key = api_key
         self._model = model
         self._configured = False
@@ -214,7 +214,7 @@ class _GoogleAdapter(_LLMAdapter):
             )
             response = gm.generate_content(
                 user,
-                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=4096),
+                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=16384),
             )
             text = response.text or ""
             # Gemini usage 추출

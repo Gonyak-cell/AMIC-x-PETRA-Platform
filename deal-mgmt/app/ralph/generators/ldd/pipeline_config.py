@@ -60,6 +60,10 @@ class LDDPipelineConfig:
     deal_summary: str = ""
     """거래 요약 (Stage 4 자유 탐색 프롬프트용)."""
 
+    # ── 법무법인 스타일 ──
+    law_firm_mode: bool = False
+    """LAW_FIRM 리포트 타입: 3단 서술 + A/B/C/D 불확실성 라벨링 활성화."""
+
     # ── 리스크 등급 수치화 ──
     level_map: dict[str, int] = field(default_factory=lambda: {
         "CRITICAL": 4,

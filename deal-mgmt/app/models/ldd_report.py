@@ -104,6 +104,20 @@ class LDDReport(Base, TimestampMixin):
         comment="별첨 테이블 데이터 (6종: 소송/IP/부동산/계약/보험/인허가)",
     )
 
+    # ── 법무법인 스타일 (LAW_FIRM) ────────────────────────
+    law_firm_toc: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="법무법인 8개 목차 구조 (I~VIII 매핑 결과)",
+    )
+    law_firm_sections: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="법무법인 3단 서술 결과 (section → {현황/검토/Recommendation})",
+    )
+    irl_items: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="D 라벨 수집: Information Request List 항목",
+    )
+
     # ── 멀티 LLM 파이프라인 결과 ─────────────────────────
     dual_risk_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     gap_detection: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

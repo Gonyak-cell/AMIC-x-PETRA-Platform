@@ -38,9 +38,11 @@ class NarrativeGenerator:
         self,
         llm_call=None,
         learned_patterns: list[str] | None = None,
+        system_prompt_override: str | None = None,
     ):
         self._llm_call = llm_call
         self._learned_patterns = learned_patterns or []
+        self._system_prompt_override = system_prompt_override
 
     async def generate_narrative(
         self,
@@ -243,7 +245,7 @@ class NarrativeGenerator:
             logger.warning("LLM 호출 함수가 설정되지 않음 — 더미 서술 반환")
             return "(LLM 연결 필요 — 서술 자동 생성 미수행)", 0.0
 
-        system = NARRATIVE_SYSTEM_PROMPT
+        system = self._system_prompt_override or NARRATIVE_SYSTEM_PROMPT
         if self._learned_patterns:
             try:
                 from app.ralph.learning.prompt_injector import LearningPromptInjector

@@ -459,15 +459,18 @@ async def generate_ldd_report(
     report: LDDReport,
 ) -> LDDReport:
     """
-    asyncio.to_thread을 통해 블로킹 docxtpl 렌더링을 수행한다.
+    asyncio.to_thread을 통해 블로킹 렌더링을 수행한다.
 
-    narrative_sections가 존재하면 서술형 템플릿 사용:
-      - FULL → ldd_narrative_full_template.docx
-      - REDFLAG → ldd_narrative_redflag_template.docx
-    없으면 체크리스트형:
-      - FULL → ldd_full_template.docx
-      - REDFLAG → ldd_redflag_template.docx
+    3가지 경로:
+    1. LAW_FIRM → 법무법인 표준 양식 (2단계: 빈 템플릿 생성 → XML 콘텐츠 채우기)
+    2. narrative_sections 존재 → 서술형 docxtpl 템플릿
+    3. 기본 → 체크리스트형 docxtpl 템플릿
     """
+    # ── LAW_FIRM 경로: 2단계 렌더링 ──
+    if report.report_type == LDDReportType.LAW_FIRM:
+        return await _generate_law_firm_report(db, report)
+
+    # ── 기존 docxtpl 경로 ──
     has_narrative = bool(report.narrative_sections)
     prefix = "ldd_narrative_" if has_narrative else "ldd_"
     template_name = f"{prefix}{report.report_type.lower()}_template.docx"
@@ -517,6 +520,129 @@ async def generate_ldd_report(
     await db.commit()
     await db.refresh(report)
     return report
+
+
+async def _generate_law_firm_report(
+    db: AsyncSession,
+    report: LDDReport,
+) -> LDDReport:
+    """법무법인 표준 양식 2단계 렌더링.
+
+    Step 1: LawFirmTemplateGenerator로 빈 템플릿 생성
+    Step 2: LawFirmDocxRenderer로 AI 분석 결과 삽입
+    """
+    from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+    from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
+    from app.ralph.generators.ldd.law_firm_renderer import LawFirmDocxRenderer
+    from app.ralph.generators.ldd.law_firm_template import LawFirmTemplateGenerator
+
+    SOURCE_TEMPLATE = TEMPLATE_DIR / "law_firm_base.docx"
+
+    report.status = LDDReportStatus.GENERATING
+    await db.commit()
+
+    try:
+        def _render_law_firm() -> tuple[str, str, int]:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+            # Step 1: 빈 템플릿 생성
+            blank_path = OUTPUT_DIR / f"LDD_LAW_FIRM_blank_{report.id}.docx"
+            gen = LawFirmTemplateGenerator(SOURCE_TEMPLATE)
+            gen.generate_blank_template(
+                output_path=blank_path,
+                project_code=report.target_company or "[프로젝트 코드명]",
+                law_firm_name=report.law_firm or "[법무법인 명칭]",
+                report_date=report.dd_period or None,
+            )
+
+            # Step 2: 매핑 + 어댑터 + 렌더링
+            mapper = LawFirmMapper()
+            adapter = LawFirmNarrativeAdapter()
+
+            # DDRL 섹션 → 법무법인 8개 챕터 매핑
+            section_results = _sections_to_dict(report.sections or [])
+            chapters = mapper.map_sections(
+                section_results,
+                report.narrative_sections,
+            )
+
+            # 3단 서술 변환 (law_firm_sections 우선, 없으면 6블록에서 변환)
+            narratives: dict[str, list] = {}
+            if report.law_firm_sections:
+                # 이미 3단 구조로 생성된 경우
+                narratives = report.law_firm_sections
+            elif report.narrative_sections:
+                # 6블록 → 3단 변환
+                for ch in chapters:
+                    narr_list = []
+                    for ddrl_sec in ch.ddrl_sections:
+                        if ddrl_sec in (report.narrative_sections or {}):
+                            narr_list.extend(
+                                adapter.convert_chapter(
+                                    report.narrative_sections[ddrl_sec],
+                                    ch.number,
+                                )
+                            )
+                    narratives[ch.number] = [
+                        n.to_dict() if hasattr(n, "to_dict") else n
+                        for n in narr_list
+                    ]
+
+            # Executive Summary 데이터
+            exec_summary = None
+            if report.qa_result and "summary_rows" in (report.qa_result or {}):
+                exec_summary = report.qa_result
+
+            # Step 2: 콘텐츠 채우기
+            renderer = LawFirmDocxRenderer()
+            fname = f"LDD_LAW_FIRM_{report.id}.docx"
+            out = OUTPUT_DIR / fname
+
+            renderer.render(
+                template_path=blank_path,
+                output_path=out,
+                report_data={
+                    "project_code": report.target_company or "",
+                    "law_firm_name": report.law_firm or "",
+                    "report_date": report.dd_period or "",
+                    "target_company": report.target_company or "",
+                    "chapters": chapters,
+                    "narratives": narratives,
+                    "exec_summary": exec_summary,
+                    "appendices": report.appendices,
+                },
+            )
+
+            # 빈 템플릿 정리
+            blank_path.unlink(missing_ok=True)
+
+            return fname, str(out), out.stat().st_size
+
+        fname, fpath, fsize = await asyncio.to_thread(_render_law_firm)
+        report.status = LDDReportStatus.READY
+        report.file_name = fname
+        report.file_path = fpath
+        report.file_size_bytes = fsize
+        report.error_message = None
+
+    except Exception as exc:
+        logger.exception("법무법인 LDD 렌더링 실패: %s", exc)
+        report.status = LDDReportStatus.FAILED
+        report.error_message = str(exc)
+
+    await db.commit()
+    await db.refresh(report)
+    return report
+
+
+def _sections_to_dict(sections: list[dict]) -> dict[str, list[dict]]:
+    """sections JSONB 리스트를 {section_type: items} dict로 변환."""
+    result: dict[str, list[dict]] = {}
+    for section in sections:
+        st = section.get("section_type", "")
+        items = section.get("items", [])
+        result[st] = items
+    return result
 
 
 async def create_ldd_report_auto(
@@ -808,11 +934,12 @@ async def create_ldd_report_from_vdr(
             from app.ralph.routing.ldd_router import LDDModelRouter
 
             router = LDDModelRouter(llm_client)
+            is_law_firm = body.report_type == LDDReportType.LAW_FIRM
             pipeline_config = LDDPipelineConfig(
                 stage3_risk_dual=settings.LDD_STAGE3_DUAL_RISK,
                 stage4_gap_detection=settings.LDD_STAGE4_GAP_DETECTION,
                 stage5_jurisdiction=settings.LDD_STAGE5_JURISDICTION,
-                stage6_narrative=settings.LDD_STAGE6_NARRATIVE,
+                stage6_narrative=settings.LDD_STAGE6_NARRATIVE or is_law_firm,
                 stage7_qa=settings.LDD_STAGE7_QA,
                 risk_gap_auto_resolve=settings.LDD_RISK_GAP_AUTO_RESOLVE,
                 max_cost_usd=settings.LDD_MAX_COST_USD,
@@ -820,6 +947,7 @@ async def create_ldd_report_from_vdr(
                 deal_type=body.deal_type,
                 industry=body.industry,
                 is_cross_border=body.is_cross_border,
+                law_firm_mode=is_law_firm,
             )
 
             pipeline = LDDMultiLLMPipeline(
@@ -905,6 +1033,43 @@ async def create_ldd_report_from_vdr(
                 pipeline_result.qa_result.get("overall_score")
                 if pipeline_result.qa_result else None
             )
+
+            # ── 법무법인 스타일 후처리 ──
+            if is_law_firm and pipeline_result.narrative_sections:
+                from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper
+                from app.ralph.generators.ldd.law_firm_narrative_adapter import (
+                    LawFirmNarrativeAdapter,
+                )
+
+                mapper = LawFirmMapper()
+                adapter = LawFirmNarrativeAdapter()
+
+                # DDRL → 8개 목차 매핑
+                chapters = mapper.map_sections(
+                    pipeline_result.sections,
+                    pipeline_result.narrative_sections,
+                )
+                report.law_firm_toc = mapper.build_toc_data(chapters)
+
+                # 6블록 → 3단 변환
+                narratives_by_chapter: dict[str, list] = {}
+                for ch in chapters:
+                    narr_list = []
+                    for ddrl_sec in ch.ddrl_sections:
+                        if ddrl_sec in pipeline_result.narrative_sections:
+                            narr_list.extend(
+                                adapter.convert_chapter(
+                                    pipeline_result.narrative_sections[ddrl_sec],
+                                    ch.number,
+                                )
+                            )
+                    narratives_by_chapter[ch.number] = narr_list
+
+                report.law_firm_sections = adapter.build_law_firm_sections(
+                    narratives_by_chapter,
+                )
+                report.irl_items = adapter.collect_irl_items(narratives_by_chapter)
+
             report.status = LDDReportStatus.REVIEW
             report.analysis_completed_at = datetime.now(timezone.utc)
             report.review_started_at = datetime.now(timezone.utc)

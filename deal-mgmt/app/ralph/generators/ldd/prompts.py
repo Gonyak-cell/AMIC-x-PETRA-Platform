@@ -167,7 +167,7 @@ def format_source_materials(
             for t in f["tables"][:2]:
                 headers = t.get("headers", [])
                 if headers:
-                    tables_info += f"\n  헤더: {', '.join(headers[:5])}"
+                    tables_info += f"\n  헤더: {', '.join(str(h) for h in headers[:5] if h is not None)}"
 
         entry = f"### 📄 {name}{tables_info}\n{text}\n"
         if total + len(entry) > max_total_chars:
