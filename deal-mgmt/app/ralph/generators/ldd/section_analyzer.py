@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -113,7 +114,10 @@ class LDDSectionAnalyzer:
             pending_count = sum(1 for i in items if i.get("status") == "PENDING")
 
             summary = f"### {section_type}\n"
-            summary += f"- 총 {len(items)}개 항목: OK={ok_count}, ISSUE={len(issues)}, NA={na_count}, PENDING={pending_count}\n"
+            summary += (
+                f"- 총 {len(items)}개 항목: OK={ok_count}, ISSUE={len(issues)}"
+                f", NA={na_count}, PENDING={pending_count}\n"
+            )
             for issue in issues:
                 level = issue.get("issue_level", "UNKNOWN")
                 summary += f"  - [{level}] {issue.get('item_id', '')}: {issue.get('description', '')[:100]}\n"

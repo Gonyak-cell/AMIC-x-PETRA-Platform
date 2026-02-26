@@ -348,7 +348,6 @@ class RalphLLMClient:
                     break
 
         # 2. 폴백: 지정 프로바이더 외 나머지 순회
-        last_error: Exception | None = None
         for adapter in self._adapters:
             if adapter.provider_name == provider or not adapter.is_available:
                 continue
@@ -360,8 +359,7 @@ class RalphLLMClient:
                     provider, adapter.provider_name,
                 )
                 return text
-            except Exception as exc:
-                last_error = exc
+            except Exception:
                 continue
 
         # 3. 모두 실패 → 기본 call()
