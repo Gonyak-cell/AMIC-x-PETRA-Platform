@@ -770,7 +770,7 @@ export default function TransactionWorkspacePage() {
 
           {/* 법인등기 정보 — corporate_info가 있을 때만 표시 */}
           {txn.corporate_info && (() => {
-            const ci = txn.corporate_info as CorporateDocsExtractedData;
+            const ci = txn.corporate_info as unknown as CorporateDocsExtractedData;
             const sortedDirectors = sortDirectorsByPosition(ci.directors ?? []);
 
             return (
