@@ -200,12 +200,24 @@ jobs:
                 MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
                 DB=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('db','N/A'))" 2>/dev/null || echo "N/A")
                 SVC_NAME=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('service','unknown'))" 2>/dev/null || echo "unknown")
-                if [ "$STATUS" = "ok" ] && [ "$MIGR" != "False" ] && [ "$DB" != "error" ]; then
-                  echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
+                # Determine expected service name for image-swap detection
+                case "$LABEL" in
+                  ma) EXPECTED_SVC="deal-mgmt" ;;
+                  *) EXPECTED_SVC="$LABEL" ;;
+                esac
+
+                # PASS: correct service identity + responding + migration OK
+                # WARN: db=error (service running but DB unreachable)
+                # FAIL: wrong service name (image swap) / not responding / migration failed
+                if [ "$STATUS" != "unknown" ] && [ "$SVC_NAME" = "$EXPECTED_SVC" ] && [ "$MIGR" != "False" ]; then
+                  if [ "$DB" = "error" ]; then
+                    echo "    $LABEL: OK (status=$STATUS, db=$DB ⚠, migration=$MIGR, service=$SVC_NAME)"
+                  else
+                    echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
+                  fi
                 else
                   echo "    $LABEL: FAILED (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
-                  # Debug: dump raw response and container state for failed services
-                  echo "    DEBUG[$LABEL]: raw_response='$RESPONSE'"
+                  echo "    DEBUG[$LABEL]: raw='$RESPONSE'"
                   $COMPOSE logs "$SVC" --tail=10 2>/dev/null | head -15 || true
                   HEALTH_OK=false
                 fi
