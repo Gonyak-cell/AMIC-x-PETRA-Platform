@@ -24,6 +24,10 @@ on:
           - frontend-only
           - backend-only
 
+permissions:
+  checks: read
+  contents: read
+
 concurrency:
   group: deploy-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
