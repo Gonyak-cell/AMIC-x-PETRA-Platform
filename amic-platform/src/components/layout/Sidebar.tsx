@@ -115,7 +115,7 @@ const KIIS_PORTFOLIO = [
 // ── M&A Navigation ──
 
 const MA_PIPELINE_NAV = [
-  { to: "/ma/transactions", label: "Pipeline", icon: Handshake },
+  { to: "/ma/transactions", label: "Pipeline", icon: Handshake, end: true },
   { to: "/ma/transactions/new", label: "New Transaction", icon: PlusCircle },
 ];
 
@@ -288,6 +288,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                   to={item.to}
                   label={item.label}
                   icon={item.icon}
+                  end={(item as { end?: boolean }).end}
                   onClick={onNavItemClick}
                 />
               ))}

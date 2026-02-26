@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 12:37:00
+> 최종 업데이트: 2026-02-26 15:44:55
 
 ## 폴더 구조
 
@@ -9,11 +9,12 @@
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 33 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
-| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 10 |
+| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 14 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
-| IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩 | 6 |
+| IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩, TM/DM 디자인 시스템 | 9 |
 | 프론트엔드 | `frontend/` | UI 리프레시, 통합 프론트엔드 계획, MSW, GSAP 모션, 팀 페이지, 로그인/캘린더 | 8 |
+| LDD 모듈 | `ldd/` | LDD 보고서 생성 프로세스 문서 | 1 |
 | 테스트 | `testing/` | E2E 테스트 계획, 회귀 방지 | 2 |
 
 ---
@@ -103,7 +104,7 @@
 | `20260216_2025_Security_Code_Review.md` | 보안 코드 리뷰 |
 | `20260216_2205_JWT_HTTPOnly_Cookie_Migration_Plan.md` | JWT → httpOnly 쿠키 마이그레이션 계획 |
 
-## deployment/ (10)
+## deployment/ (14)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -117,6 +118,10 @@
 | `20260226_1139_Production_CORS_JWT_DB_Password_Fix.md` | **CORS/JWT/DB 비밀번호 수정** — IM JWT_SECRET 추가, KIIS CORS 변수명 수정, .env JSON 배열 형식, PG 볼륨 비밀번호 동기화 |
 | `20260226_1231_ERROR_CATALOG.md` | **프로덕션 에러 카탈로그** — 15개 카테고리(401~SSL만료~디스크풀), 2/26 사례, 점검 명령어, 통합 진단 스크립트 연동 |
 | `20260226_1237_Production_Diagnostic_System.md` | **프로덕션 통합 진단 시스템 구축** — 10개 카테고리 진단 스크립트, Claude 규칙, deploy.yml 강화, 에러 카탈로그 |
+| `20260226_1254_CICD_Health_Check_SSL_Fix.md` | **CI/CD 헬스체크 SSL 수정** — nginx SSL 리다이렉트로 localhost 헬스체크 실패, docker exec 직접 호출로 해결, 재시도 로직 추가 |
+| `20260226_1330_Clova_STT_API_Key_Setup.md` | **Clova Speech STT API 키 설정** — config.py 필드 추가, docker-compose 매핑, 프로덕션 SSH 배포 |
+| `20260226_1429_FDD_MA_502_Fix.md` | **FDD/MA 502 Bad Gateway 수정** — BuildKit 이미지 스왑 재발(--no-cache 복원), workers 4→2, 안정성 재확인+로그 캡처, IM revision ID 32자 제한 |
+| `20260226_1544_Deploy_Pipeline_Stabilization.md` | **배포 파이프라인 영구 안정화** — 근본 원인 3가지(이미지 스왑/Alembic 3중 실행/안전장치 부재) 수정, KIIS entrypoint alembic 제거, IM HealthResponse 확장, deploy.yml 8단계 강화, 프로덕션 IM DB stamp+복구, infra-freeze/code-freeze 규칙 |
 
 ## fdd/ (4)
 
@@ -144,7 +149,7 @@
 | `20260217_2154_GP_Centric_Search_Implementation.md` | GP(운용사) 중심 검색 전환 구현 보고서 |
 | `20260222_1635_Private_Fund_GP_Datasource_Research.md` | 기관전용 사모펀드 GP 데이터소스 조사 |
 
-## im/ (5)
+## im/ (9)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -154,6 +159,9 @@
 | `20260217_1342_IM_Visualization_Auto_Generation.md` | IM 시각화 자동 생성 계획 |
 | `20260223_0005_Deal_Document_Studio_Integration_Review.md` | Deal Document Studio TM 통합 코드 리뷰 |
 | `20260223_1128_PPT_Design_Style_Selection_Implementation.md` | PPT 디자인 스타일 선택 기능 구현 보고서 (AMIC / AMIC x 파트너 브랜딩) |
+| `20260226_1521_TM_DM_Design_System_Manual.md` | **TM/DM PPT 디자인 시스템 매뉴얼 (보정판)** — 4개 PPTX XML 파싱 재분석, 5개 보정사항(섹션바 #0F3A32, 테이블 테두리 solid/dash, TOC 좌표, 재무 Y=3.325cm, 커버 줄간격 90%), 디자인 토큰·빈 템플릿 재생성 |
+| `20260226_1542_TM_DM_Design_System_Deliverables.md` | **TM/DM 디자인 시스템 산출물 생성 보고서** — 5개 보정사항 상세, 수정 파일 6종, TOC 좌표 검증 결과 포함 |
+| `20260226_1541_TM_DM_Generator_Implementation.md` | **TM/DM 생성기 구현 보고서** — shape_bottom_inches 크래시 수정, DM 6개 렌더러+프롬프트 신규, TM render_html 수정, 107 tests (TM 60+DM 47) |
 
 ## frontend/ (8)
 
@@ -168,6 +176,12 @@
 | `20260225_1204_Deal_Document_Studio_Dashboard_Redesign.md` | Deal Doc Studio 대시보드 리디자인 — MA 거래 중심 전환, 아이콘 단색화, 표준 레이아웃 |
 | `20260225_1648_Login_Export_Calendar_MA_Transition.md` | **로그인 리다이렉트 수정 + 세션 쿠키 전환 + Export Hub MA 추가 + Calendar MA 전용 전환** (14파일, tsc+build PASS) |
 | `20260225_1809_Sidebar_ModuleGroup_Redesign.md` | **사이드바 ModuleSwitcher 드롭다운 → ModuleGroup 직접 노출** — 4개 모듈 독립 토글, 좌측 연결선, 0.5초 트랜지션, localStorage 상태 보존 |
+
+## ldd/ (1)
+
+| 파일명 | 설명 |
+|--------|------|
+| `20260226_1340_LDD_Report_Generation_Process.md` | LDD 보고서 작성 로직 상세 프로세스 — 3가지 생성 모드, DDRL 10개 섹션 52항목, 멀티 LLM 10단계 파이프라인, Ralph Loop 2회 적용, DOCX 렌더링, 비용 추적 |
 
 ## testing/ (2)
 
@@ -195,6 +209,7 @@
 | 보안/인증 | `security/` | Security, JWT, 인증, XSS, CORS |
 | 배포/인프라 | `deployment/` | Deploy, 배포, 빌드, CI/CD, Docker |
 | FDD 모듈 전용 | `fdd/` | FDD, 실사, Due Diligence |
+| LDD 모듈 전용 | `ldd/` | LDD, 법률실사, Legal Due Diligence, DDRL |
 | KIIS 모듈 전용 | `kiis/` | KIIS, 펀드, REIT, 공시 |
 | IM 모듈 전용 | `im/` | IM, 투자설명서, Information Memorandum |
 | 프론트엔드 공통 | `frontend/` | UI, UX, 컴포넌트, MSW, 프론트엔드 |
