@@ -65,9 +65,11 @@ async def _api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """앱 시작/종료 시 리소스를 관리한다."""
-    # startup: 필요 시 DB 엔진 초기화 등 수행
+    from src.api.db.session import dispose_engine, init_engine
+
+    init_engine()
     yield
-    # shutdown: 리소스 정리
+    await dispose_engine()
 
 
 def create_app() -> FastAPI:

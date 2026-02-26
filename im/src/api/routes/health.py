@@ -37,11 +37,16 @@ class ReadinessResponse(BaseModel):
 async def _check_db() -> bool:
     """DB 연결 상태를 확인한다."""
     try:
-        from src.api.db.session import async_engine
+        from src.api.db.session import async_engine, init_engine
 
         if async_engine is None:
+            init_engine()
+
+        from src.api.db.session import async_engine as engine_ref
+
+        if engine_ref is None:
             return False
-        async with async_engine.connect() as conn:
+        async with engine_ref.connect() as conn:
             await conn.execute(
                 __import__("sqlalchemy").text("SELECT 1")
             )
