@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 _ALEMBIC_DIR = Path(__file__).resolve().parent.parent
 
 # 마이그레이션 상태 추적 — health check에서 참조
-_migration_ok: bool = False
+_migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
 
 
 async def _run_alembic_upgrade() -> None:
