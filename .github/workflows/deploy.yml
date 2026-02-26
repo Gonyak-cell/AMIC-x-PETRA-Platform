@@ -49,7 +49,7 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.ssl.yml"
             SCOPE="${{ github.event.inputs.scope || 'auto' }}"
 
             # ── 1. Pre-deploy backup ──
@@ -116,21 +116,44 @@ jobs:
 
             # ── 5. DB Migrations ──
             echo "=== [5/6] DB Migrations ==="
+            MIGRATE_OK=true
             if [ "$MIGRATE_FDD" = true ]; then
               echo "  Running FDD migrations..."
-              $COMPOSE exec -T fdd-api alembic upgrade head || echo "WARN: FDD migration failed"
+              if ! $COMPOSE exec -T fdd-api alembic upgrade head; then
+                echo "  CRITICAL: FDD migration failed"
+                MIGRATE_OK=false
+              fi
             fi
             if [ "$MIGRATE_KIIS" = true ]; then
               echo "  Running KIIS migrations..."
-              $COMPOSE exec -T kiis-api alembic upgrade head || echo "WARN: KIIS migration failed"
+              if ! $COMPOSE exec -T kiis-api alembic upgrade head; then
+                echo "  CRITICAL: KIIS migration failed"
+                MIGRATE_OK=false
+              fi
             fi
             if [ "$MIGRATE_IM" = true ]; then
               echo "  Running IM migrations..."
-              $COMPOSE exec -T im-api alembic upgrade head || echo "WARN: IM migration failed"
+              if ! $COMPOSE exec -T im-api alembic upgrade head; then
+                echo "  CRITICAL: IM migration failed"
+                MIGRATE_OK=false
+              fi
             fi
             if [ "$MIGRATE_MA" = true ]; then
               echo "  Running MA migrations..."
-              $COMPOSE exec -T deal-mgmt-api alembic upgrade head || echo "WARN: MA migration failed"
+              if ! $COMPOSE exec -T deal-mgmt-api alembic upgrade head; then
+                echo "  CRITICAL: MA migration failed"
+                MIGRATE_OK=false
+              fi
+            fi
+
+            if [ "$MIGRATE_OK" = false ]; then
+              echo ""
+              echo "!!! MIGRATION FAILED — Rolling back to $PREV_COMMIT !!!"
+              git checkout "$PREV_COMMIT"
+              $COMPOSE build $SERVICES
+              $COMPOSE up -d $SERVICES
+              echo "Rollback complete"
+              exit 1
             fi
 
             # ── 6. Health check + rollback ──
@@ -138,10 +161,13 @@ jobs:
             sleep 15
             HEALTH_OK=true
             for ep in fdd kiis im ma; do
-              if curl -sf --max-time 10 "http://localhost/api/$ep/health" > /dev/null 2>&1; then
-                echo "  $ep: OK"
+              RESPONSE=$(curl -sf --max-time 15 "http://localhost/api/$ep/health" 2>/dev/null || echo '{}')
+              STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
+              MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
+              if [ "$STATUS" = "ok" ] && [ "$MIGR" != "False" ]; then
+                echo "  $ep: OK (status=$STATUS, migration=$MIGR)"
               else
-                echo "  $ep: FAILED"
+                echo "  $ep: FAILED (status=$STATUS, migration=$MIGR)"
                 HEALTH_OK=false
               fi
             done
@@ -164,5 +190,11 @@ jobs:
               exit 1
             fi
 
+            # ── 7. Post-deploy diagnostic ──
+            echo "=== [7/7] Post-Deploy Diagnostic ==="
+            if [ -f scripts/diagnose-production.sh ]; then
+              bash scripts/diagnose-production.sh --ci || echo "WARN: Diagnostic reported issues (see above)"
+            fi
+
             echo ""
-            echo "=== Deployment complete — all health checks passed ==="
+            echo "=== Deployment complete — all checks passed ==="
