@@ -1,0 +1,54 @@
+# 비용 분석 L3 서술 템플릿
+section_id: cost_analysis
+version: "1.0"
+source_reference: "Big 4 FDD WP — Cost Structure Analysis"
+
+slots:
+  total_cogs:
+    level: L2
+    source: "cost.total_cogs"
+    format_spec: "currency_million"
+  gross_margin:
+    level: L2
+    source: "cost.gross_margin"
+    format_spec: "percentage"
+  total_sga:
+    level: L2
+    source: "cost.total_sga"
+    format_spec: "currency_million"
+  total_personnel:
+    level: L2
+    source: "cost.total_personnel"
+    format_spec: "currency_million"
+
+  cost_structure_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Analyze the cost structure breakdown (material, labor, overhead) and identify trends"
+    max_tokens: 150
+    data_keys: ["cost.manufacturing", "cost.sga", "cost.periods"]
+  personnel_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Comment on personnel costs, cost per head trends, and personnel ratio"
+    max_tokens: 100
+    data_keys: ["cost.personnel", "cost.headcount"]
+
+body: |
+  ## Cost Structure Analysis
+
+  ### Manufacturing Cost
+  Total COGS: {{total_cogs}} | Gross Margin: {{gross_margin}}
+  {{cost_structure_narrative}}
+
+  ### SG&A
+  Total SG&A: {{total_sga}}
+
+  ### Personnel
+  Total Personnel Cost: {{total_personnel}}
+  {{personnel_narrative}}
+
+conditional_blocks:
+  - condition: "industry == 'manufacturing'"
+    insert_after: "cost_structure_narrative"
+    text: "For manufacturing entities, raw material price volatility and supplier concentration should be evaluated as key cost drivers."

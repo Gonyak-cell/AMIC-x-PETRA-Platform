@@ -8,7 +8,7 @@ Phase 4: Waterfall(QoE Bridge), Trend Line(NWC), Bar(Revenue).
 
 from __future__ import annotations
 
-from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.chart import BarChart, LineChart, PieChart, Reference
 from openpyxl.chart.series import DataPoint
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -208,6 +208,130 @@ def render_bar_chart(
         for i in range(num_points):
             pt = DataPoint(idx=i)
             pt.graphicalProperties.solidFill = _BAR_PALETTE[i % len(_BAR_PALETTE)]
+            series.data_points.append(pt)
+
+    chart.legend = None
+    ws.add_chart(chart, anchor)
+
+
+def render_concentration_chart(
+    ws: Worksheet,
+    *,
+    data_col: int,
+    label_col: int,
+    start_row: int,
+    end_row: int,
+    anchor: str = "A1",
+    title: str = "Revenue Concentration",
+    width: int = 16,
+    height: int = 14,
+) -> None:
+    """파이차트 — 매출 집중도 (Top N 거래처/제품 비중) 시각화.
+
+    Args:
+        ws: 대상 워크시트
+        data_col: 금액/비중 데이터 컬럼 번호 (1-based)
+        label_col: 항목명 컬럼 번호
+        start_row: 데이터 시작 행 (헤더 제외)
+        end_row: 데이터 끝 행
+        anchor: 차트 삽입 위치 (예: "H2")
+        title: 차트 제목
+        width: 차트 너비 (cm)
+        height: 차트 높이 (cm)
+    """
+    if end_row <= start_row:
+        return
+
+    chart = PieChart()
+    chart.style = 10
+    chart.title = title
+    chart.width = width
+    chart.height = height
+
+    # 데이터 참조
+    data_ref = Reference(ws, min_col=data_col, min_row=start_row - 1, max_row=end_row)
+    cats_ref = Reference(ws, min_col=label_col, min_row=start_row, max_row=end_row)
+
+    chart.add_data(data_ref, titles_from_data=True)
+    chart.set_categories(cats_ref)
+
+    # 색상 팔레트 적용
+    pie_colors = [_PRIMARY, _ACCENT1, _ACCENT3, _ACCENT4, _ACCENT2, _ACCENT5, _LIGHT_GRAY]
+    if chart.series:
+        series = chart.series[0]
+        num_points = end_row - start_row
+        for i in range(num_points):
+            pt = DataPoint(idx=i)
+            pt.graphicalProperties.solidFill = pie_colors[i % len(pie_colors)]
+            series.data_points.append(pt)
+
+    ws.add_chart(chart, anchor)
+
+
+def render_fcf_waterfall_chart(
+    ws: Worksheet,
+    *,
+    data_col: int,
+    label_col: int,
+    start_row: int,
+    end_row: int,
+    anchor: str = "A1",
+    title: str = "FCF Bridge",
+    width: int = 22,
+    height: int = 13,
+) -> None:
+    """FCF Bridge 워터폴 차트 (EBITDA → OCF → FCF).
+
+    Stacked Bar로 워터폴 효과를 시뮬레이션합니다.
+    양수는 green, 음수는 red, subtotal/total은 primary blue.
+
+    Args:
+        ws: 대상 워크시트
+        data_col: 금액 데이터 컬럼 번호 (1-based)
+        label_col: 카테고리 라벨 컬럼 번호
+        start_row: 데이터 시작 행 (헤더 제외)
+        end_row: 데이터 끝 행
+        anchor: 차트 삽입 위치
+        title: 차트 제목
+        width: 차트 너비 (cm)
+        height: 차트 높이 (cm)
+    """
+    if end_row <= start_row:
+        return
+
+    chart = BarChart()
+    chart.type = "col"
+    chart.style = 10
+    chart.title = title
+    chart.y_axis.title = "(백만원)"
+    chart.y_axis.numFmt = "#,##0"
+    chart.x_axis.delete = False
+    chart.width = width
+    chart.height = height
+
+    data_ref = Reference(ws, min_col=data_col, min_row=start_row - 1, max_row=end_row)
+    cats_ref = Reference(ws, min_col=label_col, min_row=start_row, max_row=end_row)
+
+    chart.add_data(data_ref, titles_from_data=True)
+    chart.set_categories(cats_ref)
+    chart.shape = 4
+
+    # 색상: EBITDA(primary), subtotal(accent4), total(primary)
+    if chart.series:
+        series = chart.series[0]
+        series.graphicalProperties.solidFill = _PRIMARY
+
+        num_points = end_row - start_row
+        for i in range(num_points):
+            pt = DataPoint(idx=i)
+            if i == 0:
+                pt.graphicalProperties.solidFill = _PRIMARY
+            elif i == num_points - 1:
+                pt.graphicalProperties.solidFill = _PRIMARY
+            elif i == 4:
+                pt.graphicalProperties.solidFill = _ACCENT4
+            else:
+                pt.graphicalProperties.solidFill = _ACCENT1
             series.data_points.append(pt)
 
     chart.legend = None

@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     LDD_STAGE3_DUAL_RISK: bool = True           # 듀얼 리스크 분석
     LDD_STAGE4_GAP_DETECTION: bool = True       # 누락 탐지
     LDD_STAGE5_JURISDICTION: bool = False       # 관할권 교차 (크로스보더 시만)
+    LDD_STAGE6_NARRATIVE: bool = False          # 6블록 서술 생성 (비용 ~$2-4 추가)
     LDD_STAGE7_QA: bool = True                  # 최종 QA
     LDD_RISK_GAP_AUTO_RESOLVE: int = 1          # gap≤N 자동 해결
     LDD_MAX_COST_USD: float = 15.0              # 세션 비용 한도

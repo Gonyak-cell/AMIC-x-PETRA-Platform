@@ -1040,7 +1040,7 @@ def build_income_statement_block(
                 "amount": item.get("amount", ""),
             }
         )
-        indent_map[idx] = indent
+        indent_map[str(idx)] = indent
         if item.get("is_total"):
             total_rows.append(idx)
         elif item.get("is_subtotal"):
@@ -1103,7 +1103,7 @@ def build_balance_sheet_block(
                 "amount": item.get("amount", ""),
             }
         )
-        indent_map[idx] = indent
+        indent_map[str(idx)] = indent
         if item.get("is_total"):
             total_rows.append(idx)
         elif item.get("is_subtotal"):
@@ -1167,7 +1167,7 @@ def build_cash_flow_block(
                 "amount": item.get("amount", ""),
             }
         )
-        indent_map[idx] = indent
+        indent_map[str(idx)] = indent
         if item.get("is_total"):
             total_rows.append(idx)
         elif item.get("is_subtotal"):
@@ -1470,6 +1470,977 @@ def build_reconciliation_block(
         rows=checks,
         zebra_stripe=False,
         metadata={"style": "reconciliation", "tab_color": "999999"},
+    )
+
+
+# =============================================================================
+# Multi-period Financial Statement Builders (Phase 1)
+# =============================================================================
+
+
+def build_multiperiod_fs_block(
+    result: Any,
+    *,
+    title: str | None = None,
+    tab_color: str = "003366",
+    show_yoy: bool = True,
+    show_cagr: bool = True,
+    derived_metrics: list[Any] | None = None,
+) -> TableBlock:
+    """다기간 재무제표 블록 생성.
+
+    MultiPeriodResult → TableBlock 변환.
+    기간별 컬럼 + YoY% + CAGR 컬럼을 동적 생성.
+
+    Args:
+        result: MultiPeriodResult (multiperiod_engine.py)
+        title: 커스텀 제목 (None이면 statement_type에서 추론)
+        tab_color: 시트 탭 색상
+        show_yoy: YoY 변동률 컬럼 표시 여부
+        show_cagr: CAGR 컬럼 표시 여부
+        derived_metrics: DerivedMetricsRow 리스트 (마진율 등)
+
+    Returns:
+        TableBlock (metadata.style = "financial_statement")
+    """
+    # 제목 결정
+    title_map = {
+        "IS": "Income Statement (손익계산서)",
+        "BS": "Balance Sheet (재무상태표)",
+        "CF": "Cash Flow Statement (현금흐름표)",
+    }
+    block_title = title or title_map.get(result.statement_type, "Financial Statement")
+
+    # 컬럼 정의: 계정과목 + 기간별 금액 + YoY + CAGR
+    columns = [
+        TableColumn(key="name_ko", header="계정과목", width=3.5, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Account", width=3.0, align=AlignType.LEFT),
+    ]
+
+    for period in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"amt_{period}",
+                header=period,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
+            )
+        )
+
+    # YoY 컬럼 (두 번째 기간부터)
+    if show_yoy and len(result.period_labels) >= 2:
+        for period in result.period_labels[1:]:
+            columns.append(
+                TableColumn(
+                    key=f"yoy_{period}",
+                    header=f"YoY {period}",
+                    width=1.0,
+                    align=AlignType.RIGHT,
+                    format="percentage",
+                )
+            )
+
+    # CAGR 컬럼
+    has_cagr = show_cagr and any(r.cagr is not None for r in result.rows)
+    if has_cagr:
+        columns.append(
+            TableColumn(
+                key="cagr",
+                header="CAGR",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            )
+        )
+
+    # 행 데이터 생성
+    rows: list[dict[str, Any]] = []
+    subtotal_rows: list[int] = []
+    total_rows: list[int] = []
+    indent_map: dict[int, int] = {}
+
+    for idx, row in enumerate(result.rows):
+        prefix = "  " * row.indent
+        row_data: dict[str, Any] = {
+            "name_ko": f"{prefix}{row.label_ko}",
+            "name_en": f"{prefix}{row.label_en}",
+        }
+
+        # 기간별 금액
+        for period in result.period_labels:
+            amt = row.periods.get(period)
+            row_data[f"amt_{period}"] = str(amt) if amt is not None else ""
+
+        # YoY
+        if show_yoy:
+            for period in result.period_labels[1:]:
+                yoy = row.yoy_changes.get(period)
+                row_data[f"yoy_{period}"] = str(yoy) if yoy is not None else ""
+
+        # CAGR
+        if has_cagr:
+            row_data["cagr"] = str(row.cagr) if row.cagr is not None else ""
+
+        rows.append(row_data)
+        indent_map[str(idx)] = row.indent
+
+        if row.is_total:
+            total_rows.append(idx)
+        elif row.is_subtotal:
+            subtotal_rows.append(idx)
+
+    # 유도 지표 행 추가 (마진율 등)
+    if derived_metrics:
+        separator_idx = len(rows)
+        rows.append({"name_ko": "", "name_en": ""})  # 구분선
+
+        for metric in derived_metrics:
+            metric_row: dict[str, Any] = {
+                "name_ko": metric.metric_name_ko,
+                "name_en": metric.metric_name_en,
+            }
+            for period in result.period_labels:
+                val = metric.periods.get(period)
+                metric_row[f"amt_{period}"] = f"{val}%" if val is not None else ""
+            rows.append(metric_row)
+
+    return TableBlock(
+        title=block_title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": total_rows,
+            "indent_map": indent_map,
+            "tab_color": tab_color,
+            "statement_type": result.statement_type,
+            "period_count": len(result.period_labels),
+            "has_yoy": show_yoy,
+            "has_cagr": has_cagr,
+        },
+    )
+
+
+def build_multiperiod_is_block(
+    result: Any,
+    derived_metrics: list[Any] | None = None,
+) -> TableBlock:
+    """다기간 IS 블록."""
+    return build_multiperiod_fs_block(
+        result,
+        title="Income Statement — Multi-period (손익계산서)",
+        tab_color="003366",
+        derived_metrics=derived_metrics,
+    )
+
+
+def build_multiperiod_bs_block(result: Any) -> TableBlock:
+    """다기간 BS 블록."""
+    return build_multiperiod_fs_block(
+        result,
+        title="Balance Sheet — Multi-period (재무상태표)",
+        tab_color="1565C0",
+    )
+
+
+def build_multiperiod_cf_block(result: Any) -> TableBlock:
+    """다기간 CF 블록."""
+    return build_multiperiod_fs_block(
+        result,
+        title="Cash Flow Statement — Multi-period (현금흐름표)",
+        tab_color="00838F",
+    )
+
+
+# =============================================================================
+# Revenue Deep-dive Builders (Phase 1)
+# =============================================================================
+
+
+def build_revenue_by_customer_block(
+    result: Any,
+    title: str = "Revenue by Customer (거래처별 매출)",
+) -> TableBlock:
+    """거래처별 매출 분해 블록."""
+    return _build_revenue_breakdown_table(result, title=title, tab_color="2E7D32")
+
+
+def build_revenue_by_product_block(
+    result: Any,
+    title: str = "Revenue by Product (제품별 매출)",
+) -> TableBlock:
+    """제품별 매출 분해 블록."""
+    return _build_revenue_breakdown_table(result, title=title, tab_color="6A1B9A")
+
+
+def build_revenue_by_month_block(
+    result: Any,
+    title: str = "Revenue Monthly Trend (월별 매출 추이)",
+) -> TableBlock:
+    """월별 매출 추이 블록."""
+    return _build_revenue_breakdown_table(result, title=title, tab_color="E65100")
+
+
+def build_revenue_concentration_block(
+    result: Any,
+    title: str = "Revenue Concentration (매출 집중도)",
+) -> TableBlock:
+    """매출 집중도 분석 블록.
+
+    HHI 지수, Top N 비중, 경고 메시지 포함.
+    """
+    columns = [
+        TableColumn(key="metric", header="지표", width=3.0, align=AlignType.LEFT),
+        TableColumn(key="value", header="값", width=2.0, align=AlignType.RIGHT),
+        TableColumn(key="assessment", header="평가", width=3.0, align=AlignType.LEFT),
+    ]
+
+    # HHI 등급 판정
+    hhi = result.concentration_index
+    if hhi < Decimal("1500"):
+        hhi_grade = "비집중 (Non-concentrated)"
+    elif hhi < Decimal("2500"):
+        hhi_grade = "중간 집중 (Moderately concentrated)"
+    else:
+        hhi_grade = "고집중 (Highly concentrated)"
+
+    rows = [
+        {
+            "metric": "HHI (Herfindahl-Hirschman Index)",
+            "value": str(hhi),
+            "assessment": hhi_grade,
+        },
+        {
+            "metric": f"Top {result.top_n_count} 매출 비중",
+            "value": f"{result.top_n_share}%",
+            "assessment": "주의" if result.top_n_share > Decimal("80") else "양호",
+        },
+        {
+            "metric": "고유 항목 수",
+            "value": str(result.metadata.get("unique_items", 0)),
+            "assessment": "",
+        },
+    ]
+
+    # 경고 메시지 추가
+    for warn in result.warnings:
+        rows.append({"metric": "경고", "value": "", "assessment": warn})
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={
+            "style": "concentration_analysis",
+            "tab_color": "E0301E",
+            "hhi": str(hhi),
+            "top_n_share": str(result.top_n_share),
+        },
+    )
+
+
+def build_monthly_trend_block(
+    result: Any,
+    title: str = "Revenue Monthly Trend (월별 매출 추이)",
+) -> TableBlock:
+    """MonthlyTrendResult → 테이블 블록."""
+    columns = [
+        TableColumn(key="month", header="월", width=1.5, align=AlignType.CENTER),
+        TableColumn(
+            key="amount", header="매출액", width=2.0, align=AlignType.RIGHT, format="currency"
+        ),
+        TableColumn(
+            key="yoy", header="YoY %", width=1.2, align=AlignType.RIGHT, format="percentage"
+        ),
+        TableColumn(
+            key="seasonality", header="계절성 지수", width=1.5, align=AlignType.RIGHT
+        ),
+    ]
+
+    rows = []
+    for item in result.trend:
+        rows.append({
+            "month": item.month,
+            "amount": str(item.amount),
+            "yoy": str(item.yoy_pct) if item.yoy_pct is not None else "",
+            "seasonality": str(result.seasonality_index.get(item.month, "")),
+        })
+
+    # 합계/평균 행
+    footer_rows = [
+        {
+            "month": "합계",
+            "amount": str(result.total),
+            "yoy": "",
+            "seasonality": "",
+        },
+        {
+            "month": "월평균",
+            "amount": str(result.average_monthly),
+            "yoy": "",
+            "seasonality": "100.00",
+        },
+    ]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={
+            "style": "monthly_trend",
+            "tab_color": "E65100",
+            "peak_month": result.peak_month,
+            "trough_month": result.trough_month,
+        },
+    )
+
+
+# =============================================================================
+# Cost Structure Builders (Phase 2)
+# =============================================================================
+
+
+def build_cost_manufacturing_block(
+    result: Any,
+    title: str = "Manufacturing Cost (제조원가 3요소)",
+) -> TableBlock:
+    """ManufacturingCostResult → 테이블 블록."""
+    columns = [
+        TableColumn(key="name_ko", header="항목", width=3.0, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Account", width=2.5, align=AlignType.LEFT),
+    ]
+    for p in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"amt_{p}", header=p, width=1.5,
+                align=AlignType.RIGHT, format="currency",
+            )
+        )
+        columns.append(
+            TableColumn(
+                key=f"ratio_{p}", header=f"비율 {p}", width=1.0,
+                align=AlignType.RIGHT, format="percentage",
+            )
+        )
+
+    rows: list[dict[str, Any]] = []
+
+    def _add_row(
+        name_ko: str, name_en: str,
+        amounts: dict[str, Decimal],
+        ratios: dict[str, Decimal],
+        is_sub: bool = False,
+    ) -> None:
+        row: dict[str, Any] = {"name_ko": name_ko, "name_en": name_en}
+        for p in result.period_labels:
+            row[f"amt_{p}"] = str(amounts.get(p, ""))
+            row[f"ratio_{p}"] = str(ratios.get(p, ""))
+        rows.append(row)
+
+    _add_row("직접재료비", "Direct Materials", result.direct_materials, result.material_ratio)
+    _add_row("직접인건비", "Direct Labor", result.direct_labor, result.labor_ratio)
+    _add_row("제조경비", "Mfg Overhead", result.manufacturing_overhead, result.overhead_ratio)
+
+    # 합계 행
+    total_row: dict[str, Any] = {"name_ko": "제조원가 합계", "name_en": "Total Mfg Cost"}
+    for p in result.period_labels:
+        total_row[f"amt_{p}"] = str(result.total_cogs.get(p, ""))
+        total_row[f"ratio_{p}"] = "100.00"
+    rows.append(total_row)
+
+    subtotal_rows = [len(rows) - 1]
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": [],
+            "tab_color": "FF6600",
+        },
+    )
+
+
+def build_cost_sga_block(
+    result: Any,
+    title: str = "SG&A Breakdown (판관비 상세)",
+) -> TableBlock:
+    """SGABreakdownResult → 테이블 블록."""
+    columns = [
+        TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
+        TableColumn(key="name", header="항목", width=3.0, align=AlignType.LEFT),
+    ]
+    for p in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"amt_{p}", header=p, width=1.5,
+                align=AlignType.RIGHT, format="currency",
+            )
+        )
+    columns.extend([
+        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+    ])
+
+    rows: list[dict[str, Any]] = []
+    for item in result.items:
+        row: dict[str, Any] = {
+            "rank": item.code,
+            "name": item.name_ko,
+        }
+        for p in result.period_labels:
+            row[f"amt_{p}"] = str(item.amounts_by_period.get(p, ""))
+        row["share"] = str(item.share_pct)
+        row["yoy"] = str(item.yoy_pct) if item.yoy_pct is not None else ""
+        rows.append(row)
+
+    # SGA/Revenue ratio footer
+    footer_rows = []
+    if result.sga_to_revenue_ratio:
+        ratio_row: dict[str, Any] = {"rank": "", "name": "판관비/매출"}
+        for p in result.period_labels:
+            ratio_row[f"amt_{p}"] = f"{result.sga_to_revenue_ratio.get(p, '')}%"
+        ratio_row["share"] = ""
+        ratio_row["yoy"] = ""
+        footer_rows.append(ratio_row)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={"style": "cost_breakdown", "tab_color": "FF6600"},
+    )
+
+
+def build_cost_personnel_block(
+    result: Any,
+    title: str = "Personnel Analysis (인건비 분석)",
+) -> TableBlock:
+    """PersonnelCostResult → 테이블 블록."""
+    columns = [
+        TableColumn(key="metric", header="지표", width=3.0, align=AlignType.LEFT),
+    ]
+    for p in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"val_{p}", header=p, width=1.5, align=AlignType.RIGHT,
+            )
+        )
+
+    rows: list[dict[str, Any]] = []
+
+    # 총 인건비
+    row_total: dict[str, Any] = {"metric": "총 인건비 (Total Personnel)"}
+    for p in result.period_labels:
+        row_total[f"val_{p}"] = str(result.total_personnel.get(p, ""))
+    rows.append(row_total)
+
+    # 인원수
+    row_hc: dict[str, Any] = {"metric": "임직원 수 (Headcount)"}
+    for p in result.period_labels:
+        row_hc[f"val_{p}"] = str(result.headcount.get(p, "N/A"))
+    rows.append(row_hc)
+
+    # 1인당 인건비
+    row_cph: dict[str, Any] = {"metric": "1인당 인건비 (Cost/Head)"}
+    for p in result.period_labels:
+        row_cph[f"val_{p}"] = str(result.cost_per_head.get(p, "N/A"))
+    rows.append(row_cph)
+
+    # 인건비/매출
+    row_rev: dict[str, Any] = {"metric": "인건비/매출 (%)"}
+    for p in result.period_labels:
+        val = result.personnel_to_revenue.get(p)
+        row_rev[f"val_{p}"] = f"{val}%" if val is not None else "N/A"
+    rows.append(row_rev)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={"style": "personnel_analysis", "tab_color": "FF6600"},
+    )
+
+
+# =============================================================================
+# FCF Bridge Builders (Phase 2)
+# =============================================================================
+
+
+def build_fcf_bridge_block(
+    result: Any,
+    title: str = "FCF Bridge (잉여현금흐름)",
+) -> TableBlock:
+    """FCFBridgeResult → 다기간 FCF bridge 테이블 블록."""
+    columns = [
+        TableColumn(key="name_ko", header="항목", width=3.5, align=AlignType.LEFT),
+        TableColumn(key="name_en", header="Item", width=3.0, align=AlignType.LEFT),
+    ]
+    for p in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"amt_{p}", header=p, width=1.5,
+                align=AlignType.RIGHT, format="currency",
+            )
+        )
+
+    rows: list[dict[str, Any]] = []
+    subtotal_rows: list[int] = []
+    total_rows: list[int] = []
+
+    # 워터폴 항목 기반 (다기간)
+    row_defs = [
+        ("EBITDA", "EBITDA", "ebitda", False, False),
+        ("운전자본 변동", "WC Change", "working_capital_change", False, False),
+        ("법인세 납부", "Tax Paid", "tax_paid", False, False),
+        ("기타 영업활동", "Other Operating", "other_operating", False, False),
+        ("영업현금흐름", "Operating CF", "operating_cash_flow", True, False),
+        ("CAPEX", "CAPEX", "total_capex", False, False),
+        ("  유지보수 CAPEX", "  Maintenance", "maintenance_capex", False, False),
+        ("  성장 CAPEX", "  Growth", "growth_capex", False, False),
+        ("잉여현금흐름 (FCF)", "Free Cash Flow", "free_cash_flow", True, True),
+    ]
+
+    for idx, (ko, en, attr, is_sub, is_tot) in enumerate(row_defs):
+        row: dict[str, Any] = {"name_ko": ko, "name_en": en}
+        for p in result.period_labels:
+            pd = result.periods.get(p)
+            if pd:
+                val = getattr(pd, attr, None)
+                if attr == "tax_paid":
+                    val = -val if val else val
+                elif attr == "total_capex":
+                    val = -val if val else val
+                row[f"amt_{p}"] = str(val) if val is not None else ""
+            else:
+                row[f"amt_{p}"] = ""
+        rows.append(row)
+        if is_tot:
+            total_rows.append(idx)
+        elif is_sub:
+            subtotal_rows.append(idx)
+
+    # FCF Conversion 행
+    conv_idx = len(rows)
+    conv_row: dict[str, Any] = {"name_ko": "FCF Conversion (%)", "name_en": "FCF/EBITDA"}
+    for p in result.period_labels:
+        pd = result.periods.get(p)
+        if pd and pd.fcf_conversion is not None:
+            conv_row[f"amt_{p}"] = f"{pd.fcf_conversion}%"
+        else:
+            conv_row[f"amt_{p}"] = "N/A"
+    rows.append(conv_row)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=False,
+        metadata={
+            "style": "financial_statement",
+            "subtotal_rows": subtotal_rows,
+            "total_rows": total_rows,
+            "tab_color": "006064",
+        },
+    )
+
+
+def build_capex_analysis_block(
+    result: Any,
+    title: str = "CAPEX Analysis (자본적 지출 분석)",
+) -> TableBlock:
+    """CAPEXAnalysisResult → 테이블 블록."""
+    columns = [
+        TableColumn(key="metric", header="항목", width=3.0, align=AlignType.LEFT),
+    ]
+    for p in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"val_{p}", header=p, width=1.5, align=AlignType.RIGHT,
+            )
+        )
+
+    rows: list[dict[str, Any]] = []
+
+    def _metric_row(label: str, data: dict[str, Any], fmt: str = "amount") -> dict[str, Any]:
+        row: dict[str, Any] = {"metric": label}
+        for p in result.period_labels:
+            val = data.get(p)
+            if fmt == "pct" and val is not None:
+                row[f"val_{p}"] = f"{val}%"
+            elif fmt == "ratio" and val is not None:
+                row[f"val_{p}"] = f"{val}x"
+            else:
+                row[f"val_{p}"] = str(val) if val is not None else ""
+        return row
+
+    rows.append(_metric_row("유무형자산 취득 (Additions)", result.asset_additions))
+    rows.append(_metric_row("유무형자산 처분 (Disposals)", result.asset_disposals))
+    rows.append(_metric_row("순 CAPEX (Net)", result.total_capex))
+    rows.append(_metric_row("유지보수 CAPEX (Maintenance)", result.maintenance_capex))
+    rows.append(_metric_row("성장 CAPEX (Growth)", result.growth_capex))
+    rows.append(_metric_row("CAPEX/매출 (%)", result.capex_to_revenue, "pct"))
+    rows.append(_metric_row("CAPEX/D&A (배수)", result.capex_to_da, "ratio"))
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={"style": "capex_analysis", "tab_color": "006064"},
+    )
+
+
+# ── Phase 3: Backlog + Consolidation Blocks ─────────────────────
+
+
+def build_backlog_summary_block(result: Any) -> TableBlock:
+    """BacklogSummaryResult → 수주잔액 Summary 블록."""
+    columns = [
+        TableColumn(key="metric", header="지표", width=3.0, align=AlignType.LEFT),
+        TableColumn(key="value", header="값", width=2.0, align=AlignType.RIGHT),
+    ]
+    rows = [
+        {"metric": "수주잔액 합계", "value": str(result.total_backlog)},
+        {"metric": "수주 건수", "value": str(result.order_count)},
+        {"metric": "Book-to-Bill Ratio", "value": str(result.book_to_bill_ratio) if result.book_to_bill_ratio else "N/A"},
+        {"metric": "수주 커버리지 (개월)", "value": str(result.backlog_coverage_months) if result.backlog_coverage_months else "N/A"},
+        {"metric": "Top 5 거래처 비중 (%)", "value": str(result.top_n_share)},
+        {"metric": "HHI 집중도", "value": str(result.concentration_index)},
+    ]
+    return TableBlock(
+        title="수주잔액 Summary (Order Backlog Summary)",
+        columns=columns,
+        rows=rows,
+        metadata={"style": "backlog_summary", "tab_color": "4E342E"},
+    )
+
+
+def build_backlog_by_customer_block(result: Any) -> TableBlock:
+    """BacklogSummaryResult → 거래처별 수주잔액 블록."""
+    columns = [
+        TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
+        TableColumn(key="customer", header="거래처", width=3.0, align=AlignType.LEFT),
+        TableColumn(key="amount", header="수주잔액", width=2.0, align=AlignType.RIGHT, format="currency"),
+        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(key="count", header="건수", width=0.8, align=AlignType.RIGHT),
+    ]
+    rows = []
+    for i, item in enumerate(result.backlog_by_customer, 1):
+        rows.append({
+            "rank": str(i),
+            "customer": item.customer_name,
+            "amount": str(item.amount),
+            "share": str(item.share_pct),
+            "count": str(item.order_count),
+        })
+
+    footer_rows = [{
+        "rank": "",
+        "customer": "합계 (Total)",
+        "amount": str(result.total_backlog),
+        "share": "100.00",
+        "count": str(result.order_count),
+    }]
+
+    return TableBlock(
+        title="거래처별 수주잔액 (Backlog by Customer)",
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={"style": "backlog_customer", "tab_color": "4E342E"},
+    )
+
+
+def build_backlog_aging_block(result: Any) -> TableBlock:
+    """BacklogAgingResult → 수주 Aging 블록."""
+    columns = [
+        TableColumn(key="bucket", header="Aging 구간", width=2.0, align=AlignType.LEFT),
+        TableColumn(key="amount", header="금액", width=2.0, align=AlignType.RIGHT, format="currency"),
+        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(key="count", header="건수", width=0.8, align=AlignType.RIGHT),
+    ]
+    rows = []
+    for b in result.buckets:
+        rows.append({
+            "bucket": b.bucket,
+            "amount": str(b.amount),
+            "share": str(b.share_pct),
+            "count": str(b.order_count),
+        })
+
+    # 납기 초과 행
+    if result.overdue_amount > Decimal("0"):
+        rows.append({
+            "bucket": "납기 초과 (Overdue)",
+            "amount": str(result.overdue_amount),
+            "share": str(result.overdue_share_pct),
+            "count": "",
+        })
+
+    return TableBlock(
+        title="수주 Aging (Backlog Aging)",
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={"style": "backlog_aging", "tab_color": "BF360C"},
+    )
+
+
+def build_negative_margin_block(result: Any) -> TableBlock:
+    """NegativeMarginResult → 역마진 분석 블록."""
+    columns = [
+        TableColumn(key="order_id", header="수주번호", width=1.5, align=AlignType.LEFT),
+        TableColumn(key="customer", header="거래처", width=2.0, align=AlignType.LEFT),
+        TableColumn(key="amount", header="수주금액", width=1.5, align=AlignType.RIGHT, format="currency"),
+        TableColumn(key="cost", header="추정원가", width=1.5, align=AlignType.RIGHT, format="currency"),
+        TableColumn(key="margin", header="마진 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(key="reason", header="사유", width=2.0, align=AlignType.LEFT),
+    ]
+    rows = []
+    for neg in result.negative_margin_orders:
+        rows.append({
+            "order_id": neg.order_id,
+            "customer": neg.customer_name,
+            "amount": str(neg.order_amount),
+            "cost": str(neg.estimated_cost),
+            "margin": str(neg.margin),
+            "reason": neg.reason,
+        })
+
+    footer_rows = [{
+        "order_id": "",
+        "customer": f"합계 ({result.negative_count}건)",
+        "amount": str(result.total_negative_amount),
+        "cost": "",
+        "margin": "",
+        "reason": f"예상 손실: {result.total_negative_loss}",
+    }]
+
+    return TableBlock(
+        title="역마진 분석 (Negative Margin Orders)",
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={"style": "negative_margin", "tab_color": "B71C1C"},
+    )
+
+
+def build_monthly_new_orders_block(result: Any) -> TableBlock:
+    """MonthlyNewOrderResult → 월별 신규수주 블록."""
+    columns = [
+        TableColumn(key="month", header="월", width=1.5, align=AlignType.CENTER),
+        TableColumn(key="amount", header="신규수주", width=2.0, align=AlignType.RIGHT, format="currency"),
+        TableColumn(key="cumulative", header="누적", width=2.0, align=AlignType.RIGHT, format="currency"),
+    ]
+    if result.yoy_growth:
+        columns.append(
+            TableColumn(key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        )
+
+    rows = []
+    for m in result.months:
+        row: dict[str, Any] = {
+            "month": m,
+            "amount": str(result.amounts.get(m, Decimal("0"))),
+            "cumulative": str(result.cumulative.get(m, Decimal("0"))),
+        }
+        if result.yoy_growth:
+            yoy = result.yoy_growth.get(m)
+            row["yoy"] = str(yoy) if yoy is not None else ""
+        rows.append(row)
+
+    return TableBlock(
+        title="월별 신규수주 추이 (Monthly New Orders)",
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={"style": "monthly_orders", "tab_color": "4E342E"},
+    )
+
+
+def build_entity_pl_comparison_block(result: Any) -> TableBlock:
+    """EntityPLComparison → 법인별 P&L 비교 블록."""
+    columns = [
+        TableColumn(key="category", header="항목", width=2.5, align=AlignType.LEFT),
+    ]
+    for ec in result.entity_codes:
+        columns.append(
+            TableColumn(key=f"amt_{ec}", header=ec, width=1.8, align=AlignType.RIGHT, format="currency"),
+        )
+        columns.append(
+            TableColumn(key=f"pct_{ec}", header=f"{ec} %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        )
+    columns.append(
+        TableColumn(key="total", header="연결 합계", width=1.8, align=AlignType.RIGHT, format="currency"),
+    )
+
+    rows = []
+    for cat in result.categories:
+        row: dict[str, Any] = {"category": cat}
+        for ec in result.entity_codes:
+            row[f"amt_{ec}"] = str(result.amounts.get(ec, {}).get(cat, Decimal("0")))
+            row[f"pct_{ec}"] = str(result.shares.get(ec, {}).get(cat, Decimal("0")))
+        row["total"] = str(result.total_row.get(cat, Decimal("0")))
+        rows.append(row)
+
+    return TableBlock(
+        title="법인별 손익 비교 (Entity P&L Comparison)",
+        columns=columns,
+        rows=rows,
+        zebra_stripe=True,
+        metadata={"style": "entity_comparison", "tab_color": "1A237E"},
+    )
+
+
+def build_ic_elimination_block(result: Any) -> TableBlock:
+    """ConsolidationResult → IC 제거 스케줄 블록."""
+    columns = [
+        TableColumn(key="description", header="내용", width=3.0, align=AlignType.LEFT),
+        TableColumn(key="debit", header="차변 법인", width=1.5, align=AlignType.LEFT),
+        TableColumn(key="credit", header="대변 법인", width=1.5, align=AlignType.LEFT),
+        TableColumn(key="category", header="카테고리", width=1.5, align=AlignType.LEFT),
+        TableColumn(key="amount", header="금액", width=2.0, align=AlignType.RIGHT, format="currency"),
+    ]
+    rows = []
+    for e in result.eliminations:
+        rows.append({
+            "description": e.description,
+            "debit": e.debit_entity,
+            "credit": e.credit_entity,
+            "category": e.account_category,
+            "amount": str(e.amount),
+        })
+
+    footer_rows = [{
+        "description": "IC 제거 합계",
+        "debit": "",
+        "credit": "",
+        "category": "",
+        "amount": str(result.elimination_total),
+    }]
+
+    return TableBlock(
+        title="내부거래 제거 (IC Elimination Schedule)",
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={"style": "ic_elimination", "tab_color": "1A237E"},
+    )
+
+
+def build_fx_rate_summary_block(fx_rates: list[Any]) -> TableBlock:
+    """FXRate 목록 → 환율 요약 블록."""
+    columns = [
+        TableColumn(key="currency", header="통화", width=1.0, align=AlignType.CENTER),
+        TableColumn(key="period", header="기간", width=1.5, align=AlignType.CENTER),
+        TableColumn(key="end_rate", header="기말 환율", width=1.5, align=AlignType.RIGHT, format="decimal"),
+        TableColumn(key="avg_rate", header="평균 환율", width=1.5, align=AlignType.RIGHT, format="decimal"),
+    ]
+    rows = []
+    for fx in fx_rates:
+        rows.append({
+            "currency": fx.source_currency,
+            "period": fx.period,
+            "end_rate": str(fx.period_end_rate),
+            "avg_rate": str(fx.average_rate),
+        })
+
+    return TableBlock(
+        title="환율 요약 (FX Rate Summary)",
+        columns=columns,
+        rows=rows,
+        metadata={"style": "fx_summary", "tab_color": "1A237E"},
+    )
+
+
+def _build_revenue_breakdown_table(
+    result: Any,
+    *,
+    title: str,
+    tab_color: str,
+) -> TableBlock:
+    """RevenueBreakdownResult → 테이블 블록 (공용)."""
+    # 기간 컬럼 동적 생성
+    columns = [
+        TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
+        TableColumn(key="name", header="항목", width=3.0, align=AlignType.LEFT),
+    ]
+
+    for period in result.period_labels:
+        columns.append(
+            TableColumn(
+                key=f"amt_{period}",
+                header=period,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
+            )
+        )
+
+    columns.extend([
+        TableColumn(
+            key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"
+        ),
+        TableColumn(
+            key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"
+        ),
+    ])
+
+    rows = []
+    for item in result.breakdown:
+        row_data: dict[str, Any] = {
+            "rank": str(item.rank),
+            "name": item.name,
+        }
+        for period in result.period_labels:
+            amt = item.amounts_by_period.get(period)
+            row_data[f"amt_{period}"] = str(amt) if amt is not None else ""
+        row_data["share"] = str(item.share_pct)
+        row_data["yoy"] = str(item.yoy_pct) if item.yoy_pct is not None else ""
+        rows.append(row_data)
+
+    # 합계 행
+    footer_rows = [
+        {
+            "rank": "",
+            "name": "합계 (Total)",
+            **{f"amt_{p}": "" for p in result.period_labels},
+            "share": "100.00",
+            "yoy": "",
+        }
+    ]
+    # 최신 기간 합계
+    if result.period_labels:
+        footer_rows[0][f"amt_{result.period_labels[-1]}"] = str(result.total_revenue)
+
+    return TableBlock(
+        title=title,
+        columns=columns,
+        rows=rows,
+        footer_rows=footer_rows,
+        zebra_stripe=True,
+        metadata={
+            "style": "revenue_breakdown",
+            "tab_color": tab_color,
+            "dimension": result.dimension,
+            "hhi": str(result.concentration_index),
+        },
     )
 
 

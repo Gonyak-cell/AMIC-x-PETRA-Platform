@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-25 21:36:00
+> 최종 업데이트: 2026-02-26 00:11:00
 
 ## 폴더 구조
 
@@ -10,7 +10,7 @@
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드 | 4 |
-| FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트 | 3 |
+| FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰 | 4 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩 | 6 |
 | 프론트엔드 | `frontend/` | UI 리프레시, 통합 프론트엔드 계획, MSW, GSAP 모션, 팀 페이지, 로그인/캘린더 | 8 |
@@ -103,7 +103,7 @@
 | `20260216_2025_Security_Code_Review.md` | 보안 코드 리뷰 |
 | `20260216_2205_JWT_HTTPOnly_Cookie_Migration_Plan.md` | JWT → httpOnly 쿠키 마이그레이션 계획 |
 
-## deployment/ (4)
+## deployment/ (5)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -111,14 +111,16 @@
 | `20260217_0028_Session22_Build_Deploy_Report.md` | Session 22 빌드/배포 리포트 |
 | `20260217_1908_Dev_Port_5173_vs_3000.md` | 개발환경 포트 가이드 |
 | `20260223_1227_Production_Deployment_Guide.md` | 프로덕션 배포 가이드 (Session 34 검증 결과 추가) |
+| `20260226_0011_Azure_VM_Production_Deployment_Report.md` | Azure VM 프로덕션 배포 리포트 — 18개 컨테이너, 마이그레이션, 시드 |
 
-## fdd/ (3)
+## fdd/ (4)
 
 | 파일명 | 설명 |
 |--------|------|
 | `20260217_0200_MultiLLM_Industry_Prompt_Improvement_Plan.md` | 멀티LLM 산업별 프롬프트 개선 |
 | `20260217_0241_FDD_Workflow_Analysis.md` | FDD 워크플로 분석 |
 | `20260217_1340_FDD_Template_SlotFill_System_Plan.md` | FDD 템플릿 Slot-Fill 시스템 계획 |
+| `20260226_0942_FDD_Phase1-5_Code_Review.md` | FDD Big 4 WP Phase 1~5 코드 리뷰 보고서 |
 
 ## kiis/ (12)
 

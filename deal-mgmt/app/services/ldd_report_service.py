@@ -23,6 +23,7 @@ from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import LDDIssueLevel, LDDItemStatus, LDDReportStatus, LDDReportType
 from app.models.ldd_report import LDDReport
 from app.models.ldd_vdr_reference import LddVdrReference
+from app.ralph.generators.ldd.templates import TemplateRegistry
 from app.schemas.ldd_report import (
     DEFAULT_LDD_SECTIONS,
     LDDFinalizeRequest,
@@ -38,6 +39,27 @@ TEMPLATE_DIR     = Path(__file__).resolve().parent.parent.parent / "templates" /
 OUTPUT_DIR       = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
 _PROJECT_ROOT    = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_VERSION = "1.0"
+
+
+def _resolve_sections(deal_type: str, explicit_sections: list | None = None) -> tuple[list[dict], str]:
+    """거래유형과 명시적 섹션 데이터로부터 최종 섹션 dict 리스트를 결정한다.
+
+    Returns:
+        (sections_data, template_type) 튜플.
+        template_type은 적용된 템플릿 식별자 ("DEFAULT" 또는 deal_type 값).
+    """
+    # 1. 명시적 섹션이 제공되면 최우선 사용
+    if explicit_sections:
+        return explicit_sections, "CUSTOM"
+
+    # 2. deal_type이 지정되면 TemplateRegistry에서 조회
+    if deal_type:
+        template_sections = TemplateRegistry.get_sections_dict(deal_type)
+        if template_sections:
+            return template_sections, deal_type
+
+    # 3. 폴백 — 기존 10개 고정 섹션
+    return copy.deepcopy(DEFAULT_LDD_SECTIONS), "DEFAULT"
 
 
 def _validate_source_dir(source_dir: str) -> None:
@@ -216,7 +238,95 @@ def _build_context(report: LDDReport) -> dict:
         "draft_score":    report.draft_score,
         "final_score":    report.final_score,
     }
+
+    # 서술(narrative) 데이터가 있으면 narrative_items 컨텍스트 추가
+    narrative = report.narrative_sections
+    if narrative:
+        ctx["narrative_items"] = _build_narrative_items(sections, narrative)
+
+    # 별첨(appendix) 데이터 추가
+    if report.appendices and report.appendices.get("tables"):
+        ctx["appendix_tables"] = [
+            t for t in report.appendices["tables"] if t.get("row_count", 0) > 0
+        ]
+
     return ctx
+
+
+def _build_narrative_items(
+    sections: list[dict],
+    narrative_sections: dict[str, list[dict]],
+) -> list[dict]:
+    """서술 데이터를 docxtpl 컨텍스트 형식으로 조립한다.
+
+    각 섹션별 항목에 narrative blocks를 매칭하여 반환.
+
+    Returns:
+        [
+            {
+                "section_title": "1. 기업 일반 및 지배구조",
+                "items": [
+                    {
+                        "item_id": "CORP-01",
+                        "item_name": "설립/등기/정관 검토",
+                        "status": "ISSUE",
+                        "issue_level": "HIGH",
+                        "blocks": [
+                            {"title": "사실관계", "content": "..."},
+                            ...
+                        ],
+                    },
+                    ...
+                ],
+            },
+            ...
+        ]
+    """
+    result: list[dict] = []
+
+    for section in sections:
+        section_type = section.get("section_type", "")
+        section_title = section.get("title", "")
+        narrative_items = narrative_sections.get(section_type, [])
+
+        # item_id로 narrative 결과를 매핑
+        narrative_by_id: dict[str, dict] = {}
+        for nr in narrative_items:
+            narrative_by_id[nr.get("item_id", "")] = nr
+
+        items_ctx: list[dict] = []
+        for item in section.get("items", []):
+            item_id = item.get("item_id", "")
+            nr = narrative_by_id.get(item_id)
+
+            blocks = []
+            if nr and nr.get("blocks"):
+                blocks = [
+                    {"title": b.get("title", ""), "content": b.get("content", "")}
+                    for b in nr["blocks"]
+                    if b.get("content")
+                ]
+
+            # 블록이 없으면 체크리스트 데이터를 단일 블록으로 폴백
+            if not blocks and item.get("description"):
+                blocks = [{"title": "검토 결과", "content": item["description"]}]
+
+            if blocks:
+                items_ctx.append({
+                    "item_id": item_id,
+                    "item_name": item.get("name", ""),
+                    "status": item.get("status", "PENDING"),
+                    "issue_level": item.get("issue_level", ""),
+                    "blocks": blocks,
+                })
+
+        if items_ctx:
+            result.append({
+                "section_title": section_title,
+                "items": items_ctx,
+            })
+
+    return result
 
 
 # ── CRUD ─────────────────────────────────────────────────────────────────────
@@ -263,18 +373,18 @@ async def create_ldd_report(
     body: LDDReportCreate,
     created_by_email: str | None = None,
 ) -> LDDReport:
-    # 섹션 기본값 적용
-    sections_data = (
-        [s.model_dump() for s in body.sections]
-        if body.sections
-        else DEFAULT_LDD_SECTIONS
-    )
+    # 섹션 기본값 적용 — deal_type 우선, 없으면 DEFAULT_LDD_SECTIONS
+    explicit = [s.model_dump() for s in body.sections] if body.sections else None
+    deal_type = getattr(body, "deal_type", "") or ""
+    sections_data, template_type = _resolve_sections(deal_type, explicit)
     sections_data = _compute_risk_colors(sections_data)
     counts = _compute_counts(sections_data)
 
     report = LDDReport(
         transaction_id   = transaction_id,
         report_type      = body.report_type,
+        deal_type        = deal_type or None,
+        template_type    = template_type,
         title            = body.title,
         target_company   = body.target_company,
         dd_period        = body.dd_period,
@@ -350,10 +460,17 @@ async def generate_ldd_report(
 ) -> LDDReport:
     """
     asyncio.to_thread을 통해 블로킹 docxtpl 렌더링을 수행한다.
-    FULL → ldd_full_template.docx
-    REDFLAG → ldd_redflag_template.docx
+
+    narrative_sections가 존재하면 서술형 템플릿 사용:
+      - FULL → ldd_narrative_full_template.docx
+      - REDFLAG → ldd_narrative_redflag_template.docx
+    없으면 체크리스트형:
+      - FULL → ldd_full_template.docx
+      - REDFLAG → ldd_redflag_template.docx
     """
-    template_name = f"ldd_{report.report_type.lower()}_template.docx"
+    has_narrative = bool(report.narrative_sections)
+    prefix = "ldd_narrative_" if has_narrative else "ldd_"
+    template_name = f"{prefix}{report.report_type.lower()}_template.docx"
     template_path = TEMPLATE_DIR / template_name
 
     if not template_path.exists():
@@ -605,13 +722,16 @@ async def create_ldd_report_from_vdr(
 
     now = datetime.now(timezone.utc)
 
-    # 1. LDDReport 레코드 생성
-    sections_data = copy.deepcopy(DEFAULT_LDD_SECTIONS)
+    # 1. LDDReport 레코드 생성 — deal_type 기반 템플릿 선택
+    deal_type = body.deal_type or ""
+    sections_data, template_type = _resolve_sections(deal_type)
     counts = _compute_counts(sections_data)
 
     report = LDDReport(
         transaction_id=transaction_id,
         report_type=body.report_type,
+        deal_type=deal_type or None,
+        template_type=template_type,
         title=body.title,
         target_company=body.target_company,
         dd_period=body.dd_period,
@@ -692,13 +812,14 @@ async def create_ldd_report_from_vdr(
                 stage3_risk_dual=settings.LDD_STAGE3_DUAL_RISK,
                 stage4_gap_detection=settings.LDD_STAGE4_GAP_DETECTION,
                 stage5_jurisdiction=settings.LDD_STAGE5_JURISDICTION,
+                stage6_narrative=settings.LDD_STAGE6_NARRATIVE,
                 stage7_qa=settings.LDD_STAGE7_QA,
                 risk_gap_auto_resolve=settings.LDD_RISK_GAP_AUTO_RESOLVE,
                 max_cost_usd=settings.LDD_MAX_COST_USD,
                 max_iterations=body.draft_max_iterations,
-                deal_type=getattr(body, "deal_type", ""),
-                industry=getattr(body, "industry", ""),
-                is_cross_border=getattr(body, "is_cross_border", False),
+                deal_type=body.deal_type,
+                industry=body.industry,
+                is_cross_border=body.is_cross_border,
             )
 
             pipeline = LDDMultiLLMPipeline(
@@ -706,17 +827,49 @@ async def create_ldd_report_from_vdr(
                 router=router,
                 config=pipeline_config,
                 source_map=parsed_source_map,
-                sections_config=copy.deepcopy(DEFAULT_LDD_SECTIONS),
+                sections_config=copy.deepcopy(sections_data),
                 learned_patterns=learned_patterns,
             )
+
+            # RalphSession 레코드 생성 (멀티 LLM 학습 패턴 축적용)
+            from app.models.ralph_session import RalphSession, RalphSessionStatus
+            ralph_session = RalphSession(
+                id=uuid.uuid4(),
+                transaction_id=transaction_id,
+                doc_type="LDD",
+                status=RalphSessionStatus.PLANNING,
+                prd=None,
+                config={
+                    "pipeline": "multi_llm_7stage",
+                    "stage3_risk_dual": pipeline_config.stage3_risk_dual,
+                    "stage4_gap_detection": pipeline_config.stage4_gap_detection,
+                    "stage5_jurisdiction": pipeline_config.stage5_jurisdiction,
+                    "stage7_qa": pipeline_config.stage7_qa,
+                    "max_cost_usd": pipeline_config.max_cost_usd,
+                },
+                learned_patterns=learned_patterns or None,
+                created_by_email=created_by_email,
+            )
+            db.add(ralph_session)
+            await db.flush()
 
             vdr_doc_names = list(vdr_name_to_id.keys())
             pipeline_result = await pipeline.run(vdr_document_names=vdr_doc_names)
 
+            # RalphSession 결과 업데이트
+            ralph_session.status = RalphSessionStatus.COMPLETED.value
+            ralph_session.total_cost_usd = pipeline_result.cost_usd
+            ralph_session.final_score = (
+                pipeline_result.qa_result.get("overall_score")
+                if pipeline_result.qa_result else None
+            )
+            ralph_session.total_iterations = 1  # 멀티 LLM은 단일 실행
+
             # 파이프라인 결과 → LDD 섹션 형식 변환
-            sections_data = copy.deepcopy(DEFAULT_LDD_SECTIONS)
+            merged_sections = copy.deepcopy(sections_data)
             if pipeline_result.sections:
-                _merge_ai_results(sections_data, pipeline_result.sections, include_ai_meta=True)
+                _merge_ai_results(merged_sections, pipeline_result.sections, include_ai_meta=True)
+            sections_data = merged_sections
 
             sections_data = _compute_risk_colors(sections_data)
             counts = _compute_counts(sections_data)
@@ -732,6 +885,20 @@ async def create_ldd_report_from_vdr(
             report.dual_risk_summary = pipeline_result.dual_risk_summary
             report.gap_detection = pipeline_result.gap_detection
             report.jurisdiction_analysis = pipeline_result.jurisdiction_analysis
+            report.narrative_sections = pipeline_result.narrative_sections
+
+            # 법률 인용 검증 결과 추출 (narrative_sections 내부에 포함)
+            if pipeline_result.narrative_sections:
+                citation_summary: dict = {}
+                for sec_type, items in pipeline_result.narrative_sections.items():
+                    for item in items:
+                        cv = item.get("citation_verification")
+                        if cv:
+                            citation_summary.setdefault(sec_type, []).append(cv)
+                if citation_summary:
+                    report.legal_citations = citation_summary
+
+            report.appendices = pipeline_result.appendices
             report.qa_result = pipeline_result.qa_result
             report.pipeline_stages = pipeline_result.stages
             report.draft_score = (
@@ -745,7 +912,7 @@ async def create_ldd_report_from_vdr(
         else:
             # ── 기존 단일 LLM 워크플로우 (하위 호환) ──
             analyzer = LDDSectionAnalyzer(llm_call=llm_call, learned_patterns=learned_patterns)
-            generator = LDDDocumentGenerator(analyzer, copy.deepcopy(DEFAULT_LDD_SECTIONS))
+            generator = LDDDocumentGenerator(analyzer, copy.deepcopy(sections_data))
             generator.set_source_map(parsed_source_map)
 
             # 5. 품질 게이트 + Ralph Loop #1
@@ -800,14 +967,15 @@ async def create_ldd_report_from_vdr(
             )
 
             # 6. 결과를 LDD 섹션 형식으로 변환
-            sections_data = copy.deepcopy(DEFAULT_LDD_SECTIONS)
+            merged_sections = copy.deepcopy(sections_data)
             if loop_result.final_artifact:
                 try:
                     report_data = json.loads(loop_result.final_artifact)
                     ai_sections = report_data.get("sections", {})
-                    _merge_ai_results(sections_data, ai_sections, include_ai_meta=True)
+                    _merge_ai_results(merged_sections, ai_sections, include_ai_meta=True)
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.warning("Ralph Loop #1 결과 파싱 실패: %s", e)
+            sections_data = merged_sections
 
             sections_data = _compute_risk_colors(sections_data)
             counts = _compute_counts(sections_data)

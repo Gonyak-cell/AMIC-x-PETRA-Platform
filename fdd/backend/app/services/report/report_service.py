@@ -25,8 +25,21 @@ from app.renderers.report_builder import (
     build_adjustment_by_category_block,
     build_balance_sheet_block,
     build_cash_flow_block,
+    build_backlog_aging_block,
+    build_backlog_by_customer_block,
+    build_backlog_summary_block,
+    build_capex_analysis_block,
+    build_cost_manufacturing_block,
+    build_cost_personnel_block,
+    build_cost_sga_block,
     build_cost_structure_block,
+    build_entity_pl_comparison_block,
+    build_fcf_bridge_block,
+    build_fx_rate_summary_block,
     build_fx_summary_block,
+    build_ic_elimination_block,
+    build_monthly_new_orders_block,
+    build_negative_margin_block,
     build_income_statement_block,
     build_issue_block,
     build_issue_summary_table_block,
@@ -34,6 +47,10 @@ from app.renderers.report_builder import (
     build_margin_analysis_block,
     build_methodology_block,
     build_monthly_is_block,
+    build_monthly_trend_block,
+    build_multiperiod_bs_block,
+    build_multiperiod_cf_block,
+    build_multiperiod_is_block,
     build_net_debt_schedule_block,
     build_nwc_definition_table_block,
     build_nwc_peg_table_block,
@@ -43,6 +60,9 @@ from app.renderers.report_builder import (
     build_qoe_yoy_block,
     build_reconciliation_block,
     build_revenue_breakdown_block,
+    build_revenue_by_customer_block,
+    build_revenue_by_product_block,
+    build_revenue_concentration_block,
     build_scope_block,
     build_seasonality_block,
     build_text_block,
@@ -530,6 +550,679 @@ def _build_sales_cost_sections(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Phase 1.5: Multi-period Financial Statements (IS/BS/CF, 4yr+H1)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_multiperiod_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    industry_id: str = "general",
+) -> None:
+    """다기간 재무제표 섹션 (IS/BS/CF) 생성.
+
+    AccountMapping 데이터를 기간별로 그룹화한 후,
+    multiperiod_engine으로 4년+반기 시계열을 산출한다.
+    """
+    from sqlalchemy import select
+
+    from app.engines.multiperiod_engine import (
+        compute_derived_metrics,
+        compute_multiperiod_bs,
+        compute_multiperiod_cf,
+        compute_multiperiod_is,
+    )
+    from app.models.account_mapping import AccountMapping, MappingStatus
+    from app.services.report.skeletons.skeleton_registry import skeleton_to_line_item_defs
+
+    # 승인된 매핑 조회
+    mappings = list(
+        db.scalars(
+            select(AccountMapping).where(
+                AccountMapping.deal_id == deal_id,
+                AccountMapping.status == MappingStatus.APPROVED,
+            )
+        )
+    )
+
+    if not mappings:
+        logger.info("No approved mappings for multiperiod, deal %s", deal_id)
+        return
+
+    # 기간별 금액 집계
+    # 현재 AccountMapping에 기간 필드가 없으므로,
+    # 단일 기간("FY Latest")으로 매핑한다.
+    # TODO: Upload 파일에서 기간 정보 추출 시 다기간 지원 확장
+    amounts_by_period: dict[str, dict[str, Decimal]] = {}
+
+    # 기본: 단일 기간
+    period_label = "FY Latest"
+    period_data: dict[str, Decimal] = {}
+    for m in mappings:
+        code = m.target_line_item_code
+        period_data[code] = period_data.get(code, Decimal(0)) + (
+            m.affected_amount or Decimal(0)
+        )
+    amounts_by_period[period_label] = period_data
+
+    # 산업 기반 스켈레톤 로드
+    industry = industry_id if industry_id != "general" else None
+
+    # IS (다기간)
+    try:
+        is_defs = skeleton_to_line_item_defs("IS", industry=industry)
+        is_result, _ = compute_multiperiod_is(amounts_by_period, is_defs)
+        if is_result.rows:
+            metrics = compute_derived_metrics(is_result)
+            sections.append(build_multiperiod_is_block(is_result, derived_metrics=metrics))
+    except Exception as e:
+        logger.warning("Multiperiod IS failed: %s", e)
+
+    # BS (다기간)
+    try:
+        bs_defs = skeleton_to_line_item_defs("BS", industry=industry)
+        bs_result, _ = compute_multiperiod_bs(amounts_by_period, bs_defs)
+        if bs_result.rows:
+            sections.append(build_multiperiod_bs_block(bs_result))
+    except Exception as e:
+        logger.warning("Multiperiod BS failed: %s", e)
+
+    # CF (다기간) — IS/BS 변동 기반
+    try:
+        cf_defs = skeleton_to_line_item_defs("CF", industry=industry)
+        cf_result, _ = compute_multiperiod_cf(amounts_by_period, cf_defs)
+        if cf_result.rows:
+            sections.append(build_multiperiod_cf_block(cf_result))
+    except Exception as e:
+        logger.warning("Multiperiod CF failed: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 1.6: Revenue Deep-dive (customer/product/monthly)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_revenue_deepdive_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+) -> None:
+    """매출 Deep-dive 섹션 생성.
+
+    GL 데이터에서 거래처별/제품별/월별 매출 분해를 산출한다.
+    """
+    from sqlalchemy import select
+
+    from app.engines.revenue_engine import (
+        compute_monthly_trend,
+        compute_revenue_breakdown,
+    )
+
+    # GL 엔트리에서 매출 관련 데이터 추출
+    # UploadFile → GeneralLedgerEntry 조회
+    try:
+        from app.models.upload import UploadFile, UploadType
+
+        uploads = list(
+            db.scalars(
+                select(UploadFile).where(
+                    UploadFile.deal_id == deal_id,
+                    UploadFile.upload_type == UploadType.GL,
+                )
+            )
+        )
+
+        if not uploads:
+            logger.info("No GL uploads for revenue deep-dive, deal %s", deal_id)
+            return
+
+        # GL 엔트리 수집
+        from app.models.upload import GeneralLedgerEntry
+
+        gl_entries = []
+        for upload in uploads:
+            entries = list(
+                db.scalars(
+                    select(GeneralLedgerEntry).where(
+                        GeneralLedgerEntry.upload_file_id == upload.id,
+                    )
+                )
+            )
+            for entry in entries:
+                gl_entries.append({
+                    "entry_id": str(entry.id),
+                    "account_code": entry.account_code,
+                    "account_name": entry.account_name or "",
+                    "description": entry.description or "",
+                    "amount": str(entry.amount) if entry.amount else "0",
+                    "entry_date": str(entry.entry_date) if entry.entry_date else "",
+                    "customer_name": getattr(entry, "customer_name", "") or "",
+                    "product_name": getattr(entry, "product_name", "") or "",
+                    "period": getattr(entry, "period", "FY Latest") or "FY Latest",
+                    "month": str(entry.entry_date)[:7] if entry.entry_date else "",
+                })
+
+        if not gl_entries:
+            return
+
+        # 매출 계정 필터 (REVENUE 카테고리에 매핑된 계정코드)
+        from app.models.account_mapping import AccountMapping, MappingStatus
+
+        revenue_codes = set(
+            db.scalars(
+                select(AccountMapping.source_account_code).where(
+                    AccountMapping.deal_id == deal_id,
+                    AccountMapping.status == MappingStatus.APPROVED,
+                    AccountMapping.target_line_item_code.like("IS-REV%"),
+                )
+            )
+        )
+
+        revenue_entries = [
+            e for e in gl_entries
+            if e["account_code"] in revenue_codes
+        ]
+
+        if not revenue_entries:
+            logger.info("No revenue GL entries for deep-dive, deal %s", deal_id)
+            return
+
+        # 거래처별 매출
+        if any(e.get("customer_name") for e in revenue_entries):
+            try:
+                cust_result, _ = compute_revenue_breakdown(
+                    revenue_entries,
+                    dimension="customer",
+                    dimension_key="customer_name",
+                )
+                if cust_result.breakdown:
+                    sections.append(build_revenue_by_customer_block(cust_result))
+                    sections.append(build_revenue_concentration_block(cust_result))
+            except Exception as e:
+                logger.warning("Revenue by customer failed: %s", e)
+
+        # 제품별 매출
+        if any(e.get("product_name") for e in revenue_entries):
+            try:
+                prod_result, _ = compute_revenue_breakdown(
+                    revenue_entries,
+                    dimension="product",
+                    dimension_key="product_name",
+                )
+                if prod_result.breakdown:
+                    sections.append(build_revenue_by_product_block(prod_result))
+            except Exception as e:
+                logger.warning("Revenue by product failed: %s", e)
+
+        # 월별 매출 추이
+        monthly_entries = [e for e in revenue_entries if e.get("month")]
+        if monthly_entries:
+            try:
+                monthly_result, _ = compute_monthly_trend(
+                    monthly_entries,
+                    month_key="month",
+                    amount_key="amount",
+                )
+                if monthly_result.trend:
+                    sections.append(build_monthly_trend_block(monthly_result))
+            except Exception as e:
+                logger.warning("Monthly trend failed: %s", e)
+
+    except ImportError:
+        logger.info("GL models not available, skipping revenue deep-dive")
+    except Exception as e:
+        logger.warning("Revenue deep-dive section build failed: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 2: Cost Structure + FCF Bridge Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_cost_structure_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+) -> None:
+    """비용 구조 분석 섹션 (제조원가/판관비/인건비) 생성."""
+    from sqlalchemy import select
+
+    from app.engines.cost_engine import (
+        compute_manufacturing_cost,
+        compute_personnel_cost,
+        compute_sga_breakdown,
+    )
+
+    try:
+        from app.models.journal_entry import JournalEntry
+        from app.models.account_mapping import AccountMapping, MappingStatus
+        from app.models.standard_line_item import LineItemCategory, StandardLineItem
+
+        # COGS로 매핑된 원천 계정코드 조회
+        cogs_codes = list(
+            db.scalars(
+                select(StandardLineItem.code).where(
+                    StandardLineItem.category == LineItemCategory.COGS
+                )
+            )
+        )
+        cogs_source_codes = set()
+        if cogs_codes:
+            cogs_source_codes = set(
+                db.scalars(
+                    select(AccountMapping.source_account_code).where(
+                        AccountMapping.deal_id == deal_id,
+                        AccountMapping.status == MappingStatus.APPROVED,
+                        AccountMapping.target_line_item_code.in_(cogs_codes),
+                    )
+                )
+            )
+
+        # SGA로 매핑된 원천 계정코드 조회
+        sga_codes = list(
+            db.scalars(
+                select(StandardLineItem.code).where(
+                    StandardLineItem.category == LineItemCategory.SGA
+                )
+            )
+        )
+        sga_source_codes = set()
+        if sga_codes:
+            sga_source_codes = set(
+                db.scalars(
+                    select(AccountMapping.source_account_code).where(
+                        AccountMapping.deal_id == deal_id,
+                        AccountMapping.status == MappingStatus.APPROVED,
+                        AccountMapping.target_line_item_code.in_(sga_codes),
+                    )
+                )
+            )
+
+        # GL 엔트리 수집
+        from app.models.upload import GeneralLedgerEntry, UploadFile, UploadType
+
+        uploads = list(
+            db.scalars(
+                select(UploadFile).where(
+                    UploadFile.deal_id == deal_id,
+                    UploadFile.upload_type == UploadType.GL,
+                )
+            )
+        )
+        if not uploads:
+            return
+
+        gl_entries = []
+        for upload in uploads:
+            entries = list(
+                db.scalars(
+                    select(GeneralLedgerEntry).where(
+                        GeneralLedgerEntry.upload_file_id == upload.id,
+                    )
+                )
+            )
+            for entry in entries:
+                gl_entries.append({
+                    "account_code": entry.account_code,
+                    "account_name": entry.account_name or "",
+                    "amount": str(entry.amount) if entry.amount else "0",
+                    "period": getattr(entry, "period", "FY Latest") or "FY Latest",
+                    "cost_category": getattr(entry, "cost_category", "") or "",
+                    "department": getattr(entry, "department", "") or "",
+                })
+
+        # 매출 데이터 (비율 계산용)
+        revenue_by_period: dict[str, Decimal] | None = None
+        if qoe_calc and qoe_calc.revenue:
+            revenue_by_period = {"FY Latest": qoe_calc.revenue}
+
+        # 제조원가 분석 (COGS 카테고리 GL)
+        cost_entries = [e for e in gl_entries if e["account_code"] in cogs_source_codes]
+        if cost_entries:
+            try:
+                mfg_result, _ = compute_manufacturing_cost(
+                    cost_entries, revenue_by_period=revenue_by_period,
+                )
+                if mfg_result.period_labels:
+                    sections.append(build_cost_manufacturing_block(mfg_result))
+            except Exception as e:
+                logger.warning("Manufacturing cost analysis failed: %s", e)
+
+        # 판관비 분석 (SGA 카테고리 GL)
+        sga_entries = [e for e in gl_entries if e["account_code"] in sga_source_codes]
+        if sga_entries:
+            try:
+                sga_result, _ = compute_sga_breakdown(
+                    sga_entries, revenue_by_period=revenue_by_period,
+                )
+                if sga_result.items:
+                    sections.append(build_cost_sga_block(sga_result))
+            except Exception as e:
+                logger.warning("SGA breakdown failed: %s", e)
+
+        # 인건비 분석 (전체 GL에서 인건비 관련)
+        personnel_keywords = {"급여", "상여", "퇴직", "복리", "인건비", "salary", "wage", "bonus"}
+        personnel_entries = [
+            e for e in gl_entries
+            if any(kw in (e.get("account_name", "") or "").lower() for kw in personnel_keywords)
+        ]
+        if personnel_entries:
+            try:
+                pers_result, _ = compute_personnel_cost(
+                    personnel_entries, revenue_by_period=revenue_by_period,
+                )
+                if pers_result.period_labels:
+                    sections.append(build_cost_personnel_block(pers_result))
+            except Exception as e:
+                logger.warning("Personnel cost analysis failed: %s", e)
+
+    except ImportError:
+        logger.info("GL models not available, skipping cost structure sections")
+    except Exception as e:
+        logger.warning("Cost structure section build failed: %s", e)
+
+
+def _build_fcf_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+    nwc_calc: "NWCCalculation | None",
+) -> None:
+    """FCF Bridge + CAPEX 분석 섹션 생성."""
+    from app.engines.fcf_engine import compute_capex_analysis, compute_fcf_bridge
+
+    try:
+        # FCF Bridge 입력 데이터 구성 (QoE + NWC에서 추출)
+        if not qoe_calc:
+            return
+
+        ebitda = qoe_calc.reported_ebitda or Decimal(0)
+        da = qoe_calc.depreciation_amortization or Decimal(0)
+
+        # WC 변동: NWC에서 delta 추출 (가능시)
+        delta_ar = Decimal(0)
+        delta_inv = Decimal(0)
+        delta_ap = Decimal(0)
+
+        if nwc_calc and nwc_calc.monthly_trend:
+            # 최근 2개 월 데이터에서 WC 변동 추정
+            months = sorted(nwc_calc.monthly_trend.keys())
+            if len(months) >= 2:
+                prev_m = nwc_calc.monthly_trend.get(months[-2], {})
+                curr_m = nwc_calc.monthly_trend.get(months[-1], {})
+                delta_ar = Decimal(str(curr_m.get("ar", 0))) - Decimal(str(prev_m.get("ar", 0)))
+                delta_inv = Decimal(str(curr_m.get("inv", 0))) - Decimal(str(prev_m.get("inv", 0)))
+                delta_ap = Decimal(str(curr_m.get("ap", 0))) - Decimal(str(prev_m.get("ap", 0)))
+
+        # Tax (추정: EBITDA의 22%)
+        tax_rate = Decimal("0.22")
+        tax_estimate = ebitda * tax_rate if ebitda > 0 else Decimal(0)
+
+        # CAPEX (D&A를 proxy로 사용)
+        capex_estimate = da * Decimal("1.1")  # D&A × 110% (보수적 추정)
+
+        fcf_inputs = {
+            "FY Latest": {
+                "ebitda": str(ebitda),
+                "depreciation_amortization": str(da),
+                "delta_ar": str(delta_ar),
+                "delta_inventory": str(delta_inv),
+                "delta_ap": str(delta_ap),
+                "tax_paid": str(tax_estimate),
+                "other_operating": "0",
+                "capex": str(capex_estimate),
+                "other_investing": "0",
+            },
+        }
+
+        fcf_result, _ = compute_fcf_bridge(fcf_inputs)
+        if fcf_result.period_labels:
+            sections.append(build_fcf_bridge_block(fcf_result))
+
+        # CAPEX 상세 분석
+        capex_entries = [
+            {"period": "FY Latest", "capex_type": "acquisition", "amount": str(capex_estimate)},
+        ]
+        revenue_by_period = None
+        if qoe_calc.revenue:
+            revenue_by_period = {"FY Latest": qoe_calc.revenue}
+
+        capex_result, _ = compute_capex_analysis(
+            capex_entries,
+            da_by_period={"FY Latest": da},
+            revenue_by_period=revenue_by_period,
+        )
+        if capex_result.period_labels:
+            sections.append(build_capex_analysis_block(capex_result))
+
+    except Exception as e:
+        logger.warning("FCF section build failed: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 3: Backlog (Order Backlog) Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_backlog_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+    qoe_calc: "QoECalculation | None",
+) -> None:
+    """수주잔액 분석 섹션 생성.
+
+    수주 데이터가 업로드된 경우에만 동작.
+    """
+    from app.engines.backlog_engine import (
+        compute_backlog_aging,
+        compute_backlog_summary,
+        compute_monthly_new_orders,
+        detect_negative_margin_orders,
+    )
+
+    try:
+        from sqlalchemy import select
+
+        from app.models.upload import Upload, UploadStatus, UploadType
+
+        # 수주 데이터 업로드 확인
+        backlog_upload = db.scalars(
+            select(Upload).where(
+                Upload.deal_id == deal_id,
+                Upload.upload_type == UploadType.BACKLOG,
+                Upload.status == UploadStatus.COMPLETED,
+            ).order_by(Upload.created_at.desc())
+        ).first()
+
+        if not backlog_upload or not backlog_upload.parsed_data:
+            return
+
+        parsed = backlog_upload.parsed_data
+        backlog_entries = parsed.get("entries", [])
+        if not backlog_entries:
+            return
+
+        # 매출 정보 (B/B ratio, 커버리지 계산용)
+        revenue_total = None
+        new_orders_total = None
+        if qoe_calc and qoe_calc.revenue:
+            revenue_total = qoe_calc.revenue
+
+        # Summary
+        summary_result, _ = compute_backlog_summary(
+            backlog_entries,
+            revenue_total=revenue_total,
+            new_orders_total=new_orders_total,
+        )
+        if summary_result.total_backlog > Decimal("0"):
+            sections.append(build_backlog_summary_block(summary_result))
+            sections.append(build_backlog_by_customer_block(summary_result))
+
+        # Aging
+        aging_result, _ = compute_backlog_aging(backlog_entries)
+        if aging_result.buckets:
+            sections.append(build_backlog_aging_block(aging_result))
+
+        # 역마진
+        margin_result, _ = detect_negative_margin_orders(backlog_entries)
+        if margin_result.negative_margin_orders:
+            sections.append(build_negative_margin_block(margin_result))
+
+        # 월별 신규수주
+        order_entries = parsed.get("new_orders", [])
+        if order_entries:
+            orders_result, _ = compute_monthly_new_orders(order_entries)
+            if orders_result.months:
+                sections.append(build_monthly_new_orders_block(orders_result))
+
+    except ImportError:
+        logger.info("Backlog models not available, skipping backlog sections")
+    except Exception as e:
+        logger.warning("Backlog section build failed: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 3: Enhanced Consolidation Sections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _build_enhanced_consolidation_sections(
+    db: Session,
+    deal_id: UUID,
+    sections: list,
+) -> None:
+    """연결 분석 확장 섹션 (IC 자동 감지, FX, 엔티티 비교)."""
+    from app.engines.consolidation_engine import (
+        FXRate,
+        compare_entity_pl,
+        convert_fx,
+        detect_ic_transactions,
+    )
+
+    try:
+        from sqlalchemy import select
+
+        from app.models.account_mapping import AccountMapping, MappingStatus
+        from app.models.deal import DealEntity
+
+        entities = list(
+            db.scalars(
+                select(DealEntity).where(
+                    DealEntity.deal_id == deal_id,
+                    DealEntity.is_active.is_(True),
+                )
+            )
+        )
+
+        if len(entities) < 2:
+            return  # 단일 법인이면 연결 분석 불필요
+
+        # 엔티티별 계정 데이터 구성
+        from app.engines.consolidation_engine import EntityAccountData
+
+        entity_accounts: dict[str, list[EntityAccountData]] = {}
+        entity_names: dict[str, str] = {}
+
+        for entity in entities:
+            eid = str(entity.id)
+            entity_names[entity.code] = entity.name
+
+            mappings = list(
+                db.scalars(
+                    select(AccountMapping).where(
+                        AccountMapping.deal_id == deal_id,
+                        AccountMapping.entity_id == entity.id,
+                        AccountMapping.status == MappingStatus.APPROVED,
+                    )
+                )
+            )
+
+            accounts = []
+            for m in mappings:
+                if m.standard_line_item and m.mapped_amount is not None:
+                    accounts.append(EntityAccountData(
+                        entity_id=eid,
+                        entity_code=entity.code,
+                        account_code=m.source_account_code or "",
+                        account_name=m.source_account_name or "",
+                        category=m.standard_line_item.category.value
+                        if m.standard_line_item.category else "",
+                        amount=m.mapped_amount,
+                    ))
+
+            if accounts:
+                entity_accounts[eid] = accounts
+
+        if len(entity_accounts) < 2:
+            return
+
+        # 1. 엔티티별 P&L 비교
+        pl_result, _ = compare_entity_pl(entity_accounts)
+        if pl_result.entity_codes:
+            sections.append(build_entity_pl_comparison_block(pl_result))
+
+        # 2. IC 자동 감지
+        ic_candidates, _ = detect_ic_transactions(
+            entity_accounts, entity_names=entity_names,
+        )
+        if ic_candidates:
+            # IC 후보를 ConsolidationResult 형태로 변환하여 블록 생성
+            from app.engines.consolidation_engine import ConsolidationResult, EliminationEntry
+
+            ic_elims = []
+            ic_total = Decimal("0")
+            for cand in ic_candidates:
+                ic_elims.append(EliminationEntry(
+                    description=f"IC auto-detected ({cand.confidence}): {cand.entity_a} ↔ {cand.entity_b}",
+                    debit_entity=cand.entity_a,
+                    credit_entity=cand.entity_b,
+                    amount=min(cand.amount_a, cand.amount_b),
+                    account_category=cand.category,
+                ))
+                ic_total += min(cand.amount_a, cand.amount_b)
+
+            mock_result = ConsolidationResult(
+                consolidated_totals={},
+                entity_subtotals={},
+                eliminations=ic_elims,
+                elimination_total=ic_total,
+                minority_interest=Decimal("0"),
+                warnings=[],
+            )
+            sections.append(build_ic_elimination_block(mock_result))
+
+        # 3. FX 요약 (서로 다른 통화 엔티티가 있을 때)
+        currencies = set()
+        for entity in entities:
+            if hasattr(entity, "currency") and entity.currency:
+                currencies.add(entity.currency)
+
+        if len(currencies) > 1:
+            fx_rates = []
+            for entity in entities:
+                if hasattr(entity, "currency") and entity.currency and entity.currency != "KRW":
+                    if hasattr(entity, "fx_rate_end") and entity.fx_rate_end:
+                        fx_rates.append(FXRate(
+                            source_currency=entity.currency,
+                            target_currency="KRW",
+                            period_end_rate=Decimal(str(entity.fx_rate_end)),
+                            average_rate=Decimal(str(getattr(entity, "fx_rate_avg", entity.fx_rate_end))),
+                            period="FY Latest",
+                        ))
+            if fx_rates:
+                sections.append(build_fx_rate_summary_block(fx_rates))
+
+    except ImportError:
+        logger.info("Entity models not available, skipping consolidation sections")
+    except Exception as e:
+        logger.warning("Enhanced consolidation section build failed: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Phase 6: Reconciliation & Appendix Sections
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -748,6 +1441,12 @@ def build_report_ir(
     include_financial_statements: bool = True,
     include_trends: bool = True,
     include_sales_analysis: bool = True,
+    include_multiperiod: bool = True,
+    include_revenue_deepdive: bool = True,
+    include_cost_structure: bool = True,
+    include_fcf: bool = True,
+    include_backlog: bool = True,
+    include_consolidation_enhanced: bool = True,
     use_llm_narratives: bool = False,
     use_template_slotfill: bool = False,
 ) -> ReportIR:
@@ -1056,6 +1755,14 @@ def build_report_ir(
     if include_financial_statements:
         _build_financial_statement_sections(db, deal_id, sections, qoe_calc, nwc_calc, debt_calc)
 
+    # ═══ Phase 1.5: Multi-period FS (4yr+H1 IS/BS/CF) ═══
+    if include_multiperiod:
+        _build_multiperiod_sections(db, deal_id, sections, industry_id)
+
+    # ═══ Phase 1.6: Revenue Deep-dive (customer/product/monthly) ═══
+    if include_revenue_deepdive:
+        _build_revenue_deepdive_sections(db, deal_id, sections)
+
     # ═══ Phase 2: Multi-Period Trends ═══
     if include_trends:
         _build_trend_sections(db, deal_id, sections, qoe_calc, nwc_calc)
@@ -1063,6 +1770,22 @@ def build_report_ir(
     # ═══ Phase 3: Sales & Cost Analysis ═══
     if include_sales_analysis:
         _build_sales_cost_sections(db, deal_id, sections, qoe_calc)
+
+    # ═══ Phase 2: Cost Structure (제조원가/판관비/인건비) ═══
+    if include_cost_structure:
+        _build_cost_structure_sections(db, deal_id, sections, qoe_calc)
+
+    # ═══ Phase 2: FCF Bridge + CAPEX ═══
+    if include_fcf:
+        _build_fcf_sections(db, deal_id, sections, qoe_calc, nwc_calc)
+
+    # ═══ Phase 3: 수주잔액 분석 ═══
+    if include_backlog:
+        _build_backlog_sections(db, deal_id, sections, qoe_calc)
+
+    # ═══ Phase 3: 연결 분석 확장 ═══
+    if include_consolidation_enhanced:
+        _build_enhanced_consolidation_sections(db, deal_id, sections)
 
     # 7. Multi-Entity Sections (entity structure, FX rates)
     _build_multi_entity_sections(db, deal_id, sections)

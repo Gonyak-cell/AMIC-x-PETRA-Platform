@@ -456,6 +456,219 @@ def create_redflag_template(output_path: Path) -> None:
     print(f"[OK] REDFLAG 템플릿 생성: {output_path}")
 
 
+# ─── NARRATIVE FULL 템플릿 ──────────────────────────────────────────────────
+
+def create_narrative_full_template(output_path: Path) -> None:
+    """서술형 정식 LDD 보고서 템플릿.
+
+    체크리스트 테이블 대신 항목별 6블록 서술 문단을 사용한다.
+    표지 → 목차 → Executive Summary → 섹션별 서술 분석 → 이슈 요약 → 별첨 → "이 상"
+    """
+    doc = Document()
+    _set_margins(doc)
+
+    # ── 표지 ──
+    _add_title(doc, "{{ title }}", size_pt=16.0, space_before_pt=60.0)
+    _add_subtitle(doc, "Legal Due Diligence Report", size_pt=11.0)
+    doc.add_paragraph()
+    _add_body(doc, "대상회사:  {{ target_company }}", indent_cm=2.0)
+    _add_body(doc, "실사기간:  {{ dd_period }}", indent_cm=2.0)
+    _add_body(doc, "보고서유형: 정식 법률실사보고서 (서술형)", indent_cm=2.0)
+    _add_body(doc, "법무법인:  {{ law_firm }}", indent_cm=2.0)
+    _add_body(doc, "담당변호사: {{ prepared_by }}", indent_cm=2.0)
+    _add_body(doc, "작성일:    {{ report_date }}", indent_cm=2.0)
+    doc.add_page_break()
+
+    # ── Executive Summary ──
+    _add_section_heading(doc, "I. 실사 결과 요약 (Executive Summary)")
+
+    _add_subsection_heading(doc, "1. 이슈 현황 개요")
+    _add_body(doc, "본 법률실사 결과 도출된 이슈 현황은 아래와 같습니다.")
+
+    # 요약 테이블
+    summary_tbl = doc.add_table(rows=2, cols=5)
+    summary_tbl.style = "Table Grid"
+    headers = ["구분", "Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
+    values  = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    header_colors = ["D9D9D9", "FF0000", "FF9900", "70AD47", "D9D9D9"]
+    value_colors  = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
+    for i, (hdr, color) in enumerate(zip(headers, header_colors)):
+        cell = summary_tbl.rows[0].cells[i]
+        _set_cell_background(cell, color)
+        _set_cell_text(cell, hdr, bold=True, center=True)
+    for i, (val, color) in enumerate(zip(values, value_colors)):
+        cell = summary_tbl.rows[1].cells[i]
+        _set_cell_background(cell, color)
+        _set_cell_text(cell, val, center=True)
+
+    doc.add_paragraph()
+
+    _add_subsection_heading(doc, "2. 주요 발견사항 요약")
+    _add_body(doc, "※ 아래는 주요 이슈 항목 요약입니다. 상세 서술 분석은 섹션별 보고를 참조하십시오.")
+    doc.add_page_break()
+
+    # ── 섹션별 서술 분석 ──
+    _add_section_heading(doc, "II. 섹션별 분석")
+
+    # 섹션 루프
+    _add_jinja_block(doc, "{%p for section in narrative_items %}")
+    _add_subsection_heading(doc, "{{ section.section_title }}")
+
+    # 항목 루프
+    _add_jinja_block(doc, "{%p for item in section.items %}")
+
+    # 항목 제목
+    para = doc.add_paragraph()
+    para.paragraph_format.space_before = Pt(10)
+    para.paragraph_format.space_after = Pt(4)
+    run = para.add_run("{{ item.item_id }}. {{ item.item_name }}")
+    _apply_font(run, size_pt=12.0, bold=True)
+
+    # 항목 상태 표시
+    _add_body(doc, "[상태: {{ item.status }}{% if item.issue_level %} / {{ item.issue_level }}{% endif %}]")
+
+    # 블록 루프 — 각 블록은 소제목 + 본문
+    _add_jinja_block(doc, "{%p for block in item.blocks %}")
+
+    para_block_title = doc.add_paragraph()
+    para_block_title.paragraph_format.space_before = Pt(6)
+    run_bt = para_block_title.add_run("{{ block.title }}")
+    _apply_font(run_bt, size_pt=11.0, bold=True)
+
+    _add_body(doc, "{{ block.content }}")
+
+    _add_jinja_block(doc, "{%p endfor %}")  # end block loop
+
+    doc.add_paragraph()  # 항목 사이 간격
+    _add_jinja_block(doc, "{%p endfor %}")  # end item loop
+    _add_jinja_block(doc, "{%p endfor %}")  # end section loop
+    doc.add_page_break()
+
+    # ── 이슈 요약 테이블 ──
+    _add_section_heading(doc, "III. 이슈 목록 요약")
+    _add_body(doc, "※ ISSUE로 분류된 항목의 종합 목록입니다.")
+    doc.add_paragraph()
+
+    issue_tbl = doc.add_table(rows=1, cols=6)
+    issue_tbl.style = "Table Grid"
+    issue_hdrs = ["섹션", "항목명", "이슈등급", "발견사항", "거래영향", "RFI 번호"]
+    for j, hdr in enumerate(issue_hdrs):
+        _set_cell_background(issue_tbl.rows[0].cells[j], "D9D9D9")
+        _set_cell_text(issue_tbl.rows[0].cells[j], hdr, size_pt=9.0, bold=True, center=True)
+
+    issue_row = issue_tbl.add_row()
+    issue_row.cells[0].text = ""
+    issue_row.cells[0].paragraphs[0].add_run("{%tr for issue in all_issues %}")
+    for j in range(1, 6):
+        issue_row.cells[j].text = ""
+
+    issue_data_row = issue_tbl.add_row()
+    issue_vals = [
+        "{{ issue.section_title }}",
+        "{{ issue.name }}",
+        "{{ issue.issue_level }}",
+        "{{ issue.description }}",
+        "{{ issue.deal_impact }}",
+        "{{ issue.rfi_number if issue.rfi_required else '' }}",
+    ]
+    for j, val in enumerate(issue_vals):
+        _set_cell_text(issue_data_row.cells[j], val, size_pt=9.0)
+
+    issue_end_row = issue_tbl.add_row()
+    issue_end_row.cells[0].text = ""
+    issue_end_row.cells[0].paragraphs[0].add_run("{%tr endfor %}")
+    for j in range(1, 6):
+        issue_end_row.cells[j].text = ""
+
+    doc.add_paragraph()
+    _add_body(doc, "— 이 상 —")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(str(output_path))
+    print(f"[OK] NARRATIVE FULL 템플릿 생성: {output_path}")
+
+
+# ─── NARRATIVE REDFLAG 템플릿 ────────────────────────────────────────────────
+
+def create_narrative_redflag_template(output_path: Path) -> None:
+    """서술형 Redflag DD 템플릿.
+
+    Critical/High/Medium 이슈 항목만 서술 분석 포함.
+    """
+    doc = Document()
+    _set_margins(doc)
+
+    # ── 표지 ──
+    _add_title(doc, "{{ title }}", size_pt=16.0, space_before_pt=60.0)
+    _add_subtitle(doc, "Redflag Due Diligence Report (서술형)", size_pt=11.0)
+    doc.add_paragraph()
+    _add_body(doc, "대상회사:  {{ target_company }}", indent_cm=2.0)
+    _add_body(doc, "실사기간:  {{ dd_period }}", indent_cm=2.0)
+    _add_body(doc, "보고서유형: Redflag DD (Red/Amber 이슈 서술 분석)", indent_cm=2.0)
+    _add_body(doc, "법무법인:  {{ law_firm }}", indent_cm=2.0)
+    _add_body(doc, "담당변호사: {{ prepared_by }}", indent_cm=2.0)
+    _add_body(doc, "작성일:    {{ report_date }}", indent_cm=2.0)
+    doc.add_page_break()
+
+    # ── Executive Summary ──
+    _add_section_heading(doc, "I. Executive Summary")
+    _add_body(doc, "본 Redflag DD는 대상회사 {{ target_company }}에 대한 "
+              "법률실사에서 Red(Critical) 및 Amber(High/Medium) 등급 이슈를 중심으로 "
+              "심층 서술 분석을 제공한다.")
+    doc.add_paragraph()
+
+    rf_tbl = doc.add_table(rows=2, cols=4)
+    rf_tbl.style = "Table Grid"
+    rf_headers = ["Critical (Red)", "High/Medium (Amber)", "Low (Green)", "합계"]
+    rf_values  = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
+    rf_h_colors = ["FF0000", "FF9900", "70AD47", "D9D9D9"]
+    rf_v_colors = ["FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
+    for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors)):
+        cell = rf_tbl.rows[0].cells[i]
+        _set_cell_background(cell, color)
+        _set_cell_text(cell, hdr, bold=True, center=True)
+    for i, (val, color) in enumerate(zip(rf_values, rf_v_colors)):
+        cell = rf_tbl.rows[1].cells[i]
+        _set_cell_background(cell, color)
+        _set_cell_text(cell, val, center=True)
+    doc.add_page_break()
+
+    # ── 서술형 Findings ──
+    _add_section_heading(doc, "II. 상세 Findings (서술 분석)")
+    _add_body(doc, "※ Green(Low) 이슈, OK, N/A 항목은 본 보고서에서 제외합니다.")
+    doc.add_paragraph()
+
+    _add_jinja_block(doc, "{%p for section in narrative_items %}")
+    _add_subsection_heading(doc, "{{ section.section_title }}")
+
+    _add_jinja_block(doc, "{%p for item in section.items %}")
+
+    para = doc.add_paragraph()
+    para.paragraph_format.space_before = Pt(10)
+    run = para.add_run("{{ item.item_id }}. {{ item.item_name }}")
+    _apply_font(run, size_pt=12.0, bold=True)
+
+    _add_body(doc, "[{{ item.status }} / {{ item.issue_level }}]")
+
+    _add_jinja_block(doc, "{%p for block in item.blocks %}")
+    para_bt = doc.add_paragraph()
+    para_bt.paragraph_format.space_before = Pt(6)
+    run_bt = para_bt.add_run("{{ block.title }}")
+    _apply_font(run_bt, size_pt=11.0, bold=True)
+    _add_body(doc, "{{ block.content }}")
+    _add_jinja_block(doc, "{%p endfor %}")
+
+    doc.add_paragraph()
+    _add_jinja_block(doc, "{%p endfor %}")
+    _add_jinja_block(doc, "{%p endfor %}")
+
+    _add_body(doc, "— 이 상 —")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(str(output_path))
+    print(f"[OK] NARRATIVE REDFLAG 템플릿 생성: {output_path}")
+
+
 # ─── 진입점 ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -463,6 +676,8 @@ if __name__ == "__main__":
 
     create_full_template(TEMPLATE_DIR / "ldd_full_template.docx")
     create_redflag_template(TEMPLATE_DIR / "ldd_redflag_template.docx")
+    create_narrative_full_template(TEMPLATE_DIR / "ldd_narrative_full_template.docx")
+    create_narrative_redflag_template(TEMPLATE_DIR / "ldd_narrative_redflag_template.docx")
 
     print(f"\n[DIR] 템플릿 저장 위치: {TEMPLATE_DIR.resolve()}")
     print("[OK] LDD 템플릿 생성 완료 (버전:", TEMPLATE_VERSION, ")")

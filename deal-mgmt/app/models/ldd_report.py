@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import LDDReportStatus, LDDReportType
+from app.models.enums import LDDDealType, LDDReportStatus, LDDReportType
 
 
 class LDDReport(Base, TimestampMixin):
@@ -35,6 +35,16 @@ class LDDReport(Base, TimestampMixin):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     status: Mapped[LDDReportStatus] = mapped_column(
         Enum(LDDReportStatus), nullable=False, default=LDDReportStatus.DRAFT
+    )
+
+    # 거래유형별 템플릿
+    deal_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True,
+        comment="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO 등)",
+    )
+    template_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True,
+        comment="적용된 템플릿 식별자 (deal_type과 동일하거나 커스텀)",
     )
 
     # 대상 회사 정보
@@ -75,6 +85,24 @@ class LDDReport(Base, TimestampMixin):
     )
     draft_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     final_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # ── 6블록 서술(Narrative) 데이터 ─────────────────────
+    narrative_sections: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="6블록 서술 결과 (section_type → [NarrativeResult])",
+    )
+
+    # ── 법률 인용 검증 결과 ───────────────────────────────
+    legal_citations: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="법률 인용 검증 결과 (section_type → citation_verification)",
+    )
+
+    # ── 별첨(Appendix) 데이터 ──────────────────────────────
+    appendices: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="별첨 테이블 데이터 (6종: 소송/IP/부동산/계약/보험/인허가)",
+    )
 
     # ── 멀티 LLM 파이프라인 결과 ─────────────────────────
     dual_risk_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

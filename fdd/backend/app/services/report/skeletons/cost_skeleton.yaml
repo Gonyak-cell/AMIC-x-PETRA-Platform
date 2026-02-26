@@ -1,0 +1,146 @@
+# Cost Structure 행 구조 스켈레톤
+# Big 4 WP 수준 — 제조원가 3요소 + 판관비 + 인건비
+
+statement_type: COST
+title_ko: "비용 구조 분석"
+title_en: "Cost Structure Analysis"
+
+sections:
+  - section: manufacturing_cost
+    title_ko: "제조원가 3요소"
+    title_en: "Manufacturing Cost Elements"
+    rows:
+      - code: COST-MFG-DM
+        label_ko: "직접재료비"
+        label_en: "Direct Materials"
+        category: DIRECT_MATERIAL
+        indent: 1
+        is_subtotal: false
+      - code: COST-MFG-DL
+        label_ko: "직접인건비"
+        label_en: "Direct Labor"
+        category: DIRECT_LABOR
+        indent: 1
+        is_subtotal: false
+      - code: COST-MFG-OH
+        label_ko: "제조경비"
+        label_en: "Manufacturing Overhead"
+        category: MANUFACTURING_OVERHEAD
+        indent: 1
+        is_subtotal: false
+      - code: COST-MFG-TOTAL
+        label_ko: "제조원가 합계"
+        label_en: "Total Manufacturing Cost"
+        category: MANUFACTURING_COST_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "COST-MFG-DM + COST-MFG-DL + COST-MFG-OH"
+
+  - section: cost_ratios
+    title_ko: "원가 비율"
+    title_en: "Cost Ratios"
+    rows:
+      - code: COST-RATIO-MAT
+        label_ko: "재료비율"
+        label_en: "Material Ratio"
+        category: MATERIAL_RATIO
+        indent: 1
+        is_subtotal: false
+        format: percentage
+      - code: COST-RATIO-LAB
+        label_ko: "인건비율"
+        label_en: "Labor Ratio"
+        category: LABOR_RATIO
+        indent: 1
+        is_subtotal: false
+        format: percentage
+      - code: COST-RATIO-OH
+        label_ko: "경비율"
+        label_en: "Overhead Ratio"
+        category: OVERHEAD_RATIO
+        indent: 1
+        is_subtotal: false
+        format: percentage
+
+  - section: sga
+    title_ko: "판관비 상세"
+    title_en: "SG&A Breakdown"
+    rows:
+      - code: SGA-SALARY
+        label_ko: "급여"
+        label_en: "Salaries"
+        category: SALARY
+        indent: 1
+        is_subtotal: false
+      - code: SGA-RENT
+        label_ko: "임차료"
+        label_en: "Rent"
+        category: RENT
+        indent: 1
+        is_subtotal: false
+      - code: SGA-DEPRECIATION
+        label_ko: "감가상각비"
+        label_en: "Depreciation"
+        category: SGA_DEPRECIATION
+        indent: 1
+        is_subtotal: false
+      - code: SGA-ADVERTISING
+        label_ko: "광고선전비"
+        label_en: "Advertising"
+        category: ADVERTISING
+        indent: 1
+        is_subtotal: false
+      - code: SGA-OTHER
+        label_ko: "기타 판관비"
+        label_en: "Other SG&A"
+        category: OTHER_SGA
+        indent: 1
+        is_subtotal: false
+      - code: SGA-TOTAL
+        label_ko: "판관비 합계"
+        label_en: "Total SG&A"
+        category: SGA_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "SGA-SALARY + SGA-RENT + SGA-DEPRECIATION + SGA-ADVERTISING + SGA-OTHER"
+
+  - section: personnel
+    title_ko: "인건비 분석"
+    title_en: "Personnel Cost Analysis"
+    rows:
+      - code: PERS-TOTAL
+        label_ko: "총 인건비"
+        label_en: "Total Personnel Cost"
+        category: TOTAL_PERSONNEL
+        indent: 0
+        is_subtotal: true
+      - code: PERS-HEADCOUNT
+        label_ko: "임직원 수"
+        label_en: "Headcount"
+        category: HEADCOUNT
+        indent: 1
+        is_subtotal: false
+        format: integer
+      - code: PERS-PERHEAD
+        label_ko: "1인당 인건비"
+        label_en: "Cost per Head"
+        category: COST_PER_HEAD
+        indent: 1
+        is_subtotal: false
+      - code: PERS-RATIO
+        label_ko: "인건비/매출"
+        label_en: "Personnel/Revenue"
+        category: PERSONNEL_TO_REVENUE
+        indent: 1
+        is_subtotal: false
+        format: percentage
+
+# 교차검증 규칙
+validation:
+  - check: "COST-MFG-TOTAL == COST-MFG-DM + COST-MFG-DL + COST-MFG-OH"
+    message_ko: "제조원가 합계 = 직접재료비 + 직접인건비 + 제조경비"
+    message_en: "Total Mfg Cost = DM + DL + OH"
+
+  - check: "COST-RATIO-MAT + COST-RATIO-LAB + COST-RATIO-OH ≈ 100"
+    message_ko: "3요소 비율 합계 ≈ 100%"
+    message_en: "Three element ratios sum ≈ 100%"

@@ -1,0 +1,125 @@
+# FCF Bridge 행 구조 스켈레톤
+# Big 4 WP 수준 — EBITDA → OCF → CAPEX → FCF Bridge
+
+statement_type: FCF
+title_ko: "FCF Bridge"
+title_en: "Free Cash Flow Bridge"
+
+sections:
+  - section: ebitda_to_ocf
+    title_ko: "EBITDA → 영업현금흐름"
+    title_en: "EBITDA to Operating Cash Flow"
+    rows:
+      - code: FCF-EBITDA
+        label_ko: "EBITDA"
+        label_en: "EBITDA"
+        category: EBITDA
+        indent: 0
+        is_subtotal: false
+      - code: FCF-WC
+        label_ko: "운전자본 변동"
+        label_en: "Working Capital Change"
+        category: WC_CHANGE
+        indent: 1
+        is_subtotal: false
+      - code: FCF-WC-AR
+        label_ko: "  매출채권 증감"
+        label_en: "  Change in AR"
+        category: DELTA_AR
+        indent: 2
+        is_subtotal: false
+      - code: FCF-WC-INV
+        label_ko: "  재고자산 증감"
+        label_en: "  Change in Inventory"
+        category: DELTA_INV
+        indent: 2
+        is_subtotal: false
+      - code: FCF-WC-AP
+        label_ko: "  매입채무 증감"
+        label_en: "  Change in AP"
+        category: DELTA_AP
+        indent: 2
+        is_subtotal: false
+      - code: FCF-TAX
+        label_ko: "법인세 납부"
+        label_en: "Tax Paid"
+        category: TAX_PAID
+        indent: 1
+        is_subtotal: false
+      - code: FCF-OTHER-OP
+        label_ko: "기타 영업활동"
+        label_en: "Other Operating"
+        category: OTHER_OPERATING
+        indent: 1
+        is_subtotal: false
+      - code: FCF-OCF
+        label_ko: "영업현금흐름"
+        label_en: "Operating Cash Flow"
+        category: OPERATING_CF
+        indent: 0
+        is_subtotal: true
+        formula: "FCF-EBITDA + FCF-WC - FCF-TAX + FCF-OTHER-OP"
+
+  - section: ocf_to_fcf
+    title_ko: "영업CF → FCF"
+    title_en: "Operating CF to Free Cash Flow"
+    rows:
+      - code: FCF-CAPEX-TOTAL
+        label_ko: "CAPEX 합계"
+        label_en: "Total CAPEX"
+        category: TOTAL_CAPEX
+        indent: 1
+        is_subtotal: false
+      - code: FCF-CAPEX-MAINT
+        label_ko: "  유지보수 CAPEX"
+        label_en: "  Maintenance CAPEX"
+        category: MAINTENANCE_CAPEX
+        indent: 2
+        is_subtotal: false
+      - code: FCF-CAPEX-GROWTH
+        label_ko: "  성장 CAPEX"
+        label_en: "  Growth CAPEX"
+        category: GROWTH_CAPEX
+        indent: 2
+        is_subtotal: false
+      - code: FCF-FCF
+        label_ko: "잉여현금흐름 (FCF)"
+        label_en: "Free Cash Flow"
+        category: FREE_CASH_FLOW
+        indent: 0
+        is_subtotal: true
+        is_total: true
+        formula: "FCF-OCF - FCF-CAPEX-TOTAL"
+
+  - section: metrics
+    title_ko: "FCF 지표"
+    title_en: "FCF Metrics"
+    rows:
+      - code: FCF-CONV
+        label_ko: "FCF Conversion"
+        label_en: "FCF Conversion (FCF/EBITDA)"
+        category: FCF_CONVERSION
+        indent: 0
+        is_subtotal: false
+        format: percentage
+      - code: FCF-YIELD
+        label_ko: "FCF Yield"
+        label_en: "FCF Yield (FCF/Revenue)"
+        category: FCF_YIELD
+        indent: 0
+        is_subtotal: false
+        format: percentage
+
+# 교차검증 규칙
+validation:
+  - check: "FCF-OCF == FCF-EBITDA + FCF-WC - FCF-TAX + FCF-OTHER-OP"
+    message_ko: "영업CF = EBITDA + WC변동 - 세금 + 기타영업"
+    message_en: "OCF = EBITDA + WC Change - Tax + Other Op"
+
+  - check: "FCF-FCF == FCF-OCF - FCF-CAPEX-TOTAL"
+    message_ko: "FCF = OCF - CAPEX"
+    message_en: "FCF = OCF - CAPEX"
+
+  - check: "FCF-CAPEX-TOTAL == FCF-CAPEX-MAINT + FCF-CAPEX-GROWTH"
+    message_ko: "총 CAPEX = 유지보수 + 성장"
+    message_en: "Total CAPEX = Maintenance + Growth"

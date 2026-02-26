@@ -13,10 +13,11 @@ deterministic gap 비교로 불일치를 탐지한다.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.ralph.generators.ldd.json_utils import extract_json
 
 from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
 from app.ralph.generators.ldd.prompts import SYSTEM_PROMPT, format_source_materials
@@ -273,17 +274,10 @@ JSON만 반환하세요.
         self, raw_text: str, perspective: str, item_id: str,
     ) -> PerspectiveResult:
         """LLM 응답을 PerspectiveResult로 파싱한다."""
-        text = raw_text.strip()
-        if "```json" in text:
-            text = text.split("```json", 1)[1].split("```", 1)[0]
-        elif "```" in text:
-            text = text.split("```", 1)[1].split("```", 1)[0]
-
-        try:
-            data = json.loads(text.strip())
-        except json.JSONDecodeError:
-            logger.warning("듀얼 분석 JSON 파싱 실패: perspective=%s, item=%s", perspective, item_id)
-            data = {
+        data = extract_json(
+            raw_text,
+            context=f"듀얼 분석 perspective={perspective}, item={item_id}",
+            fallback={
                 "status": "PENDING",
                 "issue_level": None,
                 "description": "분석 결과 파싱 실패",
@@ -291,7 +285,8 @@ JSON만 반환하세요.
                 "recommendation": "",
                 "confidence": 0.0,
                 "evidence_refs": [],
-            }
+            },
+        )
 
         return PerspectiveResult(
             perspective=perspective,

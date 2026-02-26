@@ -1,0 +1,214 @@
+# Income Statement 행 구조 스켈레톤
+# Big 4 WP 수준 — 4년+반기 다기간 손익계산서
+#
+# 규칙:
+# - code: StandardLineItem.code와 일치
+# - is_subtotal: true면 하위 항목 합산 행
+# - indent: 표시 들여쓰기 수준 (0=최상위, 1=하위)
+# - sign_negate: true면 TB 부호 반전 (대변→양수)
+# - industry_only: 특정 산업에서만 표시 (null=항상 표시)
+
+statement_type: IS
+title_ko: "손익계산서"
+title_en: "Income Statement"
+
+sections:
+  - section: revenue
+    title_ko: "매출"
+    title_en: "Revenue"
+    rows:
+      - code: IS-REV-001
+        label_ko: "매출액"
+        label_en: "Revenue"
+        category: REVENUE
+        indent: 0
+        is_subtotal: false
+        sign_negate: true
+
+  - section: cogs
+    title_ko: "매출원가"
+    title_en: "Cost of Goods Sold"
+    rows:
+      - code: IS-COGS-001
+        label_ko: "매출원가"
+        label_en: "Cost of Goods Sold"
+        category: COGS
+        indent: 0
+        is_subtotal: false
+        sign_negate: false
+
+  - section: gross_profit
+    title_ko: "매출총이익"
+    title_en: "Gross Profit"
+    rows:
+      - code: IS-GP-001
+        label_ko: "매출총이익"
+        label_en: "Gross Profit"
+        category: GROSS_PROFIT
+        indent: 0
+        is_subtotal: true
+        formula: "IS-REV-001 - IS-COGS-001"
+        sign_negate: false
+
+  - section: sga
+    title_ko: "판매비와관리비"
+    title_en: "Selling, General & Administrative"
+    rows:
+      - code: IS-SGA-001
+        label_ko: "판매비와관리비"
+        label_en: "SG&A Expenses"
+        category: SGA
+        indent: 0
+        is_subtotal: false
+        sign_negate: false
+
+  - section: da
+    title_ko: "감가상각비"
+    title_en: "Depreciation & Amortization"
+    rows:
+      - code: IS-DA-001
+        label_ko: "감가상각비"
+        label_en: "Depreciation & Amortization"
+        category: DEPRECIATION_AMORTIZATION
+        indent: 1
+        is_subtotal: false
+        sign_negate: false
+
+  - section: other_operating
+    title_ko: "기타영업수익"
+    title_en: "Other Operating Income"
+    rows:
+      - code: IS-OOI-001
+        label_ko: "기타영업수익(비용)"
+        label_en: "Other Operating Income/(Expense)"
+        category: OTHER_OPERATING_INCOME
+        indent: 0
+        is_subtotal: false
+        sign_negate: true
+
+  - section: operating_income
+    title_ko: "영업이익"
+    title_en: "Operating Income"
+    rows:
+      - code: IS-OI-001
+        label_ko: "영업이익"
+        label_en: "Operating Income"
+        category: OPERATING_INCOME
+        indent: 0
+        is_subtotal: true
+        formula: "IS-GP-001 - IS-SGA-001 + IS-OOI-001"
+        sign_negate: false
+
+  - section: ebitda
+    title_ko: "EBITDA"
+    title_en: "EBITDA"
+    rows:
+      - code: IS-EBITDA-001
+        label_ko: "EBITDA"
+        label_en: "EBITDA"
+        category: EBITDA
+        indent: 0
+        is_subtotal: true
+        formula: "IS-OI-001 + IS-DA-001"
+        sign_negate: false
+
+  - section: non_operating
+    title_ko: "영업외수익(비용)"
+    title_en: "Non-operating Income/(Expense)"
+    rows:
+      - code: IS-INT-EXP-001
+        label_ko: "이자비용"
+        label_en: "Interest Expense"
+        category: INTEREST_EXPENSE
+        indent: 1
+        is_subtotal: false
+        sign_negate: false
+      - code: IS-INT-INC-001
+        label_ko: "이자수익"
+        label_en: "Interest Income"
+        category: INTEREST_INCOME
+        indent: 1
+        is_subtotal: false
+        sign_negate: true
+      - code: IS-NOP-001
+        label_ko: "기타영업외손익"
+        label_en: "Other Non-operating"
+        category: NON_OPERATING
+        indent: 1
+        is_subtotal: false
+        sign_negate: false
+
+  - section: tax
+    title_ko: "법인세"
+    title_en: "Income Tax"
+    rows:
+      - code: IS-TAX-001
+        label_ko: "법인세비용"
+        label_en: "Income Tax Expense"
+        category: TAX_EXPENSE
+        indent: 0
+        is_subtotal: false
+        sign_negate: false
+
+  - section: net_income
+    title_ko: "당기순이익"
+    title_en: "Net Income"
+    rows:
+      - code: IS-NI-001
+        label_ko: "당기순이익"
+        label_en: "Net Income"
+        category: NET_INCOME
+        indent: 0
+        is_subtotal: true
+        formula: "IS-OI-001 - IS-INT-EXP-001 + IS-INT-INC-001 + IS-NOP-001 - IS-TAX-001"
+        sign_negate: false
+
+# 산업별 추가 행 (조건부 포함)
+industry_extensions:
+  manufacturing:
+    insert_after: IS-COGS-001
+    rows:
+      - code: IS-COGS-MAT
+        label_ko: "  직접재료비"
+        label_en: "  Direct Materials"
+        category: COGS
+        indent: 2
+        is_subtotal: false
+      - code: IS-COGS-LAB
+        label_ko: "  직접인건비"
+        label_en: "  Direct Labor"
+        category: COGS
+        indent: 2
+        is_subtotal: false
+      - code: IS-COGS-OH
+        label_ko: "  제조경비"
+        label_en: "  Manufacturing Overhead"
+        category: COGS
+        indent: 2
+        is_subtotal: false
+
+  tech:
+    insert_after: IS-SGA-001
+    rows:
+      - code: IS-SGA-RND
+        label_ko: "  연구개발비"
+        label_en: "  R&D Expenses"
+        category: SGA
+        indent: 2
+        is_subtotal: false
+      - code: IS-SGA-SBC
+        label_ko: "  주식기준보상"
+        label_en: "  Stock-based Compensation"
+        category: SGA
+        indent: 2
+        is_subtotal: false
+
+# 교차검증 규칙
+validation:
+  - check: "IS-GP-001 == IS-REV-001 - IS-COGS-001"
+    message_ko: "매출총이익 = 매출액 - 매출원가"
+    message_en: "Gross Profit = Revenue - COGS"
+
+  - check: "IS-EBITDA-001 == IS-OI-001 + IS-DA-001"
+    message_ko: "EBITDA = 영업이익 + 감가상각비"
+    message_en: "EBITDA = Operating Income + D&A"

@@ -348,6 +348,16 @@ class MarketingDocStatus(enum.StrEnum):
 
 
 # ── Phase 7: LDD (Legal Due Diligence) Reports ────────
+class LDDDealType(enum.StrEnum):
+    """LDD 보고서 거래유형 — 템플릿 선택 기준."""
+    STOCK_ACQUISITION = "STOCK_ACQUISITION"   # 주식인수
+    REAL_ESTATE       = "REAL_ESTATE"         # 부동산
+    IPO               = "IPO"                 # IPO (기업공개)
+    CORPORATE_SPLIT   = "CORPORATE_SPLIT"     # 회사분할
+    PREFERRED_STOCK   = "PREFERRED_STOCK"     # 종류주식투자
+    ASSET_ACQUISITION = "ASSET_ACQUISITION"   # 사업양수도
+
+
 class LDDReportStatus(enum.StrEnum):
     DRAFT      = "DRAFT"       # 파라미터 저장 완료, 렌더링 전
     ANALYZING  = "ANALYZING"   # Ralph Loop #1: VDR 기반 AI 초안 분석 중

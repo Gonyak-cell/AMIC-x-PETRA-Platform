@@ -198,7 +198,7 @@ class LDDGuardrails:
                 rule=rule,
                 severity="WARNING",
                 location="DDRL",
-                message=f"52개 DDRL 항목 중 {len(missing)}개 누락: {sorted(missing)[:5]}...",
+                message=f"{len(VALID_ITEM_IDS)}개 DDRL 항목 중 {len(missing)}개 누락: {sorted(missing)[:5]}...",
             ))
 
         if not any(i.rule == rule for i in result.issues):

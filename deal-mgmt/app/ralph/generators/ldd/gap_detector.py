@@ -12,10 +12,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.ralph.generators.ldd.json_utils import extract_json
 
 from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
 
@@ -232,18 +233,8 @@ class GapDetector:
         return "\n".join(parts)
 
     def _parse_gaps(self, raw: str, source: str, prefix: str) -> list[GapItem]:
-        text = raw.strip()
-        if "```json" in text:
-            text = text.split("```json", 1)[1].split("```", 1)[0]
-        elif "```" in text:
-            text = text.split("```", 1)[1].split("```", 1)[0]
-
-        try:
-            items = json.loads(text.strip())
-            if not isinstance(items, list):
-                return []
-        except json.JSONDecodeError:
-            logger.warning("누락 탐지 JSON 파싱 실패: source=%s", source)
+        items = extract_json(raw, context=f"누락 탐지 source={source}", fallback=[])
+        if not isinstance(items, list):
             return []
 
         gaps: list[GapItem] = []

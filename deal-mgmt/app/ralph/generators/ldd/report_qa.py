@@ -6,10 +6,11 @@ FDD의 ReportQAAgent 패턴 + LDD 특화 6가지 검증 항목.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.ralph.generators.ldd.json_utils import extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -111,16 +112,8 @@ class LDDReportQA:
         return self._parse_result(raw)
 
     def _parse_result(self, raw: str) -> LDDQAResult:
-        text = raw.strip()
-        if "```json" in text:
-            text = text.split("```json", 1)[1].split("```", 1)[0]
-        elif "```" in text:
-            text = text.split("```", 1)[1].split("```", 1)[0]
-
-        try:
-            data = json.loads(text.strip())
-        except json.JSONDecodeError:
-            logger.warning("LDD QA 결과 파싱 실패")
+        data = extract_json(raw, context="LDD QA 결과", fallback=None)
+        if data is None:
             return LDDQAResult(
                 overall_score=0,
                 summary="QA 결과 파싱 실패",

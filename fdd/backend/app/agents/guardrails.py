@@ -340,3 +340,94 @@ def _extract_account_codes_from_output(output: dict[str, Any]) -> list[str]:
 
     _recursive_extract(output)
     return codes
+
+
+# ── Phase 4: 추가 검증 함수 ─────────────────────────────
+
+
+def validate_percentage_claims(
+    text: str,
+    known_percentages: dict[str, str],
+    tolerance: Decimal = Decimal("2.0"),
+) -> list[str]:
+    """LLM 텍스트 내 백분율 주장이 실제 값과 일치하는지 검증.
+
+    Args:
+        text: LLM 생성 텍스트
+        known_percentages: {"metric_name": "45.5"} 형태의 실제 값
+        tolerance: 허용 오차 (%, 기본 2.0)
+
+    Returns:
+        경고 메시지 목록
+    """
+    import re
+
+    warnings = []
+    # 텍스트에서 "N%" 또는 "N.N%" 패턴 추출
+    pct_pattern = re.compile(r"(\d+\.?\d*)\s*%")
+    matches = pct_pattern.findall(text)
+
+    for match_str in matches:
+        try:
+            claimed_pct = Decimal(match_str)
+        except Exception:
+            continue
+
+        # 알려진 값과 비교
+        for metric, actual_str in known_percentages.items():
+            try:
+                actual = Decimal(str(actual_str))
+            except Exception:
+                continue
+
+            # 근접한 값이면 검증 (±tolerance 이내에서 차이 체크)
+            diff = abs(claimed_pct - actual)
+            if diff <= tolerance * 2 and diff > tolerance:
+                warnings.append(
+                    f"PCT_MISMATCH: Claimed {claimed_pct}% for {metric}, actual {actual}%"
+                )
+
+    return warnings
+
+
+def validate_trend_direction(
+    text: str,
+    known_trends: dict[str, str],
+) -> list[str]:
+    """LLM 텍스트 내 증가/감소 방향이 실제 YoY와 일치하는지 검증.
+
+    Args:
+        text: LLM 생성 텍스트
+        known_trends: {"metric": "increase"} 또는 {"metric": "decrease"}
+
+    Returns:
+        경고 메시지 목록
+    """
+    warnings = []
+    increase_words = {"증가", "상승", "성장", "확대", "호전", "increase", "growth", "rise", "grew"}
+    decrease_words = {"감소", "하락", "축소", "악화", "위축", "decrease", "decline", "drop", "fell"}
+
+    text_lower = text.lower()
+
+    for metric, direction in known_trends.items():
+        metric_lower = metric.lower()
+        if metric_lower not in text_lower:
+            continue
+
+        # 메트릭 주변 텍스트에서 방향 감지
+        idx = text_lower.index(metric_lower)
+        context = text_lower[max(0, idx - 50):idx + len(metric_lower) + 50]
+
+        text_says_increase = any(w in context for w in increase_words)
+        text_says_decrease = any(w in context for w in decrease_words)
+
+        if direction == "increase" and text_says_decrease and not text_says_increase:
+            warnings.append(
+                f"TREND_MISMATCH: Text says '{metric}' decreased, but actual trend is increase"
+            )
+        elif direction == "decrease" and text_says_increase and not text_says_decrease:
+            warnings.append(
+                f"TREND_MISMATCH: Text says '{metric}' increased, but actual trend is decrease"
+            )
+
+    return warnings

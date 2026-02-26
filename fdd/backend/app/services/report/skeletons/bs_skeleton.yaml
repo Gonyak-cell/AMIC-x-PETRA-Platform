@@ -1,0 +1,192 @@
+# Balance Sheet 행 구조 스켈레톤
+# Big 4 WP 수준 — 4년+반기 다기간 재무상태표
+
+statement_type: BS
+title_ko: "재무상태표"
+title_en: "Balance Sheet"
+
+sections:
+  - section: current_assets
+    title_ko: "유동자산"
+    title_en: "Current Assets"
+    rows:
+      - code: BS-CA-CASH
+        label_ko: "현금및현금성자산"
+        label_en: "Cash & Cash Equivalents"
+        category: CASH
+        indent: 1
+        is_subtotal: false
+      - code: BS-CA-AR
+        label_ko: "매출채권"
+        label_en: "Accounts Receivable"
+        category: AR
+        indent: 1
+        is_subtotal: false
+      - code: BS-CA-INV
+        label_ko: "재고자산"
+        label_en: "Inventories"
+        category: INVENTORY
+        indent: 1
+        is_subtotal: false
+      - code: BS-CA-OTHER
+        label_ko: "기타유동자산"
+        label_en: "Other Current Assets"
+        category: OTHER_CURRENT_ASSETS
+        indent: 1
+        is_subtotal: false
+      - code: BS-CA-TOTAL
+        label_ko: "유동자산 합계"
+        label_en: "Total Current Assets"
+        category: CURRENT_ASSETS_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "BS-CA-CASH + BS-CA-AR + BS-CA-INV + BS-CA-OTHER"
+
+  - section: noncurrent_assets
+    title_ko: "비유동자산"
+    title_en: "Non-current Assets"
+    rows:
+      - code: BS-NCA-PPE
+        label_ko: "유형자산"
+        label_en: "Property, Plant & Equipment"
+        category: PPE
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCA-INTANG
+        label_ko: "무형자산"
+        label_en: "Intangible Assets"
+        category: INTANGIBLES
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCA-OTHER
+        label_ko: "기타비유동자산"
+        label_en: "Other Non-current Assets"
+        category: OTHER_NONCURRENT_ASSETS
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCA-TOTAL
+        label_ko: "비유동자산 합계"
+        label_en: "Total Non-current Assets"
+        category: NONCURRENT_ASSETS_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "BS-NCA-PPE + BS-NCA-INTANG + BS-NCA-OTHER"
+
+  - section: total_assets
+    title_ko: "자산총계"
+    title_en: "Total Assets"
+    rows:
+      - code: BS-TA
+        label_ko: "자산총계"
+        label_en: "Total Assets"
+        category: TOTAL_ASSETS
+        indent: 0
+        is_subtotal: true
+        is_total: true
+        formula: "BS-CA-TOTAL + BS-NCA-TOTAL"
+
+  - section: current_liabilities
+    title_ko: "유동부채"
+    title_en: "Current Liabilities"
+    rows:
+      - code: BS-CL-AP
+        label_ko: "매입채무"
+        label_en: "Accounts Payable"
+        category: AP
+        indent: 1
+        is_subtotal: false
+      - code: BS-CL-ACCR
+        label_ko: "미지급비용"
+        label_en: "Accrued Expenses"
+        category: ACCRUALS
+        indent: 1
+        is_subtotal: false
+      - code: BS-CL-OTHER
+        label_ko: "기타유동부채"
+        label_en: "Other Current Liabilities"
+        category: OTHER_CURRENT_LIABILITIES
+        indent: 1
+        is_subtotal: false
+      - code: BS-CL-TOTAL
+        label_ko: "유동부채 합계"
+        label_en: "Total Current Liabilities"
+        category: CURRENT_LIABILITIES_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "BS-CL-AP + BS-CL-ACCR + BS-CL-OTHER"
+
+  - section: noncurrent_liabilities
+    title_ko: "비유동부채"
+    title_en: "Non-current Liabilities"
+    rows:
+      - code: BS-NCL-DEBT
+        label_ko: "차입금"
+        label_en: "Borrowings"
+        category: DEBT
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCL-LEASE
+        label_ko: "리스부채"
+        label_en: "Lease Liabilities"
+        category: LEASE_LIABILITIES
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCL-OTHER
+        label_ko: "기타비유동부채"
+        label_en: "Other Non-current Liabilities"
+        category: OTHER_NONCURRENT_LIABILITIES
+        indent: 1
+        is_subtotal: false
+      - code: BS-NCL-TOTAL
+        label_ko: "비유동부채 합계"
+        label_en: "Total Non-current Liabilities"
+        category: NONCURRENT_LIABILITIES_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "BS-NCL-DEBT + BS-NCL-LEASE + BS-NCL-OTHER"
+
+  - section: total_liabilities
+    title_ko: "부채총계"
+    title_en: "Total Liabilities"
+    rows:
+      - code: BS-TL
+        label_ko: "부채총계"
+        label_en: "Total Liabilities"
+        category: TOTAL_LIABILITIES
+        indent: 0
+        is_subtotal: true
+        formula: "BS-CL-TOTAL + BS-NCL-TOTAL"
+
+  - section: equity
+    title_ko: "자본"
+    title_en: "Equity"
+    rows:
+      - code: BS-EQ-001
+        label_ko: "자본총계"
+        label_en: "Total Equity"
+        category: EQUITY
+        indent: 0
+        is_subtotal: false
+
+  - section: total_le
+    title_ko: "부채및자본총계"
+    title_en: "Total Liabilities & Equity"
+    rows:
+      - code: BS-TLE
+        label_ko: "부채및자본총계"
+        label_en: "Total Liabilities & Equity"
+        category: TOTAL_LE
+        indent: 0
+        is_subtotal: true
+        is_total: true
+        formula: "BS-TL + BS-EQ-001"
+
+# 교차검증 규칙
+validation:
+  - check: "BS-TA == BS-TLE"
+    message_ko: "자산총계 = 부채및자본총계"
+    message_en: "Total Assets = Total Liabilities & Equity"
+
+  - check: "BS-CA-TOTAL == BS-CA-CASH + BS-CA-AR + BS-CA-INV + BS-CA-OTHER"
+    message_ko: "유동자산 합계 = 현금 + 매출채권 + 재고 + 기타유동자산"
+    message_en: "Total CA = Cash + AR + Inventory + Other CA"

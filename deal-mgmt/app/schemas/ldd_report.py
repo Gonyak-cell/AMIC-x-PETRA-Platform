@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import (
+    LDDDealType,
     LDDIssueLevel,
     LDDItemStatus,
     LDDReportStatus,
@@ -71,11 +72,12 @@ class LDDReportCreate(BaseModel):
 
     title: str = Field(..., max_length=300)
     report_type: LDDReportType = LDDReportType.FULL
+    deal_type: str = Field("", description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO 등). 빈 문자열이면 기본 10개 섹션 사용.")
     target_company: str | None = Field(None, max_length=200)
     dd_period: str | None = Field(None, max_length=100)
     law_firm: str | None = Field(None, max_length=200)
     prepared_by: str | None = Field(None, max_length=200)
-    sections: list[LDDSection] | None = None  # None이면 DEFAULT_LDD_SECTIONS 사용
+    sections: list[LDDSection] | None = None  # None이면 deal_type 템플릿 또는 DEFAULT_LDD_SECTIONS 사용
 
     @model_validator(mode="after")
     def validate_issue_items(self) -> LDDReportCreate:
@@ -115,6 +117,8 @@ class LDDReportOut(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
     report_type: LDDReportType
+    deal_type: str | None = None
+    template_type: str | None = None
     title: str
     status: LDDReportStatus
     target_company: str | None
@@ -150,6 +154,9 @@ class LDDReportOut(BaseModel):
     dual_risk_summary: dict | None = None
     gap_detection: dict | None = None
     jurisdiction_analysis: dict | None = None
+    narrative_sections: dict | None = None
+    legal_citations: dict | None = None
+    appendices: dict | None = None
     qa_result: dict | None = None
     pipeline_stages: list[dict] | None = None
     created_at: datetime
@@ -181,7 +188,7 @@ class LDDReportCreateFromVdr(BaseModel):
     # 멀티 LLM 파이프라인 옵션
     use_multi_llm: bool | None = None      # None=서버 설정 따름, True/False=강제
     is_cross_border: bool = False           # 크로스보더 거래 여부 (Stage 5 활성화)
-    deal_type: str = ""                     # 거래 유형 (M&A, JV, 사업양수도)
+    deal_type: str = Field("", description="거래유형 (STOCK_ACQUISITION, REAL_ESTATE, IPO, CORPORATE_SPLIT, PREFERRED_STOCK, ASSET_ACQUISITION). 빈 문자열이면 기본 10개 섹션 사용.")
     industry: str = ""                      # 대상 산업 (식품, IT, 금융)
 
 

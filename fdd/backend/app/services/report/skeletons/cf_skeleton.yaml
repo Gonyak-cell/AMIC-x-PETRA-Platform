@@ -1,0 +1,162 @@
+# Cash Flow Statement 행 구조 스켈레톤
+# Big 4 WP 수준 — 4년+반기 다기간 현금흐름표 (간접법)
+
+statement_type: CF
+title_ko: "현금흐름표"
+title_en: "Cash Flow Statement"
+
+sections:
+  - section: operating
+    title_ko: "영업활동 현금흐름"
+    title_en: "Cash Flows from Operating Activities"
+    rows:
+      - code: CF-OP-NI
+        label_ko: "당기순이익"
+        label_en: "Net Income"
+        category: NET_INCOME
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-DA
+        label_ko: "감가상각비"
+        label_en: "Depreciation & Amortization"
+        category: DEPRECIATION_AMORTIZATION
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-AR
+        label_ko: "매출채권 증감"
+        label_en: "Change in Accounts Receivable"
+        category: WC_AR_CHANGE
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-INV
+        label_ko: "재고자산 증감"
+        label_en: "Change in Inventories"
+        category: WC_INV_CHANGE
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-AP
+        label_ko: "매입채무 증감"
+        label_en: "Change in Accounts Payable"
+        category: WC_AP_CHANGE
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-OTHER
+        label_ko: "기타 영업활동"
+        label_en: "Other Operating Activities"
+        category: OTHER_OPERATING_CF
+        indent: 1
+        is_subtotal: false
+      - code: CF-OP-TOTAL
+        label_ko: "영업활동 현금흐름 소계"
+        label_en: "Net Cash from Operating"
+        category: OPERATING_CF_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "CF-OP-NI + CF-OP-DA + CF-OP-AR + CF-OP-INV + CF-OP-AP + CF-OP-OTHER"
+
+  - section: investing
+    title_ko: "투자활동 현금흐름"
+    title_en: "Cash Flows from Investing Activities"
+    rows:
+      - code: CF-INV-CAPEX
+        label_ko: "유무형자산 취득"
+        label_en: "Capital Expenditures"
+        category: CAPEX
+        indent: 1
+        is_subtotal: false
+      - code: CF-INV-DISP
+        label_ko: "유무형자산 처분"
+        label_en: "Proceeds from Disposal"
+        category: ASSET_DISPOSAL
+        indent: 1
+        is_subtotal: false
+      - code: CF-INV-OTHER
+        label_ko: "기타 투자활동"
+        label_en: "Other Investing Activities"
+        category: OTHER_INVESTING_CF
+        indent: 1
+        is_subtotal: false
+      - code: CF-INV-TOTAL
+        label_ko: "투자활동 현금흐름 소계"
+        label_en: "Net Cash from Investing"
+        category: INVESTING_CF_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "CF-INV-CAPEX + CF-INV-DISP + CF-INV-OTHER"
+
+  - section: financing
+    title_ko: "재무활동 현금흐름"
+    title_en: "Cash Flows from Financing Activities"
+    rows:
+      - code: CF-FIN-BORROW
+        label_ko: "차입금 순증감"
+        label_en: "Net Borrowings"
+        category: NET_BORROWINGS
+        indent: 1
+        is_subtotal: false
+      - code: CF-FIN-EQUITY
+        label_ko: "유상증자/감자"
+        label_en: "Equity Issuance/Repurchase"
+        category: EQUITY_CHANGE
+        indent: 1
+        is_subtotal: false
+      - code: CF-FIN-DIV
+        label_ko: "배당금 지급"
+        label_en: "Dividends Paid"
+        category: DIVIDENDS
+        indent: 1
+        is_subtotal: false
+      - code: CF-FIN-OTHER
+        label_ko: "기타 재무활동"
+        label_en: "Other Financing Activities"
+        category: OTHER_FINANCING_CF
+        indent: 1
+        is_subtotal: false
+      - code: CF-FIN-TOTAL
+        label_ko: "재무활동 현금흐름 소계"
+        label_en: "Net Cash from Financing"
+        category: FINANCING_CF_TOTAL
+        indent: 0
+        is_subtotal: true
+        formula: "CF-FIN-BORROW + CF-FIN-EQUITY + CF-FIN-DIV + CF-FIN-OTHER"
+
+  - section: net_change
+    title_ko: "현금 순증감"
+    title_en: "Net Change in Cash"
+    rows:
+      - code: CF-NET
+        label_ko: "현금 순증감"
+        label_en: "Net Change in Cash"
+        category: NET_CASH_CHANGE
+        indent: 0
+        is_subtotal: true
+        is_total: true
+        formula: "CF-OP-TOTAL + CF-INV-TOTAL + CF-FIN-TOTAL"
+
+  - section: beginning_ending
+    title_ko: "기초/기말 현금"
+    title_en: "Beginning/Ending Cash"
+    rows:
+      - code: CF-BEG
+        label_ko: "기초 현금"
+        label_en: "Cash at Beginning"
+        category: BEGINNING_CASH
+        indent: 1
+        is_subtotal: false
+      - code: CF-END
+        label_ko: "기말 현금"
+        label_en: "Cash at End"
+        category: ENDING_CASH
+        indent: 0
+        is_subtotal: true
+        formula: "CF-BEG + CF-NET"
+
+# 교차검증 규칙
+validation:
+  - check: "CF-NET == CF-OP-TOTAL + CF-INV-TOTAL + CF-FIN-TOTAL"
+    message_ko: "현금 순증감 = 영업CF + 투자CF + 재무CF"
+    message_en: "Net Change = Operating + Investing + Financing"
+
+  - check: "CF-END == CF-BEG + CF-NET"
+    message_ko: "기말 현금 = 기초 현금 + 순증감"
+    message_en: "Ending Cash = Beginning + Net Change"

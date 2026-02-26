@@ -1,0 +1,64 @@
+# 매출 분석 L3 서술 템플릿
+section_id: revenue_deep_dive
+version: "1.0"
+source_reference: "Big 4 FDD WP — Revenue Deep Dive"
+
+slots:
+  # L2 슬롯 (데이터 직접 참조)
+  total_revenue:
+    level: L2
+    source: "revenue.total"
+    format_spec: "currency_million"
+  customer_count:
+    level: L2
+    source: "revenue.customer_count"
+  hhi:
+    level: L2
+    source: "revenue.hhi"
+  top5_share:
+    level: L2
+    source: "revenue.top5_share"
+    format_spec: "percentage"
+
+  # L3 슬롯 (LLM 생성)
+  revenue_trend_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Describe the revenue trend across periods, noting any significant YoY changes"
+    max_tokens: 120
+    data_keys: ["revenue.period_labels", "revenue.totals", "revenue.yoy"]
+  concentration_risk_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Assess customer concentration risk based on HHI and top customer shares"
+    max_tokens: 100
+    data_keys: ["revenue.hhi", "revenue.top5_share", "revenue.breakdown"]
+  seasonality_narrative:
+    level: L3
+    slot_type: sentence
+    hint: "Comment on revenue seasonality patterns if monthly data available"
+    max_tokens: 60
+    data_keys: ["revenue.monthly_trend"]
+
+body: |
+  ## Revenue Analysis
+
+  Total Revenue: {{total_revenue}} ({{customer_count}} customers)
+
+  ### Trend Analysis
+  {{revenue_trend_narrative}}
+
+  ### Concentration Analysis
+  HHI Index: {{hhi}} | Top 5 Share: {{top5_share}}
+  {{concentration_risk_narrative}}
+
+  ### Seasonality
+  {{seasonality_narrative}}
+
+conditional_blocks:
+  - condition: "industry == 'manufacturing'"
+    insert_after: "concentration_risk_narrative"
+    text: "For manufacturing entities, revenue concentration should be evaluated alongside order backlog coverage and customer contract terms."
+  - condition: "industry == 'tech'"
+    insert_after: "revenue_trend_narrative"
+    text: "For technology companies, recurring revenue (ARR/MRR) should be analyzed separately from one-time license fees."

@@ -1,0 +1,146 @@
+# 연결 분석(Consolidation) 스켈레톤
+# Big 4 WP 수준 — 엔티티별 P&L 비교 + IC 제거 + FX 요약
+
+statement_type: CONSOLIDATION
+title_ko: "연결 분석"
+title_en: "Consolidation Analysis"
+
+sections:
+  - section: entity_pl_comparison
+    title_ko: "법인별 손익 비교"
+    title_en: "Entity P&L Comparison"
+    rows:
+      - code: CON-REV
+        label_ko: "매출액"
+        label_en: "Revenue"
+        category: REVENUE
+        indent: 0
+      - code: CON-COGS
+        label_ko: "매출원가"
+        label_en: "COGS"
+        category: COGS
+        indent: 0
+      - code: CON-GP
+        label_ko: "매출총이익"
+        label_en: "Gross Profit"
+        category: GROSS_PROFIT
+        indent: 0
+        is_subtotal: true
+      - code: CON-SGA
+        label_ko: "판매관리비"
+        label_en: "SG&A"
+        category: SGA
+        indent: 0
+      - code: CON-OI
+        label_ko: "영업이익"
+        label_en: "Operating Income"
+        category: OPERATING_INCOME
+        indent: 0
+        is_subtotal: true
+      - code: CON-EBITDA
+        label_ko: "EBITDA"
+        label_en: "EBITDA"
+        category: EBITDA
+        indent: 0
+        is_subtotal: true
+      - code: CON-NI
+        label_ko: "당기순이익"
+        label_en: "Net Income"
+        category: NET_INCOME
+        indent: 0
+        is_total: true
+
+  - section: ic_elimination
+    title_ko: "내부거래 제거"
+    title_en: "Intercompany Elimination"
+    rows:
+      - code: CON-IC-DESC
+        label_ko: "내용"
+        label_en: "Description"
+        category: IC_DESCRIPTION
+        indent: 0
+      - code: CON-IC-DR
+        label_ko: "차변 법인"
+        label_en: "Debit Entity"
+        category: IC_DEBIT
+        indent: 0
+      - code: CON-IC-CR
+        label_ko: "대변 법인"
+        label_en: "Credit Entity"
+        category: IC_CREDIT
+        indent: 0
+      - code: CON-IC-AMT
+        label_ko: "금액"
+        label_en: "Amount"
+        category: IC_AMOUNT
+        indent: 0
+      - code: CON-IC-TOTAL
+        label_ko: "IC 제거 합계"
+        label_en: "Total IC Elimination"
+        category: IC_TOTAL
+        indent: 0
+        is_total: true
+
+  - section: fx_summary
+    title_ko: "환율 요약"
+    title_en: "FX Rate Summary"
+    rows:
+      - code: CON-FX-CCY
+        label_ko: "통화"
+        label_en: "Currency"
+        category: FX_CURRENCY
+        indent: 0
+      - code: CON-FX-END
+        label_ko: "기말 환율"
+        label_en: "Period-End Rate"
+        category: FX_END_RATE
+        indent: 0
+        format: decimal
+      - code: CON-FX-AVG
+        label_ko: "평균 환율"
+        label_en: "Average Rate"
+        category: FX_AVG_RATE
+        indent: 0
+        format: decimal
+      - code: CON-FX-IMPACT
+        label_ko: "환율 영향"
+        label_en: "FX Impact"
+        category: FX_IMPACT
+        indent: 0
+
+  - section: minority_interest
+    title_ko: "소수지분"
+    title_en: "Minority Interest"
+    rows:
+      - code: CON-MI-ENT
+        label_ko: "법인명"
+        label_en: "Entity"
+        category: MI_ENTITY
+        indent: 0
+      - code: CON-MI-PCT
+        label_ko: "지분율"
+        label_en: "Ownership %"
+        category: MI_OWNERSHIP
+        indent: 0
+        format: percentage
+      - code: CON-MI-AMT
+        label_ko: "소수지분 금액"
+        label_en: "Minority Interest Amount"
+        category: MI_AMOUNT
+        indent: 0
+      - code: CON-MI-TOTAL
+        label_ko: "소수지분 합계"
+        label_en: "Total Minority Interest"
+        category: MI_TOTAL
+        indent: 0
+        is_total: true
+
+# 교차검증 규칙
+validation:
+  - check: "CON-CONSOLIDATED == sum(entity) - CON-IC-TOTAL"
+    message_ko: "연결 = 법인별 합산 - IC 제거"
+    message_en: "Consolidated = Sum of entities - IC elimination"
+
+  - check: "CON-GP == CON-REV - CON-COGS"
+    message_ko: "매출총이익 = 매출 - 원가"
+    message_en: "GP = Revenue - COGS"

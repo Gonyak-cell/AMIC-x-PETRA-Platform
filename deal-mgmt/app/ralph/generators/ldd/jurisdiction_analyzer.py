@@ -9,10 +9,11 @@ stage5_jurisdiction=True (기본 OFF, 크로스보더 거래 시만 활성화)
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.ralph.generators.ldd.json_utils import extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -147,22 +148,12 @@ class JurisdictionAnalyzer:
         return await self._llm_client.call(system, user)
 
     def _parse_points(self, raw: str, jurisdiction: str) -> list[dict[str, Any]]:
-        text = raw.strip()
-        if "```json" in text:
-            text = text.split("```json", 1)[1].split("```", 1)[0]
-        elif "```" in text:
-            text = text.split("```", 1)[1].split("```", 1)[0]
-
-        try:
-            items = json.loads(text.strip())
-            if not isinstance(items, list):
-                return []
-            for item in items:
-                item["_jurisdiction"] = jurisdiction
-            return items
-        except json.JSONDecodeError:
-            logger.warning("관할권 분석 JSON 파싱 실패: jurisdiction=%s", jurisdiction)
+        items = extract_json(raw, context=f"관할권 분석 jurisdiction={jurisdiction}", fallback=[])
+        if not isinstance(items, list):
             return []
+        for item in items:
+            item["_jurisdiction"] = jurisdiction
+        return items
 
     def _find_cross_and_conflicts(
         self,

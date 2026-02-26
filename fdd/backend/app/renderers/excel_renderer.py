@@ -899,11 +899,15 @@ def _render_index_sheet(wb: Workbook) -> None:
     # 시트 이름으로 카테고리 분류
     categories: dict[str, list[str]] = {
         "재무제표 (Financial Statements)": [],
+        "매출 분석 (Revenue Analysis)": [],
+        "비용 분석 (Cost Structure)": [],
+        "FCF 분석 (Free Cash Flow)": [],
+        "수주 분석 (Order Backlog)": [],
+        "연결 분석 (Consolidation)": [],
         "QoE 분석 (Quality of Earnings)": [],
         "NWC 분석 (Net Working Capital)": [],
         "Net Debt": [],
         "트렌드 분석 (Trends)": [],
-        "매출/원가 분석 (Revenue & Cost)": [],
         "검증 (Reconciliation)": [],
         "이슈 및 체크리스트": [],
         "기타": [],
@@ -913,8 +917,18 @@ def _render_index_sheet(wb: Workbook) -> None:
         if sheet == "Index":
             continue
         name_lower = sheet.lower()
-        if any(k in name_lower for k in ("income statement", "balance sheet", "cash flow", "손익", "재무상태", "현금흐름")):
+        if any(k in name_lower for k in ("income statement", "balance sheet", "cash flow", "손익", "재무상태", "현금흐름", "multi-period")):
             categories["재무제표 (Financial Statements)"].append(sheet)
+        elif any(k in name_lower for k in ("revenue by", "revenue monthly", "revenue concentration", "거래처별", "제품별", "매출 집중")):
+            categories["매출 분석 (Revenue Analysis)"].append(sheet)
+        elif any(k in name_lower for k in ("cost", "margin", "sga", "manufacturing", "personnel", "원가", "판관비", "인건비")):
+            categories["비용 분석 (Cost Structure)"].append(sheet)
+        elif any(k in name_lower for k in ("fcf", "free cash flow", "capex", "잉여현금")):
+            categories["FCF 분석 (Free Cash Flow)"].append(sheet)
+        elif any(k in name_lower for k in ("backlog", "수주", "order backlog", "aging", "negative margin", "역마진", "new orders", "신규수주")):
+            categories["수주 분석 (Order Backlog)"].append(sheet)
+        elif any(k in name_lower for k in ("entity p&l", "ic elimination", "consolidat", "fx rate", "fx summary", "법인별", "내부거래", "연결", "환율")):
+            categories["연결 분석 (Consolidation)"].append(sheet)
         elif "qoe" in name_lower or "ebitda" in name_lower:
             categories["QoE 분석 (Quality of Earnings)"].append(sheet)
         elif "nwc" in name_lower or "working capital" in name_lower:
@@ -923,8 +937,6 @@ def _render_index_sheet(wb: Workbook) -> None:
             categories["Net Debt"].append(sheet)
         elif any(k in name_lower for k in ("trend", "monthly", "seasonality", "yoy", "트렌드")):
             categories["트렌드 분석 (Trends)"].append(sheet)
-        elif any(k in name_lower for k in ("revenue", "cost", "margin", "매출", "원가")):
-            categories["매출/원가 분석 (Revenue & Cost)"].append(sheet)
         elif any(k in name_lower for k in ("reconciliation", "검증", "recon")):
             categories["검증 (Reconciliation)"].append(sheet)
         elif any(k in name_lower for k in ("issue", "checklist", "체크")):
@@ -977,10 +989,19 @@ def _classify_table_block(block: TableBlock) -> tuple[str, str]:
     # metadata.style 기반 분류 (최우선)
     if style == "financial_statement":
         return (title[:31], "financial_statement")
-    if style in ("trend", "seasonality", "monthly"):
+    if style in ("trend", "seasonality", "monthly", "monthly_trend"):
         return (title[:31], "trend")
     if style == "reconciliation":
         return (title[:31], "reconciliation")
+    if style in ("revenue_breakdown", "concentration_analysis"):
+        return (title[:31], "table")
+    if style in ("cost_breakdown", "personnel_analysis", "capex_analysis"):
+        return (title[:31], "table")
+    if style in ("backlog_summary", "backlog_customer", "backlog_aging",
+                  "negative_margin", "monthly_orders"):
+        return (title[:31], "table")
+    if style in ("entity_comparison", "ic_elimination", "fx_summary"):
+        return (title[:31], "table")
 
     # 기존 제목 기반 분류 (하위 호환)
     t = title.lower()

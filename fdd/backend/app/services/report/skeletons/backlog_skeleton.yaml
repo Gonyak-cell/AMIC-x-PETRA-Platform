@@ -1,0 +1,142 @@
+# 수주잔액(Order Backlog) 분석 스켈레톤
+# Big 4 WP 수준 — 수주잔액 Summary + 거래처별 + Aging + 역마진
+
+statement_type: BACKLOG
+title_ko: "수주잔액 분석"
+title_en: "Order Backlog Analysis"
+
+sections:
+  - section: summary
+    title_ko: "수주잔액 Summary"
+    title_en: "Backlog Summary"
+    rows:
+      - code: BL-TOTAL
+        label_ko: "수주잔액 합계"
+        label_en: "Total Backlog"
+        category: TOTAL_BACKLOG
+        indent: 0
+        is_subtotal: true
+      - code: BL-COUNT
+        label_ko: "수주 건수"
+        label_en: "Order Count"
+        category: ORDER_COUNT
+        indent: 0
+        is_subtotal: false
+        format: integer
+      - code: BL-BTB
+        label_ko: "Book-to-Bill Ratio"
+        label_en: "Book-to-Bill Ratio"
+        category: BOOK_TO_BILL
+        indent: 0
+        is_subtotal: false
+        format: ratio
+      - code: BL-COV
+        label_ko: "수주 커버리지 (개월)"
+        label_en: "Backlog Coverage (months)"
+        category: COVERAGE_MONTHS
+        indent: 0
+        is_subtotal: false
+        format: decimal
+      - code: BL-TOP5
+        label_ko: "Top 5 거래처 비중"
+        label_en: "Top 5 Customer Share"
+        category: TOP5_SHARE
+        indent: 0
+        is_subtotal: false
+        format: percentage
+      - code: BL-HHI
+        label_ko: "HHI 집중도"
+        label_en: "HHI Concentration Index"
+        category: HHI
+        indent: 0
+        is_subtotal: false
+        format: integer
+
+  - section: by_customer
+    title_ko: "거래처별 수주잔액"
+    title_en: "Backlog by Customer"
+    rows:
+      - code: BL-CUST-NAME
+        label_ko: "거래처명"
+        label_en: "Customer Name"
+        category: CUSTOMER_NAME
+        indent: 0
+      - code: BL-CUST-AMT
+        label_ko: "수주잔액"
+        label_en: "Backlog Amount"
+        category: CUSTOMER_AMOUNT
+        indent: 0
+      - code: BL-CUST-PCT
+        label_ko: "비중 (%)"
+        label_en: "Share (%)"
+        category: CUSTOMER_SHARE
+        indent: 0
+        format: percentage
+      - code: BL-CUST-CNT
+        label_ko: "건수"
+        label_en: "Count"
+        category: CUSTOMER_COUNT
+        indent: 0
+        format: integer
+
+  - section: aging
+    title_ko: "수주 Aging"
+    title_en: "Backlog Aging"
+    rows:
+      - code: BL-AGE-0-3M
+        label_ko: "0 ~ 3개월"
+        label_en: "0-3 Months"
+        category: AGING_0_3M
+        indent: 0
+      - code: BL-AGE-3-6M
+        label_ko: "3 ~ 6개월"
+        label_en: "3-6 Months"
+        category: AGING_3_6M
+        indent: 0
+      - code: BL-AGE-6-12M
+        label_ko: "6 ~ 12개월"
+        label_en: "6-12 Months"
+        category: AGING_6_12M
+        indent: 0
+      - code: BL-AGE-12M
+        label_ko: "12개월 초과"
+        label_en: "12+ Months"
+        category: AGING_12M_PLUS
+        indent: 0
+      - code: BL-AGE-OVERDUE
+        label_ko: "납기 초과"
+        label_en: "Overdue"
+        category: OVERDUE
+        indent: 0
+        is_subtotal: true
+
+  - section: negative_margin
+    title_ko: "역마진 분석"
+    title_en: "Negative Margin Analysis"
+    rows:
+      - code: BL-NEG-COUNT
+        label_ko: "역마진 건수"
+        label_en: "Negative Margin Count"
+        category: NEG_COUNT
+        indent: 0
+        format: integer
+      - code: BL-NEG-AMOUNT
+        label_ko: "역마진 수주 총액"
+        label_en: "Total Negative Margin Amount"
+        category: NEG_AMOUNT
+        indent: 0
+      - code: BL-NEG-LOSS
+        label_ko: "예상 손실액"
+        label_en: "Estimated Loss"
+        category: NEG_LOSS
+        indent: 0
+
+# 교차검증 규칙
+validation:
+  - check: "BL-TOTAL == sum(BL-CUST-AMT)"
+    message_ko: "수주잔액 합계 = 거래처별 합계"
+    message_en: "Total backlog = Sum of customer backlog"
+
+  - check: "sum(AGING) == BL-TOTAL"
+    message_ko: "Aging 합계 = 수주잔액 합계"
+    message_en: "Sum of aging buckets = Total backlog"

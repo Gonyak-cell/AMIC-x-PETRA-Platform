@@ -1,0 +1,64 @@
+# FCF 분석 L3 서술 템플릿
+section_id: fcf_analysis
+version: "1.0"
+source_reference: "Big 4 FDD WP — FCF Bridge Analysis"
+
+slots:
+  ebitda:
+    level: L2
+    source: "fcf.ebitda"
+    format_spec: "currency_million"
+  ocf:
+    level: L2
+    source: "fcf.ocf"
+    format_spec: "currency_million"
+  fcf:
+    level: L2
+    source: "fcf.fcf"
+    format_spec: "currency_million"
+  fcf_conversion:
+    level: L2
+    source: "fcf.fcf_conversion"
+    format_spec: "percentage"
+
+  fcf_bridge_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Walk through the FCF bridge from EBITDA to FCF, highlighting key items"
+    max_tokens: 150
+    data_keys: ["fcf.ebitda", "fcf.wc_change", "fcf.tax", "fcf.capex", "fcf.fcf"]
+  capex_strategy_narrative:
+    level: L3
+    slot_type: paragraph
+    hint: "Assess CAPEX strategy — maintenance vs growth split, intensity"
+    max_tokens: 100
+    data_keys: ["fcf.maint_capex", "fcf.growth_capex", "fcf.capex_to_revenue"]
+  cash_conversion_narrative:
+    level: L3
+    slot_type: sentence
+    hint: "Comment on FCF conversion efficiency vs industry benchmarks"
+    max_tokens: 60
+    data_keys: ["fcf.fcf_conversion"]
+
+body: |
+  ## Free Cash Flow Analysis
+
+  ### FCF Bridge
+  EBITDA: {{ebitda}} → OCF: {{ocf}} → FCF: {{fcf}}
+  FCF Conversion: {{fcf_conversion}}
+
+  {{fcf_bridge_narrative}}
+
+  ### CAPEX Analysis
+  {{capex_strategy_narrative}}
+
+  ### Cash Conversion Assessment
+  {{cash_conversion_narrative}}
+
+conditional_blocks:
+  - condition: "industry == 'manufacturing'"
+    insert_after: "capex_strategy_narrative"
+    text: "For capital-intensive manufacturing, maintenance CAPEX adequacy should be assessed against asset age and replacement cycle."
+  - condition: "industry == 'tech'"
+    insert_after: "capex_strategy_narrative"
+    text: "For technology companies, growth CAPEX should be evaluated in the context of R&D capitalization policies and scalability."

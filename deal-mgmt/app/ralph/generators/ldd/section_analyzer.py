@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
+
+from app.ralph.generators.ldd.json_utils import extract_json
 
 from app.ralph.generators.ldd.prompts import (
     CROSS_VALIDATION_PROMPT,
@@ -163,24 +164,14 @@ class LDDSectionAnalyzer:
 
     def _parse_json(self, raw: str, context: str) -> dict[str, Any]:
         """LLM 응답에서 JSON을 추출한다."""
-        # JSON 블록 추출
-        text = raw.strip()
-        if "```json" in text:
-            text = text.split("```json", 1)[1]
-            text = text.split("```", 1)[0]
-        elif "```" in text:
-            text = text.split("```", 1)[1]
-            text = text.split("```", 1)[0]
-
-        try:
-            return json.loads(text.strip())
-        except json.JSONDecodeError as e:
-            logger.warning("JSON 파싱 실패 (%s): %s", context, e)
-            return {
+        return extract_json(
+            raw,
+            context=context,
+            fallback={
                 "status": "PENDING",
                 "issue_level": None,
                 "risk_color": "",
-                "description": f"분석 결과 파싱 실패: {e}",
+                "description": f"분석 결과 파싱 실패",
                 "deal_impact": "",
                 "recommendation": "",
                 "rfi_required": False,
@@ -188,7 +179,8 @@ class LDDSectionAnalyzer:
                 "confidence": 0.0,
                 "evidence_refs": [],
                 "_raw_response": raw[:500],
-            }
+            },
+        )
 
 
 class LDDDocumentGenerator:

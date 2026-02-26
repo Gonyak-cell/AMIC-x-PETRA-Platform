@@ -23,6 +23,9 @@ class LDDPipelineConfig:
     stage5_jurisdiction: bool = False
     """Stage 5: 관할권 교차 분석 (크로스보더 M&A 시만 활성화)."""
 
+    stage6_narrative: bool = False
+    """Stage 6: 6블록 서술 생성 (항목당 1-3페이지 심층 분석). 기본 OFF — 비용 ~$2-4 추가."""
+
     stage7_qa: bool = True
     """Stage 7: 최종 QA (독립 팩트체크)."""
 

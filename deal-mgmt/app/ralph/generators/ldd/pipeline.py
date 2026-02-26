@@ -33,13 +33,15 @@ class StageProgress:
 
 @dataclass
 class PipelineResult:
-    """7단계 파이프라인 전체 결과."""
+    """10단계 파이프라인 전체 결과."""
 
     sections: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     executive_summary: str = ""
     dual_risk_summary: dict[str, Any] | None = None
     gap_detection: dict[str, Any] | None = None
     jurisdiction_analysis: dict[str, Any] | None = None
+    narrative_sections: dict[str, list[dict]] | None = None
+    appendices: dict[str, Any] | None = None
     qa_result: dict[str, Any] | None = None
     guardrail_result: dict[str, Any] | None = None
     cost_usd: float = 0.0
@@ -49,7 +51,7 @@ class PipelineResult:
 # ── 메인 파이프라인 ──────────────────────────────────────────────
 
 class LDDMultiLLMPipeline:
-    """LDD 7단계 멀티 LLM 파이프라인 오케스트레이터.
+    """LDD 10단계 멀티 LLM 파이프라인 오케스트레이터.
 
     기존 Ralph Loop과 독립적으로 실행.
     create_ldd_report_from_vdr() 안에서 호출.
@@ -76,22 +78,28 @@ class LDDMultiLLMPipeline:
             StageProgress(3, "듀얼 리스크 분석"),
             StageProgress(4, "누락 탐지"),
             StageProgress(5, "관할권 교차 분석"),
-            StageProgress(6, "레포트 생성"),
-            StageProgress(7, "최종 QA"),
+            StageProgress(6, "6블록 서술 생성"),
+            StageProgress(7, "법률 인용 검증"),
+            StageProgress(8, "별첨 데이터 수집"),
+            StageProgress(9, "레포트 생성"),
+            StageProgress(10, "최종 QA"),
         ]
 
     async def run(
         self,
         vdr_document_names: list[str] | None = None,
     ) -> PipelineResult:
-        """7단계 파이프라인을 순차 실행한다.
+        """10단계 파이프라인을 순차 실행한다.
 
         Stage 1~2: 기존 LDDSectionAnalyzer로 수행 (단일 LLM)
         Stage 3: DualRiskAnalyzer (멀티 LLM, opt-in)
         Stage 4: GapDetector (멀티 LLM, opt-in)
         Stage 5: JurisdictionAnalyzer (멀티 LLM, 크로스보더 시)
-        Stage 6: Executive Summary + 교차 검증 (단일 LLM)
-        Stage 7: LDDReportQA (멀티 LLM, opt-in)
+        Stage 6: NarrativeGenerator — 6블록 서술 생성 (opt-in)
+        Stage 7: 법률 인용 검증 (레지스트리 대조)
+        Stage 8: 별첨 데이터 수집 (체크리스트 기반)
+        Stage 9: Executive Summary + 교차 검증 (단일 LLM)
+        Stage 10: LDDReportQA (멀티 LLM, opt-in)
         """
         from app.ralph.generators.ldd.section_analyzer import LDDSectionAnalyzer
 
@@ -134,7 +142,7 @@ class LDDMultiLLMPipeline:
 
         # ── Stage 3: 듀얼 리스크 분석 ──
         dual_risk_summary: dict[str, Any] | None = None
-        if self._config.stage3_risk_dual and self._router:
+        if self._config.stage3_risk_dual and self._router and not self._is_cost_exceeded():
             self._update_stage(2, "running")
             try:
                 dual_risk_summary = await self._run_stage3_dual_risk(
@@ -148,7 +156,7 @@ class LDDMultiLLMPipeline:
             self._update_stage(2, "skipped", 50)
 
         # ── Stage 4: 누락 탐지 ──
-        if self._config.stage4_gap_detection and self._router:
+        if self._config.stage4_gap_detection and self._router and not self._is_cost_exceeded():
             self._update_stage(3, "running")
             try:
                 gap_result = await self._run_stage4_gap_detection(
@@ -180,7 +188,7 @@ class LDDMultiLLMPipeline:
             gap_result = None
 
         # ── Stage 5: 관할권 교차 분석 (크로스보더 시) ──
-        if self._config.stage5_jurisdiction and self._config.is_cross_border and self._router:
+        if self._config.stage5_jurisdiction and self._config.is_cross_border and self._router and not self._is_cost_exceeded():
             self._update_stage(4, "running")
             try:
                 jurisdiction_result = await self._run_stage5_jurisdiction(
@@ -215,7 +223,52 @@ class LDDMultiLLMPipeline:
                 logger.warning("Stage 5 관할권 교차 분석 실패 (폴백): %s", exc)
             self._update_stage(4, "completed", 75)
         else:
-            self._update_stage(4, "skipped", 75)
+            self._update_stage(4, "skipped", 55)
+
+        # ── Stage 6: 6블록 서술 생성 ──
+        if self._config.stage6_narrative and not self._is_cost_exceeded():
+            self._update_stage(5, "running")
+            try:
+                narrative_results = await self._run_stage6_narrative(section_results)
+                result.narrative_sections = narrative_results
+            except Exception as exc:
+                logger.warning("Stage 6 서술 생성 실패 (폴백): %s", exc)
+            self._update_stage(5, "completed", 70)
+        else:
+            self._update_stage(5, "skipped", 70)
+
+        # ── Stage 7: 법률 인용 검증 ──
+        if result.narrative_sections and not self._is_cost_exceeded():
+            self._update_stage(6, "running")
+            try:
+                from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+                verifier = CitationVerifier()
+                result.narrative_sections = verifier.verify_narrative_sections(
+                    result.narrative_sections,
+                )
+                logger.info("Stage 7 법률 인용 검증 완료")
+            except Exception as exc:
+                logger.warning("Stage 7 인용 검증 실패 (폴백): %s", exc)
+            self._update_stage(6, "completed", 73)
+        else:
+            self._update_stage(6, "skipped", 73)
+
+        # ── Stage 8: 별첨 데이터 수집 ──
+        try:
+            from app.ralph.generators.ldd.appendix_generator import AppendixGenerator
+            self._update_stage(7, "running")
+            appendix_gen = AppendixGenerator()
+            appendix_result = appendix_gen.generate(section_results)
+            result.appendices = appendix_result.to_dict()
+            logger.info(
+                "Stage 8 별첨 생성 완료: %d개 테이블, %d개 행",
+                appendix_result.non_empty_tables,
+                appendix_result.total_rows,
+            )
+            self._update_stage(7, "completed", 75)
+        except Exception as exc:
+            logger.warning("Stage 8 별첨 생성 실패 (폴백): %s", exc)
+            self._update_stage(7, "skipped", 75)
 
         # ── Guardrails 검증 ──
         try:
@@ -240,19 +293,19 @@ class LDDMultiLLMPipeline:
         except Exception as exc:
             logger.warning("Guardrails 검증 실패 (무시): %s", exc)
 
-        # ── Stage 6: Executive Summary ──
-        self._update_stage(5, "running")
+        # ── Stage 9: Executive Summary ──
+        self._update_stage(8, "running")
         try:
             exec_summary = await analyzer.generate_executive_summary(section_results)
             result.executive_summary = exec_summary
         except Exception as exc:
             logger.warning("Executive Summary 생성 실패: %s", exc)
             result.executive_summary = ""
-        self._update_stage(5, "completed", 90)
+        self._update_stage(8, "completed", 90)
 
-        # ── Stage 7: 최종 QA ──
-        if self._config.stage7_qa and self._router:
-            self._update_stage(6, "running")
+        # ── Stage 10: 최종 QA ──
+        if self._config.stage7_qa and self._router and not self._is_cost_exceeded():
+            self._update_stage(9, "running")
             try:
                 qa_result = await self._run_stage7_qa(section_results, exec_summary=result.executive_summary)
                 result.qa_result = {
@@ -270,10 +323,26 @@ class LDDMultiLLMPipeline:
                     "summary": qa_result.summary,
                 }
             except Exception as exc:
-                logger.warning("Stage 7 QA 실패 (폴백): %s", exc)
-            self._update_stage(6, "completed", 100)
+                logger.warning("Stage 10 QA 실패 (폴백): %s", exc)
+            self._update_stage(9, "completed", 100)
         else:
-            self._update_stage(6, "skipped", 100)
+            self._update_stage(9, "skipped", 100)
+
+        # ── 서술 품질 게이트 (LLM 없이 밀리초 동작) ──
+        if result.narrative_sections:
+            try:
+                from app.ralph.gates.narrative_gate import NarrativeQualityGate
+                nq_gate = NarrativeQualityGate()
+                nq_result = nq_gate.evaluate(result.narrative_sections)
+                if result.qa_result is None:
+                    result.qa_result = {}
+                result.qa_result["narrative_quality"] = nq_result.to_dict()
+                logger.info(
+                    "서술 품질 게이트: %d/%d 통과 (점수 %.1f/5.0)",
+                    nq_result.passed_items, nq_result.total_items, nq_result.overall_score,
+                )
+            except Exception as exc:
+                logger.warning("서술 품질 게이트 실패 (무시): %s", exc)
 
         # ── 최종 결과 조립 ──
         result.sections = section_results
@@ -311,6 +380,12 @@ class LDDMultiLLMPipeline:
             "items": [],
         }
 
+        # section_type → title 매핑
+        title_map = {
+            cfg.get("section_type", ""): cfg.get("title", "")
+            for cfg in self._sections_config
+        }
+
         for section_type, items in section_results.items():
             source_files = self._source_map.get(section_type, [])
             for item in items:
@@ -322,6 +397,7 @@ class LDDMultiLLMPipeline:
                         item_id=item.get("item_id", ""),
                         item_name=item.get("name", ""),
                         section_type=section_type,
+                        section_title=title_map.get(section_type, ""),
                         source_files=source_files,
                     )
 
@@ -403,7 +479,74 @@ class LDDMultiLLMPipeline:
             deal_summary=self._config.deal_summary or "(거래 요약 미제공)",
         )
 
-    # ── Stage 7: 최종 QA ──
+    # ── Stage 6: 6블록 서술 생성 ──
+
+    async def _run_stage6_narrative(
+        self,
+        section_results: dict[str, list[dict]],
+    ) -> dict[str, list[dict]]:
+        """Stage 6: 항목별 6블록 서술 생성."""
+        from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
+
+        # LLM 호출 함수 결정
+        llm_call = (
+            self._router.call_routed if self._router
+            else (self._llm_client.call if self._llm_client and self._llm_client.is_available else None)
+        )
+
+        generator = NarrativeGenerator(
+            llm_call=llm_call,
+            learned_patterns=self._learned_patterns,
+        )
+
+        # 법률 컨텍스트 주입기 초기화
+        try:
+            from app.ralph.generators.ldd.legal_citations import CitationPromptInjector
+            injector = CitationPromptInjector()
+        except Exception:
+            injector = None
+
+        # section_type → title 매핑
+        title_map = {
+            cfg.get("section_type", ""): cfg.get("title", "")
+            for cfg in self._sections_config
+        }
+
+        narrative_results: dict[str, list[dict]] = {}
+
+        for section_type, items in section_results.items():
+            source_files = self._source_map.get(section_type, [])
+            section_dict = {
+                "section_type": section_type,
+                "title": title_map.get(section_type, ""),
+                "items": items,
+            }
+
+            # 섹션별 법률 컨텍스트 주입
+            legal_context = ""
+            if injector:
+                try:
+                    legal_context = injector.build_legal_context(section_type)
+                except Exception as exc:
+                    logger.debug("법률 컨텍스트 주입 실패 (%s): %s", section_type, exc)
+
+            results = await generator.generate_section_narratives(
+                section=section_dict,
+                source_files=source_files,
+                legal_context=legal_context,
+            )
+
+            narrative_results[section_type] = [r.to_dict() for r in results]
+            logger.info(
+                "Stage 6 서술 생성 완료: %s (%d 항목, %d 블록)",
+                section_type,
+                len(results),
+                sum(len(r.blocks) for r in results),
+            )
+
+        return narrative_results
+
+    # ── Stage 10: 최종 QA ──
 
     async def _run_stage7_qa(
         self,
@@ -458,3 +601,16 @@ class LDDMultiLLMPipeline:
             self._stages[index].status = status
             if progress_pct:
                 self._stages[index].progress_pct = progress_pct
+
+    def _is_cost_exceeded(self) -> bool:
+        """누적 비용이 한도를 초과했는지 확인한다."""
+        if not hasattr(self._llm_client, "_cost_tracker"):
+            return False
+        accumulated = self._llm_client._cost_tracker.accumulated_usd
+        if accumulated >= self._config.max_cost_usd:
+            logger.warning(
+                "비용 한도 초과 ($%.2f >= $%.2f) — 이후 Stage 스킵",
+                accumulated, self._config.max_cost_usd,
+            )
+            return True
+        return False

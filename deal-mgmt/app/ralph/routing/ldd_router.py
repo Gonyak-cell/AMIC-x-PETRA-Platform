@@ -137,6 +137,11 @@ class LDDModelRouter:
     async def call_routed(self, section_id: str, system: str, user: str) -> str:
         """섹션에 맞는 프로바이더로 LLM을 호출한다."""
         decision = self.resolve(section_id)
-        return await self._llm_client.call_for_provider(
+        result = await self._llm_client.call_for_provider(
             system, user, provider=decision.provider,
         )
+        if not result or not result.strip():
+            raise ValueError(
+                f"LDD 라우터: '{section_id}' (provider={decision.provider}) 빈 응답 반환"
+            )
+        return result
