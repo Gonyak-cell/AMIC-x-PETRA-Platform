@@ -1,9 +1,6 @@
 """실사자료 중 PDF 5개만 로컬에 복사하여 다운로드를 트리거한다."""
-import os
 import pathlib
-import shutil
 import subprocess
-import time
 
 BASE = pathlib.Path(
     r"C:\Users\서지원\OneDrive - 주식회사 페트라브릿지파트너스"

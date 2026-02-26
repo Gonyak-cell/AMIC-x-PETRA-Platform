@@ -1,7 +1,8 @@
 """E2E Docker test — full MA workflow lifecycle with Risk/Compliance gates."""
 
+from datetime import UTC, datetime, timedelta
+
 import httpx
-from datetime import datetime, timedelta, UTC
 from jose import jwt
 
 SECRET = "dev-shared-jwt-secret-change-in-production"

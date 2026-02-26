@@ -786,7 +786,7 @@ def main() -> None:
 
     print(f"[INFO] 템플릿 저장 위치: {TEMPLATE_DIR.resolve()}")
     print(f"[INFO] 템플릿 버전: {TEMPLATE_VERSION}")
-    print(f"[INFO] 서식 기준: 체결본 분석 결과 (바탕체, A4, 표준 여백)\n")
+    print("[INFO] 서식 기준: 체결본 분석 결과 (바탕체, A4, 표준 여백)\n")
 
     create_spa_template(TEMPLATE_DIR)
     create_sha_template(TEMPLATE_DIR)

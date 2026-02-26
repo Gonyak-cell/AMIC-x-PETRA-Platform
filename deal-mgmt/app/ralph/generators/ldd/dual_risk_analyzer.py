@@ -18,9 +18,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.ralph.generators.ldd.json_utils import extract_json
-
 from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
-from app.ralph.generators.ldd.prompts import SYSTEM_PROMPT, format_source_materials
+from app.ralph.generators.ldd.prompts import format_source_materials
 from app.ralph.parsers.base import ParsedFile
 
 logger = logging.getLogger(__name__)

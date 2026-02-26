@@ -53,10 +53,10 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 
 # SQLite에서 PostgreSQL 전용 타입 컴파일 지원
 from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 

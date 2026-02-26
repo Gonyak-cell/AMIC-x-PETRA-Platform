@@ -52,8 +52,8 @@ class CitationDB:
         if self._loaded:
             return
 
-        from app.ralph.generators.ldd.legal_citations.korean_statutes import STATUTES
         from app.ralph.generators.ldd.legal_citations.korean_precedents import PRECEDENTS
+        from app.ralph.generators.ldd.legal_citations.korean_statutes import STATUTES
 
         self._statutes = STATUTES
         self._precedents = PRECEDENTS

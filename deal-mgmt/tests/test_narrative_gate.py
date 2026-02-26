@@ -6,9 +6,7 @@ Phase 6: 품질 보증 — 서술 품질 게이트 테스트.
 import pytest
 
 from app.ralph.gates.narrative_gate import (
-    NarrativeItemQuality,
     NarrativeQualityGate,
-    NarrativeQualityResult,
 )
 
 

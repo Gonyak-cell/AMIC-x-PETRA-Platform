@@ -1,6 +1,5 @@
 """RFI API 테스트."""
 
-import pytest
 
 SAMPLE_TXN = {
     "name": "RFI 테스트 거래",

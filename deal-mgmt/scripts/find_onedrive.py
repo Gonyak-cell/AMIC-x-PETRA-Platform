@@ -1,5 +1,4 @@
 """OneDrive 폴더 경로 탐색 및 파일 접근성 확인."""
-import os
 import pathlib
 
 user_home = pathlib.Path(r"C:\Users\서지원")

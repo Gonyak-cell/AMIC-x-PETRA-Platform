@@ -1,8 +1,7 @@
 """Pipeline 결과 JSON 확인 스크립트."""
 import json
-import sys
 
-with open("output/pipeline_result.json", "r", encoding="utf-8") as f:
+with open("output/pipeline_result.json", encoding="utf-8") as f:
     data = json.load(f)
 
 # Executive summary
@@ -20,7 +19,7 @@ for sec, items in ns.items():
 
 # Gap detection
 gap = data.get("gap_detection", {})
-print(f"\n=== GAP DETECTION ===")
+print("\n=== GAP DETECTION ===")
 if gap:
     for k, v in gap.items():
         if isinstance(v, list):
@@ -30,7 +29,7 @@ if gap:
 
 # Dual risk
 dr = data.get("dual_risk_summary", {})
-print(f"\n=== DUAL RISK ===")
+print("\n=== DUAL RISK ===")
 print(f"  {json.dumps(dr, ensure_ascii=False)[:500]}")
 
 # Cost
@@ -38,13 +37,13 @@ print(f"\n=== COST: ${data.get('cost_usd', 0):.4f} ===")
 
 # Guardrails
 gr = data.get("guardrail_result", {})
-print(f"\n=== GUARDRAILS ===")
+print("\n=== GUARDRAILS ===")
 print(f"  errors: {gr.get('error_count', 0)}, warnings: {gr.get('warning_count', 0)}")
 print(f"  passed: {gr.get('passed_rules', [])}")
 
 # QA
 qa = data.get("qa_result", {})
-print(f"\n=== QA ===")
+print("\n=== QA ===")
 if qa:
     print(f"  overall_score: {qa.get('overall_score', 'N/A')}")
     print(f"  summary: {qa.get('summary', 'N/A')[:500]}")

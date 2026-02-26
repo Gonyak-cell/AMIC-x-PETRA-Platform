@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.exceptions import DocumentNotFoundError, DocumentNotReadyError
+from app.core.exceptions import DocumentNotFoundError
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import MarketingDocStatus
 from app.schemas.marketing_material import (

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -141,7 +141,7 @@ class RalphLoopOrchestrator:
     @log_error_with_input
     async def run(self, source_data: dict[str, Any]) -> LoopResult:
         """3단계 Ralph Loop를 실행한다."""
-        started = datetime.now(timezone.utc).isoformat()
+        started = datetime.now(UTC).isoformat()
         errors: list[str] = []
         critical_flags: list[str] = []
 
@@ -186,7 +186,7 @@ class RalphLoopOrchestrator:
                 errors=errors,
                 critical_flags=critical_flags,
                 started_at=started,
-                completed_at=datetime.now(timezone.utc).isoformat(),
+                completed_at=datetime.now(UTC).isoformat(),
             )
 
         except Exception as exc:
@@ -199,7 +199,7 @@ class RalphLoopOrchestrator:
                 progress=self._tracker.to_dict(),
                 errors=[str(exc)],
                 started_at=started,
-                completed_at=datetime.now(timezone.utc).isoformat(),
+                completed_at=datetime.now(UTC).isoformat(),
             )
 
     # ── Phase 1: 구조 기획 ──────────────────────────────────────────────────

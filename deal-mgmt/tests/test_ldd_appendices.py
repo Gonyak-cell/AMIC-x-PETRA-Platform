@@ -5,6 +5,7 @@ Phase 4: appendix_types, appendix_generator 테스트.
 
 import pytest
 
+from app.ralph.generators.ldd.appendix_generator import AppendixGenerator
 from app.ralph.generators.ldd.appendix_types import (
     APPENDIX_COLUMNS,
     APPENDIX_SECTION_MAP,
@@ -14,8 +15,6 @@ from app.ralph.generators.ldd.appendix_types import (
     AppendixTable,
     AppendixType,
 )
-from app.ralph.generators.ldd.appendix_generator import AppendixGenerator
-
 
 # ── AppendixType 테스트 ──────────────────────────────────────────────────
 

@@ -13,14 +13,10 @@ LDD 법률실사보고서 — 원본 기반 양식 템플릿 생성 스크립트
 
 from __future__ import annotations
 
-import copy
 import re
-import zipfile
-from io import BytesIO
 from pathlib import Path
 
 from docx import Document
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent

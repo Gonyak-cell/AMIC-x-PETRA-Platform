@@ -164,7 +164,7 @@ def print_analysis(doc_path: Path, doc_type: str, verbose: bool = False, max_par
             print(f"  Table {info['table_idx']}: {info['rows']}행 × {info['cols']}열 | {info['sample']}")
 
     # ── 서식 요약 ──────────────────────────────────────────────
-    print(f"\n[서식 요약]")
+    print("\n[서식 요약]")
     top_fonts = sorted(font_counter.items(), key=lambda x: -x[1])[:5]
     print(f"  주요 폰트: {top_fonts}")
     top_styles = sorted(style_counter.items(), key=lambda x: -x[1])[:5]
@@ -173,7 +173,7 @@ def print_analysis(doc_path: Path, doc_type: str, verbose: bool = False, max_par
     # ── 섹션/페이지 설정 ──────────────────────────────────────────────
     if doc.sections:
         section = doc.sections[0]
-        print(f"\n[페이지 설정]")
+        print("\n[페이지 설정]")
         try:
             print(f"  크기: {section.page_width.cm:.1f}cm × {section.page_height.cm:.1f}cm")
             print(

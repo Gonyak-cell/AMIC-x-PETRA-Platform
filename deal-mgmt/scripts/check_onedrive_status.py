@@ -1,6 +1,6 @@
 """OneDrive 프로세스 상태 및 네트워크 활동 확인."""
-import subprocess
 import pathlib
+import subprocess
 
 # 1. OneDrive 프로세스 확인
 print("=== OneDrive Process ===")

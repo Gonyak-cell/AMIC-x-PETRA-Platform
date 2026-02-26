@@ -8,7 +8,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.legal_document import DateStr
 from app.models.enums import (
     RFICategory,
     RFIItemPriority,
@@ -16,7 +15,7 @@ from app.models.enums import (
     RFISourceType,
     RFIStatus,
 )
-
+from app.schemas.legal_document import DateStr
 
 # ── RFI ────────────────────────────────────────────────────
 

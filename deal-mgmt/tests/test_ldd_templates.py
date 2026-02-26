@@ -3,14 +3,13 @@
 import pytest
 
 from app.ralph.generators.ldd.templates import TemplateRegistry
-from app.ralph.generators.ldd.templates.base import ItemDef, LDDTemplate, SectionDef
 from app.ralph.generators.ldd.templates.asset_acquisition import AssetAcquisitionTemplate
+from app.ralph.generators.ldd.templates.base import ItemDef, LDDTemplate, SectionDef
 from app.ralph.generators.ldd.templates.corporate_split import CorporateSplitTemplate
 from app.ralph.generators.ldd.templates.ipo import IPOTemplate
 from app.ralph.generators.ldd.templates.preferred_stock import PreferredStockTemplate
 from app.ralph.generators.ldd.templates.real_estate import RealEstateTemplate
 from app.ralph.generators.ldd.templates.stock_acquisition import StockAcquisitionTemplate
-
 
 # ── TemplateRegistry 테스트 ────────────────────────────────────────────────────
 
@@ -185,8 +184,8 @@ class TestResolveSections:
         assert len(sections) == 4
 
     def test_empty_deal_type_fallback(self):
-        from app.services.ldd_report_service import _resolve_sections
         from app.schemas.ldd_report import DEFAULT_LDD_SECTIONS
+        from app.services.ldd_report_service import _resolve_sections
         sections, ttype = _resolve_sections("")
         assert ttype == "DEFAULT"
         assert len(sections) == len(DEFAULT_LDD_SECTIONS)

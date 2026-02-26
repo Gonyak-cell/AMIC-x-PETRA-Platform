@@ -13,7 +13,7 @@ import copy
 import json
 import logging
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -846,7 +846,7 @@ async def create_ldd_report_from_vdr(
     from app.ralph.prd_manager import load_prd
     from app.services.text_extraction_service import TextExtractionService, build_source_map
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. LDDReport 레코드 생성 — deal_type 기반 템플릿 선택
     deal_type = body.deal_type or ""
@@ -884,8 +884,8 @@ async def create_ldd_report_from_vdr(
 
         if not source_files:
             report.status = LDDReportStatus.REVIEW
-            report.analysis_completed_at = datetime.now(timezone.utc)
-            report.review_started_at = datetime.now(timezone.utc)
+            report.analysis_completed_at = datetime.now(UTC)
+            report.review_started_at = datetime.now(UTC)
             await db.commit()
             await db.refresh(report)
             return report
@@ -1071,8 +1071,8 @@ async def create_ldd_report_from_vdr(
                 report.irl_items = adapter.collect_irl_items(narratives_by_chapter)
 
             report.status = LDDReportStatus.REVIEW
-            report.analysis_completed_at = datetime.now(timezone.utc)
-            report.review_started_at = datetime.now(timezone.utc)
+            report.analysis_completed_at = datetime.now(UTC)
+            report.review_started_at = datetime.now(UTC)
 
         else:
             # ── 기존 단일 LLM 워크플로우 (하위 호환) ──
@@ -1158,8 +1158,8 @@ async def create_ldd_report_from_vdr(
             )
             report.draft_score = loop_result.final_score
             report.status = LDDReportStatus.REVIEW
-            report.analysis_completed_at = datetime.now(timezone.utc)
-            report.review_started_at = datetime.now(timezone.utc)
+            report.analysis_completed_at = datetime.now(UTC)
+            report.review_started_at = datetime.now(UTC)
 
         await db.commit()
         await db.refresh(report)
@@ -1175,7 +1175,7 @@ async def create_ldd_report_from_vdr(
             pass  # ralph_session 또는 멀티 LLM 모드에서 실패한 경우
         report.status = LDDReportStatus.FAILED
         report.error_message = str(exc)
-        report.analysis_completed_at = datetime.now(timezone.utc)
+        report.analysis_completed_at = datetime.now(UTC)
         await db.commit()
         await db.refresh(report)
         return report
@@ -1215,7 +1215,7 @@ async def finalize_ldd_report(
         )
 
     report.status = LDDReportStatus.FINALIZING
-    report.finalize_started_at = datetime.now(timezone.utc)
+    report.finalize_started_at = datetime.now(UTC)
     await db.commit()
 
     try:
@@ -1361,7 +1361,7 @@ async def finalize_ldd_report(
             uuid.UUID(loop_result.session_id) if loop_result.session_id else None
         )
         report.final_score = loop_result.final_score
-        report.finalize_completed_at = datetime.now(timezone.utc)
+        report.finalize_completed_at = datetime.now(UTC)
 
         # 7. DOCX 렌더링
         report = await generate_ldd_report(db, report)
@@ -1377,7 +1377,7 @@ async def finalize_ldd_report(
             pass  # ralph_session 생성 이전에 실패한 경우
         report.status = LDDReportStatus.FAILED
         report.error_message = str(exc)
-        report.finalize_completed_at = datetime.now(timezone.utc)
+        report.finalize_completed_at = datetime.now(UTC)
         await db.commit()
         await db.refresh(report)
         return report

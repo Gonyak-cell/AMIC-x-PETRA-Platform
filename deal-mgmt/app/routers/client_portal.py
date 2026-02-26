@@ -11,16 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims
 from app.models.buyer_candidate import BuyerCandidate
+from app.models.enums import (
+    BuyerCandidateStatus,
+    MarketingDocStatus,
+    MeetingStatus,
+)
 from app.models.marketing_material import MarketingMaterial
 from app.models.meeting_attendee import MeetingAttendee
 from app.models.meeting_log import MeetingLog
 from app.models.transaction import Transaction
-from app.models.enums import (
-    BuyerCandidateStatus,
-    MarketingDocStatus,
-    MeetingPhase,
-    MeetingStatus,
-)
 from app.schemas.client_portal import (
     BuyerSummaryForClient,
     ClientPortalDashboard,

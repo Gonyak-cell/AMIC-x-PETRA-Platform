@@ -2,6 +2,11 @@
 
 import pytest
 
+from app.ralph.generators.ldd.narrative_prompts import (
+    BLOCK_PROMPTS,
+    BLOCK_TITLES,
+    NARRATIVE_SYSTEM_PROMPT,
+)
 from app.ralph.generators.ldd.narrative_types import (
     BLOCK_STRATEGY,
     NarrativeBlock,
@@ -9,12 +14,6 @@ from app.ralph.generators.ldd.narrative_types import (
     NarrativeResult,
     get_blocks_for_item,
 )
-from app.ralph.generators.ldd.narrative_prompts import (
-    BLOCK_PROMPTS,
-    BLOCK_TITLES,
-    NARRATIVE_SYSTEM_PROMPT,
-)
-
 
 # ── NarrativeBlockType 테스트 ────────────────────────────────────────────────
 

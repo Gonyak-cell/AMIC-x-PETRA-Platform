@@ -6,14 +6,12 @@ memo_generator.py → PPTXProgrammaticGate → RalphMemoGenerator 전체 파이�
 from __future__ import annotations
 
 import os
-import tempfile
 
 import pytest
 
 from app.pptx.memo_generator import TEMPLATE_PATH, generate_memo
 from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
 from app.ralph.generators.pptx_generator import RalphMemoGenerator
-
 
 # ── 마스터 템플릿 존재 + 레이아웃 확인 ─────────────────────────────────────────
 

@@ -29,9 +29,6 @@ JSON 콘텐츠 형식:
     }
 """
 import os
-import sys
-import json
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -124,9 +121,9 @@ def set_theme_color(run, theme_color_name='BACKGROUND_1'):
 
 
 def add_confidential_footer(slide, position='bottom', on_forest=False):
-    from pptx.util import Inches, Pt
     from pptx.dml.color import RGBColor
     from pptx.enum.text import PP_ALIGN
+    from pptx.util import Inches, Pt
 
     if position == 'top_right':
         left, top = Inches(8.2185), Inches(0.7106)
@@ -154,8 +151,8 @@ def add_confidential_footer(slide, position='bottom', on_forest=False):
 
 
 def set_font(run, name=None, size_pt=None, bold=None, italic=None, color=None, theme_color=None):
-    from pptx.util import Pt
     from pptx.dml.color import RGBColor
+    from pptx.util import Pt
     if name:
         run.font.name = name
     if size_pt:
@@ -173,9 +170,8 @@ def set_font(run, name=None, size_pt=None, bold=None, italic=None, color=None, t
 def add_textbox(slide, left, top, width, height, text, font_name=None,
                 font_size=None, bold=None, color=None, alignment=None,
                 word_wrap=True, theme_color=None):
-    from pptx.util import Inches, Pt
-    from pptx.dml.color import RGBColor
     from pptx.enum.text import PP_ALIGN
+    from pptx.util import Inches
 
     txBox = slide.shapes.add_textbox(
         Inches(left), Inches(top), Inches(width), Inches(height)
@@ -204,8 +200,7 @@ def add_textbox(slide, left, top, width, height, text, font_name=None,
 
 def add_rich_text_box(slide, left, top, width, height, runs, word_wrap=True,
                       base_font_size=11, line_spacing=1.15):
-    from pptx.util import Inches, Pt, Emu
-    from pptx.dml.color import RGBColor
+    from pptx.util import Inches
 
     txBox = slide.shapes.add_textbox(
         Inches(left), Inches(top), Inches(width), Inches(height)
@@ -233,9 +228,9 @@ def add_rich_text_box(slide, left, top, width, height, runs, word_wrap=True,
 
 
 def add_table(slide, left, top, width, height, headers, rows):
-    from pptx.util import Inches, Pt
     from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.util import Inches
 
     n_cols = len(headers)
     n_rows = len(rows) + 1
@@ -278,10 +273,10 @@ def add_table(slide, left, top, width, height, headers, rows):
 
 
 def add_section_header_shape(slide, left, top, width, text, bg_color=None):
-    from pptx.util import Inches, Pt, Emu
     from pptx.dml.color import RGBColor
     from pptx.enum.shapes import MSO_SHAPE
-    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.util import Emu, Inches
 
     bg = bg_color or COLOR_GREEN_PRIMARY
     height = 0.35
@@ -323,10 +318,8 @@ def _clear_table_style(table):
 
 def _set_cell_border(cell, top=None, bottom=None, left_side=None, right_side=None):
     """셀 테두리 스타일 설정"""
-    from pptx.util import Pt
-    from pptx.dml.color import RGBColor
-    from pptx.oxml.ns import qn
     from lxml import etree
+    from pptx.oxml.ns import qn
 
     tc = cell._tc
     tc_pr = tc.find(qn('a:tcPr'))
@@ -361,9 +354,8 @@ def _set_cell_border(cell, top=None, bottom=None, left_side=None, right_side=Non
 def add_info_table_block(slide, left, top, width, label, fields,
                          financial=None, bullet_values=None,
                          label_w=1.5, field_col_w=1.5, row_h=0.35, fin_row_h=0.65):
-    from pptx.util import Inches, Pt, Emu
-    from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.util import Emu, Inches
 
     table_w = width - label_w
     value_col_w = table_w - field_col_w
@@ -484,8 +476,6 @@ def add_info_table_block(slide, left, top, width, label, fields,
 # ── 슬라이드 생성 함수 ──────────────────────────────────────────
 
 def create_cover_slide(prs, project_name, memo_type_label, date_str):
-    from pptx.util import Inches
-    from pptx.enum.text import PP_ALIGN
 
     layout = get_layout(prs, 'COVER')
     slide = prs.slides.add_slide(layout)
@@ -511,8 +501,8 @@ def create_cover_slide(prs, project_name, memo_type_label, date_str):
 
 
 def create_disclaimer_slide(prs, disclaimer_text, date_label='', company_name=''):
-    from pptx.util import Inches, Emu
-    from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
+    from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
+    from pptx.util import Emu, Inches
 
     layout = get_layout(prs, 'FOREST')
     slide = prs.slides.add_slide(layout)
@@ -586,7 +576,6 @@ def create_disclaimer_slide(prs, disclaimer_text, date_label='', company_name=''
 
 
 def create_toc_slide(prs, sections, current_section=0):
-    from pptx.util import Inches
 
     layout = get_layout(prs, 'FOREST')
     slide = prs.slides.add_slide(layout)
@@ -604,9 +593,9 @@ def create_toc_slide(prs, sections, current_section=0):
 
 
 def _build_toc_table_xml(slide, sections, current_section=0):
-    from pptx.util import Inches
-    from pptx.oxml.ns import qn
     from lxml import etree
+    from pptx.oxml.ns import qn
+    from pptx.util import Inches
 
     n_rows = len(sections)
     col0_w = 540000
@@ -741,9 +730,6 @@ def create_section_divider_slide(prs, section_number, section_title):
 
 
 def create_main_slide(prs, title, body_elements=None, note=None):
-    from pptx.util import Inches, Pt
-    from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN
 
     layout = get_layout(prs, 'MAIN')
     slide = prs.slides.add_slide(layout)
@@ -865,7 +851,6 @@ def _place_body_element(slide, elem, current_top):
 
 
 def _place_body_element_at(slide, elem, left, top, width):
-    from pptx.util import Inches
 
     elem_type = elem.get('type', 'text')
 

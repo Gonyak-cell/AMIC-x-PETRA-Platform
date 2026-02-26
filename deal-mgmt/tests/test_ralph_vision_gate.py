@@ -11,7 +11,6 @@ import pytest
 from app.ralph.gates.base import DimensionScore, GateResult, GateVerdict
 from app.ralph.gates.vision_gate import VISION_WEIGHTS, VisionGate
 
-
 # ── VisionGate 기본 ──────────────────────────────────────────────────────────
 
 

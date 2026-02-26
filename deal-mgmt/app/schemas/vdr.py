@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import VdrDocumentStatus, VdrFolderCategory
 
-
 # ── 폴더 스키마 ───────────────────────────────────────────
 
 

@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import LDDDealType, LDDReportStatus, LDDReportType
+from app.models.enums import LDDReportStatus, LDDReportType
 
 
 class LDDReport(Base, TimestampMixin):

@@ -142,7 +142,7 @@ async def _run_llm_analysis(
     job: TranscriptionJob,
 ) -> tuple[dict, float]:
     """LLM으로 녹취록을 구조화된 회의록으로 변환한다."""
-    from app.ralph.llm_client import CostTracker, RalphLLMClient
+    from app.ralph.llm_client import RalphLLMClient
 
     llm = RalphLLMClient(
         anthropic_api_key=getattr(settings, "ANTHROPIC_API_KEY", "") or "",

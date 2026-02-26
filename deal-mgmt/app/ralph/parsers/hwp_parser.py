@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from app.ralph.parsers.base import ParsedFile, ParsedTable
+from app.ralph.parsers.base import ParsedFile
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +127,8 @@ def _parse_with_olefile(file_path: str) -> ParsedFile:
 
 def _parse_hwpx(file_path: str) -> ParsedFile:
     """HWPX (OOXML 기반) 파싱 — ZIP 내부 XML 추출."""
-    import zipfile
     import xml.etree.ElementTree as ET
+    import zipfile
 
     try:
         text_parts: list[str] = []

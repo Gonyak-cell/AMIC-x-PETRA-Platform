@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.database import async_session_factory
 from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import MarketingDocStatus, MarketingDocType
 from app.models.marketing_material import MarketingMaterial
@@ -151,7 +150,6 @@ async def create_marketing_material_with_ralph(
     created_by_email: str | None = None,
 ) -> MarketingMaterial:
     """Ralph Loop 품질 강화 모드로 마케팅 자료를 생성한다."""
-    import json
     import logging
 
     from app.ralph.convergence import ConvergenceConfig
@@ -268,7 +266,7 @@ async def update_distribution(
     mat = await get_marketing_material(db, transaction_id, mat_id)
 
     mat.distributed_to = body.distributed_to
-    mat.distributed_at = body.distributed_at or datetime.now(timezone.utc).isoformat()
+    mat.distributed_at = body.distributed_at or datetime.now(UTC).isoformat()
 
     await db.commit()
     await db.refresh(mat)

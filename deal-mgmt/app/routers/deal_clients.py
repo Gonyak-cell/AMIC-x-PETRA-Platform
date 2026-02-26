@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims, require_role
+from app.core.security import JWTClaims, require_role
 from app.models.deal_client import DealClient
 from app.models.enums import AuditAction
 from app.schemas.deal_client import ClientDealSummary, DealClientCreate, DealClientOut

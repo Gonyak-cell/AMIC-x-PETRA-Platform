@@ -111,7 +111,6 @@ async def start_transcription(
     await db.refresh(job)
 
     # 백그라운드 처리 시작
-    from app.services.transcription_service import process_transcription_job
     background_tasks.add_task(_run_transcription, job.id)
 
     return TranscriptionJobOut.model_validate(job)

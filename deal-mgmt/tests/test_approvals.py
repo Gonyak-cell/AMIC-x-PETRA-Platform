@@ -1,6 +1,5 @@
 """Approval Requests API 테스트 — Phase 5A."""
 
-import pytest
 
 
 SAMPLE_APPROVAL = {
@@ -232,7 +231,7 @@ async def test_cancel_already_decided(client, transaction_id):
 # ── 404 ────────────────────────────────────────────────────
 async def test_get_nonexistent_approval(client, transaction_id):
     resp = await client.get(
-        f"/api/v1/approvals/00000000-0000-0000-0000-000000000000"
+        "/api/v1/approvals/00000000-0000-0000-0000-000000000000"
     )
     assert resp.status_code == 404
 

@@ -9,8 +9,6 @@ XML 직접 조작으로 원본 서식(폰트, 색상, 스타일)을 100% 보존.
 from __future__ import annotations
 
 import logging
-import re
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 

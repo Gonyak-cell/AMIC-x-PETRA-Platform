@@ -7,36 +7,13 @@ from app.models.closing_checklist import ClosingChecklist
 from app.models.compliance_item import ComplianceItem
 from app.models.contract import Contract
 from app.models.contract_markup import ContractMarkup
-from app.models.deal_client import DealClient
 from app.models.contract_version import ContractVersion
 from app.models.dd_checklist import DDChecklist
+from app.models.deal_client import DealClient
 from app.models.earnout import EarnoutMilestone
 from app.models.engagement import Engagement
-from app.models.ldd_report import LDDReport
-from app.models.ldd_vdr_reference import LddVdrReference
-from app.models.legal_document import LegalDocument
-from app.models.meeting_action_item import MeetingActionItem
-from app.models.meeting_attendee import MeetingAttendee
-from app.models.meeting_log import MeetingLog
-from app.models.negotiation_issue import NegotiationIssue
 from app.models.enums import (
     ActionItemStatus,
-    FMChecklistCategory,
-    FMChecklistItemStatus,
-    FMChecklistSeverity,
-    FMChecklistStatus,
-    FinancialModelStatus,
-    FinancialModelType,
-    RFICategory,
-    RFIItemPriority,
-    RFIItemStatus,
-    RFISourceType,
-    RFIStatus,
-    TranscriptionJobStatus,
-    PermitAnalysisStatus,
-    PermitFilingType,
-    PermitRequirementStatus,
-    PermitTimingType,
     ApprovalStatus,
     ApprovalType,
     AttendeeRole,
@@ -46,11 +23,11 @@ from app.models.enums import (
     BuyerCandidateStatus,
     BuyerReaction,
     BuyerType,
-    ConditionMatchLevel,
     ClosingCategory,
     ClosingConditionStatus,
     ComplianceCategory,
     ComplianceStatus,
+    ConditionMatchLevel,
     ContractStatus,
     ContractType,
     DDChecklistStatus,
@@ -58,6 +35,12 @@ from app.models.enums import (
     EarnoutMetric,
     EarnoutStatus,
     EngagementType,
+    FinancialModelStatus,
+    FinancialModelType,
+    FMChecklistCategory,
+    FMChecklistItemStatus,
+    FMChecklistSeverity,
+    FMChecklistStatus,
     LDDIssueLevel,
     LDDItemStatus,
     LDDReportStatus,
@@ -75,11 +58,18 @@ from app.models.enums import (
     NegotiationIssuePriority,
     NegotiationIssueStatus,
     NoteType,
-    VdrDocumentStatus,
-    VdrFolderCategory,
+    PermitAnalysisStatus,
+    PermitFilingType,
+    PermitRequirementStatus,
+    PermitTimingType,
     PMICategory,
     PMIPriority,
     PMITaskStatus,
+    RFICategory,
+    RFIItemPriority,
+    RFIItemStatus,
+    RFISourceType,
+    RFIStatus,
     RiskCategory,
     RiskLikelihood,
     RiskSeverity,
@@ -88,24 +78,34 @@ from app.models.enums import (
     TransactionPhase,
     TransactionSide,
     TransactionStatus,
+    TranscriptionJobStatus,
     ValuationMethod,
+    VdrDocumentStatus,
+    VdrFolderCategory,
     WorkingGroupRole,
 )
-from app.models.financial_model import FMChecklist, FMChecklistItem, FinancialModel
+from app.models.financial_model import FinancialModel, FMChecklist, FMChecklistItem
+from app.models.ldd_report import LDDReport
+from app.models.ldd_vdr_reference import LddVdrReference
+from app.models.legal_document import LegalDocument
 from app.models.marketing_material import MarketingMaterial
+from app.models.meeting_action_item import MeetingActionItem
+from app.models.meeting_attendee import MeetingAttendee
+from app.models.meeting_log import MeetingLog
 from app.models.nda import NDA
+from app.models.negotiation_issue import NegotiationIssue
+from app.models.note import DealNote
 from app.models.permit_analysis import PermitAnalysis
 from app.models.permit_requirement import PermitRequirement
-from app.models.note import DealNote
 from app.models.pmi_task import PMITask
 from app.models.ralph_session import RalphSession
 from app.models.rfi import RFI
-from app.models.rfi_item import RFIItem
 from app.models.rfi_checklist_mapping import RFIChecklistMapping
+from app.models.rfi_item import RFIItem
 from app.models.risk_item import RiskItem
 from app.models.timeline import DealTimeline
-from app.models.transcription_job import TranscriptionJob
 from app.models.transaction import Transaction
+from app.models.transcription_job import TranscriptionJob
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.models.vdr_text_cache import VdrTextCache

@@ -18,7 +18,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ── 모호한 표현 패턴 ─────────────────────────────────────────────────────
 
 _VAGUE_PATTERNS: list[re.Pattern] = [

@@ -14,10 +14,8 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from app.ralph.generators.ldd.json_utils import extract_json
-
 from app.ralph.generators.ldd.pipeline_config import LDDPipelineConfig
 
 logger = logging.getLogger(__name__)

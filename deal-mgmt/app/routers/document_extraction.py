@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims, require_write_access
-from app.models.enums import ExtractionStatus
 from app.schemas.document_extraction import (
     BatchExtractionRequest,
     ExtractionConfirmRequest,
@@ -42,7 +41,6 @@ async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: Backg
     except Exception as exc:
         logger.warning("Celery 디스패치 실패, 동기 폴백: %s", exc)
         from app.core.database import async_session_factory
-        from app.services.document_extraction_service import run_extraction_pipeline
 
         background_tasks.add_task(
             _run_sync_fallback, extraction_id, async_session_factory

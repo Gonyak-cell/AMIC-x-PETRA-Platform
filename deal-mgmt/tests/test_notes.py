@@ -1,6 +1,5 @@
 """Deal Notes API 테스트 — Phase 5A."""
 
-import pytest
 
 
 # ── Create ─────────────────────────────────────────────────

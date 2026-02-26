@@ -7,7 +7,6 @@ import pytest
 
 from app.ralph.llm_client import COST_PER_1K, CostTracker, RalphLLMClient
 
-
 # ── CostTracker ──────────────────────────────────────────────────────────────
 
 

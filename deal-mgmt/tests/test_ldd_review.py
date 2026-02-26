@@ -2,8 +2,7 @@
 
 import uuid
 
-import pytest
-from sqlalchemy import select, update
+from sqlalchemy import update
 
 SAMPLE_TXN = {
     "name": "LDD 리뷰 테스트 거래",

@@ -14,7 +14,6 @@ from app.models.enums import (
     PermitTimingType,
 )
 
-
 # ── 공통 서브 모델 ──────────────────────────────────────────
 
 class ExistingPermit(BaseModel):

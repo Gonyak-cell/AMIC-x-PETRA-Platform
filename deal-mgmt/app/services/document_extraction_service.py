@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document_extraction import DocumentExtraction
@@ -295,7 +295,7 @@ async def confirm_extraction(
     extraction.target_id = applied_id
     extraction.status = ExtractionStatus.CONFIRMED
     extraction.reviewed_by_email = user_email
-    extraction.reviewed_at = datetime.now(timezone.utc).isoformat()
+    extraction.reviewed_at = datetime.now(UTC).isoformat()
     await db.commit()
     await db.refresh(extraction)
 

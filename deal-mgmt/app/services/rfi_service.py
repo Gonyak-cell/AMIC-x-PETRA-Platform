@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -31,7 +31,6 @@ from app.schemas.rfi import (
     RFIUpdate,
 )
 from app.services import audit_service
-
 
 # ── RFI CRUD ───────────────────────────────────────────────
 
@@ -147,7 +146,7 @@ async def send_rfi(
     if rfi.total_items == 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="질문이 없는 RFI는 발송할 수 없습니다")
     rfi.status = RFIStatus.SENT
-    rfi.sent_at = datetime.now(timezone.utc)
+    rfi.sent_at = datetime.now(UTC)
     await audit_service.record(
         db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
         actor_email=actor_email, new_value={"status": "SENT"},
@@ -171,7 +170,7 @@ async def close_rfi(
             detail=f"현재 상태({rfi.status.value})에서는 마감할 수 없습니다",
         )
     rfi.status = RFIStatus.CLOSED
-    rfi.closed_at = datetime.now(timezone.utc)
+    rfi.closed_at = datetime.now(UTC)
     await audit_service.record(
         db, entity_type="RFI", entity_id=rfi.id, action=AuditAction.UPDATE,
         actor_email=actor_email, new_value={"status": "CLOSED"},
@@ -190,7 +189,7 @@ async def extend_deadline(
 ) -> RFI:
     rfi = await _get_rfi_simple(db, txn_id, rfi_id)
     # BE-WF-05: 과거 날짜 및 기존 마감일 이전 검증
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = datetime.now(UTC).strftime("%Y-%m-%d")
     if new_due_date < today_str:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -360,7 +359,7 @@ async def respond_to_item(
         )
     item.response = body.response
     item.response_documents = body.response_documents
-    item.responded_at = datetime.now(timezone.utc)
+    item.responded_at = datetime.now(UTC)
     item.responded_by = responder_email
     item.status = RFIItemStatus.RESPONDED
     rfi = await _get_rfi_simple(db, txn_id, rfi_id)
@@ -421,7 +420,7 @@ async def get_rfi_summary(db: AsyncSession, txn_id: uuid.UUID) -> RFISummary:
     pct = (responded / total_items * 100) if total_items > 0 else 0.0
 
     # 기한 초과
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%d")
     overdue = sum(
         1 for i in all_items
         if i.status == RFIItemStatus.PENDING and i.due_date and i.due_date < now_str

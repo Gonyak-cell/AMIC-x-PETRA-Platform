@@ -2,10 +2,8 @@
 
 attrib +P -U <file> 명령으로 "이 디바이스에 항상 유지" 설정.
 """
-import os
 import pathlib
 import subprocess
-import sys
 
 BASE = pathlib.Path(
     r"C:\Users\서지원\OneDrive - 주식회사 페트라브릿지파트너스"
@@ -27,7 +25,7 @@ for f in real_files[:5]:
     print(f"  {result.stdout.strip()}")
 
 # Step 2: 폴더 전체 pin (attrib +P -U /S /D)
-print(f"\n=== Step 2: 폴더 전체 pin 시도 ===")
+print("\n=== Step 2: 폴더 전체 pin 시도 ===")
 print(f"  대상: {BASE}")
 result = subprocess.run(
     ["attrib", "+P", "-U", "/S", "/D", str(BASE / "*")],
@@ -40,6 +38,7 @@ print(f"  returncode: {result.returncode}")
 
 # Step 3: 잠시 후 다시 확인
 import time
+
 print("\n=== Step 3: 10초 대기 후 재확인 ===")
 time.sleep(10)
 

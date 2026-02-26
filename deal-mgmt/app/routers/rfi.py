@@ -15,6 +15,7 @@ from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claim
 from app.schemas.rfi import (
     RFIAutoGenerateFromDDRequest,
     RFIAutoGenerateResult,
+    RFIChecklistMappingOut,
     RFICreate,
     RFIDetailOut,
     RFIExcelImportResult,
@@ -28,7 +29,6 @@ from app.schemas.rfi import (
     RFIOut,
     RFISummary,
     RFIUpdate,
-    RFIChecklistMappingOut,
 )
 from app.services import rfi_service, transaction_service
 

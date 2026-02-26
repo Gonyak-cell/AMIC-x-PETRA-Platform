@@ -7,7 +7,6 @@ vdr_text_caches 테이블에 캐싱하여 동일 문서의 반복 추출을 방�
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 from dataclasses import dataclass

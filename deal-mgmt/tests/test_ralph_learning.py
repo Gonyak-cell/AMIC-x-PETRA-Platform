@@ -6,7 +6,6 @@ PatternAggregator (DB 쿼리) 와 LearningPromptInjector (프롬프트 주입) �
 import uuid
 
 import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ralph_session import RalphSession, RalphSessionStatus

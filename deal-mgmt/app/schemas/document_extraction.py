@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import DocExtractionCategory, ExtractionStatus
 
-
 # ── 요청 스키마 ──────────────────────────────────────────────
 
 

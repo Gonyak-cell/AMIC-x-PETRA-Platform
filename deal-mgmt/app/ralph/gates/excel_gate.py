@@ -11,13 +11,12 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from typing import Any
 
 from app.ralph.gates.base import DimensionScore, GateResult, QualityGate
-
-import logging
 
 logger = logging.getLogger(__name__)
 

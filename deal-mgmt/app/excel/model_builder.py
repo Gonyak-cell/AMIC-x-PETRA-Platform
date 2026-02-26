@@ -15,9 +15,6 @@ from openpyxl.utils import get_column_letter
 
 from app.excel import formulas as F
 from app.excel.styles import (
-    ALIGN_CENTER,
-    ALIGN_RIGHT,
-    NUM_FMT_DAYS,
     NUM_FMT_KRW,
     NUM_FMT_MULTIPLE,
     NUM_FMT_PCT,
@@ -33,7 +30,7 @@ from app.excel.styles import (
     create_named_styles,
     set_column_widths,
 )
-from app.models.enums import FMChecklistCategory, FinancialModelType
+from app.models.enums import FinancialModelType, FMChecklistCategory
 from app.services.financial_model_service import FM_FIELD_REGISTRY
 
 # title → category 매핑 (Input 시트 카테고리별 필터링용)

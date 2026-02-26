@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
 import tempfile
 from pathlib import Path
 
@@ -17,9 +15,8 @@ from app.ralph.gates.llm_judge_gate import (
     EXCEL_WEIGHTS,
     LLMJudgeGate,
 )
-from app.ralph.generators.excel_generator import RalphExcelGenerator, SHEET_TITLES
+from app.ralph.generators.excel_generator import SHEET_TITLES, RalphExcelGenerator
 from app.ralph.prd_manager import load_prd
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

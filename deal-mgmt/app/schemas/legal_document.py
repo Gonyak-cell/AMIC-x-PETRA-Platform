@@ -11,7 +11,6 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_valida
 
 from app.models.enums import LegalDocStatus, LegalDocType
 
-
 # ── 공통 유효성 헬퍼 ──────────────────────────────────────────────────────────
 
 def _validate_date_str(v: object) -> str:
@@ -61,7 +60,7 @@ class LegalDocumentCreate(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_parameters_by_type(self) -> "LegalDocumentCreate":
+    def validate_parameters_by_type(self) -> LegalDocumentCreate:
         """doc_type에 맞는 파라미터 스키마로 유효성 검증."""
         schema_map: dict[LegalDocType, type[BaseModel]] = {
             LegalDocType.SPA: SPAParameters,
@@ -101,7 +100,7 @@ class SPAParameters(BaseModel):
     governing_law: str = Field("대한민국", description="준거법")
 
     @model_validator(mode="after")
-    def validate_transfer_not_exceed_total(self) -> "SPAParameters":
+    def validate_transfer_not_exceed_total(self) -> SPAParameters:
         if self.total_shares > 0 and self.transfer_shares > self.total_shares:
             raise ValueError(
                 f"양도주식 수({self.transfer_shares:,})는 "
@@ -174,7 +173,7 @@ class SSAParameters(BaseModel):
     governing_law: str = Field("대한민국", description="준거법")
 
     @model_validator(mode="after")
-    def validate_post_money_ge_pre_money(self) -> "SSAParameters":
+    def validate_post_money_ge_pre_money(self) -> SSAParameters:
         if self.pre_money_valuation > 0 and self.post_money_valuation > 0:
             if self.post_money_valuation < self.pre_money_valuation:
                 raise ValueError(

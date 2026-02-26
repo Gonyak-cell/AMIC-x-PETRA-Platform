@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 from app.ralph.generators.ldd.json_utils import extract_json
-
 from app.ralph.generators.ldd.prompts import (
     CROSS_VALIDATION_PROMPT,
     EXECUTIVE_SUMMARY_PROMPT,
@@ -171,7 +170,7 @@ class LDDSectionAnalyzer:
                 "status": "PENDING",
                 "issue_level": None,
                 "risk_color": "",
-                "description": f"분석 결과 파싱 실패",
+                "description": "분석 결과 파싱 실패",
                 "deal_impact": "",
                 "recommendation": "",
                 "rfi_required": False,

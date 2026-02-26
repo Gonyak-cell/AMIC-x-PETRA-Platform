@@ -8,14 +8,12 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import (
-    LDDDealType,
     LDDIssueLevel,
     LDDItemStatus,
     LDDReportStatus,
     LDDReportType,
     LDDSectionType,
 )
-
 
 # ── 항목(Item) 스키마 ─────────────────────────────────────────────────────────
 

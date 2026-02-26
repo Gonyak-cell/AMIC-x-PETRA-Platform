@@ -404,8 +404,8 @@ class TestIntegration:
 
     def test_injector_then_verifier_roundtrip(self):
         """주입기가 생성한 컨텍스트에서 ID를 추출하고 검증하는 라운드트립."""
-        from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
         from app.ralph.generators.ldd.citation_verifier import CitationVerifier
+        from app.ralph.generators.ldd.legal_citations.citation_prompt_injector import CitationPromptInjector
 
         injector = CitationPromptInjector()
         verifier = CitationVerifier()
@@ -417,7 +417,7 @@ class TestIntegration:
         ids = injector.extract_citation_ids(ctx)
         # 주입된 컨텍스트에는 [cite:ID] 형식이 아니라 [ID] 형식으로 되어 있으므로
         # 검증기가 직접 사용하는 시나리오: LLM이 [cite:ID]로 인용한 텍스트 검증
-        sample_text = f"이사는 상법 제382조 [cite:상법_382]에 따라 선임된다."
+        sample_text = "이사는 상법 제382조 [cite:상법_382]에 따라 선임된다."
         result = verifier.verify_text(sample_text)
         assert result.verified >= 1
 

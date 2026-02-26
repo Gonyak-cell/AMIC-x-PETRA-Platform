@@ -142,7 +142,7 @@ def stage0_scan(source_dir: str) -> list[dict]:
     print(f"  폴더: {source_dir}")
 
     if not Path(source_dir).exists():
-        print(f"  [ERROR] 폴더가 존재하지 않습니다!")
+        print("  [ERROR] 폴더가 존재하지 않습니다!")
         sys.exit(1)
 
     t0 = time.time()
@@ -180,7 +180,7 @@ def _check_onedrive_availability(file_list: list[dict]) -> tuple[int, int]:
             with open(info["path"], "rb") as f:
                 f.read(1)  # 1바이트만 읽기 시도
             readable += 1
-        except (OSError, IOError):
+        except OSError:
             cloud_only += 1
 
     return readable, cloud_only
@@ -232,7 +232,7 @@ def stage0_parse(file_list: list[dict]) -> list:
             pf = parse_file(info["path"])
             pf.ddrl_sections = classify_file(info["path"], pf)
             parsed_files.append(pf)
-        except (OSError, IOError) as exc:
+        except OSError:
             cloud_errors += 1
             # OneDrive 클라우드 전용 파일 — 무시
         except Exception as exc:

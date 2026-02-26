@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
 
 from app.ralph.generators.ldd.section_analyzer import LDDDocumentGenerator, LDDSectionAnalyzer
-from app.ralph.parsers.base import ParsedFile
 
 logger = logging.getLogger(__name__)
 

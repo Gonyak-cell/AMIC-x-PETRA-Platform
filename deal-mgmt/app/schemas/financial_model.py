@@ -8,14 +8,13 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.models.enums import (
+    FinancialModelStatus,
+    FinancialModelType,
     FMChecklistCategory,
     FMChecklistItemStatus,
     FMChecklistSeverity,
     FMChecklistStatus,
-    FinancialModelStatus,
-    FinancialModelType,
 )
-
 
 # ── FinancialModel ────────────────────────────────────────────────────────
 

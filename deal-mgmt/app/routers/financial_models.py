@@ -14,13 +14,13 @@ from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims
 from app.models.enums import FinancialModelStatus
 from app.schemas.financial_model import (
+    FinancialModelCreate,
+    FinancialModelOut,
     FMChecklistBulkUpdate,
     FMChecklistFinalizeRequest,
     FMChecklistItemOut,
     FMChecklistItemUpdate,
     FMChecklistOut,
-    FinancialModelCreate,
-    FinancialModelOut,
 )
 from app.services import financial_model_service as fm_svc
 from app.services.fm_checklist_service import FMChecklistService

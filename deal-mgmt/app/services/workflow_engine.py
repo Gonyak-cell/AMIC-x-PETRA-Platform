@@ -16,7 +16,6 @@ from app.core.log_decorators import log_error_with_input
 from app.models.approval import ApprovalRequest
 from app.models.compliance_item import ComplianceItem
 from app.models.enums import (
-    ApprovalStatus,
     ApprovalType,
     AuditAction,
     ComplianceStatus,

@@ -12,7 +12,6 @@ import pytest
 
 from app.models.enums import LDDReportType
 
-
 # ── Phase A: enum + 모델 ──────────────────────────────────────────────────────
 
 
@@ -40,9 +39,9 @@ class TestLawFirmTemplateGenerator:
 
     def test_constants(self):
         from app.ralph.generators.ldd.law_firm_template import (
-            SECTION_BAR_FILLS,
-            RECOMMENDATION_FILL,
             PRESERVE_STYLES,
+            RECOMMENDATION_FILL,
+            SECTION_BAR_FILLS,
             SECTION_PLACEHOLDERS,
         )
         assert "26382A" in SECTION_BAR_FILLS
@@ -66,7 +65,7 @@ class TestLawFirmMapper:
     """DDRL 10개 섹션 → 법무법인 8개 목차 매핑 검증."""
 
     def test_import(self):
-        from app.ralph.generators.ldd.law_firm_mapper import LawFirmMapper, LawFirmChapter
+        from app.ralph.generators.ldd.law_firm_mapper import LawFirmChapter, LawFirmMapper
         assert LawFirmMapper is not None
         assert LawFirmChapter is not None
 
@@ -407,8 +406,8 @@ class TestPipelineStage6LawFirmMode:
     """pipeline.py Stage 6에서 law_firm_mode가 NarrativeGenerator에 전달되는지 검증."""
 
     def test_narrative_generator_accepts_system_prompt_override(self):
-        from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
         from app.ralph.generators.ldd.law_firm_prompts import LAW_FIRM_SYSTEM_PROMPT
+        from app.ralph.generators.ldd.narrative_generator import NarrativeGenerator
 
         gen = NarrativeGenerator(system_prompt_override=LAW_FIRM_SYSTEM_PROMPT)
         assert gen._system_prompt_override == LAW_FIRM_SYSTEM_PROMPT

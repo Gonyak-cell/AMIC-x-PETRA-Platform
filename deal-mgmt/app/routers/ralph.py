@@ -33,8 +33,6 @@ async def _run_ralph_loop(
     """
     from app.core.database import async_session_factory
     from app.ralph.convergence import ConvergenceConfig
-    from app.ralph.gates.docx_gate import DOCXProgrammaticGate
-    from app.ralph.gates.llm_judge_gate import LLMJudgeGate
     from app.ralph.llm_client import RalphLLMClient
     from app.ralph.orchestrator import LoopConfig, RalphLoopOrchestrator
     from app.ralph.prd_manager import load_prd
@@ -128,8 +126,8 @@ def _build_pipeline(
     if doc_type.lower().startswith("ldd"):
         from app.ralph.gates.docx_gate import DOCXProgrammaticGate
         from app.ralph.generators.ldd.section_analyzer import LDDDocumentGenerator, LDDSectionAnalyzer
-        from app.ralph.parsers.file_classifier import parse_and_classify, scan_directory
         from app.ralph.parsers.base import ParsedFile
+        from app.ralph.parsers.file_classifier import parse_and_classify, scan_directory
         from app.schemas.ldd_report import DEFAULT_LDD_SECTIONS
 
         # 파서 + 분류

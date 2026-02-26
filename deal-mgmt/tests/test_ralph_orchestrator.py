@@ -10,12 +10,11 @@ import json
 
 import pytest
 
-from app.ralph.convergence import ConvergenceChecker, ConvergenceConfig, ConvergenceVerdict
+from app.ralph.convergence import ConvergenceChecker, ConvergenceConfig
 from app.ralph.gates.base import DimensionScore, GateResult, GateVerdict, QualityGate
 from app.ralph.gates.docx_gate import DOCXProgrammaticGate
 from app.ralph.orchestrator import LoopConfig, LoopResult, LoopStatus, RalphLoopOrchestrator
-from app.ralph.progress_tracker import IterationRecord, ProgressTracker
-
+from app.ralph.progress_tracker import ProgressTracker
 
 # ── 더미 생성기 (DocumentGenerator Protocol) ──────────────────────────────────
 

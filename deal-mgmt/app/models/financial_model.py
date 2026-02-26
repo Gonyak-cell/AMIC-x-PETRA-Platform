@@ -2,20 +2,19 @@
 
 import uuid
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 from app.models.enums import (
+    FinancialModelStatus,
+    FinancialModelType,
     FMChecklistCategory,
     FMChecklistItemStatus,
     FMChecklistSeverity,
     FMChecklistStatus,
-    FinancialModelStatus,
-    FinancialModelType,
 )
-
 
 # ── FinancialModel ────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -374,7 +374,7 @@ async def import_rfi_from_excel(
             existing = existing_items[q_num]
             if response_text:
                 existing.response = response_text
-                existing.responded_at = datetime.now(timezone.utc)
+                existing.responded_at = datetime.now(UTC)
                 existing.status = parsed_status
             if notes_text:
                 existing.notes = notes_text
@@ -395,7 +395,7 @@ async def import_rfi_from_excel(
                 source_type=RFISourceType.EXCEL_IMPORT,
             )
             if response_text:
-                new_item.responded_at = datetime.now(timezone.utc)
+                new_item.responded_at = datetime.now(UTC)
             db.add(new_item)
             items_imported += 1
             if q_num == 0:

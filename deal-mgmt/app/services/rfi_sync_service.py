@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,7 +57,7 @@ async def sync_accepted_to_checklists(
                     existing = dd_item.notes or ""
                     dd_item.notes = f"{existing}\n[RFI 응답] {item.response}".strip()
                     mapping.synced = True
-                    mapping.synced_at = datetime.now(timezone.utc)
+                    mapping.synced_at = datetime.now(UTC)
                     mapping.synced_value = item.response[:500]
                     synced_count += 1
 
