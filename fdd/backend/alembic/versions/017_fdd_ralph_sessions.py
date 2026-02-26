@@ -1,7 +1,7 @@
 """FDD Ralph Loop 세션 테이블.
 
 Revision ID: 017_fdd_ralph_sessions
-Revises: 016_fdd_checklist_and_analysis_run
+Revises: 016
 """
 
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = "017_fdd_ralph_sessions"
-down_revision = "016_fdd_checklist_and_analysis_run"
+down_revision = "016"
 branch_labels = None
 depends_on = None
 

@@ -92,6 +92,7 @@ services:
       ELASTICSEARCH_URL: http://elastic:${KIIS_ES_PASSWORD:-changeme}@kiis-es:9200
       CORS_ORIGINS: ${KIIS_CORS_ORIGINS}
       SECRET_KEY: ${SHARED_JWT_SECRET}
+      JWT_SECRET: ${SHARED_JWT_SECRET}
       WORKERS: 4
       LOG_LEVEL: ${KIIS_LOG_LEVEL:-WARNING}
     restart: unless-stopped

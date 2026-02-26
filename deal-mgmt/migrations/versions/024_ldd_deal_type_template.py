@@ -1,14 +1,14 @@
 """LDD 거래유형별 템플릿 시스템 — deal_type, template_type 컬럼 추가.
 
 Revision ID: 024
-Revises: 023
+Revises: 023_ldd_multi_llm
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "024"
-down_revision = "023"
+down_revision = "023_ldd_multi_llm"
 branch_labels = None
 depends_on = None
 
