@@ -259,7 +259,7 @@ services:
   deal-mgmt-celery-worker:
     build:
       context: ./deal-mgmt
-    image: amic-deal-mgmt-api:latest
+    image: amic-deal-mgmt-worker:latest
     container_name: amic-deal-mgmt-celery-worker
     command: >
       celery -A app.tasks.celery_app worker
@@ -368,7 +368,7 @@ services:
   im-celery-worker:
     build:
       context: ./im
-    image: amic-im-api:latest
+    image: amic-im-worker:latest
     container_name: amic-im-celery-worker
     command: >
       celery -A src.api.tasks.celery_app worker
@@ -402,7 +402,7 @@ services:
   im-celery-beat:
     build:
       context: ./im
-    image: amic-im-api:latest
+    image: amic-im-beat:latest
     container_name: amic-im-celery-beat
     command: >
       celery -A src.api.tasks.celery_app beat
