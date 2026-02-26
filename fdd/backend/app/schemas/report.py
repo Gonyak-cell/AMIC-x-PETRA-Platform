@@ -29,6 +29,30 @@ class ReportGenerateRequest(BaseModel):
     include_sales_analysis: bool = Field(
         default=True, description="매출/원가 상세 분석 시트 포함"
     )
+    include_multiperiod: bool = Field(
+        default=True, description="다기간 재무제표(4yr+H1) 포함"
+    )
+    include_revenue_deepdive: bool = Field(
+        default=True, description="매출 심화 분석(고객별/제품별/집중도) 포함"
+    )
+    include_cost_structure: bool = Field(
+        default=True, description="비용 구조 분석(제조원가/판관비/인건비) 포함"
+    )
+    include_fcf: bool = Field(
+        default=True, description="FCF 브릿지 + CAPEX 분석 포함"
+    )
+    include_backlog: bool = Field(
+        default=True, description="수주잔액 분석 포함"
+    )
+    include_consolidation_enhanced: bool = Field(
+        default=True, description="연결 분석(IC 제거/엔티티별 P&L/FX) 포함"
+    )
+    use_llm_narratives: bool = Field(
+        default=False, description="LLM 기반 내러티브 자동 생성 활성화"
+    )
+    use_template_slotfill: bool = Field(
+        default=False, description="템플릿 SlotFill 내러티브 생성 활성화"
+    )
     format: Literal["pptx", "docx", "xlsx", "json"] = Field(
         default="pptx", description="출력 형식 (pptx, docx, xlsx, json)"
     )

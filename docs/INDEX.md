@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 11:39:00
+> 최종 업데이트: 2026-02-26 12:32:00
 
 ## 폴더 구조
 
@@ -9,8 +9,8 @@
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 33 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
-| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드 | 8 |
-| FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰 | 4 |
+| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 9 |
+| FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩 | 6 |
 | 프론트엔드 | `frontend/` | UI 리프레시, 통합 프론트엔드 계획, MSW, GSAP 모션, 팀 페이지, 로그인/캘린더 | 8 |
@@ -115,6 +115,7 @@
 | `20260226_1018_CICD_Auto_Deploy_Setup.md` | CI/CD 자동 배포 설정 가이드 — GitHub Actions, Secrets, 트리거, 사용법 |
 | `20260226_1119_Production_Dashboard_Error_Fix.md` | **프로덕션 대시보드 에러 수정** — KIIS JWT_SECRET 불일치, deal-mgmt Alembic 체인 단절+중복 인덱스, IM 테이블 누락, nginx DNS 캐시 |
 | `20260226_1139_Production_CORS_JWT_DB_Password_Fix.md` | **CORS/JWT/DB 비밀번호 수정** — IM JWT_SECRET 추가, KIIS CORS 변수명 수정, .env JSON 배열 형식, PG 볼륨 비밀번호 동기화 |
+| `20260226_1231_ERROR_CATALOG.md` | **프로덕션 에러 카탈로그** — 15개 카테고리(401~SSL만료~디스크풀), 2/26 사례, 점검 명령어, 통합 진단 스크립트 연동 |
 
 ## fdd/ (4)
 
@@ -124,6 +125,7 @@
 | `20260217_0241_FDD_Workflow_Analysis.md` | FDD 워크플로 분석 |
 | `20260217_1340_FDD_Template_SlotFill_System_Plan.md` | FDD 템플릿 Slot-Fill 시스템 계획 |
 | `20260226_0942_FDD_Phase1-5_Code_Review.md` | FDD Big 4 WP Phase 1~5 코드 리뷰 보고서 |
+| `20260226_1232_FDD_Report_Generator_Local_vs_Azure_Audit.md` | **FDD 보고서 생성기 로컬 vs Azure 비교 감사** — P0 PPTX URL 버그 수정, 에이전트 허위 보고 검증, 15개 include 플래그 API 노출, Auto FDD 상위 집합 확인 |
 
 ## kiis/ (12)
 

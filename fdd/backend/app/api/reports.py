@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
+from app.config import settings
 from app.auth.rbac import Permission
 from app.core.logging import get_logger
 from app.database import get_db
@@ -66,6 +67,14 @@ async def generate_report(
         include_financial_statements=request.include_financial_statements,
         include_trends=request.include_trends,
         include_sales_analysis=request.include_sales_analysis,
+        include_multiperiod=request.include_multiperiod,
+        include_revenue_deepdive=request.include_revenue_deepdive,
+        include_cost_structure=request.include_cost_structure,
+        include_fcf=request.include_fcf,
+        include_backlog=request.include_backlog,
+        include_consolidation_enhanced=request.include_consolidation_enhanced,
+        use_llm_narratives=request.use_llm_narratives,
+        use_template_slotfill=request.use_template_slotfill,
     )
 
     # Ralph Loop Pass 1: Draft Refinement
@@ -190,7 +199,7 @@ async def generate_report(
         )
 
     # PPTX 생성 (기본값)
-    pptx_bytes = await generate_pptx(report_ir)
+    pptx_bytes = await generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
     filename = f"FDD_Report_{report_ir.metadata.deal_name}.pptx"
 
     return StreamingResponse(
@@ -457,7 +466,7 @@ async def create_report_version(
         xlsx_buffer = render_excel_report(report_ir)
         Path(file_path).write_bytes(xlsx_buffer.getvalue())
     else:
-        pptx_bytes = await generate_pptx(report_ir)
+        pptx_bytes = await generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
         Path(file_path).write_bytes(pptx_bytes)
 
     # Create DB record
