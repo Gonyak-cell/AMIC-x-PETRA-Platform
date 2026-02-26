@@ -39,7 +39,7 @@ services:
 
   # ======================== FDD BACKEND ========================
   fdd-api:
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     ports: []
     volumes: []
     environment:
@@ -241,7 +241,7 @@ services:
 
   # ======================== DEAL MANAGEMENT BACKEND ========================
   deal-mgmt-api:
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     ports: []
     volumes: []
     environment:

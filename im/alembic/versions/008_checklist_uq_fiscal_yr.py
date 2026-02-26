@@ -1,13 +1,13 @@
 """add fiscal_year to im_checklist_items unique constraint
 
-Revision ID: 008_checklist_item_unique_fiscal_year
+Revision ID: 008_checklist_uq_fiscal_yr
 Revises: 007_im_ralph_sessions
 Create Date: 2026-02-25
 """
 
 from alembic import op
 
-revision = "008_checklist_item_unique_fiscal_year"
+revision = "008_checklist_uq_fiscal_yr"
 down_revision = "007_im_ralph_sessions"
 branch_labels = None
 depends_on = None
