@@ -59,7 +59,7 @@ import {
 import type { EngagementCreate } from "@/modules/ma/types/engagement";
 import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
 import type { BuyerCandidate, BuyerCandidateCreate } from "@/modules/ma/types/buyer";
-import type { TransactionPhase, TransactionSide, Currency } from "@/modules/ma/types/transaction";
+import type { TransactionPhase, TransactionSide, Currency, DealStructure, InvestmentType } from "@/modules/ma/types/transaction";
 import { useNdas, useNdaSummary, useCreateNda, useUpdateNda, useDeleteNda } from "@/modules/ma/hooks/useNdas";
 import { useBids, useBidComparison, useCreateBid, useUpdateBid, useDeleteBid } from "@/modules/ma/hooks/useBids";
 import { useDDChecklist, useDDChecklistSummary, useCreateDDChecklistItem, useUpdateDDChecklistItem, useDeleteDDChecklistItem } from "@/modules/ma/hooks/useDDChecklist";
@@ -279,7 +279,7 @@ export default function TransactionWorkspacePage() {
   const { data: phaseStatus } = usePhaseCompletion(id);
   useAutoAdvanceNotification(id);
   const { data: engagements } = useEngagements(id);
-  const { data: _members } = useWorkingGroup(id);
+  useWorkingGroup(id);
   const { data: conflicts } = useConflictCheck(id);
   const { data: buyers } = useBuyers(id);
   const { data: timeline } = useTimeline(id);
@@ -525,11 +525,12 @@ export default function TransactionWorkspacePage() {
       const g = PHASE_TO_SVC_GROUP[txn.phase] ?? "PREPARATION";
       setOpenSvcGroups(new Set([g]));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txn?.phase]);
   const toggleSvcGroup = (key: string) =>
     setOpenSvcGroups((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
 
@@ -767,7 +768,7 @@ export default function TransactionWorkspacePage() {
                 <InlineSelect
                   options={DEAL_STRUCTURE_OPTIONS}
                   value={txn.deal_structure ?? ""}
-                  onChange={(v) => updateTxn.mutate({ deal_structure: v || null })}
+                  onChange={(v) => updateTxn.mutate({ deal_structure: (v || null) as DealStructure | null })}
                   disabled={!canWrite()}
                 />
               </dd>
@@ -776,7 +777,7 @@ export default function TransactionWorkspacePage() {
                 <InlineSelect
                   options={INVESTMENT_TYPE_OPTIONS}
                   value={txn.investment_type ?? ""}
-                  onChange={(v) => updateTxn.mutate({ investment_type: v || null })}
+                  onChange={(v) => updateTxn.mutate({ investment_type: (v || null) as InvestmentType | null })}
                   disabled={!canWrite()}
                 />
               </dd>

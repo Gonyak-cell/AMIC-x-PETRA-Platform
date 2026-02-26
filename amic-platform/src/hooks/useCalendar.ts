@@ -20,6 +20,7 @@ for (const p of PHASE_CONFIG) {
   PHASE_LABEL[p.phase] = p.label;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useCalendarEvents(_filter: CalendarFilter) {
   const txnQuery = useQuery({
     queryKey: ["calendar", "ma-transactions"],

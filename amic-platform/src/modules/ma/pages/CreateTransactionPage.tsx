@@ -30,10 +30,10 @@ export default function CreateTransactionPage() {
   const navigate = useNavigate();
   const { isClient } = useAuth();
   const createTxn = useCreateTransaction();
-
-  if (isClient) return <Navigate to="/ma/transactions" replace />;
   const [form, setForm] = useState<TransactionCreate>(INITIAL);
   const [showOptional, setShowOptional] = useState(false);
+
+  if (isClient) return <Navigate to="/ma/transactions" replace />;
 
   const set = <K extends keyof TransactionCreate>(
     key: K,

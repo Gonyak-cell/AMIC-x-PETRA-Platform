@@ -107,12 +107,14 @@ export default function CreateLDDReportPage() {
       const typeLabel = LDD_REPORT_TYPE_LABELS[reportType];
       setTitle(`[${typeLabel}] ${txn.target_company_name ?? txn.name} 법률실사보고서`);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txn]);
 
   useEffect(() => {
     if (defaultSections && sections.length === 0) {
       setSections(defaultSections);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultSections]);
 
   const createMut = useCreateLDDReport(txnId);

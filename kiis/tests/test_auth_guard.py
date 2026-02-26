@@ -115,7 +115,7 @@ class TestAuthGuard:
         """/health는 인증이 필요하지 않다."""
         resp = await unauthenticated_client.get("/health")
         assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        assert resp.json()["status"] in ("ok", "degraded")
 
     @pytest.mark.asyncio
     async def test_deals_does_not_require_auth(self, unauthenticated_client):

@@ -80,9 +80,6 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isClient } = useAuth();
-
-  // CLIENT 역할은 MA Pipeline으로 리다이렉트
-  if (isClient) return <Navigate to="/ma/transactions" replace />;
   const { data: health } = useModuleHealth();
   const { data: aggregatedHealth } = useAggregatedHealth();
   const { kpis, errors, loading } = usePortalKpis(health);
@@ -92,6 +89,9 @@ export default function DashboardPage() {
 
   useScrollReveal(quickActionsRef, { stagger: 0.06 });
   useScrollReveal(modulesRef, { stagger: 0.08 });
+
+  // CLIENT 역할은 MA Pipeline으로 리다이렉트
+  if (isClient) return <Navigate to="/ma/transactions" replace />;
 
   const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",

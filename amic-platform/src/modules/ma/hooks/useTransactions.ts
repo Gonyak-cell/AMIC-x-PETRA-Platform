@@ -183,6 +183,7 @@ export function useAutoAdvanceNotification(txnId: string) {
     }
 
     prevCanAdvance.current = phaseStatus.can_advance;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phaseStatus?.can_advance, phaseStatus?.has_warnings, phaseStatus?.next_phase]);
 }
 

@@ -112,6 +112,7 @@ export default function AudioTranscriptionModal({ open, onClose, txnId, meetingP
     } else if (jobStatus.status === "FAILED") {
       // 에러 상태 유지 — processing 단계에서 에러 메시지 표시
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobStatus?.status]);
 
   // 모달 닫힐 때 리셋
