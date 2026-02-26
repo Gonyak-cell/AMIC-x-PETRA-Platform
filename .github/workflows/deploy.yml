@@ -138,8 +138,8 @@ jobs:
             # Reload nginx to pick up new upstream container IPs after recreation
             $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
 
-            # Wait for containers to be ready
-            sleep 15
+            # Wait for containers to be ready (IM depends_on chain can take 60s+)
+            sleep 30
 
             # ── 5. DB Migrations ──
             # Each module runs independently — one failure does not block others
