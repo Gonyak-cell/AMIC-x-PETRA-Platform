@@ -767,7 +767,7 @@ export default function TransactionWorkspacePage() {
                 <InlineSelect
                   options={DEAL_STRUCTURE_OPTIONS}
                   value={txn.deal_structure ?? ""}
-                  onChange={(v) => updateTxn.mutate({ deal_structure: v || undefined })}
+                  onChange={(v) => updateTxn.mutate({ deal_structure: v || null })}
                   disabled={!canWrite()}
                 />
               </dd>
@@ -776,7 +776,7 @@ export default function TransactionWorkspacePage() {
                 <InlineSelect
                   options={INVESTMENT_TYPE_OPTIONS}
                   value={txn.investment_type ?? ""}
-                  onChange={(v) => updateTxn.mutate({ investment_type: v || undefined })}
+                  onChange={(v) => updateTxn.mutate({ investment_type: v || null })}
                   disabled={!canWrite()}
                 />
               </dd>
@@ -789,7 +789,7 @@ export default function TransactionWorkspacePage() {
                   defaultValue={txn.industry ?? ""}
                   onBlur={(e) => {
                     const v = e.target.value.trim();
-                    if (v !== (txn.industry ?? "")) updateTxn.mutate({ industry: v || undefined });
+                    if (v !== (txn.industry ?? "")) updateTxn.mutate({ industry: v || null });
                   }}
                   disabled={!canWrite()}
                   placeholder="-"
@@ -803,8 +803,8 @@ export default function TransactionWorkspacePage() {
                   className={cn(INLINE_INPUT_CLS, "w-32 text-right font-mono")}
                   defaultValue={txn.estimated_deal_value ?? ""}
                   onBlur={(e) => {
-                    const v = e.target.value ? Number(e.target.value) : undefined;
-                    if (v !== (txn.estimated_deal_value ?? undefined)) updateTxn.mutate({ estimated_deal_value: v });
+                    const v = e.target.value ? Number(e.target.value) : null;
+                    if (v !== txn.estimated_deal_value) updateTxn.mutate({ estimated_deal_value: v });
                   }}
                   disabled={!canWrite()}
                   placeholder="-"
@@ -822,7 +822,7 @@ export default function TransactionWorkspacePage() {
                   type="date"
                   className={cn(INLINE_INPUT_CLS, "w-36")}
                   value={txn.target_close_date ?? ""}
-                  onChange={(e) => updateTxn.mutate({ target_close_date: e.target.value || undefined })}
+                  onChange={(e) => updateTxn.mutate({ target_close_date: e.target.value || null })}
                   disabled={!canWrite()}
                 />
               </dd>
@@ -849,7 +849,7 @@ export default function TransactionWorkspacePage() {
                   defaultValue={txn.deal_captain_email ?? ""}
                   onBlur={(e) => {
                     const v = e.target.value.trim();
-                    if (v !== (txn.deal_captain_email ?? "")) updateTxn.mutate({ deal_captain_email: v || undefined });
+                    if (v !== (txn.deal_captain_email ?? "")) updateTxn.mutate({ deal_captain_email: v || null });
                   }}
                   disabled={!canWrite()}
                   placeholder="-"

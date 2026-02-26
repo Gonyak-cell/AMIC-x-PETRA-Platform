@@ -524,6 +524,7 @@ export default function CompanyDetailPage() {
           <DataTable
             columns={subsidiaryColumns}
             data={basicInfo.subsidiaries}
+            keyField="sbrd_enp_nm"
             compact
             striped
           />

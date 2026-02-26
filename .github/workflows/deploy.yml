@@ -29,12 +29,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── CI 통과 대기 (push 이벤트만, workflow_dispatch는 즉시 배포) ──
+  wait-for-ci:
+    name: Wait for CI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Wait for CI workflow to pass
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: "Build"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success
+
   deploy:
     name: Deploy to ${{ github.event.inputs.environment || 'production' }}
     runs-on: ubuntu-latest
+    needs: [wait-for-ci]
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push'
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && needs.wait-for-ci.result == 'success'))
     environment: ${{ github.event.inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v4

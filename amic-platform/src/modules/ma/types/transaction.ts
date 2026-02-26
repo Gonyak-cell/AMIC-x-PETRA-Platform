@@ -74,14 +74,14 @@ export interface TransactionUpdate {
   target_company_name?: string;
   target_corp_code?: string;
   client_name?: string;
-  estimated_deal_value?: number;
+  estimated_deal_value?: number | null;
   currency?: Currency;
-  deal_structure?: DealStructure;
-  investment_type?: InvestmentType;
-  industry?: string;
+  deal_structure?: DealStructure | null;
+  investment_type?: InvestmentType | null;
+  industry?: string | null;
   lead_advisor_email?: string;
-  deal_captain_email?: string;
-  target_close_date?: string;
+  deal_captain_email?: string | null;
+  target_close_date?: string | null;
   notes?: string;
 }
 

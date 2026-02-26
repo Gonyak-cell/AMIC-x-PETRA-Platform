@@ -65,6 +65,8 @@ jobs:
           JWT_SECRET: test-jwt-secret
           SECRET_KEY: test-secret-key
           AUTH_ENABLED: "true"
+      - name: Corp basic service tests
+        run: pytest tests/test_corp_basic_service.py -v --tb=short
 
   # ─── Stage 1: Lint + Typecheck (fast feedback) ─────────────────────
   quality:
