@@ -16,7 +16,7 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "ldd_reports",
-        sa.Column("deal_type", sa.String(50), nullable=True, index=True, comment="거래유형 (STOCK_ACQUISITION 등)"),
+        sa.Column("deal_type", sa.String(50), nullable=True, comment="거래유형 (STOCK_ACQUISITION 등)"),
     )
     op.add_column(
         "ldd_reports",
