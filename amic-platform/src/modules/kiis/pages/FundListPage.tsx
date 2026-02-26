@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Landmark, AlertCircle } from "lucide-react";
+import { Landmark, AlertCircle, Clock, Users } from "lucide-react";
 import { useFunds } from "@/modules/kiis/hooks/useFunds";
 import { useFundFilters } from "@/modules/kiis/hooks/useFundFilters";
 import { Card, DataTable, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
@@ -13,6 +13,7 @@ import {
   ASSET_CLASS_LABELS,
   FUND_STATUS_BADGE_VARIANT,
   FUND_STATUS_LABELS,
+  DATA_SOURCE_LABELS,
 } from "@/modules/kiis/constants/fundFilters";
 import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
@@ -57,7 +58,21 @@ const columns: Column<FundListItem>[] = [
       </Badge>
     ),
   },
-  { key: "company_name", header: "Manager" },
+  {
+    key: "company_name",
+    header: "Manager",
+    render: (row) => (
+      <div className="flex items-center gap-1.5">
+        <span>{row.company_name}</span>
+        {row.is_co_gp && (
+          <Badge variant="warning">
+            <Users className="h-3 w-3 mr-0.5" />
+            Co-GP
+          </Badge>
+        )}
+      </div>
+    ),
+  },
   {
     key: "total_amount",
     header: "Total Amount",
@@ -71,6 +86,17 @@ const columns: Column<FundListItem>[] = [
     align: "center",
     width: "80px",
     render: (row) => row.vintage_year ?? "-",
+  },
+  {
+    key: "data_source",
+    header: "Source",
+    align: "center",
+    width: "100px",
+    render: (row) => (
+      <span className="text-xs text-text-secondary">
+        {DATA_SOURCE_LABELS[row.data_source ?? "kofia"] ?? row.data_source}
+      </span>
+    ),
   },
   {
     key: "is_maturity_alert",
@@ -128,6 +154,7 @@ export default function FundListPage() {
         legalTypes={getSelected("legal_type")}
         assetClasses={getSelected("asset_class")}
         fundStatuses={getSelected("fund_status")}
+        dataSource={params.data_source ?? ""}
         vintageFrom={params.vintage_from?.toString() ?? ""}
         vintageTo={params.vintage_to?.toString() ?? ""}
         amountPreset={new URLSearchParams(window.location.search).get("amount_preset") ?? ""}
@@ -139,6 +166,14 @@ export default function FundListPage() {
         }}
         activeFilterCount={activeFilterCount}
       />
+
+      {/* 기준시점 표시 */}
+      {data?.reference_date && (
+        <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+          <Clock className="h-3 w-3" />
+          기준시점: {data.reference_date}
+        </div>
+      )}
 
       <Card padding="none">
         {!isLoading && (!data?.items || data.items.length === 0) ? (

@@ -7,6 +7,7 @@ import {
   ASSET_CLASS_OPTIONS,
   FUND_STATUS_OPTIONS,
   AMOUNT_PRESET_OPTIONS,
+  DATA_SOURCE_OPTIONS,
   getVintageYearOptions,
 } from "@/modules/kiis/constants/fundFilters";
 
@@ -19,6 +20,7 @@ interface FundFilterPanelProps {
   legalTypes: string[];
   assetClasses: string[];
   fundStatuses: string[];
+  dataSource: string;
   vintageFrom: string;
   vintageTo: string;
   amountPreset: string;
@@ -76,6 +78,7 @@ export function FundFilterPanel({
   legalTypes,
   assetClasses,
   fundStatuses,
+  dataSource,
   vintageFrom,
   vintageTo,
   amountPreset,
@@ -211,6 +214,21 @@ export function FundFilterPanel({
       >
         <div className="overflow-hidden">
           <div className="border-t border-gray-border/60 px-5 py-4 space-y-4 bg-bg-cool/40">
+            {/* 행 0: 데이터 소스 */}
+            <div className="space-y-2">
+              <SectionLabel>데이터 소스</SectionLabel>
+              <div className="flex flex-wrap gap-2">
+                {DATA_SOURCE_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt.value}
+                    label={opt.label}
+                    active={dataSource === opt.value}
+                    onClick={() => onSetFilter("data_source", opt.value || undefined)}
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* 행 1: Investment Type + Legal Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

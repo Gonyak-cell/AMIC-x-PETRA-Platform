@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Wallet, AlertCircle, Search, Database, Globe } from "lucide-react";
+import { Wallet, AlertCircle, Search, Database, Globe, Clock, Users, FileText } from "lucide-react";
 import { useGPs } from "@/modules/kiis/hooks/useGPs";
 import { useGPRegistry } from "@/modules/kiis/hooks/useGPRegistry";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -12,7 +12,7 @@ import {
   PageHero,
   Spinner,
 } from "@/components/ui";
-import type { GPListParams, GPSortField } from "@/modules/kiis/types/gp";
+import type { GPListItem, GPListParams, GPSortField } from "@/modules/kiis/types/gp";
 import type { GPRegistryItem } from "@/modules/kiis/types/gpRegistry";
 import { formatAmountKRW } from "@/lib/format";
 import {
@@ -24,7 +24,7 @@ import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
 const PAGE_SIZE = 20;
 
-type DataSource = "kofia" | "registry";
+type DataSource = "kofia" | "pef_registry" | "registry";
 
 function useGPFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -150,6 +150,61 @@ function RegistryGPCard({ gp }: { gp: GPRegistryItem }) {
   );
 }
 
+/* ─── PEF 등록부 GP 카드 ─── */
+function PEFGPCard({ gp }: { gp: GPListItem }) {
+  return (
+    <Card className="h-full hover-glow transition-all duration-200">
+      <div className="space-y-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-text-dark truncate">
+            {gp.company_name}
+          </h3>
+          {gp.vintage_range && (
+            <p className="text-xs text-text-secondary mt-0.5">
+              Vintage {gp.vintage_range}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-text-secondary">PEF 펀드 수</p>
+            <p className="text-lg font-semibold text-text-dark tabular-nums">
+              {gp.fund_count}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-text-secondary">총 약정액</p>
+            <p className="text-lg font-semibold text-text-dark tabular-nums">
+              {formatAmountKRW(gp.total_aum)}
+            </p>
+          </div>
+        </div>
+
+        {(gp.is_co_gp_count ?? 0) > 0 && (
+          <div className="text-xs text-text-secondary">
+            <Users className="inline h-3 w-3 mr-1" />
+            Co-GP 참여: {gp.is_co_gp_count}건
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5">
+          <Badge variant="success">
+            <FileText className="h-3 w-3 mr-1" />
+            PEF 등록부
+          </Badge>
+          {gp.reference_date && (
+            <span className="text-xs text-text-secondary flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {gp.reference_date}
+            </span>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function GPListPage() {
   const navigate = useNavigate();
   const { params, setFilter, page, setPage, source, setSource } =
@@ -157,6 +212,7 @@ export default function GPListPage() {
   const [search, setSearch] = useState(params.company_name ?? "");
 
   const kofiaQuery = useGPs(params);
+  const pefQuery = useGPs({ ...params, data_source: "pef_registry" });
   const registryQuery = useGPRegistry({
     company_name: params.company_name,
     page,
@@ -164,8 +220,9 @@ export default function GPListPage() {
   });
 
   const isKofia = source === "kofia";
-  const data = isKofia ? kofiaQuery.data : registryQuery.data;
-  const isLoading = isKofia ? kofiaQuery.isLoading : registryQuery.isLoading;
+  const isPef = source === "pef_registry";
+  const data = isKofia ? kofiaQuery.data : isPef ? pefQuery.data : registryQuery.data;
+  const isLoading = isKofia ? kofiaQuery.isLoading : isPef ? pefQuery.isLoading : registryQuery.isLoading;
 
   const gridRef = useRef<HTMLDivElement>(null);
   useScrollReveal(gridRef, { stagger: 0.05, y: 20 }, [isLoading, data?.items.length]);
@@ -213,30 +270,27 @@ export default function GPListPage() {
 
       {/* 데이터소스 전환 탭 */}
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setSource("kofia")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-dr-sm text-sm font-medium transition-colors ${
-            isKofia
-              ? "bg-accent text-white shadow-sm"
-              : "bg-white text-text-secondary border border-border hover:border-accent/50"
-          }`}
-        >
-          <Database className="h-4 w-4" />
-          KOFIA 펀드 데이터
-        </button>
-        <button
-          type="button"
-          onClick={() => setSource("registry")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-dr-sm text-sm font-medium transition-colors ${
-            !isKofia
-              ? "bg-accent text-white shadow-sm"
-              : "bg-white text-text-secondary border border-border hover:border-accent/50"
-          }`}
-        >
-          <Globe className="h-4 w-4" />
-          등록 운용사 (공공데이터)
-        </button>
+        {(
+          [
+            { key: "kofia", icon: Database, label: "KOFIA 펀드 데이터" },
+            { key: "pef_registry", icon: FileText, label: "PEF 등록부" },
+            { key: "registry", icon: Globe, label: "등록 운용사 (공공데이터)" },
+          ] as const
+        ).map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSource(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-dr-sm text-sm font-medium transition-colors ${
+              source === key
+                ? "bg-accent text-white shadow-sm"
+                : "bg-white text-text-secondary border border-border hover:border-accent/50"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Search & Filters */}
@@ -274,8 +328,8 @@ export default function GPListPage() {
             </div>
           )}
 
-          {/* 정렬 + 전체 펀드 링크 — KOFIA 전용 */}
-          {isKofia && (
+          {/* 정렬 + 전체 펀드 링크 — KOFIA / PEF 공통 */}
+          {(isKofia || isPef) && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
                 <span>정렬:</span>
@@ -313,7 +367,7 @@ export default function GPListPage() {
               </div>
 
               <Link
-                to="/kiis/funds/all"
+                to={isPef ? "/kiis/funds/all?data_source=pef_registry" : "/kiis/funds/all"}
                 className="text-sm text-accent hover:underline"
               >
                 전체 펀드 보기 →
@@ -321,8 +375,21 @@ export default function GPListPage() {
             </div>
           )}
 
-          {/* 공공데이터 설명 */}
-          {!isKofia && (
+          {/* 기준시점 표시 */}
+          {data?.reference_date && (
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <Clock className="h-3.5 w-3.5" />
+              기준시점: {data.reference_date}
+            </div>
+          )}
+
+          {/* 탭별 안내 문구 */}
+          {isPef && (
+            <p className="text-xs text-text-secondary">
+              기관전용 사모집합투자기구(PEF) 등록부 기반 GP별 펀드 현황입니다. Co-GP 참여 건수가 포함됩니다.
+            </p>
+          )}
+          {source === "registry" && (
             <p className="text-xs text-text-secondary">
               공공데이터포털 금융통계 기반 등록 자산운용사 정보입니다. KOFIA
               DIS에 미포함된 기관전용 사모펀드 운용사도 포함됩니다.
@@ -339,7 +406,7 @@ export default function GPListPage() {
           icon={Wallet}
           title="운용사가 없습니다"
           description={
-            !isKofia && !params.company_name
+            source === "registry" && !params.company_name
               ? "DATA_GO_KR_API_KEY가 설정되어 있는지 확인하세요."
               : "검색 조건을 변경해 보세요."
           }
@@ -349,88 +416,85 @@ export default function GPListPage() {
           ref={gridRef}
           className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
         >
-          {isKofia
-            ? data.items.map((gp) => {
-                const kofiaGp = gp as (typeof kofiaQuery.data extends { items: (infer T)[] } | undefined ? T : never);
-                return (
-                  <button
-                    key={kofiaGp.company_code || kofiaGp.company_name}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/kiis/funds/gp/${encodeURIComponent(kofiaGp.company_code || kofiaGp.company_name)}?name=${encodeURIComponent(kofiaGp.company_name)}`,
-                      )
-                    }
-                    className="text-left w-full"
-                  >
-                    <Card className="h-full hover-glow transition-all duration-200 cursor-pointer">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-text-dark truncate">
-                              {kofiaGp.company_name}
-                            </h3>
-                            {kofiaGp.vintage_range && (
-                              <p className="text-xs text-text-secondary mt-0.5">
-                                Vintage {kofiaGp.vintage_range}
-                              </p>
-                            )}
-                          </div>
-                          {kofiaGp.has_maturity_alert && (
-                            <AlertCircle className="h-4 w-4 text-caution shrink-0 mt-1" />
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-text-secondary">
-                              펀드 수
-                            </p>
-                            <p className="text-lg font-semibold text-text-dark tabular-nums">
-                              {kofiaGp.fund_count}
-                              {kofiaGp.active_fund_count <
-                                kofiaGp.fund_count && (
-                                <span className="text-xs font-normal text-text-secondary ml-1">
-                                  ({kofiaGp.active_fund_count} active)
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-text-secondary">
-                              총 AUM
-                            </p>
-                            <p className="text-lg font-semibold text-text-dark tabular-nums">
-                              {formatAmountKRW(kofiaGp.total_aum)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {kofiaGp.asset_classes.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {kofiaGp.asset_classes.map((ac) => (
-                              <Badge
-                                key={ac}
-                                variant={
-                                  ASSET_CLASS_BADGE_VARIANT[ac] ?? "neutral"
-                                }
-                              >
-                                {ASSET_CLASS_LABELS[ac] ?? ac}
-                              </Badge>
-                            ))}
-                          </div>
+          {isKofia &&
+            (data as typeof kofiaQuery.data)!.items.map((gp) => (
+              <button
+                key={gp.company_code || gp.company_name}
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/kiis/funds/gp/${encodeURIComponent(gp.company_code || gp.company_name)}?name=${encodeURIComponent(gp.company_name)}`,
+                  )
+                }
+                className="text-left w-full"
+              >
+                <Card className="h-full hover-glow transition-all duration-200 cursor-pointer">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-text-dark truncate">
+                          {gp.company_name}
+                        </h3>
+                        {gp.vintage_range && (
+                          <p className="text-xs text-text-secondary mt-0.5">
+                            Vintage {gp.vintage_range}
+                          </p>
                         )}
                       </div>
-                    </Card>
-                  </button>
-                );
-              })
-            : data.items.map((gp) => (
-                <RegistryGPCard
-                  key={(gp as GPRegistryItem).finance_company_code || (gp as GPRegistryItem).company_name}
-                  gp={gp as GPRegistryItem}
-                />
-              ))}
+                      {gp.has_maturity_alert && (
+                        <AlertCircle className="h-4 w-4 text-caution shrink-0 mt-1" />
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-text-secondary">펀드 수</p>
+                        <p className="text-lg font-semibold text-text-dark tabular-nums">
+                          {gp.fund_count}
+                          {gp.active_fund_count < gp.fund_count && (
+                            <span className="text-xs font-normal text-text-secondary ml-1">
+                              ({gp.active_fund_count} active)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-secondary">총 AUM</p>
+                        <p className="text-lg font-semibold text-text-dark tabular-nums">
+                          {formatAmountKRW(gp.total_aum)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {gp.asset_classes.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {gp.asset_classes.map((ac) => (
+                          <Badge
+                            key={ac}
+                            variant={ASSET_CLASS_BADGE_VARIANT[ac] ?? "neutral"}
+                          >
+                            {ASSET_CLASS_LABELS[ac] ?? ac}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </button>
+            ))}
+
+          {isPef &&
+            (data as typeof pefQuery.data)!.items.map((gp) => (
+              <PEFGPCard key={gp.company_name} gp={gp} />
+            ))}
+
+          {source === "registry" &&
+            (data as typeof registryQuery.data)!.items.map((gp) => (
+              <RegistryGPCard
+                key={gp.finance_company_code || gp.company_name}
+                gp={gp}
+              />
+            ))}
         </div>
       )}
 

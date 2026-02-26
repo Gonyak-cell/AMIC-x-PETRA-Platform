@@ -8,6 +8,10 @@ export interface GPListItem {
   asset_classes: string[];
   vintage_range: string | null;
   has_maturity_alert: boolean;
+  data_sources?: string[];
+  is_co_gp_count?: number;
+  pef_fund_count?: number;
+  reference_date?: string | null;
 }
 
 /** GP 목록 API 응답 */
@@ -16,6 +20,7 @@ export interface GPListResponse {
   page: number;
   size: number;
   items: GPListItem[];
+  reference_date?: string | null;
 }
 
 export type GPSortField = "total_aum" | "fund_count" | "company_name";
@@ -24,6 +29,7 @@ export type GPSortField = "total_aum" | "fund_count" | "company_name";
 export interface GPListParams {
   company_name?: string;
   asset_class?: string;
+  data_source?: string;
   sort_by?: GPSortField;
   sort_order?: "asc" | "desc";
   page?: number;

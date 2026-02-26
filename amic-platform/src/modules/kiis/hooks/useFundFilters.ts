@@ -10,6 +10,7 @@ const FILTER_KEYS = [
   "legal_type",
   "asset_class",
   "fund_status",
+  "data_source",
   "vintage_from",
   "vintage_to",
   "amount_preset",
@@ -29,6 +30,7 @@ export function useFundFilters() {
       legal_type: searchParams.get("legal_type") || undefined,
       asset_class: searchParams.get("asset_class") || undefined,
       fund_status: searchParams.get("fund_status") || undefined,
+      data_source: searchParams.get("data_source") || undefined,
       vintage_from: searchParams.get("vintage_from")
         ? Number(searchParams.get("vintage_from"))
         : undefined,

@@ -2,6 +2,13 @@ export type FundType = "blind" | "project";
 export type LegalType = "professional_private" | "general_private" | "public";
 export type AssetClass = "vc" | "pef" | "real_estate" | "infra" | "mezzanine" | "fund_of_funds";
 export type FundStatus = "active" | "harvest" | "liquidated";
+export type DataSource = "kofia" | "pef_registry";
+
+/** GP 정보 (Co-GP 지원) */
+export interface GPInfo {
+  gp_name: string;
+  gp_role: string; // gp1, gp2, gp3
+}
 
 /** 목록 API 응답 아이템 (GET /kofia/funds → items[]) */
 export interface FundListItem {
@@ -15,6 +22,11 @@ export interface FundListItem {
   total_amount: string | null;
   vintage_year: number | null;
   is_maturity_alert: boolean;
+  data_source?: string;
+  legal_basis?: string | null;
+  is_co_gp?: boolean;
+  gp_list?: GPInfo[] | null;
+  reference_date?: string | null;
 }
 
 /** 상세 API 응답 내 fund 객체 (GET /kofia/funds/{code} → .fund) */
@@ -48,6 +60,7 @@ export interface FundManagerItem {
 export interface FundDetailResponse {
   fund: FundItem;
   managers: FundManagerItem[];
+  reference_date?: string | null;
 }
 
 /** 목록 API 래퍼 응답 */
@@ -56,6 +69,7 @@ export interface FundListResponse {
   page: number;
   size: number;
   items: FundListItem[];
+  reference_date?: string | null;
 }
 
 export interface FundManagerListResponse {
@@ -72,6 +86,7 @@ export interface FundListParams {
   legal_type?: string;
   asset_class?: string;
   fund_status?: string;
+  data_source?: string;
   vintage_from?: number;
   vintage_to?: number;
   amount_min?: number;

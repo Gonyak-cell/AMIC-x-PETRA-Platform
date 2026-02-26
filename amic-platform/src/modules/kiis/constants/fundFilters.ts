@@ -35,6 +35,18 @@ export const FUND_STATUS_OPTIONS: FilterOption[] = [
   { value: "liquidated", label: "청산" },
 ];
 
+// --- 데이터 소스 ---
+export const DATA_SOURCE_OPTIONS: FilterOption[] = [
+  { value: "", label: "전체" },
+  { value: "kofia", label: "KOFIA" },
+  { value: "pef_registry", label: "PEF 등록부" },
+];
+
+export const DATA_SOURCE_LABELS: Record<string, string> = {
+  kofia: "KOFIA",
+  pef_registry: "PEF 등록부",
+};
+
 // --- 설정액 프리셋 ---
 export const AMOUNT_PRESET_OPTIONS: FilterOption[] = [
   { value: "", label: "전체" },
