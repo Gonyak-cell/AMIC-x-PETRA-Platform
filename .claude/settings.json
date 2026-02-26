@@ -73,6 +73,11 @@
             "type": "command",
             "command": "bash -c 'python \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-user-prompt.py\"'",
             "timeout": 3
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'python \"$CLAUDE_PROJECT_DIR/.claude/hooks/daily-report-trigger.py\"'",
+            "timeout": 45
           }
         ]
       }

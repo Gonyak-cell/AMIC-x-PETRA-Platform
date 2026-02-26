@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 15:44:55
+> 최종 업데이트: 2026-02-26 18:39:00
 
 ## 폴더 구조
 
@@ -9,7 +9,7 @@
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 33 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
-| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 14 |
+| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 15 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩, TM/DM 디자인 시스템 | 9 |
@@ -122,6 +122,7 @@
 | `20260226_1330_Clova_STT_API_Key_Setup.md` | **Clova Speech STT API 키 설정** — config.py 필드 추가, docker-compose 매핑, 프로덕션 SSH 배포 |
 | `20260226_1429_FDD_MA_502_Fix.md` | **FDD/MA 502 Bad Gateway 수정** — BuildKit 이미지 스왑 재발(--no-cache 복원), workers 4→2, 안정성 재확인+로그 캡처, IM revision ID 32자 제한 |
 | `20260226_1544_Deploy_Pipeline_Stabilization.md` | **배포 파이프라인 영구 안정화** — 근본 원인 3가지(이미지 스왑/Alembic 3중 실행/안전장치 부재) 수정, KIIS entrypoint alembic 제거, IM HealthResponse 확장, deploy.yml 8단계 강화, 프로덕션 IM DB stamp+복구, infra-freeze/code-freeze 규칙 |
+| `20260226_1839_TS_Build_Safety_Net_and_KIIS_OpenAPI_Review.md` | **KIIS OpenAPI 코드 리뷰(2차) + TS 빌드 안전장치** — @cache model 역직렬화 버그 수정, TS2352 배포 에러 수정, Husky pre-push 훅 + ci.yml feat/** 트리거 확장 |
 
 ## fdd/ (4)
 

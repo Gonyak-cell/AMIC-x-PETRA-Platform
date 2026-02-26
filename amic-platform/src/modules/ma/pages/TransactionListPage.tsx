@@ -112,6 +112,7 @@ export default function TransactionListPage() {
     {
       key: "name",
       header: "거래명",
+      width: "280px",
       render: (row) => (
         <div>
           <span className="font-medium">{row.name}</span>
@@ -154,7 +155,7 @@ export default function TransactionListPage() {
     {
       key: "estimated_deal_value",
       header: "예상 금액",
-      width: "140px",
+      width: "150px",
       align: "right",
       mono: true,
       render: (row) => formatValue(row.estimated_deal_value, row.currency),
@@ -162,7 +163,7 @@ export default function TransactionListPage() {
     {
       key: "client_name",
       header: "클라이언트",
-      width: "140px",
+      width: "160px",
       render: (row) => (
         <span className="text-sm text-text-secondary">{row.client_name}</span>
       ),

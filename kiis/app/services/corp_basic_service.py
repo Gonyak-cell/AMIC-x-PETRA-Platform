@@ -136,7 +136,7 @@ class CorpBasicService:
             fss_corp_unq_no=item.get("fssCorpUnqNo", ""),
         )
 
-    @cache(ttl=86400, prefix="corp_basic:affiliates")
+    @cache(ttl=86400, prefix="corp_basic:affiliates", model=AffiliateItem)
     async def get_affiliates(self, crno: str) -> list[AffiliateItem]:
         """계열회사 조회 (getAffiliate_V2)."""
         data = await self._request(
@@ -156,7 +156,7 @@ class CorpBasicService:
             for item in raw_items
         ]
 
-    @cache(ttl=86400, prefix="corp_basic:subsidiaries")
+    @cache(ttl=86400, prefix="corp_basic:subsidiaries", model=SubsidiaryItem)
     async def get_subsidiaries(self, crno: str) -> list[SubsidiaryItem]:
         """연결대상 종속기업 조회 (getConsSubsComp_V2)."""
         data = await self._request(

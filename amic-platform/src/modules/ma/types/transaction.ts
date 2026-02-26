@@ -70,6 +70,7 @@ export interface TransactionCreate {
 export interface TransactionUpdate {
   name?: string;
   code_name?: string;
+  side?: TransactionSide;
   target_company_name?: string;
   target_corp_code?: string;
   client_name?: string;
@@ -81,6 +82,7 @@ export interface TransactionUpdate {
   lead_advisor_email?: string;
   deal_captain_email?: string;
   target_close_date?: string;
+  notes?: string;
 }
 
 export interface TransactionListParams {

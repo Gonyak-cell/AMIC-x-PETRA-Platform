@@ -41,6 +41,7 @@ import { cn } from "@/lib/cn";
 
 import {
   useTransaction,
+  useUpdateTransaction,
   usePhaseCompletion,
   useAdvancePhase,
   useAutoAdvanceNotification,
@@ -58,7 +59,7 @@ import {
 import type { EngagementCreate } from "@/modules/ma/types/engagement";
 import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
 import type { BuyerCandidate, BuyerCandidateCreate } from "@/modules/ma/types/buyer";
-import type { TransactionPhase } from "@/modules/ma/types/transaction";
+import type { TransactionPhase, TransactionSide, Currency } from "@/modules/ma/types/transaction";
 import { useNdas, useNdaSummary, useCreateNda, useUpdateNda, useDeleteNda } from "@/modules/ma/hooks/useNdas";
 import { useBids, useBidComparison, useCreateBid, useUpdateBid, useDeleteBid } from "@/modules/ma/hooks/useBids";
 import { useDDChecklist, useDDChecklistSummary, useCreateDDChecklistItem, useUpdateDDChecklistItem, useDeleteDDChecklistItem } from "@/modules/ma/hooks/useDDChecklist";
@@ -82,8 +83,8 @@ import type { ContractCreate, ContractStatus, SignatureStatus as SigStatus } fro
 import type { ClosingChecklistCreate, ClosingCategory, ClosingConditionStatus } from "@/modules/ma/types/closing";
 import type { PMITask, PMITaskCreate, PMICategory, PMITaskStatus, PMIPriority } from "@/modules/ma/types/pmi";
 import type { EarnoutCreate, EarnoutStatus, EarnoutMetric } from "@/modules/ma/types/earnout";
-import { sortDirectorsByPosition } from "@/modules/ma/types/document_extraction";
-import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
+import CompanyInfoCard from "@/modules/ma/components/overview/CompanyInfoCard";
+import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import PipelineFlow from "@/modules/ma/components/PipelineFlow";
 import PhaseActionPanel from "@/modules/ma/components/PhaseActionPanel";
 import {
@@ -124,6 +125,10 @@ import {
   RISK_STATUS_OPTIONS,
   COMPLIANCE_CATEGORY_OPTIONS,
   COMPLIANCE_STATUS_OPTIONS,
+  TRANSACTION_SIDE_OPTIONS,
+  DEAL_STRUCTURE_OPTIONS,
+  INVESTMENT_TYPE_OPTIONS,
+  CURRENCY_OPTIONS,
 } from "@/modules/ma/constants";
 
 import ClientPortalDashboard from "@/modules/ma/components/ClientPortalDashboard";
@@ -330,6 +335,9 @@ export default function TransactionWorkspacePage() {
   const { data: ralphSessions } = useRalphSessions(id);
   const createRalphSession = useCreateRalphSession(id);
   const [selectedRalphSession, setSelectedRalphSession] = useState<RalphSession | null>(null);
+
+  // Mutations — Transaction 기본 정보
+  const updateTxn = useUpdateTransaction(id);
 
   // Mutations — Phase 1
   const advancePhase = useAdvancePhase(id);
@@ -742,88 +750,128 @@ export default function TransactionWorkspacePage() {
       )}
       {safeActiveTab === "overview" && !isClient && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
+          {/* 거래 정보 */}
           <Card title="거래 정보" headerBar>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm p-1">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm p-1 items-center">
               <dt className="text-text-muted">유형</dt>
-              <dd>{txn.side}</dd>
+              <dd>
+                <InlineSelect
+                  options={TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "")}
+                  value={txn.side}
+                  onChange={(v) => updateTxn.mutate({ side: v as TransactionSide })}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">딜 구조</dt>
-              <dd>{txn.deal_structure ?? "-"}</dd>
+              <dd>
+                <InlineSelect
+                  options={DEAL_STRUCTURE_OPTIONS}
+                  value={txn.deal_structure ?? ""}
+                  onChange={(v) => updateTxn.mutate({ deal_structure: v || undefined })}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">투자 유형</dt>
-              <dd>{txn.investment_type ?? "-"}</dd>
+              <dd>
+                <InlineSelect
+                  options={INVESTMENT_TYPE_OPTIONS}
+                  value={txn.investment_type ?? ""}
+                  onChange={(v) => updateTxn.mutate({ investment_type: v || undefined })}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">산업</dt>
-              <dd>{txn.industry ?? "-"}</dd>
+              <dd>
+                <input
+                  key={`industry-${txn.updated_at}`}
+                  type="text"
+                  className={cn(INLINE_INPUT_CLS, "w-40")}
+                  defaultValue={txn.industry ?? ""}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== (txn.industry ?? "")) updateTxn.mutate({ industry: v || undefined });
+                  }}
+                  disabled={!canWrite()}
+                  placeholder="-"
+                />
+              </dd>
               <dt className="text-text-muted">예상 금액</dt>
-              <dd className="font-mono">
-                {txn.estimated_deal_value != null
-                  ? `${txn.estimated_deal_value.toLocaleString()} ${txn.currency}`
-                  : "-"}
+              <dd className="flex items-center gap-1">
+                <input
+                  key={`deal-val-${txn.updated_at}`}
+                  type="number"
+                  className={cn(INLINE_INPUT_CLS, "w-32 text-right font-mono")}
+                  defaultValue={txn.estimated_deal_value ?? ""}
+                  onBlur={(e) => {
+                    const v = e.target.value ? Number(e.target.value) : undefined;
+                    if (v !== (txn.estimated_deal_value ?? undefined)) updateTxn.mutate({ estimated_deal_value: v });
+                  }}
+                  disabled={!canWrite()}
+                  placeholder="-"
+                />
+                <InlineSelect
+                  options={CURRENCY_OPTIONS}
+                  value={txn.currency}
+                  onChange={(v) => updateTxn.mutate({ currency: v as Currency })}
+                  disabled={!canWrite()}
+                />
               </dd>
               <dt className="text-text-muted">목표 종결일</dt>
-              <dd>{txn.target_close_date ?? "-"}</dd>
+              <dd>
+                <input
+                  type="date"
+                  className={cn(INLINE_INPUT_CLS, "w-36")}
+                  value={txn.target_close_date ?? ""}
+                  onChange={(e) => updateTxn.mutate({ target_close_date: e.target.value || undefined })}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">리드 어드바이저</dt>
-              <dd>{txn.lead_advisor_email}</dd>
+              <dd>
+                <input
+                  key={`lead-${txn.updated_at}`}
+                  type="email"
+                  className={cn(INLINE_INPUT_CLS, "w-48")}
+                  defaultValue={txn.lead_advisor_email}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== txn.lead_advisor_email) updateTxn.mutate({ lead_advisor_email: v });
+                  }}
+                  disabled={!canWrite()}
+                />
+              </dd>
               <dt className="text-text-muted">딜 캡틴</dt>
-              <dd>{txn.deal_captain_email ?? "-"}</dd>
+              <dd>
+                <input
+                  key={`captain-${txn.updated_at}`}
+                  type="email"
+                  className={cn(INLINE_INPUT_CLS, "w-48")}
+                  defaultValue={txn.deal_captain_email ?? ""}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== (txn.deal_captain_email ?? "")) updateTxn.mutate({ deal_captain_email: v || undefined });
+                  }}
+                  disabled={!canWrite()}
+                  placeholder="-"
+                />
+              </dd>
             </dl>
           </Card>
-
-          {/* 법인등기 정보 — corporate_info가 있을 때만 표시 */}
-          {txn.corporate_info && (() => {
-            const ci = txn.corporate_info as unknown as CorporateDocsExtractedData;
-            const sortedDirectors = sortDirectorsByPosition(ci.directors ?? []);
-
-            return (
-              <Card title="법인등기 정보" headerBar>
-                <div className="space-y-4 p-1">
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <dt className="text-text-muted">상호</dt>
-                    <dd>{ci.company_name ?? "-"}</dd>
-                    <dt className="text-text-muted">설립일</dt>
-                    <dd>{ci.establishment_date ?? "-"}</dd>
-                    <dt className="text-text-muted">본점</dt>
-                    <dd className="col-span-1">{ci.head_office_address ?? "-"}</dd>
-                  </dl>
-
-                  <div className="border-t border-gray-border pt-3">
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <dt className="text-text-muted">발행주식의 총수</dt>
-                      <dd className="font-mono">{ci.total_shares_issued != null ? `${ci.total_shares_issued.toLocaleString()}주` : "-"}</dd>
-                      <dt className="text-text-muted">1주의 금액</dt>
-                      <dd className="font-mono">{ci.par_value_per_share != null ? `${ci.par_value_per_share.toLocaleString()}원` : "-"}</dd>
-                      <dt className="text-text-muted">보통주식</dt>
-                      <dd className="font-mono">{ci.common_shares != null ? `${ci.common_shares.toLocaleString()}주` : "-"}</dd>
-                      <dt className="text-text-muted">종류주식</dt>
-                      <dd className="font-mono">{ci.preferred_shares != null ? `${ci.preferred_shares.toLocaleString()}주` : "-"}</dd>
-                      <dt className="text-text-muted">자본금의 액</dt>
-                      <dd className="font-mono">{ci.capital_amount != null ? `${ci.capital_amount.toLocaleString()}원` : "-"}</dd>
-                    </dl>
-                  </div>
-
-                  {sortedDirectors.length > 0 && (
-                    <div className="border-t border-gray-border pt-3">
-                      <h4 className="text-xs font-semibold text-text-secondary mb-2">임원에 관한 사항</h4>
-                      <div className="space-y-1">
-                        {sortedDirectors.map((d, i) => (
-                          <div key={i} className="flex items-baseline gap-2 text-sm">
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-bg-cool text-text-secondary shrink-0">
-                              {d.position}
-                            </span>
-                            <span className="font-medium">{d.name}</span>
-                            {d.birth_date && <span className="text-text-muted text-xs">{d.birth_date}</span>}
-                            {d.appointment_date && <span className="text-text-muted text-xs">{d.appointment_date}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+          {/* 회사 정보 — 전체 너비 */}
+          <div className="lg:col-span-2">
+            {txn.corporate_info ? (
+              <CompanyInfoCard txn={txn} />
+            ) : (
+              <Card title="회사 정보" headerBar>
+                <EngagementDocUpload txnId={id} />
               </Card>
-            );
-          })()}
+            )}
           </div>
-          <Card title="서비스 연동" headerBar>
-            <div className="space-y-1.5 p-1">
+
+          {/* 서비스 연동 — 전체 너비 */}
+          <div className="lg:col-span-2">
+            <Card title="서비스 연동" headerBar>
+              <div className="space-y-1.5 p-1">
               {(() => {
                 const enc = encodeURIComponent;
                 interface SvcItem { key: string; label: string; icon: typeof Building2; tab: string; connected?: boolean; viewUrl?: string; createUrl?: string; placeholder?: boolean; }
@@ -986,6 +1034,7 @@ export default function TransactionWorkspacePage() {
               </dl>
             </div>
           </Card>
+          </div>
         </div>
       )}
 

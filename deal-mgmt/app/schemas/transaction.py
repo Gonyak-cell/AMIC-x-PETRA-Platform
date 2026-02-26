@@ -60,6 +60,7 @@ class TransactionCreate(BaseModel):
 class TransactionUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     code_name: str | None = Field(None, min_length=1, max_length=100)
+    side: TransactionSide | None = None
     target_company_name: str | None = Field(None, min_length=1, max_length=200)
     target_corp_code: str | None = Field(None, max_length=20)
     client_name: str | None = Field(None, min_length=1, max_length=200)
