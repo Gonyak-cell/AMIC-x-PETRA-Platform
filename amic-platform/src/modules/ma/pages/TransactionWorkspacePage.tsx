@@ -82,6 +82,8 @@ import type { ContractCreate, ContractStatus, SignatureStatus as SigStatus } fro
 import type { ClosingChecklistCreate, ClosingCategory, ClosingConditionStatus } from "@/modules/ma/types/closing";
 import type { PMITask, PMITaskCreate, PMICategory, PMITaskStatus, PMIPriority } from "@/modules/ma/types/pmi";
 import type { EarnoutCreate, EarnoutStatus, EarnoutMetric } from "@/modules/ma/types/earnout";
+import { sortDirectorsByPosition } from "@/modules/ma/types/document_extraction";
+import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import PipelineFlow from "@/modules/ma/components/PipelineFlow";
 import PhaseActionPanel from "@/modules/ma/components/PhaseActionPanel";
 import {
@@ -740,6 +742,7 @@ export default function TransactionWorkspacePage() {
       )}
       {safeActiveTab === "overview" && !isClient && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
           <Card title="거래 정보" headerBar>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm p-1">
               <dt className="text-text-muted">유형</dt>
@@ -764,6 +767,61 @@ export default function TransactionWorkspacePage() {
               <dd>{txn.deal_captain_email ?? "-"}</dd>
             </dl>
           </Card>
+
+          {/* 법인등기 정보 — corporate_info가 있을 때만 표시 */}
+          {txn.corporate_info && (() => {
+            const ci = txn.corporate_info as CorporateDocsExtractedData;
+            const sortedDirectors = sortDirectorsByPosition(ci.directors ?? []);
+
+            return (
+              <Card title="법인등기 정보" headerBar>
+                <div className="space-y-4 p-1">
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <dt className="text-text-muted">상호</dt>
+                    <dd>{ci.company_name ?? "-"}</dd>
+                    <dt className="text-text-muted">설립일</dt>
+                    <dd>{ci.establishment_date ?? "-"}</dd>
+                    <dt className="text-text-muted">본점</dt>
+                    <dd className="col-span-1">{ci.head_office_address ?? "-"}</dd>
+                  </dl>
+
+                  <div className="border-t border-gray-border pt-3">
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <dt className="text-text-muted">발행주식의 총수</dt>
+                      <dd className="font-mono">{ci.total_shares_issued != null ? `${ci.total_shares_issued.toLocaleString()}주` : "-"}</dd>
+                      <dt className="text-text-muted">1주의 금액</dt>
+                      <dd className="font-mono">{ci.par_value_per_share != null ? `${ci.par_value_per_share.toLocaleString()}원` : "-"}</dd>
+                      <dt className="text-text-muted">보통주식</dt>
+                      <dd className="font-mono">{ci.common_shares != null ? `${ci.common_shares.toLocaleString()}주` : "-"}</dd>
+                      <dt className="text-text-muted">종류주식</dt>
+                      <dd className="font-mono">{ci.preferred_shares != null ? `${ci.preferred_shares.toLocaleString()}주` : "-"}</dd>
+                      <dt className="text-text-muted">자본금의 액</dt>
+                      <dd className="font-mono">{ci.capital_amount != null ? `${ci.capital_amount.toLocaleString()}원` : "-"}</dd>
+                    </dl>
+                  </div>
+
+                  {sortedDirectors.length > 0 && (
+                    <div className="border-t border-gray-border pt-3">
+                      <h4 className="text-xs font-semibold text-text-secondary mb-2">임원에 관한 사항</h4>
+                      <div className="space-y-1">
+                        {sortedDirectors.map((d, i) => (
+                          <div key={i} className="flex items-baseline gap-2 text-sm">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-bg-cool text-text-secondary shrink-0">
+                              {d.position}
+                            </span>
+                            <span className="font-medium">{d.name}</span>
+                            {d.birth_date && <span className="text-text-muted text-xs">{d.birth_date}</span>}
+                            {d.appointment_date && <span className="text-text-muted text-xs">{d.appointment_date}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
+          </div>
           <Card title="서비스 연동" headerBar>
             <div className="space-y-1.5 p-1">
               {(() => {

@@ -94,6 +94,7 @@ app = FastAPI(
         {"name": "Permits", "description": "인허가 분석 — 업종별 인허가 자동 분석 및 기한 관리"},
     {"name": "Transcription", "description": "녹음 변환 — 오디오 업로드 + Clova STT + LLM 회의록 자동 생성"},
         {"name": "RFI", "description": "RFI (Request for Information) — 정보 요청 관리, Excel 가져오기/내보내기, 체크리스트 연동"},
+        {"name": "Document Extraction", "description": "문서 AI 추출 — VDR 문서 자동 분류 + 핵심 데이터 추출 (NDA/LOI/SPA/등기부등본/세무신고서)"},
     ],
 )
 
@@ -130,6 +131,7 @@ from app.routers import (  # noqa: E402
     dashboard,
     dd_checklists,
     deal_clients,
+    document_extraction,
     earnout,
     engagements,
     financial_models,
@@ -193,6 +195,7 @@ app.include_router(transcription.router, prefix="/api/v1")
 app.include_router(rfi.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(vdr_internal.router, prefix="/api/v1")
+app.include_router(document_extraction.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

@@ -43,6 +43,8 @@ export interface Transaction {
   target_close_date: string | null;
   fdd_deal_id: string | null;
   im_document_id: string | null;
+  corporate_info: Record<string, unknown> | null;
+  financial_summary: Record<string, unknown> | null;
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

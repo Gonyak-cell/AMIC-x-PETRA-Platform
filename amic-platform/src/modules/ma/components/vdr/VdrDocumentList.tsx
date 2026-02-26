@@ -1,6 +1,7 @@
 import {
   Download,
   FileText,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import type { VdrDocument, VdrFolder } from "@/modules/ma/types/vdr";
 import { MIME_TYPE_LABELS, VDR_CONSTRAINTS } from "@/modules/ma/types/vdr";
 import { getVdrDownloadUrl } from "@/modules/ma/hooks/useVdr";
+import { useCreateExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
 
 interface Props {
   txnId: string;
@@ -54,6 +56,7 @@ export default function VdrDocumentList({
   onDelete,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const createExtraction = useCreateExtraction(txnId);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -169,6 +172,14 @@ export default function VdrDocumentList({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                        title="AI 분석"
+                        onClick={() => createExtraction.mutate(doc.id)}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </button>
                       <a
                         href={getVdrDownloadUrl(txnId, doc.id)}
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-info"

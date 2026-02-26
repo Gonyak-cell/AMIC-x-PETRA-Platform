@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -36,3 +36,7 @@ class Bid(Base, TimestampMixin):
     # Details
     conditions: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── AI 추출 필드 ────────────────────────────────────
+    exclusivity_period_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    conditions_precedent: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

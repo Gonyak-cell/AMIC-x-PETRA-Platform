@@ -371,6 +371,7 @@ class LDDReportStatus(enum.StrEnum):
 class LDDReportType(enum.StrEnum):
     FULL     = "FULL"     # 정식 전체 LDD 보고서 (10개 섹션)
     REDFLAG  = "REDFLAG"  # Redflag DD — Executive Summary + Red/Amber 이슈만
+    LAW_FIRM = "LAW_FIRM" # 법무법인 표준 양식 (I~VIII 대목차, 3단 서술, A/B/C/D 라벨링)
 
 
 class LDDItemStatus(enum.StrEnum):
@@ -675,3 +676,29 @@ class RFISourceType(enum.StrEnum):
     DD_CHECKLIST = "DD_CHECKLIST"
     EXCEL_IMPORT = "EXCEL_IMPORT"
     AI_SUGGESTED = "AI_SUGGESTED"
+
+
+# ── Document Extraction (AI 문서 분류/추출) ──────────────
+
+
+class DocExtractionCategory(enum.StrEnum):
+    """업로드 문서 AI 분류 카테고리."""
+    NDA = "NDA"                       # 비밀유지계약서
+    LOI_MOU = "LOI_MOU"               # LOI, MOU, IOI
+    SPA_BTA = "SPA_BTA"               # SPA, SHA, BTA, SSA
+    CORPORATE_DOCS = "CORPORATE_DOCS" # 등기부등본, 사업자등록증
+    TAX_FILING = "TAX_FILING"         # 세무신고서, 법인세 신고서
+    TEASER_IM = "TEASER_IM"           # Teaser, IM, CIM (향후 확장)
+    DD_REPORT = "DD_REPORT"           # FDD/LDD/TDD 보고서 (향후 확장)
+    RFI_RESPONSE = "RFI_RESPONSE"     # RFI 답변서 (향후 확장)
+    REFERENCE_ONLY = "REFERENCE_ONLY" # 기타 참고용 (추출 불필요)
+
+
+class ExtractionStatus(enum.StrEnum):
+    """문서 AI 추출 작업 상태."""
+    PENDING = "PENDING"           # 대기
+    CLASSIFYING = "CLASSIFYING"   # 분류 중
+    EXTRACTING = "EXTRACTING"     # 데이터 추출 중
+    COMPLETED = "COMPLETED"       # 추출 완료 (사용자 검토 대기)
+    FAILED = "FAILED"             # 실패
+    CONFIRMED = "CONFIRMED"       # 사용자 검토 확정

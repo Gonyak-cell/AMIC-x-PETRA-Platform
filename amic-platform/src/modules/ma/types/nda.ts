@@ -12,6 +12,9 @@ export interface NDA {
   signed_at: string | null;
   expires_at: string | null;
   document_url: string | null;
+  counterparty_name: string | null;
+  jurisdiction: string | null;
+  confidentiality_period_months: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

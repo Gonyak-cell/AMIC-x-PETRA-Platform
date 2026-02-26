@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import Boolean, Enum, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -53,6 +53,10 @@ class Transaction(Base, TimestampMixin):
 
     # Notes
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── AI 추출 필드 ────────────────────────────────────
+    corporate_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    financial_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Soft Delete
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

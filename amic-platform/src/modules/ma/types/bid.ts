@@ -29,6 +29,8 @@ export interface Bid {
   submitted_at: string | null;
   valid_until: string | null;
   conditions: string | null;
+  exclusivity_period_days: number | null;
+  conditions_precedent: string[] | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

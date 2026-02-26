@@ -1,9 +1,10 @@
-import { FolderLock, HardDrive, Files, FolderTree } from "lucide-react";
+import { FolderLock, HardDrive, Files, FolderTree, Sparkles } from "lucide-react";
 import { useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
 import {
   useVdrSummary,
   useVdrFolders,
@@ -16,6 +17,7 @@ import {
 } from "@/modules/ma/hooks/useVdr";
 import type { VdrFolder } from "@/modules/ma/types/vdr";
 
+import ExtractionList from "../extraction/ExtractionList";
 import VdrDocumentList from "./VdrDocumentList";
 import VdrFolderTree from "./VdrFolderTree";
 
@@ -62,6 +64,8 @@ export default function VdrTab({ txnId }: Props) {
 
   const uploadDoc = useUploadVdrDocument(txnId, selectedFolderId ?? "");
   const deleteDoc = useDeleteVdrDocument(txnId);
+  const { data: extractionData } = useExtractions(txnId);
+  const extractionCount = extractionData?.total ?? 0;
 
   // ── 초기화 전 상태 ────────────────────────────────────
   if (!summaryLoading && summary && !summary.initialized) {
@@ -106,7 +110,7 @@ export default function VdrTab({ txnId }: Props) {
     <div className="space-y-4">
       {/* KPI 요약 */}
       {summary && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <KpiCard
             label="폴더"
             value={String(summary.total_folders)}
@@ -121,6 +125,11 @@ export default function VdrTab({ txnId }: Props) {
             label="총 용량"
             value={formatBytes(summary.total_size_bytes)}
             icon={HardDrive}
+          />
+          <KpiCard
+            label="AI 분석"
+            value={String(extractionCount)}
+            icon={Sparkles}
           />
         </div>
       )}
@@ -155,6 +164,16 @@ export default function VdrTab({ txnId }: Props) {
           />
         </Card>
       </div>
+
+      {/* AI 분석 결과 */}
+      {extractionCount > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 mb-2">
+            AI 문서 분석 결과
+          </h3>
+          <ExtractionList txnId={txnId} />
+        </div>
+      )}
     </div>
   );
 }

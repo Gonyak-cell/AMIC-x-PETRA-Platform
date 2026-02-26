@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, Text
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,3 +27,8 @@ class NDA(Base, TimestampMixin):
     expires_at: Mapped[str | None] = mapped_column(String(10), nullable=True)
     document_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── AI 추출 필드 ────────────────────────────────────
+    counterparty_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    jurisdiction: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    confidentiality_period_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
