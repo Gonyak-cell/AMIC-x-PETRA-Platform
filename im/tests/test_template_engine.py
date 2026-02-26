@@ -410,3 +410,93 @@ class TestSchemas:
 
         tc2 = TableContent(rows=[["a"]], headers=["Col1"])
         assert tc2.headers == ["Col1"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 매핑 타입 테스트
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestMappingTypes:
+    """매핑 타입을 _types에서 임포트할 수 있다."""
+
+    def test_import_from_init(self) -> None:
+        """mappings 패키지에서 SlideMapping/SlotMapping을 임포트할 수 있다."""
+        from src.template_engine.mappings import SlideMapping, SlotMapping
+
+        assert SlideMapping is not None
+        assert SlotMapping is not None
+
+    def test_import_from_types(self) -> None:
+        """_types 모듈에서 직접 임포트할 수 있다."""
+        from src.template_engine.mappings._types import SlideMapping, SlotMapping
+
+        assert SlideMapping is not None
+        assert SlotMapping is not None
+
+    def test_all_mappings_use_shared_types(self) -> None:
+        """모든 매핑 파일이 같은 SlideMapping 클래스를 사용한다."""
+        from src.template_engine.mappings import (
+            NX3_DM_MAPPING,
+            SPICY_TM_MAPPING,
+            SWITCH_TM_MAPPING,
+            YTN_DM_MAPPING,
+            SlideMapping,
+        )
+
+        for mapping in [
+            NX3_DM_MAPPING, SPICY_TM_MAPPING,
+            SWITCH_TM_MAPPING, YTN_DM_MAPPING,
+        ]:
+            for item in mapping:
+                assert isinstance(item, SlideMapping)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LLM 응답 파싱 방어 코드 테스트
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestPromptsParsing:
+    """parse_template_content_response 방어 코드 테스트."""
+
+    def test_missing_slide_idx_uses_default(self) -> None:
+        """slide_idx 누락 시 기본값 0을 사용한다."""
+        from src.template_engine.prompts import parse_template_content_response
+
+        result = parse_template_content_response({
+            "slides": [{"texts": {"shape1": "hello"}}],
+        })
+        assert result.slides[0].slide_idx == 0
+
+    def test_missing_series_fields_uses_defaults(self) -> None:
+        """series의 name/values 누락 시 기본값을 사용한다."""
+        from src.template_engine.prompts import parse_template_content_response
+
+        result = parse_template_content_response({
+            "slides": [{
+                "slide_idx": 1,
+                "charts": {
+                    "chart1": {
+                        "categories": ["A"],
+                        "series": [{}],
+                    },
+                },
+            }],
+        })
+        chart = result.slides[0].charts["chart1"]
+        assert chart.series[0].name == ""
+        assert chart.series[0].values == []
+
+    def test_malformed_slide_skipped(self) -> None:
+        """비정상 슬라이드 데이터는 건너뛴다."""
+        from src.template_engine.prompts import parse_template_content_response
+
+        result = parse_template_content_response({
+            "slides": [
+                None,
+                {"slide_idx": 2, "texts": {}},
+            ],
+        })
+        assert len(result.slides) == 1
+        assert result.slides[0].slide_idx == 2
