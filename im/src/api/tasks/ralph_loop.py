@@ -88,8 +88,10 @@ def run_im_ralph_loop_task(
                 raise ValueError(f"Document not found: {document_id}")
 
             pptx_path = doc.pptx_path
-            im_style = (doc.im_style or "FULL").upper()
-            doc_type = "im_teaser" if im_style in ("TEASER", "TM") else "im_full"
+            from src.api.tasks.doc_type_resolver import resolve_doc_type
+
+            im_style = doc.im_style or "FULL"
+            doc_type = resolve_doc_type(im_style)
             company_name = doc.company_name
             generation_config = doc.generation_config or {}
 

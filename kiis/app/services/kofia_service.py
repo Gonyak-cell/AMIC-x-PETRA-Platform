@@ -738,6 +738,16 @@ class KOFIAService:
         logger.info("Fund manager query not yet supported via ProFrame API")
         return [], 0
 
+    async def get_reference_date(self) -> str | None:
+        """KOFIA 데이터의 기준시점 문자열을 반환한다.
+
+        캐시된 최신 기준일(YYYYMMDD)을 사람이 읽을 수 있는 형식으로 변환한다.
+        """
+        std_dt = self._latest_std_dt
+        if not std_dt or len(std_dt) != 8:
+            return None
+        return f"{std_dt[:4]}.{std_dt[4:6]}.{std_dt[6:8]} 기준"
+
     async def close(self) -> None:
         """HTTP 클라이언트를 종료한다."""
         self._latest_std_dt = None

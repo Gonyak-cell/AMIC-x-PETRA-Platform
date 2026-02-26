@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -41,12 +41,50 @@ class Fund(TimestampMixin, Base):
     kofia_last_synced: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None, comment="KOFIA 마지막 동기화 시각"
     )
+    data_source: Mapped[str] = mapped_column(
+        String(30), index=True, default="kofia", server_default="kofia",
+        comment="데이터 소스 (kofia/pef_registry)",
+    )
+    legal_basis: Mapped[str | None] = mapped_column(
+        String(200), nullable=True, comment="설립근거법률"
+    )
+    is_co_gp: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", comment="Co-GP 여부"
+    )
+    reference_date: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, comment="데이터 기준시점 (예: 2024.12월말)"
+    )
 
     company: Mapped["Company | None"] = relationship(back_populates="funds")  # noqa: F821
     managers: Mapped[list["FundManager"]] = relationship(back_populates="fund", cascade="all, delete-orphan")
+    gp_list: Mapped[list["FundGP"]] = relationship(back_populates="fund", cascade="all, delete-orphan")
     deals: Mapped[list["Deal"]] = relationship(  # noqa: F821
         foreign_keys="Deal.fund_id", back_populates="fund"
     )
+
+
+class FundGP(TimestampMixin, Base):
+    """펀드-GP 다대다 관계 (Co-GP 지원)"""
+
+    __tablename__ = "fund_gps"
+    __table_args__ = (
+        UniqueConstraint("fund_id", "gp_name", name="uq_fund_gp"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    fund_id: Mapped[int] = mapped_column(
+        ForeignKey("funds.id", ondelete="CASCADE"), index=True
+    )
+    gp_name: Mapped[str] = mapped_column(String(200), index=True, comment="GP명")
+    gp_role: Mapped[str] = mapped_column(
+        String(10), default="gp1", comment="GP 역할 (gp1/gp2/gp3)"
+    )
+    company_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True, comment="매칭된 기업 ID",
+    )
+
+    fund: Mapped["Fund"] = relationship(back_populates="gp_list")
 
 
 class FundManager(TimestampMixin, Base):

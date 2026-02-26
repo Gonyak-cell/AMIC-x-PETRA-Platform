@@ -127,7 +127,7 @@ ChecklistSummaryResponse.model_rebuild()
 # ---------------------------------------------------------------------------
 
 
-_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "TEASER", "CUSTOM"}
+_VALID_IM_STYLES = {"TITAN", "COVENANT", "FULL", "TEASER", "DM", "CUSTOM"}
 
 
 class CreateFromVdrRequest(BaseModel):

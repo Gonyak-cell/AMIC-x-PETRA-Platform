@@ -2,7 +2,7 @@ from app.models.base import Base, TimestampMixin
 from app.models.company import Company, CompanyAlias
 from app.models.deal import Deal, DealSector, DealStage
 from app.models.disclosure import Disclosure, DisclosureType
-from app.models.fund import Fund, FundManager
+from app.models.fund import Fund, FundGP, FundManager
 from app.models.manager import ManagerMovement, MovementType
 from app.models.news import NewsArticle
 from app.models.portfolio import PortfolioCompany, SurvivalStatus
@@ -26,6 +26,7 @@ __all__ = [
     "Disclosure",
     "DisclosureType",
     "Fund",
+    "FundGP",
     "FundManager",
     "ManagerMovement",
     "MovementType",

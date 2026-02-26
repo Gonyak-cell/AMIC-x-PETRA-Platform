@@ -98,11 +98,46 @@ IM_TEASER_PRD: dict[str, Any] = {
     "budget_usd": 5.0,
 }
 
+# ── DM (Discussion Memorandum) PRD ────────────────────────────────────────────
+
+IM_DM_PRD: dict[str, Any] = {
+    "memo_type": "DM",
+    "min_slides": 6,
+    "max_slides": 15,
+    "required_slides": ["Cover", "Disclaimer"],
+    "required_sections": [
+        "dm_deal_structure",
+        "dm_investment_thesis",
+        "dm_valuation",
+    ],
+    "design_standards": {
+        "font_heading": "SUITE",
+        "font_body": "Pretendard",
+        "color_primary": "#0F3A32",
+        "color_secondary": "#1C8F57",
+        "color_accent": "#26C260",
+        "color_fresh": "#A3E96B",
+        "color_light": "#E6FDD6",
+    },
+    "quality_dimensions": {
+        "information_density": {"weight": 0.25},
+        "visual_hierarchy": {"weight": 0.15},
+        "chart_effectiveness": {"weight": 0.25},
+        "slide_narrative_flow": {"weight": 0.15},
+        "brand_consistency": {"weight": 0.05},
+        "investor_readiness": {"weight": 0.15},
+    },
+    "pass_threshold": 3.5,
+    "max_iterations": 2,
+    "budget_usd": 3.0,
+}
+
 # ── PRD 레지스트리 ───────────────────────────────────────────────────────────
 
 _PRD_REGISTRY: dict[str, dict[str, Any]] = {
     "im_full": IM_FULL_PRD,
     "im_teaser": IM_TEASER_PRD,
+    "im_dm": IM_DM_PRD,
 }
 
 
@@ -110,7 +145,7 @@ def get_prd(doc_type: str) -> dict[str, Any]:
     """문서 유형에 맞는 PRD를 반환한다.
 
     Args:
-        doc_type: "im_full" 또는 "im_teaser".
+        doc_type: "im_full", "im_teaser", 또는 "im_dm".
 
     Returns:
         PRD dict.

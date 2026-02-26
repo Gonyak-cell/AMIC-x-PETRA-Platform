@@ -41,7 +41,7 @@ from src.api.schemas.checklist import (
     CreateFromVdrRequest,
     CreateFromVdrResponse,
 )
-from src.api.services.checklist_field_registry import get_all_fields
+from src.api.services.checklist_field_registry import get_all_fields, get_fields_for_style
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +123,8 @@ async def create_from_vdr(
     )
     session.add(checklist)
 
-    # 3. 표준 필드로 초기 아이템 생성
-    fields = get_all_fields()
+    # 3. 스타일별 필드로 초기 아이템 생성
+    fields = get_fields_for_style(data.im_style)
     for i, field_def in enumerate(fields):
         item = IMChecklistItem(
             id=uuid.uuid4(),

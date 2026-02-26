@@ -178,6 +178,117 @@ def get_all_fields() -> list[FieldDefinition]:
     return _ALL_FIELDS
 
 
+# ---------------------------------------------------------------------------
+# 스타일별 필드 필터링
+# ---------------------------------------------------------------------------
+
+# TM 핵심 재무 지표: revenue, operating_income, ebitda, net_income (×3년 = 12)
+_TM_FINANCIAL_KEYS: frozenset[str] = frozenset(
+    f"{metric}_{year}"
+    for metric in ("revenue", "operating_income", "ebitda", "net_income")
+    for year in _FINANCIAL_YEARS
+)
+
+# DM 핵심 재무 지표: revenue, cogs, gross_profit, operating_income, ebitda, net_income (×3년 = 18)
+_DM_FINANCIAL_KEYS: frozenset[str] = frozenset(
+    f"{metric}_{year}"
+    for metric in ("revenue", "cogs", "gross_profit", "operating_income", "ebitda", "net_income")
+    for year in _FINANCIAL_YEARS
+)
+
+# TM COMPANY 필드 (핵심 8개)
+_TM_COMPANY_KEYS: frozenset[str] = frozenset((
+    "company_name", "company_name_en", "founded_date", "ceo_name",
+    "employee_count", "headquarters", "industry_classification", "company_description",
+))
+
+# DM COMPANY 필드 (핵심 6개 — 상세 사업 설명 제외)
+_DM_COMPANY_KEYS: frozenset[str] = frozenset((
+    "company_name", "company_name_en", "founded_date",
+    "ceo_name", "industry_classification", "company_description",
+))
+
+# TM/DM 공통: DEAL 필드 서브셋
+_TM_DEAL_KEYS: frozenset[str] = frozenset((
+    "deal_type", "deal_background", "stake_pct", "investment_highlights",
+))
+
+# TM/DM 공통: MANAGEMENT 서브셋
+_TM_MANAGEMENT_KEYS: frozenset[str] = frozenset((
+    "mgmt_1_name", "mgmt_1_title", "mgmt_2_name", "mgmt_2_title",
+))
+
+# TM/DM 공통: SHAREHOLDERS 서브셋
+_TM_SHAREHOLDERS_KEYS: frozenset[str] = frozenset((
+    "sh_1_name", "sh_1_pct", "sh_2_name", "sh_2_pct",
+))
+
+
+def get_fields_for_style(im_style: str) -> list[FieldDefinition]:
+    """IM 스타일에 따라 필터링된 필드 목록을 반환한다.
+
+    - FULL / CUSTOM / TITAN / COVENANT: 전체 80필드
+    - TEASER / TM: 40필드 (핵심 재무 4지표×3yr + 회사 8 + 시장 8 + 거래 4 + 경영 4 + 주주 4)
+    - DM: 46필드 (핵심 재무 6지표×3yr + 회사 6 + 시장 8 + 거래 10 + 경영 0 + 주주 4)
+    """
+    style = im_style.upper()
+
+    # FULL 스타일은 전체 필드 반환
+    if style in ("FULL", "CUSTOM", "TITAN", "COVENANT"):
+        return get_all_fields()
+
+    all_fields = get_all_fields()
+
+    if style in ("TEASER", "TM"):
+        return [
+            f for f in all_fields
+            if _matches_tm_filter(f)
+        ]
+
+    if style == "DM":
+        return [
+            f for f in all_fields
+            if _matches_dm_filter(f)
+        ]
+
+    # 알 수 없는 스타일은 전체 반환 (안전 폴백)
+    return all_fields
+
+
+def _matches_tm_filter(f: FieldDefinition) -> bool:
+    """TM 스타일에 포함되는 필드인지 판별한다."""
+    if f.category == "FINANCIAL":
+        return f.field_key in _TM_FINANCIAL_KEYS
+    if f.category == "COMPANY":
+        return f.field_key in _TM_COMPANY_KEYS
+    if f.category == "MARKET":
+        return True  # 시장 8개 전체 포함
+    if f.category == "DEAL":
+        return f.field_key in _TM_DEAL_KEYS
+    if f.category == "MANAGEMENT":
+        return f.field_key in _TM_MANAGEMENT_KEYS
+    if f.category == "SHAREHOLDERS":
+        return f.field_key in _TM_SHAREHOLDERS_KEYS
+    return False
+
+
+def _matches_dm_filter(f: FieldDefinition) -> bool:
+    """DM 스타일에 포함되는 필드인지 판별한다."""
+    if f.category == "FINANCIAL":
+        return f.field_key in _DM_FINANCIAL_KEYS
+    if f.category == "COMPANY":
+        return f.field_key in _DM_COMPANY_KEYS
+    if f.category == "MARKET":
+        return True  # 시장 8개 전체 포함
+    if f.category == "DEAL":
+        return True  # 거래 10개 전체 포함
+    if f.category == "MANAGEMENT":
+        return False  # DM은 경영진 정보 미포함
+    if f.category == "SHAREHOLDERS":
+        return f.field_key in _TM_SHAREHOLDERS_KEYS
+    return False
+
+
 def get_fields_by_category(category: FieldCategory) -> list[FieldDefinition]:
     """특정 카테고리의 필드만 반환한다."""
     return [f for f in get_all_fields() if f.category == category]
