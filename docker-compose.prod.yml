@@ -251,6 +251,8 @@ services:
       FDD_API_URL: http://fdd-api:8000/api/v1
       IM_API_URL: http://im-api:8000/api
       KIIS_API_URL: http://kiis-api:8000/api/v1
+      CLOVA_CLIENT_ID: ${CLOVA_CLIENT_ID}
+      CLOVA_CLIENT_SECRET: ${CLOVA_CLIENT_SECRET}
       DEBUG: "false"
     restart: unless-stopped
     deploy:
