@@ -368,6 +368,6 @@ jobs:
         with:
           allowed-skips: >-
             backend-deal-mgmt, backend-kiis, backend-fdd, backend-im,
-            quality, unit-test, build,
+            quality, unit-test, build, e2e-test,
             security-sast, dependency-scan
           jobs: ${{ toJSON(needs) }}
