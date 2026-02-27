@@ -1,8 +1,5 @@
-import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +13,6 @@ from app.core.exceptions import register_exception_handlers
 from app.core.log_middleware import setup_request_logging
 from app.core.logging import setup_logging
 from app.core.redis import close_redis, init_redis
-from app.tasks.scheduler import close_scheduler, init_scheduler
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.routers import (
     alerts,
@@ -37,6 +33,7 @@ from app.routers import (
     sanctions,
     search,
 )
+from app.tasks.scheduler import close_scheduler, init_scheduler
 
 # 구조화 로깅 초기화 (통일 JSON 로그 스키마)
 setup_logging(level="INFO", json_output=not settings.DEBUG, service_name="kiis", log_dir=settings.LOG_DIR or None)
@@ -56,32 +53,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 _INSECURE_DEFAULT_KEY = "change-this-to-a-random-secret-key"
 
-# Alembic 프로젝트 루트 (kiis/)
-_ALEMBIC_DIR = Path(__file__).resolve().parent.parent
-
 # 마이그레이션 상태 추적 — health check에서 참조
 _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
-
-
-async def _run_alembic_upgrade() -> None:
-    """서버 시작 시 Alembic 마이그레이션을 자동 실행한다."""
-    global _migration_ok
-
-    def _upgrade() -> None:
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config(str(_ALEMBIC_DIR / "alembic.ini"))
-        alembic_cfg.set_main_option("script_location", str(_ALEMBIC_DIR / "migrations"))
-        command.upgrade(alembic_cfg, "head")
-
-    try:
-        await asyncio.wait_for(asyncio.to_thread(_upgrade), timeout=10)
-        _migration_ok = True
-        logger.info("Alembic migration completed (upgrade to head)")
-    except Exception as e:
-        _migration_ok = False
-        logger.warning("Alembic migration FAILED: %s — API may return 500 for DB operations", e)
 
 
 @asynccontextmanager
@@ -234,6 +207,7 @@ app.include_router(alerts.watchlist_router, prefix="/api/v1/watchlist", tags=["W
 app.include_router(alerts.alerts_router, prefix="/api/v1/alerts", tags=["Alerts"])
 
 from app.routers import audit as audit_router  # noqa: E402
+
 app.include_router(audit_router.router, prefix="/api/v1/audit", tags=["Audit"])
 
 

@@ -1,7 +1,5 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,31 +14,8 @@ from app.core.logging import setup_logging
 setup_logging(level="INFO", json_output=not settings.DEBUG, service_name="deal-mgmt", log_dir=settings.LOG_DIR or None)
 logger = logging.getLogger(__name__)
 
-_ALEMBIC_DIR = Path(__file__).resolve().parent.parent
-
 # 마이그레이션 상태 추적 — health check에서 참조
 _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
-
-
-async def _run_alembic_upgrade() -> None:
-    """서버 시작 시 Alembic 마이그레이션을 자동 실행한다."""
-    global _migration_ok
-
-    def _upgrade() -> None:
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config(str(_ALEMBIC_DIR / "alembic.ini"))
-        alembic_cfg.set_main_option("script_location", str(_ALEMBIC_DIR / "migrations"))
-        command.upgrade(alembic_cfg, "head")
-
-    try:
-        await asyncio.wait_for(asyncio.to_thread(_upgrade), timeout=10)
-        _migration_ok = True
-        logger.info("Alembic migration completed (upgrade to head)")
-    except Exception as e:
-        _migration_ok = False
-        logger.warning("Alembic migration FAILED: %s — API may return 500 for DB operations", e)
 
 
 @asynccontextmanager
