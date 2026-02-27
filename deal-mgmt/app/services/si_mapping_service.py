@@ -56,10 +56,7 @@ async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[Ksi
         return []
     q = (
         select(KsicIoMapping.ksic_code, KsicIoMapping.ksic_name)
-        .where(
-            KsicIoMapping.ksic_code.ilike(f"%{query}%")
-            | KsicIoMapping.ksic_name.ilike(f"%{query}%")
-        )
+        .where(KsicIoMapping.ksic_code.ilike(f"%{query}%") | KsicIoMapping.ksic_name.ilike(f"%{query}%"))
         .distinct()
         .limit(limit)
     )
@@ -90,9 +87,7 @@ async def map_si_candidates(
 
     # ── Step 2: Bridge (KSIC → IO 코드) ──────────────────
     q_bridge = (
-        select(KsicIoMapping.io_code, KsicIoMapping.io_name)
-        .where(KsicIoMapping.ksic_code.in_(ksic_codes))
-        .distinct()
+        select(KsicIoMapping.io_code, KsicIoMapping.io_name).where(KsicIoMapping.ksic_code.in_(ksic_codes)).distinct()
     )
     bridge_result = await db.execute(q_bridge)
     target_io_map = {row[0]: row[1] or "" for row in bridge_result.all()}
@@ -110,14 +105,22 @@ async def map_si_candidates(
 
     # ── Step 3: Backward (공급자) — batch IN + 인덱스 ────
     backward_panels = await _get_value_chain(
-        db, target_io_codes, direction="backward", top_n=top_n,
-        ksic_index=ksic_index, max_companies=max_companies_per_panel,
+        db,
+        target_io_codes,
+        direction="backward",
+        top_n=top_n,
+        ksic_index=ksic_index,
+        max_companies=max_companies_per_panel,
     )
 
     # ── Step 4: Forward (수요자) — batch IN + 인덱스 ─────
     forward_panels = await _get_value_chain(
-        db, target_io_codes, direction="forward", top_n=top_n,
-        ksic_index=ksic_index, max_companies=max_companies_per_panel,
+        db,
+        target_io_codes,
+        direction="forward",
+        top_n=top_n,
+        ksic_index=ksic_index,
+        max_companies=max_companies_per_panel,
     )
 
     # ── Step 5: 결과 조합 ─────────────────────────────────
@@ -126,8 +129,11 @@ async def map_si_candidates(
 
     logger.info(
         "SI 매핑 완료: ksic=%s, 전체=%d, direct=%d, backward=%d, forward=%d",
-        ksic_codes, len(all_candidates), len(direct_out),
-        len(backward_panels), len(forward_panels),
+        ksic_codes,
+        len(all_candidates),
+        len(direct_out),
+        len(backward_panels),
+        len(forward_panels),
     )
 
     return SIMappingResponse(
@@ -154,9 +160,7 @@ async def bulk_add_to_buyers(
     si_companies = list(result.scalars().all())
 
     # 이미 등록된 기업명 확인 (중복 방지)
-    existing_q = select(BuyerCandidate.company_name).where(
-        BuyerCandidate.transaction_id == txn_id
-    )
+    existing_q = select(BuyerCandidate.company_name).where(BuyerCandidate.transaction_id == txn_id)
     existing_result = await db.execute(existing_q)
     existing_names = {row[0] for row in existing_result.all()}
 
@@ -233,7 +237,8 @@ async def get_deep_dive(
             if search_resp.status_code != 200:
                 logger.warning(
                     "KIIS DART 기업검색 실패: status=%d, company=%s",
-                    search_resp.status_code, si_company.company_name,
+                    search_resp.status_code,
+                    si_company.company_name,
                 )
                 return base_response
 
@@ -268,7 +273,10 @@ async def get_deep_dive(
             )
 
             responses = await asyncio.gather(
-                overview_task, *financial_tasks, disclosure_task, sanctions_task,
+                overview_task,
+                *financial_tasks,
+                disclosure_task,
+                sanctions_task,
                 return_exceptions=True,
             )
 

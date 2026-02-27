@@ -52,9 +52,7 @@ class TextReplacement(BaseModel):
 
     shape_name: str | None = None
     prefix: str | None = None
-    mode: Literal["replace", "placeholder", "timeline"] = Field(
-        "replace", description="텍스트 교체 모드"
-    )
+    mode: Literal["replace", "placeholder", "timeline"] = Field("replace", description="텍스트 교체 모드")
     texts: list[str] = Field(default_factory=list)
     replacements: dict[str, str] = Field(default_factory=dict)
     items: list[dict[str, str]] = Field(default_factory=list)

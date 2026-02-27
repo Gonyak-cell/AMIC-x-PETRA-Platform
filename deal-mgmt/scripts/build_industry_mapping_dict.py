@@ -37,15 +37,12 @@ INDUSTRY_CSV = MAPPING_DB_DIR / "industry_classification.csv"
 IO_KSIC_CSV = MAPPING_DB_DIR / "io_ksic_mapping.csv"
 HWP_PATH = MAPPING_DB_DIR / "한국표준산업분류(2017.1)-제10차개정_20260106085911.hwp"
 HWP_CSV = MAPPING_DB_DIR / "ksic_5digit_from_hwp.csv"
-LINKAGE_XLSX = (
-    MAPPING_DB_DIR
-    / "한국표준산업분류 제11차-제10차 연계표_20240509_20240514030911.xlsx"
-)
+LINKAGE_XLSX = MAPPING_DB_DIR / "한국표준산업분류 제11차-제10차 연계표_20240509_20240514030911.xlsx"
 LINKAGE_CSV = MAPPING_DB_DIR / "ksic_11th_linkage.csv"
 OUTPUT_DIR = MAPPING_DB_DIR
 
-FUZZY_THRESHOLD = 0.80          # 1~4차 매칭
-HWP_FUZZY_THRESHOLD = 0.75      # 5차 HWP 전용 (공식 분류표 신뢰도 높음)
+FUZZY_THRESHOLD = 0.80  # 1~4차 매칭
+HWP_FUZZY_THRESHOLD = 0.75  # 5차 HWP 전용 (공식 분류표 신뢰도 높음)
 
 # ---------------------------------------------------------------------------
 # 수동 확정 매핑 (자동 파이프라인 1~7차로 해결 불가한 45건)
@@ -97,7 +94,10 @@ MANUAL_OVERRIDE: dict[str, tuple[str, str]] = {
     # --- D. 복합업종 첫 키워드 기준 (11건) ---
     "가방 시계 안경 및 기타 생활용품 도매업": ("46499", "그 외 기타 생활용품 도매업"),
     "건물산업설비 청소 및 방제 서비스업": ("74211", "건축물 일반 청소업"),
-    "생활용 포장위생용품 문구용품 및 출판 인쇄물 도매업": ("46451", "생활용 포장 및 위생용품, 봉투 및 유사 제품 도매업"),
+    "생활용 포장위생용품 문구용품 및 출판 인쇄물 도매업": (
+        "46451",
+        "생활용 포장 및 위생용품, 봉투 및 유사 제품 도매업",
+    ),
     "음반 및 비디오물 악기 오락 및 경기용품 도매업": ("46461", "음반 및 비디오물 도매업"),
     "석재 쇄석 및 모래 자갈 채취업": ("07122", "모래 및 자갈 채취업"),
     "섬유 직물 및 의복액세서리 소매업": ("47411", "섬유 및 직물류 소매업"),
@@ -149,9 +149,24 @@ def normalize_aggressive(text: str) -> str:
 
 # 업종 접미사 목록 (긴 것부터 매칭하여 가장 구체적인 접미사 우선 제거)
 _INDUSTRY_SUFFIXES = [
-    "임가공업", "제조업", "도매업", "소매업", "건설업", "수리업",
-    "서비스업", "가공업", "재배업", "사육업", "발전업", "광업",
-    "어업", "운송업", "중개업", "보험업", "사업", "업",
+    "임가공업",
+    "제조업",
+    "도매업",
+    "소매업",
+    "건설업",
+    "수리업",
+    "서비스업",
+    "가공업",
+    "재배업",
+    "사육업",
+    "발전업",
+    "광업",
+    "어업",
+    "운송업",
+    "중개업",
+    "보험업",
+    "사업",
+    "업",
 ]
 
 
@@ -452,8 +467,13 @@ def load_ksic_lookups():
 # Step 4: 하이브리드 매칭 (Exact + Fuzzy)
 # ---------------------------------------------------------------------------
 def match_industry_names(
-    unique_names, lookup_by_level, code4_to_code5, io_name_lookup, hwp_lookup,
-    linkage_lookup=None, linkage_reverse=None,
+    unique_names,
+    lookup_by_level,
+    code4_to_code5,
+    io_name_lookup,
+    hwp_lookup,
+    linkage_lookup=None,
+    linkage_reverse=None,
 ):
     """고유 업종명에 대해 1~7차 순서로 매칭."""
     if linkage_lookup is None:
@@ -499,19 +519,29 @@ def match_industry_names(
     link_agg_keys = list(link_aggressive.keys())
 
     print(f"\n[Step 3] 매칭 시작 (총 {len(unique_names)}개)")
-    print(f"  레퍼런스: industry_classification {len(norm_keys)}개, "
-          f"io_name {len(io_keys)}개, HWP 5자리 {len(hwp_keys)}개, "
-          f"11차 연계표 {len(link_keys)}개")
+    print(
+        f"  레퍼런스: industry_classification {len(norm_keys)}개, "
+        f"io_name {len(io_keys)}개, HWP 5자리 {len(hwp_keys)}개, "
+        f"11차 연계표 {len(link_keys)}개"
+    )
 
     counts = {
         "manual_override": 0,
-        "exact": 0, "fuzzy": 0,
-        "exact_agg": 0, "fuzzy_agg": 0,
-        "io_exact": 0, "io_fuzzy": 0,
-        "hwp_exact": 0, "hwp_fuzzy": 0,
-        "hwp_exact_agg": 0, "hwp_fuzzy_agg": 0,
-        "link11_exact": 0, "link11_fuzzy": 0, "link11_agg": 0,
-        "upper_class": 0, "split_first": 0,
+        "exact": 0,
+        "fuzzy": 0,
+        "exact_agg": 0,
+        "fuzzy_agg": 0,
+        "io_exact": 0,
+        "io_fuzzy": 0,
+        "hwp_exact": 0,
+        "hwp_fuzzy": 0,
+        "hwp_exact_agg": 0,
+        "hwp_fuzzy_agg": 0,
+        "link11_exact": 0,
+        "link11_fuzzy": 0,
+        "link11_agg": 0,
+        "upper_class": 0,
+        "split_first": 0,
         "fail": 0,
     }
 
@@ -527,9 +557,18 @@ def match_industry_names(
             code, name = MANUAL_OVERRIDE[norm_name]
             k5 = code if len(code) == 5 else ""
             k4 = code[:4] if len(code) >= 4 else code
-            matched.append(_success_row(
-                raw_name, norm_name, k4, name, "manual", "manual_override", 1.0, k5,
-            ))
+            matched.append(
+                _success_row(
+                    raw_name,
+                    norm_name,
+                    k4,
+                    name,
+                    "manual",
+                    "manual_override",
+                    1.0,
+                    k5,
+                )
+            )
             counts["manual_override"] += 1
             continue
 
@@ -572,9 +611,19 @@ def match_industry_names(
         if io_result:
             io_name, io_code, k5, amb, io_method, score = io_result
             tag = f"io_{io_method}"
-            matched.append(_success_row(
-                raw_name, norm_name, io_code, io_name, "io_name", tag, score, k5, amb,
-            ))
+            matched.append(
+                _success_row(
+                    raw_name,
+                    norm_name,
+                    io_code,
+                    io_name,
+                    "io_name",
+                    tag,
+                    score,
+                    k5,
+                    amb,
+                )
+            )
             counts[tag] += 1
             continue
 
@@ -584,9 +633,19 @@ def match_industry_names(
             if hwp_result:
                 orig, k5, method, score = hwp_result
                 k4 = k5[:4]
-                matched.append(_success_row(
-                    raw_name, norm_name, k4, orig, "hwp_5digit", method, score, k5, False,
-                ))
+                matched.append(
+                    _success_row(
+                        raw_name,
+                        norm_name,
+                        k4,
+                        orig,
+                        "hwp_5digit",
+                        method,
+                        score,
+                        k5,
+                        False,
+                    )
+                )
                 counts[method] += 1
                 continue
 
@@ -598,9 +657,19 @@ def match_industry_names(
                     orig, k5, method, score = hwp_result
                     k4 = k5[:4]
                     tag = method.replace("hwp_", "hwp_") + "_agg"
-                    matched.append(_success_row(
-                        raw_name, norm_name, k4, orig, "hwp_5digit", tag, score, k5, False,
-                    ))
+                    matched.append(
+                        _success_row(
+                            raw_name,
+                            norm_name,
+                            k4,
+                            orig,
+                            "hwp_5digit",
+                            tag,
+                            score,
+                            k5,
+                            False,
+                        )
+                    )
                     counts[tag] += 1
                     continue
 
@@ -611,9 +680,19 @@ def match_industry_names(
                         orig, k5, method, score = hwp_result
                         k4 = k5[:4]
                         tag = method.replace("hwp_", "hwp_") + "_agg"
-                        matched.append(_success_row(
-                            raw_name, norm_name, k4, orig, "hwp_5digit", tag, score, k5, False,
-                        ))
+                        matched.append(
+                            _success_row(
+                                raw_name,
+                                norm_name,
+                                k4,
+                                orig,
+                                "hwp_5digit",
+                                tag,
+                                score,
+                                k5,
+                                False,
+                            )
+                        )
                         counts[tag] += 1
                         continue
 
@@ -625,10 +704,21 @@ def match_industry_names(
                 _k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
                 k5 = k11  # 11차 코드를 5자리로 사용
                 tag = "link11_exact" if method == "hwp_exact" else "link11_fuzzy"
-                matched.append(_success_row(
-                    raw_name, norm_name, k5[:4], orig, "linkage_11th",
-                    tag, score, k5, False, k11=k11, change_type=chg,
-                ))
+                matched.append(
+                    _success_row(
+                        raw_name,
+                        norm_name,
+                        k5[:4],
+                        orig,
+                        "linkage_11th",
+                        tag,
+                        score,
+                        k5,
+                        False,
+                        k11=k11,
+                        change_type=chg,
+                    )
+                )
                 counts[tag] += 1
                 continue
 
@@ -639,10 +729,21 @@ def match_industry_names(
                     orig, k11, method, score = link_result
                     _k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
                     k5 = k11
-                    matched.append(_success_row(
-                        raw_name, norm_name, k5[:4], orig, "linkage_11th",
-                        "link11_agg", score, k5, False, k11=k11, change_type=chg,
-                    ))
+                    matched.append(
+                        _success_row(
+                            raw_name,
+                            norm_name,
+                            k5[:4],
+                            orig,
+                            "linkage_11th",
+                            "link11_agg",
+                            score,
+                            k5,
+                            False,
+                            k11=k11,
+                            change_type=chg,
+                        )
+                    )
                     counts["link11_agg"] += 1
                     continue
 
@@ -657,15 +758,27 @@ def match_industry_names(
                 first_basic = _find_first_basic(upper_code, lookup_by_level, code4_to_code5)
                 if first_basic:
                     k4, k5 = first_basic
-                    matched.append(_success_row(
-                        raw_name, norm_name, k4, orig, upper_level,
-                        "upper_class", 1.0, k5, True,
-                    ))
+                    matched.append(
+                        _success_row(
+                            raw_name,
+                            norm_name,
+                            k4,
+                            orig,
+                            upper_level,
+                            "upper_class",
+                            1.0,
+                            k5,
+                            True,
+                        )
+                    )
                     counts["upper_class"] += 1
                     break
             else:
                 cands = difflib.get_close_matches(
-                    norm_name, upper_keys_list, n=1, cutoff=FUZZY_THRESHOLD,
+                    norm_name,
+                    upper_keys_list,
+                    n=1,
+                    cutoff=FUZZY_THRESHOLD,
                 )
                 if cands:
                     best = cands[0]
@@ -673,14 +786,25 @@ def match_industry_names(
                     if sc >= FUZZY_THRESHOLD:
                         orig, upper_code = upper_dict[best]
                         first_basic = _find_first_basic(
-                            upper_code, lookup_by_level, code4_to_code5,
+                            upper_code,
+                            lookup_by_level,
+                            code4_to_code5,
                         )
                         if first_basic:
                             k4, k5 = first_basic
-                            matched.append(_success_row(
-                                raw_name, norm_name, k4, orig, upper_level,
-                                "upper_class", round(sc, 4), k5, True,
-                            ))
+                            matched.append(
+                                _success_row(
+                                    raw_name,
+                                    norm_name,
+                                    k4,
+                                    orig,
+                                    upper_level,
+                                    "upper_class",
+                                    round(sc, 4),
+                                    k5,
+                                    True,
+                                )
+                            )
                             counts["upper_class"] += 1
                             break
         else:
@@ -690,16 +814,33 @@ def match_industry_names(
                 split_norm = normalize(split_name)
                 # 분해 이름으로 1~6차 전체 레퍼런스 검색 (1회만)
                 split_result = _try_split_match(
-                    split_norm, all_norm_names, norm_keys, code4_to_code5,
-                    hwp_lookup, hwp_keys, linkage_lookup, link_keys,
+                    split_norm,
+                    all_norm_names,
+                    norm_keys,
+                    code4_to_code5,
+                    hwp_lookup,
+                    hwp_keys,
+                    linkage_lookup,
+                    link_keys,
                     linkage_reverse,
                 )
                 if split_result:
                     code, orig, level, k5, amb, sc, k11, chg = split_result
-                    matched.append(_success_row(
-                        raw_name, norm_name, code, orig, level,
-                        "split_first", sc, k5, amb, k11=k11, change_type=chg,
-                    ))
+                    matched.append(
+                        _success_row(
+                            raw_name,
+                            norm_name,
+                            code,
+                            orig,
+                            level,
+                            "split_first",
+                            sc,
+                            k5,
+                            amb,
+                            k11=k11,
+                            change_type=chg,
+                        )
+                    )
                     counts["split_first"] += 1
                     continue
 
@@ -711,15 +852,16 @@ def match_industry_names(
                 **linkage_lookup,
             }
             candidates = difflib.get_close_matches(
-                norm_name, all_candidate_keys, n=1, cutoff=0.0,
+                norm_name,
+                all_candidate_keys,
+                n=1,
+                cutoff=0.0,
             )
             if candidates:
                 best = candidates[0]
                 score = difflib.SequenceMatcher(None, norm_name, best).ratio()
                 orig, code = all_candidate_lookup.get(best, ("", ""))
-                unmatched.append(
-                    _fail_row(raw_name, norm_name, orig, code, round(score, 4))
-                )
+                unmatched.append(_fail_row(raw_name, norm_name, orig, code, round(score, 4)))
             else:
                 unmatched.append(_fail_row(raw_name, norm_name, "", "", 0.0))
             counts["fail"] += 1
@@ -772,8 +914,7 @@ def _try_fuzzy(query, keys, lookup, code4_to_code5):
     return code, orig, level, "fuzzy", round(score, 4), k5, amb
 
 
-def _success_row(raw, norm, code, orig, level, method, score, k5="", amb=False,
-                  k11="", change_type=""):
+def _success_row(raw, norm, code, orig, level, method, score, k5="", amb=False, k11="", change_type=""):
     row = {
         "원본_업종명": raw,
         "정규화_업종명": norm,
@@ -840,9 +981,17 @@ def _find_first_basic(upper_code, lookup_by_level, code4_to_code5):
     return None
 
 
-def _try_split_match(split_norm, all_norm_names, norm_keys, code4_to_code5,
-                     hwp_lookup, hwp_keys, linkage_lookup, link_keys,
-                     linkage_reverse):
+def _try_split_match(
+    split_norm,
+    all_norm_names,
+    norm_keys,
+    code4_to_code5,
+    hwp_lookup,
+    hwp_keys,
+    linkage_lookup,
+    link_keys,
+    linkage_reverse,
+):
     """분해된 업종명으로 전체 레퍼런스를 검색한다."""
     # 1. industry_classification exact/fuzzy
     if split_norm in all_norm_names:
@@ -941,18 +1090,27 @@ def save_results(matched, unmatched):
         print("  매칭 방식별:")
         for method in [
             "manual_override",
-            "exact", "fuzzy", "exact_agg", "fuzzy_agg",
-            "io_exact", "io_fuzzy",
-            "hwp_exact", "hwp_fuzzy", "hwp_exact_agg", "hwp_fuzzy_agg",
-            "link11_exact", "link11_fuzzy", "link11_agg",
-            "upper_class", "split_first",
+            "exact",
+            "fuzzy",
+            "exact_agg",
+            "fuzzy_agg",
+            "io_exact",
+            "io_fuzzy",
+            "hwp_exact",
+            "hwp_fuzzy",
+            "hwp_exact_agg",
+            "hwp_fuzzy_agg",
+            "link11_exact",
+            "link11_fuzzy",
+            "link11_agg",
+            "upper_class",
+            "split_first",
         ]:
             cnt = (df_matched["매칭_방식"] == method).sum()
             if cnt > 0:
                 print(f"    {method}: {cnt}")
         print("  매칭 레벨별:")
-        for level in ["manual", "basic", "sub", "mid", "large", "io_name",
-                      "hwp_5digit", "linkage_11th"]:
+        for level in ["manual", "basic", "sub", "mid", "large", "io_name", "hwp_5digit", "linkage_11th"]:
             cnt = (df_matched["매칭_레벨"] == level).sum()
             if cnt > 0:
                 print(f"    {level}: {cnt}")
@@ -979,8 +1137,13 @@ def main():
     hwp_lookup = load_or_extract_hwp_5digit()
     linkage_lookup, linkage_reverse = load_or_extract_linkage_11th()
     matched, unmatched = match_industry_names(
-        unique_names, lookup_by_level, code4_to_code5, io_name_lookup, hwp_lookup,
-        linkage_lookup, linkage_reverse,
+        unique_names,
+        lookup_by_level,
+        code4_to_code5,
+        io_name_lookup,
+        hwp_lookup,
+        linkage_lookup,
+        linkage_reverse,
     )
     save_results(matched, unmatched)
 

@@ -97,9 +97,7 @@ class TestFitAndCenter:
         buf = BytesIO()
         img.save(buf, format="PNG")
 
-        _left, _top, width, height = _fit_and_center(
-            0, 0, 1000, 1000, buf
-        )
+        _left, _top, width, height = _fit_and_center(0, 0, 1000, 1000, buf)
         # 가로가 기준 → 높이가 줄어듦
         assert width == 1000
         assert height == 500
@@ -110,9 +108,7 @@ class TestFitAndCenter:
         buf = BytesIO()
         img.save(buf, format="PNG")
 
-        _left, _top, width, height = _fit_and_center(
-            0, 0, 2000, 1000, buf
-        )
+        _left, _top, width, height = _fit_and_center(0, 0, 2000, 1000, buf)
         # 세로가 기준 → 너비가 줄어듦
         assert height == 1000
         assert width == 500

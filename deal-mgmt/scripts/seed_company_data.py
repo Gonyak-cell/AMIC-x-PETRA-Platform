@@ -141,7 +141,9 @@ def process_csv_files(
 
     logger.info(
         "[Step 3] 전처리 완료: 총 CSV 행 %d → 고유 기업 %d건 (KSIC 매핑 %d건)",
-        total_rows, len(all_records), mapped_count,
+        total_rows,
+        len(all_records),
+        mapped_count,
     )
     return all_records, total_rows, mapped_count, failed_files
 
@@ -150,16 +152,16 @@ def process_csv_files(
 # 4단계: UPSERT 벌크 삽입
 # ---------------------------------------------------------------------------
 async def upsert_companies(
-    session: AsyncSession, records: list[dict], force: bool = False,
+    session: AsyncSession,
+    records: list[dict],
+    force: bool = False,
 ) -> int:
     """si_companies 테이블에 UPSERT(on_conflict_do_nothing) 방식으로 벌크 삽입한다."""
     from app.models.si_company import SICompany
 
     if force:
         # 실제 기업(jurir_no 있는 것)만 삭제, 더미 기업은 유지
-        result = await session.execute(
-            delete(SICompany).where(SICompany.jurir_no.isnot(None))
-        )
+        result = await session.execute(delete(SICompany).where(SICompany.jurir_no.isnot(None)))
         await session.commit()
         logger.info("기존 실제 기업 데이터 삭제: %d건", result.rowcount)
 
@@ -176,7 +178,10 @@ async def upsert_companies(
         inserted += result.rowcount
         logger.info(
             "[Step 4] 청크 %d~%d: %d건 삽입 (누적 %d)",
-            i, min(i + CHUNK_SIZE, len(records)), result.rowcount, inserted,
+            i,
+            min(i + CHUNK_SIZE, len(records)),
+            result.rowcount,
+            inserted,
         )
 
     await session.commit()

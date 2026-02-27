@@ -48,10 +48,7 @@ def replace_chart_data(
     shape = find_shape_by_name(slide, shape_name)
 
     if not shape.has_chart:
-        raise ChartShapeError(
-            f"'{shape_name}'에 차트가 없습니다. "
-            f"shape_type: {shape.shape_type}"
-        )
+        raise ChartShapeError(f"'{shape_name}'에 차트가 없습니다. shape_type: {shape.shape_type}")
 
     chart = shape.chart
 
@@ -61,8 +58,7 @@ def replace_chart_data(
         values = s.get("values", [])
         if len(values) != n_cats:
             raise DataValidationError(
-                f"시리즈 '{s.get('name', '')}' 값 수({len(values)})가 "
-                f"카테고리 수({n_cats})와 불일치"
+                f"시리즈 '{s.get('name', '')}' 값 수({len(values)})가 카테고리 수({n_cats})와 불일치"
             )
 
     # CategoryChartData 구성
@@ -70,9 +66,7 @@ def replace_chart_data(
     chart_data.categories = categories
 
     for s in series:
-        scaled_values = tuple(
-            v * scale_factor if v is not None else None for v in s["values"]
-        )
+        scaled_values = tuple(v * scale_factor if v is not None else None for v in s["values"])
         chart_data.add_series(s.get("name", ""), scaled_values)
 
     # 데이터 교체 (서식 보존)

@@ -6,7 +6,6 @@ import {
 } from "@/modules/ma/hooks/useSIMapping";
 import type {
   KsicSuggestion,
-  SICandidate,
   SIMappingResponse,
 } from "@/modules/ma/types/si_mapping";
 

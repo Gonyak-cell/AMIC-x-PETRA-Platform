@@ -20,11 +20,15 @@ class SICompany(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     company_name: Mapped[str] = mapped_column(String(300), nullable=False, index=True)
     jurir_no: Mapped[str | None] = mapped_column(
-        String(13), unique=True, index=True, nullable=True,
+        String(13),
+        unique=True,
+        index=True,
+        nullable=True,
         comment="법인등록번호 13자리 (하이픈 제거)",
     )
     corp_code: Mapped[str | None] = mapped_column(
-        String(10), nullable=True,
+        String(10),
+        nullable=True,
         comment="사업자등록번호 (하이픈 제거)",
     )
     ksic_codes: Mapped[list | None] = mapped_column(

@@ -32,15 +32,55 @@ logger = logging.getLogger(__name__)
 
 # 더미 기업명 프리픽스
 _NAME_PREFIXES = [
-    "테스트기업", "가상산업", "한국", "동양", "서울", "대한", "미래",
-    "글로벌", "첨단", "신세계", "코리아", "아시아", "태평양", "중앙",
-    "삼성", "현대", "에스케이", "엘지", "포스코", "한화", "두산",
-    "금호", "대우", "쌍용", "효성", "코오롱", "동국", "세아",
+    "테스트기업",
+    "가상산업",
+    "한국",
+    "동양",
+    "서울",
+    "대한",
+    "미래",
+    "글로벌",
+    "첨단",
+    "신세계",
+    "코리아",
+    "아시아",
+    "태평양",
+    "중앙",
+    "삼성",
+    "현대",
+    "에스케이",
+    "엘지",
+    "포스코",
+    "한화",
+    "두산",
+    "금호",
+    "대우",
+    "쌍용",
+    "효성",
+    "코오롱",
+    "동국",
+    "세아",
 ]
 _NAME_SUFFIXES = [
-    "산업", "전자", "화학", "건설", "에너지", "물산", "테크",
-    "솔루션", "글로벌", "홀딩스", "파트너스", "인더스트리", "코퍼레이션",
-    "제약", "바이오", "시스템즈", "네트웍스", "캐피탈", "인베스트",
+    "산업",
+    "전자",
+    "화학",
+    "건설",
+    "에너지",
+    "물산",
+    "테크",
+    "솔루션",
+    "글로벌",
+    "홀딩스",
+    "파트너스",
+    "인더스트리",
+    "코퍼레이션",
+    "제약",
+    "바이오",
+    "시스템즈",
+    "네트웍스",
+    "캐피탈",
+    "인베스트",
 ]
 
 
@@ -48,6 +88,7 @@ async def _get_engine_and_session(database_url: str | None = None):
     """DB 엔진/세션 생성."""
     if database_url is None:
         from app.core.config import settings
+
         database_url = settings.DATABASE_URL
 
     engine = create_async_engine(database_url)
@@ -74,12 +115,14 @@ async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bo
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            rows.append({
-                "io_code": row["io_code"].strip(),
-                "io_name": row.get("io_name", "").strip() or None,
-                "ksic_code": row["ksic_code"].strip(),
-                "ksic_name": row.get("ksic_name", "").strip() or None,
-            })
+            rows.append(
+                {
+                    "io_code": row["io_code"].strip(),
+                    "io_name": row.get("io_name", "").strip() or None,
+                    "ksic_code": row["ksic_code"].strip(),
+                    "ksic_name": row.get("ksic_name", "").strip() or None,
+                }
+            )
 
     # 청크 삽입
     chunk_size = 5000
@@ -116,13 +159,15 @@ async def load_io_transactions(session: AsyncSession, csv_path: Path, force: boo
             val = row["transaction_value"].strip()
             if not val or float(val) == 0:
                 continue  # 거래액 0 제외
-            rows.append({
-                "source_io_code": row["source_io_code"].strip(),
-                "source_io_name": row.get("source_io_name", "").strip() or None,
-                "target_io_code": row["target_io_code"].strip(),
-                "target_io_name": row.get("target_io_name", "").strip() or None,
-                "transaction_value": float(val),
-            })
+            rows.append(
+                {
+                    "source_io_code": row["source_io_code"].strip(),
+                    "source_io_name": row.get("source_io_name", "").strip() or None,
+                    "target_io_code": row["target_io_code"].strip(),
+                    "target_io_name": row.get("target_io_name", "").strip() or None,
+                    "transaction_value": float(val),
+                }
+            )
 
     chunk_size = 5000
     total = 0
@@ -138,9 +183,7 @@ async def load_io_transactions(session: AsyncSession, csv_path: Path, force: boo
     return total
 
 
-async def generate_dummy_companies(
-    session: AsyncSession, n: int = 500, force: bool = False
-) -> int:
+async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: bool = False) -> int:
     """더미 SI 기업 생성 — 매핑 테이블의 실제 KSIC 코드 사용."""
     from app.models.si_company import SICompany
 
@@ -181,14 +224,16 @@ async def generate_dummy_companies(
         k = random.randint(1, 3)
         codes = random.sample(ksic_pool, min(k, len(ksic_pool)))
 
-        companies.append({
-            "id": uuid.uuid4(),
-            "company_name": name,
-            "ksic_codes": codes,
-            "revenue": float(random.randint(100, 10000)) * 1_000_000_00,  # 100억 ~ 1조
-            "has_investment_history": random.choice([True, False]),
-            "description": None,
-        })
+        companies.append(
+            {
+                "id": uuid.uuid4(),
+                "company_name": name,
+                "ksic_codes": codes,
+                "revenue": float(random.randint(100, 10000)) * 1_000_000_00,  # 100억 ~ 1조
+                "has_investment_history": random.choice([True, False]),
+                "description": None,
+            }
+        )
 
     from app.models.si_company import SICompany
 

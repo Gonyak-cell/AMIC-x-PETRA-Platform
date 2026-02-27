@@ -30,10 +30,7 @@ def find_shape_by_name(slide: Any, name: str) -> Any:
         if shape.name == name:
             return shape
     existing = [s.name for s in slide.shapes]
-    raise ShapeNotFoundError(
-        f"슬라이드에서 '{name}' shape를 찾을 수 없습니다. "
-        f"존재하는 shape: {existing}"
-    )
+    raise ShapeNotFoundError(f"슬라이드에서 '{name}' shape를 찾을 수 없습니다. 존재하는 shape: {existing}")
 
 
 def find_shapes_by_prefix(slide: Any, prefix: str) -> list[Any]:
@@ -94,7 +91,4 @@ def catalog_presentation(prs: Any) -> list[dict[str, Any]]:
     Returns:
         [{"slide_index": int, "shapes": [...]}, ...]
     """
-    return [
-        {"slide_index": idx, "shapes": catalog_slide_shapes(slide)}
-        for idx, slide in enumerate(prs.slides)
-    ]
+    return [{"slide_index": idx, "shapes": catalog_slide_shapes(slide)} for idx, slide in enumerate(prs.slides)]

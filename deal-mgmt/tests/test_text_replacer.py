@@ -67,40 +67,30 @@ class TestReplaceTextPreservingFormat:
 
     def test_basic_replace(self, text_slide):
         """기본 텍스트 교체."""
-        shape = replace_text_preserving_format(
-            text_slide, "txt_body", ["새 첫 번째 문단", "새 두 번째 문단"]
-        )
+        shape = replace_text_preserving_format(text_slide, "txt_body", ["새 첫 번째 문단", "새 두 번째 문단"])
         assert shape.text_frame.paragraphs[0].text == "새 첫 번째 문단"
         assert shape.text_frame.paragraphs[1].text == "새 두 번째 문단"
 
     def test_fewer_texts(self, text_slide):
         """texts가 기존 paragraph보다 적으면 일부만 교체."""
-        shape = replace_text_preserving_format(
-            text_slide, "txt_body", ["교체됨"]
-        )
+        shape = replace_text_preserving_format(text_slide, "txt_body", ["교체됨"])
         assert shape.text_frame.paragraphs[0].text == "교체됨"
 
     def test_more_texts_adds_paragraphs(self, text_slide):
         """texts가 기존 paragraph보다 많으면 새 paragraph 추가."""
-        shape = replace_text_preserving_format(
-            text_slide, "txt_body", ["A", "B", "C", "D"]
-        )
+        shape = replace_text_preserving_format(text_slide, "txt_body", ["A", "B", "C", "D"])
         paras = list(shape.text_frame.paragraphs)
         assert len(paras) >= 4
 
     def test_bold_preserved(self, text_slide):
         """볼드 서식 보존 확인."""
-        shape = replace_text_preserving_format(
-            text_slide, "txt_bold", ["새 볼드 텍스트"]
-        )
+        shape = replace_text_preserving_format(text_slide, "txt_bold", ["새 볼드 텍스트"])
         runs = list(shape.text_frame.paragraphs[0].runs)
         assert runs[0].font.bold is True
 
     def test_font_size_preserved(self, text_slide):
         """폰트 크기 보존 확인."""
-        shape = replace_text_preserving_format(
-            text_slide, "txt_bold", ["크기 보존"]
-        )
+        shape = replace_text_preserving_format(text_slide, "txt_bold", ["크기 보존"])
         runs = list(shape.text_frame.paragraphs[0].runs)
         assert runs[0].font.size == Pt(14)
 
@@ -147,9 +137,7 @@ class TestReplacePlaceholdersInText:
         tx.name = "txt_multi"
         tx.text_frame.paragraphs[0].text = "{{name}} 대표이사 {{name}}"
 
-        shape = replace_placeholders_in_text(
-            slide, "txt_multi", {"name": "김대표"}
-        )
+        shape = replace_placeholders_in_text(slide, "txt_multi", {"name": "김대표"})
         assert shape.text_frame.paragraphs[0].text == "김대표 대표이사 김대표"
 
 

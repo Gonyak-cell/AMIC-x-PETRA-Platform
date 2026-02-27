@@ -113,9 +113,7 @@ def explore_all(output_dir: Path) -> None:
         for sname in IO_SHEETS:
             ws = wb[sname]
             print(f"\n    [{sname}]")
-            for i, row in enumerate(
-                ws.iter_rows(min_row=5, max_row=7, values_only=True), 5
-            ):
+            for i, row in enumerate(ws.iter_rows(min_row=5, max_row=7, values_only=True), 5):
                 vals = list(row[:8])
                 print(f"      Row {i}: {vals}")
     finally:
@@ -371,9 +369,7 @@ def run_phase2(output_dir: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="한국은행 2020 산업연관표 ETL 파이프라인"
-    )
+    parser = argparse.ArgumentParser(description="한국은행 2020 산업연관표 ETL 파이프라인")
     parser.add_argument(
         "--explore",
         action="store_true",

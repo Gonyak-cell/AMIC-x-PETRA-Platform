@@ -117,24 +117,18 @@ class TestSplitTableAcrossSlides:
     def test_no_split_needed(self, table_prs):
         """행 수가 적으면 분할 없음."""
         rows = [["항목1", 100, 200, 300], ["항목2", 400, 500, 600]]
-        count = split_table_across_slides(
-            table_prs, 0, "tbl_financials", None, rows, max_rows_per_slide=10
-        )
+        count = split_table_across_slides(table_prs, 0, "tbl_financials", None, rows, max_rows_per_slide=10)
         assert count == 1
 
     def test_split_into_pages(self, table_prs):
         """행이 초과하면 슬라이드 분할."""
         rows = [[f"항목{i}", i, i * 10, i * 100] for i in range(25)]
-        count = split_table_across_slides(
-            table_prs, 0, "tbl_financials", None, rows, max_rows_per_slide=10
-        )
+        count = split_table_across_slides(table_prs, 0, "tbl_financials", None, rows, max_rows_per_slide=10)
         assert count == 3  # ceil(25 / 10) = 3
 
     def test_split_preserves_headers(self, table_prs):
         """분할된 슬라이드에 헤더 전달."""
         rows = [[f"row{i}", i, i, i] for i in range(15)]
         headers = ["항목", "A", "B", "C"]
-        count = split_table_across_slides(
-            table_prs, 0, "tbl_financials", headers, rows, max_rows_per_slide=10
-        )
+        count = split_table_across_slides(table_prs, 0, "tbl_financials", headers, rows, max_rows_per_slide=10)
         assert count == 2

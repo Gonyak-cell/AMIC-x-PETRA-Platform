@@ -28,20 +28,74 @@ async def _seed_reference_data(session: AsyncSession) -> dict:
 
     # IO 거래: IO01(식료품)의 공급자=IO03(화학), 수요자=IO02(섬유)
     transactions = [
-        IOTransaction(source_io_code="IO03", source_io_name="화학제품", target_io_code="IO01", target_io_name="식료품", transaction_value=5000.0),
-        IOTransaction(source_io_code="IO04", source_io_name="전자부품", target_io_code="IO01", target_io_name="식료품", transaction_value=3000.0),
-        IOTransaction(source_io_code="IO01", source_io_name="식료품", target_io_code="IO02", target_io_name="섬유", transaction_value=4000.0),
-        IOTransaction(source_io_code="IO01", source_io_name="식료품", target_io_code="IO04", target_io_name="전자부품", transaction_value=2000.0),
+        IOTransaction(
+            source_io_code="IO03",
+            source_io_name="화학제품",
+            target_io_code="IO01",
+            target_io_name="식료품",
+            transaction_value=5000.0,
+        ),
+        IOTransaction(
+            source_io_code="IO04",
+            source_io_name="전자부품",
+            target_io_code="IO01",
+            target_io_name="식료품",
+            transaction_value=3000.0,
+        ),
+        IOTransaction(
+            source_io_code="IO01",
+            source_io_name="식료품",
+            target_io_code="IO02",
+            target_io_name="섬유",
+            transaction_value=4000.0,
+        ),
+        IOTransaction(
+            source_io_code="IO01",
+            source_io_name="식료품",
+            target_io_code="IO04",
+            target_io_name="전자부품",
+            transaction_value=2000.0,
+        ),
     ]
     session.add_all(transactions)
 
     # SI 기업
     companies = {
-        "direct": SICompany(id=uuid.uuid4(), company_name="동종기업A", ksic_codes=["C10"], revenue=15_000_000_000, has_investment_history=True),
-        "direct_low_rev": SICompany(id=uuid.uuid4(), company_name="동종기업B_저매출", ksic_codes=["C10"], revenue=5_000_000_000, has_investment_history=False),
-        "backward": SICompany(id=uuid.uuid4(), company_name="공급자기업A", ksic_codes=["C20"], revenue=20_000_000_000, has_investment_history=False),
-        "forward": SICompany(id=uuid.uuid4(), company_name="수요자기업A", ksic_codes=["C13"], revenue=12_000_000_000, has_investment_history=True),
-        "unrelated": SICompany(id=uuid.uuid4(), company_name="무관기업", ksic_codes=["C99"], revenue=30_000_000_000, has_investment_history=False),
+        "direct": SICompany(
+            id=uuid.uuid4(),
+            company_name="동종기업A",
+            ksic_codes=["C10"],
+            revenue=15_000_000_000,
+            has_investment_history=True,
+        ),
+        "direct_low_rev": SICompany(
+            id=uuid.uuid4(),
+            company_name="동종기업B_저매출",
+            ksic_codes=["C10"],
+            revenue=5_000_000_000,
+            has_investment_history=False,
+        ),
+        "backward": SICompany(
+            id=uuid.uuid4(),
+            company_name="공급자기업A",
+            ksic_codes=["C20"],
+            revenue=20_000_000_000,
+            has_investment_history=False,
+        ),
+        "forward": SICompany(
+            id=uuid.uuid4(),
+            company_name="수요자기업A",
+            ksic_codes=["C13"],
+            revenue=12_000_000_000,
+            has_investment_history=True,
+        ),
+        "unrelated": SICompany(
+            id=uuid.uuid4(),
+            company_name="무관기업",
+            ksic_codes=["C99"],
+            revenue=30_000_000_000,
+            has_investment_history=False,
+        ),
     }
     session.add_all(companies.values())
     await session.commit()

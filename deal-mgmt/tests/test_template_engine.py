@@ -34,7 +34,10 @@ def template_pptx(tmp_path):
     chart_data.add_series("Default", (0, 0))
     cs = slide0.shapes.add_chart(
         XL_CHART_TYPE.COLUMN_CLUSTERED,
-        Inches(0.5), Inches(0.5), Inches(4), Inches(3),
+        Inches(0.5),
+        Inches(0.5),
+        Inches(4),
+        Inches(3),
         chart_data,
     )
     cs.name = "chart_revenue"
@@ -52,7 +55,10 @@ def template_pptx(tmp_path):
 
     img_ph = slide1.shapes.add_shape(
         1,  # Rectangle
-        Inches(6), Inches(0.5), Inches(3), Inches(3),
+        Inches(6),
+        Inches(0.5),
+        Inches(3),
+        Inches(3),
     )
     img_ph.name = "img_product"
 
