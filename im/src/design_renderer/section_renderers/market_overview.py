@@ -89,7 +89,7 @@ class MarketOverviewRenderer(BaseSectionRenderer):
         from src.design_renderer.pptx_engine.shape_builder import (
             add_body_textbox,
             add_bullet_list,
-            add_chart_image,
+            add_chart_or_image,
             add_financial_table,
             add_kpi_grid,
             add_sub_header_bar,
@@ -201,19 +201,17 @@ class MarketOverviewRenderer(BaseSectionRenderer):
             result.append(slide5)
 
         # ------------------------------------------------------------------
-        # Slide 6: Market Charts (차트 이미지)
+        # Slide 6: Market Charts (네이티브 또는 이미지)
         # ------------------------------------------------------------------
         chart_list = data.charts.get("market_overview", [])
         for chart in chart_list:
-            chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get("image_path")
-            if img:
-                chart_slide = factory.add_content_slide(
-                    title=chart.title or "시장 분석 차트"
-                )
-                add_chart_image(
-                    chart_slide, img, top=lay.content_top, tokens=tokens
-                )
+            chart_slide = factory.add_content_slide(
+                title=chart.title or "시장 분석 차트"
+            )
+            shape = add_chart_or_image(
+                chart_slide, chart, top=lay.content_top, tokens=tokens
+            )
+            if shape is not None:
                 result.append(chart_slide)
 
         # 데이터가 전혀 없는 경우 빈 슬라이드 1개라도 반환

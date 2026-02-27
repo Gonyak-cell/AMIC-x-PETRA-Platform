@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,6 +30,7 @@ class ContractMarkup(Base, TimestampMixin):
     version_label: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "v3 - 매수인 마크업"
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_party: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    markup_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "draft"/"1st"/"2nd"/"final"
 
     # 파일
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -38,6 +39,8 @@ class ContractMarkup(Base, TimestampMixin):
 
     # 변경 요약
     changes_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    key_changes: Mapped[list | None] = mapped_column(JSONB, nullable=True)  # 구조화된 변경 목록
+    key_changes: Mapped[list | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )  # 구조화된 변경 목록
 
     created_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

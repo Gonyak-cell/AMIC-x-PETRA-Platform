@@ -385,7 +385,7 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
         from src.design_renderer.pptx_engine.shape_builder import (
             add_body_textbox,
             add_bullet_list,
-            add_chart_image,
+            add_chart_or_image,
             add_financial_table,
             add_kpi_grid,
             add_sub_header_bar,
@@ -427,29 +427,30 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             result.append(slide2)
 
         # ── Slide 3: Revenue Trend ──
-        # 차트 이미지 중 "revenue" 관련이 있으면 차트, 없으면 bullet list
+        # 차트 중 "revenue" 관련이 있으면 차트, 없으면 bullet list
         chart_list = data.charts.get("financial_analysis", [])
-        revenue_chart_img = None
+        revenue_chart_obj = None
         remaining_charts: list[Any] = []
         for chart in chart_list:
             chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get("image_path")
+            has_img = chart_data.get("image_bytes") or chart_data.get("image_path")
+            has_native_data = bool(chart.chart_type)
             title_lower = (chart.title or "").lower()
-            if img and revenue_chart_img is None and (
+            if (has_img or has_native_data) and revenue_chart_obj is None and (
                 "revenue" in title_lower
                 or "매출" in title_lower
                 or "revenue_yoy" in chart_data
             ):
-                revenue_chart_img = (chart.title, img)
+                revenue_chart_obj = chart
             else:
                 remaining_charts.append(chart)
 
-        if revenue_chart_img is not None:
+        if revenue_chart_obj is not None:
             slide3 = factory.add_content_slide(
-                title=revenue_chart_img[0] or "매출 추이"
+                title=revenue_chart_obj.title or "매출 추이"
             )
-            add_chart_image(
-                slide3, revenue_chart_img[1],
+            add_chart_or_image(
+                slide3, revenue_chart_obj,
                 top=lay.content_top, tokens=tokens,
             )
             result.append(slide3)
@@ -567,17 +568,15 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             )
             result.append(slide9)
 
-        # ── Slide 10: 나머지 차트 슬라이드 (기존 유지) ──
+        # ── Slide 10: 나머지 차트 슬라이드 (네이티브 또는 이미지) ──
         for chart in remaining_charts:
-            chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get("image_path")
-            if img:
-                chart_slide = factory.add_content_slide(
-                    title=chart.title or "재무 차트"
-                )
-                add_chart_image(
-                    chart_slide, img, top=lay.content_top, tokens=tokens
-                )
+            chart_slide = factory.add_content_slide(
+                title=chart.title or "재무 차트"
+            )
+            shape = add_chart_or_image(
+                chart_slide, chart, top=lay.content_top, tokens=tokens
+            )
+            if shape is not None:
                 result.append(chart_slide)
 
         return result

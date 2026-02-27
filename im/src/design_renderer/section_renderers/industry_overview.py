@@ -175,7 +175,7 @@ class IndustryOverviewRenderer(BaseSectionRenderer):
         from src.design_renderer.pptx_engine.shape_builder import (
             add_body_textbox,
             add_bullet_list,
-            add_chart_image,
+            add_chart_or_image,
             add_financial_table,
         )
 
@@ -210,11 +210,8 @@ class IndustryOverviewRenderer(BaseSectionRenderer):
             y2 = lay.content_top
 
             for chart in chart_list:
-                img_data = getattr(chart, "data", {}) or {}
-                img = img_data.get("image_bytes") or img_data.get("image_path")
-                if img:
-                    add_chart_image(slide2, img, top=y2, tokens=tokens)
-                    y2 += 2.5
+                add_chart_or_image(slide2, chart, top=y2, tokens=tokens)
+                y2 += 2.5
 
             if risk_categories:
                 headers = ["카테고리", "설명", "리스크 요인"]

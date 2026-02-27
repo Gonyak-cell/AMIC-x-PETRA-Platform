@@ -8,6 +8,7 @@ import type {
   NegotiationIssueListResponse,
   NegotiationIssueStatus,
   NegotiationIssuePriority,
+  IssueDecisionStatus,
   AIClauseSuggestionResponse,
 } from "@/modules/ma/types/negotiation_issue";
 
@@ -15,7 +16,7 @@ const KEY = (txnId: string) => ["ma", "transactions", txnId, "negotiation-issues
 
 export function useNegotiationIssues(
   txnId: string,
-  opts?: { status?: NegotiationIssueStatus; priority?: NegotiationIssuePriority; meetingId?: string },
+  opts?: { status?: NegotiationIssueStatus; priority?: NegotiationIssuePriority; meetingId?: string; contractId?: string },
 ) {
   return useQuery<NegotiationIssueListResponse>({
     queryKey: [...KEY(txnId), opts],
@@ -24,6 +25,7 @@ export function useNegotiationIssues(
       if (opts?.status) params.status = opts.status;
       if (opts?.priority) params.priority = opts.priority;
       if (opts?.meetingId) params.meeting_id = opts.meetingId;
+      if (opts?.contractId) params.contract_id = opts.contractId;
       const { data } = await maApi.get(`/transactions/${txnId}/negotiation-issues`, { params });
       return data;
     },
@@ -80,6 +82,26 @@ export function useDeleteNegotiationIssue(txnId: string) {
     },
     onError: () => {
       toast.error("협상 이견 삭제에 실패했습니다.");
+    },
+  });
+}
+
+export function useBatchUpdateDecision(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { issue_id: string; decision_status: IssueDecisionStatus }[]) => {
+      const { data } = await maApi.patch(
+        `/transactions/${txnId}/negotiation-issues/batch-decision`,
+        items,
+      );
+      return data as NegotiationIssue[];
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY(txnId) });
+      toast.success("의사결정이 업데이트되었습니다.");
+    },
+    onError: () => {
+      toast.error("의사결정 업데이트에 실패했습니다.");
     },
   });
 }

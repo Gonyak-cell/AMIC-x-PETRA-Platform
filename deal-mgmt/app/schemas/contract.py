@@ -97,3 +97,40 @@ class AIAnalysisResult(BaseModel):
     status: str
     message: str
     clauses: list[AIRiskFlag]
+
+
+# ── 협상 워크스페이스 ──────────────────────────────────
+
+
+class NegotiationGanttItem(BaseModel):
+    contract_id: uuid.UUID
+    contract_type: str
+    title: str
+    status: str
+    total_markups: int = 0
+    open_issues: int = 0
+    first_markup_at: str | None = None
+    latest_markup_at: str | None = None
+    created_at: str | None = None
+
+
+class NegotiationGanttResponse(BaseModel):
+    items: list[NegotiationGanttItem]
+    transaction_start_date: str | None = None
+    target_close_date: str | None = None
+
+
+class MarkupComparisonResponse(BaseModel):
+    version_a: int
+    version_b: int
+    markup_a_label: str | None = None
+    markup_b_label: str | None = None
+    markup_a_party: str | None = None
+    markup_b_party: str | None = None
+    markup_a_summary: str | None = None
+    markup_b_summary: str | None = None
+    key_changes_a: list[str] | None = None
+    key_changes_b: list[str] | None = None
+    additions: list[str]
+    deletions: list[str]
+    common: list[str]

@@ -17,6 +17,7 @@ class ContractMarkupOut(BaseModel):
     version_label: str
     version_number: int
     source_party: str | None = None
+    markup_type: str | None = None
     file_path: str | None = None
     file_name: str | None = None
     file_size_bytes: int | None = None
@@ -33,6 +34,7 @@ class ContractMarkupCreate(BaseModel):
     meeting_id: uuid.UUID | None = None
     version_label: str = Field(..., min_length=1, max_length=100)
     source_party: str | None = None
+    markup_type: str | None = None
     changes_summary: str | None = None
     key_changes: list[str] | None = None
 

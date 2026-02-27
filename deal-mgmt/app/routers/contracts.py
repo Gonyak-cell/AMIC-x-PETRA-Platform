@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.contract import Contract
+from app.models.contract_markup import ContractMarkup
 from app.models.contract_version import ContractVersion
-from app.models.enums import AuditAction, ContractStatus, SignatureStatus
+from app.models.enums import AuditAction, ContractStatus, NegotiationIssueStatus, SignatureStatus
+from app.models.negotiation_issue import NegotiationIssue
 from app.schemas.contract import (
     AIAnalysisResult,
     ContractCreate,
@@ -21,6 +23,9 @@ from app.schemas.contract import (
     ContractUpdate,
     ContractVersionCreate,
     ContractVersionOut,
+    MarkupComparisonResponse,
+    NegotiationGanttItem,
+    NegotiationGanttResponse,
 )
 from app.services import audit_service, contract_analysis_service, transaction_service
 
@@ -232,3 +237,116 @@ async def analyze_contract(
     await db.commit()
 
     return result
+
+
+# ── Negotiation Workspace ────────────────────────────────
+
+
+@router.get("/negotiation-gantt", response_model=NegotiationGanttResponse)
+async def negotiation_gantt(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """전체 계약 협상 진행도 Gantt 데이터."""
+    txn = await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+
+    contracts_q = select(Contract).where(Contract.transaction_id == txn_id).order_by(Contract.created_at.asc())
+    contracts = (await db.execute(contracts_q)).scalars().all()
+
+    items: list[NegotiationGanttItem] = []
+    for c in contracts:
+        # 마크업 수 및 날짜 범위
+        markup_stats_q = select(
+            func.count(ContractMarkup.id),
+            func.min(ContractMarkup.created_at),
+            func.max(ContractMarkup.created_at),
+        ).where(ContractMarkup.contract_id == c.id)
+        markup_stats = (await db.execute(markup_stats_q)).one()
+
+        # 미해결 이견 수
+        open_issues_q = select(func.count(NegotiationIssue.id)).where(
+            NegotiationIssue.contract_id == c.id,
+            NegotiationIssue.status.in_(
+                [
+                    NegotiationIssueStatus.OPEN,
+                    NegotiationIssueStatus.IN_PROGRESS,
+                ]
+            ),
+        )
+        open_count = (await db.execute(open_issues_q)).scalar() or 0
+
+        items.append(
+            NegotiationGanttItem(
+                contract_id=c.id,
+                contract_type=c.contract_type.value,
+                title=c.title,
+                status=c.status.value,
+                total_markups=markup_stats[0] or 0,
+                open_issues=open_count,
+                first_markup_at=str(markup_stats[1]) if markup_stats[1] else None,
+                latest_markup_at=str(markup_stats[2]) if markup_stats[2] else None,
+                created_at=str(c.created_at) if c.created_at else None,
+            )
+        )
+
+    return NegotiationGanttResponse(
+        items=items,
+        transaction_start_date=str(txn.created_at) if txn.created_at else None,
+        target_close_date=txn.target_close_date if hasattr(txn, "target_close_date") else None,
+    )
+
+
+@router.get("/{contract_id}/markups/compare", response_model=MarkupComparisonResponse)
+async def compare_markups(
+    txn_id: uuid.UUID,
+    contract_id: uuid.UUID,
+    version_a: int = Query(..., ge=1),
+    version_b: int = Query(..., ge=1),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """두 마크업 버전 메타데이터 비교."""
+    await check_client_deal_access(db, txn_id, claims)
+
+    # 두 마크업 조회
+    q_a = select(ContractMarkup).where(
+        ContractMarkup.contract_id == contract_id,
+        ContractMarkup.version_number == version_a,
+    )
+    q_b = select(ContractMarkup).where(
+        ContractMarkup.contract_id == contract_id,
+        ContractMarkup.version_number == version_b,
+    )
+    markup_a = (await db.execute(q_a)).scalar_one_or_none()
+    markup_b = (await db.execute(q_b)).scalar_one_or_none()
+
+    if markup_a is None or markup_b is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="비교 대상 마크업 버전을 찾을 수 없습니다",
+        )
+
+    # key_changes 기반 diff 계산
+    changes_a = set(markup_a.key_changes or [])
+    changes_b = set(markup_b.key_changes or [])
+    additions = sorted(changes_b - changes_a)
+    deletions = sorted(changes_a - changes_b)
+    common = sorted(changes_a & changes_b)
+
+    return MarkupComparisonResponse(
+        version_a=version_a,
+        version_b=version_b,
+        markup_a_label=markup_a.version_label,
+        markup_b_label=markup_b.version_label,
+        markup_a_party=markup_a.source_party,
+        markup_b_party=markup_b.source_party,
+        markup_a_summary=markup_a.changes_summary,
+        markup_b_summary=markup_b.changes_summary,
+        key_changes_a=markup_a.key_changes,
+        key_changes_b=markup_b.key_changes,
+        additions=additions,
+        deletions=deletions,
+        common=common,
+    )

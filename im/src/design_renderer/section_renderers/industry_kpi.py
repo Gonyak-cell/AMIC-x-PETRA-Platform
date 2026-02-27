@@ -144,7 +144,7 @@ class IndustryKPIRenderer(BaseSectionRenderer):
         lay = tokens.layout
 
         from src.design_renderer.pptx_engine.shape_builder import (
-            add_chart_image,
+            add_chart_or_image,
             add_kpi_grid,
         )
 
@@ -162,14 +162,11 @@ class IndustryKPIRenderer(BaseSectionRenderer):
             )
             y += 1.6
 
-        # 차트 이미지 삽입
+        # 차트 삽입 (네이티브 또는 이미지)
         chart_list = (data.charts or {}).get("industry_kpi", [])
         for chart in chart_list:
-            img_data = getattr(chart, "data", {}) or {}
-            img = img_data.get("image_bytes") or img_data.get("image_path")
-            if img:
-                add_chart_image(slide, img, top=y, tokens=tokens)
-                y += 2.5
+            add_chart_or_image(slide, chart, top=y, tokens=tokens)
+            y += 2.5
 
         result.append(slide)
         return result

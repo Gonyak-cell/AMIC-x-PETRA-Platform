@@ -1,10 +1,14 @@
 """금융 차트 생성 모듈 — chart_engine 위임 어댑터.
 
-> 마지막 수정: 2026-02-11 22:00:00
+> 마지막 수정: 2026-02-27 10:28:00
 
 IM 문서에 필수적인 금융 차트 유형을 명시적으로 지원한다.
 실제 차트 생성 로직은 chart_engine 모듈에 위임하고,
 이 파일은 IMDesignTokens → ChartConfig 변환 + PPTX/PDF 임베딩만 담당.
+
+하이브리드 전략:
+- stacked_bar, donut, line, hbar → 네이티브 PPTX 차트 (편집 가능)
+- combo, waterfall, heatmap 등 → Plotly → PNG 래스터 (기존 방식 유지)
 """
 
 from __future__ import annotations
@@ -214,6 +218,54 @@ def embed_chart_pptx(
     slide.shapes.add_picture(
         buf, Inches(left), Inches(top), Inches(width), Inches(height)
     )
+
+
+def embed_chart_native_or_image(
+    slide: Any,
+    chart_data: ChartData,
+    *,
+    left: float = 0.5,
+    top: float = 1.5,
+    width: float = 9.0,
+    height: float = 4.5,
+    tokens: IMDesignTokens | None = None,
+    optimize: bool = True,
+) -> Any:
+    """차트 타입에 따라 네이티브 PPTX 또는 PNG 이미지로 자동 분기.
+
+    - stacked_bar, donut, line, hbar → 네이티브 PPTX 차트 (편집 가능)
+    - combo, waterfall, heatmap 등 → Plotly → PNG 래스터 (기존)
+
+    Args:
+        slide: python-pptx Slide 객체.
+        chart_data: ChartData (chart_type, title, data).
+        left/top/width/height: 슬라이드 내 위치 (인치).
+        tokens: IMDesignTokens (색상/폰트).
+        optimize: PNG 최적화 여부 (래스터 경로만 해당).
+
+    Returns:
+        네이티브 chart shape 또는 None (이미지 삽입 시).
+    """
+    from src.chart_engine.pptx_native import get_native_builder
+
+    builder = get_native_builder(chart_data.chart_type)
+    if builder is not None:
+        cfg = _tokens_to_config(tokens)
+        return builder.build(
+            slide,
+            chart_data.data,
+            title=chart_data.title,
+            left=left,
+            top=top,
+            width=width,
+            height=height,
+            config=cfg,
+        )
+
+    # 네이티브 미지원 → 기존 Plotly → PNG 경로
+    fig = create_chart(chart_data, tokens=tokens)
+    embed_chart_pptx(slide, fig, left=left, top=top, width=width, height=height, optimize=optimize)
+    return None
 
 
 def embed_chart_html(

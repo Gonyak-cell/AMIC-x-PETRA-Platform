@@ -168,6 +168,7 @@ import {
   FM_STATUS_COLORS,
 } from "@/modules/ma/types/financial_model";
 import FMChecklistReview from "@/modules/ma/components/fm/FMChecklistReview";
+import { ContractNegotiationWorkspace } from "@/modules/ma/components/negotiation/ContractNegotiationWorkspace";
 
 import {
   Badge,
@@ -257,7 +258,7 @@ export default function TransactionWorkspacePage() {
   const [ddSubTab, setDdSubTab] = useState<"checklist" | "reports">("checklist");
 
   // 계약/SPA 서브탭 (계약 vs 법률 문서)
-  const [contractSubTab, setContractSubTab] = useState<"contracts" | "legal-docs">("contracts");
+  const [contractSubTab, setContractSubTab] = useState<"negotiation-workspace" | "contracts" | "legal-docs">("negotiation-workspace");
 
   // 매수자 서브탭 (Long List vs Short List)
   const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">("long-list");
@@ -1933,14 +1934,20 @@ export default function TransactionWorkspacePage() {
           {/* 서브탭: 계약 / 법률 문서 */}
           <Tabs
             tabs={[
-              { id: "contracts", label: "계약" },
+              { id: "negotiation-workspace", label: "협상 워크스페이스" },
+              { id: "contracts", label: "계약 목록" },
               { id: "legal-docs", label: "법률 문서" },
             ]}
             activeTab={contractSubTab}
-            onTabChange={(tab) => setContractSubTab(tab as "contracts" | "legal-docs")}
+            onTabChange={(tab) => setContractSubTab(tab as "negotiation-workspace" | "contracts" | "legal-docs")}
             variant="pill"
             size="sm"
           />
+
+          {/* 협상 워크스페이스 서브탭 */}
+          {contractSubTab === "negotiation-workspace" && (
+            <ContractNegotiationWorkspace txnId={id} />
+          )}
 
           {/* 법률 문서 서브탭 */}
           {contractSubTab === "legal-docs" && (

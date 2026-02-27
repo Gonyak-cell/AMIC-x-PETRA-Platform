@@ -1,14 +1,20 @@
-"""Chart Engine — Plotly/Graphviz 기반 차트·다이어그램 생성 모듈.
+"""Chart Engine — Plotly/Graphviz/네이티브 PPTX 기반 차트·다이어그램 생성 모듈.
 
-> 마지막 수정: 2026-02-11 10:00:00
+> 마지막 수정: 2026-02-27 10:28:00
 
 IMDocumentData의 재무/시장/조직 데이터를 시각화하는 독립 모듈.
 design_renderer에서 호출하되, design_renderer에 의존하지 않는다.
+
+하이브리드 전략:
+- stacked_bar, donut, line, hbar → 네이티브 PPTX 차트 (편집 가능)
+- combo, waterfall, heatmap 등 → Plotly → PNG 래스터 (기존)
+- org_chart, shareholding, flow → Graphviz → PNG
 
 사용 예시::
 
     from src.chart_engine import create_chart, AMICThemeFactory, ChartConfig
     from src.chart_engine import plotly_to_png, graphviz_to_png
+    from src.chart_engine.pptx_native import get_native_builder, is_native_supported
 
     fig = create_chart("combo", data, title="매출 추이")
     png_bytes = plotly_to_png(fig)
@@ -70,7 +76,7 @@ from src.chart_engine.export import (
 # Data transformer
 from src.chart_engine.data_transformer import ChartSpec, DataTransformer
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 __all__ = [
     # Config

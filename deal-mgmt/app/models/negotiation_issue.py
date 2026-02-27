@@ -2,12 +2,12 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import NegotiationIssuePriority, NegotiationIssueStatus
+from app.models.enums import IssueDecisionStatus, NegotiationIssuePriority, NegotiationIssueStatus
 
 
 class NegotiationIssue(Base, TimestampMixin):
@@ -25,6 +25,12 @@ class NegotiationIssue(Base, TimestampMixin):
     meeting_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("meeting_logs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
@@ -54,7 +60,16 @@ class NegotiationIssue(Base, TimestampMixin):
         nullable=False,
         default=NegotiationIssuePriority.MEDIUM,
     )
+    decision_status: Mapped[IssueDecisionStatus] = mapped_column(
+        Enum(IssueDecisionStatus),
+        nullable=False,
+        default=IssueDecisionStatus.PENDING,
+    )
     resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolved_at: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+    # 교차 계약 연동
+    linked_issue_ids: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    markup_version_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

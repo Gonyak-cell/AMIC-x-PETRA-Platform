@@ -148,7 +148,7 @@ class ValuationRenderer(BaseSectionRenderer):
 
         from src.design_renderer.pptx_engine.shape_builder import (
             add_body_textbox,
-            add_chart_image,
+            add_chart_or_image,
             add_financial_table,
             add_kpi_grid,
         )
@@ -190,17 +190,15 @@ class ValuationRenderer(BaseSectionRenderer):
                 )
                 result.append(slide2)
 
-        # 슬라이드 3-4: 차트 (heatmap, waterfall)
+        # 슬라이드 3-4: 차트 (네이티브 또는 이미지)
         for chart in data.charts.get("valuation", []):
-            chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get("image_path")
-            if img:
-                chart_slide = factory.add_content_slide(
-                    title=chart.title or "밸류에이션 차트"
-                )
-                add_chart_image(
-                    chart_slide, img, top=lay.content_top, tokens=tokens
-                )
+            chart_slide = factory.add_content_slide(
+                title=chart.title or "밸류에이션 차트"
+            )
+            shape = add_chart_or_image(
+                chart_slide, chart, top=lay.content_top, tokens=tokens
+            )
+            if shape is not None:
                 result.append(chart_slide)
 
         # 슬라이드 5: Exit 전략 비교 테이블

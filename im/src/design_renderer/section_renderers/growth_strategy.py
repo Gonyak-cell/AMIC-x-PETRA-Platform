@@ -59,7 +59,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
 
         from src.design_renderer.pptx_engine.shape_builder import (
             add_bullet_list,
-            add_chart_image,
+            add_chart_or_image,
             add_sub_header_bar,
             add_summary_textbox,
         )
@@ -205,20 +205,16 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
 
             result.append(slide4)
 
-        # ── 슬라이드 5: Charts ──
+        # ── 슬라이드 5: Charts (네이티브 또는 이미지) ──
         chart_list = data.charts.get("growth_strategy", [])
         for chart in chart_list:
-            chart_data = chart.data
-            img = chart_data.get("image_bytes") or chart_data.get(
-                "image_path"
+            chart_slide = factory.add_content_slide(
+                title=chart.title or "성장 전략 차트"
             )
-            if img:
-                chart_slide = factory.add_content_slide(
-                    title=chart.title or "성장 전략 차트"
-                )
-                add_chart_image(
-                    chart_slide, img, top=lay.content_top, tokens=tokens
-                )
+            shape = add_chart_or_image(
+                chart_slide, chart, top=lay.content_top, tokens=tokens
+            )
+            if shape is not None:
                 result.append(chart_slide)
 
         return result

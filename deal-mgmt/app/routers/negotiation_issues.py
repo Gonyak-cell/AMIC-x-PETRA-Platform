@@ -14,6 +14,7 @@ from app.models.enums import AuditAction, NegotiationIssuePriority, NegotiationI
 from app.models.negotiation_issue import NegotiationIssue
 from app.schemas.negotiation_issue import (
     AIClauseSuggestionResponse,
+    BatchDecisionUpdate,
     NegotiationIssueCreate,
     NegotiationIssueListResponse,
     NegotiationIssueOut,
@@ -31,6 +32,7 @@ async def list_issues(
     status_filter: NegotiationIssueStatus | None = Query(None, alias="status"),
     priority: NegotiationIssuePriority | None = None,
     meeting_id: uuid.UUID | None = None,
+    contract_id: uuid.UUID | None = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -51,6 +53,9 @@ async def list_issues(
     if meeting_id:
         q = q.where(NegotiationIssue.meeting_id == meeting_id)
         count_q = count_q.where(NegotiationIssue.meeting_id == meeting_id)
+    if contract_id:
+        q = q.where(NegotiationIssue.contract_id == contract_id)
+        count_q = count_q.where(NegotiationIssue.contract_id == contract_id)
 
     total = (await db.execute(count_q)).scalar() or 0
     q = q.order_by(NegotiationIssue.created_at.desc())
@@ -174,6 +179,57 @@ async def ai_suggest_clause(
     await db.commit()
     await db.refresh(issue)
     return suggestion
+
+
+@router.patch("/batch-decision", response_model=list[NegotiationIssueOut])
+async def batch_update_decision(
+    txn_id: uuid.UUID,
+    body: list[BatchDecisionUpdate],
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """일괄 의사결정 상태 업데이트."""
+    await transaction_service.get_transaction(db, txn_id)
+    updated: list[NegotiationIssueOut] = []
+    for item in body:
+        issue = await _get_issue_or_404(db, txn_id, item.issue_id)
+        issue.decision_status = item.decision_status
+        await audit_service.record(
+            db,
+            entity_type="NegotiationIssue",
+            entity_id=issue.id,
+            action=AuditAction.UPDATE,
+            actor_email=claims.email,
+            new_value={"decision_status": item.decision_status.value},
+        )
+        updated.append(NegotiationIssueOut.model_validate(issue))
+    await db.commit()
+    for u in updated:
+        # refresh after commit
+        pass
+    return updated
+
+
+@router.get("/{issue_id}/linked", response_model=list[NegotiationIssueOut])
+async def get_linked_issues(
+    txn_id: uuid.UUID,
+    issue_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """교차 계약 연동 이견 조회."""
+    await check_client_deal_access(db, txn_id, claims)
+    issue = await _get_issue_or_404(db, txn_id, issue_id)
+    if not issue.linked_issue_ids:
+        return []
+
+    linked_uuids = [uuid.UUID(lid) for lid in issue.linked_issue_ids]
+    q = select(NegotiationIssue).where(
+        NegotiationIssue.id.in_(linked_uuids),
+        NegotiationIssue.transaction_id == txn_id,
+    )
+    result = await db.execute(q)
+    return [NegotiationIssueOut.model_validate(i) for i in result.scalars().all()]
 
 
 async def _get_issue_or_404(db: AsyncSession, txn_id: uuid.UUID, issue_id: uuid.UUID) -> NegotiationIssue:

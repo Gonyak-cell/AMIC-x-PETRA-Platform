@@ -7,7 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import NegotiationIssuePriority, NegotiationIssueStatus
+from app.models.enums import IssueDecisionStatus, NegotiationIssuePriority, NegotiationIssueStatus
 
 
 class NegotiationIssueOut(BaseModel):
@@ -16,6 +16,7 @@ class NegotiationIssueOut(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
     meeting_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
     title: str
     clause_reference: str | None = None
     category: str | None = None
@@ -26,8 +27,11 @@ class NegotiationIssueOut(BaseModel):
     ai_suggestion_rationale: str | None = None
     status: NegotiationIssueStatus
     priority: NegotiationIssuePriority
+    decision_status: IssueDecisionStatus = IssueDecisionStatus.PENDING
     resolution: str | None = None
     resolved_at: str | None = None
+    linked_issue_ids: list[str] | None = None
+    markup_version_number: int | None = None
     created_by_email: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -35,6 +39,7 @@ class NegotiationIssueOut(BaseModel):
 
 class NegotiationIssueCreate(BaseModel):
     meeting_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
     title: str = Field(..., min_length=1, max_length=300)
     clause_reference: str | None = None
     category: str | None = None
@@ -43,10 +48,14 @@ class NegotiationIssueCreate(BaseModel):
     legal_review: str | None = None
     status: NegotiationIssueStatus = NegotiationIssueStatus.OPEN
     priority: NegotiationIssuePriority = NegotiationIssuePriority.MEDIUM
+    decision_status: IssueDecisionStatus = IssueDecisionStatus.PENDING
+    linked_issue_ids: list[str] | None = None
+    markup_version_number: int | None = None
 
 
 class NegotiationIssueUpdate(BaseModel):
     meeting_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
     title: str | None = Field(None, min_length=1, max_length=300)
     clause_reference: str | None = None
     category: str | None = None
@@ -55,8 +64,16 @@ class NegotiationIssueUpdate(BaseModel):
     legal_review: str | None = None
     status: NegotiationIssueStatus | None = None
     priority: NegotiationIssuePriority | None = None
+    decision_status: IssueDecisionStatus | None = None
     resolution: str | None = None
     resolved_at: str | None = None
+    linked_issue_ids: list[str] | None = None
+    markup_version_number: int | None = None
+
+
+class BatchDecisionUpdate(BaseModel):
+    issue_id: uuid.UUID
+    decision_status: IssueDecisionStatus
 
 
 class NegotiationIssueListResponse(BaseModel):

@@ -147,6 +147,8 @@ class ContractType(enum.StrEnum):
     SIDE_LETTER = "SIDE_LETTER"
     SHAREHOLDERS_AGREEMENT = "SHAREHOLDERS_AGREEMENT"
     ESCROW_AGREEMENT = "ESCROW_AGREEMENT"
+    BTA = "BTA"  # Business Transfer Agreement (영업양수도계약)
+    SSA = "SSA"  # Share Subscription Agreement (신주인수계약)
     OTHER = "OTHER"
 
 
@@ -499,7 +501,13 @@ class ConditionMatchLevel(enum.StrEnum):
     NOT_ASSESSED = "NOT_ASSESSED"
 
 
-# 협상 전용
+# 협상 전용 — 의사결정 상태
+class IssueDecisionStatus(enum.StrEnum):
+    PENDING = "PENDING"  # 미결정 (gray)
+    CONSIDER_ACCEPTING = "CONSIDER_ACCEPTING"  # 수용 검토 (yellow/green)
+    CANNOT_ACCEPT = "CANNOT_ACCEPT"  # 수용 불가 (red)
+
+
 class NegotiationIssueStatus(enum.StrEnum):
     OPEN = "OPEN"
     IN_PROGRESS = "IN_PROGRESS"

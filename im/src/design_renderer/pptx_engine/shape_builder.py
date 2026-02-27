@@ -286,6 +286,72 @@ def add_chart_image(
     return slide.shapes.add_picture(str(image_path_or_bytes), l, t, w, h)
 
 
+def add_chart_or_image(
+    slide: Any,
+    chart: Any,
+    *,
+    left: float | None = None,
+    top: float | None = None,
+    width: float | None = None,
+    height: float = 3.5,
+    tokens: IMDesignTokens | None = None,
+) -> Any:
+    """ChartData에서 네이티브 PPTX 차트 또는 이미지를 자동 선택하여 삽입.
+
+    chart_type이 네이티브 전환 대상(stacked_bar, donut, line, hbar)이면
+    편집 가능한 PPTX 차트로, 그 외에는 기존 이미지 방식으로 삽입한다.
+
+    Args:
+        slide: Slide 인스턴스.
+        chart: ChartData 인스턴스 (chart_type, title, data).
+        left, top, width, height: 위치/크기 (inches).
+        tokens: 디자인 토큰.
+
+    Returns:
+        생성된 shape (Chart 또는 Picture).
+    """
+    from src.chart_engine.config import chart_config_from_design_tokens
+    from src.chart_engine.pptx_native import get_native_builder
+
+    if tokens is None:
+        tokens = DEFAULT_TOKENS
+
+    lay = tokens.layout
+    pos_left = left if left is not None else lay.content_left
+    pos_top = top if top is not None else lay.content_top + 0.5
+    pos_width = width if width is not None else lay.content_width
+    pos_height = height
+
+    chart_type = getattr(chart, "chart_type", "")
+    builder = get_native_builder(chart_type)
+
+    if builder is not None:
+        cfg = chart_config_from_design_tokens(tokens)
+        chart_data_dict = getattr(chart, "data", {}) or {}
+        chart_title = getattr(chart, "title", "") or ""
+        return builder.build(
+            slide,
+            chart_data_dict,
+            title=chart_title,
+            left=pos_left,
+            top=pos_top,
+            width=pos_width,
+            height=pos_height,
+            config=cfg,
+        )
+
+    # 네이티브 미지원 → 기존 이미지 경로
+    chart_data_dict = getattr(chart, "data", {}) or {}
+    img = chart_data_dict.get("image_bytes") or chart_data_dict.get("image_path")
+    if img:
+        return add_chart_image(
+            slide, img,
+            left=pos_left, top=pos_top, width=pos_width, height=pos_height,
+            tokens=tokens,
+        )
+    return None
+
+
 def add_kpi_grid(
     slide: Any,
     kpis: list[dict[str, Any]],
