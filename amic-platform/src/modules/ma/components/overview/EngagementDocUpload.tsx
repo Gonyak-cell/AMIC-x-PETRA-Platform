@@ -1,11 +1,21 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, CheckCircle2, Loader2, FileText, AlertCircle } from "lucide-react";
+import {
+  Upload,
+  CheckCircle2,
+  Loader2,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
+import axios from "axios";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useQueryClient } from "@tanstack/react-query";
 import { maApi } from "@/api/maClient";
 import { useVdrFolders, useInitVdr } from "@/modules/ma/hooks/useVdr";
-import { useCreateExtraction, useExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
+import {
+  useCreateExtraction,
+  useExtraction,
+} from "@/modules/ma/hooks/useDocumentExtraction";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 
@@ -23,7 +33,13 @@ const ACCEPTED_TYPES = [
 const ACCEPTED_EXTENSIONS = ".pdf,.docx,.jpg,.jpeg,.png";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-type Step = "idle" | "uploading" | "classifying" | "extracting" | "completed" | "failed";
+type Step =
+  | "idle"
+  | "uploading"
+  | "classifying"
+  | "extracting"
+  | "completed"
+  | "failed";
 
 export default function EngagementDocUpload({ txnId, onComplete }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,7 +49,8 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractionId, setExtractionId] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewExtraction, setReviewExtraction] = useState<DocumentExtraction | null>(null);
+  const [reviewExtraction, setReviewExtraction] =
+    useState<DocumentExtraction | null>(null);
 
   // VDR 훅
   const qc = useQueryClient();
@@ -57,7 +74,10 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
     } else if (polledExtraction.status === "FAILED" && step !== "failed") {
       setStep("failed");
       setErrorMsg(polledExtraction.error_message ?? "AI 분석에 실패했습니다.");
-    } else if (polledExtraction.status === "EXTRACTING" && step === "classifying") {
+    } else if (
+      polledExtraction.status === "EXTRACTING" &&
+      step === "classifying"
+    ) {
       setStep("extracting");
     }
   }, [polledExtraction, extractionId, step]);
@@ -110,19 +130,33 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
         );
 
         // 3. VDR 캐시 무효화 (VDR 탭 즉시 반영)
-        qc.invalidateQueries({ queryKey: ["ma", "transactions", txnId, "vdr"] });
+        qc.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "vdr"],
+        });
 
         // 4. AI 추출 시작
         setStep("classifying");
         const extraction = await createExtraction.mutateAsync(uploadedDoc.id);
         setExtractionId(extraction.id);
         // 이후는 폴링으로 상태 추적
-      } catch {
+      } catch (error) {
         setStep("failed");
-        setErrorMsg("파일 업로드에 실패했습니다.");
+        const detail =
+          axios.isAxiosError(error) && error.response?.data?.detail
+            ? String(error.response.data.detail)
+            : "파일 업로드에 실패했습니다.";
+        setErrorMsg(detail);
       }
     },
-    [corporateFolder, initVdr, createExtraction, txnId, validateFile, refetchFolders, qc],
+    [
+      corporateFolder,
+      initVdr,
+      createExtraction,
+      txnId,
+      validateFile,
+      refetchFolders,
+      qc,
+    ],
   );
 
   // 드래그 앤 드롭 핸들러
@@ -189,7 +223,9 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
           {selectedFile && (
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-border">
               <FileText size={16} className="text-text-muted" />
-              <span className="text-sm font-medium truncate">{selectedFile.name}</span>
+              <span className="text-sm font-medium truncate">
+                {selectedFile.name}
+              </span>
             </div>
           )}
 
@@ -210,8 +246,18 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
 
                 return (
                   <div key={s.key} className="flex items-center gap-2.5">
-                    {isDone && <CheckCircle2 size={16} className="text-accent shrink-0" />}
-                    {isActive && <Loader2 size={16} className="text-accent shrink-0 animate-spin" />}
+                    {isDone && (
+                      <CheckCircle2
+                        size={16}
+                        className="text-accent shrink-0"
+                      />
+                    )}
+                    {isActive && (
+                      <Loader2
+                        size={16}
+                        className="text-accent shrink-0 animate-spin"
+                      />
+                    )}
                     {isPending && (
                       <div className="w-4 h-4 rounded-full border-2 border-gray-border shrink-0" />
                     )}
@@ -266,7 +312,10 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
       />
 
       <div className="mx-auto w-12 h-12 rounded-full bg-bg-cool border border-gray-border flex items-center justify-center mb-3">
-        <Upload size={20} className={cn(dragging ? "text-accent" : "text-text-muted")} />
+        <Upload
+          size={20}
+          className={cn(dragging ? "text-accent" : "text-text-muted")}
+        />
       </div>
 
       <p className="text-sm text-text-secondary mb-1">
@@ -292,9 +341,7 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
         PDF, DOCX, JPG, PNG (최대 50MB)
       </p>
 
-      {errorMsg && (
-        <p className="text-xs text-negative mt-2">{errorMsg}</p>
-      )}
+      {errorMsg && <p className="text-xs text-negative mt-2">{errorMsg}</p>}
     </div>
   );
 }

@@ -745,10 +745,10 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
 
 // ── Phase ↔ Tab 매핑 ────────────────────────────────
 export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
-  ENGAGEMENT: "engagement",
+  ENGAGEMENT: "overview",
   PREPARATION: "marketing-materials",
   MARKETING: "buyers",
-  BIDDING_DD: "dd-checklist",
+  BIDDING_DD: "bids",
   NEGOTIATION: "contracts",
   CLOSING: "closing",
   POST_CLOSING: "pmi",

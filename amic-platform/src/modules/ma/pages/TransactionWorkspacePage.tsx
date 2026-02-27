@@ -838,6 +838,24 @@ export default function TransactionWorkspacePage() {
             )}
             {canWrite() && txn.status === "ACTIVE" && (
               <>
+                {phaseStatus?.previous_phase && (
+                  <Button
+                    variant="ghost"
+                    icon={ArrowLeft}
+                    onClick={() =>
+                      advancePhase.mutate({
+                        to_phase: phaseStatus.previous_phase!,
+                      })
+                    }
+                    loading={advancePhase.isPending}
+                    className="!text-white/80 hover:!text-white hover:!bg-white/10"
+                  >
+                    {PHASE_CONFIG.find(
+                      (p) => p.phase === phaseStatus.previous_phase,
+                    )?.label ?? "이전"}{" "}
+                    단계로
+                  </Button>
+                )}
                 {phaseStatus?.can_advance && phaseStatus.next_phase && (
                   <div className="flex items-center gap-2">
                     {phaseStatus.has_warnings && (
@@ -918,10 +936,9 @@ export default function TransactionWorkspacePage() {
             const clickedIdx = PHASE_CONFIG.findIndex((p) => p.phase === phase);
             if (clickedIdx > currentIdx) return; // 미래 단계 무시
             if (phase === viewedPhase) return; // 같은 단계 재클릭 무시
-            const currentPath = splat
-              ? `/ma/transactions/${id}/${splat}`
-              : `/ma/transactions/${id}`;
-            navigate(`${currentPath}?viewPhase=${phase}`);
+            const defaultTab = PHASE_TAB_MAP[phase];
+            const tabPath = defaultTab === "overview" ? "" : `/${defaultTab}`;
+            navigate(`/ma/transactions/${id}${tabPath}?viewPhase=${phase}`);
           }}
         />
       </Card>
@@ -2112,13 +2129,8 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone txnId={id} entityType="NDA" embedded />
           </Card>
-          <FileUploadZone
-            txnId={id}
-            entityType="NDA"
-            compact
-            title="외부 NDA"
-          />
         </div>
       )}
 
@@ -2326,13 +2338,8 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone txnId={id} entityType="BID" embedded />
           </Card>
-          <FileUploadZone
-            txnId={id}
-            entityType="BID"
-            compact
-            title="외부 입찰 자료"
-          />
         </div>
       )}
 
@@ -2692,15 +2699,10 @@ export default function TransactionWorkspacePage() {
                     keyField="id"
                   />
                 )}
+                <FileUploadZone txnId={id} entityType="DD_CHECKLIST" embedded />
               </Card>
             </>
           )}
-          <FileUploadZone
-            txnId={id}
-            entityType="DD_CHECKLIST"
-            compact
-            title="외부 DD 자료"
-          />
         </div>
       )}
 
@@ -2910,15 +2912,10 @@ export default function TransactionWorkspacePage() {
                     keyField="id"
                   />
                 )}
+                <FileUploadZone txnId={id} entityType="CONTRACT" embedded />
               </Card>
             </>
           )}
-          <FileUploadZone
-            txnId={id}
-            entityType="CONTRACT"
-            compact
-            title="외부 계약 자료"
-          />
         </div>
       )}
 
@@ -3131,13 +3128,8 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone txnId={id} entityType="CLOSING" embedded />
           </Card>
-          <FileUploadZone
-            txnId={id}
-            entityType="CLOSING"
-            compact
-            title="외부 Closing 자료"
-          />
         </div>
       )}
 
@@ -3330,13 +3322,8 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone txnId={id} entityType="PMI" embedded />
           </Card>
-          <FileUploadZone
-            txnId={id}
-            entityType="PMI"
-            compact
-            title="외부 PMI 자료"
-          />
         </div>
       )}
 
@@ -3505,14 +3492,8 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone txnId={id} entityType="EARNOUT" embedded />
           </Card>
-
-          <FileUploadZone
-            txnId={id}
-            entityType="EARNOUT"
-            compact
-            title="외부 어닝아웃 자료"
-          />
         </div>
       )}
 
@@ -4271,14 +4252,12 @@ export default function TransactionWorkspacePage() {
                 keyField="id"
               />
             )}
+            <FileUploadZone
+              txnId={id}
+              entityType="MARKETING_MATERIAL"
+              embedded
+            />
           </Card>
-
-          <FileUploadZone
-            txnId={id}
-            entityType="MARKETING_MATERIAL"
-            compact
-            title="외부 마케팅 자료"
-          />
         </div>
       )}
 
@@ -4459,15 +4438,13 @@ export default function TransactionWorkspacePage() {
                   keyField="id"
                 />
               )}
+              <FileUploadZone
+                txnId={id}
+                entityType="FINANCIAL_MODEL"
+                embedded
+              />
             </Card>
           )}
-
-          <FileUploadZone
-            txnId={id}
-            entityType="FINANCIAL_MODEL"
-            compact
-            title="외부 재무모델"
-          />
         </div>
       )}
 

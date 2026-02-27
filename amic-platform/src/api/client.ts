@@ -9,14 +9,18 @@ declare module "axios" {
 }
 
 // M1: Token refresh 엔드포인트 환경변수화
-const REFRESH_URL = import.meta.env.VITE_AUTH_REFRESH_URL || "/api/fdd/auth/refresh";
+const REFRESH_URL =
+  import.meta.env.VITE_AUTH_REFRESH_URL || "/api/fdd/auth/refresh";
 
 // ── Shared refresh promise to deduplicate concurrent 401 retries ──
 let refreshPromise: Promise<boolean> | null = null;
 
 function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
-  // Request: 쿠키는 브라우저가 자동으로 첨부하므로 별도 처리 불필요
+  // Request: FormData 전송 시 Content-Type 제거 (브라우저가 multipart boundary 자동 설정)
   instance.interceptors.request.use((config) => {
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
     return config;
   });
 
@@ -46,8 +50,8 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
           refreshPromise = axios
             .post<{ message: string }>(
               REFRESH_URL,
-              {},  // body 비우기 (쿠키로 전송됨)
-              { withCredentials: true }  // 쿠키 전송 활성화
+              {}, // body 비우기 (쿠키로 전송됨)
+              { withCredentials: true }, // 쿠키 전송 활성화
             )
             .then(() => {
               // 토큰 저장 불필요 (쿠키 자동 갱신)
@@ -61,7 +65,8 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
         await refreshPromise;
         return instance(original);
       } catch (refreshErr) {
-        const is401 = axios.isAxiosError(refreshErr) && refreshErr.response?.status === 401;
+        const is401 =
+          axios.isAxiosError(refreshErr) && refreshErr.response?.status === 401;
         if (is401) {
           emitForceLogout();
         }
@@ -78,7 +83,7 @@ export function createApiClient(baseURL: string): AxiosInstance {
     baseURL,
     timeout: 30_000,
     headers: { "Content-Type": "application/json" },
-    withCredentials: true,  // 쿠키 전송 활성화
+    withCredentials: true, // 쿠키 전송 활성화
   });
   return applyAuthInterceptors(instance);
 }
