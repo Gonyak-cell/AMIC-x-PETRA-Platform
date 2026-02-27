@@ -2,4 +2,4 @@
 
 from app.ralph.routing.ldd_router import DEFAULT_LDD_ROUTING, LDDModelRouter
 
-__all__ = ["LDDModelRouter", "DEFAULT_LDD_ROUTING"]
+__all__ = ["DEFAULT_LDD_ROUTING", "LDDModelRouter"]

@@ -250,7 +250,7 @@ class TestGapDetector:
             GapItem("GAP-003", "LABOR", "노무 누락", "MEDIUM", "", "checklist"),
         ]
 
-        merged, dups = detector._merge_and_deduplicate(items, [])
+        merged, _dups = detector._merge_and_deduplicate(items, [])
         assert merged[0].priority == "CRITICAL"
         assert merged[1].priority == "MEDIUM"
         assert merged[2].priority == "LOW"

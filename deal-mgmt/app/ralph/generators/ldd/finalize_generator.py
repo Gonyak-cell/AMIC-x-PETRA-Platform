@@ -78,10 +78,7 @@ class LDDFinalizeGenerator(LDDDocumentGenerator):
         - 반려/미검토 항목: user_feedback를 반영하여 재분석
         """
         # 피드백 문자열 변환 (오케스트레이터는 list[str] 전달)
-        if isinstance(feedback, list):
-            feedback_str = "\n".join(feedback) if feedback else ""
-        else:
-            feedback_str = feedback or ""
+        feedback_str = ("\n".join(feedback) if feedback else "") if isinstance(feedback, list) else feedback or ""
 
         section_cfg = None
         for sec in self._sections_config:

@@ -53,7 +53,7 @@ def _get_sync_engine():
 
 def _get_blob_client():
     """Azure Blob 컨테이너 클라이언트를 생성한다."""
-    from azure.storage.blob import BlobServiceClient, ContentSettings  # noqa: F401
+    from azure.storage.blob import BlobServiceClient, ContentSettings
 
     conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
     if not conn_str:

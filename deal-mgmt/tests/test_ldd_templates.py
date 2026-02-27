@@ -217,5 +217,5 @@ class TestResolveSections:
     def test_unknown_deal_type_fallback(self):
         from app.services.ldd_report_service import _resolve_sections
 
-        sections, ttype = _resolve_sections("NONEXISTENT")
+        _sections, ttype = _resolve_sections("NONEXISTENT")
         assert ttype == "DEFAULT"

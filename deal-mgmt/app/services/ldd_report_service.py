@@ -9,6 +9,7 @@ Ralph Loop 2회 적용 워크플로우:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import json
 import logging
@@ -425,10 +426,8 @@ async def update_ldd_sections(
 
     # 기존 파일 삭제
     if report.file_path:
-        try:
+        with contextlib.suppress(OSError):
             Path(report.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     report.file_path = None
     report.file_name = None
     report.file_size_bytes = None
@@ -444,10 +443,8 @@ async def delete_ldd_report(
     report = await get_ldd_report(db, transaction_id, report_id)
 
     if report.file_path:
-        try:
+        with contextlib.suppress(OSError):
             Path(report.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
 
     await db.delete(report)
     await db.commit()
@@ -793,10 +790,8 @@ async def _insert_vdr_references(
                 # [VDR:uuid]filename 형식에서 UUID 추출
                 match = re.match(r"\[VDR:([0-9a-f-]{36})\]", ref)
                 if match:
-                    try:
+                    with contextlib.suppress(ValueError):
                         vdr_doc_id = uuid.UUID(match.group(1))
-                    except ValueError:
-                        pass
 
                 # UUID 못 찾으면 파일명으로 매칭
                 if not vdr_doc_id:
@@ -1383,10 +1378,8 @@ async def regenerate_ldd_report(
     report = await get_ldd_report(db, transaction_id, report_id)
 
     if report.file_path:
-        try:
+        with contextlib.suppress(OSError):
             Path(report.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     report.file_path = None
     report.file_name = None
     report.file_size_bytes = None

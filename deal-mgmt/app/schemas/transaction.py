@@ -29,6 +29,18 @@ class TransactionOut(BaseModel):
     lead_advisor_email: str
     deal_captain_email: str | None = None
     target_close_date: str | None = None
+    # Deal Terms
+    sale_process: str | None = None
+    control_transfer: str | None = None
+    target_stake: float | None = None
+    new_share_ratio: float | None = None
+    old_share_ratio: float | None = None
+    valuation_basis: str | None = None
+    cross_border: str | None = None
+    target_buyer_types: list[str] | None = None
+    exclusivity: bool | None = None
+    exclusivity_deadline: str | None = None
+
     fdd_deal_id: str | None = None
     im_document_id: str | None = None
     notes: str | None = None
@@ -53,6 +65,17 @@ class TransactionCreate(BaseModel):
     lead_advisor_email: str = Field(..., max_length=255)
     deal_captain_email: str | None = Field(None, max_length=255)
     target_close_date: str | None = Field(None, max_length=10)
+    # Deal Terms
+    sale_process: str | None = Field(None, max_length=30)
+    control_transfer: str | None = Field(None, max_length=20)
+    target_stake: float | None = Field(None, ge=0, le=100)
+    new_share_ratio: float | None = Field(None, ge=0, le=100)
+    old_share_ratio: float | None = Field(None, ge=0, le=100)
+    valuation_basis: str | None = Field(None, max_length=30)
+    cross_border: str | None = Field(None, max_length=20)
+    target_buyer_types: list[str] | None = None
+    exclusivity: bool | None = None
+    exclusivity_deadline: str | None = Field(None, max_length=10)
     notes: str | None = None
 
 
@@ -72,6 +95,17 @@ class TransactionUpdate(BaseModel):
     lead_advisor_email: str | None = Field(None, max_length=255)
     deal_captain_email: str | None = Field(None, max_length=255)
     target_close_date: str | None = Field(None, max_length=10)
+    # Deal Terms
+    sale_process: str | None = Field(None, max_length=30)
+    control_transfer: str | None = Field(None, max_length=20)
+    target_stake: float | None = None
+    new_share_ratio: float | None = None
+    old_share_ratio: float | None = None
+    valuation_basis: str | None = Field(None, max_length=30)
+    cross_border: str | None = Field(None, max_length=20)
+    target_buyer_types: list[str] | None = None
+    exclusivity: bool | None = None
+    exclusivity_deadline: str | None = Field(None, max_length=10)
     notes: str | None = None
     fdd_deal_id: str | None = None
     im_document_id: str | None = None

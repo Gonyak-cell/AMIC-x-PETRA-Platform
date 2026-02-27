@@ -347,7 +347,7 @@ def process_document(input_path: Path, output_path: Path) -> None:
                 first_cells = rows[0].findall(f"{{{ns}}}tc")
                 if first_cells:
                     fill = _get_cell_fill_xml(first_cells[0])
-                    is_data = fill == DATA_TABLE_HEADER_FILL  # noqa: F841
+                    is_data = fill == DATA_TABLE_HEADER_FILL
 
                     for row_idx, row in enumerate(rows):
                         if row_idx == 0:

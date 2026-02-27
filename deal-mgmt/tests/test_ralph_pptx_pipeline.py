@@ -142,7 +142,7 @@ class TestPPTXGateWithRealFile:
         result = await gate.evaluate(output, {"memo_type": "TM", "min_slides": 3})
 
         # 기본 콘텐츠에는 [금액], [회사명] 등 플레이스홀더가 있으므로 CRITICAL 발견
-        has_placeholder_issue = any("CRITICAL" in i for i in result.issues)  # noqa: F841
+        has_placeholder_issue = any("CRITICAL" in i for i in result.issues)
         # 기본 템플릿에 따라 플레이스홀더가 있을 수도 없을 수도 있음
         # 중요한 것은 Gate가 오류 없이 완료되는 것
         assert result.weighted_score > 0

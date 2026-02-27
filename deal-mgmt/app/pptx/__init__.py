@@ -2,4 +2,4 @@
 
 from .memo_generator import GenerationResult, generate_memo
 
-__all__ = ["generate_memo", "GenerationResult"]
+__all__ = ["GenerationResult", "generate_memo"]

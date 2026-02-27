@@ -90,7 +90,7 @@ class _AnthropicAdapter(_LLMAdapter):
         if not self._api_key:
             return False
         try:
-            import anthropic  # noqa: F401
+            import anthropic
 
             return True
         except ImportError:
@@ -137,7 +137,7 @@ class _OpenAIAdapter(_LLMAdapter):
         if not self._api_key:
             return False
         try:
-            import openai  # noqa: F401
+            import openai
 
             return True
         except ImportError:
@@ -187,7 +187,7 @@ class _GoogleAdapter(_LLMAdapter):
         if not self._api_key:
             return False
         try:
-            import google.generativeai  # noqa: F401
+            import google.generativeai
 
             return True
         except ImportError:

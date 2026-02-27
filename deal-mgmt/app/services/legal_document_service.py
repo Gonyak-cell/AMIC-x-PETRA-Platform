@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from pathlib import Path
 
@@ -84,10 +85,8 @@ async def delete_legal_document(
 
     # 파일 삭제
     if doc.file_path:
-        try:
+        with contextlib.suppress(OSError):
             Path(doc.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
 
     await db.delete(doc)
     await db.commit()
@@ -167,10 +166,8 @@ async def regenerate_document(
 
     # 기존 파일 삭제
     if doc.file_path:
-        try:
+        with contextlib.suppress(OSError):
             Path(doc.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
 
     doc.file_path = None
     doc.file_name = None

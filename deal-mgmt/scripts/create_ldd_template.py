@@ -177,11 +177,11 @@ def create_full_template(output_path: Path) -> None:
     header_colors = ["D9D9D9", "FF0000", "FF9900", "70AD47", "D9D9D9"]
     value_colors = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
 
-    for i, (hdr, color) in enumerate(zip(headers, header_colors)):
+    for i, (hdr, color) in enumerate(zip(headers, header_colors, strict=False)):
         cell = summary_tbl.rows[0].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, hdr, bold=True, center=True)
-    for i, (val, color) in enumerate(zip(values, value_colors)):
+    for i, (val, color) in enumerate(zip(values, value_colors, strict=False)):
         cell = summary_tbl.rows[1].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, val, center=True)
@@ -230,7 +230,7 @@ def create_full_template(output_path: Path) -> None:
     col_widths = [1.0, 3.5, 1.5, 1.8, 4.5, 3.5, 4.0]
 
     # 헤더 행
-    for j, (hdr, w) in enumerate(zip(col_headers, col_widths)):
+    for j, (hdr, w) in enumerate(zip(col_headers, col_widths, strict=False)):
         cell = item_tbl.rows[0].cells[j]
         _set_cell_background(cell, "D9D9D9")
         _set_cell_text(cell, hdr, size_pt=9.0, bold=True, center=True)
@@ -362,11 +362,11 @@ def create_redflag_template(output_path: Path) -> None:
     rf_h_colors = ["FF0000", "FF9900", "70AD47", "D9D9D9"]
     rf_v_colors = ["FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
 
-    for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors)):
+    for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors, strict=False)):
         cell = rf_tbl.rows[0].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, hdr, bold=True, center=True)
-    for i, (val, color) in enumerate(zip(rf_values, rf_v_colors)):
+    for i, (val, color) in enumerate(zip(rf_values, rf_v_colors, strict=False)):
         cell = rf_tbl.rows[1].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, val, center=True)
@@ -501,11 +501,11 @@ def create_narrative_full_template(output_path: Path) -> None:
     values = ["건수", "{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     header_colors = ["D9D9D9", "FF0000", "FF9900", "70AD47", "D9D9D9"]
     value_colors = ["D9D9D9", "FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
-    for i, (hdr, color) in enumerate(zip(headers, header_colors)):
+    for i, (hdr, color) in enumerate(zip(headers, header_colors, strict=False)):
         cell = summary_tbl.rows[0].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, hdr, bold=True, center=True)
-    for i, (val, color) in enumerate(zip(values, value_colors)):
+    for i, (val, color) in enumerate(zip(values, value_colors, strict=False)):
         cell = summary_tbl.rows[1].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, val, center=True)
@@ -636,11 +636,11 @@ def create_narrative_redflag_template(output_path: Path) -> None:
     rf_values = ["{{ red_count }}", "{{ amber_count }}", "{{ green_count }}", "{{ issue_count }}"]
     rf_h_colors = ["FF0000", "FF9900", "70AD47", "D9D9D9"]
     rf_v_colors = ["FCE4D6", "FFF2CC", "E2EFDA", "D9D9D9"]
-    for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors)):
+    for i, (hdr, color) in enumerate(zip(rf_headers, rf_h_colors, strict=False)):
         cell = rf_tbl.rows[0].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, hdr, bold=True, center=True)
-    for i, (val, color) in enumerate(zip(rf_values, rf_v_colors)):
+    for i, (val, color) in enumerate(zip(rf_values, rf_v_colors, strict=False)):
         cell = rf_tbl.rows[1].cells[i]
         _set_cell_background(cell, color)
         _set_cell_text(cell, val, center=True)

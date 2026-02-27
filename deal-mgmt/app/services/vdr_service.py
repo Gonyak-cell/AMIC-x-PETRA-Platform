@@ -244,7 +244,7 @@ async def update_document(
     doc = await get_document(db, transaction_id, doc_id)
     update_data = body.model_dump(exclude_unset=True)
 
-    if "folder_id" in update_data and update_data["folder_id"]:
+    if update_data.get("folder_id"):
         await get_folder(db, transaction_id, update_data["folder_id"])
 
     for key, value in update_data.items():
@@ -333,7 +333,7 @@ async def get_all_vdr_overviews(db: AsyncSession) -> list[dict]:
         )
         .outerjoin(folder_sub, folder_sub.c.transaction_id == Transaction.id)
         .outerjoin(doc_sub, doc_sub.c.transaction_id == Transaction.id)
-        .where(Transaction.is_deleted == False)  # noqa: E712
+        .where(Transaction.is_deleted.is_(False))
         .order_by(Transaction.updated_at.desc())
     )
 

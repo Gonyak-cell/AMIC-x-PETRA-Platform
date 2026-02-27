@@ -160,7 +160,7 @@ class TestRalphLLMClient:
             return "response text", "gpt-4o", 100, 50
 
         # Mock is_available
-        client._adapters[0].is_available  # noqa: B018 — 접근만
+        client._adapters[0].is_available
         type(client._adapters[0]).is_available = property(lambda self: True)
         type(client._adapters[1]).is_available = property(lambda self: True)
         client._adapters[0].generate = fail_generate

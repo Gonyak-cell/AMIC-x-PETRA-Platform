@@ -211,7 +211,7 @@ class VisionGate(QualityGate):
         content: list[dict] = [
             {"type": "text", "text": "아래 M&A 프레젠테이션 슬라이드들의 시각적 품질을 평가해 주세요."},
         ]
-        for i, img_bytes in enumerate(images):
+        for _i, img_bytes in enumerate(images):
             b64 = base64.b64encode(img_bytes).decode("utf-8")
             content.append(
                 {

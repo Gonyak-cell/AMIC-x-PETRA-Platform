@@ -405,9 +405,8 @@ def lookup_permits(
             continue
 
         # 3) deal_structure 필터
-        if entry.deal_structure_filter and deal_structure:
-            if deal_structure not in entry.deal_structure_filter:
-                continue
+        if entry.deal_structure_filter and deal_structure and deal_structure not in entry.deal_structure_filter:
+            continue
 
         seen.add(key)
         results.append(entry)

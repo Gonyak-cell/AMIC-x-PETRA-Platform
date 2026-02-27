@@ -37,4 +37,4 @@ def parse_file(file_path: str) -> ParsedFile:
         )
 
 
-__all__ = ["parse_file", "ParsedFile", "ParsedTable", "SUPPORTED_EXTENSIONS"]
+__all__ = ["SUPPORTED_EXTENSIONS", "ParsedFile", "ParsedTable", "parse_file"]

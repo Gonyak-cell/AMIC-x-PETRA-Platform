@@ -289,7 +289,7 @@ async def test_rfi_counts_auto_update(client):
     txn_id = await _create_txn(client)
     rfi = await _create_rfi(client, txn_id)
     item1 = await _add_item(client, txn_id, rfi["id"], question="질문1")
-    item2 = await _add_item(client, txn_id, rfi["id"], question="질문2")  # noqa: F841
+    item2 = await _add_item(client, txn_id, rfi["id"], question="질문2")
 
     # RFI 상세 확인 — 2개 항목
     detail = (await client.get(f"/api/v1/transactions/{txn_id}/rfis/{rfi['id']}")).json()
@@ -334,7 +334,7 @@ async def test_rfi_summary(client):
     txn_id = await _create_txn(client)
     rfi = await _create_rfi(client, txn_id)
     item1 = await _add_item(client, txn_id, rfi["id"], category="FINANCIAL", question="재무 질문")
-    item2 = await _add_item(client, txn_id, rfi["id"], category="LEGAL", question="법률 질문")  # noqa: F841
+    item2 = await _add_item(client, txn_id, rfi["id"], category="LEGAL", question="법률 질문")
 
     # 1개 응답
     await client.post(f"/api/v1/transactions/{txn_id}/rfis/{rfi['id']}/send")

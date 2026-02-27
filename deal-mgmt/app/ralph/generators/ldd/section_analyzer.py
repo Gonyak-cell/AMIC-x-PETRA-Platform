@@ -231,10 +231,7 @@ class LDDDocumentGenerator:
     ) -> str:
         """섹션 내 모든 항목을 분석하고 JSON 문자열로 반환한다."""
         # 피드백 문자열 변환 (오케스트레이터는 list[str] 전달)
-        if isinstance(feedback, list):
-            feedback_str = "\n".join(feedback) if feedback else ""
-        else:
-            feedback_str = feedback or ""
+        feedback_str = ("\n".join(feedback) if feedback else "") if isinstance(feedback, list) else feedback or ""
 
         # 해당 섹션 설정 찾기
         section_cfg = None

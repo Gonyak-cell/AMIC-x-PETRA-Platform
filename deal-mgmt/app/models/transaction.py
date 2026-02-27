@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Enum, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Enum, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -50,6 +50,20 @@ class Transaction(Base, TimestampMixin):
     # Service Links
     fdd_deal_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     im_document_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    # ── Deal Terms (거래 조건) ────────────────────────────
+    sale_process: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    control_transfer: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    target_stake: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    new_share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    old_share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    valuation_basis: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    cross_border: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    target_buyer_types: Mapped[list | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
+    exclusivity: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+    exclusivity_deadline: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # Notes
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

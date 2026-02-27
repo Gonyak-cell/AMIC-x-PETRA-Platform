@@ -192,7 +192,7 @@ class LawFirmDocxRenderer:
 
             elif tag == "p":
                 text = _get_text_from_xml(element).strip()
-                numId, ilvl = _get_num_info_from_xml(element)
+                _numId, _ilvl = _get_num_info_from_xml(element)
 
                 # 대목차 플레이스홀더 → 챕터 내 항목명
                 if text in SECTION_PLACEHOLDERS.values() or text == BODY_PLACEHOLDER:
@@ -215,9 +215,7 @@ class LawFirmDocxRenderer:
                             )
                             _set_text_in_xml(element, content)
                             item_idx += 1
-                        elif text == "[소주제명 기재]":
-                            _set_text_in_xml(element, item.get("name", ""))
-                        elif text == "[세부항목명 기재]":
+                        elif text == "[소주제명 기재]" or text == "[세부항목명 기재]":
                             _set_text_in_xml(element, item.get("name", ""))
 
     def _fill_recommendation_box(

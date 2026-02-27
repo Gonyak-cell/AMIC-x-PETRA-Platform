@@ -49,7 +49,7 @@ class TestLawFirmTemplateGenerator:
         assert "26382A" in SECTION_BAR_FILLS
         assert "385623" in SECTION_BAR_FILLS
         assert RECOMMENDATION_FILL == "E2EFD9"
-        assert PRESERVE_STYLES == {"11", "22", "31", "40"}
+        assert {"11", "22", "31", "40"} == PRESERVE_STYLES
         assert 0 in SECTION_PLACEHOLDERS
         assert 1 in SECTION_PLACEHOLDERS
         assert 2 in SECTION_PLACEHOLDERS

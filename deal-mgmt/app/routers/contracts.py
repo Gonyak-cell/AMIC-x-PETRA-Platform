@@ -255,38 +255,52 @@ async def negotiation_gantt(
     contracts_q = select(Contract).where(Contract.transaction_id == txn_id).order_by(Contract.created_at.asc())
     contracts = (await db.execute(contracts_q)).scalars().all()
 
+    contract_ids = [c.id for c in contracts]
+
+    # 마크업 통계: 단일 쿼리 (N+1 → 1)
+    markup_map: dict = {}
+    if contract_ids:
+        markup_stats_q = (
+            select(
+                ContractMarkup.contract_id,
+                func.count(ContractMarkup.id).label("total"),
+                func.min(ContractMarkup.created_at).label("first_at"),
+                func.max(ContractMarkup.created_at).label("latest_at"),
+            )
+            .where(ContractMarkup.contract_id.in_(contract_ids))
+            .group_by(ContractMarkup.contract_id)
+        )
+        markup_map = {row.contract_id: row for row in (await db.execute(markup_stats_q)).all()}
+
+    # 미해결 이견 통계: 단일 쿼리 (N+1 → 1)
+    issues_map: dict[uuid.UUID, int] = {}
+    if contract_ids:
+        issues_stats_q = (
+            select(
+                NegotiationIssue.contract_id,
+                func.count(NegotiationIssue.id).label("open_count"),
+            )
+            .where(
+                NegotiationIssue.contract_id.in_(contract_ids),
+                NegotiationIssue.status.in_([NegotiationIssueStatus.OPEN, NegotiationIssueStatus.IN_PROGRESS]),
+            )
+            .group_by(NegotiationIssue.contract_id)
+        )
+        issues_map = {row.contract_id: row.open_count for row in (await db.execute(issues_stats_q)).all()}
+
     items: list[NegotiationGanttItem] = []
     for c in contracts:
-        # 마크업 수 및 날짜 범위
-        markup_stats_q = select(
-            func.count(ContractMarkup.id),
-            func.min(ContractMarkup.created_at),
-            func.max(ContractMarkup.created_at),
-        ).where(ContractMarkup.contract_id == c.id)
-        markup_stats = (await db.execute(markup_stats_q)).one()
-
-        # 미해결 이견 수
-        open_issues_q = select(func.count(NegotiationIssue.id)).where(
-            NegotiationIssue.contract_id == c.id,
-            NegotiationIssue.status.in_(
-                [
-                    NegotiationIssueStatus.OPEN,
-                    NegotiationIssueStatus.IN_PROGRESS,
-                ]
-            ),
-        )
-        open_count = (await db.execute(open_issues_q)).scalar() or 0
-
+        ms = markup_map.get(c.id)
         items.append(
             NegotiationGanttItem(
                 contract_id=c.id,
                 contract_type=c.contract_type.value,
                 title=c.title,
                 status=c.status.value,
-                total_markups=markup_stats[0] or 0,
-                open_issues=open_count,
-                first_markup_at=str(markup_stats[1]) if markup_stats[1] else None,
-                latest_markup_at=str(markup_stats[2]) if markup_stats[2] else None,
+                total_markups=ms.total if ms else 0,
+                open_issues=issues_map.get(c.id, 0),
+                first_markup_at=str(ms.first_at) if ms and ms.first_at else None,
+                latest_markup_at=str(ms.latest_at) if ms and ms.latest_at else None,
                 created_at=str(c.created_at) if c.created_at else None,
             )
         )

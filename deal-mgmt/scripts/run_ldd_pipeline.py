@@ -468,7 +468,7 @@ def print_result_summary(result):
     ok_count = issue_count = na_count = pending_count = 0
     red = amber = green = 0
 
-    for section_type, items in result.sections.items():
+    for _section_type, items in result.sections.items():
         for item in items:
             total_items += 1
             status = item.get("status", "PENDING")
@@ -588,7 +588,7 @@ def render_docx(result, output_dir: Path, template_name: str = "ldd_full_templat
         return
 
     # 컨텍스트 빌드 (서비스 의존 없이 직접 구성)
-    sections = list(result.sections.values()) if isinstance(result.sections, dict) else result.sections  # noqa: F841
+    sections = list(result.sections.values()) if isinstance(result.sections, dict) else result.sections
 
     # sections를 dict 리스트로 변환
     sections_list = []
@@ -686,7 +686,7 @@ async def main():
 
     sections_config = TemplateRegistry.get_sections_dict(args.deal_type)
     if sections_config is None:
-        from app.ralph.generators.ldd.section_analyzer import DEFAULT_LDD_SECTIONS  # noqa: F401
+        from app.ralph.generators.ldd.section_analyzer import DEFAULT_LDD_SECTIONS
 
         # DEFAULT_LDD_SECTIONS가 없을 수 있으므로 직접 구성
         print(f"  [WARN] 템플릿 미등록: {args.deal_type} — 기본 STOCK_ACQUISITION 사용")

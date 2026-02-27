@@ -471,7 +471,7 @@ class TestIntegration:
         ctx = injector.build_legal_context("GOVERNANCE")
 
         # 컨텍스트에서 ID 추출
-        ids = injector.extract_citation_ids(ctx)  # noqa: F841
+        ids = injector.extract_citation_ids(ctx)
         # 주입된 컨텍스트에는 [cite:ID] 형식이 아니라 [ID] 형식으로 되어 있으므로
         # 검증기가 직접 사용하는 시나리오: LLM이 [cite:ID]로 인용한 텍스트 검증
         sample_text = "이사는 상법 제382조 [cite:상법_382]에 따라 선임된다."

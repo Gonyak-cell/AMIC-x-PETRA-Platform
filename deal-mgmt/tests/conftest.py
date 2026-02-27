@@ -64,10 +64,10 @@ from sqlalchemy.pool import StaticPool
 
 SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
 
-from app.core.database import get_db  # noqa: E402
-from app.core.security import JWTClaims, get_jwt_claims  # noqa: E402
-from app.main import app  # noqa: E402
-from app.models import Base  # noqa: E402
+from app.core.database import get_db
+from app.core.security import JWTClaims, get_jwt_claims
+from app.main import app
+from app.models import Base
 
 # ── Test DB engine (SQLite in-memory) ──────────────────────
 _test_engine = create_async_engine(

@@ -6,6 +6,7 @@ FinancialModelBuilder를 래핑하여 DocumentGenerator Protocol을 구현한다
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import shutil
@@ -72,10 +73,8 @@ class RalphExcelGenerator:
             logger.debug("임시 디렉토리 정리: %s", self._temp_dir)
 
     def __del__(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.cleanup()
-        except Exception:
-            pass
 
     async def generate_outline(
         self,

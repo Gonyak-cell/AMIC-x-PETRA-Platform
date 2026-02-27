@@ -167,10 +167,7 @@ class NarrativeQualityGate:
             summary_issues.append(f"{failed}개 항목이 품질 기준 미달")
 
         # 전체 점수 (5.0 만점)
-        if total > 0:
-            score = (passed / total) * 5.0
-        else:
-            score = 5.0
+        score = passed / total * 5.0 if total > 0 else 5.0
 
         elapsed_ms = int((time.perf_counter_ns() - start) / 1_000_000)
 

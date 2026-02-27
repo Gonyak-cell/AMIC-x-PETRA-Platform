@@ -104,7 +104,7 @@ setup_request_logging(app)
 register_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────
-from app.routers import (  # noqa: E402
+from app.routers import (
     approvals,
     audit,
     bids,

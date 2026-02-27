@@ -150,10 +150,7 @@ async def get_gantt_timeline(
     for idx, (phase_enum, label) in enumerate(_PHASE_ORDER):
         phase_val = phase_enum.value
 
-        if idx == 0:
-            start = deal_start
-        else:
-            start = phase_start_dates.get(phase_val)
+        start = deal_start if idx == 0 else phase_start_dates.get(phase_val)
 
         if idx < current_phase_idx:
             # 완료된 phase: 다음 phase의 시작일 = 이 phase의 종료일
