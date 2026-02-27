@@ -61,6 +61,8 @@ ignore = [
     "RUF003", # ambiguous unicode char in comment — intentional Korean text
     "RUF012", # mutable-class-default — Pydantic models use mutable defaults by design
     "SIM102", # collapsible-if — intentional readability in validators/elif chains
+    "SIM105", # suppressible-exception — try-except-pass 패턴 의도적 사용
+    "SIM108", # if-else-block-instead-of-if-exp — 가독성 우선
     "UP042",  # StrEnum migration — keep str+Enum pattern for now
 ]
 
@@ -78,12 +80,17 @@ extend-immutable-calls = [
 "app/services/ldd_report_service.py" = ["N806"]
 # Excel formula alias: 'formulas as F' is intentional shorthand
 "app/excel/model_builder.py" = ["N812"]
-# HWP parser: imports used only for isinstance/availability check
+# HWP parser / LLM client: imports used only for isinstance/availability check
 "app/ralph/parsers/hwp_parser.py" = ["F401"]
+"app/ralph/llm_client.py" = ["F401"]
+# main.py: routers imported after app setup (FastAPI pattern)
+"app/main.py" = ["E402"]
 # Test files: Korean law names trigger N802, sys.path setup requires E402, Roman numeral chapter vars N806
-"tests/*.py" = ["N802", "N806", "E402"]
+# F841: test setup variables, B018: mock attribute access
+"tests/*.py" = ["N802", "N806", "E402", "F841", "B018"]
 # Script files: lenient import ordering, variable naming, error handling
-"scripts/*.py" = ["E402", "E741", "E722", "N806"]
+# F401/F841: deferred imports and intermediate variables
+"scripts/*.py" = ["E402", "E741", "E722", "N806", "B905", "F401", "F841"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

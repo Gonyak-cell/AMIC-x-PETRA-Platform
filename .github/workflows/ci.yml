@@ -113,7 +113,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e ".[dev]" 2>/dev/null || pip install -e .
-          pip install ruff pytest pytest-asyncio httpx aiosqlite python-jose[cryptography] bcrypt
+          pip install ruff pytest pytest-asyncio pytest-cov httpx aiosqlite python-jose[cryptography] bcrypt
       - name: Auth guard tests
         run: pytest tests/test_auth_guard.py -v --tb=short
         env:
