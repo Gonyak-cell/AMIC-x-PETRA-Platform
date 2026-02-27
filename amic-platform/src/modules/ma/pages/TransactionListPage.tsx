@@ -56,8 +56,24 @@ const SIDE_LABEL: Record<string, string> = {
   DUAL: "Dual",
 };
 
+function formatKrwCompact(val: number | null): string {
+  if (val == null || val === 0) return "-";
+  const abs = Math.abs(val);
+  const sign = val < 0 ? "-" : "";
+  if (abs >= 1_0000_0000) {
+    const eok = Math.round(abs / 1_0000_0000);
+    return `${sign}${eok.toLocaleString("ko-KR")}억원`;
+  }
+  if (abs >= 1_0000) {
+    const man = Math.round(abs / 1_0000);
+    return `${sign}${man.toLocaleString("ko-KR")}만원`;
+  }
+  return `${sign}${abs.toLocaleString("ko-KR")}원`;
+}
+
 function formatValue(val: number | null, currency: string): string {
   if (val == null) return "-";
+  if (currency === "KRW") return formatKrwCompact(val);
   return new Intl.NumberFormat("ko-KR", {
     style: "currency",
     currency,
@@ -236,7 +252,7 @@ export default function TransactionListPage() {
         />
         <KpiCard
           label="예상 총액"
-          value={formatValue(kpis.totalValue || null, "KRW")}
+          value={formatKrwCompact(kpis.totalValue || null)}
           icon={DollarSign}
         />
         <KpiCard
