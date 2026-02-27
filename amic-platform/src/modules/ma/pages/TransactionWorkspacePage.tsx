@@ -1860,7 +1860,7 @@ export default function TransactionWorkspacePage() {
                     <Button
                       icon={Sparkles}
                       onClick={() => setShowSIMappingModal(true)}
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                     >
                       SI 자동 매핑
