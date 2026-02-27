@@ -163,6 +163,26 @@ jobs:
             fi
             echo "  All required env vars present."
 
+            # ── 3.6. CORS format validation ──
+            # KIIS/IM/MA는 list[str] (JSON 배열) 형식 필수.
+            # FDD만 str (쉼표 구분) 형식.
+            echo "=== [3.6/8] CORS Format Validation ==="
+            FORMAT_ERR=""
+            for SVC_VAR in KIIS_CORS_ORIGINS IM_CORS_ORIGINS MA_CORS_ORIGINS; do
+              VAL=$(grep "^${SVC_VAR}=" .env 2>/dev/null | cut -d= -f2-)
+              if [ -n "$VAL" ] && ! echo "$VAL" | grep -qE '^\['; then
+                echo "  ERROR: $SVC_VAR must be JSON array (e.g. [\"https://...\"])"
+                echo "  Got: $VAL"
+                FORMAT_ERR="$FORMAT_ERR $SVC_VAR"
+              fi
+            done
+            if [ -n "$FORMAT_ERR" ]; then
+              echo "CRITICAL: CORS format errors:$FORMAT_ERR"
+              echo "Aborting deployment."
+              exit 1
+            fi
+            echo "  All CORS formats valid."
+
             # ── 4. Build & restart ──
             # image: 태그가 명시되어 BuildKit 이미지 스왑 방지됨 (--no-cache 불필요)
             echo "=== [4/8] Build & Restart ==="

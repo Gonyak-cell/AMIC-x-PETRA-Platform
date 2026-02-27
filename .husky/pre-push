@@ -1,14 +1,20 @@
 #!/bin/sh
-# ─── Guard 1: deploy.yml 권한 블록 보존 ───────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════
+# Pre-push Guards — CI/Deploy 회귀 방지
+# 규칙 문서: .claude/rules/ci-regression-prevention.md
+# ═══════════════════════════════════════════════════════════════════
+
+# 리모트 비교 기준 (upstream 없으면 origin/master 폴백)
+REMOTE=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "origin/master")
+
+# ─── Guard 1: deploy.yml 권한 블록 보존 ───────────────────────────
 # wait-for-ci 단계에 gh api /check-runs 호출 시 'checks: read' 권한 필수.
-# deploy.yml 수정 시 실수로 permissions 블록을 제거하면 403 에러로 Deploy 실패.
 DEPLOY_YML=".github/workflows/deploy.yml"
 if [ -f "$DEPLOY_YML" ]; then
   if ! grep -q "checks: read" "$DEPLOY_YML"; then
     echo ""
-    echo "❌ PRE-PUSH BLOCKED: .github/workflows/deploy.yml에 'checks: read' 권한이 없습니다."
+    echo "❌ PRE-PUSH BLOCKED: deploy.yml에 'checks: read' 권한이 없습니다."
     echo "   wait-for-ci 단계의 gh api /check-runs 호출에 필수입니다."
-    echo "   deploy.yml의 permissions 블록에 'checks: read'를 추가하세요:"
     echo ""
     echo "   permissions:"
     echo "     checks: read"
@@ -18,38 +24,80 @@ if [ -f "$DEPLOY_YML" ]; then
   fi
 fi
 
-# ─── Guard 2: SQLAlchemy 모델 JSONB/UUID 크로스 DB 호환성 경고 ─────────────
-# PostgreSQL 전용 JSONB/UUID를 직접 사용하면 SQLite CI 테스트가 깨짐.
-# JSON().with_variant(JSONB, "postgresql") 및 Uuid 사용 필요.
-STAGED_MODELS=$(git diff --cached --name-only 2>/dev/null | grep -E "(models/.*\.py|app/models/.*\.py)$" || true)
-if [ -n "$STAGED_MODELS" ]; then
-  RAW_JSONB=$(git diff --cached -- "*.py" 2>/dev/null | grep "^+" | grep -E "mapped_column\(JSONB|mapped_column\(UUID\(as_uuid" | grep -v "with_variant" || true)
+# ─── Guard 2: SQLAlchemy JSONB/UUID 크로스 DB 호환성 ──────────────
+# PostgreSQL 전용 JSONB/UUID 직접 사용 → SQLite CI 테스트 실패.
+# JSON().with_variant(JSONB, "postgresql") / Uuid 사용 필요.
+CHANGED_PY=$(git diff "$REMOTE"...HEAD --name-only -- '*.py' 2>/dev/null || true)
+if [ -n "$CHANGED_PY" ]; then
+  RAW_JSONB=$(git diff "$REMOTE"...HEAD -- '*.py' 2>/dev/null | grep "^+" | grep -E "mapped_column\(JSONB|mapped_column\(UUID\(as_uuid" | grep -v "with_variant" || true)
   if [ -n "$RAW_JSONB" ]; then
     echo ""
-    echo "⚠️  WARNING: SQLAlchemy 모델에 PostgreSQL 전용 타입 직접 사용 감지:"
+    echo "❌ PRE-PUSH BLOCKED: PostgreSQL 전용 타입 직접 사용 감지:"
     echo "$RAW_JSONB"
     echo ""
-    echo "   SQLite CI 테스트 실패 가능성이 있습니다."
-    echo "   권장: JSON().with_variant(JSONB, 'postgresql') / Uuid"
+    echo "   SQLite CI 테스트가 실패합니다."
+    echo "   수정: JSON().with_variant(JSONB, 'postgresql') / Uuid 사용"
+    echo ""
+    exit 1
+  fi
+fi
+
+# ─── Guard 3: TypeScript 타입 체크 ────────────────────────────────
+CHANGED_TS=$(git diff "$REMOTE"...HEAD --name-only -- '*.ts' '*.tsx' 2>/dev/null || true)
+if [ -n "$CHANGED_TS" ]; then
+  if [ -d "amic-platform/node_modules" ]; then
+    echo "Pre-push: Running TypeScript type check..."
+    if ! (cd amic-platform && npx tsc --noEmit); then
+      echo ""
+      echo "❌ PRE-PUSH BLOCKED: TypeScript 타입 에러가 있습니다."
+      echo ""
+      exit 1
+    fi
+    echo "TypeScript check passed."
+  else
+    echo "⚠️ WARNING: amic-platform/node_modules 없음 — TypeScript 검사 건너뜀"
+  fi
+fi
+
+# ─── Guard 4: Python ruff 린트 체크 ──────────────────────────────
+# 변경된 Python 모듈만 검사 (F821 undefined, F841 unused 등)
+if [ -n "$CHANGED_PY" ]; then
+  if python -m ruff --version >/dev/null 2>&1; then
+    echo "Pre-push: Running ruff lint check..."
+    RUFF_FAILED=false
+    for MODULE in deal-mgmt kiis fdd/backend; do
+      MODULE_FILES=$(echo "$CHANGED_PY" | grep "^${MODULE}/" || true)
+      if [ -n "$MODULE_FILES" ] && [ -d "$MODULE" ]; then
+        if ! (cd "$MODULE" && python -m ruff check . --select E,F,I,W 2>&1); then
+          RUFF_FAILED=true
+        fi
+      fi
+    done
+    if [ "$RUFF_FAILED" = true ]; then
+      echo ""
+      echo "❌ PRE-PUSH BLOCKED: ruff 린트 에러가 있습니다."
+      echo "   수정: cd <module> && python -m ruff check . --fix"
+      echo ""
+      exit 1
+    fi
+    echo "Ruff lint check passed."
+  else
+    echo "⚠️ WARNING: ruff 미설치 — Python 린트 검사 건너뜀"
+  fi
+fi
+
+# ─── Guard 5: TypeScript 타입 파일 동기화 경고 ────────────────────
+# .tsx 파일 변경 시 types/*.ts 변경이 없으면 경고 (blocking 아님)
+if [ -n "$CHANGED_TS" ]; then
+  CHANGED_TSX=$(echo "$CHANGED_TS" | grep '\.tsx$' || true)
+  CHANGED_TYPES=$(echo "$CHANGED_TS" | grep 'types/.*\.ts$' || true)
+  if [ -n "$CHANGED_TSX" ] && [ -z "$CHANGED_TYPES" ]; then
+    echo ""
+    echo "⚠️ WARNING: .tsx 파일이 변경되었으나 types/*.ts 변경이 없습니다."
+    echo "   새로운 props/타입을 추가했다면 types/ 파일도 함께 커밋하세요."
     echo "   (경고만 출력, 푸시는 계속됩니다)"
     echo ""
   fi
 fi
 
-# ─── Guard 3: TypeScript 타입 체크 ────────────────────────────────────────
-cd amic-platform
-
-if [ ! -d "node_modules" ]; then
-  echo "node_modules not found in amic-platform/. Run 'npm install' first."
-  exit 1
-fi
-
-echo "Pre-push: Running TypeScript type check..."
-npx tsc --noEmit
-
-if [ $? -ne 0 ]; then
-  echo "TypeScript errors found. Push aborted."
-  exit 1
-fi
-
-echo "TypeScript check passed."
+echo "All pre-push checks passed."
