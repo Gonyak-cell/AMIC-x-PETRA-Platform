@@ -139,7 +139,7 @@ class LawFirmMapper:
         # VII. 보험 — 별도 처리: CONTRACTS 섹션 내 보험 관련 항목 수집
         insurance_chapter = chapters[6]  # VII
         if not insurance_chapter.items:
-            for ddrl_section, items in section_results.items():
+            for _ddrl_section, items in section_results.items():
                 for item in items:
                     name = item.get("name", "").lower()
                     item_id = item.get("item_id", "").upper()

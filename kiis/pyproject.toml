@@ -48,7 +48,13 @@ extend-exclude = ["migrations"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
 ignore = [
+    "E501",   # line too long — Korean text + data dicts make 120-char limit impractical
     "B008",   # FastAPI Depends() in default args is intentional
+    "B904",   # raise-without-from — gradual migration
+    "RUF001", # ambiguous unicode char in string — intentional Korean text
+    "RUF002", # ambiguous unicode char in docstring — intentional Korean text
+    "RUF003", # ambiguous unicode char in comment — intentional Korean text
+    "RUF012", # mutable-class-default — Pydantic models use mutable defaults by design
 ]
 
 [tool.ruff.lint.flake8-bugbear]

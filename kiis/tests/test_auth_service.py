@@ -90,7 +90,7 @@ class TestTokenCreation:
         """만료된 토큰 디코딩 시 JWTError가 발생한다."""
         data = {"sub": "testuser", "role": "viewer"}
         token = create_access_token(data=data, expires_delta=timedelta(seconds=-1))
-        with pytest.raises(Exception):  # jose.ExpiredSignatureError
+        with pytest.raises(jwt.ExpiredSignatureError):
             jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
 

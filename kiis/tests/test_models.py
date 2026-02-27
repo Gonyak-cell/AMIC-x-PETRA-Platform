@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.models.company import Company
 from app.models.fund import Fund, FundManager
@@ -52,7 +53,7 @@ async def test_company_unique_corp_code(async_session):
     await async_session.commit()
 
     async_session.add(company2)
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         await async_session.commit()
     await async_session.rollback()
 

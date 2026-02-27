@@ -634,7 +634,7 @@ class FinancialModelBuilder:
         ]
 
         we_row = row
-        for label, cell_type, fmt, cl_title, default in cap_items:
+        for label, cell_type, fmt, _cl_title, default in cap_items:
             apply_label(ws.cell(row=row, column=2), label)
             cell = ws.cell(row=row, column=3)
             if cell_type == "input":
@@ -694,11 +694,10 @@ class FinancialModelBuilder:
                     apply_formula(cell, F.discount_factor("WACC!C$" + str(row + 10), ci + 1), "0.0000")
                 elif label == "PV of FCFF":
                     apply_formula(cell, F.pv(f"{cl}{r - 2}", f"{cl}{r - 1}"), NUM_FMT_KRW)
-                elif label == "PV of Terminal Value":
-                    if ci == len(years) - 1:
-                        tv_row = r - 3
-                        df_row = r - 1
-                        apply_formula(cell, F.pv(f"{cl}{tv_row}", f"{cl}{df_row}"), NUM_FMT_KRW)
+                elif label == "PV of Terminal Value" and ci == len(years) - 1:
+                    tv_row = r - 3
+                    df_row = r - 1
+                    apply_formula(cell, F.pv(f"{cl}{tv_row}", f"{cl}{df_row}"), NUM_FMT_KRW)
             r += 1
 
         # Summary section
@@ -890,7 +889,7 @@ class FinancialModelBuilder:
         for j, w in enumerate(wacc_values):
             r = row + 1 + j
             apply_subheader(ws.cell(row=r, column=2), f"{w:.1%}")
-            for i, m in enumerate(multiples):
+            for i, _m in enumerate(multiples):
                 apply_input(ws.cell(row=r, column=i + 3), 0, NUM_FMT_KRW)
 
     # ── Summary 시트 ──────────────────────────────────────────
