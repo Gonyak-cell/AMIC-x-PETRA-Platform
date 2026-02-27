@@ -9,7 +9,7 @@ from .template_engine import TemplateVisualizationResult, process_template
 
 __all__ = [
     "GenerationResult",
-    "generate_memo",
     "TemplateVisualizationResult",
+    "generate_memo",
     "process_template",
 ]
