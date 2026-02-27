@@ -335,9 +335,7 @@ async def test_ksic_search_special_chars(client: AsyncClient, async_session: Asy
     assert resp.json() == []
 
 
-async def test_bulk_add_nonexistent_company(
-    client: AsyncClient, async_session: AsyncSession, transaction_id: str
-):
+async def test_bulk_add_nonexistent_company(client: AsyncClient, async_session: AsyncSession, transaction_id: str):
     """존재하지 않는 SI 기업 ID → 에러 없이 스킵."""
     await _seed_reference_data(async_session)
     fake_id = str(uuid.uuid4())

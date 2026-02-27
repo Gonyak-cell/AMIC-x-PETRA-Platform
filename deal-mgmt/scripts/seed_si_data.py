@@ -270,9 +270,7 @@ async def load_inducements(
         await session.commit()
         logger.info("%s 기존 데이터 삭제 완료", table_name)
 
-    count = (
-        await session.execute(select(func.count()).select_from(model_cls))
-    ).scalar()
+    count = (await session.execute(select(func.count()).select_from(model_cls))).scalar()
     if count and count > 0 and not force:
         logger.info("%s 이미 %d건 존재, 스킵", table_name, count)
         return count
@@ -387,9 +385,7 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
 
     max_names = len(_NAME_PREFIXES) * len(_NAME_SUFFIXES)
     if n > max_names:
-        logger.warning(
-            "dummy_count=%d > 최대 조합 수=%d, %d로 제한", n, max_names, max_names
-        )
+        logger.warning("dummy_count=%d > 최대 조합 수=%d, %d로 제한", n, max_names, max_names)
         n = max_names
 
     # 전체 이름 조합 생성 후 셔플 — while True 무한 루프 방지
