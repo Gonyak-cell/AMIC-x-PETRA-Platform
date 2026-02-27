@@ -98,9 +98,9 @@ class TransactionUpdate(BaseModel):
     # Deal Terms
     sale_process: str | None = Field(None, max_length=30)
     control_transfer: str | None = Field(None, max_length=20)
-    target_stake: float | None = None
-    new_share_ratio: float | None = None
-    old_share_ratio: float | None = None
+    target_stake: float | None = Field(None, ge=0, le=100)
+    new_share_ratio: float | None = Field(None, ge=0, le=100)
+    old_share_ratio: float | None = Field(None, ge=0, le=100)
     valuation_basis: str | None = Field(None, max_length=30)
     cross_border: str | None = Field(None, max_length=20)
     target_buyer_types: list[str] | None = None

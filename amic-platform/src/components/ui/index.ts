@@ -15,6 +15,12 @@ export type { KpiCardProps } from "./KpiCard";
 export { InlineSelect, INLINE_INPUT_CLS } from "./InlineSelect";
 export type { InlineSelectProps, InlineSelectOption } from "./InlineSelect";
 
+export { InlineCombobox } from "./InlineCombobox";
+export type {
+  InlineComboboxProps,
+  InlineComboboxOption,
+} from "./InlineCombobox";
+
 export { DataTable } from "./DataTable";
 export type { DataTableProps, Column, SectionHeaderConfig } from "./DataTable";
 
@@ -39,7 +45,11 @@ export {
   ChartSkeleton,
   TableSkeleton,
 } from "./Skeleton";
-export type { SkeletonProps, ChartSkeletonProps, TableSkeletonProps } from "./Skeleton";
+export type {
+  SkeletonProps,
+  ChartSkeletonProps,
+  TableSkeletonProps,
+} from "./Skeleton";
 
 export { Spinner, LoadingOverlay } from "./Spinner";
 export type { SpinnerProps } from "./Spinner";
@@ -64,3 +74,6 @@ export type { TabsProps, TabItem } from "./Tabs";
 
 export { CheckboxGroup } from "./CheckboxGroup";
 export type { CheckboxGroupProps, CheckboxGroupOption } from "./CheckboxGroup";
+
+export { SlidePanel } from "./SlidePanel";
+export type { SlidePanelProps } from "./SlidePanel";

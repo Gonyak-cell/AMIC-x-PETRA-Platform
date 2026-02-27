@@ -9,7 +9,12 @@ export type TransactionPhase =
   | "CLOSING"
   | "POST_CLOSING";
 
-export type TransactionStatus = "DRAFT" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "TERMINATED";
+export type TransactionStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "ON_HOLD"
+  | "COMPLETED"
+  | "TERMINATED";
 
 export type DealStructure =
   | "SHARE_ACQUISITION"
@@ -19,9 +24,23 @@ export type DealStructure =
   | "MBO"
   | "OTHER";
 
-export type InvestmentType = "EQUITY" | "DEBT" | "MEZZANINE" | "CONVERTIBLE" | "OTHER";
+export type InvestmentType =
+  | "EQUITY"
+  | "DEBT"
+  | "MEZZANINE"
+  | "CONVERTIBLE"
+  | "OTHER";
 
 export type Currency = "KRW" | "USD" | "EUR" | "JPY" | "CNY";
+
+export type SaleProcess =
+  | "COMPETITIVE_LIMITED"
+  | "COMPETITIVE_OPEN"
+  | "NEGOTIATED";
+export type ControlTransfer = "BUYOUT" | "MINORITY";
+export type ValuationBasis = "ENTERPRISE_VALUE" | "PRE_MONEY_EQUITY";
+export type CrossBorder = "DOMESTIC" | "OUTBOUND" | "INBOUND";
+export type TargetBuyerType = "STRATEGIC" | "FINANCIAL_SPONSOR";
 
 export interface Transaction {
   id: string;
@@ -41,6 +60,18 @@ export interface Transaction {
   lead_advisor_email: string;
   deal_captain_email: string | null;
   target_close_date: string | null;
+  // Deal Terms
+  sale_process: SaleProcess | null;
+  control_transfer: ControlTransfer | null;
+  target_stake: number | null;
+  new_share_ratio: number | null;
+  old_share_ratio: number | null;
+  valuation_basis: ValuationBasis | null;
+  cross_border: CrossBorder | null;
+  target_buyer_types: TargetBuyerType[] | null;
+  exclusivity: boolean | null;
+  exclusivity_deadline: string | null;
+
   fdd_deal_id: string | null;
   im_document_id: string | null;
   corporate_info: Record<string, unknown> | null;
@@ -82,6 +113,17 @@ export interface TransactionUpdate {
   lead_advisor_email?: string;
   deal_captain_email?: string | null;
   target_close_date?: string | null;
+  // Deal Terms
+  sale_process?: SaleProcess | null;
+  control_transfer?: ControlTransfer | null;
+  target_stake?: number | null;
+  new_share_ratio?: number | null;
+  old_share_ratio?: number | null;
+  valuation_basis?: ValuationBasis | null;
+  cross_border?: CrossBorder | null;
+  target_buyer_types?: TargetBuyerType[] | null;
+  exclusivity?: boolean | null;
+  exclusivity_deadline?: string | null;
   notes?: string;
 }
 

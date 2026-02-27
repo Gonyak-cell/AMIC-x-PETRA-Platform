@@ -1,7 +1,12 @@
 import type { SelectOption } from "@/components/ui";
 import type { TransactionPhase } from "./types/transaction";
 import type { BuyerStatus } from "./types/buyer";
-import type { RFIStatus, RFICategory, RFIItemPriority, RFIItemStatus } from "./types/rfi";
+import type {
+  RFIStatus,
+  RFICategory,
+  RFIItemPriority,
+  RFIItemStatus,
+} from "./types/rfi";
 
 // ── Transaction Side ──────────────────────────────────
 export const TRANSACTION_SIDE_OPTIONS: SelectOption[] = [
@@ -49,6 +54,58 @@ export const INVESTMENT_TYPE_OPTIONS: SelectOption[] = [
   { value: "MEZZANINE", label: "메자닌" },
   { value: "CONVERTIBLE", label: "전환사채" },
   { value: "OTHER", label: "기타" },
+];
+
+// ── Sale Process (매각 프로세스) ─────────────────────
+export const SALE_PROCESS_OPTIONS: SelectOption[] = [
+  { value: "", label: "선택 안함" },
+  { value: "COMPETITIVE_LIMITED", label: "제한적 경쟁입찰" },
+  { value: "COMPETITIVE_OPEN", label: "공개 경쟁입찰" },
+  { value: "NEGOTIATED", label: "수의계약" },
+];
+
+// ── Control Transfer (경영권 이전) ──────────────────
+export const CONTROL_TRANSFER_OPTIONS: SelectOption[] = [
+  { value: "", label: "미정" },
+  { value: "BUYOUT", label: "경영권 포함" },
+  { value: "MINORITY", label: "소수지분" },
+];
+
+// ── Valuation Basis (밸류에이션 기준) ────────────────
+export const VALUATION_BASIS_OPTIONS: SelectOption[] = [
+  { value: "", label: "선택 안함" },
+  { value: "ENTERPRISE_VALUE", label: "EV 기준" },
+  { value: "PRE_MONEY_EQUITY", label: "Pre-money Equity 기준" },
+];
+
+// ── Cross Border (국경간 거래) ──────────────────────
+export const CROSS_BORDER_OPTIONS: SelectOption[] = [
+  { value: "", label: "선택 안함" },
+  { value: "DOMESTIC", label: "국내" },
+  { value: "OUTBOUND", label: "아웃바운드" },
+  { value: "INBOUND", label: "인바운드" },
+];
+
+// ── Target Buyer Type (매수인 유형 - 멀티셀렉트) ────
+export const TARGET_BUYER_TYPE_OPTIONS: SelectOption[] = [
+  { value: "STRATEGIC", label: "SI (전략적 투자자)" },
+  { value: "FINANCIAL_SPONSOR", label: "FI (재무적 투자자)" },
+];
+
+// ── Team Members (InlineCombobox용) ─────────────────
+export interface TeamMember {
+  email: string;
+  name: string;
+  title: string;
+}
+
+export const TEAM_MEMBERS: TeamMember[] = [
+  { email: "ytkim@amic.kr", name: "김양태", title: "대표 / 회계사" },
+  { email: "jwsuh@amic.kr", name: "서지원", title: "변호사" },
+  { email: "yhlim@amic.kr", name: "임영훈", title: "변호사" },
+  { email: "bj.park@amic.kr", name: "박병준", title: "변호사" },
+  { email: "wsjo@amic.kr", name: "조우상", title: "이사" },
+  { email: "tryoon@amic.kr", name: "윤태리", title: "실장" },
 ];
 
 // ── Buyer Type ────────────────────────────────────────
@@ -173,23 +230,69 @@ export interface DDWorkstreamGroupConfig {
 }
 
 export const DD_WORKSTREAM_HIERARCHY: DDWorkstreamGroupConfig[] = [
-  { key: "FDD_GROUP", label: "FDD (재무실사)", children: ["FDD_FINANCIAL_STATEMENTS", "FDD_REVENUE", "FDD_WORKING_CAPITAL", "FDD_DEBT_CASH", "FDD_PROJECTIONS"] },
-  { key: "LDD_GROUP", label: "LDD (법률실사)", children: ["LDD_CORPORATE", "LDD_PERMITS", "LDD_CONTRACTS", "LDD_ASSETS", "LDD_LABOR", "LDD_LITIGATION", "LDD_IP", "LDD_INSURANCE", "LDD_ENVIRONMENT"] },
-  { key: "TDD_GROUP", label: "TDD (세무실사)", children: ["TDD_CORPORATE_TAX", "TDD_VAT", "TDD_TRANSFER_PRICING", "TDD_WITHHOLDING", "TDD_TAX_INCENTIVES"] },
+  {
+    key: "FDD_GROUP",
+    label: "FDD (재무실사)",
+    children: [
+      "FDD_FINANCIAL_STATEMENTS",
+      "FDD_REVENUE",
+      "FDD_WORKING_CAPITAL",
+      "FDD_DEBT_CASH",
+      "FDD_PROJECTIONS",
+    ],
+  },
+  {
+    key: "LDD_GROUP",
+    label: "LDD (법률실사)",
+    children: [
+      "LDD_CORPORATE",
+      "LDD_PERMITS",
+      "LDD_CONTRACTS",
+      "LDD_ASSETS",
+      "LDD_LABOR",
+      "LDD_LITIGATION",
+      "LDD_IP",
+      "LDD_INSURANCE",
+      "LDD_ENVIRONMENT",
+    ],
+  },
+  {
+    key: "TDD_GROUP",
+    label: "TDD (세무실사)",
+    children: [
+      "TDD_CORPORATE_TAX",
+      "TDD_VAT",
+      "TDD_TRANSFER_PRICING",
+      "TDD_WITHHOLDING",
+      "TDD_TAX_INCENTIVES",
+    ],
+  },
   { key: "OTHER", label: "기타", children: ["OTHER"] },
 ];
 
 export const DD_SUB_LABELS: Record<string, string> = {
   // FDD
-  FDD_FINANCIAL_STATEMENTS: "재무제표 분석", FDD_REVENUE: "매출 및 수익성",
-  FDD_WORKING_CAPITAL: "운전자본", FDD_DEBT_CASH: "차입금 및 현금", FDD_PROJECTIONS: "사업계획 및 추정",
+  FDD_FINANCIAL_STATEMENTS: "재무제표 분석",
+  FDD_REVENUE: "매출 및 수익성",
+  FDD_WORKING_CAPITAL: "운전자본",
+  FDD_DEBT_CASH: "차입금 및 현금",
+  FDD_PROJECTIONS: "사업계획 및 추정",
   // LDD
-  LDD_CORPORATE: "회사일반", LDD_PERMITS: "인허가 및 법령준수", LDD_CONTRACTS: "계약",
-  LDD_ASSETS: "자산(부동산/기타 자산)", LDD_LABOR: "인사노무", LDD_LITIGATION: "소송 및 분쟁",
-  LDD_IP: "지식재산권", LDD_INSURANCE: "보험", LDD_ENVIRONMENT: "환경",
+  LDD_CORPORATE: "회사일반",
+  LDD_PERMITS: "인허가 및 법령준수",
+  LDD_CONTRACTS: "계약",
+  LDD_ASSETS: "자산(부동산/기타 자산)",
+  LDD_LABOR: "인사노무",
+  LDD_LITIGATION: "소송 및 분쟁",
+  LDD_IP: "지식재산권",
+  LDD_INSURANCE: "보험",
+  LDD_ENVIRONMENT: "환경",
   // TDD
-  TDD_CORPORATE_TAX: "법인세", TDD_VAT: "부가가치세", TDD_TRANSFER_PRICING: "이전가격",
-  TDD_WITHHOLDING: "원천세", TDD_TAX_INCENTIVES: "세제혜택 및 감면",
+  TDD_CORPORATE_TAX: "법인세",
+  TDD_VAT: "부가가치세",
+  TDD_TRANSFER_PRICING: "이전가격",
+  TDD_WITHHOLDING: "원천세",
+  TDD_TAX_INCENTIVES: "세제혜택 및 감면",
 };
 
 export const DD_STATUS_OPTIONS: SelectOption[] = [
@@ -652,32 +755,49 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
 };
 
 // ── 단계별 표시 탭 (전 단계 공통 + 단계별) ────────────
-export const ALWAYS_VISIBLE_TABS = [
-  "overview",
-] as const;
+export const ALWAYS_VISIBLE_TABS = ["overview"] as const;
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
-  ENGAGEMENT:   [...ALWAYS_VISIBLE_TABS, "engagement", "rfi"],
-  PREPARATION:  [...ALWAYS_VISIBLE_TABS, "marketing-materials", "models", "ndas", "vdr"],
-  MARKETING:    [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
-  BIDDING_DD:   [...ALWAYS_VISIBLE_TABS, "bids", "dd-checklist", "rfi", "vdr"],
-  NEGOTIATION:  [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
-  CLOSING:      [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
+  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi"],
+  PREPARATION: [
+    ...ALWAYS_VISIBLE_TABS,
+    "marketing-materials",
+    "models",
+    "ndas",
+    "vdr",
+  ],
+  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
+  BIDDING_DD: [...ALWAYS_VISIBLE_TABS, "bids", "dd-checklist", "rfi", "vdr"],
+  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
+  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
   POST_CLOSING: [...ALWAYS_VISIBLE_TABS, "pmi", "earnout", "vdr"],
 };
 
 // ── 매수자 Long List / Short List 분류 ────────────────
 export const LONG_LIST_STATUSES: BuyerStatus[] = [
-  "IDENTIFIED", "CONTACTED", "NDA_SENT", "NDA_SIGNED",
+  "IDENTIFIED",
+  "CONTACTED",
+  "NDA_SENT",
+  "NDA_SIGNED",
 ];
 export const SHORT_LIST_STATUSES: BuyerStatus[] = [
-  "CIM_SENT", "INTEREST_CONFIRMED", "IOI_RECEIVED", "IOI_ACCEPTED",
-  "DD_GRANTED", "DD_IN_PROGRESS", "LOI_RECEIVED", "LOI_ACCEPTED",
-  "SELECTED", "REJECTED",
+  "CIM_SENT",
+  "INTEREST_CONFIRMED",
+  "IOI_RECEIVED",
+  "IOI_ACCEPTED",
+  "DD_GRANTED",
+  "DD_IN_PROGRESS",
+  "LOI_RECEIVED",
+  "LOI_ACCEPTED",
+  "SELECTED",
+  "REJECTED",
 ];
 
 // ── 파이프라인 마일스톤 ─────────────────────────────
-export const PHASE_MILESTONES: { afterPhase: TransactionPhase; label: string }[] = [
+export const PHASE_MILESTONES: {
+  afterPhase: TransactionPhase;
+  label: string;
+}[] = [
   { afterPhase: "MARKETING", label: "MOU Signed" },
   { afterPhase: "CLOSING", label: "Deal Closed" },
 ];
