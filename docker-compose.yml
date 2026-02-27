@@ -203,6 +203,7 @@ services:
       REDIS_RESULT_BACKEND: redis://deal-mgmt-redis:6379/1
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
       AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
+      DATA_GO_KR_API_KEY: ${MA_DATA_GO_KR_API_KEY:-}
       DEBUG: "true"
       AUTH_ENABLED: "true"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

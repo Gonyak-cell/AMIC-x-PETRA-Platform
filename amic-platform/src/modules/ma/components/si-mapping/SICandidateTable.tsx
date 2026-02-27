@@ -152,7 +152,7 @@ export default function SICandidateTable({
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-slate-700">
-                    {formatRevenue(c.company.revenue)}
+                    {formatRevenue(c.company.revenue, c.company.revenue_year)}
                   </td>
                   <td className="px-3 py-2">
                     {c.company.has_investment_history ? (

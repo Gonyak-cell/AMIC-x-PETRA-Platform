@@ -46,10 +46,12 @@ async def get_data_stats(db: AsyncSession) -> SIDataStats:
     si_count = (await db.execute(select(func.count()).select_from(SICompany))).scalar() or 0
     mapping_count = (await db.execute(select(func.count()).select_from(KsicIoMapping))).scalar() or 0
     io_count = (await db.execute(select(func.count()).select_from(IOTransaction))).scalar() or 0
+    rev_count = (await db.execute(select(func.count()).where(SICompany.revenue.isnot(None)))).scalar() or 0
     return SIDataStats(
         si_companies_count=si_count,
         ksic_io_mappings_count=mapping_count,
         io_transactions_count=io_count,
+        revenue_count=rev_count,
         is_seeded=si_count > 0 and mapping_count > 0 and io_count > 0,
     )
 

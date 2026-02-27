@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 3600
     DB_POOL_TIMEOUT: int = 30
 
+    # 금융위 공공데이터포털 API (기업재무정보 수집)
+    DATA_GO_KR_API_KEY: str = ""
+    DATA_GO_KR_BASE_URL: str = "https://apis.data.go.kr"
+
     # Service URLs (inter-service communication)
     FDD_API_URL: str = "http://localhost:8000/api/v1"
     IM_API_URL: str = "http://localhost:8002/api"

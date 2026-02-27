@@ -7,6 +7,7 @@ export interface SICompany {
   company_name: string;
   ksic_codes: string[] | null;
   revenue: number | null;
+  revenue_year: number | null;
   has_investment_history: boolean;
   description: string | null;
 }
@@ -62,6 +63,7 @@ export interface SIDataStats {
   si_companies_count: number;
   ksic_io_mappings_count: number;
   io_transactions_count: number;
+  revenue_count: number;
   is_seeded: boolean;
 }
 

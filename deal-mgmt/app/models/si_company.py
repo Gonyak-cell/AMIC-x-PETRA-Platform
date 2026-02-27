@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Numeric, String, Text, Uuid
+from sqlalchemy import Boolean, Integer, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -37,5 +37,10 @@ class SICompany(Base, TimestampMixin):
         nullable=True,
     )
     revenue: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
+    revenue_year: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="매출액 기준 사업연도 (예: 2024)",
+    )
     has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

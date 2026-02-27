@@ -46,6 +46,7 @@ class SICompanyOut(BaseModel):
     company_name: str
     ksic_codes: list[str] | None = None
     revenue: float | None = None
+    revenue_year: int | None = None
     has_investment_history: bool = False
     description: str | None = None
 
@@ -99,6 +100,7 @@ class SIDataStats(BaseModel):
     si_companies_count: int
     ksic_io_mappings_count: int
     io_transactions_count: int
+    revenue_count: int = 0
     is_seeded: bool
 
 

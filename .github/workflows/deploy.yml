@@ -253,6 +253,22 @@ jobs:
               echo "  MA not changed — skipping SI seed."
             fi
 
+            # ── 5.6. SI Revenue Data Seed ──
+            # 금융위 기업재무정보 API로 매출액 수집 (idempotent, 점진적)
+            echo "=== [5.6/8] SI Revenue Data Seed ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              NULL_REV=$($COMPOSE exec -T deal-mgmt-api python3 -c "import urllib.request as u,json;d=json.load(u.urlopen('http://localhost:8000/api/v1/si-mapping/stats',timeout=10));print(d.get('si_companies_count',0)-d.get('revenue_count',0))" 2>/dev/null || echo "0")
+              if [ "$NULL_REV" -gt 1000 ]; then
+                echo "  Revenue NULL: $NULL_REV — running revenue seed (limit=5000)..."
+                timeout 600 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_revenue_data --limit 5000 2>&1 || \
+                  echo "  WARN: Revenue seed incomplete (non-blocking, will continue next deploy)"
+              else
+                echo "  Revenue data sufficient — skipping."
+              fi
+            else
+              echo "  MA not changed — skipping revenue seed."
+            fi
+
             # ── 6. Health check + rollback (with retries) ──
             # NOTE: Use docker exec to curl backends directly (bypass nginx SSL redirect)
             echo "=== [6/6] Health Check ==="
