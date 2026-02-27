@@ -15,7 +15,10 @@ import {
   useBatchUpdateDecision,
   useAIClauseSuggestion,
 } from "@/modules/ma/hooks/useNegotiationIssues";
-import { useNegotiationGantt, useMarkupComparison } from "@/modules/ma/hooks/useNegotiationWorkspace";
+import {
+  useNegotiationGantt,
+  useMarkupComparison,
+} from "@/modules/ma/hooks/useNegotiationWorkspace";
 import type { IssueDecisionStatus } from "@/modules/ma/types/negotiation_issue";
 
 import { ContractSelector } from "./ContractSelector";
@@ -30,17 +33,25 @@ interface ContractNegotiationWorkspaceProps {
   canWrite?: boolean;
 }
 
-export function ContractNegotiationWorkspace({ txnId, canWrite = true }: ContractNegotiationWorkspaceProps) {
+export function ContractNegotiationWorkspace({
+  txnId,
+  canWrite = true,
+}: ContractNegotiationWorkspaceProps) {
   // ── State ──────────────────────────────────────────────
-  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(
+    null,
+  );
   const [selectedVersions, setSelectedVersions] = useState<number[]>([]);
   const [aiInsightTarget, setAIInsightTarget] = useState<string | null>(null);
 
   // ── Data Hooks ─────────────────────────────────────────
-  const { data: contracts = [], isLoading: contractsLoading } = useContracts(txnId);
-  const { data: ganttData, isLoading: ganttLoading } = useNegotiationGantt(txnId);
+  const { data: contracts = [], isLoading: contractsLoading } =
+    useContracts(txnId);
+  const { data: ganttData, isLoading: ganttLoading } =
+    useNegotiationGantt(txnId);
 
-  const selectedContract = contracts.find((c) => c.id === selectedContractId) ?? null;
+  const selectedContract =
+    contracts.find((c) => c.id === selectedContractId) ?? null;
 
   // 마크업
   const { data: markupData, isLoading: markupsLoading } = useContractMarkups(
@@ -53,24 +64,31 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
   const deleteMarkup = useDeleteContractMarkup(txnId, selectedContractId ?? "");
 
   // 비교
-  const versionA = selectedVersions.length >= 2 ? Math.min(...selectedVersions) : null;
-  const versionB = selectedVersions.length >= 2 ? Math.max(...selectedVersions) : null;
-  const { data: comparison, isLoading: comparisonLoading } = useMarkupComparison(
-    txnId,
-    selectedContractId,
-    versionA,
-    versionB,
-  );
+  const versionA =
+    selectedVersions.length >= 2 ? Math.min(...selectedVersions) : null;
+  const versionB =
+    selectedVersions.length >= 2 ? Math.max(...selectedVersions) : null;
+  const { data: comparison, isLoading: comparisonLoading } =
+    useMarkupComparison(txnId, selectedContractId, versionA, versionB);
 
   // 마크업 A / B 객체
-  const markupA = versionA != null ? markups.find((m) => m.version_number === versionA) ?? null : null;
-  const markupB = versionB != null ? markups.find((m) => m.version_number === versionB) ?? null : null;
+  const markupA =
+    versionA != null
+      ? (markups.find((m) => m.version_number === versionA) ?? null)
+      : null;
+  const markupB =
+    versionB != null
+      ? (markups.find((m) => m.version_number === versionB) ?? null)
+      : null;
 
   // 이견
-  const { data: issueData, isLoading: issuesLoading } = useNegotiationIssues(txnId, {
-    contractId: selectedContractId ?? undefined,
-  });
-  const issues = issueData?.items ?? [];
+  const { data: issueData, isLoading: issuesLoading } = useNegotiationIssues(
+    txnId,
+    {
+      contractId: selectedContractId ?? undefined,
+    },
+  );
+  const issues = useMemo(() => issueData?.items ?? [], [issueData?.items]);
 
   const createIssue = useCreateNegotiationIssue(txnId);
   const updateIssue = useUpdateNegotiationIssue(txnId);
@@ -104,17 +122,26 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
     });
   }, []);
 
-  const handleUploadMarkup = useCallback((formData: FormData) => {
-    createMarkup.mutate(formData);
-  }, [createMarkup]);
+  const handleUploadMarkup = useCallback(
+    (formData: FormData) => {
+      createMarkup.mutate(formData);
+    },
+    [createMarkup],
+  );
 
-  const handleDeleteMarkup = useCallback((markupId: string) => {
-    deleteMarkup.mutate(markupId);
-  }, [deleteMarkup]);
+  const handleDeleteMarkup = useCallback(
+    (markupId: string) => {
+      deleteMarkup.mutate(markupId);
+    },
+    [deleteMarkup],
+  );
 
-  const handleUpdateDecision = useCallback((issueId: string, decision: IssueDecisionStatus) => {
-    batchDecision.mutate([{ issue_id: issueId, decision_status: decision }]);
-  }, [batchDecision]);
+  const handleUpdateDecision = useCallback(
+    (issueId: string, decision: IssueDecisionStatus) => {
+      batchDecision.mutate([{ issue_id: issueId, decision_status: decision }]);
+    },
+    [batchDecision],
+  );
 
   const handleRequestAIInsight = useCallback((clauseRef: string) => {
     setAIInsightTarget(clauseRef);
@@ -122,7 +149,10 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
 
   // AI insight 관련 이슈 찾기
   const aiInsightIssue = aiInsightTarget
-    ? issues.find((i) => i.clause_reference === aiInsightTarget || i.title === aiInsightTarget)
+    ? issues.find(
+        (i) =>
+          i.clause_reference === aiInsightTarget || i.title === aiInsightTarget,
+      )
     : null;
 
   // ── Loading ────────────────────────────────────────────
@@ -140,7 +170,9 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="mb-3 h-12 w-12 text-text-muted" />
         <p className="text-sm text-text-secondary">등록된 계약서가 없습니다.</p>
-        <p className="mt-1 text-xs text-text-muted">계약 목록 탭에서 계약서를 먼저 등록하세요.</p>
+        <p className="mt-1 text-xs text-text-muted">
+          계약 목록 탭에서 계약서를 먼저 등록하세요.
+        </p>
       </div>
     );
   }
@@ -160,7 +192,9 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
       {/* 계약 선택 전: Gantt 차트만 표시 */}
       {!selectedContractId ? (
         <div className="px-4 pb-4">
-          <h3 className="mb-3 text-sm font-heading font-semibold text-text-dark">전체 계약 협상 진행도</h3>
+          <h3 className="mb-3 text-sm font-heading font-semibold text-text-dark">
+            전체 계약 협상 진행도
+          </h3>
           <ContractNegotiationGantt
             data={ganttData ?? null}
             isLoading={ganttLoading}
@@ -215,7 +249,7 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
                   clauseReference={aiInsightIssue?.clause_reference ?? null}
                   aiSuggestion={aiInsightIssue?.ai_suggestion ?? null}
                   aiRationale={aiInsightIssue?.ai_suggestion_rationale ?? null}
-                  isLoading={false}
+                  isLoading={aiSuggest.isPending}
                   onClose={() => setAIInsightTarget(null)}
                 />
               )}
@@ -230,7 +264,9 @@ export function ContractNegotiationWorkspace({ txnId, canWrite = true }: Contrac
                 isLoading={issuesLoading}
                 canWrite={canWrite}
                 onUpdateDecision={handleUpdateDecision}
-                onUpdate={(issueId, body) => updateIssue.mutate({ issueId, body })}
+                onUpdate={(issueId, body) =>
+                  updateIssue.mutate({ issueId, body })
+                }
                 onCreate={(body) => createIssue.mutate(body)}
                 onDelete={(issueId) => deleteIssue.mutate(issueId)}
                 onAISuggest={(issueId) => aiSuggest.mutate(issueId)}

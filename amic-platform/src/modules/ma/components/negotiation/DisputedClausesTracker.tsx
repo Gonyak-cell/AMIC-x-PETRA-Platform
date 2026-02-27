@@ -79,7 +79,6 @@ interface DisputedClausesTrackerProps {
 }
 
 export function DisputedClausesTracker({
-  txnId: _txnId,
   contractId,
   issues,
   isLoading,
