@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Literal
@@ -53,11 +54,25 @@ async def get_data_stats(db: AsyncSession) -> SIDataStats:
 
 
 # ── KSIC 자동완성 ─────────────────────────────────────────
+def _strip_ksic_prefix(code: str) -> str:
+    """KSIC 대분류 알파벳 접두사 제거 (J58211 → 58211).
+
+    단일 알파벳 + 4~5자리 숫자 패턴만 strip (표준 KSIC 세분류/세세분류).
+    C10 같은 짧은 코드는 그대로 유지.
+    """
+    m = re.match(r"^[A-Za-z](\d{4,5})$", code)
+    return m.group(1) if m else code
+
+
 async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[KsicSuggestion]:
     """KSIC 코드/이름 검색 — 자동완성용."""
     if not query or len(query) < 1:
         return []
-    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    q = query.strip()
+    # 검색용: 선행 알파벳 제거 (J58 → 58, ILIKE '%58%'로 58211 등 매칭)
+    cleaned = re.sub(r"^[A-Za-z]+", "", q)
+    cleaned = cleaned if cleaned else q  # 알파벳만 입력 시 원본 유지 (이름 검색용)
+    escaped = cleaned.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     pattern = f"%{escaped}%"
     q = (
         select(KsicIoMapping.ksic_code, KsicIoMapping.ksic_name)
@@ -83,6 +98,9 @@ async def map_si_candidates(
     성능 최적화: 기업 테이블을 1회만 로딩하여 인메모리 KSIC 인덱스를 구축한 후,
     이후 모든 KSIC→기업 검색은 dict 참조로 수행 (DB 쿼리 ~33 → ~5).
     """
+    # 대분류 알파벳 접두사 제거 (J58211 → 58211)
+    ksic_codes = [c for c in (_strip_ksic_prefix(c) for c in ksic_codes) if c]
+
     # ── Step 0: 1회 전체 로딩 + 인메모리 인덱스 ─────────
     all_companies = await _load_filtered_companies(db, min_revenue, require_investment_history)
     ksic_index = _build_ksic_index(all_companies)
