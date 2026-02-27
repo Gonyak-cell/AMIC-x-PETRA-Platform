@@ -236,6 +236,23 @@ jobs:
               echo "Continuing with health checks (migrations may need manual intervention)..."
             fi
 
+            # ── 5.5. SI Company Data Seed ──
+            # 기업개황 CSV 11만건을 si_companies 테이블에 적재 (idempotent UPSERT)
+            echo "=== [5.5/8] SI Company Data Seed ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              echo "  Checking SI company data..."
+              SI_COUNT=$($COMPOSE exec -T deal-mgmt-api python3 -c "import urllib.request as u,json;print(json.load(u.urlopen('http://localhost:8000/api/v1/si-mapping/stats',timeout=10)).get('si_companies_count',0))" 2>/dev/null || echo "0")
+              if [ "$SI_COUNT" -lt 1000 ]; then
+                echo "  SI companies: $SI_COUNT — running seed..."
+                $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_company_data 2>&1 || \
+                  echo "  WARN: SI seed failed (non-blocking)"
+              else
+                echo "  SI companies: $SI_COUNT — already seeded, skipping."
+              fi
+            else
+              echo "  MA not changed — skipping SI seed."
+            fi
+
             # ── 6. Health check + rollback (with retries) ──
             # NOTE: Use docker exec to curl backends directly (bypass nginx SSL redirect)
             echo "=== [6/6] Health Check ==="

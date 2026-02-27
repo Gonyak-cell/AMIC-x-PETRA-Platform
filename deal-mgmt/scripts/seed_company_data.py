@@ -3,6 +3,8 @@
 industry_master_dict.csv (1,574건 업종명→KSIC 매핑 사전)를 메모리에 로드한 뒤,
 20개 기업개황 CSV 파일을 순회하며 PostgreSQL si_companies 테이블에 UPSERT 적재한다.
 
+pandas 의존성 없이 stdlib csv 모듈만 사용 → 프로덕션 컨테이너에서 직접 실행 가능.
+
 사용법:
     cd deal-mgmt
     python -m scripts.seed_company_data [--force]
@@ -12,13 +14,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import csv
 import glob
 import logging
 import re
 import uuid
 from pathlib import Path
 
-import pandas as pd
 from sqlalchemy import delete, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -38,6 +40,12 @@ IO_KSIC_MAPPING_CSV = BASE_DIR / "app" / "marketing" / "si_mapping" / "db" / "io
 CHUNK_SIZE = 5000
 
 
+def _read_csv_rows(path: Path) -> list[dict[str, str]]:
+    """CSV 파일을 읽어 dict 리스트로 반환한다 (BOM 처리 포함)."""
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        return list(csv.DictReader(f))
+
+
 # ---------------------------------------------------------------------------
 # 0단계: IO-KSIC 매핑 테이블의 KSIC 코드 풀 로드
 # ---------------------------------------------------------------------------
@@ -46,8 +54,12 @@ def _load_io_ksic_pool() -> set[str]:
     if not IO_KSIC_MAPPING_CSV.exists():
         logger.warning("io_ksic_mapping.csv 없음: %s", IO_KSIC_MAPPING_CSV)
         return set()
-    io_df = pd.read_csv(IO_KSIC_MAPPING_CSV, dtype=str, encoding="utf-8-sig")
-    pool = set(io_df["ksic_code"].dropna().str.strip())
+    rows = _read_csv_rows(IO_KSIC_MAPPING_CSV)
+    pool: set[str] = set()
+    for row in rows:
+        code = (row.get("ksic_code") or "").strip()
+        if code:
+            pool.add(code)
     logger.info("IO-KSIC 코드 풀 로드: %d개 고유 코드", len(pool))
     if not pool:
         logger.error("IO-KSIC 코드 풀이 비어 있음 — 접두사 역매핑 불가, 원본 코드로 저장됩니다")
@@ -69,19 +81,19 @@ def load_master_dict() -> dict[str, list[str]]:
     """
     io_ksic_pool = _load_io_ksic_pool()
 
-    df = pd.read_csv(MASTER_DICT_CSV, dtype=str, encoding="utf-8-sig")
-    logger.info("마스터 사전 로드: %d건", len(df))
+    rows = _read_csv_rows(MASTER_DICT_CSV)
+    logger.info("마스터 사전 로드: %d건", len(rows))
 
     mapping: dict[str, list[str]] = {}
-    for _, row in df.iterrows():
-        name = str(row["원본_업종명"]).strip()
+    for row in rows:
+        name = (row.get("원본_업종명") or "").strip()
         if not name:
             continue
-        code_5 = str(row.get("KSIC_코드_5자리", "")).strip()
-        code_4 = str(row.get("KSIC_코드_4자리", "")).strip()
+        code_5 = (row.get("KSIC_코드_5자리") or "").strip()
+        code_4 = (row.get("KSIC_코드_4자리") or "").strip()
 
         # 5자리 코드 우선
-        if code_5 and code_5 != "nan" and len(code_5) >= 5:
+        if code_5 and len(code_5) >= 5:
             if code_5 in io_ksic_pool:
                 mapping[name] = [code_5]
                 continue
@@ -95,13 +107,12 @@ def load_master_dict() -> dict[str, list[str]]:
             continue
 
         # 4자리 이하 fallback → 접두사 역매핑
-        code = code_4 if code_4 and code_4 != "nan" else None
-        if code:
-            expanded = [c for c in io_ksic_pool if c.startswith(code)]
+        if code_4:
+            expanded = [c for c in io_ksic_pool if c.startswith(code_4)]
             if expanded:
                 mapping[name] = expanded
             else:
-                mapping[name] = [code]
+                mapping[name] = [code_4]
 
     logger.info("마스터 사전 매핑 엔트리: %d건", len(mapping))
     return mapping
@@ -110,9 +121,9 @@ def load_master_dict() -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 # 유틸리티
 # ---------------------------------------------------------------------------
-def strip_to_digits(value: str, max_len: int) -> str | None:
+def strip_to_digits(value: str | None, max_len: int) -> str | None:
     """문자열에서 숫자만 추출하여 max_len 자리까지 반환한다."""
-    if not value or pd.isna(value):
+    if not value:
         return None
     digits = re.sub(r"\D", "", str(value))
     return digits[:max_len] if digits else None
@@ -140,18 +151,20 @@ def process_csv_files(
     for csv_path in csv_files:
         fname = Path(csv_path).name
         try:
-            df = pd.read_csv(csv_path, dtype=str, encoding="utf-8-sig")
+            rows = _read_csv_rows(Path(csv_path))
         except Exception as exc:
             logger.warning("  파일 읽기 실패: %s — %s", fname, exc)
             failed_files.append(fname)
             continue
 
-        # 법인등록번호 결측 행 Drop
-        df = df.dropna(subset=["법인등록번호"])
-        total_rows += len(df)
         file_new = 0
+        file_total = 0
+        for row in rows:
+            # 법인등록번호 결측 행 스킵
+            if not row.get("법인등록번호"):
+                continue
+            file_total += 1
 
-        for _, row in df.iterrows():
             jurir_no = strip_to_digits(row["법인등록번호"], 13)
             if not jurir_no or len(jurir_no) < 6:
                 continue  # 유효하지 않은 법인등록번호
@@ -162,16 +175,16 @@ def process_csv_files(
             seen_jurir.add(jurir_no)
 
             # 업종명 → KSIC 코드 매핑 (접두사 역매핑 적용)
-            industry_name = str(row.get("업종명", "")).strip()
+            industry_name = (row.get("업종명") or "").strip()
             ksic_codes = master_dict.get(industry_name, [])
             if ksic_codes:
                 mapped_count += 1
 
             record = {
                 "id": uuid.uuid4(),
-                "company_name": str(row.get("회사이름", "")).strip() or "Unknown",
+                "company_name": (row.get("회사이름") or "").strip() or "Unknown",
                 "jurir_no": jurir_no,
-                "corp_code": strip_to_digits(row.get("사업자등록번호", ""), 10),
+                "corp_code": strip_to_digits(row.get("사업자등록번호"), 10),
                 "ksic_codes": ksic_codes,
                 "revenue": None,
                 "has_investment_history": False,
@@ -180,7 +193,8 @@ def process_csv_files(
             all_records.append(record)
             file_new += 1
 
-        logger.info("  %s: %d행 → 신규 %d건", fname, len(df), file_new)
+        total_rows += file_total
+        logger.info("  %s: %d행 → 신규 %d건", fname, file_total, file_new)
 
     logger.info(
         "[Step 3] 전처리 완료: 총 CSV 행 %d → 고유 기업 %d건 (KSIC 매핑 %d건)",

@@ -23,6 +23,7 @@ RUN uv export --frozen --no-dev --no-hashes > requirements.txt \
 # Copy application source code
 COPY app/ ./app/
 COPY migrations/ ./migrations/
+COPY scripts/ ./scripts/
 COPY alembic.ini ./
 
 # ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ COPY --from=builder /install/bin /usr/local/bin
 # Copy application code from builder
 COPY --from=builder /build/app /app/app
 COPY --from=builder /build/migrations /app/migrations
+COPY --from=builder /build/scripts /app/scripts
 COPY --from=builder /build/alembic.ini /app/alembic.ini
 
 # Copy entrypoint script
