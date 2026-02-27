@@ -43,22 +43,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Waiting for CI 'Build' job on commit ${{ github.sha }}..."
+          echo "Waiting for CI Gate on commit ${{ github.sha }}..."
           for i in $(seq 1 40); do
-            # Query check runs for this commit, filter for "Build" job
+            # CI Gate is the single required status check (alls-green)
             STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
-              --jq '.check_runs[] | select(.name == "Build") | .conclusion' 2>/dev/null || echo "")
+              --jq '.check_runs[] | select(.name == "CI Gate") | .conclusion' 2>/dev/null || echo "")
             if [ "$STATUS" = "success" ]; then
-              echo "CI Build passed!"
+              echo "CI Gate passed!"
               exit 0
             elif [ "$STATUS" = "failure" ]; then
-              echo "CI Build failed — aborting deploy"
+              echo "CI Gate failed — aborting deploy"
               exit 1
             fi
-            echo "  Attempt $i/40: Build status='${STATUS:-pending}', waiting 15s..."
+            echo "  Attempt $i/40: CI Gate status='${STATUS:-pending}', waiting 15s..."
             sleep 15
           done
-          echo "CI Build did not complete within 10 minutes — aborting deploy"
+          echo "CI Gate did not complete within 10 minutes — aborting deploy"
           exit 1
 
   deploy:
