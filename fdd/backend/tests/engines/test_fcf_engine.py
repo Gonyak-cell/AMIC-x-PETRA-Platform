@@ -12,7 +12,6 @@ from app.engines.fcf_engine import (
     compute_fcf_bridge,
 )
 
-
 # ── FCF Bridge ───────────────────────────────────────────
 
 

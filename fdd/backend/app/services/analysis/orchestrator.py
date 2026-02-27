@@ -552,7 +552,11 @@ class AnalysisOrchestrator:
             {qoe: {...} | None, nwc: {...} | None, debt: {...} | None}
         """
         from app.agents.base import AgentResponse
-        from app.agents.cross_verifier import CrossVerificationAgent, CrossVerificationResult, ReviewMode
+        from app.agents.cross_verifier import (
+            CrossVerificationAgent,
+            CrossVerificationResult,
+            ReviewMode,
+        )
         from app.services.llm.client import create_llm_client
         from app.services.llm.routing.model_router import DEFAULT_FDD_ROUTING
 

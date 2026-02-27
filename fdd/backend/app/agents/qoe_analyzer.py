@@ -121,7 +121,7 @@ class QoEAnalyzerAgent(BaseAgent):
             return {
                 "analysis_results": [],
                 "summary": "",
-                "warnings": [f"JSON 파싱 실패: {str(e)}"],
+                "warnings": [f"JSON 파싱 실패: {e!s}"],
             }
 
     def validate_output(

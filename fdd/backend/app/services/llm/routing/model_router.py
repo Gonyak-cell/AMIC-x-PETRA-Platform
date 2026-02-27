@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.core.logging import get_logger
-from app.services.llm.client import LLMClient, LLMProvider, LLMResponse
+from app.services.llm.client import LLMClient, LLMResponse
 
 logger = get_logger(__name__)
 

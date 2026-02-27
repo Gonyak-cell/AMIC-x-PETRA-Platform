@@ -27,7 +27,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 from app.utils.db_types import JsonbColumn
 
-
 # ── Enums ────────────────────────────────────────────────────────────────
 
 
@@ -126,7 +125,7 @@ class FddChecklist(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    items: Mapped[list["FddChecklistItem"]] = relationship(
+    items: Mapped[list[FddChecklistItem]] = relationship(
         back_populates="checklist",
         cascade="all, delete-orphan",
         order_by="FddChecklistItem.order_index",
@@ -199,8 +198,8 @@ class FddChecklistItem(Base):
     )
 
     # Relationships
-    checklist: Mapped["FddChecklist"] = relationship(back_populates="items")
-    vdr_links: Mapped[list["ChecklistItemVdrLink"]] = relationship(
+    checklist: Mapped[FddChecklist] = relationship(back_populates="items")
+    vdr_links: Mapped[list[ChecklistItemVdrLink]] = relationship(
         back_populates="checklist_item",
         cascade="all, delete-orphan",
     )
@@ -254,7 +253,7 @@ class ChecklistItemVdrLink(Base):
     )
 
     # Relationships
-    checklist_item: Mapped["FddChecklistItem"] = relationship(
+    checklist_item: Mapped[FddChecklistItem] = relationship(
         back_populates="vdr_links"
     )
 

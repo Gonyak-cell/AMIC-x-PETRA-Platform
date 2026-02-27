@@ -15,7 +15,6 @@ from app.models.fdd_checklist import (
     ChecklistStatus,
 )
 
-
 # ── Request Schemas ──────────────────────────────────────────────────────
 
 

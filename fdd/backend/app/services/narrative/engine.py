@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader
 
 NARRATIVE_VERSION = "0.1.0"
 

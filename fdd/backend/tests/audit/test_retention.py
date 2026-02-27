@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditAction, AuditLog
-from app.services.retention.policy import DataType, RetentionPolicy, RETENTION_PERIODS
+from app.services.retention.policy import RETENTION_PERIODS, DataType, RetentionPolicy
 
 
 def test_retention_periods_defined():
@@ -19,8 +19,10 @@ def test_retention_periods_defined():
 def test_get_expiry_date():
     """만료일이 올바르게 계산된다."""
     from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session as OrmSession, sessionmaker
+    from sqlalchemy.orm import Session as OrmSession
+    from sqlalchemy.orm import sessionmaker
     from sqlalchemy.pool import StaticPool
+
     from app.database import Base
 
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)

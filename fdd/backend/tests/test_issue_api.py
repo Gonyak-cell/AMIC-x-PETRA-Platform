@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.models.deal import Deal, DealType, DealStatus
+from app.models.deal import Deal, DealStatus, DealType
 from app.models.issue import Issue, IssueCategory, IssueSeverity, IssueStatus
 
 

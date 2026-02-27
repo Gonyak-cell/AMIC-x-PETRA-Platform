@@ -18,10 +18,11 @@ import asyncio
 import json
 import re
 import sys
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from openpyxl import load_workbook
 
@@ -592,7 +593,7 @@ def parse_fixed_assets(input_dir: Path) -> dict[str, dict[str, Decimal]]:
         for row in ws.iter_rows(values_only=True):
             if not row or not row[0]:
                 continue
-            if "합계" in str(row[0]).strip() or "계" == str(row[0]).strip():
+            if "합계" in str(row[0]).strip() or str(row[0]).strip() == "계":
                 if len(row) >= 13:
                     totals["취득원가"] = _to_millions(_safe_decimal(row[2]))
                     totals["감가상각누계"] = _to_millions(_safe_decimal(row[11]))
@@ -1648,7 +1649,7 @@ def build_pl_overview(
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
     commentary_map: dict[str, str] | None = None,
-) -> "TableBlock":
+) -> TableBlock:
     """PL Overview — 다기간 손익계산서 + YoY% + Comment + 마진분석.
 
     샘플의 'PL Overview' 시트와 동일한 구조.
@@ -1767,7 +1768,7 @@ def build_qoe_block(
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
     llm_adjustments: list[dict[str, Any]] | None = None,
-) -> "TableBlock":
+) -> TableBlock:
     """QoE (Quality of Earnings) — Adjusted EBITDA Bridge.
 
     샘플의 'QoE' 시트와 동일한 구조.
@@ -1859,7 +1860,7 @@ def build_qoe_block(
             v_dec = _safe_decimal(v)
             if ("국고" in k or "보조금" in k) and v_dec > ZERO:
                 neg_vals = {p: -v_dec}
-                rows.append(_row(f"({adj_idx}) {k} 제거", neg_vals, f"비경상 정부지원금 — Normalized EBITDA에서 제거", indent=1))
+                rows.append(_row(f"({adj_idx}) {k} 제거", neg_vals, "비경상 정부지원금 — Normalized EBITDA에서 제거", indent=1))
                 adj_total_by_period[p] += -v_dec
                 adj_idx += 1
 
@@ -1870,7 +1871,7 @@ def build_qoe_block(
             v_dec = _safe_decimal(v)
             if "잡이익" in k and abs(v_dec) > _safe_decimal(rev_by_period.get(p, 0)) * Decimal("0.01"):
                 neg_vals = {p: -v_dec}
-                rows.append(_row(f"({adj_idx}) 비경상적 {k} 제거", neg_vals, f"일회성 항목 (자산처분익 등)", indent=1))
+                rows.append(_row(f"({adj_idx}) 비경상적 {k} 제거", neg_vals, "일회성 항목 (자산처분익 등)", indent=1))
                 adj_total_by_period[p] += -v_dec
                 adj_idx += 1
 
@@ -1917,7 +1918,7 @@ def build_qoe_block(
 
 def build_bs_overview(
     fs_data: dict[str, Any],
-) -> "TableBlock":
+) -> TableBlock:
     """BS Overview — 다기간 재무상태표 + 증감."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -1971,7 +1972,7 @@ def build_qoa_block(
     nwc_data: dict[str, Any],
     fs_data: dict[str, Any],
     bu_pl: dict[str, dict[str, Decimal]],
-) -> "TableBlock":
+) -> TableBlock:
     """QoA (Quality of Net Assets / Net Debt) — 샘플 구조."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -2046,7 +2047,7 @@ def build_revenue_analysis(
     customer_entries: list[dict[str, Any]],
     hhi: Decimal,
     observations: list[str] | None = None,
-) -> "TableBlock":
+) -> TableBlock:
     """Revenue Analysis — 유형별 + 구성비 + Key Observations."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -2116,7 +2117,7 @@ def build_revenue_analysis(
     for pi, p in enumerate(periods):
         cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
         if pi > 0:
-            cols.append(TableColumn(key=f"yoy_{pi}", header=f"YoY", width=1.0, align=AlignType.CENTER))
+            cols.append(TableColumn(key=f"yoy_{pi}", header="YoY", width=1.0, align=AlignType.CENTER))
     cols.append(TableColumn(key="comment", header="Comment", width=5.0, align=AlignType.LEFT))
 
     return TableBlock(title="Revenue Analysis", columns=cols, rows=rows, metadata={"style": "table"})
@@ -2125,7 +2126,7 @@ def build_revenue_analysis(
 def build_sga_block(
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
-) -> "TableBlock":
+) -> TableBlock:
     """SGA Analysis — 카테고리별 판관비 + %Rev."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -2227,7 +2228,7 @@ def build_sga_block(
     cols = [TableColumn(key="account", header="과목", width=2.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
         cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-        cols.append(TableColumn(key=f"pct_{pi}", header=f"% Rev", width=1.0, align=AlignType.CENTER))
+        cols.append(TableColumn(key=f"pct_{pi}", header="% Rev", width=1.0, align=AlignType.CENTER))
     cols.append(TableColumn(key="comment", header="Comment", width=3.5, align=AlignType.LEFT))
 
     return TableBlock(title="SGA Analysis", columns=cols, rows=rows, metadata={"style": "table"})
@@ -2236,7 +2237,7 @@ def build_sga_block(
 def build_labor_block(
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
-) -> "TableBlock":
+) -> TableBlock:
     """Labor Cost & Headcount Analysis."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -2300,7 +2301,7 @@ def build_nwc_block(
     nwc_data: dict[str, Any],
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
-) -> "TableBlock":
+) -> TableBlock:
     """NWC Analysis — 매출/매입채권 + DSO/DPO + 변동."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -2383,7 +2384,7 @@ def build_capex_block(
     fixed_assets: dict[str, dict[str, Decimal]],
     bu_pl: dict[str, dict[str, Decimal]],
     fs_data: dict[str, Any],
-) -> "TableBlock":
+) -> TableBlock:
     """CapEx & Fixed Asset Analysis."""
     from app.renderers.report_builder import AlignType, TableBlock, TableColumn
 
@@ -3231,7 +3232,7 @@ def main() -> None:
     render_excel_report(report_ir, output_path=output_path)
 
     print(f"\n{'=' * 60}")
-    print(f"  [DONE] FDD Working Paper generated!")
+    print("  [DONE] FDD Working Paper generated!")
     print(f"  Output: {output_path.resolve()}")
     print(f"{'=' * 60}")
 

@@ -13,6 +13,7 @@ from pptx import Presentation
 from pptx.util import Inches
 
 from app.renderers.report_builder import (
+    AlignType,
     BlockType,
     ChartBlock,
     ChartData,
@@ -27,7 +28,6 @@ from app.renderers.report_builder import (
     TableBlock,
     TableColumn,
     TextBlock,
-    AlignType,
 )
 from app.renderers.template_injector import (
     InjectionContext,
@@ -41,7 +41,6 @@ from app.schemas.template import (
     TemplateContract,
     TemplateSlot,
 )
-
 
 # =============================================================================
 # Fixtures

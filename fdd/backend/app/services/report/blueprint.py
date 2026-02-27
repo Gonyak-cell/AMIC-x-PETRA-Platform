@@ -6,15 +6,13 @@ DealProfileResolver 결과를 받아 Excel WP 시트 생성 순서를 결정하�
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from app.services.report.deal_profile import (
     DealProfile,
     DealProfileResolver,
-    SheetSpec,
 )
-
 
 # ── 시트별 메타데이터 ──────────────────────────────────────
 

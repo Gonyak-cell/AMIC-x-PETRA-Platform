@@ -12,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
-from app.config import settings
 from app.auth.rbac import Permission
+from app.config import settings
 from app.core.logging import get_logger
 from app.database import get_db
 from app.models.analysis_run import AnalysisRun

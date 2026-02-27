@@ -10,7 +10,6 @@ import time
 from typing import Any
 
 from app.qa.types import (
-    QA_VERSION,
     QACheckType,
     QAFinding,
     QAResult,
@@ -19,10 +18,8 @@ from app.qa.types import (
 )
 from app.qa.utils import (
     CELL_OVERFLOW_LIMIT,
-    PLACEHOLDER_PATTERNS,
     TEXT_OVERFLOW_LIMIT,
     build_location_path,
-    check_text_length,
     find_placeholders,
 )
 

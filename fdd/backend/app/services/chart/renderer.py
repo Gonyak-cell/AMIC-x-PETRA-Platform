@@ -8,7 +8,7 @@ from decimal import Decimal
 from io import BytesIO
 from typing import Any
 
-from app.renderers.report_builder import ChartBlock, ChartData, ChartType
+from app.renderers.report_builder import ChartBlock, ChartType
 from app.services.chart.bar import (
     create_bar_chart,
     create_grouped_bar_chart,
@@ -16,7 +16,7 @@ from app.services.chart.bar import (
 )
 from app.services.chart.line import create_single_line_chart, create_trend_chart
 from app.services.chart.pie import create_donut_chart, create_pie_chart
-from app.services.chart.waterfall import create_ebitda_bridge, create_generic_waterfall
+from app.services.chart.waterfall import create_generic_waterfall
 
 CHART_RENDERER_VERSION = "0.2.0"
 

@@ -17,30 +17,28 @@ from app.qa import (
     run_layout_qa,
     run_report_qa,
 )
-
 from tests.qa.golden.datasets import (
-    GOLDEN_DATASETS,
-    GoldenCase,
-    GoldenCaseType,
-    get_cases_by_type,
-    get_failing_cases,
-    get_passing_cases,
-    G_QOE_001,
-    G_QOE_002,
-    G_QOE_003,
-    G_NWC_001,
-    G_NWC_002,
+    G_COMPOSITE_001,
+    G_COMPOSITE_002,
+    G_COMPOSITE_003,
     G_DEBT_001,
     G_DEBT_002,
     G_EVIDENCE_001,
     G_EVIDENCE_002,
     G_LAYOUT_001,
     G_LAYOUT_002,
-    G_COMPOSITE_001,
-    G_COMPOSITE_002,
-    G_COMPOSITE_003,
+    G_NWC_001,
+    G_NWC_002,
+    G_QOE_001,
+    G_QOE_002,
+    G_QOE_003,
+    GOLDEN_DATASETS,
+    GoldenCase,
+    GoldenCaseType,
+    get_cases_by_type,
+    get_failing_cases,
+    get_passing_cases,
 )
-
 
 # =============================================================================
 # 유틸리티 함수

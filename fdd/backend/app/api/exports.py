@@ -109,7 +109,7 @@ def download_export(
     filename = f"{record.name}.{record.format.value}"
 
     return StreamingResponse(
-        open(file_path, "rb"),  # noqa: SIM115
+        open(file_path, "rb"),
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

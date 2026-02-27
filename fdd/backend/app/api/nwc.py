@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session
 limiter = Limiter(key_func=get_remote_address)
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
-from app.core.exceptions import NotFoundError
 from app.auth.rbac import Permission
+from app.core.exceptions import NotFoundError
 from app.database import get_db
 from app.models.deal import Deal, DealSnapshot
 from app.schemas.nwc import (

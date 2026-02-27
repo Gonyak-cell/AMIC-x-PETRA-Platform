@@ -18,7 +18,6 @@ from app.ralph.gates.base import GateVerdict
 from app.ralph.gates.fdd_programmatic_gate import FDDProgrammaticGate
 from app.ralph.generators.fdd_report_generator import FDDReportGenerator
 
-
 # ── Fixtures ────────────────────────────────────────────────────
 
 

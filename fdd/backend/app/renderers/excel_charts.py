@@ -324,9 +324,7 @@ def render_fcf_waterfall_chart(
         num_points = end_row - start_row
         for i in range(num_points):
             pt = DataPoint(idx=i)
-            if i == 0:
-                pt.graphicalProperties.solidFill = _PRIMARY
-            elif i == num_points - 1:
+            if i == 0 or i == num_points - 1:
                 pt.graphicalProperties.solidFill = _PRIMARY
             elif i == 4:
                 pt.graphicalProperties.solidFill = _ACCENT4

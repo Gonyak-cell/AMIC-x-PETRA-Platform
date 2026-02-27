@@ -3,57 +3,56 @@
 Report IR 생성과 블록 빌더 함수들의 골든 케이스를 테스트합니다.
 """
 
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
 from app.renderers.report_builder import (
+    AlignType,
+    AppendixBlock,
+    AppendixItem,
     # Block Types
     BlockType,
-    ChartType,
-    AlignType,
-    RiskLevel,
-    # Blocks
-    CoverBlock,
-    KPIBlock,
-    TableBlock,
-    TableColumn,
     ChartBlock,
     ChartData,
-    TextBlock,
+    ChartType,
     ClaimBlock,
+    # Blocks
+    CoverBlock,
     EvidenceRef,
     IssueBlock,
     IssueItem,
+    KPIBlock,
     MethodologyBlock,
     MethodologyItem,
-    ScopeBlock,
-    ScopeItem,
-    AppendixBlock,
-    AppendixItem,
     # IR
     ReportIR,
     ReportMetadata,
+    RiskLevel,
+    ScopeBlock,
+    ScopeItem,
+    TableBlock,
+    TableColumn,
+    TextBlock,
+    build_claim_block,
+    build_issue_block,
+    build_issue_summary_table_block,
+    build_kpi_block,
+    build_methodology_block,
+    build_net_debt_schedule_block,
+    build_nwc_definition_table_block,
+    build_nwc_peg_table_block,
+    build_nwc_trend_table_block,
+    build_qoe_adjustments_table_block,
     # Builders
     build_qoe_table_block,
-    build_waterfall_chart_block,
-    build_kpi_block,
-    build_text_block,
-    build_qoe_adjustments_table_block,
-    build_nwc_definition_table_block,
-    build_nwc_trend_table_block,
-    build_nwc_peg_table_block,
-    build_net_debt_schedule_block,
-    build_issue_summary_table_block,
-    build_claim_block,
     build_scope_block,
-    build_methodology_block,
-    build_issue_block,
+    build_text_block,
+    build_waterfall_chart_block,
     # Serialization
     report_ir_to_dict,
 )
-
 
 # =============================================================================
 # Golden Test: Block Types

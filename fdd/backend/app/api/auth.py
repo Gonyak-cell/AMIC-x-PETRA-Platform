@@ -9,20 +9,18 @@ import os
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
 from app.auth.rbac import Permission
 from app.auth.token import decode_access_token
-from app.config import settings
 from app.core.errors import ErrorCode
 from app.core.exceptions import AuthenticationError
 from app.database import get_db
 from app.schemas.user import (
     LoginRequest,
-    TokenResponse,
     UserCreate,
     UserRead,
     UserUpdate,

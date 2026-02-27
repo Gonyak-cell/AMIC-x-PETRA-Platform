@@ -11,10 +11,10 @@ import pytest
 
 from app.qa import (
     DEFAULT_SLAS,
-    QACheckType,
-    QASeverity,
     PerformanceMeasurement,
     PerformanceReport,
+    QACheckType,
+    QASeverity,
     SLADefinition,
     measure_operation,
     run_performance_qa,

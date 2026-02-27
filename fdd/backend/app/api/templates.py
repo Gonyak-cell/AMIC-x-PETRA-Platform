@@ -9,7 +9,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, UploadFile as FastAPIUploadFile
+from fastapi import APIRouter, Depends, Query
+from fastapi import UploadFile as FastAPIUploadFile
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission

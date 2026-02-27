@@ -23,12 +23,12 @@ from app.renderers.report_builder import (
     ReportIR,
     ReportMetadata,
     build_adjustment_by_category_block,
-    build_balance_sheet_block,
-    build_cash_flow_block,
     build_backlog_aging_block,
     build_backlog_by_customer_block,
     build_backlog_summary_block,
+    build_balance_sheet_block,
     build_capex_analysis_block,
+    build_cash_flow_block,
     build_cost_manufacturing_block,
     build_cost_personnel_block,
     build_cost_sga_block,
@@ -38,19 +38,18 @@ from app.renderers.report_builder import (
     build_fx_rate_summary_block,
     build_fx_summary_block,
     build_ic_elimination_block,
-    build_monthly_new_orders_block,
-    build_negative_margin_block,
     build_income_statement_block,
     build_issue_block,
     build_issue_summary_table_block,
     build_kpi_block,
     build_margin_analysis_block,
     build_methodology_block,
-    build_monthly_is_block,
+    build_monthly_new_orders_block,
     build_monthly_trend_block,
     build_multiperiod_bs_block,
     build_multiperiod_cf_block,
     build_multiperiod_is_block,
+    build_negative_margin_block,
     build_net_debt_schedule_block,
     build_nwc_definition_table_block,
     build_nwc_peg_table_block,
@@ -91,7 +90,6 @@ def _build_financial_statement_sections(
     from app.models.account_mapping import AccountMapping, MappingStatus
     from app.models.standard_line_item import (
         FinancialStatement,
-        LineItemCategory,
         StandardLineItem,
     )
 
@@ -427,8 +425,8 @@ def _build_sales_cost_sections(
     from sqlalchemy import func as sa_func
     from sqlalchemy import select
 
-    from app.models.journal_entry import JournalEntry
     from app.models.account_mapping import AccountMapping, MappingStatus
+    from app.models.journal_entry import JournalEntry
     from app.models.standard_line_item import LineItemCategory, StandardLineItem
 
     # ── Revenue Breakdown (거래처별 매출) ──
@@ -574,7 +572,9 @@ def _build_multiperiod_sections(
         compute_multiperiod_is,
     )
     from app.models.account_mapping import AccountMapping, MappingStatus
-    from app.services.report.skeletons.skeleton_registry import skeleton_to_line_item_defs
+    from app.services.report.skeletons.skeleton_registry import (
+        skeleton_to_line_item_defs,
+    )
 
     # 승인된 매핑 조회
     mappings = list(
@@ -796,8 +796,8 @@ def _build_cost_structure_sections(
     )
 
     try:
-        from app.models.journal_entry import JournalEntry
         from app.models.account_mapping import AccountMapping, MappingStatus
+        from app.models.journal_entry import JournalEntry
         from app.models.standard_line_item import LineItemCategory, StandardLineItem
 
         # COGS로 매핑된 원천 계정코드 조회
@@ -1099,7 +1099,6 @@ def _build_enhanced_consolidation_sections(
     from app.engines.consolidation_engine import (
         FXRate,
         compare_entity_pl,
-        convert_fx,
         detect_ic_transactions,
     )
 
@@ -1171,7 +1170,10 @@ def _build_enhanced_consolidation_sections(
         )
         if ic_candidates:
             # IC 후보를 ConsolidationResult 형태로 변환하여 블록 생성
-            from app.engines.consolidation_engine import ConsolidationResult, EliminationEntry
+            from app.engines.consolidation_engine import (
+                ConsolidationResult,
+                EliminationEntry,
+            )
 
             ic_elims = []
             ic_total = Decimal("0")

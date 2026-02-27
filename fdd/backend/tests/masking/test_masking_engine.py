@@ -5,13 +5,12 @@ from decimal import Decimal
 import pytest
 
 from app.services.masking.engine import (
+    MODE_DEFAULTS,
     AmountMaskMode,
     DistributionMode,
     MaskingConfig,
     MaskingEngine,
-    MODE_DEFAULTS,
 )
-
 
 # ── MaskingEngine.mask_amount ──────────────────────────
 

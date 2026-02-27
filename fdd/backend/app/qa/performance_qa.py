@@ -7,11 +7,11 @@ GL 100만 라인 기준 성능 SLA 측정.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from app.qa.types import (
-    QA_VERSION,
     QACheckType,
     QAFinding,
     QAResult,

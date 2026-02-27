@@ -27,7 +27,6 @@ from app.schemas.template import (
 )
 from app.services.template import template_service
 
-
 # =============================================================================
 # Schema Tests
 # =============================================================================

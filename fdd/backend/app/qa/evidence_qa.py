@@ -10,7 +10,6 @@ import time
 from typing import Any
 
 from app.qa.types import (
-    QA_VERSION,
     QACheckType,
     QAFinding,
     QAResult,
@@ -207,7 +206,7 @@ def check_required_evidence(
                             check_type=QACheckType.EVIDENCE_MISSING,
                             severity=QASeverity.WARNING,
                             location=location,
-                            message=f"Table row missing required evidence",
+                            message="Table row missing required evidence",
                             expected=f">= {table_row_min}",
                             actual=str(len(evidence_ids)),
                         )

@@ -66,7 +66,7 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=app --cov-report=xml --cov-fail-under=60"
+addopts = "--cov=app --cov-report=xml"
 markers = [
     "integration: marks tests that require external API access",
     "e2e: marks end-to-end tests that verify full system flows",

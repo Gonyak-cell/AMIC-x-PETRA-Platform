@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import CurrentUser, require_permission
 from app.auth.rbac import Permission
 from app.database import get_db
-from app.models.ralph_session import FddRalphSession, FddRalphSessionStatus
+from app.models.ralph_session import FddRalphSession
 from app.schemas.ralph import (
     RalphProgressRead,
     RalphSessionCreate,

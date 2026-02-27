@@ -15,8 +15,6 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode
 from app.core.exceptions import CalculationError, NotFoundError
 from app.core.logging import get_logger
-from app.industry import get_fdd_industry_module_safe
-from app.models.deal import Deal
 from app.engines.debt_engine import (
     ENGINE_VERSION,
     BSAccountData,
@@ -24,8 +22,10 @@ from app.engines.debt_engine import (
     calculate_net_debt,
     detect_debt_like_candidates,
 )
+from app.industry import get_fdd_industry_module_safe
 from app.models.account_mapping import AccountMapping, MappingStatus
 from app.models.audit import AuditAction, AuditLog
+from app.models.deal import Deal
 from app.models.debt import (
     DebtItem,
     DebtItemStatus,

@@ -13,7 +13,6 @@ import pytest
 from app.agents.report_qa import ReportQAAgent
 from app.services.llm.routing.model_router import DEFAULT_FDD_ROUTING
 
-
 # ── Test 1: 수치 불일치 탐지 ─────────────────────────────────────
 
 

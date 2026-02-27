@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import Any
 
-from app.services.masking.engine import DistributionMode, MaskingEngine
+from app.services.masking.engine import DistributionMode
 
 
 @dataclass

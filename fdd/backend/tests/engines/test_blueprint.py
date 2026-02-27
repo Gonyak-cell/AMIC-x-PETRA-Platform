@@ -3,9 +3,9 @@
 import pytest
 
 from app.services.report.blueprint import (
+    _CATEGORY_COLORS,
     SheetBlueprint,
     WorkbookBlueprint,
-    _CATEGORY_COLORS,
 )
 from app.services.report.deal_profile import DealProfile
 

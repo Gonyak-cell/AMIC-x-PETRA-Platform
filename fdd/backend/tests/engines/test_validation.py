@@ -1,7 +1,8 @@
 """ReportValidationEngine 단위 테스트."""
 
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from app.services.report.validation import (
     CROSS_TOLERANCE,

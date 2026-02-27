@@ -4,7 +4,6 @@ Report IR을 Word(DOCX) 문서로 변환합니다.
 docxtpl 템플릿 엔진을 사용하여 Jinja2 문법 기반 템플릿을 렌더링합니다.
 """
 
-from dataclasses import asdict
 from decimal import Decimal
 from enum import Enum
 from io import BytesIO
@@ -16,7 +15,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
-from docx.shared import Cm, Inches, Pt, RGBColor
+from docx.shared import Inches, Pt, RGBColor
 from docx.table import Table
 from docxtpl import DocxTemplate
 
@@ -24,7 +23,6 @@ from app.renderers.design_system import get_colors, get_fonts
 from app.renderers.report_builder import (
     AlignType,
     AppendixBlock,
-    BlockType,
     ChartBlock,
     ClaimBlock,
     CoverBlock,

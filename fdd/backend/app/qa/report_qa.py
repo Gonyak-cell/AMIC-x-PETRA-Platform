@@ -11,7 +11,6 @@ from decimal import Decimal
 from typing import Any
 
 from app.qa.types import (
-    QA_VERSION,
     QACheckType,
     QAFinding,
     QAResult,
@@ -21,8 +20,6 @@ from app.qa.types import (
 from app.qa.utils import (
     DEFAULT_NUMERIC_TOLERANCE,
     build_location_path,
-    compare_decimals,
-    deep_get,
     format_decimal_diff,
     safe_decimal,
 )
@@ -85,7 +82,7 @@ def compare_table_rows(
                 check_type=QACheckType.STRUCTURE_MISMATCH,
                 severity=QASeverity.ERROR,
                 location=location_prefix,
-                message=f"Row count mismatch",
+                message="Row count mismatch",
                 expected=str(len(expected_rows)),
                 actual=str(len(actual_rows)),
             )

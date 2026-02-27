@@ -15,7 +15,7 @@ from app.auth.dependencies import CurrentUser, get_current_user, require_permiss
 from app.auth.rbac import Permission
 from app.database import get_db
 from app.models.job import JobStatus, JobType
-from app.schemas.job import JobCreate, JobListResponse, JobProgress, JobRead
+from app.schemas.job import JobCreate, JobProgress, JobRead
 from app.services.jobs.orchestrator import JobOrchestrator
 
 router = APIRouter(tags=["jobs"])

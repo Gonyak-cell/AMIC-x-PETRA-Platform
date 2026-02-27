@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.ralph.gates.base import GateResult
 
@@ -77,7 +77,7 @@ class ProgressTracker:
         rec = IterationRecord(
             iteration=iteration,
             section_id=section_id,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             gate_results=gate_dicts,
             weighted_score=best_score,
             passed=all(gr.passed for gr in gate_results),

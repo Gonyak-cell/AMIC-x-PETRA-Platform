@@ -17,10 +17,10 @@ from app.services.narrative.engine import (
 __all__ = [
     "NARRATIVE_VERSION",
     "NarrativeTemplate",
-    "generate_narrative",
-    "generate_qoe_narrative",
-    "generate_nwc_narrative",
     "generate_debt_narrative",
     "generate_executive_summary",
+    "generate_narrative",
+    "generate_nwc_narrative",
+    "generate_qoe_narrative",
     "load_narrative_template",
 ]

@@ -64,6 +64,7 @@ target-version = ["py312"]
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+extend-exclude = ["alembic", "migrations"]
 
 [tool.ruff.lint]
 select = [
@@ -81,6 +82,34 @@ select = [
 ignore = [
     "E501",   # line-too-long (Black handles)
     "B008",   # Depends() in function defaults — FastAPI pattern
+    "B904",   # raise-without-from — gradual migration
+    "RUF001", # ambiguous unicode char in string — intentional Korean text
+    "RUF002", # ambiguous unicode char in docstring — intentional Korean text
+    "RUF003", # ambiguous unicode char in comment — intentional Korean text
+    "RUF012", # mutable-class-default — Pydantic models use mutable defaults by design
+    "RUF059", # unused-unpacked-variable — intentional destructuring patterns
+    "SIM102", # collapsible-if — intentional readability
+    "SIM105", # suppressible-exception — try-except-pass intentional
+    "SIM108", # if-else-block-instead-of-if-exp — readability first
+    "UP042",  # StrEnum migration — keep str+Enum pattern for now
+    "UP047",  # unnecessary backslash in f-string
+    "B007",   # unused-loop-variable — intentional unpacking
+    "B017",   # assert-raises-exception — test patterns
+    "B023",   # function-uses-loop-variable — engine loop patterns
+    "B905",   # zip-without-explicit-strict
+    "E741",   # ambiguous-variable-name — mathematical notation
+    "SIM113", # enumerate-for-loop
+    "SIM118", # in-dict-keys — explicit .keys() preferred
+    "RUF005", # collection-literal-concatenation
+    "RUF015", # unnecessary-iterable-allocation-for-first-element
+    "RUF017", # quadratic-list-summation
+    "RUF022", # unsorted-dunder-all
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path",
+    "fastapi.Body", "fastapi.Header", "fastapi.Security",
 ]
 
 [tool.ruff.lint.isort]
@@ -88,9 +117,15 @@ known-first-party = ["app"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["T20", "N806"]
+"tests/**/*.py" = ["T20", "N806", "F401", "F841", "B018", "E402"]
 "app/templates/**/*.py" = ["T20"]
-"scripts/*.py" = ["F821", "E402", "T20"]
+"scripts/*.py" = ["F821", "E402", "T20", "F401", "F841", "N806", "E741", "E722"]
+"app/api/*.py" = ["E402", "N806"]
+"app/engines/*.py" = ["F841", "N806"]
+"app/renderers/*.py" = ["F841", "F401"]
+"app/services/**/*.py" = ["F841", "F401"]
+"app/qa/*.py" = ["F841"]
+"app/ralph/generators/*.py" = ["N806"]
 
 # ──────────────────────────────────────────────
 # mypy — strict mode

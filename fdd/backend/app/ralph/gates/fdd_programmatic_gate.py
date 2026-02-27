@@ -248,9 +248,7 @@ class FDDProgrammaticGate(QualityGate):
             correction = (item.get("user_correction") or "").lower()
             amount = (item.get("user_amount") or "").replace(",", "")
             # 키워드 기반 매칭: 의미 있는 단어(2자 이상)의 60%+ 존재 시 반영으로 판정
-            if correction and self._correction_reflected(correction, full_text):
-                reflected += 1
-            elif amount and amount in full_text.replace(",", ""):
+            if (correction and self._correction_reflected(correction, full_text)) or (amount and amount in full_text.replace(",", "")):
                 reflected += 1
 
         if not corrected_items:

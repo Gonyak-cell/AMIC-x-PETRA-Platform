@@ -7,7 +7,6 @@ EPIC-10 FDD-1002: 고객 PPT/Word 템플릿에 FDD 콘텐츠를 주입합니다.
 import logging
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -26,8 +25,6 @@ from app.renderers.report_builder import (
     TextBlock,
 )
 from app.schemas.template import (
-    SlotBlockMapping,
-    SlotStatus,
     SlotType,
     StyleTokens,
     TemplateContract,
@@ -226,7 +223,7 @@ class TemplateInjector:
             logger.exception(f"PPTX injection failed: {e}")
             return InjectionResult(
                 success=False,
-                errors=[f"PPTX injection failed: {str(e)}"],
+                errors=[f"PPTX injection failed: {e!s}"],
             )
 
     def _inject_docx(self) -> InjectionResult:
@@ -272,7 +269,7 @@ class TemplateInjector:
             logger.exception(f"DOCX injection failed: {e}")
             return InjectionResult(
                 success=False,
-                errors=[f"DOCX injection failed: {str(e)}"],
+                errors=[f"DOCX injection failed: {e!s}"],
             )
 
     def _process_docx_paragraph(

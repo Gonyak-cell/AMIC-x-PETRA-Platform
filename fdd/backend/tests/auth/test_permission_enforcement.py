@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user, CurrentUser
+from app.auth.dependencies import CurrentUser, get_current_user
 from app.config import settings
 from app.database import get_db
 from app.main import app

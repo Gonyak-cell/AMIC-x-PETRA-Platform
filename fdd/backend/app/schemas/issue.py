@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 from app.models.issue import IssueCategory, IssueSeverity, IssueStatus
 
-
 # ── Issue Create/Update ──────────────────────────────────
 
 

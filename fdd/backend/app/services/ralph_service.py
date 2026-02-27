@@ -21,7 +21,7 @@ from app.ralph.gates.fdd_llm_judge_gate import FDDLLMJudgeGate
 from app.ralph.gates.fdd_programmatic_gate import FDDProgrammaticGate
 from app.ralph.generators.fdd_report_generator import FDDReportGenerator
 from app.ralph.learning.pattern_aggregator import PatternAggregator
-from app.ralph.orchestrator import LoopConfig, LoopStatus, RalphLoopOrchestrator
+from app.ralph.orchestrator import LoopConfig, RalphLoopOrchestrator
 from app.renderers.report_builder import ReportIR, report_ir_to_dict
 
 logger = logging.getLogger(__name__)

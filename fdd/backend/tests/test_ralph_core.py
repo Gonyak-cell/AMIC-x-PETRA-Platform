@@ -5,10 +5,13 @@ Convergence, ProgressTracker, GateResult 코어 모듈의 정상 동작을 검�
 
 import pytest
 
-from app.ralph.convergence import ConvergenceChecker, ConvergenceConfig, ConvergenceVerdict
+from app.ralph.convergence import (
+    ConvergenceChecker,
+    ConvergenceConfig,
+    ConvergenceVerdict,
+)
 from app.ralph.gates.base import DimensionScore, GateResult, GateVerdict
 from app.ralph.progress_tracker import ProgressTracker
-
 
 # ── Convergence Tests ─────────────────────────────────────────────
 

@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from app.renderers.report_builder import BlockType
 
@@ -279,11 +280,7 @@ class FDDReportGenerator:
         for corr in self._checklist_corrections:
             corr_cat = corr.get("category", "").lower()
             # 카테고리 매칭
-            if block_type == "text" and corr_cat in title:
-                related.append(corr)
-            elif block_type == "claim" and (corr_cat == category or corr_cat in title):
-                related.append(corr)
-            elif block_type == "issue":
+            if (block_type == "text" and corr_cat in title) or (block_type == "claim" and (corr_cat == category or corr_cat in title)) or block_type == "issue":
                 related.append(corr)
 
         return related

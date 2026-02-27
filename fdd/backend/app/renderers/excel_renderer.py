@@ -14,7 +14,7 @@ from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side, numbers
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -23,11 +23,9 @@ from app.renderers.report_builder import (
     CoverBlock,
     IssueBlock,
     KPIBlock,
-    ReportBlock,
     ReportIR,
     ScopeBlock,
     TableBlock,
-    TextBlock,
 )
 
 EXCEL_RENDERER_VERSION = "0.2.0"

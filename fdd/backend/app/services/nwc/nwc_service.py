@@ -16,8 +16,6 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode
 from app.core.exceptions import CalculationError, NotFoundError
 from app.core.logging import get_logger
-from app.industry import get_fdd_industry_module_safe
-from app.models.deal import Deal
 from app.engines.nwc_engine import (
     ENGINE_VERSION,
     BSAccountData,
@@ -27,8 +25,10 @@ from app.engines.nwc_engine import (
     classify_nwc_items,
     simulate_all_pegs,
 )
+from app.industry import get_fdd_industry_module_safe
 from app.models.account_mapping import AccountMapping, MappingStatus
 from app.models.audit import AuditAction, AuditLog
+from app.models.deal import Deal
 from app.models.evidence import EvidenceLink, SourceType
 from app.models.journal_entry import JournalEntry
 from app.models.nwc import (

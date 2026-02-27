@@ -59,9 +59,7 @@ class Transaction(Base, TimestampMixin):
     old_share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
     valuation_basis: Mapped[str | None] = mapped_column(String(30), nullable=True)
     cross_border: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    target_buyer_types: Mapped[list | None] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), nullable=True
-    )
+    target_buyer_types: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     exclusivity: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
     exclusivity_deadline: Mapped[str | None] = mapped_column(String(10), nullable=True)
 

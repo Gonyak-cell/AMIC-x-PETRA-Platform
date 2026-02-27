@@ -5,7 +5,6 @@ Prometheus 포맷 메트릭 수집 + FastAPI 미들웨어.
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from threading import Lock
 from typing import Any

@@ -14,7 +14,8 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from app.ralph.gates.base import DimensionScore, GateResult, QualityGate
 

@@ -25,7 +25,6 @@ from app.renderers.report_builder import (
     TextBlock,
 )
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
 
 

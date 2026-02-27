@@ -6,11 +6,10 @@ import pytest
 
 from app.engines.revenue_engine import (
     RevenueBreakdownResult,
+    _compute_hhi,
     compute_monthly_trend,
     compute_revenue_breakdown,
-    _compute_hhi,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────
 

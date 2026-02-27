@@ -7,7 +7,6 @@ LLM 호출 없음 — 키워드/패턴 기반 구조화.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import Any
 
 ENGINE_VERSION = "0.1.0"

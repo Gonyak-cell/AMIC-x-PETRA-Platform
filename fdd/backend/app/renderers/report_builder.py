@@ -2019,9 +2019,7 @@ def build_fcf_bridge_block(
             pd = result.periods.get(p)
             if pd:
                 val = getattr(pd, attr, None)
-                if attr == "tax_paid":
-                    val = -val if val else val
-                elif attr == "total_capex":
+                if attr == "tax_paid" or attr == "total_capex":
                     val = -val if val else val
                 row[f"amt_{p}"] = str(val) if val is not None else ""
             else:

@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from app.models.email_preference import EmailPreference
 
-
 _DEFAULT_PREFS = {
     "deal_updates": False,
     "watchlist_alerts": False,

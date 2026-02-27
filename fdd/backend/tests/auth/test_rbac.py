@@ -1,6 +1,6 @@
 """RBAC 권한 체계 유닛 테스트."""
 
-from app.auth.rbac import Permission, has_permission, get_permissions, ROLE_PERMISSIONS
+from app.auth.rbac import ROLE_PERMISSIONS, Permission, get_permissions, has_permission
 from app.models.user import UserRole
 
 

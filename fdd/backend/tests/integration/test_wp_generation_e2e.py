@@ -4,15 +4,12 @@
 실제 DB/LLM 없이 순수 함수 조합으로 전체 흐름을 검증한다.
 """
 
-import pytest
 from decimal import Decimal
 
-from app.engines.multiperiod_engine import (
-    LineItemDef,
-    compute_multiperiod_is,
-)
-from app.engines.revenue_engine import (
-    compute_revenue_breakdown,
+import pytest
+
+from app.engines.backlog_engine import (
+    compute_backlog_summary,
 )
 from app.engines.cost_engine import (
     compute_manufacturing_cost,
@@ -20,28 +17,31 @@ from app.engines.cost_engine import (
 from app.engines.fcf_engine import (
     compute_fcf_bridge,
 )
-from app.engines.backlog_engine import (
-    compute_backlog_summary,
+from app.engines.multiperiod_engine import (
+    LineItemDef,
+    compute_multiperiod_is,
 )
 from app.engines.qualitative_engine import (
     InterviewNote,
-    structure_interviews,
     extract_themes,
+    structure_interviews,
 )
-from app.services.report.deal_profile import DealProfile, DealProfileResolver
+from app.engines.revenue_engine import (
+    compute_revenue_breakdown,
+)
+from app.renderers.report_builder import (
+    build_backlog_summary_block,
+    build_cost_manufacturing_block,
+    build_fcf_bridge_block,
+    build_multiperiod_is_block,
+    build_revenue_by_customer_block,
+)
 from app.services.report.blueprint import WorkbookBlueprint
+from app.services.report.deal_profile import DealProfile, DealProfileResolver
 from app.services.report.validation import (
     run_cross_validation,
     run_full_validation,
 )
-from app.renderers.report_builder import (
-    build_multiperiod_is_block,
-    build_revenue_by_customer_block,
-    build_cost_manufacturing_block,
-    build_fcf_bridge_block,
-    build_backlog_summary_block,
-)
-
 
 # ── Fixtures ───────────────────────────────────────────────
 

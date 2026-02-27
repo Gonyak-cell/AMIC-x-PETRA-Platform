@@ -18,7 +18,6 @@ from app.engines.multiperiod_engine import (
     compute_multiperiod_is,
 )
 
-
 # ── Helpers ──────────────────────────────────────────────
 
 def _def(

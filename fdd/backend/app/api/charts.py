@@ -10,8 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from app.auth.dependencies import CurrentUser, get_current_user, require_permission
-from app.auth.rbac import Permission
+from app.auth.dependencies import CurrentUser, get_current_user
 from app.renderers.design_system import get_design_system
 from app.schemas.chart import (
     EBITDABridgeRequest,

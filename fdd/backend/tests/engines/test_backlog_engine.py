@@ -15,7 +15,6 @@ from app.engines.backlog_engine import (
     detect_negative_margin_orders,
 )
 
-
 # ── Backlog Summary ─────────────────────────────────────
 
 

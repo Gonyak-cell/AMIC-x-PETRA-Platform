@@ -3,8 +3,8 @@
 Report IR dataclasses와 빌더 함수들을 테스트합니다.
 """
 
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import pytest
 

@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.engines.anomaly_engine import (
-    ENGINE_VERSION,
     ANOMALY_SCORE_THRESHOLD,
+    ENGINE_VERSION,
     AnomalyScoreResult,
     analyze_entries_for_anomalies,
 )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
@@ -19,7 +19,7 @@ from app.qa.types import (
     QASeverity,
     create_result_from_findings,
 )
-from app.qa.utils import DEFAULT_NUMERIC_TOLERANCE, safe_decimal
+from app.qa.utils import safe_decimal
 
 VALIDATION_VERSION = "0.1.0"
 

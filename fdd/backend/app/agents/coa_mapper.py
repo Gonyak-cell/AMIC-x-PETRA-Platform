@@ -118,7 +118,7 @@ class CoAMapperAgent(BaseAgent):
             logger.error(f"Failed to parse CoA mapper response: {e}")
             return {
                 "mapping_suggestions": [],
-                "warnings": [f"JSON 파싱 실패: {str(e)}"],
+                "warnings": [f"JSON 파싱 실패: {e!s}"],
             }
 
     def validate_output(

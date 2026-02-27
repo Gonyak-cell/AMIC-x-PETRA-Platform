@@ -11,23 +11,13 @@
 
 from typing import Any
 
-from app.qa.types import (
-    QA_VERSION,
-    QACheckType,
-    QAFinding,
-    QAResult,
-    QASeverity,
-    create_result_from_findings,
-)
-
-# Report QA (FDD-1602)
-from app.qa.report_qa import (
-    REPORT_QA_VERSION,
-    compare_numeric_values,
-    compare_report_ir,
-    compare_table_block,
-    compare_table_rows,
-    run_report_qa,
+# Evidence QA (FDD-1604)
+from app.qa.evidence_qa import (
+    EVIDENCE_QA_VERSION,
+    check_db_evidence_integrity,
+    check_ir_evidence_coverage,
+    check_required_evidence,
+    run_evidence_qa,
 )
 
 # Layout QA (FDD-1603)
@@ -36,15 +26,6 @@ from app.qa.layout_qa import (
     check_text_overflow,
     check_unsubstituted_placeholders,
     run_layout_qa,
-)
-
-# Evidence QA (FDD-1604)
-from app.qa.evidence_qa import (
-    EVIDENCE_QA_VERSION,
-    check_db_evidence_integrity,
-    check_ir_evidence_coverage,
-    check_required_evidence,
-    run_evidence_qa,
 )
 
 # Performance QA (FDD-1605)
@@ -56,6 +37,24 @@ from app.qa.performance_qa import (
     SLADefinition,
     measure_operation,
     run_performance_qa,
+)
+
+# Report QA (FDD-1602)
+from app.qa.report_qa import (
+    REPORT_QA_VERSION,
+    compare_numeric_values,
+    compare_report_ir,
+    compare_table_block,
+    compare_table_rows,
+    run_report_qa,
+)
+from app.qa.types import (
+    QA_VERSION,
+    QACheckType,
+    QAFinding,
+    QAResult,
+    QASeverity,
+    create_result_from_findings,
 )
 
 __all__ = [

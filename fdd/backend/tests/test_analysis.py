@@ -22,7 +22,6 @@ from app.models.fdd_checklist import (
     FddChecklistItem,
 )
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
 
 

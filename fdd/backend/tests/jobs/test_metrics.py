@@ -4,7 +4,6 @@ import pytest
 
 from app.services.metrics.collector import Counter, Gauge, Histogram, MetricsCollector
 
-
 # ── Counter ────────────────────────────────────────────
 
 

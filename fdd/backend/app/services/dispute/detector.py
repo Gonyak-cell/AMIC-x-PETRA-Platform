@@ -11,9 +11,7 @@ from typing import Any
 
 from app.engines.delta_engine import DefinitionDelta, ImpactLevel
 from app.renderers.report_builder import (
-    BlockType,
     ClaimBlock,
-    ReportBlock,
     ReportIR,
     TableBlock,
 )
@@ -186,7 +184,7 @@ def detect_related_party_transactions(
                                 item_id=f"rpt_{block.title}_{idx}",
                                 category=DisputeCategory.RELATED_PARTY,
                                 severity="medium",
-                                title=f"Related party transaction detected",
+                                title="Related party transaction detected",
                                 description=f"Keyword '{keyword}' found in {block.title}",
                                 location=f"{block.title}:row_{idx}",
                                 highlight_style=HighlightStyle.YELLOW_BACKGROUND,
@@ -274,7 +272,7 @@ def detect_subjective_judgments(
                             category=DisputeCategory.SUBJECTIVE_JUDGMENT,
                             severity="low",
                             title=f"Subjective language: '{keyword}'",
-                            description=f"Claim contains subjective language",
+                            description="Claim contains subjective language",
                             location="claim_block",
                             highlight_style=HighlightStyle.QUESTION_ICON,
                             metadata={"keyword": keyword},
