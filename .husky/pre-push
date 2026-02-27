@@ -60,27 +60,27 @@ if [ -n "$CHANGED_TS" ]; then
 fi
 
 # ─── Guard 4: Python ruff 린트 체크 ──────────────────────────────
-# 변경된 Python 모듈만 검사 (F821 undefined, F841 unused 등)
+# 치명적 에러만 차단 (undefined name, syntax error 등). 전체 lint는 CI에서 담당.
 if [ -n "$CHANGED_PY" ]; then
   if python -m ruff --version >/dev/null 2>&1; then
-    echo "Pre-push: Running ruff lint check..."
+    echo "Pre-push: Running ruff critical-error check..."
     RUFF_FAILED=false
     for MODULE in deal-mgmt kiis fdd/backend; do
       MODULE_FILES=$(echo "$CHANGED_PY" | grep "^${MODULE}/" || true)
       if [ -n "$MODULE_FILES" ] && [ -d "$MODULE" ]; then
-        if ! (cd "$MODULE" && python -m ruff check . --select E,F,I,W 2>&1); then
+        if ! (cd "$MODULE" && python -m ruff check . --select E9,F821,F811 2>&1); then
           RUFF_FAILED=true
         fi
       fi
     done
     if [ "$RUFF_FAILED" = true ]; then
       echo ""
-      echo "❌ PRE-PUSH BLOCKED: ruff 린트 에러가 있습니다."
-      echo "   수정: cd <module> && python -m ruff check . --fix"
+      echo "❌ PRE-PUSH BLOCKED: Python 치명적 에러가 있습니다."
+      echo "   수정: cd <module> && python -m ruff check . --select E9,F821,F811"
       echo ""
       exit 1
     fi
-    echo "Ruff lint check passed."
+    echo "Ruff critical-error check passed."
   else
     echo "⚠️ WARNING: ruff 미설치 — Python 린트 검사 건너뜀"
   fi
