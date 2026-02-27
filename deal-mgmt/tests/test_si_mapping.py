@@ -269,6 +269,18 @@ async def test_map_all_candidates_dedup(client: AsyncClient, async_session: Asyn
     assert len(company_ids) == len(set(company_ids))
 
 
+async def test_map_unknown_ksic_codes(client: AsyncClient, async_session: AsyncSession):
+    """존재하지 않는 KSIC 코드 → 빈 결과 반환."""
+    await _seed_reference_data(async_session)
+    resp = await client.post("/api/v1/si-mapping/map", json={"ksic_codes": ["Z99"]})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["direct_peers"] == []
+    assert body["backward_chain"] == []
+    assert body["forward_chain"] == []
+    assert body["all_candidates"] == []
+
+
 # ── Bulk Add Buyers ────────────────────────────────────────
 
 
@@ -303,3 +315,37 @@ async def test_bulk_add_skip_duplicates(client: AsyncClient, async_session: Asyn
     body = resp.json()
     assert body["added_count"] == 1  # backward만 추가
     assert body["skipped_count"] == 1  # direct은 skip
+
+
+# ── Error Path Tests ──────────────────────────────────────
+
+
+async def test_map_empty_ksic_codes(client: AsyncClient, async_session: AsyncSession):
+    """빈 ksic_codes 목록 → 422 검증 에러."""
+    await _seed_reference_data(async_session)
+    resp = await client.post("/api/v1/si-mapping/map", json={"ksic_codes": []})
+    assert resp.status_code == 422
+
+
+async def test_ksic_search_special_chars(client: AsyncClient, async_session: AsyncSession):
+    """LIKE 와일드카드 특수문자(%_) 검색 → 에러 없이 빈 결과."""
+    await _seed_reference_data(async_session)
+    resp = await client.get("/api/v1/si-mapping/ksic/search?q=%25test_")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_bulk_add_nonexistent_company(
+    client: AsyncClient, async_session: AsyncSession, transaction_id: str
+):
+    """존재하지 않는 SI 기업 ID → 에러 없이 스킵."""
+    await _seed_reference_data(async_session)
+    fake_id = str(uuid.uuid4())
+    resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/si-mapping/add-buyers",
+        json={"si_company_ids": [fake_id]},
+    )
+    # 존재하지 않는 ID는 스킵되어 added=0
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["added_count"] == 0

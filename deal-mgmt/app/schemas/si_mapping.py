@@ -21,7 +21,7 @@ class SIMappingRequest(BaseModel):
 class BulkAddBuyersRequest(BaseModel):
     """SI 매핑 결과를 BuyerCandidate로 일괄 등록."""
 
-    si_company_ids: list[uuid.UUID] = Field(..., min_length=1)
+    si_company_ids: list[uuid.UUID] = Field(..., min_length=1, max_length=100)
 
 
 # ── 응답: SI 기업 ─────────────────────────────────────────

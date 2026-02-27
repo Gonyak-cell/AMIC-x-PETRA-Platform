@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import Boolean, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
@@ -35,6 +36,6 @@ class SICompany(Base, TimestampMixin):
         JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
     )
-    revenue: Mapped[float | None] = mapped_column(Numeric(20, 2), nullable=True)
+    revenue: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

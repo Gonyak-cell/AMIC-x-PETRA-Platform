@@ -21,17 +21,28 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import itertools
 import logging
 import random
 import uuid
 from pathlib import Path
 
-from sqlalchemy import delete, insert, select, text
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def _validate_csv_headers(reader: csv.DictReader, required: list[str], csv_path: Path) -> None:
+    """CSV 헤더에서 필수 컬럼 존재 여부 확인."""
+    if reader.fieldnames is None:
+        raise ValueError(f"CSV 파일에 헤더가 없습니다: {csv_path}")
+    missing = set(required) - set(reader.fieldnames)
+    if missing:
+        raise ValueError(f"CSV 필수 컬럼 누락: {missing} (파일: {csv_path})")
+
 
 # 더미 기업명 프리픽스
 _NAME_PREFIXES = [
@@ -108,7 +119,7 @@ async def load_io_sectors(session: AsyncSession, csv_path: Path, force: bool = F
         await session.commit()
         logger.info("io_sectors 기존 데이터 삭제 완료")
 
-    count = (await session.execute(text("SELECT COUNT(*) FROM io_sectors"))).scalar()
+    count = (await session.execute(select(func.count()).select_from(IOSector))).scalar()
     if count and count > 0 and not force:
         logger.info("io_sectors 이미 %d건 존재, 스킵", count)
         return count
@@ -117,6 +128,7 @@ async def load_io_sectors(session: AsyncSession, csv_path: Path, force: bool = F
     io_codes: dict[str, str] = {}
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        _validate_csv_headers(reader, ["source_io_code", "target_io_code"], csv_path)
         for row in reader:
             src_code = row["source_io_code"].strip()
             src_name = row.get("source_io_name", "").strip()
@@ -145,7 +157,7 @@ async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bo
         logger.info("ksic_io_mappings 기존 데이터 삭제 완료")
 
     # 기존 데이터 확인
-    count = (await session.execute(text("SELECT COUNT(*) FROM ksic_io_mappings"))).scalar()
+    count = (await session.execute(select(func.count()).select_from(KsicIoMapping))).scalar()
     if count and count > 0 and not force:
         logger.info("ksic_io_mappings 이미 %d건 존재, 스킵", count)
         return count
@@ -154,6 +166,7 @@ async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bo
     seen: set[tuple[str, str]] = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        _validate_csv_headers(reader, ["io_code", "ksic_code"], csv_path)
         for row in reader:
             io_code = row["io_code"].strip()
             ksic_code = row["ksic_code"].strip()
@@ -193,25 +206,40 @@ async def load_io_transactions(session: AsyncSession, csv_path: Path, force: boo
         await session.commit()
         logger.info("io_transactions 기존 데이터 삭제 완료")
 
-    count = (await session.execute(text("SELECT COUNT(*) FROM io_transactions"))).scalar()
+    count = (await session.execute(select(func.count()).select_from(IOTransaction))).scalar()
     if count and count > 0 and not force:
         logger.info("io_transactions 이미 %d건 존재, 스킵", count)
         return count
 
     rows = []
+    seen: set[tuple[str, str]] = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        _validate_csv_headers(reader, ["source_io_code", "target_io_code", "value"], csv_path)
         for row in reader:
             val = row["value"].strip()
-            if not val or float(val) == 0:
+            if not val:
+                continue
+            try:
+                fval = float(val)
+            except ValueError:
+                logger.warning("거래액 숫자 변환 실패, 스킵: value=%r", val)
+                continue
+            if fval == 0:
                 continue  # 거래액 0 제외
+            src = row["source_io_code"].strip()
+            tgt = row["target_io_code"].strip()
+            key = (src, tgt)
+            if key in seen:
+                continue
+            seen.add(key)
             rows.append(
                 {
-                    "source_io_code": row["source_io_code"].strip(),
+                    "source_io_code": src,
                     "source_io_name": row.get("source_io_name", "").strip() or None,
-                    "target_io_code": row["target_io_code"].strip(),
+                    "target_io_code": tgt,
                     "target_io_name": row.get("target_io_name", "").strip() or None,
-                    "transaction_value": float(val),
+                    "transaction_value": fval,
                 }
             )
 
@@ -242,20 +270,36 @@ async def load_inducements(
         await session.commit()
         logger.info("%s 기존 데이터 삭제 완료", table_name)
 
-    count = (await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))).scalar()
+    count = (
+        await session.execute(select(func.count()).select_from(model_cls))
+    ).scalar()
     if count and count > 0 and not force:
         logger.info("%s 이미 %d건 존재, 스킵", table_name, count)
         return count
 
     rows = []
+    seen: set[tuple[str, str]] = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        _validate_csv_headers(reader, ["source_io_code", "target_io_code", "value"], csv_path)
         for row in reader:
+            src = row["source_io_code"].strip()
+            tgt = row["target_io_code"].strip()
+            key = (src, tgt)
+            if key in seen:
+                continue
+            seen.add(key)
+            raw_val = row["value"].strip()
+            try:
+                coeff = float(raw_val)
+            except ValueError:
+                logger.warning("%s 계수 변환 실패, 스킵: value=%r", table_name, raw_val)
+                continue
             rows.append(
                 {
-                    "source_io_code": row["source_io_code"].strip(),
-                    "target_io_code": row["target_io_code"].strip(),
-                    "coefficient": float(row["value"].strip()),
+                    "source_io_code": src,
+                    "target_io_code": tgt,
+                    "coefficient": coeff,
                 }
             )
 
@@ -282,7 +326,7 @@ async def load_ksic_classifications(session: AsyncSession, csv_path: Path, force
         await session.commit()
         logger.info("ksic_classifications 기존 데이터 삭제 완료")
 
-    count = (await session.execute(text("SELECT COUNT(*) FROM ksic_classifications"))).scalar()
+    count = (await session.execute(select(func.count()).select_from(KsicClassification))).scalar()
     if count and count > 0 and not force:
         logger.info("ksic_classifications 이미 %d건 존재, 스킵", count)
         return count
@@ -291,6 +335,7 @@ async def load_ksic_classifications(session: AsyncSession, csv_path: Path, force
     seen: set[str] = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        _validate_csv_headers(reader, ["basic_code"], csv_path)
         for row in reader:
             basic_code = row["basic_code"].strip()
             if not basic_code or basic_code in seen:
@@ -324,7 +369,7 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
         await session.commit()
         logger.info("si_companies 기존 데이터 삭제 완료")
 
-    count = (await session.execute(text("SELECT COUNT(*) FROM si_companies"))).scalar()
+    count = (await session.execute(select(func.count()).select_from(SICompany))).scalar()
     if count and count > 0 and not force:
         logger.info("si_companies 이미 %d건 존재, 스킵", count)
         return count
@@ -340,18 +385,20 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
 
     logger.info("KSIC 코드 풀: %d개", len(ksic_pool))
 
-    companies = []
-    used_names: set[str] = set()
-    for _ in range(n):
-        # 고유 기업명 생성
-        while True:
-            prefix = random.choice(_NAME_PREFIXES)
-            suffix = random.choice(_NAME_SUFFIXES)
-            name = f"{prefix}{suffix}"
-            if name not in used_names:
-                used_names.add(name)
-                break
+    max_names = len(_NAME_PREFIXES) * len(_NAME_SUFFIXES)
+    if n > max_names:
+        logger.warning(
+            "dummy_count=%d > 최대 조합 수=%d, %d로 제한", n, max_names, max_names
+        )
+        n = max_names
 
+    # 전체 이름 조합 생성 후 셔플 — while True 무한 루프 방지
+    all_names = [f"{p}{s}" for p, s in itertools.product(_NAME_PREFIXES, _NAME_SUFFIXES)]
+    random.shuffle(all_names)
+    selected_names = all_names[:n]
+
+    companies = []
+    for name in selected_names:
         # 무작위 KSIC 1~3개
         k = random.randint(1, 3)
         codes = random.sample(ksic_pool, min(k, len(ksic_pool)))
@@ -361,7 +408,7 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
                 "id": uuid.uuid4(),
                 "company_name": name,
                 "ksic_codes": codes,
-                "revenue": float(random.randint(100, 10000)) * 1_000_000_00,  # 100억 ~ 1조
+                "revenue": float(random.randint(100, 10000)) * 100_000_000,  # 100억 ~ 1조
                 "has_investment_history": random.choice([True, False]),
                 "description": None,
             }
@@ -379,6 +426,33 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
     return total
 
 
+async def _force_clear_all(session: AsyncSession) -> None:
+    """--force: 전체 SI 테이블을 FK 역순으로 삭제 (자식 → 부모)."""
+    from app.models.io_inducement import (
+        IOProductionInducement,
+        IOValueAddedInducement,
+    )
+    from app.models.io_sector import IOSector
+    from app.models.io_transaction import IOTransaction
+    from app.models.ksic_classification import KsicClassification
+    from app.models.ksic_io_mapping import KsicIoMapping
+    from app.models.si_company import SICompany
+
+    # FK 의존 역순: leaf → root
+    for model in [
+        SICompany,
+        IOProductionInducement,
+        IOValueAddedInducement,
+        IOTransaction,
+        KsicIoMapping,
+        IOSector,
+        KsicClassification,
+    ]:
+        await session.execute(delete(model))
+    await session.commit()
+    logger.info("--force: 전체 SI 테이블 초기화 완료 (FK 역순)")
+
+
 async def main(csv_dir: str = "./data", dummy_count: int = 500, force: bool = False):
     """시딩 메인 실행."""
     csv_path = Path(csv_dir)
@@ -386,6 +460,10 @@ async def main(csv_dir: str = "./data", dummy_count: int = 500, force: bool = Fa
     engine, session_factory = await _get_engine_and_session()
 
     async with session_factory() as session:
+        # --force: FK 역순으로 전체 삭제 (개별 함수의 DELETE보다 먼저 실행)
+        if force:
+            await _force_clear_all(session)
+
         # 0. IO 부문분류 마스터 (FK 참조 대상, 가장 먼저 시딩)
         tx_csv = csv_path / "transaction_table.csv"
         if tx_csv.exists():

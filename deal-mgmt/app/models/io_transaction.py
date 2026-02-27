@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from sqlalchemy import ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,4 +31,4 @@ class IOTransaction(Base):
         index=True,
     )
     target_io_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    transaction_value: Mapped[float] = mapped_column(Numeric(20, 2), nullable=False)
+    transaction_value: Mapped[Decimal] = mapped_column(Numeric(20, 2), nullable=False)

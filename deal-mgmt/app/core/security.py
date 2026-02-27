@@ -23,7 +23,7 @@ class JWTClaims:
     role: str
 
 
-def _get_jwt_secret() -> str:
+def get_jwt_secret() -> str:
     """JWT 검증에 사용할 시크릿을 반환한다. JWT_SECRET 우선, 없으면 SECRET_KEY 폴백."""
     secret = settings.JWT_SECRET or settings.SECRET_KEY
     if not secret:
@@ -61,7 +61,7 @@ async def get_jwt_claims(
     if token is None:
         raise credentials_exception
     try:
-        payload = jwt.decode(token, _get_jwt_secret(), algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[settings.JWT_ALGORITHM])
         sub: str | None = payload.get("sub")
         if sub is None:
             raise credentials_exception

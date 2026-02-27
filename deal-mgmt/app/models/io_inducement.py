@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from sqlalchemy import ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,15 +21,13 @@ class IOProductionInducement(Base):
         String(20),
         ForeignKey("io_sectors.code"),
         nullable=False,
-        index=True,
     )
     target_io_code: Mapped[str] = mapped_column(
         String(20),
         ForeignKey("io_sectors.code"),
         nullable=False,
-        index=True,
     )
-    coefficient: Mapped[float] = mapped_column(Numeric(20, 10), nullable=False)
+    coefficient: Mapped[Decimal] = mapped_column(Numeric(20, 10), nullable=False)
 
 
 class IOValueAddedInducement(Base):
@@ -41,12 +41,10 @@ class IOValueAddedInducement(Base):
         String(20),
         ForeignKey("io_sectors.code"),
         nullable=False,
-        index=True,
     )
     target_io_code: Mapped[str] = mapped_column(
         String(20),
         ForeignKey("io_sectors.code"),
         nullable=False,
-        index=True,
     )
-    coefficient: Mapped[float] = mapped_column(Numeric(20, 10), nullable=False)
+    coefficient: Mapped[Decimal] = mapped_column(Numeric(20, 10), nullable=False)

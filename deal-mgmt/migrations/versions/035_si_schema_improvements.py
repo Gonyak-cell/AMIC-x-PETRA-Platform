@@ -1,5 +1,9 @@
 """SI 매핑 스키마 개선: io_sectors 마스터, ksic_classifications, 유니크 제약, FK, 복합 인덱스, 유발계수 테이블.
 
+주의: upgrade()의 DELETE 문은 비가역적 — 동일 (io_code, ksic_code) / (source, target) 쌍의
+중복 행 중 MIN(id)만 보존하고 나머지를 삭제한다. 값이 다른 중복 행이 있으면 데이터 유실 가능.
+downgrade()로 롤백해도 삭제된 행은 복구되지 않는다.
+
 Revision ID: 035
 Revises: 034
 """
@@ -156,20 +160,15 @@ def downgrade() -> None:
     op.drop_index("ix_ksic_io_ksic_io", table_name="ksic_io_mappings")
     op.drop_index("ix_io_txn_tgt_src", table_name="io_transactions")
 
-    # FK 삭제
+    # FK + 유니크 제약 삭제 (동일 테이블은 batch 1회로 통합)
     with op.batch_alter_table("ksic_io_mappings") as batch_op:
         batch_op.drop_constraint("fk_ksic_io_code", type_="foreignkey")
+        batch_op.drop_constraint("uq_ksic_io_mapping", type_="unique")
 
     with op.batch_alter_table("io_transactions") as batch_op:
         batch_op.drop_constraint("fk_io_txn_target", type_="foreignkey")
         batch_op.drop_constraint("fk_io_txn_source", type_="foreignkey")
-
-    # 유니크 제약 삭제
-    with op.batch_alter_table("io_transactions") as batch_op:
         batch_op.drop_constraint("uq_io_txn_src_tgt", type_="unique")
-
-    with op.batch_alter_table("ksic_io_mappings") as batch_op:
-        batch_op.drop_constraint("uq_ksic_io_mapping", type_="unique")
 
     # io_sectors 삭제
     op.drop_table("io_sectors")

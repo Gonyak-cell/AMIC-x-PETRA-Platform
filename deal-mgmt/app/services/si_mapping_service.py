@@ -5,9 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 import httpx
 from fastapi import HTTPException
+from jose import jwt as jose_jwt
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,9 +57,11 @@ async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[Ksi
     """KSIC 코드/이름 검색 — 자동완성용."""
     if not query or len(query) < 1:
         return []
+    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{escaped}%"
     q = (
         select(KsicIoMapping.ksic_code, KsicIoMapping.ksic_name)
-        .where(KsicIoMapping.ksic_code.ilike(f"%{query}%") | KsicIoMapping.ksic_name.ilike(f"%{query}%"))
+        .where(KsicIoMapping.ksic_code.ilike(pattern) | KsicIoMapping.ksic_name.ilike(pattern))
         .distinct()
         .limit(limit)
     )
@@ -167,6 +172,8 @@ async def bulk_add_to_buyers(
     added_ids: list[uuid.UUID] = []
     skipped = 0
 
+    # 1) 모든 BuyerCandidate를 생성하고 add (flush 없이)
+    new_buyers: list[tuple[BuyerCandidate, SICompany]] = []
     for si in si_companies:
         if si.company_name in existing_names:
             skipped += 1
@@ -179,7 +186,15 @@ async def bulk_add_to_buyers(
             notes=f"SI 자동 매핑으로 추가됨 (KSIC: {si.ksic_codes})",
         )
         db.add(buyer)
+        new_buyers.append((buyer, si))
+        existing_names.add(si.company_name)
+
+    # 2) 한 번에 flush → ID 할당 (N회 → 1회)
+    if new_buyers:
         await db.flush()
+
+    # 3) 배치 audit 기록
+    for buyer, si in new_buyers:
         await audit_service.record(
             db,
             entity_type="BuyerCandidate",
@@ -189,7 +204,6 @@ async def bulk_add_to_buyers(
             new_value={"company_name": si.company_name, "source": "SI_MAPPING"},
         )
         added_ids.append(buyer.id)
-        existing_names.add(si.company_name)
 
     await db.commit()
 
@@ -200,11 +214,25 @@ async def bulk_add_to_buyers(
     )
 
 
+# ── 서비스 간 통신 토큰 ──────────────────────────────────
+def _make_service_token() -> str:
+    """내부 서비스 간 통신용 단기 JWT 토큰 생성 (30초 TTL)."""
+    from app.core.config import settings
+    from app.core.security import get_jwt_secret
+
+    payload = {
+        "sub": "deal-mgmt-service",
+        "iss": "deal-mgmt",
+        "exp": datetime.now(UTC) + timedelta(seconds=30),
+        "scope": "internal",
+    }
+    return jose_jwt.encode(payload, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
+
+
 # ── 딥다이브 ───────────────────────────────────────────────
 async def get_deep_dive(
     db: AsyncSession,
     company_id: uuid.UUID,
-    auth_token: str | None = None,
 ) -> DeepDiveResponse:
     """SI 기업 딥다이브 — KIIS DART API를 통해 기업개황·재무·공시 조회.
 
@@ -221,11 +249,10 @@ async def get_deep_dive(
     company_out = SICompanyOut.model_validate(si_company)
     base_response = DeepDiveResponse(company=company_out)
 
-    # 2. KIIS DART API로 corp_code 매핑 시도
+    # 2. KIIS DART API로 corp_code 매핑 시도 (서비스 토큰 사용)
     kiis_base = settings.KIIS_API_URL.rstrip("/")
-    headers: dict[str, str] = {}
-    if auth_token:
-        headers["Authorization"] = f"Bearer {auth_token}"
+    token = _make_service_token()
+    headers = {"Authorization": f"Bearer {token}"}
 
     try:
         async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
@@ -454,7 +481,7 @@ def _lookup_by_ksic(
 async def _get_value_chain(
     db: AsyncSession,
     target_io_codes: list[str],
-    direction: str,
+    direction: Literal["backward", "forward"],
     top_n: int,
     ksic_index: dict[str, list[SICompany]],
     max_companies: int = 50,

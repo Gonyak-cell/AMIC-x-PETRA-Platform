@@ -5,9 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _logger = logging.getLogger(__name__)
 
-_DEV_SECRET = "dev-secret-change-in-production-!!"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -15,10 +12,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "Deal Management"
     DEBUG: bool = False
     SECRET_KEY: str = ""
-    JWT_SECRET: str = _DEV_SECRET  # 프로덕션에서는 .env로 덮어쓸 것
+    JWT_SECRET: str = ""  # .env 필수 — 하드코딩 금지
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://deal_mgmt_user:deal_mgmt_dev_password@localhost:5436/deal_mgmt"
+    DATABASE_URL: str = ""  # .env 필수 — 하드코딩 금지
 
     # JWT
     JWT_ALGORITHM: str = "HS256"
@@ -79,13 +76,20 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # ── Startup validation ────────────────────────────────────
-_is_production = os.getenv("ENV", "").lower() in ("production", "prod")
+_env_name = os.getenv("ENV", "").lower()
+_is_production = _env_name in ("production", "prod")
+_is_staging = _env_name in ("staging", "stg")
 
 _effective_jwt = settings.JWT_SECRET or settings.SECRET_KEY
-if _effective_jwt == _DEV_SECRET or (not _effective_jwt):
-    if _is_production:
+if not _effective_jwt:
+    if _is_production or _is_staging:
         raise RuntimeError(
-            "CRITICAL: JWT_SECRET must be set in production. "
+            "CRITICAL: JWT_SECRET must be set in production/staging. "
             "Generate a strong secret (≥32 chars) and set the JWT_SECRET env var."
         )
-    _logger.warning("Using default dev JWT secret. Set JWT_SECRET env var for production.")
+    _logger.warning("JWT_SECRET not set. Set JWT_SECRET in .env for development.")
+
+if not settings.DATABASE_URL:
+    if _is_production or _is_staging:
+        raise RuntimeError("CRITICAL: DATABASE_URL must be set in production/staging.")
+    _logger.warning("DATABASE_URL not set. Set DATABASE_URL in .env for development.")
