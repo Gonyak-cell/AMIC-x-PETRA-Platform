@@ -1,5 +1,7 @@
 # Code Review Verification Rules
 
+> **리뷰 체크리스트**: 정합성/완전성/품질/안정성 4단계 리뷰 관점 — `.claude/rules/code-review-checklist.md` (루트 레벨 상시 적용)
+>
 > **필수 참조**: 모든 코드 리뷰 에이전트는 **Verified Claim Protocol** (`.claude/rules/verified-claim-protocol.md`)을 적용합니다.
 > 이 파일의 6개 원칙은 VCP의 보충 규칙으로 함께 적용됩니다.
 >

@@ -224,4 +224,43 @@ Phase 0A(Quality Gates) 통과 후, 에이전트 호출 전에 실행:
 
 ---
 
+### 5. CI/품질 게이트 결과 참조
+
+**목적**: 자동화된 품질 게이트가 이미 검증한 항목을 코드 리뷰에서 중복 검사하지 않도록 안내
+
+**실행 방법** (가용 시):
+```bash
+# 최근 CI 실행 결과 조회
+gh run list --limit 1
+
+# Job별 pass/fail 확인
+gh run view <run-id> --json jobs --jq '.jobs[] | "\(.name): \(.conclusion)"'
+```
+
+**결과 플래그**:
+- `ci_lint_passed`: ruff/eslint 통과 여부
+- `ci_type_passed`: tsc/pyright 통과 여부
+- `ci_test_passed`: pytest/vitest 통과 여부
+- `ci_build_passed`: vite build 통과 여부
+- `ci_security_passed`: gitleaks/semgrep/trivy 결과
+
+**에이전트 컨텍스트 전달**:
+```
+CI 품질 게이트 상태:
+- Lint: {passed/failed/unknown}
+- Type Check: {passed/failed/unknown}
+- Tests: {passed/failed/unknown}
+- Build: {passed/failed/unknown}
+- Security: {passed/failed/unknown}
+
+⚠️ CI가 통과한 항목은 [자동 검증됨] 표시. 리뷰에서 동일 카테고리의 기계적 이슈는 보고 불필요.
+⚠️ CI가 실패하거나 미실행인 항목은 수동 검토 우선순위 상향.
+```
+
+**영향**:
+- CI가 잡는 기계적 검사(린트, 타입, 포맷) 중복 보고 방지
+- 코드 리뷰는 논리적 검사(설계, 정합성, 완전성, 모듈 간 계약)에 집중
+
+---
+
 **문서 종료** — review-orchestrate에 통합 준비 완료.

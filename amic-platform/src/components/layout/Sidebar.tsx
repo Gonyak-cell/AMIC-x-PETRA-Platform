@@ -15,18 +15,12 @@ import {
   BarChart3,
   Building2,
   Building,
-  Newspaper,
-  ShieldAlert,
-  Star,
   PlusCircle,
   Home,
   Users,
   ClipboardCheck,
   ClipboardList,
   Activity,
-  UserSearch,
-  GitCompare,
-  ScrollText,
   BarChart2,
   Calendar,
   Download,
@@ -53,7 +47,11 @@ import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
-import { SidebarNavItem, SidebarPhaseItem, SidebarSection } from "./SidebarNavItem";
+import {
+  SidebarNavItem,
+  SidebarPhaseItem,
+  SidebarSection,
+} from "./SidebarNavItem";
 import { SidebarModuleGroup } from "./SidebarModuleGroup";
 import { Badge } from "@/components/ui";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
@@ -63,9 +61,7 @@ import amicPetraLogoUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple.svg";
 
 // ── FDD Navigation ──
 
-const FDD_WORKFLOW_NAV = [
-  { to: "", label: "Overview", icon: Eye, end: true },
-];
+const FDD_WORKFLOW_NAV = [{ to: "", label: "Overview", icon: Eye, end: true }];
 
 const FDD_SETUP_NAV = [
   { to: "setup", label: "Deal Setup", icon: Settings },
@@ -82,34 +78,14 @@ const FDD_ANALYSIS_NAV = [
   { to: "issues", label: "Issues", icon: AlertTriangle },
 ];
 
-const FDD_REPORT_NAV = [
-  { to: "report", label: "Report", icon: FileOutput },
-];
+const FDD_REPORT_NAV = [{ to: "report", label: "Report", icon: FileOutput }];
 
 // ── KIIS Navigation ──
 
-const KIIS_OVERVIEW = [
-  { to: "/kiis", label: "Dashboard", icon: BarChart3 },
-];
-
 const KIIS_RESEARCH = [
-  { to: "/kiis/funds", label: "GPs & Funds", icon: Wallet },
-  { to: "/kiis/companies", label: "Companies", icon: Building2 },
+  { to: "/kiis/gp", label: "GP", icon: Wallet },
+  { to: "/kiis/funds", label: "Fund", icon: Building2 },
   { to: "/kiis/reits", label: "REITs", icon: Building },
-  { to: "/kiis/news", label: "News & Sentiment", icon: Newspaper },
-];
-
-const KIIS_PIPELINE = [
-  { to: "/kiis/deals", label: "Deal Sourcing", icon: TrendingUp },
-  { to: "/kiis/sanctions", label: "Sanctions", icon: ShieldAlert },
-];
-
-const KIIS_PORTFOLIO = [
-  { to: "/kiis/portfolio", label: "Portfolio", icon: Activity },
-  { to: "/kiis/managers", label: "Managers", icon: UserSearch },
-  { to: "/kiis/entities", label: "Entity Match", icon: GitCompare },
-  { to: "/kiis/disclosures", label: "Disclosures", icon: ScrollText },
-  { to: "/kiis/watchlist", label: "Watchlist", icon: Star },
 ];
 
 // ── M&A Navigation ──
@@ -120,34 +96,35 @@ const MA_PIPELINE_NAV = [
 ];
 
 const MA_WORKFLOW_NAV = [
-  { phase: "ENGAGEMENT",   to: "engagement",         label: "① 수임",       icon: Handshake },
-  { phase: "PREPARATION",  to: "marketing-materials", label: "② 준비",       icon: ClipboardList },
-  { phase: "MARKETING",    to: "buyers",              label: "③ 마케팅",     icon: Megaphone },
-  { phase: "BIDDING_DD",   to: "dd-checklist",        label: "④ 입찰/DD",    icon: Search },
-  { phase: "NEGOTIATION",  to: "contracts",           label: "⑤ 협상",       icon: Scale },
-  { phase: "CLOSING",      to: "closing",             label: "⑥ Closing",    icon: CheckCircle2 },
-  { phase: "POST_CLOSING", to: "pmi",                 label: "⑦ Post-Close", icon: Archive },
+  { phase: "ENGAGEMENT", to: "engagement", label: "① 수임", icon: Handshake },
+  {
+    phase: "PREPARATION",
+    to: "marketing-materials",
+    label: "② 준비",
+    icon: ClipboardList,
+  },
+  { phase: "MARKETING", to: "buyers", label: "③ 마케팅", icon: Megaphone },
+  { phase: "BIDDING_DD", to: "dd-checklist", label: "④ 입찰/DD", icon: Search },
+  { phase: "NEGOTIATION", to: "contracts", label: "⑤ 협상", icon: Scale },
+  { phase: "CLOSING", to: "closing", label: "⑥ Closing", icon: CheckCircle2 },
+  { phase: "POST_CLOSING", to: "pmi", label: "⑦ Post-Close", icon: Archive },
 ] as const;
 
 const MA_TOOLS_NAV = [
-  { to: "vdr",             label: "VDR",          icon: FolderLock },
-  { to: "timeline",        label: "타임라인",     icon: Activity },
-  { to: "risks",           label: "리스크",       icon: AlertTriangle },
-  { to: "compliance",      label: "컴플라이언스", icon: Shield },
-  { to: "notes-approvals", label: "노트/승인",    icon: FileText },
+  { to: "vdr", label: "VDR", icon: FolderLock },
+  { to: "timeline", label: "타임라인", icon: Activity },
+  { to: "risks", label: "리스크", icon: AlertTriangle },
+  { to: "compliance", label: "컴플라이언스", icon: Shield },
+  { to: "notes-approvals", label: "노트/승인", icon: FileText },
 ];
 
 // ── VDR Navigation ──
 
-const VDR_NAV = [
-  { to: "/vdr", label: "VDR Overview", icon: FolderLock },
-];
+const VDR_NAV = [{ to: "/vdr", label: "VDR Overview", icon: FolderLock }];
 
 // ── Docs (Deal Document Studio) Navigation ──
 
-const DOCS_HOME_NAV = [
-  { to: "/docs", label: "Studio Home", icon: FileText },
-];
+const DOCS_HOME_NAV = [{ to: "/docs", label: "Studio Home", icon: FileText }];
 
 const DOCS_MARKETING_NAV = [
   { to: "/docs/marketing", label: "Overview", icon: FileText, end: true },
@@ -161,7 +138,13 @@ const DOCS_LEGAL_NAV = [
   { to: "/docs/legal/contracts", label: "Deal Contracts", icon: FileSignature },
 ];
 
-const DOCS_DD_NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean; comingSoon?: boolean }> = [
+const DOCS_DD_NAV: Array<{
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  comingSoon?: boolean;
+}> = [
   { to: "/docs/dd", label: "Overview", icon: SearchCheck, end: true },
   { to: "/docs/dd/fdd", label: "FDD", icon: BarChart2 },
   { to: "/docs/dd/ldd", label: "LDD", icon: Gavel },
@@ -169,9 +152,22 @@ const DOCS_DD_NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: bo
 ];
 
 const DOCS_CHECKLIST_NAV = [
-  { to: "/docs/checklists", label: "Overview", icon: ClipboardCheck, end: true },
-  { to: "/docs/checklists/closing", label: "Closing Checklist", icon: ListChecks },
-  { to: "/docs/checklists/timeline", label: "Deal Timeline", icon: CalendarClock },
+  {
+    to: "/docs/checklists",
+    label: "Overview",
+    icon: ClipboardCheck,
+    end: true,
+  },
+  {
+    to: "/docs/checklists/closing",
+    label: "Closing Checklist",
+    icon: ListChecks,
+  },
+  {
+    to: "/docs/checklists/timeline",
+    label: "Deal Timeline",
+    icon: CalendarClock,
+  },
 ];
 
 export interface SidebarProps {
@@ -187,7 +183,10 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
   const isFdd = location.pathname.startsWith("/fdd");
   const isKiis = location.pathname.startsWith("/kiis");
-  const isDocs = location.pathname.startsWith("/docs") || location.pathname.startsWith("/im") || isFdd;
+  const isDocs =
+    location.pathname.startsWith("/docs") ||
+    location.pathname.startsWith("/im") ||
+    isFdd;
   const isVdr = location.pathname.startsWith("/vdr");
   const isMa = location.pathname.startsWith("/ma");
   const isAdmin = location.pathname.startsWith("/admin");
@@ -202,11 +201,16 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
   // MA 현재 거래의 phase 정보 (React Query 캐시 공유)
   const { data: maTxn } = useTransaction(isInMaWorkspace ? maTxnId! : "");
   const currentPhase = maTxn?.phase;
-  const currentPhaseIdx = PHASE_CONFIG.findIndex((p) => p.phase === currentPhase);
+  const currentPhaseIdx = PHASE_CONFIG.findIndex(
+    (p) => p.phase === currentPhase,
+  );
 
   return (
     <aside
-      className={cn("w-64 bg-gradient-to-b from-amic-800 via-amic to-amic-700 min-h-screen flex flex-col shadow-sidebar", className)}
+      className={cn(
+        "w-64 bg-gradient-to-b from-amic-800 via-amic to-amic-700 min-h-screen flex flex-col shadow-sidebar",
+        className,
+      )}
       role="navigation"
       aria-label="Main navigation"
     >
@@ -259,7 +263,6 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
       {/* Module Navigation — all modules rendered, each with collapsible group */}
       <div className="flex-1 overflow-y-auto py-2 px-3">
-
         {/* MODULES label */}
         {!isClient && (
           <h3 className="px-4 mb-2 mt-2 text-[10px] font-semibold text-white/30 uppercase tracking-[0.15em]">
@@ -280,9 +283,9 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             onNavItemClick={onNavItemClick}
           >
             <nav className="space-y-1" aria-label="M&A navigation">
-              {MA_PIPELINE_NAV
-                .filter((item) => !isClient || item.to !== "/ma/transactions/new")
-                .map((item) => (
+              {MA_PIPELINE_NAV.filter(
+                (item) => !isClient || item.to !== "/ma/transactions/new",
+              ).map((item) => (
                 <SidebarNavItem
                   key={item.to}
                   to={item.to}
@@ -296,7 +299,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
             {!isClient && (
               <>
-                <SidebarSection title="Workspace" collapsible defaultOpen storageKey="ma-workspace" className="mt-3">
+                <SidebarSection
+                  title="Workspace"
+                  collapsible
+                  defaultOpen
+                  storageKey="ma-workspace"
+                  className="mt-3"
+                >
                   <SidebarNavItem
                     to={isInMaWorkspace ? `/ma/transactions/${maTxnId}/` : "#"}
                     label="Overview"
@@ -307,9 +316,17 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                   />
                 </SidebarSection>
 
-                <SidebarSection title="Workflow" collapsible defaultOpen storageKey="ma-workflow" className="mt-3">
+                <SidebarSection
+                  title="Workflow"
+                  collapsible
+                  defaultOpen
+                  storageKey="ma-workflow"
+                  className="mt-3"
+                >
                   {MA_WORKFLOW_NAV.map((item) => {
-                    const itemIdx = PHASE_CONFIG.findIndex((p) => p.phase === item.phase);
+                    const itemIdx = PHASE_CONFIG.findIndex(
+                      (p) => p.phase === item.phase,
+                    );
                     const status: "done" | "current" | "future" =
                       !isInMaWorkspace || currentPhaseIdx < 0
                         ? "future"
@@ -322,7 +339,11 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                     return (
                       <SidebarPhaseItem
                         key={item.phase}
-                        to={isInMaWorkspace ? `/ma/transactions/${maTxnId}/${item.to}?viewPhase=${item.phase}` : "#"}
+                        to={
+                          isInMaWorkspace
+                            ? `/ma/transactions/${maTxnId}/${item.to}?viewPhase=${item.phase}`
+                            : "#"
+                        }
                         label={item.label}
                         icon={item.icon}
                         status={!isInMaWorkspace ? "future" : status}
@@ -332,11 +353,21 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                   })}
                 </SidebarSection>
 
-                <SidebarSection title="Tools" collapsible defaultOpen storageKey="ma-tools" className="mt-3">
+                <SidebarSection
+                  title="Tools"
+                  collapsible
+                  defaultOpen
+                  storageKey="ma-tools"
+                  className="mt-3"
+                >
                   {MA_TOOLS_NAV.map((item) => (
                     <SidebarNavItem
                       key={item.to}
-                      to={isInMaWorkspace ? `/ma/transactions/${maTxnId}/${item.to}` : "#"}
+                      to={
+                        isInMaWorkspace
+                          ? `/ma/transactions/${maTxnId}/${item.to}`
+                          : "#"
+                      }
                       label={item.label}
                       icon={item.icon}
                       disabled={!isInMaWorkspace}
@@ -388,7 +419,10 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             defaultOpen={isDocs}
             onNavItemClick={onNavItemClick}
           >
-            <nav className="space-y-1" aria-label="Deal Document Studio navigation">
+            <nav
+              className="space-y-1"
+              aria-label="Deal Document Studio navigation"
+            >
               {DOCS_HOME_NAV.map((item) => (
                 <SidebarNavItem
                   key={item.to}
@@ -401,7 +435,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               ))}
             </nav>
 
-            <SidebarSection title="Marketing" collapsible defaultOpen storageKey="docs-marketing" className="mt-3">
+            <SidebarSection
+              title="Marketing"
+              collapsible
+              defaultOpen
+              storageKey="docs-marketing"
+              className="mt-3"
+            >
               {DOCS_MARKETING_NAV.map((item) => (
                 <SidebarNavItem
                   key={item.to}
@@ -414,7 +454,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               ))}
             </SidebarSection>
 
-            <SidebarSection title="Legal" collapsible defaultOpen storageKey="docs-legal" className="mt-3">
+            <SidebarSection
+              title="Legal"
+              collapsible
+              defaultOpen
+              storageKey="docs-legal"
+              className="mt-3"
+            >
               {DOCS_LEGAL_NAV.map((item) => (
                 <SidebarNavItem
                   key={item.to}
@@ -427,7 +473,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               ))}
             </SidebarSection>
 
-            <SidebarSection title="Due Diligence" collapsible defaultOpen storageKey="docs-dd" className="mt-3">
+            <SidebarSection
+              title="Due Diligence"
+              collapsible
+              defaultOpen
+              storageKey="docs-dd"
+              className="mt-3"
+            >
               {DOCS_DD_NAV.map((item) => (
                 <SidebarNavItem
                   key={item.to}
@@ -455,7 +507,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                     />
                   ))}
                 </SidebarSection>
-                <SidebarSection title="Setup" collapsible defaultOpen storageKey="fdd-setup" className="mt-3">
+                <SidebarSection
+                  title="Setup"
+                  collapsible
+                  defaultOpen
+                  storageKey="fdd-setup"
+                  className="mt-3"
+                >
                   {FDD_SETUP_NAV.map((item) => (
                     <SidebarNavItem
                       key={item.to}
@@ -466,7 +524,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                     />
                   ))}
                 </SidebarSection>
-                <SidebarSection title="Analysis" collapsible defaultOpen storageKey="fdd-analysis" className="mt-3">
+                <SidebarSection
+                  title="Analysis"
+                  collapsible
+                  defaultOpen
+                  storageKey="fdd-analysis"
+                  className="mt-3"
+                >
                   {FDD_ANALYSIS_NAV.map((item) => (
                     <SidebarNavItem
                       key={item.to}
@@ -477,7 +541,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                     />
                   ))}
                 </SidebarSection>
-                <SidebarSection title="Report" collapsible defaultOpen storageKey="fdd-report" className="mt-3">
+                <SidebarSection
+                  title="Report"
+                  collapsible
+                  defaultOpen
+                  storageKey="fdd-report"
+                  className="mt-3"
+                >
                   {FDD_REPORT_NAV.map((item) => (
                     <SidebarNavItem
                       key={item.to}
@@ -491,7 +561,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               </>
             )}
 
-            <SidebarSection title="Checklist & Timeline" collapsible defaultOpen storageKey="docs-checklist" className="mt-3">
+            <SidebarSection
+              title="Checklist & Timeline"
+              collapsible
+              defaultOpen
+              storageKey="docs-checklist"
+              className="mt-3"
+            >
               {DOCS_CHECKLIST_NAV.map((item, idx) => (
                 <SidebarNavItem
                   key={`${item.to}-${idx}`}
@@ -518,42 +594,14 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             defaultOpen={isKiis}
             onNavItemClick={onNavItemClick}
           >
-            <nav className="space-y-1" aria-label="KIIS navigation">
-              {KIIS_OVERVIEW.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </nav>
-            <SidebarSection title="Research" collapsible defaultOpen storageKey="kiis-research" className="mt-3">
+            <SidebarSection
+              title="Research"
+              collapsible
+              defaultOpen
+              storageKey="kiis-research"
+              className="mt-3"
+            >
               {KIIS_RESEARCH.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-            <SidebarSection title="Deal Pipeline" collapsible defaultOpen storageKey="kiis-pipeline" className="mt-3">
-              {KIIS_PIPELINE.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-            <SidebarSection title="Portfolio Mgmt" collapsible defaultOpen storageKey="kiis-portfolio" className="mt-3">
-              {KIIS_PORTFOLIO.map((item) => (
                 <SidebarNavItem
                   key={item.to}
                   to={item.to}
@@ -570,37 +618,40 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
         {!isClient && <SidebarFavorites onNavItemClick={onNavItemClick} />}
 
         {/* Admin Navigation (hidden for CLIENT) */}
-        {!isClient && (isAdmin || hasPermission("user:manage") || hasPermission("audit:view")) && (
-          <>
-          <div className="h-px mx-1 my-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <SidebarSection title="Admin">
-            {hasPermission("user:manage") && (
-              <SidebarNavItem
-                to="/admin/users"
-                label="Users"
-                icon={Users}
-                onClick={onNavItemClick}
-              />
-            )}
-            {hasPermission("audit:view") && (
-              <SidebarNavItem
-                to="/admin/activity"
-                label="Activity Log"
-                icon={ClipboardList}
-                onClick={onNavItemClick}
-              />
-            )}
-            {hasPermission("audit:view") && (
-              <SidebarNavItem
-                to="/analytics"
-                label="Analytics"
-                icon={BarChart2}
-                onClick={onNavItemClick}
-              />
-            )}
-          </SidebarSection>
-          </>
-        )}
+        {!isClient &&
+          (isAdmin ||
+            hasPermission("user:manage") ||
+            hasPermission("audit:view")) && (
+            <>
+              <div className="h-px mx-1 my-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <SidebarSection title="Admin">
+                {hasPermission("user:manage") && (
+                  <SidebarNavItem
+                    to="/admin/users"
+                    label="Users"
+                    icon={Users}
+                    onClick={onNavItemClick}
+                  />
+                )}
+                {hasPermission("audit:view") && (
+                  <SidebarNavItem
+                    to="/admin/activity"
+                    label="Activity Log"
+                    icon={ClipboardList}
+                    onClick={onNavItemClick}
+                  />
+                )}
+                {hasPermission("audit:view") && (
+                  <SidebarNavItem
+                    to="/analytics"
+                    label="Analytics"
+                    icon={BarChart2}
+                    onClick={onNavItemClick}
+                  />
+                )}
+              </SidebarSection>
+            </>
+          )}
 
         {/* Help */}
         <div className="mt-2">

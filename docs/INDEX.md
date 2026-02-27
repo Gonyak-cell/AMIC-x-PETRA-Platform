@@ -1,6 +1,6 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-26 23:32:00
+> 최종 업데이트: 2026-02-27 14:07:00
 
 ## 폴더 구조
 
@@ -9,7 +9,7 @@
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 34 |
 | 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
-| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 16 |
+| 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 18 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
 | KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩, TM/DM 디자인 시스템 | 9 |
@@ -105,7 +105,7 @@
 | `20260216_2025_Security_Code_Review.md` | 보안 코드 리뷰 |
 | `20260216_2205_JWT_HTTPOnly_Cookie_Migration_Plan.md` | JWT → httpOnly 쿠키 마이그레이션 계획 |
 
-## deployment/ (14)
+## deployment/ (15)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -125,6 +125,8 @@
 | `20260226_1544_Deploy_Pipeline_Stabilization.md` | **배포 파이프라인 영구 안정화** — 근본 원인 3가지(이미지 스왑/Alembic 3중 실행/안전장치 부재) 수정, KIIS entrypoint alembic 제거, IM HealthResponse 확장, deploy.yml 8단계 강화, 프로덕션 IM DB stamp+복구, infra-freeze/code-freeze 규칙 |
 | `20260226_1839_TS_Build_Safety_Net_and_KIIS_OpenAPI_Review.md` | **KIIS OpenAPI 코드 리뷰(2차) + TS 빌드 안전장치** — @cache model 역직렬화 버그 수정, TS2352 배포 에러 수정, Husky pre-push 훅 + ci.yml feat/** 트리거 확장 |
 | `20260226_2332_VDR_Azure_Blob_Storage_Deployment.md` | **VDR Azure Blob Storage 배포 완료** — Docker 볼륨→Azure Blob 마이그레이션, Storage Account 생성, 프로덕션 배포, 거래별 6레이어 분리 검증 |
+| `20260227_1104_Quality_Gate_Implementation_Report.md` | **품질 게이트 강화 구현 보고서** — P0~P3 전체 매트릭스, dorny/paths-filter 변경 감지, ci-gate, Gitleaks, Semgrep, Trivy, Dependabot, pyright, E2E blocking 전환, lefthook, AI 코드 리뷰 |
+| `20260227_1407_CI_Pipeline_Full_Fix_Report.md` | **CI 파이프라인 전면 수정 + 품질게이트 강화** — 7건 CI 실패 수정(FDD/deal-mgmt/KIIS/Frontend/E2E), pre-push Guard 4b/6 신설, 진단규칙 신설, Deploy 타임아웃 확장, 13/13 Jobs+Deploy SUCCESS |
 
 ## fdd/ (4)
 
