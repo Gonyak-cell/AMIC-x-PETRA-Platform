@@ -120,6 +120,7 @@ from app.routers import (
     deal_clients,
     document_extraction,
     earnout,
+    template_visualization,
     engagements,
     financial_models,
     integrations,
@@ -135,6 +136,7 @@ from app.routers import (
     ralph,
     rfi,
     risks,
+    si_mapping,
     timeline,
     transactions,
     transcription,
@@ -184,6 +186,8 @@ app.include_router(audit.router, prefix="/api/v1")
 app.include_router(vdr_internal.router, prefix="/api/v1")
 app.include_router(document_extraction.router, prefix="/api/v1")
 app.include_router(attachments.router, prefix="/api/v1")
+app.include_router(template_visualization.router, prefix="/api/v1")
+app.include_router(si_mapping.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

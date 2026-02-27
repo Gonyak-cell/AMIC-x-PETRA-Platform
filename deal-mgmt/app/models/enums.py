@@ -725,6 +725,15 @@ class AttachmentEntityType(enum.StrEnum):
     EARNOUT = "EARNOUT"
 
 
+# ── SI Mapping ────────────────────────────────────────
+class SICompanyRelation(enum.StrEnum):
+    """SI 기업과 타겟 기업 간의 산업 관계 유형."""
+
+    DIRECT = "DIRECT"  # 동일 KSIC (동종업계)
+    BACKWARD = "BACKWARD"  # 공급자 (후방연관)
+    FORWARD = "FORWARD"  # 수요자 (전방연관)
+
+
 class ExtractionStatus(enum.StrEnum):
     """문서 AI 추출 작업 상태."""
 

@@ -13,6 +13,8 @@ from app.models.dd_checklist import DDChecklist
 from app.models.deal_client import DealClient
 from app.models.earnout import EarnoutMilestone
 from app.models.engagement import Engagement
+from app.models.io_transaction import IOTransaction
+from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.enums import (
     ActionItemStatus,
     ApprovalStatus,
@@ -77,6 +79,7 @@ from app.models.enums import (
     RiskLikelihood,
     RiskSeverity,
     RiskStatus,
+    SICompanyRelation,
     SignatureStatus,
     TransactionPhase,
     TransactionSide,
@@ -106,6 +109,7 @@ from app.models.rfi import RFI
 from app.models.rfi_checklist_mapping import RFIChecklistMapping
 from app.models.rfi_item import RFIItem
 from app.models.risk_item import RiskItem
+from app.models.si_company import SICompany
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
 from app.models.transcription_job import TranscriptionJob
@@ -152,6 +156,8 @@ __all__ = [
     "DealClient",
     "DealNote",
     "DealTimeline",
+    "IOTransaction",
+    "KsicIoMapping",
     "EarnoutMetric",
     "EarnoutMilestone",
     "EarnoutStatus",
@@ -215,6 +221,8 @@ __all__ = [
     "RiskLikelihood",
     "RiskSeverity",
     "RiskStatus",
+    "SICompany",
+    "SICompanyRelation",
     "SignatureStatus",
     "TimestampMixin",
     "Transaction",

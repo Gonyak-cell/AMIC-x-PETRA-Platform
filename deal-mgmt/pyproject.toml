@@ -18,6 +18,7 @@ dependencies = [
     "docxtpl>=0.16.0",
     "python-docx>=1.1.0",
     "python-pptx>=0.6.21",
+    "Pillow>=10.0.0",
     # Ralph Loop — 실사자료 파서
     "openpyxl>=3.1.0",
     "PyMuPDF>=1.23.0",
@@ -75,6 +76,7 @@ extend-immutable-calls = [
 [tool.ruff.lint.per-file-ignores]
 # OOXML camelCase XML element names are conventional in python-pptx/python-docx
 "app/pptx/memo_generator.py" = ["N806"]
+"app/pptx/template_engine/*.py" = ["N806"]
 "app/ralph/generators/ldd/law_firm_template.py" = ["N806"]
 "app/ralph/generators/ldd/law_firm_renderer.py" = ["N806"]
 "app/services/ldd_report_service.py" = ["N806"]

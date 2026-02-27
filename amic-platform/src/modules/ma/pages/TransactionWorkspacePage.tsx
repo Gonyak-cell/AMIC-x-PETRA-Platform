@@ -295,6 +295,7 @@ import {
 } from "@/modules/ma/types/financial_model";
 import FMChecklistReview from "@/modules/ma/components/fm/FMChecklistReview";
 import { ContractNegotiationWorkspace } from "@/modules/ma/components/negotiation/ContractNegotiationWorkspace";
+import SIMappingPanel from "@/modules/ma/components/si-mapping/SIMappingPanel";
 
 import {
   Badge,
@@ -422,6 +423,7 @@ export default function TransactionWorkspacePage() {
   const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">(
     "long-list",
   );
+  const [showSIMappingModal, setShowSIMappingModal] = useState(false);
 
   // URL 호환성: 삭제된 탭 → 통합 탭으로 리다이렉트 (viewPhase 보존)
   useEffect(() => {
@@ -1853,33 +1855,51 @@ export default function TransactionWorkspacePage() {
               </div>
 
               {buyerSubTab === "long-list" && (
-                <Card title="Long List" headerBar padding="none">
-                  {!longList.length ? (
-                    <EmptyState
-                      icon={Users}
-                      title="Long List 후보 없음"
-                      description="잠재 매수자를 추가하세요."
-                      actionLabel={canWrite() ? "후보 추가" : undefined}
-                      onAction={
-                        canWrite() ? () => setShowBuyerModal(true) : undefined
-                      }
-                    />
-                  ) : (
-                    <DataTable
-                      columns={buyerColumns}
-                      data={longList}
-                      keyField="id"
-                      onRowClick={(buyer: BuyerCandidate) => {
-                        const qs = new URLSearchParams();
-                        if (viewedPhase) qs.set("viewPhase", viewedPhase);
-                        qs.set("buyerId", buyer.id);
-                        navigate(
-                          `/ma/transactions/${id}/marketing-logs?${qs.toString()}`,
-                        );
-                      }}
+                <>
+                  <div className="mb-3 flex justify-end">
+                    <Button
+                      icon={Sparkles}
+                      onClick={() => setShowSIMappingModal(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      SI 자동 매핑
+                    </Button>
+                  </div>
+                  <Card title="Long List" headerBar padding="none">
+                    {!longList.length ? (
+                      <EmptyState
+                        icon={Users}
+                        title="Long List 후보 없음"
+                        description="잠재 매수자를 추가하세요."
+                        actionLabel={canWrite() ? "후보 추가" : undefined}
+                        onAction={
+                          canWrite() ? () => setShowBuyerModal(true) : undefined
+                        }
+                      />
+                    ) : (
+                      <DataTable
+                        columns={buyerColumns}
+                        data={longList}
+                        keyField="id"
+                        onRowClick={(buyer: BuyerCandidate) => {
+                          const qs = new URLSearchParams();
+                          if (viewedPhase) qs.set("viewPhase", viewedPhase);
+                          qs.set("buyerId", buyer.id);
+                          navigate(
+                            `/ma/transactions/${id}/marketing-logs?${qs.toString()}`,
+                          );
+                        }}
+                      />
+                    )}
+                  </Card>
+                  {showSIMappingModal && (
+                    <SIMappingPanel
+                      txnId={id!}
+                      onClose={() => setShowSIMappingModal(false)}
                     />
                   )}
-                </Card>
+                </>
               )}
 
               {buyerSubTab === "short-list" && (
