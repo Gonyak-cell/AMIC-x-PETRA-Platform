@@ -82,6 +82,11 @@ class Settings(BaseSettings):
     WATCHLIST_ALERT_INTERVAL_HOURS: int = 6
     MANAGER_TRACKING_DAY_OF_WEEK: str = "mon"
 
+    # Logo Crawling (GP CI)
+    LOGO_CRAWL_RATE_PER_MINUTE: int = 20
+    LOGO_CRAWL_REQUEST_DELAY: float = 2.0  # 크롤링 예의: 2초 간격
+    LOGO_STALE_DAYS: int = 30  # 30일 경과 시 재크롤링
+
     # REITs (리츠정보시스템)
     REITS_BASE_URL: str = "https://reits.molit.go.kr"
     REITS_RATE_LIMIT_PER_MINUTE: int = 20  # 3초 간격 = 분당 20회

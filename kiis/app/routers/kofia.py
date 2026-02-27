@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.models.company import Company
 from app.schemas.fund import (
     FundDetailResponse,
     FundListResponse,
@@ -11,11 +15,31 @@ from app.schemas.fund import (
 from app.services.kofia_service import KOFIAService
 from app.services.pef_registry_service import PEFRegistryService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
 def get_kofia_service() -> KOFIAService:
     return KOFIAService()
+
+
+async def _enrich_gp_logos(
+    db: AsyncSession,
+    items: list,
+) -> None:
+    """GP 목록 아이템에 logo_url을 매핑한다 (in-place)."""
+    names = [item.company_name for item in items if item.company_name]
+    if not names:
+        return
+    stmt = select(Company.corp_name, Company.logo_url).where(
+        Company.corp_name.in_(names),
+        Company.logo_url.isnot(None),
+    )
+    result = await db.execute(stmt)
+    logo_map: dict[str, str] = {row.corp_name: row.logo_url for row in result}
+    for item in items:
+        item.logo_url = logo_map.get(item.company_name)
 
 
 @router.get("/gp", response_model=GPListResponse, summary="운용사(GP) 목록 조회")
@@ -44,8 +68,12 @@ async def list_gps(
             page=page,
             size=size,
         )
+        await _enrich_gp_logos(db, items)
         return GPListResponse(
-            total=total, page=page, size=size, items=items,
+            total=total,
+            page=page,
+            size=size,
+            items=items,
             reference_date=ref_date,
         )
 
@@ -63,8 +91,14 @@ async def list_gps(
     # KOFIA 기준시점 가져오기
     ref_date = await service.get_reference_date()
 
+    # DB에서 로고 URL 매핑
+    await _enrich_gp_logos(db, items)
+
     return GPListResponse(
-        total=total, page=page, size=size, items=items,
+        total=total,
+        page=page,
+        size=size,
+        items=items,
         reference_date=ref_date,
     )
 
@@ -74,8 +108,12 @@ async def list_funds(
     company_name: str | None = Query(None, description="운용사명 검색"),
     fund_name: str | None = Query(None, description="펀드명 검색"),
     fund_type: str | None = Query(None, description="펀드 유형 — 쉼표 구분 복수 선택 (blind,project)"),
-    legal_type: str | None = Query(None, description="법률 유형 — 쉼표 구분 복수 선택 (professional_private,general_private,public)"),
-    asset_class: str | None = Query(None, description="자산 클래스 — 쉼표 구분 복수 선택 (vc,pef,real_estate,infra,mezzanine,fund_of_funds)"),
+    legal_type: str | None = Query(
+        None, description="법률 유형 — 쉼표 구분 복수 선택 (professional_private,general_private,public)"
+    ),
+    asset_class: str | None = Query(
+        None, description="자산 클래스 — 쉼표 구분 복수 선택 (vc,pef,real_estate,infra,mezzanine,fund_of_funds)"
+    ),
     fund_status: str | None = Query(None, description="펀드 상태 — 쉼표 구분 복수 선택 (active,harvest,liquidated)"),
     data_source: str | None = Query(None, description="데이터 소스 (kofia/pef_registry, 미지정=전체)"),
     vintage_from: int | None = Query(None, description="빈티지 연도 시작"),
@@ -122,7 +160,10 @@ async def list_funds(
         pef_svc = PEFRegistryService(db)
         items, total, ref_date = await pef_svc.search_funds(**filter_kwargs)
         return FundListResponse(
-            total=total, page=page, size=size, items=items,
+            total=total,
+            page=page,
+            size=size,
+            items=items,
             reference_date=ref_date,
         )
 
@@ -132,7 +173,10 @@ async def list_funds(
         await service.close()
         ref_date = await service.get_reference_date()
         return FundListResponse(
-            total=total, page=page, size=size, items=items,
+            total=total,
+            page=page,
+            size=size,
+            items=items,
             reference_date=ref_date,
         )
 

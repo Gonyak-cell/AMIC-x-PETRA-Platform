@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Building2,
   Briefcase,
   PieChart as PieIcon,
   Users,
@@ -19,6 +18,7 @@ import {
 } from "@/modules/kiis/types/gpResearch";
 import { ComboChart } from "./charts/ComboChart";
 import { ScatterPlot } from "./charts/ScatterPlot";
+import { GPLogo } from "./GPLogo";
 import { DonutChart } from "./charts/DonutChart";
 
 interface GPDetailOverlayProps {
@@ -61,9 +61,7 @@ export function GPDetailOverlay({ gp }: GPDetailOverlayProps) {
     <div className="space-y-6">
       {/* ── 헤더 영역 ── */}
       <div className="flex items-start gap-4">
-        <div className="h-14 w-14 rounded-full bg-amic-50 flex items-center justify-center shrink-0">
-          <Building2 className="h-7 w-7 text-amic" />
-        </div>
+        <GPLogo logoUrl={gp.logoUrl} name={gp.name} size="lg" />
         <div className="min-w-0 flex-1">
           <h3 className="text-xl font-heading font-bold text-text-dark">
             {gp.name}

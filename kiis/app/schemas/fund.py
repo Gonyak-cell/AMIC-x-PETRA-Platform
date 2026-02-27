@@ -115,6 +115,7 @@ class GPListItem(BaseModel):
     is_co_gp_count: int = Field(0, description="Co-GP 참여 펀드 수")
     pef_fund_count: int = Field(0, description="PEF 등록부 펀드 수")
     reference_date: str | None = Field(None, description="데이터 기준시점")
+    logo_url: str | None = Field(None, description="운용사 로고 URL")
 
 
 class GPListResponse(BaseModel):

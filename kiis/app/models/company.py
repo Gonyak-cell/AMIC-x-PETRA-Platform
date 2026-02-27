@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -22,6 +24,9 @@ class Company(TimestampMixin, Base):
     adres: Mapped[str | None] = mapped_column(Text, comment="주소")
     hm_url: Mapped[str | None] = mapped_column(String(500), comment="홈페이지")
     ir_url: Mapped[str | None] = mapped_column(String(500), comment="IR 홈페이지")
+    logo_url: Mapped[str | None] = mapped_column(String(1000), comment="로고 이미지 URL")
+    logo_source: Mapped[str | None] = mapped_column(String(30), comment="로고 소스 (og_image/meta_icon/favicon)")
+    logo_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), comment="로고 수집 시각")
     phn_no: Mapped[str | None] = mapped_column(String(50), comment="전화번호")
     fax_no: Mapped[str | None] = mapped_column(String(50), comment="팩스번호")
     induty_code: Mapped[str | None] = mapped_column(String(20), comment="업종코드")

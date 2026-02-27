@@ -60,6 +60,7 @@ export interface GPResearchItem {
   id: string;
   name: string;
   nameEn?: string;
+  logoUrl?: string;
   established: string; // "2010.03"
   licenses: LicenseType[];
   sponsorType: SponsorType;

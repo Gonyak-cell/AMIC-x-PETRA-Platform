@@ -3,7 +3,7 @@ import type { Column } from "@/components/ui";
 import type { GPResearchItem } from "@/modules/kiis/types/gpResearch";
 import { LICENSE_SHORT_LABELS } from "@/modules/kiis/types/gpResearch";
 import type { LicenseType } from "@/modules/kiis/types/gpResearch";
-import { Building2 } from "lucide-react";
+import { GPLogo } from "./GPLogo";
 
 interface GPMasterListProps {
   data: GPResearchItem[];
@@ -28,9 +28,7 @@ const columns: Column<GPResearchItem>[] = [
     width: "240px",
     render: (row) => (
       <div className="flex items-center gap-2.5">
-        <div className="h-8 w-8 rounded-full bg-amic-50 flex items-center justify-center shrink-0">
-          <Building2 className="h-4 w-4 text-amic" />
-        </div>
+        <GPLogo logoUrl={row.logoUrl} name={row.name} size="sm" />
         <div className="min-w-0">
           <p className="font-medium text-text-dark truncate text-sm">
             {row.name}

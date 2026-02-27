@@ -25,6 +25,7 @@ from app.routers import (
     disclosures,
     entity,
     kofia,
+    logo,
     managers,
     news,
     portfolio,
@@ -64,18 +65,13 @@ async def lifespan(app: FastAPI):
     if not settings.DEBUG:
         if not settings.SECRET_KEY or settings.SECRET_KEY == _INSECURE_DEFAULT_KEY:
             raise RuntimeError(
-                "SECRET_KEY must be set to a secure random value in production. "
-                "Set SECRET_KEY in your .env file."
+                "SECRET_KEY must be set to a secure random value in production. Set SECRET_KEY in your .env file."
             )
         if not _effective_jwt_secret:
-            raise RuntimeError(
-                "JWT secret is not configured. "
-                "Set JWT_SECRET or SECRET_KEY in your .env file."
-            )
+            raise RuntimeError("JWT secret is not configured. Set JWT_SECRET or SECRET_KEY in your .env file.")
         if not settings.DART_API_KEY:
             raise RuntimeError(
-                "DART_API_KEY is required in production. "
-                "Register at https://opendart.fss.or.kr and set DART_API_KEY."
+                "DART_API_KEY is required in production. Register at https://opendart.fss.or.kr and set DART_API_KEY."
             )
     else:
         if not _effective_jwt_secret:
@@ -100,15 +96,11 @@ async def lifespan(app: FastAPI):
             from app.models.company import Company
 
             async with async_session_factory() as db:
-                count_result = await db.execute(
-                    select(func.count()).select_from(Company)
-                )
+                count_result = await db.execute(select(func.count()).select_from(Company))
                 company_count = count_result.scalar() or 0
 
             if company_count == 0:
-                logger.info(
-                    "Companies 테이블이 비어있습니다. DART 기업 동기화를 시작합니다..."
-                )
+                logger.info("Companies 테이블이 비어있습니다. DART 기업 동기화를 시작합니다...")
                 from app.tasks.company_sync import sync_companies_from_dart
 
                 result = await sync_companies_from_dart(enrich_listed=False)
@@ -152,6 +144,7 @@ app = FastAPI(
         {"name": "Dashboard", "description": "시스템 대시보드 요약"},
         {"name": "Watchlist", "description": "관심 기업 모니터링"},
         {"name": "Alerts", "description": "알림 이력 관리"},
+        {"name": "Logo", "description": "GP 로고 크롤링 관리"},
     ],
 )
 
@@ -205,6 +198,7 @@ app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(alerts.watchlist_router, prefix="/api/v1/watchlist", tags=["Watchlist"])
 app.include_router(alerts.alerts_router, prefix="/api/v1/alerts", tags=["Alerts"])
+app.include_router(logo.router, prefix="/api/v1/logo", tags=["Logo"])
 
 from app.routers import audit as audit_router  # noqa: E402
 
