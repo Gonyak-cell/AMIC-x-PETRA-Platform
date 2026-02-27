@@ -46,11 +46,21 @@ line-length = 120
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "B008",   # FastAPI Depends() in default args is intentional
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path",
+    "fastapi.Body", "fastapi.Header", "fastapi.Security",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=app --cov-report=xml --cov-fail-under=60"
 markers = [
     "integration: marks tests that require external API access",
     "e2e: marks end-to-end tests that verify full system flows",

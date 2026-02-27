@@ -1,0 +1,22 @@
+# lefthook — pre-commit 훅 (husky pre-push와 공존)
+# 설치: npm i -D lefthook && npx lefthook install
+pre-commit:
+  parallel: true
+  commands:
+    python-format:
+      glob: "*.py"
+      exclude: "migrations/"
+      run: ruff format {staged_files} && ruff check --fix {staged_files}
+      stage_fixed: true
+    python-lint:
+      glob: "*.py"
+      exclude: "migrations/"
+      run: ruff check {staged_files} --output-format=github
+    ts-lint:
+      glob: "*.{ts,tsx}"
+      run: cd amic-platform && npx eslint --fix {staged_files}
+      stage_fixed: true
+    ts-format:
+      glob: "*.{ts,tsx}"
+      run: cd amic-platform && npx prettier --write {staged_files}
+      stage_fixed: true

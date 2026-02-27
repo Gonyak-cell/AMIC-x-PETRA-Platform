@@ -51,10 +51,17 @@ line-length = 120
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
 ignore = [
     "E501",   # line too long — Korean text + data dicts make 120-char limit impractical
+    "B008",   # FastAPI Depends() in default args is intentional
     "UP042",  # StrEnum migration — keep str+Enum pattern for now
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path",
+    "fastapi.Body", "fastapi.Header", "fastapi.Security",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -75,6 +82,7 @@ ignore = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=app --cov-report=xml --cov-fail-under=60"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

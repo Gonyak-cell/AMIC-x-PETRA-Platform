@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit*--no-verify*)",
+      "Bash(git push --no-verify*)",
+      "Bash(git push*--no-verify*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -39,6 +47,11 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-format-python.sh\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-format-typescript.sh\"",
             "timeout": 30
           }
         ]

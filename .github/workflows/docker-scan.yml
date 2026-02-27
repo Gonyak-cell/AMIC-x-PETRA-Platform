@@ -1,0 +1,37 @@
+name: Docker Image Scan
+
+on:
+  schedule:
+    - cron: "0 2 * * 1" # 매주 월요일 새벽 2시 (UTC)
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - service: fdd-api
+            context: ./fdd/backend
+          - service: kiis-api
+            context: ./kiis
+          - service: deal-mgmt-api
+            context: ./deal-mgmt
+          - service: frontend
+            context: ./amic-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t ${{ matrix.service }}:scan ${{ matrix.context }}
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "${{ matrix.service }}:scan"
+          severity: "CRITICAL,HIGH"
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
