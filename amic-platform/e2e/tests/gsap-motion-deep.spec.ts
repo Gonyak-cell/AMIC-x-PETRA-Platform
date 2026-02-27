@@ -16,20 +16,17 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-    // Navigate to FDD
+    // Navigate to FDD — wait for GSAP page transition to complete
     await page.goto("/fdd/deals");
-    // PageTransition: opacity 0→1, y 14→0 (0.4s) — wait for animation to settle
-    await page.waitForTimeout(600);
-
     const heading = page.getByRole("heading", { level: 1 });
-    await expect(heading).toBeVisible();
+    await expect(heading).toBeVisible({ timeout: 3000 });
     await expect(heading).toContainText("Deals");
 
     // Navigate to KIIS
     await page.goto("/kiis/companies");
-    await page.waitForTimeout(600);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "Companies",
+      { timeout: 3000 },
     );
 
     consoleMonitor.assertNoErrors();
@@ -41,19 +38,22 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     consoleMonitor,
   }) => {
     await page.goto("/fdd/deals");
-    // Wait for GSAP page transition (0.4s duration + buffer)
-    await page.waitForTimeout(700);
+    // Wait for heading to be visible (indicates page transition complete)
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 3000,
+    });
 
     // The PageTransition wrapper should be fully opaque
-    const opacity = await page.evaluate(() => {
-      const main = document.querySelector("main");
-      if (!main) return "1";
-      // PageTransition div is the first child of main content area
-      const transitionDiv = main.querySelector("div");
-      if (!transitionDiv) return "1";
-      return window.getComputedStyle(transitionDiv).opacity;
-    });
-    expect(Number(opacity)).toBeGreaterThanOrEqual(0.9);
+    await expect(async () => {
+      const opacity = await page.evaluate(() => {
+        const main = document.querySelector("main");
+        if (!main) return 1;
+        const transitionDiv = main.querySelector("div");
+        if (!transitionDiv) return 1;
+        return Number(window.getComputedStyle(transitionDiv).opacity);
+      });
+      expect(opacity).toBeGreaterThanOrEqual(0.9);
+    }).toPass({ timeout: 3000 });
 
     consoleMonitor.assertNoErrors();
   });
@@ -65,19 +65,15 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     consoleMonitor,
   }) => {
     await page.goto("/fdd/deals");
-    // Wait for page transition + row stagger (0.4s + 0.35s + buffer)
-    await page.waitForTimeout(1000);
 
     const table = page.locator("table");
-    await expect(table).toBeVisible();
+    await expect(table).toBeVisible({ timeout: 3000 });
 
-    // Rows should be visible (opacity 1, y 0 after gsap.fromTo)
+    // Rows should be visible after gsap stagger animation
     const rows = table.locator("tbody tr");
+    await expect(rows.first()).toBeVisible({ timeout: 3000 });
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
-
-    // Check first row is visible
-    await expect(rows.first()).toBeVisible();
 
     consoleMonitor.assertNoErrors();
     consoleMonitor.assertNoUnhandledExceptions();
@@ -111,7 +107,9 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await page.waitForTimeout(300);
+
+    // Wait for page to be fully loaded before evaluating gsap state
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     // Verify gsap.globalTimeline.timeScale is 0
     const timeScale = await page.evaluate(() => {
@@ -147,18 +145,12 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
 
     // Open search palette (uses Modal-like dialog)
     await page.keyboard.press("Control+k");
-    const dialog = page.locator(
-      "[role='dialog'][aria-label='Global search']",
-    );
-    await expect(dialog).toBeVisible();
+    const dialog = page.locator("[role='dialog'][aria-label='Global search']");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
 
-    // Wait for GSAP entry animation (scale 0.95→1, 0.35s)
-    await page.waitForTimeout(500);
-
-    // Close modal
+    // Close modal — wait for exit animation to complete
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(400); // exit animation (0.25s + buffer)
-    await expect(dialog).toBeHidden();
+    await expect(dialog).toBeHidden({ timeout: 3000 });
 
     consoleMonitor.assertNoErrors();
     consoleMonitor.assertNoUnhandledExceptions();
@@ -171,33 +163,34 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     consoleMonitor,
   }) => {
     await page.goto("/");
-    await page.waitForTimeout(800);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 3000,
+    });
 
     // Dashboard has KPI cards that may use useScrollReveal
     // Scroll down to trigger scroll-based animations
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1000);
 
-    // All visible content should have opacity > 0
-    const hiddenElements = await page.evaluate(() => {
-      const elements = document.querySelectorAll("main *");
-      let hidden = 0;
-      elements.forEach((el) => {
-        const style = window.getComputedStyle(el);
-        if (
-          style.opacity === "0" &&
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          (el as HTMLElement).offsetHeight > 0
-        ) {
-          hidden++;
-        }
+    // All visible content should have opacity > 0 after scroll
+    await expect(async () => {
+      const hiddenElements = await page.evaluate(() => {
+        const elements = document.querySelectorAll("main *");
+        let hidden = 0;
+        elements.forEach((el) => {
+          const style = window.getComputedStyle(el);
+          if (
+            style.opacity === "0" &&
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            (el as HTMLElement).offsetHeight > 0
+          ) {
+            hidden++;
+          }
+        });
+        return hidden;
       });
-      return hidden;
-    });
-
-    // After scrolling, no visible elements should remain at opacity 0
-    expect(hiddenElements).toBe(0);
+      expect(hiddenElements).toBe(0);
+    }).toPass({ timeout: 5000 });
 
     consoleMonitor.assertNoErrors();
     consoleMonitor.assertNoUnhandledExceptions();
@@ -213,21 +206,21 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     await page.setViewportSize({ width: 390, height: 844 }); // iPhone 14
 
     await page.goto("/");
-    await page.waitForTimeout(800);
-
-    // Verify content is visible on mobile
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 3000,
+    });
 
     // Navigate on mobile
     await page.goto("/fdd/deals");
-    await page.waitForTimeout(800);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "Deals",
+      { timeout: 3000 },
     );
 
-    // Scroll on mobile
+    // Scroll on mobile — verify no errors
     await page.evaluate(() => window.scrollTo(0, 500));
-    await page.waitForTimeout(600);
+    // Wait for scroll to settle by checking page didn't crash
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     consoleMonitor.assertNoErrors();
     consoleMonitor.assertNoUnhandledExceptions();
@@ -274,8 +267,9 @@ test.describe("GSAP Motion System — Animation & Accessibility Verification", (
     }
 
     // Final page should be fully loaded
-    await page.waitForTimeout(600);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 3000,
+    });
 
     consoleMonitor.assertNoErrors();
     consoleMonitor.assertNoUnhandledExceptions();

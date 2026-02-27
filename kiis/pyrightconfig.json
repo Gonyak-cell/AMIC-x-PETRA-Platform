@@ -1,0 +1,9 @@
+{
+  "include": ["app"],
+  "exclude": ["migrations", "tests", "alembic"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingModuleSource": false,
+  "reportOptionalMemberAccess": false
+}
