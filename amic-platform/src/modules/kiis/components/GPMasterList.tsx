@@ -99,12 +99,7 @@ const columns: Column<GPResearchItem>[] = [
   },
 ];
 
-export function GPMasterList({
-  data,
-  selectedId,
-  onSelect,
-  isLoading,
-}: GPMasterListProps) {
+export function GPMasterList({ data, onSelect, isLoading }: GPMasterListProps) {
   return (
     <DataTable<GPResearchItem>
       columns={columns}
