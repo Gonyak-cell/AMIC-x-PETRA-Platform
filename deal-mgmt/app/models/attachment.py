@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -20,9 +19,9 @@ class Attachment(Base, TimestampMixin):
 
     __tablename__ = "attachments"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -30,7 +29,7 @@ class Attachment(Base, TimestampMixin):
 
     # ── 다형성 참조 ───────────────────────────────────────
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
 
     # ── 파일 메타데이터 ───────────────────────────────────
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
