@@ -964,7 +964,7 @@ export default function TransactionWorkspacePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 거래 정보 — 2-Column */}
           <Card title="거래 정보" headerBar className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0 p-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0 p-1 md:items-start">
               {/* ── 좌측 열: 기본 딜 정보 ── */}
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm items-center">
                 <dt className="text-text-muted">거래명</dt>
