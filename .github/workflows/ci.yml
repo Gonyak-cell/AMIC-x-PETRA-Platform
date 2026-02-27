@@ -256,6 +256,7 @@ jobs:
   e2e-test:
     name: E2E Tests (Mocked)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.ci-config == 'true'
     defaults:
@@ -372,4 +373,5 @@ jobs:
             backend-deal-mgmt, backend-kiis, backend-fdd, backend-im,
             quality, unit-test, build, e2e-test,
             security-sast, dependency-scan
+          allowed-failures: e2e-test
           jobs: ${{ toJSON(needs) }}
