@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import uuid
@@ -151,8 +152,8 @@ async def map_si_candidates(
     all_candidates = _build_flat_candidates(direct_companies, backward_panels, forward_panels, ksic_codes)
 
     logger.info(
-        "SI 매핑 완료: ksic=%s, 전체=%d, direct=%d, backward=%d, forward=%d",
-        ksic_codes,
+        "SI 매핑 완료: ksic_count=%d, 전체=%d, direct=%d, backward=%d, forward=%d",
+        len(ksic_codes),
         len(all_candidates),
         len(direct_out),
         len(backward_panels),
@@ -471,13 +472,28 @@ async def _load_filtered_companies(
 
 
 def _build_ksic_index(companies: list[SICompany]) -> dict[str, list[SICompany]]:
-    """기업 목록으로부터 {KSIC코드: [기업,...]} 인메모리 인덱스 구축."""
+    """기업 목록으로부터 {KSIC코드: [기업,...]} 인메모리 인덱스 구축.
+
+    방어 코드: ksic_codes가 str(이중 직렬화)인 경우 json.loads로 복원 시도.
+    """
     index: dict[str, list[SICompany]] = {}
     for c in companies:
-        if not c.ksic_codes:
+        codes = c.ksic_codes
+        if not codes:
             continue
-        for code in c.ksic_codes:
-            index.setdefault(code, []).append(c)
+        # 방어: 이중 직렬화로 str이 된 경우 복원
+        if isinstance(codes, str):
+            try:
+                codes = json.loads(codes)
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("ksic_codes JSON 파싱 실패: company_id=%s", c.id)
+                continue
+            if not isinstance(codes, list):
+                logger.warning("ksic_codes가 list가 아님: company_id=%s", c.id)
+                continue
+        for code in codes:
+            if isinstance(code, str) and code:
+                index.setdefault(code, []).append(c)
     return index
 
 
@@ -485,14 +501,40 @@ def _lookup_by_ksic(
     ksic_index: dict[str, list[SICompany]],
     ksic_codes: list[str],
 ) -> list[SICompany]:
-    """인메모리 인덱스에서 KSIC 코드 집합에 매칭되는 기업 조회 (중복 제거)."""
+    """인메모리 인덱스에서 KSIC 코드에 매칭되는 기업 조회 (중복 제거).
+
+    매칭 전략 (우선순위 순):
+    1. 정확 매칭: 인덱스에 코드가 있으면 바로 반환
+    2. 접두사 매칭: 입력 코드가 인덱스 키의 접두사이면 매칭
+       예) 입력 "24" → 인덱스 "24110", "24231" 등 모두 매칭
+    3. 역접두사 매칭: 인덱스 키가 입력 코드의 접두사이면 매칭
+       예) 입력 "24110123" → 인덱스 "24110" 매칭
+
+    NOTE: seed_company_data.py의 load_master_dict()에서 적재 시 접두사 정규화를
+    수행하지만, 모든 코드가 정규화되지 않을 수 있어 조회 시점에서도 접두사 매칭을
+    수행하는 2중 안전망 설계.
+    """
     seen: set[uuid.UUID] = set()
     matched: list[SICompany] = []
+
     for code in ksic_codes:
+        # 1. 정확 매칭
         for c in ksic_index.get(code, []):
             if c.id not in seen:
                 seen.add(c.id)
                 matched.append(c)
+
+        # 2 & 3. 접두사/역접두사 매칭 (코드 길이 2+ 제한)
+        if len(code) >= 2:
+            for index_code, companies in ksic_index.items():
+                if index_code == code:
+                    continue  # 이미 정확 매칭에서 처리
+                if index_code.startswith(code) or code.startswith(index_code):
+                    for c in companies:
+                        if c.id not in seen:
+                            seen.add(c.id)
+                            matched.append(c)
+
     return matched
 
 

@@ -33,31 +33,75 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 SI_CSV_DIR = BASE_DIR / "app" / "marketing" / "si_list" / "csv"
 MASTER_DICT_CSV = BASE_DIR / "app" / "marketing" / "si_mapping" / "db" / "industry_master_dict.csv"
+IO_KSIC_MAPPING_CSV = BASE_DIR / "app" / "marketing" / "si_mapping" / "db" / "io_ksic_mapping.csv"
 
 CHUNK_SIZE = 5000
 
 
 # ---------------------------------------------------------------------------
+# 0단계: IO-KSIC 매핑 테이블의 KSIC 코드 풀 로드
+# ---------------------------------------------------------------------------
+def _load_io_ksic_pool() -> set[str]:
+    """io_ksic_mapping.csv에서 고유 KSIC 코드 집합을 로드한다."""
+    if not IO_KSIC_MAPPING_CSV.exists():
+        logger.warning("io_ksic_mapping.csv 없음: %s", IO_KSIC_MAPPING_CSV)
+        return set()
+    io_df = pd.read_csv(IO_KSIC_MAPPING_CSV, dtype=str, encoding="utf-8-sig")
+    pool = set(io_df["ksic_code"].dropna().str.strip())
+    logger.info("IO-KSIC 코드 풀 로드: %d개 고유 코드", len(pool))
+    if not pool:
+        logger.error("IO-KSIC 코드 풀이 비어 있음 — 접두사 역매핑 불가, 원본 코드로 저장됩니다")
+    return pool
+
+
+# ---------------------------------------------------------------------------
 # 1단계: 마스터 사전 메모리 로드
 # ---------------------------------------------------------------------------
-def load_master_dict() -> dict[str, str]:
-    """industry_master_dict.csv를 읽어 {원본_업종명: KSIC코드} dict를 생성한다.
+def load_master_dict() -> dict[str, list[str]]:
+    """industry_master_dict.csv를 읽어 {원본_업종명: [KSIC코드,...]} dict를 생성한다.
 
-    5자리 코드 우선, 없으면 4자리 코드 사용.
+    5자리 코드 우선. 4자리 이하 코드는 io_ksic_mapping에서 접두사 역매핑하여
+    실제 매핑 테이블에 존재하는 코드로 확장한다.
+
+    NOTE: 접두사 확장은 적재 시점(여기)과 조회 시점(si_mapping_service._lookup_by_ksic)
+    양쪽에서 수행된다. 적재 시점에서 가능한 한 정확한 5자리 코드로 정규화하고,
+    조회 시점에서 나머지 자릿수 불일치를 접두사 매칭으로 보완하는 2중 안전망 설계.
     """
+    io_ksic_pool = _load_io_ksic_pool()
+
     df = pd.read_csv(MASTER_DICT_CSV, dtype=str, encoding="utf-8-sig")
     logger.info("마스터 사전 로드: %d건", len(df))
 
-    mapping: dict[str, str] = {}
+    mapping: dict[str, list[str]] = {}
     for _, row in df.iterrows():
         name = str(row["원본_업종명"]).strip()
         if not name:
             continue
         code_5 = str(row.get("KSIC_코드_5자리", "")).strip()
         code_4 = str(row.get("KSIC_코드_4자리", "")).strip()
-        code = code_5 if code_5 and code_5 != "nan" else code_4
-        if code and code != "nan":
-            mapping[name] = code
+
+        # 5자리 코드 우선
+        if code_5 and code_5 != "nan" and len(code_5) >= 5:
+            if code_5 in io_ksic_pool:
+                mapping[name] = [code_5]
+                continue
+            # 접두사 역매핑 (5자리로 시작하는 더 긴 코드 찾기)
+            expanded = [c for c in io_ksic_pool if c.startswith(code_5)]
+            if expanded:
+                mapping[name] = expanded
+                continue
+            # io_mapping에 없어도 원본 코드 유지 (서비스 레이어 접두사 매칭이 처리)
+            mapping[name] = [code_5]
+            continue
+
+        # 4자리 이하 fallback → 접두사 역매핑
+        code = code_4 if code_4 and code_4 != "nan" else None
+        if code:
+            expanded = [c for c in io_ksic_pool if c.startswith(code)]
+            if expanded:
+                mapping[name] = expanded
+            else:
+                mapping[name] = [code]
 
     logger.info("마스터 사전 매핑 엔트리: %d건", len(mapping))
     return mapping
@@ -78,11 +122,11 @@ def strip_to_digits(value: str, max_len: int) -> str | None:
 # 2~3단계: CSV 순회 + 전처리
 # ---------------------------------------------------------------------------
 def process_csv_files(
-    master_dict: dict[str, str],
-) -> tuple[list[dict], int, int, list[str]]:
-    """20개 기업개황 CSV를 순회하며 DB 삽입용 레코드 리스트를 생성한다.
+    master_dict: dict[str, list[str]],
+) -> tuple[list[dict], int, int, int, list[str]]:
+    """기업개황 CSV를 순회하며 DB 삽입용 레코드 리스트를 생성한다.
 
-    반환: (records, total_rows, mapped_count, failed_files)
+    반환: (records, total_rows, mapped_count, total_csv_files, failed_files)
     """
     csv_files = sorted(glob.glob(str(SI_CSV_DIR / "*.csv")))
     logger.info("[Step 2] CSV 파일 %d개 발견: %s", len(csv_files), SI_CSV_DIR)
@@ -117,11 +161,10 @@ def process_csv_files(
                 continue
             seen_jurir.add(jurir_no)
 
-            # 업종명 → KSIC 코드 매핑
+            # 업종명 → KSIC 코드 매핑 (접두사 역매핑 적용)
             industry_name = str(row.get("업종명", "")).strip()
-            ksic_code = master_dict.get(industry_name)
-            ksic_codes = [ksic_code] if ksic_code else []
-            if ksic_code:
+            ksic_codes = master_dict.get(industry_name, [])
+            if ksic_codes:
                 mapped_count += 1
 
             record = {
@@ -145,7 +188,7 @@ def process_csv_files(
         len(all_records),
         mapped_count,
     )
-    return all_records, total_rows, mapped_count, failed_files
+    return all_records, total_rows, mapped_count, len(csv_files), failed_files
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +244,7 @@ async def main(force: bool = False) -> None:
     master_dict = load_master_dict()
 
     # 2~3단계: CSV 순회 + 전처리
-    records, total_rows, mapped_count, failed_files = process_csv_files(master_dict)
+    records, total_rows, mapped_count, total_csv_files, failed_files = process_csv_files(master_dict)
 
     if not records:
         logger.error("적재할 레코드가 없습니다. 종료.")
@@ -227,7 +270,7 @@ async def main(force: bool = False) -> None:
     print("\n" + "=" * 60)
     print("  적재 완료 리포트")
     print("=" * 60)
-    print(f"  처리 CSV 파일: {20 - len(failed_files)}/{20}개")
+    print(f"  처리 CSV 파일: {total_csv_files - len(failed_files)}/{total_csv_files}개")
     print(f"  총 CSV 행: {total_rows:,}")
     print(f"  고유 기업 (중복 제거): {len(records):,}")
     print(f"  KSIC 매핑 성공: {mapped_count:,} ({mapped_count / len(records) * 100:.1f}%)")

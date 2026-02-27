@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import csv
 import itertools
-import json
 import logging
 import random
 import uuid
@@ -268,7 +267,7 @@ def _seed_dummy_companies(conn, ksic_pool: list[str], n: int = 500) -> int:
             {
                 "id": str(uuid.UUID(int=rng.getrandbits(128))),
                 "company_name": name,
-                "ksic_codes": json.dumps(codes),
+                "ksic_codes": codes,
                 "revenue": float(rng.randint(100, 10000)) * 1_0000_0000,
                 "has_investment_history": rng.choice([True, False]),
                 "description": None,

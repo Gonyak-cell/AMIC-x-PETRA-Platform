@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ── 요청 ──────────────────────────────────────────────────
+_KSIC_CODE_RE = re.compile(r"^[A-Za-z0-9]{1,10}$")
+
+
 class SIMappingRequest(BaseModel):
     """SI 매핑 실행 요청."""
 
-    ksic_codes: list[str] = Field(..., min_length=1)
+    ksic_codes: list[str] = Field(..., min_length=1, max_length=20)
+
+    @field_validator("ksic_codes", mode="after")
+    @classmethod
+    def validate_ksic_elements(cls, codes: list[str]) -> list[str]:
+        """각 KSIC 코드가 영숫자 1~10자리인지 검증."""
+        for code in codes:
+            if not _KSIC_CODE_RE.match(code):
+                msg = f"KSIC 코드는 영숫자 1~10자리여야 합니다: {code!r}"
+                raise ValueError(msg)
+        return codes
+
     top_n: int = Field(default=5, ge=1, le=20)
     max_companies_per_panel: int = Field(default=50, ge=1, le=200)
     min_revenue: float | None = Field(default=None)

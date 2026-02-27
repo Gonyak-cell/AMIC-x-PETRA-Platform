@@ -1,5 +1,6 @@
 """SI(전략적 투자자) 자동 매핑 API + 서비스 테스트."""
 
+import json
 import uuid
 
 import pytest
@@ -10,6 +11,7 @@ from app.models.io_sector import IOSector
 from app.models.io_transaction import IOTransaction
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.si_company import SICompany
+from app.services.si_mapping_service import _build_ksic_index, _lookup_by_ksic
 
 pytestmark = pytest.mark.anyio
 
@@ -347,3 +349,129 @@ async def test_bulk_add_nonexistent_company(client: AsyncClient, async_session: 
     assert resp.status_code == 201
     body = resp.json()
     assert body["added_count"] == 0
+
+
+# ── 접두사 매칭 + 이중 직렬화 방어 테스트 ─────────────────
+
+
+async def test_prefix_matching_short_to_long(async_session: AsyncSession):
+    """접두사 매칭 — 기업 KSIC 'C1'이 조회 코드 'C10'과 매칭."""
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="접두사기업",
+        ksic_codes=["C1"],
+        revenue=10_000_000_000,
+    )
+    index = _build_ksic_index([company])
+    # "C10"으로 조회 → 인덱스 키 "C1"이 "C10"의 접두사이므로 매칭
+    result = _lookup_by_ksic(index, ["C10"])
+    assert len(result) == 1
+    assert result[0].company_name == "접두사기업"
+
+
+async def test_prefix_matching_long_to_short(async_session: AsyncSession):
+    """역접두사 매칭 — 기업 KSIC 'C101'이 조회 코드 'C10'과 매칭."""
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="세부업종기업",
+        ksic_codes=["C101"],
+        revenue=10_000_000_000,
+    )
+    index = _build_ksic_index([company])
+    # "C10"으로 조회 → 인덱스 키 "C101"이 "C10"으로 시작하므로 매칭
+    result = _lookup_by_ksic(index, ["C10"])
+    assert len(result) == 1
+    assert result[0].company_name == "세부업종기업"
+
+
+async def test_prefix_matching_exact_still_works(async_session: AsyncSession):
+    """정확 매칭이 여전히 최우선으로 동작."""
+    exact = SICompany(
+        id=uuid.uuid4(),
+        company_name="정확매칭기업",
+        ksic_codes=["C10"],
+        revenue=10_000_000_000,
+    )
+    prefix = SICompany(
+        id=uuid.uuid4(),
+        company_name="접두사매칭기업",
+        ksic_codes=["C1"],
+        revenue=5_000_000_000,
+    )
+    index = _build_ksic_index([exact, prefix])
+    result = _lookup_by_ksic(index, ["C10"])
+    names = [c.company_name for c in result]
+    assert "정확매칭기업" in names
+    assert "접두사매칭기업" in names
+
+
+async def test_prefix_matching_no_false_positive(async_session: AsyncSession):
+    """관련 없는 코드는 매칭하지 않음."""
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="무관기업",
+        ksic_codes=["C99"],
+        revenue=10_000_000_000,
+    )
+    index = _build_ksic_index([company])
+    result = _lookup_by_ksic(index, ["C10"])
+    assert len(result) == 0
+
+
+async def test_build_ksic_index_handles_double_serialized():
+    """_build_ksic_index가 이중 직렬화된 ksic_codes(str)를 복원 처리."""
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="이중직렬화기업",
+    )
+    # 이중 직렬화 시뮬레이션: ORM을 거치지 않고 직접 str 설정
+    object.__setattr__(company, "ksic_codes", json.dumps(["C10", "C20"]))
+
+    index = _build_ksic_index([company])
+    assert "C10" in index
+    assert "C20" in index
+    assert len(index["C10"]) == 1
+    assert index["C10"][0].company_name == "이중직렬화기업"
+
+
+async def test_build_ksic_index_handles_normal_list():
+    """_build_ksic_index가 정상 list 타입 ksic_codes를 올바르게 처리."""
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="정상기업",
+        ksic_codes=["C10", "C20"],
+        revenue=10_000_000_000,
+    )
+    index = _build_ksic_index([company])
+    assert "C10" in index
+    assert "C20" in index
+
+
+async def test_map_prefix_matching_via_api(client: AsyncClient, async_session: AsyncSession):
+    """API 레벨 접두사 매칭 — 'C1' KSIC 보유 기업이 'C10' 매핑에 포함."""
+    # IO 부문 + 매핑 시딩
+    sectors = [IOSector(code="IO01", name="식료품")]
+    session = async_session
+    session.add_all(sectors)
+    await session.flush()
+
+    mappings = [
+        KsicIoMapping(io_code="IO01", io_name="식료품", ksic_code="C10", ksic_name="식료품"),
+    ]
+    session.add_all(mappings)
+
+    # KSIC "C1" 보유 기업 (접두사 매칭 대상)
+    company = SICompany(
+        id=uuid.uuid4(),
+        company_name="접두사매칭API기업",
+        ksic_codes=["C1"],
+        revenue=10_000_000_000,
+    )
+    session.add(company)
+    await session.commit()
+
+    resp = await client.post("/api/v1/si-mapping/map", json={"ksic_codes": ["C10"]})
+    assert resp.status_code == 200
+    body = resp.json()
+    peer_names = [p["company_name"] for p in body["direct_peers"]]
+    assert "접두사매칭API기업" in peer_names
