@@ -99,9 +99,7 @@ async def _get_engine_and_session(database_url: str | None = None):
     return engine, session_factory
 
 
-async def load_io_sectors(
-    session: AsyncSession, csv_path: Path, force: bool = False
-) -> int:
+async def load_io_sectors(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
     """transaction_table.csv에서 고유 IO 코드를 추출하여 io_sectors 테이블에 삽입."""
     from app.models.io_sector import IOSector
 
@@ -137,9 +135,7 @@ async def load_io_sectors(
     return len(rows)
 
 
-async def load_ksic_io_mappings(
-    session: AsyncSession, csv_path: Path, force: bool = False
-) -> int:
+async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
     """io_ksic_mapping.csv → ksic_io_mappings 테이블 벌크 삽입."""
     from app.models.ksic_io_mapping import KsicIoMapping
 
@@ -188,9 +184,7 @@ async def load_ksic_io_mappings(
     return total
 
 
-async def load_io_transactions(
-    session: AsyncSession, csv_path: Path, force: bool = False
-) -> int:
+async def load_io_transactions(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
     """transaction_table.csv → io_transactions 테이블 벌크 삽입."""
     from app.models.io_transaction import IOTransaction
 
@@ -248,9 +242,7 @@ async def load_inducements(
         await session.commit()
         logger.info("%s 기존 데이터 삭제 완료", table_name)
 
-    count = (
-        await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
-    ).scalar()
+    count = (await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))).scalar()
     if count and count > 0 and not force:
         logger.info("%s 이미 %d건 존재, 스킵", table_name, count)
         return count
@@ -281,9 +273,7 @@ async def load_inducements(
     return total
 
 
-async def load_ksic_classifications(
-    session: AsyncSession, csv_path: Path, force: bool = False
-) -> int:
+async def load_ksic_classifications(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
     """industry_classification.csv → ksic_classifications 테이블 벌크 삽입."""
     from app.models.ksic_classification import KsicClassification
 
@@ -292,9 +282,7 @@ async def load_ksic_classifications(
         await session.commit()
         logger.info("ksic_classifications 기존 데이터 삭제 완료")
 
-    count = (
-        await session.execute(text("SELECT COUNT(*) FROM ksic_classifications"))
-    ).scalar()
+    count = (await session.execute(text("SELECT COUNT(*) FROM ksic_classifications"))).scalar()
     if count and count > 0 and not force:
         logger.info("ksic_classifications 이미 %d건 존재, 스킵", count)
         return count
@@ -327,9 +315,7 @@ async def load_ksic_classifications(
     return len(rows)
 
 
-async def generate_dummy_companies(
-    session: AsyncSession, n: int = 500, force: bool = False
-) -> int:
+async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: bool = False) -> int:
     """더미 SI 기업 생성 — 매핑 테이블의 실제 KSIC 코드 사용."""
     from app.models.si_company import SICompany
 
@@ -349,9 +335,7 @@ async def generate_dummy_companies(
     result = await session.execute(select(KsicIoMapping.ksic_code).distinct())
     ksic_pool = [row[0] for row in result.all()]
     if not ksic_pool:
-        logger.warning(
-            "ksic_io_mappings가 비어있어 더미 기업 생성 불가. 먼저 매핑 데이터를 삽입하세요."
-        )
+        logger.warning("ksic_io_mappings가 비어있어 더미 기업 생성 불가. 먼저 매핑 데이터를 삽입하세요.")
         return 0
 
     logger.info("KSIC 코드 풀: %d개", len(ksic_pool))
@@ -377,8 +361,7 @@ async def generate_dummy_companies(
                 "id": uuid.uuid4(),
                 "company_name": name,
                 "ksic_codes": codes,
-                "revenue": float(random.randint(100, 10000))
-                * 1_000_000_00,  # 100억 ~ 1조
+                "revenue": float(random.randint(100, 10000)) * 1_000_000_00,  # 100억 ~ 1조
                 "has_investment_history": random.choice([True, False]),
                 "description": None,
             }
@@ -476,9 +459,7 @@ if __name__ == "__main__":
         help="CSV 파일 디렉토리",
     )
     parser.add_argument("--dummy-count", type=int, default=500, help="더미 기업 수")
-    parser.add_argument(
-        "--force", action="store_true", help="기존 데이터 삭제 후 재삽입"
-    )
+    parser.add_argument("--force", action="store_true", help="기존 데이터 삭제 후 재삽입")
     args = parser.parse_args()
 
     asyncio.run(main(csv_dir=args.csv_dir, dummy_count=args.dummy_count, force=args.force))

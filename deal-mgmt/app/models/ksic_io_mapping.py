@@ -12,9 +12,7 @@ class KsicIoMapping(Base):
     """KSIC 코드와 산업연관표 I-O 코드 간의 N:M 매핑."""
 
     __tablename__ = "ksic_io_mappings"
-    __table_args__ = (
-        UniqueConstraint("io_code", "ksic_code", name="uq_ksic_io_mapping"),
-    )
+    __table_args__ = (UniqueConstraint("io_code", "ksic_code", name="uq_ksic_io_mapping"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     io_code: Mapped[str] = mapped_column(
