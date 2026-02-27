@@ -6,6 +6,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.io_sector import IOSector
 from app.models.io_transaction import IOTransaction
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.si_company import SICompany
@@ -15,7 +16,17 @@ pytestmark = pytest.mark.anyio
 
 # ── 헬퍼: 참조 데이터 시딩 ─────────────────────────────────
 async def _seed_reference_data(session: AsyncSession) -> dict:
-    """테스트용 KSIC 매핑 + IO 거래 + SI 기업 데이터 삽입."""
+    """테스트용 IO 부문 + KSIC 매핑 + IO 거래 + SI 기업 데이터 삽입."""
+    # IO 부문분류 마스터 (FK 참조 대상, 가장 먼저 삽입)
+    sectors = [
+        IOSector(code="IO01", name="식료품"),
+        IOSector(code="IO02", name="섬유"),
+        IOSector(code="IO03", name="화학제품"),
+        IOSector(code="IO04", name="전자부품"),
+    ]
+    session.add_all(sectors)
+    await session.flush()
+
     # KSIC ↔ IO 매핑
     mappings = [
         KsicIoMapping(io_code="IO01", io_name="식료품", ksic_code="C10", ksic_name="식료품 제조업"),

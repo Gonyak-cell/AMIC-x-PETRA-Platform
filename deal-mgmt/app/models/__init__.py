@@ -89,7 +89,10 @@ from app.models.enums import (
     WorkingGroupRole,
 )
 from app.models.financial_model import FinancialModel, FMChecklist, FMChecklistItem
+from app.models.io_inducement import IOProductionInducement, IOValueAddedInducement
+from app.models.io_sector import IOSector
 from app.models.io_transaction import IOTransaction
+from app.models.ksic_classification import KsicClassification
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.ldd_report import LDDReport
 from app.models.ldd_vdr_reference import LddVdrReference
@@ -170,8 +173,12 @@ __all__ = [
     "FinancialModel",
     "FinancialModelStatus",
     "FinancialModelType",
+    "IOProductionInducement",
+    "IOSector",
     "IOTransaction",
+    "IOValueAddedInducement",
     "IssueDecisionStatus",
+    "KsicClassification",
     "KsicIoMapping",
     "LDDIssueLevel",
     "LDDItemStatus",

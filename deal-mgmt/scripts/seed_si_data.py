@@ -4,8 +4,11 @@
     python -m scripts.seed_si_data --csv-dir ./app/marketing/si_mapping/db
 
 CSV 파일 요구사항 (parse_io_tables.py 출력):
+    - transaction_table.csv: source_io_code, source_io_name, target_io_code, target_io_name, value
     - io_ksic_mapping.csv: io_code, io_name, ksic_code (ksic_name은 선택)
-    - transaction_table.csv: source_io_code, source_io_name, target_io_code, target_io_name, transaction_value
+    - production_inducement.csv: source_io_code, source_io_name, target_io_code, target_io_name, value
+    - value_added_inducement.csv: source_io_code, source_io_name, target_io_code, target_io_name, value
+    - industry_classification.csv: basic_code, basic_name, sub_code, sub_name, mid_code, mid_name, large_code, large_name
 
 옵션:
     --csv-dir     CSV 파일 디렉토리 (기본: ./app/marketing/si_mapping/db)
@@ -96,8 +99,48 @@ async def _get_engine_and_session(database_url: str | None = None):
     return engine, session_factory
 
 
-async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
-    """ksic_mapping.csv → ksic_io_mappings 테이블 벌크 삽입."""
+async def load_io_sectors(
+    session: AsyncSession, csv_path: Path, force: bool = False
+) -> int:
+    """transaction_table.csv에서 고유 IO 코드를 추출하여 io_sectors 테이블에 삽입."""
+    from app.models.io_sector import IOSector
+
+    if force:
+        await session.execute(delete(IOSector))
+        await session.commit()
+        logger.info("io_sectors 기존 데이터 삭제 완료")
+
+    count = (await session.execute(text("SELECT COUNT(*) FROM io_sectors"))).scalar()
+    if count and count > 0 and not force:
+        logger.info("io_sectors 이미 %d건 존재, 스킵", count)
+        return count
+
+    # transaction_table.csv에서 고유 IO 코드+이름 추출
+    io_codes: dict[str, str] = {}
+    with open(csv_path, encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            src_code = row["source_io_code"].strip()
+            src_name = row.get("source_io_name", "").strip()
+            tgt_code = row["target_io_code"].strip()
+            tgt_name = row.get("target_io_name", "").strip()
+            if src_code and src_code not in io_codes:
+                io_codes[src_code] = src_name
+            if tgt_code and tgt_code not in io_codes:
+                io_codes[tgt_code] = tgt_name
+
+    rows = [{"code": code, "name": name or code} for code, name in sorted(io_codes.items())]
+
+    await session.execute(insert(IOSector), rows)
+    await session.commit()
+    logger.info("io_sectors 총 %d건 삽입 완료", len(rows))
+    return len(rows)
+
+
+async def load_ksic_io_mappings(
+    session: AsyncSession, csv_path: Path, force: bool = False
+) -> int:
+    """io_ksic_mapping.csv → ksic_io_mappings 테이블 벌크 삽입."""
     from app.models.ksic_io_mapping import KsicIoMapping
 
     if force:
@@ -112,14 +155,21 @@ async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bo
         return count
 
     rows = []
+    seen: set[tuple[str, str]] = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            io_code = row["io_code"].strip()
+            ksic_code = row["ksic_code"].strip()
+            key = (io_code, ksic_code)
+            if key in seen:
+                continue
+            seen.add(key)
             rows.append(
                 {
-                    "io_code": row["io_code"].strip(),
+                    "io_code": io_code,
                     "io_name": row.get("io_name", "").strip() or None,
-                    "ksic_code": row["ksic_code"].strip(),
+                    "ksic_code": ksic_code,
                     "ksic_name": row.get("ksic_name", "").strip() or None,
                 }
             )
@@ -138,8 +188,10 @@ async def load_ksic_io_mappings(session: AsyncSession, csv_path: Path, force: bo
     return total
 
 
-async def load_io_transactions(session: AsyncSession, csv_path: Path, force: bool = False) -> int:
-    """fact_transaction.csv → io_transactions 테이블 벌크 삽입."""
+async def load_io_transactions(
+    session: AsyncSession, csv_path: Path, force: bool = False
+) -> int:
+    """transaction_table.csv → io_transactions 테이블 벌크 삽입."""
     from app.models.io_transaction import IOTransaction
 
     if force:
@@ -156,7 +208,7 @@ async def load_io_transactions(session: AsyncSession, csv_path: Path, force: boo
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            val = row["transaction_value"].strip()
+            val = row["value"].strip()
             if not val or float(val) == 0:
                 continue  # 거래액 0 제외
             rows.append(
@@ -183,7 +235,101 @@ async def load_io_transactions(session: AsyncSession, csv_path: Path, force: boo
     return total
 
 
-async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: bool = False) -> int:
+async def load_inducements(
+    session: AsyncSession,
+    csv_path: Path,
+    table_name: str,
+    model_cls: type,
+    force: bool = False,
+) -> int:
+    """유발계수 CSV → DB 테이블 벌크 삽입 (생산유발/부가가치유발 공용)."""
+    if force:
+        await session.execute(delete(model_cls))
+        await session.commit()
+        logger.info("%s 기존 데이터 삭제 완료", table_name)
+
+    count = (
+        await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
+    ).scalar()
+    if count and count > 0 and not force:
+        logger.info("%s 이미 %d건 존재, 스킵", table_name, count)
+        return count
+
+    rows = []
+    with open(csv_path, encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(
+                {
+                    "source_io_code": row["source_io_code"].strip(),
+                    "target_io_code": row["target_io_code"].strip(),
+                    "coefficient": float(row["value"].strip()),
+                }
+            )
+
+    chunk_size = 5000
+    total = 0
+    for i in range(0, len(rows), chunk_size):
+        chunk = rows[i : i + chunk_size]
+        await session.execute(insert(model_cls), chunk)
+        total += len(chunk)
+        if total % 50000 == 0 or total == len(rows):
+            logger.info("%s: %d / %d 삽입", table_name, total, len(rows))
+
+    await session.commit()
+    logger.info("%s 총 %d건 삽입 완료", table_name, total)
+    return total
+
+
+async def load_ksic_classifications(
+    session: AsyncSession, csv_path: Path, force: bool = False
+) -> int:
+    """industry_classification.csv → ksic_classifications 테이블 벌크 삽입."""
+    from app.models.ksic_classification import KsicClassification
+
+    if force:
+        await session.execute(delete(KsicClassification))
+        await session.commit()
+        logger.info("ksic_classifications 기존 데이터 삭제 완료")
+
+    count = (
+        await session.execute(text("SELECT COUNT(*) FROM ksic_classifications"))
+    ).scalar()
+    if count and count > 0 and not force:
+        logger.info("ksic_classifications 이미 %d건 존재, 스킵", count)
+        return count
+
+    rows = []
+    seen: set[str] = set()
+    with open(csv_path, encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            basic_code = row["basic_code"].strip()
+            if not basic_code or basic_code in seen:
+                continue
+            seen.add(basic_code)
+            rows.append(
+                {
+                    "basic_code": basic_code,
+                    "basic_name": row.get("basic_name", "").strip() or basic_code,
+                    "sub_code": row.get("sub_code", "").strip() or None,
+                    "sub_name": row.get("sub_name", "").strip() or None,
+                    "mid_code": row.get("mid_code", "").strip() or None,
+                    "mid_name": row.get("mid_name", "").strip() or None,
+                    "large_code": row.get("large_code", "").strip() or None,
+                    "large_name": row.get("large_name", "").strip() or None,
+                }
+            )
+
+    await session.execute(insert(KsicClassification), rows)
+    await session.commit()
+    logger.info("ksic_classifications 총 %d건 삽입 완료", len(rows))
+    return len(rows)
+
+
+async def generate_dummy_companies(
+    session: AsyncSession, n: int = 500, force: bool = False
+) -> int:
     """더미 SI 기업 생성 — 매핑 테이블의 실제 KSIC 코드 사용."""
     from app.models.si_company import SICompany
 
@@ -203,7 +349,9 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
     result = await session.execute(select(KsicIoMapping.ksic_code).distinct())
     ksic_pool = [row[0] for row in result.all()]
     if not ksic_pool:
-        logger.warning("ksic_io_mappings가 비어있어 더미 기업 생성 불가. 먼저 매핑 데이터를 삽입하세요.")
+        logger.warning(
+            "ksic_io_mappings가 비어있어 더미 기업 생성 불가. 먼저 매핑 데이터를 삽입하세요."
+        )
         return 0
 
     logger.info("KSIC 코드 풀: %d개", len(ksic_pool))
@@ -229,13 +377,12 @@ async def generate_dummy_companies(session: AsyncSession, n: int = 500, force: b
                 "id": uuid.uuid4(),
                 "company_name": name,
                 "ksic_codes": codes,
-                "revenue": float(random.randint(100, 10000)) * 1_000_000_00,  # 100억 ~ 1조
+                "revenue": float(random.randint(100, 10000))
+                * 1_000_000_00,  # 100억 ~ 1조
                 "has_investment_history": random.choice([True, False]),
                 "description": None,
             }
         )
-
-    from app.models.si_company import SICompany
 
     chunk_size = 100
     total = 0
@@ -256,6 +403,13 @@ async def main(csv_dir: str = "./data", dummy_count: int = 500, force: bool = Fa
     engine, session_factory = await _get_engine_and_session()
 
     async with session_factory() as session:
+        # 0. IO 부문분류 마스터 (FK 참조 대상, 가장 먼저 시딩)
+        tx_csv = csv_path / "transaction_table.csv"
+        if tx_csv.exists():
+            await load_io_sectors(session, tx_csv, force)
+        else:
+            logger.warning("파일 없음: %s — io_sectors 시딩 스킵", tx_csv)
+
         # 1. KSIC-IO 매핑
         mapping_csv = csv_path / "io_ksic_mapping.csv"
         if mapping_csv.exists():
@@ -264,13 +418,50 @@ async def main(csv_dir: str = "./data", dummy_count: int = 500, force: bool = Fa
             logger.warning("파일 없음: %s", mapping_csv)
 
         # 2. IO 거래 데이터
-        tx_csv = csv_path / "transaction_table.csv"
         if tx_csv.exists():
             await load_io_transactions(session, tx_csv, force)
         else:
             logger.warning("파일 없음: %s", tx_csv)
 
-        # 3. 더미 기업 생성
+        # 3. 생산유발계수
+        from app.models.io_inducement import (
+            IOProductionInducement,
+            IOValueAddedInducement,
+        )
+
+        prod_csv = csv_path / "production_inducement.csv"
+        if prod_csv.exists():
+            await load_inducements(
+                session,
+                prod_csv,
+                "io_production_inducements",
+                IOProductionInducement,
+                force,
+            )
+        else:
+            logger.warning("파일 없음: %s", prod_csv)
+
+        # 4. 부가가치유발계수
+        va_csv = csv_path / "value_added_inducement.csv"
+        if va_csv.exists():
+            await load_inducements(
+                session,
+                va_csv,
+                "io_value_added_inducements",
+                IOValueAddedInducement,
+                force,
+            )
+        else:
+            logger.warning("파일 없음: %s", va_csv)
+
+        # 5. KSIC 산업분류 참조 테이블
+        cls_csv = csv_path / "industry_classification.csv"
+        if cls_csv.exists():
+            await load_ksic_classifications(session, cls_csv, force)
+        else:
+            logger.warning("파일 없음: %s", cls_csv)
+
+        # 6. 더미 기업 생성
         await generate_dummy_companies(session, dummy_count, force)
 
     await engine.dispose()
@@ -279,9 +470,15 @@ async def main(csv_dir: str = "./data", dummy_count: int = 500, force: bool = Fa
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SI 매핑 참조 데이터 시딩")
-    parser.add_argument("--csv-dir", default="./app/marketing/si_mapping/db", help="CSV 파일 디렉토리")
+    parser.add_argument(
+        "--csv-dir",
+        default="./app/marketing/si_mapping/db",
+        help="CSV 파일 디렉토리",
+    )
     parser.add_argument("--dummy-count", type=int, default=500, help="더미 기업 수")
-    parser.add_argument("--force", action="store_true", help="기존 데이터 삭제 후 재삽입")
+    parser.add_argument(
+        "--force", action="store_true", help="기존 데이터 삭제 후 재삽입"
+    )
     args = parser.parse_args()
 
     asyncio.run(main(csv_dir=args.csv_dir, dummy_count=args.dummy_count, force=args.force))
