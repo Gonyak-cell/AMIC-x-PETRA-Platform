@@ -81,6 +81,28 @@ if [ -n "$CHANGED_PY" ]; then
       exit 1
     fi
     echo "Ruff critical-error check passed."
+
+    # ─── Guard 4b: Python ruff 전체 린트 (변경 파일만) ───────────────
+    # CI와 동일한 전체 규칙을 변경 파일에 대해서만 실행.
+    # 속도: 변경 파일만 검사하므로 ~1-2초.
+    echo "Pre-push: Running ruff full lint on changed files..."
+    RUFF_FULL_FAILED=false
+    for MODULE in deal-mgmt kiis fdd/backend; do
+      MODULE_FILES=$(echo "$CHANGED_PY" | grep "^${MODULE}/" | sed "s|^${MODULE}/||" || true)
+      if [ -n "$MODULE_FILES" ] && [ -d "$MODULE" ]; then
+        if ! (cd "$MODULE" && echo "$MODULE_FILES" | xargs python -m ruff check 2>&1); then
+          RUFF_FULL_FAILED=true
+        fi
+      fi
+    done
+    if [ "$RUFF_FULL_FAILED" = true ]; then
+      echo ""
+      echo "❌ PRE-PUSH BLOCKED: ruff 전체 린트 위반이 있습니다."
+      echo "   수정: cd <module> && python -m ruff check . --fix"
+      echo ""
+      exit 1
+    fi
+    echo "Ruff full lint check passed."
   else
     echo "⚠️ WARNING: ruff 미설치 — Python 린트 검사 건너뜀"
   fi
@@ -97,6 +119,26 @@ if [ -n "$CHANGED_TS" ]; then
     echo "   새로운 props/타입을 추가했다면 types/ 파일도 함께 커밋하세요."
     echo "   (경고만 출력, 푸시는 계속됩니다)"
     echo ""
+  fi
+fi
+
+# ─── Guard 6: pyproject.toml pip 호환성 검증 ──────────────────────
+# [dependency-groups] (PEP 735) 사용 감지 → pip install -e ".[dev]" 인식 불가.
+CHANGED_TOML=$(git diff "$REMOTE"...HEAD --name-only -- '*/pyproject.toml' 2>/dev/null || true)
+if [ -n "$CHANGED_TOML" ]; then
+  TOML_ERR=false
+  for TOML in $CHANGED_TOML; do
+    if [ -f "$TOML" ] && grep -q "\[dependency-groups\]" "$TOML" 2>/dev/null; then
+      echo ""
+      echo "❌ PRE-PUSH BLOCKED: $TOML에 [dependency-groups] 사용 감지"
+      echo "   CI의 pip install -e '.[dev]'가 인식하지 못합니다."
+      echo "   수정: [project.optional-dependencies]로 변환하세요."
+      TOML_ERR=true
+    fi
+  done
+  if [ "$TOML_ERR" = true ]; then
+    echo ""
+    exit 1
   fi
 fi
 

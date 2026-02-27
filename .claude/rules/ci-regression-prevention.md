@@ -120,16 +120,99 @@ except Exception as exc:
 
 ---
 
+## 규칙 6: pyproject.toml — 빌드 백엔드 통일
+
+**배경**: setuptools flat-layout auto-discovery는 top-level에 여러 패키지(`app/`, `alembic/`)가 있으면
+혼동되어 `Multiple top-level packages discovered` 에러가 발생한다.
+hatchling + `packages = ["app"]`이 명시적이고 안정적이다.
+
+**필수 패턴**:
+```toml
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+**금지**:
+```toml
+# ❌ top-level에 app/ 외 디렉토리(alembic/)가 있는 경우
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+# packages 미지정 → flat-layout 에러
+```
+
+**사전 체크**: 새 모듈 추가 시 기존 모듈(deal-mgmt, kiis)의 pyproject.toml을 참조.
+
+---
+
+## 규칙 7: pyproject.toml — dev 의존성 표준 형식
+
+**배경**: `[dependency-groups]`(PEP 735)는 uv 전용이다. pip은 `[project.optional-dependencies]`만 인식한다.
+CI가 `pip install -e ".[dev]"`을 사용하므로, `[dependency-groups]`를 쓰면 dev 의존성(pytest-cov 등)이 설치되지 않는다.
+
+**필수 패턴**:
+```toml
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    # ...
+]
+```
+
+**금지**:
+```toml
+# ❌ pip에서 인식 불가 — CI 실패
+[dependency-groups]
+dev = [...]
+```
+
+**사전 자동 체크**: `.husky/pre-push` Guard 6 — `[dependency-groups]` 감지 시 푸시 차단.
+
+---
+
+## 규칙 8: CI/workflow YAML — Job-level permissions 주의
+
+**배경**: GitHub Actions에서 job-level `permissions` 블록은 workflow-level `permissions`를 **병합하지 않고 완전히 대체**한다. job-level에 `contents: read`를 빠뜨리면 `actions/checkout`이 `Repository not found`로 실패한다.
+
+**필수 확인**:
+```yaml
+# workflow-level
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  my-job:
+    permissions:
+      # ⚠️ 여기서 contents: read 를 빠뜨리면 checkout 실패!
+      pull-requests: read
+      contents: read    # ← 반드시 포함
+```
+
+**체크리스트**: `.github/workflows/*.yml` 수정 시:
+- job-level `permissions` 블록이 있으면 `contents: read` 포함 여부 확인
+- `actions/checkout@v4`를 사용하는 Job에는 반드시 `contents: read` 필요
+
+---
+
 ## 위반 감지 신호 (이 생각이 들면 체크리스트 실행)
 
 - "로컬에서 빌드/테스트 통과했으니 CI도 될 것이다"
 - "`deploy.yml` 수정했는데 permissions는 그대로일 거야"
 - "이 `json` 함수는 다른 import에 포함됐겠지"
 - "이 타입 파일은 나중에 커밋해도 돼"
+- "CI가 Repository not found면 GitHub Settings 문제일 것이다"
+- "`pip install -e .[dev]` 실패해도 fallback이 있으니 괜찮을 것이다"
 
 ## 관련 파일
 
-- `.husky/pre-push` — 자동 차단 게이트 (Guard 1, 2, 3)
+- `.husky/pre-push` — 자동 차단 게이트 (Guard 1~6)
 - `.github/workflows/deploy.yml` — CI 게이트 의존 워크플로우
 - `.github/workflows/ci.yml` — SQLite 기반 테스트 환경 정의
 - `kiis/app/models/audit.py` — 올바른 크로스 DB 호환 타입 예시
+- `.claude/rules/ci-deploy-failure-diagnostic.md` — CI/Deploy 실패 진단 규칙
