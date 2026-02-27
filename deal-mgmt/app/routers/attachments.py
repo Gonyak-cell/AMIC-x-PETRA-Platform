@@ -21,9 +21,21 @@ from app.services import audit_service, transaction_service
 UPLOAD_DIR = Path("uploads/attachments")
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
-    ".docx", ".doc", ".pdf", ".xlsx", ".xls",
-    ".pptx", ".ppt", ".hwp", ".hwpx", ".txt",
-    ".csv", ".zip", ".png", ".jpg", ".jpeg",
+    ".docx",
+    ".doc",
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".pptx",
+    ".ppt",
+    ".hwp",
+    ".hwpx",
+    ".txt",
+    ".csv",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
 }
 VALID_ENTITY_TYPES = {e.value for e in AttachmentEntityType}
 
