@@ -91,15 +91,19 @@ export function ScatterPlot({
               borderRadius: 8,
               fontSize: 13,
             }}
-            formatter={(value: number, name: string) => {
-              if (name === "Gross IRR") return [`${value.toFixed(1)}%`, name];
-              if (name === "펀드 규모")
-                return [`${value.toLocaleString()}억`, name];
-              return [value, name];
+            formatter={(
+              value: number | undefined,
+              name: string | undefined,
+            ) => {
+              const v = value ?? 0;
+              const n = name ?? "";
+              if (n === "Gross IRR") return [`${v.toFixed(1)}%`, n];
+              if (n === "펀드 규모") return [`${v.toLocaleString()}억`, n];
+              return [v, n];
             }}
             labelFormatter={(
               _: unknown,
-              payload: Array<{ payload?: IRRScatterPoint }>,
+              payload: ReadonlyArray<{ payload?: IRRScatterPoint }>,
             ) => {
               const item = payload?.[0]?.payload;
               return item ? `${item.fundName} (${item.vintage})` : "";

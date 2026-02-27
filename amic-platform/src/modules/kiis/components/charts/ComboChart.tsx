@@ -76,10 +76,10 @@ export function ComboChart({
               borderRadius: 8,
               fontSize: 13,
             }}
-            formatter={(value: number, name: string) => [
-              `${value.toLocaleString()}억`,
-              name,
-            ]}
+            formatter={(
+              value: number | undefined,
+              name: string | undefined,
+            ) => [`${(value ?? 0).toLocaleString()}억`, name ?? ""]}
           />
           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
           <Bar

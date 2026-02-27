@@ -91,8 +91,8 @@ export function DonutChart({
               borderRadius: 8,
               fontSize: 13,
             }}
-            formatter={(value: number) => [
-              `${value.toLocaleString()}억 (${((value / total) * 100).toFixed(1)}%)`,
+            formatter={(value: number | undefined) => [
+              `${(value ?? 0).toLocaleString()}억 (${(((value ?? 0) / total) * 100).toFixed(1)}%)`,
               "투자 금액",
             ]}
           />
