@@ -13,8 +13,6 @@ from app.models.dd_checklist import DDChecklist
 from app.models.deal_client import DealClient
 from app.models.earnout import EarnoutMilestone
 from app.models.engagement import Engagement
-from app.models.io_transaction import IOTransaction
-from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.enums import (
     ActionItemStatus,
     ApprovalStatus,
@@ -91,6 +89,8 @@ from app.models.enums import (
     WorkingGroupRole,
 )
 from app.models.financial_model import FinancialModel, FMChecklist, FMChecklistItem
+from app.models.io_transaction import IOTransaction
+from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.ldd_report import LDDReport
 from app.models.ldd_vdr_reference import LddVdrReference
 from app.models.legal_document import LegalDocument
@@ -156,8 +156,6 @@ __all__ = [
     "DealClient",
     "DealNote",
     "DealTimeline",
-    "IOTransaction",
-    "KsicIoMapping",
     "EarnoutMetric",
     "EarnoutMilestone",
     "EarnoutStatus",
@@ -172,7 +170,9 @@ __all__ = [
     "FinancialModel",
     "FinancialModelStatus",
     "FinancialModelType",
+    "IOTransaction",
     "IssueDecisionStatus",
+    "KsicIoMapping",
     "LDDIssueLevel",
     "LDDItemStatus",
     "LDDReport",

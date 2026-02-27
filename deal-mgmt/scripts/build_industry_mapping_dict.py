@@ -253,7 +253,7 @@ def load_or_extract_hwp_5digit() -> dict:
         df.to_csv(HWP_CSV, encoding="utf-8-sig", index=False)
         print(f"    캐시 저장: {HWP_CSV.name}")
     else:
-        print(f"  경고: HWP 파일 없음 - 5차 매칭 건너뜀")
+        print("  경고: HWP 파일 없음 - 5차 매칭 건너뜀")
         return {}
 
     lookup = {}
@@ -471,7 +471,7 @@ def match_industry_names(
 
     # aggressive 정규화 버전도 생성 (대상측)
     all_aggressive_names = {}
-    for norm, (orig, code, level_name) in all_norm_names.items():
+    for _norm, (orig, code, level_name) in all_norm_names.items():
         agg = normalize_aggressive(orig)
         if agg and agg not in all_aggressive_names:
             all_aggressive_names[agg] = (orig, code, level_name)
@@ -483,7 +483,7 @@ def match_industry_names(
 
     # HWP 룩업에 대한 aggressive 버전도 생성
     hwp_aggressive = {}
-    for norm, (orig, code) in hwp_lookup.items():
+    for _norm, (orig, code) in hwp_lookup.items():
         agg = normalize_aggressive(orig)
         if agg and agg not in hwp_aggressive:
             hwp_aggressive[agg] = (orig, code)
@@ -492,7 +492,7 @@ def match_industry_names(
     # 11차 연계표 룩업 키 + aggressive 버전
     link_keys = list(linkage_lookup.keys())
     link_aggressive = {}
-    for norm, (orig, code) in linkage_lookup.items():
+    for _norm, (orig, code) in linkage_lookup.items():
         agg = normalize_aggressive(orig)
         if agg and agg not in link_aggressive:
             link_aggressive[agg] = (orig, code)
@@ -622,7 +622,7 @@ def match_industry_names(
             link_result = _try_hwp_match(norm_name, link_keys, linkage_lookup)
             if link_result:
                 orig, k11, method, score = link_result
-                k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
+                _k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
                 k5 = k11  # 11차 코드를 5자리로 사용
                 tag = "link11_exact" if method == "hwp_exact" else "link11_fuzzy"
                 matched.append(_success_row(
@@ -637,7 +637,7 @@ def match_industry_names(
                 link_result = _try_hwp_match(agg_name, link_agg_keys, link_aggressive)
                 if link_result:
                     orig, k11, method, score = link_result
-                    k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
+                    _k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
                     k5 = k11
                     matched.append(_success_row(
                         raw_name, norm_name, k5[:4], orig, "linkage_11th",
@@ -716,11 +716,7 @@ def match_industry_names(
             if candidates:
                 best = candidates[0]
                 score = difflib.SequenceMatcher(None, norm_name, best).ratio()
-                orig, code = (
-                    all_candidate_lookup[best]
-                    if best in all_candidate_lookup
-                    else ("", "")
-                )
+                orig, code = all_candidate_lookup.get(best, ("", ""))
                 unmatched.append(
                     _fail_row(raw_name, norm_name, orig, code, round(score, 4))
                 )
@@ -836,7 +832,7 @@ def _find_first_basic(upper_code, lookup_by_level, code4_to_code5):
     """상위분류 코드에 속하는 첫 번째 basic(4자리) 코드를 찾는다."""
     basic_dict = lookup_by_level.get("basic", {})
     # basic 코드 중 상위 코드로 시작하는 것 찾기
-    for _norm, (orig, code) in basic_dict.items():
+    for _norm, (_orig, code) in basic_dict.items():
         if code.startswith(upper_code):
             k5_list = code4_to_code5.get(code, [])
             k5 = k5_list[0] if k5_list else ""
@@ -875,7 +871,7 @@ def _try_split_match(split_norm, all_norm_names, norm_keys, code4_to_code5,
         link_r = _try_hwp_match(split_norm, link_keys, linkage_lookup)
         if link_r:
             orig, k11, _method, sc = link_r
-            k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
+            _k10, chg = _resolve_11th_to_10th(k11, linkage_reverse)
             return k11[:4], orig, "linkage_11th", k11, False, sc, k11, chg
 
     return None
@@ -935,14 +931,14 @@ def save_results(matched, unmatched):
     df_matched.to_csv(matched_path, encoding="utf-8-sig", index=False)
     df_unmatched.to_csv(review_path, encoding="utf-8-sig", index=False)
 
-    print(f"\n[Step 4] 결과 저장 완료")
+    print("\n[Step 4] 결과 저장 완료")
     print(f"  성공: {matched_path} ({len(df_matched)}행)")
     print(f"  실패: {review_path} ({len(df_unmatched)}행)")
 
     # 매칭 통계
     if len(df_matched) > 0:
         print("\n=== 매칭 통계 ===")
-        print(f"  매칭 방식별:")
+        print("  매칭 방식별:")
         for method in [
             "manual_override",
             "exact", "fuzzy", "exact_agg", "fuzzy_agg",
@@ -954,7 +950,7 @@ def save_results(matched, unmatched):
             cnt = (df_matched["매칭_방식"] == method).sum()
             if cnt > 0:
                 print(f"    {method}: {cnt}")
-        print(f"  매칭 레벨별:")
+        print("  매칭 레벨별:")
         for level in ["manual", "basic", "sub", "mid", "large", "io_name",
                       "hwp_5digit", "linkage_11th"]:
             cnt = (df_matched["매칭_레벨"] == level).sum()
