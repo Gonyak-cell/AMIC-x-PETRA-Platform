@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { MobileMenuButton } from "./MobileMenuButton";
-import amicMainWhiteUrl from "@/assets/logos/AMIC_Main_White.svg";
+import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg";
 import { SidebarOverlay } from "./SidebarOverlay";
 import { PageTransition } from "./PageTransition";
 import { DesktopHeader } from "@/components/DesktopHeader";
@@ -143,13 +143,11 @@ export default function AppShell({ children }: AppShellProps) {
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               />
-              <div className="flex items-center gap-2">
-                <img src={amicMainWhiteUrl} alt="AMIC" className="h-5 w-auto" />
-                <span className="text-white/40 text-xs font-display">x</span>
-                <span className="text-accent font-display font-bold text-[10px] tracking-[0.08em]">
-                  PETRA
-                </span>
-              </div>
+              <img
+                src={amicPetraWhiteUrl}
+                alt="AMIC & PETRABRIDGE PARTNERS"
+                className="h-4 w-auto"
+              />
               <div className="ml-auto text-white">
                 <NotificationBell />
               </div>

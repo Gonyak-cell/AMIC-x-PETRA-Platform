@@ -171,6 +171,25 @@
   }
 }
 
+/* ── Login Page: Dark Theme for Mobile (forest background) ── */
+@media (max-width: 1023px) {
+  .login-dark-theme label {
+    color: rgba(255, 255, 255, 0.75);
+  }
+  .login-dark-theme input {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+  .login-dark-theme input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .login-dark-theme input:focus {
+    border-color: #26C260;
+    box-shadow: 0 0 0 2px rgba(38, 194, 96, 0.25);
+  }
+}
+
 /* ── Accessibility: Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,
