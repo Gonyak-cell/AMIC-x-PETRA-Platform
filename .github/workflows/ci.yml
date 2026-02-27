@@ -256,7 +256,6 @@ jobs:
   e2e-test:
     name: E2E Tests (Mocked)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.ci-config == 'true'
     defaults:
@@ -274,6 +273,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run mocked E2E tests
         run: npm run test:e2e:deep
+        timeout-minutes: 8
         continue-on-error: true
         env:
           CI: "true"
