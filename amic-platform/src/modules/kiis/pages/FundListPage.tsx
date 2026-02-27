@@ -3,7 +3,14 @@ import { useNavigate, Link } from "react-router-dom";
 import { Landmark, AlertCircle, Clock, Users } from "lucide-react";
 import { useFunds } from "@/modules/kiis/hooks/useFunds";
 import { useFundFilters } from "@/modules/kiis/hooks/useFundFilters";
-import { Card, DataTable, Badge, EmptyState, Pagination, PageHero } from "@/components/ui";
+import {
+  Card,
+  DataTable,
+  Badge,
+  EmptyState,
+  Pagination,
+  PageHero,
+} from "@/components/ui";
 import type { Column } from "@/components/ui";
 import type { FundListItem } from "@/modules/kiis/types/fund";
 import { formatAmount } from "@/lib/format";
@@ -132,7 +139,7 @@ export default function FundListPage() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="text-sm text-text-secondary">
-        <Link to="/kiis/funds" className="hover:text-accent">
+        <Link to="/kiis/gp" className="hover:text-accent">
           ← GP 목록으로 돌아가기
         </Link>
       </div>
@@ -157,7 +164,9 @@ export default function FundListPage() {
         dataSource={params.data_source ?? ""}
         vintageFrom={params.vintage_from?.toString() ?? ""}
         vintageTo={params.vintage_to?.toString() ?? ""}
-        amountPreset={new URLSearchParams(window.location.search).get("amount_preset") ?? ""}
+        amountPreset={
+          new URLSearchParams(window.location.search).get("amount_preset") ?? ""
+        }
         onSetFilter={setFilter}
         onReset={() => {
           resetFilters();

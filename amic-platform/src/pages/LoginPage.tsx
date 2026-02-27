@@ -36,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex overflow-x-hidden">
       {/* Left Panel — Brochure Cover */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <img
@@ -55,7 +55,9 @@ export default function LoginPage() {
               <span className="text-amic font-serif font-bold text-[26px] tracking-[0.2em] leading-none mt-0.5">
                 AMIC
               </span>
-              <span className="text-amic/25 text-2xl font-extralight leading-none">&amp;</span>
+              <span className="text-amic/25 text-2xl font-extralight leading-none">
+                &amp;
+              </span>
               <div className="text-accent font-heading font-bold leading-[1.15]">
                 <div className="text-lg tracking-[0.1em]">PETRABRIDGE</div>
                 <div className="text-lg tracking-[0.1em]">PARTNERS</div>
@@ -68,9 +70,7 @@ export default function LoginPage() {
             <h2 className="text-2xl font-heading font-bold text-text-dark">
               Welcome
             </h2>
-            <p className="text-text-secondary mt-2">
-              Sign in to continue
-            </p>
+            <p className="text-text-secondary mt-2">Sign in to continue</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

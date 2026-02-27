@@ -12,7 +12,10 @@ const MODULE_COLORS: Record<CalendarEventModule, string> = {
   ma: "bg-accent",
 };
 
-const MODULE_BADGE: Record<CalendarEventModule, "info" | "success" | "warning"> = {
+const MODULE_BADGE: Record<
+  CalendarEventModule,
+  "info" | "success" | "warning"
+> = {
   ma: "success",
 };
 
@@ -134,7 +137,7 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
   const showSidebar = selectedDay !== null || selectedEntityId !== null;
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col md:flex-row gap-6">
       {/* Grid */}
       <div className="flex-1">
         {/* Day headers */}
@@ -153,7 +156,7 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
         <div className="grid grid-cols-7 gap-px bg-gray-border rounded-lg overflow-hidden">
           {/* Empty cells for offset */}
           {Array.from({ length: startOffset }).map((_, i) => (
-            <div key={`empty-${i}`} className="bg-bg-cool h-24" />
+            <div key={`empty-${i}`} className="bg-bg-cool h-16 md:h-24" />
           ))}
 
           {days.map((day) => {
@@ -166,9 +169,10 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
               <button
                 key={day}
                 className={cn(
-                  "bg-white h-24 p-1.5 text-left hover:bg-blue-50/50 transition-colors",
+                  "bg-white h-16 md:h-24 p-1 md:p-1.5 text-left hover:bg-blue-50/50 transition-colors",
                   isSelected && "ring-2 ring-amic ring-inset",
-                  isHighlighted && "bg-bg-light-green ring-1 ring-accent/30 ring-inset",
+                  isHighlighted &&
+                    "bg-bg-light-green ring-1 ring-accent/30 ring-inset",
                 )}
                 onClick={() => handleDayClick(day)}
               >
@@ -209,7 +213,7 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
 
       {/* Event sidebar */}
       {showSidebar && (
-        <div className="w-80 shrink-0">
+        <div className="w-full md:w-80 md:shrink-0">
           {/* 사이드바 헤더 */}
           {selectedEntityId ? (
             <div className="mb-3">
@@ -235,7 +239,9 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
           )}
 
           {groupedEvents.length === 0 ? (
-            <p className="text-sm text-text-secondary">No events on this day.</p>
+            <p className="text-sm text-text-secondary">
+              No events on this day.
+            </p>
           ) : (
             <div className="space-y-3">
               {groupedEvents.map((group) => (
@@ -248,13 +254,23 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
                       : "border-gray-border hover:border-accent/50 cursor-pointer",
                   )}
                   onClick={
-                    selectedEntityId ? undefined : () => handleProjectClick(group.entityId)
+                    selectedEntityId
+                      ? undefined
+                      : () => handleProjectClick(group.entityId)
                   }
                 >
                   {/* 프로젝트 헤더 */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={cn("w-2 h-2 rounded-full", MODULE_COLORS[group.module])} />
-                    <Badge variant={MODULE_BADGE[group.module]} className="text-xs">
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full",
+                        MODULE_COLORS[group.module],
+                      )}
+                    />
+                    <Badge
+                      variant={MODULE_BADGE[group.module]}
+                      className="text-xs"
+                    >
                       {group.module.toUpperCase()}
                     </Badge>
                     <span className="text-sm font-medium text-text-dark truncate">
@@ -268,9 +284,12 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
                       <div key={ev.id} className="flex items-center gap-2">
                         <span className="w-1 h-1 rounded-full bg-accent/60 shrink-0" />
                         <p className="text-xs text-text-secondary">
-                          {ev.type === "transaction_created" && `거래 생성 (${ev.date})`}
-                          {ev.type === "target_close" && `목표 종결일 (${ev.date})`}
-                          {ev.type === "phase_current" && `현재 단계: ${group.phaseLabel} (${ev.date})`}
+                          {ev.type === "transaction_created" &&
+                            `거래 생성 (${ev.date})`}
+                          {ev.type === "target_close" &&
+                            `목표 종결일 (${ev.date})`}
+                          {ev.type === "phase_current" &&
+                            `현재 단계: ${group.phaseLabel} (${ev.date})`}
                         </p>
                       </div>
                     ))}
@@ -288,7 +307,9 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
                               <div
                                 className={cn(
                                   "w-2 h-0.5",
-                                  isCompleted || isCurrent ? "bg-accent" : "bg-gray-200",
+                                  isCompleted || isCurrent
+                                    ? "bg-accent"
+                                    : "bg-gray-200",
                                 )}
                               />
                             )}
@@ -308,8 +329,11 @@ export function CalendarGrid({ year, month, events }: CalendarGridProps) {
                       })}
                     </div>
                     <p className="text-xs text-text-secondary mt-1.5">
-                      현재: <span className="font-medium text-text-dark">{group.phaseLabel}</span>
-                      {" "}({group.phaseOrder}/7)
+                      현재:{" "}
+                      <span className="font-medium text-text-dark">
+                        {group.phaseLabel}
+                      </span>{" "}
+                      ({group.phaseOrder}/7)
                     </p>
                   </div>
 

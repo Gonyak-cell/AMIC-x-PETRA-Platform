@@ -105,7 +105,7 @@ export default function AppShell({ children }: AppShellProps) {
         Skip to main content
       </a>
 
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen overflow-x-hidden">
         {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <Sidebar />
@@ -122,7 +122,7 @@ export default function AppShell({ children }: AppShellProps) {
               id="mobile-sidebar"
               className={cn(
                 "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300",
-                sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                sidebarOpen ? "translate-x-0" : "-translate-x-full",
               )}
             >
               <Sidebar onNavItemClick={() => setSidebarOpen(false)} />
@@ -133,7 +133,7 @@ export default function AppShell({ children }: AppShellProps) {
         {/* Main Content */}
         <main
           id="main-content"
-          className="flex-1 bg-bg-cool"
+          className="flex-1 min-w-0 bg-bg-cool"
           {...(isMobile && sidebarOpen ? { inert: true } : {})}
         >
           {/* Mobile Header */}
@@ -146,7 +146,9 @@ export default function AppShell({ children }: AppShellProps) {
               <div className="flex items-center gap-2">
                 <img src={amicMainWhiteUrl} alt="AMIC" className="h-5 w-auto" />
                 <span className="text-white/40 text-xs font-display">x</span>
-                <span className="text-accent font-display font-bold text-[10px] tracking-[0.08em]">PETRA</span>
+                <span className="text-accent font-display font-bold text-[10px] tracking-[0.08em]">
+                  PETRA
+                </span>
               </div>
               <div className="ml-auto text-white">
                 <NotificationBell />
@@ -155,9 +157,7 @@ export default function AppShell({ children }: AppShellProps) {
           )}
           {/* Desktop Header */}
           {!isMobile && (
-            <DesktopHeader
-              onSearchClick={() => setCommandPaletteOpen(true)}
-            />
+            <DesktopHeader onSearchClick={() => setCommandPaletteOpen(true)} />
           )}
           <div className="max-w-7xl mx-auto px-4 py-4 md:px-8 md:py-6">
             <PageTransition>{children}</PageTransition>

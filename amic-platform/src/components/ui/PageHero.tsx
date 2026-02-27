@@ -101,7 +101,7 @@ export function PageHero({
           <div>
             <h1
               ref={titleRef}
-              className="text-hero-title font-heading text-white mb-2"
+              className="text-2xl md:text-hero-title font-heading text-white mb-2"
               style={{ opacity: 0 }}
             >
               {title}
