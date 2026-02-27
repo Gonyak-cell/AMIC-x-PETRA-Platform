@@ -24,7 +24,11 @@ import type {
   BuyerCandidateUpdate,
   BuyerPipelineSummary,
 } from "@/modules/ma/types/buyer";
-import type { TimelineResponse, MilestoneCreate, GanttResponse } from "@/modules/ma/types/timeline";
+import type {
+  TimelineResponse,
+  MilestoneCreate,
+  GanttResponse,
+} from "@/modules/ma/types/timeline";
 
 // ── Transaction CRUD ───────────────────────────────────
 export function useTransactions(params?: TransactionListParams) {
@@ -89,8 +93,12 @@ export function useDeleteTransaction() {
     mutationFn: async (txnId: string) => {
       await maApi.delete(`/transactions/${txnId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, txnId) => {
+      // 삭제된 거래의 모든 관련 쿼리를 캐시에서 제거 (refetch 방지)
+      qc.removeQueries({ queryKey: ["ma", "transactions", txnId] });
+      // 거래 목록 + 대시보드 갱신
       qc.invalidateQueries({ queryKey: ["ma", "transactions"] });
+      qc.invalidateQueries({ queryKey: ["ma", "dashboard"] });
       toast.success("거래가 삭제되었습니다.");
     },
     onError: () => {
@@ -156,35 +164,53 @@ export function useAutoAdvanceNotification(txnId: string) {
     }
 
     // can_advance가 false → true로 전환된 시점에만 알림
-    if (phaseStatus.can_advance && !prevCanAdvance.current && phaseStatus.next_phase) {
+    if (
+      phaseStatus.can_advance &&
+      !prevCanAdvance.current &&
+      phaseStatus.next_phase
+    ) {
       const nextLabel =
         PHASE_CONFIG.find((p) => p.phase === phaseStatus.next_phase)?.label ??
         phaseStatus.next_phase;
 
       if (phaseStatus.has_warnings) {
-        toast.info(`${nextLabel} 단계로 진행할 수 있습니다 (권장 항목 미완료)`, {
-          action: {
-            label: "진행하기",
-            onClick: () =>
-              advanceRef.current.mutate({ to_phase: phaseStatus.next_phase! }),
+        toast.info(
+          `${nextLabel} 단계로 진행할 수 있습니다 (권장 항목 미완료)`,
+          {
+            action: {
+              label: "진행하기",
+              onClick: () =>
+                advanceRef.current.mutate({
+                  to_phase: phaseStatus.next_phase!,
+                }),
+            },
+            duration: 10000,
           },
-          duration: 10000,
-        });
+        );
       } else {
-        toast.success(`모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`, {
-          action: {
-            label: "진행하기",
-            onClick: () =>
-              advanceRef.current.mutate({ to_phase: phaseStatus.next_phase! }),
+        toast.success(
+          `모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`,
+          {
+            action: {
+              label: "진행하기",
+              onClick: () =>
+                advanceRef.current.mutate({
+                  to_phase: phaseStatus.next_phase!,
+                }),
+            },
+            duration: 10000,
           },
-          duration: 10000,
-        });
+        );
       }
     }
 
     prevCanAdvance.current = phaseStatus.can_advance;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phaseStatus?.can_advance, phaseStatus?.has_warnings, phaseStatus?.next_phase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    phaseStatus?.can_advance,
+    phaseStatus?.has_warnings,
+    phaseStatus?.next_phase,
+  ]);
 }
 
 export function useChangeStatus(txnId: string) {
@@ -260,10 +286,7 @@ export function useAddMember(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: WorkingGroupMemberCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/members`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/members`, body);
       return data as WorkingGroupMember;
     },
     onSuccess: () => {
@@ -283,9 +306,7 @@ export function useConflictCheck(txnId: string) {
   return useQuery<ConflictCheckResult>({
     queryKey: ["ma", "transactions", txnId, "conflict-check"],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/conflict-check`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/conflict-check`);
       return data;
     },
     enabled: !!txnId,
