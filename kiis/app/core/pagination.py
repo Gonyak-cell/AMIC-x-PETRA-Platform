@@ -6,11 +6,9 @@ KIIS 전체 라우터에서 반복되는 page/size → offset 계산, 총 건수
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from fastapi import Query
-from pydantic import BaseModel
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

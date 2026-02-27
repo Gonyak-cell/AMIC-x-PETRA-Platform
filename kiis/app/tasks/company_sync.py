@@ -6,7 +6,7 @@ bulk upsert한다. 선택적으로 상장사 상세 enrichment를 수행한다.
 
 import logging
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import async_session_factory

@@ -10,7 +10,6 @@ from app.services.public_data_service import (
     _safe_int,
 )
 
-
 # --- 유틸리티 함수 테스트 ---
 
 

@@ -20,7 +20,6 @@ from app.services.reputation_themes import (
     POSITIVE_THEME_MAP,
     RISK_ABSENCE_THEMES,
     THEME_DISPLAY_NAMES,
-    THEME_SENTIMENT,
 )
 
 logger = logging.getLogger(__name__)

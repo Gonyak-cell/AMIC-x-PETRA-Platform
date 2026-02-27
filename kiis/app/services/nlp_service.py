@@ -147,10 +147,7 @@ class NLPService:
         total_negative = sum(m["weight"] for m in negative_matches) if negative_matches else 0.0
 
         match_count = len(positive_matches) + len(negative_matches)
-        if match_count == 0:
-            score = 0.0
-        else:
-            score = (total_positive - total_negative) / match_count
+        score = 0.0 if match_count == 0 else (total_positive - total_negative) / match_count
 
         # -1.0 ~ 1.0 범위로 클램핑
         score = max(-1.0, min(1.0, score))

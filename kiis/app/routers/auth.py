@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_active_user
 from app.models.user import User
-from app.schemas.auth import Token, TokenRefresh, UserCreate, UserLogin, UserResponse
+from app.schemas.auth import UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
 
 _is_production = os.getenv("ENV", "").lower() in ("production", "prod")

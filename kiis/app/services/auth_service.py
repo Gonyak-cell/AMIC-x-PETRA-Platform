@@ -6,7 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import _get_jwt_secret, create_access_token, create_refresh_token, get_password_hash, verify_password
+from app.core.security import (
+    _get_jwt_secret,
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+    verify_password,
+)
 from app.models.user import User, UserRole
 from app.schemas.auth import UserCreate
 

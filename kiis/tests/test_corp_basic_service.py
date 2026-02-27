@@ -20,7 +20,6 @@ from app.schemas.corp_basic import (
 )
 from app.services.corp_basic_service import CorpBasicService
 
-
 # ── Mock 응답 데이터 ──
 
 MOCK_OUTLINE_RESPONSE = {

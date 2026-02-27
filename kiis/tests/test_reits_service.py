@@ -501,7 +501,7 @@ async def test_search_reits_filter_type(httpx_mock):
     )
 
     service = REITsService()
-    items, total = await service.search_reits(reits_type="self_managed")
+    items, _total = await service.search_reits(reits_type="self_managed")
     await service.close()
 
     # 4개 중 자기관리 리츠는 1개
@@ -519,7 +519,7 @@ async def test_search_reits_filter_status(httpx_mock):
     )
 
     service = REITsService()
-    items, total = await service.search_reits(status="dissolved")
+    items, _total = await service.search_reits(status="dissolved")
     await service.close()
 
     assert len(items) == 1

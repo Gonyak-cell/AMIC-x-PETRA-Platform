@@ -155,7 +155,7 @@ async def test_search_disclosures(httpx_mock):
     )
 
     service = DARTService()
-    items, total_count, total_page = await service.search_disclosures(
+    items, total_count, _total_page = await service.search_disclosures(
         corp_code="00126380",
         bgn_de="20240101",
         end_de="20241231",

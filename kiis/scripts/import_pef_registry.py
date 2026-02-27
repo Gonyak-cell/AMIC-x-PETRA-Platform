@@ -22,8 +22,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 # 프로젝트 루트를 sys.path에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.database import async_session_factory, engine  # noqa: E402
-from app.models.fund import Fund, FundGP  # noqa: E402
+from app.core.database import async_session_factory, engine
+from app.models.fund import Fund, FundGP
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ async def import_records(records: list[dict]) -> tuple[int, int]:
                 inserted += 1
 
             # GP 관계 삽입
-            for gp_name, gp_role in zip(rec["gp_names"], rec["gp_roles"]):
+            for gp_name, gp_role in zip(rec["gp_names"], rec["gp_roles"], strict=False):
                 gp_stmt = pg_insert(FundGP).values(
                     fund_id=fund_id,
                     gp_name=gp_name,

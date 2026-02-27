@@ -1,8 +1,6 @@
 """스케줄러 초기화/종료 테스트"""
 
-from unittest.mock import AsyncMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from app.tasks.scheduler import close_scheduler, get_scheduler, init_scheduler
 
@@ -53,9 +51,9 @@ class TestSchedulerLifecycle:
 
     async def test_close_scheduler_calls_shutdown(self):
         """스케줄러가 존재하면 shutdown(wait=False)을 호출한다."""
-        import app.tasks.scheduler as mod
-
         from unittest.mock import MagicMock
+
+        import app.tasks.scheduler as mod
 
         mock_scheduler = MagicMock()
         mod._scheduler = mock_scheduler

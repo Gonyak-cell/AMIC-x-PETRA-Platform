@@ -161,7 +161,7 @@ class EntityResolver:
             result = await db.execute(stmt)
             row = result.first()
             if row:
-                alias, company = row
+                _alias, company = row
                 return {
                     "corp_code": company.corp_code,
                     "corp_name": company.corp_name,

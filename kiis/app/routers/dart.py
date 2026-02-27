@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.exceptions import DARTAPIError, ExternalAPIError
 from app.models.company import Company
+from app.schemas.corp_basic import CorpBasicInfoResponse
 from app.schemas.dart import (
     CompanyInfo,
     CompanyListResponse,
@@ -15,7 +16,6 @@ from app.schemas.dart import (
     FinancialStatementItem,
     SanctionListResponse,
 )
-from app.schemas.corp_basic import CorpBasicInfoResponse
 from app.schemas.fina_stat import FinaStatItem, SummaryFinancialResponse
 from app.services.corp_basic_service import CorpBasicService
 from app.services.dart_service import DARTService

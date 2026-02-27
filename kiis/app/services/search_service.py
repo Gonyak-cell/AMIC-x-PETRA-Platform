@@ -5,10 +5,10 @@ ES 클라이언트가 None이면 빈 결과를 반환하여 ES 미설치 환경�
 """
 
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from elasticsearch.helpers import async_bulk
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.elasticsearch import get_es_client
@@ -145,7 +145,7 @@ class SearchService:
                     },
                 }
 
-        success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
+        _success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
         if errors:
             logger.warning("Company bulk indexing had %d errors", len(errors))
         return total
@@ -171,7 +171,7 @@ class SearchService:
                     },
                 }
 
-        success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
+        _success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
         if errors:
             logger.warning("Fund bulk indexing had %d errors", len(errors))
         return total
@@ -197,7 +197,7 @@ class SearchService:
                     },
                 }
 
-        success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
+        _success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
         if errors:
             logger.warning("News bulk indexing had %d errors", len(errors))
         return total
@@ -223,7 +223,7 @@ class SearchService:
                     },
                 }
 
-        success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
+        _success, errors = await async_bulk(es, _gen(), chunk_size=self.BATCH_SIZE, raise_on_error=False)
         if errors:
             logger.warning("Deal bulk indexing had %d errors", len(errors))
         return total

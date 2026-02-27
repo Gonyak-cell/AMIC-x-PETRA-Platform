@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.tasks.reputation_recalc import run_reputation_recalc
 
 

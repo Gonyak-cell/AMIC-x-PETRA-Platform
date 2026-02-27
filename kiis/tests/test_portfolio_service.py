@@ -642,7 +642,7 @@ class TestUpdateValuation:
         async_session.add(portfolio)
         await async_session.flush()
 
-        result, is_newly_unicorn = await portfolio_service.update_valuation(
+        result, _is_newly_unicorn = await portfolio_service.update_valuation(
             db=async_session,
             portfolio_id=portfolio.id,
             valuation=Decimal("2_000_000_000_000"),

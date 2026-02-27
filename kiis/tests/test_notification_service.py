@@ -10,7 +10,6 @@ import pytest
 
 from app.services.notification_service import NotificationService
 
-
 # ─── Slack Tests ───
 
 
@@ -239,8 +238,8 @@ class TestCreateAndNotify:
 
     async def test_create_and_notify(self, async_session):
         """알림 생성 후 dispatch가 호출되는지 검증한다."""
-        from app.models.user import User
         from app.models.company import Company
+        from app.models.user import User
         from app.services.alert_service import AlertService
 
         company = Company(

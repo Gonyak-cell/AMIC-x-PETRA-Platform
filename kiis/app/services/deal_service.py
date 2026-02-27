@@ -759,7 +759,7 @@ class DealService:
         summary_text = (
             f"최근 {years}년간 총 {total_deals}건"
             + (f" ({amount_display})" if amount_display else "")
-            + f"의 투자를 집행했습니다."
+            + "의 투자를 집행했습니다."
         )
         sector_summary = (
             f"주력 섹터는 {top_sector}이며, "

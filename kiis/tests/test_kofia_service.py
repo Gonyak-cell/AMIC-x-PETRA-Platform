@@ -3,7 +3,6 @@
 ProFrame XML 프로토콜 기반 (proframeWeb/XMLSERVICES/) 서비스 테스트.
 """
 
-import re
 from datetime import date
 from decimal import Decimal
 
@@ -12,10 +11,10 @@ import pytest
 from app.services.kofia_service import (
     KOFIAService,
     _build_proframe_xml,
-    _parse_proframe_response,
     _parse_date,
     _parse_decimal,
     _parse_int,
+    _parse_proframe_response,
 )
 
 # --- Mock ProFrame XML 응답 ---
@@ -445,7 +444,7 @@ async def test_search_funds_filter_types():
         (price_items, 3),
     ])
 
-    items, total = await service.search_funds(fund_types=["project"])
+    items, _total = await service.search_funds(fund_types=["project"])
     await service.close()
 
     assert len(items) == 1
@@ -464,7 +463,7 @@ async def test_search_funds_company_name():
         (price_items, 3),
     ])
 
-    items, total = await service.search_funds(company_name="미래에셋")
+    items, _total = await service.search_funds(company_name="미래에셋")
     await service.close()
 
     assert len(items) == 1
@@ -673,7 +672,7 @@ async def test_get_gp_list_company_name_filter():
 async def test_get_gp_list_aum_and_vintage():
     """GP AUM 합산 및 빈티지 범위 검증"""
     service = _make_gp_service()
-    items, total = await service.get_gp_list()
+    items, _total = await service.get_gp_list()
     await service.close()
 
     # 한투파: 50000 + 80000 = 130000 (백만원) → 130,000,000,000원

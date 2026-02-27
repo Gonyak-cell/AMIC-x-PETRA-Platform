@@ -117,19 +117,19 @@ class TestClassifySector:
     def test_classify_bio_sector(self, deal_service: DealService):
         """바이오/헬스케어 섹터 분류"""
         text = "신약 개발 바이오 제약 회사"
-        sector, keywords = deal_service.classify_sector(text)
+        sector, _keywords = deal_service.classify_sector(text)
         assert sector == DealSector.BIO_HEALTH
 
     def test_classify_saas_sector(self, deal_service: DealService):
         """SaaS 섹터 분류"""
         text = "B2B SaaS 클라우드 플랫폼"
-        sector, keywords = deal_service.classify_sector(text)
+        sector, _keywords = deal_service.classify_sector(text)
         assert sector == DealSector.SAAS
 
     def test_classify_fintech_sector(self, deal_service: DealService):
         """핀테크 섹터 분류"""
         text = "간편결제 페이 핀테크 서비스"
-        sector, keywords = deal_service.classify_sector(text)
+        sector, _keywords = deal_service.classify_sector(text)
         assert sector == DealSector.FINTECH
 
     def test_classify_other_sector(self, deal_service: DealService):
@@ -143,13 +143,13 @@ class TestClassifySector:
         """추가 키워드로 분류"""
         text = "스타트업 투자"
         keywords = ["머신러닝", "딥러닝"]
-        sector, matched = deal_service.classify_sector(text, keywords)
+        sector, _matched = deal_service.classify_sector(text, keywords)
         assert sector == DealSector.AI_DEEPTECH
 
     def test_classify_multiple_matches(self, deal_service: DealService):
         """여러 섹터 매칭 시 최다 매칭 선택"""
         text = "AI 인공지능 딥러닝 머신러닝 바이오"
-        sector, keywords = deal_service.classify_sector(text)
+        sector, _keywords = deal_service.classify_sector(text)
         assert sector == DealSector.AI_DEEPTECH  # AI 키워드가 더 많음
 
 
@@ -334,7 +334,7 @@ class TestGetDealsByCompany:
         sample_deals: list[Deal],
     ):
         """단계 필터"""
-        deals, total = await deal_service.get_deals_by_company(
+        _deals, total = await deal_service.get_deals_by_company(
             db=async_session,
             corp_code=sample_company.corp_code,
             stage=DealStage.SERIES_A,

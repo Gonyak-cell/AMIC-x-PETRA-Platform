@@ -6,8 +6,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from app.core.config import settings
-from app.core.log_decorators import log_error_with_input
 from app.core.exceptions import ExternalAPIError
+from app.core.log_decorators import log_error_with_input
 from app.schemas.fund import (
     FundDetailResponse,
     FundItem,
@@ -215,7 +215,7 @@ class KOFIAService:
             dt_str = candidate.strftime("%Y%m%d")
 
             # 실제로 데이터가 있는지 빠르게 확인 (1건만 조회)
-            items, total = await self._request_proframe(
+            items, _total = await self._request_proframe(
                 "FS-DIS2", "DISFundFeeCmsSO", "select",
                 "DISCondFuncDTO", {
                     "tmpV30": dt_str,

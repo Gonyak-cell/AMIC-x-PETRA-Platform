@@ -13,10 +13,9 @@ from app.models.user import User, UserRole
 from app.models.watchlist import AlertHistory, AlertType, Watchlist
 
 __all__ = [
-    "Base",
-    "TimestampMixin",
     "AlertHistory",
     "AlertType",
+    "Base",
     "ClassifiedSanction",
     "Company",
     "CompanyAlias",
@@ -32,13 +31,14 @@ __all__ = [
     "MovementType",
     "NewsArticle",
     "PortfolioCompany",
-    "SurvivalStatus",
     "REITs",
     "REITsAsset",
     "ReputationHistory",
     "ReputationScore",
     "SanctionCategory",
     "SanctionSeverity",
+    "SurvivalStatus",
+    "TimestampMixin",
     "User",
     "UserRole",
     "Watchlist",
