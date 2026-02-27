@@ -3,15 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Plus,
+  Pencil,
   Briefcase,
   TrendingUp,
   Clock,
   DollarSign,
 } from "lucide-react";
 
-import {
-  useTransactions,
-} from "@/modules/ma/hooks/useTransactions";
+import { useTransactions } from "@/modules/ma/hooks/useTransactions";
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
   TRANSACTION_SIDE_OPTIONS,
@@ -34,12 +33,16 @@ import {
 import type { Column } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import heroImg from "@/assets/images/heroes/hero-arch-teal.jpg";
+import EditTransactionModal from "@/modules/ma/components/EditTransactionModal";
 
 const PHASE_LABELS: Record<string, string> = Object.fromEntries(
   PHASE_CONFIG.map((p) => [p.phase, p.label]),
 );
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+const STATUS_VARIANT: Record<
+  string,
+  "success" | "warning" | "error" | "info" | "neutral"
+> = {
   DRAFT: "neutral",
   ACTIVE: "success",
   ON_HOLD: "warning",
@@ -69,6 +72,7 @@ export default function TransactionListPage() {
   const [sideFilter, setSideFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null);
   const pageSize = 20;
 
   const kpiRef = useRef<HTMLDivElement>(null);
@@ -168,13 +172,38 @@ export default function TransactionListPage() {
         <span className="text-sm text-text-secondary">{row.client_name}</span>
       ),
     },
+    ...(canWrite()
+      ? [
+          {
+            key: "actions" as keyof Transaction,
+            header: "",
+            width: "48px",
+            align: "center" as const,
+            render: (row: Transaction) => (
+              <button
+                type="button"
+                className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+                title="기본정보 수정"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditTarget(row);
+                }}
+              >
+                <Pencil size={15} />
+              </button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="space-y-6">
       <PageHero
         title="M&A Pipeline"
-        subtitle={isClient ? "배정된 거래 목록" : "7단계 워크플로우 기반 거래 관리"}
+        subtitle={
+          isClient ? "배정된 거래 목록" : "7단계 워크플로우 기반 거래 관리"
+        }
         backgroundImage={heroImg}
         backgroundOpacity={0.18}
         compact
@@ -191,7 +220,10 @@ export default function TransactionListPage() {
       />
 
       {/* KPI 카드 */}
-      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div
+        ref={kpiRef}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
         <KpiCard
           label="전체 거래"
           value={String(kpis.total)}
@@ -268,9 +300,15 @@ export default function TransactionListPage() {
           <EmptyState
             icon={Briefcase}
             title="거래가 없습니다"
-            description={canWrite() ? "새 거래를 생성하여 M&A 파이프라인을 시작하세요." : "배정된 거래가 없습니다."}
+            description={
+              canWrite()
+                ? "새 거래를 생성하여 M&A 파이프라인을 시작하세요."
+                : "배정된 거래가 없습니다."
+            }
             actionLabel={canWrite() ? "New Transaction" : undefined}
-            onAction={canWrite() ? () => navigate("/ma/transactions/new") : undefined}
+            onAction={
+              canWrite() ? () => navigate("/ma/transactions/new") : undefined
+            }
           />
         ) : (
           <DataTable
@@ -290,6 +328,15 @@ export default function TransactionListPage() {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
+        />
+      )}
+
+      {/* 편집 모달 */}
+      {editTarget && (
+        <EditTransactionModal
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          transaction={editTarget}
         />
       )}
     </div>
