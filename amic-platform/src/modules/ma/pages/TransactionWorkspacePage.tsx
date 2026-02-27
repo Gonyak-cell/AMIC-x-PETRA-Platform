@@ -1371,7 +1371,10 @@ export default function TransactionWorkspacePage() {
               <CompanyInfoCard txn={txn} />
             ) : (
               <Card title="회사 정보" headerBar>
-                <EngagementDocUpload txnId={id} />
+                <EngagementDocUpload
+                  txnId={id}
+                  docCategoryHint="CORPORATE_DOCS"
+                />
               </Card>
             )}
           </div>

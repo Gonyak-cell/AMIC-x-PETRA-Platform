@@ -41,13 +41,19 @@ async def create_extraction(
     db: AsyncSession,
     transaction_id: uuid.UUID,
     vdr_document_id: uuid.UUID,
+    doc_category_hint: DocExtractionCategory | None = None,
 ) -> DocumentExtraction:
-    """추출 작업 레코드를 생성한다 (PENDING 상태)."""
+    """추출 작업 레코드를 생성한다 (PENDING 상태).
+
+    doc_category_hint가 있으면 분류 단계를 건너뛴다.
+    """
     extraction = DocumentExtraction(
         transaction_id=transaction_id,
         vdr_document_id=vdr_document_id,
         status=ExtractionStatus.PENDING,
     )
+    if doc_category_hint:
+        extraction.doc_category = doc_category_hint
     db.add(extraction)
     await db.flush()
     await db.refresh(extraction)
@@ -176,10 +182,6 @@ async def run_extraction_pipeline(
             await db.commit()
             return
 
-        # 상태: CLASSIFYING
-        extraction.status = ExtractionStatus.CLASSIFYING
-        await db.commit()
-
         # 2. 파일 파싱
         try:
             parsed = parse_file(vdr_doc.file_path)
@@ -203,17 +205,30 @@ async def run_extraction_pipeline(
             await db.commit()
             return
 
-        # 4. 분류
-        try:
-            category, confidence = await classify_document(parsed, llm)
-        except Exception as exc:
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = f"문서 분류 실패: {exc}"
+        # 4. 분류 (doc_category가 이미 설정된 경우 = hint → 건너뛰기)
+        if extraction.doc_category:
+            category = extraction.doc_category
+            confidence = 1.0
+            extraction.classification_confidence = confidence
+            logger.info(
+                "분류 건너뛰기 (hint): %s → %s",
+                vdr_doc.original_name,
+                category.value,
+            )
+        else:
+            extraction.status = ExtractionStatus.CLASSIFYING
             await db.commit()
-            return
 
-        extraction.doc_category = category
-        extraction.classification_confidence = confidence
+            try:
+                category, confidence = await classify_document(parsed, llm)
+            except Exception as exc:
+                extraction.status = ExtractionStatus.FAILED
+                extraction.error_message = f"문서 분류 실패: {exc}"
+                await db.commit()
+                return
+
+            extraction.doc_category = category
+            extraction.classification_confidence = confidence
 
         # 5. REFERENCE_ONLY 또는 향후 확장 카테고리 → 추출 건너뜀
         if category.value not in EXTRACTABLE_CATEGORIES:

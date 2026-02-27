@@ -22,9 +22,7 @@ export function useExtractions(txnId: string) {
   return useQuery<ExtractionListResponse>({
     queryKey: extractionQK(txnId),
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/extractions`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/extractions`);
       return data;
     },
     enabled: !!txnId,
@@ -65,11 +63,14 @@ export function useExtraction(txnId: string, id: string) {
 export function useCreateExtraction(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vdrDocumentId: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/extractions`,
-        { vdr_document_id: vdrDocumentId },
-      );
+    mutationFn: async (params: {
+      vdrDocumentId: string;
+      docCategoryHint?: string;
+    }) => {
+      const { data } = await maApi.post(`/transactions/${txnId}/extractions`, {
+        vdr_document_id: params.vdrDocumentId,
+        doc_category_hint: params.docCategoryHint ?? null,
+      });
       return data as DocumentExtraction;
     },
     onSuccess: () => {
@@ -134,7 +135,12 @@ export function useConfirmExtraction(txnId: string) {
           });
         } else {
           qc.invalidateQueries({
-            queryKey: ["ma", "transactions", txnId, data.target_model === "bid" ? "bids" : `${data.target_model}s`],
+            queryKey: [
+              "ma",
+              "transactions",
+              txnId,
+              data.target_model === "bid" ? "bids" : `${data.target_model}s`,
+            ],
           });
         }
       }

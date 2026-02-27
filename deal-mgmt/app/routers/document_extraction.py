@@ -70,7 +70,12 @@ async def create_extraction(
     """단일 VDR 문서 AI 추출을 시작한다."""
     await transaction_service.get_transaction(db, txn_id)
 
-    extraction = await svc.create_extraction(db, txn_id, body.vdr_document_id)
+    extraction = await svc.create_extraction(
+        db,
+        txn_id,
+        body.vdr_document_id,
+        body.doc_category_hint,
+    )
     await db.commit()
     await db.refresh(extraction)
 

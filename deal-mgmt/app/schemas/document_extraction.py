@@ -17,6 +17,7 @@ class ExtractionCreateRequest(BaseModel):
     """단일 문서 추출 요청."""
 
     vdr_document_id: uuid.UUID
+    doc_category_hint: DocExtractionCategory | None = None
 
 
 class BatchExtractionRequest(BaseModel):

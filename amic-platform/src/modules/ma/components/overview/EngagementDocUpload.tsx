@@ -15,12 +15,14 @@ import { useVdrFolders, useInitVdr } from "@/modules/ma/hooks/useVdr";
 import {
   useCreateExtraction,
   useExtraction,
+  useExtractions,
 } from "@/modules/ma/hooks/useDocumentExtraction";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 
 interface Props {
   txnId: string;
+  docCategoryHint?: string;
   onComplete?: () => void;
 }
 
@@ -41,7 +43,11 @@ type Step =
   | "completed"
   | "failed";
 
-export default function EngagementDocUpload({ txnId, onComplete }: Props) {
+export default function EngagementDocUpload({
+  txnId,
+  docCategoryHint,
+  onComplete,
+}: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [step, setStep] = useState<Step>("idle");
@@ -51,6 +57,7 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewExtraction, setReviewExtraction] =
     useState<DocumentExtraction | null>(null);
+  const dismissedRef = useRef(false);
 
   // VDR 훅
   const qc = useQueryClient();
@@ -61,8 +68,34 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
   // "01. CORPORATE" 폴더 찾기
   const corporateFolder = folders?.find((f) => f.category === "CORPORATE");
 
+  // 기존 extraction 목록 조회 (새로고침 시 복원용)
+  const { data: existingExtractions } = useExtractions(txnId);
+
   // 추출 상태 폴링 (extractionId가 있을 때만)
   const { data: polledExtraction } = useExtraction(txnId, extractionId ?? "");
+
+  // 마운트 시 진행 중/완료 대기 extraction 자동 복원 (새로고침 대응)
+  useEffect(() => {
+    if (extractionId || step !== "idle") return;
+    if (dismissedRef.current) return;
+    if (!existingExtractions?.items?.length) return;
+
+    const active = existingExtractions.items.find((e) =>
+      ["PENDING", "CLASSIFYING", "EXTRACTING", "COMPLETED"].includes(e.status),
+    );
+    if (!active) return;
+
+    setExtractionId(active.id);
+    if (active.status === "COMPLETED") {
+      setStep("completed");
+      setReviewExtraction(active);
+      setReviewOpen(true);
+    } else if (active.status === "EXTRACTING") {
+      setStep("extracting");
+    } else {
+      setStep("classifying");
+    }
+  }, [existingExtractions, extractionId, step]);
 
   // 폴링 결과 → 완료/실패 시 상태 전환
   useEffect(() => {
@@ -135,8 +168,11 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
         });
 
         // 4. AI 추출 시작
-        setStep("classifying");
-        const extraction = await createExtraction.mutateAsync(uploadedDoc.id);
+        setStep(docCategoryHint ? "extracting" : "classifying");
+        const extraction = await createExtraction.mutateAsync({
+          vdrDocumentId: uploadedDoc.id,
+          docCategoryHint,
+        });
         setExtractionId(extraction.id);
         // 이후는 폴링으로 상태 추적
       } catch (error) {
@@ -153,6 +189,7 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
       initVdr,
       createExtraction,
       txnId,
+      docCategoryHint,
       validateFile,
       refetchFolders,
       qc,
@@ -195,6 +232,7 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
     setStep("idle");
     setExtractionId(null);
     setSelectedFile(null);
+    dismissedRef.current = true;
     onComplete?.();
   }, [onComplete]);
 
@@ -203,6 +241,7 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
     setErrorMsg(null);
     setSelectedFile(null);
     setExtractionId(null);
+    dismissedRef.current = false;
   }, []);
 
   // ── 진행 상태 UI ──────────────────────────────────────
@@ -220,13 +259,22 @@ export default function EngagementDocUpload({ txnId, onComplete }: Props) {
     return (
       <>
         <div className="bg-bg-cool rounded-dr p-6">
-          {selectedFile && (
+          {selectedFile ? (
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-border">
               <FileText size={16} className="text-text-muted" />
               <span className="text-sm font-medium truncate">
                 {selectedFile.name}
               </span>
             </div>
+          ) : (
+            extractionId && (
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-border">
+                <FileText size={16} className="text-text-muted" />
+                <span className="text-sm font-medium text-text-muted">
+                  문서 AI 분석 진행 중...
+                </span>
+              </div>
+            )
           )}
 
           {step === "failed" ? (
