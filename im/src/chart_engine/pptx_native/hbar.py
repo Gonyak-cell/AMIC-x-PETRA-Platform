@@ -22,7 +22,7 @@ from src.chart_engine.config import ChartConfig
 from src.chart_engine.exceptions import ChartDataError
 from src.chart_engine.pptx_native.base import NativeChartBuilder
 from src.chart_engine.pptx_native.styling import (
-    _hex_to_rgb,
+    hex_to_rgb,
     apply_axis_style,
     apply_data_labels,
 )
@@ -53,6 +53,13 @@ class HBarBuilder(NativeChartBuilder):
         if not categories or not values:
             raise ChartDataError("hbar", "categories와 values는 필수입니다.")
 
+        if len(categories) != len(values):
+            raise ChartDataError(
+                "hbar",
+                f"categories 길이({len(categories)})와 "
+                f"values 길이({len(values)})가 다릅니다.",
+            )
+
         chart_data = CategoryChartData()
         chart_data.categories = categories
         chart_data.add_series("", tuple(values))
@@ -79,9 +86,9 @@ class HBarBuilder(NativeChartBuilder):
             fill = point.format.fill
             fill.solid()
             if cat == highlight:
-                fill.fore_color.rgb = _hex_to_rgb(c.accent)
+                fill.fore_color.rgb = hex_to_rgb(c.accent)
             else:
-                fill.fore_color.rgb = _hex_to_rgb(c.primary)
+                fill.fore_color.rgb = hex_to_rgb(c.primary)
 
         # 범례 숨김 (단일 시리즈)
         chart.has_legend = False

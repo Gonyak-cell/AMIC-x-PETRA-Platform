@@ -49,6 +49,15 @@ class LineChartBuilder(NativeChartBuilder):
         if not x or not series_list:
             raise ChartDataError("line", "x와 series는 필수입니다.")
 
+        n_x = len(x)
+        for s in series_list:
+            if len(s.get("values", [])) != n_x:
+                raise ChartDataError(
+                    "line",
+                    f"series '{s.get('name', '')}' values 길이가 "
+                    f"x 길이({n_x})와 다릅니다.",
+                )
+
         chart_data = CategoryChartData()
         chart_data.categories = x
         for s in series_list:

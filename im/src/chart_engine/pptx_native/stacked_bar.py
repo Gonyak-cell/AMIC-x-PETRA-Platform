@@ -49,6 +49,15 @@ class StackedBarBuilder(NativeChartBuilder):
         if not categories or not series_list:
             raise ChartDataError("stacked_bar", "categories와 series는 필수입니다.")
 
+        n_cats = len(categories)
+        for s in series_list:
+            if len(s.get("values", [])) != n_cats:
+                raise ChartDataError(
+                    "stacked_bar",
+                    f"series '{s.get('name', '')}' values 길이가 "
+                    f"categories 길이({n_cats})와 다릅니다.",
+                )
+
         chart_data = CategoryChartData()
         chart_data.categories = categories
         for s in series_list:

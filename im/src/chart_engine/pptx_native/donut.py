@@ -21,8 +21,9 @@ from src.chart_engine.config import ChartConfig
 from src.chart_engine.exceptions import ChartDataError
 from src.chart_engine.pptx_native.base import NativeChartBuilder
 from src.chart_engine.pptx_native.styling import (
+    hex_to_rgb,
     apply_legend,
-    apply_series_colors,
+    get_color_sequence,
 )
 
 
@@ -49,6 +50,13 @@ class DonutBuilder(NativeChartBuilder):
         if not labels or not values:
             raise ChartDataError("donut", "labels와 values는 필수입니다.")
 
+        if len(labels) != len(values):
+            raise ChartDataError(
+                "donut",
+                f"labels 길이({len(labels)})와 "
+                f"values 길이({len(values)})가 다릅니다.",
+            )
+
         chart_data = CategoryChartData()
         chart_data.categories = labels
         chart_data.add_series("", tuple(values))
@@ -67,8 +75,15 @@ class DonutBuilder(NativeChartBuilder):
             chart.has_title = True
             chart.chart_title.text_frame.text = title
 
-        # 도넛 포인트별 색상 적용 (시리즈 색상이 아닌 포인트별 색상)
-        apply_series_colors(chart, cfg)
+        # 도넛 포인트별 색상 적용 (슬라이스마다 다른 색상)
+        colors = get_color_sequence(cfg)
+        series = chart.plots[0].series[0]
+        for idx in range(len(labels)):
+            point = series.points[idx]
+            point.format.fill.solid()
+            point.format.fill.fore_color.rgb = hex_to_rgb(
+                colors[idx % len(colors)]
+            )
 
         # 데이터 레이블: 카테고리명 + 백분율
         plot = chart.plots[0]

@@ -449,11 +449,12 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             slide3 = factory.add_content_slide(
                 title=revenue_chart_obj.title or "매출 추이"
             )
-            add_chart_or_image(
+            shape = add_chart_or_image(
                 slide3, revenue_chart_obj,
                 top=lay.content_top, tokens=tokens,
             )
-            result.append(slide3)
+            if shape is not None:
+                result.append(slide3)
         else:
             # Fallback: 매출 YoY bullet list
             bullets = self._build_revenue_yoy_bullets(data)

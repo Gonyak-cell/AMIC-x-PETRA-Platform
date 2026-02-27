@@ -13,7 +13,7 @@ from pptx.util import Pt
 from src.chart_engine.config import ChartConfig, DEFAULT_CHART_CONFIG
 
 
-def _hex_to_rgb(hex_color: str) -> RGBColor:
+def hex_to_rgb(hex_color: str) -> RGBColor:
     """'#RRGGBB' → pptx.dml.color.RGBColor."""
     h = hex_color.lstrip("#")
     return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
@@ -44,7 +44,7 @@ def apply_series_colors(
     for i, series in enumerate(plot.series):
         fill = series.format.fill
         fill.solid()
-        fill.fore_color.rgb = _hex_to_rgb(colors[i % len(colors)])
+        fill.fore_color.rgb = hex_to_rgb(colors[i % len(colors)])
 
 
 def apply_axis_style(chart: Any, config: ChartConfig | None = None) -> None:
@@ -57,7 +57,7 @@ def apply_axis_style(chart: Any, config: ChartConfig | None = None) -> None:
             continue
         tl = axis.tick_labels
         tl.font.size = Pt(9)
-        tl.font.color.rgb = _hex_to_rgb(c.text_secondary)
+        tl.font.color.rgb = hex_to_rgb(c.text_secondary)
         # font.name 설정은 python-pptx에서 직접 지원하지 않는 경우가 있으므로
         # 안전하게 try
         try:
@@ -69,7 +69,7 @@ def apply_axis_style(chart: Any, config: ChartConfig | None = None) -> None:
     va = chart.value_axis
     if va is not None:
         va.has_major_gridlines = True
-        va.major_gridlines.format.line.color.rgb = _hex_to_rgb(c.gray_border)
+        va.major_gridlines.format.line.color.rgb = hex_to_rgb(c.gray_border)
         va.has_minor_gridlines = False
 
 
@@ -99,7 +99,7 @@ def apply_data_labels(
     plot.has_data_labels = True
     dl = plot.data_labels
     dl.font.size = Pt(font_size)
-    dl.font.color.rgb = _hex_to_rgb(cfg.colors.text_body)
+    dl.font.color.rgb = hex_to_rgb(cfg.colors.text_body)
     dl.number_format = number_format
     dl.number_format_is_linked = False
 
