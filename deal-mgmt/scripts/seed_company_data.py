@@ -37,7 +37,7 @@ SI_CSV_DIR = BASE_DIR / "app" / "marketing" / "si_list" / "csv"
 MASTER_DICT_CSV = BASE_DIR / "app" / "marketing" / "si_mapping" / "db" / "industry_master_dict.csv"
 IO_KSIC_MAPPING_CSV = BASE_DIR / "app" / "marketing" / "si_mapping" / "db" / "io_ksic_mapping.csv"
 
-CHUNK_SIZE = 5000
+CHUNK_SIZE = 3000  # asyncpg 파라미터 제한 32,767개 (3000행 × 8컬럼 = 24,000)
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
