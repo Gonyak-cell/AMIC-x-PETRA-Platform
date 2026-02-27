@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Calendar, Diamond, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { NegotiationGanttData, NegotiationGanttItem } from "@/modules/ma/types/negotiation_workspace";
+import type { NegotiationGanttData } from "@/modules/ma/types/negotiation_workspace";
 
 interface ContractNegotiationGanttProps {
   data: NegotiationGanttData | null;
@@ -107,7 +107,15 @@ export function ContractNegotiationGantt({
       ? daysBetween(start, data.target_close_date)
       : null;
 
-    return { start, end, totalDays, monthTicks, bars, todayOffset, targetOffset };
+    return {
+      start,
+      end,
+      totalDays,
+      monthTicks,
+      bars,
+      todayOffset,
+      targetOffset,
+    };
   }, [data, today]);
 
   if (isLoading) {
@@ -130,19 +138,26 @@ export function ContractNegotiationGantt({
   const ROW_HEIGHT = 36;
   const LABEL_WIDTH = 140;
   const CHART_PADDING_TOP = 28;
-  const CHART_HEIGHT = CHART_PADDING_TOP + computed.bars.length * ROW_HEIGHT + 16;
+  const CHART_HEIGHT =
+    CHART_PADDING_TOP + computed.bars.length * ROW_HEIGHT + 16;
 
-  const toX = (dayOffset: number) => `${(dayOffset / computed.totalDays) * 100}%`;
+  const toX = (dayOffset: number) =>
+    `${(dayOffset / computed.totalDays) * 100}%`;
 
   return (
     <div className="space-y-2">
       {/* Legend */}
       <div className="flex items-center gap-3 px-1 text-[10px] text-text-muted">
         {Object.entries(CONTRACT_COLORS)
-          .filter(([type]) => computed.bars.some((b) => b.contract_type === type))
+          .filter(([type]) =>
+            computed.bars.some((b) => b.contract_type === type),
+          )
           .map(([type, color]) => (
             <span key={type} className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
+              <span
+                className="h-2.5 w-2.5 rounded-sm"
+                style={{ backgroundColor: color }}
+              />
               {type}
             </span>
           ))}
@@ -163,7 +178,10 @@ export function ContractNegotiationGantt({
         <div className="flex min-w-[600px]">
           {/* Labels */}
           <div className="flex-none" style={{ width: LABEL_WIDTH }}>
-            <div style={{ height: CHART_PADDING_TOP }} className="border-b border-gray-border" />
+            <div
+              style={{ height: CHART_PADDING_TOP }}
+              className="border-b border-gray-border"
+            />
             {computed.bars.map((bar) => (
               <button
                 key={bar.contract_id}
@@ -177,11 +195,19 @@ export function ContractNegotiationGantt({
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-sm"
-                  style={{ backgroundColor: CONTRACT_COLORS[bar.contract_type] ?? CONTRACT_COLORS.OTHER }}
+                  style={{
+                    backgroundColor:
+                      CONTRACT_COLORS[bar.contract_type] ??
+                      CONTRACT_COLORS.OTHER,
+                  }}
                 />
-                <span className="truncate text-xs font-medium text-text-dark">{bar.title}</span>
+                <span className="truncate text-xs font-medium text-text-dark">
+                  {bar.title}
+                </span>
                 {bar.open_issues > 0 && (
-                  <Badge variant="error" className="ml-auto text-[9px]">{bar.open_issues}</Badge>
+                  <Badge variant="error" className="ml-auto text-[9px]">
+                    {bar.open_issues}
+                  </Badge>
                 )}
               </button>
             ))}
@@ -196,7 +222,10 @@ export function ContractNegotiationGantt({
                 className="absolute top-0 border-l border-gray-200"
                 style={{ left: toX(tick.offset), height: "100%" }}
               >
-                <span className="absolute left-1 text-[9px] text-text-muted whitespace-nowrap" style={{ lineHeight: `${CHART_PADDING_TOP}px` }}>
+                <span
+                  className="absolute left-1 text-[9px] text-text-muted whitespace-nowrap"
+                  style={{ lineHeight: `${CHART_PADDING_TOP}px` }}
+                >
                   {tick.label}
                 </span>
               </div>
@@ -207,7 +236,10 @@ export function ContractNegotiationGantt({
               className="absolute top-0 z-10 w-px bg-blue-500"
               style={{ left: toX(computed.todayOffset), height: "100%" }}
             >
-              <span className="absolute -left-3 text-[8px] font-semibold text-blue-600" style={{ lineHeight: `${CHART_PADDING_TOP}px` }}>
+              <span
+                className="absolute -left-3 text-[8px] font-semibold text-blue-600"
+                style={{ lineHeight: `${CHART_PADDING_TOP}px` }}
+              >
                 Today
               </span>
             </div>
@@ -222,17 +254,24 @@ export function ContractNegotiationGantt({
                   borderLeft: "2px dashed #BC2C1A",
                 }}
               >
-                <Diamond className="absolute -left-[5px] h-2.5 w-2.5 fill-red-600 text-red-600" style={{ top: CHART_PADDING_TOP - 6 }} />
+                <Diamond
+                  className="absolute -left-[5px] h-2.5 w-2.5 fill-red-600 text-red-600"
+                  style={{ top: CHART_PADDING_TOP - 6 }}
+                />
               </div>
             )}
 
             {/* Contract bars */}
             {computed.bars.map((bar, idx) => {
               if (bar.startOffset == null) return null;
-              const width = Math.max((bar.endOffset ?? bar.startOffset) - bar.startOffset, 2);
+              const width = Math.max(
+                (bar.endOffset ?? bar.startOffset) - bar.startOffset,
+                2,
+              );
               const y = CHART_PADDING_TOP + idx * ROW_HEIGHT + 8;
               const barHeight = ROW_HEIGHT - 16;
-              const color = CONTRACT_COLORS[bar.contract_type] ?? CONTRACT_COLORS.OTHER;
+              const color =
+                CONTRACT_COLORS[bar.contract_type] ?? CONTRACT_COLORS.OTHER;
 
               return (
                 <button

@@ -1,5 +1,4 @@
 import { X, Sparkles, AlertCircle, Scale, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 interface AIInsightCardProps {
@@ -25,7 +24,9 @@ export function AIInsightCard({
       <div className="flex items-center justify-between border-b border-gray-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary-600" />
-          <h4 className="text-sm font-heading font-semibold text-text-dark">AI 분석</h4>
+          <h4 className="text-sm font-heading font-semibold text-text-dark">
+            AI 분석
+          </h4>
         </div>
         <button onClick={onClose} className="rounded p-0.5 hover:bg-gray-100">
           <X className="h-4 w-4 text-text-muted" />
@@ -56,18 +57,27 @@ export function AIInsightCard({
             {/* M&A 표준 관행 */}
             <Section icon={Scale} title="M&A 표준 관행" color="text-blue-600">
               {aiSuggestion ? (
-                <p className="text-xs text-text-secondary whitespace-pre-wrap">{aiSuggestion}</p>
+                <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                  {aiSuggestion}
+                </p>
               ) : (
                 <p className="text-xs text-text-muted italic">
-                  LLM 연동 예정 — AI 분석 요청 시 해당 조항에 대한 M&A 표준 관행을 제시합니다.
+                  LLM 연동 예정 — AI 분석 요청 시 해당 조항에 대한 M&A 표준
+                  관행을 제시합니다.
                 </p>
               )}
             </Section>
 
             {/* 리스크 평가 */}
-            <Section icon={AlertCircle} title="리스크 평가" color="text-amber-600">
+            <Section
+              icon={AlertCircle}
+              title="리스크 평가"
+              color="text-amber-600"
+            >
               {aiRationale ? (
-                <p className="text-xs text-text-secondary whitespace-pre-wrap">{aiRationale}</p>
+                <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                  {aiRationale}
+                </p>
               ) : (
                 <p className="text-xs text-text-muted italic">
                   LLM 연동 예정 — 해당 조항의 리스크를 평가합니다.
@@ -79,9 +89,18 @@ export function AIInsightCard({
             <Section icon={Lightbulb} title="권장 대응" color="text-green-600">
               {aiSuggestion ? (
                 <div className="space-y-1.5">
-                  <ActionPill label="수용" description="상대측 제안을 현 상태로 수용" />
-                  <ActionPill label="대안 제시" description="AI 수정안 기반 역제안" />
-                  <ActionPill label="거절" description="현 조항 유지, 추가 협의 요청" />
+                  <ActionPill
+                    label="수용"
+                    description="상대측 제안을 현 상태로 수용"
+                  />
+                  <ActionPill
+                    label="대안 제시"
+                    description="AI 수정안 기반 역제안"
+                  />
+                  <ActionPill
+                    label="거절"
+                    description="현 조항 유지, 추가 협의 요청"
+                  />
                 </div>
               ) : (
                 <p className="text-xs text-text-muted italic">
@@ -125,7 +144,13 @@ function Section({
   );
 }
 
-function ActionPill({ label, description }: { label: string; description: string }) {
+function ActionPill({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}) {
   return (
     <div className="flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
       <span className="text-xs font-medium text-text-dark">{label}</span>
