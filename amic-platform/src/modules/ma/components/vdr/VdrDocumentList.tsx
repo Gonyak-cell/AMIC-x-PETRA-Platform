@@ -1,10 +1,4 @@
-import {
-  Download,
-  FileText,
-  Sparkles,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Download, FileText, Sparkles, Trash2, Upload } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 
@@ -89,9 +83,7 @@ export default function VdrDocumentList({
           <h3 className="text-sm font-semibold text-slate-700">
             {folder.name}
           </h3>
-          <p className="text-xs text-slate-400">
-            {documents.length}개 파일
-          </p>
+          <p className="text-xs text-slate-400">{documents.length}개 파일</p>
         </div>
         <Button
           variant="primary"
@@ -162,7 +154,8 @@ export default function VdrDocumentList({
                     </div>
                   </td>
                   <td className="px-4 py-2 text-slate-500">
-                    {MIME_TYPE_LABELS[doc.mime_type] ?? doc.mime_type.split("/")[1]}
+                    {MIME_TYPE_LABELS[doc.mime_type] ??
+                      doc.mime_type.split("/")[1]}
                   </td>
                   <td className="px-4 py-2 text-slate-500">
                     {formatFileSize(doc.file_size_bytes)}
@@ -176,7 +169,9 @@ export default function VdrDocumentList({
                         type="button"
                         className="rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
                         title="AI 분석"
-                        onClick={() => createExtraction.mutate(doc.id)}
+                        onClick={() =>
+                          createExtraction.mutate({ vdrDocumentId: doc.id })
+                        }
                       >
                         <Sparkles className="h-4 w-4" />
                       </button>
