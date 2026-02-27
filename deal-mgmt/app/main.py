@@ -106,6 +106,7 @@ register_exception_handlers(app)
 # ── Routers ─────────────────────────────────────────────
 from app.routers import (
     approvals,
+    attachments,
     audit,
     bids,
     buyers,
@@ -182,6 +183,7 @@ app.include_router(rfi.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(vdr_internal.router, prefix="/api/v1")
 app.include_router(document_extraction.router, prefix="/api/v1")
+app.include_router(attachments.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

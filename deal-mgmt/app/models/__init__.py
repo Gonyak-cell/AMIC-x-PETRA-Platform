@@ -1,4 +1,5 @@
 from app.models.approval import ApprovalRequest
+from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.base import Base, TimestampMixin
 from app.models.bid import Bid
@@ -16,6 +17,7 @@ from app.models.enums import (
     ActionItemStatus,
     ApprovalStatus,
     ApprovalType,
+    AttachmentEntityType,
     AttendeeRole,
     AuditAction,
     BidStatus,
@@ -119,6 +121,8 @@ __all__ = [
     "ApprovalRequest",
     "ApprovalStatus",
     "ApprovalType",
+    "Attachment",
+    "AttachmentEntityType",
     "AttendeeRole",
     "AuditAction",
     "AuditLog",

@@ -1,0 +1,89 @@
+/** 범용 첨부파일 타입. */
+
+export interface Attachment {
+  id: string;
+  transaction_id: string;
+  entity_type: AttachmentEntityType;
+  entity_id: string | null;
+  file_path: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  description: string | null;
+  uploaded_by_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttachmentListResponse {
+  items: Attachment[];
+  total: number;
+}
+
+export type AttachmentEntityType =
+  | "MARKETING_MATERIAL"
+  | "FINANCIAL_MODEL"
+  | "NDA"
+  | "BID"
+  | "DD_CHECKLIST"
+  | "CONTRACT"
+  | "CLOSING"
+  | "PMI"
+  | "EARNOUT";
+
+/** 탭 ID → entity_type 매핑. */
+export const TAB_ENTITY_TYPE_MAP: Record<string, AttachmentEntityType> = {
+  "marketing-materials": "MARKETING_MATERIAL",
+  models: "FINANCIAL_MODEL",
+  ndas: "NDA",
+  bids: "BID",
+  "dd-checklist": "DD_CHECKLIST",
+  contracts: "CONTRACT",
+  closing: "CLOSING",
+  pmi: "PMI",
+  earnout: "EARNOUT",
+};
+
+/** 업로드 제약 상수 (백엔드와 동기화). */
+export const ATTACHMENT_CONSTRAINTS = {
+  MAX_FILE_SIZE: 50 * 1024 * 1024,
+  MAX_FILE_SIZE_LABEL: "50MB",
+  ALLOWED_EXTENSIONS: new Set([
+    ".docx",
+    ".doc",
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".pptx",
+    ".ppt",
+    ".hwp",
+    ".hwpx",
+    ".txt",
+    ".csv",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
+  ]),
+  ACCEPT_EXTENSIONS:
+    ".docx,.doc,.pdf,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt,.csv,.zip,.png,.jpg,.jpeg",
+};
+
+/** MIME 타입 → 라벨 매핑. */
+export const ATTACHMENT_MIME_LABELS: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "DOCX",
+  "application/msword": "DOC",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+  "application/vnd.ms-excel": "XLS",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "PPTX",
+  "application/vnd.ms-powerpoint": "PPT",
+  "application/vnd.hancom.hwp": "HWP",
+  "text/plain": "TXT",
+  "text/csv": "CSV",
+  "application/zip": "ZIP",
+  "image/png": "PNG",
+  "image/jpeg": "JPEG",
+};

@@ -711,6 +711,20 @@ class DocExtractionCategory(enum.StrEnum):
     REFERENCE_ONLY = "REFERENCE_ONLY"  # 기타 참고용 (추출 불필요)
 
 
+class AttachmentEntityType(enum.StrEnum):
+    """범용 첨부파일 대상 엔티티 타입."""
+
+    MARKETING_MATERIAL = "MARKETING_MATERIAL"
+    FINANCIAL_MODEL = "FINANCIAL_MODEL"
+    NDA = "NDA"
+    BID = "BID"
+    DD_CHECKLIST = "DD_CHECKLIST"
+    CONTRACT = "CONTRACT"
+    CLOSING = "CLOSING"
+    PMI = "PMI"
+    EARNOUT = "EARNOUT"
+
+
 class ExtractionStatus(enum.StrEnum):
     """문서 AI 추출 작업 상태."""
 

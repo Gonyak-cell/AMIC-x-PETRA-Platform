@@ -256,6 +256,7 @@ import {
   TEAM_MEMBERS,
 } from "@/modules/ma/constants";
 
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ClientPortalDashboard from "@/modules/ma/components/ClientPortalDashboard";
 import { GanttTimeline } from "@/modules/ma/components/GanttTimeline";
 import MeetingLogsTab from "@/modules/ma/components/meetings/MeetingLogsTab";
@@ -2092,6 +2093,12 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+          <FileUploadZone
+            txnId={id}
+            entityType="NDA"
+            compact
+            title="외부 NDA"
+          />
         </div>
       )}
 
@@ -2300,6 +2307,12 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+          <FileUploadZone
+            txnId={id}
+            entityType="BID"
+            compact
+            title="외부 입찰 자료"
+          />
         </div>
       )}
 
@@ -2662,6 +2675,12 @@ export default function TransactionWorkspacePage() {
               </Card>
             </>
           )}
+          <FileUploadZone
+            txnId={id}
+            entityType="DD_CHECKLIST"
+            compact
+            title="외부 DD 자료"
+          />
         </div>
       )}
 
@@ -2874,6 +2893,12 @@ export default function TransactionWorkspacePage() {
               </Card>
             </>
           )}
+          <FileUploadZone
+            txnId={id}
+            entityType="CONTRACT"
+            compact
+            title="외부 계약 자료"
+          />
         </div>
       )}
 
@@ -3087,6 +3112,12 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+          <FileUploadZone
+            txnId={id}
+            entityType="CLOSING"
+            compact
+            title="외부 Closing 자료"
+          />
         </div>
       )}
 
@@ -3280,6 +3311,12 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+          <FileUploadZone
+            txnId={id}
+            entityType="PMI"
+            compact
+            title="외부 PMI 자료"
+          />
         </div>
       )}
 
@@ -3449,6 +3486,13 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+
+          <FileUploadZone
+            txnId={id}
+            entityType="EARNOUT"
+            compact
+            title="외부 어닝아웃 자료"
+          />
         </div>
       )}
 
@@ -4208,6 +4252,13 @@ export default function TransactionWorkspacePage() {
               />
             )}
           </Card>
+
+          <FileUploadZone
+            txnId={id}
+            entityType="MARKETING_MATERIAL"
+            compact
+            title="외부 마케팅 자료"
+          />
         </div>
       )}
 
@@ -4390,6 +4441,13 @@ export default function TransactionWorkspacePage() {
               )}
             </Card>
           )}
+
+          <FileUploadZone
+            txnId={id}
+            entityType="FINANCIAL_MODEL"
+            compact
+            title="외부 재무모델"
+          />
         </div>
       )}
 
