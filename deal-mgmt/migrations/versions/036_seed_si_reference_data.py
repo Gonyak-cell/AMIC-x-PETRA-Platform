@@ -170,6 +170,9 @@ def _seed_ksic_io_mappings(conn, csv_path: Path) -> int:
         for row in reader:
             io_code = row["io_code"].strip()
             ksic_code = row["ksic_code"].strip()
+            # 범위 표기(예: "13101sc1-15220sc1(제외)")는 VARCHAR(20) 초과 → 스킵
+            if len(ksic_code) > 20 or len(io_code) > 20:
+                continue
             key = (io_code, ksic_code)
             if key in seen:
                 continue
