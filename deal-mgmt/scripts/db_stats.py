@@ -22,17 +22,21 @@ async def main() -> None:
     from app.models.si_company import SICompany
 
     engine = create_async_engine(settings.DATABASE_URL)
+    try:
+        async with AsyncSession(engine) as session:
+            total = (await session.execute(select(func.count()).select_from(SICompany))).scalar() or 0
 
-    async with AsyncSession(engine) as session:
-        total = (await session.execute(select(func.count()).select_from(SICompany))).scalar() or 0
+            revenue = (
+                await session.execute(select(func.count()).select_from(SICompany).where(SICompany.revenue.isnot(None)))
+            ).scalar() or 0
 
-        revenue = (await session.execute(select(func.count()).where(SICompany.revenue.isnot(None)))).scalar() or 0
-
-        corp_basic = (
-            await session.execute(select(func.count()).where(SICompany.corp_basic_synced_at.isnot(None)))
-        ).scalar() or 0
-
-    await engine.dispose()
+            corp_basic = (
+                await session.execute(
+                    select(func.count()).select_from(SICompany).where(SICompany.corp_basic_synced_at.isnot(None))
+                )
+            ).scalar() or 0
+    finally:
+        await engine.dispose()
 
     print(
         json.dumps(
