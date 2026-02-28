@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import time
 import uuid
 from datetime import UTC, datetime
 
@@ -32,6 +34,27 @@ logger = logging.getLogger(__name__)
 # 추출 시 텍스트 최대 길이 (토큰 비용 제어)
 _MAX_TEXT_CHARS = 100_000
 _PREVIEW_CHARS = 2_000
+
+# 카테고리별 추출 텍스트 제한 (정형 문서는 앞부분에 핵심 정보 집중)
+_CATEGORY_TEXT_LIMITS: dict[str, int] = {
+    "CORPORATE_DOCS": 30_000,
+    "TAX_FILING": 40_000,
+    "NDA": 20_000,
+    "LOI_MOU": 30_000,
+    "SPA_BTA": _MAX_TEXT_CHARS,
+}
+
+# 정형 문서 카테고리 — 경량 모델로 추출 (빠르고 저렴, 실패 시 primary 폴백)
+_MINI_MODEL_CATEGORIES: frozenset[str] = frozenset({"CORPORATE_DOCS", "TAX_FILING"})
+
+# 경량 모델 우선순위 (프로바이더별): 사용 가능한 첫 번째 모델 사용
+_MINI_MODELS: list[str] = [
+    "claude-haiku-4-5-20251001",  # Anthropic (프로덕션에서 사용 가능)
+    "gpt-4o-mini",  # OpenAI (키 설정 시 사용)
+]
+
+# 경량 모델 개별 호출 타임아웃 (초) — LLM 어댑터 90초보다 짧게
+_MINI_MODEL_TIMEOUT: float = 30.0
 
 
 # ── CRUD ─────────────────────────────────────────────────────
@@ -99,10 +122,20 @@ async def classify_document(
 
     user_msg = CLASSIFICATION_USER_TEMPLATE.format(text_preview=preview)
 
-    # mini 모델 우선 시도
-    try:
-        raw = await llm_client.call_with_model(CLASSIFICATION_SYSTEM, user_msg, model="gpt-4o-mini")
-    except Exception:
+    # 경량 모델 우선 시도 (개별 타임아웃 적용)
+    raw = None
+    for mini_model in _MINI_MODELS:
+        try:
+            raw = await asyncio.wait_for(
+                llm_client.call_with_model(CLASSIFICATION_SYSTEM, user_msg, model=mini_model),
+                timeout=_MINI_MODEL_TIMEOUT,
+            )
+            logger.info("경량 모델 분류 성공: model=%s", mini_model)
+            break
+        except Exception as exc:
+            logger.debug("경량 모델 %s 분류 실패 (폴백 시도): %s", mini_model, exc)
+            continue
+    if raw is None:
         raw = await llm_client.call(CLASSIFICATION_SYSTEM, user_msg)
 
     # JSON 파싱
@@ -137,13 +170,32 @@ async def extract_fields(
     if not system_prompt:
         return {}
 
-    doc_text = parsed.text[:_MAX_TEXT_CHARS]
+    max_chars = _CATEGORY_TEXT_LIMITS.get(category.value, _MAX_TEXT_CHARS)
+    doc_text = parsed.text[:max_chars]
     if not doc_text.strip():
         return {}
 
     user_msg = EXTRACTION_USER_TEMPLATE.format(document_text=doc_text)
 
-    raw = await llm_client.call(system_prompt, user_msg)
+    # 정형 문서: 경량 모델 우선 (빠르고 저렴), 실패 시 primary 폴백
+    if category.value in _MINI_MODEL_CATEGORIES:
+        raw = None
+        for mini_model in _MINI_MODELS:
+            try:
+                raw = await asyncio.wait_for(
+                    llm_client.call_with_model(system_prompt, user_msg, model=mini_model),
+                    timeout=_MINI_MODEL_TIMEOUT,
+                )
+                logger.info("경량 모델 추출 성공: model=%s, category=%s", mini_model, category.value)
+                break
+            except Exception as exc:
+                logger.debug("경량 모델 %s 추출 실패 (폴백 시도): %s", mini_model, exc)
+                continue
+        if raw is None:
+            logger.info("경량 모델 모두 실패, primary 폴백 (category=%s)", category.value)
+            raw = await llm_client.call(system_prompt, user_msg)
+    else:
+        raw = await llm_client.call(system_prompt, user_msg)
 
     try:
         return json.loads(_extract_json(raw))
@@ -157,7 +209,7 @@ async def extract_fields(
 
 async def run_extraction_pipeline(
     extraction_id: uuid.UUID,
-    session_factory,
+    session_factory: object,
 ) -> None:
     """전체 추출 파이프라인을 실행한다 (Celery 태스크에서 호출).
 
@@ -168,108 +220,177 @@ async def run_extraction_pipeline(
     """
     from app.core.config import settings
 
-    async with session_factory() as db:
-        # 1. 추출 레코드 + VDR 문서 로드
-        extraction = await get_extraction(db, extraction_id)
-        if not extraction:
-            logger.error("추출 레코드 없음: %s", extraction_id)
-            return
+    t0 = time.monotonic()
 
-        vdr_doc = await db.get(VdrDocument, extraction.vdr_document_id)
-        if not vdr_doc:
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = "VDR 문서를 찾을 수 없습니다"
-            await db.commit()
-            return
-
-        # 2. 파일 파싱
+    try:
+        async with session_factory() as db:
+            await _run_pipeline_inner(db, extraction_id, settings, t0)
+    except Exception as exc:
+        logger.exception("파이프라인 미처리 예외 (extraction=%s): %s", extraction_id, exc)
+        # FAILED 마킹 시도 (별도 세션)
         try:
-            parsed = parse_file(vdr_doc.file_path)
-        except Exception as exc:
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = f"파일 파싱 실패: {exc}"
-            await db.commit()
-            return
+            async with session_factory() as db:
+                ext = await db.get(DocumentExtraction, extraction_id)
+                if ext and ext.status not in (
+                    ExtractionStatus.COMPLETED,
+                    ExtractionStatus.CONFIRMED,
+                    ExtractionStatus.FAILED,
+                ):
+                    ext.status = ExtractionStatus.FAILED
+                    ext.error_message = "내부 오류가 발생했습니다. 관리자에게 문의하세요."
+                    await db.commit()
+        except Exception:
+            logger.exception("FAILED 마킹 복구 실패 (extraction=%s)", extraction_id)
 
-        if not parsed.is_valid:
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = f"파싱 결과 없음: {parsed.parse_error or '텍스트/표 없음'}"
-            await db.commit()
-            return
 
-        # 3. LLM 클라이언트 생성
-        llm = RalphLLMClient.from_settings(settings)
-        if not llm.is_available:
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = "사용 가능한 LLM 프로바이더가 없습니다"
-            await db.commit()
-            return
+async def _run_pipeline_inner(
+    db: AsyncSession,
+    extraction_id: uuid.UUID,
+    settings: object,
+    t0: float,
+) -> None:
+    """파이프라인 내부 로직 (run_extraction_pipeline에서 호출)."""
+    # 0. 멱등성 가드 — SELECT FOR UPDATE로 동시 실행 방지
+    result = await db.execute(
+        select(DocumentExtraction).where(DocumentExtraction.id == extraction_id).with_for_update(skip_locked=True)
+    )
+    extraction = result.scalar_one_or_none()
+    if not extraction:
+        logger.info("추출 레코드 없음 또는 다른 워커가 처리 중: %s", extraction_id)
+        return
 
-        # 4. 분류 (doc_category가 이미 설정된 경우 = hint → 건너뛰기)
-        if extraction.doc_category:
-            category = extraction.doc_category
-            confidence = 1.0
-            extraction.classification_confidence = confidence
-            logger.info(
-                "분류 건너뛰기 (hint): %s → %s",
-                vdr_doc.original_name,
-                category.value,
-            )
-        else:
-            extraction.status = ExtractionStatus.CLASSIFYING
-            await db.commit()
+    if extraction.status != ExtractionStatus.PENDING:
+        logger.info(
+            "추출 이미 처리됨, 스킵: %s (status=%s)",
+            extraction_id,
+            extraction.status.value,
+        )
+        return
 
-            try:
-                category, confidence = await classify_document(parsed, llm)
-            except Exception as exc:
-                extraction.status = ExtractionStatus.FAILED
-                extraction.error_message = f"문서 분류 실패: {exc}"
-                await db.commit()
-                return
-
-            extraction.doc_category = category
-            extraction.classification_confidence = confidence
-
-        # 5. REFERENCE_ONLY 또는 향후 확장 카테고리 → 추출 건너뜀
-        if category.value not in EXTRACTABLE_CATEGORIES:
-            extraction.status = ExtractionStatus.COMPLETED
-            extraction.llm_cost_usd = llm.total_cost_usd
-            await db.commit()
-            logger.info(
-                "분류 완료 (추출 불필요): %s → %s (%.0f%%)",
-                vdr_doc.original_name,
-                category.value,
-                confidence * 100,
-            )
-            return
-
-        # 6. 상태: EXTRACTING
-        extraction.status = ExtractionStatus.EXTRACTING
+    vdr_doc = await db.get(VdrDocument, extraction.vdr_document_id)
+    if not vdr_doc:
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "VDR 문서를 찾을 수 없습니다"
         await db.commit()
+        return
 
-        # 7. 데이터 추출
+    # 2. 파일 파싱
+    try:
+        parsed = parse_file(vdr_doc.file_path)
+    except Exception as exc:
+        logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "문서 파싱에 실패했습니다."
+        await db.commit()
+        return
+
+    if not parsed.is_valid:
+        logger.warning("파싱 결과 없음 (extraction=%s): %s", extraction_id, parsed.parse_error)
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "문서에서 텍스트를 추출할 수 없습니다."
+        await db.commit()
+        return
+
+    t_parse = time.monotonic()
+    logger.info("파싱 완료: %.1fs (chars=%d)", t_parse - t0, len(parsed.text))
+
+    # 3. LLM 클라이언트 생성
+    llm = RalphLLMClient.from_settings(settings)
+    if not llm.is_available:
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "AI 분석 서비스를 사용할 수 없습니다."
+        await db.commit()
+        return
+
+    # 4. 분류 (doc_category가 이미 설정된 경우 = hint → 건너뛰기)
+    was_hint = extraction.doc_category is not None
+    if extraction.doc_category:
+        category = extraction.doc_category
+        confidence = 1.0
+        extraction.classification_confidence = confidence
+        logger.info(
+            "분류 건너뛰기 (hint): %s → %s",
+            vdr_doc.original_name,
+            category.value,
+        )
+    else:
+        extraction.status = ExtractionStatus.CLASSIFYING
+        await db.flush()
+
         try:
-            extracted = await extract_fields(parsed, category, llm)
+            category, confidence = await classify_document(parsed, llm)
         except Exception as exc:
+            logger.error("문서 분류 실패 (extraction=%s): %s", extraction_id, exc)
             extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = f"데이터 추출 실패: {exc}"
-            extraction.llm_cost_usd = llm.total_cost_usd
+            extraction.error_message = "문서 분류에 실패했습니다."
             await db.commit()
             return
 
-        # 8. 결과 저장
-        extraction.extracted_data = extracted
+        extraction.doc_category = category
+        extraction.classification_confidence = confidence
+
+    t_classify = time.monotonic()
+    logger.info(
+        "분류 완료: %.1fs (skip=%s, category=%s, confidence=%.0f%%)",
+        t_classify - t_parse,
+        was_hint,
+        category.value,
+        confidence * 100,
+    )
+
+    # 5. REFERENCE_ONLY 또는 향후 확장 카테고리 → 추출 건너뜀
+    if category.value not in EXTRACTABLE_CATEGORIES:
         extraction.status = ExtractionStatus.COMPLETED
         extraction.llm_cost_usd = llm.total_cost_usd
         await db.commit()
-
         logger.info(
-            "추출 완료: %s → %s (%.0f%%, $%.4f)",
+            "분류 완료 (추출 불필요): %s → %s (%.0f%%)",
             vdr_doc.original_name,
             category.value,
             confidence * 100,
-            llm.total_cost_usd,
         )
+        return
+
+    # 6. 상태: EXTRACTING
+    extraction.status = ExtractionStatus.EXTRACTING
+    await db.flush()
+
+    # 7. 데이터 추출
+    try:
+        extracted = await extract_fields(parsed, category, llm)
+    except Exception as exc:
+        logger.error("데이터 추출 실패 (extraction=%s): %s", extraction_id, exc)
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "데이터 추출에 실패했습니다."
+        extraction.llm_cost_usd = llm.total_cost_usd
+        await db.commit()
+        return
+
+    t_extract = time.monotonic()
+    max_chars = _CATEGORY_TEXT_LIMITS.get(category.value, _MAX_TEXT_CHARS)
+    use_mini = category.value in _MINI_MODEL_CATEGORIES
+    logger.info(
+        "추출 완료: %.1fs (model=%s, chars=%d/%d)",
+        t_extract - t_classify,
+        "mini" if use_mini else "primary",
+        min(len(parsed.text), max_chars),
+        max_chars,
+    )
+
+    # 8. 결과 저장
+    extraction.extracted_data = extracted
+    extraction.status = ExtractionStatus.COMPLETED
+    extraction.llm_cost_usd = llm.total_cost_usd
+    await db.commit()
+
+    logger.info(
+        "전체 파이프라인 완료: %.1fs — %s → %s (%.0f%%, $%.4f)",
+        time.monotonic() - t0,
+        vdr_doc.original_name,
+        category.value,
+        confidence * 100,
+        llm.total_cost_usd,
+    )
 
 
 # ── 사용자 확정 → DB 매핑 ────────────────────────────────────
@@ -301,6 +422,11 @@ async def confirm_extraction(
         create_new=create_new,
         data=confirmed_data,
     )
+
+    if applied_id is None and target_model in ("nda", "bid", "contract"):
+        raise ValueError(
+            f"{target_model} 데이터 적용 실패: 대상 레코드가 없거나 필수 필드(buyer_candidate_id)가 누락되었습니다"
+        )
 
     # 추출 레코드 업데이트
     extraction.extracted_data = confirmed_data
@@ -356,9 +482,29 @@ async def _apply_to_nda(
         "confidentiality_period_months": "confidentiality_period_months",
     }
 
-    if target_id and not create_new:
+    if create_new:
+        buyer_id_raw = data.get("buyer_candidate_id")
+        if not buyer_id_raw:
+            logger.warning("NDA 신규 생성 실패: buyer_candidate_id 누락")
+            return None
+        buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        from app.models.buyer_candidate import BuyerCandidate
+
+        buyer = await db.get(BuyerCandidate, buyer_id)
+        if not buyer or buyer.transaction_id != transaction_id:
+            logger.warning("NDA 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음")
+            return None
+        nda = NDA(transaction_id=transaction_id, buyer_candidate_id=buyer_id)
+        for src, dst in field_map.items():
+            val = data.get(src)
+            if val is not None:
+                setattr(nda, dst, val)
+        db.add(nda)
+        await db.flush()
+        return nda.id
+    elif target_id:
         nda = await db.get(NDA, target_id)
-        if nda:
+        if nda and nda.transaction_id == transaction_id:
             for src, dst in field_map.items():
                 val = data.get(src)
                 if val is not None:
@@ -378,21 +524,49 @@ async def _apply_to_bid(
     """Bid 모델에 추출 데이터를 적용한다."""
     from app.models.bid import Bid
 
-    if target_id and not create_new:
+    field_map = {
+        "proposed_amount": "amount",
+        "currency": "currency",
+        "valuation_method": "valuation_method",
+        "exclusivity_period_days": "exclusivity_period_days",
+        "conditions_precedent": "conditions_precedent",
+        "valid_until": "valid_until",
+    }
+
+    if create_new:
+        buyer_id_raw = data.get("buyer_candidate_id")
+        if not buyer_id_raw:
+            logger.warning("Bid 신규 생성 실패: buyer_candidate_id 누락")
+            return None
+        buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        from app.models.buyer_candidate import BuyerCandidate
+
+        buyer = await db.get(BuyerCandidate, buyer_id)
+        if not buyer or buyer.transaction_id != transaction_id:
+            logger.warning("Bid 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음")
+            return None
+        from app.models.enums import BidType
+
+        bid_type_val = data.get("bid_type", BidType.LOI)
+        bid = Bid(
+            transaction_id=transaction_id,
+            buyer_candidate_id=buyer_id,
+            bid_type=bid_type_val,
+        )
+        for src, dst in field_map.items():
+            val = data.get(src)
+            if val is not None:
+                setattr(bid, dst, val)
+        db.add(bid)
+        await db.flush()
+        return bid.id
+    elif target_id:
         bid = await db.get(Bid, target_id)
-        if bid:
-            if data.get("proposed_amount") is not None:
-                bid.amount = data["proposed_amount"]
-            if data.get("currency"):
-                bid.currency = data["currency"]
-            if data.get("valuation_method"):
-                bid.valuation_method = data["valuation_method"]
-            if data.get("exclusivity_period_days") is not None:
-                bid.exclusivity_period_days = data["exclusivity_period_days"]
-            if data.get("conditions_precedent"):
-                bid.conditions_precedent = data["conditions_precedent"]
-            if data.get("valid_until"):
-                bid.valid_until = data["valid_until"]
+        if bid and bid.transaction_id == transaction_id:
+            for src, dst in field_map.items():
+                val = data.get(src)
+                if val is not None:
+                    setattr(bid, dst, val)
             await db.flush()
             return bid.id
     return None
@@ -408,30 +582,45 @@ async def _apply_to_contract(
     """Contract 모델에 추출 데이터를 적용한다."""
     from app.models.contract import Contract
 
-    if target_id and not create_new:
+    field_map = {
+        "counterparty_name": "counterparty_name",
+        "effective_date": "effective_date",
+        "closing_date": "expiry_date",
+        "risk_summary": "ai_analysis_summary",
+    }
+
+    risk_flag_keys = frozenset(
+        {
+            "rw_cap_amount",
+            "rw_cap_percentage",
+            "indemnification_period_months",
+            "key_conditions",
+            "final_purchase_price",
+        }
+    )
+
+    def _apply_fields(contract: object) -> None:
+        for src, dst in field_map.items():
+            val = data.get(src)
+            if val is not None:
+                setattr(contract, dst, val)
+        risk_flags = {k: v for k, v in data.items() if k in risk_flag_keys and v is not None}
+        if risk_flags:
+            contract.ai_risk_flags = risk_flags  # type: ignore[attr-defined]
+
+    if create_new:
+        contract = Contract(
+            transaction_id=transaction_id,
+            title=data.get("title") or "AI 추출 계약서",
+        )
+        _apply_fields(contract)
+        db.add(contract)
+        await db.flush()
+        return contract.id
+    elif target_id:
         contract = await db.get(Contract, target_id)
-        if contract:
-            if data.get("counterparty_name"):
-                contract.counterparty_name = data["counterparty_name"]
-            if data.get("effective_date"):
-                contract.effective_date = data["effective_date"]
-            if data.get("closing_date"):
-                contract.expiry_date = data["closing_date"]
-            # AI 분석 전용 필드 활용
-            contract.ai_analysis_summary = data.get("risk_summary")
-            contract.ai_risk_flags = {
-                k: v
-                for k, v in data.items()
-                if k
-                in (
-                    "rw_cap_amount",
-                    "rw_cap_percentage",
-                    "indemnification_period_months",
-                    "key_conditions",
-                    "final_purchase_price",
-                )
-                and v is not None
-            } or None
+        if contract and contract.transaction_id == transaction_id:
+            _apply_fields(contract)
             await db.flush()
             return contract.id
     return None
@@ -507,12 +696,12 @@ def _extract_json(text: str) -> str:
     # ```json ... ``` 블록 추출
     if "```json" in text:
         start = text.index("```json") + 7
-        end = text.index("```", start)
-        return text[start:end].strip()
+        end = text.find("```", start)
+        return text[start:end].strip() if end != -1 else text[start:].strip()
     if "```" in text:
         start = text.index("```") + 3
-        end = text.index("```", start)
-        return text[start:end].strip()
+        end = text.find("```", start)
+        return text[start:end].strip() if end != -1 else text[start:].strip()
 
     # { ... } 블록 추출
     first_brace = text.find("{")
