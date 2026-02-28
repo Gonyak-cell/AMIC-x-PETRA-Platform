@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import httpx
 
@@ -41,7 +42,7 @@ class KIISClient:
             await self._client.aclose()
             self._client = None
 
-    async def _request_with_retry(self, method: str, path: str, **kwargs: object) -> httpx.Response:
+    async def _request_with_retry(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         """HTTP 요청 + 재시도 (transient 오류 대응)."""
         client = await self._get_client()
         last_exc: Exception | None = None

@@ -116,7 +116,8 @@ class _AnthropicAdapter(_LLMAdapter):
             messages=[{"role": "user", "content": user}],
         )
 
-        text = response.content[0].text if response.content else ""
+        first = response.content[0] if response.content else None
+        text = first.text if first and hasattr(first, "text") else ""
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
         return text, model_id, input_tokens, output_tokens

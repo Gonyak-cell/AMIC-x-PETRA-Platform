@@ -80,8 +80,8 @@ async def buyer_summary(
         total=len(buyers),
         by_status=by_status,
         by_tier=by_tier,
-        avg_ioi_value=sum(ioi_values) / len(ioi_values) if ioi_values else None,
-        avg_loi_value=sum(loi_values) / len(loi_values) if loi_values else None,
+        avg_ioi_value=Decimal(sum(ioi_values)) / Decimal(len(ioi_values)) if ioi_values else None,
+        avg_loi_value=Decimal(sum(loi_values)) / Decimal(len(loi_values)) if loi_values else None,
     )
 
 
