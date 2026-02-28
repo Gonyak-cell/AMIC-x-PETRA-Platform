@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.schemas.public_data import GPRegistryItem, GPRegistryListResponse
+from app.core.database import get_db
+from app.schemas.public_data import GPRegistryItem, GPRegistryListResponse, GPSyncResponse
 from app.services.public_data_service import PublicDataService
 
 router = APIRouter()
@@ -41,3 +42,25 @@ async def get_registered_gp(
     result = await service.get_gp_by_name(company_name)
     await service.close()
     return result
+
+
+@router.post("/gp/sync", response_model=GPSyncResponse, summary="GP 프로파일 DB 동기화")
+async def sync_gp_profiles(
+    db=Depends(get_db),
+    service: PublicDataService = Depends(get_public_data_service),
+):
+    """공공데이터포털 GP 레지스트리를 Company 테이블에 동기화한다.
+
+    - 기존 Company와 EntityResolver로 매칭 → GP 컬럼 업데이트
+    - 미매칭 → 신규 Company 생성 (is_gp=True)
+    - CompanyAlias 자동 등록
+    """
+    result = await service.sync_gp_profiles(db)
+    await service.close()
+    return GPSyncResponse(
+        total_api_items=result.total_api_items,
+        created=result.created,
+        updated=result.updated,
+        aliases_added=result.aliases_added,
+        errors=result.errors,
+    )

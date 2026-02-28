@@ -51,7 +51,11 @@ class TestRunReputationRecalc:
             prev_result = MagicMock()
             prev_result.scalar_one_or_none.return_value = "Stable"
 
-            sessions = [query_session, FakeSession(execute_returns=[prev_result]), FakeSession(execute_returns=[prev_result])]
+            sessions = [
+                query_session,
+                FakeSession(execute_returns=[prev_result]),
+                FakeSession(execute_returns=[prev_result]),
+            ]
             idx = [0]
 
             def make_session():
@@ -128,7 +132,11 @@ class TestRunReputationRecalc:
             prev_result = MagicMock()
             prev_result.scalar_one_or_none.return_value = None
 
-            sessions = [query_session, FakeSession(execute_returns=[prev_result]), FakeSession(execute_returns=[prev_result])]
+            sessions = [
+                query_session,
+                FakeSession(execute_returns=[prev_result]),
+                FakeSession(execute_returns=[prev_result]),
+            ]
             idx = [0]
 
             def make_session():

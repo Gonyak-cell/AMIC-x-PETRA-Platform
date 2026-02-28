@@ -689,9 +689,7 @@ class TestCheckSurvivalPreservesUnicorn:
         ]
 
         service = PortfolioService()
-        service.dart_service.search_disclosures = AsyncMock(
-            return_value=(mock_disclosures, 1, 1)
-        )
+        service.dart_service.search_disclosures = AsyncMock(return_value=(mock_disclosures, 1, 1))
 
         result = await service.check_survival(db=async_session, portfolio_id=portfolio.id)
 

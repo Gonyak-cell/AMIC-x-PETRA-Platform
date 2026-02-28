@@ -119,9 +119,7 @@ class DealAmountStats(BaseModel):
     median_amount: Decimal | None = Field(None, description="중앙값 (원)")
     min_amount: Decimal | None = Field(None, description="최소 투자 금액 (원)")
     max_amount: Decimal | None = Field(None, description="최대 투자 금액 (원)")
-    distribution: list[AmountBucket] = Field(
-        default_factory=list, description="금액 구간별 분포"
-    )
+    distribution: list[AmountBucket] = Field(default_factory=list, description="금액 구간별 분포")
 
 
 class DealCreateRequest(BaseModel):

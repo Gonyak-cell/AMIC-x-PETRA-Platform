@@ -49,10 +49,7 @@ def _get_jwt_secret() -> str:
     """JWT 검증에 사용할 시크릿을 반환한다. JWT_SECRET 우선, 없으면 SECRET_KEY 폴백."""
     secret = settings.JWT_SECRET or settings.SECRET_KEY
     if not secret:
-        raise RuntimeError(
-            "JWT secret is not configured. "
-            "Set JWT_SECRET or SECRET_KEY in your .env file."
-        )
+        raise RuntimeError("JWT secret is not configured. Set JWT_SECRET or SECRET_KEY in your .env file.")
     return secret
 
 
@@ -178,14 +175,14 @@ async def get_current_user(
                 return user
             # Cross-backend federation: FDD 토큰 정보로 KIIS 사용자 자동 생성
             role = payload.get("role", "analyst")
-            # FDD 역할 → KIIS 역할 매핑 (대소문자 통일)
             role_lower = role.lower() if role else "analyst"
             if role_lower == "client":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="외부 클라이언트는 KIIS 서비스에 접근할 수 없습니다",
                 )
-            if role_lower not in ("admin", "analyst", "viewer"):
+            # FDD admin이라도 KIIS에서는 analyst로 제한 (KIIS admin은 직접 설정만 가능)
+            if role_lower not in ("analyst", "viewer"):
                 role_lower = "analyst"
             user = User(
                 username=email.split("@")[0],

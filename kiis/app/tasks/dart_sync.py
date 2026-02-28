@@ -26,9 +26,7 @@ async def run_dart_sync() -> dict:
     errors = 0
 
     async with async_session_factory() as db:
-        result = await db.execute(
-            select(Company.corp_code).where(Company.corp_code.isnot(None))
-        )
+        result = await db.execute(select(Company.corp_code).where(Company.corp_code.isnot(None)))
         corp_codes = [row[0] for row in result.all()]
 
     total = len(corp_codes)

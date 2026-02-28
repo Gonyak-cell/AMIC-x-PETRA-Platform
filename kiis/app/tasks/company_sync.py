@@ -98,9 +98,7 @@ async def sync_companies_from_dart(enrich_listed: bool = True) -> dict:
                 try:
                     info = await svc.get_company_info(corp_code)
                     async with async_session_factory() as db:
-                        await db.execute(
-                            select(Company).where(Company.id == company_id)
-                        )
+                        await db.execute(select(Company).where(Company.id == company_id))
                         stmt = (
                             Company.__table__.update()
                             .where(Company.id == company_id)

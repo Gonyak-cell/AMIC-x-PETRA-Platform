@@ -20,6 +20,8 @@ class DisclosureType(StrEnum):
     SEMI_ANNUAL = "semi_annual"  # 반기보고서
     MATERIAL = "material"  # 주요사항보고서
     SANCTION = "sanction"  # 제재/조치
+    MAJOR_HOLDING = "major_holding"  # 대량보유상황보고서
+    EXECUTIVE_HOLDING = "executive_holding"  # 임원·주요주주 소유보고
     OTHER = "other"  # 기타
 
 

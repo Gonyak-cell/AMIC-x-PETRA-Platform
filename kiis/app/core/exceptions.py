@@ -99,14 +99,21 @@ async def dart_api_error_handler(request: Request, exc: DARTAPIError) -> JSONRes
     }
     error_title = code_map.get(exc.status_code, "DART_UNKNOWN_ERROR")
     return _problem_response(
-        http_status, f"dart:{exc.status_code}", error_title,
-        exc.message, error_code=exc.code, dart_status=exc.status_code,
+        http_status,
+        f"dart:{exc.status_code}",
+        error_title,
+        exc.message,
+        error_code=exc.code,
+        dart_status=exc.status_code,
     )
 
 
 async def rate_limit_error_handler(request: Request, exc: RateLimitExceededError) -> JSONResponse:
     return _problem_response(
-        429, "system:rate_limit", "RATE_LIMIT_EXCEEDED", exc.message,
+        429,
+        "system:rate_limit",
+        "RATE_LIMIT_EXCEEDED",
+        exc.message,
         error_code=exc.code,
     )
 
@@ -114,8 +121,12 @@ async def rate_limit_error_handler(request: Request, exc: RateLimitExceededError
 async def external_api_error_handler(request: Request, exc: ExternalAPIError) -> JSONResponse:
     logger.error("ExternalAPIError [%s]: %s", exc.source, exc.message, exc_info=exc)
     return _problem_response(
-        502, f"external:{exc.source.lower()}", "EXTERNAL_API_ERROR",
-        exc.message, error_code=exc.code, source=exc.source,
+        502,
+        f"external:{exc.source.lower()}",
+        "EXTERNAL_API_ERROR",
+        exc.message,
+        error_code=exc.code,
+        source=exc.source,
     )
 
 

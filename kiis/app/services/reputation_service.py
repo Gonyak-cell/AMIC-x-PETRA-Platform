@@ -50,7 +50,11 @@ class ReputationService:
         self.nlp_service = nlp_service or NLPService()
 
     async def get_reputation(
-        self, db: AsyncSession, corp_code: str, *, company_id: int | None = None,
+        self,
+        db: AsyncSession,
+        corp_code: str,
+        *,
+        company_id: int | None = None,
     ) -> ReputationScore | None:
         """기업의 현재 평판 점수를 조회한다.
 
@@ -68,7 +72,12 @@ class ReputationService:
         return result.scalar_one_or_none()
 
     async def get_reputation_history(
-        self, db: AsyncSession, corp_code: str, limit: int = 30, *, company_id: int | None = None,
+        self,
+        db: AsyncSession,
+        corp_code: str,
+        limit: int = 30,
+        *,
+        company_id: int | None = None,
     ) -> list[ReputationHistory]:
         """기업의 평판 이력을 조회한다."""
         if company_id is not None:

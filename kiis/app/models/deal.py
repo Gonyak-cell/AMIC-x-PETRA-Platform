@@ -29,6 +29,16 @@ class DealSector(StrEnum):
     OTHER = "other"  # 기타
 
 
+class DealType(StrEnum):
+    """딜 유형"""
+
+    INVESTMENT = "investment"  # 투자 (VC/PE)
+    ACQUISITION = "acquisition"  # 인수
+    EXIT = "exit"  # 엑시트
+    HOLDING_CHANGE = "holding_change"  # 지분 변동 (대량보유 신호)
+    EXECUTIVE_CHANGE = "executive_change"  # 임원/주요주주 지분 변동
+
+
 class DealStage(StrEnum):
     """투자 단계"""
 
@@ -118,6 +128,17 @@ class Deal(TimestampMixin, Base):
         comment="원본 뉴스 ID",
     )
 
+    # 딜 분류 (Phase 2: 대량보유 딜 신호)
+    deal_type: Mapped[str | None] = mapped_column(
+        String(30), index=True, comment="딜 유형 (investment/acquisition/exit/holding_change)"
+    )
+    rcept_no: Mapped[str | None] = mapped_column(String(20), index=True, comment="DART 접수번호 (공시 원문 연결)")
+    disclosure_id: Mapped[int | None] = mapped_column(
+        ForeignKey("disclosures.id", ondelete="SET NULL"),
+        index=True,
+        comment="원문 공시 ID (감사추적)",
+    )
+
     # 추가 정보
     is_lead_investor: Mapped[bool] = mapped_column(Boolean, default=False, comment="리드 투자사 여부")
     co_investors: Mapped[str | None] = mapped_column(Text, comment="공동 투자사 목록 (JSON)")
@@ -131,6 +152,9 @@ class Deal(TimestampMixin, Base):
         foreign_keys=[target_company_id]
     )
     news_article: Mapped["NewsArticle | None"] = relationship()  # noqa: F821
+    source_disclosure: Mapped["Disclosure | None"] = relationship(  # noqa: F821
+        foreign_keys=[disclosure_id],
+    )
     fund: Mapped["Fund | None"] = relationship(  # noqa: F821
         foreign_keys=[fund_id], back_populates="deals"
     )

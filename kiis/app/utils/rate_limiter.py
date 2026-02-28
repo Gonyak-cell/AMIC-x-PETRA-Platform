@@ -37,8 +37,14 @@ class TokenBucketRateLimiter:
         self._day_tokens = min(self.per_day, self._day_tokens + elapsed * self._day_rate)
         self._day_last_refill = now
 
-    async def acquire(self) -> None:
-        """토큰을 획득한다. 토큰이 부족하면 대기한다."""
+    async def acquire(self, timeout: float = 60.0) -> None:
+        """토큰을 획득한다. 토큰이 부족하면 대기한다.
+
+        Args:
+            timeout: 최대 대기 시간 (초). 초과 시 TimeoutError 발생.
+        """
+        deadline = time.monotonic() + timeout
+
         while True:
             async with self._lock:
                 self._refill()
@@ -53,7 +59,13 @@ class TokenBucketRateLimiter:
                 else:
                     wait = (1.0 - self._day_tokens) / self._day_rate
 
-            await asyncio.sleep(wait)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Rate limiter 토큰 획득 대기 {timeout}초 초과 "
+                    f"(minute={int(self._minute_tokens)}, day={int(self._day_tokens)})"
+                )
+            await asyncio.sleep(min(wait, remaining))
 
     @property
     def available_minute_tokens(self) -> int:

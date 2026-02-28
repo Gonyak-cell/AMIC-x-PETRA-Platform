@@ -29,14 +29,19 @@ class TestSchedulerLifecycle:
             mock_settings.MANAGER_TRACKING_DAY_OF_WEEK = "mon"
             mock_settings.PORTFOLIO_CHECK_HOUR = 5
             mock_settings.WATCHLIST_ALERT_INTERVAL_HOURS = 6
+            mock_settings.IB_COLLECT_INTERVAL_HOURS = 4
+            mock_settings.GP_PROFILE_SYNC_DAY_OF_WEEK = "mon"
+            mock_settings.GP_PROFILE_SYNC_HOUR = 7
+            mock_settings.HOLDING_SYNC_HOUR = 10
+            mock_settings.ELESTOCK_SYNC_HOUR = 11
 
             mock_scheduler = mock_scheduler_cls.return_value
-            mock_scheduler.get_jobs.return_value = [None] * 6
+            mock_scheduler.get_jobs.return_value = [None] * 11
 
             await init_scheduler()
 
             mock_scheduler.start.assert_called_once()
-            assert mock_scheduler.add_job.call_count == 6
+            assert mock_scheduler.add_job.call_count == 11
 
         # 정리
         await close_scheduler()
@@ -68,7 +73,7 @@ class TestSchedulerJobRegistration:
     """등록된 작업 ID 검증"""
 
     async def test_job_ids(self):
-        """6개 작업이 올바른 ID로 등록되는지 확인한다."""
+        """9개 작업이 올바른 ID로 등록되는지 확인한다."""
         with (
             patch("app.tasks.scheduler.settings") as mock_settings,
             patch("app.tasks.scheduler.AsyncIOScheduler") as mock_scheduler_cls,
@@ -80,14 +85,31 @@ class TestSchedulerJobRegistration:
             mock_settings.MANAGER_TRACKING_DAY_OF_WEEK = "mon"
             mock_settings.PORTFOLIO_CHECK_HOUR = 5
             mock_settings.WATCHLIST_ALERT_INTERVAL_HOURS = 6
+            mock_settings.IB_COLLECT_INTERVAL_HOURS = 4
+            mock_settings.GP_PROFILE_SYNC_DAY_OF_WEEK = "mon"
+            mock_settings.GP_PROFILE_SYNC_HOUR = 7
+            mock_settings.HOLDING_SYNC_HOUR = 10
+            mock_settings.ELESTOCK_SYNC_HOUR = 11
 
             mock_scheduler = mock_scheduler_cls.return_value
-            mock_scheduler.get_jobs.return_value = [None] * 6
+            mock_scheduler.get_jobs.return_value = [None] * 11
 
             await init_scheduler()
 
             job_ids = [call.kwargs["id"] for call in mock_scheduler.add_job.call_args_list]
-            expected = {"dart_sync", "news_collect", "reputation_recalc", "manager_tracking", "portfolio_check", "watchlist_alerts"}
+            expected = {
+                "company_sync",
+                "dart_sync",
+                "news_collect",
+                "reputation_recalc",
+                "manager_tracking",
+                "portfolio_check",
+                "watchlist_alerts",
+                "ib_collect",
+                "gp_profile_sync",
+                "holding_sync",
+                "elestock_sync",
+            }
             assert set(job_ids) == expected
 
         await close_scheduler()

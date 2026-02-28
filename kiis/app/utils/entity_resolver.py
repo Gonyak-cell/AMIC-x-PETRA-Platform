@@ -5,7 +5,6 @@ import unicodedata
 from rapidfuzz import fuzz
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.company import Company, CompanyAlias
 
@@ -96,6 +95,24 @@ class EntityResolver:
 
     DEFAULT_THRESHOLD = 0.75
 
+    def __init__(self) -> None:
+        self._companies_cache: list[tuple[str | None, str]] | None = None
+
+    async def _get_companies(self, db: AsyncSession) -> list[tuple[str | None, str]]:
+        """Company (corp_code, corp_name) 목록을 캐시하여 반환한다.
+
+        인스턴스 수명 동안 1회만 DB 조회. 배치 처리 시 반복 풀 스캔 방지.
+        """
+        if self._companies_cache is None:
+            stmt = select(Company.corp_code, Company.corp_name)
+            result = await db.execute(stmt)
+            self._companies_cache = list(result.all())
+        return self._companies_cache
+
+    def clear_cache(self) -> None:
+        """캐시를 무효화한다."""
+        self._companies_cache = None
+
     async def resolve(
         self,
         db: AsyncSession,
@@ -172,17 +189,14 @@ class EntityResolver:
 
     async def _match_by_corp_name(self, db: AsyncSession, normalized: str) -> dict | None:
         """Company.corp_name 정규화 매칭을 시도한다."""
-        # 정규화 이름으로 정식명칭에서 검색
-        stmt = select(Company).options(selectinload(Company.aliases))
-        result = await db.execute(stmt)
-        companies = result.scalars().all()
+        companies = await self._get_companies(db)
 
-        for company in companies:
-            comp_normalized = normalize_company_name(company.corp_name)
+        for corp_code, corp_name in companies:
+            comp_normalized = normalize_company_name(corp_name)
             if comp_normalized == normalized:
                 return {
-                    "corp_code": company.corp_code,
-                    "corp_name": company.corp_name,
+                    "corp_code": corp_code,
+                    "corp_name": corp_name,
                     "similarity": 1.0,
                     "matched_by": "exact",
                 }
@@ -196,18 +210,16 @@ class EntityResolver:
         max_candidates: int,
     ) -> list[dict]:
         """유사도 기반으로 후보 기업을 추출한다."""
-        stmt = select(Company).options(selectinload(Company.aliases))
-        result = await db.execute(stmt)
-        companies = result.scalars().all()
+        companies = await self._get_companies(db)
 
         candidates = []
-        for company in companies:
-            similarity = calculate_similarity(normalized, company.corp_name)
+        for corp_code, corp_name in companies:
+            similarity = calculate_similarity(normalized, corp_name)
             if similarity >= threshold * 0.8:  # threshold보다 약간 낮은 것도 후보에 포함
                 candidates.append(
                     {
-                        "corp_code": company.corp_code,
-                        "corp_name": company.corp_name,
+                        "corp_code": corp_code,
+                        "corp_name": corp_name,
                         "similarity": round(similarity, 4),
                     }
                 )

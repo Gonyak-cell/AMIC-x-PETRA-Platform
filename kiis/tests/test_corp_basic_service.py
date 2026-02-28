@@ -152,13 +152,7 @@ class TestParseItems:
 
     def test_parse_items_as_list(self):
         """items가 list로 바로 오는 경우."""
-        data = {
-            "response": {
-                "body": {
-                    "items": [{"key": "val"}]
-                }
-            }
-        }
+        data = {"response": {"body": {"items": [{"key": "val"}]}}}
         items = self.service._parse_items(data)
         assert len(items) == 1
 

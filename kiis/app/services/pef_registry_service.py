@@ -54,24 +54,13 @@ class PEFRegistryService:
         Returns:
             (items, total_count, reference_date)
         """
-        stmt = (
-            select(Fund)
-            .options(selectinload(Fund.gp_list))
-            .where(Fund.data_source == "pef_registry")
-        )
+        stmt = select(Fund).options(selectinload(Fund.gp_list)).where(Fund.data_source == "pef_registry")
 
         # 텍스트 검색
         if company_name:
             # GP 이름으로도 검색 (fund_gps 테이블 JOIN)
-            gp_fund_ids = (
-                select(FundGP.fund_id)
-                .where(FundGP.gp_name.ilike(f"%{company_name}%"))
-                .scalar_subquery()
-            )
-            stmt = stmt.where(
-                Fund.company_name.ilike(f"%{company_name}%")
-                | Fund.id.in_(gp_fund_ids)
-            )
+            gp_fund_ids = select(FundGP.fund_id).where(FundGP.gp_name.ilike(f"%{company_name}%")).scalar_subquery()
+            stmt = stmt.where(Fund.company_name.ilike(f"%{company_name}%") | Fund.id.in_(gp_fund_ids))
         if fund_name:
             stmt = stmt.where(Fund.fund_name.ilike(f"%{fund_name}%"))
 
@@ -190,20 +179,22 @@ class PEFRegistryService:
             if mn_v is not None:
                 vintage_range = str(mn_v) if mn_v == mx_v else f"{mn_v}~{mx_v}"
 
-            gp_items.append(GPListItem(
-                company_name=row.gp_name,
-                company_code="",
-                fund_count=row.fund_count,
-                active_fund_count=row.fund_count,  # PEF 등록부는 모두 active
-                total_aum=row.total_aum,
-                asset_classes=["pef"],
-                vintage_range=vintage_range,
-                has_maturity_alert=False,
-                data_sources=["pef_registry"],
-                is_co_gp_count=co_gp_map.get(row.gp_name, 0),
-                pef_fund_count=row.fund_count,
-                reference_date=ref_date,
-            ))
+            gp_items.append(
+                GPListItem(
+                    company_name=row.gp_name,
+                    company_code="",
+                    fund_count=row.fund_count,
+                    active_fund_count=row.fund_count,  # PEF 등록부는 모두 active
+                    total_aum=row.total_aum,
+                    asset_classes=["pef"],
+                    vintage_range=vintage_range,
+                    has_maturity_alert=False,
+                    data_sources=["pef_registry"],
+                    is_co_gp_count=co_gp_map.get(row.gp_name, 0),
+                    pef_fund_count=row.fund_count,
+                    reference_date=ref_date,
+                )
+            )
 
         # 정렬
         allowed_gp_sorts = {"total_aum", "fund_count", "company_name"}
@@ -221,7 +212,7 @@ class PEFRegistryService:
 
         # 페이지네이션
         start = (page - 1) * size
-        gp_items = gp_items[start: start + size]
+        gp_items = gp_items[start : start + size]
 
         return gp_items, total, ref_date
 
@@ -239,8 +230,7 @@ class PEFRegistryService:
             return None
 
         gp_list = [
-            GPInfo(gp_name=gp.gp_name, gp_role=gp.gp_role)
-            for gp in sorted(fund.gp_list, key=lambda g: g.gp_role)
+            GPInfo(gp_name=gp.gp_name, gp_role=gp.gp_role) for gp in sorted(fund.gp_list, key=lambda g: g.gp_role)
         ]
 
         from app.schemas.fund import FundManagerItem
@@ -293,8 +283,7 @@ class PEFRegistryService:
         gp_list = None
         if fund.gp_list:
             gp_list = [
-                GPInfo(gp_name=gp.gp_name, gp_role=gp.gp_role)
-                for gp in sorted(fund.gp_list, key=lambda g: g.gp_role)
+                GPInfo(gp_name=gp.gp_name, gp_role=gp.gp_role) for gp in sorted(fund.gp_list, key=lambda g: g.gp_role)
             ]
 
         return FundListItem(

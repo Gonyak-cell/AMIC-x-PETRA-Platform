@@ -174,8 +174,11 @@ def test_parse_int():
 def test_build_proframe_xml():
     """ProFrame XML 요청 빌드 테스트"""
     xml = _build_proframe_xml(
-        "FS-DIS2", "DISFundStdPriceSO", "select",
-        "DISCondFuncDTO", {"tmpV30": "20260213", "tmpV11": ""},
+        "FS-DIS2",
+        "DISFundStdPriceSO",
+        "select",
+        "DISCondFuncDTO",
+        {"tmpV30": "20260213", "tmpV11": ""},
     )
     assert "<pfmAppName>FS-DIS2</pfmAppName>" in xml
     assert "<pfmSvcName>DISFundStdPriceSO</pfmSvcName>" in xml
@@ -420,10 +423,12 @@ async def test_search_funds():
     std_date_items = [{"standardDt": "20260213"}]
     price_items, _ = _parse_proframe_response(MOCK_FUND_PRICE_RESPONSE)
 
-    service = _make_service_with_mock([
-        (std_date_items, 1),  # _get_latest_standard_date
-        (price_items, 3),     # _get_all_fund_prices
-    ])
+    service = _make_service_with_mock(
+        [
+            (std_date_items, 1),  # _get_latest_standard_date
+            (price_items, 3),  # _get_all_fund_prices
+        ]
+    )
 
     items, total = await service.search_funds(page=1, size=20)
     await service.close()
@@ -439,10 +444,12 @@ async def test_search_funds_filter_types():
     std_date_items = [{"standardDt": "20260213"}]
     price_items, _ = _parse_proframe_response(MOCK_FUND_PRICE_RESPONSE)
 
-    service = _make_service_with_mock([
-        (std_date_items, 1),
-        (price_items, 3),
-    ])
+    service = _make_service_with_mock(
+        [
+            (std_date_items, 1),
+            (price_items, 3),
+        ]
+    )
 
     items, _total = await service.search_funds(fund_types=["project"])
     await service.close()
@@ -458,10 +465,12 @@ async def test_search_funds_company_name():
     std_date_items = [{"standardDt": "20260213"}]
     price_items, _ = _parse_proframe_response(MOCK_FUND_PRICE_RESPONSE)
 
-    service = _make_service_with_mock([
-        (std_date_items, 1),
-        (price_items, 3),
-    ])
+    service = _make_service_with_mock(
+        [
+            (std_date_items, 1),
+            (price_items, 3),
+        ]
+    )
 
     items, _total = await service.search_funds(company_name="미래에셋")
     await service.close()
@@ -477,12 +486,14 @@ async def test_get_fund_detail():
     price_items, _ = _parse_proframe_response(MOCK_FUND_PRICE_RESPONSE)
     fee_items, _ = _parse_proframe_response(MOCK_FEE_RESPONSE)
 
-    service = _make_service_with_mock([
-        (std_date_items, 1),   # _get_latest_standard_date
-        (price_items, 3),      # _get_all_fund_prices
-        (fee_items, 2),        # _get_latest_fee_date → 수수료 데이터 있음 (탐색)
-        (fee_items, 2),        # _get_all_fund_fees → 실제 수수료 조회
-    ])
+    service = _make_service_with_mock(
+        [
+            (std_date_items, 1),  # _get_latest_standard_date
+            (price_items, 3),  # _get_all_fund_prices
+            (fee_items, 2),  # _get_latest_fee_date → 수수료 데이터 있음 (탐색)
+            (fee_items, 2),  # _get_all_fund_fees → 실제 수수료 조회
+        ]
+    )
 
     result = await service.get_fund_detail("KR5200001234")
     await service.close()
@@ -499,15 +510,17 @@ async def test_get_fund_detail_no_fee():
     std_date_items = [{"standardDt": "20260213"}]
     price_items, _ = _parse_proframe_response(MOCK_FUND_PRICE_RESPONSE)
 
-    service = _make_service_with_mock([
-        (std_date_items, 1),   # _get_latest_standard_date
-        (price_items, 3),      # _get_all_fund_prices
-        ([], 0),               # _get_latest_fee_date 시도 1 (빈 응답)
-        ([], 0),               # _get_latest_fee_date 시도 2 (빈 응답)
-        ([], 0),               # _get_latest_fee_date 시도 3 (빈 응답)
-        # 폴백: std_dt 캐시 사용 → 추가 요청 없음
-        ([], 0),               # _get_all_fund_fees (폴백 기준일)
-    ])
+    service = _make_service_with_mock(
+        [
+            (std_date_items, 1),  # _get_latest_standard_date
+            (price_items, 3),  # _get_all_fund_prices
+            ([], 0),  # _get_latest_fee_date 시도 1 (빈 응답)
+            ([], 0),  # _get_latest_fee_date 시도 2 (빈 응답)
+            ([], 0),  # _get_latest_fee_date 시도 3 (빈 응답)
+            # 폴백: std_dt 캐시 사용 → 추가 요청 없음
+            ([], 0),  # _get_all_fund_fees (폴백 기준일)
+        ]
+    )
 
     result = await service.get_fund_detail("KR5200009999")
     await service.close()
@@ -542,14 +555,21 @@ async def test_kofia_api_error():
     import httpx
 
     mock_response = httpx.Response(500, request=httpx.Request("POST", "http://test"))
-    service.client.post = AsyncMock(side_effect=httpx.HTTPStatusError(
-        "Server Error", request=mock_response.request, response=mock_response,
-    ))
+    service.client.post = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "Server Error",
+            request=mock_response.request,
+            response=mock_response,
+        )
+    )
 
     with pytest.raises(ExternalAPIError) as exc_info:
         await service._request_proframe(
-            "FS-DIS2", "DISFundStdPriceSO", "select",
-            "DISCondFuncDTO", {"tmpV30": "20260213"},
+            "FS-DIS2",
+            "DISFundStdPriceSO",
+            "select",
+            "DISCondFuncDTO",
+            {"tmpV30": "20260213"},
         )
     await service.close()
 

@@ -108,3 +108,69 @@ class SanctionItem(BaseModel):
 
 class SanctionListResponse(BaseModel):
     items: list[SanctionItem]
+
+
+# --- 대량보유상황보고서 ---
+class MajorHoldingItem(BaseModel):
+    rcept_no: str = Field("", description="접수번호")
+    rcept_dt: str = Field("", description="접수일자 (YYYYMMDD)")
+    corp_code: str = Field("", description="고유번호")
+    corp_name: str = Field("", description="법인명")
+    report_tp: str = Field("", description="보고구분")
+    repror: str = Field("", description="대표보고자")
+    stkqy: str = Field("", description="보유주식수")
+    stkrt: str = Field("", description="보유비율 (%)")
+    stkqy_irds: str = Field("", description="보유주식수 증감")
+    stkrt_irds: str = Field("", description="보유비율 증감")
+    ctr_stkqy: str = Field("", description="주요체결 주식수")
+    ctr_stkrt: str = Field("", description="주요체결 지분율")
+    report_resn: str = Field("", description="보고사유")
+
+
+class MajorHoldingListResponse(BaseModel):
+    page_no: int
+    page_count: int
+    total_count: int
+    total_page: int
+    items: list[MajorHoldingItem]
+
+
+class HoldingSyncResponse(BaseModel):
+    total_fetched: int = 0
+    new_records: int = 0
+    updated_records: int = 0
+    deals_created: int = 0
+    linked_disclosures: int = 0
+    errors: list[str] = Field(default_factory=list)
+
+
+# --- 임원·주요주주 소유보고 ---
+class ElestockItem(BaseModel):
+    rcept_no: str = Field("", description="접수번호")
+    rcept_dt: str = Field("", description="접수일자 (YYYYMMDD)")
+    corp_code: str = Field("", description="고유번호")
+    corp_name: str = Field("", description="법인명")
+    repror: str = Field("", description="보고자명")
+    isu_exctv_rgist_at: str = Field("", description="임원 등록 여부 (Y/N)")
+    isu_exctv_ofcps: str = Field("", description="직책")
+    isu_main_shrholdr: str = Field("", description="주요주주 여부 (Y/N)")
+    sp_stock_lmp_cnt: str = Field("", description="소유 주식수")
+    sp_stock_lmp_irds_cnt: str = Field("", description="소유 주식수 증감")
+    sp_stock_lmp_rate: str = Field("", description="소유 비율 (%)")
+    sp_stock_lmp_irds_rate: str = Field("", description="소유 비율 증감")
+    ctr_stkqy: str = Field("", description="특정증권등 소유 주식수")
+    ctr_stkrt: str = Field("", description="특정증권등 소유 비율")
+    report_resn: str = Field("", description="변동사유")
+
+
+class ElestockListResponse(BaseModel):
+    items: list[ElestockItem]
+
+
+class ElestockSyncResponse(BaseModel):
+    total_fetched: int = 0
+    new_records: int = 0
+    updated_records: int = 0
+    deals_created: int = 0
+    linked_disclosures: int = 0
+    errors: list[str] = Field(default_factory=list)

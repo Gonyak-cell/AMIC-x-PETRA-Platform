@@ -172,8 +172,11 @@ class KOFIAService:
             return self._latest_std_dt
 
         items, _ = await self._request_proframe(
-            "FS-DIS2", "DISComStdYMDSO", "select",
-            "DISComStdYMDDTO", {"codeDesc": "D_RD"},
+            "FS-DIS2",
+            "DISComStdYMDSO",
+            "select",
+            "DISComStdYMDDTO",
+            {"codeDesc": "D_RD"},
         )
         if items:
             self._latest_std_dt = items[0].get("standardDt", "")
@@ -216,8 +219,11 @@ class KOFIAService:
 
             # 실제로 데이터가 있는지 빠르게 확인 (1건만 조회)
             items, _total = await self._request_proframe(
-                "FS-DIS2", "DISFundFeeCmsSO", "select",
-                "DISCondFuncDTO", {
+                "FS-DIS2",
+                "DISFundFeeCmsSO",
+                "select",
+                "DISCondFuncDTO",
+                {
                     "tmpV30": dt_str,
                     "tmpV11": "",
                     "tmpV12": "",
@@ -302,9 +308,7 @@ class KOFIAService:
 
     # ─── 파싱 ────────────────────────────────────────
 
-    def _parse_fund_list_from_proframe(
-        self, items: list[dict[str, str]]
-    ) -> list[FundListItem]:
+    def _parse_fund_list_from_proframe(self, items: list[dict[str, str]]) -> list[FundListItem]:
         """DISFundStdPriceSO 응답을 FundListItem 목록으로 변환한다.
 
         필드 매핑 (DISFundStdPriceSO/select):
@@ -572,20 +576,14 @@ class KOFIAService:
         # 자산 클래스 필터 (쉼표 구분 복수 선택)
         if asset_class:
             target_classes = set(ac.strip() for ac in asset_class.split(",") if ac.strip())
-            groups = {
-                k: v for k, v in groups.items()
-                if target_classes & set(f.asset_class for f in v)
-            }
+            groups = {k: v for k, v in groups.items() if target_classes & set(f.asset_class for f in v)}
 
         # GP 집계
         gp_items: list[GPListItem] = []
         for gp_name, gp_funds in groups.items():
             fund_count = len(gp_funds)
             active_count = sum(1 for f in gp_funds if f.fund_status == "active")
-            total_aum = sum(
-                f.total_amount for f in gp_funds
-                if f.total_amount is not None
-            ) or None
+            total_aum = sum(f.total_amount for f in gp_funds if f.total_amount is not None) or None
 
             asset_classes = sorted(set(f.asset_class for f in gp_funds if f.asset_class))
             vintages = [f.vintage_year for f in gp_funds if f.vintage_year is not None]
@@ -596,16 +594,18 @@ class KOFIAService:
 
             has_alert = any(f.is_maturity_alert for f in gp_funds)
 
-            gp_items.append(GPListItem(
-                company_name=gp_name,
-                company_code=code_map.get(gp_name, ""),
-                fund_count=fund_count,
-                active_fund_count=active_count,
-                total_aum=total_aum,
-                asset_classes=asset_classes,
-                vintage_range=vintage_range,
-                has_maturity_alert=has_alert,
-            ))
+            gp_items.append(
+                GPListItem(
+                    company_name=gp_name,
+                    company_code=code_map.get(gp_name, ""),
+                    fund_count=fund_count,
+                    active_fund_count=active_count,
+                    total_aum=total_aum,
+                    asset_classes=asset_classes,
+                    vintage_range=vintage_range,
+                    has_maturity_alert=has_alert,
+                )
+            )
 
         # 정렬
         if sort_by in self._ALLOWED_GP_SORT_FIELDS:
@@ -669,8 +669,11 @@ class KOFIAService:
             "tmpV51": "",
         }
         items, _ = await self._request_proframe(
-            "FS-DIS2", "DISFundStdPriceSO", "select",
-            "DISCondFuncDTO", fields,
+            "FS-DIS2",
+            "DISFundStdPriceSO",
+            "select",
+            "DISCondFuncDTO",
+            fields,
         )
         return items
 
@@ -690,8 +693,11 @@ class KOFIAService:
             "tmpV4": "",
         }
         items, _ = await self._request_proframe(
-            "FS-DIS2", "DISFundFeeCmsSO", "select",
-            "DISCondFuncDTO", fee_fields,
+            "FS-DIS2",
+            "DISFundFeeCmsSO",
+            "select",
+            "DISCondFuncDTO",
+            fee_fields,
         )
         return items
 
@@ -712,8 +718,11 @@ class KOFIAService:
         """운용사명으로 회사코드를 조회한다."""
         std_dt = await self._get_latest_standard_date()
         items, _ = await self._request_proframe(
-            "FS-DIS2", "DISMngCompInqSO", "select",
-            "DISMngCompInqListDTO", {"option": "P", "standardDt": std_dt},
+            "FS-DIS2",
+            "DISMngCompInqSO",
+            "select",
+            "DISMngCompInqListDTO",
+            {"option": "P", "standardDt": std_dt},
         )
         keyword = company_name.lower()
         for item in items:

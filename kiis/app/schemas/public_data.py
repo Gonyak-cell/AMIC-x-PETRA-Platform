@@ -32,3 +32,13 @@ class GPRegistryListResponse(BaseModel):
     page: int
     size: int
     items: list[GPRegistryItem]
+
+
+class GPSyncResponse(BaseModel):
+    """GP 프로파일 동기화 결과 응답"""
+
+    total_api_items: int = Field(0, description="API에서 조회된 GP 수")
+    created: int = Field(0, description="신규 생성된 Company 수")
+    updated: int = Field(0, description="GP 프로파일 업데이트된 Company 수")
+    aliases_added: int = Field(0, description="자동 등록된 별칭 수")
+    errors: list[str] = Field(default_factory=list, description="에러 발생 GP 목록")

@@ -9,7 +9,9 @@ from app.schemas.dart import (
     CompanyInfo,
     CompanyListItem,
     DisclosureItem,
+    ElestockItem,
     FinancialStatementItem,
+    MajorHoldingItem,
     SanctionItem,
 )
 from app.utils.cache import cache
@@ -17,6 +19,21 @@ from app.utils.http_client import AsyncHTTPClient
 from app.utils.rate_limiter import TokenBucketRateLimiter
 
 logger = logging.getLogger(__name__)
+
+# 모듈 수준 싱글톤 Rate Limiter (DARTService 인스턴스 간 공유)
+_shared_rate_limiter: TokenBucketRateLimiter | None = None
+
+
+def _get_rate_limiter() -> TokenBucketRateLimiter:
+    """프로세스 내 단일 Rate Limiter 인스턴스를 반환한다."""
+    global _shared_rate_limiter
+    if _shared_rate_limiter is None:
+        _shared_rate_limiter = TokenBucketRateLimiter(
+            per_minute=settings.DART_RATE_LIMIT_PER_MINUTE,
+            per_day=settings.DART_RATE_LIMIT_PER_DAY,
+        )
+    return _shared_rate_limiter
+
 
 # DART 상태 코드 매핑
 DART_STATUS_MESSAGES = {
@@ -41,10 +58,7 @@ class DARTService:
             timeout=30.0,
             headers={"User-Agent": "KIIS/0.1.0"},
         )
-        self.rate_limiter = TokenBucketRateLimiter(
-            per_minute=settings.DART_RATE_LIMIT_PER_MINUTE,
-            per_day=settings.DART_RATE_LIMIT_PER_DAY,
-        )
+        self.rate_limiter = _get_rate_limiter()
 
     def _check_response(self, data: dict) -> None:
         """DART API 응답 상태 코드를 검증한다."""
@@ -63,11 +77,14 @@ class DARTService:
         response = await self.client.get(endpoint, params=params)
         try:
             data = response.json()
-        except Exception:
+        except (ValueError, UnicodeDecodeError) as exc:
+            body_preview = response.text[:200] if response.text else "(empty)"
             raise DARTAPIError(
                 status_code="900",
-                message=f"DART API가 비정상 응답을 반환했습니다 (status={response.status_code})",
-            )
+                message=(
+                    f"DART API JSON 파싱 실패 (status={response.status_code}, endpoint={endpoint}): {body_preview}"
+                ),
+            ) from exc
         self._check_response(data)
         return data
 
@@ -174,6 +191,45 @@ class DARTService:
             },
         )
         return [FinancialStatementItem(**item) for item in data.get("list", [])]
+
+    @cache(ttl=3600, prefix="dart")  # 1시간 캐시
+    async def get_major_holdings(
+        self,
+        corp_code: str,
+        *,
+        bgn_de: str | None = None,
+        end_de: str | None = None,
+        page_no: int = 1,
+        page_count: int = 100,
+    ) -> tuple[list[MajorHoldingItem], int, int]:
+        """대량보유상황보고서 조회
+
+        Returns:
+            (대량보유 목록, 전체 건수, 전체 페이지수)
+        """
+        params: dict[str, str] = {
+            "corp_code": corp_code,
+            "page_no": str(page_no),
+            "page_count": str(page_count),
+        }
+        if bgn_de:
+            params["bgn_de"] = bgn_de
+        if end_de:
+            params["end_de"] = end_de
+
+        data = await self._request("/majorstock.json", params)
+
+        items = [MajorHoldingItem(**item) for item in data.get("list", [])]
+        total_count = int(data.get("total_count", 0))
+        total_page = int(data.get("total_page", 0))
+
+        return items, total_count, total_page
+
+    @cache(ttl=3600, prefix="dart")  # 1시간 캐시
+    async def get_executive_holdings(self, corp_code: str) -> list[ElestockItem]:
+        """임원·주요주주 소유보고 조회 (/elestock.json). 페이지네이션 없음."""
+        data = await self._request("/elestock.json", {"corp_code": corp_code})
+        return [ElestockItem(**item) for item in data.get("list", [])]
 
     async def get_sanctions(self, corp_code: str) -> list[SanctionItem]:
         """제재 내역 조회"""

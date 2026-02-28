@@ -5,13 +5,22 @@
 2. 금융회사기본정보 — 기본 프로필 (설립일, 주소, 연락처)
 """
 
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import ExternalAPIError
+from app.models.company import Company, CompanyAlias
 from app.schemas.public_data import GPRegistryItem
 from app.utils.cache import cache
+from app.utils.entity_resolver import EntityResolver, normalize_company_name
 from app.utils.http_client import AsyncHTTPClient
 from app.utils.rate_limiter import TokenBucketRateLimiter
 
@@ -222,3 +231,150 @@ class PublicDataService:
             if item.company_name == company_name:
                 return item
         return items[0] if items else None
+
+    # ──────────────────────────────────────────────
+    # GP 프로파일 DB 동기화 (Phase 1)
+    # ──────────────────────────────────────────────
+
+    async def sync_gp_profiles(self, db: AsyncSession) -> GPSyncResult:
+        """공공데이터 GP 레지스트리를 Company 테이블에 동기화한다.
+
+        1. 전체 GP 목록 API 조회
+        2. EntityResolver로 기존 Company 매칭
+        3. 매칭 → GP 컬럼 업데이트
+        4. 미매칭 → 신규 Company 생성 (is_gp=True, corp_code=None)
+        5. CompanyAlias 자동 등록
+        """
+        result = GPSyncResult()
+
+        if not self._api_key:
+            logger.warning("DATA_GO_KR_API_KEY 미설정 — 동기화 스킵")
+            return result
+
+        # 전체 GP 목록 조회 (페이지네이션 없이 전량)
+        all_items, _ = await self.search_gp_registry(page=1, size=9999)
+        result.total_api_items = len(all_items)
+        logger.info("공공데이터 GP %d건 조회 완료", len(all_items))
+
+        resolver = EntityResolver()
+        now = datetime.now(UTC)
+
+        for item in all_items:
+            try:
+                await self._sync_single_gp(db, resolver, item, now, result)
+            except Exception:
+                logger.exception("GP 동기화 실패: %s", item.company_name)
+                result.errors.append(item.company_name)
+
+        await db.commit()
+        logger.info(
+            "GP 동기화 완료: 업데이트 %d, 신규 %d, 별칭 %d, 에러 %d",
+            result.updated,
+            result.created,
+            result.aliases_added,
+            len(result.errors),
+        )
+        return result
+
+    async def _sync_single_gp(
+        self,
+        db: AsyncSession,
+        resolver: EntityResolver,
+        item: GPRegistryItem,
+        now: datetime,
+        result: GPSyncResult,
+    ) -> None:
+        """단일 GP 항목을 Company에 동기화한다."""
+        # 1. EntityResolver로 기존 Company 매칭
+        match_result = await resolver.resolve(db, item.company_name)
+        matched = match_result.get("match")
+
+        if matched:
+            # 기존 Company 업데이트
+            stmt = select(Company).where(Company.corp_code == matched["corp_code"])
+            # corp_code가 None인 경우 corp_name으로 매칭
+            if matched["corp_code"] is None:
+                stmt = select(Company).where(func.lower(Company.corp_name) == func.lower(matched["corp_name"]))
+            db_result = await db.execute(stmt)
+            company = db_result.scalar_one_or_none()
+
+            if company:
+                self._update_gp_fields(company, item, now)
+                result.updated += 1
+                return
+
+        # 2. finance_company_code로 직접 매칭 시도
+        if item.finance_company_code:
+            stmt = select(Company).where(Company.finance_company_code == item.finance_company_code)
+            db_result = await db.execute(stmt)
+            company = db_result.scalar_one_or_none()
+            if company:
+                self._update_gp_fields(company, item, now)
+                result.updated += 1
+                return
+
+        # 3. 신규 Company 생성
+        company = Company(
+            corp_code=None,
+            corp_name=item.company_name,
+            corp_name_eng=item.company_name_en or None,
+            bizr_no=item.business_registration_no or None,
+            jurir_no=item.corporation_registration_no or None,
+            adres=item.address or None,
+            phn_no=item.phone or None,
+            est_dt=item.established_date or None,
+            is_gp=True,
+            finance_company_code=item.finance_company_code or None,
+            gp_authorization_date=item.authorization_date or None,
+            gp_aum=item.aum,
+            gp_fund_count=item.fund_count,
+            gp_employee_count=item.employee_count,
+            gp_profile_synced_at=now,
+        )
+        db.add(company)
+        await db.flush()
+        result.created += 1
+
+        # 정규화 별칭 자동 등록
+        normalized = normalize_company_name(item.company_name)
+        if normalized and normalized != item.company_name:
+            alias = CompanyAlias(
+                alias_name=normalized,
+                company_id=company.id,
+                is_manual=False,
+            )
+            db.add(alias)
+            result.aliases_added += 1
+
+    @staticmethod
+    def _update_gp_fields(company: Company, item: GPRegistryItem, now: datetime) -> None:
+        """Company의 GP 프로파일 필드를 업데이트한다."""
+        company.is_gp = True
+        if item.finance_company_code:
+            company.finance_company_code = item.finance_company_code
+        if item.authorization_date:
+            company.gp_authorization_date = item.authorization_date
+        if item.aum is not None:
+            company.gp_aum = item.aum
+        if item.fund_count is not None:
+            company.gp_fund_count = item.fund_count
+        if item.employee_count is not None:
+            company.gp_employee_count = item.employee_count
+        if item.address and not company.adres:
+            company.adres = item.address
+        if item.phone and not company.phn_no:
+            company.phn_no = item.phone
+        if item.established_date and not company.est_dt:
+            company.est_dt = item.established_date
+        company.gp_profile_synced_at = now
+
+
+@dataclass
+class GPSyncResult:
+    """GP 동기화 결과."""
+
+    total_api_items: int = 0
+    created: int = 0
+    updated: int = 0
+    aliases_added: int = 0
+    errors: list[str] = field(default_factory=list)

@@ -23,11 +23,23 @@ from typing import Any
 
 SERVICE_NAME = "kiis"
 
-_SENSITIVE_KEYS = frozenset({
-    "password", "token", "secret", "api_key", "authorization",
-    "credit_card", "ssn", "jwt", "cookie", "access_token",
-    "refresh_token", "private_key", "secret_key",
-})
+_SENSITIVE_KEYS = frozenset(
+    {
+        "password",
+        "token",
+        "secret",
+        "api_key",
+        "authorization",
+        "credit_card",
+        "ssn",
+        "jwt",
+        "cookie",
+        "access_token",
+        "refresh_token",
+        "private_key",
+        "secret_key",
+    }
+)
 
 
 class JSONFormatter(logging.Formatter):
@@ -65,19 +77,13 @@ class JSONFormatter(logging.Formatter):
             error_block: dict[str, Any] = {
                 "type": type(exc_value).__name__,
                 "message": str(exc_value),
-                "stacktrace": "".join(
-                    traceback.format_exception(exc_type, exc_value, exc_tb)
-                ),
+                "stacktrace": "".join(traceback.format_exception(exc_type, exc_value, exc_tb)),
             }
 
             # error_code 추출 (도메인 예외에서)
             if hasattr(exc_value, "code"):
                 code = exc_value.code
-                code_str = (
-                    f"{SERVICE_NAME.upper()}-{code.value}"
-                    if hasattr(code, "value")
-                    else str(code)
-                )
+                code_str = f"{SERVICE_NAME.upper()}-{code.value}" if hasattr(code, "value") else str(code)
                 error_block["error_code"] = code_str
             elif hasattr(exc_value, "error_code"):
                 error_block["error_code"] = exc_value.error_code
@@ -203,12 +209,7 @@ def _sanitize(data: Any, depth: int = 0) -> Any:
     if depth > 5:
         return "..."
     if isinstance(data, dict):
-        return {
-            k: "***MASKED***"
-            if k.lower() in _SENSITIVE_KEYS
-            else _sanitize(v, depth + 1)
-            for k, v in data.items()
-        }
+        return {k: "***MASKED***" if k.lower() in _SENSITIVE_KEYS else _sanitize(v, depth + 1) for k, v in data.items()}
     if isinstance(data, (list, tuple)):
         return [_sanitize(item, depth + 1) for item in data[:20]]
     if isinstance(data, str) and len(data) > 1000:

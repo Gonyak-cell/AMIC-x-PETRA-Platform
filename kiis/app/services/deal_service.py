@@ -609,11 +609,7 @@ class DealService:
             }
 
         # 중앙값: 금액 목록을 가져와서 Python 측에서 계산
-        amounts_query = (
-            select(Deal.amount)
-            .where(*base_filter)
-            .order_by(Deal.amount)
-        )
+        amounts_query = select(Deal.amount).where(*base_filter).order_by(Deal.amount)
         amounts_result = await db.execute(amounts_query)
         amounts = [row[0] for row in amounts_result.all()]
 
@@ -621,11 +617,7 @@ class DealService:
         if amounts:
             n = len(amounts)
             mid = n // 2
-            median_amount = (
-                amounts[mid]
-                if n % 2 == 1
-                else (amounts[mid - 1] + amounts[mid]) / 2
-            )
+            median_amount = amounts[mid] if n % 2 == 1 else (amounts[mid - 1] + amounts[mid]) / 2
 
         # 구간별 분포
         eok = Decimal("100_000_000")  # 1억 = 100,000,000원
@@ -719,37 +711,37 @@ class DealService:
         sectors = []
         for sa in sector_aggs:
             pct = round(sa["deal_count"] / total_deals * 100, 1) if total_deals else 0
-            top_deals = await self._get_top_deals(
-                db, company.id, min_year, sector=sa["sector"], limit=3
+            top_deals = await self._get_top_deals(db, company.id, min_year, sector=sa["sector"], limit=3)
+            sectors.append(
+                {
+                    "sector": sa["sector"],
+                    "sector_name": sa["sector_name"],
+                    "deal_count": sa["deal_count"],
+                    "total_amount": sa["total_amount"],
+                    "total_amount_display": self.format_amount_display(sa["total_amount"]),
+                    "percentage": pct,
+                    "description": f"{sa['sector_name']} 섹터에 {sa['deal_count']}건 투자",
+                    "deals": top_deals,
+                }
             )
-            sectors.append({
-                "sector": sa["sector"],
-                "sector_name": sa["sector_name"],
-                "deal_count": sa["deal_count"],
-                "total_amount": sa["total_amount"],
-                "total_amount_display": self.format_amount_display(sa["total_amount"]),
-                "percentage": pct,
-                "description": f"{sa['sector_name']} 섹터에 {sa['deal_count']}건 투자",
-                "deals": top_deals,
-            })
 
         # 스테이지별 상세 (대표 딜 포함)
         stages = []
         for st in stage_aggs:
             pct = round(st["deal_count"] / total_deals * 100, 1) if total_deals else 0
-            top_deals = await self._get_top_deals(
-                db, company.id, min_year, stage=st["stage"], limit=3
+            top_deals = await self._get_top_deals(db, company.id, min_year, stage=st["stage"], limit=3)
+            stages.append(
+                {
+                    "stage": st["stage"],
+                    "stage_name": st["stage_name"],
+                    "deal_count": st["deal_count"],
+                    "total_amount": st["total_amount"],
+                    "total_amount_display": self.format_amount_display(st["total_amount"]),
+                    "percentage": pct,
+                    "description": f"{st['stage_name']} 단계에 {st['deal_count']}건 투자",
+                    "deals": top_deals,
+                }
             )
-            stages.append({
-                "stage": st["stage"],
-                "stage_name": st["stage_name"],
-                "deal_count": st["deal_count"],
-                "total_amount": st["total_amount"],
-                "total_amount_display": self.format_amount_display(st["total_amount"]),
-                "percentage": pct,
-                "description": f"{st['stage_name']} 단계에 {st['deal_count']}건 투자",
-                "deals": top_deals,
-            })
 
         # 요약 텍스트 생성
         top_sector = sectors[0]["sector_name"] if sectors else "N/A"
@@ -761,17 +753,16 @@ class DealService:
             + (f" ({amount_display})" if amount_display else "")
             + "의 투자를 집행했습니다."
         )
-        sector_summary = (
-            f"주력 섹터는 {top_sector}이며, "
-            + (f"상위 {min(3, len(sectors))}개 섹터가 전체의 "
-               f"{sum(s['percentage'] for s in sectors[:3]):.0f}%를 차지합니다."
-               if sectors else "섹터 정보가 없습니다.")
+        sector_summary = f"주력 섹터는 {top_sector}이며, " + (
+            f"상위 {min(3, len(sectors))}개 섹터가 전체의 "
+            f"{sum(s['percentage'] for s in sectors[:3]):.0f}%를 차지합니다."
+            if sectors
+            else "섹터 정보가 없습니다."
         )
-        stage_summary = (
-            f"주력 투자 단계는 {top_stage}이며, "
-            + (f"상위 {min(3, len(stages))}개 단계가 전체의 "
-               f"{sum(s['percentage'] for s in stages[:3]):.0f}%를 차지합니다."
-               if stages else "단계 정보가 없습니다.")
+        stage_summary = f"주력 투자 단계는 {top_stage}이며, " + (
+            f"상위 {min(3, len(stages))}개 단계가 전체의 {sum(s['percentage'] for s in stages[:3]):.0f}%를 차지합니다."
+            if stages
+            else "단계 정보가 없습니다."
         )
 
         return {

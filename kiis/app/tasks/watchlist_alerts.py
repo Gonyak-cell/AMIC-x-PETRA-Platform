@@ -37,9 +37,7 @@ async def run_watchlist_alerts() -> dict:
         async with async_session_factory() as db:
             # 최근 6시간 이내 공시 조회
             since = datetime.now(KST) - timedelta(hours=6)
-            disc_result = await db.execute(
-                select(Disclosure).where(Disclosure.created_at >= since)
-            )
+            disc_result = await db.execute(select(Disclosure).where(Disclosure.created_at >= since))
             recent_disclosures = disc_result.scalars().all()
             new_disclosures = len(recent_disclosures)
 
@@ -57,9 +55,7 @@ async def run_watchlist_alerts() -> dict:
                 watchlist_entries = wl_result.scalars().all()
 
                 # 기업명 조회
-                company_result = await db.execute(
-                    select(Company.corp_name).where(Company.id == disclosure.company_id)
-                )
+                company_result = await db.execute(select(Company.corp_name).where(Company.id == disclosure.company_id))
                 corp_name = company_result.scalar_one_or_none() or ""
 
                 for entry in watchlist_entries:

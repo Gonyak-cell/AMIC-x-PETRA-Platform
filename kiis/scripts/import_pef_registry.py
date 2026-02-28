@@ -89,20 +89,22 @@ def parse_excel(file_path: str) -> list[dict]:
             gp_names.append(gp3)
         is_co_gp = len(gp_names) >= 2
 
-        records.append({
-            "seq": seq,
-            "fund_code": f"PEF-{seq:04d}",
-            "fund_name": fund_name,
-            "legal_basis": legal_basis,
-            "established_date": established_date,
-            "vintage_year": established_date.year if established_date else None,
-            "total_amount": total_amount,
-            "company_name": gp1,  # 기본 GP (기존 검색 호환)
-            "fund_type": classify_fund_type(fund_name),
-            "is_co_gp": is_co_gp,
-            "gp_names": gp_names,
-            "gp_roles": ["gp1"] + (["gp2"] if gp2 else []) + (["gp3"] if gp3 else []),
-        })
+        records.append(
+            {
+                "seq": seq,
+                "fund_code": f"PEF-{seq:04d}",
+                "fund_name": fund_name,
+                "legal_basis": legal_basis,
+                "established_date": established_date,
+                "vintage_year": established_date.year if established_date else None,
+                "total_amount": total_amount,
+                "company_name": gp1,  # 기본 GP (기존 검색 호환)
+                "fund_type": classify_fund_type(fund_name),
+                "is_co_gp": is_co_gp,
+                "gp_names": gp_names,
+                "gp_roles": ["gp1"] + (["gp2"] if gp2 else []) + (["gp3"] if gp3 else []),
+            }
+        )
 
     wb.close()
     return records
@@ -116,47 +118,51 @@ async def import_records(records: list[dict]) -> tuple[int, int]:
     async with async_session_factory() as session:
         for rec in records:
             # Fund upsert
-            stmt = pg_insert(Fund).values(
-                fund_code=rec["fund_code"],
-                fund_name=rec["fund_name"],
-                company_name=rec["company_name"],
-                fund_type=rec["fund_type"],
-                legal_type="professional_private",
-                asset_class="pef",
-                fund_category="PEF",
-                total_amount=rec["total_amount"],
-                established_date=rec["established_date"],
-                vintage_year=rec["vintage_year"],
-                is_active=True,
-                is_maturity_alert=False,
-                data_source="pef_registry",
-                legal_basis=rec["legal_basis"],
-                is_co_gp=rec["is_co_gp"],
-                reference_date=REFERENCE_DATE,
-            ).on_conflict_do_update(
-                index_elements=["fund_code"],
-                set_={
-                    "fund_name": rec["fund_name"],
-                    "company_name": rec["company_name"],
-                    "fund_type": rec["fund_type"],
-                    "total_amount": rec["total_amount"],
-                    "established_date": rec["established_date"],
-                    "vintage_year": rec["vintage_year"],
-                    "legal_basis": rec["legal_basis"],
-                    "is_co_gp": rec["is_co_gp"],
-                    "reference_date": REFERENCE_DATE,
-                },
-            ).returning(Fund.id)
+            stmt = (
+                pg_insert(Fund)
+                .values(
+                    fund_code=rec["fund_code"],
+                    fund_name=rec["fund_name"],
+                    company_name=rec["company_name"],
+                    fund_type=rec["fund_type"],
+                    legal_type="professional_private",
+                    asset_class="pef",
+                    fund_category="PEF",
+                    total_amount=rec["total_amount"],
+                    established_date=rec["established_date"],
+                    vintage_year=rec["vintage_year"],
+                    is_active=True,
+                    is_maturity_alert=False,
+                    data_source="pef_registry",
+                    legal_basis=rec["legal_basis"],
+                    is_co_gp=rec["is_co_gp"],
+                    reference_date=REFERENCE_DATE,
+                )
+                .on_conflict_do_update(
+                    index_elements=["fund_code"],
+                    set_={
+                        "fund_name": rec["fund_name"],
+                        "company_name": rec["company_name"],
+                        "fund_type": rec["fund_type"],
+                        "total_amount": rec["total_amount"],
+                        "established_date": rec["established_date"],
+                        "vintage_year": rec["vintage_year"],
+                        "legal_basis": rec["legal_basis"],
+                        "is_co_gp": rec["is_co_gp"],
+                        "reference_date": REFERENCE_DATE,
+                    },
+                )
+                .returning(Fund.id)
+            )
 
             result = await session.execute(stmt)
             fund_id = result.scalar_one()
 
             # 기존 fund_gps 삭제 후 재삽입
-            existing_gps = await session.execute(
-                select(FundGP.id).where(FundGP.fund_id == fund_id)
-            )
+            existing_gps = await session.execute(select(FundGP.id).where(FundGP.fund_id == fund_id))
             if existing_gps.scalars().first() is not None:
                 from sqlalchemy import delete
+
                 await session.execute(delete(FundGP).where(FundGP.fund_id == fund_id))
                 updated += 1
             else:
@@ -164,11 +170,15 @@ async def import_records(records: list[dict]) -> tuple[int, int]:
 
             # GP 관계 삽입
             for gp_name, gp_role in zip(rec["gp_names"], rec["gp_roles"], strict=False):
-                gp_stmt = pg_insert(FundGP).values(
-                    fund_id=fund_id,
-                    gp_name=gp_name,
-                    gp_role=gp_role,
-                ).on_conflict_do_nothing(constraint="uq_fund_gp")
+                gp_stmt = (
+                    pg_insert(FundGP)
+                    .values(
+                        fund_id=fund_id,
+                        gp_name=gp_name,
+                        gp_role=gp_role,
+                    )
+                    .on_conflict_do_nothing(constraint="uq_fund_gp")
+                )
                 await session.execute(gp_stmt)
 
         await session.commit()

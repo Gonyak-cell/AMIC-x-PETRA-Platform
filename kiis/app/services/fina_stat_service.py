@@ -91,9 +91,7 @@ class FinaStatService:
     # ── API 메서드 ──
 
     @cache(ttl=86400, prefix="fina_stat:summary", model=SummaryFinancialItem)
-    async def get_summary(
-        self, crno: str, biz_year: str, num_of_rows: int = 10
-    ) -> list[SummaryFinancialItem]:
+    async def get_summary(self, crno: str, biz_year: str, num_of_rows: int = 10) -> list[SummaryFinancialItem]:
         """요약재무제표 조회 (getSummFinaStat_V2).
 
         매출, 영업이익, 순이익, 총자산, 부채비율 등 핵심 KPI를 반환한다.
@@ -131,9 +129,7 @@ class FinaStatService:
         ]
 
     @cache(ttl=86400, prefix="fina_stat:bs", model=FinaStatItem)
-    async def get_balance_sheet(
-        self, crno: str, biz_year: str, num_of_rows: int = 100
-    ) -> list[FinaStatItem]:
+    async def get_balance_sheet(self, crno: str, biz_year: str, num_of_rows: int = 100) -> list[FinaStatItem]:
         """재무상태표 조회 (getBs_V2)."""
         data = await self._request(
             f"{_BASE}/getBs_V2",
@@ -148,9 +144,7 @@ class FinaStatService:
         return self._parse_fina_items(data)
 
     @cache(ttl=86400, prefix="fina_stat:is", model=FinaStatItem)
-    async def get_income_statement(
-        self, crno: str, biz_year: str, num_of_rows: int = 100
-    ) -> list[FinaStatItem]:
+    async def get_income_statement(self, crno: str, biz_year: str, num_of_rows: int = 100) -> list[FinaStatItem]:
         """손익계산서 조회 (getIncoStat_V2)."""
         data = await self._request(
             f"{_BASE}/getIncoStat_V2",

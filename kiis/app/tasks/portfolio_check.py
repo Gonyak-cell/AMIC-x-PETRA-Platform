@@ -31,9 +31,7 @@ async def run_portfolio_check() -> dict:
     errors = 0
 
     async with async_session_factory() as db:
-        result = await db.execute(
-            select(PortfolioCompany.id, PortfolioCompany.investor_company_id)
-        )
+        result = await db.execute(select(PortfolioCompany.id, PortfolioCompany.investor_company_id))
         portfolio_entries = result.all()
 
     total = len(portfolio_entries)
@@ -86,9 +84,7 @@ async def _notify_unicorn(
     )
     watchlist_entries = result.scalars().all()
 
-    company_result = await db.execute(
-        select(Company.corp_name).where(Company.id == investor_company_id)
-    )
+    company_result = await db.execute(select(Company.corp_name).where(Company.id == investor_company_id))
     corp_name = company_result.scalar_one_or_none() or "알 수 없음"
 
     for entry in watchlist_entries:

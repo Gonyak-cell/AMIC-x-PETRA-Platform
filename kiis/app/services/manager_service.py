@@ -237,7 +237,10 @@ class ManagerService:
         deals: list[Deal] = []
         if current_fund_obj and current_fund_obj.company_id:
             deals_stmt = (
-                select(Deal).where(Deal.company_id == current_fund_obj.company_id).order_by(Deal.deal_date.desc()).limit(20)
+                select(Deal)
+                .where(Deal.company_id == current_fund_obj.company_id)
+                .order_by(Deal.deal_date.desc())
+                .limit(20)
             )
             deals_result = await db.execute(deals_stmt)
             deals = list(deals_result.scalars().all())

@@ -143,15 +143,7 @@ class TestParseItems:
         assert items == []
 
     def test_parse_single_item(self):
-        data = {
-            "response": {
-                "body": {
-                    "items": {
-                        "item": {"fncoNm": "단일"}
-                    }
-                }
-            }
-        }
+        data = {"response": {"body": {"items": {"item": {"fncoNm": "단일"}}}}}
         items = self.service._parse_items(data)
         assert len(items) == 1
         assert items[0]["fncoNm"] == "단일"
