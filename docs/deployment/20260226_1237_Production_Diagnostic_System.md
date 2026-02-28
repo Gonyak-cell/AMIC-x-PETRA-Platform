@@ -40,7 +40,7 @@
 
 사용법:
 ```bash
-ssh azureuser@52.231.69.38 "cd /opt/amic-platform && bash scripts/diagnose-production.sh"
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38 "cd /opt/amic-platform && bash scripts/diagnose-production.sh"
 ```
 
 ### 2. `.claude/rules/production-error-diagnostic.md` (신규)

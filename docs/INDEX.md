@@ -11,7 +11,7 @@
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 18 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
-| KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드 | 12 |
+| KIIS 모듈 | `kiis/` | KIIS 구현 계획, 워크플로, 펀드 검색, 캐싱, GP 전환, 사모펀드, GP DB화 | 13 |
 | IM 모듈 | `im/` | IM 워크플로, 템플릿, 시각화, Deal Doc Studio 통합, PPT 브랜딩, TM/DM 디자인 시스템 | 9 |
 | 프론트엔드 | `frontend/` | UI 리프레시, 통합 프론트엔드 계획, MSW, GSAP 모션, 팀 페이지, 로그인/캘린더 | 8 |
 | LDD 모듈 | `ldd/` | LDD 보고서 생성 프로세스 문서 | 1 |
@@ -138,7 +138,7 @@
 | `20260226_0942_FDD_Phase1-5_Code_Review.md` | FDD Big 4 WP Phase 1~5 코드 리뷰 보고서 |
 | `20260226_1232_FDD_Report_Generator_Local_vs_Azure_Audit.md` | **FDD 보고서 생성기 로컬 vs Azure 비교 감사** — P0 PPTX URL 버그 수정, 에이전트 허위 보고 검증, 15개 include 플래그 API 노출, Auto FDD 상위 집합 확인 |
 
-## kiis/ (12)
+## kiis/ (13)
 
 | 파일명 | 설명 |
 |--------|------|
@@ -153,6 +153,7 @@
 | `20260217_2039_KOFIA_ProFrame_API_Migration.md` | KOFIA ProFrame API 마이그레이션 |
 | `20260217_2154_GP_Centric_Search_Implementation.md` | GP(운용사) 중심 검색 전환 구현 보고서 |
 | `20260222_1635_Private_Fund_GP_Datasource_Research.md` | 기관전용 사모펀드 GP 데이터소스 조사 |
+| `20260228_0249_GP_Research_DB_Schema_Roadmap.md` | **GP 리서치 DB화 스키마 설계 + 구현 로드맵** — 6개 새 테이블, 3개 기존 확장, 5 Phase, 마이그레이션 전략 |
 
 ## im/ (9)
 

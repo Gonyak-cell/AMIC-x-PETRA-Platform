@@ -97,7 +97,7 @@ gh run watch <run-id>          # 실시간 모니터링
 
 ### 수동 배포 (서버 직접)
 ```bash
-ssh -i "amic-platform-prod_key.pem" azureuser@52.231.69.38
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38
 cd /opt/amic-platform
 git pull origin feat/ma-workflow
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build

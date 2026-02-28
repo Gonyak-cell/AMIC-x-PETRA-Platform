@@ -3,6 +3,7 @@ paths:
   - "fdd/**/*.py"
   - "kiis/**/*.py"
   - "im/**/*.py"
+  - "deal-mgmt/**/*.py"
 ---
 # Python Style Guide (백엔드 통합)
 

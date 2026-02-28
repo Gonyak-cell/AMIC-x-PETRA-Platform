@@ -163,7 +163,7 @@ MA_DB_PASSWORD=b743b5942f227ce4fa09cd66bf6aa899
 ## 8. SSH 접속 정보
 
 ```bash
-ssh -i "amic-platform-prod_key.pem" azureuser@52.231.69.38
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38
 ```
 
 - **PEM 키 위치**: `OneDrive - 주식회사 페트라브릿지파트너스/AMIC의 파일 - 3. Administration/기타. 플랫폼/amic-platform-prod_key.pem`

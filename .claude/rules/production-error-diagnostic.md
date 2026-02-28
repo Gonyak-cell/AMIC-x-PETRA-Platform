@@ -27,7 +27,7 @@
 에러 수정 **전에** 반드시 실행:
 
 ```bash
-ssh azureuser@52.231.69.38 "cd /opt/amic-platform && bash scripts/diagnose-production.sh"
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38 "cd /opt/amic-platform && bash scripts/diagnose-production.sh"
 ```
 
 10개 카테고리를 자동 점검:

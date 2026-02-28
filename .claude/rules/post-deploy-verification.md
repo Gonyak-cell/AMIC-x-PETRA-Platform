@@ -34,13 +34,13 @@ git push origin <current-branch>
 #### 3-1. 배포 반영 확인
 ```bash
 # CI/CD 자동 배포 대기 또는 수동 pull
-ssh azureuser@52.231.69.38 "cd /opt/amic-platform && git log --oneline -1"
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38 "cd /opt/amic-platform && git log --oneline -1"
 ```
 
 #### 3-2. 환경변수 검증
 ```bash
 # .env의 CORS 값이 올바른 형식인지 확인
-ssh azureuser@52.231.69.38 "cd /opt/amic-platform && grep -E 'CORS_ORIGINS|ALLOWED_ORIGINS|JWT_SECRET' .env"
+ssh -i "ssh/amic-platform-prod_key.pem" -o StrictHostKeyChecking=no azureuser@52.231.69.38 "cd /opt/amic-platform && grep -E 'CORS_ORIGINS|ALLOWED_ORIGINS|JWT_SECRET' .env"
 ```
 
 **CORS 값 형식 규칙:**
