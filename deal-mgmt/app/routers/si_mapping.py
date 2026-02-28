@@ -72,7 +72,7 @@ async def map_si(
 async def get_deep_dive(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(_WRITE_ACCESS),
+    claims: JWTClaims = Depends(_READ_ACCESS),
 ):
     """SI 기업 딥다이브 — DART 기업개황, 재무제표, 공시 조회."""
     return await si_mapping_service.get_deep_dive(db, company_id)
