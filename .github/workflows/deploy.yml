@@ -259,8 +259,8 @@ jobs:
             if [ "$MIGRATE_MA" = true ]; then
               NULL_REV=$($COMPOSE exec -T deal-mgmt-api python3 -c "import urllib.request as u,json;d=json.load(u.urlopen('http://localhost:8000/api/v1/si-mapping/stats',timeout=10));print(d.get('si_companies_count',0)-d.get('revenue_count',0))" 2>/dev/null || echo "0")
               if [ "$NULL_REV" -gt 1000 ]; then
-                echo "  Revenue NULL: $NULL_REV — running revenue seed (limit=5000)..."
-                timeout 600 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_revenue_data --limit 5000 2>&1 || \
+                echo "  Revenue NULL: $NULL_REV — running revenue seed (limit=9500)..."
+                timeout 7200 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_revenue_data --limit 9500 2>&1 || \
                   echo "  WARN: Revenue seed incomplete (non-blocking, will continue next deploy)"
               else
                 echo "  Revenue data sufficient — skipping."
