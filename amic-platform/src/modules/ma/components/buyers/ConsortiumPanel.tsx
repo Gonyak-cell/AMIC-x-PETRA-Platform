@@ -80,7 +80,7 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
         </h3>
         {canWrite && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => setShowForm((v) => !v)}
           >

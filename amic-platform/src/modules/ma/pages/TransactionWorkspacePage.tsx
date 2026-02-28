@@ -1829,7 +1829,9 @@ export default function TransactionWorkspacePage() {
                     onChange={(val) =>
                       updateBuyer.mutate({
                         buyerId: r.id,
-                        body: { tier: (val || null) as BuyerTier | null },
+                        body: {
+                          tier: (val || undefined) as BuyerTier | undefined,
+                        },
                       })
                     }
                   />
@@ -1852,7 +1854,7 @@ export default function TransactionWorkspacePage() {
                       updateBuyer.mutate({
                         buyerId: r.id,
                         body: {
-                          deal_role: (val || null) as DealRole | null,
+                          deal_role: (val || undefined) as DealRole | undefined,
                         },
                       })
                     }
