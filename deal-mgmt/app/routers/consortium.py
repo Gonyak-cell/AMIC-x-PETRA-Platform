@@ -15,13 +15,20 @@ from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.consortium_mapping import ConsortiumMapping
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, ConsortiumStatus, DealRole
 from app.schemas.consortium import ConsortiumMappingCreate, ConsortiumMappingOut, ConsortiumMappingUpdate
 from app.services import audit_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/consortium", tags=["Consortium"])
+
+# ── 상태 전이 규칙 ────────────────────────────────────────
+_VALID_TRANSITIONS: dict[ConsortiumStatus, set[ConsortiumStatus]] = {
+    ConsortiumStatus.TAPPING: {ConsortiumStatus.CONFIRMED, ConsortiumStatus.DROPPED},
+    ConsortiumStatus.CONFIRMED: {ConsortiumStatus.DROPPED},
+    ConsortiumStatus.DROPPED: set(),  # 종료 상태
+}
 
 
 # ── 헬퍼 ────────────────────────────────────────────────
@@ -113,6 +120,14 @@ async def create_consortium_mapping(
     lead_buyer = await _validate_buyer_in_txn(db, txn_id, body.lead_buyer_id, "Lead")
     co_buyer = await _validate_buyer_in_txn(db, txn_id, body.co_investor_buyer_id, "Co-investor")
 
+    # SOLE_BUYER 검증 — 단독 매수자는 컨소시엄 불가
+    for buyer, label in [(lead_buyer, "Lead"), (co_buyer, "Co-investor")]:
+        if buyer.deal_role == DealRole.SOLE_BUYER:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{label} 매수자({buyer.company_name})는 단독 매수자(SOLE_BUYER)로 설정되어 컨소시엄에 참여할 수 없습니다",
+            )
+
     # 중복 검증
     dup_q = select(ConsortiumMapping).where(
         ConsortiumMapping.transaction_id == txn_id,
@@ -180,11 +195,19 @@ async def update_consortium_mapping(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="컨소시엄 매핑을 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
-    if "status" in update_data and update_data["status"] is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="status는 null로 설정할 수 없습니다",
-        )
+    if "status" in update_data:
+        new_status = update_data["status"]
+        if new_status is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="status는 null로 설정할 수 없습니다",
+            )
+        allowed = _VALID_TRANSITIONS.get(mapping.status, set())
+        if new_status not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"상태 전이 불가: {mapping.status.value} → {new_status.value}",
+            )
     for k, v in update_data.items():
         setattr(mapping, k, v)
 

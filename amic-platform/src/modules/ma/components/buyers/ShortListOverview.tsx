@@ -111,6 +111,7 @@ function ExpandedContent({
       header: "",
       render: (r) => (
         <button
+          type="button"
           className="text-xs text-negative hover:underline"
           onClick={(e) => {
             e.stopPropagation();
@@ -269,6 +270,7 @@ function BuyerRow({
       {/* Header Row */}
       <button
         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-bg-cool/50 transition-colors"
+        aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? (

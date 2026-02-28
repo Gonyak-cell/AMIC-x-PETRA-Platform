@@ -142,11 +142,11 @@ def build_buyer_excel(
             buyer.contact_name or "",
             buyer.contact_email or "",
             buyer.contact_phone or "",
-            float(buyer.ioi_value) if buyer.ioi_value else "",
+            int(buyer.ioi_value) if buyer.ioi_value else "",
             buyer.ioi_date or "",
-            float(buyer.loi_value) if buyer.loi_value else "",
+            int(buyer.loi_value) if buyer.loi_value else "",
             buyer.loi_date or "",
-            float(buyer.final_offer_value) if buyer.final_offer_value else "",
+            int(buyer.final_offer_value) if buyer.final_offer_value else "",
             buyer.corp_code or "",
             ", ".join(consortium_names) if consortium_names else "",
             _STAGE_LABELS.get(latest_stage or "", latest_stage or ""),
@@ -160,7 +160,7 @@ def build_buyer_excel(
                 cell.alignment = _ALIGN_CENTER
             elif col_idx in (10, 12, 14):
                 cell.alignment = _ALIGN_RIGHT
-                if isinstance(value, float):
+                if isinstance(value, (int, float)):
                     cell.number_format = "#,##0"
             else:
                 cell.alignment = _ALIGN_LEFT

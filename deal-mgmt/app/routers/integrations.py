@@ -90,6 +90,7 @@ async def fdd_status(
         result = await fdd.get_deal_status(deal_id)
         return IntegrationResult(service="FDD", status="ok", data=result)
     except Exception as e:
+        logger.warning("FDD status query failed for txn %s, deal %s: %s", txn_id, deal_id, e)
         return IntegrationResult(service="FDD", status="error", error=str(e))
 
 
@@ -141,6 +142,7 @@ async def im_status(
         result = await im.get_document_status(document_id)
         return IntegrationResult(service="IM", status="ok", data=result)
     except Exception as e:
+        logger.warning("IM status query failed for txn %s, doc %s: %s", txn_id, document_id, e)
         return IntegrationResult(service="IM", status="error", error=str(e))
 
 
@@ -163,4 +165,5 @@ async def kiis_company_search(
         results = await kiis.search_company(q)
         return IntegrationResult(service="KIIS", status="ok", data={"items": results})
     except Exception as e:
+        logger.warning("KIIS company search failed for txn %s, q=%s: %s", txn_id, q, e)
         return IntegrationResult(service="KIIS", status="error", error=str(e))

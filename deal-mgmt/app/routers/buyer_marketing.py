@@ -89,6 +89,7 @@ async def create_marketing_log(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> MarketingLogOut:
+    await check_client_deal_access(db, txn_id, claims)
     await _get_buyer(db, txn_id, buyer_id)
     log = BuyerMarketingLog(
         buyer_id=buyer_id,
@@ -125,6 +126,7 @@ async def update_marketing_log(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> MarketingLogOut:
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerMarketingLog).where(
         BuyerMarketingLog.id == log_id,
         BuyerMarketingLog.buyer_id == buyer_id,
@@ -162,6 +164,7 @@ async def delete_marketing_log(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerMarketingLog).where(
         BuyerMarketingLog.id == log_id,
         BuyerMarketingLog.buyer_id == buyer_id,

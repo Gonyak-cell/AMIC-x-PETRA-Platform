@@ -67,6 +67,15 @@ class BlobStorageClient:
             container_name,
         )
 
+    async def ensure_initialized(self) -> None:
+        """이미 초기화됐으면 no-op, 아니면 init() 호출.
+
+        Celery 워커처럼 lifespan 밖에서 호출되는 경우 안전하게 초기화한다.
+        """
+        if self._container_client is not None or self._is_local:
+            return
+        await self.init()
+
     async def close(self) -> None:
         """비동기 클라이언트를 정리한다."""
         if self._container_client is not None:

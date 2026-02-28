@@ -58,6 +58,8 @@ export default function EngagementDocUpload({
   const [reviewExtraction, setReviewExtraction] =
     useState<DocumentExtraction | null>(null);
   const dismissedRef = useRef(false);
+  const pollingStartRef = useRef<number | null>(null);
+  const POLLING_TIMEOUT_MS = 5 * 60 * 1000; // 5분
 
   // VDR 훅
   const qc = useQueryClient();
@@ -97,7 +99,17 @@ export default function EngagementDocUpload({
     }
   }, [existingExtractions, extractionId, step]);
 
-  // 폴링 결과 → 완료/실패 시 상태 전환
+  // extractionId 설정 시 폴링 시작 시각 기록
+  useEffect(() => {
+    if (extractionId && !pollingStartRef.current) {
+      pollingStartRef.current = Date.now();
+    }
+    if (!extractionId) {
+      pollingStartRef.current = null;
+    }
+  }, [extractionId]);
+
+  // 폴링 결과 → 완료/실패/타임아웃 시 상태 전환
   useEffect(() => {
     if (!polledExtraction || !extractionId) return;
     if (polledExtraction.status === "COMPLETED" && step !== "completed") {
@@ -112,6 +124,16 @@ export default function EngagementDocUpload({
       step === "classifying"
     ) {
       setStep("extracting");
+    }
+
+    // 폴링 타임아웃 — 5분 초과 시 실패 처리
+    if (
+      pollingStartRef.current &&
+      Date.now() - pollingStartRef.current > POLLING_TIMEOUT_MS &&
+      !["completed", "failed", "idle"].includes(step)
+    ) {
+      setStep("failed");
+      setErrorMsg("AI 분석이 예상 시간을 초과했습니다. 다시 시도해주세요.");
     }
   }, [polledExtraction, extractionId, step]);
 
@@ -167,13 +189,20 @@ export default function EngagementDocUpload({
           queryKey: ["ma", "transactions", txnId, "vdr"],
         });
 
-        // 4. AI 추출 시작
-        setStep(docCategoryHint ? "extracting" : "classifying");
+        // 4. AI 추출 시작 — 백엔드 응답 기반 상태 설정
         const extraction = await createExtraction.mutateAsync({
           vdrDocumentId: uploadedDoc.id,
           docCategoryHint,
         });
         setExtractionId(extraction.id);
+        // 서버 반환 상태 기반으로 step 결정 (PENDING은 곧 CLASSIFYING으로 전환됨)
+        const statusMap: Record<string, Step> = {
+          EXTRACTING: "extracting",
+          CLASSIFYING: "classifying",
+          COMPLETED: "completed",
+          FAILED: "failed",
+        };
+        setStep(statusMap[extraction.status] ?? "classifying");
         // 이후는 폴링으로 상태 추적
       } catch (error) {
         setStep("failed");

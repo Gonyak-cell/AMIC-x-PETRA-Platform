@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,8 +47,8 @@ class BuyerStageSummary(BaseModel):
 class DartFinancialSummaryOut(BaseModel):
     """DART 재무 요약 응답 스키마."""
 
-    revenue: float | None = None
-    operating_profit: float | None = None
-    net_income: float | None = None
-    debt_ratio: float | None = None
+    revenue: Decimal | None = None
+    operating_profit: Decimal | None = None
+    net_income: Decimal | None = None
+    debt_ratio: Decimal | None = None
     fiscal_year: str | None = None

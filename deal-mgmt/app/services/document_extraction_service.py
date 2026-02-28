@@ -5,13 +5,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import tempfile
 import time
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.models.document_extraction import DocumentExtraction
 from app.models.enums import (
     DocExtractionCategory,
@@ -55,6 +58,9 @@ _MINI_MODELS: list[str] = [
 
 # 경량 모델 개별 호출 타임아웃 (초) — LLM 어댑터 90초보다 짧게
 _MINI_MODEL_TIMEOUT: float = 30.0
+
+# 전체 파이프라인 타임아웃 (초) — Celery soft_time_limit(300초)보다 짧게
+_PIPELINE_TIMEOUT: float = 240.0
 
 
 # ── CRUD ─────────────────────────────────────────────────────
@@ -224,7 +230,29 @@ async def run_extraction_pipeline(
 
     try:
         async with session_factory() as db:
-            await _run_pipeline_inner(db, extraction_id, settings, t0)
+            await asyncio.wait_for(
+                _run_pipeline_inner(db, extraction_id, settings, t0),
+                timeout=_PIPELINE_TIMEOUT,
+            )
+    except TimeoutError:
+        logger.error(
+            "파이프라인 타임아웃 (extraction=%s, %.0fs)",
+            extraction_id,
+            _PIPELINE_TIMEOUT,
+        )
+        try:
+            async with session_factory() as db:
+                ext = await db.get(DocumentExtraction, extraction_id)
+                if ext and ext.status not in (
+                    ExtractionStatus.COMPLETED,
+                    ExtractionStatus.CONFIRMED,
+                    ExtractionStatus.FAILED,
+                ):
+                    ext.status = ExtractionStatus.FAILED
+                    ext.error_message = "AI 분석 시간이 초과되었습니다. 다시 시도해주세요."
+                    await db.commit()
+        except Exception:
+            logger.exception("타임아웃 FAILED 마킹 실패 (extraction=%s)", extraction_id)
     except Exception as exc:
         logger.exception("파이프라인 미처리 예외 (extraction=%s): %s", extraction_id, exc)
         # FAILED 마킹 시도 (별도 세션)
@@ -274,15 +302,44 @@ async def _run_pipeline_inner(
         await db.commit()
         return
 
-    # 2. 파일 파싱
+    # 1.5. blob storage에서 파일 다운로드 → 임시 파일
+    await blob_client.ensure_initialized()
+
     try:
-        parsed = parse_file(vdr_doc.file_path)
+        file_bytes = await blob_client.download_blob(vdr_doc.file_path)
+    except FileNotFoundError:
+        logger.error("파일 없음 (extraction=%s): %s", extraction_id, vdr_doc.file_path)
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "원본 파일을 찾을 수 없습니다."
+        await db.commit()
+        return
+    except Exception as exc:
+        logger.error("파일 다운로드 실패 (extraction=%s): %s", extraction_id, exc)
+        extraction.status = ExtractionStatus.FAILED
+        extraction.error_message = "파일 다운로드에 실패했습니다."
+        await db.commit()
+        return
+
+    # 2. 파일 파싱 — 임시 파일에 쓴 후 파싱
+    ext = Path(vdr_doc.original_name).suffix.lower()
+    tmp_path: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(file_bytes)
+            tmp_path = tmp.name
+        parsed = parse_file(tmp_path)
     except Exception as exc:
         logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
         extraction.status = ExtractionStatus.FAILED
         extraction.error_message = "문서 파싱에 실패했습니다."
         await db.commit()
         return
+    finally:
+        if tmp_path:
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except OSError:
+                pass
 
     if not parsed.is_valid:
         logger.warning("파싱 결과 없음 (extraction=%s): %s", extraction_id, parsed.parse_error)

@@ -250,6 +250,110 @@ async def test_list_includes_deal_role(client) -> None:
 # ── Created By Email ──────────────────────────────────────
 
 
+async def test_sole_buyer_consortium_rejected(client) -> None:
+    """SOLE_BUYER는 컨소시엄 매핑 불가."""
+    txn_id = await _create_txn(client)
+    lead = await _add_buyer(client, txn_id, company_name="리드", deal_role="SOLE_BUYER")
+    co = await _add_buyer(client, txn_id, company_name="코인")
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/consortium/",
+        json={"lead_buyer_id": lead["id"], "co_investor_buyer_id": co["id"]},
+    )
+    assert resp.status_code == 422
+    assert "단독 매수자" in resp.json()["detail"]
+
+
+async def test_status_transition_rejected(client) -> None:
+    """무효한 상태 전이 거부 — CONFIRMED→TAPPING, DROPPED→CONFIRMED."""
+    txn_id = await _create_txn(client)
+    lead = await _add_buyer(client, txn_id, company_name="리드")
+    co = await _add_buyer(client, txn_id, company_name="코인")
+
+    create_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/consortium/",
+        json={"lead_buyer_id": lead["id"], "co_investor_buyer_id": co["id"]},
+    )
+    mapping_id = create_resp.json()["id"]
+
+    # TAPPING → CONFIRMED (유효)
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"status": "CONFIRMED"},
+    )
+    assert resp.status_code == 200
+
+    # CONFIRMED → TAPPING (무효)
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"status": "TAPPING"},
+    )
+    assert resp.status_code == 422
+    assert "상태 전이 불가" in resp.json()["detail"]
+
+
+async def test_dropped_is_terminal(client) -> None:
+    """DROPPED 상태에서는 어떤 전이도 불가."""
+    txn_id = await _create_txn(client)
+    lead = await _add_buyer(client, txn_id, company_name="리드")
+    co = await _add_buyer(client, txn_id, company_name="코인")
+
+    create_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/consortium/",
+        json={"lead_buyer_id": lead["id"], "co_investor_buyer_id": co["id"]},
+    )
+    mapping_id = create_resp.json()["id"]
+
+    # TAPPING → DROPPED
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"status": "DROPPED"},
+    )
+
+    # DROPPED → CONFIRMED (무효)
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"status": "CONFIRMED"},
+    )
+    assert resp.status_code == 422
+
+    # DROPPED → TAPPING (무효)
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"status": "TAPPING"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_equity_share_pct_boundary(client) -> None:
+    """equity_share_pct 경계값 검증 — 0, 100 허용."""
+    txn_id = await _create_txn(client)
+    lead = await _add_buyer(client, txn_id, company_name="리드")
+    co = await _add_buyer(client, txn_id, company_name="코인")
+
+    create_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/consortium/",
+        json={"lead_buyer_id": lead["id"], "co_investor_buyer_id": co["id"]},
+    )
+    mapping_id = create_resp.json()["id"]
+
+    # 0% — 유효
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"equity_share_pct": 0},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["equity_share_pct"] == "0.00"
+
+    # 100% — 유효
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/consortium/{mapping_id}",
+        json={"equity_share_pct": 100},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["equity_share_pct"] == "100.00"
+
+
 async def test_create_log_stores_email(client) -> None:
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)

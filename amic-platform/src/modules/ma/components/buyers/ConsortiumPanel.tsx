@@ -73,9 +73,9 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-700">
+    <div className="rounded-lg border border-border bg-white">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 className="text-sm font-semibold text-text-primary">
           컨소시엄 / 공동투자 매핑
         </h3>
         {canWrite && (
@@ -92,14 +92,18 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
 
       {/* 생성 폼 */}
       {showForm && (
-        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+        <div className="border-b border-border bg-bg-cool px-4 py-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label
+                htmlFor="consortium-lead"
+                className="mb-1 block text-xs font-medium text-text-secondary"
+              >
                 Lead 매수자
               </label>
               <select
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                id="consortium-lead"
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 value={leadId}
                 onChange={(e) => setLeadId(e.target.value)}
               >
@@ -112,11 +116,15 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label
+                htmlFor="consortium-co"
+                className="mb-1 block text-xs font-medium text-text-secondary"
+              >
                 Co-investor
               </label>
               <select
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                id="consortium-co"
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 value={coId}
                 onChange={(e) => setCoId(e.target.value)}
               >
@@ -129,12 +137,16 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label
+                htmlFor="consortium-equity"
+                className="mb-1 block text-xs font-medium text-text-secondary"
+              >
                 지분율 (%)
               </label>
               <input
+                id="consortium-equity"
                 type="number"
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 value={equityPct}
                 onChange={(e) => setEquityPct(e.target.value)}
                 min={0}
@@ -144,12 +156,16 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label
+                htmlFor="consortium-notes"
+                className="mb-1 block text-xs font-medium text-text-secondary"
+              >
                 비고
               </label>
               <input
+                id="consortium-notes"
                 type="text"
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="선택사항"
@@ -179,7 +195,7 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
       {/* 테이블 */}
       <div className="overflow-x-auto">
         {isLoading ? (
-          <div className="flex h-24 items-center justify-center text-sm text-slate-400">
+          <div className="flex h-24 items-center justify-center text-sm text-text-muted">
             불러오는 중...
           </div>
         ) : isError ? (
@@ -187,36 +203,49 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
             컨소시엄 매핑을 불러오지 못했습니다.
           </div>
         ) : mappings.length === 0 ? (
-          <div className="flex h-24 items-center justify-center text-sm text-slate-400">
+          <div className="flex h-24 items-center justify-center text-sm text-text-muted">
             등록된 컨소시엄 매핑이 없습니다.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-100 bg-slate-50 text-left text-xs text-slate-500">
+          <table className="w-full text-sm" aria-label="컨소시엄 매핑 목록">
+            <thead className="border-b border-border bg-bg-cool text-left text-xs text-text-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Lead</th>
-                <th className="px-4 py-2 font-medium">Co-investor</th>
-                <th className="px-4 py-2 font-medium">상태</th>
-                <th className="px-4 py-2 font-medium">지분율</th>
-                <th className="px-4 py-2 font-medium">비고</th>
-                {canWrite && <th className="px-4 py-2 font-medium" />}
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Lead
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Co-investor
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  상태
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  지분율
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  비고
+                </th>
+                {canWrite && (
+                  <th scope="col" className="px-4 py-2 font-medium" />
+                )}
               </tr>
             </thead>
             <tbody>
               {mappings.map((m) => (
                 <tr
                   key={m.id}
-                  className="border-b border-slate-50 hover:bg-slate-50"
+                  className="border-b border-border/50 hover:bg-bg-cool/50"
                 >
-                  <td className="px-4 py-2 font-medium text-slate-700">
+                  <td className="px-4 py-2 font-medium text-text-primary">
                     {m.lead_buyer_name}
                   </td>
-                  <td className="px-4 py-2 text-slate-600">
+                  <td className="px-4 py-2 text-text-secondary">
                     {m.co_investor_buyer_name}
                   </td>
                   <td className="px-4 py-2">
                     {canWrite ? (
                       <select
+                        aria-label={`${m.lead_buyer_name} ↔ ${m.co_investor_buyer_name} 상태`}
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[m.status] ?? ""}`}
                         value={m.status}
                         disabled={updateMapping.isPending}
@@ -243,17 +272,19 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-slate-500">
+                  <td className="px-4 py-2 text-text-muted">
                     {m.equity_share_pct != null
                       ? `${m.equity_share_pct}%`
                       : "—"}
                   </td>
-                  <td className="px-4 py-2 text-slate-500">{m.notes ?? "—"}</td>
+                  <td className="px-4 py-2 text-text-muted">
+                    {m.notes ?? "—"}
+                  </td>
                   {canWrite && (
                     <td className="px-4 py-2">
                       <button
                         type="button"
-                        className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-negative"
+                        className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
                         title="삭제"
                         onClick={() => {
                           if (
