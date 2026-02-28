@@ -11,6 +11,9 @@ __pycache__/
 generated/
 output/
 
+# SQLite
+*.db
+
 # IDE
 .vscode/
 .idea/

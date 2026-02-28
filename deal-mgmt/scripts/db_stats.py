@@ -35,6 +35,12 @@ async def main() -> None:
                     select(func.count()).select_from(SICompany).where(SICompany.corp_basic_synced_at.isnot(None))
                 )
             ).scalar() or 0
+
+            fina_stat = (
+                await session.execute(
+                    select(func.count()).select_from(SICompany).where(SICompany.fina_stat_synced_at.isnot(None))
+                )
+            ).scalar() or 0
     finally:
         await engine.dispose()
 
@@ -43,6 +49,7 @@ async def main() -> None:
             {
                 "si_companies_count": total,
                 "revenue_count": revenue,
+                "fina_stat_count": fina_stat,
                 "corp_basic_count": corp_basic,
             }
         )

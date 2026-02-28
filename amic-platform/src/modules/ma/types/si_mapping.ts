@@ -11,6 +11,16 @@ export interface SICompany {
   has_investment_history: boolean;
   description: string | null;
 
+  // 재무정보 (금융위 getSummFinaStat_V2)
+  operating_profit: number | null;
+  net_income: number | null;
+  total_assets: number | null;
+  total_debt: number | null;
+  total_equity: number | null;
+  capital_amount: number | null;
+  debt_ratio: number | null;
+  pretax_income: number | null;
+
   // 기업기본정보 (금융위 getCorpOutline_V2)
   representative: string | null;
   founded_date: string | null;
@@ -75,6 +85,7 @@ export interface SIDataStats {
   ksic_io_mappings_count: number;
   io_transactions_count: number;
   revenue_count: number;
+  fina_stat_count: number;
   corp_basic_count: number;
   is_seeded: boolean;
 }

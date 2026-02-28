@@ -47,6 +47,9 @@ async def get_data_stats(db: AsyncSession) -> SIDataStats:
     mapping_count = (await db.execute(select(func.count()).select_from(KsicIoMapping))).scalar() or 0
     io_count = (await db.execute(select(func.count()).select_from(IOTransaction))).scalar() or 0
     rev_count = (await db.execute(select(func.count()).where(SICompany.revenue.isnot(None)))).scalar() or 0
+    fina_stat_count = (
+        await db.execute(select(func.count()).where(SICompany.fina_stat_synced_at.isnot(None)))
+    ).scalar() or 0
     corp_basic_count = (
         await db.execute(select(func.count()).where(SICompany.corp_basic_synced_at.isnot(None)))
     ).scalar() or 0
@@ -55,6 +58,7 @@ async def get_data_stats(db: AsyncSession) -> SIDataStats:
         ksic_io_mappings_count=mapping_count,
         io_transactions_count=io_count,
         revenue_count=rev_count,
+        fina_stat_count=fina_stat_count,
         corp_basic_count=corp_basic_count,
         is_seeded=si_count > 0 and mapping_count > 0 and io_count > 0,
     )

@@ -50,6 +50,16 @@ class SICompanyOut(BaseModel):
     has_investment_history: bool = False
     description: str | None = None
 
+    # 재무정보 (금융위 getSummFinaStat_V2)
+    operating_profit: float | None = None
+    net_income: float | None = None
+    total_assets: float | None = None
+    total_debt: float | None = None
+    total_equity: float | None = None
+    capital_amount: float | None = None
+    debt_ratio: float | None = None
+    pretax_income: float | None = None
+
     # 기업기본정보 (금융위 getCorpOutline_V2)
     representative: str | None = None
     founded_date: str | None = None
@@ -112,6 +122,7 @@ class SIDataStats(BaseModel):
     ksic_io_mappings_count: int
     io_transactions_count: int
     revenue_count: int = 0
+    fina_stat_count: int = 0
     corp_basic_count: int = 0
     is_seeded: bool
 

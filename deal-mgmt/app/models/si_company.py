@@ -43,6 +43,69 @@ class SICompany(Base, TimestampMixin):
         nullable=True,
         comment="매출액 기준 사업연도 (예: 2024)",
     )
+
+    # ── 재무정보 (금융위 getSummFinaStat_V2) ──
+    operating_profit: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="영업이익 (enpBzopPft)",
+    )
+    net_income: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="당기순이익 (enpCrtmNpf)",
+    )
+    total_assets: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="자산총계 (enpTastAmt)",
+    )
+    total_debt: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="부채총계 (enpTdbtAmt)",
+    )
+    total_equity: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="자본총계 (enpTcptAmt)",
+    )
+    capital_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="자본금 (enpCptlAmt)",
+    )
+    debt_ratio: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 4),
+        nullable=True,
+        comment="부채비율 % (fnclDebtRto)",
+    )
+    pretax_income: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        comment="법인세차감전순이익 (iclsPalClcAmt)",
+    )
+    fina_base_date: Mapped[str | None] = mapped_column(
+        String(8),
+        nullable=True,
+        comment="재무정보 기준일자 YYYYMMDD (basDt)",
+    )
+    fina_report_code: Mapped[str | None] = mapped_column(
+        String(5),
+        nullable=True,
+        comment="회계보고서 구분코드 (fnclDcd)",
+    )
+    fina_report_name: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="회계보고서 구분명 (fnclDcdNm)",
+    )
+    fina_stat_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="재무정보 최종 동기화 시점",
+    )
+
     has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -96,4 +159,9 @@ class SICompany(Base, TimestampMixin):
         DateTime(timezone=True),
         nullable=True,
         comment="기업기본정보 최종 동기화 시점",
+    )
+    corp_basic_base_date: Mapped[str | None] = mapped_column(
+        String(8),
+        nullable=True,
+        comment="기본정보 기준일자 YYYYMMDD (basDt)",
     )

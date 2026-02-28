@@ -19,7 +19,7 @@ import time
 from datetime import UTC, datetime
 
 import httpx
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -99,11 +99,12 @@ async def fetch_corp_basic(
             "main_business": _extract_field(item, "enpMainBizNm"),
             "market_type": _extract_field(item, "corpRegMrktDcd"),
             "market_type_name": _extract_field(item, "corpRegMrktDcdNm"),
+            "corp_basic_base_date": _extract_field(item, "basDt"),
         }
     except (httpx.TimeoutException, httpx.ConnectError) as exc:
-        logger.warning("API 호출 실패 (crno=%s): %s", crno, exc)
+        logger.debug("API 호출 실패 (crno=%s): %s", crno, type(exc).__name__)
     except Exception as exc:
-        logger.warning("예외 (crno=%s): %s", crno, exc)
+        logger.debug("예외 (crno=%s): %s", crno, type(exc).__name__)
     return None
 
 
@@ -112,18 +113,19 @@ async def process_batch(
     client: httpx.AsyncClient,
     api_key: str,
     companies: list[tuple[str, str]],  # (id_hex, jurir_no)
-) -> tuple[int, int]:
+    *,
+    minute_start: float,
+    minute_calls: int,
+) -> tuple[int, int, float, int]:
     """배치 내 기업들의 기본정보를 수집하고 DB에 저장한다.
 
-    반환: (성공 건수, API 호출 건수)
+    반환: (성공 건수, API 호출 건수, minute_start, minute_calls)
     """
     from app.models.si_company import SICompany
 
     updates: list[dict] = []
     api_calls = 0
     success_count = 0
-    minute_start = time.monotonic()
-    minute_calls = 0
 
     for company_id_hex, jurir_no in companies:
         # Rate limit: 분당 90회
@@ -173,7 +175,7 @@ async def process_batch(
             logger.warning("  DB 커밋 실패 (%d건 롤백): %s", len(updates), exc)
             await session.rollback()
 
-    return success_count, api_calls
+    return success_count, api_calls, minute_start, minute_calls
 
 
 async def main(limit: int = 9500, force: bool = False) -> None:
@@ -233,6 +235,8 @@ async def main(limit: int = 9500, force: bool = False) -> None:
         total_success = 0
         total_api_calls = 0
         batch_size = 500
+        minute_start = time.monotonic()
+        minute_calls = 0
 
         async with httpx.AsyncClient(
             base_url=settings.DATA_GO_KR_BASE_URL,
@@ -247,11 +251,13 @@ async def main(limit: int = 9500, force: bool = False) -> None:
                     len(batch),
                 )
 
-                success, api_calls = await process_batch(
+                success, api_calls, minute_start, minute_calls = await process_batch(
                     session,
                     client,
                     api_key,
                     batch,
+                    minute_start=minute_start,
+                    minute_calls=minute_calls,
                 )
                 total_success += success
                 total_api_calls += api_calls
@@ -266,8 +272,10 @@ async def main(limit: int = 9500, force: bool = False) -> None:
 
         # 최종 통계
         synced_count = (
-            await session.execute(select(SICompany.id).where(SICompany.corp_basic_synced_at.isnot(None)))
-        ).all()
+            await session.execute(
+                select(func.count()).select_from(SICompany).where(SICompany.corp_basic_synced_at.isnot(None))
+            )
+        ).scalar() or 0
 
     await engine.dispose()
 
@@ -277,7 +285,7 @@ async def main(limit: int = 9500, force: bool = False) -> None:
     print(f"  수집 대상: {len(companies):,}건")
     print(f"  API 호출: {total_api_calls:,}건")
     print(f"  수집 성공: {total_success:,}건")
-    print(f"  DB 기본정보 보유 기업 총계: {len(synced_count):,}건")
+    print(f"  DB 기본정보 보유 기업 총계: {synced_count:,}건")
     print()
 
 
