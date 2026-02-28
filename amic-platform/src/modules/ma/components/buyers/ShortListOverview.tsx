@@ -41,6 +41,8 @@ import {
 import { useDartFinancialSummary } from "@/modules/ma/hooks/useDartIntegration";
 import { useUpdateBuyer } from "@/modules/ma/hooks/useTransactions";
 
+const TIER_ORDER = ["TIER_1", "TIER_2", "TIER_3"];
+
 interface ShortListOverviewProps {
   txnId: string;
   buyers: BuyerCandidate[];
@@ -351,9 +353,8 @@ export default function ShortListOverview({
   overviewData,
   canWrite,
 }: ShortListOverviewProps) {
-  const tierOrder = ["TIER_1", "TIER_2", "TIER_3"];
   const shortListBuyers = useMemo(
-    () => buyers.filter((b) => b.tier && tierOrder.includes(b.tier)),
+    () => buyers.filter((b) => b.tier && TIER_ORDER.includes(b.tier)),
     [buyers],
   );
 
@@ -365,13 +366,11 @@ export default function ShortListOverview({
 
   const grouped = useMemo(
     () =>
-      tierOrder
-        .map((tier) => ({
-          tier,
-          label: BUYER_TIER_LABELS[tier] ?? tier,
-          buyers: shortListBuyers.filter((b) => b.tier === tier),
-        }))
-        .filter((g) => g.buyers.length > 0),
+      TIER_ORDER.map((tier) => ({
+        tier,
+        label: BUYER_TIER_LABELS[tier] ?? tier,
+        buyers: shortListBuyers.filter((b) => b.tier === tier),
+      })).filter((g) => g.buyers.length > 0),
     [shortListBuyers],
   );
 

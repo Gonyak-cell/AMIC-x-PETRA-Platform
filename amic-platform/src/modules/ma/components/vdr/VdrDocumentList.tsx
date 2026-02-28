@@ -88,7 +88,7 @@ export default function VdrDocumentList({
         });
       }
     },
-    [onUpload, folder, suggestCategory.mutate],
+    [onUpload, folder, suggestCategory],
   );
 
   const handleDrop = useCallback(
