@@ -383,6 +383,30 @@ export function useUpdateBuyer(txnId: string) {
   });
 }
 
+export function useExportBuyerExcel(txnId: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/buyers/export-excel`,
+        { responseType: "blob" },
+      );
+      return data as Blob;
+    },
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Long-List_${txnId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("엑셀 파일이 다운로드되었습니다.");
+    },
+    onError: () => {
+      toast.error("엑셀 다운로드에 실패했습니다.");
+    },
+  });
+}
+
 // ── Timeline ───────────────────────────────────────────
 export function useTimeline(txnId: string) {
   return useQuery<TimelineResponse>({

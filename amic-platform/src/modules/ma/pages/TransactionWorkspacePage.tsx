@@ -54,6 +54,8 @@ import {
   useConflictCheck,
   useBuyers,
   useAddBuyer,
+  useUpdateBuyer,
+  useExportBuyerExcel,
   useTimeline,
   useGanttTimeline,
 } from "@/modules/ma/hooks/useTransactions";
@@ -62,6 +64,8 @@ import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
 import type {
   BuyerCandidate,
   BuyerCandidateCreate,
+  BuyerTier,
+  DealRole,
 } from "@/modules/ma/types/buyer";
 import type {
   TransactionPhase,
@@ -74,6 +78,11 @@ import type {
   ValuationBasis,
   CrossBorder,
 } from "@/modules/ma/types/transaction";
+import { useShortListOverview } from "@/modules/ma/hooks/useMarketingLogs";
+import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
+import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
+import ConsortiumPanel from "@/modules/ma/components/buyers/ConsortiumPanel";
+import ShortListOverview from "@/modules/ma/components/buyers/ShortListOverview";
 import {
   useNdas,
   useNdaSummary,
@@ -216,6 +225,8 @@ import {
   WORKING_GROUP_ROLE_OPTIONS,
   BUYER_TYPE_OPTIONS,
   BUYER_STATUS_OPTIONS,
+  BUYER_TIER_OPTIONS,
+  DEAL_ROLE_OPTIONS,
   NDA_TYPE_OPTIONS,
   NDA_STATUS_OPTIONS,
   BID_TYPE_OPTIONS,
@@ -1783,6 +1794,12 @@ export default function TransactionWorkspacePage() {
       {/* ── Buyers 탭 (Long List / Short List) ─────────── */}
       {safeActiveTab === "buyers" &&
         (() => {
+          const updateBuyer = useUpdateBuyer(id);
+          const exportExcel = useExportBuyerExcel(id);
+          const { data: shortListOverview } = useShortListOverview(id);
+
+          const tierOptions = BUYER_TIER_OPTIONS.filter((o) => o.value !== "");
+
           const buyerColumns: Column<BuyerCandidate>[] = [
             {
               key: "company_name",
@@ -1797,6 +1814,50 @@ export default function TransactionWorkspacePage() {
                   )}
                 </div>
               ),
+            },
+            {
+              key: "tier",
+              header: "Tier",
+              render: (r) =>
+                canWrite() ? (
+                  <InlineSelect
+                    options={[{ value: "", label: "-" }, ...tierOptions]}
+                    value={r.tier ?? ""}
+                    onChange={(val) =>
+                      updateBuyer.mutate({
+                        buyerId: r.id,
+                        body: { tier: (val || null) as BuyerTier | null },
+                      })
+                    }
+                  />
+                ) : (
+                  <BuyerTierBadge tier={r.tier} />
+                ),
+            },
+            {
+              key: "deal_role",
+              header: "역할",
+              render: (r) => {
+                const roleOptions = DEAL_ROLE_OPTIONS.filter(
+                  (o) => o.value !== "",
+                );
+                return canWrite() ? (
+                  <InlineSelect
+                    options={[{ value: "", label: "-" }, ...roleOptions]}
+                    value={r.deal_role ?? ""}
+                    onChange={(val) =>
+                      updateBuyer.mutate({
+                        buyerId: r.id,
+                        body: {
+                          deal_role: (val || null) as DealRole | null,
+                        },
+                      })
+                    }
+                  />
+                ) : (
+                  <DealRoleBadge role={r.deal_role} />
+                );
+              },
             },
             {
               key: "buyer_type",
@@ -1835,10 +1896,11 @@ export default function TransactionWorkspacePage() {
                 r.loi_value != null ? r.loi_value.toLocaleString() : "-",
             },
           ];
-          const longList =
-            buyers?.filter((b) => LONG_LIST_STATUSES.includes(b.status)) ?? [];
-          const shortList =
-            buyers?.filter((b) => SHORT_LIST_STATUSES.includes(b.status)) ?? [];
+
+          const allBuyers = buyers ?? [];
+          const shortListBuyers = allBuyers.filter(
+            (b) => b.tier && b.tier !== "NOT_TARGET",
+          );
 
           return (
             <div className="space-y-4">
@@ -1848,12 +1910,12 @@ export default function TransactionWorkspacePage() {
                     {
                       id: "long-list",
                       label: "Long List",
-                      badge: longList.length || undefined,
+                      badge: allBuyers.length || undefined,
                     },
                     {
                       id: "short-list",
                       label: "Short List",
-                      badge: shortList.length || undefined,
+                      badge: shortListBuyers.length || undefined,
                     },
                   ]}
                   activeTab={buyerSubTab}
@@ -1863,15 +1925,28 @@ export default function TransactionWorkspacePage() {
                   variant="pill"
                   size="sm"
                 />
-                {canWrite() && (
-                  <Button
-                    icon={UserPlus}
-                    onClick={() => setShowBuyerModal(true)}
-                    variant="ghost"
-                  >
-                    후보 추가
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {buyerSubTab === "long-list" && (
+                    <Button
+                      icon={Download}
+                      onClick={() => exportExcel.mutate()}
+                      variant="ghost"
+                      size="sm"
+                      loading={exportExcel.isPending}
+                    >
+                      Excel
+                    </Button>
+                  )}
+                  {canWrite() && (
+                    <Button
+                      icon={UserPlus}
+                      onClick={() => setShowBuyerModal(true)}
+                      variant="ghost"
+                    >
+                      후보 추가
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {buyerSubTab === "long-list" && (
@@ -1887,7 +1962,7 @@ export default function TransactionWorkspacePage() {
                     </Button>
                   </div>
                   <Card title="Long List" headerBar padding="none">
-                    {!longList.length ? (
+                    {!allBuyers.length ? (
                       <EmptyState
                         icon={Users}
                         title="Long List 후보 없음"
@@ -1900,16 +1975,8 @@ export default function TransactionWorkspacePage() {
                     ) : (
                       <DataTable
                         columns={buyerColumns}
-                        data={longList}
+                        data={allBuyers}
                         keyField="id"
-                        onRowClick={(buyer: BuyerCandidate) => {
-                          const qs = new URLSearchParams();
-                          if (viewedPhase) qs.set("viewPhase", viewedPhase);
-                          qs.set("buyerId", buyer.id);
-                          navigate(
-                            `/ma/transactions/${id}/marketing-logs?${qs.toString()}`,
-                          );
-                        }}
                       />
                     )}
                   </Card>
@@ -1923,29 +1990,19 @@ export default function TransactionWorkspacePage() {
               )}
 
               {buyerSubTab === "short-list" && (
-                <Card title="Short List" headerBar padding="none">
-                  {!shortList.length ? (
-                    <EmptyState
-                      icon={Users}
-                      title="Short List 후보 없음"
-                      description="CIM 발송 이후 후보가 여기에 표시됩니다."
-                    />
-                  ) : (
-                    <DataTable
-                      columns={buyerColumns}
-                      data={shortList}
-                      keyField="id"
-                      onRowClick={(buyer: BuyerCandidate) => {
-                        const qs = new URLSearchParams();
-                        if (viewedPhase) qs.set("viewPhase", viewedPhase);
-                        qs.set("buyerId", buyer.id);
-                        navigate(
-                          `/ma/transactions/${id}/marketing-logs?${qs.toString()}`,
-                        );
-                      }}
-                    />
-                  )}
-                </Card>
+                <>
+                  <ShortListOverview
+                    txnId={id}
+                    buyers={allBuyers}
+                    overviewData={shortListOverview ?? []}
+                    canWrite={canWrite()}
+                  />
+                  <ConsortiumPanel
+                    txnId={id}
+                    buyers={allBuyers}
+                    canWrite={canWrite()}
+                  />
+                </>
               )}
             </div>
           );

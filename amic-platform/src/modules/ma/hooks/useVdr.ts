@@ -16,7 +16,15 @@ import type {
 const folderQK = (txnId: string) =>
   ["ma", "transactions", txnId, "vdr", "folders"] as const;
 const docQK = (txnId: string, folderId: string) =>
-  ["ma", "transactions", txnId, "vdr", "folders", folderId, "documents"] as const;
+  [
+    "ma",
+    "transactions",
+    txnId,
+    "vdr",
+    "folders",
+    folderId,
+    "documents",
+  ] as const;
 const summaryQK = (txnId: string) =>
   ["ma", "transactions", txnId, "vdr", "summary"] as const;
 
@@ -215,4 +223,17 @@ export function useDeleteVdrDocument(txnId: string) {
 /** VDR 문서 다운로드 URL */
 export function getVdrDownloadUrl(txnId: string, docId: string): string {
   return `/api/ma/transactions/${txnId}/vdr/documents/${docId}/download`;
+}
+
+/** 파일명 기반 VDR 폴더 카테고리 추천 */
+export function useSuggestVdrCategory(txnId: string) {
+  return useMutation({
+    mutationFn: async (filename: string) => {
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/vdr/suggest-category`,
+        { filename },
+      );
+      return data as { category: string | null; folder_name: string | null };
+    },
+  });
 }

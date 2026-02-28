@@ -14,7 +14,20 @@ export type BuyerStatus =
   | "SELECTED"
   | "REJECTED";
 
-export type BuyerType = "STRATEGIC" | "FINANCIAL_SPONSOR" | "FAMILY_OFFICE" | "INDIVIDUAL" | "OTHER";
+export type BuyerType =
+  | "STRATEGIC"
+  | "FINANCIAL_SPONSOR"
+  | "FAMILY_OFFICE"
+  | "INDIVIDUAL"
+  | "OTHER";
+
+export type BuyerTier = "TIER_1" | "TIER_2" | "TIER_3" | "NOT_TARGET";
+
+export type DealRole =
+  | "SOLE_BUYER"
+  | "CONSORTIUM_LEAD"
+  | "CO_INVESTOR"
+  | "FINANCING_PROVIDER";
 
 export interface BuyerCandidate {
   id: string;
@@ -25,6 +38,9 @@ export interface BuyerCandidate {
   contact_phone: string | null;
   buyer_type: BuyerType;
   status: BuyerStatus;
+  tier: BuyerTier | null;
+  deal_role: DealRole | null;
+  corp_code: string | null;
   ioi_value: number | null;
   ioi_date: string | null;
   loi_value: number | null;
@@ -43,6 +59,9 @@ export interface BuyerCandidateCreate {
   contact_email?: string;
   contact_phone?: string;
   buyer_type: BuyerType;
+  tier?: BuyerTier;
+  deal_role?: DealRole;
+  corp_code?: string;
   notes?: string;
   extra_data?: Record<string, unknown>;
 }
@@ -54,6 +73,9 @@ export interface BuyerCandidateUpdate {
   contact_phone?: string;
   buyer_type?: BuyerType;
   status?: BuyerStatus;
+  tier?: BuyerTier;
+  deal_role?: DealRole;
+  corp_code?: string;
   ioi_value?: number;
   ioi_date?: string;
   loi_value?: number;
@@ -67,6 +89,7 @@ export interface BuyerCandidateUpdate {
 export interface BuyerPipelineSummary {
   total: number;
   by_status: Record<BuyerStatus, number>;
+  by_tier: Record<string, number>;
   avg_ioi_value: number | null;
   avg_loi_value: number | null;
 }

@@ -1,11 +1,27 @@
-import { Download, FileText, Sparkles, Trash2, Upload } from "lucide-react";
-import { useCallback, useRef } from "react";
+import {
+  Download,
+  FileText,
+  FolderInput,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
 import type { VdrDocument, VdrFolder } from "@/modules/ma/types/vdr";
-import { MIME_TYPE_LABELS, VDR_CONSTRAINTS } from "@/modules/ma/types/vdr";
-import { getVdrDownloadUrl } from "@/modules/ma/hooks/useVdr";
+import {
+  MIME_TYPE_LABELS,
+  VDR_CATEGORY_LABELS,
+  VDR_CONSTRAINTS,
+} from "@/modules/ma/types/vdr";
+import type { VdrFolderCategory } from "@/modules/ma/types/vdr";
+import {
+  getVdrDownloadUrl,
+  useSuggestVdrCategory,
+} from "@/modules/ma/hooks/useVdr";
 import { useCreateExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
 
 interface Props {
@@ -15,6 +31,7 @@ interface Props {
   isLoading: boolean;
   onUpload: (file: File) => void;
   onDelete: (docId: string) => void;
+  onNavigateToFolder?: (category: string) => void;
 }
 
 function formatFileSize(bytes: number): string {
@@ -41,6 +58,12 @@ function validateFile(file: File): string | null {
   return null;
 }
 
+interface CategorySuggestion {
+  filename: string;
+  category: string;
+  folderName: string;
+}
+
 export default function VdrDocumentList({
   txnId,
   folder,
@@ -48,9 +71,36 @@ export default function VdrDocumentList({
   isLoading,
   onUpload,
   onDelete,
+  onNavigateToFolder,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createExtraction = useCreateExtraction(txnId);
+  const suggestCategory = useSuggestVdrCategory(txnId);
+  const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
+
+  const uploadWithSuggestion = useCallback(
+    (file: File) => {
+      onUpload(file);
+      if (folder) {
+        suggestCategory.mutate(file.name, {
+          onSuccess: (result) => {
+            if (
+              result.category &&
+              result.category !== folder.category &&
+              result.folder_name
+            ) {
+              setSuggestion({
+                filename: file.name,
+                category: result.category,
+                folderName: result.folder_name,
+              });
+            }
+          },
+        });
+      }
+    },
+    [onUpload, folder, suggestCategory],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -61,10 +111,10 @@ export default function VdrDocumentList({
           toast.error(error);
           continue;
         }
-        onUpload(file);
+        uploadWithSuggestion(file);
       }
     },
-    [onUpload],
+    [uploadWithSuggestion],
   );
 
   if (!folder) {
@@ -106,12 +156,47 @@ export default function VdrDocumentList({
                 toast.error(error);
                 continue;
               }
-              onUpload(file);
+              uploadWithSuggestion(file);
             }
             e.target.value = "";
           }}
         />
       </div>
+
+      {/* Category Suggestion Banner */}
+      {suggestion && (
+        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs">
+          <FolderInput className="h-4 w-4 shrink-0 text-amber-600" />
+          <span className="text-amber-800">
+            <strong>{suggestion.filename}</strong>은{" "}
+            <strong>
+              {VDR_CATEGORY_LABELS[suggestion.category as VdrFolderCategory] ??
+                suggestion.folderName}
+            </strong>{" "}
+            폴더에 더 적합할 수 있습니다.
+          </span>
+          {onNavigateToFolder && (
+            <button
+              type="button"
+              className="ml-auto shrink-0 rounded bg-amber-100 px-2 py-0.5 text-amber-700 hover:bg-amber-200"
+              onClick={() => {
+                onNavigateToFolder(suggestion.category);
+                setSuggestion(null);
+              }}
+            >
+              이동
+            </button>
+          )}
+          <button
+            type="button"
+            className="shrink-0 text-amber-400 hover:text-amber-600"
+            onClick={() => setSuggestion(null)}
+            aria-label="닫기"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Drop zone + list */}
       <div

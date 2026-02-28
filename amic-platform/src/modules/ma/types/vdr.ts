@@ -12,6 +12,7 @@ export type VdrFolderCategory =
   | "ENVIRONMENT"
   | "IP"
   | "INSURANCE"
+  | "MARKET_RESEARCH"
   | "CUSTOM";
 
 export interface VdrFolder {
@@ -89,6 +90,7 @@ export const VDR_CATEGORY_LABELS: Record<VdrFolderCategory, string> = {
   ENVIRONMENT: "환경",
   IP: "지식재산권",
   INSURANCE: "보험",
+  MARKET_RESEARCH: "시장자료",
   CUSTOM: "사용자 정의",
 };
 

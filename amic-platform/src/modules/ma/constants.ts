@@ -108,6 +108,70 @@ export const TEAM_MEMBERS: TeamMember[] = [
   { email: "tryoon@amic.kr", name: "윤태리", title: "실장" },
 ];
 
+// ── Deal Role (컨소시엄 역할) ────────────────────────
+export const DEAL_ROLE_OPTIONS: SelectOption[] = [
+  { value: "", label: "미지정" },
+  { value: "SOLE_BUYER", label: "단독 매수자" },
+  { value: "CONSORTIUM_LEAD", label: "컨소시엄 리드" },
+  { value: "CO_INVESTOR", label: "공동투자자" },
+  { value: "FINANCING_PROVIDER", label: "파이낸싱 제공자" },
+];
+
+export const DEAL_ROLE_LABELS: Record<string, string> = {
+  SOLE_BUYER: "단독 매수자",
+  CONSORTIUM_LEAD: "컨소시엄 리드",
+  CO_INVESTOR: "공동투자자",
+  FINANCING_PROVIDER: "파이낸싱 제공자",
+};
+
+// ── Consortium Status (컨소시엄 상태) ────────────────
+export const CONSORTIUM_STATUS_OPTIONS: SelectOption[] = [
+  { value: "TAPPING", label: "타진 중" },
+  { value: "CONFIRMED", label: "확정" },
+  { value: "DROPPED", label: "이탈" },
+];
+
+export const CONSORTIUM_STATUS_LABELS: Record<string, string> = {
+  TAPPING: "타진 중",
+  CONFIRMED: "확정",
+  DROPPED: "이탈",
+};
+
+// ── Buyer Tier ───────────────────────────────────────
+export const BUYER_TIER_OPTIONS: SelectOption[] = [
+  { value: "", label: "전체" },
+  { value: "TIER_1", label: "Tier 1" },
+  { value: "TIER_2", label: "Tier 2" },
+  { value: "TIER_3", label: "Tier 3" },
+  { value: "NOT_TARGET", label: "대상 아님" },
+];
+
+export const BUYER_TIER_LABELS: Record<string, string> = {
+  TIER_1: "Tier 1",
+  TIER_2: "Tier 2",
+  TIER_3: "Tier 3",
+  NOT_TARGET: "대상 아님",
+};
+
+// ── Marketing Stage ─────────────────────────────────
+export const MARKETING_STAGE_LABELS: Record<string, string> = {
+  IDENTIFIED: "식별",
+  EMAIL_SENT: "메일전송",
+  PHONE_CALL: "전화",
+  ADVISOR_MEETING: "자문사 미팅",
+  NDA_SIGNED: "NDA 체결",
+  TARGET_MEETING: "대상회사 미팅",
+};
+
+export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
+  { value: "IDENTIFIED", label: "식별" },
+  { value: "EMAIL_SENT", label: "메일전송" },
+  { value: "PHONE_CALL", label: "전화" },
+  { value: "ADVISOR_MEETING", label: "자문사 미팅" },
+  { value: "NDA_SIGNED", label: "NDA 체결" },
+  { value: "TARGET_MEETING", label: "대상회사 미팅" },
+];
+
 // ── Buyer Type ────────────────────────────────────────
 export const BUYER_TYPE_OPTIONS: SelectOption[] = [
   { value: "", label: "전체" },

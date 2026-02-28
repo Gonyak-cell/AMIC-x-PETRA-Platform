@@ -1,4 +1,10 @@
-import { FolderLock, HardDrive, Files, FolderTree, Sparkles } from "lucide-react";
+import {
+  FolderLock,
+  HardDrive,
+  Files,
+  FolderTree,
+  Sparkles,
+} from "lucide-react";
 import { useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -43,9 +49,23 @@ function findFolder(folders: VdrFolder[], id: string): VdrFolder | null {
   return null;
 }
 
+/** flat tree에서 category로 폴더를 검색 */
+function findFolderByCategory(
+  folders: VdrFolder[],
+  category: string,
+): VdrFolder | null {
+  for (const f of folders) {
+    if (f.category === category) return f;
+    const found = findFolderByCategory(f.children, category);
+    if (found) return found;
+  }
+  return null;
+}
+
 export default function VdrTab({ txnId }: Props) {
   const { data: summary, isLoading: summaryLoading } = useVdrSummary(txnId);
-  const { data: folders = [], isLoading: foldersLoading } = useVdrFolders(txnId);
+  const { data: folders = [], isLoading: foldersLoading } =
+    useVdrFolders(txnId);
   const initVdr = useInitVdr(txnId);
   const createFolder = useCreateVdrFolder(txnId);
   const deleteFolder = useDeleteVdrFolder(txnId);
@@ -78,8 +98,8 @@ export default function VdrTab({ txnId }: Props) {
               VDR (Virtual Data Room)
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              실사 자료실을 초기화하면 M&A 실사에 필요한 11개 기본 폴더가 자동으로
-              생성됩니다.
+              실사 자료실을 초기화하면 M&A 실사에 필요한 11개 기본 폴더가
+              자동으로 생성됩니다.
             </p>
           </div>
           <Button
@@ -161,6 +181,10 @@ export default function VdrTab({ txnId }: Props) {
             isLoading={docsLoading}
             onUpload={(file) => uploadDoc.mutate(file)}
             onDelete={(docId) => deleteDoc.mutate(docId)}
+            onNavigateToFolder={(category) => {
+              const target = findFolderByCategory(folders, category);
+              if (target) setSelectedFolderId(target.id);
+            }}
           />
         </Card>
       </div>
