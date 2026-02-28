@@ -129,6 +129,92 @@ async def test_sync_holdings_upsert(async_session):
 
 
 @pytest.mark.asyncio
+async def test_sync_holdings_resolver_sets_reporter_company_id(async_session):
+    """_resolve_reporter가 Company ID를 반환하면 reporter_company_id가 설정된다."""
+    gp = Company(corp_name="한국투자파트너스", is_gp=True, corp_code="00164779")
+    async_session.add(gp)
+    await async_session.flush()
+
+    mock_items = [
+        MajorHoldingItem(
+            rcept_no="20240301000099",
+            rcept_dt="20240301",
+            corp_code="00126380",
+            corp_name="삼성전자",
+            report_tp="신규",
+            repror="한국투자파트너스",
+            stkqy="1000000",
+            stkrt="7.5",
+            report_resn="주식취득",
+        ),
+    ]
+
+    mock_dart = AsyncMock(spec=DARTService)
+    mock_dart.get_major_holdings = AsyncMock(return_value=(mock_items, 1, 1))
+
+    service = HoldingSignalService(mock_dart)
+
+    with patch.object(service, "_resolve_reporter", return_value=gp.id):
+        result = await service.sync_holdings(async_session, "00126380")
+
+    assert result.new_records == 1
+
+    db_result = await async_session.execute(select(DartMajorHolding))
+    holding = db_result.scalar_one()
+    assert holding.reporter_company_id == gp.id
+
+
+@pytest.mark.asyncio
+async def test_sync_holdings_update_preserves_reporter_when_none(async_session):
+    """업데이트 시 _resolve_reporter가 None이면 기존 reporter_company_id를 보존한다."""
+    gp = Company(corp_name="기존GP", is_gp=True, corp_code="00000077")
+    async_session.add(gp)
+    await async_session.flush()
+
+    existing = DartMajorHolding(
+        rcept_no="20240301000077",
+        rcept_dt="20240301",
+        corp_code="00126380",
+        corp_name="삼성전자",
+        repror="기존GP",
+        stkrt="3.0",
+        reporter_company_id=gp.id,
+    )
+    async_session.add(existing)
+    await async_session.flush()
+
+    mock_items = [
+        MajorHoldingItem(
+            rcept_no="20240301000077",
+            rcept_dt="20240301",
+            corp_code="00126380",
+            corp_name="삼성전자",
+            repror="기존GP",
+            stkrt="5.0",
+            report_resn="주식취득",
+        ),
+    ]
+
+    mock_dart = AsyncMock(spec=DARTService)
+    mock_dart.get_major_holdings = AsyncMock(return_value=(mock_items, 1, 1))
+
+    service = HoldingSignalService(mock_dart)
+
+    # resolver가 None을 반환해도 기존 reporter_company_id가 보존되어야 함
+    with patch.object(service, "_resolve_reporter", return_value=None):
+        result = await service.sync_holdings(async_session, "00126380")
+
+    assert result.updated_records == 1
+
+    db_result = await async_session.execute(
+        select(DartMajorHolding).where(DartMajorHolding.rcept_no == "20240301000077")
+    )
+    holding = db_result.scalar_one()
+    assert holding.stkrt == "5.0"  # 업데이트됨
+    assert holding.reporter_company_id == gp.id  # 보존됨
+
+
+@pytest.mark.asyncio
 async def test_sync_holdings_update_existing(async_session):
     """이미 존재하는 rcept_no는 업데이트한다."""
     # 기존 레코드 생성
@@ -350,6 +436,56 @@ async def test_generate_deal_signals_exact_threshold(async_session):
 
     deals_created = await service.generate_deal_signals(async_session)
     assert deals_created == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_deal_signals_none_stkrt_creates_deal(async_session):
+    """stkrt가 '-'(parse_float→None)이면 필터를 통과하여 딜을 생성한다."""
+    gp = Company(corp_name="불명GP", is_gp=True, corp_code="00000066")
+    async_session.add(gp)
+    await async_session.flush()
+
+    holding = DartMajorHolding(
+        rcept_no="20240601000066",
+        rcept_dt="20240601",
+        corp_code="00126380",
+        corp_name="삼성전자",
+        repror="불명GP",
+        stkrt="-",
+        report_resn="주식취득",
+        reporter_company_id=gp.id,
+    )
+    async_session.add(holding)
+    await async_session.flush()
+
+    mock_dart = AsyncMock(spec=DARTService)
+    service = HoldingSignalService(mock_dart)
+
+    deals_created = await service.generate_deal_signals(async_session)
+    assert deals_created == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_deal_signals_null_reporter_excluded(async_session):
+    """reporter_company_id가 NULL이면 JOIN에서 제외되어 딜이 생성되지 않는다."""
+    holding = DartMajorHolding(
+        rcept_no="20240601000055",
+        rcept_dt="20240601",
+        corp_code="00126380",
+        corp_name="삼성전자",
+        repror="미매칭보고자",
+        stkrt="10.0",
+        report_resn="주식취득",
+        reporter_company_id=None,
+    )
+    async_session.add(holding)
+    await async_session.flush()
+
+    mock_dart = AsyncMock(spec=DARTService)
+    service = HoldingSignalService(mock_dart)
+
+    deals_created = await service.generate_deal_signals(async_session)
+    assert deals_created == 0
 
 
 # ── 중복 Deal 방지 테스트 ──

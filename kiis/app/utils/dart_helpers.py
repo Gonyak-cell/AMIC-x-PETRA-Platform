@@ -1,17 +1,29 @@
 """DART 데이터 파싱 공유 유틸리티.
 
 HoldingSignalService / ElestockSignalService에서 공통으로 사용하는
-문자열 → 날짜/숫자 변환, corp_code 조회 헬퍼.
+문자열 → 날짜/숫자 변환, corp_code 조회 헬퍼, 동기화 결과 dataclass.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
+
+
+@dataclass
+class DartSyncResult:
+    """DART 동기화 + 딜 신호 생성 공통 결과."""
+
+    total_fetched: int = 0
+    new_records: int = 0
+    updated_records: int = 0
+    deals_created: int = 0
+    errors: list[str] = field(default_factory=list)
 
 
 def parse_float(value: str | None) -> float | None:

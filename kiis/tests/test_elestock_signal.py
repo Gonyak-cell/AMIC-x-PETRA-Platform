@@ -380,6 +380,69 @@ async def test_generate_deal_signals_exact_threshold(async_session):
     assert deals_created == 1
 
 
+@pytest.mark.asyncio
+async def test_generate_deal_signals_none_rate_creates_deal(async_session):
+    """sp_stock_lmp_rate가 '-'(parse_float→None)이면 필터를 통과하여 딜을 생성한다."""
+    holding = DartExecutiveHolding(
+        rcept_no="20241101000066",
+        rcept_dt="20241101",
+        corp_code="00126380",
+        corp_name="삼성전자",
+        repror="불명임원",
+        isu_exctv_rgist_at="Y",
+        sp_stock_lmp_rate="-",
+        report_resn="취득",
+    )
+    async_session.add(holding)
+    await async_session.flush()
+
+    mock_dart = AsyncMock(spec=DARTService)
+    service = ElestockSignalService(mock_dart)
+
+    deals_created = await service.generate_deal_signals(async_session)
+    assert deals_created == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_deal_signals_disclosure_id_propagated(async_session):
+    """holding에 disclosure_id가 있으면 생성된 Deal에도 전파된다."""
+    from app.models.disclosure import Disclosure
+
+    disclosure = Disclosure(
+        corp_code="00126380",
+        report_nm="임원소유보고",
+        rcept_no="20241201000077",
+        dart_viewer_url="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20241201000077",
+        source="dart",
+    )
+    async_session.add(disclosure)
+    await async_session.flush()
+
+    holding = DartExecutiveHolding(
+        rcept_no="20241201000077",
+        rcept_dt="20241201",
+        corp_code="00126380",
+        corp_name="삼성전자",
+        repror="전파임원",
+        isu_exctv_rgist_at="Y",
+        sp_stock_lmp_rate="3.0",
+        report_resn="취득",
+        disclosure_id=disclosure.id,
+    )
+    async_session.add(holding)
+    await async_session.flush()
+
+    mock_dart = AsyncMock(spec=DARTService)
+    service = ElestockSignalService(mock_dart)
+
+    deals_created = await service.generate_deal_signals(async_session)
+    assert deals_created == 1
+
+    db_result = await async_session.execute(select(Deal))
+    deal = db_result.scalar_one()
+    assert deal.disclosure_id == disclosure.id
+
+
 # ── 중복 Deal 방지 테스트 ──
 
 

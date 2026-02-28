@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +19,7 @@ from app.models.elestock import DartExecutiveHolding
 from app.schemas.dart import ElestockItem
 from app.services.dart_service import DARTService
 from app.utils.dart_helpers import (
+    DartSyncResult,
     is_acquisition,
     parse_date,
     parse_float,
@@ -33,17 +33,6 @@ logger = logging.getLogger(__name__)
 _ACQUISITION_KEYWORDS = ("취득", "매수", "증여받음", "상속")
 
 
-@dataclass
-class ElestockSyncResult:
-    """임원소유보고 동기화 + 딜 신호 생성 결과."""
-
-    total_fetched: int = 0
-    new_records: int = 0
-    updated_records: int = 0
-    deals_created: int = 0
-    errors: list[str] = field(default_factory=list)
-
-
 class ElestockSignalService:
     """DART 임원·주요주주 소유보고 수집 및 딜 신호 생성 서비스."""
 
@@ -54,14 +43,14 @@ class ElestockSignalService:
         self,
         db: AsyncSession,
         corp_code: str,
-    ) -> ElestockSyncResult:
+    ) -> DartSyncResult:
         """특정 기업의 임원소유보고 데이터를 수집하여 DB에 저장한다.
 
         1. DART API /elestock.json 호출
         2. dart_executive_holdings upsert (rcept_no 기준)
         3. rcept_no → Disclosure 자동 연결 (disclosure_id)
         """
-        result = ElestockSyncResult()
+        result = DartSyncResult()
 
         try:
             items = await self.dart.get_executive_holdings(corp_code)
@@ -206,7 +195,7 @@ class ElestockSignalService:
         db: AsyncSession,
         item: ElestockItem,
         company_id: int | None,
-        result: ElestockSyncResult,
+        result: DartSyncResult,
         *,
         existing: DartExecutiveHolding | None = None,
         disclosure_id: int | None = None,
