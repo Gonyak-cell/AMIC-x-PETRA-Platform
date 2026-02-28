@@ -35,6 +35,10 @@ async def init_scheduler() -> None:
     # 지연 임포트로 순환 참조 방지
     from app.tasks.company_sync import sync_companies_from_dart
     from app.tasks.dart_sync import run_dart_sync
+    from app.tasks.elestock_sync import run_elestock_sync
+    from app.tasks.gp_profile_sync import run_gp_profile_sync
+    from app.tasks.holding_sync import run_holding_sync
+    from app.tasks.ib_collect import run_ib_collect
     from app.tasks.manager_tracking import run_manager_tracking
     from app.tasks.news_collect import run_news_collect
     from app.tasks.portfolio_check import run_portfolio_check
@@ -97,6 +101,39 @@ async def init_scheduler() -> None:
         hours=settings.WATCHLIST_ALERT_INTERVAL_HOURS,
         id="watchlist_alerts",
         name="워치리스트 알림 확인",
+    )
+
+    _scheduler.add_job(
+        run_ib_collect,
+        "interval",
+        hours=settings.IB_COLLECT_INTERVAL_HOURS,
+        id="ib_collect",
+        name="IB 매체 자동 수집",
+    )
+
+    _scheduler.add_job(
+        run_gp_profile_sync,
+        "cron",
+        day_of_week=settings.GP_PROFILE_SYNC_DAY_OF_WEEK,
+        hour=settings.GP_PROFILE_SYNC_HOUR,
+        id="gp_profile_sync",
+        name="GP 프로파일 동기화 (공공데이터)",
+    )
+
+    _scheduler.add_job(
+        run_holding_sync,
+        "cron",
+        hour=settings.HOLDING_SYNC_HOUR,
+        id="holding_sync",
+        name="DART 대량보유 동기화 + 딜 신호",
+    )
+
+    _scheduler.add_job(
+        run_elestock_sync,
+        "cron",
+        hour=settings.ELESTOCK_SYNC_HOUR,
+        id="elestock_sync",
+        name="DART 임원소유보고 동기화 + 딜 신호",
     )
 
     _scheduler.start()

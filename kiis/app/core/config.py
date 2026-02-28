@@ -81,6 +81,13 @@ class Settings(BaseSettings):
     PORTFOLIO_CHECK_HOUR: int = 5
     WATCHLIST_ALERT_INTERVAL_HOURS: int = 6
     MANAGER_TRACKING_DAY_OF_WEEK: str = "mon"
+    GP_PROFILE_SYNC_DAY_OF_WEEK: str = "mon"  # GP 프로파일 동기화 요일
+    GP_PROFILE_SYNC_HOUR: int = 7  # GP 프로파일 동기화 시각
+    HOLDING_SYNC_HOUR: int = 10  # 대량보유 동기화 시각
+    HOLDING_SIGNAL_MIN_STKRT: float = 5.0  # 딜 신호 최소 지분율 (%)
+    HOLDING_SYNC_LOOKBACK_DAYS: int = 30  # 대량보유 수집 기간 (일)
+    ELESTOCK_SYNC_HOUR: int = 11  # 임원소유보고 동기화 시각 (대량보유 이후 1시간)
+    ELESTOCK_SIGNAL_MIN_RATE: float = 1.0  # 임원소유보고 딜 신호 최소 비율 (%)
 
     # Logo Crawling (GP CI)
     LOGO_CRAWL_RATE_PER_MINUTE: int = 20
@@ -92,6 +99,12 @@ class Settings(BaseSettings):
     REITS_RATE_LIMIT_PER_MINUTE: int = 20  # 3초 간격 = 분당 20회
     REITS_RATE_LIMIT_PER_DAY: int = 500
     REITS_REQUEST_DELAY: float = 3.0  # robots.txt 준수 최소 간격 (초)
+
+    # IB 매체 크롤링 (인베스트조선, 딜사이트, IB토마토, 블로터)
+    IB_COLLECT_INTERVAL_HOURS: int = 4  # 자동 수집 주기
+    IB_CRAWL_REQUEST_DELAY: float = 3.0  # robots.txt 준수 딜레이 (초)
+    IB_CRAWL_MAX_PAGES: int = 3  # 매체당 최대 페이지 수
+    IB_PAYWALL_SKIP: bool = False  # True: paywall 기사 완전 스킵 (False: is_paywalled=True로 저장)
 
 
 settings = Settings()

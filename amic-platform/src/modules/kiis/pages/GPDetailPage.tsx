@@ -1,5 +1,10 @@
 import { useState, useMemo } from "react";
-import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import {
+  useParams,
+  useSearchParams,
+  useNavigate,
+  Link,
+} from "react-router-dom";
 import {
   Landmark,
   TrendingUp,
@@ -9,6 +14,7 @@ import {
   BarChart3,
   Info,
   AlertCircle,
+  FileSearch,
 } from "lucide-react";
 import { useFunds } from "@/modules/kiis/hooks/useFunds";
 import { useCompanies } from "@/modules/kiis/hooks/useCompanies";
@@ -35,6 +41,7 @@ import type { Column, TabItem } from "@/components/ui";
 import ReputationSummary from "@/modules/kiis/components/ReputationSummary";
 import TendencySummary from "@/modules/kiis/components/TendencySummary";
 import DealTrendChart from "@/modules/kiis/components/DealTrendChart";
+import IBInsightsPanel from "@/modules/kiis/components/IBInsightsPanel";
 import { FinancialBarChart } from "@/components/charts/FinancialBarChart";
 import type { BarChartDataPoint } from "@/components/charts/FinancialBarChart";
 import type { FundListItem } from "@/modules/kiis/types/fund";
@@ -138,8 +145,7 @@ const dealColumns: Column<DealItem>[] = [
     header: "Date",
     align: "center",
     width: "120px",
-    render: (row) =>
-      row.deal_date ? formatDate(row.deal_date, "short") : "-",
+    render: (row) => (row.deal_date ? formatDate(row.deal_date, "short") : "-"),
   },
 ];
 
@@ -151,6 +157,7 @@ const TABS: TabItem[] = [
   { id: "deals", label: "Deal History", icon: TrendingUp },
   { id: "tendency", label: "Investment Tendency", icon: PieChart },
   { id: "news", label: "News", icon: Newspaper },
+  { id: "ib-insights", label: "IB Insights", icon: FileSearch },
 ];
 
 /* ───────── Page ───────── */
@@ -163,7 +170,8 @@ export default function GPDetailPage() {
   const [fundPage, setFundPage] = useState(1);
 
   // company_name: 쿼리 파라미터 > URL 디코드
-  const gpName = searchParams.get("name") ?? decodeURIComponent(companyCode ?? "");
+  const gpName =
+    searchParams.get("name") ?? decodeURIComponent(companyCode ?? "");
 
   // 1. 이 GP의 펀드 목록
   const { data: fundsData, isLoading: fundsLoading } = useFunds({
@@ -234,7 +242,10 @@ export default function GPDetailPage() {
         {hasCorpCode && (
           <>
             <span className="mx-2">·</span>
-            <Link to={`/kiis/companies/${corpCode}`} className="hover:text-accent">
+            <Link
+              to={`/kiis/companies/${corpCode}`}
+              className="hover:text-accent"
+            >
               DART Profile →
             </Link>
           </>
@@ -290,15 +301,20 @@ export default function GPDetailPage() {
 
       {/* ─── Overview Tab ─── */}
       {activeTab === "overview" && (
-        <div className="space-y-6" role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview">
+        <div
+          className="space-y-6"
+          role="tabpanel"
+          id="tabpanel-overview"
+          aria-labelledby="tab-overview"
+        >
           {!hasCorpCode && (
             <Card>
               <div className="flex items-center gap-3 text-text-secondary">
                 <Info className="h-5 w-5 shrink-0" />
                 <p className="text-sm">
-                  이 운용사가 DART 엔티티에 매칭되지 않아 업계 평판, 딜 히스토리,
-                  투자 성향 데이터를 표시할 수 없습니다. Entity Match 메뉴에서
-                  매칭을 수행해 주세요.
+                  이 운용사가 DART 엔티티에 매칭되지 않아 업계 평판, 딜
+                  히스토리, 투자 성향 데이터를 표시할 수 없습니다. Entity Match
+                  메뉴에서 매칭을 수행해 주세요.
                 </p>
               </div>
             </Card>
@@ -361,7 +377,12 @@ export default function GPDetailPage() {
 
       {/* ─── Funds Tab ─── */}
       {activeTab === "funds" && (
-        <div className="space-y-4" role="tabpanel" id="tabpanel-funds" aria-labelledby="tab-funds">
+        <div
+          className="space-y-4"
+          role="tabpanel"
+          id="tabpanel-funds"
+          aria-labelledby="tab-funds"
+        >
           <Card padding="none">
             {!fundsData?.items.length ? (
               <EmptyState
@@ -424,7 +445,11 @@ export default function GPDetailPage() {
 
       {/* ─── Tendency Tab ─── */}
       {activeTab === "tendency" && (
-        <div role="tabpanel" id="tabpanel-tendency" aria-labelledby="tab-tendency">
+        <div
+          role="tabpanel"
+          id="tabpanel-tendency"
+          aria-labelledby="tab-tendency"
+        >
           {!hasCorpCode ? (
             <Card>
               <EmptyState
@@ -486,6 +511,27 @@ export default function GPDetailPage() {
                 ))}
               </div>
             </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── IB Insights Tab ─── */}
+      {activeTab === "ib-insights" && (
+        <div
+          role="tabpanel"
+          id="tabpanel-ib-insights"
+          aria-labelledby="tab-ib-insights"
+        >
+          {!hasCorpCode ? (
+            <Card>
+              <EmptyState
+                icon={FileSearch}
+                title="IB 인사이트 데이터 없음"
+                description="DART 엔티티 매칭이 필요합니다."
+              />
+            </Card>
+          ) : (
+            <IBInsightsPanel corpCode={corpCode} />
           )}
         </div>
       )}

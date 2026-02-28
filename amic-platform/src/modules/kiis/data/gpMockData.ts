@@ -5,6 +5,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "imm",
     name: "IMM인베스트먼트",
     nameEn: "IMM Investment",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/9ec0cfcdadc055b83595f19ff09a5222d9e98bd581fcd66e627f82141cdaab97_1745908361110922.jpg",
     established: "1999.06",
     licenses: ["pef"],
     sponsorType: "independent",
@@ -152,6 +154,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "stic",
     name: "스틱인베스트먼트",
     nameEn: "STIC Investments",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/c5acd676b5045c2b0b3490d2e93edba3d557fe5b8492c8ddd34997d4baed5f64_1708230603827238.jpg",
     established: "1999.11",
     licenses: ["pef"],
     sponsorType: "independent",
@@ -265,6 +269,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "mbk",
     name: "MBK파트너스",
     nameEn: "MBK Partners",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/7eb3bcf73546b2822cc60401310c90816e546a9ffce76ba049ec302196e7d1ab_1650275763857477.jpg",
     established: "2005.03",
     licenses: ["pef"],
     sponsorType: "independent",
@@ -386,6 +392,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "hahn",
     name: "한앤컴퍼니",
     nameEn: "Hahn & Company",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/7fb71e01d5d6c37ce75e13cdfd7d4febe3652978bbaef92d6aa1bb45baaeb93e_1704388744326259.jpg",
     established: "2010.01",
     licenses: ["pef"],
     sponsorType: "independent",
@@ -504,6 +512,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "glenwood",
     name: "글랜우드프라이빗에퀴티",
     nameEn: "Glenwood Private Equity",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/930768e7e08431188e0760d94557d43bd2801327a86d963d92325733551ca9ab_1730339658177784.jpg",
     established: "2012.07",
     licenses: ["pef", "vc"],
     sponsorType: "independent",
@@ -610,6 +620,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "kb-invest",
     name: "KB인베스트먼트",
     nameEn: "KB Investment",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/9722fbb9c8b0ca1eff7d72a15be6eca7e09884a207e7d7707660faecd04d86ae_1646662511432117.jpg",
     established: "2008.04",
     licenses: ["vc"],
     sponsorType: "financial_group",
@@ -722,6 +734,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "shinhan-vc",
     name: "신한벤처투자",
     nameEn: "Shinhan Venture Investment",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/2710b0de00c920458508fce39ea93adc8ebe4c35705c946ab487ca4069bd5188_1666320283266265.jpg",
     established: "2010.09",
     licenses: ["vc"],
     sponsorType: "financial_group",
@@ -823,6 +837,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "hyundai-cvc",
     name: "현대자동차 CVC",
     nameEn: "Hyundai Motor CVC",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/9a516939d90504a817732255a13e7a580644f8e4de8c0d5749b521e6da30d507_1646660349431231.jpg",
     established: "2018.03",
     licenses: ["vc", "nta"],
     sponsorType: "corporate_cvc",
@@ -934,6 +950,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "sk-square",
     name: "SK스퀘어",
     nameEn: "SK Square",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/d8c9693eaa2d5105904f0aee15fb2134a8f5a79a5f12d555f90993512b82a746_1646661295539035.jpg",
     established: "2021.11",
     licenses: ["pef", "nta"],
     sponsorType: "holding_cvc",
@@ -1044,6 +1062,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "dsc",
     name: "DSC인베스트먼트",
     nameEn: "DSC Investment",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/4a358da0a73922a30a18b6c20a3ff5a6103288a8fb1e1236ea2277b3af912f90_1649055570428726.jpg",
     established: "2007.05",
     licenses: ["vc"],
     sponsorType: "independent",
@@ -1155,6 +1175,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "softbank-va",
     name: "소프트뱅크벤처스아시아",
     nameEn: "SoftBank Ventures Asia",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/cb5b7c13cb73fe10cb0809c2a71d019b0d67082658270e9e5c96f168962d5591_1718684116033849.jpg",
     established: "2000.07",
     licenses: ["vc"],
     sponsorType: "corporate_cvc",
@@ -1262,6 +1284,8 @@ export const GP_MOCK_DATA: GPResearchItem[] = [
     id: "hanwha-pe",
     name: "한화투자증권 PE",
     nameEn: "Hanwha Investment PE",
+    logoUrl:
+      "https://logo-resources.thevc.kr/organizations/200x200/5d839bc69c2f3d8c3f2e612dded845bf668071721efb08123d15b2b8b47031de_1666421911599904.jpg",
     established: "2015.01",
     licenses: ["pef", "nta"],
     sponsorType: "financial_group",

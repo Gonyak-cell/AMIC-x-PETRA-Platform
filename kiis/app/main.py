@@ -24,6 +24,7 @@ from app.routers import (
     deals,
     disclosures,
     entity,
+    ib_insights,
     kofia,
     logo,
     managers,
@@ -111,8 +112,10 @@ async def lifespan(app: FastAPI):
     logger.info("KIIS application started")
     yield
     # Shutdown
+    from app.routers.ib_insights import close_ib_services
     from app.routers.kofia import close_kofia_service
 
+    await close_ib_services()
     await close_kofia_service()
     await close_scheduler()
     await close_elasticsearch()
@@ -145,6 +148,7 @@ app = FastAPI(
         {"name": "Watchlist", "description": "관심 기업 모니터링"},
         {"name": "Alerts", "description": "알림 이력 관리"},
         {"name": "Logo", "description": "GP 로고 크롤링 관리"},
+        {"name": "IB Insights", "description": "IB 전문 매체 기사 수집 및 인사이트 분석"},
     ],
 )
 
@@ -199,6 +203,7 @@ app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboar
 app.include_router(alerts.watchlist_router, prefix="/api/v1/watchlist", tags=["Watchlist"])
 app.include_router(alerts.alerts_router, prefix="/api/v1/alerts", tags=["Alerts"])
 app.include_router(logo.router, prefix="/api/v1/logo", tags=["Logo"])
+app.include_router(ib_insights.router, prefix="/api/v1", tags=["IB Insights"])
 
 from app.routers import audit as audit_router  # noqa: E402
 

@@ -19,9 +19,11 @@ const SENTIMENT_LABELS: Record<SentimentType, string> = {
   negative: "Negative",
 };
 
+const NEUTRAL_DEADZONE = 0.1;
+
 function deriveSentiment(score: number): SentimentType {
-  if (score > 0) return "positive";
-  if (score < 0) return "negative";
+  if (score > NEUTRAL_DEADZONE) return "positive";
+  if (score < -NEUTRAL_DEADZONE) return "negative";
   return "neutral";
 }
 
@@ -29,13 +31,13 @@ export default function SentimentIndicator({
   score,
   className,
 }: SentimentIndicatorProps) {
-  if (score == null) return <span className="text-text-secondary text-xs">-</span>;
+  if (score == null)
+    return <span className="text-text-secondary text-xs">-</span>;
 
   const sentiment = deriveSentiment(score);
 
   return (
     <span
-      role="status"
       aria-label={`Sentiment: ${SENTIMENT_LABELS[sentiment]} (${(score * 100).toFixed(0)}%)`}
       className={cn(
         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
