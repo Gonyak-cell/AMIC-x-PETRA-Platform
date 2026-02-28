@@ -122,7 +122,7 @@ async def test_update_status(client) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "CONFIRMED"
-    assert data["equity_share_pct"] == 30.0
+    assert data["equity_share_pct"] == "30.00"
 
 
 async def test_delete_mapping(client) -> None:

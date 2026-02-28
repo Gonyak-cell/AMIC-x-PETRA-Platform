@@ -1,13 +1,13 @@
 # AMIC x PETRA Platform — 문서 색인
 
-> 최종 업데이트: 2026-02-27 14:07:00
+> 최종 업데이트: 2026-02-28 14:45:00
 
 ## 폴더 구조
 
 | 카테고리 | 폴더 | 설명 | 문서 수 |
 |---------|------|------|--------|
 | 아키텍처 | `architecture/` | 전체 프로젝트 구조, 통합 계획, 포털 설계, M&A 워크플로우, Ralph Loop, VDR, 로깅/에러코드, 재무모델 | 34 |
-| 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 35 |
+| 코드 리뷰 | `code-review/` | 코드 리뷰 리포트, 프롬프트, 프로토콜 | 36 |
 | 보안 | `security/` | 보안 감사, JWT/인증 마이그레이션 | 2 |
 | 배포 | `deployment/` | 배포 체크리스트, 빌드 리포트, 개발환경 포트, 프로덕션 가이드, 에러 카탈로그 | 18 |
 | FDD 모듈 | `fdd/` | FDD 백엔드 워크플로, 템플릿, LLM 프롬프트, 코드 리뷰, 감사 | 5 |
@@ -97,6 +97,7 @@
 | `20260225_2136_RFI_Module_Code_Review_Prompts.md` | **RFI 모듈 코드 리뷰 프롬프트** — 세션 A(백엔드 11파일, 8관점) + 세션 B(프론트엔드 6파일, 7관점) |
 | `20260225_2136_RFI_Module_Backend_Code_Review.md` | **RFI 백엔드 코드 리뷰 리포트** — 26건 (Critical 2 + Major 7 + Moderate 13 + Minor 4), 거부 가설 5건 |
 | `20260225_2136_RFI_Module_Frontend_Code_Review.md` | **RFI 프론트엔드 코드 리뷰 리포트** — 23건 (Major 1 + Moderate 12 + Minor 10), FE↔BE 정합성, 접근성 |
+| `20260228_1445_MA_Consortium_Mapping_Code_Review.md` | **MA 컨소시엄/공동투자 매핑 코드 리뷰** — 18건 (Critical 1 + Major 1 + Moderate 8 + Minor 8), 5-에이전트 병렬 + 10건 교차검증, FP 1건 제거, 심각도 하향 8건 |
 
 ## security/ (2)
 

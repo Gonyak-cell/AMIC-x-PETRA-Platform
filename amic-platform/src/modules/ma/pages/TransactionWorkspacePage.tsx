@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  Navigate,
+} from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowLeft,
@@ -382,7 +387,7 @@ export default function TransactionWorkspacePage() {
   const { txnId, "*": splat } = useParams<{ txnId: string; "*": string }>();
   const navigate = useNavigate();
   const { canWrite, isClient } = useAuth();
-  const id = txnId!;
+  const id = txnId ?? "";
 
   // URL 기반 탭 결정
   const VALID_TABS = [
@@ -522,6 +527,9 @@ export default function TransactionWorkspacePage() {
   const createEngagement = useCreateEngagement(id);
   const addMember = useAddMember(id);
   const addBuyer = useAddBuyer(id);
+  const updateBuyer = useUpdateBuyer(id);
+  const exportExcel = useExportBuyerExcel(id);
+  const { data: shortListOverview } = useShortListOverview(id);
 
   // Mutations — Phase 2
   const createNda = useCreateNda(id);
@@ -808,6 +816,7 @@ export default function TransactionWorkspacePage() {
         ? (PHASE_TAB_MAP[viewedPhase] ?? "overview")
         : "overview";
 
+  if (!txnId) return <Navigate to="/ma/transactions" replace />;
   if (isLoading) return <Spinner size="lg" />;
   if (!txn)
     return (
@@ -1794,10 +1803,6 @@ export default function TransactionWorkspacePage() {
       {/* ── Buyers 탭 (Long List / Short List) ─────────── */}
       {safeActiveTab === "buyers" &&
         (() => {
-          const updateBuyer = useUpdateBuyer(id);
-          const exportExcel = useExportBuyerExcel(id);
-          const { data: shortListOverview } = useShortListOverview(id);
-
           const tierOptions = BUYER_TIER_OPTIONS.filter((o) => o.value !== "");
 
           const buyerColumns: Column<BuyerCandidate>[] = [

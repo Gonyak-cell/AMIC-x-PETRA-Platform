@@ -2,11 +2,11 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { Search } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { PageHero, SlidePanel } from "@/components/ui";
-import type {
-  LicenseType,
-  GPResearchItem,
-} from "@/modules/kiis/types/gpResearch";
-import { GP_MOCK_DATA } from "@/modules/kiis/data/gpMockData";
+import type { LicenseType } from "@/modules/kiis/types/gpResearch";
+import {
+  useGPResearchList,
+  useGPResearchDetail,
+} from "@/modules/kiis/hooks/useGPResearch";
 import { GPSegmentControl } from "@/modules/kiis/components/GPSegmentControl";
 import { GPMasterList } from "@/modules/kiis/components/GPMasterList";
 import { GPDetailOverlay } from "@/modules/kiis/components/GPDetailOverlay";
@@ -21,6 +21,9 @@ export default function GPResearchPage() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const { data: gpData = [], isLoading } = useGPResearchList();
+  const { data: selectedGP = null } = useGPResearchDetail(selectedGPId);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     clearTimeout(timerRef.current);
@@ -29,7 +32,7 @@ export default function GPResearchPage() {
 
   // 필터링 & 정렬
   const filteredData = useMemo(() => {
-    let result = GP_MOCK_DATA;
+    let result = gpData;
 
     // 라이선스 필터
     if (selectedLicenses.size > 0) {
@@ -51,12 +54,7 @@ export default function GPResearchPage() {
 
     // AUM 내림차순 정렬
     return [...result].sort((a, b) => b.cumAum - a.cumAum);
-  }, [selectedLicenses, debouncedQuery]);
-
-  const selectedGP = useMemo<GPResearchItem | null>(
-    () => GP_MOCK_DATA.find((gp) => gp.id === selectedGPId) ?? null,
-    [selectedGPId],
-  );
+  }, [gpData, selectedLicenses, debouncedQuery]);
 
   const gridRef = useRef<HTMLDivElement>(null);
   useScrollReveal(gridRef, { stagger: 0.04, y: 16 }, [filteredData.length]);
@@ -91,11 +89,17 @@ export default function GPResearchPage() {
 
       {/* 마스터 리스트 */}
       <div ref={gridRef}>
-        <GPMasterList
-          data={filteredData}
-          selectedId={selectedGPId}
-          onSelect={setSelectedGPId}
-        />
+        {isLoading ? (
+          <p className="py-12 text-center text-sm text-text-secondary">
+            운용사 데이터를 불러오는 중...
+          </p>
+        ) : (
+          <GPMasterList
+            data={filteredData}
+            selectedId={selectedGPId}
+            onSelect={setSelectedGPId}
+          />
+        )}
       </div>
 
       {/* 상세 오버레이 */}

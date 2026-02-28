@@ -7,6 +7,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -36,7 +37,7 @@ def _build_out(mapping: ConsortiumMapping, lead_name: str, co_name: str) -> dict
         "co_investor_buyer_id": mapping.co_investor_buyer_id,
         "co_investor_buyer_name": co_name,
         "status": mapping.status,
-        "equity_share_pct": float(mapping.equity_share_pct) if mapping.equity_share_pct is not None else None,
+        "equity_share_pct": mapping.equity_share_pct,
         "notes": mapping.notes,
         "created_at": mapping.created_at,
         "updated_at": mapping.updated_at,
@@ -133,7 +134,14 @@ async def create_consortium_mapping(
         notes=body.notes,
     )
     db.add(mapping)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="동일 Lead-Co 쌍의 매핑이 이미 존재합니다",
+        )
 
     await audit_service.record(
         db,
@@ -172,6 +180,11 @@ async def update_consortium_mapping(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="컨소시엄 매핑을 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
+    if "status" in update_data and update_data["status"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="status는 null로 설정할 수 없습니다",
+        )
     for k, v in update_data.items():
         setattr(mapping, k, v)
 
@@ -186,10 +199,17 @@ async def update_consortium_mapping(
     await db.commit()
     await db.refresh(mapping)
 
-    # 회사명 조회
-    lead_buyer = await _validate_buyer_in_txn(db, txn_id, mapping.lead_buyer_id, "Lead")
-    co_buyer = await _validate_buyer_in_txn(db, txn_id, mapping.co_investor_buyer_id, "Co")
-    return ConsortiumMappingOut(**_build_out(mapping, lead_buyer.company_name, co_buyer.company_name))
+    # 회사명 조회 — aliased join으로 1회 쿼리
+    lead = aliased(BuyerCandidate)
+    co = aliased(BuyerCandidate)
+    q = (
+        select(ConsortiumMapping, lead.company_name, co.company_name)
+        .join(lead, ConsortiumMapping.lead_buyer_id == lead.id)
+        .join(co, ConsortiumMapping.co_investor_buyer_id == co.id)
+        .where(ConsortiumMapping.id == mapping.id)
+    )
+    row = (await db.execute(q)).one()
+    return ConsortiumMappingOut(**_build_out(row[0], row[1], row[2]))
 
 
 # ── 삭제 ────────────────────────────────────────────────
@@ -203,6 +223,8 @@ async def delete_consortium_mapping(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
     """컨소시엄 매핑 삭제."""
+    await check_client_deal_access(db, txn_id, claims)
+
     q = select(ConsortiumMapping).where(
         ConsortiumMapping.id == mapping_id,
         ConsortiumMapping.transaction_id == txn_id,

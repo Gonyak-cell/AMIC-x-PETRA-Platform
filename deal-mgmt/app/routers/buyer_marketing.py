@@ -10,12 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.database import get_db
+from app.core.dependencies import get_kiis_client
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.buyer_marketing_log import BuyerMarketingLog
-from app.models.enums import AuditAction, MarketingStage
+from app.models.consortium_mapping import ConsortiumMapping
+from app.models.enums import AuditAction, BuyerTier, MarketingStage
 from app.schemas.marketing_log import (
     BuyerStageSummary,
     DartFinancialSummaryOut,
@@ -24,6 +27,8 @@ from app.schemas.marketing_log import (
     MarketingLogUpdate,
 )
 from app.services import audit_service, transaction_service
+from app.services.buyer_export_service import build_buyer_excel
+from app.services.protocols import KIISClientProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -226,8 +231,6 @@ async def short_list_marketing_overview(
     await check_client_deal_access(db, txn_id, claims)
 
     # Short-List = tier IS NOT NULL AND tier != NOT_TARGET
-    from app.models.enums import BuyerTier
-
     buyers_q = select(BuyerCandidate.id).where(
         BuyerCandidate.transaction_id == txn_id,
         BuyerCandidate.tier.isnot(None),
@@ -277,14 +280,13 @@ async def dart_company_search(
     q: str = Query(..., min_length=1, alias="q"),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
+    kiis: KIISClientProtocol = Depends(get_kiis_client),
 ) -> list[dict]:
     """DART 기업 typeahead 검색 — KIIS 서비스 경유."""
-    await transaction_service.get_transaction(db, txn_id)
-
-    from app.services.kiis_client import kiis_client
+    await check_client_deal_access(db, txn_id, claims)
 
     try:
-        results = await kiis_client.search_company(q)
+        results = await kiis.search_company(q)
         return results[:20]  # 최대 20건 반환
     except Exception:
         logger.warning("DART 기업 검색 실패: query=%s", q, exc_info=True)
@@ -297,6 +299,7 @@ async def dart_financial_summary(
     buyer_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
+    kiis: KIISClientProtocol = Depends(get_kiis_client),
 ) -> DartFinancialSummaryOut:
     """매수자의 DART 재무 요약 — corp_code 기반."""
     await check_client_deal_access(db, txn_id, claims)
@@ -308,10 +311,8 @@ async def dart_financial_summary(
             detail="corp_code가 설정되지 않았습니다. 회사명으로 DART 기업을 먼저 매핑하세요.",
         )
 
-    from app.services.kiis_client import kiis_client
-
     try:
-        summary = await kiis_client.get_financial_summary(buyer.corp_code)
+        summary = await kiis.get_financial_summary(buyer.corp_code)
         return DartFinancialSummaryOut(**summary)
     except Exception:
         logger.warning("DART 재무 요약 조회 실패: corp_code=%s", buyer.corp_code, exc_info=True)
@@ -339,10 +340,6 @@ async def export_buyers_excel(
     buyers = list(result.scalars().all())
 
     # 마케팅 최신 stage/log_date 집계
-    from sqlalchemy.orm import aliased
-
-    from app.models.consortium_mapping import ConsortiumMapping
-
     mkt_q = (
         select(
             BuyerMarketingLog.buyer_id,
@@ -383,8 +380,6 @@ async def export_buyers_excel(
         lead_id, co_id, lead_name, co_name = row[0], row[1], row[2], row[3]
         consortium_map.setdefault(lead_id, []).append(co_name)
         consortium_map.setdefault(co_id, []).append(lead_name)
-
-    from app.services.buyer_export_service import build_buyer_excel
 
     wb = build_buyer_excel(
         buyers,

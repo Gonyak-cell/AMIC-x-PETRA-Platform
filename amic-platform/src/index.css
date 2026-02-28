@@ -171,23 +171,34 @@
   }
 }
 
-/* ── Login Page: Dark Theme for Mobile (forest background) ── */
-@media (max-width: 1023px) {
-  .login-dark-theme label {
-    color: rgba(255, 255, 255, 0.75);
-  }
-  .login-dark-theme input {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-  }
-  .login-dark-theme input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
-  }
-  .login-dark-theme input:focus {
-    border-color: #26C260;
-    box-shadow: 0 0 0 2px rgba(38, 194, 96, 0.25);
-  }
+/* ── Login Hero: PEF-style dark theme ── */
+.login-hero label {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.login-hero input {
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  transition: border-color 0.3s ease;
+}
+.login-hero input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.login-hero input:focus {
+  border-bottom-color: #26C260 !important;
+  box-shadow: 0 1px 0 0 #26C260 !important;
+  outline: none;
+}
+.login-hero input:hover:not(:focus) {
+  border-bottom-color: rgba(255, 255, 255, 0.45) !important;
 }
 
 /* ── Accessibility: Reduced Motion ── */

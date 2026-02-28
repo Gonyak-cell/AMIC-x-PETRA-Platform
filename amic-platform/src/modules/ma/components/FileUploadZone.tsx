@@ -22,6 +22,7 @@ import {
   useDeleteAttachment,
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
+import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
 
 interface FileUploadZoneProps {
   txnId: string;
@@ -35,20 +36,6 @@ interface FileUploadZoneProps {
   readOnly?: boolean;
   /** 커스텀 제목 */
   title?: string;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
 }
 
 function validateFile(file: File): string | null {
@@ -161,7 +148,7 @@ export default function FileUploadZone({
                   {formatFileSize(att.file_size_bytes)}
                 </td>
                 <td className="px-4 py-2 text-slate-500">
-                  {formatDate(att.created_at)}
+                  {formatISODate(att.created_at)}
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-1">

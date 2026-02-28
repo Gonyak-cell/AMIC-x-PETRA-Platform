@@ -142,7 +142,7 @@ async def test_update_buyer_ioi(client):
         },
     )
     assert resp.status_code == 200
-    assert resp.json()["ioi_value"] == 50000000000
+    assert resp.json()["ioi_value"] == "50000000000.00"
     assert resp.json()["ioi_date"] == "2026-03-15"
     assert resp.json()["status"] == "IOI_RECEIVED"
 
@@ -160,7 +160,7 @@ async def test_update_buyer_loi(client):
         },
     )
     assert resp.status_code == 200
-    assert resp.json()["loi_value"] == 55000000000
+    assert resp.json()["loi_value"] == "55000000000.00"
 
 
 async def test_update_buyer_rejection(client):
@@ -246,5 +246,5 @@ async def test_buyer_summary_with_data(client):
     assert data["total"] == 3
     assert data["by_status"]["IOI_RECEIVED"] == 2
     assert data["by_status"]["NDA_SENT"] == 1
-    assert data["avg_ioi_value"] == 55000000000
+    assert data["avg_ioi_value"] == "55000000000.00"
     assert data["avg_loi_value"] is None

@@ -3,13 +3,7 @@ import { Upload, Download, Trash2, FileText, Clock } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Input } from "@/components/ui";
 import type { ContractMarkup } from "@/modules/ma/types/contract_markup";
 import { getMarkupDownloadUrl } from "@/modules/ma/hooks/useContractMarkups";
-
-function formatFileSize(bytes: number | null): string {
-  if (!bytes) return "-";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { formatFileSize } from "@/modules/ma/utils/format";
 
 interface ContractMarkupTimelineProps {
   txnId: string;
@@ -69,7 +63,10 @@ export default function ContractMarkupTimeline({
         )}
         <div className="space-y-3">
           {markups.map((markup) => (
-            <div key={markup.id} className="relative flex items-start gap-3 pl-2">
+            <div
+              key={markup.id}
+              className="relative flex items-start gap-3 pl-2"
+            >
               <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-primary-300 bg-white text-xs font-semibold text-primary-600">
                 {markup.version_number}
               </div>
@@ -88,7 +85,11 @@ export default function ContractMarkupTimeline({
                   <div className="flex items-center gap-1.5">
                     {markup.file_name && (
                       <a
-                        href={getMarkupDownloadUrl(txnId, contractId, markup.id)}
+                        href={getMarkupDownloadUrl(
+                          txnId,
+                          contractId,
+                          markup.id,
+                        )}
                         className="text-primary-600 hover:text-primary-700"
                         title="다운로드"
                       >
@@ -108,19 +109,25 @@ export default function ContractMarkupTimeline({
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
                   {markup.file_name && <span>{markup.file_name}</span>}
-                  {markup.file_size_bytes && <span>{formatFileSize(markup.file_size_bytes)}</span>}
+                  {markup.file_size_bytes && (
+                    <span>{formatFileSize(markup.file_size_bytes)}</span>
+                  )}
                   <span className="flex items-center gap-0.5">
                     <Clock className="h-3 w-3" />
                     {new Date(markup.created_at).toLocaleDateString("ko-KR")}
                   </span>
                 </div>
                 {markup.changes_summary && (
-                  <p className="text-xs text-text-secondary mt-1.5">{markup.changes_summary}</p>
+                  <p className="text-xs text-text-secondary mt-1.5">
+                    {markup.changes_summary}
+                  </p>
                 )}
                 {markup.key_changes && markup.key_changes.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {markup.key_changes.map((kc, i) => (
-                      <Badge key={i} variant="neutral">{kc}</Badge>
+                      <Badge key={i} variant="neutral">
+                        {kc}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -133,7 +140,9 @@ export default function ContractMarkupTimeline({
       {/* 업로드 */}
       {canWrite && (
         <Card className="p-4 border-dashed">
-          <p className="text-sm font-medium text-text-dark mb-3">새 버전 업로드</p>
+          <p className="text-sm font-medium text-text-dark mb-3">
+            새 버전 업로드
+          </p>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[160px]">
               <Input
@@ -152,7 +161,9 @@ export default function ContractMarkupTimeline({
               />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-text-secondary mb-1">파일</label>
+              <label className="block text-xs text-text-secondary mb-1">
+                파일
+              </label>
               <input
                 ref={fileRef}
                 type="file"
@@ -161,7 +172,7 @@ export default function ContractMarkupTimeline({
               />
             </div>
             <Button
-                            icon={Upload}
+              icon={Upload}
               onClick={handleFileUpload}
               disabled={isUploading}
             >

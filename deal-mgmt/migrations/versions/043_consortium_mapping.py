@@ -117,6 +117,10 @@ def upgrade() -> None:
             "lead_buyer_id != co_investor_buyer_id",
             name="ck_no_self_consortium",
         ),
+        sa.CheckConstraint(
+            "equity_share_pct >= 0 AND equity_share_pct <= 100",
+            name="ck_equity_share_range",
+        ),
         sa.UniqueConstraint(
             "transaction_id",
             "lead_buyer_id",

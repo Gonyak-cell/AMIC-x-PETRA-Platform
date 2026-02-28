@@ -48,7 +48,7 @@ export interface BuyerCandidate {
   final_offer_value: number | null;
   rejection_reason: string | null;
   notes: string | null;
-  extra_data: Record<string, unknown>;
+  extra_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

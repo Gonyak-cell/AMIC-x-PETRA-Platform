@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Mail,
@@ -112,7 +112,8 @@ function ExpandedContent({
           className="text-xs text-negative hover:underline"
           onClick={(e) => {
             e.stopPropagation();
-            deleteLog.mutate(r.id);
+            if (window.confirm("마케팅 로그를 삭제하시겠습니까?"))
+              deleteLog.mutate(r.id);
           }}
         >
           삭제
@@ -351,8 +352,27 @@ export default function ShortListOverview({
   canWrite,
 }: ShortListOverviewProps) {
   const tierOrder = ["TIER_1", "TIER_2", "TIER_3"];
-  const shortListBuyers = buyers.filter(
-    (b) => b.tier && tierOrder.includes(b.tier),
+  const shortListBuyers = useMemo(
+    () => buyers.filter((b) => b.tier && tierOrder.includes(b.tier)),
+    [buyers],
+  );
+
+  // overviewData에서 buyer_id → BuyerStageSummary 매핑 (개별 API 호출 방지)
+  const summaryMap = useMemo(
+    () => new Map(overviewData.map((s) => [s.buyer_id, s])),
+    [overviewData],
+  );
+
+  const grouped = useMemo(
+    () =>
+      tierOrder
+        .map((tier) => ({
+          tier,
+          label: BUYER_TIER_LABELS[tier] ?? tier,
+          buyers: shortListBuyers.filter((b) => b.tier === tier),
+        }))
+        .filter((g) => g.buyers.length > 0),
+    [shortListBuyers],
   );
 
   if (!shortListBuyers.length) {
@@ -364,17 +384,6 @@ export default function ShortListOverview({
       />
     );
   }
-
-  // overviewData에서 buyer_id → BuyerStageSummary 매핑 (개별 API 호출 방지)
-  const summaryMap = new Map(overviewData.map((s) => [s.buyer_id, s]));
-
-  const grouped = tierOrder
-    .map((tier) => ({
-      tier,
-      label: BUYER_TIER_LABELS[tier] ?? tier,
-      buyers: shortListBuyers.filter((b) => b.tier === tier),
-    }))
-    .filter((g) => g.buyers.length > 0);
 
   return (
     <div className="space-y-4">

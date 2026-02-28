@@ -29,7 +29,11 @@ interface Props {
 }
 
 export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
-  const { data: mappings = [], isLoading } = useConsortiumMappings(txnId);
+  const {
+    data: mappings = [],
+    isLoading,
+    isError,
+  } = useConsortiumMappings(txnId);
   const createMapping = useCreateConsortiumMapping(txnId);
   const updateMapping = useUpdateConsortiumMapping(txnId);
   const deleteMapping = useDeleteConsortiumMapping(txnId);
@@ -178,6 +182,10 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
           <div className="flex h-24 items-center justify-center text-sm text-slate-400">
             불러오는 중...
           </div>
+        ) : isError ? (
+          <div className="flex h-24 items-center justify-center text-sm text-negative">
+            컨소시엄 매핑을 불러오지 못했습니다.
+          </div>
         ) : mappings.length === 0 ? (
           <div className="flex h-24 items-center justify-center text-sm text-slate-400">
             등록된 컨소시엄 매핑이 없습니다.
@@ -211,6 +219,7 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                       <select
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[m.status] ?? ""}`}
                         value={m.status}
+                        disabled={updateMapping.isPending}
                         onChange={(e) =>
                           updateMapping.mutate({
                             mappingId: m.id,
@@ -246,7 +255,12 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                         type="button"
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-negative"
                         title="삭제"
-                        onClick={() => deleteMapping.mutate(m.id)}
+                        onClick={() => {
+                          if (
+                            window.confirm("컨소시엄 매핑을 삭제하시겠습니까?")
+                          )
+                            deleteMapping.mutate(m.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

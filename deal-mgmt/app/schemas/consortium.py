@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +21,7 @@ class ConsortiumMappingOut(BaseModel):
     co_investor_buyer_id: uuid.UUID
     co_investor_buyer_name: str
     status: ConsortiumStatus
-    equity_share_pct: float | None = None
+    equity_share_pct: Decimal | None = None
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -30,11 +31,11 @@ class ConsortiumMappingCreate(BaseModel):
     lead_buyer_id: uuid.UUID
     co_investor_buyer_id: uuid.UUID
     status: ConsortiumStatus = ConsortiumStatus.TAPPING
-    equity_share_pct: float | None = Field(None, ge=0, le=100)
+    equity_share_pct: Decimal | None = Field(None, ge=0, le=100)
     notes: str | None = None
 
 
 class ConsortiumMappingUpdate(BaseModel):
     status: ConsortiumStatus | None = None
-    equity_share_pct: float | None = Field(None, ge=0, le=100)
+    equity_share_pct: Decimal | None = Field(None, ge=0, le=100)
     notes: str | None = None

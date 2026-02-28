@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,11 +23,11 @@ class BuyerCandidateOut(BaseModel):
     tier: BuyerTier | None = None
     corp_code: str | None = None
     deal_role: DealRole | None = None
-    ioi_value: float | None = None
+    ioi_value: Decimal | None = None
     ioi_date: str | None = None
-    loi_value: float | None = None
+    loi_value: Decimal | None = None
     loi_date: str | None = None
-    final_offer_value: float | None = None
+    final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
     notes: str | None = None
     extra_data: dict | None = None
@@ -57,11 +58,11 @@ class BuyerCandidateUpdate(BaseModel):
     tier: BuyerTier | None = None
     corp_code: str | None = Field(None, max_length=8)
     deal_role: DealRole | None = None
-    ioi_value: float | None = None
+    ioi_value: Decimal | None = None
     ioi_date: str | None = Field(None, max_length=10)
-    loi_value: float | None = None
+    loi_value: Decimal | None = None
     loi_date: str | None = Field(None, max_length=10)
-    final_offer_value: float | None = None
+    final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
     notes: str | None = None
     extra_data: dict | None = None
@@ -71,5 +72,5 @@ class BuyerPipelineSummary(BaseModel):
     total: int
     by_status: dict[str, int]
     by_tier: dict[str, int] = Field(default_factory=dict)
-    avg_ioi_value: float | None = None
-    avg_loi_value: float | None = None
+    avg_ioi_value: Decimal | None = None
+    avg_loi_value: Decimal | None = None

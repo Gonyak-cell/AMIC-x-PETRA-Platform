@@ -17,7 +17,7 @@ class TestVdrInit:
         resp = await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
         assert resp.status_code == 201
         folders = resp.json()
-        assert len(folders) == 11
+        assert len(folders) == 12
         # 필수 폴더 4개 확인
         required = [f for f in folders if f["is_required"]]
         assert len(required) == 4
@@ -48,7 +48,7 @@ class TestVdrFolders:
         resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
         assert resp.status_code == 200
         tree = resp.json()
-        assert len(tree) == 11
+        assert len(tree) == 12
         # 각 폴더에 document_count 필드 존재
         assert all("document_count" in f for f in tree)
 
@@ -228,7 +228,7 @@ class TestVdrSummary:
         resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
         data = resp.json()
         assert data["initialized"] is True
-        assert data["total_folders"] == 11
+        assert data["total_folders"] == 12
         assert data["total_documents"] == 1
         assert data["total_size_bytes"] == 5
 
@@ -429,7 +429,7 @@ class TestVdrOverview:
         items = resp.json()
         item = next(i for i in items if i["transaction_id"] == transaction_id)
         assert item["vdr_initialized"] is True
-        assert item["total_folders"] == 11
+        assert item["total_folders"] == 12
         assert item["total_documents"] == 1
         assert item["total_size_bytes"] == len(content)
         assert item["last_upload_at"] is not None

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import uuid
 from dataclasses import dataclass
 
@@ -48,6 +49,9 @@ async def get_jwt_claims(
     deal-mgmt는 자체 User DB가 없으므로 클레임만 사용한다.
     """
     if not settings.AUTH_ENABLED:
+        _env = os.getenv("ENV", "").lower()
+        if _env in ("production", "prod", "staging", "stg"):
+            raise RuntimeError("CRITICAL: AUTH_ENABLED=False is forbidden in production/staging")
         return _DEV_CLAIMS
 
     credentials_exception = HTTPException(

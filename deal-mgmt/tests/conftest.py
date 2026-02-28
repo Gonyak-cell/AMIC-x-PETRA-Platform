@@ -65,9 +65,11 @@ from sqlalchemy.pool import StaticPool
 SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
 
 from app.core.database import get_db
+from app.core.dependencies import get_fdd_client, get_im_client, get_kiis_client
 from app.core.security import JWTClaims, get_jwt_claims
 from app.main import app
 from app.models import Base
+from app.services.mock_clients import MockFDDClient, MockIMClient, MockKIISClient
 
 # ── Test DB engine (SQLite in-memory) ──────────────────────
 _test_engine = create_async_engine(
@@ -111,6 +113,9 @@ async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
 # ── 의존성 오버라이드 적용 ─────────────────────────────────
 app.dependency_overrides[get_jwt_claims] = _override_get_jwt_claims
 app.dependency_overrides[get_db] = _override_get_db
+app.dependency_overrides[get_kiis_client] = MockKIISClient
+app.dependency_overrides[get_fdd_client] = MockFDDClient
+app.dependency_overrides[get_im_client] = MockIMClient
 
 
 # ── Fixtures ───────────────────────────────────────────────

@@ -31,3 +31,20 @@ export function formatDate(yyyymmdd: string): string {
   if (!yyyymmdd || yyyymmdd.length !== 8) return yyyymmdd || "-";
   return `${yyyymmdd.slice(0, 4)}.${yyyymmdd.slice(4, 6)}.${yyyymmdd.slice(6)}`;
 }
+
+/** ISO 날짜 문자열 → 한국어 날짜 (YYYY. MM. DD.) */
+export function formatISODate(iso: string): string {
+  return new Date(iso).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+/** 바이트 → 사람이 읽을 수 있는 크기 (B / KB / MB). */
+export function formatFileSize(bytes: number | null): string {
+  if (bytes == null || bytes === 0) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

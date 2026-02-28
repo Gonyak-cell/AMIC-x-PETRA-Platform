@@ -46,6 +46,3 @@ class FDDClient:
             )
             resp.raise_for_status()
             return resp.json()
-
-
-fdd_client = FDDClient()

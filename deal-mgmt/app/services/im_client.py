@@ -47,6 +47,3 @@ class IMClient:
             resp = await client.post(f"{self.base_url}/documents/{document_id}/regenerate")
             resp.raise_for_status()
             return resp.json()
-
-
-im_client = IMClient()

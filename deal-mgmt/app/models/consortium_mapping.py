@@ -1,6 +1,7 @@
 """컨소시엄/공동투자 매핑 — 동일 딜 내 매수자 간 N:M 관계."""
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
@@ -44,13 +45,17 @@ class ConsortiumMapping(Base, TimestampMixin):
     status: Mapped[ConsortiumStatus] = mapped_column(
         Enum(ConsortiumStatus), nullable=False, default=ConsortiumStatus.TAPPING
     )
-    equity_share_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    equity_share_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         CheckConstraint(
             "lead_buyer_id != co_investor_buyer_id",
             name="ck_no_self_consortium",
+        ),
+        CheckConstraint(
+            "equity_share_pct >= 0 AND equity_share_pct <= 100",
+            name="ck_equity_share_range",
         ),
         UniqueConstraint(
             "transaction_id",

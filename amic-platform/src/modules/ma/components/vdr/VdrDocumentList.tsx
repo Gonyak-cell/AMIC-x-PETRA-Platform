@@ -23,29 +23,17 @@ import {
   useSuggestVdrCategory,
 } from "@/modules/ma/hooks/useVdr";
 import { useCreateExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
+import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
 
 interface Props {
   txnId: string;
   folder: VdrFolder | null;
   documents: VdrDocument[];
   isLoading: boolean;
+  isUploading?: boolean;
   onUpload: (file: File) => void;
   onDelete: (docId: string) => void;
   onNavigateToFolder?: (category: string) => void;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
 }
 
 function validateFile(file: File): string | null {
@@ -69,6 +57,7 @@ export default function VdrDocumentList({
   folder,
   documents,
   isLoading,
+  isUploading,
   onUpload,
   onDelete,
   onNavigateToFolder,
@@ -99,7 +88,7 @@ export default function VdrDocumentList({
         });
       }
     },
-    [onUpload, folder, suggestCategory],
+    [onUpload, folder, suggestCategory.mutate],
   );
 
   const handleDrop = useCallback(
@@ -138,10 +127,11 @@ export default function VdrDocumentList({
         <Button
           variant="primary"
           size="sm"
+          disabled={isUploading}
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="mr-1 h-3.5 w-3.5" />
-          업로드
+          {isUploading ? "업로드 중..." : "업로드"}
         </Button>
         <input
           ref={fileInputRef}
@@ -246,7 +236,7 @@ export default function VdrDocumentList({
                     {formatFileSize(doc.file_size_bytes)}
                   </td>
                   <td className="px-4 py-2 text-slate-500">
-                    {formatDate(doc.created_at)}
+                    {formatISODate(doc.created_at)}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1">
@@ -271,7 +261,10 @@ export default function VdrDocumentList({
                         type="button"
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-negative"
                         title="삭제"
-                        onClick={() => onDelete(doc.id)}
+                        onClick={() => {
+                          if (window.confirm("이 문서를 삭제하시겠습니까?"))
+                            onDelete(doc.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

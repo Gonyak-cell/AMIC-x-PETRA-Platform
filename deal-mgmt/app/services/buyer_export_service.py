@@ -52,12 +52,12 @@ _ROLE_LABELS: dict[str, str] = {
 }
 
 _STAGE_LABELS: dict[str, str] = {
-    "INITIAL_CONTACT": "초기 접촉",
-    "NDA_PROCESS": "NDA 절차",
-    "CIM_DISTRIBUTION": "CIM 배포",
-    "IOI_PROCESS": "IOI 절차",
-    "DD_PROCESS": "DD 절차",
-    "FINAL_BID": "최종 입찰",
+    "IDENTIFIED": "발굴",
+    "EMAIL_SENT": "이메일 발송",
+    "PHONE_CALL": "전화 접촉",
+    "ADVISOR_MEETING": "어드바이저 미팅",
+    "NDA_SIGNED": "NDA 체결",
+    "TARGET_MEETING": "대상회사 미팅",
 }
 
 _HEADERS = [

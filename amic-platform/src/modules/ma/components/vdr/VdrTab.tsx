@@ -179,6 +179,7 @@ export default function VdrTab({ txnId }: Props) {
             folder={selectedFolder}
             documents={documents}
             isLoading={docsLoading}
+            isUploading={uploadDoc.isPending}
             onUpload={(file) => uploadDoc.mutate(file)}
             onDelete={(docId) => deleteDoc.mutate(docId)}
             onNavigateToFolder={(category) => {

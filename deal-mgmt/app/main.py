@@ -33,9 +33,9 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     await blob_client.close()
-    from app.services.kiis_client import kiis_client
+    from app.core.dependencies import close_all_clients
 
-    await kiis_client.close()
+    await close_all_clients()
     logger.info("Deal Management application stopped")
 
 
@@ -210,7 +210,8 @@ async def health_check():
         async with async_session_factory() as session:
             await session.execute(text("SELECT 1"))
         result["db"] = "ok"
-    except Exception:
+    except Exception as exc:
+        logger.error("Health check DB 연결 실패: %s", exc)
         result["status"] = "degraded"
         result["db"] = "error"
     return result

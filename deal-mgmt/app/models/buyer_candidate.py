@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import JSON, Enum, ForeignKey, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
@@ -29,11 +30,11 @@ class BuyerCandidate(Base, TimestampMixin):
     corp_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     # Financial
-    ioi_value: Mapped[float | None] = mapped_column(Numeric(20, 2), nullable=True)
+    ioi_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     ioi_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    loi_value: Mapped[float | None] = mapped_column(Numeric(20, 2), nullable=True)
+    loi_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     loi_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    final_offer_value: Mapped[float | None] = mapped_column(Numeric(20, 2), nullable=True)
+    final_offer_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
 
     # Notes
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

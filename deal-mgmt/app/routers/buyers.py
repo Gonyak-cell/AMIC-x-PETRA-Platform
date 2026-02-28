@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -19,6 +21,8 @@ from app.schemas.buyer import (
     BuyerPipelineSummary,
 )
 from app.services import audit_service, transaction_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/buyers", tags=["Buyers"])
 
@@ -61,16 +65,16 @@ async def buyer_summary(
 
     by_status: dict[str, int] = {}
     by_tier: dict[str, int] = {}
-    ioi_values: list[float] = []
-    loi_values: list[float] = []
+    ioi_values: list[Decimal] = []
+    loi_values: list[Decimal] = []
     for b in buyers:
         by_status[b.status.value] = by_status.get(b.status.value, 0) + 1
         if b.tier:
             by_tier[b.tier.value] = by_tier.get(b.tier.value, 0) + 1
         if b.ioi_value:
-            ioi_values.append(float(b.ioi_value))
+            ioi_values.append(b.ioi_value)
         if b.loi_value:
-            loi_values.append(float(b.loi_value))
+            loi_values.append(b.loi_value)
 
     return BuyerPipelineSummary(
         total=len(buyers),
@@ -89,6 +93,7 @@ async def add_buyer(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     buyer = BuyerCandidate(transaction_id=txn_id, **body.model_dump())
     db.add(buyer)
     await db.flush()
@@ -128,6 +133,7 @@ async def update_buyer(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:
@@ -157,6 +163,7 @@ async def remove_buyer(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:

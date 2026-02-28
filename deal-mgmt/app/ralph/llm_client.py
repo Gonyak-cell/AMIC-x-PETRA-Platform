@@ -344,7 +344,8 @@ class RalphLLMClient:
                     text, model_used, inp, out = await adapter.generate(system, user, model=model)
                     self._cost_tracker.add(model_used, inp, out)
                     return text
-                except Exception:
+                except Exception as exc:
+                    logger.warning("call_with_model 실패 (%s, model=%s): %s", adapter.provider_name, model, exc)
                     break  # 해당 프로바이더 실패 → 폴백
 
         # 2차: 나머지 어댑터 순회
@@ -355,7 +356,8 @@ class RalphLLMClient:
                 text, model_used, inp, out = await adapter.generate(system, user, model=model)
                 self._cost_tracker.add(model_used, inp, out)
                 return text
-            except Exception:
+            except Exception as exc:
+                logger.warning("call_with_model 폴백 실패 (%s): %s", adapter.provider_name, exc)
                 continue
 
         return await self.call(system, user)  # 최종 폴백
@@ -422,4 +424,12 @@ class RalphLLMClient:
             return await self.call_for_provider(system, user, provider=provider)
 
         coros = [_single(s, u, p) for s, u, p in tasks]
-        return await asyncio.gather(*coros)
+        results = await asyncio.gather(*coros, return_exceptions=True)
+        final: list[str] = []
+        for i, r in enumerate(results):
+            if isinstance(r, BaseException):
+                logger.warning("call_parallel 태스크 %d 실패: %s", i, r)
+                final.append("")
+            else:
+                final.append(r)
+        return final
