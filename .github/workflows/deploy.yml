@@ -241,7 +241,9 @@ jobs:
             echo "=== [5.5/8] SI Company Data Seed ==="
             if [ "$MIGRATE_MA" = true ]; then
               echo "  Checking SI company data..."
-              SI_COUNT=$($COMPOSE exec -T deal-mgmt-api python3 -c "import urllib.request as u,json;print(json.load(u.urlopen('http://localhost:8000/api/v1/si-mapping/stats',timeout=10)).get('si_companies_count',0))" 2>/dev/null || echo "0")
+              # NOTE: DB 직접 쿼리 사용 (API는 JWT 인증 필요하므로 deploy 시 호출 불가)
+              SI_STATS=$($COMPOSE exec -T deal-mgmt-api python -m scripts.db_stats 2>/dev/null || echo '{}')
+              SI_COUNT=$(echo "$SI_STATS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('si_companies_count',0))" 2>/dev/null || echo "0")
               if [ "$SI_COUNT" -lt 1000 ]; then
                 echo "  SI companies: $SI_COUNT — running seed..."
                 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_company_data 2>&1 || \
@@ -257,7 +259,9 @@ jobs:
             # 금융위 기업재무정보 API로 매출액 수집 (idempotent, 점진적)
             echo "=== [5.6/8] SI Revenue Data Seed ==="
             if [ "$MIGRATE_MA" = true ]; then
-              NULL_REV=$($COMPOSE exec -T deal-mgmt-api python3 -c "import urllib.request as u,json;d=json.load(u.urlopen('http://localhost:8000/api/v1/si-mapping/stats',timeout=10));print(d.get('si_companies_count',0)-d.get('revenue_count',0))" 2>/dev/null || echo "0")
+              # Re-query stats after potential 5.5 seed
+              SI_STATS=$($COMPOSE exec -T deal-mgmt-api python -m scripts.db_stats 2>/dev/null || echo '{}')
+              NULL_REV=$(echo "$SI_STATS" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('si_companies_count',0)-d.get('revenue_count',0))" 2>/dev/null || echo "0")
               if [ "$NULL_REV" -gt 1000 ]; then
                 echo "  Revenue NULL: $NULL_REV — running revenue seed (limit=9500)..."
                 timeout 7200 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_revenue_data --limit 9500 2>&1 || \
@@ -267,6 +271,22 @@ jobs:
               fi
             else
               echo "  MA not changed — skipping revenue seed."
+            fi
+
+            # ── 5.7. SI Corp Basic Data Seed ──
+            # 금융위 기업기본정보 API로 대표자/설립일/주소 등 수집 (idempotent, 점진적)
+            echo "=== [5.7/8] SI Corp Basic Data Seed ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              NOT_SYNCED=$(echo "$SI_STATS" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('si_companies_count',0)-d.get('corp_basic_count',0))" 2>/dev/null || echo "0")
+              if [ "$NOT_SYNCED" -gt 1000 ]; then
+                echo "  SI companies: $NOT_SYNCED — running corp basic seed (limit=9500)..."
+                timeout 7200 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_corp_basic_data --limit 9500 2>&1 || \
+                  echo "  WARN: Corp basic seed incomplete (non-blocking, will continue next deploy)"
+              else
+                echo "  Corp basic data sufficient — skipping."
+              fi
+            else
+              echo "  MA not changed — skipping corp basic seed."
             fi
 
             # ── 6. Health check + rollback (with retries) ──

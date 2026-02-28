@@ -50,6 +50,17 @@ class SICompanyOut(BaseModel):
     has_investment_history: bool = False
     description: str | None = None
 
+    # 기업기본정보 (금융위 getCorpOutline_V2)
+    representative: str | None = None
+    founded_date: str | None = None
+    address: str | None = None
+    homepage: str | None = None
+    employee_count: str | None = None
+    industry_name: str | None = None
+    main_business: str | None = None
+    market_type: str | None = None
+    market_type_name: str | None = None
+
 
 class SICandidateOut(BaseModel):
     """플랫 후보 — 테이블 렌더링용."""
@@ -101,6 +112,7 @@ class SIDataStats(BaseModel):
     ksic_io_mappings_count: int
     io_transactions_count: int
     revenue_count: int = 0
+    corp_basic_count: int = 0
     is_seeded: bool
 
 

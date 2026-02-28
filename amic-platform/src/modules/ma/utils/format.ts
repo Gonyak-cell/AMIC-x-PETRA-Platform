@@ -10,18 +10,20 @@ export function formatKRW(value: number | null): string {
   return `${sign}${Math.round(abs).toLocaleString()}`;
 }
 
-/** 매출액 간이 포맷 (null → "-", year 있으면 연도 접미사 표시). */
+/** 매출액 간이 포맷 (null → "-", year 있으면 연도 접미사 표시, 음수 지원). */
 export function formatRevenue(
   value: number | null,
   year?: number | null,
 ): string {
   if (value == null) return "-";
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
   const suffix = year ? ` (${year})` : "";
-  if (value >= 1_000_000_000_000)
-    return `${(value / 1_000_000_000_000).toFixed(1)}조${suffix}`;
-  if (value >= 100_000_000)
-    return `${Math.round(value / 100_000_000).toLocaleString()}억${suffix}`;
-  return `${Math.round(value).toLocaleString()}${suffix}`;
+  if (abs >= 1_000_000_000_000)
+    return `${sign}${(abs / 1_000_000_000_000).toFixed(1)}조${suffix}`;
+  if (abs >= 100_000_000)
+    return `${sign}${Math.round(abs / 100_000_000).toLocaleString()}억${suffix}`;
+  return `${sign}${Math.round(abs).toLocaleString()}${suffix}`;
 }
 
 /** YYYYMMDD → YYYY.MM.DD 변환. */

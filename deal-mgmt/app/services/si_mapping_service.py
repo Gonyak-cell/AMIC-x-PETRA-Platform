@@ -47,11 +47,15 @@ async def get_data_stats(db: AsyncSession) -> SIDataStats:
     mapping_count = (await db.execute(select(func.count()).select_from(KsicIoMapping))).scalar() or 0
     io_count = (await db.execute(select(func.count()).select_from(IOTransaction))).scalar() or 0
     rev_count = (await db.execute(select(func.count()).where(SICompany.revenue.isnot(None)))).scalar() or 0
+    corp_basic_count = (
+        await db.execute(select(func.count()).where(SICompany.corp_basic_synced_at.isnot(None)))
+    ).scalar() or 0
     return SIDataStats(
         si_companies_count=si_count,
         ksic_io_mappings_count=mapping_count,
         io_transactions_count=io_count,
         revenue_count=rev_count,
+        corp_basic_count=corp_basic_count,
         is_seeded=si_count > 0 and mapping_count > 0 and io_count > 0,
     )
 
@@ -268,9 +272,27 @@ async def get_deep_dive(
         raise HTTPException(status_code=404, detail="SI 기업을 찾을 수 없습니다")
 
     company_out = SICompanyOut.model_validate(si_company)
-    base_response = DeepDiveResponse(company=company_out)
 
-    # 2. KIIS DART API로 corp_code 매핑 시도 (서비스 토큰 사용)
+    # 2. DB 기업기본정보가 있으면 바로 CompanyOverview 구성 (DART 호출 생략)
+    if si_company.corp_basic_synced_at is not None:
+        overview = CompanyOverview(
+            corp_code=si_company.corp_code or "",
+            corp_name=si_company.company_name,
+            ceo_nm=si_company.representative or "",
+            est_dt=si_company.founded_date or "",
+            induty_code=(si_company.ksic_codes or [""])[0] if si_company.ksic_codes else "",
+            adres=si_company.address or "",
+            hm_url=si_company.homepage or "",
+        )
+        base_response = DeepDiveResponse(
+            company=company_out,
+            overview=overview,
+            dart_available=False,
+        )
+    else:
+        base_response = DeepDiveResponse(company=company_out)
+
+    # 3. KIIS DART API로 corp_code 매핑 시도 (서비스 토큰 사용)
     kiis_base = settings.KIIS_API_URL.rstrip("/")
     token = _make_service_token()
     headers = {"Authorization": f"Bearer {token}"}

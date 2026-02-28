@@ -11,7 +11,7 @@ import type {
 
 import KsicSearchInput from "./KsicSearchInput";
 import SICandidateTable from "./SICandidateTable";
-import SIDeepDiveDrawer from "./SIDeepDiveDrawer";
+import SIDetailPanel from "./SIDetailPanel";
 import ValueChainDiagram from "./ValueChainDiagram";
 
 interface SIMappingPanelProps {
@@ -211,8 +211,8 @@ export default function SIMappingPanel({
         </div>
       </div>
 
-      {/* 딥다이브 Drawer */}
-      <SIDeepDiveDrawer
+      {/* 기업 상세 패널 */}
+      <SIDetailPanel
         companyId={deepDiveId}
         onClose={() => setDeepDiveId(null)}
       />

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -44,3 +45,55 @@ class SICompany(Base, TimestampMixin):
     )
     has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ── 기업기본정보 (금융위 getCorpOutline_V2) ──
+    representative: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="대표자 (enpRprFnm)",
+    )
+    founded_date: Mapped[str | None] = mapped_column(
+        String(8),
+        nullable=True,
+        comment="설립일 YYYYMMDD (enpEstbDt)",
+    )
+    address: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="기본주소 (enpBsadr)",
+    )
+    homepage: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="홈페이지 URL (enpHmpgUrl)",
+    )
+    employee_count: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="종업원수 (enpEmpeCnt)",
+    )
+    industry_name: Mapped[str | None] = mapped_column(
+        String(300),
+        nullable=True,
+        comment="업종명 (sicNm)",
+    )
+    main_business: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="주요사업 (enpMainBizNm)",
+    )
+    market_type: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="시장구분 P:유가 K:코스닥 N:코넥스 E:기타",
+    )
+    market_type_name: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="시장구분명 (corpRegMrktDcdNm)",
+    )
+    corp_basic_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="기업기본정보 최종 동기화 시점",
+    )

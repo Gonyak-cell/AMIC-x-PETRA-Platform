@@ -10,6 +10,17 @@ export interface SICompany {
   revenue_year: number | null;
   has_investment_history: boolean;
   description: string | null;
+
+  // 기업기본정보 (금융위 getCorpOutline_V2)
+  representative: string | null;
+  founded_date: string | null;
+  address: string | null;
+  homepage: string | null;
+  employee_count: string | null;
+  industry_name: string | null;
+  main_business: string | null;
+  market_type: string | null;
+  market_type_name: string | null;
 }
 
 export interface SICandidate {
@@ -64,6 +75,7 @@ export interface SIDataStats {
   ksic_io_mappings_count: number;
   io_transactions_count: number;
   revenue_count: number;
+  corp_basic_count: number;
   is_seeded: boolean;
 }
 
