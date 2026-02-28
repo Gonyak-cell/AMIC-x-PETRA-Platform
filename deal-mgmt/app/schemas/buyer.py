@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import BuyerCandidateStatus, BuyerType
+from app.models.enums import BuyerCandidateStatus, BuyerTier, BuyerType, DealRole
 
 
 class BuyerCandidateOut(BaseModel):
@@ -19,6 +19,9 @@ class BuyerCandidateOut(BaseModel):
     contact_phone: str | None = None
     buyer_type: BuyerType
     status: BuyerCandidateStatus
+    tier: BuyerTier | None = None
+    corp_code: str | None = None
+    deal_role: DealRole | None = None
     ioi_value: float | None = None
     ioi_date: str | None = None
     loi_value: float | None = None
@@ -37,6 +40,9 @@ class BuyerCandidateCreate(BaseModel):
     contact_email: str | None = Field(None, max_length=255)
     contact_phone: str | None = Field(None, max_length=20)
     buyer_type: BuyerType
+    tier: BuyerTier | None = None
+    corp_code: str | None = Field(None, max_length=8)
+    deal_role: DealRole | None = None
     notes: str | None = None
     extra_data: dict | None = None
 
@@ -48,6 +54,9 @@ class BuyerCandidateUpdate(BaseModel):
     contact_phone: str | None = Field(None, max_length=20)
     buyer_type: BuyerType | None = None
     status: BuyerCandidateStatus | None = None
+    tier: BuyerTier | None = None
+    corp_code: str | None = Field(None, max_length=8)
+    deal_role: DealRole | None = None
     ioi_value: float | None = None
     ioi_date: str | None = Field(None, max_length=10)
     loi_value: float | None = None
@@ -61,5 +70,6 @@ class BuyerCandidateUpdate(BaseModel):
 class BuyerPipelineSummary(BaseModel):
     total: int
     by_status: dict[str, int]
+    by_tier: dict[str, int] = Field(default_factory=dict)
     avg_ioi_value: float | None = None
     avg_loi_value: float | None = None

@@ -29,6 +29,7 @@ _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
     (VdrFolderCategory.ENVIRONMENT, "환경", False),
     (VdrFolderCategory.IP, "지식재산권", False),
     (VdrFolderCategory.INSURANCE, "보험", False),
+    (VdrFolderCategory.MARKET_RESEARCH, "시장자료", False),
 ]
 
 

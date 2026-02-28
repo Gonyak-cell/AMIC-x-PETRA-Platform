@@ -393,3 +393,39 @@ def _build_tree(
             roots.append(node)
 
     return roots
+
+
+# ── 파일명 기반 폴더 카테고리 추천 ──────────────────────────
+
+
+@router.post("/suggest-category")
+async def suggest_folder_category(
+    txn_id: uuid.UUID,
+    filename: str,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> dict:
+    """파일명을 분석하여 적합한 VDR 폴더 카테고리를 추천한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    from app.services.vdr_categorization_service import suggest_category
+
+    category = suggest_category(filename)
+    if category is None:
+        return {"suggested_category": None, "suggested_folder_id": None}
+
+    # 해당 카테고리의 폴더 ID 조회
+    from sqlalchemy import select as sa_select
+
+    q = sa_select(VdrFolder.id).where(
+        VdrFolder.transaction_id == txn_id,
+        VdrFolder.category == category,
+        VdrFolder.parent_id.is_(None),
+    )
+    result = await db.execute(q)
+    folder_id = result.scalar_one_or_none()
+
+    return {
+        "suggested_category": category.value,
+        "suggested_folder_id": str(folder_id) if folder_id else None,
+    }

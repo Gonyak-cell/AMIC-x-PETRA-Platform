@@ -28,6 +28,7 @@ async def list_buyers(
     txn_id: uuid.UUID,
     buyer_status: str | None = Query(None, alias="status"),
     buyer_type: str | None = Query(None, alias="type"),
+    tier: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
@@ -38,6 +39,8 @@ async def list_buyers(
         q = q.where(BuyerCandidate.status == buyer_status)
     if buyer_type:
         q = q.where(BuyerCandidate.buyer_type == buyer_type)
+    if tier:
+        q = q.where(BuyerCandidate.tier == tier)
     q = q.order_by(BuyerCandidate.created_at.desc())
     result = await db.execute(q)
     return [BuyerCandidateOut.model_validate(b) for b in result.scalars().all()]
@@ -57,10 +60,13 @@ async def buyer_summary(
     buyers = list(result.scalars().all())
 
     by_status: dict[str, int] = {}
+    by_tier: dict[str, int] = {}
     ioi_values: list[float] = []
     loi_values: list[float] = []
     for b in buyers:
         by_status[b.status.value] = by_status.get(b.status.value, 0) + 1
+        if b.tier:
+            by_tier[b.tier.value] = by_tier.get(b.tier.value, 0) + 1
         if b.ioi_value:
             ioi_values.append(float(b.ioi_value))
         if b.loi_value:
@@ -69,6 +75,7 @@ async def buyer_summary(
     return BuyerPipelineSummary(
         total=len(buyers),
         by_status=by_status,
+        by_tier=by_tier,
         avg_ioi_value=sum(ioi_values) / len(ioi_values) if ioi_values else None,
         avg_loi_value=sum(loi_values) / len(loi_values) if loi_values else None,
     )

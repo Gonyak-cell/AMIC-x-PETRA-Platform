@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import DocExtractionCategory, ExtractionStatus
 
@@ -26,6 +27,9 @@ class BatchExtractionRequest(BaseModel):
     vdr_document_ids: list[uuid.UUID] = Field(..., min_length=1, max_length=10)
 
 
+_MAX_CONFIRMED_DATA_BYTES = 500_000  # 500 KB
+
+
 class ExtractionConfirmRequest(BaseModel):
     """사용자 검토 확정 요청."""
 
@@ -33,6 +37,14 @@ class ExtractionConfirmRequest(BaseModel):
     target_model: Literal["nda", "bid", "contract", "transaction"]
     target_id: uuid.UUID | None = None  # 기존 레코드 업데이트 시
     create_new: bool = False  # True면 신규 레코드 생성
+
+    @field_validator("confirmed_data")
+    @classmethod
+    def limit_size(cls, v: dict) -> dict:
+        """confirmed_data JSON 크기를 제한하여 DB 스토리지 남용을 방지한다."""
+        if len(json.dumps(v, ensure_ascii=False)) > _MAX_CONFIRMED_DATA_BYTES:
+            raise ValueError("confirmed_data가 500KB를 초과합니다")
+        return v
 
 
 # ── 응답 스키마 ──────────────────────────────────────────────

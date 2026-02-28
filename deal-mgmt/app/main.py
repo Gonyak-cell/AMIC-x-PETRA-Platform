@@ -33,6 +33,9 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     await blob_client.close()
+    from app.services.kiis_client import kiis_client
+
+    await kiis_client.close()
     logger.info("Deal Management application stopped")
 
 
@@ -109,10 +112,12 @@ from app.routers import (
     attachments,
     audit,
     bids,
+    buyer_marketing,
     buyers,
     client_portal,
     closing,
     compliance,
+    consortium,
     contract_markups,
     contracts,
     dashboard,
@@ -149,7 +154,11 @@ from app.routers import (
 app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(workflow.router, prefix="/api/v1")
 app.include_router(engagements.router, prefix="/api/v1")
+# buyer_marketing을 buyers보다 먼저 등록 — /buyers/dart-search, /buyers/export-excel
+# 경로가 buyers의 /buyers/{buyer_id} UUID 파라미터와 충돌하기 때문
+app.include_router(buyer_marketing.router, prefix="/api/v1")
 app.include_router(buyers.router, prefix="/api/v1")
+app.include_router(consortium.router, prefix="/api/v1")
 app.include_router(ndas.router, prefix="/api/v1")
 app.include_router(bids.router, prefix="/api/v1")
 app.include_router(dd_checklists.router, prefix="/api/v1")

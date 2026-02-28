@@ -13,6 +13,8 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 # ── 비용 추적 ─────────────────────────────────────────────────────────────────
@@ -100,7 +102,10 @@ class _AnthropicAdapter(_LLMAdapter):
         import anthropic
 
         if self._client is None:
-            self._client = anthropic.AsyncAnthropic(api_key=self._api_key)
+            self._client = anthropic.AsyncAnthropic(
+                api_key=self._api_key,
+                timeout=httpx.Timeout(90.0, connect=10.0),
+            )
 
         model_id = model or self._model
         response = await self._client.messages.create(
@@ -147,7 +152,10 @@ class _OpenAIAdapter(_LLMAdapter):
         import openai
 
         if self._client is None:
-            self._client = openai.AsyncOpenAI(api_key=self._api_key)
+            self._client = openai.AsyncOpenAI(
+                api_key=self._api_key,
+                timeout=httpx.Timeout(90.0, connect=10.0),
+            )
 
         model_id = model or self._model
         response = await self._client.chat.completions.create(
@@ -218,7 +226,7 @@ class _GoogleAdapter(_LLMAdapter):
             out = getattr(usage, "candidates_token_count", 0) if usage else 0
             return text, inp, out
 
-        text, input_tokens, output_tokens = await asyncio.to_thread(_sync_call)
+        text, input_tokens, output_tokens = await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=90.0)
         return text, model_id, input_tokens, output_tokens
 
 
@@ -308,10 +316,40 @@ class RalphLLMClient:
 
         raise RuntimeError(f"사용 가능한 LLM 프로바이더가 없습니다. 마지막 에러: {last_error}")
 
+    @staticmethod
+    def _provider_for_model(model: str) -> str | None:
+        """모델명에서 프로바이더를 추론한다 (불필요한 크로스 프로바이더 호출 방지)."""
+        if model.startswith("claude"):
+            return "anthropic"
+        if model.startswith("gpt"):
+            return "openai"
+        if model.startswith("gemini"):
+            return "google"
+        return None
+
     async def call_with_model(self, system: str, user: str, *, model: str) -> str:
-        """특정 모델을 지정하여 호출한다 (Judge Panel용)."""
+        """특정 모델을 지정하여 호출한다 (Judge Panel용).
+
+        모델명에서 프로바이더를 추론하여 해당 어댑터를 우선 시도한 후,
+        실패 시 나머지 어댑터로 폴백한다.
+        """
+        preferred = self._provider_for_model(model)
+
+        # 1차: 추론된 프로바이더 우선 시도
+        if preferred:
+            for adapter in self._adapters:
+                if adapter.provider_name != preferred or not adapter.is_available:
+                    continue
+                try:
+                    text, model_used, inp, out = await adapter.generate(system, user, model=model)
+                    self._cost_tracker.add(model_used, inp, out)
+                    return text
+                except Exception:
+                    break  # 해당 프로바이더 실패 → 폴백
+
+        # 2차: 나머지 어댑터 순회
         for adapter in self._adapters:
-            if not adapter.is_available:
+            if not adapter.is_available or adapter.provider_name == preferred:
                 continue
             try:
                 text, model_used, inp, out = await adapter.generate(system, user, model=model)
@@ -319,7 +357,8 @@ class RalphLLMClient:
                 return text
             except Exception:
                 continue
-        return await self.call(system, user)  # 폴백
+
+        return await self.call(system, user)  # 최종 폴백
 
     async def call_for_provider(self, system: str, user: str, *, provider: str) -> str:
         """특정 프로바이더를 지정하여 호출한다 (LDD 라우터용).

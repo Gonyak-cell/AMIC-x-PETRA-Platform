@@ -4,8 +4,10 @@ from app.models.audit import AuditLog
 from app.models.base import Base, TimestampMixin
 from app.models.bid import Bid
 from app.models.buyer_candidate import BuyerCandidate
+from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.closing_checklist import ClosingChecklist
 from app.models.compliance_item import ComplianceItem
+from app.models.consortium_mapping import ConsortiumMapping
 from app.models.contract import Contract
 from app.models.contract_markup import ContractMarkup
 from app.models.contract_version import ContractVersion
@@ -24,16 +26,19 @@ from app.models.enums import (
     BidType,
     BuyerCandidateStatus,
     BuyerReaction,
+    BuyerTier,
     BuyerType,
     ClosingCategory,
     ClosingConditionStatus,
     ComplianceCategory,
     ComplianceStatus,
     ConditionMatchLevel,
+    ConsortiumStatus,
     ContractStatus,
     ContractType,
     DDChecklistStatus,
     DDWorkstream,
+    DealRole,
     EarnoutMetric,
     EarnoutStatus,
     EngagementType,
@@ -53,6 +58,7 @@ from app.models.enums import (
     LegalDocType,
     MarketingDocStatus,
     MarketingDocType,
+    MarketingStage,
     MeetingChannel,
     MeetingPhase,
     MeetingStatus,
@@ -139,7 +145,9 @@ __all__ = [
     "BidType",
     "BuyerCandidate",
     "BuyerCandidateStatus",
+    "BuyerMarketingLog",
     "BuyerReaction",
+    "BuyerTier",
     "BuyerType",
     "ClosingCategory",
     "ClosingChecklist",
@@ -148,6 +156,8 @@ __all__ = [
     "ComplianceItem",
     "ComplianceStatus",
     "ConditionMatchLevel",
+    "ConsortiumMapping",
+    "ConsortiumStatus",
     "Contract",
     "ContractMarkup",
     "ContractStatus",
@@ -158,6 +168,7 @@ __all__ = [
     "DDWorkstream",
     "DealClient",
     "DealNote",
+    "DealRole",
     "DealTimeline",
     "EarnoutMetric",
     "EarnoutMilestone",
@@ -193,6 +204,7 @@ __all__ = [
     "MarketingDocStatus",
     "MarketingDocType",
     "MarketingMaterial",
+    "MarketingStage",
     "MeetingActionItem",
     "MeetingAttendee",
     "MeetingChannel",

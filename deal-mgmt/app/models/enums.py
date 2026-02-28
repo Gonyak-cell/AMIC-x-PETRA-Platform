@@ -66,6 +66,43 @@ class BuyerType(enum.StrEnum):
     OTHER = "OTHER"
 
 
+class BuyerTier(enum.StrEnum):
+    """Long-List Tier 분류 — 사용자 수동 지정."""
+
+    TIER_1 = "TIER_1"
+    TIER_2 = "TIER_2"
+    TIER_3 = "TIER_3"
+    NOT_TARGET = "NOT_TARGET"
+
+
+class DealRole(enum.StrEnum):
+    """매수자 딜 역할 — 컨소시엄 구조 분류."""
+
+    SOLE_BUYER = "SOLE_BUYER"
+    CONSORTIUM_LEAD = "CONSORTIUM_LEAD"
+    CO_INVESTOR = "CO_INVESTOR"
+    FINANCING_PROVIDER = "FINANCING_PROVIDER"
+
+
+class ConsortiumStatus(enum.StrEnum):
+    """컨소시엄 참여 상태."""
+
+    TAPPING = "TAPPING"
+    CONFIRMED = "CONFIRMED"
+    DROPPED = "DROPPED"
+
+
+class MarketingStage(enum.StrEnum):
+    """Short-List 마케팅 활동 6단계."""
+
+    IDENTIFIED = "IDENTIFIED"  # 식별
+    EMAIL_SENT = "EMAIL_SENT"  # 메일전송
+    PHONE_CALL = "PHONE_CALL"  # 전화
+    ADVISOR_MEETING = "ADVISOR_MEETING"  # 자문사 미팅
+    NDA_SIGNED = "NDA_SIGNED"  # NDA 체결
+    TARGET_MEETING = "TARGET_MEETING"  # 대상회사 미팅
+
+
 # ── Phase 2: NDA ───────────────────────────────────────
 class NdaType(enum.StrEnum):
     ONE_WAY = "ONE_WAY"
@@ -436,6 +473,7 @@ class VdrFolderCategory(enum.StrEnum):
     ENVIRONMENT = "ENVIRONMENT"  # 환경
     IP = "IP"  # 지식재산권
     INSURANCE = "INSURANCE"  # 보험
+    MARKET_RESEARCH = "MARKET_RESEARCH"  # 시장자료
     CUSTOM = "CUSTOM"  # 사용자 생성 폴더
 
 
@@ -723,6 +761,7 @@ class AttachmentEntityType(enum.StrEnum):
     CLOSING = "CLOSING"
     PMI = "PMI"
     EARNOUT = "EARNOUT"
+    MARKETING_LOG = "MARKETING_LOG"
 
 
 # ── SI Mapping ────────────────────────────────────────

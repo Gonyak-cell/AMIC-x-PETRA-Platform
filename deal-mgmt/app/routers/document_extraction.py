@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims, require_write_access
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.schemas.document_extraction import (
     BatchExtractionRequest,
     ExtractionConfirmRequest,
@@ -32,20 +32,28 @@ router = APIRouter(
 
 
 async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: BackgroundTasks) -> None:
-    """Celery 우선, 연결 실패 시 FastAPI BackgroundTasks 폴백."""
+    """BackgroundTasks로 확실히 실행하고, Celery도 시도한다.
+
+    Celery 워커가 태스크를 인식 못하면 메시지가 버려지므로,
+    BackgroundTasks를 항상 등록하여 실행을 보장한다.
+    파이프라인의 멱등성 가드가 중복 실행을 방지한다.
+    """
+    from app.core.database import async_session_factory
+
+    # 항상 BackgroundTasks 등록 (실행 보장)
+    background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
+
+    # Celery도 시도 (워커가 정상이면 더 빠르게 처리)
     try:
         from app.tasks.extraction_tasks import run_extraction_task
 
         run_extraction_task.delay(str(extraction_id))
-        logger.info("Celery 디스패치 성공: %s", extraction_id)
+        logger.info("Celery 디스패치 성공 (BackgroundTasks도 등록됨): %s", extraction_id)
     except Exception as exc:
-        logger.warning("Celery 디스패치 실패, 동기 폴백: %s", exc)
-        from app.core.database import async_session_factory
-
-        background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
+        logger.debug("Celery 디스패치 실패 (BackgroundTasks로 처리): %s", exc)
 
 
-async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory) -> None:
+async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) -> None:
     """FastAPI BackgroundTasks용 동기 폴백."""
     from app.services.document_extraction_service import run_extraction_pipeline
 
@@ -69,6 +77,7 @@ async def create_extraction(
 ):
     """단일 VDR 문서 AI 추출을 시작한다."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     extraction = await svc.create_extraction(
         db,
@@ -98,6 +107,7 @@ async def batch_extract(
 ):
     """여러 VDR 문서를 일괄 AI 추출한다 (최대 10건)."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     extractions = []
     for vdr_doc_id in body.vdr_document_ids:
@@ -123,6 +133,7 @@ async def list_extractions(
 ):
     """거래의 모든 추출 작업 목록을 조회한다 (폴링용)."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     items = await svc.list_extractions(db, txn_id)
     return ExtractionListOut(
@@ -143,6 +154,7 @@ async def get_extraction(
 ):
     """단일 추출 작업 상세를 조회한다."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     extraction = await svc.get_extraction(db, extraction_id)
     if not extraction or extraction.transaction_id != txn_id:
@@ -166,6 +178,7 @@ async def confirm_extraction(
 ):
     """추출 결과를 검토/수정 후 확정하여 DB에 매핑한다."""
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     # 추출 레코드 존재 확인
     extraction = await svc.get_extraction(db, extraction_id)
