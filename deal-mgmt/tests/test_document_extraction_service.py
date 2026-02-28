@@ -796,6 +796,11 @@ class TestPipeline:
 
         with (
             patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+            ),
+            patch(
                 "app.services.document_extraction_service.parse_file",
                 return_value=mock_parsed,
             ),
@@ -829,6 +834,11 @@ class TestPipeline:
 
         with (
             patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+            ),
+            patch(
                 "app.services.document_extraction_service.parse_file",
                 return_value=mock_parsed,
             ),
@@ -861,6 +871,11 @@ class TestPipeline:
 
         with (
             patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+            ),
+            patch(
                 "app.services.document_extraction_service.parse_file",
                 return_value=mock_parsed,
             ),
@@ -889,6 +904,11 @@ class TestPipeline:
         await async_session.commit()
 
         with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+            ),
             patch(
                 "app.services.document_extraction_service.parse_file",
                 side_effect=RuntimeError("파싱 에러"),
@@ -920,6 +940,11 @@ class TestPipeline:
         llm.is_available = False
 
         with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+            ),
             patch(
                 "app.services.document_extraction_service.parse_file",
                 return_value=mock_parsed,

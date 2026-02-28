@@ -135,7 +135,7 @@ export default function EngagementDocUpload({
       setStep("failed");
       setErrorMsg("AI 분석이 예상 시간을 초과했습니다. 다시 시도해주세요.");
     }
-  }, [polledExtraction, extractionId, step]);
+  }, [polledExtraction, extractionId, step, POLLING_TIMEOUT_MS]);
 
   // 파일 검증
   const validateFile = useCallback((file: File): string | null => {
