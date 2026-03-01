@@ -80,8 +80,10 @@ for step, (from_p, to_p) in enumerate(
     [
         ("ENGAGEMENT", "PREPARATION"),
         ("PREPARATION", "MARKETING"),
-        ("MARKETING", "BIDDING_DD"),
-        ("BIDDING_DD", "NEGOTIATION"),
+        ("MARKETING", "BIDDING"),
+        ("BIDDING", "MOU_SIGNED"),
+        ("MOU_SIGNED", "MAIN_DUE_DILIGENCE"),
+        ("MAIN_DUE_DILIGENCE", "NEGOTIATION"),
     ],
     start=4,
 ):

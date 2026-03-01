@@ -11,7 +11,9 @@ class TransactionPhase(enum.StrEnum):
     ENGAGEMENT = "ENGAGEMENT"
     PREPARATION = "PREPARATION"
     MARKETING = "MARKETING"
-    BIDDING_DD = "BIDDING_DD"
+    BIDDING = "BIDDING"
+    MOU_SIGNED = "MOU_SIGNED"
+    MAIN_DUE_DILIGENCE = "MAIN_DUE_DILIGENCE"
     NEGOTIATION = "NEGOTIATION"
     CLOSING = "CLOSING"
     POST_CLOSING = "POST_CLOSING"
@@ -56,6 +58,9 @@ class BuyerCandidateStatus(enum.StrEnum):
     LOI_ACCEPTED = "LOI_ACCEPTED"
     SELECTED = "SELECTED"
     REJECTED = "REJECTED"
+    BID_SUBMITTED = "BID_SUBMITTED"
+    BID_NOT_SUBMITTED = "BID_NOT_SUBMITTED"
+    BID_DROPPED = "BID_DROPPED"
 
 
 class BuyerType(enum.StrEnum):
@@ -782,3 +787,10 @@ class ExtractionStatus(enum.StrEnum):
     COMPLETED = "COMPLETED"  # 추출 완료 (사용자 검토 대기)
     FAILED = "FAILED"  # 실패
     CONFIRMED = "CONFIRMED"  # 사용자 검토 확정
+
+
+class TableStyleTheme(enum.StrEnum):
+    """플랫폼 전역 테이블 스타일 테마."""
+
+    DEFAULT = "DEFAULT"  # AMIC Forest 스타일
+    MODERN_GREEN = "MODERN_GREEN"  # 연녹색 헤더 (#65A765), 점선 구분

@@ -166,7 +166,9 @@ const PHASE_ORDER = [
   "ENGAGEMENT",
   "PREPARATION",
   "MARKETING",
-  "BIDDING_DD",
+  "BIDDING",
+  "MOU_SIGNED",
+  "MAIN_DUE_DILIGENCE",
   "NEGOTIATION",
   "CLOSING",
   "POST_CLOSING",
@@ -176,7 +178,9 @@ const PHASE_LABELS: Record<string, string> = {
   ENGAGEMENT: "Engagement",
   PREPARATION: "Preparation",
   MARKETING: "Marketing",
-  BIDDING_DD: "Bidding / DD",
+  BIDDING: "Bidding",
+  MOU_SIGNED: "MOU Signed",
+  MAIN_DUE_DILIGENCE: "Main DD",
   NEGOTIATION: "Negotiation",
   CLOSING: "Closing",
   POST_CLOSING: "Post-Closing",
@@ -248,8 +252,7 @@ export function useAnalyticsKpis(
         staleTime: 60_000,
         retry: false,
         enabled:
-          (!moduleFilter || moduleFilter === "im") &&
-          isModuleUp(health, "im"),
+          (!moduleFilter || moduleFilter === "im") && isModuleUp(health, "im"),
       },
       {
         queryKey: ["analytics", "ma-dashboard-stats"],
@@ -285,7 +288,8 @@ export function useAnalyticsKpis(
     ],
   });
 
-  const [dealsQuery, kiisQuery, imDocsQuery, maQuery, docsCountsQuery] = results;
+  const [dealsQuery, kiisQuery, imDocsQuery, maQuery, docsCountsQuery] =
+    results;
   const isLoading = results.some((r) => r.isLoading);
   const isError = results.some((r) => r.isError);
 
@@ -408,8 +412,7 @@ export function useAnalyticsTimeSeries(
         staleTime: 60_000,
         retry: false,
         enabled:
-          (!moduleFilter || moduleFilter === "im") &&
-          isModuleUp(health, "im"),
+          (!moduleFilter || moduleFilter === "im") && isModuleUp(health, "im"),
       },
       {
         queryKey: ["analytics", "ma-transactions-all"],
@@ -439,8 +442,7 @@ export function useAnalyticsTimeSeries(
         },
         staleTime: 60_000,
         enabled:
-          (!moduleFilter || moduleFilter === "ma") &&
-          isModuleUp(health, "ma"),
+          (!moduleFilter || moduleFilter === "ma") && isModuleUp(health, "ma"),
       },
     ],
   });

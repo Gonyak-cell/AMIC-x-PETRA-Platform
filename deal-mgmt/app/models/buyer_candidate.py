@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import JSON, Enum, ForeignKey, Numeric, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, Enum, ForeignKey, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -10,7 +10,7 @@ from app.models.enums import BuyerCandidateStatus, BuyerTier, BuyerType, DealRol
 
 
 class BuyerCandidate(Base, TimestampMixin):
-    """매수자 후보 — 14단계 상태 파이프라인."""
+    """매수자 후보 — 17단계 상태 파이프라인."""
 
     __tablename__ = "buyer_candidates"
 
@@ -41,6 +41,9 @@ class BuyerCandidate(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Deal Role (컨소시엄 구조)
     deal_role: Mapped[DealRole | None] = mapped_column(Enum(DealRole), nullable=True, default=None)
+
+    # Short-List 승격 플래그
+    is_short_listed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     extra_data: Mapped[dict | None] = mapped_column(
         "metadata", JSON().with_variant(JSONB, "postgresql"), nullable=True, default=dict

@@ -72,6 +72,14 @@ class Company(TimestampMixin, Base):
     )
     # IB 매체 기사
     ib_articles: Mapped[list["IBArticle"]] = relationship(back_populates="company")  # noqa: F821
+    # GP가 운용하는 KVIC 자조합 목록
+    kvic_funds: Mapped[list["KVICFund"]] = relationship(  # noqa: F821
+        back_populates="company", cascade="all, delete-orphan"
+    )
+    # GP1으로 참여하는 PEF 목록
+    pef_funds_as_gp1: Mapped[list["PEFFund"]] = relationship(  # noqa: F821
+        foreign_keys="PEFFund.gp1_company_id", back_populates="gp1_company"
+    )
 
 
 class CompanyAlias(TimestampMixin, Base):

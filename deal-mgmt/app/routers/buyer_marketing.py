@@ -29,6 +29,7 @@ from app.schemas.marketing_log import (
 )
 from app.services import audit_service, transaction_service
 from app.services.buyer_export_service import build_buyer_excel
+from app.services.platform_settings_service import get_or_create_settings
 from app.services.protocols import KIISClientProtocol
 
 logger = logging.getLogger(__name__)
@@ -394,11 +395,20 @@ async def export_buyers_excel(
         consortium_map.setdefault(lead_id, []).append(co_name)
         consortium_map.setdefault(co_id, []).append(lead_name)
 
+    # 플랫폼 설정에서 테이블 스타일 조회 (실패 시 DEFAULT 폴백)
+    try:
+        platform_settings = await get_or_create_settings(db)
+        table_style = platform_settings.table_style
+    except Exception:
+        logger.warning("플랫폼 설정 조회 실패 — DEFAULT 스타일로 폴백")
+        table_style = "DEFAULT"
+
     wb = build_buyer_excel(
         buyers,
         txn.code_name or txn.name,
         marketing_latest=marketing_latest,
         consortium_map=consortium_map,
+        table_style=table_style,
     )
     buf = io.BytesIO()
     wb.save(buf)

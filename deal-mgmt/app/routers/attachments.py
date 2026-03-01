@@ -36,6 +36,13 @@ ALLOWED_EXTENSIONS = {
     ".png",
     ".jpg",
     ".jpeg",
+    # Audio (마케팅 로그 녹음 첨부)
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".ogg",
+    ".aac",
+    ".wma",
 }
 VALID_ENTITY_TYPES = {e.value for e in AttachmentEntityType}
 

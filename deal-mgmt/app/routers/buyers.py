@@ -17,10 +17,12 @@ from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
 from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerTier, BuyerType
 from app.schemas.buyer import (
+    BiddingSummary,
     BuyerCandidateCreate,
     BuyerCandidateOut,
     BuyerCandidateUpdate,
     BuyerPipelineSummary,
+    ShortListPromoteRequest,
 )
 from app.services import audit_service, transaction_service
 
@@ -35,6 +37,7 @@ async def list_buyers(
     buyer_status: BuyerCandidateStatus | None = Query(None, alias="status"),
     buyer_type: BuyerType | None = Query(None, alias="type"),
     tier: BuyerTier | None = Query(None),
+    is_short_listed: bool | None = Query(None),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[BuyerCandidateOut]:
@@ -47,6 +50,8 @@ async def list_buyers(
         q = q.where(BuyerCandidate.buyer_type == buyer_type)
     if tier:
         q = q.where(BuyerCandidate.tier == tier)
+    if is_short_listed is not None:
+        q = q.where(BuyerCandidate.is_short_listed == is_short_listed)
     q = q.order_by(BuyerCandidate.created_at.desc())
     result = await db.execute(q)
     return [BuyerCandidateOut.model_validate(b) for b in result.scalars().all()]
@@ -124,6 +129,104 @@ async def add_buyer(
     await db.commit()
     await db.refresh(buyer)
     return BuyerCandidateOut.model_validate(buyer)
+
+
+@router.post("/promote-short-list", response_model=list[BuyerCandidateOut])
+async def promote_short_list(
+    txn_id: uuid.UUID,
+    body: ShortListPromoteRequest,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+) -> list[BuyerCandidateOut]:
+    """체크된 매수자들을 Short-List로 승격한다.
+
+    contact_name, contact_email, contact_phone 중 하나라도 없으면 422.
+    """
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+
+    q = select(BuyerCandidate).where(
+        BuyerCandidate.transaction_id == txn_id,
+        BuyerCandidate.id.in_(body.buyer_ids),
+    )
+    buyers_list = list((await db.execute(q)).scalars().all())
+
+    if len(buyers_list) != len(body.buyer_ids):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="일부 매수자 후보를 찾을 수 없습니다",
+        )
+
+    # 연락처 필수 검증
+    missing: list[dict] = []
+    for b in buyers_list:
+        lacks = []
+        if not b.contact_name:
+            lacks.append("contact_name")
+        if not b.contact_email:
+            lacks.append("contact_email")
+        if not b.contact_phone:
+            lacks.append("contact_phone")
+        if lacks:
+            missing.append({"buyer_id": str(b.id), "company_name": b.company_name, "missing_fields": lacks})
+
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Short-List 승격을 위해 연락처 정보가 필요합니다", "missing_contact": missing},
+        )
+
+    for b in buyers_list:
+        b.is_short_listed = True
+        await audit_service.record(
+            db,
+            entity_type="BuyerCandidate",
+            entity_id=b.id,
+            action=AuditAction.UPDATE,
+            actor_email=claims.email,
+            old_value={"is_short_listed": False},
+            new_value={"is_short_listed": True},
+            notes="Short-List 승격",
+        )
+
+    await db.commit()
+    for b in buyers_list:
+        await db.refresh(b)
+    return [BuyerCandidateOut.model_validate(b) for b in buyers_list]
+
+
+@router.get("/bidding-summary", response_model=BiddingSummary)
+async def bidding_summary(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> BiddingSummary:
+    """입찰 결과 집계 — BID_SUBMITTED / BID_NOT_SUBMITTED / BID_DROPPED 건수."""
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+
+    _where = BuyerCandidate.transaction_id == txn_id
+
+    bid_statuses = [
+        BuyerCandidateStatus.BID_SUBMITTED,
+        BuyerCandidateStatus.BID_NOT_SUBMITTED,
+        BuyerCandidateStatus.BID_DROPPED,
+    ]
+
+    q = (
+        select(BuyerCandidate.status, func.count().label("cnt"))
+        .where(_where, BuyerCandidate.status.in_(bid_statuses))
+        .group_by(BuyerCandidate.status)
+    )
+    rows = (await db.execute(q)).all()
+    counts = {row.status.value: row.cnt for row in rows}
+
+    return BiddingSummary(
+        total_bidders=sum(counts.values()),
+        bid_submitted=counts.get("BID_SUBMITTED", 0),
+        bid_not_submitted=counts.get("BID_NOT_SUBMITTED", 0),
+        bid_dropped=counts.get("BID_DROPPED", 0),
+    )
 
 
 @router.get("/{buyer_id}", response_model=BuyerCandidateOut)

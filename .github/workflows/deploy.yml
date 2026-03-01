@@ -202,17 +202,17 @@ jobs:
               local SVC=$1
               local LABEL=$2
               echo "  Running $LABEL migrations..."
+              echo "  $LABEL: current revision:"
+              $COMPOSE exec -T "$SVC" alembic current 2>&1 || true
               if $COMPOSE exec -T "$SVC" alembic upgrade head 2>&1; then
                 echo "  $LABEL: OK"
                 return 0
               fi
-              # Fallback: tables may exist but alembic_version is empty → stamp head
-              echo "  $LABEL: upgrade failed, trying stamp head..."
-              if $COMPOSE exec -T "$SVC" alembic stamp head 2>&1; then
-                echo "  $LABEL: stamped to head (tables existed without alembic tracking)"
-                return 0
-              fi
-              echo "  CRITICAL: $LABEL migration and stamp both failed"
+              # Do NOT stamp head — stamping without running migrations causes
+              # column-not-found errors at runtime (see KIIS dashboard 500 incident).
+              # Migration failures must be fixed manually.
+              echo "  CRITICAL: $LABEL migration failed — manual intervention required"
+              echo "  $LABEL: check migration files and DB state, then run: alembic upgrade head"
               return 1
             }
 

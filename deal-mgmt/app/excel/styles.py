@@ -193,3 +193,66 @@ def create_named_styles(wb):
     for name, style in styles.items():
         if name not in wb.named_styles:
             wb.add_named_style(style)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MODERN_GREEN 팔레트 (테이블 스타일 테마)
+# ══════════════════════════════════════════════════════════════════════════════
+
+MODERN_GREEN_HEADER = "65A765"
+
+MODERN_GREEN_FONT_HEADER = Font(name="맑은 고딕", size=10, bold=True, color=WHITE)
+MODERN_GREEN_FONT_BODY = Font(name="맑은 고딕", size=10, color=BLACK)
+MODERN_GREEN_FONT_SUMMARY = Font(name="맑은 고딕", size=10, bold=True, color=MODERN_GREEN_HEADER)
+MODERN_GREEN_FONT_LINK = Font(name="맑은 고딕", size=10, color=LINK_BLUE, underline="single")
+
+MODERN_GREEN_FILL_HEADER = PatternFill(
+    start_color=MODERN_GREEN_HEADER, end_color=MODERN_GREEN_HEADER, fill_type="solid"
+)
+
+# dashed 하단선만, 좌우 없음
+MODERN_GREEN_ROW_BORDER = Border(
+    bottom=Side(style="dashed", color="CCCCCC"),
+)
+# 요약 행: 상단 실선
+MODERN_GREEN_SUMMARY_BORDER = Border(
+    top=Side(style="thin", color="CCCCCC"),
+)
+
+
+# ── 테마 기반 스타일 적용 헬퍼 ─────────────────────────────────────────────
+
+
+def apply_theme_header(cell: object, text: str | None = None, theme: str = "DEFAULT") -> None:
+    """테마별 헤더 스타일 적용."""
+    if text is not None:
+        cell.value = text  # type: ignore[attr-defined]
+    if theme == "MODERN_GREEN":
+        cell.font = MODERN_GREEN_FONT_HEADER  # type: ignore[attr-defined]
+        cell.fill = MODERN_GREEN_FILL_HEADER  # type: ignore[attr-defined]
+        cell.alignment = ALIGN_CENTER  # type: ignore[attr-defined]
+        # 좌우 테두리 없음
+    else:
+        apply_header(cell, text=None)
+
+
+def apply_theme_row(cell: object, theme: str = "DEFAULT") -> None:
+    """테마별 데이터 행 스타일 적용."""
+    if theme == "MODERN_GREEN":
+        cell.font = MODERN_GREEN_FONT_BODY  # type: ignore[attr-defined]
+        cell.border = MODERN_GREEN_ROW_BORDER  # type: ignore[attr-defined]
+    else:
+        cell.font = FONT_NORMAL  # type: ignore[attr-defined]
+        cell.border = THIN_BORDER  # type: ignore[attr-defined]
+
+
+def apply_theme_summary(cell: object, text: str | None = None, theme: str = "DEFAULT") -> None:
+    """테마별 요약 행(소계/합계) 스타일 적용."""
+    if text is not None:
+        cell.value = text  # type: ignore[attr-defined]
+    if theme == "MODERN_GREEN":
+        cell.font = MODERN_GREEN_FONT_SUMMARY  # type: ignore[attr-defined]
+        cell.border = MODERN_GREEN_SUMMARY_BORDER  # type: ignore[attr-defined]
+    else:
+        cell.font = Font(name="Pretendard", size=10, bold=True, color=BLACK)  # type: ignore[attr-defined]
+        cell.border = DOUBLE_BOTTOM  # type: ignore[attr-defined]

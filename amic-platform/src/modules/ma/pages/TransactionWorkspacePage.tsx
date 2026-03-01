@@ -88,6 +88,7 @@ import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import ConsortiumPanel from "@/modules/ma/components/buyers/ConsortiumPanel";
 import ShortListOverview from "@/modules/ma/components/buyers/ShortListOverview";
+import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
 import {
   useNdas,
   useNdaSummary,
@@ -441,6 +442,7 @@ export default function TransactionWorkspacePage() {
     "long-list",
   );
   const [showSIMappingModal, setShowSIMappingModal] = useState(false);
+  const [showFIRecommendModal, setShowFIRecommendModal] = useState(false);
   const [buyerDetailCompanyId, setBuyerDetailCompanyId] = useState<
     string | null
   >(null);
@@ -730,7 +732,9 @@ export default function TransactionWorkspacePage() {
     ENGAGEMENT: "PREPARATION",
     PREPARATION: "PREPARATION",
     MARKETING: "MARKETING",
-    BIDDING_DD: "BIDDING_DD",
+    BIDDING: "BIDDING",
+    MOU_SIGNED: "MOU_SIGNED",
+    MAIN_DUE_DILIGENCE: "MAIN_DUE_DILIGENCE",
     NEGOTIATION: "NEGOTIATION",
     CLOSING: "CLOSING",
     POST_CLOSING: "CLOSING",
@@ -1515,9 +1519,15 @@ export default function TransactionWorkspacePage() {
                       ],
                     },
                     {
-                      key: "BIDDING_DD",
-                      phase: "BIDDING_DD" as const,
-                      label: "DD",
+                      key: "BIDDING",
+                      phase: "BIDDING" as const,
+                      label: "입찰",
+                      items: [],
+                    },
+                    {
+                      key: "MAIN_DUE_DILIGENCE",
+                      phase: "MAIN_DUE_DILIGENCE" as const,
+                      label: "본실사",
                       items: [
                         {
                           key: "fdd",
@@ -1827,6 +1837,30 @@ export default function TransactionWorkspacePage() {
 
           const buyerColumns: Column<BuyerCandidate>[] = [
             {
+              key: "is_short_listed" as keyof BuyerCandidate,
+              header: "",
+              minWidth: "40px",
+              render: (r) => (
+                <input
+                  type="checkbox"
+                  checked={r.is_short_listed}
+                  disabled={!canWrite()}
+                  onChange={() =>
+                    updateBuyer.mutate({
+                      buyerId: r.id,
+                      body: {
+                        is_short_listed: !r.is_short_listed,
+                      } as BuyerCandidateUpdate & { is_short_listed: boolean },
+                    })
+                  }
+                  className="h-4 w-4 rounded border-border-default accent-accent"
+                  title={
+                    r.is_short_listed ? "Short-List 해제" : "Short-List 승격"
+                  }
+                />
+              ),
+            },
+            {
               key: "company_name",
               header: "회사명",
               minWidth: "160px",
@@ -1917,41 +1951,11 @@ export default function TransactionWorkspacePage() {
                 </Badge>
               ),
             },
-            {
-              key: "status",
-              header: "상태",
-              minWidth: "100px",
-              render: (r) => (
-                <Badge variant={BUYER_STATUS_VARIANT[r.status] ?? "neutral"}>
-                  {BUYER_STATUS_OPTIONS.find((o) => o.value === r.status)
-                    ?.label ?? r.status}
-                </Badge>
-              ),
-            },
-            {
-              key: "ioi_value",
-              header: "IOI",
-              minWidth: "80px",
-              align: "right" as const,
-              mono: true,
-              render: (r) =>
-                r.ioi_value != null ? r.ioi_value.toLocaleString() : "-",
-            },
-            {
-              key: "loi_value",
-              header: "LOI",
-              minWidth: "80px",
-              align: "right" as const,
-              mono: true,
-              render: (r) =>
-                r.loi_value != null ? r.loi_value.toLocaleString() : "-",
-            },
+            /* status, ioi_value, loi_value 컬럼 제거됨 (지시사항 1) */
           ];
 
           const allBuyers = buyers ?? [];
-          const shortListBuyers = allBuyers.filter(
-            (b) => b.tier && b.tier !== "NOT_TARGET",
-          );
+          const shortListBuyers = allBuyers.filter((b) => b.is_short_listed);
 
           return (
             <div className="space-y-4">
@@ -2002,7 +2006,15 @@ export default function TransactionWorkspacePage() {
 
               {buyerSubTab === "long-list" && (
                 <>
-                  <div className="mb-3 flex justify-end">
+                  <div className="mb-3 flex justify-end gap-2">
+                    <Button
+                      icon={Building2}
+                      onClick={() => setShowFIRecommendModal(true)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      FI 자동 추천
+                    </Button>
                     <Button
                       icon={Sparkles}
                       onClick={() => setShowSIMappingModal(true)}
@@ -2035,6 +2047,16 @@ export default function TransactionWorkspacePage() {
                     <SIMappingPanel
                       txnId={id!}
                       onClose={() => setShowSIMappingModal(false)}
+                    />
+                  )}
+                  {showFIRecommendModal && (
+                    <FIRecommendModal
+                      open
+                      onClose={() => setShowFIRecommendModal(false)}
+                      txnId={id!}
+                      existingCompanyNames={allBuyers.map(
+                        (b) => b.company_name,
+                      )}
                     />
                   )}
                 </>

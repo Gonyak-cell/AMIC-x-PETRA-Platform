@@ -41,13 +41,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="M&A Deal Management Service — 7단계 거래 워크플로우 관리 시스템",
+    description="M&A Deal Management Service — 9단계 거래 워크플로우 관리 시스템",
     version="0.1.0",
     lifespan=lifespan,
     openapi_tags=[
         {"name": "Health", "description": "서비스 상태 확인"},
         {"name": "Transactions", "description": "M&A 거래 관리"},
-        {"name": "Workflow", "description": "7단계 워크플로우 상태 머신"},
+        {"name": "Workflow", "description": "9단계 워크플로우 상태 머신"},
         {"name": "Engagements", "description": "수임계약 관리"},
         {"name": "Working Group", "description": "워킹그룹 멤버 관리"},
         {"name": "Buyers", "description": "매수자 후보 파이프라인"},
@@ -108,6 +108,7 @@ register_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────
 from app.routers import (
+    admin_settings,
     approvals,
     attachments,
     audit,
@@ -135,6 +136,7 @@ from app.routers import (
     ndas,
     negotiation_issues,
     notes,
+    pef_registry,
     permits,
     pmi,
     ralph,
@@ -197,6 +199,8 @@ app.include_router(document_extraction.router, prefix="/api/v1")
 app.include_router(attachments.router, prefix="/api/v1")
 app.include_router(template_visualization.router, prefix="/api/v1")
 app.include_router(si_mapping.router, prefix="/api/v1")
+app.include_router(admin_settings.router, prefix="/api/v1")
+app.include_router(pef_registry.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

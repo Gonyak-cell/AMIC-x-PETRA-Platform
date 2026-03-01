@@ -4,6 +4,7 @@ from app.models.deal import Deal, DealSector, DealStage, DealType
 from app.models.disclosure import Disclosure, DisclosureType
 from app.models.elestock import DartExecutiveHolding
 from app.models.fund import Fund, FundGP, FundManager
+from app.models.gp_fund import KVICFund, PEFFund
 from app.models.holding import DartMajorHolding
 from app.models.ib_article import IBArticle
 from app.models.manager import ManagerMovement, MovementType
@@ -34,9 +35,11 @@ __all__ = [
     "FundGP",
     "FundManager",
     "IBArticle",
+    "KVICFund",
     "ManagerMovement",
     "MovementType",
     "NewsArticle",
+    "PEFFund",
     "PortfolioCompany",
     "REITs",
     "REITsAsset",

@@ -85,6 +85,7 @@ from app.models.enums import (
     RiskStatus,
     SICompanyRelation,
     SignatureStatus,
+    TableStyleTheme,
     TransactionPhase,
     TransactionSide,
     TransactionStatus,
@@ -110,8 +111,10 @@ from app.models.meeting_log import MeetingLog
 from app.models.nda import NDA
 from app.models.negotiation_issue import NegotiationIssue
 from app.models.note import DealNote
+from app.models.pef_fund_registry import PefFundRegistry
 from app.models.permit_analysis import PermitAnalysis
 from app.models.permit_requirement import PermitRequirement
+from app.models.platform_settings import PlatformSettings
 from app.models.pmi_task import PMITask
 from app.models.ralph_session import RalphSession
 from app.models.rfi import RFI
@@ -221,12 +224,14 @@ __all__ = [
     "PMIPriority",
     "PMITask",
     "PMITaskStatus",
+    "PefFundRegistry",
     "PermitAnalysis",
     "PermitAnalysisStatus",
     "PermitFilingType",
     "PermitRequirement",
     "PermitRequirementStatus",
     "PermitTimingType",
+    "PlatformSettings",
     "RFICategory",
     "RFIChecklistMapping",
     "RFIItem",
@@ -243,6 +248,7 @@ __all__ = [
     "SICompany",
     "SICompanyRelation",
     "SignatureStatus",
+    "TableStyleTheme",
     "TimestampMixin",
     "Transaction",
     "TransactionPhase",

@@ -4,7 +4,9 @@ export type TransactionPhase =
   | "ENGAGEMENT"
   | "PREPARATION"
   | "MARKETING"
-  | "BIDDING_DD"
+  | "BIDDING"
+  | "MOU_SIGNED"
+  | "MAIN_DUE_DILIGENCE"
   | "NEGOTIATION"
   | "CLOSING"
   | "POST_CLOSING";

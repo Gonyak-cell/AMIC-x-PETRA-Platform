@@ -198,6 +198,9 @@ export const BUYER_STATUS_OPTIONS: SelectOption[] = [
   { value: "LOI_ACCEPTED", label: "LOI 수락" },
   { value: "SELECTED", label: "최종 선정" },
   { value: "REJECTED", label: "거절" },
+  { value: "BID_SUBMITTED", label: "입찰 제출" },
+  { value: "BID_NOT_SUBMITTED", label: "미제출" },
+  { value: "BID_DROPPED", label: "입찰 포기" },
 ];
 
 // ── Engagement Type ───────────────────────────────────
@@ -746,7 +749,7 @@ export const RFI_ITEM_STATUS_LABELS: Record<RFIItemStatus, string> = {
   NOT_APPLICABLE: "해당없음",
 };
 
-// ── 7단계 Phase 설정 ─────────────────────────────────
+// ── 9단계 Phase 설정 ─────────────────────────────────
 export interface PhaseConfigItem {
   phase: TransactionPhase;
   label: string;
@@ -778,32 +781,46 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
     order: 3,
   },
   {
-    phase: "BIDDING_DD",
-    label: "입찰/DD",
-    description: "IOI 접수, 실사 진행, LOI 접수",
-    icon: "Search",
+    phase: "BIDDING",
+    label: "입찰",
+    description: "IOI/LOI 접수, 매수자 입찰 결과 추적",
+    icon: "Gavel",
     order: 4,
+  },
+  {
+    phase: "MOU_SIGNED",
+    label: "MOU 체결",
+    description: "양해각서 체결, 독점 협상권 부여",
+    icon: "FileSignature",
+    order: 5,
+  },
+  {
+    phase: "MAIN_DUE_DILIGENCE",
+    label: "본실사",
+    description: "FDD/LDD/TDD 본실사 진행",
+    icon: "Search",
+    order: 6,
   },
   {
     phase: "NEGOTIATION",
     label: "협상",
     description: "최종 후보 선정, SPA 협상, 가격 조정",
     icon: "Scale",
-    order: 5,
+    order: 7,
   },
   {
     phase: "CLOSING",
     label: "Closing",
     description: "SPA 체결, 선행조건 충족, 거래 완결",
     icon: "CheckCircle",
-    order: 6,
+    order: 8,
   },
   {
     phase: "POST_CLOSING",
     label: "Post-Closing",
     description: "가격조정 정산, PMI 지원, 프로젝트 종결",
     icon: "Archive",
-    order: 7,
+    order: 9,
   },
 ];
 
@@ -812,7 +829,9 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
   ENGAGEMENT: "overview",
   PREPARATION: "marketing-materials",
   MARKETING: "buyers",
-  BIDDING_DD: "bids",
+  BIDDING: "bids",
+  MOU_SIGNED: "contracts",
+  MAIN_DUE_DILIGENCE: "dd-checklist",
   NEGOTIATION: "contracts",
   CLOSING: "closing",
   POST_CLOSING: "pmi",
@@ -831,7 +850,9 @@ export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
     "vdr",
   ],
   MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
-  BIDDING_DD: [...ALWAYS_VISIBLE_TABS, "bids", "dd-checklist", "rfi", "vdr"],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "buyers", "vdr"],
+  MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"],
+  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
   NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
   CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
   POST_CLOSING: [...ALWAYS_VISIBLE_TABS, "pmi", "earnout", "vdr"],
@@ -862,6 +883,7 @@ export const PHASE_MILESTONES: {
   afterPhase: TransactionPhase;
   label: string;
 }[] = [
-  { afterPhase: "MARKETING", label: "MOU Signed" },
+  { afterPhase: "BIDDING", label: "MOU Signed" },
+  { afterPhase: "MAIN_DUE_DILIGENCE", label: "SPA 체결" },
   { afterPhase: "CLOSING", label: "Deal Closed" },
 ];

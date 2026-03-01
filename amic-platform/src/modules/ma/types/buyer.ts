@@ -12,7 +12,10 @@ export type BuyerStatus =
   | "LOI_RECEIVED"
   | "LOI_ACCEPTED"
   | "SELECTED"
-  | "REJECTED";
+  | "REJECTED"
+  | "BID_SUBMITTED"
+  | "BID_NOT_SUBMITTED"
+  | "BID_DROPPED";
 
 export type BuyerType =
   | "STRATEGIC"
@@ -40,6 +43,7 @@ export interface BuyerCandidate {
   status: BuyerStatus;
   tier: BuyerTier | null;
   deal_role: DealRole | null;
+  is_short_listed: boolean;
   corp_code: string | null;
   ioi_value: number | null;
   ioi_date: string | null;
@@ -92,4 +96,15 @@ export interface BuyerPipelineSummary {
   by_tier: Record<string, number>;
   avg_ioi_value: number | null;
   avg_loi_value: number | null;
+}
+
+export interface ShortListPromoteRequest {
+  buyer_ids: string[];
+}
+
+export interface BiddingSummary {
+  total_bidders: number;
+  bid_submitted: number;
+  bid_not_submitted: number;
+  bid_dropped: number;
 }

@@ -23,6 +23,7 @@ class BuyerCandidateOut(BaseModel):
     tier: BuyerTier | None = None
     corp_code: str | None = None
     deal_role: DealRole | None = None
+    is_short_listed: bool = False
     ioi_value: Decimal | None = None
     ioi_date: str | None = None
     loi_value: Decimal | None = None
@@ -58,6 +59,7 @@ class BuyerCandidateUpdate(BaseModel):
     tier: BuyerTier | None = None
     corp_code: str | None = Field(None, max_length=8)
     deal_role: DealRole | None = None
+    is_short_listed: bool | None = None
     ioi_value: Decimal | None = None
     ioi_date: str | None = Field(None, max_length=10)
     loi_value: Decimal | None = None
@@ -74,3 +76,14 @@ class BuyerPipelineSummary(BaseModel):
     by_tier: dict[str, int] = Field(default_factory=dict)
     avg_ioi_value: Decimal | None = None
     avg_loi_value: Decimal | None = None
+
+
+class ShortListPromoteRequest(BaseModel):
+    buyer_ids: list[uuid.UUID]
+
+
+class BiddingSummary(BaseModel):
+    total_bidders: int
+    bid_submitted: int
+    bid_not_submitted: int
+    bid_dropped: int

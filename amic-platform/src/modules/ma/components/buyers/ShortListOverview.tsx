@@ -356,7 +356,7 @@ export default function ShortListOverview({
   canWrite,
 }: ShortListOverviewProps) {
   const shortListBuyers = useMemo(
-    () => buyers.filter((b) => b.tier && TIER_ORDER.includes(b.tier)),
+    () => buyers.filter((b) => b.is_short_listed),
     [buyers],
   );
 
@@ -381,7 +381,7 @@ export default function ShortListOverview({
       <EmptyState
         icon={User}
         title="Short List 후보 없음"
-        description="Long List에서 Tier를 지정하면 여기에 표시됩니다."
+        description="Long List에서 체크박스를 선택하면 여기에 표시됩니다."
       />
     );
   }

@@ -4,53 +4,50 @@ from decimal import Decimal
 
 import pytest
 
-from app.services.public_data_service import (
-    PublicDataService,
-    _safe_decimal,
-    _safe_int,
-)
+from app.services.public_data_service import PublicDataService
+from app.utils.numeric import safe_decimal, safe_int
 
 # --- 유틸리티 함수 테스트 ---
 
 
 class TestSafeDecimal:
     def test_valid_number(self):
-        assert _safe_decimal("12345.67") == Decimal("12345.67")
+        assert safe_decimal("12345.67") == Decimal("12345.67")
 
     def test_comma_separated(self):
-        assert _safe_decimal("1,234,567") == Decimal("1234567")
+        assert safe_decimal("1,234,567") == Decimal("1234567")
 
     def test_none(self):
-        assert _safe_decimal(None) is None
+        assert safe_decimal(None) is None
 
     def test_empty(self):
-        assert _safe_decimal("") is None
+        assert safe_decimal("") is None
 
     def test_dash(self):
-        assert _safe_decimal("-") is None
+        assert safe_decimal("-") is None
 
     def test_zero(self):
-        assert _safe_decimal("0") is None
+        assert safe_decimal("0") is None
 
     def test_invalid(self):
-        assert _safe_decimal("N/A") is None
+        assert safe_decimal("N/A") is None
 
 
 class TestSafeInt:
     def test_valid(self):
-        assert _safe_int("42") == 42
+        assert safe_int("42") == 42
 
     def test_comma(self):
-        assert _safe_int("1,234") == 1234
+        assert safe_int("1,234") == 1234
 
     def test_none(self):
-        assert _safe_int(None) is None
+        assert safe_int(None) is None
 
     def test_empty(self):
-        assert _safe_int("") is None
+        assert safe_int("") is None
 
     def test_integer_input(self):
-        assert _safe_int(100) == 100
+        assert safe_int(100) == 100
 
 
 # --- 응답 파싱 테스트 ---

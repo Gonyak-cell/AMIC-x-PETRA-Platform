@@ -191,7 +191,14 @@ async def test_rollback_phase(client):
 async def test_advance_through_multiple_phases(client):
     txn_id = await _create_active_txn(client, code_name="WF-MULTI")
 
-    phases = ["PREPARATION", "MARKETING", "BIDDING_DD", "NEGOTIATION"]
+    phases = [
+        "PREPARATION",
+        "MARKETING",
+        "BIDDING",
+        "MOU_SIGNED",
+        "MAIN_DUE_DILIGENCE",
+        "NEGOTIATION",
+    ]
     for phase in phases:
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/workflow/advance",

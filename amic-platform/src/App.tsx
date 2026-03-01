@@ -4,6 +4,7 @@ import LoginPage from "@/pages/LoginPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui";
+import { PlatformSettingsProvider } from "@/contexts/PlatformSettingsContext";
 import { useAuth } from "@/hooks/useAuth";
 
 /** CLIENT 역할의 사내 전용 라우트 접근을 차단한다. */
@@ -29,15 +30,9 @@ const HelpRoutes = React.lazy(() => import("@/pages/help/HelpRoutes"));
 const CalendarRoutes = React.lazy(
   () => import("@/pages/calendar/CalendarRoutes"),
 );
-const ExportsRoutes = React.lazy(
-  () => import("@/pages/exports/ExportsRoutes"),
-);
-const DocsRoutes = React.lazy(
-  () => import("@/modules/docs/DocsRoutes"),
-);
-const VdrRoutes = React.lazy(
-  () => import("@/modules/vdr/VdrRoutes"),
-);
+const ExportsRoutes = React.lazy(() => import("@/pages/exports/ExportsRoutes"));
+const DocsRoutes = React.lazy(() => import("@/modules/docs/DocsRoutes"));
+const VdrRoutes = React.lazy(() => import("@/modules/vdr/VdrRoutes"));
 const TeamPage = React.lazy(() => import("@/pages/team/TeamPage"));
 
 function ModuleFallback() {
@@ -51,9 +46,11 @@ export default function App() {
       <Route
         element={
           <ProtectedRoute>
-            <AppShell>
-              <Outlet />
-            </AppShell>
+            <PlatformSettingsProvider>
+              <AppShell>
+                <Outlet />
+              </AppShell>
+            </PlatformSettingsProvider>
           </ProtectedRoute>
         }
       >
@@ -193,9 +190,13 @@ export default function App() {
           path="*"
           element={
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <h1 className="text-4xl font-heading font-bold text-text-dark mb-2">404</h1>
+              <h1 className="text-4xl font-heading font-bold text-text-dark mb-2">
+                404
+              </h1>
               <p className="text-text-secondary mb-6">Page not found</p>
-              <a href="/" className="text-amic hover:underline">Go to Dashboard</a>
+              <a href="/" className="text-amic hover:underline">
+                Go to Dashboard
+              </a>
             </div>
           }
         />

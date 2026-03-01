@@ -1,5 +1,5 @@
 import { Fragment, useState, useRef, useCallback, useEffect } from "react";
-import type { ReactNode, KeyboardEvent } from "react";
+import type { ReactNode, KeyboardEvent, CSSProperties } from "react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
 import { Skeleton } from "./Skeleton";
@@ -139,17 +139,30 @@ export function DataTable<T extends object>({
       >
         <table className="w-full">
           <thead>
-            <tr className="bg-amic-50 border-b-2 border-amic">
+            <tr
+              className="border-b-2"
+              style={
+                {
+                  background: "var(--table-header-bg, #0F3A32)",
+                } as CSSProperties
+              }
+            >
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "text-amic font-heading font-semibold text-sub-header tracking-wide",
+                    "font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"],
                   )}
-                  style={{ width: col.width, minWidth: col.minWidth }}
+                  style={{
+                    width: col.width,
+                    minWidth: col.minWidth,
+                    color: "var(--table-header-text, #FFFFFF)",
+                    fontWeight:
+                      "var(--table-header-font-weight, 600)" as string,
+                  }}
                 >
                   {col.header ?? col.label}
                 </th>
@@ -186,17 +199,30 @@ export function DataTable<T extends object>({
       >
         <table className="w-full">
           <thead>
-            <tr className="bg-amic-50 border-b-2 border-amic">
+            <tr
+              className="border-b-2"
+              style={
+                {
+                  background: "var(--table-header-bg, #0F3A32)",
+                } as CSSProperties
+              }
+            >
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "text-amic font-heading font-semibold text-sub-header tracking-wide",
+                    "font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"],
                   )}
-                  style={{ width: col.width, minWidth: col.minWidth }}
+                  style={{
+                    width: col.width,
+                    minWidth: col.minWidth,
+                    color: "var(--table-header-text, #FFFFFF)",
+                    fontWeight:
+                      "var(--table-header-font-weight, 600)" as string,
+                  }}
                 >
                   {col.header ?? col.label}
                 </th>
@@ -221,17 +247,29 @@ export function DataTable<T extends object>({
     >
       <table className="w-full">
         <thead>
-          <tr className="bg-amic-50 border-b-2 border-amic">
+          <tr
+            className="border-b-2"
+            style={
+              {
+                background: "var(--table-header-bg, #0F3A32)",
+              } as CSSProperties
+            }
+          >
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  "text-amic font-heading font-semibold text-sub-header tracking-wide",
+                  "font-heading font-semibold text-sub-header tracking-wide",
                   uppercaseHeaders && "uppercase tracking-[0.15em]",
                   cellPadding,
                   alignStyles[col.align || "left"],
                 )}
-                style={{ width: col.width, minWidth: col.minWidth }}
+                style={{
+                  width: col.width,
+                  minWidth: col.minWidth,
+                  color: "var(--table-header-text, #FFFFFF)",
+                  fontWeight: "var(--table-header-font-weight, 600)" as string,
+                }}
               >
                 {col.header ?? col.label}
               </th>
@@ -249,7 +287,11 @@ export function DataTable<T extends object>({
               <Fragment key={rowKey}>
                 {/* 섹션 헤더 (다크그린 바) */}
                 {sectionLabel && (
-                  <tr className="bg-amic">
+                  <tr
+                    style={{
+                      background: "var(--table-section-bg, #0F3A32)",
+                    }}
+                  >
                     <td
                       colSpan={columns.length}
                       className="px-4 py-2 text-white font-heading font-semibold text-sm"
@@ -268,14 +310,20 @@ export function DataTable<T extends object>({
                   role={onRowClick ? "button" : undefined}
                   aria-label={onRowClick ? `Row ${rowIndex + 1}` : undefined}
                   className={cn(
-                    striped && rowIndex % 2 === 1 ? "bg-table-alt" : "bg-white",
-                    onRowClick &&
-                      "cursor-pointer hover:bg-accent/5 transition-colors",
+                    "bg-white",
+                    onRowClick && "cursor-pointer transition-colors",
                     onRowClick &&
                       "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent",
                     focusedRowIndex === rowIndex &&
                       "ring-2 ring-inset ring-accent",
                   )}
+                  style={{
+                    background:
+                      striped && rowIndex % 2 === 1
+                        ? "var(--table-stripe-bg, #F7F8FA)"
+                        : undefined,
+                    borderBottom: "var(--table-row-border, 1px solid #E5E7EB)",
+                  }}
                   onClick={() => onRowClick?.(row)}
                   onKeyDown={
                     onRowClick
@@ -309,7 +357,12 @@ export function DataTable<T extends object>({
         </tbody>
         {footer && (
           <tfoot>
-            <tr className="bg-amic-50 border-t border-gray-border font-semibold">
+            <tr
+              className="border-t border-gray-border font-semibold"
+              style={{
+                background: "var(--table-footer-bg, #EDF5F3)",
+              }}
+            >
               {footer}
             </tr>
           </tfoot>

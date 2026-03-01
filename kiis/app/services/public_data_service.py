@@ -10,9 +10,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -22,6 +22,7 @@ from app.schemas.public_data import GPRegistryItem
 from app.utils.cache import cache
 from app.utils.entity_resolver import EntityResolver, normalize_company_name
 from app.utils.http_client import AsyncHTTPClient
+from app.utils.numeric import safe_decimal, safe_int
 from app.utils.rate_limiter import TokenBucketRateLimiter
 
 logger = logging.getLogger(__name__)
@@ -34,24 +35,6 @@ _ASSET_MGMT_FINANCIAL = f"{_ASSET_MGMT_BASE}/getFinSttus"
 # 금융회사기본정보 API 경로
 _FN_CO_BASE = "/1160100/service/GetFnCoBasiInfoService"
 _FN_CO_OUTLINE = f"{_FN_CO_BASE}/getFnCoOutl"
-
-
-def _safe_decimal(value: str | None) -> Decimal | None:
-    if not value or value.strip() in ("", "-", "0"):
-        return None
-    try:
-        return Decimal(value.strip().replace(",", ""))
-    except InvalidOperation:
-        return None
-
-
-def _safe_int(value: str | int | None) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return int(str(value).strip().replace(",", ""))
-    except (ValueError, TypeError):
-        return None
 
 
 class PublicDataService:
@@ -202,12 +185,12 @@ class PublicDataService:
                     established_date=fn_co.get("estbDt", ""),
                     address=fn_co.get("bnAdrs", ""),
                     phone=fn_co.get("rprsTelno", ""),
-                    employee_count=_safe_int(item.get("empcnt")),
-                    capital=_safe_decimal(financial.get("cptlAmt")),
-                    total_assets=_safe_decimal(financial.get("totalAsset")),
-                    aum=_safe_decimal(item.get("oprtAssetAmt")),
-                    fund_count=_safe_int(item.get("fundCnt")),
-                    operating_revenue=_safe_decimal(financial.get("oprtRevnAmt")),
+                    employee_count=safe_int(item.get("empcnt")),
+                    capital=safe_decimal(financial.get("cptlAmt")),
+                    total_assets=safe_decimal(financial.get("totalAsset")),
+                    aum=safe_decimal(item.get("oprtAssetAmt")),
+                    fund_count=safe_int(item.get("fundCnt")),
+                    operating_revenue=safe_decimal(financial.get("oprtRevnAmt")),
                     authorization_date=item.get("authorizDt", ""),
                     data_date=item.get("baseYm", ""),
                 )
@@ -329,6 +312,7 @@ class PublicDataService:
             gp_aum=item.aum,
             gp_fund_count=item.fund_count,
             gp_employee_count=item.employee_count,
+            gp_strategy_tags={"sources": ["public_data"], "strategies": []},
             gp_profile_synced_at=now,
         )
         db.add(company)
@@ -354,7 +338,8 @@ class PublicDataService:
             company.finance_company_code = item.finance_company_code
         if item.authorization_date:
             company.gp_authorization_date = item.authorization_date
-        if item.aum is not None:
+        # gp_aum: 기존 값이 없는 경우에만 덮어씀 (FreeSIS 등 다른 소스 값 보호)
+        if item.aum is not None and company.gp_aum is None:
             company.gp_aum = item.aum
         if item.fund_count is not None:
             company.gp_fund_count = item.fund_count
@@ -366,7 +351,59 @@ class PublicDataService:
             company.phn_no = item.phone
         if item.established_date and not company.est_dt:
             company.est_dt = item.established_date
+
+        # gp_strategy_tags에 public_data 소스 머지 (dict 복사로 mutation safety 확보)
+        tags = dict(company.gp_strategy_tags or {})
+        sources = list(tags.get("sources", []))
+        if "public_data" not in sources:
+            sources.append("public_data")
+        tags["sources"] = sources
+        if "strategies" not in tags:
+            tags["strategies"] = []
+        company.gp_strategy_tags = tags
+
         company.gp_profile_synced_at = now
+
+
+async def search_gp_companies(
+    db: AsyncSession,
+    *,
+    company_name: str | None = None,
+    source: str | None = None,
+    strategy: str | None = None,
+    sort_by: str = "aum",
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[Company], int]:
+    """Company 테이블에서 GP(is_gp=True)를 통합 조회한다.
+
+    FreeSIS, KVIC, 공공데이터포털 등 여러 소스에서 동기화된 GP를
+    source/strategy 필터와 정렬로 조회한다.
+    """
+    stmt = select(Company).where(Company.is_gp.is_(True))
+
+    if company_name:
+        stmt = stmt.where(Company.corp_name.ilike(f"%{company_name}%"))
+
+    if source:
+        stmt = stmt.where(cast(Company.gp_strategy_tags, String).contains(f'"{source}"'))
+
+    if strategy:
+        stmt = stmt.where(cast(Company.gp_strategy_tags, String).contains(f'"{strategy}"'))
+
+    if sort_by == "fund_count":
+        stmt = stmt.order_by(Company.gp_fund_count.desc().nulls_last())
+    elif sort_by == "company_name":
+        stmt = stmt.order_by(Company.corp_name.asc())
+    else:
+        stmt = stmt.order_by(Company.gp_aum.desc().nulls_last())
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    stmt = stmt.offset((page - 1) * size).limit(size)
+    result = await db.execute(stmt)
+    return list(result.scalars().all()), total
 
 
 @dataclass

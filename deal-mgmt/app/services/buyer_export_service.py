@@ -7,8 +7,13 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
+
+from app.excel.styles import (
+    apply_theme_header,
+    apply_theme_row,
+)
 
 if TYPE_CHECKING:
     from app.models.buyer_candidate import BuyerCandidate
@@ -35,6 +40,9 @@ _STATUS_LABELS: dict[str, str] = {
     "LOI_ACCEPTED": "LOI 승인",
     "SELECTED": "최종 선정",
     "REJECTED": "거절",
+    "BID_SUBMITTED": "입찰 제출",
+    "BID_NOT_SUBMITTED": "미제출",
+    "BID_DROPPED": "입찰 포기",
 }
 
 _TYPE_LABELS: dict[str, str] = {
@@ -83,9 +91,6 @@ _HEADERS = [
     "비고",
 ]
 
-_HEADER_FILL = PatternFill(start_color="1B3A5C", end_color="1B3A5C", fill_type="solid")
-_HEADER_FONT = Font(name="맑은 고딕", bold=True, color="FFFFFF", size=10)
-_BODY_FONT = Font(name="맑은 고딕", size=10)
 _ALIGN_CENTER = Alignment(horizontal="center", vertical="center")
 _ALIGN_LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
 _ALIGN_RIGHT = Alignment(horizontal="right", vertical="center")
@@ -97,6 +102,7 @@ def build_buyer_excel(
     *,
     marketing_latest: dict[uuid.UUID, tuple[str | None, str | None]] | None = None,
     consortium_map: dict[uuid.UUID, list[str]] | None = None,
+    table_style: str = "DEFAULT",
 ) -> Workbook:
     """매수자 Long-List를 Excel Workbook으로 생성한다.
 
@@ -118,9 +124,7 @@ def build_buyer_excel(
     # 헤더 행
     for col_idx, header in enumerate(_HEADERS, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
-        cell.fill = _HEADER_FILL
-        cell.font = _HEADER_FONT
-        cell.alignment = _ALIGN_CENTER
+        apply_theme_header(cell, header, theme=table_style)
 
     # 데이터 행
     for row_idx, buyer in enumerate(buyers, start=2):
@@ -158,7 +162,7 @@ def build_buyer_excel(
         ]
         for col_idx, value in enumerate(row_data, start=1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
-            cell.font = _BODY_FONT
+            apply_theme_row(cell, theme=table_style)
             if col_idx in (1, 3, 4, 5, 6):
                 cell.alignment = _ALIGN_CENTER
             elif col_idx in (10, 12, 14):
