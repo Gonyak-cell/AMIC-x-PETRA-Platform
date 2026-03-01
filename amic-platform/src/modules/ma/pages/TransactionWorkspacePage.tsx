@@ -228,7 +228,6 @@ import {
   ENGAGEMENT_TYPE_OPTIONS,
   WORKING_GROUP_ROLE_OPTIONS,
   BUYER_TYPE_OPTIONS,
-  BUYER_STATUS_OPTIONS,
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
   NDA_TYPE_OPTIONS,
@@ -347,26 +346,6 @@ const STATUS_VARIANT: Record<
   ON_HOLD: "warning",
   COMPLETED: "info",
   TERMINATED: "error",
-};
-
-const BUYER_STATUS_VARIANT: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "neutral"
-> = {
-  IDENTIFIED: "neutral",
-  CONTACTED: "neutral",
-  NDA_SENT: "info",
-  NDA_SIGNED: "info",
-  CIM_SENT: "info",
-  INTEREST_CONFIRMED: "warning",
-  IOI_RECEIVED: "warning",
-  IOI_ACCEPTED: "success",
-  DD_GRANTED: "success",
-  DD_IN_PROGRESS: "success",
-  LOI_RECEIVED: "warning",
-  LOI_ACCEPTED: "success",
-  SELECTED: "success",
-  REJECTED: "error",
 };
 
 function formatDate(iso: string): string {
