@@ -18,14 +18,14 @@ def upgrade() -> None:
     op.add_column(
         "deals",
         sa.Column(
-            "deal_type", sa.String(30), nullable=True, index=True,
+            "deal_type", sa.String(30), nullable=True,
             comment="딜 유형 (investment/acquisition/exit/holding_change)",
         ),
     )
     op.add_column(
         "deals",
         sa.Column(
-            "rcept_no", sa.String(20), nullable=True, index=True,
+            "rcept_no", sa.String(20), nullable=True,
             comment="DART 접수번호 (공시 원문 연결)",
         ),
     )
