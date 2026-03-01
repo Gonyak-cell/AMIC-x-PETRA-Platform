@@ -57,7 +57,10 @@ async def test_promote_with_contact_info(client):
 async def test_promote_missing_contact(client):
     """연락처 없는 buyer → 422, 누락 필드 목록."""
     txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id, **BUYER_NO_CONTACT)
+    # 연락처 없이 직접 생성 (BUYER_WITH_CONTACT 기본값 회피)
+    resp0 = await client.post(f"/api/v1/transactions/{txn_id}/buyers", json=BUYER_NO_CONTACT)
+    assert resp0.status_code == 201
+    buyer = resp0.json()
 
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",

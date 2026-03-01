@@ -55,6 +55,10 @@ COPY --from=builder /build/alembic.ini /app/alembic.ini
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# Copy seed scripts and data files (deploy-time seeding)
+COPY scripts/*.py /app/scripts/
+COPY data/ /app/data/
+
 ENV PYTHONPATH="/app"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

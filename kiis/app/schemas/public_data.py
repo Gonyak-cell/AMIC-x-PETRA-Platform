@@ -117,6 +117,7 @@ class GPCompanyItem(BaseModel):
     phn_no: str | None = Field(None, description="연락처")
     gp_authorization_date: str | None = Field(None, description="인가일자")
     gp_aum: Decimal | None = Field(None, description="운용자산 AUM (백만원)")
+    gp_total_commitment: Decimal | None = Field(None, description="FSS PEF 총약정액 합산 (억원)")
     gp_fund_count: int | None = Field(None, description="운용 펀드수")
     gp_employee_count: int | None = Field(None, description="임직원수")
     sources: list[str] = Field(default_factory=list, description="데이터 소스 (freesis, kvic, public_data)")

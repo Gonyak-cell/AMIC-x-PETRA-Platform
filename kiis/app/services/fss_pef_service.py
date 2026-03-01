@@ -176,6 +176,9 @@ class FSSPEFService:
                 logger.exception("FSS PEF 동기화 실패: %s", item.pef_name)
                 result.errors.append(item.pef_name)
 
+        # GP별 총약정액 합산 → Company.gp_total_commitment 갱신
+        self._aggregate_gp_commitment(gp_cache, items)
+
         await db.commit()
         logger.info(
             "FSS PEF 동기화 완료: 총 %d건, PEF 생성 %d, GP 신규 %d, 에러 %d",
@@ -277,6 +280,33 @@ class FSSPEFService:
         tags["sources"] = sources
         company.gp_strategy_tags = tags
         company.gp_profile_synced_at = now
+
+    @staticmethod
+    def _aggregate_gp_commitment(
+        gp_cache: dict[str, Company],
+        items: list[FSSPEFItem],
+    ) -> None:
+        """GP별 총약정액을 합산하여 Company.gp_total_commitment에 저장한다.
+
+        공동 운용 PEF는 각 GP에 중복 합산한다 (타겟팅 풀 구성 목적).
+        """
+        commitment_map: dict[str, Decimal] = {}
+        for item in items:
+            amt = item.total_commitment or Decimal(0)
+            if amt == 0:
+                continue
+            for gp_name in (item.gp1_name, item.gp2_name, item.gp3_name):
+                if gp_name:
+                    commitment_map[gp_name] = commitment_map.get(gp_name, Decimal(0)) + amt
+
+        updated = 0
+        for gp_name, total in commitment_map.items():
+            company = gp_cache.get(gp_name)
+            if company:
+                company.gp_total_commitment = total
+                updated += 1
+
+        logger.info("GP 총약정액 합산 완료: %d개 GP 갱신", updated)
 
     def _find_header_row(self, rows: list[tuple]) -> int | None:  # type: ignore[type-arg]
         """헤더 행 인덱스를 찾는다 (첫 10행 내에서)."""

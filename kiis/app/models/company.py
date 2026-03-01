@@ -49,6 +49,9 @@ class Company(TimestampMixin, Base):
     gp_strategy_tags: Mapped[dict | None] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), nullable=True, comment="전략 태그"
     )
+    gp_total_commitment: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 0), nullable=True, comment="FSS PEF 총약정액 합산 (억원, GP1+GP2+GP3 참여분)"
+    )
     gp_profile_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="GP 프로파일 마지막 동기화 시각"
     )

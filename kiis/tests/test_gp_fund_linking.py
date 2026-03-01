@@ -319,3 +319,128 @@ class TestFSSPEFService:
         db_result = await async_session.execute(stmt)
         pef = db_result.scalar_one()
         assert pef.total_commitment == Decimal("12345")
+
+
+# ──────────────────────────────────────────────
+# GP 총약정액 합산 테스트
+# ──────────────────────────────────────────────
+
+
+class TestGPTotalCommitmentAggregation:
+    async def test_single_gp_single_pef(self, async_session: AsyncSession) -> None:
+        """단일 GP + 단일 PEF → gp_total_commitment = 해당 PEF 약정액."""
+        service = FSSPEFService()
+        items = [
+            FSSPEFItem(
+                pef_name="단독 PEF",
+                gp1_name="합산테스트GP",
+                total_commitment=Decimal("1000"),
+            ),
+        ]
+
+        await service.sync_pef_data(async_session, items)
+
+        stmt = select(Company).where(Company.corp_name == "합산테스트GP")
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+        assert company.gp_total_commitment == Decimal("1000")
+
+    async def test_single_gp_multiple_pefs(self, async_session: AsyncSession) -> None:
+        """동일 GP가 여러 PEF에 GP1로 참여 → 총약정액 합산."""
+        service = FSSPEFService()
+        items = [
+            FSSPEFItem(
+                pef_name="PEF Alpha",
+                gp1_name="다중PEF운용사",
+                total_commitment=Decimal("500"),
+            ),
+            FSSPEFItem(
+                pef_name="PEF Beta",
+                gp1_name="다중PEF운용사",
+                total_commitment=Decimal("300"),
+            ),
+            FSSPEFItem(
+                pef_name="PEF Gamma",
+                gp1_name="다중PEF운용사",
+                total_commitment=Decimal("200"),
+            ),
+        ]
+
+        await service.sync_pef_data(async_session, items)
+
+        stmt = select(Company).where(Company.corp_name == "다중PEF운용사")
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+        assert company.gp_total_commitment == Decimal("1000")
+
+    async def test_coop_pef_double_counted(self, async_session: AsyncSession) -> None:
+        """공동 운용 PEF는 각 GP에 중복 합산된다."""
+        service = FSSPEFService()
+        items = [
+            FSSPEFItem(
+                pef_name="공동운용 PEF",
+                gp1_name="주GP운용사",
+                gp2_name="공동GP운용사",
+                total_commitment=Decimal("800"),
+            ),
+        ]
+
+        await service.sync_pef_data(async_session, items)
+
+        stmt = select(Company).where(Company.corp_name == "주GP운용사")
+        result = await async_session.execute(stmt)
+        gp1 = result.scalar_one()
+        assert gp1.gp_total_commitment == Decimal("800")
+
+        stmt2 = select(Company).where(Company.corp_name == "공동GP운용사")
+        result2 = await async_session.execute(stmt2)
+        gp2 = result2.scalar_one()
+        assert gp2.gp_total_commitment == Decimal("800")
+
+    async def test_mixed_roles_aggregation(self, async_session: AsyncSession) -> None:
+        """GP1로 단독 참여 + GP2로 공동 참여 → 합산."""
+        service = FSSPEFService()
+        items = [
+            FSSPEFItem(
+                pef_name="단독 PEF",
+                gp1_name="복합역할GP",
+                total_commitment=Decimal("600"),
+            ),
+            FSSPEFItem(
+                pef_name="공동 PEF",
+                gp1_name="다른운용사",
+                gp2_name="복합역할GP",
+                total_commitment=Decimal("400"),
+            ),
+        ]
+
+        await service.sync_pef_data(async_session, items)
+
+        stmt = select(Company).where(Company.corp_name == "복합역할GP")
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+        # GP1: 600, GP2: 400 → 합계 1000
+        assert company.gp_total_commitment == Decimal("1000")
+
+    async def test_zero_commitment_excluded(self, async_session: AsyncSession) -> None:
+        """총약정액이 0 또는 None인 PEF는 합산에서 제외된다."""
+        service = FSSPEFService()
+        items = [
+            FSSPEFItem(
+                pef_name="약정액 있는 PEF",
+                gp1_name="제로테스트GP",
+                total_commitment=Decimal("500"),
+            ),
+            FSSPEFItem(
+                pef_name="약정액 없는 PEF",
+                gp1_name="제로테스트GP",
+                total_commitment=None,
+            ),
+        ]
+
+        await service.sync_pef_data(async_session, items)
+
+        stmt = select(Company).where(Company.corp_name == "제로테스트GP")
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+        assert company.gp_total_commitment == Decimal("500")

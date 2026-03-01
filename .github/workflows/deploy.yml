@@ -289,6 +289,24 @@ jobs:
               echo "  MA not changed — skipping corp basic seed."
             fi
 
+            # ── 5.8. KIIS FSS PEF GP Data Seed ──
+            # 금감원 기관전용 PEF 엑셀에서 GP 전수목록 + 총약정액 합산 (idempotent UPSERT)
+            echo "=== [5.8/8] KIIS FSS PEF GP Seed ==="
+            if [ "$MIGRATE_KIIS" = true ]; then
+              echo "  Checking PEF fund data..."
+              KIIS_STATS=$($COMPOSE exec -T kiis-api python -m scripts.db_stats 2>/dev/null || echo '{}')
+              PEF_COUNT=$(echo "$KIIS_STATS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('pef_funds_count',0))" 2>/dev/null || echo "0")
+              if [ "$PEF_COUNT" -lt 100 ]; then
+                echo "  PEF funds: $PEF_COUNT — running FSS PEF seed..."
+                timeout 120 $COMPOSE exec -T kiis-api python -m scripts.seed_fss_pef data/fss_pef.xlsx 2>&1 || \
+                  echo "  WARN: FSS PEF seed failed (non-blocking)"
+              else
+                echo "  PEF funds: $PEF_COUNT — already seeded, skipping."
+              fi
+            else
+              echo "  KIIS not changed — skipping FSS PEF seed."
+            fi
+
             # ── 6. Health check + rollback (with retries) ──
             # NOTE: Use docker exec to curl backends directly (bypass nginx SSL redirect)
             echo "=== [6/6] Health Check ==="

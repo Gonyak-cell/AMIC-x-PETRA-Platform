@@ -90,13 +90,6 @@ const TEAM_MEMBERS: TeamMemberData[] = [
     ],
   },
   {
-    name: "윤태리",
-    title: "실장",
-    org: "AMIC x PETRABRIDGE PARTNERS",
-    career: [],
-    education: [],
-  },
-  {
     name: "서지원",
     title: "대표변호사",
     org: "법무법인 아믹",
