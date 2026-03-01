@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
-import { Building2, TrendingUp } from "lucide-react";
+import { AlertTriangle, Building2, TrendingUp } from "lucide-react";
 import {
   Badge,
   Button,
@@ -26,9 +26,18 @@ export default function FIRecommendModal({
   txnId,
   existingCompanyNames,
 }: FIRecommendModalProps) {
-  const { data: recommendations, isLoading } = useFIRecommendations(txnId);
+  const {
+    data: recommendations,
+    isLoading,
+    isError,
+  } = useFIRecommendations(txnId);
   const addBuyer = useAddBuyer(txnId);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 모달 열릴 때 선택 초기화
+  useEffect(() => {
+    if (open) setSelected(new Set());
+  }, [open]);
 
   const existingSet = useMemo(
     () => new Set(existingCompanyNames.map((n) => n.toLowerCase())),
@@ -89,13 +98,23 @@ export default function FIRecommendModal({
         </div>
       )}
 
-      {!isLoading && (!recommendations || recommendations.length === 0) && (
+      {!isLoading && isError && (
         <EmptyState
-          icon={Building2}
-          title="추천 결과 없음"
-          description="거래금액 범위에 해당하는 PEF가 없습니다. 거래금액(estimated_deal_value)을 확인해 주세요."
+          icon={AlertTriangle}
+          title="추천 조회 실패"
+          description="FI 추천 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
         />
       )}
+
+      {!isLoading &&
+        !isError &&
+        (!recommendations || recommendations.length === 0) && (
+          <EmptyState
+            icon={Building2}
+            title="추천 결과 없음"
+            description="거래금액 범위에 해당하는 PEF가 없습니다. 거래금액(estimated_deal_value)을 확인해 주세요."
+          />
+        )}
 
       {!isLoading && recommendations && recommendations.length > 0 && (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -121,13 +140,14 @@ export default function FIRecommendModal({
                     checked={isSelected}
                     disabled={isExisting}
                     onChange={() => toggleGP(rec.gp_name)}
+                    aria-label={`${rec.gp_name} 선택`}
                     className="h-4 w-4 rounded border-border"
                   />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{rec.gp_name}</span>
-                      {isExisting && <Badge variant="default">추가됨</Badge>}
+                      {isExisting && <Badge variant="neutral">추가됨</Badge>}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-text-muted">
                       <span className="flex items-center gap-1">

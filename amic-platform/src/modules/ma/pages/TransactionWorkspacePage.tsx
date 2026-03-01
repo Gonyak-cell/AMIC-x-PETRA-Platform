@@ -69,6 +69,7 @@ import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
 import type {
   BuyerCandidate,
   BuyerCandidateCreate,
+  BuyerCandidateUpdate,
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
@@ -346,6 +347,9 @@ const STATUS_VARIANT: Record<
   ON_HOLD: "warning",
   COMPLETED: "info",
   TERMINATED: "error",
+  BID_SUBMITTED: "info",
+  BID_NOT_SUBMITTED: "warning",
+  BID_DROPPED: "error",
 };
 
 function formatDate(iso: string): string {
