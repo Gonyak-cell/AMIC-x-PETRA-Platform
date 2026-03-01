@@ -63,6 +63,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
+SQLiteTypeCompiler.visit_UUID = lambda self, type_, **kw: "CHAR(36)"
 
 from app.core.database import get_db
 from app.core.dependencies import get_fdd_client, get_im_client, get_kiis_client
