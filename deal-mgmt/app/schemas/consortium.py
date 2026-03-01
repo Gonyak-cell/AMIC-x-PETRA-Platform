@@ -32,10 +32,10 @@ class ConsortiumMappingCreate(BaseModel):
     co_investor_buyer_id: uuid.UUID
     status: ConsortiumStatus = ConsortiumStatus.TAPPING
     equity_share_pct: Decimal | None = Field(None, ge=0, le=100)
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=2000)
 
 
 class ConsortiumMappingUpdate(BaseModel):
     status: ConsortiumStatus | None = None
     equity_share_pct: Decimal | None = Field(None, ge=0, le=100)
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=2000)

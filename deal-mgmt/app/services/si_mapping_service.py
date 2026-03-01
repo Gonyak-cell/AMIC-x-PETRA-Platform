@@ -180,6 +180,18 @@ async def map_si_candidates(
     )
 
 
+# ── 기업명 검색 ──────────────────────────────────────────
+async def find_si_company_by_name(
+    db: AsyncSession,
+    company_name: str,
+) -> SICompany | None:
+    """기업명으로 SI 기업 검색 (정확 매칭)."""
+    result = await db.execute(
+        select(SICompany).where(SICompany.company_name == company_name).limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 # ── 일괄 BuyerCandidate 등록 ─────────────────────────────
 async def bulk_add_to_buyers(
     db: AsyncSession,
@@ -213,6 +225,7 @@ async def bulk_add_to_buyers(
             buyer_type=BuyerType.STRATEGIC,
             status=BuyerCandidateStatus.IDENTIFIED,
             notes=f"SI 자동 매핑으로 추가됨 (KSIC: {si.ksic_codes})",
+            extra_data={"si_company_id": str(si.id)},
         )
         db.add(buyer)
         new_buyers.append((buyer, si))

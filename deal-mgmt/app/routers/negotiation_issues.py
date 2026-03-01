@@ -88,7 +88,7 @@ async def batch_update_decision(
             entity_id=issue.id,
             action=AuditAction.UPDATE,
             actor_email=claims.email,
-            new_value={"decision_status": item.decision_status.value},
+            new_value={"decision_status": item.decision_status},
         )
         updated.append(NegotiationIssueOut.model_validate(issue))
     await db.commit()
@@ -170,6 +170,7 @@ async def update_issue(
 ):
     issue = await _get_issue_or_404(db, txn_id, issue_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(issue, k) for k in update_data}
     for k, v in update_data.items():
         setattr(issue, k, v)
     await audit_service.record(
@@ -178,7 +179,8 @@ async def update_issue(
         entity_id=issue.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(issue)

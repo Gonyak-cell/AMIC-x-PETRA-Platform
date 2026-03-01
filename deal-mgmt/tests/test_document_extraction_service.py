@@ -20,7 +20,9 @@ from app.models.enums import (
     BuyerType,
     DocExtractionCategory,
     ExtractionStatus,
+    NdaType,
     TransactionSide,
+    ValuationMethod,
     VdrDocumentStatus,
     VdrFolderCategory,
 )
@@ -30,12 +32,16 @@ from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.ralph.parsers.base import ParsedFile
 from app.services.document_extraction_service import (
+    _STRING_LIMITS,
     _extract_json,
+    _safe_enum_value,
+    _safe_set_string,
     classify_document,
     confirm_extraction,
     create_extraction,
     extract_fields,
     get_extraction,
+    has_active_extraction,
     list_extractions,
 )
 
@@ -133,6 +139,34 @@ class TestExtractJson:
         assert _extract_json(text) == "no json here"
 
 
+# ── _safe_enum_value ─────────────────────────────────────────
+
+
+class TestSafeEnumValue:
+    def test_none_returns_none(self) -> None:
+        assert _safe_enum_value(BidType, None) is None
+
+    def test_valid_string(self) -> None:
+        result = _safe_enum_value(BidType, "LOI")
+        assert result == BidType.LOI
+
+    def test_invalid_string_returns_none(self) -> None:
+        result = _safe_enum_value(BidType, "NONEXISTENT")
+        assert result is None
+
+    def test_valid_nda_type(self) -> None:
+        result = _safe_enum_value(NdaType, "MUTUAL")
+        assert result == NdaType.MUTUAL
+
+    def test_valid_valuation_method(self) -> None:
+        result = _safe_enum_value(ValuationMethod, "DCF")
+        assert result == ValuationMethod.DCF
+
+    def test_empty_string_returns_none(self) -> None:
+        result = _safe_enum_value(BidType, "")
+        assert result is None
+
+
 # ── CRUD ─────────────────────────────────────────────────────
 
 
@@ -187,6 +221,54 @@ class TestExtractionCrud:
         items = await list_extractions(async_session, txn1.id)
         assert len(items) == 1
         assert items[0].transaction_id == txn1.id
+
+
+# ── has_active_extraction ────────────────────────────────────
+
+
+class TestHasActiveExtraction:
+    async def test_detects_pending(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        await create_extraction(async_session, txn.id, vdr_doc.id)
+
+        result = await has_active_extraction(async_session, vdr_doc.id)
+        assert result is not None
+
+    async def test_detects_completed(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        result = await has_active_extraction(async_session, vdr_doc.id)
+        assert result is not None
+
+    async def test_allows_retry_after_failed(self, async_session: AsyncSession) -> None:
+        """FAILED 상태는 활성으로 간주하지 않아 재시도를 허용한다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.FAILED
+        await async_session.flush()
+
+        result = await has_active_extraction(async_session, vdr_doc.id)
+        assert result is None
+
+    async def test_isolation_by_vdr_doc(self, async_session: AsyncSession) -> None:
+        """다른 VDR 문서의 추출은 감지하지 않는다."""
+        txn = await _make_txn(async_session)
+        vdr_doc1 = await _make_vdr_doc(async_session, txn)
+        vdr_doc2 = await _make_vdr_doc(async_session, txn)
+        await create_extraction(async_session, txn.id, vdr_doc1.id)
+
+        result = await has_active_extraction(async_session, vdr_doc2.id)
+        assert result is None
+
+    async def test_no_extraction_returns_none(self, async_session: AsyncSession) -> None:
+        result = await has_active_extraction(async_session, uuid.uuid4())
+        assert result is None
 
 
 # ── classify_document ────────────────────────────────────────
@@ -423,6 +505,64 @@ class TestConfirmNda:
                 user_email="test@example.com",
             )
 
+    async def test_confirm_nda_invalid_nda_type_ignored(self, async_session: AsyncSession) -> None:
+        """무효한 nda_type 문자열은 무시되고 기본값이 유지된다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "counterparty_name": "테스트사",
+                "buyer_candidate_id": str(buyer.id),
+                "nda_type": "INVALID_TYPE",
+            },
+            target_model="nda",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+        nda = await async_session.get(NDA, updated.target_id)
+        assert nda is not None
+        assert nda.nda_type == NdaType.MUTUAL  # 무효값 무시 → 기본값
+
+    async def test_confirm_nda_update_valid_nda_type(self, async_session: AsyncSession) -> None:
+        """기존 NDA의 nda_type을 유효한 값으로 변경할 수 있다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        nda = NDA(
+            transaction_id=txn.id,
+            buyer_candidate_id=buyer.id,
+            counterparty_name="기존 상대방",
+            nda_type=NdaType.MUTUAL,
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"nda_type": "ONE_WAY"},
+            target_model="nda",
+            target_id=nda.id,
+            create_new=False,
+            user_email="test@example.com",
+        )
+        await async_session.refresh(nda)
+        assert nda.nda_type == NdaType.ONE_WAY
+
 
 # ── confirm_extraction + _apply_to_bid ───────────────────────
 
@@ -522,6 +662,149 @@ class TestConfirmBid:
         assert bid.currency == "EUR"
         assert bid.valid_until == "2026-06-30"
 
+    async def test_confirm_bid_null_bid_type_defaults_loi(self, async_session: AsyncSession) -> None:
+        """bid_type=None 전달 시 LOI 기본값으로 폴백한다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "buyer_candidate_id": str(buyer.id),
+                "bid_type": None,
+                "proposed_amount": 10000000000,
+            },
+            target_model="bid",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+        bid = await async_session.get(Bid, updated.target_id)
+        assert bid is not None
+        assert bid.bid_type == BidType.LOI  # None → LOI 폴백
+
+    async def test_confirm_bid_explicit_bid_type(self, async_session: AsyncSession) -> None:
+        """명시적 bid_type 전달 시 해당 값으로 설정된다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "buyer_candidate_id": str(buyer.id),
+                "bid_type": "FINAL_OFFER",
+            },
+            target_model="bid",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+        bid = await async_session.get(Bid, updated.target_id)
+        assert bid is not None
+        assert bid.bid_type == BidType.FINAL_OFFER
+
+    async def test_confirm_bid_update_bid_type(self, async_session: AsyncSession) -> None:
+        """기존 Bid의 bid_type을 업데이트할 수 있다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        bid = Bid(
+            transaction_id=txn.id,
+            buyer_candidate_id=buyer.id,
+            bid_type=BidType.LOI,
+        )
+        async_session.add(bid)
+        await async_session.flush()
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"bid_type": "FINAL_OFFER"},
+            target_model="bid",
+            target_id=bid.id,
+            create_new=False,
+            user_email="test@example.com",
+        )
+        await async_session.refresh(bid)
+        assert bid.bid_type == BidType.FINAL_OFFER
+
+    async def test_confirm_bid_update_valuation_method(self, async_session: AsyncSession) -> None:
+        """기존 Bid에 valuation_method를 설정할 수 있다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        bid = Bid(
+            transaction_id=txn.id,
+            buyer_candidate_id=buyer.id,
+            bid_type=BidType.LOI,
+        )
+        async_session.add(bid)
+        await async_session.flush()
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"valuation_method": "DCF"},
+            target_model="bid",
+            target_id=bid.id,
+            create_new=False,
+            user_email="test@example.com",
+        )
+        await async_session.refresh(bid)
+        assert bid.valuation_method == ValuationMethod.DCF
+
+    async def test_confirm_bid_invalid_bid_type_ignored(self, async_session: AsyncSession) -> None:
+        """무효한 bid_type은 무시되고 기존 값이 유지된다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+
+        bid = Bid(
+            transaction_id=txn.id,
+            buyer_candidate_id=buyer.id,
+            bid_type=BidType.LOI,
+        )
+        async_session.add(bid)
+        await async_session.flush()
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"bid_type": "NONEXISTENT_TYPE"},
+            target_model="bid",
+            target_id=bid.id,
+            create_new=False,
+            user_email="test@example.com",
+        )
+        await async_session.refresh(bid)
+        assert bid.bid_type == BidType.LOI  # 무효값 무시 → 기존값 유지
+
 
 # ── confirm_extraction + _apply_to_contract ──────────────────
 
@@ -572,6 +855,8 @@ class TestConfirmContract:
                 "rw_cap_amount": 1000000000,
                 "rw_cap_percentage": 20,
                 "key_conditions": ["주요 조건1"],
+                "currency": "KRW",
+                "contract_type": "SPA",
             },
             target_model="contract",
             target_id=None,
@@ -583,6 +868,8 @@ class TestConfirmContract:
         assert contract.ai_risk_flags is not None
         assert contract.ai_risk_flags["rw_cap_amount"] == 1000000000
         assert contract.ai_risk_flags["rw_cap_percentage"] == 20
+        assert contract.ai_risk_flags["currency"] == "KRW"
+        assert contract.ai_risk_flags["contract_type"] == "SPA"
 
     async def test_confirm_contract_null_guard(self, async_session: AsyncSession) -> None:
         txn = await _make_txn(async_session)
@@ -635,6 +922,41 @@ class TestConfirmContract:
         contract = await async_session.get(Contract, updated.target_id)
         assert contract is not None
         assert contract.title == "주식매매계약서"
+
+    async def test_confirm_contract_risk_flags_merge(self, async_session: AsyncSession) -> None:
+        """기존 ai_risk_flags에 새 플래그를 머지한다 (기존 키 보존)."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+
+        contract = Contract(
+            transaction_id=txn.id,
+            title="기존 계약서",
+            ai_risk_flags={"rw_cap_amount": 500000000, "currency": "KRW"},
+        )
+        async_session.add(contract)
+        await async_session.flush()
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "rw_cap_percentage": 15,
+                "contract_type": "SPA",
+            },
+            target_model="contract",
+            target_id=contract.id,
+            create_new=False,
+            user_email="test@example.com",
+        )
+        await async_session.refresh(contract)
+        assert contract.ai_risk_flags["rw_cap_amount"] == 500000000  # 기존 유지
+        assert contract.ai_risk_flags["currency"] == "KRW"  # 기존 유지
+        assert contract.ai_risk_flags["rw_cap_percentage"] == 15  # 새로 추가
+        assert contract.ai_risk_flags["contract_type"] == "SPA"  # 새로 추가
 
 
 # ── confirm_extraction + _apply_to_transaction ───────────────
@@ -771,6 +1093,43 @@ class TestConfirmErrors:
         assert updated.status == ExtractionStatus.CONFIRMED
         assert updated.target_id is None
 
+    async def test_reconfirm_changes_target(self, async_session: AsyncSession) -> None:
+        """CONFIRMED 상태에서 다른 target_model로 재확정할 수 있다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        # 1차 확정: transaction
+        first = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"company_name": "테스트사"},
+            target_model="transaction",
+            target_id=None,
+            create_new=False,
+            user_email="first@example.com",
+        )
+        assert first.status == ExtractionStatus.CONFIRMED
+        assert first.target_model == "transaction"
+
+        # 2차 확정 (재확정): contract로 변경
+        second = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={"counterparty_name": "변경 상대방"},
+            target_model="contract",
+            target_id=None,
+            create_new=True,
+            user_email="second@example.com",
+        )
+        assert second.status == ExtractionStatus.CONFIRMED
+        assert second.target_model == "contract"
+        assert second.target_id is not None
+        assert second.reviewed_by_email == "second@example.com"
+
 
 # ── run_extraction_pipeline ──────────────────────────────────
 
@@ -798,7 +1157,7 @@ class TestPipeline:
             patch(
                 "app.services.document_extraction_service.blob_client",
                 ensure_initialized=AsyncMock(),
-                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+                download_blob_to_file=AsyncMock(),
             ),
             patch(
                 "app.services.document_extraction_service.parse_file",
@@ -809,9 +1168,9 @@ class TestPipeline:
                 return_value=llm,
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         await async_session.refresh(ext)
         assert ext.status == ExtractionStatus.COMPLETED
@@ -836,7 +1195,7 @@ class TestPipeline:
             patch(
                 "app.services.document_extraction_service.blob_client",
                 ensure_initialized=AsyncMock(),
-                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+                download_blob_to_file=AsyncMock(),
             ),
             patch(
                 "app.services.document_extraction_service.parse_file",
@@ -847,9 +1206,9 @@ class TestPipeline:
                 return_value=llm,
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         await async_session.refresh(ext)
         assert ext.status == ExtractionStatus.COMPLETED
@@ -873,7 +1232,7 @@ class TestPipeline:
             patch(
                 "app.services.document_extraction_service.blob_client",
                 ensure_initialized=AsyncMock(),
-                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+                download_blob_to_file=AsyncMock(),
             ),
             patch(
                 "app.services.document_extraction_service.parse_file",
@@ -884,9 +1243,9 @@ class TestPipeline:
                 return_value=llm,
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         await async_session.refresh(ext)
         assert ext.status == ExtractionStatus.COMPLETED
@@ -907,7 +1266,7 @@ class TestPipeline:
             patch(
                 "app.services.document_extraction_service.blob_client",
                 ensure_initialized=AsyncMock(),
-                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+                download_blob_to_file=AsyncMock(),
             ),
             patch(
                 "app.services.document_extraction_service.parse_file",
@@ -918,9 +1277,9 @@ class TestPipeline:
                 return_value=_mock_llm_client(),
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         await async_session.refresh(ext)
         assert ext.status == ExtractionStatus.FAILED
@@ -943,7 +1302,7 @@ class TestPipeline:
             patch(
                 "app.services.document_extraction_service.blob_client",
                 ensure_initialized=AsyncMock(),
-                download_blob=AsyncMock(return_value=b"fake pdf bytes"),
+                download_blob_to_file=AsyncMock(),
             ),
             patch(
                 "app.services.document_extraction_service.parse_file",
@@ -954,9 +1313,9 @@ class TestPipeline:
                 return_value=llm,
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         await async_session.refresh(ext)
         assert ext.status == ExtractionStatus.FAILED
@@ -979,9 +1338,186 @@ class TestPipeline:
                 return_value=_mock_llm_client(),
             ),
         ):
-            from app.services.document_extraction_service import _run_pipeline_inner
+            from app.services.document_extraction_service import _run_pipeline_core
 
-            await _run_pipeline_inner(async_session, ext.id, MagicMock(), 0.0)
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
 
         # 파싱 호출 없음 (COMPLETED이므로 스킵)
         mock_parse.assert_not_called()
+
+    async def test_pipeline_empty_extraction_sets_error_message(self, async_session: AsyncSession) -> None:
+        """LLM이 빈 결과를 반환하면 COMPLETED + error_message 힌트가 설정된다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "NDA 문서 " * 200
+
+        classify_resp = '{"category": "NDA", "confidence": 0.90}'
+        # LLM이 파싱 불가능한 응답 → extract_fields가 {} 반환
+        extract_resp = "no json content here"
+
+        llm = _mock_llm_client()
+        llm.call_with_model = AsyncMock(return_value=classify_resp)
+        llm.call = AsyncMock(return_value=extract_resp)
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        assert ext.status == ExtractionStatus.COMPLETED
+        assert ext.extracted_data == {}
+        assert ext.error_message is not None
+        assert "구조화 데이터" in ext.error_message
+
+
+# ── _safe_set_string 테스트 ────────────────────────────────────
+
+
+class TestSafeSetString:
+    """_safe_set_string 유틸리티 단위 테스트."""
+
+    def test_normal_string_within_limit(self) -> None:
+        """제한 이내의 문자열은 그대로 설정된다."""
+        obj = MagicMock()
+        _safe_set_string(obj, "counterparty_name", "AMIC Partners")
+        assert obj.counterparty_name == "AMIC Partners"
+
+    def test_string_exceeds_limit_truncated(self) -> None:
+        """제한 초과 문자열은 잘린다."""
+        obj = MagicMock()
+        long_name = "A" * 250  # counterparty_name 제한: 200
+        _safe_set_string(obj, "counterparty_name", long_name)
+        assert obj.counterparty_name == "A" * 200
+
+    def test_currency_truncated_to_3(self) -> None:
+        """currency 필드는 3자로 제한."""
+        obj = MagicMock()
+        _safe_set_string(obj, "currency", "USDX")
+        assert obj.currency == "USD"
+
+    def test_non_string_value_passes_through(self) -> None:
+        """숫자 등 비문자열은 truncation 없이 전달."""
+        obj = MagicMock()
+        _safe_set_string(obj, "exclusivity_period_days", 90)
+        assert obj.exclusivity_period_days == 90
+
+    def test_unknown_field_no_limit(self) -> None:
+        """_STRING_LIMITS에 없는 필드는 제한 없이 설정."""
+        obj = MagicMock()
+        long_val = "X" * 1000
+        _safe_set_string(obj, "unknown_field", long_val)
+        assert obj.unknown_field == long_val
+
+    def test_date_field_truncated_to_10(self) -> None:
+        """날짜 필드(signed_at 등)는 10자로 제한."""
+        obj = MagicMock()
+        _safe_set_string(obj, "signed_at", "2026-01-01 extra text")
+        assert obj.signed_at == "2026-01-01"
+        assert len(obj.signed_at) == 10
+
+    def test_string_limits_dict_exists(self) -> None:
+        """주요 필드가 _STRING_LIMITS에 정의되어 있다."""
+        assert "counterparty_name" in _STRING_LIMITS
+        assert "currency" in _STRING_LIMITS
+        assert "signed_at" in _STRING_LIMITS
+
+
+# ── UUID 파싱 한국어 에러 테스트 ────────────────────────────────
+
+
+class TestUuidParsingKoreanError:
+    """UUID 형식 오류 시 한국어 ValueError가 발생하는지 검증."""
+
+    async def test_nda_invalid_uuid_raises_korean_error(self, async_session: AsyncSession) -> None:
+        """NDA 생성 시 잘못된 UUID → 한국어 ValueError."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        ext.extracted_data = {"counterparty_name": "Test"}
+        await async_session.commit()
+
+        with pytest.raises(ValueError, match="buyer_candidate_id 형식이 올바르지 않습니다"):
+            await confirm_extraction(
+                db=async_session,
+                extraction_id=ext.id,
+                confirmed_data={"buyer_candidate_id": "not-a-uuid"},
+                target_model="nda",
+                target_id=None,
+                create_new=True,
+                user_email="test@amic.kr",
+            )
+
+    async def test_bid_invalid_uuid_raises_korean_error(self, async_session: AsyncSession) -> None:
+        """Bid 생성 시 잘못된 UUID → 한국어 ValueError."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        ext.extracted_data = {"proposed_amount": 1000}
+        await async_session.commit()
+
+        with pytest.raises(ValueError, match="buyer_candidate_id 형식이 올바르지 않습니다"):
+            await confirm_extraction(
+                db=async_session,
+                extraction_id=ext.id,
+                confirmed_data={"buyer_candidate_id": "invalid-uuid-format"},
+                target_model="bid",
+                target_id=None,
+                create_new=True,
+                user_email="test@amic.kr",
+            )
+
+    async def test_nda_create_with_string_overflow_truncated(self, async_session: AsyncSession) -> None:
+        """NDA 생성 시 counterparty_name 초과 → 200자로 잘림."""
+        txn = await _make_txn(async_session)
+        buyer = BuyerCandidate(
+            transaction_id=txn.id,
+            company_name="TestCo",
+            buyer_type=BuyerType.STRATEGIC,
+            status=BuyerCandidateStatus.IDENTIFIED,
+        )
+        async_session.add(buyer)
+        await async_session.flush()
+
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        ext.extracted_data = {"counterparty_name": "A" * 250}
+        await async_session.commit()
+
+        result = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "buyer_candidate_id": str(buyer.id),
+                "counterparty_name": "B" * 250,
+            },
+            target_model="nda",
+            target_id=None,
+            create_new=True,
+            user_email="test@amic.kr",
+        )
+        assert result.target_id is not None
+        nda = await async_session.get(NDA, result.target_id)
+        assert nda is not None
+        assert len(nda.counterparty_name) == 200

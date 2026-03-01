@@ -14,6 +14,7 @@ from app.schemas.si_mapping import (
     BulkAddBuyersResponse,
     DeepDiveResponse,
     KsicSuggestion,
+    SICompanyOut,
     SIDataStats,
     SIMappingRequest,
     SIMappingResponse,
@@ -65,6 +66,20 @@ async def map_si(
         min_revenue=body.min_revenue,
         require_investment_history=body.require_investment_history,
     )
+
+
+# ── 기업명 검색 ──────────────────────────────────────────
+@router.get("/si-mapping/companies/search-by-name", response_model=SICompanyOut | None)
+async def search_si_company_by_name(
+    name: str = Query(..., min_length=1, max_length=300),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(_READ_ACCESS),
+) -> SICompanyOut | None:
+    """기업명으로 SI 기업 검색 (정확 매칭)."""
+    si = await si_mapping_service.find_si_company_by_name(db, name)
+    if si is None:
+        return None
+    return SICompanyOut.model_validate(si)
 
 
 # ── 기업 딥다이브 ──────────────────────────────────────────

@@ -79,10 +79,16 @@ class FMChecklistService:
         actor: str,
     ) -> list[FMChecklistItem]:
         """여러 항목을 한번에 업데이트한다."""
+        # N+1 방지: 단일 IN 쿼리로 일괄 로딩
+        item_ids = [bulk.item_id for bulk in updates]
+        stmt = select(FMChecklistItem).where(FMChecklistItem.id.in_(item_ids))
+        rows = (await self.db.execute(stmt)).scalars().all()
+        items_by_id = {item.id: item for item in rows}
+
         results: list[FMChecklistItem] = []
         skipped: list[str] = []
         for bulk in updates:
-            item = await self.db.get(FMChecklistItem, bulk.item_id)
+            item = items_by_id.get(bulk.item_id)
             if item is None:
                 skipped.append(f"{bulk.item_id} (not found)")
                 continue

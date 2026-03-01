@@ -100,14 +100,24 @@ export default function SICandidateTable({
                   className="rounded border-slate-300"
                 />
               </th>
-              <th className="px-3 py-2 font-medium text-slate-600">기업명</th>
-              <th className="px-3 py-2 font-medium text-slate-600">KSIC</th>
-              <th className="px-3 py-2 text-right font-medium text-slate-600">
+              <th className="min-w-[140px] px-3 py-2 font-medium text-slate-600">
+                기업명
+              </th>
+              <th className="w-[100px] px-3 py-2 font-medium text-slate-600">
+                KSIC
+              </th>
+              <th className="w-[100px] px-3 py-2 text-right font-medium text-slate-600">
                 매출액
               </th>
-              <th className="px-3 py-2 font-medium text-slate-600">투자이력</th>
-              <th className="px-3 py-2 font-medium text-slate-600">관계</th>
-              <th className="px-3 py-2 font-medium text-slate-600">산업(IO)</th>
+              <th className="w-[64px] px-3 py-2 font-medium text-slate-600">
+                투자이력
+              </th>
+              <th className="w-[80px] px-3 py-2 font-medium text-slate-600">
+                관계
+              </th>
+              <th className="min-w-[100px] px-3 py-2 font-medium text-slate-600">
+                산업(IO)
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -166,7 +176,7 @@ export default function SICandidateTable({
                   <td className="px-3 py-2">
                     <span
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium",
+                        "inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
                         rel.badgeCls,
                       )}
                     >

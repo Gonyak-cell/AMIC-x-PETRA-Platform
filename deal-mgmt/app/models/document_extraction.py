@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Enum, Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Enum, Float, ForeignKey, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -19,15 +19,15 @@ class DocumentExtraction(Base, TimestampMixin):
 
     __tablename__ = "document_extractions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     vdr_document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("vdr_documents.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -46,13 +46,13 @@ class DocumentExtraction(Base, TimestampMixin):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 추출 결과 (JSON) ────────────────────────────────
-    extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    extracted_data: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # ── 매핑 대상 ────────────────────────────────────────
     target_model: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )  # "nda", "bid", "contract", "transaction"
-    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    target_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
 
     # ── 비용 추적 ────────────────────────────────────────
     llm_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)

@@ -97,6 +97,7 @@ async def update_nda(
     if nda is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NDA를 찾을 수 없습니다")
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(nda, k) for k in update_data}
     for k, v in update_data.items():
         setattr(nda, k, v)
     await audit_service.record(
@@ -105,7 +106,8 @@ async def update_nda(
         entity_id=nda.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(nda)

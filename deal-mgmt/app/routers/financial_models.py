@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import FinancialModelStatus
 from app.schemas.financial_model import (
     FinancialModelCreate,
@@ -42,6 +42,7 @@ async def list_models(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     return await fm_svc.list_financial_models(db, txn_id)
 
 
@@ -50,8 +51,9 @@ async def create_model(
     txn_id: UUID,
     body: FinancialModelCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     return await fm_svc.create_financial_model(db, txn_id, body, claims.email or "unknown")
 
 
@@ -62,6 +64,7 @@ async def get_model(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     return await fm_svc.get_financial_model(db, fm_id, txn_id)
 
 
@@ -70,8 +73,9 @@ async def regenerate_model(
     txn_id: UUID,
     fm_id: UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     return await fm_svc.regenerate_financial_model(db, fm_id, txn_id)
 
 
@@ -80,8 +84,9 @@ async def delete_model(
     txn_id: UUID,
     fm_id: UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     await fm_svc.delete_financial_model(db, fm_id, txn_id)
 
 
@@ -92,6 +97,7 @@ async def download_model(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     fm = await fm_svc.get_financial_model(db, fm_id, txn_id)
     if fm.status != FinancialModelStatus.READY or not fm.file_path:
         raise HTTPException(
@@ -129,6 +135,7 @@ async def get_checklist(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     await fm_svc.get_financial_model(db, fm_id, txn_id)
     svc = FMChecklistService(db)
     checklist = await svc.get_checklist(fm_id)
@@ -150,8 +157,9 @@ async def update_checklist_item(
     item_id: UUID,
     body: FMChecklistItemUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     await fm_svc.get_financial_model(db, fm_id, txn_id)
     svc = FMChecklistService(db)
     item = await svc.update_item(item_id, body, claims.email or "unknown")
@@ -166,8 +174,9 @@ async def bulk_update_checklist_items(
     cl_id: UUID,
     body: FMChecklistBulkUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     await fm_svc.get_financial_model(db, fm_id, txn_id)
     svc = FMChecklistService(db)
     items = await svc.bulk_update_items(cl_id, body.items, claims.email or "unknown")
@@ -182,8 +191,9 @@ async def finalize_checklist(
     cl_id: UUID,
     body: FMChecklistFinalizeRequest | None = None,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     fm = await fm_svc.get_financial_model(db, fm_id, txn_id)
 
     # 상태 가드: GENERATING/FINALIZING 중이면 거부

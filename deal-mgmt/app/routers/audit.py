@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
@@ -11,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.security import JWTClaims, require_role
 from app.schemas.audit import AuditLogListResponse, AuditLogRead
 from app.services.audit_service import list_audit_logs
 
@@ -27,7 +28,7 @@ async def search_audit_logs(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_role("ADMIN", "MANAGER")),
 ) -> AuditLogListResponse:
     """감사 로그를 검색/필터한다."""
     items, total = await list_audit_logs(
@@ -54,7 +55,7 @@ async def export_audit_logs(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_role("ADMIN", "MANAGER")),
 ) -> StreamingResponse:
     """감사 로그를 CSV 파일로 내보낸다."""
     items, _ = await list_audit_logs(
@@ -69,15 +70,18 @@ async def export_audit_logs(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID"])
+    writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID", "Old Value", "New Value", "Notes"])
     for item in items:
         writer.writerow(
             [
                 item.created_at.isoformat() if item.created_at else "",
                 item.actor_email or "",
-                item.action.value if hasattr(item.action, "value") else str(item.action),
+                item.action.value,
                 item.entity_type,
                 str(item.entity_id),
+                json.dumps(item.old_value, ensure_ascii=False) if item.old_value else "",
+                json.dumps(item.new_value, ensure_ascii=False) if item.new_value else "",
+                item.notes or "",
             ]
         )
 

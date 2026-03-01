@@ -18,7 +18,7 @@ from app.models.enums import AuditAction
 def _json_safe(val: Any) -> Any:
     """SQLAlchemy 모델 속성값을 JSON 직렬화 가능 타입으로 변환한다."""
     if isinstance(val, Decimal):
-        return float(val)
+        return str(val)
     if isinstance(val, uuid.UUID):
         return str(val)
     if isinstance(val, datetime):

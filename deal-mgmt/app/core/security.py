@@ -65,7 +65,12 @@ async def get_jwt_claims(
     if token is None:
         raise credentials_exception
     try:
-        payload = jwt.decode(token, get_jwt_secret(), algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token,
+            get_jwt_secret(),
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"verify_exp": True},
+        )
         sub: str | None = payload.get("sub")
         if sub is None:
             raise credentials_exception

@@ -34,6 +34,7 @@ const ACCEPTED_TYPES = [
 ];
 const ACCEPTED_EXTENSIONS = ".pdf,.docx,.jpg,.jpeg,.png";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const POLLING_TIMEOUT_MS = 5 * 60 * 1000; // 5분
 
 type Step =
   | "idle"
@@ -59,7 +60,6 @@ export default function EngagementDocUpload({
     useState<DocumentExtraction | null>(null);
   const dismissedRef = useRef(false);
   const pollingStartRef = useRef<number | null>(null);
-  const POLLING_TIMEOUT_MS = 5 * 60 * 1000; // 5분
 
   // VDR 훅
   const qc = useQueryClient();
@@ -112,7 +112,11 @@ export default function EngagementDocUpload({
   // 폴링 결과 → 완료/실패/타임아웃 시 상태 전환
   useEffect(() => {
     if (!polledExtraction || !extractionId) return;
-    if (polledExtraction.status === "COMPLETED" && step !== "completed") {
+    if (
+      (polledExtraction.status === "COMPLETED" ||
+        polledExtraction.status === "CONFIRMED") &&
+      step !== "completed"
+    ) {
       setStep("completed");
       setReviewExtraction(polledExtraction);
       setReviewOpen(true);
@@ -135,7 +139,7 @@ export default function EngagementDocUpload({
       setStep("failed");
       setErrorMsg("AI 분석이 예상 시간을 초과했습니다. 다시 시도해주세요.");
     }
-  }, [polledExtraction, extractionId, step, POLLING_TIMEOUT_MS]);
+  }, [polledExtraction, extractionId, step]);
 
   // 파일 검증
   const validateFile = useCallback((file: File): string | null => {

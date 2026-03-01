@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims, require_write_access
+from app.models.enums import AuditAction
 from app.models.ralph_session import RalphSession, RalphSessionStatus
 from app.schemas.ralph import RalphProgressOut, RalphSessionCreate, RalphSessionOut
+from app.services import audit_service
 
 logger = logging.getLogger(__name__)
 
@@ -292,6 +294,15 @@ async def create_ralph_session(
         },
     )
     db.add(session)
+    await db.flush()
+    await audit_service.record(
+        db,
+        entity_type="RalphSession",
+        entity_id=session.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"doc_type": body.doc_type, "transaction_id": transaction_id},
+    )
     await db.commit()
     await db.refresh(session)
 

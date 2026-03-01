@@ -7,6 +7,7 @@ import type {
   BulkAddBuyersResponse,
   DeepDiveResponse,
   KsicSuggestion,
+  SICompany,
   SIDataStats,
   SIMappingRequest,
   SIMappingResponse,
@@ -18,6 +19,8 @@ const siQK = {
   stats: ["ma", "si-mapping", "stats"] as const,
   ksicSearch: (q: string) => ["ma", "si-mapping", "ksic", q] as const,
   deepDive: (id: string) => ["ma", "si-mapping", "deep-dive", id] as const,
+  searchByName: (name: string) =>
+    ["ma", "si-mapping", "search-by-name", name] as const,
 };
 
 // ── 데이터 통계 ──────────────────────────────────────────
@@ -60,6 +63,23 @@ export function useSIDeepDive(companyId: string | null) {
     },
     enabled: !!companyId,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ── 기업명으로 SICompany 검색 ────────────────────────────
+
+export function useSICompanyByName(name: string | null) {
+  return useQuery<SICompany | null>({
+    queryKey: siQK.searchByName(name ?? ""),
+    queryFn: async () => {
+      const { data } = await maApi.get<SICompany | null>(
+        `/si-mapping/companies/search-by-name`,
+        { params: { name } },
+      );
+      return data;
+    },
+    enabled: !!name,
+    staleTime: 10 * 60 * 1000,
   });
 }
 

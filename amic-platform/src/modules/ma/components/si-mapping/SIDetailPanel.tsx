@@ -14,6 +14,7 @@ import { useSIDeepDive } from "@/modules/ma/hooks/useSIMapping";
 import type {
   FinancialSummary,
   SanctionItem,
+  SICompany,
 } from "@/modules/ma/types/si_mapping";
 import {
   formatDate,
@@ -138,7 +139,10 @@ export default function SIDetailPanel({
               <OverviewTab company={company!} overview={overview ?? null} />
             )}
             {activeTab === "financials" && (
-              <FinancialsTab financials={data.financials} />
+              <FinancialsTab
+                financials={data.financials}
+                company={data.company}
+              />
             )}
             {activeTab === "disclosures" && (
               <DisclosuresTab
@@ -209,62 +213,118 @@ function OverviewTab({
 
 // ── 재무 정보 탭 ──────────────────────────────────────────
 
-function FinancialsTab({ financials }: { financials: FinancialSummary[] }) {
-  if (financials.length === 0) {
+function FinancialsTab({
+  financials,
+  company,
+}: {
+  financials: FinancialSummary[];
+  company: SICompany;
+}) {
+  // DART 재무 데이터가 있으면 기존 연도별 테이블 표시
+  if (financials.length > 0) {
+    return (
+      <div className="overflow-x-auto rounded-dr border border-gray-border">
+        <table className="w-full text-right text-sm">
+          <thead className="border-b border-gray-border bg-bg-secondary">
+            <tr>
+              <th className="px-3 py-2.5 text-left text-kpi-label text-text-secondary">
+                연도
+              </th>
+              <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
+                매출액
+              </th>
+              <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
+                영업이익
+              </th>
+              <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
+                순이익
+              </th>
+              <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
+                총자산
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-border">
+            {financials.map((f) => (
+              <tr
+                key={f.bsns_year}
+                className="hover:bg-bg-secondary/50 transition-colors"
+              >
+                <td className="px-3 py-2.5 text-left font-medium text-text-dark">
+                  {f.bsns_year}
+                </td>
+                <td className="px-3 py-2.5 font-mono tabular-nums">
+                  {formatKRW(f.revenue)}
+                </td>
+                <td className="px-3 py-2.5 font-mono tabular-nums">
+                  {formatKRW(f.operating_income)}
+                </td>
+                <td className="px-3 py-2.5 font-mono tabular-nums">
+                  {formatKRW(f.net_income)}
+                </td>
+                <td className="px-3 py-2.5 font-mono tabular-nums">
+                  {formatKRW(f.total_assets)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // DART 없을 때 SICompany 시딩 데이터 폴백
+  const seededRows = [
+    { label: "매출액", value: company.revenue },
+    { label: "영업이익", value: company.operating_profit },
+    { label: "당기순이익", value: company.net_income },
+    { label: "자산총계", value: company.total_assets },
+    { label: "부채총계", value: company.total_debt },
+    { label: "자본총계", value: company.total_equity },
+  ].filter((row) => row.value != null);
+
+  if (seededRows.length === 0) {
     return (
       <div className="rounded-dr border border-gray-border bg-bg-secondary p-6 text-center text-sm text-text-secondary">
-        재무 데이터가 없습니다. DART 연동을 확인하세요.
+        재무 데이터가 없습니다.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-dr border border-gray-border">
-      <table className="w-full text-right text-sm">
-        <thead className="border-b border-gray-border bg-bg-secondary">
-          <tr>
-            <th className="px-3 py-2.5 text-left text-kpi-label text-text-secondary">
-              연도
-            </th>
-            <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
-              매출액
-            </th>
-            <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
-              영업이익
-            </th>
-            <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
-              순이익
-            </th>
-            <th className="px-3 py-2.5 text-kpi-label text-text-secondary">
-              총자산
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-border">
-          {financials.map((f) => (
-            <tr
-              key={f.bsns_year}
-              className="hover:bg-bg-secondary/50 transition-colors"
-            >
-              <td className="px-3 py-2.5 text-left font-medium text-text-dark">
-                {f.bsns_year}
-              </td>
-              <td className="px-3 py-2.5 font-mono tabular-nums">
-                {formatKRW(f.revenue)}
-              </td>
-              <td className="px-3 py-2.5 font-mono tabular-nums">
-                {formatKRW(f.operating_income)}
-              </td>
-              <td className="px-3 py-2.5 font-mono tabular-nums">
-                {formatKRW(f.net_income)}
-              </td>
-              <td className="px-3 py-2.5 font-mono tabular-nums">
-                {formatKRW(f.total_assets)}
-              </td>
+    <div className="space-y-3">
+      <p className="text-xs text-text-secondary">
+        금융위 공시 기준 ({company.revenue_year ?? "-"}년)
+      </p>
+      <div className="overflow-x-auto rounded-dr border border-gray-border">
+        <table className="w-full text-sm">
+          <thead className="border-b border-gray-border bg-bg-secondary">
+            <tr>
+              <th className="px-3 py-2.5 text-left text-kpi-label text-text-secondary">
+                항목
+              </th>
+              <th className="px-3 py-2.5 text-right text-kpi-label text-text-secondary">
+                금액
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-border">
+            {seededRows.map((row) => (
+              <tr
+                key={row.label}
+                className="hover:bg-bg-secondary/50 transition-colors"
+              >
+                <td className="px-3 py-2.5 text-left font-medium text-text-dark">
+                  {row.label}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {formatKRW(row.value!)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

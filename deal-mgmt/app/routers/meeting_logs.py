@@ -156,7 +156,7 @@ async def create_meeting_log(
         entity_id=log.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value={"title": body.title, "phase": body.meeting_phase.value},
+        new_value={"title": body.title, "phase": body.meeting_phase},
     )
     await db.commit()
     await db.refresh(log)
@@ -173,6 +173,7 @@ async def update_meeting_log(
 ):
     log = await _get_log_or_404(db, txn_id, log_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(log, k) for k in update_data}
     for k, v in update_data.items():
         setattr(log, k, v)
     await audit_service.record(
@@ -181,7 +182,8 @@ async def update_meeting_log(
         entity_id=log.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(log)
@@ -239,7 +241,7 @@ async def add_attendee(
         entity_id=attendee.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value={"name": body.name, "meeting_id": str(log_id)},
+        new_value={"name": body.name, "meeting_id": log_id},
     )
     await db.commit()
     await db.refresh(attendee)
@@ -258,6 +260,7 @@ async def update_attendee(
     await _get_log_or_404(db, txn_id, log_id)
     attendee = await _get_attendee_or_404(db, log_id, att_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(attendee, k) for k in update_data}
     for k, v in update_data.items():
         setattr(attendee, k, v)
     await audit_service.record(
@@ -266,7 +269,8 @@ async def update_attendee(
         entity_id=attendee.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(attendee)
@@ -330,7 +334,7 @@ async def create_action_item(
         entity_id=item.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value={"title": body.title, "meeting_id": str(log_id)},
+        new_value={"title": body.title, "meeting_id": log_id},
     )
     await db.commit()
     await db.refresh(item)
@@ -349,6 +353,7 @@ async def update_action_item(
     await _get_log_or_404(db, txn_id, log_id)
     item = await _get_action_item_or_404(db, log_id, item_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(item, k) for k in update_data}
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
@@ -357,7 +362,8 @@ async def update_action_item(
         entity_id=item.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(item)

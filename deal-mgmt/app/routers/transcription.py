@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import (
     ActionItemStatus,
+    AuditAction,
     MeetingChannel,
     MeetingPhase,
     MeetingStatus,
@@ -25,7 +26,7 @@ from app.models.meeting_attendee import MeetingAttendee
 from app.models.meeting_log import MeetingLog
 from app.models.transcription_job import TranscriptionJob
 from app.schemas.transcription import TranscriptionApproval, TranscriptionJobOut
-from app.services import transaction_service
+from app.services import audit_service, transaction_service
 from app.services.transcription_service import ALLOWED_AUDIO_TYPES, MAX_AUDIO_SIZE_BYTES
 
 router = APIRouter(
@@ -107,6 +108,15 @@ async def start_transcription(
         created_by_email=claims.email,
     )
     db.add(job)
+    await db.flush()
+    await audit_service.record(
+        db,
+        entity_type="TranscriptionJob",
+        entity_id=job.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={"title": title, "meeting_date": meeting_date},
+    )
     await db.commit()
     await db.refresh(job)
 
@@ -247,9 +257,34 @@ async def approve_transcription(
             )
             db.add(action)
 
+    # 감사 기록 — MeetingLog CREATE (참석자/액션아이템 포함)
+    await audit_service.record(
+        db,
+        entity_type="MeetingLog",
+        entity_id=meeting_log.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value={
+            "title": job.title,
+            "source": "transcription",
+            "transcription_job_id": job.id,
+            "attendee_count": attendee_count,
+        },
+    )
+
     # 작업 상태 업데이트
     job.status = TranscriptionJobStatus.APPROVED
     job.meeting_log_id = meeting_log.id
+
+    await audit_service.record(
+        db,
+        entity_type="TranscriptionJob",
+        entity_id=job.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        old_value={"status": TranscriptionJobStatus.COMPLETED},
+        new_value={"status": TranscriptionJobStatus.APPROVED, "meeting_log_id": meeting_log.id},
+    )
 
     await db.commit()
     await db.refresh(job)

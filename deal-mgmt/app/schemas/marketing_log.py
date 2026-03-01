@@ -28,13 +28,13 @@ class MarketingLogOut(BaseModel):
 class MarketingLogCreate(BaseModel):
     stage: MarketingStage
     log_date: str = Field(..., max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    content: str | None = None
+    content: str | None = Field(None, max_length=2000)
 
 
 class MarketingLogUpdate(BaseModel):
     stage: MarketingStage | None = None
     log_date: str | None = Field(None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    content: str | None = None
+    content: str | None = Field(None, max_length=2000)
 
 
 class BuyerStageSummary(BaseModel):

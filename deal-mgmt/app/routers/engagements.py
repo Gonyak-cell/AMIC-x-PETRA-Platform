@@ -60,7 +60,7 @@ async def create_engagement(
         entity_id=eng.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value=body.model_dump(),
+        new_value=body.model_dump(mode="json"),
     )
     await db.commit()
     await db.refresh(eng)
@@ -159,7 +159,7 @@ async def add_member(
         entity_id=member.id,
         action=AuditAction.MEMBER_ADDED,
         actor_email=claims.email,
-        new_value=body.model_dump(),
+        new_value=body.model_dump(mode="json"),
     )
     await db.commit()
     await db.refresh(member)

@@ -104,6 +104,7 @@ async def update_earnout(
     if milestone is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="어닝아웃 마일스톤을 찾을 수 없습니다")
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(milestone, k) for k in update_data}
     for k, v in update_data.items():
         setattr(milestone, k, v)
     await audit_service.record(
@@ -112,7 +113,8 @@ async def update_earnout(
         entity_id=milestone.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(milestone)

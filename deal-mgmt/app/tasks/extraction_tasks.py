@@ -7,6 +7,8 @@ import concurrent.futures
 import logging
 import uuid
 
+from celery.exceptions import SoftTimeLimitExceeded
+
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -26,9 +28,8 @@ def _run_async(coro):
 @celery_app.task(
     name="deal_mgmt.extraction.run_pipeline",
     bind=True,
-    max_retries=1,
     soft_time_limit=300,  # 5분
-    acks_late=True,
+    acks_late=True,  # 워커 크래시 시 메시지 재전달 (명시적 self.retry 미사용)
 )
 def run_extraction_task(self, extraction_id: str) -> None:
     """VDR 문서 AI 추출 파이프라인을 실행한다."""
@@ -42,6 +43,17 @@ def run_extraction_task(self, extraction_id: str) -> None:
             run_extraction_pipeline(
                 extraction_id=uuid.UUID(extraction_id),
                 session_factory=async_session_factory,
+            )
+        )
+    except SoftTimeLimitExceeded:
+        logger.warning("Celery: soft_time_limit 초과 (extraction=%s)", extraction_id)
+        from app.services.document_extraction_service import mark_extraction_failed
+
+        _run_async(
+            mark_extraction_failed(
+                async_session_factory,
+                uuid.UUID(extraction_id),
+                "AI 분석 시간이 초과되었습니다. 다시 시도해주세요.",
             )
         )
     except Exception:

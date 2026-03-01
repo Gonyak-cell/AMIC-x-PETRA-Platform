@@ -65,7 +65,7 @@ async def link_fdd(
             entity_id=txn.id,
             action=AuditAction.SERVICE_LINKED,
             actor_email=claims.email,
-            new_value={"service": "FDD", "result": str(result)},
+            new_value={"service": "FDD", "result": result},
         )
         await db.commit()
         return IntegrationResult(service="FDD", status="linked", data=result)
@@ -117,7 +117,7 @@ async def link_im(
             entity_id=txn.id,
             action=AuditAction.SERVICE_LINKED,
             actor_email=claims.email,
-            new_value={"service": "IM", "result": str(result)},
+            new_value={"service": "IM", "result": result},
         )
         await db.commit()
         return IntegrationResult(service="IM", status="linked", data=result)

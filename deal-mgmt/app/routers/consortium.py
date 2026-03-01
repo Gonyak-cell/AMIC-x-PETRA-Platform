@@ -109,6 +109,8 @@ async def create_consortium_mapping(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> ConsortiumMappingOut:
     """컨소시엄 매핑 생성."""
+    await check_client_deal_access(db, txn_id, claims)
+
     # 자기 참조 검증
     if body.lead_buyer_id == body.co_investor_buyer_id:
         raise HTTPException(
@@ -164,7 +166,7 @@ async def create_consortium_mapping(
         entity_id=mapping.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value=body.model_dump(mode="json"),
+        new_value=body.model_dump(mode="json"),  # Pydantic v2: UUID→str 직렬화
     )
     await db.commit()
     await db.refresh(mapping)
@@ -195,6 +197,7 @@ async def update_consortium_mapping(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="컨소시엄 매핑을 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(mapping, k) for k in update_data}
     if "status" in update_data:
         new_status = update_data["status"]
         if new_status is None:
@@ -217,6 +220,7 @@ async def update_consortium_mapping(
         entity_id=mapping.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
+        old_value=old_value,
         new_value=update_data,
     )
     await db.commit()
@@ -262,6 +266,12 @@ async def delete_consortium_mapping(
         entity_id=mapping.id,
         action=AuditAction.DELETE,
         actor_email=claims.email,
+        old_value={
+            "lead_buyer_id": mapping.lead_buyer_id,
+            "co_investor_buyer_id": mapping.co_investor_buyer_id,
+            "status": mapping.status,
+            "equity_share_pct": mapping.equity_share_pct,
+        },
     )
     await db.delete(mapping)
     await db.commit()

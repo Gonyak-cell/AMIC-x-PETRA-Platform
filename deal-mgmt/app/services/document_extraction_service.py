@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.blob_storage import blob_client
 from app.models.document_extraction import DocumentExtraction
@@ -64,6 +64,34 @@ _PIPELINE_TIMEOUT: float = 240.0
 
 
 # ── CRUD ─────────────────────────────────────────────────────
+
+
+async def has_active_extraction(
+    db: AsyncSession,
+    vdr_document_id: uuid.UUID,
+) -> DocumentExtraction | None:
+    """해당 VDR 문서에 진행 중이거나 완료된 추출이 있으면 반환한다.
+
+    NOTE: 동시 요청 시 두 트랜잭션이 모두 None을 반환할 수 있는 레이스 윈도우 존재.
+    DB에 잠글 행이 없으므로 SELECT FOR UPDATE로 방지 불가.
+    파이프라인의 멱등성 가드(SELECT FOR UPDATE skip_locked)가 중복 실행을 방지한다.
+    """
+    _active_statuses = (
+        ExtractionStatus.PENDING,
+        ExtractionStatus.CLASSIFYING,
+        ExtractionStatus.EXTRACTING,
+        ExtractionStatus.COMPLETED,
+        ExtractionStatus.CONFIRMED,
+    )
+    result = await db.execute(
+        select(DocumentExtraction)
+        .where(
+            DocumentExtraction.vdr_document_id == vdr_document_id,
+            DocumentExtraction.status.in_(_active_statuses),
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create_extraction(
@@ -139,7 +167,7 @@ async def classify_document(
             logger.info("경량 모델 분류 성공: model=%s", mini_model)
             break
         except Exception as exc:
-            logger.debug("경량 모델 %s 분류 실패 (폴백 시도): %s", mini_model, exc)
+            logger.info("경량 모델 %s 분류 실패 (폴백 시도): %s", mini_model, exc)
             continue
     if raw is None:
         raw = await llm_client.call(CLASSIFICATION_SYSTEM, user_msg)
@@ -195,7 +223,7 @@ async def extract_fields(
                 logger.info("경량 모델 추출 성공: model=%s, category=%s", mini_model, category.value)
                 break
             except Exception as exc:
-                logger.debug("경량 모델 %s 추출 실패 (폴백 시도): %s", mini_model, exc)
+                logger.info("경량 모델 %s 추출 실패 (폴백 시도): %s", mini_model, exc)
                 continue
         if raw is None:
             logger.info("경량 모델 모두 실패, primary 폴백 (category=%s)", category.value)
@@ -215,7 +243,7 @@ async def extract_fields(
 
 async def run_extraction_pipeline(
     extraction_id: uuid.UUID,
-    session_factory: object,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """전체 추출 파이프라인을 실행한다 (Celery 태스크에서 호출).
 
@@ -229,55 +257,97 @@ async def run_extraction_pipeline(
     t0 = time.monotonic()
 
     try:
-        async with session_factory() as db:
-            await asyncio.wait_for(
-                _run_pipeline_inner(db, extraction_id, settings, t0),
-                timeout=_PIPELINE_TIMEOUT,
-            )
+        await asyncio.wait_for(
+            _run_pipeline_inner(session_factory, extraction_id, settings, t0),
+            timeout=_PIPELINE_TIMEOUT,
+        )
     except TimeoutError:
         logger.error(
             "파이프라인 타임아웃 (extraction=%s, %.0fs)",
             extraction_id,
             _PIPELINE_TIMEOUT,
         )
-        try:
-            async with session_factory() as db:
-                ext = await db.get(DocumentExtraction, extraction_id)
-                if ext and ext.status not in (
-                    ExtractionStatus.COMPLETED,
-                    ExtractionStatus.CONFIRMED,
-                    ExtractionStatus.FAILED,
-                ):
-                    ext.status = ExtractionStatus.FAILED
-                    ext.error_message = "AI 분석 시간이 초과되었습니다. 다시 시도해주세요."
-                    await db.commit()
-        except Exception:
-            logger.exception("타임아웃 FAILED 마킹 실패 (extraction=%s)", extraction_id)
+        await mark_extraction_failed(
+            session_factory,
+            extraction_id,
+            "AI 분석 시간이 초과되었습니다. 다시 시도해주세요.",
+        )
     except Exception as exc:
         logger.exception("파이프라인 미처리 예외 (extraction=%s): %s", extraction_id, exc)
-        # FAILED 마킹 시도 (별도 세션)
-        try:
-            async with session_factory() as db:
-                ext = await db.get(DocumentExtraction, extraction_id)
-                if ext and ext.status not in (
-                    ExtractionStatus.COMPLETED,
-                    ExtractionStatus.CONFIRMED,
-                    ExtractionStatus.FAILED,
-                ):
-                    ext.status = ExtractionStatus.FAILED
-                    ext.error_message = "내부 오류가 발생했습니다. 관리자에게 문의하세요."
-                    await db.commit()
-        except Exception:
-            logger.exception("FAILED 마킹 복구 실패 (extraction=%s)", extraction_id)
+        await mark_extraction_failed(
+            session_factory,
+            extraction_id,
+            "내부 오류가 발생했습니다. 관리자에게 문의하세요.",
+        )
+
+
+async def mark_extraction_failed(
+    session_factory: async_sessionmaker[AsyncSession],
+    extraction_id: uuid.UUID,
+    message: str,
+) -> None:
+    """별도 세션으로 추출 레코드를 FAILED로 마킹한다."""
+    try:
+        async with session_factory() as db:
+            ext = await db.get(DocumentExtraction, extraction_id)
+            if ext and ext.status not in (
+                ExtractionStatus.COMPLETED,
+                ExtractionStatus.CONFIRMED,
+                ExtractionStatus.FAILED,
+            ):
+                ext.status = ExtractionStatus.FAILED
+                ext.error_message = message
+                await db.commit()
+    except Exception:
+        logger.exception("FAILED 마킹 실패 (extraction=%s)", extraction_id)
 
 
 async def _run_pipeline_inner(
+    session_factory: async_sessionmaker[AsyncSession],
+    extraction_id: uuid.UUID,
+    settings: object,
+    t0: float,
+) -> None:
+    """파이프라인 내부 로직 (run_extraction_pipeline에서 호출).
+
+    세션을 내부에서 생성하여 asyncio.wait_for 취소 시에도 안전하게 정리한다.
+    """
+    async with session_factory() as db:
+        try:
+            await _run_pipeline_core(db, extraction_id, settings, t0)
+        except asyncio.CancelledError:
+            await db.rollback()
+            raise
+
+
+async def _set_failed(
+    db: AsyncSession,
+    extraction: DocumentExtraction,
+    message: str,
+    *,
+    llm_cost: float | None = None,
+) -> None:
+    """추출 레코드를 FAILED로 마킹하고 커밋한다 (파이프라인 내부용)."""
+    if extraction.status in (
+        ExtractionStatus.COMPLETED,
+        ExtractionStatus.CONFIRMED,
+        ExtractionStatus.FAILED,
+    ):
+        return
+    extraction.status = ExtractionStatus.FAILED
+    extraction.error_message = message
+    if llm_cost is not None:
+        extraction.llm_cost_usd = llm_cost
+    await db.commit()
+
+
+async def _run_pipeline_core(
     db: AsyncSession,
     extraction_id: uuid.UUID,
     settings: object,
     t0: float,
 ) -> None:
-    """파이프라인 내부 로직 (run_extraction_pipeline에서 호출)."""
+    """파이프라인 핵심 로직."""
     # 0. 멱등성 가드 — SELECT FOR UPDATE로 동시 실행 방지
     result = await db.execute(
         select(DocumentExtraction).where(DocumentExtraction.id == extraction_id).with_for_update(skip_locked=True)
@@ -297,43 +367,39 @@ async def _run_pipeline_inner(
 
     vdr_doc = await db.get(VdrDocument, extraction.vdr_document_id)
     if not vdr_doc:
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "VDR 문서를 찾을 수 없습니다"
-        await db.commit()
+        await _set_failed(db, extraction, "VDR 문서를 찾을 수 없습니다")
         return
 
-    # 1.5. blob storage에서 파일 다운로드 → 임시 파일
+    # 1.5. blob storage → 임시 파일 스트리밍 다운로드 (메모리 절약)
     await blob_client.ensure_initialized()
 
-    try:
-        file_bytes = await blob_client.download_blob(vdr_doc.file_path)
-    except FileNotFoundError:
-        logger.error("파일 없음 (extraction=%s): %s", extraction_id, vdr_doc.file_path)
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "원본 파일을 찾을 수 없습니다."
-        await db.commit()
-        return
-    except Exception as exc:
-        logger.error("파일 다운로드 실패 (extraction=%s): %s", extraction_id, exc)
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "파일 다운로드에 실패했습니다."
-        await db.commit()
-        return
-
-    # 2. 파일 파싱 — 임시 파일에 쓴 후 파싱
     ext = Path(vdr_doc.original_name).suffix.lower()
     tmp_path: str | None = None
     try:
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-            tmp.write(file_bytes)
             tmp_path = tmp.name
-        parsed = parse_file(tmp_path)
-    except Exception as exc:
-        logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "문서 파싱에 실패했습니다."
-        await db.commit()
-        return
+
+        try:
+            await blob_client.download_blob_to_file(
+                vdr_doc.file_path,
+                Path(tmp_path),
+            )
+        except FileNotFoundError:
+            logger.error("파일 없음 (extraction=%s): %s", extraction_id, vdr_doc.file_path)
+            await _set_failed(db, extraction, "원본 파일을 찾을 수 없습니다.")
+            return
+        except Exception as exc:
+            logger.error("파일 다운로드 실패 (extraction=%s): %s", extraction_id, exc)
+            await _set_failed(db, extraction, "파일 다운로드에 실패했습니다.")
+            return
+
+        # 2. 파일 파싱
+        try:
+            parsed = parse_file(tmp_path)
+        except Exception as exc:
+            logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
+            await _set_failed(db, extraction, "문서 파싱에 실패했습니다.")
+            return
     finally:
         if tmp_path:
             try:
@@ -343,9 +409,7 @@ async def _run_pipeline_inner(
 
     if not parsed.is_valid:
         logger.warning("파싱 결과 없음 (extraction=%s): %s", extraction_id, parsed.parse_error)
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "문서에서 텍스트를 추출할 수 없습니다."
-        await db.commit()
+        await _set_failed(db, extraction, "문서에서 텍스트를 추출할 수 없습니다.")
         return
 
     t_parse = time.monotonic()
@@ -354,9 +418,7 @@ async def _run_pipeline_inner(
     # 3. LLM 클라이언트 생성
     llm = RalphLLMClient.from_settings(settings)
     if not llm.is_available:
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "AI 분석 서비스를 사용할 수 없습니다."
-        await db.commit()
+        await _set_failed(db, extraction, "AI 분석 서비스를 사용할 수 없습니다.")
         return
 
     # 4. 분류 (doc_category가 이미 설정된 경우 = hint → 건너뛰기)
@@ -372,15 +434,13 @@ async def _run_pipeline_inner(
         )
     else:
         extraction.status = ExtractionStatus.CLASSIFYING
-        await db.flush()
+        await db.commit()
 
         try:
             category, confidence = await classify_document(parsed, llm)
         except Exception as exc:
             logger.error("문서 분류 실패 (extraction=%s): %s", extraction_id, exc)
-            extraction.status = ExtractionStatus.FAILED
-            extraction.error_message = "문서 분류에 실패했습니다."
-            await db.commit()
+            await _set_failed(db, extraction, "문서 분류에 실패했습니다.")
             return
 
         extraction.doc_category = category
@@ -410,17 +470,19 @@ async def _run_pipeline_inner(
 
     # 6. 상태: EXTRACTING
     extraction.status = ExtractionStatus.EXTRACTING
-    await db.flush()
+    await db.commit()
 
     # 7. 데이터 추출
     try:
         extracted = await extract_fields(parsed, category, llm)
     except Exception as exc:
         logger.error("데이터 추출 실패 (extraction=%s): %s", extraction_id, exc)
-        extraction.status = ExtractionStatus.FAILED
-        extraction.error_message = "데이터 추출에 실패했습니다."
-        extraction.llm_cost_usd = llm.total_cost_usd
-        await db.commit()
+        await _set_failed(
+            db,
+            extraction,
+            "데이터 추출에 실패했습니다.",
+            llm_cost=llm.total_cost_usd,
+        )
         return
 
     t_extract = time.monotonic()
@@ -436,6 +498,8 @@ async def _run_pipeline_inner(
 
     # 8. 결과 저장
     extraction.extracted_data = extracted
+    if not extracted:
+        extraction.error_message = "문서에서 구조화 데이터를 추출하지 못했습니다"
     extraction.status = ExtractionStatus.COMPLETED
     extraction.llm_cost_usd = llm.total_cost_usd
     await db.commit()
@@ -463,7 +527,18 @@ async def confirm_extraction(
     user_email: str,
 ) -> DocumentExtraction:
     """사용자가 검토/수정한 데이터를 확정하고 대상 모델에 매핑한다."""
-    extraction = await get_extraction(db, extraction_id)
+    logger.info(
+        "확정 시작: extraction=%s, target_model=%s, create_new=%s, user=%s",
+        extraction_id,
+        target_model,
+        create_new,
+        user_email,
+    )
+    # SELECT FOR UPDATE — 동시 confirm 호출 시 이중 NDA/Bid 생성 방지
+    result = await db.execute(
+        select(DocumentExtraction).where(DocumentExtraction.id == extraction_id).with_for_update()
+    )
+    extraction = result.scalar_one_or_none()
     if not extraction:
         raise ValueError(f"추출 레코드 없음: {extraction_id}")
 
@@ -494,6 +569,13 @@ async def confirm_extraction(
     extraction.reviewed_at = datetime.now(UTC).isoformat()
     await db.commit()
     await db.refresh(extraction)
+
+    logger.info(
+        "확정 완료: extraction=%s, target_model=%s, target_id=%s",
+        extraction_id,
+        target_model,
+        applied_id,
+    )
 
     return extraction
 
@@ -528,11 +610,11 @@ async def _apply_to_nda(
     create_new: bool,
 ) -> uuid.UUID | None:
     """NDA 모델에 추출 데이터를 적용한다."""
+    from app.models.enums import NdaType
     from app.models.nda import NDA
 
     field_map = {
         "counterparty_name": "counterparty_name",
-        "nda_type": "nda_type",
         "signed_at": "signed_at",
         "expires_at": "expires_at",
         "jurisdiction": "jurisdiction",
@@ -542,20 +624,30 @@ async def _apply_to_nda(
     if create_new:
         buyer_id_raw = data.get("buyer_candidate_id")
         if not buyer_id_raw:
-            logger.warning("NDA 신규 생성 실패: buyer_candidate_id 누락")
+            logger.warning("NDA 신규 생성 실패: buyer_candidate_id 누락 (txn=%s)", transaction_id)
             return None
-        buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        try:
+            buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        except (ValueError, AttributeError):
+            raise ValueError(f"buyer_candidate_id 형식이 올바르지 않습니다: {buyer_id_raw!r}")
         from app.models.buyer_candidate import BuyerCandidate
 
         buyer = await db.get(BuyerCandidate, buyer_id)
         if not buyer or buyer.transaction_id != transaction_id:
-            logger.warning("NDA 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음")
+            logger.warning(
+                "NDA 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음 (txn=%s, buyer=%s)",
+                transaction_id,
+                buyer_id,
+            )
             return None
         nda = NDA(transaction_id=transaction_id, buyer_candidate_id=buyer_id)
         for src, dst in field_map.items():
             val = data.get(src)
             if val is not None:
-                setattr(nda, dst, val)
+                _safe_set_string(nda, dst, val)
+        nda_type_val = _safe_enum_value(NdaType, data.get("nda_type"))
+        if nda_type_val is not None:
+            nda.nda_type = nda_type_val
         db.add(nda)
         await db.flush()
         return nda.id
@@ -565,7 +657,10 @@ async def _apply_to_nda(
             for src, dst in field_map.items():
                 val = data.get(src)
                 if val is not None:
-                    setattr(nda, dst, val)
+                    _safe_set_string(nda, dst, val)
+            nda_type_val = _safe_enum_value(NdaType, data.get("nda_type"))
+            if nda_type_val is not None:
+                nda.nda_type = nda_type_val
             await db.flush()
             return nda.id
     return None
@@ -580,11 +675,11 @@ async def _apply_to_bid(
 ) -> uuid.UUID | None:
     """Bid 모델에 추출 데이터를 적용한다."""
     from app.models.bid import Bid
+    from app.models.enums import BidType, ValuationMethod
 
     field_map = {
         "proposed_amount": "amount",
         "currency": "currency",
-        "valuation_method": "valuation_method",
         "exclusivity_period_days": "exclusivity_period_days",
         "conditions_precedent": "conditions_precedent",
         "valid_until": "valid_until",
@@ -593,18 +688,23 @@ async def _apply_to_bid(
     if create_new:
         buyer_id_raw = data.get("buyer_candidate_id")
         if not buyer_id_raw:
-            logger.warning("Bid 신규 생성 실패: buyer_candidate_id 누락")
+            logger.warning("Bid 신규 생성 실패: buyer_candidate_id 누락 (txn=%s)", transaction_id)
             return None
-        buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        try:
+            buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+        except (ValueError, AttributeError):
+            raise ValueError(f"buyer_candidate_id 형식이 올바르지 않습니다: {buyer_id_raw!r}")
         from app.models.buyer_candidate import BuyerCandidate
 
         buyer = await db.get(BuyerCandidate, buyer_id)
         if not buyer or buyer.transaction_id != transaction_id:
-            logger.warning("Bid 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음")
+            logger.warning(
+                "Bid 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음 (txn=%s, buyer=%s)",
+                transaction_id,
+                buyer_id,
+            )
             return None
-        from app.models.enums import BidType
-
-        bid_type_val = data.get("bid_type", BidType.LOI)
+        bid_type_val = _safe_enum_value(BidType, data.get("bid_type")) or BidType.LOI
         bid = Bid(
             transaction_id=transaction_id,
             buyer_candidate_id=buyer_id,
@@ -613,7 +713,10 @@ async def _apply_to_bid(
         for src, dst in field_map.items():
             val = data.get(src)
             if val is not None:
-                setattr(bid, dst, val)
+                _safe_set_string(bid, dst, val)
+        val_method = _safe_enum_value(ValuationMethod, data.get("valuation_method"))
+        if val_method is not None:
+            bid.valuation_method = val_method
         db.add(bid)
         await db.flush()
         return bid.id
@@ -623,7 +726,13 @@ async def _apply_to_bid(
             for src, dst in field_map.items():
                 val = data.get(src)
                 if val is not None:
-                    setattr(bid, dst, val)
+                    _safe_set_string(bid, dst, val)
+            bid_type_val = _safe_enum_value(BidType, data.get("bid_type"))
+            if bid_type_val is not None:
+                bid.bid_type = bid_type_val
+            val_method = _safe_enum_value(ValuationMethod, data.get("valuation_method"))
+            if val_method is not None:
+                bid.valuation_method = val_method
             await db.flush()
             return bid.id
     return None
@@ -653,6 +762,8 @@ async def _apply_to_contract(
             "indemnification_period_months",
             "key_conditions",
             "final_purchase_price",
+            "currency",
+            "contract_type",
         }
     )
 
@@ -660,10 +771,11 @@ async def _apply_to_contract(
         for src, dst in field_map.items():
             val = data.get(src)
             if val is not None:
-                setattr(contract, dst, val)
+                _safe_set_string(contract, dst, val)
         risk_flags = {k: v for k, v in data.items() if k in risk_flag_keys and v is not None}
         if risk_flags:
-            contract.ai_risk_flags = risk_flags  # type: ignore[attr-defined]
+            existing = getattr(contract, "ai_risk_flags", None) or {}
+            contract.ai_risk_flags = {**existing, **risk_flags}  # type: ignore[attr-defined]
 
     if create_new:
         contract = Contract(
@@ -746,6 +858,47 @@ async def _apply_to_transaction(
 
 
 # ── 유틸리티 ─────────────────────────────────────────────────
+
+
+_STRING_LIMITS: dict[str, int] = {
+    "counterparty_name": 200,
+    "jurisdiction": 200,
+    "signed_at": 10,
+    "expires_at": 10,
+    "valid_until": 10,
+    "currency": 3,
+    "title": 300,
+    "effective_date": 10,
+    "expiry_date": 10,
+    "ai_analysis_summary": 0,  # Text — 제한 없음
+}
+
+
+def _safe_set_string(obj: object, attr: str, val: object) -> None:
+    """문자열 필드를 안전하게 설정한다. 길이 초과 시 자르고 경고 로그를 남긴다."""
+    if isinstance(val, str):
+        limit = _STRING_LIMITS.get(attr, 0)
+        if limit and len(val) > limit:
+            logger.warning(
+                "필드 '%s' 값이 %d자 제한을 초과하여 잘림: %d자 → %d자",
+                attr,
+                limit,
+                len(val),
+                limit,
+            )
+            val = val[:limit]
+    setattr(obj, attr, val)
+
+
+def _safe_enum_value(enum_cls: type, val: object) -> object | None:
+    """Enum 문자열을 안전하게 변환한다. 무효한 값이면 None을 반환."""
+    if val is None:
+        return None
+    try:
+        return enum_cls(val)
+    except (ValueError, KeyError):
+        logger.warning("무효한 Enum 값 무시: %s(%r)", enum_cls.__name__, val)
+        return None
 
 
 def _extract_json(text: str) -> str:

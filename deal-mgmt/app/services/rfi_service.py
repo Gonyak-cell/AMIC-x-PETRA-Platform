@@ -97,6 +97,7 @@ async def update_rfi(
 ) -> RFI:
     rfi = await _get_rfi_simple(db, txn_id, rfi_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(rfi, k) for k in update_data}
     for k, v in update_data.items():
         setattr(rfi, k, v)
     await audit_service.record(
@@ -105,7 +106,8 @@ async def update_rfi(
         entity_id=rfi.id,
         action=AuditAction.UPDATE,
         actor_email=actor_email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(rfi)
@@ -328,6 +330,7 @@ async def update_rfi_item(
 ) -> RFIItem:
     item = await _get_rfi_item(db, txn_id, rfi_id, item_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(item, k) for k in update_data}
     for k, v in update_data.items():
         setattr(item, k, v)
     await audit_service.record(
@@ -336,7 +339,8 @@ async def update_rfi_item(
         entity_id=item.id,
         action=AuditAction.UPDATE,
         actor_email=actor_email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(item)

@@ -154,6 +154,7 @@ async def update_risk(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="리스크 항목을 찾을 수 없습니다")
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(item, k) for k in update_data}
     for k, v in update_data.items():
         setattr(item, k, v)
     # severity 또는 likelihood 변경 시 risk_score 재계산
@@ -165,7 +166,8 @@ async def update_risk(
         entity_id=item.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(item)

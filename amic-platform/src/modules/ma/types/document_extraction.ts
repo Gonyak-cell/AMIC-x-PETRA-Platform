@@ -88,6 +88,7 @@ export interface ExtractionListResponse {
 
 export interface ExtractionCreateRequest {
   vdr_document_id: string;
+  doc_category_hint?: DocExtractionCategory;
 }
 
 export interface BatchExtractionRequest {
@@ -143,13 +144,25 @@ export interface CorporateDirector {
   appointment_date: string | null;
 }
 
-const DIRECTOR_POSITION_ORDER = ["사내이사/대표이사", "대표이사", "사내이사", "사외이사", "감사"];
+const DIRECTOR_POSITION_ORDER = [
+  "사내이사/대표이사",
+  "대표이사",
+  "사내이사",
+  "사외이사",
+  "감사",
+];
 
 /** 임원 목록을 직위 순서대로 정렬 (대표이사 → 사내이사 → 사외이사 → 감사) */
-export function sortDirectorsByPosition(directors: CorporateDirector[]): CorporateDirector[] {
+export function sortDirectorsByPosition(
+  directors: CorporateDirector[],
+): CorporateDirector[] {
   return [...directors].sort((a, b) => {
-    const ai = DIRECTOR_POSITION_ORDER.findIndex((p) => a.position?.includes(p));
-    const bi = DIRECTOR_POSITION_ORDER.findIndex((p) => b.position?.includes(p));
+    const ai = DIRECTOR_POSITION_ORDER.findIndex((p) =>
+      a.position?.includes(p),
+    );
+    const bi = DIRECTOR_POSITION_ORDER.findIndex((p) =>
+      b.position?.includes(p),
+    );
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 }

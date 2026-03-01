@@ -116,7 +116,7 @@ async def create_note(
         entity_id=note.id,
         action=AuditAction.NOTE_CREATED,
         actor_email=claims.email,
-        new_value={"note_type": body.note_type.value, "content_preview": body.content[:100]},
+        new_value={"note_type": body.note_type, "content_preview": body.content[:100]},
     )
     await db.commit()
     await db.refresh(note)
@@ -133,6 +133,7 @@ async def update_note(
 ):
     note = await _get_note_or_404(db, txn_id, note_id)
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(note, k) for k in update_data}
     for k, v in update_data.items():
         setattr(note, k, v)
     await audit_service.record(
@@ -141,7 +142,8 @@ async def update_note(
         entity_id=note.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(note)

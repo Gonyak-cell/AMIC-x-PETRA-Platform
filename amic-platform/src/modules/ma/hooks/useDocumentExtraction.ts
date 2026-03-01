@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type {
@@ -77,9 +78,6 @@ export function useCreateExtraction(txnId: string) {
       qc.invalidateQueries({ queryKey: extractionQK(txnId) });
       toast.success("AI 분석을 시작했습니다.");
     },
-    onError: () => {
-      toast.error("AI 분석 생성에 실패했습니다.");
-    },
   });
 }
 
@@ -98,8 +96,13 @@ export function useBatchExtract(txnId: string) {
       qc.invalidateQueries({ queryKey: extractionQK(txnId) });
       toast.success(`${data.length}건의 AI 분석을 시작했습니다.`);
     },
-    onError: () => {
-      toast.error("일괄 AI 분석 생성에 실패했습니다.");
+    onError: (error) => {
+      const detail =
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "일괄 AI 분석 생성에 실패했습니다.";
+      toast.error(detail);
     },
   });
 }
@@ -146,8 +149,13 @@ export function useConfirmExtraction(txnId: string) {
       }
       toast.success("추출 결과가 확정되었습니다.");
     },
-    onError: () => {
-      toast.error("추출 확정에 실패했습니다.");
+    onError: (error) => {
+      const detail =
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "추출 확정에 실패했습니다.";
+      toast.error(detail);
     },
   });
 }

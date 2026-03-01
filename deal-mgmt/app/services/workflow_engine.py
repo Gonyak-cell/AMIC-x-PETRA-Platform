@@ -168,8 +168,8 @@ async def advance_phase(
         entity_id=txn.id,
         action=AuditAction.PHASE_TRANSITION,
         actor_email=actor_email,
-        old_value={"phase": from_phase.value},
-        new_value={"phase": to_phase.value},
+        old_value={"phase": from_phase},
+        new_value={"phase": to_phase},
         notes=notes,
     )
     await db.commit()
@@ -224,7 +224,7 @@ async def request_phase_approval(
         entity_id=approval.id,
         action=AuditAction.APPROVAL_REQUESTED,
         actor_email=actor_email,
-        new_value={"from_phase": txn.phase.value, "to_phase": to_phase.value},
+        new_value={"from_phase": txn.phase, "to_phase": to_phase},
     )
     await db.commit()
     await db.refresh(approval)
@@ -264,8 +264,8 @@ async def change_status(
         entity_id=txn.id,
         action=AuditAction.STATUS_CHANGE,
         actor_email=actor_email,
-        old_value={"status": from_status.value},
-        new_value={"status": to_status.value},
+        old_value={"status": from_status},
+        new_value={"status": to_status},
         notes=reason,
     )
     await db.commit()

@@ -322,6 +322,62 @@ async def test_short_list_overview_empty(client):
     assert resp.json() == []
 
 
+async def test_short_list_overview_with_marketing_data(client):
+    """Short-List에 마케팅 로그가 있을 때 stage별 최신 일자 집계 검증."""
+    txn_id = await _create_txn(client)
+    b1 = await _add_buyer(client, txn_id, company_name="A사")
+    b2 = await _add_buyer(client, txn_id, company_name="B사")
+
+    # b1=TIER_1, b2=TIER_2
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
+        json={"tier": "TIER_1"},
+    )
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
+        json={"tier": "TIER_2"},
+    )
+
+    # b1에 마케팅 로그 2건 — IDENTIFIED(03-01), EMAIL_SENT(03-05, 03-10)
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
+        json={"stage": "IDENTIFIED", "log_date": "2026-03-01"},
+    )
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
+        json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+    )
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
+        json={"stage": "EMAIL_SENT", "log_date": "2026-03-10"},
+    )
+
+    # b2에 마케팅 로그 1건 — IDENTIFIED(03-02)
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}/marketing-logs",
+        json={"stage": "IDENTIFIED", "log_date": "2026-03-02"},
+    )
+
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/short-list/marketing-overview",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+
+    # buyer_id별 stages 매핑
+    by_buyer = {item["buyer_id"]: item["stages"] for item in data}
+
+    # b1: IDENTIFIED=03-01, EMAIL_SENT=03-10 (최신), 나머지 None
+    assert by_buyer[b1["id"]]["IDENTIFIED"] == "2026-03-01"
+    assert by_buyer[b1["id"]]["EMAIL_SENT"] == "2026-03-10"
+    assert by_buyer[b1["id"]]["PHONE_CALL"] is None
+
+    # b2: IDENTIFIED=03-02, 나머지 None
+    assert by_buyer[b2["id"]]["IDENTIFIED"] == "2026-03-02"
+    assert by_buyer[b2["id"]]["EMAIL_SENT"] is None
+
+
 # ── Excel Export ──────────────────────────────────────────
 
 

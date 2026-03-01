@@ -310,6 +310,9 @@ import {
 import FMChecklistReview from "@/modules/ma/components/fm/FMChecklistReview";
 import { ContractNegotiationWorkspace } from "@/modules/ma/components/negotiation/ContractNegotiationWorkspace";
 import SIMappingPanel from "@/modules/ma/components/si-mapping/SIMappingPanel";
+import SIDetailPanel from "@/modules/ma/components/si-mapping/SIDetailPanel";
+import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
+import { toast } from "sonner";
 
 import {
   Badge,
@@ -438,6 +441,25 @@ export default function TransactionWorkspacePage() {
     "long-list",
   );
   const [showSIMappingModal, setShowSIMappingModal] = useState(false);
+  const [buyerDetailCompanyId, setBuyerDetailCompanyId] = useState<
+    string | null
+  >(null);
+  // 이름 기반 SICompany 검색 (si_company_id 없는 buyer 용)
+  const [buyerDetailSearchName, setBuyerDetailSearchName] = useState<
+    string | null
+  >(null);
+  const { data: searchedSICompany, isFetched: siNameFetched } =
+    useSICompanyByName(buyerDetailSearchName);
+  // 이름 검색 결과가 도착하면 해당 ID로 SIDetailPanel 열기
+  useEffect(() => {
+    if (!buyerDetailSearchName || !siNameFetched) return;
+    if (searchedSICompany?.id) {
+      setBuyerDetailCompanyId(searchedSICompany.id);
+    } else {
+      toast.info("SI 데이터베이스에 등록되지 않은 기업입니다.");
+    }
+    setBuyerDetailSearchName(null);
+  }, [searchedSICompany, buyerDetailSearchName, siNameFetched]);
 
   // URL 호환성: 삭제된 탭 → 통합 탭으로 리다이렉트 (viewPhase 보존)
   useEffect(() => {
@@ -1807,20 +1829,39 @@ export default function TransactionWorkspacePage() {
             {
               key: "company_name",
               header: "회사명",
-              render: (r) => (
-                <div>
-                  <span className="font-medium">{r.company_name}</span>
-                  {r.contact_name && (
-                    <span className="block text-xs text-text-muted">
-                      {r.contact_name}
-                    </span>
-                  )}
-                </div>
-              ),
+              minWidth: "160px",
+              render: (r) => {
+                const siId = (r.extra_data as Record<string, unknown> | null)
+                  ?.si_company_id as string | undefined;
+                return (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (siId) {
+                          setBuyerDetailCompanyId(siId);
+                        } else {
+                          setBuyerDetailSearchName(r.company_name);
+                        }
+                      }}
+                      className="text-left font-medium hover:text-accent hover:underline"
+                    >
+                      {r.company_name}
+                    </button>
+                    {r.contact_name && (
+                      <span className="block text-xs text-text-muted">
+                        {r.contact_name}
+                      </span>
+                    )}
+                  </div>
+                );
+              },
             },
             {
               key: "tier",
               header: "Tier",
+              minWidth: "100px",
               render: (r) =>
                 canWrite() ? (
                   <InlineSelect
@@ -1842,6 +1883,7 @@ export default function TransactionWorkspacePage() {
             {
               key: "deal_role",
               header: "역할",
+              minWidth: "120px",
               render: (r) => {
                 const roleOptions = DEAL_ROLE_OPTIONS.filter(
                   (o) => o.value !== "",
@@ -1867,6 +1909,7 @@ export default function TransactionWorkspacePage() {
             {
               key: "buyer_type",
               header: "유형",
+              minWidth: "100px",
               render: (r) => (
                 <Badge variant="neutral">
                   {BUYER_TYPE_OPTIONS.find((o) => o.value === r.buyer_type)
@@ -1877,6 +1920,7 @@ export default function TransactionWorkspacePage() {
             {
               key: "status",
               header: "상태",
+              minWidth: "100px",
               render: (r) => (
                 <Badge variant={BUYER_STATUS_VARIANT[r.status] ?? "neutral"}>
                   {BUYER_STATUS_OPTIONS.find((o) => o.value === r.status)
@@ -1887,6 +1931,7 @@ export default function TransactionWorkspacePage() {
             {
               key: "ioi_value",
               header: "IOI",
+              minWidth: "80px",
               align: "right" as const,
               mono: true,
               render: (r) =>
@@ -1895,6 +1940,7 @@ export default function TransactionWorkspacePage() {
             {
               key: "loi_value",
               header: "LOI",
+              minWidth: "80px",
               align: "right" as const,
               mono: true,
               render: (r) =>
@@ -2009,6 +2055,12 @@ export default function TransactionWorkspacePage() {
                   />
                 </>
               )}
+
+              {/* 기업 상세 패널 (Long List 회사명 클릭 시) */}
+              <SIDetailPanel
+                companyId={buyerDetailCompanyId}
+                onClose={() => setBuyerDetailCompanyId(null)}
+              />
             </div>
           );
         })()}
@@ -2207,10 +2259,11 @@ export default function TransactionWorkspacePage() {
             <Card title="입찰 비교 매트릭스" headerBar padding="none">
               <DataTable
                 columns={[
-                  { key: "buyer_name", header: "매수자" },
+                  { key: "buyer_name", header: "매수자", minWidth: "140px" },
                   {
                     key: "buyer_type",
                     header: "유형",
+                    minWidth: "100px",
                     render: (r) => (
                       <Badge variant="neutral">
                         {BUYER_TYPE_OPTIONS.find(
@@ -2222,6 +2275,7 @@ export default function TransactionWorkspacePage() {
                   {
                     key: "ioi",
                     header: "IOI",
+                    minWidth: "80px",
                     align: "right",
                     mono: true,
                     render: (r) => (r.ioi ? formatAmount(r.ioi.amount) : "-"),
@@ -2229,6 +2283,7 @@ export default function TransactionWorkspacePage() {
                   {
                     key: "loi",
                     header: "LOI",
+                    minWidth: "80px",
                     align: "right",
                     mono: true,
                     render: (r) => (r.loi ? formatAmount(r.loi.amount) : "-"),
@@ -2236,6 +2291,7 @@ export default function TransactionWorkspacePage() {
                   {
                     key: "final_offer",
                     header: "최종 제안",
+                    minWidth: "80px",
                     align: "right",
                     mono: true,
                     render: (r) =>

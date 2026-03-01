@@ -8,8 +8,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import JWTClaims, get_jwt_claims
+from app.core.database import get_db
+from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.schemas.template_visualization import (
     TemplateVisualizationRequest,
     TemplateVisualizationResponse,
@@ -44,7 +46,8 @@ def _validate_path_within(path: Path, base_dir: Path, label: str) -> Path:
 async def create_template_visualization(
     transaction_id: UUID,
     request: TemplateVisualizationRequest,
-    claims: JWTClaims = Depends(get_jwt_claims),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
 ):
     """템플릿 PPTX에 시각화 데이터를 적용하여 결과 PPTX를 생성한다.
 
@@ -53,6 +56,8 @@ async def create_template_visualization(
     - 이미지/다이어그램 삽입 (Aspect Ratio 보존)
     - 텍스트 교체 (서식 보존)
     """
+    await check_client_deal_access(db, transaction_id, claims)
+
     # 템플릿 파일 경로 검증 (Path Traversal 방어)
     template_path = Path(request.template_path)
     resolved_template = _validate_path_within(template_path, _TEMPLATE_BASE_DIR, "템플릿")
@@ -87,9 +92,11 @@ async def create_template_visualization(
 async def download_visualization(
     transaction_id: UUID,
     file_path: str,
+    db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     """생성된 시각화 PPTX를 다운로드한다."""
+    await check_client_deal_access(db, transaction_id, claims)
     path = Path(file_path)
 
     # 경로 탐색 방어: generated 디렉토리 내부인지 엄격 검증

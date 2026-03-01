@@ -75,7 +75,7 @@ async def assign_deal_client(
         entity_id=dc.id,
         action=AuditAction.CLIENT_ASSIGNED,
         actor_email=claims.email,
-        new_value={"email": body.email, "transaction_id": str(txn_id)},
+        new_value={"email": body.email, "transaction_id": txn_id},
     )
 
     await db.commit()
@@ -110,7 +110,7 @@ async def remove_deal_client(
         entity_id=dc.id,
         action=AuditAction.CLIENT_REMOVED,
         actor_email=claims.email,
-        old_value={"email": dc.email, "transaction_id": str(txn_id)},
+        old_value={"email": dc.email, "transaction_id": txn_id},
     )
 
     await db.execute(delete(DealClient).where(DealClient.id == client_id))

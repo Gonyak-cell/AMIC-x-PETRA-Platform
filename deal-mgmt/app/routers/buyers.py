@@ -7,13 +7,15 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
-from app.models.enums import AuditAction
+from app.models.buyer_marketing_log import BuyerMarketingLog
+from app.models.consortium_mapping import ConsortiumMapping
+from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerTier, BuyerType
 from app.schemas.buyer import (
     BuyerCandidateCreate,
     BuyerCandidateOut,
@@ -30,12 +32,12 @@ router = APIRouter(prefix="/transactions/{txn_id}/buyers", tags=["Buyers"])
 @router.get("", response_model=list[BuyerCandidateOut])
 async def list_buyers(
     txn_id: uuid.UUID,
-    buyer_status: str | None = Query(None, alias="status"),
-    buyer_type: str | None = Query(None, alias="type"),
-    tier: str | None = Query(None),
+    buyer_status: BuyerCandidateStatus | None = Query(None, alias="status"),
+    buyer_type: BuyerType | None = Query(None, alias="type"),
+    tier: BuyerTier | None = Query(None),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> list[BuyerCandidateOut]:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
@@ -55,33 +57,47 @@ async def buyer_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
-    """매수자 파이프라인 요약 통계."""
+) -> BuyerPipelineSummary:
+    """매수자 파이프라인 요약 통계 — DB 집계 쿼리로 처리."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
-    result = await db.execute(q)
-    buyers = list(result.scalars().all())
+    _where = BuyerCandidate.transaction_id == txn_id
 
-    by_status: dict[str, int] = {}
-    by_tier: dict[str, int] = {}
-    ioi_values: list[Decimal] = []
-    loi_values: list[Decimal] = []
-    for b in buyers:
-        by_status[b.status.value] = by_status.get(b.status.value, 0) + 1
-        if b.tier:
-            by_tier[b.tier.value] = by_tier.get(b.tier.value, 0) + 1
-        if b.ioi_value:
-            ioi_values.append(b.ioi_value)
-        if b.loi_value:
-            loi_values.append(b.loi_value)
+    # 1. 전체 카운트 + 평균 (nullif로 0 제외 — 기존 동작 유지)
+    agg_q = (
+        select(
+            func.count().label("total"),
+            func.avg(func.nullif(BuyerCandidate.ioi_value, 0)).label("avg_ioi"),
+            func.avg(func.nullif(BuyerCandidate.loi_value, 0)).label("avg_loi"),
+        )
+        .select_from(BuyerCandidate)
+        .where(_where)
+    )
+    agg_row = (await db.execute(agg_q)).one()
+
+    # 2. 상태별 카운트
+    status_q = select(BuyerCandidate.status, func.count().label("cnt")).where(_where).group_by(BuyerCandidate.status)
+    by_status = {row.status.value: row.cnt for row in (await db.execute(status_q)).all()}
+
+    # 3. 티어별 카운트
+    tier_q = (
+        select(BuyerCandidate.tier, func.count().label("cnt"))
+        .where(_where, BuyerCandidate.tier.isnot(None))
+        .group_by(BuyerCandidate.tier)
+    )
+    by_tier = {row.tier.value: row.cnt for row in (await db.execute(tier_q)).all()}
+
+    # SQLite AVG는 float 반환 — Decimal(20,2) 정밀도 보장
+    _q2 = Decimal("0.01")
+    avg_ioi = Decimal(str(agg_row.avg_ioi)).quantize(_q2) if agg_row.avg_ioi is not None else None
+    avg_loi = Decimal(str(agg_row.avg_loi)).quantize(_q2) if agg_row.avg_loi is not None else None
 
     return BuyerPipelineSummary(
-        total=len(buyers),
+        total=agg_row.total,
         by_status=by_status,
         by_tier=by_tier,
-        avg_ioi_value=Decimal(sum(ioi_values)) / Decimal(len(ioi_values)) if ioi_values else None,
-        avg_loi_value=Decimal(sum(loi_values)) / Decimal(len(loi_values)) if loi_values else None,
+        avg_ioi_value=avg_ioi,
+        avg_loi_value=avg_loi,
     )
 
 
@@ -91,7 +107,7 @@ async def add_buyer(
     body: BuyerCandidateCreate,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> BuyerCandidateOut:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     buyer = BuyerCandidate(transaction_id=txn_id, **body.model_dump())
@@ -103,7 +119,7 @@ async def add_buyer(
         entity_id=buyer.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value=body.model_dump(),
+        new_value=body.model_dump(mode="json"),
     )
     await db.commit()
     await db.refresh(buyer)
@@ -116,7 +132,7 @@ async def get_buyer(
     buyer_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> BuyerCandidateOut:
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
@@ -132,7 +148,7 @@ async def update_buyer(
     body: BuyerCandidateUpdate,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> BuyerCandidateOut:
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
@@ -148,8 +164,8 @@ async def update_buyer(
         entity_id=buyer.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
-        old_value={k: str(v) if v is not None else None for k, v in old_value.items()},
-        new_value={k: str(v) if v is not None else None for k, v in update_data.items()},
+        old_value=old_value,
+        new_value=update_data,
     )
     await db.commit()
     await db.refresh(buyer)
@@ -162,18 +178,44 @@ async def remove_buyer(
     buyer_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> None:
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="매수자 후보를 찾을 수 없습니다")
+
+    # CASCADE 삭제 대상 카운트 (감사 추적)
+    log_count = (
+        await db.execute(
+            select(func.count()).select_from(BuyerMarketingLog).where(BuyerMarketingLog.buyer_id == buyer_id)
+        )
+    ).scalar_one()
+    consortium_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(ConsortiumMapping)
+            .where((ConsortiumMapping.lead_buyer_id == buyer_id) | (ConsortiumMapping.co_investor_buyer_id == buyer_id))
+        )
+    ).scalar_one()
+
+    cascade_notes = f"CASCADE 삭제: 마케팅 로그 {log_count}건, 컨소시엄 매핑 {consortium_count}건"
     await audit_service.record(
         db,
         entity_type="BuyerCandidate",
         entity_id=buyer.id,
         action=AuditAction.DELETE,
         actor_email=claims.email,
+        old_value={
+            "company_name": buyer.company_name,
+            "tier": buyer.tier,
+            "status": buyer.status,
+            "buyer_type": buyer.buyer_type,
+            "deal_role": buyer.deal_role,
+            "contact_name": buyer.contact_name,
+            "corp_code": buyer.corp_code,
+        },
+        notes=cascade_notes,
     )
     await db.delete(buyer)
     await db.commit()

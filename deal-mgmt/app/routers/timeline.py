@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import TransactionPhase
+from app.models.enums import AuditAction, TransactionPhase
 from app.models.timeline import DealTimeline
 from app.schemas.timeline import (
     GanttMilestone,
@@ -20,7 +20,7 @@ from app.schemas.timeline import (
     TimelineEventOut,
     TimelineResponse,
 )
-from app.services import transaction_service
+from app.services import audit_service, transaction_service
 
 router = APIRouter(prefix="/transactions/{txn_id}/timeline", tags=["Timeline"])
 
@@ -66,6 +66,15 @@ async def add_timeline_event(
         **body.model_dump(),
     )
     db.add(event)
+    await db.flush()
+    await audit_service.record(
+        db,
+        entity_type="DealTimeline",
+        entity_id=event.id,
+        action=AuditAction.CREATE,
+        actor_email=claims.email,
+        new_value=body.model_dump(mode="json"),
+    )
     await db.commit()
     await db.refresh(event)
     return TimelineEventOut.model_validate(event)
@@ -89,6 +98,13 @@ async def delete_timeline_event(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="이벤트를 찾을 수 없거나 자동 생성된 이벤트입니다",
         )
+    await audit_service.record(
+        db,
+        entity_type="DealTimeline",
+        entity_id=event.id,
+        action=AuditAction.DELETE,
+        actor_email=claims.email,
+    )
     await db.delete(event)
     await db.commit()
 

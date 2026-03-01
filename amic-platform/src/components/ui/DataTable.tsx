@@ -11,6 +11,7 @@ export interface Column<T> {
   label?: string;
   align?: "left" | "center" | "right";
   width?: string;
+  minWidth?: string;
   render?: (row: T, index: number) => ReactNode;
   mono?: boolean;
   sortable?: boolean;
@@ -68,7 +69,12 @@ export function DataTable<T extends object>({
 
   // Stagger-in rows when data changes
   useEffect(() => {
-    if (!tbodyRef.current || !data.length || data.length === prevDataLen.current) return;
+    if (
+      !tbodyRef.current ||
+      !data.length ||
+      data.length === prevDataLen.current
+    )
+      return;
     prevDataLen.current = data.length;
 
     const rows = tbodyRef.current.querySelectorAll("tr");
@@ -119,12 +125,18 @@ export function DataTable<T extends object>({
           break;
       }
     },
-    [data.length, onRowClick]
+    [data.length, onRowClick],
   );
 
   if (loading) {
     return (
-      <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
+      <div
+        className={cn(
+          "overflow-hidden overflow-x-auto",
+          !borderless && "border border-gray-border rounded-dr",
+          className,
+        )}
+      >
         <table className="w-full">
           <thead>
             <tr className="bg-amic-50 border-b-2 border-amic">
@@ -135,9 +147,9 @@ export function DataTable<T extends object>({
                     "text-amic font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
-                    alignStyles[col.align || "left"]
+                    alignStyles[col.align || "left"],
                   )}
-                  style={{ width: col.width }}
+                  style={{ width: col.width, minWidth: col.minWidth }}
                 >
                   {col.header ?? col.label}
                 </th>
@@ -146,7 +158,10 @@ export function DataTable<T extends object>({
           </thead>
           <tbody>
             {[...Array(skeletonRows)].map((_, i) => (
-              <tr key={i} className={striped && i % 2 === 1 ? "bg-table-alt" : "bg-white"}>
+              <tr
+                key={i}
+                className={striped && i % 2 === 1 ? "bg-table-alt" : "bg-white"}
+              >
                 {columns.map((col) => (
                   <td key={col.key} className={cellPadding}>
                     <Skeleton className="h-4 w-full" />
@@ -162,7 +177,13 @@ export function DataTable<T extends object>({
 
   if (!data.length) {
     return (
-      <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
+      <div
+        className={cn(
+          "overflow-hidden overflow-x-auto",
+          !borderless && "border border-gray-border rounded-dr",
+          className,
+        )}
+      >
         <table className="w-full">
           <thead>
             <tr className="bg-amic-50 border-b-2 border-amic">
@@ -173,9 +194,9 @@ export function DataTable<T extends object>({
                     "text-amic font-heading font-semibold text-sub-header tracking-wide",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
-                    alignStyles[col.align || "left"]
+                    alignStyles[col.align || "left"],
                   )}
-                  style={{ width: col.width }}
+                  style={{ width: col.width, minWidth: col.minWidth }}
                 >
                   {col.header ?? col.label}
                 </th>
@@ -183,13 +204,21 @@ export function DataTable<T extends object>({
             </tr>
           </thead>
         </table>
-        <div className="py-12 text-center text-text-secondary">{emptyMessage}</div>
+        <div className="py-12 text-center text-text-secondary">
+          {emptyMessage}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("overflow-hidden overflow-x-auto", !borderless && "border border-gray-border rounded-dr", className)}>
+    <div
+      className={cn(
+        "overflow-hidden overflow-x-auto",
+        !borderless && "border border-gray-border rounded-dr",
+        className,
+      )}
+    >
       <table className="w-full">
         <thead>
           <tr className="bg-amic-50 border-b-2 border-amic">
@@ -198,11 +227,11 @@ export function DataTable<T extends object>({
                 key={col.key}
                 className={cn(
                   "text-amic font-heading font-semibold text-sub-header tracking-wide",
-                    uppercaseHeaders && "uppercase tracking-[0.15em]",
+                  uppercaseHeaders && "uppercase tracking-[0.15em]",
                   cellPadding,
-                  alignStyles[col.align || "left"]
+                  alignStyles[col.align || "left"],
                 )}
-                style={{ width: col.width }}
+                style={{ width: col.width, minWidth: col.minWidth }}
               >
                 {col.header ?? col.label}
               </th>
@@ -212,7 +241,9 @@ export function DataTable<T extends object>({
         <tbody ref={tbodyRef} className="font-body text-body-text">
           {data.map((row, rowIndex) => {
             const sectionLabel = sectionMap.get(rowIndex);
-            const rowKey = String((row as Record<string, unknown>)[keyField] ?? rowIndex);
+            const rowKey = String(
+              (row as Record<string, unknown>)[keyField] ?? rowIndex,
+            );
 
             return (
               <Fragment key={rowKey}>
@@ -230,18 +261,27 @@ export function DataTable<T extends object>({
 
                 {/* 데이터 행 */}
                 <tr
-                  ref={(el) => { rowRefs.current[rowIndex] = el; }}
+                  ref={(el) => {
+                    rowRefs.current[rowIndex] = el;
+                  }}
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? "button" : undefined}
                   aria-label={onRowClick ? `Row ${rowIndex + 1}` : undefined}
                   className={cn(
                     striped && rowIndex % 2 === 1 ? "bg-table-alt" : "bg-white",
-                    onRowClick && "cursor-pointer hover:bg-accent/5 transition-colors",
-                    onRowClick && "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent",
-                    focusedRowIndex === rowIndex && "ring-2 ring-inset ring-accent"
+                    onRowClick &&
+                      "cursor-pointer hover:bg-accent/5 transition-colors",
+                    onRowClick &&
+                      "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent",
+                    focusedRowIndex === rowIndex &&
+                      "ring-2 ring-inset ring-accent",
                   )}
                   onClick={() => onRowClick?.(row)}
-                  onKeyDown={onRowClick ? (e) => handleKeyDown(e, rowIndex, row) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => handleKeyDown(e, rowIndex, row)
+                      : undefined
+                  }
                   onFocus={() => setFocusedRowIndex(rowIndex)}
                   onBlur={() => setFocusedRowIndex(-1)}
                 >
@@ -251,13 +291,15 @@ export function DataTable<T extends object>({
                       className={cn(
                         cellPadding,
                         alignStyles[col.align || "left"],
-                        col.mono && "font-mono tabular-nums"
+                        col.mono && "font-mono tabular-nums",
                       )}
-                      style={{ width: col.width }}
+                      style={{ width: col.width, minWidth: col.minWidth }}
                     >
                       {col.render
                         ? col.render(row, rowIndex)
-                        : ((row as Record<string, unknown>)[col.key] as ReactNode) ?? "-"}
+                        : (((row as Record<string, unknown>)[
+                            col.key
+                          ] as ReactNode) ?? "-")}
                     </td>
                   ))}
                 </tr>

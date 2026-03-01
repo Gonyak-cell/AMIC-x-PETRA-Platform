@@ -104,7 +104,7 @@ async def create_approval(
         action=AuditAction.APPROVAL_REQUESTED,
         actor_email=claims.email,
         new_value={
-            "approval_type": body.approval_type.value,
+            "approval_type": body.approval_type,
             "title": body.title,
             "approver_count": len(body.approvers),
         },
@@ -181,7 +181,7 @@ async def decide_approval(
         new_value={
             "decision": body.decision,
             "decider": body.email,
-            "overall_status": approval.status.value,
+            "overall_status": approval.status,
         },
     )
     await db.commit()

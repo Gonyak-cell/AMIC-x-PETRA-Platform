@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
+from app.models.enums import ExtractionStatus
 from app.schemas.document_extraction import (
     BatchExtractionRequest,
     ExtractionConfirmRequest,
@@ -79,6 +80,13 @@ async def create_extraction(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
+    existing = await svc.has_active_extraction(db, body.vdr_document_id)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이 문서에 대한 AI 분석이 이미 존재합니다",
+        )
+
     extraction = await svc.create_extraction(
         db,
         txn_id,
@@ -109,10 +117,25 @@ async def batch_extract(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
+    # 이미 활성 추출이 있는 문서 필터링
+    skipped: list[uuid.UUID] = []
     extractions = []
     for vdr_doc_id in body.vdr_document_ids:
+        existing = await svc.has_active_extraction(db, vdr_doc_id)
+        if existing:
+            skipped.append(vdr_doc_id)
+            continue
         ext = await svc.create_extraction(db, txn_id, vdr_doc_id)
         extractions.append(ext)
+
+    if skipped:
+        logger.info("배치 추출 중복 스킵: %d건 (%s)", len(skipped), skipped)
+
+    if not extractions:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"요청한 {len(skipped)}건 모두 이미 AI 분석이 존재합니다",
+        )
     await db.commit()
 
     for ext in extractions:
@@ -188,6 +211,11 @@ async def confirm_extraction(
             detail="추출 작업을 찾을 수 없습니다",
         )
 
+    # 재확정 감사: 이전 상태 스냅샷
+    prev_target_model = extraction.target_model
+    prev_target_id = extraction.target_id
+    is_reconfirm = extraction.status == ExtractionStatus.CONFIRMED
+
     try:
         updated = await svc.confirm_extraction(
             db=db,
@@ -198,9 +226,35 @@ async def confirm_extraction(
             create_new=body.create_new,
             user_email=claims.email or "",
         )
+        if is_reconfirm:
+            logger.info(
+                "추출 재확정: extraction=%s, user=%s, prev_target=%s/%s → new_target=%s/%s, data_keys=%s",
+                extraction_id,
+                claims.email,
+                prev_target_model,
+                prev_target_id,
+                body.target_model,
+                body.target_id or updated.target_id,
+                list(body.confirmed_data.keys()),
+            )
+        else:
+            logger.info(
+                "추출 확정: extraction=%s, user=%s, target_model=%s, target_id=%s, data_keys=%s",
+                extraction_id,
+                claims.email,
+                body.target_model,
+                body.target_id or updated.target_id,
+                list(body.confirmed_data.keys()),
+            )
         return ExtractionOut.model_validate(updated)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
+        )
+    except Exception:
+        logger.exception("추출 확정 중 예기치 않은 오류 (extraction=%s)", extraction_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="데이터 적용 중 오류가 발생했습니다. 입력 값을 확인해주세요.",
         )

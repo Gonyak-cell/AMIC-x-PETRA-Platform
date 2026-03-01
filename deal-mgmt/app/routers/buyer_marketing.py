@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -107,7 +108,7 @@ async def create_marketing_log(
         entity_id=log.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value=body.model_dump(),
+        new_value=body.model_dump(mode="json"),
     )
     await db.commit()
     await db.refresh(log)
@@ -137,6 +138,7 @@ async def update_marketing_log(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="마케팅 로그를 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
+    old_value = {k: getattr(log, k) for k in update_data}
     for k, v in update_data.items():
         setattr(log, k, v)
 
@@ -146,6 +148,7 @@ async def update_marketing_log(
         entity_id=log.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
+        old_value=old_value,
         new_value=update_data,
     )
     await db.commit()
@@ -179,6 +182,11 @@ async def delete_marketing_log(
         entity_id=log.id,
         action=AuditAction.DELETE,
         actor_email=claims.email,
+        old_value={
+            "stage": log.stage,
+            "log_date": log.log_date,
+            "content": log.content,
+        },
     )
     await db.delete(log)
     await db.commit()
@@ -213,7 +221,8 @@ async def marketing_stage_summary(
 
     stage_map: dict[str, str | None] = {s.value: None for s in MarketingStage}
     for row in result.all():
-        stage_map[row.stage.value if hasattr(row.stage, "value") else str(row.stage)] = row.latest
+        stage_key = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
+        stage_map[stage_key] = row.latest
 
     return BuyerStageSummary(buyer_id=buyer_id, stages=stage_map)
 
@@ -245,7 +254,8 @@ async def short_list_marketing_overview(
     if not buyer_ids:
         return []
 
-    # 모든 Short-List 매수자의 로그를 한번에 조회
+    # 서브쿼리로 IN 절 최적화 (파라미터 리스트 대신 DB가 직접 실행)
+    short_list_subq = buyers_q.scalar_subquery()
     logs_q = (
         select(
             BuyerMarketingLog.buyer_id,
@@ -254,7 +264,7 @@ async def short_list_marketing_overview(
         )
         .where(
             BuyerMarketingLog.transaction_id == txn_id,
-            BuyerMarketingLog.buyer_id.in_(buyer_ids),
+            BuyerMarketingLog.buyer_id.in_(short_list_subq),
         )
         .group_by(BuyerMarketingLog.buyer_id, BuyerMarketingLog.stage)
     )
@@ -267,7 +277,7 @@ async def short_list_marketing_overview(
 
     for row in logs_result.all():
         bid = row.buyer_id
-        stage_val = row.stage.value if hasattr(row.stage, "value") else str(row.stage)
+        stage_val = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
         if bid in buyer_stages:
             buyer_stages[bid][stage_val] = row.latest
 
@@ -357,7 +367,7 @@ async def export_buyers_excel(
     marketing_latest: dict[uuid.UUID, tuple[str | None, str | None]] = {}
     for row in mkt_result.all():
         bid = row.buyer_id
-        stage_val = row.stage.value if hasattr(row.stage, "value") else str(row.stage)
+        stage_val = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
         date_val = row.latest_date
         existing = marketing_latest.get(bid)
         if existing is None or (date_val and (existing[1] is None or date_val > existing[1])):
@@ -394,7 +404,8 @@ async def export_buyers_excel(
     wb.save(buf)
     buf.seek(0)
 
-    filename = f"Long-List_{txn.code_name or txn.name}.xlsx"
+    safe_name = re.sub(r"[^\w\s\-.]", "_", txn.code_name or txn.name)
+    filename = f"Long-List_{safe_name}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

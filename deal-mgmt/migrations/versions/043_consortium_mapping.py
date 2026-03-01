@@ -140,6 +140,6 @@ def downgrade() -> None:
     # buyer_candidates.deal_role 제거
     op.drop_column("buyer_candidates", "deal_role")
 
-    # enum 타입 삭제
-    sa.Enum(name="consortiumstatus").drop(op.get_bind(), checkfirst=True)
+    # enum 타입 삭제 (생성 역순: dealrole → consortiumstatus)
     sa.Enum(name="dealrole").drop(op.get_bind(), checkfirst=True)
+    sa.Enum(name="consortiumstatus").drop(op.get_bind(), checkfirst=True)
