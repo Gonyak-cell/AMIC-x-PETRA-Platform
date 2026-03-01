@@ -4,12 +4,14 @@
 - contract_templates.status 필터 인덱스
 """
 
+from __future__ import annotations
+
+from alembic import op
+
 revision = "048"
 down_revision = "047"
 branch_labels = None
 depends_on = None
-
-from alembic import op
 
 
 def upgrade() -> None:

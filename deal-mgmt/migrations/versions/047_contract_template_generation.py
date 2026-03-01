@@ -4,14 +4,16 @@
 - legal_documents 테이블에 generated_html, template_id 컬럼 추가
 """
 
-revision = "047"
-down_revision = "046"
-branch_labels = None
-depends_on = None
+from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
+
+revision = "047"
+down_revision = "046"
+branch_labels = None
+depends_on = None
 
 
 def upgrade() -> None:
