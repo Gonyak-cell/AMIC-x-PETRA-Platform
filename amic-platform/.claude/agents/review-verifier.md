@@ -175,7 +175,7 @@ FALSE_POSITIVE 판정 시 반드시 아래 6종 중 하나로 원인을 분류�
 
 ## 적용 규칙
 
-- **VCP 전체 적용**: `.claude/rules/verified-claim-protocol.md`의 6단계 검증 프로토콜을 따른다
+- **VCP 전체 적용**: `amic-platform/.claude/skills/review-orchestrate/docs/vcp.md`의 6단계 검증 프로토콜을 따른다
 - **독립성 원칙**: Phase 1 에이전트의 분석 결과를 출발점으로 사용하되, 코드는 반드시 독립적으로 읽는다
 - **금지 패턴**: VCP의 금지 패턴 6가지(추측 표현, 미확인 라인 번호, 메모리 기반 코드 인용 등) 동일 적용
 - **Self-Challenge 의무**: 모든 이슈에 SC-1~SC-6 체크리스트 적용, 결과를 검증 추적에 기재

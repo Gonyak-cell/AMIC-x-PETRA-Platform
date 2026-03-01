@@ -182,7 +182,7 @@ def _clean_numeric_string(raw: str) -> tuple[Decimal, str]:
         value = -value
 
     # 숫자 매칭 이후의 텍스트에서 단위 접미사 추출
-    remainder = text[match.end() :].strip()
+    text[match.end() :].strip()
     # 숫자 앞의 텍스트는 무시하지만, 숫자 바로 뒤에 붙은 단위도 확인
     # (예: "1500백만원" -- 숫자 패턴이 "1500"까지만 매칭)
     # 전체 텍스트에서 단위 패턴을 찾는다

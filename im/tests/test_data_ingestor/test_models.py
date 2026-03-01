@@ -10,7 +10,6 @@ import pytest
 from src.data_ingestor.dart.models import (
     DartAPIResponse,
     DartCompanyInfo,
-    DartDividend,
     DartFinancialStatement,
     DartMajorShareholder,
     DartSearchResult,

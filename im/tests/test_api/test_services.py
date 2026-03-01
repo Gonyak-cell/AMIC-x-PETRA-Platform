@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -83,7 +82,7 @@ class TestDocumentServiceCreate:
             "src.api.tasks.generate_im.generate_im_task.delay"
         ) as mock_delay:
             mock_delay.return_value = MagicMock(id="task-123")
-            document = await service.create_document(uuid.uuid4(), create_data)
+            await service.create_document(uuid.uuid4(), create_data)
 
         db.add.assert_called_once()
         assert db.commit.call_count >= 2  # 생성 + task_id 저장
@@ -247,7 +246,7 @@ class TestCompanyServiceGet:
             "src.api.tasks.fetch_company.fetch_company_task.delay"
         ) as mock_delay:
             mock_delay.return_value = MagicMock(id="task-789")
-            result = await service.get_company("00123456")
+            await service.get_company("00123456")
 
         assert company.fetch_status == "REFRESHING"
         mock_delay.assert_called_once_with("00123456")

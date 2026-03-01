@@ -15,9 +15,9 @@
 | 파일 | 역할 | 답하는 질문 |
 |------|------|-----------|
 | **이 파일** | 리뷰 차원/관점 정의 | "무엇을 검사하는가?" |
-| `amic-platform/.claude/rules/verified-claim-protocol.md` | 이슈별 검증 프로토콜 | "이슈가 진짜인가?" |
-| `amic-platform/.claude/skills/review-orchestrate/SKILL.md` | 실행 파이프라인 | "어떤 순서로 실행하는가?" |
-| `amic-platform/.claude/rules/review-gates.md` | 사전 검증 | "전제조건이 맞는가?" |
+| `review-orchestrate/docs/vcp.md` | 이슈별 검증 프로토콜 | "이슈가 진짜인가?" |
+| `review-orchestrate/SKILL.md` | 실행 파이프라인 | "어떤 순서로 실행하는가?" |
+| `review-orchestrate/docs/gates.md` | 사전 검증 | "전제조건이 맞는가?" |
 | `amic-platform/.claude/rules/code-review.md` | 할루시네이션 방지 원칙 | "추측 없이 리뷰하고 있는가?" |
 
 ---
@@ -153,7 +153,7 @@
 1. **BE Pydantic ↔ FE TypeScript 필드 일치**: 필드명, 타입, nullable 모두 일치하는지 (실제 양쪽 파일을 Read로 비교)
 2. **엔드포인트 경로/메서드 일치**: 프론트엔드 API 호출 URL이 백엔드 라우터 경로와 정확히 매칭
 3. **Enum 값 동기화**: 백엔드 Enum 값과 프론트엔드 상수/타입 일치
-4. **CORS 형식 일관성**: FDD=str(쉼표 구분), KIIS/IM/MA=list[str](JSON 배열) — `production-error-diagnostic.md` 참조
+4. **CORS 형식 일관성**: FDD=str(쉼표 구분), KIIS/IM/MA=list[str](JSON 배열) — `/prod-diagnostic` 스킬 참조
 5. **JWT Secret 일관성**: 4개 API 모듈(FDD/KIIS/IM/MA)의 JWT_SECRET 동일 여부
 6. **헬스체크 DB ping**: `health_check` 엔드포인트에 DB 연결 확인이 포함되어 있는지
 
@@ -161,7 +161,7 @@
 
 ## §5 허위 리뷰 방지
 
-> **VCP 위임**: 모든 이슈 보고 전 `amic-platform/.claude/rules/verified-claim-protocol.md`의 3.5단계 Self-Challenge(SC-1~SC-6) 적용 필수.
+> **VCP 위임**: 모든 이슈 보고 전 `review-orchestrate/docs/vcp.md`의 3.5단계 Self-Challenge(SC-1~SC-6) 적용 필수.
 
 체크리스트 레벨 핵심 원칙:
 
@@ -237,7 +237,7 @@ CI 결과 조회 가능 시 `gh run list --limit 1` 또는 `gh run view` 실행.
 
 ### 이슈 형식
 
-> VCP 표준 출력 형식 채택: `amic-platform/.claude/rules/verified-claim-protocol.md` 참조
+> VCP 표준 출력 형식 채택: `review-orchestrate/docs/vcp.md` 참조
 
 각 이슈:
 ```

@@ -12,7 +12,6 @@ PPTX 출력은 데이터 유무에 따라 3~5슬라이드를 동적 생성한다
 from __future__ import annotations
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens

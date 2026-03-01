@@ -14,7 +14,6 @@ import pytest
 from pptx import Presentation
 from pptx.enum.chart import XL_CHART_TYPE
 
-from src.chart_engine.config import ChartConfig, DEFAULT_CHART_CONFIG
 from src.chart_engine.exceptions import ChartDataError
 from src.chart_engine.pptx_native import (
     NATIVE_CHART_TYPES,

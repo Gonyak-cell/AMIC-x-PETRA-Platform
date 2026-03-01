@@ -119,6 +119,7 @@ from app.routers import (
     closing,
     compliance,
     consortium,
+    contract_generation,
     contract_markups,
     contracts,
     dashboard,
@@ -176,6 +177,7 @@ app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(timeline.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(legal_documents.router, prefix="/api/v1")
+app.include_router(contract_generation.router, prefix="/api/v1")
 app.include_router(marketing_materials.router, prefix="/api/v1")
 app.include_router(financial_models.router, prefix="/api/v1")
 app.include_router(ldd_reports.router, prefix="/api/v1")

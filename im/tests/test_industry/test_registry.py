@@ -4,7 +4,7 @@ import pytest
 
 from src.industry.base import IndustryModule
 from src.industry.exceptions import UnsupportedIndustryError
-from src.industry.models import IndustryChartRecommendation, IndustryKPI, KPIUnit
+from src.industry.models import IndustryChartRecommendation, IndustryKPI
 from src.industry.registry import (
     INDUSTRY_REGISTRY,
     get_industry_module,

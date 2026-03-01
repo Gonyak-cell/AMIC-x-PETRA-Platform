@@ -110,7 +110,9 @@ class PEFFund(TimestampMixin, Base):
     )
     gp2_company: Mapped[Company | None] = relationship(  # noqa: F821
         foreign_keys=[gp2_company_id],
+        back_populates="pef_funds_as_gp2",
     )
     gp3_company: Mapped[Company | None] = relationship(  # noqa: F821
         foreign_keys=[gp3_company_id],
+        back_populates="pef_funds_as_gp3",
     )

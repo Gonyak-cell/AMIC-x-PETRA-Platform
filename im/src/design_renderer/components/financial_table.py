@@ -72,9 +72,7 @@ def render_financial_table_pptx(
     if tokens is None:
         tokens = DEFAULT_TOKENS
 
-    from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN
-    from pptx.util import Inches, Pt
+    from pptx.util import Inches
 
     lay = tokens.layout
     c = tokens.colors
@@ -256,7 +254,6 @@ def _style_cell_pptx(
 
 def _set_cell_bg(cell: Any, hex_color: str) -> None:
     """셀 배경색 설정."""
-    from pptx.dml.color import RGBColor
     from pptx.oxml.ns import qn
     from lxml import etree
 

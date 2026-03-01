@@ -17,11 +17,8 @@ from collections.abc import AsyncGenerator
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event, insert
-from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
-
-SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, get_jwt_claims
@@ -456,7 +453,11 @@ class TestCascadeAuditTrail:
             company_name="감사추적기업",
             buyer_type="FINANCIAL_SPONSOR",
         )
-        # tier/status 업데이트
+        # 유효한 경로로 NDA_SENT까지 전이 + tier 설정
+        await http_client.patch(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+            json={"status": "CONTACTED"},
+        )
         await http_client.patch(
             f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
             json={"tier": "TIER_1", "status": "NDA_SENT"},
@@ -560,7 +561,11 @@ class TestAuditCsvExport:
         txn_id = await _create_txn(http_client)
         buyer = await _add_buyer(http_client, txn_id, company_name="CSV검증")
 
-        # UPDATE로 old_value/new_value 생성
+        # 유효한 경로로 NDA_SENT까지 전이 → old_value/new_value 생성
+        await http_client.patch(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+            json={"status": "CONTACTED"},
+        )
         await http_client.patch(
             f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
             json={"status": "NDA_SENT"},

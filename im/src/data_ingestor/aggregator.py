@@ -25,7 +25,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from src.data_ingestor.exceptions import DataMergeConflictError, MissingRequiredDataError
+from src.data_ingestor.exceptions import MissingRequiredDataError
 
 if TYPE_CHECKING:
     from src.data_ingestor.crawler.company_crawler import CompanyWebInfo
@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from src.data_ingestor.dart.models import (
         DartCompanyInfo,
         DartDividend,
-        DartFinancialStatement,
         DartMajorShareholder,
         FinancialStatementsCollection,
     )

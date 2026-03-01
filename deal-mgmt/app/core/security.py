@@ -50,8 +50,10 @@ async def get_jwt_claims(
     """
     if not settings.AUTH_ENABLED:
         _env = os.getenv("ENV", "").lower()
-        if _env in ("production", "prod", "staging", "stg"):
-            raise RuntimeError("CRITICAL: AUTH_ENABLED=False is forbidden in production/staging")
+        if _env not in ("local", "dev", "test", ""):
+            raise RuntimeError(
+                f"CRITICAL: AUTH_ENABLED=False is only allowed in local/dev/test environments, got ENV={_env!r}"
+            )
         return _DEV_CLAIMS
 
     credentials_exception = HTTPException(
@@ -93,7 +95,7 @@ def require_role(*roles: str):
         if claims.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"권한이 부족합니다. 필요한 역할: {', '.join(roles)}",
+                detail="이 작업을 수행할 권한이 없습니다",
             )
         return claims
 
@@ -109,7 +111,7 @@ def require_write_access():
     """CLIENT 역할의 모든 쓰기(POST/PATCH/DELETE) 작업을 차단한다."""
 
     async def checker(claims: JWTClaims = Depends(get_jwt_claims)) -> JWTClaims:
-        if claims.role == _CLIENT_ROLE:
+        if claims.role == _CLIENT_ROLE or not claims.role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="읽기 전용: 클라이언트는 데이터를 수정할 수 없습니다",

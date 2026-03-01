@@ -14,7 +14,6 @@ from typing import Any
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.prompts.base import (
     _format_financial_dict,
-    _format_metrics_dict,
     _format_value,
 )
 from src.narrative_generator.templates.loader import SectionTemplate, SlotDefinition

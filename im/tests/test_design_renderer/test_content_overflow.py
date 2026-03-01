@@ -1,6 +1,5 @@
 """콘텐츠 오버플로우 테스트 — 높이 추정/분할/폰트 조절."""
 
-import pytest
 
 from src.design_renderer.components.content_overflow import (
     ContentBlock,

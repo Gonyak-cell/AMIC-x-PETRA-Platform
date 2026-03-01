@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 from html import escape as html_escape
 from pathlib import Path
-from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 

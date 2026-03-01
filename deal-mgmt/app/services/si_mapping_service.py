@@ -42,17 +42,30 @@ logger = logging.getLogger(__name__)
 
 # ── 데이터 통계 ───────────────────────────────────────────
 async def get_data_stats(db: AsyncSession) -> SIDataStats:
-    """참조 테이블 시딩 상태 반환."""
-    si_count = (await db.execute(select(func.count()).select_from(SICompany))).scalar() or 0
+    """참조 테이블 시딩 상태 반환.
+
+    SICompany 관련 4개 COUNT를 단일 집계 쿼리로 병합 (6→3회 DB 왕복).
+    """
+    # SICompany: 4개 COUNT를 단일 쿼리로 병합
+    si_agg = (
+        await db.execute(
+            select(
+                func.count().label("total"),
+                func.count(SICompany.revenue).label("with_revenue"),
+                func.count(SICompany.fina_stat_synced_at).label("with_fina"),
+                func.count(SICompany.corp_basic_synced_at).label("with_corp"),
+            ).select_from(SICompany)
+        )
+    ).one()
+    si_count = si_agg.total
+    rev_count = si_agg.with_revenue
+    fina_stat_count = si_agg.with_fina
+    corp_basic_count = si_agg.with_corp
+
+    # 별도 테이블 COUNT (각 1회)
     mapping_count = (await db.execute(select(func.count()).select_from(KsicIoMapping))).scalar() or 0
     io_count = (await db.execute(select(func.count()).select_from(IOTransaction))).scalar() or 0
-    rev_count = (await db.execute(select(func.count()).where(SICompany.revenue.isnot(None)))).scalar() or 0
-    fina_stat_count = (
-        await db.execute(select(func.count()).where(SICompany.fina_stat_synced_at.isnot(None)))
-    ).scalar() or 0
-    corp_basic_count = (
-        await db.execute(select(func.count()).where(SICompany.corp_basic_synced_at.isnot(None)))
-    ).scalar() or 0
+
     return SIDataStats(
         si_companies_count=si_count,
         ksic_io_mappings_count=mapping_count,
@@ -495,17 +508,21 @@ def _parse_sanctions(
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────
+_MAX_COMPANIES_FOR_MAPPING: int = 10_000
+
+
 async def _load_filtered_companies(
     db: AsyncSession,
     min_revenue: float | None,
     require_investment_history: bool,
 ) -> list[SICompany]:
-    """조건 필터를 적용하여 SI 기업을 1회만 로딩."""
+    """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 10,000건)."""
     q = select(SICompany)
     if min_revenue is not None:
         q = q.where(SICompany.revenue >= min_revenue)
     if require_investment_history:
         q = q.where(SICompany.has_investment_history.is_(True))
+    q = q.limit(_MAX_COMPANIES_FOR_MAPPING)
     result = await db.execute(q)
     return list(result.scalars().all())
 

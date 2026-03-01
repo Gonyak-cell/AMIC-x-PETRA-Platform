@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import BuyerCandidateStatus, BuyerTier, BuyerType, DealRole
 
@@ -39,7 +39,9 @@ class BuyerCandidateOut(BaseModel):
 class BuyerCandidateCreate(BaseModel):
     company_name: str = Field(..., min_length=1, max_length=200)
     contact_name: str | None = Field(None, max_length=100)
-    contact_email: str | None = Field(None, max_length=255)
+    contact_email: str | None = Field(
+        None, max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+    )
     contact_phone: str | None = Field(None, max_length=20)
     buyer_type: BuyerType
     tier: BuyerTier | None = None
@@ -48,11 +50,21 @@ class BuyerCandidateCreate(BaseModel):
     notes: str | None = None
     extra_data: dict | None = None
 
+    @field_validator("extra_data")
+    @classmethod
+    def validate_extra_data_size(cls, v: dict | None) -> dict | None:
+        if v is not None and len(v) > 50:
+            msg = "extra_data는 최대 50개 키까지 허용됩니다"
+            raise ValueError(msg)
+        return v
+
 
 class BuyerCandidateUpdate(BaseModel):
     company_name: str | None = Field(None, min_length=1, max_length=200)
     contact_name: str | None = Field(None, max_length=100)
-    contact_email: str | None = Field(None, max_length=255)
+    contact_email: str | None = Field(
+        None, max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+    )
     contact_phone: str | None = Field(None, max_length=20)
     buyer_type: BuyerType | None = None
     status: BuyerCandidateStatus | None = None
@@ -61,13 +73,21 @@ class BuyerCandidateUpdate(BaseModel):
     deal_role: DealRole | None = None
     is_short_listed: bool | None = None
     ioi_value: Decimal | None = None
-    ioi_date: str | None = Field(None, max_length=10)
+    ioi_date: str | None = Field(None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
     loi_value: Decimal | None = None
-    loi_date: str | None = Field(None, max_length=10)
+    loi_date: str | None = Field(None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
     final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
     notes: str | None = None
     extra_data: dict | None = None
+
+    @field_validator("extra_data")
+    @classmethod
+    def validate_extra_data_size(cls, v: dict | None) -> dict | None:
+        if v is not None and len(v) > 50:
+            msg = "extra_data는 최대 50개 키까지 허용됩니다"
+            raise ValueError(msg)
+        return v
 
 
 class BuyerPipelineSummary(BaseModel):
@@ -79,7 +99,7 @@ class BuyerPipelineSummary(BaseModel):
 
 
 class ShortListPromoteRequest(BaseModel):
-    buyer_ids: list[uuid.UUID]
+    buyer_ids: list[uuid.UUID] = Field(..., max_length=100)
 
 
 class BiddingSummary(BaseModel):

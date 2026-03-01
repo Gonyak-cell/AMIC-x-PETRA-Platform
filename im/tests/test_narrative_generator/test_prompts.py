@@ -12,7 +12,7 @@ import pytest
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.exceptions import PromptNotFoundError
 from src.narrative_generator.prompts import create_default_registry
-from src.narrative_generator.prompts.base import BasePrompt, PromptRegistry
+from src.narrative_generator.prompts.base import BasePrompt
 from src.narrative_generator.prompts.section_prompts.core import ExecutiveSummaryPrompt
 
 

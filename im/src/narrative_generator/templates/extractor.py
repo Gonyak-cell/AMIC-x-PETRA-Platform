@@ -34,7 +34,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -659,7 +658,7 @@ class TemplateExtractor:
             f"# 원본: {Path(source_file).name}",
             "# 주의: 자동 생성된 초안입니다. 반드시 수동 검토 후 사용하십시오.",
             "#",
-            f"# 마지막 수정: (자동 생성)",
+            "# 마지막 수정: (자동 생성)",
             f"section_id: {section_id}",
             'version: "1.0"',
             f'source_reference: "{Path(source_file).name}"',

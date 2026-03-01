@@ -79,6 +79,7 @@ export interface BuyerCandidateUpdate {
   status?: BuyerStatus;
   tier?: BuyerTier;
   deal_role?: DealRole;
+  is_short_listed?: boolean;
   corp_code?: string;
   ioi_value?: number;
   ioi_date?: string;

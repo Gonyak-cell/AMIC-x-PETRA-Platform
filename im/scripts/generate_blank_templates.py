@@ -13,16 +13,14 @@
 
 from __future__ import annotations
 
-import os
 import sys
-from copy import deepcopy
 from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
-from pptx.util import Cm, Emu, Pt
+from pptx.util import Cm, Pt
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -291,13 +289,13 @@ def _add_toc_table(slide, sections: list[tuple[str, str]]):
                     tcPr.remove(ln)
                 from lxml import etree
                 ln = etree.SubElement(tcPr, qn(f"a:{border_name}"))
-                noFill = etree.SubElement(ln, qn("a:noFill"))
+                etree.SubElement(ln, qn("a:noFill"))
             # 셀 배경 투명
             solidFill = tcPr.find(qn("a:solidFill"))
             if solidFill is not None:
                 tcPr.remove(solidFill)
             from lxml import etree
-            noFill = etree.SubElement(tcPr, qn("a:noFill"))
+            etree.SubElement(tcPr, qn("a:noFill"))
 
             p = cell.text_frame.paragraphs[0]
             run = p.add_run()

@@ -225,7 +225,6 @@ class TargetHighlightsRenderer(BaseSectionRenderer):
         lay = tokens.layout
 
         from src.design_renderer.pptx_engine.shape_builder import (
-            add_body_textbox,
             add_bullet_list,
             add_financial_table,
             add_sub_header_bar,

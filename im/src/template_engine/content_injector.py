@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 from pptx.chart.data import CategoryChartData
 from pptx.oxml.ns import qn
-from pptx.util import Pt
 
 from src.template_engine.schemas import ChartContent, TableContent
 

@@ -7,6 +7,7 @@ KB에 없는 업종은 LLM 보강 (Phase 3)에서 처리한다.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 
 @dataclass(frozen=True)
@@ -376,7 +377,7 @@ PERMIT_KB: list[PermitKBEntry] = [
 def lookup_permits(
     business_types: list[str],
     deal_structure: str | None = None,
-    deal_value: float | None = None,
+    deal_value: float | Decimal | None = None,
 ) -> list[PermitKBEntry]:
     """업종 코드 목록으로 해당 인허가 항목을 조회한다.
 

@@ -66,7 +66,7 @@ async def list_gp_companies(
     company_name: str | None = Query(None, description="운용사명 검색 (부분 일치)"),
     source: str | None = Query(None, description="데이터 소스 필터 (freesis, kvic, public_data)"),
     strategy: str | None = Query(None, description="전략 태그 필터 (institutional_pef, kvic_fund)"),
-    sort_by: str = Query("aum", description="정렬 기준 (aum, fund_count, company_name)"),
+    sort_by: str = Query("aum", description="정렬 기준 (aum, commitment, fund_count, company_name)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
     db: AsyncSession = Depends(get_db),
@@ -144,6 +144,10 @@ async def get_gp_company_detail(
             selectinload(Company.kvic_funds),
             selectinload(Company.pef_funds_as_gp1).selectinload(PEFFund.gp2_company),
             selectinload(Company.pef_funds_as_gp1).selectinload(PEFFund.gp3_company),
+            selectinload(Company.pef_funds_as_gp2).selectinload(PEFFund.gp1_company),
+            selectinload(Company.pef_funds_as_gp2).selectinload(PEFFund.gp3_company),
+            selectinload(Company.pef_funds_as_gp3).selectinload(PEFFund.gp1_company),
+            selectinload(Company.pef_funds_as_gp3).selectinload(PEFFund.gp2_company),
         )
     )
     result = await db.execute(stmt)
@@ -163,20 +167,59 @@ async def get_gp_company_detail(
         for f in company.kvic_funds
     ]
 
-    pef_items = [
-        PEFFundItemResponse(
-            id=p.id,
-            pef_name=p.pef_name,
-            legal_basis=p.legal_basis,
-            registration_date=p.registration_date,
-            total_commitment=p.total_commitment,
-            gp1_name=company.corp_name,
-            gp2_name=p.gp2_company.corp_name if p.gp2_company else None,
-            gp3_name=p.gp3_company.corp_name if p.gp3_company else None,
-            synced_at=p.synced_at,
+    # GP1/GP2/GP3 역할별 PEF를 합쳐서 중복 제거 (동일 PEF가 GP1+GP2에 동시 등장 방지)
+    seen_pef_ids: set[int] = set()
+    pef_items: list[PEFFundItemResponse] = []
+
+    for p in company.pef_funds_as_gp1:
+        seen_pef_ids.add(p.id)
+        pef_items.append(
+            PEFFundItemResponse(
+                id=p.id,
+                pef_name=p.pef_name,
+                legal_basis=p.legal_basis,
+                registration_date=p.registration_date,
+                total_commitment=p.total_commitment,
+                gp1_name=company.corp_name,
+                gp2_name=p.gp2_company.corp_name if p.gp2_company else None,
+                gp3_name=p.gp3_company.corp_name if p.gp3_company else None,
+                synced_at=p.synced_at,
+            )
         )
-        for p in company.pef_funds_as_gp1
-    ]
+
+    for p in company.pef_funds_as_gp2:
+        if p.id not in seen_pef_ids:
+            seen_pef_ids.add(p.id)
+            pef_items.append(
+                PEFFundItemResponse(
+                    id=p.id,
+                    pef_name=p.pef_name,
+                    legal_basis=p.legal_basis,
+                    registration_date=p.registration_date,
+                    total_commitment=p.total_commitment,
+                    gp1_name=p.gp1_company.corp_name,
+                    gp2_name=company.corp_name,
+                    gp3_name=p.gp3_company.corp_name if p.gp3_company else None,
+                    synced_at=p.synced_at,
+                )
+            )
+
+    for p in company.pef_funds_as_gp3:
+        if p.id not in seen_pef_ids:
+            seen_pef_ids.add(p.id)
+            pef_items.append(
+                PEFFundItemResponse(
+                    id=p.id,
+                    pef_name=p.pef_name,
+                    legal_basis=p.legal_basis,
+                    registration_date=p.registration_date,
+                    total_commitment=p.total_commitment,
+                    gp1_name=p.gp1_company.corp_name,
+                    gp2_name=p.gp2_company.corp_name if p.gp2_company else None,
+                    gp3_name=company.corp_name,
+                    synced_at=p.synced_at,
+                )
+            )
 
     return GPCompanyDetailResponse(
         id=company.id,

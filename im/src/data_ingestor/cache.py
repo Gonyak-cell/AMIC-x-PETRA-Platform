@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any
 
@@ -29,7 +29,6 @@ from src.data_ingestor.dart.models import (
     DartMajorShareholder,
     FinancialStatementsCollection,
 )
-from src.data_ingestor.exceptions import CacheError
 
 if TYPE_CHECKING:
     pass

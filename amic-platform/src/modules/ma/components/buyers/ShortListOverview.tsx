@@ -115,8 +115,14 @@ function ExpandedContent({
           className="text-xs text-negative hover:underline"
           onClick={(e) => {
             e.stopPropagation();
-            if (window.confirm("마케팅 로그를 삭제하시겠습니까?"))
-              deleteLog.mutate(r.id);
+            toast("마케팅 로그를 삭제하시겠습니까?", {
+              action: {
+                label: "삭제",
+                onClick: () => deleteLog.mutate(r.id),
+              },
+              cancel: { label: "취소", onClick: () => {} },
+              duration: 8000,
+            });
           }}
         >
           삭제
@@ -366,15 +372,26 @@ export default function ShortListOverview({
     [overviewData],
   );
 
-  const grouped = useMemo(
-    () =>
-      TIER_ORDER.map((tier) => ({
-        tier,
-        label: BUYER_TIER_LABELS[tier] ?? tier,
-        buyers: shortListBuyers.filter((b) => b.tier === tier),
-      })).filter((g) => g.buyers.length > 0),
-    [shortListBuyers],
-  );
+  const grouped = useMemo(() => {
+    const groups = TIER_ORDER.map((tier) => ({
+      tier,
+      label: BUYER_TIER_LABELS[tier] ?? tier,
+      buyers: shortListBuyers.filter((b) => b.tier === tier),
+    })).filter((g) => g.buyers.length > 0);
+
+    // tier가 null이거나 TIER_ORDER에 없는 buyer → "미분류" 그룹
+    const unclassified = shortListBuyers.filter(
+      (b) => !b.tier || !TIER_ORDER.includes(b.tier),
+    );
+    if (unclassified.length > 0) {
+      groups.push({
+        tier: "UNCLASSIFIED",
+        label: "미분류",
+        buyers: unclassified,
+      });
+    }
+    return groups;
+  }, [shortListBuyers]);
 
   if (!shortListBuyers.length) {
     return (

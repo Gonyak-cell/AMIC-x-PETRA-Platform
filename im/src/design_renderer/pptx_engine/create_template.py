@@ -25,9 +25,8 @@ from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
-from pptx.dml.color import RGBColor
 from pptx.oxml.ns import qn
-from pptx.util import Emu, Inches, Pt
+from pptx.util import Inches
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 

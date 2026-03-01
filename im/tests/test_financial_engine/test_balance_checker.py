@@ -15,7 +15,6 @@ import pytest
 
 from src.financial_engine.validator.balance_checker import (
     BalanceCheckConfig,
-    BalanceCheckReport,
     BalanceCheckResult,
     BalanceChecker,
 )

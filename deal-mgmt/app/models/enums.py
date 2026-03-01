@@ -794,3 +794,27 @@ class TableStyleTheme(enum.StrEnum):
 
     DEFAULT = "DEFAULT"  # AMIC Forest 스타일
     MODERN_GREEN = "MODERN_GREEN"  # 연녹색 헤더 (#65A765), 점선 구분
+
+
+# ── Contract Template (계약서 템플릿 자동 생성) ───────────
+
+
+class TemplateVariableInputType(enum.StrEnum):
+    """템플릿 변수 입력 유형."""
+
+    TEXT = "TEXT"
+    TEXTAREA = "TEXTAREA"
+    NUMBER = "NUMBER"
+    DATE = "DATE"
+    SELECT = "SELECT"
+    BOOLEAN = "BOOLEAN"
+    CURRENCY = "CURRENCY"
+    PERCENTAGE = "PERCENTAGE"
+
+
+class ContractTemplateStatus(enum.StrEnum):
+    """계약서 템플릿 상태."""
+
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"

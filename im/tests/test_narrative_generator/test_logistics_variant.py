@@ -1,6 +1,5 @@
 """LogisticsVariant 테스트."""
 
-import pytest
 
 from src.narrative_generator.prompts import INDUSTRY_VARIANTS, get_industry_variant
 from src.narrative_generator.prompts.industry_variants.logistics import (

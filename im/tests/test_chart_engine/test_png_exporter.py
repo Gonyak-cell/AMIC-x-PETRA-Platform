@@ -3,7 +3,7 @@
 > 마지막 수정: 2026-02-10 13:45:13
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

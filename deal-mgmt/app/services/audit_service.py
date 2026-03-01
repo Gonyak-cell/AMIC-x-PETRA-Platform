@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import logging
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -13,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
 from app.models.enums import AuditAction
+
+logger = logging.getLogger(__name__)
 
 
 def _json_safe(val: Any) -> Any:
@@ -94,9 +97,16 @@ async def record(
         entity_type=entity_type,
         entity_id=entity_id,
         action=action,
-        actor_email=actor_email,
+        actor_email=actor_email or "SYSTEM",
         old_value=_sanitize_for_json(old_value),
         new_value=_sanitize_for_json(new_value),
         notes=notes,
     )
     db.add(log)
+    logger.debug(
+        "감사 로그 기록: entity=%s/%s action=%s actor=%s",
+        entity_type,
+        entity_id,
+        action.value,
+        actor_email,
+    )

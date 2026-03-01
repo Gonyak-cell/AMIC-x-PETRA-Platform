@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import (
@@ -153,7 +153,7 @@ async def analyze_permits(
     kb_results = lookup_permits(
         business_types=business_types,
         deal_structure=deal_structure,
-        deal_value=float(deal_value) if deal_value else None,
+        deal_value=deal_value,
     )
 
     # PermitRequirement 생성
@@ -189,6 +189,12 @@ async def add_manual_requirement(
         data.get("pre_filing_deadline_days"),
         data.get("post_filing_deadline_days"),
     )
+    # 기존 최대 sort_order + 1 (빈 테이블이면 0부터 시작)
+    max_q = select(func.coalesce(func.max(PermitRequirement.sort_order), -1)).where(
+        PermitRequirement.transaction_id == txn_id
+    )
+    next_order = (await db.execute(max_q)).scalar_one() + 1
+
     req = PermitRequirement(
         analysis_id=analysis_id,
         transaction_id=txn_id,
@@ -196,7 +202,7 @@ async def add_manual_requirement(
         source="MANUAL",
         confidence=1.0,
         status=PermitRequirementStatus.IDENTIFIED,
-        sort_order=99,
+        sort_order=next_order,
         filing_type=PermitFilingType(data["filing_type"]),
         timing_type=PermitTimingType(data["timing_type"]),
         permit_name=data["permit_name"],

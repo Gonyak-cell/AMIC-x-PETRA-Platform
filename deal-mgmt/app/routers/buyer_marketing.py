@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import logging
 import re
+import urllib.parse
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,7 +20,7 @@ from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claim
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
-from app.models.enums import AuditAction, BuyerTier, MarketingStage
+from app.models.enums import AuditAction, MarketingStage
 from app.schemas.marketing_log import (
     BuyerStageSummary,
     DartFinancialSummaryOut,
@@ -129,6 +130,7 @@ async def update_marketing_log(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> MarketingLogOut:
     await check_client_deal_access(db, txn_id, claims)
+    await transaction_service.get_transaction(db, txn_id)
     q = select(BuyerMarketingLog).where(
         BuyerMarketingLog.id == log_id,
         BuyerMarketingLog.buyer_id == buyer_id,
@@ -169,6 +171,7 @@ async def delete_marketing_log(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
     await check_client_deal_access(db, txn_id, claims)
+    await transaction_service.get_transaction(db, txn_id)
     q = select(BuyerMarketingLog).where(
         BuyerMarketingLog.id == log_id,
         BuyerMarketingLog.buyer_id == buyer_id,
@@ -240,14 +243,14 @@ async def short_list_marketing_overview(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[BuyerStageSummary]:
-    """Tier-1/2/3 매수자 전원의 마케팅 단계 완료 현황."""
+    """Short-List(is_short_listed=True) 매수자 전원의 마케팅 단계 완료 현황."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    # Short-List = tier IS NOT NULL AND tier != NOT_TARGET
+    # Short-List = is_short_listed 플래그 기반
     buyers_q = select(BuyerCandidate.id).where(
         BuyerCandidate.transaction_id == txn_id,
-        BuyerCandidate.tier.isnot(None),
-        BuyerCandidate.tier != BuyerTier.NOT_TARGET,
+        BuyerCandidate.is_short_listed.is_(True),
     )
     buyer_result = await db.execute(buyers_q)
     buyer_ids = [row[0] for row in buyer_result.all()]
@@ -291,19 +294,20 @@ async def short_list_marketing_overview(
 @router.get("/buyers/dart-search")
 async def dart_company_search(
     txn_id: uuid.UUID,
-    q: str = Query(..., min_length=1, alias="q"),
+    q: str = Query(..., min_length=1, max_length=100, alias="q"),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
     kiis: KIISClientProtocol = Depends(get_kiis_client),
 ) -> list[dict]:
     """DART 기업 typeahead 검색 — KIIS 서비스 경유."""
     await check_client_deal_access(db, txn_id, claims)
+    await transaction_service.get_transaction(db, txn_id)
 
     try:
         results = await kiis.search_company(q)
         return results[:20]  # 최대 20건 반환
     except Exception:
-        logger.warning("DART 기업 검색 실패: query=%s", q, exc_info=True)
+        logger.warning("DART 기업 검색 실패", exc_info=True)
         return []
 
 
@@ -403,21 +407,31 @@ async def export_buyers_excel(
         logger.warning("플랫폼 설정 조회 실패 — DEFAULT 스타일로 폴백")
         table_style = "DEFAULT"
 
-    wb = build_buyer_excel(
-        buyers,
-        txn.code_name or txn.name,
-        marketing_latest=marketing_latest,
-        consortium_map=consortium_map,
-        table_style=table_style,
-    )
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
+    try:
+        wb = build_buyer_excel(
+            buyers,
+            txn.code_name or txn.name,
+            marketing_latest=marketing_latest,
+            consortium_map=consortium_map,
+            table_style=table_style,
+        )
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+    except Exception:
+        logger.exception("Excel 내보내기 실패: txn_id=%s", txn_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Excel 파일 생성 중 오류가 발생했습니다",
+        )
 
-    safe_name = re.sub(r"[^\w\s\-.]", "_", txn.code_name or txn.name)
+    safe_name = re.sub(r"[^\w\s\-.]", "_", txn.code_name or txn.name, flags=re.ASCII)
     filename = f"Long-List_{safe_name}.xlsx"
+    encoded_filename = urllib.parse.quote(filename)
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": (f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"),
+        },
     )

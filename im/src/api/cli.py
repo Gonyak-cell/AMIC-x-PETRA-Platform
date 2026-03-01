@@ -15,7 +15,6 @@ import asyncio
 import sys
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.db.models.user import User
 from src.api.db import session as db_session

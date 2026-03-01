@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
 
 if TYPE_CHECKING:
-    import matplotlib.pyplot as plt
+    pass
 
 logger = logging.getLogger(__name__)
 

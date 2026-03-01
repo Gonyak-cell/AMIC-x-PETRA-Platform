@@ -64,8 +64,12 @@ _PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str, PrerequisiteLe
     Phase.BIDDING: [
         ("deal_structure", "딜 구조", PrerequisiteLevel.RECOMMENDED),
     ],
-    Phase.MOU_SIGNED: [],
-    Phase.MAIN_DUE_DILIGENCE: [],
+    Phase.MOU_SIGNED: [
+        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
+    ],
+    Phase.MAIN_DUE_DILIGENCE: [
+        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
+    ],
     Phase.NEGOTIATION: [
         ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
     ],

@@ -899,8 +899,10 @@ def _safe_set_field(obj: object, attr: str, val: object) -> None:
             return
     elif attr in _NUMERIC_FIELDS and isinstance(val, str):
         try:
-            val = float(val)
-        except (ValueError, TypeError):
+            from decimal import Decimal, InvalidOperation
+
+            val = Decimal(val)
+        except (InvalidOperation, ValueError, TypeError):
             logger.warning("Numeric 필드 '%s'에 변환 불가 값 무시: %r", attr, val)
             return
     elif isinstance(val, str):

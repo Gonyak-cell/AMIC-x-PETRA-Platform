@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.narrative_generator.engine.llm_provider import (
-    LLMProvider,
     LLMResponse,
     ProviderName,
 )

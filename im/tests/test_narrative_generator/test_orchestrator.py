@@ -8,9 +8,8 @@ LLM을 완전히 모킹하여 generate/generate_section/에러 처리를 테스�
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.config import NarrativeConfig

@@ -395,6 +395,8 @@ async def search_gp_companies(
         stmt = stmt.order_by(Company.gp_fund_count.desc().nulls_last())
     elif sort_by == "company_name":
         stmt = stmt.order_by(Company.corp_name.asc())
+    elif sort_by == "commitment":
+        stmt = stmt.order_by(Company.gp_total_commitment.desc().nulls_last())
     else:
         stmt = stmt.order_by(Company.gp_aum.desc().nulls_last())
 

@@ -9,7 +9,6 @@ from src.design_renderer.pptx_engine.slide_factory import SlideFactory
 from src.design_renderer.pptx_engine.style_applier import (
     add_watermark,
     apply_presentation_style,
-    apply_run_style,
     set_edit_restriction,
 )
 from src.design_renderer.pptx_engine.template_manager import TemplateManager

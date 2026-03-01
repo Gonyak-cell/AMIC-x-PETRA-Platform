@@ -6,7 +6,6 @@ AI 생성 콘텐츠가 슬라이드/페이지 영역을 초과할 때,
 
 from __future__ import annotations
 
-import copy
 import math
 from dataclasses import dataclass, field
 from typing import Any

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 from src.data_ingestor.crawler.company_crawler import CompanyCrawler, CompanyWebInfo, IRDocument
 from src.data_ingestor.crawler.news_crawler import NewsArticle, NewsCrawler

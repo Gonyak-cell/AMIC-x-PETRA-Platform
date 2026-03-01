@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 from src.narrative_generator.korean_finance.tone_adapter import (
-    FACTUAL_OPTIMISM,
     ToneAdapter,
     ToneCheckResult,
 )

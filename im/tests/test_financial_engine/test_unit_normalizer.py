@@ -13,7 +13,6 @@ import pytest
 
 from src.financial_engine.exceptions import NormalizationError, UnitConversionError
 from src.financial_engine.normalizer.unit_normalizer import (
-    UNIT_SCALES,
     UnitNormalizer,
     UnitScale,
 )

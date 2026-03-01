@@ -11,7 +11,9 @@ export interface PefFund {
 
 export interface FIRecommendation {
   gp_name: string;
+  min_fund_size: number;
   matching_funds: PefFund[];
   total_committed_sum: number;
   fund_count: number;
+  match_reason: string;
 }

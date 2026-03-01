@@ -154,7 +154,7 @@ def extract_vdr_data_task(
     from sqlalchemy.orm import Session, selectinload
 
     from src.api.db.models.im_checklist import ChecklistStatus, IMChecklist
-    from src.api.db.models.im_checklist_item import ChecklistItemStatus, IMChecklistItem
+    from src.api.db.models.im_checklist_item import ChecklistItemStatus
     from src.api.services.vdr_analysis_service import VdrAnalysisService
 
     update_progress(self, document_id, "COLLECTING", 10)

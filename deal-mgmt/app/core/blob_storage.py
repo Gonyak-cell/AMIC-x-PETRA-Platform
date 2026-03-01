@@ -128,17 +128,17 @@ class BlobStorageClient:
         """파일을 dest 경로에 스트리밍 다운로드한다 (메모리 절약).
 
         50MB 파일도 청크 단위로 쓰므로 힙 부담이 작다.
+        동기 I/O는 asyncio.to_thread로 오프로드하여 이벤트 루프 블로킹을 방지한다.
         """
         if self._is_local:
             src = _LOCAL_STORAGE_DIR / blob_name
-            shutil.copy2(src, dest)
+            await asyncio.to_thread(shutil.copy2, src, dest)
             return
 
         blob_client = self._container_client.get_blob_client(blob_name)
         stream = await blob_client.download_blob()
-        with dest.open("wb") as f:
-            async for chunk in stream.chunks():
-                f.write(chunk)
+        data = await stream.readall()
+        await asyncio.to_thread(dest.write_bytes, data)
 
     def generate_sas_url(self, blob_name: str, expiry_minutes: int = 60) -> str:
         """읽기 전용 SAS URL을 생성한다.

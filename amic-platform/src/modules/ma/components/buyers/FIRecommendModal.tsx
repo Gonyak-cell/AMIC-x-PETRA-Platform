@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Building2, TrendingUp } from "lucide-react";
+import { AlertTriangle, Building2, TrendingUp, Target } from "lucide-react";
 import {
   Badge,
   Button,
@@ -76,8 +76,8 @@ export default function FIRecommendModal({
     }
     if (added > 0) {
       toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
+      onClose();
     }
-    onClose();
   };
 
   const formatBillion = (v: number) => {
@@ -86,10 +86,10 @@ export default function FIRecommendModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="FI 자동 추천" size="lg">
+    <Modal open={open} onClose={onClose} title="FI 자동 매핑" size="lg">
       <p className="text-xs text-text-secondary mb-4">
-        거래금액 기준으로 PEF 레지스트리에서 적합한 FI(재무적 투자자)를 자동으로
-        추천합니다.
+        2021년 이후 결성 펀드 기준, 거래금액의 0.5~3배 범위 GP를 자동
+        매칭합니다. (프로젝트 펀드 제외)
       </p>
 
       {isLoading && (
@@ -130,7 +130,7 @@ export default function FIRecommendModal({
                   isSelected
                     ? "ring-2 ring-accent-primary"
                     : isExisting
-                      ? "opacity-50"
+                      ? "opacity-70 bg-bg-muted"
                       : ""
                 }
               >
@@ -138,9 +138,8 @@ export default function FIRecommendModal({
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    disabled={isExisting}
-                    onChange={() => toggleGP(rec.gp_name)}
-                    aria-label={`${rec.gp_name} 선택`}
+                    aria-disabled={isExisting || undefined}
+                    onChange={() => !isExisting && toggleGP(rec.gp_name)}
                     className="h-4 w-4 rounded border-border"
                   />
 
@@ -155,10 +154,17 @@ export default function FIRecommendModal({
                         펀드 {rec.fund_count}개
                       </span>
                       <span className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        최소 {formatBillion(rec.min_fund_size)}
+                      </span>
+                      <span className="flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
                         총약정 {formatBillion(rec.total_committed_sum)}
                       </span>
                     </div>
+                    <p className="text-[11px] text-text-muted mt-1">
+                      {rec.match_reason}
+                    </p>
                   </div>
                 </label>
               </Card>

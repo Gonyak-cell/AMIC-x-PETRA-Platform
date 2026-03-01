@@ -5,10 +5,8 @@ get_fields_for_style()이 각 IM 스타일에 맞는 필드 수를 반환하는�
 
 from __future__ import annotations
 
-import pytest
 
 from src.api.services.checklist_field_registry import (
-    get_all_fields,
     get_fields_for_style,
 )
 

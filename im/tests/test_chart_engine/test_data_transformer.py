@@ -8,9 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import pytest
 
-from src.chart_engine.data_transformer import ChartSpec, DataTransformer
+from src.chart_engine.data_transformer import DataTransformer
 
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,14 @@ class PefFundRegistry(Base, TimestampMixin):
     """
 
     __tablename__ = "pef_fund_registry"
-    __table_args__ = (Index("ix_pef_fund_registry_capital", "total_committed_capital"),)
+    __table_args__ = (
+        Index("ix_pef_fund_registry_capital", "total_committed_capital"),
+        Index("ix_pef_fund_registry_gp1", "gp1"),
+        Index("ix_pef_fund_registry_gp2", "gp2"),
+        Index("ix_pef_fund_registry_gp3", "gp3"),
+        Index("ix_pef_fund_registry_pef_name", "pef_name"),
+        Index("ix_pef_fund_registry_reg_date", "registration_date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     pef_name: Mapped[str] = mapped_column(String(300), nullable=False)

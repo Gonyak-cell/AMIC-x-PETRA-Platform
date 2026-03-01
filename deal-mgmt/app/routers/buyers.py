@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -30,6 +30,48 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/buyers", tags=["Buyers"])
 
+# ── BuyerCandidateStatus 상태 전이 규칙 ──────────────────
+# M&A 파이프라인 기반: 선형 진행 + REJECTED 분기 + BID 분기
+# 종단 상태(SELECTED, REJECTED, BID_DROPPED)에서는 전이 불가
+_S = BuyerCandidateStatus
+_BUYER_STATUS_TRANSITIONS: dict[BuyerCandidateStatus, set[BuyerCandidateStatus]] = {
+    _S.IDENTIFIED: {_S.CONTACTED, _S.REJECTED},
+    _S.CONTACTED: {_S.NDA_SENT, _S.NDA_SIGNED, _S.REJECTED},
+    _S.NDA_SENT: {_S.NDA_SIGNED, _S.REJECTED},
+    _S.NDA_SIGNED: {_S.CIM_SENT, _S.REJECTED},
+    _S.CIM_SENT: {_S.INTEREST_CONFIRMED, _S.REJECTED},
+    _S.INTEREST_CONFIRMED: {_S.IOI_RECEIVED, _S.BID_NOT_SUBMITTED, _S.REJECTED},
+    _S.IOI_RECEIVED: {_S.IOI_ACCEPTED, _S.REJECTED},
+    _S.IOI_ACCEPTED: {_S.DD_GRANTED, _S.BID_SUBMITTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.DD_GRANTED: {_S.DD_IN_PROGRESS, _S.BID_DROPPED, _S.REJECTED},
+    _S.DD_IN_PROGRESS: {_S.LOI_RECEIVED, _S.BID_SUBMITTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.LOI_RECEIVED: {_S.LOI_ACCEPTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.LOI_ACCEPTED: {_S.SELECTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.SELECTED: set(),
+    _S.REJECTED: set(),
+    _S.BID_SUBMITTED: {_S.SELECTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.BID_NOT_SUBMITTED: {_S.BID_SUBMITTED, _S.BID_DROPPED, _S.REJECTED},
+    _S.BID_DROPPED: set(),
+}
+
+_CONTACT_FIELDS = ("contact_name", "contact_email", "contact_phone")
+
+
+def _validate_contact_for_short_list(
+    contact_name: str | None,
+    contact_email: str | None,
+    contact_phone: str | None,
+) -> list[str]:
+    """Short-List 승격에 필요한 연락처 누락 필드 목록을 반환한다."""
+    lacks: list[str] = []
+    if not contact_name:
+        lacks.append("contact_name")
+    if not contact_email:
+        lacks.append("contact_email")
+    if not contact_phone:
+        lacks.append("contact_phone")
+    return lacks
+
 
 @router.get("", response_model=list[BuyerCandidateOut])
 async def list_buyers(
@@ -38,6 +80,8 @@ async def list_buyers(
     buyer_type: BuyerType | None = Query(None, alias="type"),
     tier: BuyerTier | None = Query(None),
     is_short_listed: bool | None = Query(None),
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[BuyerCandidateOut]:
@@ -52,7 +96,7 @@ async def list_buyers(
         q = q.where(BuyerCandidate.tier == tier)
     if is_short_listed is not None:
         q = q.where(BuyerCandidate.is_short_listed == is_short_listed)
-    q = q.order_by(BuyerCandidate.created_at.desc())
+    q = q.order_by(BuyerCandidate.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(q)
     return [BuyerCandidateOut.model_validate(b) for b in result.scalars().all()]
 
@@ -94,8 +138,12 @@ async def buyer_summary(
 
     # SQLite AVG는 float 반환 — Decimal(20,2) 정밀도 보장
     _q2 = Decimal("0.01")
-    avg_ioi = Decimal(str(agg_row.avg_ioi)).quantize(_q2) if agg_row.avg_ioi is not None else None
-    avg_loi = Decimal(str(agg_row.avg_loi)).quantize(_q2) if agg_row.avg_loi is not None else None
+    avg_ioi = (
+        Decimal(str(agg_row.avg_ioi)).quantize(_q2, rounding=ROUND_HALF_UP) if agg_row.avg_ioi is not None else None
+    )
+    avg_loi = (
+        Decimal(str(agg_row.avg_loi)).quantize(_q2, rounding=ROUND_HALF_UP) if agg_row.avg_loi is not None else None
+    )
 
     return BuyerPipelineSummary(
         total=agg_row.total,
@@ -160,13 +208,7 @@ async def promote_short_list(
     # 연락처 필수 검증
     missing: list[dict] = []
     for b in buyers_list:
-        lacks = []
-        if not b.contact_name:
-            lacks.append("contact_name")
-        if not b.contact_email:
-            lacks.append("contact_email")
-        if not b.contact_phone:
-            lacks.append("contact_phone")
+        lacks = _validate_contact_for_short_list(b.contact_name, b.contact_email, b.contact_phone)
         if lacks:
             missing.append({"buyer_id": str(b.id), "company_name": b.company_name, "missing_fields": lacks})
 
@@ -177,6 +219,7 @@ async def promote_short_list(
         )
 
     for b in buyers_list:
+        prev = b.is_short_listed
         b.is_short_listed = True
         await audit_service.record(
             db,
@@ -184,15 +227,17 @@ async def promote_short_list(
             entity_id=b.id,
             action=AuditAction.UPDATE,
             actor_email=claims.email,
-            old_value={"is_short_listed": False},
+            old_value={"is_short_listed": prev},
             new_value={"is_short_listed": True},
             notes="Short-List 승격",
         )
 
     await db.commit()
-    for b in buyers_list:
-        await db.refresh(b)
-    return [BuyerCandidateOut.model_validate(b) for b in buyers_list]
+    # 서버측 updated_at 갱신값 반영을 위해 일괄 재조회 (개별 refresh 대신)
+    refreshed = list(
+        (await db.execute(select(BuyerCandidate).where(BuyerCandidate.id.in_(body.buyer_ids)))).scalars().all()
+    )
+    return [BuyerCandidateOut.model_validate(b) for b in refreshed]
 
 
 @router.get("/bidding-summary", response_model=BiddingSummary)
@@ -236,6 +281,7 @@ async def get_buyer(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> BuyerCandidateOut:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
@@ -252,13 +298,55 @@ async def update_buyer(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> BuyerCandidateOut:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="매수자 후보를 찾을 수 없습니다")
+
     update_data = body.model_dump(exclude_unset=True)
-    old_value = {k: getattr(buyer, k) for k in update_data}
+
+    # 상태 전이 검증
+    if "status" in update_data:
+        new_status = update_data["status"]
+        allowed = _BUYER_STATUS_TRANSITIONS.get(buyer.status, set())
+        if new_status not in allowed:
+            logger.warning(
+                "상태 전이 거부: buyer=%s, %s → %s, actor=%s",
+                buyer_id,
+                buyer.status.value,
+                new_status.value,
+                claims.email,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="상태 전이 불가: 현재 상태에서 요청한 상태로 전환할 수 없습니다",
+            )
+
+    # is_short_listed=True 설정 시 연락처 필수 검증 (promote-short-list 우회 방지)
+    if update_data.get("is_short_listed") is True and not buyer.is_short_listed:
+        lacks = _validate_contact_for_short_list(
+            update_data.get("contact_name", buyer.contact_name),
+            update_data.get("contact_email", buyer.contact_email),
+            update_data.get("contact_phone", buyer.contact_phone),
+        )
+        if lacks:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"message": "Short-List 승격을 위해 연락처 정보가 필요합니다", "missing_fields": lacks},
+            )
+
+    # is_short_listed=True인 상태에서 연락처 필드 null화 방지 (M-B2)
+    if buyer.is_short_listed and update_data.get("is_short_listed") is not False:
+        for field in _CONTACT_FIELDS:
+            if field in update_data and not update_data[field]:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Short-List 상태에서는 {field}을(를) 비울 수 없습니다",
+                )
+
+    old_value = {k: getattr(buyer, k, None) for k in update_data}
     for k, v in update_data.items():
         setattr(buyer, k, v)
     await audit_service.record(
@@ -282,6 +370,7 @@ async def remove_buyer(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()

@@ -1,7 +1,6 @@
 """섹션 렌더러 테스트 — 레지스트리 18종/HTML/PPTX 출력."""
 
 import pytest
-from pptx import Presentation
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS
 from src.design_renderer.im_document import IMDocumentData, SECTION_IDS

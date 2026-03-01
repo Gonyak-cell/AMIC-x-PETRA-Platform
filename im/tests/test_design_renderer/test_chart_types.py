@@ -11,7 +11,6 @@ from src.design_renderer.components.chart_embed import (
     create_waterfall_chart,
     embed_chart_html,
 )
-from src.design_renderer.design_tokens import DEFAULT_TOKENS
 
 
 pytestmark = pytest.mark.requires_plotly

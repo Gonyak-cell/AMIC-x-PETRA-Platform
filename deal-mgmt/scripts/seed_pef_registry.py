@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import sys
 import uuid
 from decimal import Decimal, InvalidOperation
@@ -21,23 +22,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+logger = logging.getLogger(__name__)
+
 # 프로젝트 루트를 sys.path에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 DEFAULT_XLSX = (
     Path(__file__).resolve().parent.parent.parent / "기관전용 사모집합투자기구 현황(2024.12월말 기준)_게시용.xlsx"
 )
-
-# xlsx 헤더 → DB 컬럼 매핑 (row 4 기준, 0-indexed col)
-COL_MAP = {
-    2: "legal_basis",  # 설립근거법률
-    3: "pef_name",  # PEF 명칭(약식)
-    4: "registration_date",  # 등록일(설립일)*
-    5: "gp1",  # GP1
-    6: "gp2",  # GP2
-    7: "gp3",  # GP3
-    8: "total_committed_capital",  # 총약정액(합계)
-}
 
 
 def parse_xlsx(xlsx_path: Path) -> list[dict]:
@@ -97,37 +89,33 @@ async def seed_database(database_url: str, records: list[dict]) -> int:
         inserted = 0
         for i in range(0, len(records), batch_size):
             batch = records[i : i + batch_size]
-            values_list = []
-            for r in batch:
-                values_list.append(
-                    f"('{r['id']}', '{r['pef_name']}', "
-                    f"{_sql_str(r['legal_basis'])}, "
-                    f"{_sql_str(r['registration_date'])}, "
-                    f"{_sql_str(r['gp1'])}, "
-                    f"{_sql_str(r['gp2'])}, "
-                    f"{_sql_str(r['gp3'])}, "
-                    f"{r['total_committed_capital'] if r['total_committed_capital'] is not None else 'NULL'})"
-                )
-            sql = (
+            stmt = text(
                 "INSERT INTO pef_fund_registry "
                 "(id, pef_name, legal_basis, registration_date, gp1, gp2, gp3, total_committed_capital) "
-                "VALUES " + ", ".join(values_list)
+                "VALUES (:id, :pef_name, :legal_basis, :registration_date, :gp1, :gp2, :gp3, :capital)"
             )
-            await session.execute(text(sql))
+            params = [
+                {
+                    "id": str(r["id"]),
+                    "pef_name": r["pef_name"],
+                    "legal_basis": r["legal_basis"],
+                    "registration_date": r["registration_date"],
+                    "gp1": r["gp1"],
+                    "gp2": r["gp2"],
+                    "gp3": r["gp3"],
+                    "capital": float(r["total_committed_capital"])
+                    if r["total_committed_capital"] is not None
+                    else None,
+                }
+                for r in batch
+            ]
+            await session.execute(stmt, params)
             inserted += len(batch)
 
         await session.commit()
 
     await engine.dispose()
     return inserted
-
-
-def _sql_str(value: str | None) -> str:
-    """SQL 문자열 리터럴로 변환한다. None이면 NULL."""
-    if value is None:
-        return "NULL"
-    escaped = value.replace("'", "''")
-    return f"'{escaped}'"
 
 
 async def main() -> None:
@@ -154,13 +142,13 @@ async def main() -> None:
             "sqlite+aiosqlite:///./deal_mgmt.db",
         )
 
-    print(f"Parsing {args.xlsx} ...")
+    logger.info("Parsing %s ...", args.xlsx)
     records = parse_xlsx(args.xlsx)
-    print(f"Parsed {len(records)} PEF records")
+    logger.info("Parsed %d PEF records", len(records))
 
-    print(f"Seeding to {args.database_url} ...")
+    logger.info("Seeding to %s ...", args.database_url)
     inserted = await seed_database(args.database_url, records)
-    print(f"Done — {inserted} records inserted")
+    logger.info("Done — %d records inserted", inserted)
 
 
 if __name__ == "__main__":

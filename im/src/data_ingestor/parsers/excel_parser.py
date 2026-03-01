@@ -26,7 +26,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from src.data_ingestor.exceptions import DataValidationError, ExcelParserError
+from src.data_ingestor.exceptions import ExcelParserError
 
 if TYPE_CHECKING:
     import pandas as pd

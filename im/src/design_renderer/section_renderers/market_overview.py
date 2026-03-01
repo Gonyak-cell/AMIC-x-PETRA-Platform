@@ -6,7 +6,6 @@ TAM/SAM/SOM, 시장 성장률, 경쟁사 현황, 산업 트렌드를 표시.
 from __future__ import annotations
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens

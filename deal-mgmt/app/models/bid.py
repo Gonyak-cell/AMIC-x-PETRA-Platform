@@ -1,7 +1,8 @@
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,21 +14,19 @@ class Bid(Base, TimestampMixin):
 
     __tablename__ = "bids"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     buyer_candidate_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("buyer_candidates.id"), nullable=False, index=True
+        Uuid, ForeignKey("buyer_candidates.id"), nullable=False, index=True
     )
     bid_type: Mapped[BidType] = mapped_column(Enum(BidType), nullable=False)
     status: Mapped[BidStatus] = mapped_column(Enum(BidStatus), nullable=False, default=BidStatus.SUBMITTED)
 
     # Valuation
-    amount: Mapped[float | None] = mapped_column(Numeric(20, 2), nullable=True)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="KRW")
     valuation_method: Mapped[ValuationMethod | None] = mapped_column(Enum(ValuationMethod), nullable=True)
-    multiple: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    multiple: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Dates
     submitted_at: Mapped[str | None] = mapped_column(String(10), nullable=True)
@@ -39,4 +38,4 @@ class Bid(Base, TimestampMixin):
 
     # ── AI 추출 필드 ────────────────────────────────────
     exclusivity_period_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    conditions_precedent: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    conditions_precedent: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)

@@ -15,10 +15,8 @@ import pytest
 
 from src.financial_engine.validator.consistency_checker import (
     AnomalyType,
-    ConsistencyAnomaly,
     ConsistencyChecker,
     ConsistencyConfig,
-    ConsistencyReport,
 )
 
 

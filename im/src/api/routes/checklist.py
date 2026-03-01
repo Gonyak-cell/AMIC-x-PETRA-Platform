@@ -41,7 +41,7 @@ from src.api.schemas.checklist import (
     CreateFromVdrRequest,
     CreateFromVdrResponse,
 )
-from src.api.services.checklist_field_registry import get_all_fields, get_fields_for_style
+from src.api.services.checklist_field_registry import get_fields_for_style
 
 logger = logging.getLogger(__name__)
 

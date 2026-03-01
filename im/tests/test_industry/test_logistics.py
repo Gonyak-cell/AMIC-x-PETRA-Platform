@@ -1,6 +1,5 @@
 """LogisticsModule 테스트."""
 
-import pytest
 
 from src.industry.logistics import LogisticsModule
 from src.industry.models import (

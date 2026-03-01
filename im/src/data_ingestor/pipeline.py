@@ -26,7 +26,6 @@ from src.data_ingestor.aggregator import DataAggregator, IMDocumentData
 from src.data_ingestor.cache import CacheConfig, CacheManager, CachedDartClient
 from src.data_ingestor.dart.client import DartAPIClient
 from src.data_ingestor.dart.endpoints import FinancialStatementDivision, ReportCode
-from src.data_ingestor.exceptions import PipelineError
 
 if TYPE_CHECKING:
     from src.data_ingestor.crawler.company_crawler import CompanyWebInfo

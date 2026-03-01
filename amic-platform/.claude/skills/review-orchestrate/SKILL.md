@@ -66,7 +66,7 @@ npm run build             # Vite 프로덕션 빌드
 
 **목적**: 에이전트 실행 전 허위 양성 발생 전제 조건 탐지
 
-`--skip-gates` 플래그가 없으면 실행. 상세 규칙은 `.claude/rules/review-gates.md` 참조.
+`--skip-gates` 플래그가 없으면 실행. 상세 규칙은 `amic-platform/.claude/skills/review-orchestrate/docs/gates.md` 참조.
 
 #### 실행 단계
 
@@ -82,7 +82,7 @@ npm run build             # Vite 프로덕션 빌드
 2. **범위-에이전트 필터링**:
    - 리뷰 대상 파일 목록과 각 에이전트의 호환성 매트릭스 매칭
    - 매칭되는 파일이 없는 에이전트는 Phase 1에서 제외
-   - 호환성 매트릭스는 `review-gates.md` 참조
+   - 호환성 매트릭스는 이 스킬의 `docs/gates.md` 참조
 
 3. **스키마 드리프트 탐지** (선택적, 중기 구현):
    - 프론트엔드 타입 정의와 백엔드 스키마 비교
@@ -142,8 +142,8 @@ Phase 1의 각 에이전트 호출 시 `gate_results`를 컨텍스트로 포함:
 ```
 {에이전트명} 에이전트 역할로 동작하세요.
 .claude/agents/{에이전트명}.md의 지침과
-.claude/rules/verified-claim-protocol.md의 프로토콜을 따릅니다.
-리뷰 관점은 .claude/rules/code-review-checklist.md의 §1~§4 체크리스트를 참조합니다.
+amic-platform/.claude/skills/review-orchestrate/docs/vcp.md의 프로토콜을 따릅니다.
+리뷰 관점은 amic-platform/.claude/skills/review-orchestrate/docs/checklist.md의 §1~§4 체크리스트를 참조합니다.
 
 리뷰 대상: {스코프에 해당하는 파일/디렉터리 목록}
 {--backend이면: 백엔드 경로도 포함}
@@ -259,7 +259,7 @@ Phase 2B 자동 검증:
 
 **신뢰도 가중 우선순위 계산**:
 
-각 이슈에 대해 우선순위 점수를 계산합니다 (`.claude/rules/verified-claim-protocol.md` 참조):
+각 이슈에 대해 우선순위 점수를 계산합니다 (`amic-platform/.claude/skills/review-orchestrate/docs/vcp.md` 참조):
 
 ```
 우선순위 점수 = (심각도 가중치 × 신뢰도 가중치) + 보너스
@@ -294,12 +294,12 @@ Phase 2B 자동 검증:
   ⚠️ 이 치명적(Critical) 이슈는 중간 신뢰도(MEDIUM)로 인해 P1으로 분류되었습니다.
   ```
 
-**추가 섹션** (code-review-checklist.md 연계):
+**추가 섹션** (이 스킬의 docs/checklist.md 연계):
 
 ```markdown
 ## 계획 대비 구현 검증 (§6)
 
-{최초 계획 문서가 제공된 경우 — code-review-checklist.md §6 형식으로 작성}
+{최초 계획 문서가 제공된 경우 — 이 스킬의 docs/checklist.md §6 형식으로 작성}
 
 | # | 계획된 항목 | 구현 상태 | 검증 근거 (파일:라인) |
 |---|-----------|---------|---------------------|
@@ -307,7 +307,7 @@ Phase 2B 자동 검증:
 
 ## 품질 게이트 상태 (§7)
 
-{CI 결과 조회 가능 시 — code-review-checklist.md §7 형식으로 작성}
+{CI 결과 조회 가능 시 — docs/checklist.md §7 형식으로 작성}
 
 | 품질 게이트 | 상태 | 리뷰 영향 |
 |------------|------|----------|

@@ -1,11 +1,11 @@
 # Code Review Verification Rules
 
-> **리뷰 체크리스트**: 정합성/완전성/품질/안정성 4단계 리뷰 관점 — `.claude/rules/code-review-checklist.md` (루트 레벨 상시 적용)
+> **리뷰 체크리스트**: 정합성/완전성/품질/안정성 4단계 리뷰 관점 — `/review-orchestrate` 스킬 (`docs/checklist.md`)
 >
-> **필수 참조**: 모든 코드 리뷰 에이전트는 **Verified Claim Protocol** (`.claude/rules/verified-claim-protocol.md`)을 적용합니다.
+> **필수 참조**: 모든 코드 리뷰 에이전트는 **Verified Claim Protocol** (`/review-orchestrate` 스킬 `docs/vcp.md`)을 적용합니다.
 > 이 파일의 6개 원칙은 VCP의 보충 규칙으로 함께 적용됩니다.
 >
-> **문서화 필수**: 모든 오류 수정 및 리뷰 내역은 **Review Documentation Rule** (`.claude/rules/review-documentation.md`)에 따라 `review/{카테고리}/` 폴더에 기록합니다.
+> **문서화 필수**: 모든 오류 수정 및 리뷰 내역은 **Review Documentation Rule** (`/review-orchestrate` 스킬 `docs/documentation.md`)에 따라 `review/{카테고리}/` 폴더에 기록합니다.
 
 ## 코드 리뷰 시 할루시네이션 방지 규칙
 
@@ -44,4 +44,4 @@
 - 오류 수정 후 반드시 `review/{카테고리}/` 폴더에 수정 내역 문서 작성
 - 카테고리 폴더가 없으면 자동 생성 (`mkdir -p review/{카테고리}`)
 - 문서 작성 후 `review/INDEX.md` 업데이트
-- 상세 규칙: `.claude/rules/review-documentation.md` 참조
+- 상세 규칙: `/review-orchestrate` 스킬 `docs/documentation.md` 참조

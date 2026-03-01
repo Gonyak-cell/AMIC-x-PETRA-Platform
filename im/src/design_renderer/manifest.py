@@ -16,7 +16,6 @@ Usage::
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -113,7 +112,7 @@ class GenerationManifest:
         elapsed = self.total_elapsed_ms
 
         lines = [
-            f"=== 생성 매니페스트 ===",
+            "=== 생성 매니페스트 ===",
             f"시각: {self.generation_timestamp}",
             f"섹션: {ok}/{total} 성공 ({fail}개 실패)",
             f"슬라이드: {slides}장",

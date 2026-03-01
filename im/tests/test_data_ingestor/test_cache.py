@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -452,7 +451,7 @@ class TestCachedDartClient:
             client = CachedDartClient(client=mock_dart_client, cache=cache)
 
             result1 = await client.get_major_shareholders("00126380")
-            result2 = await client.get_major_shareholders("00126380")
+            await client.get_major_shareholders("00126380")
 
             assert mock_dart_client.get_major_shareholders.call_count == 1
             assert len(result1) > 0
@@ -466,7 +465,7 @@ class TestCachedDartClient:
             client = CachedDartClient(client=mock_dart_client, cache=cache)
 
             result1 = await client.get_dividend("00126380", "2024")
-            result2 = await client.get_dividend("00126380", "2024")
+            await client.get_dividend("00126380", "2024")
 
             assert mock_dart_client.get_dividend.call_count == 1
             assert len(result1) > 0

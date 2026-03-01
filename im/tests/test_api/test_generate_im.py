@@ -8,7 +8,6 @@ from __future__ import annotations
 import dataclasses
 import enum
 from decimal import Decimal
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest

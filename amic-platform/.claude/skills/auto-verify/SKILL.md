@@ -1,7 +1,7 @@
 ---
 name: auto-verify
 description: 보통(Moderate) 및 경미(Minor) 이슈 자동 검증. 파일 존재, 라인 번호, 코드 스니펫, 패턴 주장을 자동 검증하여 허위 양성 탐지.
-user_invocable: false
+user-invokable: false
 arguments: "issues_json"
 ---
 

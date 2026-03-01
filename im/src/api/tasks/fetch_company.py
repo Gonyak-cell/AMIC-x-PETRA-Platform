@@ -42,7 +42,7 @@ def fetch_company_task(self: Any, corp_code: str) -> dict[str, Any]:
     """
     try:
         from src.api.config import get_config
-        from src.data_ingestor.pipeline import DataCollectionPipeline, PipelineConfig
+        from src.data_ingestor.pipeline import PipelineConfig
 
         api_config = get_config()
         config = PipelineConfig(dart_api_key=api_config.dart_api_key)

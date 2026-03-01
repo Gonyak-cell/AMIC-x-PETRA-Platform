@@ -56,5 +56,5 @@
 ## 관련 문서
 
 - `docs/deployment/20260226_1429_FDD_MA_502_Fix.md` — 이미지 스왑 버그 원인/수정
-- `.claude/rules/post-deploy-verification.md` — 배포 후 검증 절차
-- `.claude/rules/production-error-diagnostic.md` — 프로덕션 에러 진단
+- `/post-deploy-check` 스킬 — 배포 후 검증 절차
+- `/prod-diagnostic` 스킬 — 프로덕션 에러 진단

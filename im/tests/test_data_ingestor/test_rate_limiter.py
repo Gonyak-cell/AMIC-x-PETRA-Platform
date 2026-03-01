@@ -5,7 +5,6 @@ T-D02 검증: Token Bucket 동작 및 동시 요청 시 rate limit 확인
 
 import asyncio
 from time import monotonic
-from unittest.mock import patch
 
 import pytest
 

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from src.data_ingestor.exceptions import ExcelParserError, PDFParserError
-from src.data_ingestor.parsers.excel_parser import ExcelParser, ExcelSheet, ExcelWorkbook
+from src.data_ingestor.parsers.excel_parser import ExcelParser, ExcelSheet
 from src.data_ingestor.parsers.pdf_parser import PDFDocument, PDFPage, PDFParser, PDFTable
 
 

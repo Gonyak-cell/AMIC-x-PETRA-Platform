@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -135,9 +136,15 @@ def _build_pipeline(
         from app.ralph.parsers.file_classifier import parse_and_classify, scan_directory
         from app.schemas.ldd_report import DEFAULT_LDD_SECTIONS
 
-        # 파서 + 분류
+        # 파서 + 분류 (경로 검증: 프로젝트 루트 내부만 허용)
         source_map: dict[str, list[ParsedFile]] = {}
         if source_dir:
+            _ralph_project_root = Path(__file__).resolve().parent.parent.parent
+            try:
+                resolved = Path(source_dir).resolve()
+                resolved.relative_to(_ralph_project_root)
+            except (ValueError, OSError) as exc:
+                raise ValueError(f"source_dir은 프로젝트 디렉토리 내부여야 합니다: {source_dir}") from exc
             for file_info in scan_directory(source_dir):
                 parsed = parse_and_classify(file_info["path"])
                 for section in parsed.ddrl_sections:

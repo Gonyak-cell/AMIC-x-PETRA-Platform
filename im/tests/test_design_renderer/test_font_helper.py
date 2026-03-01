@@ -4,7 +4,6 @@
 """
 
 import pytest
-from lxml import etree
 from pptx import Presentation
 from pptx.util import Inches, Pt
 

@@ -141,6 +141,7 @@ class FSSPEFService:
 
         # GP 이름 → Company 캐시 (동일 GP가 여러 PEF에 등장)
         gp_cache: dict[str, Company] = {}
+        synced_items: list[FSSPEFItem] = []
 
         # 기존 pef_funds 전체 삭제 (replace 전략)
         await db.execute(delete(PEFFund))
@@ -172,12 +173,14 @@ class FSSPEFService:
                 )
                 db.add(pef)
                 result.created += 1
+                synced_items.append(item)
             except Exception:
                 logger.exception("FSS PEF 동기화 실패: %s", item.pef_name)
                 result.errors.append(item.pef_name)
 
         # GP별 총약정액 합산 → Company.gp_total_commitment 갱신
-        self._aggregate_gp_commitment(gp_cache, items)
+        # 에러 발생 PEF는 제외하고 실제 동기화된 항목만 합산
+        self._aggregate_gp_commitment(gp_cache, synced_items)
 
         await db.commit()
         logger.info(
@@ -306,7 +309,13 @@ class FSSPEFService:
                 company.gp_total_commitment = total
                 updated += 1
 
-        logger.info("GP 총약정액 합산 완료: %d개 GP 갱신", updated)
+        unmatched = len(commitment_map) - updated
+        if unmatched:
+            logger.warning(
+                "GP 총약정액 합산: %d개 GP가 gp_cache에 미존재 (매칭 실패)",
+                unmatched,
+            )
+        logger.info("GP 총약정액 합산 완료: %d개 GP 갱신 (전체 %d개)", updated, len(commitment_map))
 
     def _find_header_row(self, rows: list[tuple]) -> int | None:  # type: ignore[type-arg]
         """헤더 행 인덱스를 찾는다 (첫 10행 내에서)."""

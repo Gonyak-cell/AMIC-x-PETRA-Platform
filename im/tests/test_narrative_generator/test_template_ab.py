@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.config import NarrativeConfig

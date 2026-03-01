@@ -11,6 +11,7 @@ from app.models.company import Company
 from app.models.gp_fund import KVICFund, PEFFund
 from app.services.fss_pef_service import FSSPEFItem, FSSPEFService
 from app.services.kvic_service import KVICFundOperator, KVICService
+from app.services.public_data_service import search_gp_companies
 
 # --- fixtures ---
 
@@ -444,3 +445,163 @@ class TestGPTotalCommitmentAggregation:
         result = await async_session.execute(stmt)
         company = result.scalar_one()
         assert company.gp_total_commitment == Decimal("500")
+
+
+# ──────────────────────────────────────────────
+# Detail API — GP1+GP2+GP3 PEF 병합 중복 제거 테스트
+# ──────────────────────────────────────────────
+
+
+class TestDetailAPIPEFMerge:
+    """GP 상세 조회 시 GP1/GP2/GP3 역할 PEF 병합 및 중복 제거 검증."""
+
+    async def test_gp2_pef_included_in_detail(self, async_session: AsyncSession) -> None:
+        """GP2로만 참여하는 PEF도 상세 조회에 포함된다."""
+        now = datetime.now(UTC)
+        gp_a = Company(corp_name="DetailGP_A", is_gp=True)
+        gp_b = Company(corp_name="DetailGP_B", is_gp=True)
+        async_session.add_all([gp_a, gp_b])
+        await async_session.flush()
+
+        # GP_A가 GP1, GP_B가 GP2인 PEF
+        pef = PEFFund(
+            pef_name="공동운용 상세테스트",
+            gp1_company_id=gp_a.id,
+            gp2_company_id=gp_b.id,
+            total_commitment=Decimal("500"),
+            synced_at=now,
+        )
+        async_session.add(pef)
+        await async_session.flush()
+
+        # GP_B 관점에서 조회 — GP2로 참여한 PEF가 보여야 함
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Company)
+            .where(Company.id == gp_b.id)
+            .options(
+                selectinload(Company.pef_funds_as_gp1),
+                selectinload(Company.pef_funds_as_gp2).selectinload(PEFFund.gp1_company),
+                selectinload(Company.pef_funds_as_gp3),
+            )
+        )
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+
+        # GP1 PEF는 없고, GP2 PEF가 1건
+        assert len(company.pef_funds_as_gp1) == 0
+        assert len(company.pef_funds_as_gp2) == 1
+        assert company.pef_funds_as_gp2[0].pef_name == "공동운용 상세테스트"
+
+    async def test_pef_deduplication_gp1_and_gp2(self, async_session: AsyncSession) -> None:
+        """동일 GP가 GP1+GP2로 동시 참여할 수 없지만, 병합 시 중복 제거가 동작한다."""
+        now = datetime.now(UTC)
+        gp_a = Company(corp_name="DedupeGP_A", is_gp=True)
+        gp_b = Company(corp_name="DedupeGP_B", is_gp=True)
+        async_session.add_all([gp_a, gp_b])
+        await async_session.flush()
+
+        # GP_A가 GP1인 PEF 1건, GP_A가 GP2인 PEF 1건 (별도 PEF)
+        pef1 = PEFFund(
+            pef_name="GP_A 주도 PEF",
+            gp1_company_id=gp_a.id,
+            total_commitment=Decimal("300"),
+            synced_at=now,
+        )
+        pef2 = PEFFund(
+            pef_name="GP_B 주도 PEF",
+            gp1_company_id=gp_b.id,
+            gp2_company_id=gp_a.id,
+            total_commitment=Decimal("200"),
+            synced_at=now,
+        )
+        async_session.add_all([pef1, pef2])
+        await async_session.flush()
+
+        # GP_A: GP1 PEF 1건 + GP2 PEF 1건 = 총 2건 (중복 없음)
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Company)
+            .where(Company.id == gp_a.id)
+            .options(
+                selectinload(Company.pef_funds_as_gp1),
+                selectinload(Company.pef_funds_as_gp2),
+                selectinload(Company.pef_funds_as_gp3),
+            )
+        )
+        result = await async_session.execute(stmt)
+        company = result.scalar_one()
+
+        # seen_pef_ids 중복 제거 로직 시뮬레이션
+        seen_pef_ids: set[int] = set()
+        merged: list[PEFFund] = []
+        for p in company.pef_funds_as_gp1:
+            seen_pef_ids.add(p.id)
+            merged.append(p)
+        for p in company.pef_funds_as_gp2:
+            if p.id not in seen_pef_ids:
+                seen_pef_ids.add(p.id)
+                merged.append(p)
+        for p in company.pef_funds_as_gp3:
+            if p.id not in seen_pef_ids:
+                merged.append(p)
+
+        assert len(merged) == 2
+        pef_names = {p.pef_name for p in merged}
+        assert pef_names == {"GP_A 주도 PEF", "GP_B 주도 PEF"}
+
+
+# ──────────────────────────────────────────────
+# sort_by="commitment" 정렬 테스트
+# ──────────────────────────────────────────────
+
+
+class TestSortByCommitment:
+    """search_gp_companies의 sort_by="commitment" 정렬 검증."""
+
+    async def test_sort_by_commitment_descending(self, async_session: AsyncSession) -> None:
+        """gp_total_commitment 기준 내림차순 정렬."""
+        companies = [
+            Company(corp_name="Low_GP", is_gp=True, gp_total_commitment=Decimal("100")),
+            Company(corp_name="High_GP", is_gp=True, gp_total_commitment=Decimal("9000")),
+            Company(corp_name="Mid_GP", is_gp=True, gp_total_commitment=Decimal("500")),
+        ]
+        for c in companies:
+            async_session.add(c)
+        await async_session.flush()
+        await async_session.commit()
+
+        results, total = await search_gp_companies(
+            async_session,
+            sort_by="commitment",
+            page=1,
+            size=10,
+        )
+
+        assert total == 3
+        names = [c.corp_name for c in results]
+        assert names == ["High_GP", "Mid_GP", "Low_GP"]
+
+    async def test_sort_by_commitment_nulls_last(self, async_session: AsyncSession) -> None:
+        """gp_total_commitment가 None인 GP는 뒤로 정렬."""
+        companies = [
+            Company(corp_name="No_Commitment_GP", is_gp=True, gp_total_commitment=None),
+            Company(corp_name="Has_Commitment_GP", is_gp=True, gp_total_commitment=Decimal("200")),
+        ]
+        for c in companies:
+            async_session.add(c)
+        await async_session.flush()
+        await async_session.commit()
+
+        results, total = await search_gp_companies(
+            async_session,
+            sort_by="commitment",
+            page=1,
+            size=10,
+        )
+
+        assert total == 2
+        assert results[0].corp_name == "Has_Commitment_GP"
+        assert results[1].corp_name == "No_Commitment_GP"

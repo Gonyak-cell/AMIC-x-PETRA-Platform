@@ -12,7 +12,6 @@ template_manager.py의 TemplateManager를 사용하여
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from pptx.dml.color import RGBColor
@@ -20,7 +19,7 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
 from src.design_renderer.assets import image_path
-from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
+from src.design_renderer.design_tokens import IMDesignTokens
 from src.design_renderer.pptx_engine.font_helper import set_font_with_ea
 from src.design_renderer.pptx_engine.template_manager import TemplateManager
 

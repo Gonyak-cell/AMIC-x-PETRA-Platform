@@ -9,7 +9,9 @@ from app.models.closing_checklist import ClosingChecklist
 from app.models.compliance_item import ComplianceItem
 from app.models.consortium_mapping import ConsortiumMapping
 from app.models.contract import Contract
+from app.models.contract_clause import ContractClause
 from app.models.contract_markup import ContractMarkup
+from app.models.contract_template import ContractTemplate
 from app.models.contract_version import ContractVersion
 from app.models.dd_checklist import DDChecklist
 from app.models.deal_client import DealClient
@@ -35,6 +37,7 @@ from app.models.enums import (
     ConditionMatchLevel,
     ConsortiumStatus,
     ContractStatus,
+    ContractTemplateStatus,
     ContractType,
     DDChecklistStatus,
     DDWorkstream,
@@ -86,6 +89,7 @@ from app.models.enums import (
     SICompanyRelation,
     SignatureStatus,
     TableStyleTheme,
+    TemplateVariableInputType,
     TransactionPhase,
     TransactionSide,
     TransactionStatus,
@@ -122,6 +126,7 @@ from app.models.rfi_checklist_mapping import RFIChecklistMapping
 from app.models.rfi_item import RFIItem
 from app.models.risk_item import RiskItem
 from app.models.si_company import SICompany
+from app.models.template_variable import TemplateVariable
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
 from app.models.transcription_job import TranscriptionJob
@@ -162,8 +167,11 @@ __all__ = [
     "ConsortiumMapping",
     "ConsortiumStatus",
     "Contract",
+    "ContractClause",
     "ContractMarkup",
     "ContractStatus",
+    "ContractTemplate",
+    "ContractTemplateStatus",
     "ContractType",
     "ContractVersion",
     "DDChecklist",
@@ -249,6 +257,8 @@ __all__ = [
     "SICompanyRelation",
     "SignatureStatus",
     "TableStyleTheme",
+    "TemplateVariable",
+    "TemplateVariableInputType",
     "TimestampMixin",
     "Transaction",
     "TransactionPhase",

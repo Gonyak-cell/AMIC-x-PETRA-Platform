@@ -111,7 +111,6 @@ class BusinessModelRenderer(BaseSectionRenderer):
 
         from src.design_renderer.pptx_engine.shape_builder import (
             add_body_textbox,
-            add_bullet_list,
             add_sub_header_bar,
             add_summary_textbox,
         )

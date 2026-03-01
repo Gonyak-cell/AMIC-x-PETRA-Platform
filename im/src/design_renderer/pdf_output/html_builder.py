@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from html import escape as html_escape
-from typing import Any
 
 from src.design_renderer.assets import generate_font_face_css
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens

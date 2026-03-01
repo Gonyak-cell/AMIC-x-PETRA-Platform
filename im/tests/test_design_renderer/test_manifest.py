@@ -3,7 +3,6 @@
 > 마지막 수정: 2026-02-11 10:30:00
 """
 
-import pytest
 
 from src.design_renderer.manifest import GenerationManifest, SlideManifestEntry
 

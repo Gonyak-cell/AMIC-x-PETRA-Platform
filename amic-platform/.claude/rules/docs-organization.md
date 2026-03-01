@@ -65,5 +65,5 @@
 ## 예외
 
 - `docs/INDEX.md` — 색인 파일, 루트에 유지
-- `review/` — 코드 리뷰 수정 내역 (별도 관리, `review-documentation.md` 규칙 참조)
+- `review/` — 코드 리뷰 수정 내역 (별도 관리, `/review-orchestrate` 스킬 `docs/documentation.md` 참조)
 - `CLAUDE.md`, `CLAUDE.local.md`, `README.md`, `MEMORY.md` — 시스템 파일

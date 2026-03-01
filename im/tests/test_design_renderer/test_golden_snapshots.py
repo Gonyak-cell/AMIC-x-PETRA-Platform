@@ -566,7 +566,7 @@ class TestGoldenSnapshots:
                 )
 
         assert len(mismatched) == 0, (
-            f"섹션별 슬라이드 수 불일치:\n"
+            "섹션별 슬라이드 수 불일치:\n"
             + "\n".join(f"  - {m}" for m in mismatched)
         )
 

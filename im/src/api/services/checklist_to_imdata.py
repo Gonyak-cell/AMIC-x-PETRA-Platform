@@ -23,7 +23,6 @@ from src.design_renderer.im_document import (
     CompanyOverview,
     DealStructure,
     FinancialStatements,
-    GrowthStrategy,
     IMDocumentData,
     ManagementMember,
     MarketData,

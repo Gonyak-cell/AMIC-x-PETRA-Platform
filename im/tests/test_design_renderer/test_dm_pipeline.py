@@ -18,8 +18,6 @@ from src.design_renderer.im_document import (
     FinancialStatements,
     MarketData,
     TransactionType,
-    SECTION_IDS,
-    TEASER_SECTIONS,
 )
 from src.design_renderer.pipeline import IMPipeline
 from src.design_renderer.pptx_engine.slide_factory import SlideFactory

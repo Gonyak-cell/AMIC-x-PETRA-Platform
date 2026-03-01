@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -431,7 +430,7 @@ class TestExtractorIntegration:
         results = await extractor.extract_all_sections(txt_file)
 
         assert len(results) >= 2
-        section_ids = [r.section_id for r in results]
+        [r.section_id for r in results]
         # 추출된 결과에 YAML 내용이 있어야 함
         for r in results:
             assert len(r.yaml_content) > 0

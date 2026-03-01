@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.engine.structured_output import (

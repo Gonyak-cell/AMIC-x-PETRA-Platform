@@ -13,6 +13,7 @@ SAMPLE_BUYER = {
     "company_name": "삼성물산",
     "contact_name": "이매수",
     "contact_email": "lee@samsung.com",
+    "contact_phone": "010-0000-0000",
     "buyer_type": "STRATEGIC",
 }
 
@@ -284,14 +285,14 @@ async def test_short_list_overview(client):
     b2 = await _add_buyer(client, txn_id, company_name="B사")
     b3 = await _add_buyer(client, txn_id, company_name="C사")
 
-    # b1=TIER_1, b2=TIER_2, b3=NOT_TARGET
+    # b1=TIER_1 + short-listed, b2=TIER_2 + short-listed, b3=NOT_TARGET
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
-        json={"tier": "TIER_1"},
+        json={"tier": "TIER_1", "is_short_listed": True},
     )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
-        json={"tier": "TIER_2"},
+        json={"tier": "TIER_2", "is_short_listed": True},
     )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b3['id']}",
@@ -303,7 +304,7 @@ async def test_short_list_overview(client):
     )
     assert resp.status_code == 200
     data = resp.json()
-    # NOT_TARGET은 제외 → 2건
+    # is_short_listed=False인 b3 제외 → 2건
     assert len(data) == 2
     buyer_ids = {item["buyer_id"] for item in data}
     assert b1["id"] in buyer_ids
@@ -328,14 +329,14 @@ async def test_short_list_overview_with_marketing_data(client):
     b1 = await _add_buyer(client, txn_id, company_name="A사")
     b2 = await _add_buyer(client, txn_id, company_name="B사")
 
-    # b1=TIER_1, b2=TIER_2
+    # b1=TIER_1 + short-listed, b2=TIER_2 + short-listed
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
-        json={"tier": "TIER_1"},
+        json={"tier": "TIER_1", "is_short_listed": True},
     )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
-        json={"tier": "TIER_2"},
+        json={"tier": "TIER_2", "is_short_listed": True},
     )
 
     # b1에 마케팅 로그 2건 — IDENTIFIED(03-01), EMAIL_SENT(03-05, 03-10)

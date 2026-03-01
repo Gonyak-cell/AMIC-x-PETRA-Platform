@@ -115,7 +115,6 @@ class ManagementTeamRenderer(BaseSectionRenderer):
         lay = tokens.layout
 
         from pptx.dml.color import RGBColor
-        from pptx.enum.text import PP_ALIGN
         from pptx.util import Inches, Pt
 
         slide = factory.add_content_slide(title="경영진")

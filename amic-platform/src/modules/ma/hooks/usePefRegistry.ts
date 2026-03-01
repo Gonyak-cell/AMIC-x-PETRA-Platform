@@ -1,14 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type { FIRecommendation } from "@/modules/ma/types/pef_registry";
 import type { BiddingSummary } from "@/modules/ma/types/buyer";
 
-export function useFIRecommendations(txnId: string) {
+interface FIRecommendationParams {
+  excludeProjectFunds?: boolean;
+  lowerMultiplier?: number;
+  upperMultiplier?: number;
+  limit?: number;
+}
+
+export function useFIRecommendations(
+  txnId: string,
+  params?: FIRecommendationParams,
+) {
   return useQuery({
-    queryKey: ["fi-recommendations", txnId],
+    queryKey: ["ma", "transactions", txnId, "fi-recommendations", params],
     queryFn: async () => {
       const { data } = await maApi.get<FIRecommendation[]>(
         `/transactions/${txnId}/fi-recommendations`,
+        {
+          params: {
+            ...(params?.excludeProjectFunds !== undefined && {
+              exclude_project_funds: params.excludeProjectFunds,
+            }),
+            ...(params?.lowerMultiplier !== undefined && {
+              lower_multiplier: params.lowerMultiplier,
+            }),
+            ...(params?.upperMultiplier !== undefined && {
+              upper_multiplier: params.upperMultiplier,
+            }),
+            ...(params?.limit !== undefined && {
+              limit: params.limit,
+            }),
+          },
+        },
       );
       return data;
     },
@@ -19,7 +46,7 @@ export function useFIRecommendations(txnId: string) {
 
 export function useBiddingSummary(txnId: string) {
   return useQuery({
-    queryKey: ["bidding-summary", txnId],
+    queryKey: ["ma", "transactions", txnId, "bidding-summary"],
     queryFn: async () => {
       const { data } = await maApi.get<BiddingSummary>(
         `/transactions/${txnId}/buyers/bidding-summary`,
@@ -43,8 +70,11 @@ export function usePromoteShortList(txnId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: ["buyers", txnId],
+        queryKey: ["ma", "transactions", txnId, "buyers"],
       });
+    },
+    onError: () => {
+      toast.error("Short-List 승격에 실패했습니다.");
     },
   });
 }

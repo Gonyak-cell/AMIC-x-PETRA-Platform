@@ -62,13 +62,16 @@ def upgrade() -> None:
     # 3. BuyerCandidateStatus enum 확장 (PostgreSQL만)
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        op.execute("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_SUBMITTED'")
-        op.execute("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_NOT_SUBMITTED'")
-        op.execute("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_DROPPED'")
+        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_SUBMITTED'"))
+        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_NOT_SUBMITTED'"))
+        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_DROPPED'"))
 
 
 def downgrade() -> None:
     op.drop_column("buyer_candidates", "is_short_listed")
     op.drop_index("ix_pef_fund_registry_capital", table_name="pef_fund_registry")
     op.drop_table("pef_fund_registry")
-    # PostgreSQL enum 값 제거 불가 — 수동 처리 필요
+    # PostgreSQL enum 값 제거 불가 (ALTER TYPE DROP VALUE 미지원).
+    # BID_SUBMITTED, BID_NOT_SUBMITTED, BID_DROPPED는 enum에 잔존하지만
+    # 애플리케이션에서 사용하지 않으면 무해하다. 완전 제거가 필요하면
+    # 새 enum 타입을 생성하고 교체하는 마이그레이션을 작성해야 한다.

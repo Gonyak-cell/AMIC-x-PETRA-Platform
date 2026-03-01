@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
@@ -23,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urlencode
 
 from src.data_ingestor.crawler.playwright_engine import CrawlerConfig, PlaywrightEngine
-from src.data_ingestor.exceptions import ContentExtractionError, CrawlerNetworkError
+from src.data_ingestor.exceptions import ContentExtractionError
 
 if TYPE_CHECKING:
     pass
@@ -222,7 +221,7 @@ class NewsCrawler:
         articles: list[NewsArticle] = []
 
         try:
-            result = await engine.get_page(url)
+            await engine.get_page(url)
 
             # JavaScript로 기사 추출
             script = """
@@ -292,7 +291,7 @@ class NewsCrawler:
         articles: list[NewsArticle] = []
 
         try:
-            result = await engine.get_page(url)
+            await engine.get_page(url)
 
             # JavaScript로 기사 추출
             script = """
@@ -357,7 +356,7 @@ class NewsCrawler:
         engine = await self._ensure_engine()
 
         try:
-            result = await engine.get_page(url, timeout=timeout)
+            await engine.get_page(url, timeout=timeout)
 
             # 일반적인 기사 본문 선택자들
             selectors = [

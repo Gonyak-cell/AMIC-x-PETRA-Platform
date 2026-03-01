@@ -35,7 +35,6 @@ from src.data_ingestor.dart.endpoints import (
     ShareholdingEndpoints,
 )
 from src.data_ingestor.dart.models import (
-    DartAPIResponse,
     DartCompanyInfo,
     DartDividend,
     DartFinancialStatement,
@@ -58,7 +57,7 @@ from src.data_ingestor.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    pass
 
 logger = logging.getLogger(__name__)
 

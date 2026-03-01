@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.dependencies import get_current_user
-from src.api.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
+from src.api.schemas.auth import LoginRequest
 from src.api.security.auth import verify_token
 from src.api.security.blacklist import blacklist_token
 from src.api.services.auth_service import AuthService

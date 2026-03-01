@@ -11,7 +11,6 @@ import asyncio
 import concurrent.futures
 import logging
 import uuid as uuid_mod
-from datetime import datetime, timezone
 from typing import Any
 
 from src.api.tasks.base_task import PipelineTask

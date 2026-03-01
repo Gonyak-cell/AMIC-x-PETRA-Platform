@@ -260,7 +260,6 @@ class DemandDriverRenderer(BaseSectionRenderer):
         lay = tokens.layout
 
         from src.design_renderer.pptx_engine.shape_builder import (
-            add_body_textbox,
             add_kpi_grid,
             add_summary_textbox,
             shape_bottom_inches,

@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from src.narrative_generator.rag.chunker import DocumentChunk, DocumentChunker
 
@@ -71,7 +70,7 @@ class TestDocumentChunker:
             # 다음 청크 앞부분에 존재
             current_tail = set(current_words[-5:]) if len(current_words) >= 5 else set(current_words)
             next_head = set(next_words[:10]) if len(next_words) >= 10 else set(next_words)
-            overlap = current_tail & next_head
+            current_tail & next_head
             # 최소한 일부 단어가 겹쳐야 함 (오버랩 설정이 있으므로)
             # NOTE: 문장 단위 오버랩이므로 완전한 단어 겹침 보장은 아님
             # 그러나 chunk_overlap > 0이면 일반적으로 겹침 발생

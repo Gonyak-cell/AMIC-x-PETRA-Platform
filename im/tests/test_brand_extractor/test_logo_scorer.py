@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from src.brand_extractor.config import BrandExtractorConfig
 from src.brand_extractor.logo.scorer import LogoScorer
-from src.brand_extractor.models import LogoCandidate
 
 
 class TestLogoScorer:

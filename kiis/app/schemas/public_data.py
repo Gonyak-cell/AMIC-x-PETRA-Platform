@@ -175,7 +175,9 @@ class GPCompanyDetailResponse(GPCompanyItem):
     """GP 운용사 상세 조회 응답 (자조합/PEF 포함)"""
 
     kvic_funds: list[KVICFundItemResponse] = Field(default_factory=list, description="KVIC 자조합 목록")
-    pef_funds: list[PEFFundItemResponse] = Field(default_factory=list, description="GP1으로 참여하는 PEF 목록")
+    pef_funds: list[PEFFundItemResponse] = Field(
+        default_factory=list, description="GP1/GP2/GP3으로 참여하는 전체 PEF 목록"
+    )
 
 
 class FSSPEFSyncResponse(BaseModel):

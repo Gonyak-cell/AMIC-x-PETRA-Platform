@@ -811,7 +811,7 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
   {
     phase: "CLOSING",
     label: "Closing",
-    description: "SPA 체결, 선행조건 충족, 거래 완결",
+    description: "계약 체결(Signing), 선행조건 충족, 거래 완결",
     icon: "CheckCircle",
     order: 8,
   },
@@ -884,6 +884,6 @@ export const PHASE_MILESTONES: {
   label: string;
 }[] = [
   { afterPhase: "BIDDING", label: "MOU Signed" },
-  { afterPhase: "MAIN_DUE_DILIGENCE", label: "SPA 체결" },
+  { afterPhase: "NEGOTIATION", label: "Signing" },
   { afterPhase: "CLOSING", label: "Deal Closed" },
 ];

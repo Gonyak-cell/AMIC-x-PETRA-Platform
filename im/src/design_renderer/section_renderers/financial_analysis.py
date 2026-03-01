@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens
@@ -393,7 +392,6 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
 
         result: list[Any] = []
         fs = data.financial_statements
-        dm = data.derived_metrics or {}
 
         # ── Slide 1: Financial KPI Dashboard ──
         slide1 = factory.add_content_slide(title="재무 분석")

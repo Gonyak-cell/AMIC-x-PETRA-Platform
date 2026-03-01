@@ -12,9 +12,8 @@ process() 전체 파이프라인, to_financial_statements() 변환,
 from __future__ import annotations
 
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from src.design_renderer.im_document import FinancialStatements
 from src.financial_engine.mapper.chart_of_accounts import StandardAccount

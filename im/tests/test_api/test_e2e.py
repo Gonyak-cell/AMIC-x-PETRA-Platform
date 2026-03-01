@@ -20,7 +20,7 @@ from src.api.db.models.document import Document, DocumentStatus
 from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.dependencies import get_current_user
-from src.api.exceptions import AuthorizationError, NotFoundError
+from src.api.exceptions import AuthorizationError
 
 
 def _mock_user(role: str = "USER") -> MagicMock:

@@ -15,13 +15,11 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from src.data_ingestor.crawler.playwright_engine import CrawlerConfig, PlaywrightEngine
-from src.data_ingestor.exceptions import ContentExtractionError, CrawlerNetworkError
 
 if TYPE_CHECKING:
     pass
@@ -205,7 +203,7 @@ class CompanyCrawler:
 
         try:
             # 메인 페이지 크롤링
-            result = await engine.get_page(url, timeout=timeout)
+            await engine.get_page(url, timeout=timeout)
 
             # 기본 정보 추출
             info.name = await self._extract_company_name(engine, url)

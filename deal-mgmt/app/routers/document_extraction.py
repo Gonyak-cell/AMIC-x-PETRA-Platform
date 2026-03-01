@@ -117,13 +117,28 @@ async def batch_extract(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    # 이미 활성 추출이 있는 문서 필터링
-    skipped: list[uuid.UUID] = []
+    # 이미 활성 추출이 있는 문서를 IN 쿼리 1회로 일괄 확인
+    from sqlalchemy import select
+
+    from app.models.document_extraction import DocumentExtraction
+
+    _active_statuses = (
+        ExtractionStatus.PENDING,
+        ExtractionStatus.CLASSIFYING,
+        ExtractionStatus.EXTRACTING,
+        ExtractionStatus.COMPLETED,
+        ExtractionStatus.CONFIRMED,
+    )
+    existing_q = select(DocumentExtraction.vdr_document_id).where(
+        DocumentExtraction.vdr_document_id.in_(body.vdr_document_ids),
+        DocumentExtraction.status.in_(_active_statuses),
+    )
+    existing_ids = set((await db.execute(existing_q)).scalars().all())
+
+    skipped = [vid for vid in body.vdr_document_ids if vid in existing_ids]
     extractions = []
     for vdr_doc_id in body.vdr_document_ids:
-        existing = await svc.has_active_extraction(db, vdr_doc_id)
-        if existing:
-            skipped.append(vdr_doc_id)
+        if vdr_doc_id in existing_ids:
             continue
         ext = await svc.create_extraction(db, txn_id, vdr_doc_id)
         extractions.append(ext)

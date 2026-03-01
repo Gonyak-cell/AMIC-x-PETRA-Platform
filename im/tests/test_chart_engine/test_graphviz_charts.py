@@ -7,7 +7,7 @@ graphviz Python 패키지 미설치 환경에서도 동작하도록 mock 사용.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

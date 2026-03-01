@@ -10,7 +10,6 @@ FinancialStatementsCollection → FinancialProcessor → FinancialStatements 변
 
 from __future__ import annotations
 
-from decimal import Decimal
 
 import pytest
 
@@ -21,7 +20,6 @@ from src.data_ingestor.dart.models import (
 from src.design_renderer.im_document import FinancialStatements
 from src.financial_engine.processor import (
     FinancialProcessor,
-    ProcessorConfig,
 )
 
 

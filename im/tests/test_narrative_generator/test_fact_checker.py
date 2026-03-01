@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from src.design_renderer.im_document import IMDocumentData
 from src.narrative_generator.engine.structured_output import (

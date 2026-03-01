@@ -1,6 +1,5 @@
 """TechSaaSModule 테스트."""
 
-import pytest
 
 from src.industry.models import (
     IndustryChartRecommendation,

@@ -17,7 +17,6 @@ from src.api.exceptions import (
     AuthenticationError,
     ConflictError,
     NotFoundError,
-    ValidationError,
 )
 from src.api.schemas.user import (
     AdminUserUpdateRequest,

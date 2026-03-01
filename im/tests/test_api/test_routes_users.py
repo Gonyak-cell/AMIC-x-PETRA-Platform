@@ -18,7 +18,6 @@ from src.api import create_app
 from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.dependencies import get_current_user
-from src.api.exceptions import NotFoundError
 
 
 def _make_user(

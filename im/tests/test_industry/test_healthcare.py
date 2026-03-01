@@ -1,6 +1,5 @@
 """HealthcareModule 테스트."""
 
-import pytest
 
 from src.industry.healthcare import HealthcareModule
 from src.industry.models import (

@@ -79,9 +79,15 @@ class Company(TimestampMixin, Base):
     kvic_funds: Mapped[list["KVICFund"]] = relationship(  # noqa: F821
         back_populates="company", cascade="all, delete-orphan"
     )
-    # GP1으로 참여하는 PEF 목록
+    # GP1/GP2/GP3으로 참여하는 PEF 목록
     pef_funds_as_gp1: Mapped[list["PEFFund"]] = relationship(  # noqa: F821
         foreign_keys="PEFFund.gp1_company_id", back_populates="gp1_company"
+    )
+    pef_funds_as_gp2: Mapped[list["PEFFund"]] = relationship(  # noqa: F821
+        foreign_keys="PEFFund.gp2_company_id", back_populates="gp2_company", viewonly=True
+    )
+    pef_funds_as_gp3: Mapped[list["PEFFund"]] = relationship(  # noqa: F821
+        foreign_keys="PEFFund.gp3_company_id", back_populates="gp3_company", viewonly=True
     )
 
 

@@ -8,12 +8,10 @@ IMDocumentData 직렬화/역직렬화 라운드트립 + 파이프라인 통합 �
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 
-import pytest
 
 from src.api.tasks.serializers import dict_to_im_data, im_data_to_dict
-from src.brand_extractor.models import BrandAssets, ExtractedColor, LogoCandidate
+from src.brand_extractor.models import BrandAssets
 from src.design_renderer.im_document import (
     ChartData,
     CompanyOverview,

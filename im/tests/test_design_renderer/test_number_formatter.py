@@ -1,6 +1,5 @@
 """숫자 포맷터 테스트 — 통화/퍼센트/성장 표시/NaN."""
 
-import math
 
 import pytest
 

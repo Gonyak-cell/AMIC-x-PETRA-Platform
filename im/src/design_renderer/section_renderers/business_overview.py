@@ -14,7 +14,6 @@ PPTX 슬라이드 구성 (최대 6개, 데이터 없으면 동적 스킵):
 from __future__ import annotations
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from src.design_renderer.design_tokens import DEFAULT_TOKENS, IMDesignTokens

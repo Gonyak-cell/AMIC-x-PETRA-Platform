@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 
 class PefFundOut(BaseModel):
@@ -20,9 +20,21 @@ class PefFundOut(BaseModel):
     gp3: str | None = None
     total_committed_capital: Decimal | None = None
 
+    @field_serializer("total_committed_capital")
+    @classmethod
+    def _serialize_capital(cls, v: Decimal | None) -> float | None:
+        return float(v) if v is not None else None
+
 
 class FIRecommendation(BaseModel):
     gp_name: str
+    min_fund_size: Decimal
     matching_funds: list[PefFundOut]
     total_committed_sum: Decimal
     fund_count: int
+    match_reason: str
+
+    @field_serializer("min_fund_size", "total_committed_sum")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal) -> float:
+        return float(v)

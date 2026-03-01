@@ -11,7 +11,6 @@ GET  /api/v1/documents — 목록 조회 (pagination)
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from uuid import UUID
 
@@ -23,7 +22,6 @@ from src.api.db.models.user import User
 from src.api.db.session import get_async_session
 from src.api.dependencies import get_current_user
 from src.api.exceptions import ValidationError
-from src.api.schemas.common import PaginationParams
 from src.api.schemas.documents import (
     DocumentCreate,
     DocumentListResponse,

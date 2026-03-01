@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
 
 from src.financial_engine.calculator.valuation import (
     ExitAnalysis,

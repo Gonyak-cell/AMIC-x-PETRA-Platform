@@ -6,8 +6,6 @@ registry, shape_mapper, content_injector, populator를 검증한다.
 
 from __future__ import annotations
 
-import shutil
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -31,7 +29,6 @@ from src.template_engine.shape_mapper import (
     analyze_template,
     get_charts,
     get_tables,
-    get_text_shapes,
 )
 
 # ── im/templates/ 디렉토리 경로 ─────────────────────────────────────────────

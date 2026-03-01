@@ -34,6 +34,16 @@ async def _add_buyer(client, txn_id: str, **overrides) -> dict:
     return resp.json()
 
 
+async def _walk_status(client, txn_id: str, buyer_id: str, *steps: str) -> None:
+    """유효한 상태 전이 경로를 순서대로 실행한다."""
+    for s in steps:
+        resp = await client.patch(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+            json={"status": s},
+        )
+        assert resp.status_code == 200, f"Failed transition to {s}: {resp.text}"
+
+
 # ── Create ─────────────────────────────────────────────────
 async def test_add_buyer(client):
     txn_id = await _create_txn(client)
@@ -91,11 +101,8 @@ async def test_list_buyers(client):
 async def test_list_buyers_filter_status(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
-    # 상태를 NDA_SENT로 변경
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"status": "NDA_SENT"},
-    )
+    # 유효한 경로로 NDA_SENT까지 전이
+    await _walk_status(client, txn_id, buyer["id"], "CONTACTED", "NDA_SENT")
 
     # IDENTIFIED 필터 → 0건
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers", params={"status": "IDENTIFIED"})
@@ -121,6 +128,10 @@ async def test_update_buyer_status(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
+    # IDENTIFIED → CONTACTED (유효 전이)
+    await _walk_status(client, txn_id, buyer["id"], "CONTACTED")
+
+    # CONTACTED → NDA_SENT (유효 전이)
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
         json={"status": "NDA_SENT"},
@@ -132,6 +143,17 @@ async def test_update_buyer_status(client):
 async def test_update_buyer_ioi(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
+
+    # INTEREST_CONFIRMED까지 전이
+    await _walk_status(
+        client,
+        txn_id,
+        buyer["id"],
+        "CONTACTED",
+        "NDA_SIGNED",
+        "CIM_SENT",
+        "INTEREST_CONFIRMED",
+    )
 
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
@@ -150,6 +172,21 @@ async def test_update_buyer_ioi(client):
 async def test_update_buyer_loi(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
+
+    # DD_IN_PROGRESS까지 전이
+    await _walk_status(
+        client,
+        txn_id,
+        buyer["id"],
+        "CONTACTED",
+        "NDA_SIGNED",
+        "CIM_SENT",
+        "INTEREST_CONFIRMED",
+        "IOI_RECEIVED",
+        "IOI_ACCEPTED",
+        "DD_GRANTED",
+        "DD_IN_PROGRESS",
+    )
 
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
@@ -225,17 +262,36 @@ async def test_buyer_summary_with_data(client):
     b2 = await _add_buyer(client, txn_id, company_name="SK텔레콤")
     b3 = await _add_buyer(client, txn_id, company_name="MBK Partners", buyer_type="FINANCIAL_SPONSOR")
 
-    # b1: IOI 수령
+    # b1: IOI 수령 (유효 경로 통과)
+    await _walk_status(
+        client,
+        txn_id,
+        b1["id"],
+        "CONTACTED",
+        "NDA_SIGNED",
+        "CIM_SENT",
+        "INTEREST_CONFIRMED",
+    )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
         json={"status": "IOI_RECEIVED", "ioi_value": 50000000000},
     )
-    # b2: IOI 수령
+    # b2: IOI 수령 (유효 경로 통과)
+    await _walk_status(
+        client,
+        txn_id,
+        b2["id"],
+        "CONTACTED",
+        "NDA_SIGNED",
+        "CIM_SENT",
+        "INTEREST_CONFIRMED",
+    )
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
         json={"status": "IOI_RECEIVED", "ioi_value": 60000000000},
     )
-    # b3: NDA 발송
+    # b3: NDA 발송 (유효 경로 통과)
+    await _walk_status(client, txn_id, b3["id"], "CONTACTED")
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b3['id']}",
         json={"status": "NDA_SENT"},

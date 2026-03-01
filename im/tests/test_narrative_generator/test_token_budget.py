@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from src.narrative_generator.engine.token_budget import (
     DEFAULT_BUDGET,
-    DEFAULT_TOKEN_BUDGETS,
     TokenBudgetManager,
 )
 

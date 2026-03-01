@@ -7,10 +7,7 @@ ORM 모델 정의, 컬럼 타입, 제약조건, 관계를 검증한다.
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
 
-import pytest
 
 from src.api.db.base import Base
 from src.api.db.models import APIKey, Company, Document, DocumentStatus, User
