@@ -35,7 +35,7 @@ from app.services.document_extraction_service import (
     _STRING_LIMITS,
     _extract_json,
     _safe_enum_value,
-    _safe_set_string,
+    _safe_set_field,
     classify_document,
     confirm_extraction,
     create_extraction,
@@ -1388,49 +1388,165 @@ class TestPipeline:
         assert ext.error_message is not None
         assert "구조화 데이터" in ext.error_message
 
+    async def test_pipeline_classification_failure_tracks_cost(self, async_session: AsyncSession) -> None:
+        """분류 LLM 호출 실패 → FAILED + llm_cost_usd 기록."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        await async_session.commit()
 
-# ── _safe_set_string 테스트 ────────────────────────────────────
+        mock_parsed = ParsedFile(source_path="/tmp/test.pdf", file_type="pdf")
+        mock_parsed.text = "문서 내용 " * 200
+
+        llm = _mock_llm_client()
+        llm.total_cost_usd = 0.005  # mini 모델 시도 비용
+        # 분류 호출 시 모든 모델 실패
+        llm.call_with_model = AsyncMock(side_effect=RuntimeError("mini model failed"))
+        llm.call = AsyncMock(side_effect=RuntimeError("primary model failed"))
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        assert ext.status == ExtractionStatus.FAILED
+        assert "분류" in (ext.error_message or "")
+        assert ext.llm_cost_usd == 0.005  # 비용이 기록됨
+
+    async def test_pipeline_extraction_failure_tracks_cost(self, async_session: AsyncSession) -> None:
+        """추출 LLM 호출 실패 → FAILED + llm_cost_usd 기록."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "NDA 비밀유지계약서 " * 200
+
+        classify_resp = '{"category": "NDA", "confidence": 0.92}'
+        llm = _mock_llm_client()
+        llm.total_cost_usd = 0.01
+        llm.call_with_model = AsyncMock(return_value=classify_resp)
+        # 추출 호출 시 실패
+        llm.call = AsyncMock(side_effect=RuntimeError("extraction failed"))
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        assert ext.status == ExtractionStatus.FAILED
+        assert "추출" in (ext.error_message or "")
+        assert ext.llm_cost_usd == 0.01  # 비용이 기록됨
+
+    async def test_pipeline_timeout_marks_failed(self, async_session: AsyncSession) -> None:
+        """파이프라인 타임아웃 → FAILED."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        await async_session.commit()
+
+        from app.services.document_extraction_service import run_extraction_pipeline
+
+        async def _hang_forever(_sf: object, _eid: object, _s: object, _t0: object) -> None:
+            import asyncio
+
+            await asyncio.sleep(999)
+
+        with (
+            patch(
+                "app.services.document_extraction_service._run_pipeline_inner",
+                side_effect=_hang_forever,
+            ),
+            patch(
+                "app.services.document_extraction_service._PIPELINE_TIMEOUT",
+                0.05,
+            ),
+            patch(
+                "app.services.document_extraction_service.mark_extraction_failed",
+                new_callable=AsyncMock,
+            ) as mock_mark_failed,
+        ):
+            await run_extraction_pipeline(ext.id, async_session.get_bind())  # type: ignore[arg-type]
+
+        mock_mark_failed.assert_called_once()
+        call_args = mock_mark_failed.call_args
+        assert call_args[1].get("extraction_id", call_args[0][1]) == ext.id
+        assert "시간이 초과" in str(call_args)
 
 
-class TestSafeSetString:
-    """_safe_set_string 유틸리티 단위 테스트."""
+# ── _safe_set_field 테스트 ─────────────────────────────────────
+
+
+class TestSafeSetField:
+    """_safe_set_field 유틸리티 단위 테스트."""
 
     def test_normal_string_within_limit(self) -> None:
         """제한 이내의 문자열은 그대로 설정된다."""
         obj = MagicMock()
-        _safe_set_string(obj, "counterparty_name", "AMIC Partners")
+        _safe_set_field(obj, "counterparty_name", "AMIC Partners")
         assert obj.counterparty_name == "AMIC Partners"
 
     def test_string_exceeds_limit_truncated(self) -> None:
         """제한 초과 문자열은 잘린다."""
         obj = MagicMock()
         long_name = "A" * 250  # counterparty_name 제한: 200
-        _safe_set_string(obj, "counterparty_name", long_name)
+        _safe_set_field(obj, "counterparty_name", long_name)
         assert obj.counterparty_name == "A" * 200
 
     def test_currency_truncated_to_3(self) -> None:
         """currency 필드는 3자로 제한."""
         obj = MagicMock()
-        _safe_set_string(obj, "currency", "USDX")
+        _safe_set_field(obj, "currency", "USDX")
         assert obj.currency == "USD"
 
     def test_non_string_value_passes_through(self) -> None:
         """숫자 등 비문자열은 truncation 없이 전달."""
         obj = MagicMock()
-        _safe_set_string(obj, "exclusivity_period_days", 90)
+        _safe_set_field(obj, "exclusivity_period_days", 90)
         assert obj.exclusivity_period_days == 90
 
     def test_unknown_field_no_limit(self) -> None:
         """_STRING_LIMITS에 없는 필드는 제한 없이 설정."""
         obj = MagicMock()
         long_val = "X" * 1000
-        _safe_set_string(obj, "unknown_field", long_val)
+        _safe_set_field(obj, "unknown_field", long_val)
         assert obj.unknown_field == long_val
 
     def test_date_field_truncated_to_10(self) -> None:
         """날짜 필드(signed_at 등)는 10자로 제한."""
         obj = MagicMock()
-        _safe_set_string(obj, "signed_at", "2026-01-01 extra text")
+        _safe_set_field(obj, "signed_at", "2026-01-01 extra text")
         assert obj.signed_at == "2026-01-01"
         assert len(obj.signed_at) == 10
 
@@ -1439,6 +1555,45 @@ class TestSafeSetString:
         assert "counterparty_name" in _STRING_LIMITS
         assert "currency" in _STRING_LIMITS
         assert "signed_at" in _STRING_LIMITS
+
+    # ── 타입 강제 변환 테스트 ──
+
+    def test_int_field_string_coerced(self) -> None:
+        """Integer 필드에 문자열이 오면 int로 변환된다."""
+        obj = MagicMock()
+        _safe_set_field(obj, "confidentiality_period_months", "12")
+        assert obj.confidentiality_period_months == 12
+
+    def test_int_field_int_passes_through(self) -> None:
+        """Integer 필드에 int가 오면 그대로 전달."""
+        obj = MagicMock()
+        _safe_set_field(obj, "exclusivity_period_days", 30)
+        assert obj.exclusivity_period_days == 30
+
+    def test_int_field_invalid_string_skipped(self) -> None:
+        """Integer 필드에 변환 불가 문자열이 오면 setattr 건너뜀."""
+        obj = MagicMock()
+        _safe_set_field(obj, "confidentiality_period_months", "약 12개월")
+        # setattr이 호출되지 않으므로 MagicMock 기본값(MagicMock 인스턴스) 유지
+        assert not isinstance(obj.confidentiality_period_months, (int, str))
+
+    def test_numeric_field_string_coerced(self) -> None:
+        """Numeric 필드에 문자열이 오면 float로 변환된다."""
+        obj = MagicMock()
+        _safe_set_field(obj, "amount", "50000000000")
+        assert obj.amount == 50000000000.0
+
+    def test_numeric_field_number_passes_through(self) -> None:
+        """Numeric 필드에 숫자가 오면 그대로 전달."""
+        obj = MagicMock()
+        _safe_set_field(obj, "amount", 50000000000)
+        assert obj.amount == 50000000000
+
+    def test_numeric_field_invalid_string_skipped(self) -> None:
+        """Numeric 필드에 변환 불가 문자열이 오면 setattr 건너뜀."""
+        obj = MagicMock()
+        _safe_set_field(obj, "amount", "약 500억원")
+        assert not isinstance(obj.amount, (int, float, str))
 
 
 # ── UUID 파싱 한국어 에러 테스트 ────────────────────────────────

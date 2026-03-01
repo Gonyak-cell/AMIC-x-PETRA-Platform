@@ -139,6 +139,31 @@ async def list_extractions(
     return list(result.scalars().all())
 
 
+# ── LLM 호출 헬퍼 ─────────────────────────────────────────────
+
+
+async def _call_with_mini_fallback(
+    llm_client: RalphLLMClient,
+    system_prompt: str,
+    user_msg: str,
+    context_label: str,
+) -> str:
+    """경량 모델 우선 시도 + primary 폴백으로 LLM을 호출한다."""
+    for mini_model in _MINI_MODELS:
+        try:
+            result = await asyncio.wait_for(
+                llm_client.call_with_model(system_prompt, user_msg, model=mini_model),
+                timeout=_MINI_MODEL_TIMEOUT,
+            )
+            logger.info("경량 모델 %s 성공: model=%s", context_label, mini_model)
+            return result
+        except Exception as exc:
+            logger.info("경량 모델 %s %s 실패 (폴백 시도): %s", context_label, mini_model, exc)
+            continue
+    logger.info("경량 모델 모두 실패, primary 폴백 (%s)", context_label)
+    return await llm_client.call(system_prompt, user_msg)
+
+
 # ── 분류 ─────────────────────────────────────────────────────
 
 
@@ -156,21 +181,7 @@ async def classify_document(
 
     user_msg = CLASSIFICATION_USER_TEMPLATE.format(text_preview=preview)
 
-    # 경량 모델 우선 시도 (개별 타임아웃 적용)
-    raw = None
-    for mini_model in _MINI_MODELS:
-        try:
-            raw = await asyncio.wait_for(
-                llm_client.call_with_model(CLASSIFICATION_SYSTEM, user_msg, model=mini_model),
-                timeout=_MINI_MODEL_TIMEOUT,
-            )
-            logger.info("경량 모델 분류 성공: model=%s", mini_model)
-            break
-        except Exception as exc:
-            logger.info("경량 모델 %s 분류 실패 (폴백 시도): %s", mini_model, exc)
-            continue
-    if raw is None:
-        raw = await llm_client.call(CLASSIFICATION_SYSTEM, user_msg)
+    raw = await _call_with_mini_fallback(llm_client, CLASSIFICATION_SYSTEM, user_msg, "분류")
 
     # JSON 파싱
     try:
@@ -213,21 +224,7 @@ async def extract_fields(
 
     # 정형 문서: 경량 모델 우선 (빠르고 저렴), 실패 시 primary 폴백
     if category.value in _MINI_MODEL_CATEGORIES:
-        raw = None
-        for mini_model in _MINI_MODELS:
-            try:
-                raw = await asyncio.wait_for(
-                    llm_client.call_with_model(system_prompt, user_msg, model=mini_model),
-                    timeout=_MINI_MODEL_TIMEOUT,
-                )
-                logger.info("경량 모델 추출 성공: model=%s, category=%s", mini_model, category.value)
-                break
-            except Exception as exc:
-                logger.info("경량 모델 %s 추출 실패 (폴백 시도): %s", mini_model, exc)
-                continue
-        if raw is None:
-            logger.info("경량 모델 모두 실패, primary 폴백 (category=%s)", category.value)
-            raw = await llm_client.call(system_prompt, user_msg)
+        raw = await _call_with_mini_fallback(llm_client, system_prompt, user_msg, f"추출({category.value})")
     else:
         raw = await llm_client.call(system_prompt, user_msg)
 
@@ -440,7 +437,7 @@ async def _run_pipeline_core(
             category, confidence = await classify_document(parsed, llm)
         except Exception as exc:
             logger.error("문서 분류 실패 (extraction=%s): %s", extraction_id, exc)
-            await _set_failed(db, extraction, "문서 분류에 실패했습니다.")
+            await _set_failed(db, extraction, "문서 분류에 실패했습니다.", llm_cost=llm.total_cost_usd)
             return
 
         extraction.doc_category = category
@@ -602,6 +599,43 @@ async def _apply_to_model(
         return None
 
 
+async def _resolve_buyer_candidate(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    data: dict,
+    model_label: str,
+) -> uuid.UUID | None:
+    """create_new 시 buyer_candidate_id를 검증하고 UUID를 반환한다.
+
+    누락이면 None (경고 로그), 형식 오류면 ValueError.
+    """
+    from app.models.buyer_candidate import BuyerCandidate
+
+    buyer_id_raw = data.get("buyer_candidate_id")
+    if not buyer_id_raw:
+        logger.warning(
+            "%s 신규 생성 실패: buyer_candidate_id 누락 (txn=%s)",
+            model_label,
+            transaction_id,
+        )
+        return None
+    try:
+        buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
+    except (ValueError, AttributeError):
+        raise ValueError(f"buyer_candidate_id 형식이 올바르지 않습니다: {buyer_id_raw!r}")
+
+    buyer = await db.get(BuyerCandidate, buyer_id)
+    if not buyer or buyer.transaction_id != transaction_id:
+        logger.warning(
+            "%s 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음 (txn=%s, buyer=%s)",
+            model_label,
+            transaction_id,
+            buyer_id,
+        )
+        return None
+    return buyer_id
+
+
 async def _apply_to_nda(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -621,46 +655,28 @@ async def _apply_to_nda(
         "confidentiality_period_months": "confidentiality_period_months",
     }
 
-    if create_new:
-        buyer_id_raw = data.get("buyer_candidate_id")
-        if not buyer_id_raw:
-            logger.warning("NDA 신규 생성 실패: buyer_candidate_id 누락 (txn=%s)", transaction_id)
-            return None
-        try:
-            buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
-        except (ValueError, AttributeError):
-            raise ValueError(f"buyer_candidate_id 형식이 올바르지 않습니다: {buyer_id_raw!r}")
-        from app.models.buyer_candidate import BuyerCandidate
-
-        buyer = await db.get(BuyerCandidate, buyer_id)
-        if not buyer or buyer.transaction_id != transaction_id:
-            logger.warning(
-                "NDA 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음 (txn=%s, buyer=%s)",
-                transaction_id,
-                buyer_id,
-            )
-            return None
-        nda = NDA(transaction_id=transaction_id, buyer_candidate_id=buyer_id)
+    def _apply_fields(nda: object) -> None:
         for src, dst in field_map.items():
             val = data.get(src)
             if val is not None:
-                _safe_set_string(nda, dst, val)
+                _safe_set_field(nda, dst, val)
         nda_type_val = _safe_enum_value(NdaType, data.get("nda_type"))
         if nda_type_val is not None:
-            nda.nda_type = nda_type_val
+            nda.nda_type = nda_type_val  # type: ignore[attr-defined]
+
+    if create_new:
+        buyer_id = await _resolve_buyer_candidate(db, transaction_id, data, "NDA")
+        if buyer_id is None:
+            return None
+        nda = NDA(transaction_id=transaction_id, buyer_candidate_id=buyer_id)
+        _apply_fields(nda)
         db.add(nda)
         await db.flush()
         return nda.id
     elif target_id:
         nda = await db.get(NDA, target_id)
         if nda and nda.transaction_id == transaction_id:
-            for src, dst in field_map.items():
-                val = data.get(src)
-                if val is not None:
-                    _safe_set_string(nda, dst, val)
-            nda_type_val = _safe_enum_value(NdaType, data.get("nda_type"))
-            if nda_type_val is not None:
-                nda.nda_type = nda_type_val
+            _apply_fields(nda)
             await db.flush()
             return nda.id
     return None
@@ -685,24 +701,21 @@ async def _apply_to_bid(
         "valid_until": "valid_until",
     }
 
-    if create_new:
-        buyer_id_raw = data.get("buyer_candidate_id")
-        if not buyer_id_raw:
-            logger.warning("Bid 신규 생성 실패: buyer_candidate_id 누락 (txn=%s)", transaction_id)
-            return None
-        try:
-            buyer_id = uuid.UUID(str(buyer_id_raw)) if not isinstance(buyer_id_raw, uuid.UUID) else buyer_id_raw
-        except (ValueError, AttributeError):
-            raise ValueError(f"buyer_candidate_id 형식이 올바르지 않습니다: {buyer_id_raw!r}")
-        from app.models.buyer_candidate import BuyerCandidate
+    def _apply_fields(bid: object) -> None:
+        for src, dst in field_map.items():
+            val = data.get(src)
+            if val is not None:
+                _safe_set_field(bid, dst, val)
+        bid_type_val = _safe_enum_value(BidType, data.get("bid_type"))
+        if bid_type_val is not None:
+            bid.bid_type = bid_type_val  # type: ignore[attr-defined]
+        val_method = _safe_enum_value(ValuationMethod, data.get("valuation_method"))
+        if val_method is not None:
+            bid.valuation_method = val_method  # type: ignore[attr-defined]
 
-        buyer = await db.get(BuyerCandidate, buyer_id)
-        if not buyer or buyer.transaction_id != transaction_id:
-            logger.warning(
-                "Bid 신규 생성 실패: buyer_candidate가 해당 거래에 속하지 않음 (txn=%s, buyer=%s)",
-                transaction_id,
-                buyer_id,
-            )
+    if create_new:
+        buyer_id = await _resolve_buyer_candidate(db, transaction_id, data, "Bid")
+        if buyer_id is None:
             return None
         bid_type_val = _safe_enum_value(BidType, data.get("bid_type")) or BidType.LOI
         bid = Bid(
@@ -710,29 +723,14 @@ async def _apply_to_bid(
             buyer_candidate_id=buyer_id,
             bid_type=bid_type_val,
         )
-        for src, dst in field_map.items():
-            val = data.get(src)
-            if val is not None:
-                _safe_set_string(bid, dst, val)
-        val_method = _safe_enum_value(ValuationMethod, data.get("valuation_method"))
-        if val_method is not None:
-            bid.valuation_method = val_method
+        _apply_fields(bid)
         db.add(bid)
         await db.flush()
         return bid.id
     elif target_id:
         bid = await db.get(Bid, target_id)
         if bid and bid.transaction_id == transaction_id:
-            for src, dst in field_map.items():
-                val = data.get(src)
-                if val is not None:
-                    _safe_set_string(bid, dst, val)
-            bid_type_val = _safe_enum_value(BidType, data.get("bid_type"))
-            if bid_type_val is not None:
-                bid.bid_type = bid_type_val
-            val_method = _safe_enum_value(ValuationMethod, data.get("valuation_method"))
-            if val_method is not None:
-                bid.valuation_method = val_method
+            _apply_fields(bid)
             await db.flush()
             return bid.id
     return None
@@ -771,7 +769,7 @@ async def _apply_to_contract(
         for src, dst in field_map.items():
             val = data.get(src)
             if val is not None:
-                _safe_set_string(contract, dst, val)
+                _safe_set_field(contract, dst, val)
         risk_flags = {k: v for k, v in data.items() if k in risk_flag_keys and v is not None}
         if risk_flags:
             existing = getattr(contract, "ai_risk_flags", None) or {}
@@ -873,10 +871,39 @@ _STRING_LIMITS: dict[str, int] = {
     "ai_analysis_summary": 0,  # Text — 제한 없음
 }
 
+# Integer/Numeric 컬럼 — LLM이 문자열로 반환 시 타입 강제 변환
+_INT_FIELDS: frozenset[str] = frozenset(
+    {
+        "confidentiality_period_months",
+        "exclusivity_period_days",
+    }
+)
+_NUMERIC_FIELDS: frozenset[str] = frozenset(
+    {
+        "amount",
+    }
+)
 
-def _safe_set_string(obj: object, attr: str, val: object) -> None:
-    """문자열 필드를 안전하게 설정한다. 길이 초과 시 자르고 경고 로그를 남긴다."""
-    if isinstance(val, str):
+
+def _safe_set_field(obj: object, attr: str, val: object) -> None:
+    """모델 필드를 안전하게 설정한다.
+
+    - 문자열: 길이 초과 시 자르고 경고 로그
+    - Integer/Numeric: 문자열이면 숫자로 강제 변환, 실패 시 건너뜀
+    """
+    if attr in _INT_FIELDS and isinstance(val, str):
+        try:
+            val = int(val)
+        except (ValueError, TypeError):
+            logger.warning("Integer 필드 '%s'에 변환 불가 값 무시: %r", attr, val)
+            return
+    elif attr in _NUMERIC_FIELDS and isinstance(val, str):
+        try:
+            val = float(val)
+        except (ValueError, TypeError):
+            logger.warning("Numeric 필드 '%s'에 변환 불가 값 무시: %r", attr, val)
+            return
+    elif isinstance(val, str):
         limit = _STRING_LIMITS.get(attr, 0)
         if limit and len(val) > limit:
             logger.warning(
