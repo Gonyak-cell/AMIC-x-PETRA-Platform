@@ -63,6 +63,7 @@ export function PlatformSettingsProvider({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePlatformSettingsContext() {
   return useContext(PlatformSettingsContext);
 }
