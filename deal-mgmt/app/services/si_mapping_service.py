@@ -186,9 +186,7 @@ async def find_si_company_by_name(
     company_name: str,
 ) -> SICompany | None:
     """기업명으로 SI 기업 검색 (정확 매칭)."""
-    result = await db.execute(
-        select(SICompany).where(SICompany.company_name == company_name).limit(1)
-    )
+    result = await db.execute(select(SICompany).where(SICompany.company_name == company_name).limit(1))
     return result.scalar_one_or_none()
 
 
