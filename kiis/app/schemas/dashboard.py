@@ -24,7 +24,7 @@ class RecentDeal(BaseModel):
 class RiskCompany(BaseModel):
     """리스크 기업"""
 
-    corp_code: str
+    corp_code: str | None = None
     corp_name: str
     status_tag: str
     total_score: float

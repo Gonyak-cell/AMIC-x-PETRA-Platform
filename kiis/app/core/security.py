@@ -105,6 +105,7 @@ async def get_jwt_claims(
     """
     # Dev 모드: 인증 우회
     if not settings.AUTH_ENABLED:
+        request.state.user_id = _DEV_CLAIMS.email or _DEV_CLAIMS.user_id
         return _DEV_CLAIMS
 
     credentials_exception = HTTPException(
@@ -125,11 +126,13 @@ async def get_jwt_claims(
     except JWTError:
         raise credentials_exception
 
-    return JWTClaims(
+    claims = JWTClaims(
         user_id=sub,
         email=payload.get("email"),
         role=payload.get("role", ""),
     )
+    request.state.user_id = claims.email or claims.user_id
+    return claims
 
 
 async def get_current_user(

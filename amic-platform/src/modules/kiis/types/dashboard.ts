@@ -16,7 +16,7 @@ export interface RecentDeal {
 
 /** 위험 기업 */
 export interface RiskCompany {
-  corp_code: string;
+  corp_code: string | null;
   corp_name: string;
   status_tag: StatusTag;
   total_score: number;

@@ -120,6 +120,12 @@ class TestAuthGuard:
         assert resp.json()["status"] in ("ok", "degraded")
 
     @pytest.mark.asyncio
+    async def test_dashboard_requires_auth(self, unauthenticated_client):
+        """대시보드 요약은 인증이 필요하다."""
+        resp = await unauthenticated_client.get("/api/v1/dashboard/summary")
+        assert resp.status_code == 401
+
+    @pytest.mark.asyncio
     async def test_deals_does_not_require_auth(self, unauthenticated_client):
         """딜 목록은 인증 없이 접근 가능하다 (public API)."""
         resp = await unauthenticated_client.get("/api/v1/deals")

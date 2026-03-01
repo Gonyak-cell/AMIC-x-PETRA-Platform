@@ -70,16 +70,20 @@ class DashboardService:
 
     async def _get_recent_deals(self, db: AsyncSession, limit: int = 5) -> list[dict[str, Any]]:
         """최근 딜 N건을 반환한다."""
-        result = await db.execute(select(Deal).order_by(Deal.deal_date.desc().nulls_last()).limit(limit))
-        deals = result.scalars().all()
+        result = await db.execute(
+            select(Deal.target_company, Deal.amount_display, Deal.sector, Deal.deal_date)
+            .order_by(Deal.deal_date.desc().nulls_last())
+            .limit(limit)
+        )
+        rows = result.all()
         return [
             {
-                "target_company": d.target_company,
-                "amount_display": d.amount_display,
-                "sector": d.sector,
-                "deal_date": d.deal_date,
+                "target_company": row.target_company,
+                "amount_display": row.amount_display,
+                "sector": row.sector,
+                "deal_date": row.deal_date,
             }
-            for d in deals
+            for row in rows
         ]
 
     async def _get_risk_companies(self, db: AsyncSession) -> list[dict[str, Any]]:

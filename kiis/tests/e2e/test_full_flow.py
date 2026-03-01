@@ -84,9 +84,9 @@ class TestAuthFlow:
 class TestDashboardSummary:
     """대시보드 요약 E2E 테스트"""
 
-    async def test_dashboard_summary_with_data(self, client, seed_e2e_data):
+    async def test_dashboard_summary_with_data(self, client, seed_e2e_data, auth_headers):
         """시드 데이터가 있는 상태에서 대시보드 요약을 조회하면 올바른 수가 반환된다."""
-        response = await client.get("/api/v1/dashboard/summary")
+        response = await client.get("/api/v1/dashboard/summary", headers=auth_headers)
         assert response.status_code == 200
 
         data = response.json()
@@ -101,9 +101,9 @@ class TestDashboardSummary:
         assert counts_dict["뉴스"] == 3
         assert counts_dict["딜"] == 2
 
-    async def test_dashboard_summary_empty_db(self, client):
+    async def test_dashboard_summary_empty_db(self, client, auth_headers):
         """빈 DB에서도 대시보드 요약이 정상 응답한다."""
-        response = await client.get("/api/v1/dashboard/summary")
+        response = await client.get("/api/v1/dashboard/summary", headers=auth_headers)
         assert response.status_code == 200
 
         data = response.json()

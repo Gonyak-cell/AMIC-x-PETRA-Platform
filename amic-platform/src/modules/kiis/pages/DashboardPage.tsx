@@ -7,9 +7,20 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardSummary } from "@/modules/kiis/hooks/useDashboard";
-import { Card, KpiCard, DataTable, Spinner, EmptyState, PageHero } from "@/components/ui";
+import {
+  Card,
+  KpiCard,
+  DataTable,
+  Spinner,
+  EmptyState,
+  PageHero,
+} from "@/components/ui";
 import type { Column } from "@/components/ui";
-import type { RecentDeal, RiskCompany, DataCount } from "@/modules/kiis/types/dashboard";
+import type {
+  RecentDeal,
+  RiskCompany,
+  DataCount,
+} from "@/modules/kiis/types/dashboard";
 import SearchBar from "@/modules/kiis/components/SearchBar";
 import ReputationBadge from "@/modules/kiis/components/ReputationBadge";
 import { formatDate } from "@/lib/format";
@@ -139,7 +150,10 @@ export default function DashboardPage() {
         ) : (
           <DataTable
             columns={dealColumns}
-            data={summary.recent_deals.map((d, i) => ({ ...d, _key: `${d.target_company}-${d.deal_date ?? "no-date"}-${i}` }))}
+            data={summary.recent_deals.map((d, i) => ({
+              ...d,
+              _key: `${d.target_company}-${d.deal_date ?? "no-date"}-${i}`,
+            }))}
             keyField="_key"
             striped
             compact
@@ -158,9 +172,16 @@ export default function DashboardPage() {
         ) : (
           <DataTable
             columns={riskColumns}
-            data={summary.risk_companies}
-            keyField="corp_code"
-            onRowClick={(row) => navigate(`/kiis/companies/${row.corp_code}`)}
+            data={summary.risk_companies.map((r, i) => ({
+              ...r,
+              _key: r.corp_code ?? `risk-${i}`,
+            }))}
+            keyField="_key"
+            onRowClick={(row) =>
+              row.corp_code
+                ? navigate(`/kiis/companies/${row.corp_code}`)
+                : undefined
+            }
             striped
             compact
           />

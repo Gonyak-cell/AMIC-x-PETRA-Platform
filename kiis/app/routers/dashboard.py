@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import JWTClaims, get_jwt_claims
 from app.schemas.dashboard import DashboardSummary
 from app.services.dashboard_service import DashboardService
 
@@ -21,6 +22,7 @@ def get_dashboard_service() -> DashboardService:
     summary="대시보드 요약",
 )
 async def get_dashboard_summary(
+    _claims: JWTClaims = Depends(get_jwt_claims),
     db: AsyncSession = Depends(get_db),
     service: DashboardService = Depends(get_dashboard_service),
 ) -> DashboardSummary:
