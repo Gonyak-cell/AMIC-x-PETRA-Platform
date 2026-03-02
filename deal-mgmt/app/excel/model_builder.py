@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -52,13 +53,14 @@ def _get_val(checklist_values: dict[str, str], title: str, default: str = "") ->
     return checklist_values.get(title, default)
 
 
-def _get_num(checklist_values: dict[str, str], title: str, default: float = 0.0) -> float:
-    """체크리스트 값을 float으로 변환."""
+def _get_num(checklist_values: dict[str, str], title: str, default: float = 0.0) -> Decimal:
+    """체크리스트 값을 Decimal로 변환 (금융 정밀도 보장)."""
     val = _get_val(checklist_values, title, str(default))
     try:
-        return float(val.replace(",", "").replace("%", "").replace("x", ""))
-    except (ValueError, AttributeError):
-        return default
+        cleaned = val.replace(",", "").replace("%", "").replace("x", "")
+        return Decimal(cleaned)
+    except (ValueError, AttributeError, ArithmeticError):
+        return Decimal(str(default))
 
 
 # ── 시트 구성 정의 ────────────────────────────────────────────────────────

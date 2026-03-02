@@ -3,16 +3,16 @@
 si_companies: revenue, has_investment_history 인덱스
 buyer_marketing_logs: (buyer_id, transaction_id) 복합 인덱스 + log_date 인덱스
 
-Revision ID: 050
-Revises: 049
+Revision ID: 050b
+Revises: 050
 """
 
 from __future__ import annotations
 
 from alembic import op
 
-revision = "050"
-down_revision = "049"
+revision = "050b"
+down_revision = "050"
 branch_labels = None
 depends_on = None
 

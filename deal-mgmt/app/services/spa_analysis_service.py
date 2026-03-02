@@ -58,6 +58,7 @@ class AnalysisSession:
 
     session_id: str
     spa_text: str
+    detected_doc_type: str = "SPA"
     created_at: float = field(default_factory=time.monotonic)
     cost_usd: float = 0.0
     model_used: str | None = None
@@ -362,16 +363,185 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 }
 ```"""
 
+# ── SHA Step 1: 변수 추출 ────────────────────────────────────────────────────
+
+_SHA_STEP1_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 데이터 엔지니어입니다.
+주주간계약서(SHA, Shareholders' Agreement) 원문을 분석하여 재사용 가능한 템플릿 변수를 추출합니다.
+
+## 0. 계약서 유형 확정
+이 계약서는 주주간계약서(SHA)입니다.
+detected_doc_type은 반드시 "SHA"로 설정하세요.
+
+## 1. SHA 유형 분류 (sha_type → deal_structure에도 동일 값)
+원문의 거래 배경, 당사자 관계, 투자 목적을 분석하여 분류합니다:
+- POST_BUYOUT: 경영권 인수 완료 후 주주간 권리의무 (SPA 이후 체결, 대주주 + PE/전략적 투자자)
+- JOINT_VENTURE: 합작투자 목적 (2개 이상 법인이 공동 출자, 합작회사 설립/운영)
+- MINORITY_INVESTMENT: 소수지분 투자 (VC/PI 투자, 지분율 50% 미만, 투자자 보호 중심)
+- OTHER_TYPE: 위에 해당하지 않는 경우
+
+## 2. Exit 전략 분류 (exit_strategy)
+- IPO_FOCUSED: IPO 관련 조항이 주요 exit 경로 (상장 의무, IPO 협력, 상장 시 공동매각)
+- MNA_FOCUSED: M&A 매각이 주요 exit 경로 (drag-along, 매각 우선, 매각 결정권)
+- OTHER_STRATEGY: IPO/M&A 외 exit (자사주 매입, 청산 등) 또는 exit 조항 미약
+
+## 3. 분석 순서
+1. 전문(Preamble) → 주주 목록, 지분구조, 대상회사 정보
+2. 정의 조항 → 핵심 정의 (관계사, 주주, 신주, 보통주/우선주 등)
+3. 이사회 구성 → 총 의석수, 주주별 지명권, 대표이사 선임, 의장, 정족수
+4. 의결/동의 사항 → 주주 동의 필요 사항, Veto 항목, 특별결의 요건
+5. 주식 처분 제한 → Lock-up, ROFR, ROFO, 동의 필요 여부
+6. Tag-Along / Drag-Along → 조건, 비율, 절차
+7. 옵션 → Put/Call 조건, 행사가격 산식, 행사 기간
+8. 신주인수권/희석방지 → Anti-dilution, Pre-emptive Rights
+9. 배당/수익분배 → 배당 정책, Waterfall, 우선배당
+10. Exit → IPO 의무/일정, 매각 절차, Drag 임계치
+11. 비밀유지/경업금지 → 기간, 범위, 위반 시 제재
+12. 전체 스캔 → 조건부 BOOLEAN 발견
+
+## 4. 기본 변수 목록 (반드시 원문에서 찾아 포함)
+| group_name | variable_key | input_type | 설명 |
+|-----------|-------------|-----------|------|
+| 당사자 정보 | shareholders | TEXTAREA | 주주 목록 (이름, 지분율, 줄바꿈 구분) |
+| 당사자 정보 | shareholder_count | NUMBER | 주주 수 |
+| 대상회사 | target_company | TEXT | 대상회사 명칭 |
+| 대상회사 | target_address | TEXT | 대상회사 소재지 |
+| 대상회사 | target_reg_number | TEXT | 대상회사 사업자등록번호 |
+| 대상회사 | total_shares_issued | NUMBER | 발행주식 총수 |
+| 대상회사 | par_value | CURRENCY | 1주 액면가 |
+| 이사회 | board_seats_total | NUMBER | 이사회 총 의석수 |
+| 이사회 | nominating_shareholder_seats | TEXTAREA | 주주별 이사 지명권 (줄바꿈 구분) |
+| 이사회 | board_quorum | TEXT | 이사회 의사 정족수 |
+| 이사회 | ceo_nomination | TEXT | 대표이사 선임 방법 |
+| 처분 제한 | lock_up_period_months | NUMBER | Lock-up 기간 (개월, 0=미포함) |
+| 처분 제한 | rofr_notice_days | NUMBER | ROFR 통지 기간 (일, 0=미포함) |
+| 옵션 | put_trigger_event | TEXT | Put 옵션 행사 사유 |
+| 옵션 | put_price_formula | TEXTAREA | Put 옵션 가격 산식 |
+| 옵션 | call_trigger_event | TEXT | Call 옵션 행사 사유 |
+| 옵션 | call_price_formula | TEXTAREA | Call 옵션 가격 산식 |
+| Exit | ipo_timeline_months | NUMBER | IPO 추진 기한 (개월, 0=미정) |
+| Exit | drag_threshold_percentage | PERCENTAGE | Drag-Along 행사 비율 |
+| Exit | tag_threshold_percentage | PERCENTAGE | Tag-Along 행사 비율 |
+| 재무 | waterfall_tiers | TEXTAREA | 수익분배 구조 (Waterfall) |
+| 재무 | distribution_priority | TEXT | 분배 우선순위 |
+| 비밀유지 | confidentiality_period_months | NUMBER | 비밀유지 기간 (개월) |
+| 경업금지 | non_compete_period_months | NUMBER | 경업금지 기간 (개월, 0=미포함) |
+| 경업금지 | non_compete_scope | TEXT | 경업금지 범위 |
+| 일정 | signing_date | DATE | 계약 체결일 |
+| 기타 | governing_law | SELECT | 준거법 |
+| 기타 | dispute_resolution | SELECT | 분쟁해결 방법 |
+
+원문에 해당 항목이 없으면 extracted_value를 null로, confidence를 낮게 설정하세요.
+
+## 5. SHA 전용 동적 BOOLEAN 발견 규칙
+| 조항 키워드 | variable_key | 설명 |
+|------------|-------------|------|
+| 이사 지명권 | has_board_nomination_right | 이사 지명권 존재 |
+| 거부권/동의권/비토 | has_veto_rights | 주주 거부권/Veto 존재 |
+| 상장/IPO | has_ipo_obligation | IPO 의무 조항 존재 |
+| 풋옵션 | has_put_option | 풋옵션 존재 |
+| 콜옵션 | has_call_option | 콜옵션 존재 |
+| 우선매수권/ROFR | has_right_of_first_refusal | ROFR 존재 |
+| 동반매도참여권/Tag | has_tag_along_right | Tag-Along 존재 |
+| 동반매도청구권/Drag | has_drag_along_right | Drag-Along 존재 |
+| Waterfall/분배 | has_waterfall_distribution | 수익분배 구조 존재 |
+| 질권/담보 | has_pledge_agreement | 질권 설정 계약 존재 |
+| 경업금지 | has_non_compete_obligation | 경업금지 의무 존재 |
+| 우선매수/신주인수 | has_preemptive_rights | 신주인수권/우선매수권 존재 |
+| Anti-dilution | has_anti_dilution | 희석방지 조항 존재 |
+기타 발견 시 has_{영문명} 형식으로 자율 생성하세요.
+
+## 6. SHA 유형별 추가 변수
+POST_BUYOUT (경영권 인수 후):
+| variable_key | input_type | 설명 |
+|-------------|-----------|------|
+| majority_shareholder_name | TEXT | 대주주(경영권 보유) 명칭 |
+| minority_shareholder_name | TEXT | 소수주주(투자자) 명칭 |
+| acquisition_reference | TEXT | 관련 SPA 참조 (체결일/계약명) |
+
+JOINT_VENTURE (합작투자):
+| variable_key | input_type | 설명 |
+|-------------|-----------|------|
+| jv_company_name | TEXT | 합작회사 명칭 |
+| jv_purpose | TEXTAREA | 합작 사업 목적 |
+| capital_contribution_ratio | TEXTAREA | 출자 비율 |
+| deadlock_resolution | TEXT | 교착상태 해결 방법 |
+
+MINORITY_INVESTMENT (소수지분 투자):
+| variable_key | input_type | 설명 |
+|-------------|-----------|------|
+| investor_name | TEXT | 투자자 명칭 |
+| investment_amount | CURRENCY | 투자 금액 |
+| pre_money_valuation | CURRENCY | Pre-money 기업가치 |
+| anti_dilution_type | SELECT | 희석방지 방식 |
+
+## 7. input_type 매핑 규칙
+- 이름/주소/회사명/등록번호 → TEXT
+- 긴 설명/비고/목록 → TEXTAREA
+- 금액 (원, 억원, 백만원) → CURRENCY (반드시 원 단위로 정규화: 10억 → 1000000000)
+- 비율 (%) → PERCENTAGE
+- 날짜 → DATE
+- 주식 수, 기간(개월/년), 의석수 등 → NUMBER
+- 예/아니오 → BOOLEAN
+- 선택지 → SELECT (select_options 필수)
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "detected_doc_type": "SHA",
+  "sha_type": "POST_BUYOUT",
+  "exit_strategy": "MNA_FOCUSED",
+  "variables": [
+    {
+      "variable_key": "shareholders",
+      "input_type": "TEXTAREA",
+      "question_label": "주주 목록",
+      "description": "주주 이름, 지분율을 줄바꿈으로 구분",
+      "extracted_value": "A펀드 60%\\nB법인 40%",
+      "default_value": null,
+      "is_required": true,
+      "select_options": null,
+      "display_order": 1,
+      "group_name": "당사자 정보",
+      "visible_condition": null,
+      "confidence": 0.95
+    }
+  ],
+  "deal_structure": "POST_BUYOUT",
+  "industry_type": "GENERAL",
+  "discovered_booleans": [
+    {
+      "variable_key": "has_drag_along_right",
+      "question_label": "Drag-Along 조항 포함 여부",
+      "detected_in_clause": "제6조 (동반매도청구권)"
+    }
+  ]
+}
+```
+주의: deal_structure 필드에는 sha_type과 동일한 값을 넣어주세요."""
+
 
 async def analyze_step1_variables(
     spa_text: str,
     language_hint: str | None = None,
-) -> tuple[str, list[ExtractedVariable], str, str, str, list[DiscoveredBoolean], float | None, str | None]:
+    doc_type_hint: str | None = None,
+) -> tuple[
+    str,
+    list[ExtractedVariable],
+    str,
+    str,
+    str,
+    list[DiscoveredBoolean],
+    str | None,
+    str | None,
+    float | None,
+    str | None,
+]:
     """Step 1: 계약서 원문에서 변수를 추출한다.
 
     Returns:
         (session_id, variables, deal_structure, industry_type, detected_doc_type,
-         discovered_booleans, cost, model)
+         discovered_booleans, sha_type, exit_strategy, cost, model)
     """
     session_id = str(uuid.uuid4())
 
@@ -385,15 +555,19 @@ async def analyze_step1_variables(
     session = AnalysisSession(session_id=session_id, spa_text=spa_text)
     _sessions[session_id] = session
 
+    # 프롬프트 선택: doc_type_hint가 "SHA"이면 SHA 전용 프롬프트
+    system_prompt = _SHA_STEP1_SYSTEM_PROMPT if doc_type_hint == "SHA" else _STEP1_SYSTEM_PROMPT
+
     # 사용자 프롬프트
     lang_hint = f"\n언어: {language_hint}" if language_hint else ""
+    doc_hint = f"\n문서 유형 힌트: {doc_type_hint}" if doc_type_hint else ""
     user_prompt = f"""--- 계약서 원문 시작 ---
 {spa_text}
---- 계약서 원문 끝 ---{lang_hint}
+--- 계약서 원문 끝 ---{lang_hint}{doc_hint}
 
 위 계약서 원문을 분석하여 계약 유형을 감지하고, 재사용 가능한 템플릿 변수를 추출하세요."""
 
-    data, cost, model = await _call_llm_json(_STEP1_SYSTEM_PROMPT, user_prompt)
+    data, cost, model = await _call_llm_json(system_prompt, user_prompt)
 
     # 비용 기록
     if cost:
@@ -406,6 +580,11 @@ async def analyze_step1_variables(
     industry_type = data.get("industry_type", "GENERAL")
     detected_doc_type = data.get("detected_doc_type", "SPA")
     discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
+    sha_type: str | None = data.get("sha_type")
+    exit_strategy: str | None = data.get("exit_strategy")
+
+    # 세션에 detected_doc_type 저장 (Step 2 프롬프트 분기용)
+    session.detected_doc_type = detected_doc_type
 
     # variable_key 중복 제거 (첫 번째 등장만 유지)
     seen_keys: set[str] = set()
@@ -419,7 +598,7 @@ async def analyze_step1_variables(
     variables = unique_variables
 
     logger.info(
-        "SPA Step 1 완료: session=%s, doc_type=%s, variables=%d, deal=%s, industry=%s, booleans=%d, cost=$%.4f",
+        "Step 1 완료: session=%s, doc_type=%s, variables=%d, deal=%s, industry=%s, booleans=%d, cost=$%.4f",
         session_id,
         detected_doc_type,
         len(variables),
@@ -429,7 +608,18 @@ async def analyze_step1_variables(
         cost or 0.0,
     )
 
-    return session_id, variables, deal_structure, industry_type, detected_doc_type, discovered, cost, model
+    return (
+        session_id,
+        variables,
+        deal_structure,
+        industry_type,
+        detected_doc_type,
+        discovered,
+        sha_type,
+        exit_strategy,
+        cost,
+        model,
+    )
 
 
 # ── Step 2: 조항 분해 ─────────────────────────────────────────────────────────
@@ -549,6 +739,102 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 }
 ```"""
 
+# ── SHA Step 2: 조항 분해 ────────────────────────────────────────────────────
+
+_SHA_STEP2_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 Jinja2 템플릿 엔지니어입니다.
+SHA(주주간계약서) 원문을 조항별로 분해하고, 변수 값을 Jinja2 템플릿 문법으로 변환합니다.
+
+## 표준 SHA 조항 구조 (13개 표준 조)
+1. 전문 (Preamble) — 배경, 당사자 식별, 지분 현황
+2. 정의 (Definitions) — 핵심 용어 정의
+3. 이사회/경영진 구성 (Board Composition & Governance) — 의석수, 지명권, 정족수
+4. 주주 의결 사항 / 동의권 (Voting & Consent Rights / Veto) — 중요사항 동의, 거부권
+5. 주식 처분 제한 (Transfer Restrictions) — ROFR, Lock-up, 사전동의
+6. Tag-Along / Drag-Along — 동반매도참여/청구, 비율, 절차
+7. 옵션 (Put/Call Options) — 행사 조건, 가격 산식, 기간
+8. 우선매수권 / 신주인수권 (Pre-emptive Rights) — 희석방지, 신주배정
+9. 배당 및 수익분배 (Dividends & Waterfall) — 배당 정책, 우선배당, 분배 순서
+10. 퇴출 전략 (Exit Strategy) — IPO 의무/일정, 매각 절차
+11. 비밀유지 (Confidentiality) — 범위, 기간, 예외
+12. 경업금지 (Non-Compete) — 범위, 기간, 위반 시 제재
+13. 준거법 및 분쟁해결 (Governing Law & Dispute Resolution)
+
+원문의 조/항/호 구조를 최대한 보존하세요.
+
+## Jinja2 변환 규칙
+- confirmed_variables 목록에 있는 변수만 사용하세요.
+- 리터럴 값 → {{ variable_key }}
+- 금액 → {{ investment_amount | currency_format }}
+  - ⚠ currency_format은 "금 {숫자}원" 형태를 이미 포함합니다. "금"이나 "원"을 별도로 추가하지 마세요.
+- 날짜 → {{ signing_date | date_format }}
+- 숫자 → {{ board_seats_total | number_format }}
+- 비율 → {{ drag_threshold_percentage }}%
+- 조건부 블록 → {% if has_put_option %}...{% endif %}
+
+## SHA 특화 조건부 렌더링
+- 이사 지명권: {% if has_board_nomination_right %}...{% endif %}
+- 거부권/Veto: {% if has_veto_rights %}...{% endif %}
+- IPO 의무: {% if has_ipo_obligation %}...{% endif %}
+- 풋옵션: {% if has_put_option %}...{% endif %}
+- 콜옵션: {% if has_call_option %}...{% endif %}
+- ROFR: {% if has_right_of_first_refusal %}...{% endif %}
+- Tag-Along: {% if has_tag_along_right %}...{% endif %}
+- Drag-Along: {% if has_drag_along_right %}...{% endif %}
+- Waterfall: {% if has_waterfall_distribution %}...{% endif %}
+- 경업금지: {% if has_non_compete_obligation %}...{% endif %}
+- 질권: {% if has_pledge_agreement %}...{% endif %}
+- 신주인수권: {% if has_preemptive_rights %}...{% endif %}
+- 희석방지: {% if has_anti_dilution %}...{% endif %}
+
+## SHA 유형별 조건부 조항
+- POST_BUYOUT: deal_structure == "POST_BUYOUT" — 경영권 이전 관련 (매수/매도인 권리배분, 경영 참여 범위)
+- JOINT_VENTURE: deal_structure == "JOINT_VENTURE" — 합작 사업 관련 (공동 경영, 출자 의무, 교착상태 해결)
+- MINORITY_INVESTMENT: deal_structure == "MINORITY_INVESTMENT" — 투자자 보호 (anti-dilution, 우선배당, IPO 강제)
+
+## condition_expression 규칙
+- Python 문법 사용
+- 지원 연산자: ==, !=, <, >, <=, >=, in, not in, and, or, not
+- 예: has_put_option == True
+- 예: deal_structure == "JOINT_VENTURE"
+- 예: has_drag_along_right == True and drag_threshold_percentage > 0
+- 항상 포함되는 조항은 condition_expression을 null로 설정
+
+## is_boilerplate 분류 (SHA 기준)
+- True: 정의(구조), 비밀유지, 준거법/분쟁해결
+- False: 이사회, 동의권/Veto, 처분제한, Tag/Drag, 옵션, 신주인수권, 배당/Waterfall, Exit, 경업금지
+
+## content HTML 형식
+조항 내용을 HTML로 구조화하세요:
+- <p> 태그로 각 조항/항 감싸기
+- <ol>, <li> 태그로 호/목 나열
+- 들여쓰기와 구조 보존
+
+## 복합 condition_expression 예제
+- deal_structure == "JOINT_VENTURE" and has_veto_rights == True
+- has_put_option == True and put_trigger_event != ""
+- deal_structure == "MINORITY_INVESTMENT" and has_anti_dilution == True
+- has_tag_along_right == True or has_drag_along_right == True
+- has_ipo_obligation == True and ipo_timeline_months > 0
+- non_compete_period_months > 0
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "clauses": [
+    {
+      "clause_order": 0,
+      "title": "전문",
+      "content": "<p>{{ shareholders }}(이하 각 &quot;주주&quot;)는 ...</p>",
+      "original_content": "<p>A펀드와 B법인(이하 각 &quot;주주&quot;)은 ...</p>",
+      "is_boilerplate": false,
+      "condition_expression": null,
+      "confidence": 0.9
+    }
+  ]
+}
+```"""
+
 
 async def analyze_step2_clauses(
     session_id: str,
@@ -581,22 +867,27 @@ async def analyze_step2_clauses(
         msg = f"세션 비용 한도 초과 (${session.cost_usd:.2f} / ${_MAX_COST_PER_SESSION:.2f})"
         raise ValueError(msg)
 
+    # 프롬프트 선택: 세션의 detected_doc_type에 따라 분기
+    is_sha = session.detected_doc_type == "SHA"
+    system_prompt = _SHA_STEP2_SYSTEM_PROMPT if is_sha else _STEP2_SYSTEM_PROMPT
+    doc_label = "SHA 주주간계약서" if is_sha else "SPA"
+
     # 변수 목록을 프롬프트에 포함
     var_summary = "\n".join(f"- {v.variable_key} ({v.input_type}): {v.question_label}" for v in confirmed_variables)
 
     user_prompt = f"""## 확정된 변수 목록
 {var_summary}
 
-## 거래 구조: {deal_structure}
+## {"SHA 유형" if is_sha else "거래 구조"}: {deal_structure}
 ## 산업 유형: {industry_type}
 
---- SPA 원문 시작 ---
+--- 계약서 원문 시작 ---
 {session.spa_text}
---- SPA 원문 끝 ---
+--- 계약서 원문 끝 ---
 
-위 SPA 원문을 조항별로 분해하고, 확정된 변수를 Jinja2 템플릿으로 변환하세요."""
+위 {doc_label} 원문을 조항별로 분해하고, 확정된 변수를 Jinja2 템플릿으로 변환하세요."""
 
-    data, cost, model = await _call_llm_json(_STEP2_SYSTEM_PROMPT, user_prompt)
+    data, cost, model = await _call_llm_json(system_prompt, user_prompt)
 
     if cost:
         session.cost_usd += cost

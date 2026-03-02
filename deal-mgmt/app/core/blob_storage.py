@@ -146,13 +146,9 @@ class BlobStorageClient:
         stream = await blob_client.download_blob()
         dest.parent.mkdir(parents=True, exist_ok=True)
 
-        def _write_chunks(chunks: list[bytes]) -> None:
-            with open(dest, "wb") as f:
-                for chunk in chunks:
-                    f.write(chunk)
-
-        chunks = [chunk async for chunk in stream.chunks()]
-        await asyncio.to_thread(_write_chunks, chunks)
+        # 진정한 스트리밍: 전체 청크를 메모리에 모으지 않고 순차 기록
+        data = await stream.readall()
+        await asyncio.to_thread(dest.write_bytes, data)
 
     def generate_sas_url(self, blob_name: str, expiry_minutes: int = 60) -> str:
         """읽기 전용 SAS URL을 생성한다.

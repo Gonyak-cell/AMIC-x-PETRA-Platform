@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.enums import EarnoutMetric, EarnoutStatus
 
@@ -28,6 +28,11 @@ class EarnoutOut(BaseModel):
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("target_value", "actual_value", "payment_amount")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 class EarnoutCreate(BaseModel):
@@ -63,3 +68,8 @@ class EarnoutSummary(BaseModel):
     total_actual: Decimal
     total_payment: Decimal
     by_status: dict[str, int]
+
+    @field_serializer("total_target", "total_actual", "total_payment")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None

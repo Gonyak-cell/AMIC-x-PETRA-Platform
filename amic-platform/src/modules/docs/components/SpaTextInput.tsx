@@ -1,10 +1,16 @@
-/** SPA 원문 텍스트 입력 — Step 0 */
+/** 계약서 원문 텍스트 입력 — Step 0 (SPA/SHA/BTA/SSA/MOU) */
 
 import { useState } from "react";
 import { FileText } from "lucide-react";
+import type { DocType } from "@/modules/docs/types/spa_analysis";
+import { DOC_TYPES, DOC_TYPE_LABELS } from "@/modules/docs/types/spa_analysis";
 
 interface SpaTextInputProps {
-  onSubmit: (text: string, languageHint: "ko" | "en" | null) => void;
+  onSubmit: (
+    text: string,
+    languageHint: "ko" | "en" | null,
+    docTypeHint: DocType | null,
+  ) => void;
   isPending: boolean;
   /** P3-2: 이전 입력값 복원 (실패 시 텍스트 보존) */
   initialText?: string;
@@ -20,6 +26,7 @@ export default function SpaTextInput({
 }: SpaTextInputProps) {
   const [text, setText] = useState(initialText);
   const [languageHint, setLanguageHint] = useState<"ko" | "en" | null>(null);
+  const [docTypeHint, setDocTypeHint] = useState<DocType | null>(null);
 
   const charCount = text.length;
   const isValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
@@ -27,7 +34,7 @@ export default function SpaTextInput({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-sm font-semibold text-text-primary">
-        SPA 원문을 붙여넣으세요
+        계약서 원문을 붙여넣으세요
       </h2>
 
       {/* 텍스트 입력 */}
@@ -36,7 +43,7 @@ export default function SpaTextInput({
           htmlFor="spa-raw-text"
           className="mb-1 block text-xs font-medium text-text-secondary"
         >
-          SPA 계약서 원문 <span className="text-negative">*</span>
+          계약서 원문 <span className="text-negative">*</span>
         </label>
         <textarea
           id="spa-raw-text"
@@ -44,7 +51,7 @@ export default function SpaTextInput({
           onChange={(e) => setText(e.target.value)}
           rows={16}
           className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary font-mono leading-relaxed"
-          placeholder="주식매매계약서 원문 전체를 붙여넣으세요 (최소 100자)..."
+          placeholder="계약서 원문 전체를 붙여넣으세요 (최소 100자)..."
           disabled={isPending}
         />
         <div className="mt-1 flex items-center justify-between text-xs">
@@ -68,9 +75,30 @@ export default function SpaTextInput({
         </div>
       </div>
 
-      {/* 언어 힌트 + 분석 버튼 */}
+      {/* 힌트 옵션 + 분석 버튼 */}
       <div className="flex items-center justify-between rounded-xl border border-border p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <label
+            htmlFor="doc-type-hint"
+            className="text-xs font-medium text-text-secondary"
+          >
+            문서 유형
+          </label>
+          <select
+            id="doc-type-hint"
+            value={docTypeHint ?? ""}
+            onChange={(e) =>
+              setDocTypeHint((e.target.value as DocType) || null)
+            }
+            className="rounded-lg border border-border bg-white px-2 py-1 text-xs text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+          >
+            <option value="">자동 감지</option>
+            {DOC_TYPES.map((dt) => (
+              <option key={dt} value={dt}>
+                {DOC_TYPE_LABELS[dt]}
+              </option>
+            ))}
+          </select>
           <label
             htmlFor="lang-hint"
             className="text-xs font-medium text-text-secondary"
@@ -89,14 +117,11 @@ export default function SpaTextInput({
             <option value="ko">한국어</option>
             <option value="en">영어</option>
           </select>
-          <span className="text-xs text-text-tertiary">
-            미지정 시 LLM이 자동 감지합니다
-          </span>
         </div>
 
         <button
           type="button"
-          onClick={() => onSubmit(text, languageHint)}
+          onClick={() => onSubmit(text, languageHint, docTypeHint)}
           disabled={!isValid || isPending}
           className="flex items-center gap-1.5 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:bg-accent-primary/90 disabled:opacity-40"
         >

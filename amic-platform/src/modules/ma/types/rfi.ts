@@ -133,7 +133,6 @@ export interface RFIUpdate {
   recipient_company?: string;
   due_date?: string;
   notes?: string;
-  status?: RFIStatus;
 }
 
 export interface RFIItemCreate {

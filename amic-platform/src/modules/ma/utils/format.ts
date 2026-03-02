@@ -1,8 +1,10 @@
 /** 한국 원화 금액을 억/조 단위로 포맷팅 (음수 지원). */
-export function formatKRW(value: number | null): string {
+export function formatKRW(value: string | number | null): string {
   if (value == null) return "-";
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "-";
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
   if (abs >= 1_000_000_000_000)
     return `${sign}${(abs / 1_000_000_000_000).toFixed(1)}조`;
   if (abs >= 100_000_000)
@@ -12,12 +14,14 @@ export function formatKRW(value: number | null): string {
 
 /** 매출액 간이 포맷 (null → "-", year 있으면 연도 접미사 표시, 음수 지원). */
 export function formatRevenue(
-  value: number | null,
+  value: string | number | null,
   year?: number | null,
 ): string {
   if (value == null) return "-";
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "-";
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
   const suffix = year ? ` (${year})` : "";
   if (abs >= 1_000_000_000_000)
     return `${sign}${(abs / 1_000_000_000_000).toFixed(1)}조${suffix}`;

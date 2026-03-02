@@ -104,11 +104,14 @@ async def step1_extract_variables(
             industry_type,
             detected_doc_type,
             discovered,
+            sha_type,
+            exit_strategy,
             cost,
             model,
         ) = await spa_analysis_service.analyze_step1_variables(
             body.spa_text,
             body.language_hint,
+            body.doc_type_hint,
         )
     except RuntimeError as exc:
         raise HTTPException(
@@ -127,6 +130,8 @@ async def step1_extract_variables(
         deal_structure=deal_structure,
         industry_type=industry_type,
         detected_doc_type=detected_doc_type,
+        sha_type=sha_type,
+        exit_strategy=exit_strategy,
         discovered_booleans=discovered,
         llm_cost_usd=cost if claims.role == "ADMIN" else None,
         model_used=model if claims.role == "ADMIN" else None,

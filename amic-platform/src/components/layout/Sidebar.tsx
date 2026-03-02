@@ -105,16 +105,15 @@ const MA_WORKFLOW_NAV = [
   },
   { phase: "MARKETING", to: "buyers", label: "③ 마케팅", icon: Megaphone },
   { phase: "BIDDING", to: "bids", label: "④ 입찰", icon: Search },
-  { phase: "MOU_SIGNED", to: "contracts", label: "⑤ MOU", icon: FileText },
   {
     phase: "MAIN_DUE_DILIGENCE",
     to: "dd-checklist",
-    label: "⑥ 본실사",
+    label: "⑤ 본실사",
     icon: Search,
   },
-  { phase: "NEGOTIATION", to: "contracts", label: "⑦ 협상", icon: Scale },
-  { phase: "CLOSING", to: "closing", label: "⑧ Closing", icon: CheckCircle2 },
-  { phase: "POST_CLOSING", to: "pmi", label: "⑨ Post-Close", icon: Archive },
+  { phase: "NEGOTIATION", to: "contracts", label: "⑥ 협상", icon: Scale },
+  { phase: "CLOSING", to: "closing", label: "⑦ Closing", icon: CheckCircle2 },
+  { phase: "POST_CLOSING", to: "pmi", label: "⑧ Post-Close", icon: Archive },
 ] as const;
 
 const MA_TOOLS_NAV = [

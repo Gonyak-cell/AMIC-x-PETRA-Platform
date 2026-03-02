@@ -740,7 +740,7 @@ export default function TransactionWorkspacePage() {
     PREPARATION: "PREPARATION",
     MARKETING: "MARKETING",
     BIDDING: "BIDDING",
-    MOU_SIGNED: "MOU_SIGNED",
+    MOU_SIGNED: "MAIN_DUE_DILIGENCE", // deprecated: MOU_SIGNED → MAIN_DUE_DILIGENCE로 매핑
     MAIN_DUE_DILIGENCE: "MAIN_DUE_DILIGENCE",
     NEGOTIATION: "NEGOTIATION",
     CLOSING: "CLOSING",
@@ -978,20 +978,40 @@ export default function TransactionWorkspacePage() {
             현재: <strong>{phaseLabel}</strong>
           </span>
         </div>
-        <PipelineFlow
-          currentPhase={txn.phase}
-          onPhaseClick={(phase) => {
-            const currentIdx = PHASE_CONFIG.findIndex(
-              (p) => p.phase === txn.phase,
-            );
-            const clickedIdx = PHASE_CONFIG.findIndex((p) => p.phase === phase);
-            if (clickedIdx > currentIdx) return; // 미래 단계 무시
-            if (phase === viewedPhase) return; // 같은 단계 재클릭 무시
-            const defaultTab = PHASE_TAB_MAP[phase];
-            const tabPath = defaultTab === "overview" ? "" : `/${defaultTab}`;
-            navigate(`/ma/transactions/${id}${tabPath}?viewPhase=${phase}`);
-          }}
-        />
+        <div className="relative">
+          <PipelineFlow
+            currentPhase={txn.phase}
+            onPhaseClick={(phase) => {
+              setActiveMilestone(null);
+              const currentIdx = PHASE_CONFIG.findIndex(
+                (p) => p.phase === txn.phase,
+              );
+              const clickedIdx = PHASE_CONFIG.findIndex(
+                (p) => p.phase === phase,
+              );
+              if (clickedIdx > currentIdx) return;
+              if (phase === viewedPhase) return;
+              const defaultTab = PHASE_TAB_MAP[phase];
+              const tabPath = defaultTab === "overview" ? "" : `/${defaultTab}`;
+              navigate(`/ma/transactions/${id}${tabPath}?viewPhase=${phase}`);
+            }}
+            onMilestoneClick={(milestone) =>
+              setActiveMilestone((prev) =>
+                prev?.milestoneKey === milestone.milestoneKey
+                  ? null
+                  : milestone,
+              )
+            }
+            milestoneDocuments={milestoneDocuments}
+          />
+          {activeMilestone && (
+            <MilestoneUploadPopover
+              txnId={id}
+              milestone={activeMilestone}
+              onClose={() => setActiveMilestone(null)}
+            />
+          )}
+        </div>
       </Card>
 
       {/* Phase Action Panel */}
@@ -1162,7 +1182,7 @@ export default function TransactionWorkspacePage() {
                     )}
                     defaultValue={txn.estimated_deal_value ?? ""}
                     onBlur={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : null;
+                      const v = e.target.value || null;
                       if (v !== txn.estimated_deal_value)
                         updateTxn.mutate({ estimated_deal_value: v });
                     }}

@@ -248,10 +248,7 @@ export default function EditTransactionModal({
                     : ""
                 }
                 onChange={(e) =>
-                  set(
-                    "estimated_deal_value",
-                    e.target.value ? Number(e.target.value) : null,
-                  )
+                  set("estimated_deal_value", e.target.value || null)
                 }
                 placeholder="0"
               />

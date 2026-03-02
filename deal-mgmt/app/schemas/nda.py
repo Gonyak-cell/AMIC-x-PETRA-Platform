@@ -21,6 +21,9 @@ class NDAOut(BaseModel):
     expires_at: str | None = None
     document_url: str | None = None
     notes: str | None = None
+    counterparty_name: str | None = None
+    jurisdiction: str | None = None
+    confidentiality_period_months: int | None = None
     created_at: datetime
     updated_at: datetime
 

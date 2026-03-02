@@ -243,13 +243,17 @@ class TestSessionManagement:
 
     def test_cleanup_expired(self) -> None:
         """만료된 세션이 정리되는지 확인."""
-        # 세션 딕셔너리 직접 조작하여 테스트
-        from app.services.spa_analysis_service import _cleanup_expired_sessions
+        import time
+
+        from app.services.spa_analysis_service import (
+            _SESSION_TTL,
+            _cleanup_expired_sessions,
+        )
 
         old_session = AnalysisSession(
             session_id="expired",
             spa_text="test",
-            created_at=0.0,  # 아주 오래전
+            created_at=time.monotonic() - _SESSION_TTL - 1,  # 확실히 만료
         )
         _sessions["expired"] = old_session
         _cleanup_expired_sessions()
@@ -317,6 +321,8 @@ class TestStep1AnalyzeVariables:
                 industry,
                 detected_doc_type,
                 discovered,
+                _sha_type,
+                _exit_strategy,
                 _cost,
                 _model,
             ) = await analyze_step1_variables("A" * 200)
@@ -881,9 +887,18 @@ class TestEmptyArrayEdgeCases:
         with patch("app.services.spa_analysis_service._get_llm_client", return_value=mock_llm):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            session_id, variables, _deal, _industry, doc_type, discovered, _, _ = await analyze_step1_variables(
-                "A" * 200
-            )
+            (
+                session_id,
+                variables,
+                _deal,
+                _industry,
+                doc_type,
+                discovered,
+                _,
+                _,
+                _,
+                _,
+            ) = await analyze_step1_variables("A" * 200)
 
         assert variables == []
         assert discovered == []
@@ -938,12 +953,15 @@ class TestSessionExpiryBoundary:
 
     def test_expired_session_raises(self) -> None:
         """TTL 초과 세션은 ValueError."""
+        import time
+
+        from app.services.spa_analysis_service import _SESSION_TTL
 
         session_id = "test-expired-boundary"
         _sessions[session_id] = AnalysisSession(
             session_id=session_id,
             spa_text="test",
-            created_at=0.0,  # monotonic 시작점 → 확실히 만료
+            created_at=time.monotonic() - _SESSION_TTL - 1,  # 확실히 만료
         )
         with pytest.raises(ValueError, match="세션"):
             _get_session(session_id)
@@ -1148,8 +1166,11 @@ class TestSessionLimit:
 
     def test_cleanup_frees_expired_slots(self) -> None:
         """만료 세션 정리 후 새 세션 생성 가능."""
+        import time
+
         from app.services.spa_analysis_service import (
             _MAX_SESSIONS,
+            _SESSION_TTL,
             _cleanup_expired_sessions,
         )
 
@@ -1164,7 +1185,7 @@ class TestSessionLimit:
                 _sessions[sid] = AnalysisSession(
                     session_id=sid,
                     spa_text="test",
-                    created_at=0.0,
+                    created_at=time.monotonic() - _SESSION_TTL - 1,
                 )
             for i in range(half, _MAX_SESSIONS):
                 sid = f"fresh-{i}"
@@ -1215,3 +1236,320 @@ class TestLlmCallTimeout:
             ),
         ):
             await _call_llm_json("system", "user")
+
+
+# ── SHA 확장 테스트 ──────────────────────────────────────────────────────────
+
+
+class TestShaSchemas:
+    """SHA 확장 스키마 검증 테스트."""
+
+    def test_sha_types_constant(self) -> None:
+        """SHA_TYPES 상수 검증."""
+        from app.schemas.spa_analysis import SHA_TYPES
+
+        assert "POST_BUYOUT" in SHA_TYPES
+        assert "JOINT_VENTURE" in SHA_TYPES
+        assert "MINORITY_INVESTMENT" in SHA_TYPES
+        assert "OTHER_TYPE" in SHA_TYPES
+        assert len(SHA_TYPES) == 4
+
+    def test_exit_strategies_constant(self) -> None:
+        """EXIT_STRATEGIES 상수 검증."""
+        from app.schemas.spa_analysis import EXIT_STRATEGIES
+
+        assert "IPO_FOCUSED" in EXIT_STRATEGIES
+        assert "MNA_FOCUSED" in EXIT_STRATEGIES
+        assert "OTHER_STRATEGY" in EXIT_STRATEGIES
+        assert len(EXIT_STRATEGIES) == 3
+
+    def test_all_structure_types_includes_both(self) -> None:
+        """ALL_STRUCTURE_TYPES에 SPA + SHA 값 모두 포함."""
+        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+
+        # SPA 값
+        assert "PURE_SHARE_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "CARVE_OUT" in ALL_STRUCTURE_TYPES
+        # SHA 값
+        assert "POST_BUYOUT" in ALL_STRUCTURE_TYPES
+        assert "JOINT_VENTURE" in ALL_STRUCTURE_TYPES
+
+    def test_step1_request_with_doc_type_hint(self) -> None:
+        """doc_type_hint 필드 검증."""
+        body = SpaStep1Request(spa_text="A" * 100, doc_type_hint="SHA")
+        assert body.doc_type_hint == "SHA"
+
+    def test_step1_request_without_doc_type_hint(self) -> None:
+        """doc_type_hint 미지정 시 None."""
+        body = SpaStep1Request(spa_text="A" * 100)
+        assert body.doc_type_hint is None
+
+    def test_step1_response_sha_fields(self) -> None:
+        """SHA 응답에 sha_type, exit_strategy 포함."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="POST_BUYOUT",
+            industry_type="GENERAL",
+            detected_doc_type="SHA",
+            sha_type="POST_BUYOUT",
+            exit_strategy="IPO_FOCUSED",
+        )
+        assert resp.sha_type == "POST_BUYOUT"
+        assert resp.exit_strategy == "IPO_FOCUSED"
+        assert resp.detected_doc_type == "SHA"
+
+    def test_step1_response_spa_sha_fields_null(self) -> None:
+        """SPA 응답에서 SHA 필드는 None."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",
+            industry_type="GENERAL",
+        )
+        assert resp.sha_type is None
+        assert resp.exit_strategy is None
+
+    def test_step2_request_sha_type_accepted(self) -> None:
+        """Step2 request에 SHA_TYPES 값 허용."""
+        from app.schemas.spa_analysis import SpaStep2Request
+
+        body = SpaStep2Request(
+            session_id="test",
+            variables=[],
+            deal_structure="POST_BUYOUT",
+            industry_type="GENERAL",
+        )
+        assert body.deal_structure == "POST_BUYOUT"
+
+    def test_deal_structure_accepts_all_types(self) -> None:
+        """SPA + SHA 모든 구조 값 허용."""
+        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+
+        for st in ALL_STRUCTURE_TYPES:
+            resp = SpaStep1Response(
+                session_id="test",
+                variables=[],
+                deal_structure=st,
+                industry_type="GENERAL",
+            )
+            assert resp.deal_structure == st
+
+
+class TestShaStep1Service:
+    """SHA Step 1 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_sha_step1_uses_sha_prompt(self) -> None:
+        """doc_type_hint='SHA' 시 SHA 전용 프롬프트 사용."""
+        mock_response = json.dumps(
+            {
+                "detected_doc_type": "SHA",
+                "sha_type": "POST_BUYOUT",
+                "exit_strategy": "MNA_FOCUSED",
+                "variables": [
+                    {
+                        "variable_key": "shareholders",
+                        "input_type": "TEXTAREA",
+                        "question_label": "주주 목록",
+                        "confidence": 0.9,
+                    },
+                ],
+                "deal_structure": "POST_BUYOUT",
+                "industry_type": "GENERAL",
+                "discovered_booleans": [
+                    {
+                        "variable_key": "has_drag_along_right",
+                        "question_label": "Drag-Along 조항 포함 여부",
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            result = await analyze_step1_variables("A" * 200, doc_type_hint="SHA")
+
+        (
+            session_id,
+            variables,
+            deal_struct,
+            _industry,
+            detected_doc_type,
+            discovered,
+            sha_type,
+            exit_strategy,
+            _cost,
+            _model,
+        ) = result
+
+        assert detected_doc_type == "SHA"
+        assert sha_type == "POST_BUYOUT"
+        assert exit_strategy == "MNA_FOCUSED"
+        assert deal_struct == "POST_BUYOUT"
+        assert len(variables) == 1
+        assert variables[0].variable_key == "shareholders"
+        assert len(discovered) == 1
+
+        # LLM이 SHA 프롬프트로 호출되었는지 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "주주간계약서" in system_prompt
+        assert "sha_type" in system_prompt
+
+        _sessions.pop(session_id, None)
+
+    @pytest.mark.asyncio
+    async def test_spa_step1_still_uses_spa_prompt(self) -> None:
+        """doc_type_hint 미지정 시 기존 SPA 프롬프트 유지."""
+        mock_response = json.dumps(
+            {
+                "detected_doc_type": "SPA",
+                "variables": [],
+                "deal_structure": "PURE_SHARE_TRANSFER",
+                "industry_type": "GENERAL",
+                "discovered_booleans": [],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.02
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            result = await analyze_step1_variables("A" * 200)
+
+        # SPA 프롬프트 사용 확인 (SHA 아님)
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "M&A 관련 계약서" in system_prompt
+
+        _sessions.pop(result[0], None)
+
+
+class TestShaStep2Service:
+    """SHA Step 2 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_sha_step2_uses_sha_prompt(self) -> None:
+        """session.detected_doc_type='SHA' 시 SHA Step2 프롬프트 사용."""
+        # 세션 수동 생성
+        session = AnalysisSession(
+            session_id="sha-step2-test",
+            spa_text="A" * 200,
+            detected_doc_type="SHA",
+        )
+        _sessions["sha-step2-test"] = session
+
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>SHA 전문</p>",
+                        "original_content": "<p>SHA 원문</p>",
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _cost, _model = await analyze_step2_clauses(
+                    "sha-step2-test",
+                    [],
+                    "POST_BUYOUT",
+                    "GENERAL",
+                )
+
+            assert len(clauses) == 1
+            assert clauses[0].title == "전문"
+
+            # SHA Step 2 프롬프트 확인
+            call_args = mock_llm.call.call_args
+            system_prompt = call_args[0][0]
+            assert "SHA" in system_prompt
+            assert "주주간계약서" in system_prompt
+        finally:
+            _sessions.pop("sha-step2-test", None)
+
+    @pytest.mark.asyncio
+    async def test_spa_step2_still_uses_spa_prompt(self) -> None:
+        """session.detected_doc_type='SPA' 시 기존 SPA Step2 프롬프트 유지."""
+        session = AnalysisSession(
+            session_id="spa-step2-test",
+            spa_text="A" * 200,
+            detected_doc_type="SPA",
+        )
+        _sessions["spa-step2-test"] = session
+
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>SPA 전문</p>",
+                        "original_content": "<p>SPA 원문</p>",
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.03
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _cost, _model = await analyze_step2_clauses(
+                    "spa-step2-test",
+                    [],
+                    "PURE_SHARE_TRANSFER",
+                    "GENERAL",
+                )
+
+            assert len(clauses) == 1
+
+            # SPA Step 2 프롬프트 확인
+            call_args = mock_llm.call.call_args
+            system_prompt = call_args[0][0]
+            assert "SPA 원문을 조항별로 분해" in system_prompt
+        finally:
+            _sessions.pop("spa-step2-test", None)

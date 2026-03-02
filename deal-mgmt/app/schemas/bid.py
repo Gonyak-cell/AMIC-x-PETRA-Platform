@@ -24,6 +24,8 @@ class BidOut(BaseModel):
     valid_until: str | None = None
     conditions: str | None = None
     notes: str | None = None
+    exclusivity_period_days: int | None = None
+    conditions_precedent: dict | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -39,6 +41,8 @@ class BidCreate(BaseModel):
     valid_until: str | None = Field(None, max_length=10)
     conditions: str | None = None
     notes: str | None = None
+    exclusivity_period_days: int | None = None
+    conditions_precedent: dict | None = None
 
 
 class BidUpdate(BaseModel):
@@ -52,6 +56,8 @@ class BidUpdate(BaseModel):
     valid_until: str | None = Field(None, max_length=10)
     conditions: str | None = None
     notes: str | None = None
+    exclusivity_period_days: int | None = None
+    conditions_precedent: dict | None = None
 
 
 class BidComparisonItem(BaseModel):

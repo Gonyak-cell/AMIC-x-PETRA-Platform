@@ -16,9 +16,10 @@ import { useSpaStep1, useSpaStep2, useSpaStep3 } from "../hooks/useSpaAnalysis";
 import type {
   ExtractedVariable,
   AnalyzedClause,
-  DealStructure,
   DocType,
   IndustryType,
+  ShaType,
+  ExitStrategy,
   SpaStep1Response,
   SpaStep2Response,
 } from "../types/spa_analysis";
@@ -27,9 +28,15 @@ import {
   DOC_TYPE_LABELS,
   DEAL_STRUCTURE_LABELS,
   INDUSTRY_TYPE_LABELS,
+  SHA_TYPE_LABELS,
+  EXIT_STRATEGY_LABELS,
 } from "../types/spa_analysis";
 import SpaTextInput from "./SpaTextInput";
-import { VariableReviewPanel, ClauseReviewPanel } from "./AnalysisReviewPanel";
+import {
+  VariableReviewPanel,
+  ClauseReviewPanel,
+  ShaClassificationPanel,
+} from "./AnalysisReviewPanel";
 
 interface SpaAnalysisWizardProps {
   txnId: string;
@@ -61,11 +68,14 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
   // Step 1 결과
   const [sessionId, setSessionId] = useState("");
   const [variables, setVariables] = useState<ExtractedVariable[]>([]);
-  const [dealStructure, setDealStructure] = useState<DealStructure>(
+  const [dealStructure, setDealStructure] = useState<string>(
     "PURE_SHARE_TRANSFER",
   );
   const [industryType, setIndustryType] = useState<IndustryType>("GENERAL");
   const [docType, setDocType] = useState<DocType>("SPA");
+  // SHA 전용 상태
+  const [exitStrategy, setExitStrategy] =
+    useState<ExitStrategy>("OTHER_STRATEGY");
 
   // Step 2 결과
   const [clauses, setClauses] = useState<AnalyzedClause[]>([]);
@@ -104,12 +114,17 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
 
   // Step 0 → 1: 변수 추출
   const handleStep1Submit = useCallback(
-    async (text: string, languageHint: "ko" | "en" | null) => {
+    async (
+      text: string,
+      languageHint: "ko" | "en" | null,
+      docTypeHint: DocType | null,
+    ) => {
       setPreservedText(text); // P3-2: 텍스트 보존
       try {
         const result: SpaStep1Response = await step1Mut.mutateAsync({
           spa_text: text,
           language_hint: languageHint,
+          doc_type_hint: docTypeHint,
         });
         setSessionId(result.session_id);
 
@@ -139,6 +154,8 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
         setDealStructure(result.deal_structure);
         setIndustryType(result.industry_type);
         setDocType(result.detected_doc_type ?? "SPA");
+        // SHA 전용 필드 캡처
+        setExitStrategy(result.exit_strategy ?? "OTHER_STRATEGY");
         setTemplateName("");
         setStep(1);
       } catch {
@@ -330,14 +347,38 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
             </div>
           </div>
 
-          <VariableReviewPanel
-            variables={variables}
-            dealStructure={dealStructure}
-            industryType={industryType}
-            onVariablesChange={setVariables}
-            onDealStructureChange={setDealStructure}
-            onIndustryTypeChange={setIndustryType}
-          />
+          {/* SHA: ShaClassificationPanel / SPA: VariableReviewPanel 내장 분류 */}
+          {docType === "SHA" ? (
+            <>
+              <ShaClassificationPanel
+                shaType={dealStructure as ShaType}
+                exitStrategy={exitStrategy}
+                industryType={industryType}
+                onShaTypeChange={(v) => setDealStructure(v)}
+                onExitStrategyChange={setExitStrategy}
+                onIndustryTypeChange={setIndustryType}
+                variableCount={variables.length}
+              />
+              <VariableReviewPanel
+                variables={variables}
+                dealStructure={dealStructure}
+                industryType={industryType}
+                onVariablesChange={setVariables}
+                onDealStructureChange={setDealStructure}
+                onIndustryTypeChange={setIndustryType}
+                hideClassification
+              />
+            </>
+          ) : (
+            <VariableReviewPanel
+              variables={variables}
+              dealStructure={dealStructure}
+              industryType={industryType}
+              onVariablesChange={setVariables}
+              onDealStructureChange={setDealStructure}
+              onIndustryTypeChange={setIndustryType}
+            />
+          )}
 
           {/* Step 2 에러 배너 */}
           {step2Mut.isError && (
@@ -498,12 +539,34 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                   {clauses.length}개
                 </span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-text-tertiary text-xs">딜 구조</span>
-                <span className="font-medium text-text-primary">
-                  {DEAL_STRUCTURE_LABELS[dealStructure] ?? dealStructure}
-                </span>
-              </div>
+              {docType === "SHA" ? (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">SHA 유형</span>
+                    <span className="font-medium text-text-primary">
+                      {SHA_TYPE_LABELS[dealStructure as ShaType] ??
+                        dealStructure}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      Exit 전략
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {EXIT_STRATEGY_LABELS[exitStrategy] ?? exitStrategy}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col">
+                  <span className="text-text-tertiary text-xs">딜 구조</span>
+                  <span className="font-medium text-text-primary">
+                    {DEAL_STRUCTURE_LABELS[
+                      dealStructure as keyof typeof DEAL_STRUCTURE_LABELS
+                    ] ?? dealStructure}
+                  </span>
+                </div>
+              )}
               <div className="flex flex-col">
                 <span className="text-text-tertiary text-xs">산업</span>
                 <span className="font-medium text-text-primary">

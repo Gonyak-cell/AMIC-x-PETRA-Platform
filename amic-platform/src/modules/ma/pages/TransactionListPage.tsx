@@ -56,10 +56,12 @@ const SIDE_LABEL: Record<string, string> = {
   DUAL: "Dual",
 };
 
-function formatKrwCompact(val: number | null): string {
-  if (val == null || val === 0) return "-";
-  const abs = Math.abs(val);
-  const sign = val < 0 ? "-" : "";
+function formatKrwCompact(val: string | number | null): string {
+  if (val == null) return "-";
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num) || num === 0) return "-";
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
   if (abs >= 1_0000_0000) {
     const eok = Math.round(abs / 1_0000_0000);
     return `${sign}${eok.toLocaleString("ko-KR")}억원`;
@@ -71,14 +73,16 @@ function formatKrwCompact(val: number | null): string {
   return `${sign}${abs.toLocaleString("ko-KR")}원`;
 }
 
-function formatValue(val: number | null, currency: string): string {
+function formatValue(val: string | number | null, currency: string): string {
   if (val == null) return "-";
   if (currency === "KRW") return formatKrwCompact(val);
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return "-";
   return new Intl.NumberFormat("ko-KR", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(val);
+  }).format(num);
 }
 
 export default function TransactionListPage() {

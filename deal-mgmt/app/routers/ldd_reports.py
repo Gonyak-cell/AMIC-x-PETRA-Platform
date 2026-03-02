@@ -11,7 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotReadyError
-from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
+from app.core.security import (
+    JWTClaims,
+    check_client_deal_access,
+    get_jwt_claims,
+    require_role,
+    require_write_access,
+)
 from app.models.enums import LDDReportStatus
 from app.models.transaction import Transaction
 from app.schemas.ldd_report import (
@@ -47,12 +53,7 @@ async def _get_and_authorize_txn(
     if claims.role == "CLIENT":
         await check_client_deal_access(db, txn_id, claims)
         return txn
-    if (
-        claims.role != "ADMIN"
-        and claims.email is not None
-        and txn.lead_advisor_email != claims.email
-        and txn.deal_captain_email != claims.email
-    ):
+    if claims.role != "ADMIN" and txn.lead_advisor_email != claims.email and txn.deal_captain_email != claims.email:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="이 거래에 접근할 권한이 없습니다",
@@ -68,7 +69,7 @@ _default_sections_router = APIRouter(tags=["LDD Reports"])
 @_default_sections_router.get("/ldd-reports")
 async def list_all_ldd_reports(
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_role("ADMIN", "MANAGER")),
 ):
     """모든 거래의 LDD 보고서 목록을 반환한다."""
     return [LDDReportOut.model_validate(r) for r in await ldd_report_service.list_all_ldd_reports(db)]

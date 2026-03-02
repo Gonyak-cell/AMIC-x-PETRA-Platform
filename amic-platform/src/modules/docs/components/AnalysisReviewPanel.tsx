@@ -31,25 +31,32 @@ function sanitizeHtml(html: string): string {
 import type {
   ExtractedVariable,
   AnalyzedClause,
-  DealStructure,
   IndustryType,
+  ShaType,
+  ExitStrategy,
 } from "@/modules/docs/types/spa_analysis";
 import {
   DEAL_STRUCTURES,
   DEAL_STRUCTURE_LABELS,
   INDUSTRY_TYPES,
   INDUSTRY_TYPE_LABELS,
+  SHA_TYPES,
+  SHA_TYPE_LABELS,
+  EXIT_STRATEGIES,
+  EXIT_STRATEGY_LABELS,
 } from "@/modules/docs/types/spa_analysis";
 
 // ── 변수 리뷰 ─────────────────────────────────────────────────────────────
 
 interface VariableReviewProps {
   variables: ExtractedVariable[];
-  dealStructure: DealStructure;
+  dealStructure: string; // DealStructure | ShaType
   industryType: IndustryType;
   onVariablesChange: (vars: ExtractedVariable[]) => void;
-  onDealStructureChange: (v: DealStructure) => void;
+  onDealStructureChange: (v: string) => void;
   onIndustryTypeChange: (v: IndustryType) => void;
+  /** SHA 모드일 때 분류 섹션을 숨긴다 (ShaClassificationPanel 사용 시) */
+  hideClassification?: boolean;
 }
 
 export function VariableReviewPanel({
@@ -59,6 +66,7 @@ export function VariableReviewPanel({
   onVariablesChange,
   onDealStructureChange,
   onIndustryTypeChange,
+  hideClassification = false,
 }: VariableReviewProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
@@ -110,56 +118,56 @@ export function VariableReviewPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 분류 선택 */}
-      <div className="flex items-center gap-4 rounded-xl border border-border p-4">
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="deal-structure"
-            className="text-xs font-medium text-text-secondary"
-          >
-            딜 구조
-          </label>
-          <select
-            id="deal-structure"
-            value={dealStructure}
-            onChange={(e) =>
-              onDealStructureChange(e.target.value as DealStructure)
-            }
-            className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-          >
-            {DEAL_STRUCTURES.map((ds) => (
-              <option key={ds} value={ds}>
-                {DEAL_STRUCTURE_LABELS[ds]}
-              </option>
-            ))}
-          </select>
+      {/* 분류 선택 (SHA 모드에서는 ShaClassificationPanel 사용) */}
+      {!hideClassification && (
+        <div className="flex items-center gap-4 rounded-xl border border-border p-4">
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="deal-structure"
+              className="text-xs font-medium text-text-secondary"
+            >
+              딜 구조
+            </label>
+            <select
+              id="deal-structure"
+              value={dealStructure}
+              onChange={(e) => onDealStructureChange(e.target.value)}
+              className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+            >
+              {DEAL_STRUCTURES.map((ds) => (
+                <option key={ds} value={ds}>
+                  {DEAL_STRUCTURE_LABELS[ds]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="industry-type"
+              className="text-xs font-medium text-text-secondary"
+            >
+              산업 유형
+            </label>
+            <select
+              id="industry-type"
+              value={industryType}
+              onChange={(e) =>
+                onIndustryTypeChange(e.target.value as IndustryType)
+              }
+              className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+            >
+              {INDUSTRY_TYPES.map((it) => (
+                <option key={it} value={it}>
+                  {INDUSTRY_TYPE_LABELS[it]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="ml-auto text-xs text-text-tertiary">
+            {variables.length}개 변수
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="industry-type"
-            className="text-xs font-medium text-text-secondary"
-          >
-            산업 유형
-          </label>
-          <select
-            id="industry-type"
-            value={industryType}
-            onChange={(e) =>
-              onIndustryTypeChange(e.target.value as IndustryType)
-            }
-            className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-          >
-            {INDUSTRY_TYPES.map((it) => (
-              <option key={it} value={it}>
-                {INDUSTRY_TYPE_LABELS[it]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="ml-auto text-xs text-text-tertiary">
-          {variables.length}개 변수
-        </div>
-      </div>
+      )}
 
       {/* 변수 테이블 */}
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -653,6 +661,96 @@ function SafeHtml({ html, className }: { html: string; className?: string }) {
   const clean = useMemo(() => sanitizeHtml(html), [html]);
   return (
     <div className={className} dangerouslySetInnerHTML={{ __html: clean }} />
+  );
+}
+
+// ── SHA 분류 패널 ────────────────────────────────────────────────────────
+
+interface ShaClassificationProps {
+  shaType: ShaType;
+  exitStrategy: ExitStrategy;
+  industryType: IndustryType;
+  onShaTypeChange: (v: ShaType) => void;
+  onExitStrategyChange: (v: ExitStrategy) => void;
+  onIndustryTypeChange: (v: IndustryType) => void;
+  variableCount: number;
+}
+
+export function ShaClassificationPanel({
+  shaType,
+  exitStrategy,
+  industryType,
+  onShaTypeChange,
+  onExitStrategyChange,
+  onIndustryTypeChange,
+  variableCount,
+}: ShaClassificationProps) {
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="sha-type"
+          className="text-xs font-medium text-text-secondary"
+        >
+          SHA 유형
+        </label>
+        <select
+          id="sha-type"
+          value={shaType}
+          onChange={(e) => onShaTypeChange(e.target.value as ShaType)}
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {SHA_TYPES.map((st) => (
+            <option key={st} value={st}>
+              {SHA_TYPE_LABELS[st]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="exit-strategy"
+          className="text-xs font-medium text-text-secondary"
+        >
+          Exit 전략
+        </label>
+        <select
+          id="exit-strategy"
+          value={exitStrategy}
+          onChange={(e) => onExitStrategyChange(e.target.value as ExitStrategy)}
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {EXIT_STRATEGIES.map((es) => (
+            <option key={es} value={es}>
+              {EXIT_STRATEGY_LABELS[es]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="sha-industry-type"
+          className="text-xs font-medium text-text-secondary"
+        >
+          산업 유형
+        </label>
+        <select
+          id="sha-industry-type"
+          value={industryType}
+          onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {INDUSTRY_TYPES.map((it) => (
+            <option key={it} value={it}>
+              {INDUSTRY_TYPE_LABELS[it]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="ml-auto text-xs text-text-tertiary">
+        {variableCount}개 변수
+      </div>
+    </div>
   );
 }
 

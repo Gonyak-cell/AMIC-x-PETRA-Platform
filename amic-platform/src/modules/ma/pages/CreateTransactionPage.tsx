@@ -4,7 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
-import type { TransactionCreate, DealStructure, InvestmentType } from "@/modules/ma/types/transaction";
+import type {
+  TransactionCreate,
+  DealStructure,
+  InvestmentType,
+} from "@/modules/ma/types/transaction";
 import {
   TRANSACTION_SIDE_OPTIONS,
   CURRENCY_OPTIONS,
@@ -57,7 +61,13 @@ export default function CreateTransactionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="New Transaction" subtitle="새 M&A 거래 생성" backgroundImage={heroImg} backgroundOpacity={0.18} compact />
+      <PageHero
+        title="New Transaction"
+        subtitle="새 M&A 거래 생성"
+        backgroundImage={heroImg}
+        backgroundOpacity={0.18}
+        compact
+      />
 
       <div className="max-w-2xl mx-auto">
         <Button
@@ -102,7 +112,9 @@ export default function CreateTransactionPage() {
                 label="자문 유형"
                 options={SIDE_OPTIONS}
                 value={form.side}
-                onChange={(e) => set("side", e.target.value as TransactionCreate["side"])}
+                onChange={(e) =>
+                  set("side", e.target.value as TransactionCreate["side"])
+                }
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -167,7 +179,12 @@ export default function CreateTransactionPage() {
                     options={DEAL_STRUCTURE_OPTIONS}
                     value={form.deal_structure ?? ""}
                     onChange={(e) =>
-                      set("deal_structure", (e.target.value || undefined) as DealStructure | undefined)
+                      set(
+                        "deal_structure",
+                        (e.target.value || undefined) as
+                          | DealStructure
+                          | undefined,
+                      )
                     }
                   />
                   <Select
@@ -175,7 +192,12 @@ export default function CreateTransactionPage() {
                     options={INVESTMENT_TYPE_OPTIONS}
                     value={form.investment_type ?? ""}
                     onChange={(e) =>
-                      set("investment_type", (e.target.value || undefined) as InvestmentType | undefined)
+                      set(
+                        "investment_type",
+                        (e.target.value || undefined) as
+                          | InvestmentType
+                          | undefined,
+                      )
                     }
                   />
                 </div>
@@ -190,10 +212,7 @@ export default function CreateTransactionPage() {
                         : ""
                     }
                     onChange={(e) =>
-                      set(
-                        "estimated_deal_value",
-                        e.target.value ? Number(e.target.value) : undefined,
-                      )
+                      set("estimated_deal_value", e.target.value || undefined)
                     }
                     placeholder="0"
                   />
@@ -201,7 +220,12 @@ export default function CreateTransactionPage() {
                     label="통화"
                     options={CURRENCY_OPTIONS}
                     value={form.currency ?? "KRW"}
-                    onChange={(e) => set("currency", e.target.value as TransactionCreate["currency"])}
+                    onChange={(e) =>
+                      set(
+                        "currency",
+                        e.target.value as TransactionCreate["currency"],
+                      )
+                    }
                   />
                 </div>
 

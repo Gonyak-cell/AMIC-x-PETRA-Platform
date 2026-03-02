@@ -24,6 +24,23 @@ DEAL_STRUCTURES = [
     "OTHER_STRUCTURE",
 ]
 
+# SHA 전용 ENUM
+SHA_TYPES = [
+    "POST_BUYOUT",
+    "JOINT_VENTURE",
+    "MINORITY_INVESTMENT",
+    "OTHER_TYPE",
+]
+
+EXIT_STRATEGIES = [
+    "IPO_FOCUSED",
+    "MNA_FOCUSED",
+    "OTHER_STRATEGY",
+]
+
+# SPA DEAL_STRUCTURES + SHA SHA_TYPES 통합 유효값 (validator용)
+ALL_STRUCTURE_TYPES = [*DEAL_STRUCTURES, *SHA_TYPES]
+
 INDUSTRY_TYPES = [
     "MANUFACTURING",
     "SOFTWARE",
@@ -47,12 +64,16 @@ VALID_INPUT_TYPES = [
 
 
 class SpaStep1Request(BaseModel):
-    """Step 1 요청 — SPA 원문 텍스트 입력."""
+    """Step 1 요청 — 계약서 원문 텍스트 입력."""
 
     spa_text: str = Field(..., min_length=100, max_length=500_000)
     language_hint: Literal["ko", "en"] | None = Field(
         default=None,
         description="언어 힌트. 미지정 시 LLM이 자동 감지.",
+    )
+    doc_type_hint: Literal["SPA", "SHA", "BTA", "SSA", "MOU"] | None = Field(
+        default=None,
+        description="문서 유형 힌트. 미지정 시 LLM이 자동 감지.",
     )
 
 
@@ -97,11 +118,20 @@ class SpaStep1Response(BaseModel):
 
     session_id: str
     variables: list[ExtractedVariable]
-    deal_structure: str
+    deal_structure: str  # SPA: DEAL_STRUCTURES / SHA: SHA_TYPES
     industry_type: str
     detected_doc_type: str = Field(
         default="SPA",
         description="LLM이 감지한 계약서 유형 (SPA/SHA/BTA/SSA/MOU)",
+    )
+    # SHA 전용 필드 (SPA에서는 None)
+    sha_type: str | None = Field(
+        default=None,
+        description="SHA 유형 (POST_BUYOUT/JOINT_VENTURE/MINORITY_INVESTMENT/OTHER_TYPE)",
+    )
+    exit_strategy: str | None = Field(
+        default=None,
+        description="SHA 주요 Exit 전략 (IPO_FOCUSED/MNA_FOCUSED/OTHER_STRATEGY)",
     )
     discovered_booleans: list[DiscoveredBoolean] = Field(default_factory=list)
     llm_cost_usd: float | None = None
@@ -110,8 +140,8 @@ class SpaStep1Response(BaseModel):
     @field_validator("deal_structure")
     @classmethod
     def validate_deal_structure(cls, v: str) -> str:
-        if v not in DEAL_STRUCTURES:
-            msg = f"deal_structure는 {DEAL_STRUCTURES} 중 하나여야 합니다: {v}"
+        if v not in ALL_STRUCTURE_TYPES:
+            msg = f"deal_structure는 {ALL_STRUCTURE_TYPES} 중 하나여야 합니다: {v}"
             raise ValueError(msg)
         return v
 
@@ -150,8 +180,8 @@ class SpaStep2Request(BaseModel):
     @field_validator("deal_structure")
     @classmethod
     def validate_deal_structure(cls, v: str) -> str:
-        if v not in DEAL_STRUCTURES:
-            msg = f"deal_structure는 {DEAL_STRUCTURES} 중 하나여야 합니다: {v}"
+        if v not in ALL_STRUCTURE_TYPES:
+            msg = f"deal_structure는 {ALL_STRUCTURE_TYPES} 중 하나여야 합니다: {v}"
             raise ValueError(msg)
         return v
 

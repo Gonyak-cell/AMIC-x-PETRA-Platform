@@ -5,7 +5,7 @@ export type TransactionPhase =
   | "PREPARATION"
   | "MARKETING"
   | "BIDDING"
-  | "MOU_SIGNED"
+  | "MOU_SIGNED" // deprecated: 마일스톤으로 전환, PG enum 제거 불가하여 유지
   | "MAIN_DUE_DILIGENCE"
   | "NEGOTIATION"
   | "CLOSING"
@@ -65,9 +65,9 @@ export interface Transaction {
   // Deal Terms
   sale_process: SaleProcess | null;
   control_transfer: ControlTransfer | null;
-  target_stake: number | null;
-  new_share_ratio: number | null;
-  old_share_ratio: number | null;
+  target_stake: string | null;
+  new_share_ratio: string | null;
+  old_share_ratio: string | null;
   valuation_basis: ValuationBasis | null;
   cross_border: CrossBorder | null;
   target_buyer_types: TargetBuyerType[] | null;

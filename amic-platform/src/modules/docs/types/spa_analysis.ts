@@ -32,6 +32,40 @@ export const DEAL_STRUCTURE_LABELS: Record<DealStructure, string> = {
   OTHER_STRUCTURE: "기타 구조",
 };
 
+// ── SHA 전용 ENUM ──────────────────────────────────────────────────────────
+
+export const SHA_TYPES = [
+  "POST_BUYOUT",
+  "JOINT_VENTURE",
+  "MINORITY_INVESTMENT",
+  "OTHER_TYPE",
+] as const;
+export type ShaType = (typeof SHA_TYPES)[number];
+
+export const SHA_TYPE_LABELS: Record<ShaType, string> = {
+  POST_BUYOUT: "경영권 인수 후 SHA",
+  JOINT_VENTURE: "합작투자 (JV)",
+  MINORITY_INVESTMENT: "소수지분 투자",
+  OTHER_TYPE: "기타",
+};
+
+export const EXIT_STRATEGIES = [
+  "IPO_FOCUSED",
+  "MNA_FOCUSED",
+  "OTHER_STRATEGY",
+] as const;
+export type ExitStrategy = (typeof EXIT_STRATEGIES)[number];
+
+export const EXIT_STRATEGY_LABELS: Record<ExitStrategy, string> = {
+  IPO_FOCUSED: "IPO 중심",
+  MNA_FOCUSED: "M&A 매각 중심",
+  OTHER_STRATEGY: "기타",
+};
+
+// SPA DEAL_STRUCTURES + SHA SHA_TYPES 통합
+export const ALL_STRUCTURE_TYPES = [...DEAL_STRUCTURES, ...SHA_TYPES] as const;
+export type AllStructureType = DealStructure | ShaType;
+
 export const INDUSTRY_TYPES = [
   "MANUFACTURING",
   "SOFTWARE",
@@ -75,14 +109,17 @@ export interface DiscoveredBoolean {
 export interface SpaStep1Request {
   spa_text: string;
   language_hint?: "ko" | "en" | null;
+  doc_type_hint?: DocType | null;
 }
 
 export interface SpaStep1Response {
   session_id: string;
   variables: ExtractedVariable[];
-  deal_structure: DealStructure;
+  deal_structure: string; // DealStructure | ShaType
   industry_type: IndustryType;
   detected_doc_type: DocType;
+  sha_type?: ShaType | null;
+  exit_strategy?: ExitStrategy | null;
   discovered_booleans: DiscoveredBoolean[];
   llm_cost_usd: number | null;
   model_used: string | null;
@@ -104,7 +141,7 @@ export interface SpaStep2Request {
   session_id: string;
   spa_text?: string;
   variables: ExtractedVariable[];
-  deal_structure: DealStructure;
+  deal_structure: string; // DealStructure | ShaType
   industry_type: IndustryType;
 }
 

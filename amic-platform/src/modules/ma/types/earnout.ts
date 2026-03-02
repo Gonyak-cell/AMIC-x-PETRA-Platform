@@ -21,12 +21,12 @@ export interface EarnoutMilestone {
   title: string;
   description: string | null;
   metric: EarnoutMetric;
-  target_value: number;
-  actual_value: number | null;
+  target_value: string;
+  actual_value: string | null;
   currency: string;
   measurement_start: string | null;
   measurement_end: string | null;
-  payment_amount: number | null;
+  payment_amount: string | null;
   payment_date: string | null;
   status: EarnoutStatus;
   notes: string | null;
@@ -63,8 +63,8 @@ export interface EarnoutUpdate {
 
 export interface EarnoutSummary {
   total: number;
-  total_target: number;
-  total_actual: number;
-  total_payment: number;
+  total_target: string;
+  total_actual: string;
+  total_payment: string;
   by_status: Record<string, number>;
 }

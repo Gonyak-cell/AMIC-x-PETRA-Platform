@@ -94,6 +94,7 @@ async def upload_attachment(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     # entity_type 검증
     if entity_type not in VALID_ENTITY_TYPES:

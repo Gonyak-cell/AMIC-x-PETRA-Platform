@@ -8,7 +8,7 @@ export interface ConsortiumMapping {
   co_investor_buyer_id: string;
   co_investor_buyer_name: string;
   status: ConsortiumStatus;
-  equity_share_pct: number | null;
+  equity_share_pct: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

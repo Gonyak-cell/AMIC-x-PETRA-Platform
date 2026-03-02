@@ -45,6 +45,8 @@ class TransactionOut(BaseModel):
     fdd_deal_id: str | None = None
     im_document_id: str | None = None
     notes: str | None = None
+    corporate_info: dict | None = None
+    financial_summary: dict | None = None
     is_deleted: bool = False
     created_at: datetime
     updated_at: datetime
