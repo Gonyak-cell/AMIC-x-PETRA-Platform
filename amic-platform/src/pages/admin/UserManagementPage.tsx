@@ -12,7 +12,12 @@ import {
   Info,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/useUsers";
+import {
+  useUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+} from "@/hooks/useUsers";
 import {
   useClientDeals,
   useAdminAssignDeal,
@@ -126,7 +131,9 @@ function ClientDealAssignments({
 
       {!deals || deals.length === 0 ? (
         <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <p>배정된 딜이 없습니다. 이 클라이언트는 어떤 딜도 열람할 수 없습니다.</p>
+          <p>
+            배정된 딜이 없습니다. 이 클라이언트는 어떤 딜도 열람할 수 없습니다.
+          </p>
         </div>
       ) : (
         <div className="rounded border border-amic-200 bg-amic-50/50 divide-y divide-amic-100">
@@ -212,9 +219,8 @@ export default function UserManagementPage() {
       total: users.length,
       admins: users.filter((u) => u.role === "ADMIN").length,
       managers: users.filter((u) => u.role === "MANAGER").length,
-      others: users.filter(
-        (u) => u.role === "ANALYST" || u.role === "VIEWER",
-      ).length,
+      others: users.filter((u) => u.role === "ANALYST" || u.role === "VIEWER")
+        .length,
       clients: users.filter((u) => u.role === "CLIENT").length,
     };
   }, [users]);
@@ -429,7 +435,6 @@ export default function UserManagementPage() {
             keyField="id"
             loading={isLoading}
             striped
-            uppercaseHeaders
             borderless
           />
         )}
@@ -461,7 +466,9 @@ export default function UserManagementPage() {
                   {ROLE_OPTIONS.map((r) => (
                     <td key={r.value} className="text-center py-2 px-3">
                       {ROLE_PERMISSIONS[r.value as UserRole].has(perm) ? (
-                        <span className="text-positive font-bold">&#10003;</span>
+                        <span className="text-positive font-bold">
+                          &#10003;
+                        </span>
                       ) : (
                         <span className="text-text-secondary">&#8212;</span>
                       )}
@@ -555,7 +562,10 @@ export default function UserManagementPage() {
                 <p>
                   Client users can only view deals they are explicitly assigned
                   to. After creating this user, assign them to specific deals in{" "}
-                  <strong>M&A &rarr; Transaction Workspace &rarr; Client Access</strong>.
+                  <strong>
+                    M&A &rarr; Transaction Workspace &rarr; Client Access
+                  </strong>
+                  .
                 </p>
               </div>
             </div>

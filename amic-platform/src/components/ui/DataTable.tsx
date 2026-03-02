@@ -151,7 +151,7 @@ export function DataTable<T extends object>({
                 <th
                   key={col.key}
                   className={cn(
-                    "font-heading font-semibold text-sub-header tracking-wide",
+                    "font-heading font-semibold text-sub-header",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"],
@@ -211,7 +211,7 @@ export function DataTable<T extends object>({
                 <th
                   key={col.key}
                   className={cn(
-                    "font-heading font-semibold text-sub-header tracking-wide",
+                    "font-heading font-semibold text-sub-header",
                     uppercaseHeaders && "uppercase tracking-[0.15em]",
                     cellPadding,
                     alignStyles[col.align || "left"],
@@ -259,7 +259,7 @@ export function DataTable<T extends object>({
               <th
                 key={col.key}
                 className={cn(
-                  "font-heading font-semibold text-sub-header tracking-wide",
+                  "font-heading font-semibold text-sub-header",
                   uppercaseHeaders && "uppercase tracking-[0.15em]",
                   cellPadding,
                   alignStyles[col.align || "left"],

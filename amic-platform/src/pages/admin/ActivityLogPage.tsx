@@ -28,7 +28,10 @@ import { formatDate } from "@/lib/format";
 
 type ViewMode = "table" | "timeline";
 
-const ACTION_BADGE_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
+const ACTION_BADGE_VARIANT: Record<
+  string,
+  "success" | "warning" | "error" | "info" | "neutral"
+> = {
   create: "success",
   update: "info",
   delete: "error",
@@ -78,8 +81,7 @@ export default function ActivityLogPage() {
       toast.success("Activity log exported");
     } catch {
       try {
-        const escapeCsv = (v: string) =>
-          `"${v.replace(/"/g, '""')}"`;
+        const escapeCsv = (v: string) => `"${v.replace(/"/g, '""')}"`;
         const rows = items.map((item) =>
           [
             item.created_at,
@@ -293,13 +295,7 @@ export default function ActivityLogPage() {
               description="No activity records match your current filters. Activities will appear here as users interact with the platform."
             />
           ) : (
-            <DataTable
-              columns={columns}
-              data={items}
-              keyField="id"
-              striped
-              uppercaseHeaders
-            />
+            <DataTable columns={columns} data={items} keyField="id" striped />
           )}
         </Card>
       ) : (

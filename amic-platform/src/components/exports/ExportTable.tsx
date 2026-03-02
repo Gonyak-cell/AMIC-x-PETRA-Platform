@@ -59,9 +59,7 @@ export function ExportTable({
     {
       key: "module",
       header: "Module",
-      render: (row) => (
-        <Badge variant="info">{row.module.toUpperCase()}</Badge>
-      ),
+      render: (row) => <Badge variant="info">{row.module.toUpperCase()}</Badge>,
     },
     {
       key: "format",
@@ -136,7 +134,11 @@ export function ExportTable({
           >
             Download ZIP
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected(new Set())}
+          >
             Clear
           </Button>
         </div>
@@ -147,7 +149,6 @@ export function ExportTable({
         columns={columns}
         keyField="id"
         emptyMessage="No exports found."
-        uppercaseHeaders
         borderless={false}
       />
     </div>

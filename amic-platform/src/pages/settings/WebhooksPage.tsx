@@ -66,9 +66,7 @@ export default function WebhooksPage() {
 
   const toggleEvent = (event: string) => {
     setSelectedEvents((prev) =>
-      prev.includes(event)
-        ? prev.filter((e) => e !== event)
-        : [...prev, event],
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
     );
   };
 
@@ -213,7 +211,6 @@ export default function WebhooksPage() {
             columns={columns}
             keyField="id"
             emptyMessage="No webhooks"
-            uppercaseHeaders
           />
         </Card>
       )}
@@ -247,9 +244,7 @@ export default function WebhooksPage() {
             onChange={(e) => setUrl(e.target.value)}
           />
           <div>
-            <label className="label-uppercase mb-2 block">
-              Events
-            </label>
+            <label className="label-uppercase mb-2 block">Events</label>
             <div className="flex flex-wrap gap-2">
               {EVENT_OPTIONS.map((event) => (
                 <button
