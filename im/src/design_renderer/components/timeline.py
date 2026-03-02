@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Matplotlib 비인터랙티브 백엔드
-import matplotlib
+# Matplotlib 비인터랙티브 백엔드 — use() 후 pyplot import 필수
+import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as _plt  # noqa: E402
@@ -121,9 +121,7 @@ def _render_horizontal_timeline(
         event_text = evt.get("event", "")
 
         # 마커
-        ax.scatter(
-            i, 0, s=80, color=c.accent, zorder=2, edgecolors=c.primary
-        )
+        ax.scatter(i, 0, s=80, color=c.accent, zorder=2, edgecolors=c.primary)
 
         # 연도 라벨 (아래)
         ax.text(
@@ -251,7 +249,9 @@ def render_timeline_pptx(
     _get_plt().close(fig)
     buf.seek(0)
 
-    slide.shapes.add_picture(buf, Inches(left), Inches(top), Inches(width), Inches(height))
+    slide.shapes.add_picture(
+        buf, Inches(left), Inches(top), Inches(width), Inches(height)
+    )
 
 
 # ---------------------------------------------------------------------------

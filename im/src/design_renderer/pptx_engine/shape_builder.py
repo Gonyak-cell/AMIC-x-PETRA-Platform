@@ -272,18 +272,22 @@ def add_chart_image(
 
     lay = tokens.layout
 
-    l = Inches(left if left is not None else lay.content_left)
-    t = Inches(top if top is not None else lay.content_top + 0.5)
-    w = Inches(width if width is not None else lay.content_width)
-    h = Inches(height)
+    pos_left = Inches(left if left is not None else lay.content_left)
+    pos_top = Inches(top if top is not None else lay.content_top + 0.5)
+    pos_width = Inches(width if width is not None else lay.content_width)
+    pos_height = Inches(height)
 
     if isinstance(image_path_or_bytes, bytes):
         from io import BytesIO
 
         stream = BytesIO(image_path_or_bytes)
-        return slide.shapes.add_picture(stream, l, t, w, h)
+        return slide.shapes.add_picture(
+            stream, pos_left, pos_top, pos_width, pos_height
+        )
 
-    return slide.shapes.add_picture(str(image_path_or_bytes), l, t, w, h)
+    return slide.shapes.add_picture(
+        str(image_path_or_bytes), pos_left, pos_top, pos_width, pos_height
+    )
 
 
 def add_chart_or_image(
@@ -345,8 +349,12 @@ def add_chart_or_image(
     img = chart_data_dict.get("image_bytes") or chart_data_dict.get("image_path")
     if img:
         return add_chart_image(
-            slide, img,
-            left=pos_left, top=pos_top, width=pos_width, height=pos_height,
+            slide,
+            img,
+            left=pos_left,
+            top=pos_top,
+            width=pos_width,
+            height=pos_height,
             tokens=tokens,
         )
     return None
@@ -439,9 +447,7 @@ def add_section_bar(
 
     # 배경색 — design_tokens.colors.section_bar_bg
     shape.fill.solid()
-    shape.fill.fore_color.rgb = RGBColor.from_string(
-        c.section_bar_bg.lstrip("#")
-    )
+    shape.fill.fore_color.rgb = RGBColor.from_string(c.section_bar_bg.lstrip("#"))
     shape.line.fill.background()
 
     # 텍스트
@@ -482,15 +488,21 @@ def add_dual_section_bars(
     panel_w = dp.panel_width / 2.54
 
     left_bar = add_section_bar(
-        slide, left_title,
-        left=dp.left_x / 2.54, top=bar_y,
-        width=panel_w, height=bar_h,
+        slide,
+        left_title,
+        left=dp.left_x / 2.54,
+        top=bar_y,
+        width=panel_w,
+        height=bar_h,
         tokens=tokens,
     )
     right_bar = add_section_bar(
-        slide, right_title,
-        left=dp.right_x / 2.54, top=bar_y,
-        width=panel_w, height=bar_h,
+        slide,
+        right_title,
+        left=dp.right_x / 2.54,
+        top=bar_y,
+        width=panel_w,
+        height=bar_h,
         tokens=tokens,
     )
 

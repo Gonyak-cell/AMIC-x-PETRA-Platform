@@ -2,6 +2,7 @@
 
 렌더러 레지스트리를 통해 section_id로 렌더러를 조회할 수 있다.
 """
+# ruff: noqa: E402  — 레지스트리 패턴: register_renderer 정의 후 import 필수
 
 from __future__ import annotations
 
@@ -62,21 +63,35 @@ from src.design_renderer.section_renderers.disclaimer import DisclaimerRenderer
 from src.design_renderer.section_renderers.toc_divider import TOCDividerRenderer
 
 # F-β Deal/Company 렌더러
-from src.design_renderer.section_renderers.business_overview import BusinessOverviewRenderer
-from src.design_renderer.section_renderers.company_overview import CompanyOverviewRenderer
+from src.design_renderer.section_renderers.business_overview import (
+    BusinessOverviewRenderer,
+)
+from src.design_renderer.section_renderers.company_overview import (
+    CompanyOverviewRenderer,
+)
 from src.design_renderer.section_renderers.deal_overview import DealOverviewRenderer
-from src.design_renderer.section_renderers.executive_summary import ExecutiveSummaryRenderer
+from src.design_renderer.section_renderers.executive_summary import (
+    ExecutiveSummaryRenderer,
+)
 
 # F-γ Strategy 렌더러
 from src.design_renderer.section_renderers.growth_strategy import GrowthStrategyRenderer
-from src.design_renderer.section_renderers.investment_highlights import InvestmentHighlightsRenderer
+from src.design_renderer.section_renderers.investment_highlights import (
+    InvestmentHighlightsRenderer,
+)
 from src.design_renderer.section_renderers.market_overview import MarketOverviewRenderer
 from src.design_renderer.section_renderers.value_creation import ValueCreationRenderer
 
 # F-δ Financial 렌더러
-from src.design_renderer.section_renderers.financial_analysis import FinancialAnalysisRenderer
-from src.design_renderer.section_renderers.shareholder_structure import ShareholderStructureRenderer
-from src.design_renderer.section_renderers.transaction_structure import TransactionStructureRenderer
+from src.design_renderer.section_renderers.financial_analysis import (
+    FinancialAnalysisRenderer,
+)
+from src.design_renderer.section_renderers.shareholder_structure import (
+    ShareholderStructureRenderer,
+)
+from src.design_renderer.section_renderers.transaction_structure import (
+    TransactionStructureRenderer,
+)
 
 # F-ε Supporting 렌더러
 from src.design_renderer.section_renderers.appendix import AppendixRenderer
@@ -88,7 +103,9 @@ from src.design_renderer.section_renderers.valuation import ValuationRenderer
 
 # F-ζ Industry 렌더러
 from src.design_renderer.section_renderers.industry_kpi import IndustryKPIRenderer
-from src.design_renderer.section_renderers.industry_overview import IndustryOverviewRenderer
+from src.design_renderer.section_renderers.industry_overview import (
+    IndustryOverviewRenderer,
+)
 
 # F-θ TM (Teaser Memorandum) 전용 렌더러
 from src.design_renderer.section_renderers.market_drivers import (
@@ -109,11 +126,19 @@ from src.design_renderer.section_renderers.tm_aliases import (
 )
 
 # F-ι DM (Discussion Memorandum) 전용 렌더러
-from src.design_renderer.section_renderers.dm_market_trends import DmMarketTrendsRenderer
-from src.design_renderer.section_renderers.dm_deal_structure import DmDealStructureRenderer
-from src.design_renderer.section_renderers.dm_investment_thesis import DmInvestmentThesisRenderer
+from src.design_renderer.section_renderers.dm_market_trends import (
+    DmMarketTrendsRenderer,
+)
+from src.design_renderer.section_renderers.dm_deal_structure import (
+    DmDealStructureRenderer,
+)
+from src.design_renderer.section_renderers.dm_investment_thesis import (
+    DmInvestmentThesisRenderer,
+)
 from src.design_renderer.section_renderers.dm_valuation import DmValuationRenderer
-from src.design_renderer.section_renderers.dm_risk_assessment import DmRiskAssessmentRenderer
+from src.design_renderer.section_renderers.dm_risk_assessment import (
+    DmRiskAssessmentRenderer,
+)
 from src.design_renderer.section_renderers.dm_summary import DmSummaryRenderer
 
 __all__ = [

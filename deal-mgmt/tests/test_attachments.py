@@ -10,6 +10,20 @@ pytestmark = pytest.mark.anyio
 BASE = "/api/v1/transactions"
 
 
+# 확장자별 매직바이트 — _validate_magic_bytes 검증 통과용
+_MAGIC_BY_EXT: dict[str, bytes] = {
+    ".pdf": b"%PDF-1.4 fake content",
+    ".docx": b"PK\x03\x04 fake docx content",
+    ".xlsx": b"PK\x03\x04 fake xlsx content",
+    ".pptx": b"PK\x03\x04 fake pptx content",
+    ".zip": b"PK\x03\x04 fake zip content",
+    ".png": b"\x89PNG\r\n\x1a\n fake png content",
+    ".jpg": b"\xff\xd8\xff\xe0 fake jpg content",
+    ".txt": b"fake text content",
+    ".csv": b"col1,col2\nval1,val2",
+}
+
+
 async def _upload(client: AsyncClient, txn_id: str, **overrides) -> dict:
     data = {
         "entity_type": overrides.get("entity_type", "NDA"),
@@ -20,7 +34,9 @@ async def _upload(client: AsyncClient, txn_id: str, **overrides) -> dict:
         data["description"] = overrides["description"]
 
     filename = overrides.get("filename", "test.pdf")
-    content = overrides.get("content", b"fake pdf content")
+    ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    default_content = _MAGIC_BY_EXT.get(ext, b"%PDF-1.4 fallback content")
+    content = overrides.get("content", default_content)
     files = {"file": (filename, io.BytesIO(content), "application/octet-stream")}
 
     resp = await client.post(f"{BASE}/{txn_id}/attachments", data=data, files=files)
@@ -94,7 +110,8 @@ async def test_list_filter_entity_type(client: AsyncClient, transaction_id: str)
 
 
 async def test_download(client: AsyncClient, transaction_id: str):
-    upload_resp = await _upload(client, transaction_id, content=b"hello world pdf")
+    pdf_content = b"%PDF-1.4 hello world pdf"
+    upload_resp = await _upload(client, transaction_id, content=pdf_content)
     att_id = upload_resp.json()["id"]
 
     resp = await client.get(f"{BASE}/{transaction_id}/attachments/{att_id}/download")
