@@ -360,11 +360,12 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ko-KR");
 }
 
-function formatAmount(amount: number | null): string {
+function formatAmount(amount: string | number | null): string {
   if (amount == null) return "-";
-  if (amount >= 1_0000_0000)
-    return `${(amount / 1_0000_0000).toLocaleString()}억`;
-  return amount.toLocaleString();
+  const num = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(num)) return "-";
+  if (num >= 1_0000_0000) return `${(num / 1_0000_0000).toLocaleString()}억`;
+  return num.toLocaleString();
 }
 
 // INLINE_INPUT_CLS는 @/components/ui에서 import
@@ -3580,7 +3581,11 @@ export default function TransactionWorkspacePage() {
                               e.target.value === ""
                                 ? undefined
                                 : Number(e.target.value);
-                            if (v !== m.actual_value)
+                            const current =
+                              m.actual_value != null
+                                ? Number(m.actual_value)
+                                : undefined;
+                            if (v !== current)
                               updateEarnout.mutate({
                                 milestoneId: m.id,
                                 body: { actual_value: v },
@@ -3630,7 +3635,11 @@ export default function TransactionWorkspacePage() {
                               e.target.value === ""
                                 ? undefined
                                 : Number(e.target.value);
-                            if (v !== m.payment_amount)
+                            const current =
+                              m.payment_amount != null
+                                ? Number(m.payment_amount)
+                                : undefined;
+                            if (v !== current)
                               updateEarnout.mutate({
                                 milestoneId: m.id,
                                 body: { payment_amount: v },
