@@ -51,6 +51,11 @@ if "celery" not in sys.modules:
     _celery_mock.Celery = _FakeCelery  # type: ignore[attr-defined]
     sys.modules["celery"] = _celery_mock
 
+    # celery.schedules 서브모듈 mock (cleanup_tasks.py의 crontab import 대응)
+    _celery_schedules = ModuleType("celery.schedules")
+    _celery_schedules.crontab = MagicMock(name="crontab")  # type: ignore[attr-defined]
+    sys.modules["celery.schedules"] = _celery_schedules
+
 from collections.abc import AsyncGenerator
 
 import pytest

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { Users, UserPlus, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,

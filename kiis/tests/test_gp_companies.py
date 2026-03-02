@@ -114,9 +114,7 @@ class TestSearchGPCompanies:
 
     async def test_combined_filters(self, async_session: AsyncSession, gp_companies: list[Company]) -> None:
         """source + strategy 동시 필터."""
-        results, total = await search_gp_companies(
-            async_session, source="kvic", strategy="institutional_pef"
-        )
+        results, total = await search_gp_companies(async_session, source="kvic", strategy="institutional_pef")
         assert total == 1
         assert results[0].corp_name == "스틱인베스트먼트"
 

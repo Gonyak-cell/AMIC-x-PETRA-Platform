@@ -25,7 +25,6 @@ import type {
   RFICategory,
   RFIItemStatus,
   RFIItemPriority,
-  RFIStatus,
 } from "@/modules/ma/types/rfi";
 import {
   RFI_STATUS_LABELS,

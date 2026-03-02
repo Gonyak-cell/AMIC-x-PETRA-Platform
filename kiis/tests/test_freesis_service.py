@@ -144,18 +144,10 @@ class TestFreeSISParseLogic:
             items.append(
                 FreeSISGPItem(
                     company_name=name_str,
-                    setting_balance=safe_decimal(
-                        self.service._get_cell(row, col_map.get("setting_balance"))
-                    ),
-                    fund_count=safe_int(
-                        self.service._get_cell(row, col_map.get("fund_count"))
-                    ),
-                    fund_inflow=safe_decimal(
-                        self.service._get_cell(row, col_map.get("fund_inflow"))
-                    ),
-                    fund_outflow=safe_decimal(
-                        self.service._get_cell(row, col_map.get("fund_outflow"))
-                    ),
+                    setting_balance=safe_decimal(self.service._get_cell(row, col_map.get("setting_balance"))),
+                    fund_count=safe_int(self.service._get_cell(row, col_map.get("fund_count"))),
+                    fund_inflow=safe_decimal(self.service._get_cell(row, col_map.get("fund_inflow"))),
+                    fund_outflow=safe_decimal(self.service._get_cell(row, col_map.get("fund_outflow"))),
                     reference_date="2024-12",
                 )
             )

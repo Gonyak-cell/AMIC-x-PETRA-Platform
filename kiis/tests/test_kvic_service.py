@@ -125,10 +125,9 @@ class TestKVICCSVParsing:
         self.service = KVICService()
 
     def test_parse_utf8_csv(self) -> None:
-        csv_content = (
-            "대표운영사,운영사구분,자조합 규모(백만원)\n"
-            "테스트운용사,벤처투자회사,50000\n"
-        ).encode("utf-8-sig")
+        csv_content = ("대표운영사,운영사구분,자조합 규모(백만원)\n테스트운용사,벤처투자회사,50000\n").encode(
+            "utf-8-sig"
+        )
         items = self.service.parse_kvic_csv(csv_content)
         assert len(items) == 1
         assert items[0].operator_name == "테스트운용사"
@@ -137,9 +136,7 @@ class TestKVICCSVParsing:
 
     def test_parse_cp949_csv(self) -> None:
         csv_content = (
-            "대표운영사,운영사구분,자조합 규모(백만원)\n"
-            "스틱벤처스,벤처투자회사,33400\n"
-            "한화투자증권,신기술사,20000\n"
+            "대표운영사,운영사구분,자조합 규모(백만원)\n스틱벤처스,벤처투자회사,33400\n한화투자증권,신기술사,20000\n"
         ).encode("cp949")
         items = self.service.parse_kvic_csv(csv_content)
         assert len(items) == 2
@@ -153,7 +150,9 @@ class TestKVICCSVParsing:
 
 # --- 실제 파일 파싱 테스트 ---
 
-REAL_CSV_PATH = Path(__file__).resolve().parent.parent / "app" / "data" / "한국벤처투자_모태펀드 자조합 운용사정보_20251212.csv"
+REAL_CSV_PATH = (
+    Path(__file__).resolve().parent.parent / "app" / "data" / "한국벤처투자_모태펀드 자조합 운용사정보_20251212.csv"
+)
 
 
 @pytest.mark.skipif(not REAL_CSV_PATH.exists(), reason="KVIC CSV 파일 미존재")
@@ -265,23 +264,16 @@ class TestOperatorDedup:
 
     def test_dedup_keeps_largest_fund(self) -> None:
         items = [
-            KVICFundOperator(
-                fund_name="1호", operator_name="테스트운용사", fund_size=Decimal("50000")
-            ),
-            KVICFundOperator(
-                fund_name="2호", operator_name="테스트운용사", fund_size=Decimal("80000")
-            ),
-            KVICFundOperator(
-                fund_name="3호", operator_name="다른운용사", fund_size=Decimal("30000")
-            ),
+            KVICFundOperator(fund_name="1호", operator_name="테스트운용사", fund_size=Decimal("50000")),
+            KVICFundOperator(fund_name="2호", operator_name="테스트운용사", fund_size=Decimal("80000")),
+            KVICFundOperator(fund_name="3호", operator_name="다른운용사", fund_size=Decimal("30000")),
         ]
         operator_map: dict[str, KVICFundOperator] = {}
         for item in items:
             name = item.operator_name
             existing = operator_map.get(name)
             if existing is None or (
-                item.fund_size
-                and (existing.fund_size is None or item.fund_size > existing.fund_size)
+                item.fund_size and (existing.fund_size is None or item.fund_size > existing.fund_size)
             ):
                 operator_map[name] = item
 

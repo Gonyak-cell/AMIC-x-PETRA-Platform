@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Sparkles } from "lucide-react";
+import { Trash2, Sparkles } from "lucide-react";
 import {
   useContracts,
   useContractSummary,
