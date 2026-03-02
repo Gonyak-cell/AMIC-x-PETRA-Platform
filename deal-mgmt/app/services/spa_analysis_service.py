@@ -733,16 +733,19 @@ async def analyze_step1_variables(
     str,
     str,
     list[DiscoveredBoolean],
-    str | None,
-    str | None,
-    float | None,
-    str | None,
+    str | None,  # sha_type
+    str | None,  # exit_strategy
+    str | None,  # bta_scope
+    str | None,  # severance_pay_handling
+    float | None,  # cost
+    str | None,  # model
 ]:
     """Step 1: 계약서 원문에서 변수를 추출한다.
 
     Returns:
         (session_id, variables, deal_structure, industry_type, detected_doc_type,
-         discovered_booleans, sha_type, exit_strategy, cost, model)
+         discovered_booleans, sha_type, exit_strategy, bta_scope,
+         severance_pay_handling, cost, model)
     """
     session_id = str(uuid.uuid4())
 
@@ -775,7 +778,7 @@ async def analyze_step1_variables(
 
     try:
         data, cost, model = await _call_llm_json(system_prompt, user_prompt)
-    except Exception:
+    except (RuntimeError, ValueError):
         _sessions.pop(session_id, None)
         raise
 
@@ -1230,6 +1233,11 @@ async def analyze_step2_clauses(
         session = _get_session(session_id)
     except ValueError:
         if spa_text:
+            # 세션 한도 체크 (폴백 경로에서도 적용)
+            if len(_sessions) >= _MAX_SESSIONS:
+                _cleanup_expired_sessions()
+                if len(_sessions) >= _MAX_SESSIONS:
+                    raise RuntimeError("분석 세션 수가 한도에 도달했습니다. 잠시 후 다시 시도하세요.") from None
             session = AnalysisSession(session_id=session_id, spa_text=spa_text)
             if doc_type_hint:
                 session.detected_doc_type = doc_type_hint

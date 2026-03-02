@@ -93,17 +93,22 @@ class SpaStep1Request(BaseModel):
 class ExtractedVariable(BaseModel):
     """LLM이 추출한 변수 하나."""
 
-    variable_key: str = Field(..., min_length=1, max_length=100)
+    variable_key: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        pattern=r"^[a-z][a-z0-9_]{0,98}$",
+    )
     input_type: str = Field(..., description="TEXT/TEXTAREA/NUMBER/DATE/SELECT/BOOLEAN/CURRENCY/PERCENTAGE")
     question_label: str = Field(..., min_length=1, max_length=300)
-    description: str | None = None
-    extracted_value: str | None = Field(default=None, description="원문에서 추출된 실제 값")
-    default_value: str | None = None
+    description: str | None = Field(default=None, max_length=1000)
+    extracted_value: str | None = Field(default=None, max_length=10000, description="원문에서 추출된 실제 값")
+    default_value: str | None = Field(default=None, max_length=10000)
     is_required: bool = True
     select_options: dict[str, str] | None = None
     display_order: int = 0
-    group_name: str | None = None
-    visible_condition: str | None = None
+    group_name: str | None = Field(default=None, max_length=100)
+    visible_condition: str | None = Field(default=None, max_length=500)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @field_validator("input_type")
@@ -114,14 +119,35 @@ class ExtractedVariable(BaseModel):
             raise ValueError(msg)
         return v
 
+    @field_validator("visible_condition")
+    @classmethod
+    def validate_visible_condition(cls, v: str | None) -> str | None:
+        """visible_condition도 condition_expression과 동일한 보안 검증 적용."""
+        if v is None:
+            return v
+        import ast
+        import re
+
+        forbidden = re.compile(
+            r"(__\w+__|import|exec|eval|compile|globals|locals|getattr|setattr|delattr|open|os\.|sys\.|subprocess)"
+        )
+        if forbidden.search(v):
+            return None  # 위험한 표현식 → 무시
+        try:
+            ast.parse(v, mode="eval")
+        except SyntaxError:
+            return None  # 파싱 불가능 → 무시
+        return v
+
 
 class DiscoveredBoolean(BaseModel):
     """LLM이 자율 발견한 특수 조항 BOOLEAN 변수."""
 
-    variable_key: str = Field(..., pattern=r"^has_[a-z_]+$")
-    question_label: str
+    variable_key: str = Field(..., pattern=r"^has_[a-z_]+$", max_length=100)
+    question_label: str = Field(..., min_length=1, max_length=300)
     detected_in_clause: str | None = Field(
         default=None,
+        max_length=200,
         description="해당 BOOLEAN이 발견된 원문 조항 제목",
     )
 

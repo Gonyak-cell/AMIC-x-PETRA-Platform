@@ -61,6 +61,46 @@ class TestSpaSchemas:
             )
             assert v.input_type == it
 
+    def test_visible_condition_valid(self) -> None:
+        """유효한 visible_condition은 통과."""
+        v = ExtractedVariable(
+            variable_key="test",
+            input_type="TEXT",
+            question_label="테스트",
+            visible_condition="has_escrow == True",
+        )
+        assert v.visible_condition == "has_escrow == True"
+
+    def test_visible_condition_forbidden_returns_none(self) -> None:
+        """forbidden 키워드가 포함된 visible_condition은 None으로 치환."""
+        v = ExtractedVariable(
+            variable_key="test",
+            input_type="TEXT",
+            question_label="테스트",
+            visible_condition="__import__('os').system('rm -rf /')",
+        )
+        assert v.visible_condition is None
+
+    def test_visible_condition_syntax_error_returns_none(self) -> None:
+        """파싱 불가능한 visible_condition은 None으로 치환."""
+        v = ExtractedVariable(
+            variable_key="test",
+            input_type="TEXT",
+            question_label="테스트",
+            visible_condition="if True then",
+        )
+        assert v.visible_condition is None
+
+    def test_visible_condition_none_passes(self) -> None:
+        """visible_condition이 None이면 그대로 통과."""
+        v = ExtractedVariable(
+            variable_key="test",
+            input_type="TEXT",
+            question_label="테스트",
+            visible_condition=None,
+        )
+        assert v.visible_condition is None
+
     def test_discovered_boolean_pattern(self) -> None:
         """has_ 접두사 패턴 검증."""
         b = DiscoveredBoolean(

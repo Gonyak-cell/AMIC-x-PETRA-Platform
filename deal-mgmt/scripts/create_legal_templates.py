@@ -1,214 +1,129 @@
 """
 법률 문서 docxtpl 템플릿 생성 스크립트.
 
-한국 M&A 실무 체결본(SPA/SHA/BTA/SSA/MOU) 서식 분석을 기반으로
-python-docx를 사용하여 docxtpl 호환 템플릿을 생성한다.
+52개 한국 M&A 실무 체결본 python-docx 정밀 분석 결과 기반.
+CONTRACT_STYLE_CONFIG (app/core/contract_styles.py) 표준 서식 적용.
 
-서식 기준 (2026-02-23 샘플 분석):
-  - 폰트: 바탕체 (한글), Times New Roman (영문)
+서식 기준 (2026-03-02 갱신, Tempus SPA 체결본 실측):
+  - 폰트: 바탕 (한글), Times New Roman (영문), 11.5pt
   - 페이지: A4 (21.0 × 29.7 cm)
-  - 여백: 좌 2.54 / 우 2.54 / 상 3.00 / 하 2.54 cm (SPA/SHA/SSA/MOU)
-          좌 2.50 / 우 2.50 / 상 3.00 / 하 3.00 cm (BTA)
-  - 제목: 16pt Bold 중앙정렬 (SPA/SHA/SSA), 14pt (MOU), 20pt (BTA)
-  - 본문: 12pt, 들여쓰기 1.30~1.50 cm
-  - 색상: 흑백 (브랜드 컬러 사용 안 함)
+  - 여백: 좌 2.50 / 우 2.50 / 상 3.00 / 하 3.00 cm (전 유형 통일)
+  - 줄간격: 1.3배 (MULTIPLE)
+  - 정렬: 양쪽정렬 (JUSTIFY)
+  - 바닥글: "- 1 -" 형식 페이지 번호
+  - 커스텀 스타일: Contract_L1~L4, Contract_Body, Contract_Definition
+  - 색상: 흑백
 
 사용법:
     cd deal-mgmt
-    uv run python scripts/create_legal_templates.py
+    python scripts/create_legal_templates.py
 
 생성 위치: deal-mgmt/templates/legal/
 """
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
+# scripts/ 디렉토리에서 실행 시 app 모듈 import를 위한 경로 추가
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
+from app.core.contract_styles import (
+    CONTRACT_STYLE_CONFIG,
+    add_article_heading,
+    add_body,
+    add_date_line,
+    add_jinja_block,
+    add_jinja_line,
+    add_preamble_body,
+    add_preamble_text,
+    add_section_label,
+    add_signature_table,
+    add_subheading,
+    add_subtitle,
+    add_title,
+    apply_font,
+    create_base_contract_document,
+)
+
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates" / "legal"
-TEMPLATE_VERSION = "2.0"
+TEMPLATE_VERSION = "3.0"
 
-# 한글 폰트 (체결본 분석 결과)
-FONT_KO = "바탕체"
-FONT_EN = "Times New Roman"
-
-
-# ─── 공통 유틸 ────────────────────────────────────────────────────────────────
+_CFG = CONTRACT_STYLE_CONFIG
+_BODY_PT = _CFG["font"]["body_size_pt"]
 
 
-def _apply_font(run, size_pt: float | None = None, bold: bool | None = None) -> None:
-    """Run에 바탕체 폰트 및 Times New Roman 영문 폰트 적용."""
-    run.font.name = FONT_EN
-    run.font.element.rPr.rFonts.set(qn("w:eastAsia"), FONT_KO)
-    if size_pt is not None:
-        run.font.size = Pt(size_pt)
-    if bold is not None:
-        run.bold = bold
+# ─── 공통 유틸 (하위 호환 래퍼) ──────────────────────────────────────────────
 
 
-def _set_margins(
-    doc: Document, left: float = 2.54, right: float = 2.54, top: float = 3.00, bottom: float = 2.54
-) -> None:
-    """A4 페이지 여백 설정 (cm 단위)."""
-    for section in doc.sections:
-        section.page_width = Cm(21.0)
-        section.page_height = Cm(29.7)
-        section.left_margin = Cm(left)
-        section.right_margin = Cm(right)
-        section.top_margin = Cm(top)
-        section.bottom_margin = Cm(bottom)
+def _apply_font(run: object, size_pt: float | None = None, bold: bool | None = None) -> None:
+    """contract_styles.apply_font 래퍼."""
+    apply_font(run, size_pt=size_pt, bold=bold)
+
+
+def _set_margins(doc: Document, **_kwargs: float) -> Document:
+    """create_base_contract_document로 대체됨. 하위 호환용 no-op."""
+    return doc
 
 
 def _add_title(doc: Document, text: str, size_pt: float = 16.0, space_before_pt: float = 60.0) -> None:
-    """문서 제목 단락 추가 — 중앙정렬, 바탕체 Bold."""
-    para = doc.add_paragraph()
-    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para.paragraph_format.space_before = Pt(space_before_pt)
-    para.paragraph_format.space_after = Pt(12)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=size_pt, bold=True)
+    add_title(doc, text, size_pt=size_pt, space_before_pt=space_before_pt)
 
 
 def _add_subtitle(doc: Document, text: str) -> None:
-    """영문 부제 (ex: Stock Purchase Agreement) — 중앙정렬 10pt."""
-    para = doc.add_paragraph()
-    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para.paragraph_format.space_after = Pt(6)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=10.0, bold=False)
+    add_subtitle(doc, text)
 
 
 def _add_section_label(doc: Document, text: str, bold: bool = True) -> None:
-    """'전  문', '아  래' 등 중앙 소제목 — 12pt Bold."""
-    para = doc.add_paragraph()
-    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para.paragraph_format.space_before = Pt(10)
-    para.paragraph_format.space_after = Pt(6)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0, bold=bold)
+    add_section_label(doc, text, bold=bold)
 
 
-def _add_preamble_body(doc: Document, text: str, indent_cm: float = 1.30) -> None:
-    """전문 본문 단락 — 바탕체 12pt, 들여쓰기."""
-    para = doc.add_paragraph()
-    para.paragraph_format.left_indent = Cm(indent_cm)
-    para.paragraph_format.space_after = Pt(4)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0)
+def _add_preamble_body(doc: Document, text: str, indent_cm: float = 1.40) -> None:
+    add_preamble_body(doc, text, indent_cm=indent_cm)
 
 
 def _add_preamble_text(doc: Document, text: str) -> None:
-    """전문 설명 본문 — 들여쓰기 없음, 12pt."""
-    para = doc.add_paragraph()
-    para.paragraph_format.space_after = Pt(4)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0)
+    add_preamble_text(doc, text)
 
 
 def _add_article_heading(doc: Document, num: int, title: str) -> None:
-    """제N조 (제목) — Heading 1 스타일 기반, Bold 12pt."""
-    para = doc.add_paragraph(style="Heading 1")
-    para.paragraph_format.space_before = Pt(12)
-    para.paragraph_format.space_after = Pt(6)
-    run = para.add_run(f"제{num}조 ({title})")
-    _apply_font(run, size_pt=12.0, bold=True)
+    add_article_heading(doc, num, title)
 
 
 def _add_subheading(doc: Document, text: str) -> None:
-    """소항 제목 — Heading 2 스타일 기반, 12pt."""
-    para = doc.add_paragraph(style="Heading 2")
-    para.paragraph_format.space_before = Pt(8)
-    para.paragraph_format.space_after = Pt(4)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0, bold=True)
+    add_subheading(doc, text)
 
 
 def _add_body(doc: Document, text: str, indent_cm: float = 0.0) -> None:
-    """조항 본문 단락 — 12pt."""
-    para = doc.add_paragraph()
-    if indent_cm:
-        para.paragraph_format.left_indent = Cm(indent_cm)
-    para.paragraph_format.space_after = Pt(4)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0)
+    """indent_cm을 indent_level로 변환."""
+    level = 0
+    if indent_cm >= 2.0:
+        level = 2
+    elif indent_cm >= 1.0:
+        level = 1
+    add_body(doc, text, indent_level=level)
 
 
 def _add_jinja_block(doc: Document, tag: str) -> None:
-    """Jinja2 블록 태그 전용 단락 ({%p for %} 등).
-
-    docxtpl은 단락 수준 태그에 {%p ... %} 문법을 요구한다.
-    이 함수는 태그만 포함된 빈 단락을 생성한다.
-    """
-    para = doc.add_paragraph()
-    run = para.add_run(tag)
-    _apply_font(run, size_pt=12.0)
+    add_jinja_block(doc, tag)
 
 
-def _add_jinja_line(doc: Document, text: str, indent_cm: float = 1.30) -> None:
-    """반복 루프 내 항목 단락 ({{ variable }} 포함)."""
-    para = doc.add_paragraph()
-    if indent_cm:
-        para.paragraph_format.left_indent = Cm(indent_cm)
-    para.paragraph_format.space_after = Pt(2)
-    run = para.add_run(text)
-    _apply_font(run, size_pt=12.0)
+def _add_jinja_line(doc: Document, text: str, indent_cm: float = 1.40) -> None:
+    add_jinja_line(doc, text, indent_level=1)
 
 
 def _add_date_line(doc: Document) -> None:
-    """서명 날짜 줄 — 중앙정렬."""
-    para = doc.add_paragraph()
-    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para.paragraph_format.space_before = Pt(20)
-    para.paragraph_format.space_after = Pt(10)
-    run = para.add_run("{{ signing_date }}")
-    _apply_font(run, size_pt=12.0)
+    add_date_line(doc)
 
 
 def _add_signature_table(doc: Document, parties: list[tuple[str, str, str]]) -> None:
-    """서명란 테이블.
-
-    parties: [(역할, 회사변수, 대표이사변수), ...]
-    예: [('매도인 (甲)', '{{ seller_name }}', '{{ seller_representative }}')]
-    """
-    doc.add_paragraph()
-    note = doc.add_paragraph("본 계약의 성립을 증명하기 위하여 아래에 서명 또는 기명날인한다.")
-    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    for run in note.runs:
-        _apply_font(run, size_pt=11.0)
-    doc.add_paragraph()
-
-    # 2열 테이블: 역할 | 서명
-    table = doc.add_table(rows=len(parties), cols=2)
-    table.style = "Table Grid"
-
-    for i, (role, company_var, rep_var) in enumerate(parties):
-        row = table.rows[i]
-        # 왼쪽: 역할
-        cell_l = row.cells[0]
-        cell_l.text = role
-        for run in cell_l.paragraphs[0].runs:
-            _apply_font(run, size_pt=11.0, bold=True)
-        # 오른쪽: 회사 + 대표이사
-        cell_r = row.cells[1]
-        p = cell_r.paragraphs[0]
-        p.add_run(company_var + "\n")
-        p.add_run("대표이사: " + rep_var)
-        for run in p.runs:
-            _apply_font(run, size_pt=11.0)
-
-        # 최소 높이 설정 (3cm)
-        for cell in (cell_l, cell_r):
-            tc = cell._tc
-            tcPr = tc.get_or_add_tcPr()
-            tcH = OxmlElement("w:tcH")
-            tcH.set(qn("w:val"), "1701")
-            tcH.set(qn("w:type"), "atLeast")
-            tcPr.append(tcH)
+    add_signature_table(doc, parties)
 
 
 # ─── SPA 템플릿 ───────────────────────────────────────────────────────────────
@@ -216,8 +131,7 @@ def _add_signature_table(doc: Document, parties: list[tuple[str, str, str]]) -> 
 
 def create_spa_template(out_dir: Path) -> None:
     """주식매매계약서 (Stock Purchase Agreement) 템플릿 생성."""
-    doc = Document()
-    _set_margins(doc, left=2.54, right=2.54, top=3.00, bottom=2.54)
+    doc = create_base_contract_document()
 
     # 표지
     _add_title(doc, "주 식 매 매 계 약 서", size_pt=16.0, space_before_pt=80.0)
@@ -369,8 +283,7 @@ def create_spa_template(out_dir: Path) -> None:
 
 def create_sha_template(out_dir: Path) -> None:
     """주주간계약서 (Shareholders Agreement) 템플릿 생성."""
-    doc = Document()
-    _set_margins(doc, left=2.54, right=2.54, top=3.00, bottom=2.54)
+    doc = create_base_contract_document()
 
     _add_title(doc, "주 주 간 계 약 서", size_pt=16.0, space_before_pt=80.0)
     _add_subtitle(doc, "(Shareholders Agreement)")
@@ -502,8 +415,7 @@ def create_bta_template(out_dir: Path) -> None:
     서식: LK_본문(바탕 12pt), LK_Level1(조 제목), LK_Level2(항), LK_Level3(호)
     여백: 좌2.50 우2.50 상3.00 하3.00 cm, 제목 20pt
     """
-    doc = Document()
-    _set_margins(doc, left=2.50, right=2.50, top=3.00, bottom=3.00)
+    doc = create_base_contract_document()
 
     _add_title(doc, "영 업 양 수 도 계 약 서", size_pt=20.0, space_before_pt=80.0)
     _add_subtitle(doc, "(Business Transfer Agreement)")
@@ -616,8 +528,7 @@ def create_bta_template(out_dir: Path) -> None:
 
 def create_ssa_template(out_dir: Path) -> None:
     """신주인수계약서 (Share Subscription Agreement) 템플릿 생성."""
-    doc = Document()
-    _set_margins(doc, left=2.54, right=2.54, top=3.00, bottom=2.54)
+    doc = create_base_contract_document()
 
     _add_title(doc, "신 주 인 수 계 약 서", size_pt=16.0, space_before_pt=80.0)
     _add_subtitle(doc, "(Share Subscription Agreement)")
@@ -750,8 +661,7 @@ def create_ssa_template(out_dir: Path) -> None:
 
 def create_mou_template(out_dir: Path) -> None:
     """양해각서 (Memorandum of Understanding) 템플릿 생성."""
-    doc = Document()
-    _set_margins(doc, left=2.50, right=2.50, top=3.00, bottom=2.50)
+    doc = create_base_contract_document()
 
     _add_title(doc, "양  해  각  서", size_pt=14.0, space_before_pt=80.0)
     _add_subtitle(doc, "(Memorandum of Understanding)")
