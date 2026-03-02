@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.schemas.entity import (
     AliasCreateRequest,
@@ -13,7 +14,7 @@ from app.schemas.entity import (
 )
 from app.utils.entity_resolver import EntityResolver
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 resolver = EntityResolver()
 
 

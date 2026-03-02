@@ -8,6 +8,7 @@ deal-mgmt 서비스의 VDR 데이터를 IM 백엔드에서 조회할 수 있는
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import uuid
@@ -50,10 +51,10 @@ _PARSEABLE_MIME_TYPES = {
 async def _verify_internal_key(
     x_internal_key: str | None = Header(None, alias="X-Internal-Key"),
 ) -> None:
-    """내부 서비스 키를 검증한다."""
+    """내부 서비스 키를 검증한다 (타이밍 안전 비교)."""
     if not _INTERNAL_SERVICE_KEY:
         raise HTTPException(status_code=503, detail="Internal service not configured")
-    if not x_internal_key or x_internal_key != _INTERNAL_SERVICE_KEY:
+    if not x_internal_key or not hmac.compare_digest(x_internal_key, _INTERNAL_SERVICE_KEY):
         raise HTTPException(status_code=403, detail="Invalid internal service key")
 
 

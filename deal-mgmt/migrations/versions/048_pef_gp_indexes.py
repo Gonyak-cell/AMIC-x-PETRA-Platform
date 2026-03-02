@@ -2,16 +2,16 @@
 
 모델에 선언된 gp1/gp2/gp3 인덱스가 045 마이그레이션에서 누락되었으므로 추가.
 
-Revision ID: 048
-Revises: 047
+Revision ID: 048b
+Revises: 048
 """
 
 from __future__ import annotations
 
 from alembic import op
 
-revision = "048"
-down_revision = "047"
+revision = "048b"
+down_revision = "048"
 branch_labels = None
 depends_on = None
 

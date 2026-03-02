@@ -41,11 +41,73 @@ def _get_sync_engine() -> Any:
     return create_engine(sync_url, pool_pre_ping=True)
 
 
+def _download_single_doc(
+    client: Any,
+    base_url: str,
+    transaction_id: str,
+    doc_id: str,
+) -> tuple[str, dict[str, Any]] | None:
+    """단일 VDR 문서를 다운로드하여 임시 파일로 저장한다."""
+    import httpx
+
+    try:
+        meta_resp = client.get(
+            f"{base_url}/api/v1/internal/vdr"
+            f"/transactions/{transaction_id}"
+            f"/documents/{doc_id}/metadata",
+        )
+        if meta_resp.status_code != 200:
+            logger.warning(
+                "VDR 문서 메타 조회 실패: doc_id=%s status=%d",
+                doc_id,
+                meta_resp.status_code,
+            )
+            return None
+
+        meta = meta_resp.json()
+
+        content_resp = client.get(
+            f"{base_url}/api/v1/internal/vdr"
+            f"/transactions/{transaction_id}"
+            f"/documents/{doc_id}/content",
+        )
+        if content_resp.status_code != 200:
+            logger.warning(
+                "VDR 문서 콘텐츠 다운로드 실패: doc_id=%s status=%d",
+                doc_id,
+                content_resp.status_code,
+            )
+            return None
+
+        original_name = meta.get("original_name", f"{doc_id}.bin")
+        suffix = Path(original_name).suffix
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=suffix, prefix=f"vdr_{doc_id}_"
+        ) as tmp:
+            tmp.write(content_resp.content)
+            tmp_path = tmp.name
+
+        logger.debug(
+            "VDR 문서 다운로드 완료: doc_id=%s → %s (%d bytes)",
+            doc_id,
+            tmp_path,
+            len(content_resp.content),
+        )
+        return (tmp_path, meta)
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "VDR 문서 다운로드 HTTP 에러: doc_id=%s — %s",
+            doc_id,
+            exc,
+        )
+        return None
+
+
 def _download_vdr_documents(
     transaction_id: str,
     vdr_document_ids: list[str],
 ) -> list[tuple[str, dict[str, Any]]]:
-    """deal-mgmt 내부 API에서 VDR 문서를 다운로드하여 임시 파일로 저장한다.
+    """deal-mgmt 내부 API에서 VDR 문서를 병렬 다운로드하여 임시 파일로 저장한다.
 
     Args:
         transaction_id: 거래 ID.
@@ -54,6 +116,8 @@ def _download_vdr_documents(
     Returns:
         [(temp_file_path, metadata), ...] — 호출자가 임시 파일 정리 책임.
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     import httpx
 
     from src.api.config import get_config
@@ -67,54 +131,41 @@ def _download_vdr_documents(
 
     try:
         with httpx.Client(timeout=60.0, headers=headers) as client:
-            for doc_id in vdr_document_ids:
-                try:
-                    # 1. 메타데이터 조회
-                    meta_resp = client.get(
-                        f"{base_url}/api/v1/internal/vdr"
-                        f"/transactions/{transaction_id}"
-                        f"/documents/{doc_id}/metadata",
+            if len(vdr_document_ids) <= 1:
+                # 단일 문서면 병렬화 불필요
+                for doc_id in vdr_document_ids:
+                    result = _download_single_doc(
+                        client, base_url, transaction_id, doc_id
                     )
-                    if meta_resp.status_code != 200:
-                        logger.warning(
-                            "VDR 문서 메타 조회 실패: doc_id=%s status=%d",
-                            doc_id, meta_resp.status_code,
-                        )
-                        continue
-
-                    meta = meta_resp.json()
-
-                    # 2. 콘텐츠 다운로드
-                    content_resp = client.get(
-                        f"{base_url}/api/v1/internal/vdr"
-                        f"/transactions/{transaction_id}"
-                        f"/documents/{doc_id}/content",
-                    )
-                    if content_resp.status_code != 200:
-                        logger.warning(
-                            "VDR 문서 콘텐츠 다운로드 실패: doc_id=%s status=%d",
-                            doc_id, content_resp.status_code,
-                        )
-                        continue
-
-                    # 3. 임시 파일로 저장
-                    original_name = meta.get("original_name", f"{doc_id}.bin")
-                    suffix = Path(original_name).suffix
-                    with tempfile.NamedTemporaryFile(
-                        delete=False, suffix=suffix, prefix=f"vdr_{doc_id}_"
-                    ) as tmp:
-                        tmp.write(content_resp.content)
-                        results.append((tmp.name, meta))
-
-                    logger.debug(
-                        "VDR 문서 다운로드 완료: doc_id=%s → %s (%d bytes)",
-                        doc_id, results[-1][0], len(content_resp.content),
-                    )
-                except httpx.HTTPError as exc:
-                    logger.warning(
-                        "VDR 문서 다운로드 HTTP 에러: doc_id=%s — %s",
-                        doc_id, exc,
-                    )
+                    if result:
+                        results.append(result)
+            else:
+                # 다중 문서: ThreadPoolExecutor로 병렬 다운로드 (최대 4 워커)
+                with ThreadPoolExecutor(
+                    max_workers=min(4, len(vdr_document_ids))
+                ) as executor:
+                    futures = {
+                        executor.submit(
+                            _download_single_doc,
+                            client,
+                            base_url,
+                            transaction_id,
+                            doc_id,
+                        ): doc_id
+                        for doc_id in vdr_document_ids
+                    }
+                    for future in as_completed(futures):
+                        try:
+                            result = future.result()
+                            if result:
+                                results.append(result)
+                        except Exception as exc:
+                            doc_id = futures[future]
+                            logger.warning(
+                                "VDR 문서 다운로드 실패: doc_id=%s — %s",
+                                doc_id,
+                                exc,
+                            )
     except Exception as exc:
         logger.error("deal-mgmt API 연결 실패: %s", exc)
 
@@ -177,7 +228,9 @@ def extract_vdr_data_task(
 
             # 2. VDR 문서 다운로드
             vdr_doc_ids = checklist.vdr_document_ids or []
-            transaction_id = str(checklist.transaction_id) if checklist.transaction_id else ""
+            transaction_id = (
+                str(checklist.transaction_id) if checklist.transaction_id else ""
+            )
 
             update_progress(self, document_id, "COLLECTING", 20)
 
@@ -188,7 +241,9 @@ def extract_vdr_data_task(
                 logger.warning(
                     "VDR 문서 ID 또는 transaction_id 없음: "
                     "checklist=%s, vdr_docs=%d, transaction=%s",
-                    checklist_id, len(vdr_doc_ids), transaction_id,
+                    checklist_id,
+                    len(vdr_doc_ids),
+                    transaction_id,
                 )
 
             # 3. 다운로드된 파일 경로 목록
@@ -197,7 +252,8 @@ def extract_vdr_data_task(
 
             if not file_paths:
                 logger.warning(
-                    "추출 가능한 VDR 파일 없음: checklist=%s", checklist_id,
+                    "추출 가능한 VDR 파일 없음: checklist=%s",
+                    checklist_id,
                 )
                 # 모든 아이템을 MISSING으로 표시
                 for item in checklist.items:
@@ -239,7 +295,12 @@ def extract_vdr_data_task(
 
             for item in checklist.items:
                 # fiscal_year가 있으면 (field_key, fiscal_year), 없으면 (field_key, None) 탐색
-                match = result_index.get((item.field_key, str(item.fiscal_year) if item.fiscal_year else None))
+                match = result_index.get(
+                    (
+                        item.field_key,
+                        str(item.fiscal_year) if item.fiscal_year else None,
+                    )
+                )
                 if match is None and item.fiscal_year:
                     # fiscal_year 없이도 시도
                     match = result_index.get((item.field_key, None))
@@ -269,10 +330,12 @@ def extract_vdr_data_task(
         update_progress(self, document_id, "COLLECTING", 100)
 
         logger.info(
-            "VDR 추출 완료: document=%s, checklist=%s, "
-            "추출=%d, 누락=%d, 파일=%d",
-            document_id, checklist_id,
-            extracted_count, missing_count, len(file_paths),
+            "VDR 추출 완료: document=%s, checklist=%s, 추출=%d, 누락=%d, 파일=%d",
+            document_id,
+            checklist_id,
+            extracted_count,
+            missing_count,
+            len(file_paths),
         )
 
         return {
@@ -289,7 +352,9 @@ def extract_vdr_data_task(
     except Exception as exc:
         logger.error(
             "VDR 추출 실패: document=%s checklist=%s — %s",
-            document_id, checklist_id, exc,
+            document_id,
+            checklist_id,
+            exc,
         )
         raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
     finally:

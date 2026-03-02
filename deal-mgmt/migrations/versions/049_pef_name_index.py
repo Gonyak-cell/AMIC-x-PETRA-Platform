@@ -3,7 +3,7 @@
 pef_name 검색 성능 개선을 위한 인덱스.
 
 Revision ID: 049
-Revises: 048
+Revises: 048b
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from alembic import op
 
 revision = "049"
-down_revision = "048"
+down_revision = "048b"
 branch_labels = None
 depends_on = None
 

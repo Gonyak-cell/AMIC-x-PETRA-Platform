@@ -57,39 +57,51 @@ async def export_audit_logs(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_role("ADMIN", "MANAGER")),
 ) -> StreamingResponse:
-    """감사 로그를 CSV 파일로 내보낸다."""
-    items, _ = await list_audit_logs(
-        db,
-        entity_type=entity_type,
-        action=action,
-        start_date=start_date,
-        end_date=end_date,
-        limit=10000,
-        offset=0,
-    )
+    """감사 로그를 CSV 파일로 내보낸다 (배치 스트리밍)."""
+    _batch_size = 1000
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID", "Old Value", "New Value", "Notes"])
-    for item in items:
-        writer.writerow(
-            [
-                item.created_at.isoformat() if item.created_at else "",
-                item.actor_email or "",
-                item.action.value,
-                item.entity_type,
-                str(item.entity_id),
-                json.dumps(item.old_value, ensure_ascii=False) if item.old_value else "",
-                json.dumps(item.new_value, ensure_ascii=False) if item.new_value else "",
-                item.notes or "",
-            ]
-        )
+    async def _generate():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID", "Old Value", "New Value", "Notes"])
+        yield buf.getvalue().encode("utf-8-sig")
 
-    csv_bytes = output.getvalue().encode("utf-8-sig")
+        offset = 0
+        while True:
+            items, _ = await list_audit_logs(
+                db,
+                entity_type=entity_type,
+                action=action,
+                start_date=start_date,
+                end_date=end_date,
+                limit=_batch_size,
+                offset=offset,
+            )
+            if not items:
+                break
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            for item in items:
+                writer.writerow(
+                    [
+                        item.created_at.isoformat() if item.created_at else "",
+                        item.actor_email or "",
+                        item.action.value,
+                        item.entity_type,
+                        str(item.entity_id),
+                        json.dumps(item.old_value, ensure_ascii=False) if item.old_value else "",
+                        json.dumps(item.new_value, ensure_ascii=False) if item.new_value else "",
+                        item.notes or "",
+                    ]
+                )
+            yield buf.getvalue().encode("utf-8")
+            if len(items) < _batch_size:
+                break
+            offset += _batch_size
+
     filename = f"ma_audit_log_{date.today().isoformat()}.csv"
-
     return StreamingResponse(
-        io.BytesIO(csv_bytes),
+        _generate(),
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

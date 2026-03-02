@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,10 +13,8 @@ class Contract(Base, TimestampMixin):
 
     __tablename__ = "contracts"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     contract_type: Mapped[ContractType] = mapped_column(Enum(ContractType), nullable=False, default=ContractType.SPA)
     status: Mapped[ContractStatus] = mapped_column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -33,5 +31,5 @@ class Contract(Base, TimestampMixin):
         Enum(SignatureStatus), nullable=False, default=SignatureStatus.PENDING
     )
     ai_analysis_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    ai_risk_flags: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ai_risk_flags: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

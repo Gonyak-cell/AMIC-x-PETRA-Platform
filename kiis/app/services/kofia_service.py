@@ -536,6 +536,7 @@ class KOFIAService:
 
         return items, filtered_total
 
+    @cache(ttl=21600, prefix="kofia:gp_list")
     async def get_gp_list(
         self,
         *,

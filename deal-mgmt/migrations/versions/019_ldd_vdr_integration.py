@@ -8,9 +8,12 @@ Ralph Loop 2회 적용 워크플로우 지원:
 Revision ID: 019
 Revises: 018
 """
-from alembic import op
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
+
+_JSON = sa.JSON().with_variant(_JSONB, "postgresql")
 
 revision = "019"
 down_revision = "018"
@@ -19,20 +22,27 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+
     # ── 1. LDDReportStatus enum 확장 ──────────────────────
-    op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'ANALYZING' BEFORE 'GENERATING'")
-    op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'REVIEW' BEFORE 'GENERATING'")
-    op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'FINALIZING' BEFORE 'GENERATING'")
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'ANALYZING' BEFORE 'GENERATING'")
+        op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'REVIEW' BEFORE 'GENERATING'")
+        op.execute("ALTER TYPE lddreportstatus ADD VALUE IF NOT EXISTS 'FINALIZING' BEFORE 'GENERATING'")
 
     # ── 2. ldd_reports 테이블 컬럼 추가 ──────────────────
     op.add_column("ldd_reports", sa.Column("vdr_source", sa.Boolean(), nullable=False, server_default="false"))
     op.add_column(
         "ldd_reports",
-        sa.Column("draft_ralph_session_id", UUID(as_uuid=True), sa.ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "draft_ralph_session_id", sa.Uuid(), sa.ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
+        ),
     )
     op.add_column(
         "ldd_reports",
-        sa.Column("final_ralph_session_id", UUID(as_uuid=True), sa.ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "final_ralph_session_id", sa.Uuid(), sa.ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
+        ),
     )
     op.add_column("ldd_reports", sa.Column("draft_score", sa.Float(), nullable=True))
     op.add_column("ldd_reports", sa.Column("final_score", sa.Float(), nullable=True))
@@ -46,13 +56,19 @@ def upgrade() -> None:
     # ── 3. vdr_text_caches 테이블 ─────────────────────────
     op.create_table(
         "vdr_text_caches",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("vdr_document_id", UUID(as_uuid=True), sa.ForeignKey("vdr_documents.id", ondelete="CASCADE"), nullable=False, unique=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column(
+            "vdr_document_id",
+            sa.Uuid(),
+            sa.ForeignKey("vdr_documents.id", ondelete="CASCADE"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("sha256_hash", sa.String(64), nullable=False),
         sa.Column("file_type", sa.String(20), nullable=False),
         sa.Column("extracted_text", sa.Text(), nullable=True),
-        sa.Column("tables_json", JSONB, nullable=True),
-        sa.Column("ddrl_sections", JSONB, nullable=True),
+        sa.Column("tables_json", _JSON, nullable=True),
+        sa.Column("ddrl_sections", _JSON, nullable=True),
         sa.Column("parse_error", sa.Text(), nullable=True),
         sa.Column("text_length", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("is_valid", sa.Boolean(), nullable=False, server_default="true"),
@@ -63,10 +79,10 @@ def upgrade() -> None:
     # ── 4. ldd_vdr_references 테이블 ──────────────────────
     op.create_table(
         "ldd_vdr_references",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("ldd_report_id", UUID(as_uuid=True), sa.ForeignKey("ldd_reports.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("ldd_report_id", sa.Uuid(), sa.ForeignKey("ldd_reports.id", ondelete="CASCADE"), nullable=False),
         sa.Column("item_id", sa.String(30), nullable=False),
-        sa.Column("vdr_document_id", UUID(as_uuid=True), sa.ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("vdr_document_id", sa.Uuid(), sa.ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True),
         sa.Column("section_type", sa.String(30), nullable=False),
         sa.Column("relevance_score", sa.Float(), nullable=False, server_default="0.0"),
         sa.Column("evidence_snippet", sa.String(500), nullable=True),
@@ -83,25 +99,28 @@ def upgrade() -> None:
     op.create_index("ix_ldd_reports_draft_session", "ldd_reports", ["draft_ralph_session_id"])
     op.create_index("ix_ldd_reports_final_session", "ldd_reports", ["final_ralph_session_id"])
 
-    # ── 6. updated_at 트리거 ─────────────────────────────
-    for table in ("vdr_text_caches", "ldd_vdr_references"):
-        op.execute(f"""
-            CREATE OR REPLACE FUNCTION update_{table}_updated_at()
-            RETURNS TRIGGER AS $$
-            BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
-            $$ LANGUAGE plpgsql;
-        """)
-        op.execute(f"""
-            CREATE TRIGGER trg_{table}_updated_at
-            BEFORE UPDATE ON {table}
-            FOR EACH ROW EXECUTE FUNCTION update_{table}_updated_at();
-        """)
+    # ── 6. updated_at 트리거 (PostgreSQL 전용) ─────────────
+    if bind.dialect.name == "postgresql":
+        for table in ("vdr_text_caches", "ldd_vdr_references"):
+            op.execute(f"""
+                CREATE OR REPLACE FUNCTION update_{table}_updated_at()
+                RETURNS TRIGGER AS $$
+                BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+                $$ LANGUAGE plpgsql;
+            """)
+            op.execute(f"""
+                CREATE TRIGGER trg_{table}_updated_at
+                BEFORE UPDATE ON {table}
+                FOR EACH ROW EXECUTE FUNCTION update_{table}_updated_at();
+            """)
 
 
 def downgrade() -> None:
-    for table in ("ldd_vdr_references", "vdr_text_caches"):
-        op.execute(f"DROP TRIGGER IF EXISTS trg_{table}_updated_at ON {table}")
-        op.execute(f"DROP FUNCTION IF EXISTS update_{table}_updated_at()")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        for table in ("ldd_vdr_references", "vdr_text_caches"):
+            op.execute(f"DROP TRIGGER IF EXISTS trg_{table}_updated_at ON {table}")
+            op.execute(f"DROP FUNCTION IF EXISTS update_{table}_updated_at()")
 
     op.drop_index("ix_ldd_reports_final_session", "ldd_reports")
     op.drop_index("ix_ldd_reports_draft_session", "ldd_reports")
@@ -112,11 +131,16 @@ def downgrade() -> None:
     op.drop_table("vdr_text_caches")
 
     for col in (
-        "finalize_completed_at", "finalize_started_at",
-        "review_completed_at", "review_started_at",
-        "analysis_completed_at", "analysis_started_at",
-        "final_score", "draft_score",
-        "final_ralph_session_id", "draft_ralph_session_id",
+        "finalize_completed_at",
+        "finalize_started_at",
+        "review_completed_at",
+        "review_started_at",
+        "analysis_completed_at",
+        "analysis_started_at",
+        "final_score",
+        "draft_score",
+        "final_ralph_session_id",
+        "draft_ralph_session_id",
         "vdr_source",
     ):
         op.drop_column("ldd_reports", col)

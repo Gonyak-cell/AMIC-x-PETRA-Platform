@@ -302,5 +302,7 @@ async def test_buyer_summary_with_data(client):
     assert data["total"] == 3
     assert data["by_status"]["IOI_RECEIVED"] == 2
     assert data["by_status"]["NDA_SENT"] == 1
-    assert data["avg_ioi_value"] == "55000000000.00"
+    from decimal import Decimal
+
+    assert Decimal(data["avg_ioi_value"]) == Decimal("55000000000")
     assert data["avg_loi_value"] is None

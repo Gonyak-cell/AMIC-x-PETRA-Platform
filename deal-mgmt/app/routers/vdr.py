@@ -83,16 +83,17 @@ async def _get_and_authorize_txn(
     if claims.role == "CLIENT":
         await check_client_deal_access(db, txn_id, claims)
         return txn
-    if (
-        claims.role != "ADMIN"
-        and claims.email is not None
-        and txn.lead_advisor_email != claims.email
-        and txn.deal_captain_email != claims.email
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="이 거래에 접근할 권한이 없습니다",
-        )
+    if claims.role != "ADMIN":
+        if claims.email is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 거래에 접근할 권한이 없습니다",
+            )
+        if txn.lead_advisor_email != claims.email and txn.deal_captain_email != claims.email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 거래에 접근할 권한이 없습니다",
+            )
     return txn
 
 

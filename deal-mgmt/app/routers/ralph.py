@@ -215,6 +215,12 @@ async def get_ralph_session(
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(404, "Ralph Loop 세션을 찾을 수 없습니다.")
+    # 거래 소유권 검증 — session이 속한 거래에 대한 접근 권한 확인
+    from app.services import transaction_service
+
+    txn = await transaction_service.get_transaction(db, session.transaction_id)
+    if claims.role != "ADMIN" and claims.email not in (txn.lead_advisor_email, txn.deal_captain_email):
+        raise HTTPException(status_code=403, detail="이 세션에 접근할 권한이 없습니다")
     return RalphSessionOut.model_validate(session)
 
 
@@ -238,6 +244,12 @@ async def get_ralph_progress(
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(404, "Ralph Loop 세션을 찾을 수 없습니다.")
+    # 거래 소유권 검증
+    from app.services import transaction_service
+
+    txn = await transaction_service.get_transaction(db, session.transaction_id)
+    if claims.role != "ADMIN" and claims.email not in (txn.lead_advisor_email, txn.deal_captain_email):
+        raise HTTPException(status_code=403, detail="이 세션에 접근할 권한이 없습니다")
 
     progress_data = session.progress or {}
 

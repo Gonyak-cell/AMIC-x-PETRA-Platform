@@ -295,12 +295,12 @@ class FSSPEFService:
         """
         commitment_map: dict[str, Decimal] = {}
         for item in items:
-            amt = item.total_commitment or Decimal(0)
+            amt = item.total_commitment or Decimal("0")
             if amt == 0:
                 continue
             for gp_name in (item.gp1_name, item.gp2_name, item.gp3_name):
                 if gp_name:
-                    commitment_map[gp_name] = commitment_map.get(gp_name, Decimal(0)) + amt
+                    commitment_map[gp_name] = commitment_map.get(gp_name, Decimal("0")) + amt
 
         updated = 0
         for gp_name, total in commitment_map.items():

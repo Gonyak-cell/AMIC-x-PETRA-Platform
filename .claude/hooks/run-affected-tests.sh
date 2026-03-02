@@ -35,7 +35,7 @@ if [[ -n "$fdd_changed" ]]; then
     echo "FDD 모듈 변경 감지 — 테스트 실행 중..." >&2
     if [[ -d "fdd/backend/tests" ]]; then
         cd "$PROJECT_DIR/fdd/backend"
-        python -m pytest tests/ -v --tb=short -q 2>&1 || echo "WARNING: FDD 테스트 일부 실패" >&2
+        python -m pytest tests/ -v --tb=short -q -o "addopts=" 2>&1 || echo "WARNING: FDD 테스트 일부 실패" >&2
         cd "$PROJECT_DIR"
     fi
 fi
@@ -45,9 +45,9 @@ if [[ -n "$kiis_changed" ]]; then
     if [[ -d "kiis/tests" ]]; then
         cd "$PROJECT_DIR/kiis"
         if command -v uv &>/dev/null; then
-            uv run pytest tests/ -v --tb=short -q 2>&1 || echo "WARNING: KIIS 테스트 일부 실패" >&2
+            uv run pytest tests/ -v --tb=short -q -o "addopts=" 2>&1 || echo "WARNING: KIIS 테스트 일부 실패" >&2
         else
-            python -m pytest tests/ -v --tb=short -q 2>&1 || echo "WARNING: KIIS 테스트 일부 실패" >&2
+            python -m pytest tests/ -v --tb=short -q -o "addopts=" 2>&1 || echo "WARNING: KIIS 테스트 일부 실패" >&2
         fi
         cd "$PROJECT_DIR"
     fi
@@ -57,7 +57,7 @@ if [[ -n "$im_changed" ]]; then
     echo "IM 모듈 변경 감지 — 테스트 실행 중..." >&2
     if [[ -d "im/tests" ]]; then
         cd "$PROJECT_DIR/im"
-        python -m pytest tests/ -v --tb=short -q 2>&1 || echo "WARNING: IM 테스트 일부 실패" >&2
+        python -m pytest tests/ -v --tb=short -q -o "addopts=" 2>&1 || echo "WARNING: IM 테스트 일부 실패" >&2
         cd "$PROJECT_DIR"
     fi
 fi
@@ -66,7 +66,7 @@ if [[ -n "$dealmgmt_changed" ]]; then
     echo "deal-mgmt 모듈 변경 감지 — 테스트 실행 중..." >&2
     if [[ -d "deal-mgmt/tests" ]]; then
         cd "$PROJECT_DIR/deal-mgmt"
-        python -m pytest tests/ -v --tb=short -q 2>&1 || echo "WARNING: deal-mgmt 테스트 일부 실패" >&2
+        python -m pytest tests/ -v --tb=short -q -o "addopts=" 2>&1 || echo "WARNING: deal-mgmt 테스트 일부 실패" >&2
         cd "$PROJECT_DIR"
     fi
 fi

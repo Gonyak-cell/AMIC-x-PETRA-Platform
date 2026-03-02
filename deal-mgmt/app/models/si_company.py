@@ -37,7 +37,7 @@ class SICompany(Base, TimestampMixin):
         JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
     )
-    revenue: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
+    revenue: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True, index=True)
     revenue_year: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -106,7 +106,7 @@ class SICompany(Base, TimestampMixin):
         comment="재무정보 최종 동기화 시점",
     )
 
-    has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_investment_history: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 기업기본정보 (금융위 getCorpOutline_V2) ──

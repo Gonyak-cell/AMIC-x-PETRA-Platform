@@ -3,11 +3,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.news import NewsArticle
 from app.schemas.news import NewsCollectResponse, NewsItem, NewsListItem, NewsListResponse
 from app.services.news_service import NewsService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_news_service() -> NewsService:

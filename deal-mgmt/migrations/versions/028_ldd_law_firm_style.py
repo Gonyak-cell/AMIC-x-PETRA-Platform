@@ -4,9 +4,11 @@ Revision ID: 028
 Revises: 027
 """
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB as _PG_JSONB
+
+_JSON = sa.JSON().with_variant(_PG_JSONB(), "postgresql")
 
 revision = "028"
 down_revision = "027"
@@ -15,14 +17,18 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # LDDReportType enum에 LAW_FIRM 값 추가
-    op.execute("ALTER TYPE lddreporttype ADD VALUE IF NOT EXISTS 'LAW_FIRM'")
+    # LDDReportType enum에 LAW_FIRM 값 추가 (PostgreSQL 전용)
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TYPE lddreporttype ADD VALUE IF NOT EXISTS 'LAW_FIRM'")
 
     # 법무법인 목차 구조
     op.add_column(
         "ldd_reports",
         sa.Column(
-            "law_firm_toc", JSONB, nullable=True,
+            "law_firm_toc",
+            _JSON,
+            nullable=True,
             comment="법무법인 8개 목차 구조 (I~VIII 매핑 결과)",
         ),
     )
@@ -30,7 +36,9 @@ def upgrade() -> None:
     op.add_column(
         "ldd_reports",
         sa.Column(
-            "law_firm_sections", JSONB, nullable=True,
+            "law_firm_sections",
+            _JSON,
+            nullable=True,
             comment="법무법인 3단 서술 결과 (section → {현황/검토/Recommendation})",
         ),
     )
@@ -38,7 +46,9 @@ def upgrade() -> None:
     op.add_column(
         "ldd_reports",
         sa.Column(
-            "irl_items", JSONB, nullable=True,
+            "irl_items",
+            _JSON,
+            nullable=True,
             comment="D 라벨 수집: Information Request List 항목",
         ),
     )

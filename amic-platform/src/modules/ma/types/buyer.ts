@@ -45,11 +45,11 @@ export interface BuyerCandidate {
   deal_role: DealRole | null;
   is_short_listed: boolean;
   corp_code: string | null;
-  ioi_value: number | null;
+  ioi_value: string | null;
   ioi_date: string | null;
-  loi_value: number | null;
+  loi_value: string | null;
   loi_date: string | null;
-  final_offer_value: number | null;
+  final_offer_value: string | null;
   rejection_reason: string | null;
   notes: string | null;
   extra_data: Record<string, unknown> | null;
@@ -81,11 +81,11 @@ export interface BuyerCandidateUpdate {
   deal_role?: DealRole;
   is_short_listed?: boolean;
   corp_code?: string;
-  ioi_value?: number;
+  ioi_value?: string | null;
   ioi_date?: string;
-  loi_value?: number;
+  loi_value?: string | null;
   loi_date?: string;
-  final_offer_value?: number;
+  final_offer_value?: string | null;
   rejection_reason?: string;
   notes?: string;
   extra_data?: Record<string, unknown>;
@@ -93,10 +93,10 @@ export interface BuyerCandidateUpdate {
 
 export interface BuyerPipelineSummary {
   total: number;
-  by_status: Record<BuyerStatus, number>;
+  by_status: Partial<Record<BuyerStatus, number>>;
   by_tier: Record<string, number>;
-  avg_ioi_value: number | null;
-  avg_loi_value: number | null;
+  avg_ioi_value: string | null;
+  avg_loi_value: string | null;
 }
 
 export interface ShortListPromoteRequest {

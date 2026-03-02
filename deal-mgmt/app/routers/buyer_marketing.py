@@ -291,7 +291,7 @@ async def short_list_marketing_overview(
 # ── DART 연동 ────────────────────────────────────────────
 
 
-@router.get("/buyers/dart-search")
+@router.get("/buyers/dart-search", response_model=list[dict])
 async def dart_company_search(
     txn_id: uuid.UUID,
     q: str = Query(..., min_length=1, max_length=100, alias="q"),

@@ -17,7 +17,7 @@ from app.models.buyer_candidate import BuyerCandidate
 from app.models.consortium_mapping import ConsortiumMapping
 from app.models.enums import AuditAction, ConsortiumStatus, DealRole
 from app.schemas.consortium import ConsortiumMappingCreate, ConsortiumMappingOut, ConsortiumMappingUpdate
-from app.services import audit_service
+from app.services import audit_service, transaction_service
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ async def list_consortium_mappings(
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[ConsortiumMappingOut]:
     """딜 내 모든 컨소시엄 매핑 조회."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
     lead = aliased(BuyerCandidate)
@@ -109,6 +110,7 @@ async def create_consortium_mapping(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> ConsortiumMappingOut:
     """컨소시엄 매핑 생성."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
     # 자기 참조 검증
@@ -186,6 +188,7 @@ async def update_consortium_mapping(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> ConsortiumMappingOut:
     """상태/지분율/노트 수정."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
     q = select(ConsortiumMapping).where(
@@ -250,6 +253,7 @@ async def delete_consortium_mapping(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
     """컨소시엄 매핑 삭제."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
     q = select(ConsortiumMapping).where(
@@ -288,6 +292,7 @@ async def buyer_consortium_summary(
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[ConsortiumMappingOut]:
     """특정 매수자의 컨소시엄 관계 (Lead로서 + Co-investor로서)."""
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
     lead = aliased(BuyerCandidate)

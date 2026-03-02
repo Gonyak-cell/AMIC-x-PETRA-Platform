@@ -3,8 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.models.enums import BuyerCandidateStatus, BuyerTier, BuyerType, DealRole
 
@@ -31,9 +32,14 @@ class BuyerCandidateOut(BaseModel):
     final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
     notes: str | None = None
-    extra_data: dict | None = None
+    extra_data: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("ioi_value", "loi_value", "final_offer_value")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 class BuyerCandidateCreate(BaseModel):
@@ -48,11 +54,11 @@ class BuyerCandidateCreate(BaseModel):
     corp_code: str | None = Field(None, max_length=8)
     deal_role: DealRole | None = None
     notes: str | None = None
-    extra_data: dict | None = None
+    extra_data: dict[str, Any] | None = None
 
     @field_validator("extra_data")
     @classmethod
-    def validate_extra_data_size(cls, v: dict | None) -> dict | None:
+    def validate_extra_data_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
         if v is not None and len(v) > 50:
             msg = "extra_data는 최대 50개 키까지 허용됩니다"
             raise ValueError(msg)
@@ -79,11 +85,11 @@ class BuyerCandidateUpdate(BaseModel):
     final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
     notes: str | None = None
-    extra_data: dict | None = None
+    extra_data: dict[str, Any] | None = None
 
     @field_validator("extra_data")
     @classmethod
-    def validate_extra_data_size(cls, v: dict | None) -> dict | None:
+    def validate_extra_data_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
         if v is not None and len(v) > 50:
             msg = "extra_data는 최대 50개 키까지 허용됩니다"
             raise ValueError(msg)
@@ -96,6 +102,11 @@ class BuyerPipelineSummary(BaseModel):
     by_tier: dict[str, int] = Field(default_factory=dict)
     avg_ioi_value: Decimal | None = None
     avg_loi_value: Decimal | None = None
+
+    @field_serializer("avg_ioi_value", "avg_loi_value")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 class ShortListPromoteRequest(BaseModel):

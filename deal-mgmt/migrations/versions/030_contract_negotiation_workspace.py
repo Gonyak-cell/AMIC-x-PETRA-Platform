@@ -6,6 +6,9 @@ Revises: 029
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB as _PG_JSONB
+
+_JSON = sa.JSON().with_variant(_PG_JSONB(), "postgresql")
 
 revision = "030"
 down_revision = "029"
@@ -14,21 +17,28 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # 1. ContractType enum에 BTA, SSA 추가
-    op.execute("ALTER TYPE contracttype ADD VALUE IF NOT EXISTS 'BTA'")
-    op.execute("ALTER TYPE contracttype ADD VALUE IF NOT EXISTS 'SSA'")
+    bind = op.get_bind()
+
+    # 1. ContractType enum에 BTA, SSA 추가 (PostgreSQL 전용)
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TYPE contracttype ADD VALUE IF NOT EXISTS 'BTA'")
+        op.execute("ALTER TYPE contracttype ADD VALUE IF NOT EXISTS 'SSA'")
 
     # 2. IssueDecisionStatus enum 생성
     issuedecisionstatus = sa.Enum(
-        "PENDING", "CONSIDER_ACCEPTING", "CANNOT_ACCEPT",
+        "PENDING",
+        "CONSIDER_ACCEPTING",
+        "CANNOT_ACCEPT",
         name="issuedecisionstatus",
+        create_type=False,
     )
-    issuedecisionstatus.create(op.get_bind(), checkfirst=True)
+    if bind.dialect.name == "postgresql":
+        issuedecisionstatus.create(bind, checkfirst=True)
 
     # 3. negotiation_issues 테이블 확장
     op.add_column(
         "negotiation_issues",
-        sa.Column("contract_id", sa.dialects.postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("contract_id", sa.Uuid(), nullable=True),
     )
     op.create_foreign_key(
         "fk_negotiation_issues_contract_id",
@@ -51,7 +61,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "negotiation_issues",
-        sa.Column("linked_issue_ids", sa.dialects.postgresql.JSONB, nullable=True),
+        sa.Column("linked_issue_ids", _JSON, nullable=True),
     )
     op.add_column(
         "negotiation_issues",
@@ -77,7 +87,9 @@ def downgrade() -> None:
     op.drop_constraint("fk_negotiation_issues_contract_id", "negotiation_issues", type_="foreignkey")
     op.drop_column("negotiation_issues", "contract_id")
 
-    # IssueDecisionStatus enum 삭제
-    sa.Enum(name="issuedecisionstatus").drop(op.get_bind(), checkfirst=True)
+    # IssueDecisionStatus enum 삭제 (PostgreSQL 전용)
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        sa.Enum(name="issuedecisionstatus").drop(bind, checkfirst=True)
 
     # ContractType에서 BTA, SSA 제거는 PostgreSQL에서 불가 (ADD VALUE는 비가역적)

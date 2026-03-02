@@ -62,17 +62,19 @@ export default function FIRecommendModal({
       return;
     }
 
-    let added = 0;
-    for (const gpName of toAdd) {
-      try {
-        await addBuyer.mutateAsync({
+    const results = await Promise.allSettled(
+      toAdd.map((gpName) =>
+        addBuyer.mutateAsync({
           company_name: gpName,
           buyer_type: "FINANCIAL_SPONSOR",
-        });
-        added++;
-      } catch {
-        toast.error(`${gpName} 추가 실패`);
-      }
+        }),
+      ),
+    );
+
+    const added = results.filter((r) => r.status === "fulfilled").length;
+    const failed = toAdd.length - added;
+    if (failed > 0) {
+      toast.error(`${failed}개 GP 추가 실패`);
     }
     if (added > 0) {
       toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
@@ -80,9 +82,11 @@ export default function FIRecommendModal({
     }
   };
 
-  const formatBillion = (v: number) => {
-    if (v >= 10000) return `${(v / 10000).toFixed(1)}조`;
-    return `${v.toLocaleString()}억`;
+  const formatBillion = (v: string | number) => {
+    const n = typeof v === "string" ? parseFloat(v) : v;
+    if (isNaN(n) || n === 0) return "—";
+    if (n >= 10000) return `${(n / 10000).toFixed(1)}조`;
+    return `${n.toLocaleString()}억`;
   };
 
   return (
@@ -92,89 +96,110 @@ export default function FIRecommendModal({
         매칭합니다. (프로젝트 펀드 제외)
       </p>
 
-      {isLoading && (
-        <div className="flex justify-center py-8">
-          <Spinner />
-        </div>
-      )}
+      <div aria-live="polite">
+        {isLoading && (
+          <div className="flex justify-center py-8">
+            <Spinner />
+          </div>
+        )}
 
-      {!isLoading && isError && (
-        <EmptyState
-          icon={AlertTriangle}
-          title="추천 조회 실패"
-          description="FI 추천 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
-        />
-      )}
-
-      {!isLoading &&
-        !isError &&
-        (!recommendations || recommendations.length === 0) && (
+        {!isLoading && isError && (
           <EmptyState
-            icon={Building2}
-            title="추천 결과 없음"
-            description="거래금액 범위에 해당하는 PEF가 없습니다. 거래금액(estimated_deal_value)을 확인해 주세요."
+            icon={AlertTriangle}
+            title="추천 조회 실패"
+            description="FI 추천 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
           />
         )}
 
-      {!isLoading && recommendations && recommendations.length > 0 && (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {recommendations.map((rec: FIRecommendation) => {
-            const isExisting = existingSet.has(rec.gp_name.toLowerCase());
-            const isSelected = selected.has(rec.gp_name);
+        {!isLoading &&
+          !isError &&
+          (!recommendations || recommendations.length === 0) && (
+            <EmptyState
+              icon={Building2}
+              title="추천 결과 없음"
+              description="거래금액 범위에 해당하는 PEF가 없습니다. 거래금액(estimated_deal_value)을 확인해 주세요."
+            />
+          )}
 
-            return (
-              <Card
-                key={rec.gp_name}
-                padding="sm"
-                className={
-                  isSelected
-                    ? "ring-2 ring-accent-primary"
-                    : isExisting
-                      ? "opacity-70 bg-bg-muted"
-                      : ""
-                }
-              >
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    aria-disabled={isExisting || undefined}
-                    onChange={() => !isExisting && toggleGP(rec.gp_name)}
-                    className="h-4 w-4 rounded border-border"
-                  />
+        {!isLoading && recommendations && recommendations.length > 0 && (
+          <div
+            className="max-h-[400px] overflow-y-auto"
+            tabIndex={0}
+            aria-label="FI 추천 목록"
+          >
+            <div role="list" className="space-y-2">
+              {recommendations.map((rec: FIRecommendation) => {
+                const isExisting = existingSet.has(rec.gp_name.toLowerCase());
+                const isSelected = selected.has(rec.gp_name);
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{rec.gp_name}</span>
-                      {isExisting && <Badge variant="neutral">추가됨</Badge>}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-text-muted">
-                      <span className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        펀드 {rec.fund_count}개
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Target className="h-3 w-3" />
-                        최소 {formatBillion(rec.min_fund_size)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        총약정 {formatBillion(rec.total_committed_sum)}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-text-muted mt-1">
-                      {rec.match_reason}
-                    </p>
-                  </div>
-                </label>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                return (
+                  <Card
+                    key={rec.gp_name}
+                    role="listitem"
+                    padding="sm"
+                    className={
+                      isSelected
+                        ? "ring-2 ring-accent-primary"
+                        : isExisting
+                          ? "opacity-70 bg-bg-muted"
+                          : ""
+                    }
+                  >
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isExisting}
+                        aria-disabled={isExisting || undefined}
+                        onChange={() => !isExisting && toggleGP(rec.gp_name)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {rec.gp_name}
+                          </span>
+                          {isExisting && (
+                            <Badge variant="neutral">추가됨</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-text-muted">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" aria-hidden="true" />
+                            펀드 {rec.fund_count}개
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Target className="h-3 w-3" aria-hidden="true" />
+                            최소 {formatBillion(rec.min_fund_size)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <TrendingUp
+                              className="h-3 w-3"
+                              aria-hidden="true"
+                            />
+                            총약정 {formatBillion(rec.total_committed_sum)}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-text-muted mt-1">
+                          {rec.match_reason}
+                        </p>
+                      </div>
+                    </label>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-between items-center pt-4 border-t border-border mt-4">
-        <span className="text-xs text-text-muted">
+        <span
+          className="text-xs text-text-muted"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {selected.size}개 선택됨
         </span>
         <div className="flex gap-2">

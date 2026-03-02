@@ -1,7 +1,14 @@
 /** 계약서 자동 생성 위저드 — Step 0 → Step 1 → Step 2 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  FileSearch,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   useContractTemplates,
   useContractTemplateDetail,
@@ -20,13 +27,16 @@ import ContractEditor from "./ContractEditor";
 
 interface ContractGeneratorWizardProps {
   txnId: string;
+  initialTemplateId?: string;
 }
 
 const STEP_LABELS = ["유형 선택", "체크리스트 작성", "편집 및 다운로드"];
 
 export default function ContractGeneratorWizard({
   txnId,
+  initialTemplateId,
 }: ContractGeneratorWizardProps) {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] =
     useState<ContractTemplate | null>(null);
@@ -70,6 +80,15 @@ export default function ContractGeneratorWizard({
     setVariables({});
     setStep(1);
   }, []);
+
+  // E-1: SPA 분석에서 생성된 template_id로 자동 선택
+  useEffect(() => {
+    if (!initialTemplateId || !templates || selectedTemplate) return;
+    const match = templates.find((t) => t.id === initialTemplateId);
+    if (match) {
+      handleTemplateSelect(match);
+    }
+  }, [initialTemplateId, templates, selectedTemplate, handleTemplateSelect]);
 
   // 변수 값 변경
   const handleVariableChange = useCallback((key: string, value: unknown) => {
@@ -179,8 +198,26 @@ export default function ContractGeneratorWizard({
 
       {/* Step 0: 템플릿 선택 */}
       {step === 0 && (
-        <div>
-          <h2 className="mb-4 text-sm font-semibold text-text-primary">
+        <div className="flex flex-col gap-4">
+          {/* SPA 역분석 배너 */}
+          <button
+            type="button"
+            onClick={() => navigate(`/docs/legal/spa-analysis?txn_id=${txnId}`)}
+            className="flex items-center gap-3 rounded-xl border border-dashed border-accent-primary/40 bg-accent-primary/5 p-4 text-left transition-colors hover:border-accent-primary hover:bg-accent-primary/10"
+          >
+            <FileSearch className="h-5 w-5 shrink-0 text-accent-primary" />
+            <div>
+              <span className="text-sm font-medium text-accent-primary">
+                SPA 원문 역분석
+              </span>
+              <p className="text-xs text-text-secondary">
+                기존 SPA 계약서를 AI로 분석하여 재사용 가능한 템플릿을 자동
+                생성합니다
+              </p>
+            </div>
+          </button>
+
+          <h2 className="text-sm font-semibold text-text-primary">
             계약서 유형을 선택하세요
           </h2>
           <TemplateSelector

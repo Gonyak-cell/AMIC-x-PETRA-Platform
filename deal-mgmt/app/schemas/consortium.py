@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.enums import ConsortiumStatus
 
@@ -25,6 +25,11 @@ class ConsortiumMappingOut(BaseModel):
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("equity_share_pct")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 class ConsortiumMappingCreate(BaseModel):

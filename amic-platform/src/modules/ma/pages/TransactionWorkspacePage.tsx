@@ -222,9 +222,13 @@ import CompanyInfoCard from "@/modules/ma/components/overview/CompanyInfoCard";
 import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import PipelineFlow from "@/modules/ma/components/PipelineFlow";
 import PhaseActionPanel from "@/modules/ma/components/PhaseActionPanel";
+import MilestoneUploadPopover from "@/modules/ma/components/MilestoneUploadPopover";
+import { useAttachments } from "@/modules/ma/hooks/useAttachments";
 import {
   PHASE_CONFIG,
+  PHASE_MILESTONES,
   PHASE_TAB_MAP,
+  type PhaseMilestone,
   PHASE_VISIBLE_TABS,
   ENGAGEMENT_TYPE_OPTIONS,
   WORKING_GROUP_ROLE_OPTIONS,
@@ -459,10 +463,30 @@ export default function TransactionWorkspacePage() {
     }
   }, [splat, id, navigate, viewedPhase]);
 
+  // 마일스톤 업로드 팝오버 상태
+  const [activeMilestone, setActiveMilestone] = useState<PhaseMilestone | null>(
+    null,
+  );
+
   // 데이터 로드 — Phase 1
   const { data: txn, isLoading } = useTransaction(id);
   const { data: phaseStatus } = usePhaseCompletion(id);
   useAutoAdvanceNotification(id);
+
+  // 마일스톤 문서 존재 여부 조회
+  const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");
+  const milestoneDocuments = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const m of PHASE_MILESTONES) {
+      if (m.milestoneKey) {
+        map[m.milestoneKey] =
+          milestoneAttachments?.items?.some(
+            (a) => a.entity_id === m.milestoneKey,
+          ) ?? false;
+      }
+    }
+    return map;
+  }, [milestoneAttachments]);
   const { data: engagements } = useEngagements(id);
   useWorkingGroup(id);
   const { data: conflicts } = useConflictCheck(id);

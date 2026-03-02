@@ -25,7 +25,7 @@ class PermitKBEntry:
     post_filing_days: int | None = None
     required_documents: list[str] = field(default_factory=list)
     deal_structure_filter: list[str] | None = None
-    threshold_value: float | None = None
+    threshold_value: Decimal | None = None
     notes: str | None = None
 
 

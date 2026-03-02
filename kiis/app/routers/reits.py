@@ -5,13 +5,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.reits import REITs
 from app.schemas.reits import REITsAssetListResponse, REITsDetailResponse, REITsListItem, REITsListResponse
 from app.services.reits_service import REITsService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_reits_service() -> REITsService:

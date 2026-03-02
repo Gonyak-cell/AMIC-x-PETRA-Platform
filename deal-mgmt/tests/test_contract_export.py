@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 
+import pytest
 from docx import Document
 
 from app.services.contract_export_service import (
@@ -122,6 +123,7 @@ class TestBuildDocx:
 
 
 class TestHtmlToDocxAsync:
+    @pytest.mark.asyncio
     async def test_async_wrapper(self) -> None:
         from app.services.contract_export_service import html_to_docx
 

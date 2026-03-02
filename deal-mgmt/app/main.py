@@ -144,6 +144,7 @@ from app.routers import (
     rfi,
     risks,
     si_mapping,
+    spa_analysis,
     template_visualization,
     timeline,
     transactions,
@@ -203,6 +204,7 @@ app.include_router(template_visualization.router, prefix="/api/v1")
 app.include_router(si_mapping.router, prefix="/api/v1")
 app.include_router(admin_settings.router, prefix="/api/v1")
 app.include_router(pef_registry.router, prefix="/api/v1")
+app.include_router(spa_analysis.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

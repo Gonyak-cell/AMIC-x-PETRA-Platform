@@ -6,20 +6,20 @@ export interface SICompany {
   id: string;
   company_name: string;
   ksic_codes: string[] | null;
-  revenue: number | null;
+  revenue: string | null;
   revenue_year: number | null;
   has_investment_history: boolean;
   description: string | null;
 
   // 재무정보 (금융위 getSummFinaStat_V2)
-  operating_profit: number | null;
-  net_income: number | null;
-  total_assets: number | null;
-  total_debt: number | null;
-  total_equity: number | null;
-  capital_amount: number | null;
-  debt_ratio: number | null;
-  pretax_income: number | null;
+  operating_profit: string | null;
+  net_income: string | null;
+  total_assets: string | null;
+  total_debt: string | null;
+  total_equity: string | null;
+  capital_amount: string | null;
+  debt_ratio: string | null;
+  pretax_income: string | null;
 
   // 기업기본정보 (금융위 getCorpOutline_V2)
   representative: string | null;
@@ -38,13 +38,13 @@ export interface SICandidate {
   relation: SICompanyRelation;
   io_code: string | null;
   io_name: string | null;
-  transaction_value: number | null;
+  transaction_value: string | null;
 }
 
 export interface ValueChainPanel {
   io_code: string;
   io_name: string;
-  transaction_value: number;
+  transaction_value: string;
   companies: SICompany[];
 }
 
@@ -104,10 +104,10 @@ export interface CompanyOverview {
 
 export interface FinancialSummary {
   bsns_year: string;
-  revenue: number | null;
-  operating_income: number | null;
-  net_income: number | null;
-  total_assets: number | null;
+  revenue: string | null;
+  operating_income: string | null;
+  net_income: string | null;
+  total_assets: string | null;
 }
 
 export interface DeepDiveDisclosure {

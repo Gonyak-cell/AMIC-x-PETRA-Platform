@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.schemas.disclosure import (
     DeepLinkResponse,
     DisclosureListItem,
@@ -12,7 +13,7 @@ from app.schemas.disclosure import (
 )
 from app.services.disclosure_service import DisclosureService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_disclosure_service() -> DisclosureService:

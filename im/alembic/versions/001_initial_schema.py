@@ -7,24 +7,30 @@ Create Date: 2026-02-10 22:15:00
 > 마지막 수정: 2026-02-10 22:15:00
 """
 
-from typing import Sequence, Union
+from __future__ import annotations
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = "001_initial"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+_JSON = sa.JSON().with_variant(_JSONB, "postgresql")
 
 
 def upgrade() -> None:
     # === users ===
     op.create_table(
         "users",
-        sa.Column("id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("email", sa.String(255), nullable=False),
         sa.Column("hashed_password", sa.String(255), nullable=False),
         sa.Column("full_name", sa.String(100), nullable=False),
@@ -50,7 +56,9 @@ def upgrade() -> None:
     # === api_keys ===
     op.create_table(
         "api_keys",
-        sa.Column("id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("key_hash", sa.String(64), nullable=False),
         sa.Column("name", sa.String(100), nullable=False),
@@ -74,18 +82,18 @@ def upgrade() -> None:
     # === companies ===
     op.create_table(
         "companies",
-        sa.Column("id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("corp_code", sa.String(8), nullable=False),
         sa.Column("corp_name", sa.String(200), nullable=False),
         sa.Column("corp_name_en", sa.String(200), nullable=True),
         sa.Column("stock_code", sa.String(10), nullable=True),
         sa.Column("industry", sa.String(100), nullable=True),
         sa.Column("homepage_url", sa.String(500), nullable=True),
-        sa.Column("dart_data", postgresql.JSONB(astext_type=sa.Text()), server_default="{}"),
-        sa.Column(
-            "financial_summary", postgresql.JSONB(astext_type=sa.Text()), server_default="{}"
-        ),
-        sa.Column("brand_assets", postgresql.JSONB(astext_type=sa.Text()), server_default="{}"),
+        sa.Column("dart_data", _JSON, server_default="{}"),
+        sa.Column("financial_summary", _JSON, server_default="{}"),
+        sa.Column("brand_assets", _JSON, server_default="{}"),
         sa.Column("fetch_task_id", sa.String(255), nullable=True),
         sa.Column("fetch_status", sa.String(20), server_default="PENDING"),
         sa.Column("last_fetched_at", sa.DateTime(timezone=True), nullable=True),
@@ -111,22 +119,20 @@ def upgrade() -> None:
     # === documents ===
     op.create_table(
         "documents",
-        sa.Column("id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
         sa.Column("corp_code", sa.String(8), nullable=False),
         sa.Column("company_name", sa.String(200), nullable=False),
         sa.Column("project_name", sa.String(200), nullable=True),
         sa.Column("im_style", sa.String(20), server_default="FULL"),
-        sa.Column("sections", postgresql.JSONB(astext_type=sa.Text()), server_default="[]"),
-        sa.Column(
-            "generation_config", postgresql.JSONB(astext_type=sa.Text()), server_default="{}"
-        ),
+        sa.Column("sections", _JSON, server_default="[]"),
+        sa.Column("generation_config", _JSON, server_default="{}"),
         sa.Column("status", sa.String(20), server_default="PENDING"),
         sa.Column("progress_pct", sa.Integer(), server_default="0"),
         sa.Column("celery_task_id", sa.String(255), nullable=True),
-        sa.Column(
-            "stage_details", postgresql.JSONB(astext_type=sa.Text()), server_default="{}"
-        ),
+        sa.Column("stage_details", _JSON, server_default="{}"),
         sa.Column("pptx_path", sa.String(500), nullable=True),
         sa.Column("pdf_path", sa.String(500), nullable=True),
         sa.Column("file_size_bytes", sa.BigInteger(), nullable=True),

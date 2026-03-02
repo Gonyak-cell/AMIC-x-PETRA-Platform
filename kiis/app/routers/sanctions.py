@@ -1,9 +1,12 @@
 """제재 분류 API 라우터"""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.schemas.sanction import (
     ClassifiedSanctionItem,
     ClassifiedSanctionListItem,
@@ -13,7 +16,9 @@ from app.schemas.sanction import (
 )
 from app.services.sanction_service import SanctionService
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
+
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_sanction_service() -> SanctionService:
@@ -93,11 +98,12 @@ async def classify_sanctions(
     """DART에서 특정 기업의 제재 내역을 수집하고 경중을 분류한다."""
     try:
         records = await service.classify_for_company(db=db, corp_code=corp_code)
-    except Exception as e:
+    except Exception:
+        logger.exception("DART API 호출 실패: corp_code=%s", corp_code)
         raise HTTPException(
             status_code=502,
-            detail=f"DART API 호출 실패: {e}",
-        ) from e
+            detail="외부 API 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        )
 
     items = [
         ClassifiedSanctionItem(

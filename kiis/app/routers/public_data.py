@@ -44,6 +44,7 @@ async def list_registered_gps(
     company_name: str | None = Query(None, description="운용사명 검색 (부분 일치)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
+    _claims=Depends(get_jwt_claims),
     service: PublicDataService = Depends(get_public_data_service),
 ):
     """공공데이터포털 금융통계 기반 등록 자산운용사 목록을 조회한다.
@@ -69,6 +70,7 @@ async def list_gp_companies(
     sort_by: str = Query("aum", description="정렬 기준 (aum, commitment, fund_count, company_name)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     size: int = Query(20, ge=1, le=100, description="페이지당 건수"),
+    _claims=Depends(get_jwt_claims),
     db: AsyncSession = Depends(get_db),
 ) -> GPCompanyListResponse:
     """Company 테이블에 동기화된 GP(사모펀드 운용사) 전수목록을 통합 조회한다.
@@ -128,6 +130,7 @@ async def list_gp_companies(
 )
 async def get_gp_company_detail(
     company_id: int,
+    _claims=Depends(get_jwt_claims),
     db: AsyncSession = Depends(get_db),
 ) -> GPCompanyDetailResponse:
     """GP 운용사 상세 정보를 조회한다. 연결된 KVIC 자조합 및 금감원 PEF 목록을 포함한다."""
@@ -246,6 +249,7 @@ async def get_gp_company_detail(
 @router.get("/gp/{company_name}", response_model=GPRegistryItem | None, summary="운용사 상세 조회")
 async def get_registered_gp(
     company_name: str,
+    _claims=Depends(get_jwt_claims),
     service: PublicDataService = Depends(get_public_data_service),
 ):
     """특정 운용사의 등록 정보를 조회한다."""
@@ -418,6 +422,12 @@ async def upload_kvic_gp(
 
     try:
         if filename.endswith(".csv"):
+            # CSV 콘텐츠 검증: 바이너리 파일이 .csv 확장자로 위장한 경우 차단
+            if content[:4] in (_XLSX_MAGIC, _XLS_MAGIC) or content[:2] == b"MZ":
+                raise HTTPException(
+                    status_code=400,
+                    detail="CSV 확장자이나 실제 콘텐츠가 CSV 형식이 아닙니다. 올바른 CSV 파일을 업로드하세요.",
+                )
             items = service.parse_kvic_csv(content)
         else:
             if content[:4] not in (_XLSX_MAGIC, _XLS_MAGIC):

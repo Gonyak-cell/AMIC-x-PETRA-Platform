@@ -135,16 +135,16 @@ class PublicDataService:
             logger.warning("DATA_GO_KR_API_KEY 미설정 — 빈 결과 반환")
             return [], 0
 
-        # 일반현황 데이터 (AUM, 펀드수, 임직원수 등)
-        general_data = await self._get_gp_general_list(page=1, size=500)
+        # 3개 API 병렬 호출 (각각 캐시 데코레이터 적용)
+        import asyncio as _asyncio
+
+        general_data, financial_data, fn_co_data = await _asyncio.gather(
+            self._get_gp_general_list(page=1, size=500),
+            self._get_gp_financial_list(page=1, size=500),
+            self._get_fn_co_list(page=1, size=500),
+        )
         general_items = self._parse_items(general_data)
-
-        # 재무현황 데이터 (자본금, 총자산, 영업수익)
-        financial_data = await self._get_gp_financial_list(page=1, size=500)
         financial_items = self._parse_items(financial_data)
-
-        # 금융회사기본정보 (설립일, 주소, 연락처)
-        fn_co_data = await self._get_fn_co_list(page=1, size=500)
         fn_co_items = self._parse_items(fn_co_data)
 
         # 재무 데이터를 회사명으로 인덱싱
@@ -197,7 +197,7 @@ class PublicDataService:
             )
 
         # 정렬: AUM 기준 내림차순 (None은 뒤로)
-        results.sort(key=lambda x: x.aum or Decimal(0), reverse=True)
+        results.sort(key=lambda x: x.aum or Decimal("0"), reverse=True)
 
         total = len(results)
         start = (page - 1) * size

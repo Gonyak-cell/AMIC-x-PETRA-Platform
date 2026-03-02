@@ -62,9 +62,10 @@ def upgrade() -> None:
     # 3. BuyerCandidateStatus enum 확장 (PostgreSQL만)
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_SUBMITTED'"))
-        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_NOT_SUBMITTED'"))
-        op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_DROPPED'"))
+        with op.get_context().autocommit_block():
+            op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_SUBMITTED'"))
+            op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_NOT_SUBMITTED'"))
+            op.execute(sa.text("ALTER TYPE buyercandidatestatus ADD VALUE IF NOT EXISTS 'BID_DROPPED'"))
 
 
 def downgrade() -> None:

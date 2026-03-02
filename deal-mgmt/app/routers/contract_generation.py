@@ -36,6 +36,8 @@ router = APIRouter(
 )
 
 # ── Rate Limiting (인메모리, 분당 5회) ───────────────────────────────────────
+# NOTE: 인메모리 딕셔너리 → 멀티 워커(gunicorn) 환경에서 워커별 독립 카운트.
+# 프로덕션 스케일 시 Redis 기반 분산 rate limiter로 전환 필요.
 
 _generate_rate: dict[str, list[float]] = {}
 _RATE_LIMIT_WINDOW = 60.0
@@ -135,14 +137,7 @@ async def generate_contract(
     _check_generate_rate(claims.email or "anonymous")
 
     try:
-        (
-            legal_doc,
-            clauses_used,
-            clauses_skipped,
-            llm_smoothed,
-            llm_cost,
-            timing,
-        ) = await contract_generation_service.generate_contract_html(
+        result = await contract_generation_service.generate_contract_html(
             db,
             transaction_id=txn_id,
             template_id=body.template_id,
@@ -159,14 +154,14 @@ async def generate_contract(
     await db.commit()
 
     return ContractGenerationOut(
-        legal_document_id=legal_doc.id,
-        html=legal_doc.generated_html or "",
-        clauses_used=clauses_used,
-        clauses_skipped=clauses_skipped,
-        llm_smoothed=llm_smoothed,
-        llm_cost_usd=llm_cost if claims.role == "ADMIN" else None,
-        updated_at=legal_doc.updated_at,
-        timing=GenerationTimingOut(**timing) if claims.role == "ADMIN" else None,
+        legal_document_id=result.legal_document.id,
+        html=result.legal_document.generated_html or "",
+        clauses_used=result.clauses_used,
+        clauses_skipped=result.clauses_skipped,
+        llm_smoothed=result.llm_smoothed,
+        llm_cost_usd=result.llm_cost if claims.role == "ADMIN" else None,
+        updated_at=result.legal_document.updated_at,
+        timing=GenerationTimingOut(**result.timing) if claims.role == "ADMIN" else None,
     )
 
 

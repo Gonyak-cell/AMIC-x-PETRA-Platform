@@ -3,30 +3,41 @@
 Revision ID: 018
 Revises: 017
 """
-from alembic import op
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM as PgENUM
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
+
+_JSON = sa.JSON().with_variant(_JSONB, "postgresql")
 
 revision = "018"
 down_revision = "017"
 branch_labels = None
 depends_on = None
 
-transcription_job_status = PgENUM(
-    "PENDING", "TRANSCRIBING", "ANALYZING", "COMPLETED", "APPROVED", "FAILED",
-    name="transcriptionjobstatus", create_type=False,
+transcription_job_status = sa.Enum(
+    "PENDING",
+    "TRANSCRIBING",
+    "ANALYZING",
+    "COMPLETED",
+    "APPROVED",
+    "FAILED",
+    name="transcriptionjobstatus",
+    create_type=False,
 )
 
 
 def upgrade() -> None:
-    transcription_job_status.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        transcription_job_status.create(bind, checkfirst=True)
 
     op.create_table(
         "transcription_jobs",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column(
             "transaction_id",
-            UUID(as_uuid=True),
+            sa.Uuid(),
             sa.ForeignKey("transactions.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -35,20 +46,22 @@ def upgrade() -> None:
         sa.Column("meeting_date", sa.String(10), nullable=False),
         sa.Column(
             "meeting_phase",
-            PgENUM(
-                "MARKETING", "NEGOTIATION",
-                name="meetingphase", create_type=False,
+            sa.Enum(
+                "MARKETING",
+                "NEGOTIATION",
+                name="meetingphase",
+                create_type=False,
             ),
             nullable=False,
         ),
         sa.Column(
             "buyer_id",
-            UUID(as_uuid=True),
+            sa.Uuid(),
             sa.ForeignKey("buyer_candidates.id"),
             nullable=True,
         ),
         # 참석자 (사용자 입력, JSON 배열)
-        sa.Column("attendees_json", JSONB, nullable=True),
+        sa.Column("attendees_json", _JSON, nullable=True),
         # 오디오 파일
         sa.Column("audio_file_path", sa.String(500), nullable=False),
         sa.Column("audio_file_name", sa.String(300), nullable=False),
@@ -58,11 +71,11 @@ def upgrade() -> None:
         # STT 결과
         sa.Column("transcript", sa.Text, nullable=True),
         # LLM 구조화 결과
-        sa.Column("minutes_json", JSONB, nullable=True),
+        sa.Column("minutes_json", _JSON, nullable=True),
         # 확정된 미팅 로그
         sa.Column(
             "meeting_log_id",
-            UUID(as_uuid=True),
+            sa.Uuid(),
             sa.ForeignKey("meeting_logs.id"),
             nullable=True,
         ),
@@ -83,4 +96,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("transcription_jobs")
-    transcription_job_status.drop(op.get_bind(), checkfirst=True)
+
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        transcription_job_status.drop(bind, checkfirst=True)

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.pagination import PaginationParams, paginate
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.models.reputation import ReputationScore
 from app.schemas.analysis import (
@@ -21,7 +22,7 @@ from app.schemas.analysis import (
 from app.services.reputation_service import ReputationService
 from app.services.reputation_themes import THEME_DISPLAY_NAMES, THEME_SENTIMENT
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_reputation_service() -> ReputationService:

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.schemas.deal import (
     AmountBucket,
@@ -27,7 +28,7 @@ from app.schemas.deal import (
 )
 from app.services.deal_service import DealService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_deal_service() -> DealService:

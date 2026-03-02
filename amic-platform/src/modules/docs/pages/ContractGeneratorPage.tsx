@@ -8,6 +8,7 @@ export default function ContractGeneratorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const txnId = searchParams.get("txn_id") ?? "";
+  const initialTemplateId = searchParams.get("template_id") ?? undefined;
 
   if (!txnId) {
     return (
@@ -21,7 +22,10 @@ export default function ContractGeneratorPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6">
+    <section
+      aria-label="AI 계약서 생성"
+      className="mx-auto max-w-4xl px-4 py-6"
+    >
       {/* 헤더 */}
       <div className="mb-6 flex items-center gap-3">
         <button
@@ -44,7 +48,10 @@ export default function ContractGeneratorPage() {
       </div>
 
       {/* 위저드 */}
-      <ContractGeneratorWizard txnId={txnId} />
-    </main>
+      <ContractGeneratorWizard
+        txnId={txnId}
+        initialTemplateId={initialTemplateId}
+      />
+    </section>
   );
 }

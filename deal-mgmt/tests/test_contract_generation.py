@@ -58,6 +58,14 @@ class TestEvaluateCondition:
     def test_syntax_error_returns_false(self) -> None:
         assert evaluate_condition("if True:", {}) is False
 
+    def test_in_operator(self) -> None:
+        assert evaluate_condition('doc_type in ["SPA", "SHA"]', {"doc_type": "SPA"}) is True
+        assert evaluate_condition('doc_type in ["SPA", "SHA"]', {"doc_type": "BTA"}) is False
+
+    def test_not_in_operator(self) -> None:
+        assert evaluate_condition('doc_type not in ["MOU"]', {"doc_type": "SPA"}) is True
+        assert evaluate_condition('doc_type not in ["MOU"]', {"doc_type": "MOU"}) is False
+
     def test_missing_variable_returns_none(self) -> None:
         # None == True → False
         assert evaluate_condition("x == True", {}) is False
@@ -740,10 +748,10 @@ class TestGenerateContractHtml:
                 use_llm=False,
             )
 
-        doc, used, skipped, llm_smoothed, _llm_cost, timing = result
-        assert doc == mock_legal_doc
-        assert used == 1
-        assert skipped == 0
-        assert llm_smoothed is False
-        assert "total" in timing
-        assert "template_lookup" in timing
+        assert result.legal_document == mock_legal_doc
+        assert result.clauses_used == 1
+        assert result.clauses_skipped == 0
+        assert result.llm_smoothed is False
+        assert result.llm_cost is None
+        assert "total" in result.timing
+        assert "template_lookup" in result.timing

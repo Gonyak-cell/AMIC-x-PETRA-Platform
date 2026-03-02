@@ -29,14 +29,16 @@ def _run_async(coro):
     name="deal_mgmt.extraction.run_pipeline",
     bind=True,
     soft_time_limit=300,  # 5분
-    acks_late=True,  # 워커 크래시 시 메시지 재전달 (명시적 self.retry 미사용)
+    acks_late=True,  # 워커 크래시 시 메시지 재전달
+    max_retries=2,
+    default_retry_delay=60,
 )
 def run_extraction_task(self, extraction_id: str) -> None:
     """VDR 문서 AI 추출 파이프라인을 실행한다."""
     from app.core.database import async_session_factory
     from app.services.document_extraction_service import run_extraction_pipeline
 
-    logger.info("Celery: 문서 추출 시작 (extraction=%s)", extraction_id)
+    logger.info("Celery: 문서 추출 시작 (extraction=%s, retry=%d)", extraction_id, self.request.retries)
 
     try:
         _run_async(
@@ -56,6 +58,6 @@ def run_extraction_task(self, extraction_id: str) -> None:
                 "AI 분석 시간이 초과되었습니다. 다시 시도해주세요.",
             )
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Celery: 문서 추출 실패 (extraction=%s)", extraction_id)
-        raise
+        raise self.retry(exc=exc)

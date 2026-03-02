@@ -37,15 +37,23 @@ def run_ralph_loop_task(
     body_dict: dict,
 ) -> None:
     """Ralph Loop 세션을 실행한다."""
+    from celery.exceptions import SoftTimeLimitExceeded
+
     from app.routers.ralph import _run_ralph_loop
     from app.schemas.ralph import RalphSessionCreate
 
     logger.info("Celery: Ralph Loop 시작 (session=%s)", session_id)
 
     body = RalphSessionCreate.model_validate(body_dict)
-    _run_async(
-        _run_ralph_loop(
-            session_id=uuid.UUID(session_id),
-            body=body,
+    try:
+        _run_async(
+            _run_ralph_loop(
+                session_id=uuid.UUID(session_id),
+                body=body,
+            )
         )
-    )
+    except SoftTimeLimitExceeded:
+        logger.warning("Ralph Loop soft_time_limit 초과 (session=%s)", session_id)
+    except Exception:
+        logger.exception("Ralph Loop 실패 (session=%s)", session_id)
+        raise self.retry(countdown=60)

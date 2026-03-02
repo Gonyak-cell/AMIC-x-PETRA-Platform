@@ -1,4 +1,4 @@
-"""7단계 워크플로우 상태 머신 API 테스트."""
+"""8단계 워크플로우 상태 머신 API 테스트."""
 
 # 전제 조건을 모두 충족하는 거래 데이터
 FULL_TXN = {
@@ -195,7 +195,6 @@ async def test_advance_through_multiple_phases(client):
         "PREPARATION",
         "MARKETING",
         "BIDDING",
-        "MOU_SIGNED",
         "MAIN_DUE_DILIGENCE",
         "NEGOTIATION",
     ]

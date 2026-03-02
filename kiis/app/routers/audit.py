@@ -12,10 +12,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.audit import AuditLog
 from app.schemas.audit import AuditLogListResponse, AuditLogRead
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 async def _list_audit_logs(

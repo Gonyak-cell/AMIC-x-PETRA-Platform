@@ -8,6 +8,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Literal
 
 import httpx
@@ -36,6 +37,21 @@ from app.schemas.si_mapping import (
     ValueChainPanel,
 )
 from app.services import audit_service
+
+# KIIS DART API 호출용 재사용 클라이언트 (모듈 레벨 싱글턴)
+_kiis_http_client: httpx.AsyncClient | None = None
+_kiis_http_lock = asyncio.Lock()
+
+
+async def _get_kiis_http_client() -> httpx.AsyncClient:
+    """KIIS DART API 호출용 httpx.AsyncClient 싱글턴."""
+    global _kiis_http_client
+    if _kiis_http_client is None or _kiis_http_client.is_closed:
+        async with _kiis_http_lock:
+            if _kiis_http_client is None or _kiis_http_client.is_closed:
+                _kiis_http_client = httpx.AsyncClient(timeout=15.0)
+    return _kiis_http_client
+
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +130,7 @@ async def map_si_candidates(
     ksic_codes: list[str],
     top_n: int = 5,
     max_companies_per_panel: int = 50,
-    min_revenue: float | None = None,
+    min_revenue: Decimal | None = None,
     require_investment_history: bool = False,
 ) -> SIMappingResponse:
     """KSIC 코드 기반 SI 후보 매핑 — 동종업계 + Value Chain.
@@ -268,18 +284,31 @@ async def bulk_add_to_buyers(
 
 
 # ── 서비스 간 통신 토큰 ──────────────────────────────────
+_service_token_cache: tuple[str, datetime] | None = None
+
+
 def _make_service_token() -> str:
-    """내부 서비스 간 통신용 단기 JWT 토큰 생성 (30초 TTL)."""
+    """내부 서비스 간 통신용 단기 JWT 토큰 생성 (30초 TTL, 캐시 재사용)."""
+    global _service_token_cache
+    now = datetime.now(UTC)
+    if _service_token_cache is not None:
+        token, expires_at = _service_token_cache
+        if now < expires_at - timedelta(seconds=5):
+            return token
+
     from app.core.config import settings
     from app.core.security import get_jwt_secret
 
+    expires_at = now + timedelta(seconds=30)
     payload = {
         "sub": "deal-mgmt-service",
         "iss": "deal-mgmt",
-        "exp": datetime.now(UTC) + timedelta(seconds=30),
+        "exp": expires_at,
         "scope": "internal",
     }
-    return jose_jwt.encode(payload, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
+    token = jose_jwt.encode(payload, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
+    _service_token_cache = (token, expires_at)
+    return token
 
 
 # ── 딥다이브 ───────────────────────────────────────────────
@@ -326,72 +355,79 @@ async def get_deep_dive(
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
-            # 기업명으로 DART 기업 검색 → corp_code 획득
-            search_resp = await client.get(
-                f"{kiis_base}/dart/companies",
-                params={"search": si_company.company_name, "size": 5},
+        client = await _get_kiis_http_client()
+        # 기업명으로 DART 기업 검색 → corp_code 획득
+        search_resp = await client.get(
+            f"{kiis_base}/dart/companies",
+            headers=headers,
+            params={"search": si_company.company_name, "size": 5},
+        )
+        if search_resp.status_code != 200:
+            logger.warning(
+                "KIIS DART 기업검색 실패: status=%d, company=%s",
+                search_resp.status_code,
+                si_company.company_name,
             )
-            if search_resp.status_code != 200:
-                logger.warning(
-                    "KIIS DART 기업검색 실패: status=%d, company=%s",
-                    search_resp.status_code,
-                    si_company.company_name,
-                )
-                return base_response
+            return base_response
 
-            search_data = search_resp.json()
-            items = search_data.get("items", [])
-            if not items:
-                logger.info("DART에서 '%s' 검색 결과 없음", si_company.company_name)
-                return base_response
+        search_data = search_resp.json()
+        items = search_data.get("items", [])
+        if not items:
+            logger.info("DART에서 '%s' 검색 결과 없음", si_company.company_name)
+            return base_response
 
-            # jurir_no 또는 기업명 정확 매칭으로 corp_code 특정
-            corp_code = _match_corp_code(items, si_company)
-            if not corp_code:
-                logger.info("DART corp_code 매칭 실패: %s", si_company.company_name)
-                return base_response
+        # jurir_no 또는 기업명 정확 매칭으로 corp_code 특정
+        corp_code = _match_corp_code(items, si_company)
+        if not corp_code:
+            logger.info("DART corp_code 매칭 실패: %s", si_company.company_name)
+            return base_response
 
-            # 3. 병렬 호출: 기업개황 + 재무제표(최근 3년) + 공시 + 제재
-            overview_task = client.get(f"{kiis_base}/dart/companies/{corp_code}")
-            financial_tasks = [
-                client.get(
-                    f"{kiis_base}/dart/companies/{corp_code}/financials",
-                    params={"bsns_year": str(year), "reprt_code": "11011", "fs_div": "CFS"},
-                )
-                for year in range(2025, 2022, -1)
-            ]
-            disclosure_task = client.get(
-                f"{kiis_base}/dart/disclosures",
-                params={"corp_code": corp_code, "pblntf_ty": "B", "size": 10},
+        # 3. 병렬 호출: 기업개황 + 재무제표(최근 3년) + 공시 + 제재
+        overview_task = client.get(
+            f"{kiis_base}/dart/companies/{corp_code}",
+            headers=headers,
+        )
+        financial_tasks = [
+            client.get(
+                f"{kiis_base}/dart/companies/{corp_code}/financials",
+                headers=headers,
+                params={"bsns_year": str(year), "reprt_code": "11011", "fs_div": "CFS"},
             )
-            sanctions_task = client.get(
-                f"{kiis_base}/dart/sanctions",
-                params={"corp_code": corp_code},
-            )
+            for year in range(2025, 2022, -1)
+        ]
+        disclosure_task = client.get(
+            f"{kiis_base}/dart/disclosures",
+            headers=headers,
+            params={"corp_code": corp_code, "pblntf_ty": "B", "size": 10},
+        )
+        sanctions_task = client.get(
+            f"{kiis_base}/dart/sanctions",
+            headers=headers,
+            params={"corp_code": corp_code},
+        )
 
-            responses = await asyncio.gather(
-                overview_task,
-                *financial_tasks,
-                disclosure_task,
-                sanctions_task,
-                return_exceptions=True,
-            )
+        responses = await asyncio.gather(
+            overview_task,
+            *financial_tasks,
+            disclosure_task,
+            sanctions_task,
+            return_exceptions=True,
+        )
 
-            # 4. 결과 파싱
-            overview = _parse_overview(responses[0])
-            financials = _parse_financials(responses[1:4])
-            disclosures = _parse_disclosures(responses[4])
-            sanctions = _parse_sanctions(responses[5])
+        # 4. 결과 파싱
+        overview = _parse_overview(responses[0])
+        financials = _parse_financials(responses[1:4])
+        disclosures = _parse_disclosures(responses[4])
+        sanctions = _parse_sanctions(responses[5])
 
-            return DeepDiveResponse(
-                company=company_out,
-                overview=overview,
-                financials=financials,
-                disclosures=disclosures,
-                sanctions=sanctions,
-                dart_available=True,
-            )
+        return DeepDiveResponse(
+            company=company_out,
+            overview=overview,
+            financials=financials,
+            disclosures=disclosures,
+            sanctions=sanctions,
+            dart_available=True,
+        )
 
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         logger.warning("KIIS DART API 연결 실패: %s", exc)
@@ -456,15 +492,15 @@ def _parse_financials(
     return summaries
 
 
-def _extract_amount(items: list[dict], account_name: str) -> float | None:
-    """재무제표 항목에서 특정 계정의 당기금액 추출."""
+def _extract_amount(items: list[dict], account_name: str) -> Decimal | None:
+    """재무제표 항목에서 특정 계정의 당기금액 추출 (Decimal 정밀도 보존)."""
     for item in items:
         if account_name in item.get("account_nm", ""):
             raw = item.get("thstrm_amount", "").replace(",", "")
             if raw and raw != "-":
                 try:
-                    return float(raw)
-                except ValueError:
+                    return Decimal(raw)
+                except Exception:
                     logger.debug("금액 파싱 실패: account=%s, raw=%r", account_name, raw)
     return None
 
@@ -513,11 +549,26 @@ _MAX_COMPANIES_FOR_MAPPING: int = 10_000
 
 async def _load_filtered_companies(
     db: AsyncSession,
-    min_revenue: float | None,
+    min_revenue: Decimal | None,
     require_investment_history: bool,
 ) -> list[SICompany]:
-    """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 10,000건)."""
-    q = select(SICompany)
+    """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 10,000건).
+
+    메타데이터 컬럼(jurir_no, fina_base_date 등)은 defer로 제외하여
+    10K건 로딩 시 전송 데이터량을 줄인다.
+    """
+    from sqlalchemy.orm import defer
+
+    q = select(SICompany).options(
+        defer(SICompany.jurir_no),
+        defer(SICompany.corp_code),
+        defer(SICompany.fina_base_date),
+        defer(SICompany.fina_report_code),
+        defer(SICompany.fina_report_name),
+        defer(SICompany.fina_stat_synced_at),
+        defer(SICompany.corp_basic_synced_at),
+        defer(SICompany.corp_basic_base_date),
+    )
     if min_revenue is not None:
         q = q.where(SICompany.revenue >= min_revenue)
     if require_investment_history:
@@ -566,12 +617,13 @@ def _lookup_by_ksic(
     3. 역접두사 매칭: 인덱스 키가 입력 코드의 접두사이면 매칭
        예) 입력 "24110123" → 인덱스 "24110" 매칭
 
-    NOTE: seed_company_data.py의 load_master_dict()에서 적재 시 접두사 정규화를
-    수행하지만, 모든 코드가 정규화되지 않을 수 있어 조회 시점에서도 접두사 매칭을
-    수행하는 2중 안전망 설계.
+    성능 최적화: 정렬된 키 + bisect로 접두사 매칭 O(K*N) → O(K*(logN+M)).
     """
+    import bisect as _bisect
+
     seen: set[uuid.UUID] = set()
     matched: list[SICompany] = []
+    sorted_keys = sorted(ksic_index.keys())
 
     for code in ksic_codes:
         # 1. 정확 매칭
@@ -580,16 +632,30 @@ def _lookup_by_ksic(
                 seen.add(c.id)
                 matched.append(c)
 
-        # 2 & 3. 접두사/역접두사 매칭 (코드 길이 2+ 제한)
-        if len(code) >= 2:
-            for index_code, companies in ksic_index.items():
-                if index_code == code:
-                    continue  # 이미 정확 매칭에서 처리
-                if index_code.startswith(code) or code.startswith(index_code):
-                    for c in companies:
-                        if c.id not in seen:
-                            seen.add(c.id)
-                            matched.append(c)
+        if len(code) < 2:
+            continue
+
+        # 2. 접두사 매칭: index_code가 code로 시작 (bisect로 범위 탐색)
+        lo = _bisect.bisect_left(sorted_keys, code)
+        for i in range(lo, len(sorted_keys)):
+            k = sorted_keys[i]
+            if not k.startswith(code):
+                break
+            if k == code:
+                continue  # 이미 정확 매칭에서 처리
+            for c in ksic_index[k]:
+                if c.id not in seen:
+                    seen.add(c.id)
+                    matched.append(c)
+
+        # 3. 역접두사 매칭: code가 index_code로 시작 (접두사 길이별 확인)
+        for length in range(2, len(code)):
+            prefix = code[:length]
+            if prefix != code and prefix in ksic_index:
+                for c in ksic_index[prefix]:
+                    if c.id not in seen:
+                        seen.add(c.id)
+                        matched.append(c)
 
     return matched
 
@@ -667,7 +733,7 @@ async def _get_value_chain(
             ValueChainPanel(
                 io_code=io_code,
                 io_name=io_name or "",
-                transaction_value=float(total_val) if total_val else 0.0,
+                transaction_value=total_val if total_val else Decimal("0"),
                 companies=[SICompanyOut.model_validate(c) for c in companies],
             )
         )

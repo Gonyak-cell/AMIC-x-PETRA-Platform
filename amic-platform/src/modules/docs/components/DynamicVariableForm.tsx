@@ -16,6 +16,8 @@ interface DynamicVariableFormProps {
  *  - not key                     (불리언 부정)
  *  - key == "문자열"             (문자열 동등)
  *  - key > 123 / key >= / < / <= (숫자 비교)
+ *  - key in ["v1", "v2"]        (멤버십 검사)
+ *  - key not in ["v1", "v2"]    (비멤버십 검사)
  *  - expr1 and expr2 / expr1 or expr2 (논리 조합)
  *
  * ⚠️ and가 or보다 우선순위 높음 (Python 동일)
@@ -95,6 +97,30 @@ function evalSingle(expr: string, vars: Record<string, unknown>): boolean {
       default:
         return false;
     }
+  }
+
+  // in 연산자: key in ["val1", "val2"]
+  const inMatch = expr.match(/^(\w+)\s+in\s+\[([^\]]*)\]$/);
+  if (inMatch) {
+    const raw = inMatch[2].trim();
+    if (!raw) return false; // 빈 리스트 → Python과 동일하게 false
+    const val = String(vars[inMatch[1]] ?? "");
+    const items = raw
+      .split(",")
+      .map((s) => s.trim().replace(/^"|"$/g, "").replace(/^'|'$/g, ""));
+    return items.includes(val);
+  }
+
+  // not in 연산자: key not in ["val1", "val2"]
+  const notInMatch = expr.match(/^(\w+)\s+not\s+in\s+\[([^\]]*)\]$/);
+  if (notInMatch) {
+    const raw = notInMatch[2].trim();
+    if (!raw) return true; // 빈 리스트 → Python과 동일하게 true
+    const val = String(vars[notInMatch[1]] ?? "");
+    const items = raw
+      .split(",")
+      .map((s) => s.trim().replace(/^"|"$/g, "").replace(/^'|'$/g, ""));
+    return !items.includes(val);
   }
 
   // 인식 불가 패턴 → 숨김 (BE와 동일하게 false)

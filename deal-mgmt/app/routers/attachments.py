@@ -18,7 +18,7 @@ from app.models.enums import AttachmentEntityType, AuditAction
 from app.schemas.attachment import AttachmentListResponse, AttachmentOut
 from app.services import audit_service, transaction_service
 
-UPLOAD_DIR = Path("uploads/attachments")
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
     ".docx",

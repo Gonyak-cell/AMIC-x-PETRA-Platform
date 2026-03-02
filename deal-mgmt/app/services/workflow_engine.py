@@ -1,6 +1,6 @@
-"""9단계 M&A 워크플로우 상태 머신.
+"""8단계 M&A 워크플로우 상태 머신.
 
-Phase 순서: ENGAGEMENT → PREPARATION → MARKETING → BIDDING → MOU_SIGNED → MAIN_DUE_DILIGENCE → NEGOTIATION → CLOSING → POST_CLOSING
+Phase 순서: ENGAGEMENT → PREPARATION → MARKETING → BIDDING → MAIN_DUE_DILIGENCE → NEGOTIATION → CLOSING → POST_CLOSING
 전환 규칙: 한 단계 앞/뒤로만 이동 가능, 건너뛰기 불가.
 """
 
@@ -33,13 +33,12 @@ from app.models.transaction import Transaction
 from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite, PrerequisiteLevel
 from app.services import audit_service
 
-# 순서가 있는 9단계
+# 순서가 있는 8단계 (MOU_SIGNED는 마일스톤으로 전환, 독립 단계에서 제거)
 _PHASE_ORDER: list[TransactionPhase] = [
     Phase.ENGAGEMENT,
     Phase.PREPARATION,
     Phase.MARKETING,
     Phase.BIDDING,
-    Phase.MOU_SIGNED,
     Phase.MAIN_DUE_DILIGENCE,
     Phase.NEGOTIATION,
     Phase.CLOSING,
@@ -63,9 +62,6 @@ _PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str, PrerequisiteLe
     ],
     Phase.BIDDING: [
         ("deal_structure", "딜 구조", PrerequisiteLevel.RECOMMENDED),
-    ],
-    Phase.MOU_SIGNED: [
-        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
     ],
     Phase.MAIN_DUE_DILIGENCE: [
         ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),

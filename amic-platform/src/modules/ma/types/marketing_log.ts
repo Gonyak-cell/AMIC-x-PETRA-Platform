@@ -13,6 +13,7 @@ export interface MarketingLog {
   stage: MarketingStage;
   log_date: string;
   content: string | null;
+  created_by_email: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,5 +46,5 @@ export interface DartFinancialSummary {
   operating_profit: number | null;
   net_income: number | null;
   debt_ratio: number | null;
-  fiscal_year: string;
+  fiscal_year: string | null;
 }

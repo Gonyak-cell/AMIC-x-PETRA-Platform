@@ -21,10 +21,18 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        op.execute(sa.text("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'CLIENT_ASSIGNED'"))
-        op.execute(sa.text("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'CLIENT_REMOVED'"))
+        with op.get_context().autocommit_block():
+            op.execute(sa.text("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'CLIENT_ASSIGNED'"))
+            op.execute(sa.text("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'CLIENT_REMOVED'"))
 
 
 def downgrade() -> None:
-    # PostgreSQL enum 값 제거 불가 — 애플리케이션에서 미사용으로 무해
+    # PostgreSQL은 ALTER TYPE ... DROP VALUE를 지원하지 않으므로
+    # CLIENT_ASSIGNED, CLIENT_REMOVED 값은 enum에 잔존한다.
+    # 이 값들은 애플리케이션에서 미사용 시 무해하며,
+    # 완전 롤백이 필요한 경우 enum 재생성이 필요하다:
+    #   1. 임시 VARCHAR 컬럼으로 데이터 이관
+    #   2. 기존 enum 타입 DROP
+    #   3. 새 enum 타입 CREATE (제거 대상 값 제외)
+    #   4. VARCHAR → 새 enum으로 CAST 후 원래 컬럼 복원
     pass

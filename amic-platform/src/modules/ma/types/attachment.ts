@@ -29,7 +29,9 @@ export type AttachmentEntityType =
   | "CONTRACT"
   | "CLOSING"
   | "PMI"
-  | "EARNOUT";
+  | "EARNOUT"
+  | "MARKETING_LOG"
+  | "MILESTONE";
 
 /** 탭 ID → entity_type 매핑. */
 export const TAB_ENTITY_TYPE_MAP: Record<string, AttachmentEntityType> = {

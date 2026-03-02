@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import require_role
+from app.core.security import get_jwt_claims, require_role
 from app.models.user import User
 from app.schemas.search import (
     IndexStatusResponse,
@@ -17,7 +17,7 @@ from app.schemas.search import (
 )
 from app.services.search_service import SearchService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_search_service() -> SearchService:

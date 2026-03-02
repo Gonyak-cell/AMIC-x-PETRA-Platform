@@ -1,10 +1,12 @@
 import logging
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.schemas.fund import (
     FundDetailResponse,
@@ -17,11 +19,16 @@ from app.services.pef_registry_service import PEFRegistryService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
-def get_kofia_service() -> KOFIAService:
-    return KOFIAService()
+async def get_kofia_service() -> AsyncGenerator[KOFIAService, None]:
+    """KOFIAService를 생성하고 요청 종료 시 안전하게 close한다."""
+    service = KOFIAService()
+    try:
+        yield service
+    finally:
+        await service.close()
 
 
 async def _enrich_gp_logos(
@@ -86,9 +93,8 @@ async def list_gps(
         page=page,
         size=size,
     )
-    await service.close()
 
-    # KOFIA 기준시점 가져오기
+    # KOFIA 기준시점 가져오기 (close() 전에 호출해야 캐시된 날짜 유지)
     ref_date = await service.get_reference_date()
 
     # DB에서 로고 URL 매핑
@@ -170,7 +176,6 @@ async def list_funds(
     if data_source == "kofia" or data_source is None:
         # KOFIA 데이터 (기본)
         items, total = await service.search_funds(**filter_kwargs)
-        await service.close()
         ref_date = await service.get_reference_date()
         return FundListResponse(
             total=total,
@@ -202,7 +207,6 @@ async def get_fund(
         return result
 
     result = await service.get_fund_detail(fund_code)
-    await service.close()
     return result
 
 
@@ -221,5 +225,4 @@ async def list_managers(
         page=page,
         size=size,
     )
-    await service.close()
     return FundManagerListResponse(total=total, items=items)

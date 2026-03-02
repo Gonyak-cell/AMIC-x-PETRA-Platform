@@ -21,7 +21,7 @@ async def get_vdr_overview(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    """모든 거래의 VDR 현황을 조회한다."""
-    if claims.role == "CLIENT":
-        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
+    """모든 거래의 VDR 현황을 조회한다 (ADMIN/MANAGER만 접근 가능)."""
+    if claims.role not in ("ADMIN", "MANAGER"):
+        raise HTTPException(status_code=403, detail="이 기능에 접근할 권한이 없습니다")
     return await vdr_service.get_all_vdr_overviews(db)

@@ -3,9 +3,12 @@
 Revision ID: 016
 Revises: 015
 """
-from alembic import op
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM as PgENUM
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
+
+_JSON = sa.JSON().with_variant(_JSONB, "postgresql")
 
 revision = "016"
 down_revision = "015"
@@ -14,43 +17,89 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── Enum 타입 생성 (raw SQL, IF NOT EXISTS) ──────────
-    enums = [
-        ("meetingphase", ["MARKETING", "NEGOTIATION"]),
-        ("meetingchannel", ["IN_PERSON", "EMAIL", "PHONE", "VIDEO", "HYBRID"]),
-        ("meetingstatus", ["SCHEDULED", "COMPLETED", "CANCELLED", "POSTPONED"]),
-        ("attendeerole", ["SELLER_ADVISOR", "BUYER_ADVISOR", "LEGAL_COUNSEL", "CLIENT_REPRESENTATIVE", "COUNTERPARTY", "OBSERVER", "OTHER"]),
-        ("actionitemstatus", ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
-        ("buyerreaction", ["VERY_POSITIVE", "POSITIVE", "NEUTRAL", "NEGATIVE", "VERY_NEGATIVE"]),
-        ("conditionmatchlevel", ["FULL_MATCH", "PARTIAL_MATCH", "MISMATCH", "NOT_ASSESSED"]),
-        ("negotiationissuestatus", ["OPEN", "IN_PROGRESS", "AGREED", "DEFERRED", "DEADLOCKED"]),
-        ("negotiationissuepriority", ["CRITICAL", "HIGH", "MEDIUM", "LOW"]),
-    ]
-    for name, values in enums:
-        vals = ", ".join(f"'{v}'" for v in values)
-        op.execute(
-            f"DO $$ BEGIN "
-            f"IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '{name}') THEN "
-            f"CREATE TYPE {name} AS ENUM ({vals}); "
-            f"END IF; END $$;"
-        )
+    bind = op.get_bind()
 
-    # ── PostgreSQL ENUM 참조 (create_type=False: 위에서 이미 생성) ──
-    meetingphase = PgENUM("MARKETING", "NEGOTIATION", name="meetingphase", create_type=False)
-    meetingchannel = PgENUM("IN_PERSON", "EMAIL", "PHONE", "VIDEO", "HYBRID", name="meetingchannel", create_type=False)
-    meetingstatus = PgENUM("SCHEDULED", "COMPLETED", "CANCELLED", "POSTPONED", name="meetingstatus", create_type=False)
-    attendeerole = PgENUM("SELLER_ADVISOR", "BUYER_ADVISOR", "LEGAL_COUNSEL", "CLIENT_REPRESENTATIVE", "COUNTERPARTY", "OBSERVER", "OTHER", name="attendeerole", create_type=False)
-    actionitemstatus = PgENUM("PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", name="actionitemstatus", create_type=False)
-    buyerreaction = PgENUM("VERY_POSITIVE", "POSITIVE", "NEUTRAL", "NEGATIVE", "VERY_NEGATIVE", name="buyerreaction", create_type=False)
-    conditionmatchlevel = PgENUM("FULL_MATCH", "PARTIAL_MATCH", "MISMATCH", "NOT_ASSESSED", name="conditionmatchlevel", create_type=False)
-    negotiationissuestatus = PgENUM("OPEN", "IN_PROGRESS", "AGREED", "DEFERRED", "DEADLOCKED", name="negotiationissuestatus", create_type=False)
-    negotiationissuepriority = PgENUM("CRITICAL", "HIGH", "MEDIUM", "LOW", name="negotiationissuepriority", create_type=False)
+    # ── Enum 타입 생성 (PostgreSQL 전용 raw SQL) ──────────
+    if bind.dialect.name == "postgresql":
+        enums = [
+            ("meetingphase", ["MARKETING", "NEGOTIATION"]),
+            ("meetingchannel", ["IN_PERSON", "EMAIL", "PHONE", "VIDEO", "HYBRID"]),
+            ("meetingstatus", ["SCHEDULED", "COMPLETED", "CANCELLED", "POSTPONED"]),
+            (
+                "attendeerole",
+                [
+                    "SELLER_ADVISOR",
+                    "BUYER_ADVISOR",
+                    "LEGAL_COUNSEL",
+                    "CLIENT_REPRESENTATIVE",
+                    "COUNTERPARTY",
+                    "OBSERVER",
+                    "OTHER",
+                ],
+            ),
+            ("actionitemstatus", ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
+            (
+                "buyerreaction",
+                ["VERY_POSITIVE", "POSITIVE", "NEUTRAL", "NEGATIVE", "VERY_NEGATIVE"],
+            ),
+            (
+                "conditionmatchlevel",
+                ["FULL_MATCH", "PARTIAL_MATCH", "MISMATCH", "NOT_ASSESSED"],
+            ),
+            (
+                "negotiationissuestatus",
+                ["OPEN", "IN_PROGRESS", "AGREED", "DEFERRED", "DEADLOCKED"],
+            ),
+            (
+                "negotiationissuepriority",
+                ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+            ),
+        ]
+        for name, values in enums:
+            vals = ", ".join(f"'{v}'" for v in values)
+            op.execute(
+                f"DO $$ BEGIN "
+                f"IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '{name}') THEN "
+                f"CREATE TYPE {name} AS ENUM ({vals}); "
+                f"END IF; END $$;"
+            )
+
+    # ── Cross-DB Enum 참조 ──
+    meetingphase = sa.Enum("MARKETING", "NEGOTIATION", name="meetingphase", create_type=False)
+    meetingchannel = sa.Enum("IN_PERSON", "EMAIL", "PHONE", "VIDEO", "HYBRID", name="meetingchannel", create_type=False)
+    meetingstatus = sa.Enum("SCHEDULED", "COMPLETED", "CANCELLED", "POSTPONED", name="meetingstatus", create_type=False)
+    attendeerole = sa.Enum(
+        "SELLER_ADVISOR",
+        "BUYER_ADVISOR",
+        "LEGAL_COUNSEL",
+        "CLIENT_REPRESENTATIVE",
+        "COUNTERPARTY",
+        "OBSERVER",
+        "OTHER",
+        name="attendeerole",
+        create_type=False,
+    )
+    actionitemstatus = sa.Enum(
+        "PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", name="actionitemstatus", create_type=False
+    )
+    buyerreaction = sa.Enum(
+        "VERY_POSITIVE", "POSITIVE", "NEUTRAL", "NEGATIVE", "VERY_NEGATIVE", name="buyerreaction", create_type=False
+    )
+    conditionmatchlevel = sa.Enum(
+        "FULL_MATCH", "PARTIAL_MATCH", "MISMATCH", "NOT_ASSESSED", name="conditionmatchlevel", create_type=False
+    )
+    negotiationissuestatus = sa.Enum(
+        "OPEN", "IN_PROGRESS", "AGREED", "DEFERRED", "DEADLOCKED", name="negotiationissuestatus", create_type=False
+    )
+    negotiationissuepriority = sa.Enum(
+        "CRITICAL", "HIGH", "MEDIUM", "LOW", name="negotiationissuepriority", create_type=False
+    )
 
     # ── meeting_logs ──────────────────────────────────────
     op.create_table(
         "meeting_logs",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("transaction_id", UUID(as_uuid=True), sa.ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("transaction_id", sa.Uuid(), sa.ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False),
         sa.Column("meeting_phase", meetingphase, nullable=False),
         sa.Column("title", sa.String(300), nullable=False),
         sa.Column("meeting_date", sa.String(10), nullable=False),
@@ -60,12 +109,12 @@ def upgrade() -> None:
         sa.Column("status", meetingstatus, nullable=False, server_default="COMPLETED"),
         sa.Column("minutes", sa.Text, nullable=True),
         sa.Column("summary", sa.Text, nullable=True),
-        sa.Column("provided_materials", JSONB, nullable=True),
-        sa.Column("attachments", JSONB, nullable=True),
-        sa.Column("buyer_id", UUID(as_uuid=True), sa.ForeignKey("buyer_candidates.id"), nullable=True),
+        sa.Column("provided_materials", _JSON, nullable=True),
+        sa.Column("attachments", _JSON, nullable=True),
+        sa.Column("buyer_id", sa.Uuid(), sa.ForeignKey("buyer_candidates.id"), nullable=True),
         sa.Column("condition_match", conditionmatchlevel, nullable=True),
         sa.Column("condition_notes", sa.Text, nullable=True),
-        sa.Column("contract_id", UUID(as_uuid=True), sa.ForeignKey("contracts.id"), nullable=True),
+        sa.Column("contract_id", sa.Uuid(), sa.ForeignKey("contracts.id"), nullable=True),
         sa.Column("attendee_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("created_by_email", sa.String(255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -78,8 +127,8 @@ def upgrade() -> None:
     # ── meeting_attendees ─────────────────────────────────
     op.create_table(
         "meeting_attendees",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("meeting_id", UUID(as_uuid=True), sa.ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("meeting_id", sa.Uuid(), sa.ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("email", sa.String(255), nullable=True),
         sa.Column("organization", sa.String(200), nullable=True),
@@ -94,8 +143,8 @@ def upgrade() -> None:
     # ── meeting_action_items ──────────────────────────────
     op.create_table(
         "meeting_action_items",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("meeting_id", UUID(as_uuid=True), sa.ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("meeting_id", sa.Uuid(), sa.ForeignKey("meeting_logs.id", ondelete="CASCADE"), nullable=False),
         sa.Column("title", sa.String(300), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("assignee_email", sa.String(255), nullable=True),
@@ -111,9 +160,9 @@ def upgrade() -> None:
     # ── negotiation_issues ────────────────────────────────
     op.create_table(
         "negotiation_issues",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("transaction_id", UUID(as_uuid=True), sa.ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("meeting_id", UUID(as_uuid=True), sa.ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("transaction_id", sa.Uuid(), sa.ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("meeting_id", sa.Uuid(), sa.ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True),
         sa.Column("title", sa.String(300), nullable=False),
         sa.Column("clause_reference", sa.String(200), nullable=True),
         sa.Column("category", sa.String(100), nullable=True),
@@ -136,9 +185,9 @@ def upgrade() -> None:
     # ── contract_markups ──────────────────────────────────
     op.create_table(
         "contract_markups",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("contract_id", UUID(as_uuid=True), sa.ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("meeting_id", UUID(as_uuid=True), sa.ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("contract_id", sa.Uuid(), sa.ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("meeting_id", sa.Uuid(), sa.ForeignKey("meeting_logs.id", ondelete="SET NULL"), nullable=True),
         sa.Column("version_label", sa.String(100), nullable=False),
         sa.Column("version_number", sa.Integer, nullable=False),
         sa.Column("source_party", sa.String(200), nullable=True),
@@ -146,7 +195,7 @@ def upgrade() -> None:
         sa.Column("file_name", sa.String(300), nullable=True),
         sa.Column("file_size_bytes", sa.Integer, nullable=True),
         sa.Column("changes_summary", sa.Text, nullable=True),
-        sa.Column("key_changes", JSONB, nullable=True),
+        sa.Column("key_changes", _JSON, nullable=True),
         sa.Column("created_by_email", sa.String(255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
@@ -169,12 +218,14 @@ def downgrade() -> None:
     op.drop_index("ix_meeting_logs_transaction_id")
     op.drop_table("meeting_logs")
 
-    op.execute("DROP TYPE IF EXISTS negotiationissuepriority")
-    op.execute("DROP TYPE IF EXISTS negotiationissuestatus")
-    op.execute("DROP TYPE IF EXISTS conditionmatchlevel")
-    op.execute("DROP TYPE IF EXISTS buyerreaction")
-    op.execute("DROP TYPE IF EXISTS actionitemstatus")
-    op.execute("DROP TYPE IF EXISTS attendeerole")
-    op.execute("DROP TYPE IF EXISTS meetingstatus")
-    op.execute("DROP TYPE IF EXISTS meetingchannel")
-    op.execute("DROP TYPE IF EXISTS meetingphase")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS negotiationissuepriority")
+        op.execute("DROP TYPE IF EXISTS negotiationissuestatus")
+        op.execute("DROP TYPE IF EXISTS conditionmatchlevel")
+        op.execute("DROP TYPE IF EXISTS buyerreaction")
+        op.execute("DROP TYPE IF EXISTS actionitemstatus")
+        op.execute("DROP TYPE IF EXISTS attendeerole")
+        op.execute("DROP TYPE IF EXISTS meetingstatus")
+        op.execute("DROP TYPE IF EXISTS meetingchannel")
+        op.execute("DROP TYPE IF EXISTS meetingphase")

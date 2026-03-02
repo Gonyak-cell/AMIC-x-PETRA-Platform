@@ -112,7 +112,7 @@ export default function TransactionListPage() {
       total,
       active: items.filter((t) => t.status === "ACTIVE").length,
       totalValue: items.reduce(
-        (sum, t) => sum + (t.estimated_deal_value ?? 0),
+        (sum, t) => sum + Number(t.estimated_deal_value ?? 0),
         0,
       ),
     };

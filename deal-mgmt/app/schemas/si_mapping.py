@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 import uuid
+from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 # ── 요청 ──────────────────────────────────────────────────
 _KSIC_CODE_RE = re.compile(r"^[A-Za-z0-9]{1,10}$")
@@ -28,7 +29,7 @@ class SIMappingRequest(BaseModel):
 
     top_n: int = Field(default=5, ge=1, le=20)
     max_companies_per_panel: int = Field(default=50, ge=1, le=200)
-    min_revenue: float | None = Field(default=None)
+    min_revenue: Decimal | None = Field(default=None)
     require_investment_history: bool = False
 
 
@@ -45,20 +46,20 @@ class SICompanyOut(BaseModel):
     id: uuid.UUID
     company_name: str
     ksic_codes: list[str] | None = None
-    revenue: float | None = None
+    revenue: Decimal | None = None
     revenue_year: int | None = None
     has_investment_history: bool = False
     description: str | None = None
 
     # 재무정보 (금융위 getSummFinaStat_V2)
-    operating_profit: float | None = None
-    net_income: float | None = None
-    total_assets: float | None = None
-    total_debt: float | None = None
-    total_equity: float | None = None
-    capital_amount: float | None = None
-    debt_ratio: float | None = None
-    pretax_income: float | None = None
+    operating_profit: Decimal | None = None
+    net_income: Decimal | None = None
+    total_assets: Decimal | None = None
+    total_debt: Decimal | None = None
+    total_equity: Decimal | None = None
+    capital_amount: Decimal | None = None
+    debt_ratio: Decimal | None = None
+    pretax_income: Decimal | None = None
 
     # 기업기본정보 (금융위 getCorpOutline_V2)
     representative: str | None = None
@@ -71,6 +72,21 @@ class SICompanyOut(BaseModel):
     market_type: str | None = None
     market_type_name: str | None = None
 
+    @field_serializer(
+        "revenue",
+        "operating_profit",
+        "net_income",
+        "total_assets",
+        "total_debt",
+        "total_equity",
+        "capital_amount",
+        "debt_ratio",
+        "pretax_income",
+    )
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
+
 
 class SICandidateOut(BaseModel):
     """플랫 후보 — 테이블 렌더링용."""
@@ -79,7 +95,12 @@ class SICandidateOut(BaseModel):
     relation: str  # DIRECT | BACKWARD | FORWARD
     io_code: str | None = None
     io_name: str | None = None
-    transaction_value: float | None = None
+    transaction_value: Decimal | None = None
+
+    @field_serializer("transaction_value")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 # ── 응답: Value Chain 패널 ────────────────────────────────
@@ -88,8 +109,13 @@ class ValueChainPanel(BaseModel):
 
     io_code: str
     io_name: str
-    transaction_value: float
+    transaction_value: Decimal
     companies: list[SICompanyOut] = []
+
+    @field_serializer("transaction_value")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal) -> str:
+        return str(v)
 
 
 class SIMappingResponse(BaseModel):
@@ -144,10 +170,15 @@ class FinancialSummary(BaseModel):
     """연도별 재무 요약."""
 
     bsns_year: str
-    revenue: float | None = None
-    operating_income: float | None = None
-    net_income: float | None = None
-    total_assets: float | None = None
+    revenue: Decimal | None = None
+    operating_income: Decimal | None = None
+    net_income: Decimal | None = None
+    total_assets: Decimal | None = None
+
+    @field_serializer("revenue", "operating_income", "net_income", "total_assets")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 class DeepDiveDisclosure(BaseModel):

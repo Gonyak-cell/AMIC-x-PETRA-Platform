@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.enums import MarketingStage
 
@@ -52,3 +52,7 @@ class DartFinancialSummaryOut(BaseModel):
     net_income: Decimal | None = None
     debt_ratio: Decimal | None = None
     fiscal_year: str | None = None
+
+    @field_serializer("revenue", "operating_profit", "net_income", "debt_ratio")
+    def _serialize_decimal(self, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None

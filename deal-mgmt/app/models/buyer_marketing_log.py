@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, Text, Uuid
+from sqlalchemy import Enum, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,6 +13,7 @@ class BuyerMarketingLog(Base, TimestampMixin):
     """Short-List 매수자의 마케팅 활동 로그 (단계별 일자/내용 기록)."""
 
     __tablename__ = "buyer_marketing_logs"
+    __table_args__ = (Index("ix_buyer_marketing_logs_buyer_txn", "buyer_id", "transaction_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     buyer_id: Mapped[uuid.UUID] = mapped_column(
@@ -28,6 +29,6 @@ class BuyerMarketingLog(Base, TimestampMixin):
         index=True,
     )
     stage: Mapped[MarketingStage] = mapped_column(Enum(MarketingStage), nullable=False)
-    log_date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
+    log_date: Mapped[str] = mapped_column(String(10), nullable=False, index=True)  # YYYY-MM-DD
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

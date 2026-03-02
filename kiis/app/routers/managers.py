@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.schemas.manager import (
     ManagerDealItem,
     ManagerMovementItem,
@@ -13,7 +14,7 @@ from app.schemas.manager import (
 )
 from app.services.manager_service import ManagerService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_manager_service() -> ManagerService:

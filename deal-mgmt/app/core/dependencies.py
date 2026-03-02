@@ -83,11 +83,16 @@ def get_im_client() -> IMClientProtocol:
 async def close_all_clients() -> None:
     """lifespan shutdown — 모든 클라이언트 커넥션 정리."""
     global _kiis_instance, _fdd_instance, _im_instance
-    if _kiis_instance is not None and hasattr(_kiis_instance, "close"):
-        try:
-            await _kiis_instance.close()
-        except Exception:
-            logger.warning("KIIS client close failed", exc_info=True)
+    for inst, name in [
+        (_kiis_instance, "KIIS"),
+        (_fdd_instance, "FDD"),
+        (_im_instance, "IM"),
+    ]:
+        if inst is not None and hasattr(inst, "close"):
+            try:
+                await inst.close()
+            except Exception:
+                logger.warning("%s client close failed", name, exc_info=True)
     _kiis_instance = None
     _fdd_instance = None
     _im_instance = None

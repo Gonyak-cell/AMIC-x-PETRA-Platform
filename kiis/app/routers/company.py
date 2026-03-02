@@ -4,10 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.pagination import PaginationParams, paginate
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.schemas.company import CompanyItem, CompanyListItem, CompanyListResponse
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 @router.get("", response_model=CompanyListResponse, summary="기업 목록 조회")

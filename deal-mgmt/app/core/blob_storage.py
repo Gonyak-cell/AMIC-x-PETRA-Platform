@@ -100,7 +100,9 @@ class BlobStorageClient:
     async def upload_blob(self, blob_name: str, data: bytes, content_type: str) -> str:
         """파일을 업로드한다. blob_name을 반환."""
         if self._is_local:
-            path = _LOCAL_STORAGE_DIR / blob_name
+            path = (_LOCAL_STORAGE_DIR / blob_name).resolve()
+            if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
+                raise ValueError(f"경로 순회 시도 감지: {blob_name}")
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
             return blob_name
@@ -118,7 +120,10 @@ class BlobStorageClient:
     async def download_blob(self, blob_name: str) -> bytes:
         """파일을 다운로드한다."""
         if self._is_local:
-            return (_LOCAL_STORAGE_DIR / blob_name).read_bytes()
+            path = (_LOCAL_STORAGE_DIR / blob_name).resolve()
+            if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
+                raise ValueError(f"경로 순회 시도 감지: {blob_name}")
+            return path.read_bytes()
 
         blob_client = self._container_client.get_blob_client(blob_name)
         stream = await blob_client.download_blob()
@@ -131,14 +136,23 @@ class BlobStorageClient:
         동기 I/O는 asyncio.to_thread로 오프로드하여 이벤트 루프 블로킹을 방지한다.
         """
         if self._is_local:
-            src = _LOCAL_STORAGE_DIR / blob_name
+            src = (_LOCAL_STORAGE_DIR / blob_name).resolve()
+            if not str(src).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
+                raise ValueError(f"경로 순회 시도 감지: {blob_name}")
             await asyncio.to_thread(shutil.copy2, src, dest)
             return
 
         blob_client = self._container_client.get_blob_client(blob_name)
         stream = await blob_client.download_blob()
-        data = await stream.readall()
-        await asyncio.to_thread(dest.write_bytes, data)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+
+        def _write_chunks(chunks: list[bytes]) -> None:
+            with open(dest, "wb") as f:
+                for chunk in chunks:
+                    f.write(chunk)
+
+        chunks = [chunk async for chunk in stream.chunks()]
+        await asyncio.to_thread(_write_chunks, chunks)
 
     def generate_sas_url(self, blob_name: str, expiry_minutes: int = 60) -> str:
         """읽기 전용 SAS URL을 생성한다.

@@ -27,6 +27,9 @@ const TemplatesPage = lazy(() => import("@/modules/docs/pages/TemplatesPage"));
 const ContractGeneratorPage = lazy(
   () => import("@/modules/docs/pages/ContractGeneratorPage"),
 );
+const SpaAnalysisPage = lazy(
+  () => import("@/modules/docs/pages/SpaAnalysisPage"),
+);
 
 export default function DocsRoutes() {
   return (
@@ -70,6 +73,7 @@ export default function DocsRoutes() {
           />
           <Route path="legal/contracts" element={<CreateLegalDocumentPage />} />
           <Route path="legal/generate" element={<ContractGeneratorPage />} />
+          <Route path="legal/spa-analysis" element={<SpaAnalysisPage />} />
           <Route path="ldd/new" element={<CreateLDDReportPage />} />
           {/* Checklist detail pages */}
           <Route

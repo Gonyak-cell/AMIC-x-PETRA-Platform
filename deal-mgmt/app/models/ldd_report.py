@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -25,9 +25,9 @@ class LDDReport(Base, TimestampMixin):
 
     __tablename__ = "ldd_reports"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     report_type: Mapped[LDDReportType] = mapped_column(Enum(LDDReportType), nullable=False, default=LDDReportType.FULL)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -55,7 +55,7 @@ class LDDReport(Base, TimestampMixin):
     prepared_by: Mapped[str | None] = mapped_column(String(200), nullable=True)  # 담당 변호사
 
     # 체크리스트 데이터 (10개 섹션, JSONB)
-    sections: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    sections: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 집계 카운트 (자동 계산)
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -79,58 +79,58 @@ class LDDReport(Base, TimestampMixin):
     # ── VDR 연동 + Ralph Loop 2회 적용 ─────────────────────
     vdr_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     draft_ralph_session_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
     )
     final_ralph_session_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
     )
     draft_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     final_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # ── 6블록 서술(Narrative) 데이터 ─────────────────────
     narrative_sections: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="6블록 서술 결과 (section_type → [NarrativeResult])",
     )
 
     # ── 법률 인용 검증 결과 ───────────────────────────────
     legal_citations: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="법률 인용 검증 결과 (section_type → citation_verification)",
     )
 
     # ── 별첨(Appendix) 데이터 ──────────────────────────────
     appendices: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="별첨 테이블 데이터 (6종: 소송/IP/부동산/계약/보험/인허가)",
     )
 
     # ── 법무법인 스타일 (LAW_FIRM) ────────────────────────
     law_firm_toc: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="법무법인 8개 목차 구조 (I~VIII 매핑 결과)",
     )
     law_firm_sections: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="법무법인 3단 서술 결과 (section → {현황/검토/Recommendation})",
     )
     irl_items: Mapped[list | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         comment="D 라벨 수집: Information Request List 항목",
     )
 
     # ── 멀티 LLM 파이프라인 결과 ─────────────────────────
-    dual_risk_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    gap_detection: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    jurisdiction_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    qa_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    pipeline_stages: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    dual_risk_summary: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    gap_detection: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    jurisdiction_analysis: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    qa_result: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    pipeline_stages: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 워크플로우 타임스탬프
     analysis_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

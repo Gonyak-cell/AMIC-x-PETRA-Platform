@@ -31,6 +31,17 @@ cd {모듈} && python -m ruff check . && python -m ruff format --check .
 
 위 명령어에서 **1건이라도 경고/에러가 발생하면 수정 후 재검증**한다.
 
+### 빈도순 ruff 에러 패턴 (실측 기반)
+
+| 규칙 | 설명 | 올바른 패턴 | 자동 수정 |
+|------|------|-----------|----------|
+| UP041 | `asyncio.TimeoutError` → `TimeoutError` | `except TimeoutError:` | O |
+| F401 | 미사용 import | import 제거 | O |
+| B017 | `pytest.raises(Exception)` without match | `pytest.raises(Exception, match="msg")` | **X** |
+| F841 | 미사용 변수 | 변수 제거 또는 `_` 접두사 | O |
+
+**자동 수정 불가(X)는 코드 작성 시점에서 올바르게 작성해야 합니다.**
+
 ---
 
 ## 강행 규정 2: 실행 환경 및 의존성

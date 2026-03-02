@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import logging
 import os
 import uuid
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
+from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -35,7 +40,7 @@ def get_jwt_secret() -> str:
 _DEV_CLAIMS = JWTClaims(
     user_id="00000000-0000-0000-0000-000000000000",
     email="system@autofdd.dev",
-    role="ADMIN",
+    role="ANALYST",
 )
 
 
@@ -50,7 +55,7 @@ async def get_jwt_claims(
     """
     if not settings.AUTH_ENABLED:
         _env = os.getenv("ENV", "").lower()
-        if _env not in ("local", "dev", "test", ""):
+        if _env not in ("local", "dev", "test"):
             raise RuntimeError(
                 f"CRITICAL: AUTH_ENABLED=False is only allowed in local/dev/test environments, got ENV={_env!r}"
             )
@@ -77,6 +82,7 @@ async def get_jwt_claims(
         if sub is None:
             raise credentials_exception
     except JWTError:
+        logger.debug("JWT decode failed", exc_info=True)
         raise credentials_exception
 
     return JWTClaims(
@@ -86,7 +92,7 @@ async def get_jwt_claims(
     )
 
 
-def require_role(*roles: str):
+def require_role(*roles: str) -> Callable[..., Coroutine[Any, Any, JWTClaims]]:
     """지정된 역할을 가진 사용자만 접근을 허용하는 의존성 팩토리."""
 
     async def role_checker(
@@ -107,7 +113,7 @@ def require_role(*roles: str):
 _CLIENT_ROLE = "CLIENT"
 
 
-def require_write_access():
+def require_write_access() -> Callable[..., Coroutine[Any, Any, JWTClaims]]:
     """CLIENT 역할의 모든 쓰기(POST/PATCH/DELETE) 작업을 차단한다."""
 
     async def checker(claims: JWTClaims = Depends(get_jwt_claims)) -> JWTClaims:
@@ -132,12 +138,17 @@ async def check_client_deal_access(
     """
     if claims.role != _CLIENT_ROLE:
         return
+    if claims.email is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 거래에 접근할 권한이 없습니다",
+        )
     from app.models.deal_client import DealClient
 
     result = await db.execute(
         select(DealClient.id).where(
             DealClient.transaction_id == txn_id,
-            DealClient.email == claims.email,
+            func.lower(DealClient.email) == func.lower(claims.email),
         )
     )
     if result.scalar_one_or_none() is None:

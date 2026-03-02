@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, Uuid, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -28,9 +28,9 @@ class FinancialModel(Base, TimestampMixin):
 
     __tablename__ = "financial_models"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # ── 모델 기본 정보 ─────────────────────────────────────────
@@ -45,8 +45,10 @@ class FinancialModel(Base, TimestampMixin):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 입력 파라미터 (가정값, 시나리오 등) ─────────────────────
-    parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    vdr_document_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)  # 소스 VDR 문서 ID 목록
+    parameters: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    vdr_document_ids: Mapped[list | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )  # 소스 VDR 문서 ID 목록
 
     # ── 생성된 파일 정보 ───────────────────────────────────────
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -55,7 +57,7 @@ class FinancialModel(Base, TimestampMixin):
 
     # ── Ralph Loop 결과 ───────────────────────────────────────
     ralph_session_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("ralph_sessions.id", ondelete="SET NULL"), nullable=True
     )
     ralph_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
@@ -84,9 +86,9 @@ class FMChecklist(Base):
 
     __tablename__ = "fm_checklists"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     financial_model_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("financial_models.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
@@ -130,9 +132,9 @@ class FMChecklistItem(Base):
 
     __tablename__ = "fm_checklist_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     checklist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("fm_checklists.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -159,14 +161,16 @@ class FMChecklistItem(Base):
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)  # 0.0 ~ 1.0
 
     # ── VDR 소스 추적 ──────────────────────────────────────────
-    source_vdr_doc_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    source_vdr_doc_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     source_vdr_doc_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
     source_location: Mapped[str | None] = mapped_column(String(200), nullable=True)  # sheet:row, page:line 등
 
     # ── 리뷰 기록 ─────────────────────────────────────────────
     reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     reviewed_at: Mapped[str | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    extra_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+    extra_metadata: Mapped[dict | None] = mapped_column(
+        "metadata", JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
 
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

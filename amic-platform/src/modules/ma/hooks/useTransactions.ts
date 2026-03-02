@@ -11,6 +11,7 @@ import type {
   TransactionListResponse,
 } from "@/modules/ma/types/transaction";
 import type { PhaseCompletionStatus } from "@/modules/ma/types/workflow";
+import type { DashboardStats } from "@/modules/ma/types/dashboard";
 import type {
   Engagement,
   EngagementCreate,
@@ -454,10 +455,10 @@ export function useAddTimelineEvent(txnId: string) {
 
 // ── Dashboard Stats ────────────────────────────────────
 export function useMaStats() {
-  return useQuery({
+  return useQuery<DashboardStats>({
     queryKey: ["ma", "dashboard", "stats"],
     queryFn: async () => {
-      const { data } = await maApi.get("/dashboard/stats");
+      const { data } = await maApi.get<DashboardStats>("/dashboard/stats");
       return data;
     },
   });

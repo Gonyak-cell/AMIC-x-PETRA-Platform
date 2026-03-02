@@ -116,7 +116,6 @@ _PHASE_ORDER: list[tuple[TransactionPhase, str]] = [
     (TransactionPhase.PREPARATION, "준비"),
     (TransactionPhase.MARKETING, "마케팅"),
     (TransactionPhase.BIDDING, "입찰"),
-    (TransactionPhase.MOU_SIGNED, "MOU 체결"),
     (TransactionPhase.MAIN_DUE_DILIGENCE, "본실사"),
     (TransactionPhase.NEGOTIATION, "협상"),
     (TransactionPhase.CLOSING, "Closing"),

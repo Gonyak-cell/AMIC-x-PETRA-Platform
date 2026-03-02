@@ -4,9 +4,13 @@ Revision ID: 029
 Revises: 028
 """
 
+from __future__ import annotations
+
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
+
+_JSON = sa.JSON().with_variant(_JSONB, "postgresql")
 
 revision = "029"
 down_revision = "028"
@@ -18,16 +22,16 @@ def upgrade() -> None:
     # ── 1. document_extractions 테이블 ──────────────────────
     op.create_table(
         "document_extractions",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column(
             "transaction_id",
-            UUID(as_uuid=True),
+            sa.Uuid(),
             sa.ForeignKey("transactions.id", ondelete="CASCADE"),
             nullable=False,
         ),
         sa.Column(
             "vdr_document_id",
-            UUID(as_uuid=True),
+            sa.Uuid(),
             sa.ForeignKey("vdr_documents.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -35,8 +39,15 @@ def upgrade() -> None:
         sa.Column(
             "doc_category",
             sa.Enum(
-                "NDA", "LOI_MOU", "SPA_BTA", "CORPORATE_DOCS", "TAX_FILING",
-                "TEASER_IM", "DD_REPORT", "RFI_RESPONSE", "REFERENCE_ONLY",
+                "NDA",
+                "LOI_MOU",
+                "SPA_BTA",
+                "CORPORATE_DOCS",
+                "TAX_FILING",
+                "TEASER_IM",
+                "DD_REPORT",
+                "RFI_RESPONSE",
+                "REFERENCE_ONLY",
                 name="docextractioncategory",
             ),
             nullable=True,
@@ -46,8 +57,12 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "PENDING", "CLASSIFYING", "EXTRACTING",
-                "COMPLETED", "FAILED", "CONFIRMED",
+                "PENDING",
+                "CLASSIFYING",
+                "EXTRACTING",
+                "COMPLETED",
+                "FAILED",
+                "CONFIRMED",
                 name="extractionstatus",
             ),
             nullable=False,
@@ -55,10 +70,10 @@ def upgrade() -> None:
         ),
         sa.Column("error_message", sa.Text, nullable=True),
         # 추출 결과
-        sa.Column("extracted_data", JSONB, nullable=True),
+        sa.Column("extracted_data", _JSON, nullable=True),
         # 매핑 대상
         sa.Column("target_model", sa.String(50), nullable=True),
-        sa.Column("target_id", UUID(as_uuid=True), nullable=True),
+        sa.Column("target_id", sa.Uuid(), nullable=True),
         # 비용
         sa.Column("llm_cost_usd", sa.Float, nullable=False, server_default="0"),
         # 사용자 검토
@@ -86,11 +101,11 @@ def upgrade() -> None:
 
     # ── 3. bids 테이블 컬럼 추가 ────────────────────────────
     op.add_column("bids", sa.Column("exclusivity_period_days", sa.Integer, nullable=True))
-    op.add_column("bids", sa.Column("conditions_precedent", JSONB, nullable=True))
+    op.add_column("bids", sa.Column("conditions_precedent", _JSON, nullable=True))
 
-    # ── 4. transactions 테이블 JSONB 컬럼 추가 ──────────────
-    op.add_column("transactions", sa.Column("corporate_info", JSONB, nullable=True))
-    op.add_column("transactions", sa.Column("financial_summary", JSONB, nullable=True))
+    # ── 4. transactions 테이블 _JSON 컬럼 추가 ──────────────
+    op.add_column("transactions", sa.Column("corporate_info", _JSON, nullable=True))
+    op.add_column("transactions", sa.Column("financial_summary", _JSON, nullable=True))
 
 
 def downgrade() -> None:
@@ -104,5 +119,7 @@ def downgrade() -> None:
     op.drop_index("ix_document_extractions_vdr_doc_id", table_name="document_extractions")
     op.drop_index("ix_document_extractions_txn_id", table_name="document_extractions")
     op.drop_table("document_extractions")
-    op.execute("DROP TYPE IF EXISTS extractionstatus")
-    op.execute("DROP TYPE IF EXISTS docextractioncategory")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS extractionstatus")
+        op.execute("DROP TYPE IF EXISTS docextractioncategory")

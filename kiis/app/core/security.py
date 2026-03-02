@@ -1,3 +1,4 @@
+import os
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -53,6 +54,15 @@ def _get_jwt_secret() -> str:
     return secret
 
 
+def _check_dev_env() -> None:
+    """AUTH_ENABLED=False가 허용된 환경인지 검증한다."""
+    _env = os.getenv("ENV", "").lower()
+    if _env not in ("local", "dev", "test"):
+        raise RuntimeError(
+            f"CRITICAL: AUTH_ENABLED=False is only allowed in local/dev/test environments, got ENV={_env!r}"
+        )
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """평문 비밀번호와 해시된 비밀번호를 비교한다."""
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
@@ -105,6 +115,7 @@ async def get_jwt_claims(
     """
     # Dev 모드: 인증 우회
     if not settings.AUTH_ENABLED:
+        _check_dev_env()
         request.state.user_id = _DEV_CLAIMS.email or _DEV_CLAIMS.user_id
         return _DEV_CLAIMS
 
@@ -147,6 +158,7 @@ async def get_current_user(
     """
     # Dev 모드: 인증 우회
     if not settings.AUTH_ENABLED:
+        _check_dev_env()
         return _dev_user()
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

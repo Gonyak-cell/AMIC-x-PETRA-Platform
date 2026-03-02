@@ -10,6 +10,7 @@ import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -129,12 +130,17 @@ async def get_extraction(
 async def list_extractions(
     db: AsyncSession,
     transaction_id: uuid.UUID,
+    *,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[DocumentExtraction]:
-    """거래의 모든 추출 작업 목록."""
+    """거래의 추출 작업 목록 (페이지네이션 지원)."""
     result = await db.execute(
         select(DocumentExtraction)
         .where(DocumentExtraction.transaction_id == transaction_id)
         .order_by(DocumentExtraction.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     return list(result.scalars().all())
 
@@ -354,6 +360,15 @@ async def _run_pipeline_core(
         logger.info("추출 레코드 없음 또는 다른 워커가 처리 중: %s", extraction_id)
         return
 
+    if extraction.status in (ExtractionStatus.CLASSIFYING, ExtractionStatus.EXTRACTING):
+        logger.warning(
+            "이전 실행 잔류 상태 감지 → FAILED 처리: %s (status=%s)",
+            extraction_id,
+            extraction.status.value,
+        )
+        await _set_failed(db, extraction, "이전 실행이 비정상 종료되어 재처리합니다.")
+        return
+
     if extraction.status != ExtractionStatus.PENDING:
         logger.info(
             "추출 이미 처리됨, 스킵: %s (status=%s)",
@@ -518,7 +533,7 @@ async def confirm_extraction(
     db: AsyncSession,
     extraction_id: uuid.UUID,
     confirmed_data: dict,
-    target_model: str,
+    target_model: Literal["nda", "bid", "contract", "transaction"],
     target_id: uuid.UUID | None,
     create_new: bool,
     user_email: str,

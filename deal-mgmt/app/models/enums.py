@@ -12,7 +12,7 @@ class TransactionPhase(enum.StrEnum):
     PREPARATION = "PREPARATION"
     MARKETING = "MARKETING"
     BIDDING = "BIDDING"
-    MOU_SIGNED = "MOU_SIGNED"
+    MOU_SIGNED = "MOU_SIGNED"  # deprecated: 마일스톤으로 전환, PG enum 제거 불가하여 유지
     MAIN_DUE_DILIGENCE = "MAIN_DUE_DILIGENCE"
     NEGOTIATION = "NEGOTIATION"
     CLOSING = "CLOSING"
@@ -767,6 +767,7 @@ class AttachmentEntityType(enum.StrEnum):
     PMI = "PMI"
     EARNOUT = "EARNOUT"
     MARKETING_LOG = "MARKETING_LOG"
+    MILESTONE = "MILESTONE"  # 마일스톤 문서 (Executed MOU, SPA 등)
 
 
 # ── SI Mapping ────────────────────────────────────────

@@ -215,10 +215,14 @@ class ReputationService:
         cutoff = datetime.now(UTC) - timedelta(days=months * 30)
 
         # 엑시트 키워드가 포함된 긍정 뉴스 조회
-        stmt = select(NewsArticle).where(
-            NewsArticle.company_id == company_id,
-            NewsArticle.published_at >= cutoff,
-            NewsArticle.sentiment_score > 0.3,  # 긍정 뉴스만
+        stmt = (
+            select(NewsArticle)
+            .where(
+                NewsArticle.company_id == company_id,
+                NewsArticle.published_at >= cutoff,
+                NewsArticle.sentiment_score > 0.3,  # 긍정 뉴스만
+            )
+            .limit(1000)
         )
         result = await db.execute(stmt)
         articles = result.scalars().all()
@@ -264,17 +268,17 @@ class ReputationService:
 
         # 변화율 기반 트렌드 점수
         # 상승: 0.5 ~ 1.0, 하락: 0.0 ~ 0.5
-        diff = current_avg - previous_avg
+        diff = Decimal(str(current_avg)) - Decimal(str(previous_avg))
         # diff 범위: -2.0 ~ 2.0 → 0.0 ~ 1.0으로 매핑
-        trend = (diff + 2.0) / 4.0
-        trend = max(0.0, min(1.0, trend))
+        trend = (diff + Decimal("2")) / Decimal("4")
+        trend = max(Decimal("0"), min(Decimal("1"), trend))
 
-        return Decimal(str(round(trend, 4)))
+        return trend.quantize(Decimal("0.0001"))
 
     def _normalize_news_score(self, score: Decimal) -> Decimal:
         """뉴스 점수(-1~1)를 0~1로 정규화한다."""
-        normalized = (float(score) + 1.0) / 2.0
-        return Decimal(str(round(normalized, 4)))
+        normalized = (score + Decimal("1")) / Decimal("2")
+        return normalized.quantize(Decimal("0.0001"))
 
     def _determine_status_tag(self, total: Decimal, trend: Decimal) -> str:
         """상태 태그를 결정한다."""

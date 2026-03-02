@@ -48,7 +48,7 @@ async def get_dashboard_stats(
         PhaseSummary(phase=row.phase.value, count=row.cnt, total_value=row.phase_value or None) for row in phase_rows
     ]
     total = sum(row.cnt for row in phase_rows)
-    total_value = sum(row.phase_value or Decimal(0) for row in phase_rows) or None
+    total_value = sum(row.phase_value or Decimal("0") for row in phase_rows) or None
 
     # 2) status별 count (→ active 건수도 여기서 추출)
     status_q = select(Transaction.status, func.count().label("cnt")).where(_not_deleted).group_by(Transaction.status)

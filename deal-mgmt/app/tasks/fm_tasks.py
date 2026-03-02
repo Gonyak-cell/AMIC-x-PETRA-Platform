@@ -45,6 +45,8 @@ def run_vdr_extraction_and_ralph_task(
     ralph_max_cost_usd: float = 15.0,
 ) -> None:
     """FM Ralph Loop Pass 1 — VDR 추출 + 초안 Excel 생성."""
+    from celery.exceptions import SoftTimeLimitExceeded
+
     from app.services.financial_model_service import _run_vdr_extraction_and_ralph
 
     logger.info(
@@ -52,16 +54,22 @@ def run_vdr_extraction_and_ralph_task(
         fm_id,
         transaction_id,
     )
-    _run_async(
-        _run_vdr_extraction_and_ralph(
-            fm_id=uuid.UUID(fm_id),
-            transaction_id=uuid.UUID(transaction_id),
-            vdr_document_ids=vdr_document_ids,
-            model_type=model_type,
-            ralph_max_iterations=ralph_max_iterations,
-            ralph_max_cost_usd=ralph_max_cost_usd,
+    try:
+        _run_async(
+            _run_vdr_extraction_and_ralph(
+                fm_id=uuid.UUID(fm_id),
+                transaction_id=uuid.UUID(transaction_id),
+                vdr_document_ids=vdr_document_ids,
+                model_type=model_type,
+                ralph_max_iterations=ralph_max_iterations,
+                ralph_max_cost_usd=ralph_max_cost_usd,
+            )
         )
-    )
+    except SoftTimeLimitExceeded:
+        logger.warning("FM Ralph Pass 1 soft_time_limit 초과 (fm=%s)", fm_id)
+    except Exception:
+        logger.exception("FM Ralph Pass 1 실패 (fm=%s)", fm_id)
+        raise self.retry(countdown=60)
 
 
 @celery_app.task(
@@ -77,6 +85,8 @@ def run_finalize_and_generate_task(
     transaction_id: str,
 ) -> None:
     """FM Finalize + Ralph Loop Pass 2 — 최종 Excel 생성."""
+    from celery.exceptions import SoftTimeLimitExceeded
+
     from app.services.financial_model_service import run_finalize_and_generate
 
     logger.info(
@@ -84,9 +94,15 @@ def run_finalize_and_generate_task(
         fm_id,
         transaction_id,
     )
-    _run_async(
-        run_finalize_and_generate(
-            fm_id=uuid.UUID(fm_id),
-            transaction_id=uuid.UUID(transaction_id),
+    try:
+        _run_async(
+            run_finalize_and_generate(
+                fm_id=uuid.UUID(fm_id),
+                transaction_id=uuid.UUID(transaction_id),
+            )
         )
-    )
+    except SoftTimeLimitExceeded:
+        logger.warning("FM Finalize + Ralph Pass 2 soft_time_limit 초과 (fm=%s)", fm_id)
+    except Exception:
+        logger.exception("FM Finalize + Ralph Pass 2 실패 (fm=%s)", fm_id)
+        raise self.retry(countdown=60)

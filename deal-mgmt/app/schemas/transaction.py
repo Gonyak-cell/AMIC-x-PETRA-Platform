@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.enums import TransactionPhase, TransactionSide, TransactionStatus
 
@@ -48,6 +48,11 @@ class TransactionOut(BaseModel):
     is_deleted: bool = False
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("estimated_deal_value", "target_stake", "new_share_ratio", "old_share_ratio")
+    @classmethod
+    def _serialize_decimal(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
 
 
 # ── Create ──────────────────────────────────────────────

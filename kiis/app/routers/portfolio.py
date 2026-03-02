@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_jwt_claims
 from app.models.company import Company
 from app.schemas.portfolio import (
     PortfolioCompanyItem,
@@ -16,7 +17,7 @@ from app.schemas.portfolio import (
 )
 from app.services.portfolio_service import PortfolioService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 
 def get_portfolio_service() -> PortfolioService:

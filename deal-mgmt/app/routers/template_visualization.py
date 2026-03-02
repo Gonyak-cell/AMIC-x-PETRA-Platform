@@ -102,6 +102,10 @@ async def download_visualization(
     # 경로 탐색 방어: generated 디렉토리 내부인지 엄격 검증
     resolved = _validate_path_within(path, _GENERATED_BASE_DIR, "다운로드")
 
+    # transaction_id 소속 검증: 파일 경로에 transaction_id가 포함되어야 함
+    if str(transaction_id) not in str(resolved):
+        raise HTTPException(status_code=403, detail="해당 거래에 속하지 않는 파일입니다.")
+
     if not resolved.exists():
         raise HTTPException(status_code=404, detail="파일이 없습니다.")
 

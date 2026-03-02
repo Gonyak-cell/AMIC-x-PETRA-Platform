@@ -54,7 +54,7 @@ export interface Transaction {
   target_company_name: string;
   target_corp_code: string | null;
   client_name: string;
-  estimated_deal_value: number | null;
+  estimated_deal_value: string | null;
   currency: Currency;
   deal_structure: DealStructure | null;
   investment_type: InvestmentType | null;
@@ -76,6 +76,7 @@ export interface Transaction {
 
   fdd_deal_id: string | null;
   im_document_id: string | null;
+  notes: string | null;
   corporate_info: Record<string, unknown> | null;
   financial_summary: Record<string, unknown> | null;
   is_deleted: boolean;
@@ -90,7 +91,7 @@ export interface TransactionCreate {
   target_company_name: string;
   target_corp_code?: string;
   client_name: string;
-  estimated_deal_value?: number;
+  estimated_deal_value?: string;
   currency?: Currency;
   deal_structure?: DealStructure;
   investment_type?: InvestmentType;
@@ -98,6 +99,18 @@ export interface TransactionCreate {
   lead_advisor_email: string;
   deal_captain_email?: string;
   target_close_date?: string;
+  // Deal Terms
+  sale_process?: SaleProcess;
+  control_transfer?: ControlTransfer;
+  target_stake?: number;
+  new_share_ratio?: number;
+  old_share_ratio?: number;
+  valuation_basis?: ValuationBasis;
+  cross_border?: CrossBorder;
+  target_buyer_types?: TargetBuyerType[];
+  exclusivity?: boolean;
+  exclusivity_deadline?: string;
+  notes?: string;
 }
 
 export interface TransactionUpdate {
@@ -107,7 +120,7 @@ export interface TransactionUpdate {
   target_company_name?: string;
   target_corp_code?: string;
   client_name?: string;
-  estimated_deal_value?: number | null;
+  estimated_deal_value?: string | null;
   currency?: Currency;
   deal_structure?: DealStructure | null;
   investment_type?: InvestmentType | null;

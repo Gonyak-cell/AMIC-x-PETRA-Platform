@@ -21,6 +21,7 @@
 | **P6** | Ruff 린트 | `ruff check` 0건? `pytest.raises(match=)` 사용? | CI 실패 | **127건/3일** |
 | **P7** | 의존성 누락 | 새 import가 pyproject.toml에 등록? | Docker 빌드 실패 | 다수 |
 | **P8** | 인코딩/경로 | UTF-8 명시? pathlib 사용? 한글 경로 따옴표? | UnicodeError | **84건/3일** |
+| **P9** | pytest 환경 불일치 | addopts에 플러그인 옵션 사용 시 dev 의존성 등록? | pytest 실행 실패 | 3건 |
 
 ---
 
@@ -66,8 +67,11 @@
 
 ### Pre-flight 체크
 - [ ] Python 파일 수정 후 `ruff check . && ruff format --check .` 실행 (0건 필수)
-- [ ] `pytest.raises`에 `match=` 인자 사용 (B017)
+- [ ] `pytest.raises(Exception)` / `pytest.raises(BaseException)` 사용 시 반드시 `match=` 추가 (B017)
+  - 구체적 예외(ValueError, HTTPException 등)는 match= 없이도 허용
 - [ ] import 작성 후 실제 사용 여부 확인 (F401)
+- [ ] **`asyncio.TimeoutError` 사용 금지** → 빌트인 `TimeoutError` 직접 사용 (UP041)
+- [ ] auto-format 훅에 의존 금지 — B017, N802 등은 자동 수정 불가, 처음부터 올바르게 작성
 
 ## P7: 의존성 누락
 
@@ -81,6 +85,13 @@
 - [ ] `open()` 호출 시 `encoding="utf-8"` 명시 (바이너리 모드 제외)
 - [ ] 파일 경로: `pathlib.Path` 사용 (하드코딩 절대 경로 금지)
 - [ ] Bash 명령어에서 한글/공백 경로 따옴표로 감싸기
+
+## P9: pytest 플러그인/환경 의존성 불일치
+
+### Pre-flight 체크
+- [ ] `[tool.pytest.ini_options] addopts`에 `--cov` 등 플러그인 옵션 → `[project.optional-dependencies] dev`에 해당 패키지 등록 확인
+- [ ] 로컬 pytest 실행 시 `--cov` 에러 발생 → `-o "addopts="` 로 오버라이드 가능
+- [ ] 새 pytest 플러그인 추가 시 pyproject.toml dev 의존성 동기화
 
 ---
 
@@ -96,6 +107,8 @@
 - "ruff는 나중에 돌리면 되지" → **P6 즉시 검증 필수**
 - "이 패키지는 이미 설치되어 있겠지" → **P7 pyproject.toml 확인**
 - "open()에 encoding 안 써도 되겠지" → **P8 UTF-8 명시 필수**
+- "`asyncio.TimeoutError`를 써야지" → **P6 UP041: TimeoutError 사용**
+- "pytest-cov 없어도 pytest는 돌아가겠지" → **P9 addopts 확인**
 
 ---
 

@@ -749,7 +749,7 @@ export const RFI_ITEM_STATUS_LABELS: Record<RFIItemStatus, string> = {
   NOT_APPLICABLE: "해당없음",
 };
 
-// ── 9단계 Phase 설정 ─────────────────────────────────
+// ── 8단계 Phase 설정 (MOU_SIGNED → 마일스톤으로 전환) ──────
 export interface PhaseConfigItem {
   phase: TransactionPhase;
   label: string;
@@ -788,39 +788,32 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
     order: 4,
   },
   {
-    phase: "MOU_SIGNED",
-    label: "MOU 체결",
-    description: "양해각서 체결, 독점 협상권 부여",
-    icon: "FileSignature",
-    order: 5,
-  },
-  {
     phase: "MAIN_DUE_DILIGENCE",
     label: "본실사",
     description: "FDD/LDD/TDD 본실사 진행",
     icon: "Search",
-    order: 6,
+    order: 5,
   },
   {
     phase: "NEGOTIATION",
     label: "협상",
     description: "최종 후보 선정, SPA 협상, 가격 조정",
     icon: "Scale",
-    order: 7,
+    order: 6,
   },
   {
     phase: "CLOSING",
     label: "Closing",
     description: "계약 체결(Signing), 선행조건 충족, 거래 완결",
     icon: "CheckCircle",
-    order: 8,
+    order: 7,
   },
   {
     phase: "POST_CLOSING",
     label: "Post-Closing",
     description: "가격조정 정산, PMI 지원, 프로젝트 종결",
     icon: "Archive",
-    order: 9,
+    order: 8,
   },
 ];
 
@@ -830,7 +823,7 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
   PREPARATION: "marketing-materials",
   MARKETING: "buyers",
   BIDDING: "bids",
-  MOU_SIGNED: "contracts",
+  MOU_SIGNED: "contracts", // deprecated — 호환성 유지
   MAIN_DUE_DILIGENCE: "dd-checklist",
   NEGOTIATION: "contracts",
   CLOSING: "closing",
@@ -851,7 +844,7 @@ export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
   ],
   MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
   BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "buyers", "vdr"],
-  MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"],
+  MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"], // deprecated — 호환성 유지
   MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
   NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
   CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
@@ -879,11 +872,31 @@ export const SHORT_LIST_STATUSES: BuyerStatus[] = [
 ];
 
 // ── 파이프라인 마일스톤 ─────────────────────────────
-export const PHASE_MILESTONES: {
+export interface PhaseMilestone {
   afterPhase: TransactionPhase;
   label: string;
-}[] = [
-  { afterPhase: "BIDDING", label: "MOU Signed" },
-  { afterPhase: "NEGOTIATION", label: "Signing" },
-  { afterPhase: "CLOSING", label: "Deal Closed" },
+  /** 마일스톤 문서 업로드 가능 여부 */
+  uploadable?: boolean;
+  /** 업로드 문서 라벨 (UI 표시용) */
+  documentLabel?: string;
+  /** 첨부파일 entity_id 키 (attachment API 연동용) */
+  milestoneKey?: string;
+}
+
+export const PHASE_MILESTONES: PhaseMilestone[] = [
+  {
+    afterPhase: "BIDDING",
+    label: "MOU Signed",
+    uploadable: true,
+    documentLabel: "Executed MOU",
+    milestoneKey: "MOU_SIGNED",
+  },
+  {
+    afterPhase: "NEGOTIATION",
+    label: "Signing",
+    uploadable: true,
+    documentLabel: "Executed SPA",
+    milestoneKey: "SIGNING",
+  },
+  { afterPhase: "CLOSING", label: "Closing" },
 ];

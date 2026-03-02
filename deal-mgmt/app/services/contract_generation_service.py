@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import dataclasses
 import functools
 import html as html_mod
 import logging
@@ -31,6 +32,19 @@ from app.ralph.llm_client import RalphLLMClient
 
 logger = logging.getLogger(__name__)
 
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class ContractGenerationResult:
+    """generate_contract_html 파이프라인 결과."""
+
+    legal_document: LegalDocument
+    clauses_used: int
+    clauses_skipped: int
+    llm_smoothed: bool
+    llm_cost: float | None
+    timing: dict[str, float]
+
+
 # ── Jinja2 샌드박스 환경 ──────────────────────────────────────────────────
 
 _jinja_env = SandboxedEnvironment(loader=BaseLoader(), autoescape=True, undefined=StrictUndefined)
@@ -39,24 +53,28 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _number_format(value: Any) -> str:
-    """숫자를 천단위 구분 포맷으로 변환한다. 소수점을 보존한다."""
+    """숫자를 천단위 구분 포맷으로 변환한다. Decimal 정밀도를 보존한다."""
+    from decimal import Decimal, InvalidOperation
+
     try:
-        num = float(value)
-        if num == int(num):
-            return f"{int(num):,}"
-        return f"{num:,.2f}"
-    except (ValueError, TypeError):
+        d = Decimal(str(value))
+        if d == d.to_integral_value():
+            return f"{int(d):,}"
+        return f"{d:,.2f}"
+    except (ValueError, TypeError, InvalidOperation):
         return str(value)
 
 
 def _currency_format(value: Any) -> str:
-    """금액을 원화 포맷으로 변환한다. 소수점을 보존한다."""
+    """금액을 원화 포맷으로 변환한다. Decimal 정밀도를 보존한다."""
+    from decimal import Decimal, InvalidOperation
+
     try:
-        num = float(value)
-        if num == int(num):
-            return f"금 {int(num):,}원"
-        return f"금 {num:,.2f}원"
-    except (ValueError, TypeError):
+        d = Decimal(str(value))
+        if d == d.to_integral_value():
+            return f"금 {int(d):,}원"
+        return f"금 {d:,.2f}원"
+    except (ValueError, TypeError, InvalidOperation):
         return str(value)
 
 
@@ -101,7 +119,7 @@ def _parse_expression(expression: str) -> ast.Expression:
     return ast.parse(expression, mode="eval")
 
 
-@functools.lru_cache(maxsize=128)
+@functools.lru_cache(maxsize=256)
 def _compile_template(source: str) -> Any:
     """Jinja2 템플릿을 컴파일하고 결과를 캐싱한다."""
     return _jinja_env.from_string(source)
@@ -109,8 +127,10 @@ def _compile_template(source: str) -> Any:
 
 def clear_template_cache() -> None:
     """Jinja2 템플릿 및 조건식 파싱 캐시를 초기화한다. 템플릿 수정 후 호출."""
+    global _llm_client
     _compile_template.cache_clear()
     _parse_expression.cache_clear()
+    _llm_client = None
 
 
 def _normalize_boolean_vars(variables: dict[str, Any]) -> dict[str, Any]:
@@ -430,12 +450,8 @@ async def generate_contract_html(
     *,
     use_llm: bool = True,
     created_by_email: str | None = None,
-) -> tuple[LegalDocument, int, int, bool, float | None, dict[str, float]]:
-    """전체 계약서 생성 파이프라인.
-
-    Returns:
-        (LegalDocument, clauses_used, clauses_skipped, llm_smoothed, llm_cost, timing)
-    """
+) -> ContractGenerationResult:
+    """전체 계약서 생성 파이프라인."""
     t_start = time.monotonic()
 
     # 1. 템플릿 조회
@@ -514,7 +530,14 @@ async def generate_contract_html(
         "total": t_llm - t_start,
     }
 
-    return legal_doc, clauses_used, skipped, llm_smoothed, llm_cost, timing
+    return ContractGenerationResult(
+        legal_document=legal_doc,
+        clauses_used=clauses_used,
+        clauses_skipped=skipped,
+        llm_smoothed=llm_smoothed,
+        llm_cost=llm_cost,
+        timing=timing,
+    )
 
 
 _DANGEROUS_TAG_RE = re.compile(

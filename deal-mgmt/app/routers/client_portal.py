@@ -40,7 +40,6 @@ PHASE_LABELS: dict[str, str] = {
     "PREPARATION": "준비",
     "MARKETING": "마케팅",
     "BIDDING": "입찰",
-    "MOU_SIGNED": "MOU 체결",
     "MAIN_DUE_DILIGENCE": "본실사",
     "NEGOTIATION": "협상",
     "CLOSING": "Closing",

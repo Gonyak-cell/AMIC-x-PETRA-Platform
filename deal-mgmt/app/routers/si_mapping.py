@@ -24,7 +24,7 @@ from app.services import si_mapping_service, transaction_service
 router = APIRouter(tags=["SI Mapping"])
 
 # RBAC — 읽기: 전체 인증 사용자, 쓰기: ADMIN/MANAGER
-_READ_ACCESS = require_role("ADMIN", "MANAGER", "ANALYST", "CLIENT")
+_READ_ACCESS = require_role("ADMIN", "MANAGER", "ANALYST")
 _WRITE_ACCESS = require_role("ADMIN", "MANAGER")
 
 

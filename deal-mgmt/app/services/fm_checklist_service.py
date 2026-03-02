@@ -112,8 +112,13 @@ class FMChecklistService:
             )
 
         await self.db.flush()
-        for item in results:
-            await self.db.refresh(item)
+        # N+1 방지: 개별 refresh() 대신 단일 IN 쿼리로 일괄 재로딩
+        if results:
+            refreshed_ids = [item.id for item in results]
+            refresh_stmt = select(FMChecklistItem).where(FMChecklistItem.id.in_(refreshed_ids))
+            refreshed_rows = (await self.db.execute(refresh_stmt)).scalars().all()
+            refreshed_map = {r.id: r for r in refreshed_rows}
+            results = [refreshed_map[iid] for iid in refreshed_ids if iid in refreshed_map]
         return results
 
     async def finalize_checklist(
