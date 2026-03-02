@@ -95,6 +95,7 @@ async def step1_extract_variables(
     """Step 1: SPA 원문에서 변수를 추출한다. LLM 호출 포함 (10~30초 소요)."""
     await _get_and_authorize_txn(db, txn_id, claims)
     _check_analysis_rate(claims.email or "anonymous")
+    logger.info("Step 1 요청: txn=%s, user=%s, doc_type_hint=%s", txn_id, claims.email, body.doc_type_hint)
 
     try:
         (
@@ -114,16 +115,19 @@ async def step1_extract_variables(
             body.doc_type_hint,
         )
     except RuntimeError as exc:
+        logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
     except ValueError as exc:
+        logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
 
+    logger.info("Step 1 완료: txn=%s, session=%s, doc_type=%s", txn_id, session_id, detected_doc_type)
     return SpaStep1Response(
         session_id=session_id,
         variables=variables,
@@ -151,6 +155,13 @@ async def step2_decompose_clauses(
     """Step 2: 확정된 변수를 기반으로 조항을 분해한다. LLM 호출 포함 (10~30초 소요)."""
     await _get_and_authorize_txn(db, txn_id, claims)
     _check_analysis_rate(claims.email or "anonymous")
+    logger.info(
+        "Step 2 요청: txn=%s, user=%s, session=%s, doc_type_hint=%s",
+        txn_id,
+        claims.email,
+        body.session_id,
+        body.doc_type_hint,
+    )
 
     try:
         clauses, cost, model = await spa_analysis_service.analyze_step2_clauses(
@@ -159,18 +170,22 @@ async def step2_decompose_clauses(
             body.deal_structure,
             body.industry_type,
             spa_text=body.spa_text,
+            doc_type_hint=body.doc_type_hint,
         )
     except RuntimeError as exc:
+        logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
     except ValueError as exc:
+        logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
 
+    logger.info("Step 2 완료: txn=%s, session=%s, clauses=%d", txn_id, body.session_id, len(clauses))
     return SpaStep2Response(
         session_id=body.session_id,
         clauses=clauses,
@@ -192,6 +207,7 @@ async def step3_create_template(
     """Step 3: 최종 확정된 변수/조항을 DB에 ContractTemplate으로 저장한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
     # Step 3은 LLM 미호출 (DB 저장만) → rate limiting 불필요
+    logger.info("Step 3 요청: txn=%s, user=%s, doc_type=%s", txn_id, claims.email, body.doc_type)
 
     try:
         template = await spa_analysis_service.create_template_from_analysis(
@@ -204,17 +220,19 @@ async def step3_create_template(
             doc_type=body.doc_type,
         )
     except ValueError as exc:
+        logger.error("Step 3 실패: txn=%s, doc_type=%s, error=%s", txn_id, body.doc_type, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
 
     await db.commit()
+    logger.info("Step 3 완료: txn=%s, template=%s, doc_type=%s", txn_id, template.id, body.doc_type)
 
     return SpaStep3Response(
         template_id=template.id,
         template_name=template.name,
         variables_count=len(body.variables),
         clauses_count=len(body.clauses),
-        message=f"SPA 분석 템플릿 '{template.name}'이(가) 생성되었습니다.",
+        message=f"{body.doc_type} 분석 템플릿 '{template.name}'이(가) 생성되었습니다.",
     )

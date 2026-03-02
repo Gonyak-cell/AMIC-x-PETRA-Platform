@@ -54,7 +54,10 @@ export default function SpaTextInput({
           placeholder="계약서 원문 전체를 붙여넣으세요 (최소 100자)..."
           disabled={isPending}
         />
-        <div className="mt-1 flex items-center justify-between text-xs">
+        <div
+          className="mt-1 flex items-center justify-between text-xs"
+          aria-live="polite"
+        >
           <span
             className={
               charCount < MIN_CHARS

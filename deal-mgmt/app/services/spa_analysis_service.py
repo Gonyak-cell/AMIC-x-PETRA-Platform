@@ -81,6 +81,8 @@ def _cleanup_expired_sessions() -> None:
     """만료된 세션을 제거한다."""
     now = time.monotonic()
     expired = [k for k, v in _sessions.items() if now - v.created_at > _SESSION_TTL]
+    if expired:
+        logger.debug("만료 세션 정리: %d건", len(expired))
     for k in expired:
         del _sessions[k]
 
@@ -136,6 +138,8 @@ async def _call_llm_json(
                 logger.warning("LLM JSON 파싱 실패 (시도 %d/%d): %s", attempt + 1, max_retries + 1, exc)
                 continue
             raise ValueError(f"LLM 응답을 JSON으로 파싱할 수 없습니다: {exc}") from exc
+
+    raise RuntimeError("unreachable")  # pragma: no cover
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -395,8 +399,10 @@ detected_doc_type은 반드시 "SHA"로 설정하세요.
 8. 신주인수권/희석방지 → Anti-dilution, Pre-emptive Rights
 9. 배당/수익분배 → 배당 정책, Waterfall, 우선배당
 10. Exit → IPO 의무/일정, 매각 절차, Drag 임계치
-11. 비밀유지/경업금지 → 기간, 범위, 위반 시 제재
-12. 전체 스캔 → 조건부 BOOLEAN 발견
+11. 정보권/검사권 → 재무정보 제공 주기, 접근 범위, Key-Man 조항
+12. 비밀유지/경업금지 → 기간, 범위, 위반 시 제재
+13. 계약 기간/종료 → 존속 기간, 종료 사유
+14. 전체 스캔 → 조건부 BOOLEAN 발견
 
 ## 4. 기본 변수 목록 (반드시 원문에서 찾아 포함)
 | group_name | variable_key | input_type | 설명 |
@@ -426,6 +432,10 @@ detected_doc_type은 반드시 "SHA"로 설정하세요.
 | 비밀유지 | confidentiality_period_months | NUMBER | 비밀유지 기간 (개월) |
 | 경업금지 | non_compete_period_months | NUMBER | 경업금지 기간 (개월, 0=미포함) |
 | 경업금지 | non_compete_scope | TEXT | 경업금지 범위 |
+| 정보권 | financial_report_frequency | SELECT | 재무정보 제공 주기 (select_options: {"monthly": "월간", "quarterly": "분기", "annually": "연간"}) |
+| 정보권 | information_access_scope | TEXTAREA | 정보 접근 범위 (재무제표, 사업계획, 이사회 의사록 등) |
+| 계약 기간 | agreement_term_months | NUMBER | 계약 존속 기간 (개월, 0=무기한) |
+| 계약 기간 | agreement_termination_event | TEXT | 계약 종료 사유 (예: IPO 완료, 지분 전량 매각) |
 | 일정 | signing_date | DATE | 계약 체결일 |
 | 기타 | governing_law | SELECT | 준거법 |
 | 기타 | dispute_resolution | SELECT | 분쟁해결 방법 |
@@ -448,6 +458,8 @@ detected_doc_type은 반드시 "SHA"로 설정하세요.
 | 경업금지 | has_non_compete_obligation | 경업금지 의무 존재 |
 | 우선매수/신주인수 | has_preemptive_rights | 신주인수권/우선매수권 존재 |
 | Anti-dilution | has_anti_dilution | 희석방지 조항 존재 |
+| 정보권/검사권 | has_information_rights | 재무정보 접근권/검사권 존재 |
+| Key-Man/핵심인력 | has_key_man_clause | 핵심 경영진 이탈 트리거 존재 |
 기타 발견 시 has_{영문명} 형식으로 자율 생성하세요.
 
 ## 6. SHA 유형별 추가 변수
@@ -472,7 +484,7 @@ MINORITY_INVESTMENT (소수지분 투자):
 | investor_name | TEXT | 투자자 명칭 |
 | investment_amount | CURRENCY | 투자 금액 |
 | pre_money_valuation | CURRENCY | Pre-money 기업가치 |
-| anti_dilution_type | SELECT | 희석방지 방식 |
+| anti_dilution_type | SELECT | 희석방지 방식 (select_options: {"full_ratchet": "완전 래칫", "weighted_average_broad": "가중평균(광의)", "weighted_average_narrow": "가중평균(협의)"}) |
 
 ## 7. input_type 매핑 규칙
 - 이름/주소/회사명/등록번호 → TEXT
@@ -567,7 +579,11 @@ async def analyze_step1_variables(
 
 위 계약서 원문을 분석하여 계약 유형을 감지하고, 재사용 가능한 템플릿 변수를 추출하세요."""
 
-    data, cost, model = await _call_llm_json(system_prompt, user_prompt)
+    try:
+        data, cost, model = await _call_llm_json(system_prompt, user_prompt)
+    except Exception:
+        _sessions.pop(session_id, None)
+        raise
 
     # 비용 기록
     if cost:
@@ -576,7 +592,7 @@ async def analyze_step1_variables(
 
     # 응답 파싱
     variables = [ExtractedVariable(**v) for v in data.get("variables", [])]
-    deal_structure = data.get("deal_structure", "GENERAL")
+    deal_structure = data.get("deal_structure", "OTHER_STRUCTURE")
     industry_type = data.get("industry_type", "GENERAL")
     detected_doc_type = data.get("detected_doc_type", "SPA")
     discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
@@ -765,11 +781,19 @@ SHA(주주간계약서) 원문을 조항별로 분해하고, 변수 값을 Jinja
 - confirmed_variables 목록에 있는 변수만 사용하세요.
 - 리터럴 값 → {{ variable_key }}
 - 금액 → {{ investment_amount | currency_format }}
-  - ⚠ currency_format은 "금 {숫자}원" 형태를 이미 포함합니다. "금"이나 "원"을 별도로 추가하지 마세요.
 - 날짜 → {{ signing_date | date_format }}
 - 숫자 → {{ board_seats_total | number_format }}
 - 비율 → {{ drag_threshold_percentage }}%
 - 조건부 블록 → {% if has_put_option %}...{% endif %}
+
+## 한글 금액 표기 가이드
+- currency_format 필터는 "금 {천단위 구분 숫자}원" 형태를 이미 포함합니다:
+  - 입력: 2000000000 → 출력: "금 2,000,000,000원"
+- 원문의 "금 이십억원정 (₩2,000,000,000)" 전체를 {{ variable_key | currency_format }}으로 치환하세요.
+- ⚠ 이중 래핑 금지: "금 {{ var | currency_format }}원" (X) → {{ var | currency_format }} (O)
+- 원문의 "OO억원" → 원 단위 숫자로 추출하여 변수에 저장, 표시는 currency_format 필터 사용
+- 한글 표기와 아라비아 숫자가 병기된 경우: {{ variable_key | currency_format }} 하나로 통합
+- 숫자만 필요한 경우: {{ investment_amount | number_format }} (출력: "2,000,000,000")
 
 ## SHA 특화 조건부 렌더링
 - 이사 지명권: {% if has_board_nomination_right %}...{% endif %}
@@ -785,11 +809,25 @@ SHA(주주간계약서) 원문을 조항별로 분해하고, 변수 값을 Jinja
 - 질권: {% if has_pledge_agreement %}...{% endif %}
 - 신주인수권: {% if has_preemptive_rights %}...{% endif %}
 - 희석방지: {% if has_anti_dilution %}...{% endif %}
+- 정보권: {% if has_information_rights %}...{% endif %}
+- Key-Man: {% if has_key_man_clause %}...{% endif %}
 
-## SHA 유형별 조건부 조항
-- POST_BUYOUT: deal_structure == "POST_BUYOUT" — 경영권 이전 관련 (매수/매도인 권리배분, 경영 참여 범위)
-- JOINT_VENTURE: deal_structure == "JOINT_VENTURE" — 합작 사업 관련 (공동 경영, 출자 의무, 교착상태 해결)
-- MINORITY_INVESTMENT: deal_structure == "MINORITY_INVESTMENT" — 투자자 보호 (anti-dilution, 우선배당, IPO 강제)
+## SHA 유형별 조건부 조항 및 변수 사용
+- POST_BUYOUT: deal_structure == "POST_BUYOUT" — 경영권 이전 관련
+  - 유형별 변수 활용: {{ majority_shareholder_name }}(대주주), {{ minority_shareholder_name }}(소수주주), {{ acquisition_reference }}(관련 SPA)
+  - 예: "<p>{{ majority_shareholder_name }}(이하 "대주주")는 {{ acquisition_reference }}에 따른 경영권 인수를 완료하고...</p>"
+- JOINT_VENTURE: deal_structure == "JOINT_VENTURE" — 합작 사업 관련
+  - 유형별 변수 활용: {{ jv_company_name }}(합작회사), {{ jv_purpose }}(사업 목적), {{ capital_contribution_ratio }}(출자 비율), {{ deadlock_resolution }}(교착상태 해결)
+  - 예: "<p>{{ jv_company_name }}의 사업 목적은 {{ jv_purpose }}으로 한다.</p>"
+- MINORITY_INVESTMENT: deal_structure == "MINORITY_INVESTMENT" — 투자자 보호
+  - 유형별 변수 활용: {{ investor_name }}(투자자), {{ investment_amount | currency_format }}(투자금액), {{ pre_money_valuation | currency_format }}(Pre-money), {{ anti_dilution_type }}(희석방지 방식)
+  - 예: "<p>{{ investor_name }}(이하 "투자자")는 {{ investment_amount | currency_format }}을 출자한다.</p>"
+
+## 별지/부속서(Schedule) 처리
+- 본문에서 "별지", "부속서", "별표" 참조 시: 참조 텍스트만 유지, 별지 본문은 clause에 포함하지 않음
+- 흔한 SHA 별지: Veto 항목 목록, Waterfall 계산 상세, 주주 지분 현황, 이사 지명 기준
+- 별지가 있는 조항: 관련 BOOLEAN 조건으로 참조 문구 제어
+  - 예: {% if has_veto_rights %}<p>거부권 대상 사항은 별지 제1호에 따른다.</p>{% endif %}
 
 ## condition_expression 규칙
 - Python 문법 사용
@@ -843,11 +881,13 @@ async def analyze_step2_clauses(
     industry_type: str,
     *,
     spa_text: str | None = None,
+    doc_type_hint: str | None = None,
 ) -> tuple[list[AnalyzedClause], float | None, str | None]:
     """Step 2: 확정 변수를 기반으로 조항을 분해한다.
 
     Args:
         spa_text: 멀티워커 폴백용. 세션 유실 시 이 텍스트로 임시 세션 생성.
+        doc_type_hint: 멀티워커 폴백용. 세션 유실 시 detected_doc_type 복원.
 
     Returns:
         (clauses, cost, model)
@@ -857,8 +897,10 @@ async def analyze_step2_clauses(
     except ValueError:
         if spa_text:
             session = AnalysisSession(session_id=session_id, spa_text=spa_text)
+            if doc_type_hint:
+                session.detected_doc_type = doc_type_hint
             _sessions[session_id] = session
-            logger.info("멀티워커 폴백: session=%s 임시 생성", session_id)
+            logger.info("멀티워커 폴백: session=%s 임시 생성 (doc_type=%s)", session_id, doc_type_hint or "SPA")
         else:
             raise
 
@@ -911,10 +953,16 @@ async def analyze_step2_clauses(
             rc["clause_order"] = order
         seen_orders.add(order)
 
+        # LLM 응답의 content에 sanitize 적용 (XSS 방지)
+        if rc.get("content"):
+            rc["content"] = sanitize_html(rc["content"])
+
         clauses.append(AnalyzedClause(**rc))
 
+    doc_label_log = "SHA" if is_sha else "SPA"
     logger.info(
-        "SPA Step 2 완료: session=%s, clauses=%d, cost=$%.4f, total_cost=$%.4f",
+        "%s Step 2 완료: session=%s, clauses=%d, cost=$%.4f, total_cost=$%.4f",
+        doc_label_log,
         session_id,
         len(clauses),
         cost or 0.0,
@@ -1021,7 +1069,8 @@ async def create_template_from_analysis(
     await db.refresh(template)
 
     logger.info(
-        "SPA Step 3 완료: template_id=%s, name=%s, clauses=%d, variables=%d, user=%s",
+        "%s Step 3 완료: template_id=%s, name=%s, clauses=%d, variables=%d, user=%s",
+        doc_type,
         template.id,
         template_name,
         len(clauses),

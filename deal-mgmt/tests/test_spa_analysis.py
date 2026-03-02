@@ -1323,15 +1323,28 @@ class TestShaSchemas:
         assert body.deal_structure == "POST_BUYOUT"
 
     def test_deal_structure_accepts_all_types(self) -> None:
-        """SPA + SHA 모든 구조 값 허용."""
-        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+        """SPA + SHA 모든 구조 값 허용 (올바른 doc_type 조합)."""
+        from app.schemas.spa_analysis import DEAL_STRUCTURES, SHA_TYPES
 
-        for st in ALL_STRUCTURE_TYPES:
+        # SPA 유형: DEAL_STRUCTURES 값 허용
+        for st in DEAL_STRUCTURES:
             resp = SpaStep1Response(
                 session_id="test",
                 variables=[],
                 deal_structure=st,
                 industry_type="GENERAL",
+                detected_doc_type="SPA",
+            )
+            assert resp.deal_structure == st
+
+        # SHA 유형: SHA_TYPES 값 허용
+        for st in SHA_TYPES:
+            resp = SpaStep1Response(
+                session_id="test",
+                variables=[],
+                deal_structure=st,
+                industry_type="GENERAL",
+                detected_doc_type="SHA",
             )
             assert resp.deal_structure == st
 
@@ -1553,3 +1566,142 @@ class TestShaStep2Service:
             assert "SPA 원문을 조항별로 분해" in system_prompt
         finally:
             _sessions.pop("spa-step2-test", None)
+
+
+# ── 보충 리뷰 테스트 (TEST-1, TEST-2, TEST-3) ─────────────────────────────
+
+
+class TestShaMultiWorkerFallback:
+    """TEST-1: SHA 멀티워커 폴백 + doc_type_hint 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_step2_sha_fallback_with_doc_type_hint(self) -> None:
+        """세션 유실 + spa_text + doc_type_hint='SHA' → SHA 프롬프트 사용."""
+        mock_response = json.dumps({"clauses": []})
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm._primary_model = "claude-sonnet-4-20250514"
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step2_clauses
+
+            clauses, _, _ = await analyze_step2_clauses(
+                "sha-fallback-test",
+                [],
+                "POST_BUYOUT",
+                "GENERAL",
+                spa_text="A" * 200,
+                doc_type_hint="SHA",
+            )
+
+        assert clauses == []
+
+        # SHA 프롬프트가 사용되었는지 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "주주간계약서" in system_prompt
+
+        _sessions.pop("sha-fallback-test", None)
+
+    @pytest.mark.asyncio
+    async def test_step2_fallback_without_hint_uses_spa(self) -> None:
+        """세션 유실 + spa_text + doc_type_hint 미지정 → SPA 프롬프트."""
+        mock_response = json.dumps({"clauses": []})
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm._primary_model = "claude-sonnet-4-20250514"
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step2_clauses
+
+            clauses, _, _ = await analyze_step2_clauses(
+                "spa-fallback-no-hint",
+                [],
+                "PURE_SHARE_TRANSFER",
+                "GENERAL",
+                spa_text="A" * 200,
+            )
+
+        assert clauses == []
+
+        # SPA 프롬프트가 사용되었는지 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "SPA 원문을 조항별로 분해" in system_prompt
+
+        _sessions.pop("spa-fallback-no-hint", None)
+
+
+class TestShaValidatorFallback:
+    """TEST-2: sha_type/exit_strategy 유효하지 않은 값 폴백 테스트."""
+
+    def test_sha_type_invalid_fallback_to_other(self) -> None:
+        """sha_type에 유효하지 않은 값 → OTHER_TYPE 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="POST_BUYOUT",
+            industry_type="GENERAL",
+            detected_doc_type="SHA",
+            sha_type="INVALID_TYPE",
+        )
+        assert resp.sha_type == "OTHER_TYPE"
+
+    def test_exit_strategy_invalid_fallback_to_other(self) -> None:
+        """exit_strategy에 유효하지 않은 값 → OTHER_STRATEGY 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="POST_BUYOUT",
+            industry_type="GENERAL",
+            detected_doc_type="SHA",
+            exit_strategy="INVALID_STRATEGY",
+        )
+        assert resp.exit_strategy == "OTHER_STRATEGY"
+
+    def test_sha_type_valid_passes_through(self) -> None:
+        """sha_type에 유효한 값 → 그대로 통과."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="JOINT_VENTURE",
+            industry_type="GENERAL",
+            detected_doc_type="SHA",
+            sha_type="JOINT_VENTURE",
+        )
+        assert resp.sha_type == "JOINT_VENTURE"
+
+
+class TestStep1SessionCleanup:
+    """TEST-3: Step 1 LLM 실패 시 세션 정리 검증."""
+
+    @pytest.mark.asyncio
+    async def test_step1_failure_does_not_leak_session(self) -> None:
+        """Step 1 LLM 실패 시 _sessions에 세션이 잔존하지 않는지 확인."""
+        sessions_before = len(_sessions)
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.0
+        mock_llm.call = AsyncMock(side_effect=ValueError("LLM parse error"))
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            with pytest.raises(ValueError, match="JSON"):
+                await analyze_step1_variables("A" * 200)
+
+        assert len(_sessions) == sessions_before

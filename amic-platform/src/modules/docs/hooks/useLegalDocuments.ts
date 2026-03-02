@@ -2,20 +2,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import { extractApiError } from "@/api/errors";
-import type { LegalDocument, LegalDocumentCreate } from "@/modules/docs/types/legal_document";
+import type {
+  LegalDocument,
+  LegalDocumentCreate,
+} from "@/modules/docs/types/legal_document";
 
 const BASE = (txnId: string) => `/transactions/${txnId}/legal-documents`;
 
 // ── 조회 ──────────────────────────────────────────────────────────────────────
 
-export function useLegalDocuments(txnId: string) {
+export function useLegalDocuments(txnId: string, active = true) {
   return useQuery<LegalDocument[]>({
     queryKey: ["ma", "legal-documents", txnId],
     queryFn: async () => {
       const { data } = await maApi.get(BASE(txnId));
       return data as LegalDocument[];
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     // GENERATING 상태 문서가 있을 때 3초마다 자동 재조회한다
     refetchInterval: (query) => {
       const docs = query.state.data;
@@ -50,7 +53,9 @@ export function useCreateLegalDocument(txnId: string) {
       if (doc.status === "READY") {
         toast.success("법률 문서가 생성되었습니다.");
       } else if (doc.status === "FAILED") {
-        toast.error(`문서 생성에 실패했습니다: ${doc.error_message ?? "알 수 없는 오류"}`);
+        toast.error(
+          `문서 생성에 실패했습니다: ${doc.error_message ?? "알 수 없는 오류"}`,
+        );
       }
     },
     onError: (err) => {
@@ -63,14 +68,23 @@ export function useCreateLegalDocument(txnId: string) {
 
 export function useRegenerateLegalDocument(txnId: string) {
   const qc = useQueryClient();
-  return useMutation<LegalDocument, Error, { docId: string; body: LegalDocumentCreate }>({
+  return useMutation<
+    LegalDocument,
+    Error,
+    { docId: string; body: LegalDocumentCreate }
+  >({
     mutationFn: async ({ docId, body }) => {
-      const { data } = await maApi.post(`${BASE(txnId)}/${docId}/regenerate`, body);
+      const { data } = await maApi.post(
+        `${BASE(txnId)}/${docId}/regenerate`,
+        body,
+      );
       return data as LegalDocument;
     },
     onSuccess: (doc) => {
       qc.invalidateQueries({ queryKey: ["ma", "legal-documents", txnId] });
-      qc.invalidateQueries({ queryKey: ["ma", "legal-documents", txnId, doc.id] });
+      qc.invalidateQueries({
+        queryKey: ["ma", "legal-documents", txnId, doc.id],
+      });
       if (doc.status === "READY") {
         toast.success("문서가 재생성되었습니다.");
       } else if (doc.status === "FAILED") {

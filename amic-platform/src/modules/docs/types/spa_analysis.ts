@@ -140,6 +140,8 @@ export interface AnalyzedClause {
 export interface SpaStep2Request {
   session_id: string;
   spa_text?: string;
+  /** 멀티워커 폴백용 — 세션 유실 시 detected_doc_type 복원 */
+  doc_type_hint?: DocType;
   variables: ExtractedVariable[];
   deal_structure: string; // DealStructure | ShaType
   industry_type: IndustryType;

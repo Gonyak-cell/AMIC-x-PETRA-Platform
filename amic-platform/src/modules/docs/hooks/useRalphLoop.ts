@@ -57,16 +57,14 @@ export interface RalphSessionCreate {
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
-export function useRalphSessions(txnId: string) {
+export function useRalphSessions(txnId: string, active = true) {
   return useQuery<RalphSession[]>({
     queryKey: ["ralph", "sessions", txnId],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/ralph/transactions/${txnId}/sessions`
-      );
+      const { data } = await maApi.get(`/ralph/transactions/${txnId}/sessions`);
       return data as RalphSession[];
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     refetchInterval: (query) => {
       const sessions = query.state.data;
       const hasRunning = sessions?.some((s) => s.status === "running");
@@ -93,9 +91,7 @@ export function useRalphProgress(sessionId: string) {
   return useQuery<RalphProgress>({
     queryKey: ["ralph", "progress", sessionId],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/ralph/sessions/${sessionId}/progress`
-      );
+      const { data } = await maApi.get(`/ralph/sessions/${sessionId}/progress`);
       return data as RalphProgress;
     },
     enabled: !!sessionId,
@@ -109,7 +105,7 @@ export function useCreateRalphSession(txnId: string) {
     mutationFn: async (body) => {
       const { data } = await maApi.post(
         `/ralph/transactions/${txnId}/sessions`,
-        body
+        body,
       );
       return data as RalphSession;
     },
@@ -118,9 +114,7 @@ export function useCreateRalphSession(txnId: string) {
       toast.success("Ralph Loop 세션이 시작되었습니다.");
     },
     onError: (err) => {
-      toast.error(
-        extractApiError(err, "Ralph Loop 세션 생성에 실패했습니다.")
-      );
+      toast.error(extractApiError(err, "Ralph Loop 세션 생성에 실패했습니다."));
     },
   });
 }
@@ -145,7 +139,7 @@ export function useCreateLDDReportAuto(txnId: string) {
     mutationFn: async (body) => {
       const { data } = await maApi.post(
         `/transactions/${txnId}/ldd-reports/auto`,
-        body
+        body,
       );
       return data;
     },
@@ -154,9 +148,7 @@ export function useCreateLDDReportAuto(txnId: string) {
       toast.success("AI 자동 분석이 시작되었습니다.");
     },
     onError: (err) => {
-      toast.error(
-        extractApiError(err, "AI 자동 분석 요청에 실패했습니다.")
-      );
+      toast.error(extractApiError(err, "AI 자동 분석 요청에 실패했습니다."));
     },
   });
 }

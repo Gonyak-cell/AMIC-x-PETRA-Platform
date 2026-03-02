@@ -26,8 +26,10 @@ import type {
 import {
   DOC_TYPES,
   DOC_TYPE_LABELS,
+  DEAL_STRUCTURES,
   DEAL_STRUCTURE_LABELS,
   INDUSTRY_TYPE_LABELS,
+  SHA_TYPES,
   SHA_TYPE_LABELS,
   EXIT_STRATEGY_LABELS,
 } from "../types/spa_analysis";
@@ -151,10 +153,11 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
           }
         }
         setVariables(mergedVars);
-        setDealStructure(result.deal_structure);
+        // SHA: sha_type과 deal_structure는 동일 값 (서버 설계)
+        // sha_type이 있으면 우선 사용, 없으면 deal_structure 폴백
+        setDealStructure(result.sha_type ?? result.deal_structure);
         setIndustryType(result.industry_type);
         setDocType(result.detected_doc_type ?? "SPA");
-        // SHA 전용 필드 캡처
         setExitStrategy(result.exit_strategy ?? "OTHER_STRATEGY");
         setTemplateName("");
         setStep(1);
@@ -171,6 +174,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
       const result: SpaStep2Response = await step2Mut.mutateAsync({
         session_id: sessionId,
         spa_text: preservedText || undefined,
+        doc_type_hint: docType !== "SPA" ? docType : undefined,
         variables,
         deal_structure: dealStructure,
         industry_type: industryType,
@@ -184,6 +188,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
     step2Mut,
     sessionId,
     preservedText,
+    docType,
     variables,
     dealStructure,
     industryType,
@@ -204,19 +209,23 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
       toast.error("템플릿 이름을 입력하세요.");
       return;
     }
-    const result = await step3Mut.mutateAsync({
-      session_id: sessionId,
-      template_name: templateName.trim(),
-      template_description: templateDesc.trim() || null,
-      doc_type: docType,
-      variables,
-      clauses,
-    });
-    toast.success(result.message);
-    // 생성 완료 → 계약서 생성 페이지로 이동 (template_id 포함)
-    navigate(
-      `/docs/legal/generate?txn_id=${txnId}&template_id=${result.template_id}`,
-    );
+    try {
+      const result = await step3Mut.mutateAsync({
+        session_id: sessionId,
+        template_name: templateName.trim(),
+        template_description: templateDesc.trim() || null,
+        doc_type: docType,
+        variables,
+        clauses,
+      });
+      toast.success(result.message);
+      // 생성 완료 → 계약서 생성 페이지로 이동 (template_id 포함)
+      navigate(
+        `/docs/legal/generate?txn_id=${txnId}&template_id=${result.template_id}`,
+      );
+    } catch {
+      // onError 토스트가 이미 표시됨 — unhandled rejection 방지
+    }
   }, [
     step3Mut,
     sessionId,
@@ -285,7 +294,10 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
           ) : (
             <>
               {step1Mut.isError && (
-                <div className="flex items-start gap-2 rounded-lg border border-negative/30 bg-red-50 p-3 text-sm text-negative">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-negative/30 bg-red-50 p-3 text-sm text-negative"
+                >
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
                     <p className="font-medium">변수 추출 실패</p>
@@ -329,11 +341,34 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                   진행하세요
                 </span>
                 <span className="text-text-tertiary">|</span>
-                <label className="flex items-center gap-1.5">
+                <label
+                  htmlFor="wizard-doc-type"
+                  className="flex items-center gap-1.5"
+                >
                   <span className="font-medium">계약 유형</span>
                   <select
+                    id="wizard-doc-type"
                     value={docType}
-                    onChange={(e) => setDocType(e.target.value as DocType)}
+                    onChange={(e) => {
+                      const next = e.target.value as DocType;
+                      setDocType(next);
+                      // FE-R2: SHA↔SPA 전환 시 dealStructure 기본값 리셋
+                      if (
+                        next === "SHA" &&
+                        !(SHA_TYPES as readonly string[]).includes(
+                          dealStructure,
+                        )
+                      ) {
+                        setDealStructure("OTHER_TYPE");
+                      } else if (
+                        next !== "SHA" &&
+                        !(DEAL_STRUCTURES as readonly string[]).includes(
+                          dealStructure,
+                        )
+                      ) {
+                        setDealStructure("PURE_SHARE_TRANSFER");
+                      }
+                    }}
                     className="rounded-lg border border-border bg-white px-2 py-0.5 text-xs text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                   >
                     {DOC_TYPES.map((dt) => (
@@ -382,7 +417,10 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
 
           {/* Step 2 에러 배너 */}
           {step2Mut.isError && (
-            <div className="flex items-start gap-2 rounded-lg border border-negative/30 bg-red-50 p-3 text-sm text-negative">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-negative/30 bg-red-50 p-3 text-sm text-negative"
+            >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <p className="font-medium">조항 분해 실패</p>
@@ -520,7 +558,9 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
             <h3 className="mb-2 text-xs font-semibold text-text-secondary">
               생성 요약
             </h3>
-            <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+            <div
+              className={`grid grid-cols-2 gap-2 text-sm ${docType === "SHA" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}
+            >
               <div className="flex flex-col">
                 <span className="text-text-tertiary text-xs">계약 유형</span>
                 <span className="font-medium text-text-primary">

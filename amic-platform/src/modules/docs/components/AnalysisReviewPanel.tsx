@@ -192,7 +192,15 @@ export function VariableReviewPanel({
                     {editingIdx === idx ? (
                       <div className="flex flex-col gap-0.5">
                         <input
+                          id={`var-key-${idx}`}
                           type="text"
+                          aria-label="변수 키"
+                          aria-invalid={duplicateKeys.has(v.variable_key)}
+                          aria-describedby={
+                            duplicateKeys.has(v.variable_key)
+                              ? `var-key-dup-${idx}`
+                              : undefined
+                          }
                           value={v.variable_key}
                           onChange={(e) =>
                             updateVar(idx, { variable_key: e.target.value })
@@ -200,7 +208,10 @@ export function VariableReviewPanel({
                           className={`w-full rounded border px-1 py-0.5 text-xs ${duplicateKeys.has(v.variable_key) ? "border-negative" : "border-border"}`}
                         />
                         {duplicateKeys.has(v.variable_key) && (
-                          <span className="text-[10px] text-negative">
+                          <span
+                            id={`var-key-dup-${idx}`}
+                            className="text-[10px] text-negative"
+                          >
                             중복 키
                           </span>
                         )}
@@ -222,6 +233,7 @@ export function VariableReviewPanel({
                     {editingIdx === idx ? (
                       <input
                         type="text"
+                        aria-label="질문 라벨"
                         value={v.question_label}
                         onChange={(e) =>
                           updateVar(idx, { question_label: e.target.value })
@@ -237,6 +249,7 @@ export function VariableReviewPanel({
                   <td className="px-3 py-2">
                     {editingIdx === idx ? (
                       <select
+                        aria-label="입력 타입"
                         value={v.input_type}
                         onChange={(e) =>
                           updateVar(idx, {
@@ -271,6 +284,7 @@ export function VariableReviewPanel({
                     {editingIdx === idx ? (
                       <input
                         type="text"
+                        aria-label="추출 값"
                         value={v.extracted_value ?? ""}
                         onChange={(e) =>
                           updateVar(idx, {
@@ -321,10 +335,14 @@ export function VariableReviewPanel({
                     <td colSpan={7} className="px-3 py-3">
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-medium text-text-tertiary">
+                          <label
+                            htmlFor={`var-desc-${idx}`}
+                            className="text-[10px] font-medium text-text-tertiary"
+                          >
                             설명
                           </label>
                           <input
+                            id={`var-desc-${idx}`}
                             type="text"
                             value={v.description ?? ""}
                             onChange={(e) =>
@@ -337,10 +355,14 @@ export function VariableReviewPanel({
                           />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-medium text-text-tertiary">
+                          <label
+                            htmlFor={`var-default-${idx}`}
+                            className="text-[10px] font-medium text-text-tertiary"
+                          >
                             기본값
                           </label>
                           <input
+                            id={`var-default-${idx}`}
                             type="text"
                             value={v.default_value ?? ""}
                             onChange={(e) =>
@@ -353,10 +375,14 @@ export function VariableReviewPanel({
                           />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-medium text-text-tertiary">
+                          <label
+                            htmlFor={`var-cond-${idx}`}
+                            className="text-[10px] font-medium text-text-tertiary"
+                          >
                             표시 조건
                           </label>
                           <input
+                            id={`var-cond-${idx}`}
                             type="text"
                             value={v.visible_condition ?? ""}
                             onChange={(e) =>
@@ -623,10 +649,16 @@ function SelectOptionsEditor({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-medium text-text-tertiary">
+      <label
+        htmlFor="select-opts-editor"
+        className="text-[10px] font-medium text-text-tertiary"
+      >
         선택 옵션 (JSON)
       </label>
       <textarea
+        id="select-opts-editor"
+        aria-invalid={!valid}
+        aria-describedby={!valid ? "select-opts-error" : undefined}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {
@@ -647,7 +679,7 @@ function SelectOptionsEditor({
         placeholder={'{"KEY": "표시값", "KEY2": "표시값2"}'}
       />
       {!valid && (
-        <span className="text-[10px] text-negative">
+        <span id="select-opts-error" className="text-[10px] text-negative">
           유효한 JSON이 아닙니다
         </span>
       )}

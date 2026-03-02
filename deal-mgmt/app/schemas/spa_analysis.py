@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ── 확장 ENUM 상수 ──────────────────────────────────────────────────────────
 
@@ -153,12 +153,36 @@ class SpaStep1Response(BaseModel):
             raise ValueError(msg)
         return v
 
+    @field_validator("sha_type")
+    @classmethod
+    def validate_sha_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in SHA_TYPES:
+            return "OTHER_TYPE"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
+    @field_validator("exit_strategy")
+    @classmethod
+    def validate_exit_strategy(cls, v: str | None) -> str | None:
+        if v is not None and v not in EXIT_STRATEGIES:
+            return "OTHER_STRATEGY"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
     @field_validator("detected_doc_type")
     @classmethod
     def validate_detected_doc_type(cls, v: str) -> str:
         if v not in VALID_DOC_TYPES:
             return "SPA"  # 알 수 없는 유형 → SPA 기본값
         return v
+
+    @model_validator(mode="after")
+    def validate_structure_for_doc_type(self) -> SpaStep1Response:
+        """SHA일 때는 SHA_TYPES만, SPA일 때는 DEAL_STRUCTURES만 허용."""
+        ds = self.deal_structure
+        if self.detected_doc_type == "SHA" and ds not in SHA_TYPES:
+            self.deal_structure = "OTHER_TYPE"
+        elif self.detected_doc_type != "SHA" and ds not in DEAL_STRUCTURES:
+            self.deal_structure = "OTHER_STRUCTURE"
+        return self
 
 
 # ── Step 2: 조항 분해 ──────────────────────────────────────────────────────
@@ -172,6 +196,10 @@ class SpaStep2Request(BaseModel):
         default=None,
         max_length=500_000,
         description="멀티워커 폴백용 원문 텍스트 (세션 유실 시 사용)",
+    )
+    doc_type_hint: Literal["SPA", "SHA", "BTA", "SSA", "MOU"] | None = Field(
+        default=None,
+        description="멀티워커 폴백용 문서 유형 (세션 유실 시 detected_doc_type 복원)",
     )
     variables: list[ExtractedVariable]
     deal_structure: str
