@@ -28,15 +28,15 @@ const CSS_VARS: Record<TableStyleTheme, Record<string, string>> = {
     "--table-section-bg": "#0F3A32",
   },
   MODERN_GREEN: {
-    "--table-header-bg": "#4A8A4A",
+    "--table-header-bg": "#6BAE45",
     "--table-header-text": "#FFFFFF",
     "--table-header-font-weight": "700",
     "--table-row-border": "1px dashed #CCCCCC",
-    "--table-row-hover": "rgba(101,167,101,0.05)",
-    "--table-summary-color": "#4A8A4A",
+    "--table-row-hover": "rgba(107,174,69,0.05)",
+    "--table-summary-color": "#6BAE45",
     "--table-stripe-bg": "transparent",
-    "--table-footer-bg": "rgba(101,167,101,0.08)",
-    "--table-section-bg": "#4A8A4A",
+    "--table-footer-bg": "rgba(107,174,69,0.08)",
+    "--table-section-bg": "#6BAE45",
   },
 };
 
