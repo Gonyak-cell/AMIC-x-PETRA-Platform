@@ -289,6 +289,26 @@ services:
     networks:
       - amic-network
 
+  deal-mgmt-celery-beat:
+    build:
+      context: ./deal-mgmt
+    image: amic-deal-mgmt-beat:latest
+    container_name: amic-deal-mgmt-celery-beat
+    command: >
+      celery -A app.tasks.celery_app beat
+      --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD:-deal_mgmt_dev_password}@deal-mgmt-db:5432/deal_mgmt
+      REDIS_URL: redis://deal-mgmt-redis:6379/0
+      CELERY_WORKER: "1"
+    depends_on:
+      deal-mgmt-db:
+        condition: service_healthy
+      deal-mgmt-redis:
+        condition: service_healthy
+    networks:
+      - amic-network
+
   # ======================== IM BACKEND ========================
   im-api:
     build:

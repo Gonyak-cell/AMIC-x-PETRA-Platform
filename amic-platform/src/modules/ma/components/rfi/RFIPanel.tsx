@@ -15,23 +15,18 @@ import {
 import RFICreateModal from "./RFICreateModal";
 import RFIDetailView from "./RFIDetailView";
 import type { RFIStatus } from "@/modules/ma/types/rfi";
-import { RFI_STATUS_LABELS } from "@/modules/ma/constants";
-
-const STATUS_VARIANT: Record<RFIStatus, "success" | "warning" | "error" | "info" | "neutral"> = {
-  DRAFT: "neutral",
-  SENT: "info",
-  PARTIALLY_RESPONDED: "warning",
-  FULLY_RESPONDED: "success",
-  CLOSED: "neutral",
-  CANCELLED: "error",
-};
+import { RFI_STATUS_LABELS, RFI_STATUS_VARIANT } from "@/modules/ma/constants";
 
 interface RFIPanelProps {
   txnId: string;
 }
 
 export default function RFIPanel({ txnId }: RFIPanelProps) {
-  const { data: rfis, isLoading: rfisLoading, isError: rfisError } = useRFIs(txnId);
+  const {
+    data: rfis,
+    isLoading: rfisLoading,
+    isError: rfisError,
+  } = useRFIs(txnId);
   const { data: summary, isLoading: summaryLoading } = useRFISummary(txnId);
   const generateFromDD = useGenerateRFIFromDD(txnId);
 
@@ -77,7 +72,13 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <KpiCard
             label="응답률"
             value={`${Math.round(summary.overall_response_pct)}%`}
-            variant={summary.overall_response_pct >= 80 ? "positive" : summary.overall_response_pct >= 50 ? "default" : "negative"}
+            variant={
+              summary.overall_response_pct >= 80
+                ? "positive"
+                : summary.overall_response_pct >= 50
+                  ? "default"
+                  : "negative"
+            }
           />
           <KpiCard
             label="확인 완료"
@@ -97,10 +98,15 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
         <Card padding="md">
           <div className="space-y-2">
             {summary.by_category.map((cat) => {
-              const pct = cat.total > 0 ? Math.round((cat.responded / cat.total) * 100) : 0;
+              const pct =
+                cat.total > 0
+                  ? Math.round((cat.responded / cat.total) * 100)
+                  : 0;
               return (
                 <div key={cat.category} className="flex items-center gap-3">
-                  <span className="text-xs font-medium w-20 truncate">{cat.category}</span>
+                  <span className="text-xs font-medium w-20 truncate">
+                    {cat.category}
+                  </span>
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-accent rounded-full transition-all"
@@ -119,16 +125,22 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
 
       {/* 헤더 + 액션 */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2" role="radiogroup" aria-label="RFI 상태 필터">
+        <div
+          className="flex items-center gap-2"
+          role="radiogroup"
+          aria-label="RFI 상태 필터"
+        >
           <span className="text-xs font-medium text-gray-500">상태:</span>
-          {([
-            { value: "ALL", label: "전체" },
-            { value: "DRAFT", label: "초안" },
-            { value: "SENT", label: "발송됨" },
-            { value: "PARTIALLY_RESPONDED", label: "일부 응답" },
-            { value: "FULLY_RESPONDED", label: "전체 응답" },
-            { value: "CLOSED", label: "마감" },
-          ] as const).map((opt) => (
+          {(
+            [
+              { value: "ALL", label: "전체" },
+              { value: "DRAFT", label: "초안" },
+              { value: "SENT", label: "발송됨" },
+              { value: "PARTIALLY_RESPONDED", label: "일부 응답" },
+              { value: "FULLY_RESPONDED", label: "전체 응답" },
+              { value: "CLOSED", label: "마감" },
+            ] as const
+          ).map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -168,8 +180,12 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
       ) : rfisError ? (
         <Card padding="lg">
           <div className="text-center py-8 text-red-500">
-            <p className="font-medium">RFI 목록을 불러오는 중 오류가 발생했습니다.</p>
-            <p className="text-xs mt-1 text-gray-500">잠시 후 다시 시도해 주세요.</p>
+            <p className="font-medium">
+              RFI 목록을 불러오는 중 오류가 발생했습니다.
+            </p>
+            <p className="text-xs mt-1 text-gray-500">
+              잠시 후 다시 시도해 주세요.
+            </p>
           </div>
         </Card>
       ) : !filteredRFIs?.length ? (
@@ -177,13 +193,18 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <div className="text-center py-8 text-gray-500">
             <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
             <p className="font-medium">RFI가 없습니다</p>
-            <p className="text-xs mt-1">새 RFI를 생성하거나 DD 체크리스트에서 자동으로 생성하세요.</p>
+            <p className="text-xs mt-1">
+              새 RFI를 생성하거나 DD 체크리스트에서 자동으로 생성하세요.
+            </p>
           </div>
         </Card>
       ) : (
         <div className="space-y-2">
           {filteredRFIs.map((rfi) => {
-            const pct = rfi.total_items > 0 ? Math.round((rfi.responded_items / rfi.total_items) * 100) : 0;
+            const pct =
+              rfi.total_items > 0
+                ? Math.round((rfi.responded_items / rfi.total_items) * 100)
+                : 0;
             return (
               <Card
                 key={rfi.id}
@@ -198,13 +219,17 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
                       <span className="font-medium text-sm text-gray-900 truncate">
                         {rfi.title}
                       </span>
-                      <Badge variant={STATUS_VARIANT[rfi.status]} pill>
+                      <Badge variant={RFI_STATUS_VARIANT[rfi.status]} pill>
                         {RFI_STATUS_LABELS[rfi.status]}
                       </Badge>
-                      <span className="text-xs text-gray-400">Round {rfi.round_number}</span>
+                      <span className="text-xs text-gray-400">
+                        Round {rfi.round_number}
+                      </span>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-gray-500">
-                      {rfi.recipient_company && <span>{rfi.recipient_company}</span>}
+                      {rfi.recipient_company && (
+                        <span>{rfi.recipient_company}</span>
+                      )}
                       {rfi.due_date && <span>마감: {rfi.due_date}</span>}
                       <span>
                         응답 {rfi.responded_items}/{rfi.total_items} ({pct}%)
@@ -229,7 +254,11 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
         </div>
       )}
 
-      <RFICreateModal txnId={txnId} open={showCreate} onClose={() => setShowCreate(false)} />
+      <RFICreateModal
+        txnId={txnId}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+      />
     </div>
   );
 }

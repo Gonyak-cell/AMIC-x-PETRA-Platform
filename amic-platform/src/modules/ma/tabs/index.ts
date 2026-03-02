@@ -1,0 +1,16 @@
+export { default as BuyersTab } from "./BuyersTab";
+export { default as ContractsTab } from "./ContractsTab";
+export { default as RisksTab } from "./RisksTab";
+export { default as ComplianceTab } from "./ComplianceTab";
+export { default as ClosingTab } from "./ClosingTab";
+export { default as NdasTab } from "./NdasTab";
+export { default as BidsTab } from "./BidsTab";
+export { default as DDChecklistTab } from "./DDChecklistTab";
+export { default as PMITab } from "./PMITab";
+export { default as EarnoutTab } from "./EarnoutTab";
+export { default as MarketingMaterialsTab } from "./MarketingMaterialsTab";
+export { default as ModelsTab } from "./ModelsTab";
+export { default as NotesApprovalsTab } from "./NotesApprovalsTab";
+export { default as TimelineTab } from "./TimelineTab";
+export { default as QualityTab } from "./QualityTab";
+export { default as EngagementTab } from "./EngagementTab";

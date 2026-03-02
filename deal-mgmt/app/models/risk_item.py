@@ -2,8 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Enum, Float, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -14,11 +13,10 @@ class RiskItem(Base, TimestampMixin):
     """거래별 리스크 항목 — 5x4 리스크 매트릭스 지원."""
 
     __tablename__ = "risk_items"
+    __table_args__ = (Index("ix_risk_items_txn_sev_status", "transaction_id", "severity", "status"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     category: Mapped[RiskCategory] = mapped_column(Enum(RiskCategory), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

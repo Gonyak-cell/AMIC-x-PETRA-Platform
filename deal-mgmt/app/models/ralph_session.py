@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -28,12 +28,12 @@ class RalphSession(Base, TimestampMixin):
     __tablename__ = "ralph_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         primary_key=True,
         default=uuid.uuid4,
     )
     transaction_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=True,
         index=True,

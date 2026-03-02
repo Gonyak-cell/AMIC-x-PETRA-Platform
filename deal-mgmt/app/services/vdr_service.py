@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from app.models.enums import VdrDocumentStatus, VdrFolderCategory
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import VdrDocumentUpdate, VdrFolderCreate, VdrFolderUpdate
+
+logger = logging.getLogger(__name__)
 
 # M&A 실사 VDR 기본 폴더 (11개)
 _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
@@ -230,8 +233,16 @@ async def upload_document(
         description=description,
     )
     db.add(doc)
-    await db.commit()
-    await db.refresh(doc)
+    try:
+        await db.commit()
+        await db.refresh(doc)
+    except Exception:
+        await db.rollback()
+        try:
+            await blob_client.delete_blob(blob_name)
+        except Exception as cleanup_err:
+            logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
+        raise
     return doc
 
 

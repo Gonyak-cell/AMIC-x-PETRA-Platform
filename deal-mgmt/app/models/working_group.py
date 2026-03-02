@@ -1,7 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -14,10 +13,8 @@ class WorkingGroupMember(Base, TimestampMixin):
     __tablename__ = "working_group_members"
     __table_args__ = (UniqueConstraint("transaction_id", "email", name="uq_wg_transaction_email"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     organization: Mapped[str | None] = mapped_column(String(200), nullable=True)

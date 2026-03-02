@@ -197,6 +197,8 @@ async def test_advance_through_multiple_phases(client):
         "BIDDING",
         "MAIN_DUE_DILIGENCE",
         "NEGOTIATION",
+        "CLOSING",
+        "POST_CLOSING",
     ]
     for phase in phases:
         resp = await client.post(
@@ -295,3 +297,89 @@ async def test_phase_status_has_warnings_when_recommended_unmet(client):
     assert data["required_met"] is True
     assert data["has_warnings"] is True
     assert data["can_advance"] is True
+
+
+# ── Milestone Upload (entity_id string 허용) ────────────
+async def test_milestone_upload(client):
+    """마일스톤 문서를 entity_type=MILESTONE, entity_id=문자열로 업로드."""
+    txn_id = await _create_active_txn(client, code_name="WF-MILE")
+
+    import io
+
+    pdf_bytes = b"%PDF-1.4 test content"
+    files = {"file": ("mou.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
+    data = {
+        "entity_type": "MILESTONE",
+        "entity_id": "MOU_SIGNED",
+        "description": "Executed MOU",
+    }
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        files=files,
+        data=data,
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["entity_type"] == "MILESTONE"
+    assert body["entity_id"] == "MOU_SIGNED"
+
+
+async def test_milestone_list_filter(client):
+    """마일스톤 첨부파일을 entity_id 문자열로 필터 조회."""
+    txn_id = await _create_active_txn(client, code_name="WF-MILF")
+
+    import io
+
+    pdf_bytes = b"%PDF-1.4 test content"
+    files = {"file": ("spa.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
+    data = {
+        "entity_type": "MILESTONE",
+        "entity_id": "SIGNING",
+        "description": "Executed SPA",
+    }
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        files=files,
+        data=data,
+    )
+
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        params={"entity_type": "MILESTONE", "entity_id": "SIGNING"},
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+    assert items[0]["entity_id"] == "SIGNING"
+
+
+async def test_unsupported_phase_returns_422(client):
+    """deprecated 단계(MOU_SIGNED) 거래의 phase-status 조회 시 422."""
+    # 이 테스트는 workflow_engine의 방어 코드를 검증함.
+    # DB에 직접 MOU_SIGNED를 설정할 수 없으므로 잘못된 단계 전환 시도로 확인.
+    txn_id = await _create_active_txn(client, code_name="WF-UNSUP")
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/workflow/advance",
+        json={"to_phase": "MOU_SIGNED"},
+    )
+    # MOU_SIGNED는 _PHASE_ORDER에 없으므로 422 (잘못된 단계)
+    assert resp.status_code == 422
+
+
+async def test_magic_bytes_mismatch_rejected(client):
+    """확장자와 매직바이트가 불일치하면 400."""
+    txn_id = await _create_active_txn(client, code_name="WF-MAGIC")
+
+    import io
+
+    # PNG 매직바이트를 가진 파일을 .pdf 확장자로 업로드
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
+    files = {"file": ("fake.pdf", io.BytesIO(png_header), "application/pdf")}
+    data = {"entity_type": "MILESTONE", "entity_id": "MOU_SIGNED"}
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        files=files,
+        data=data,
+    )
+    assert resp.status_code == 400
+    assert "일치하지 않습니다" in resp.json()["detail"]

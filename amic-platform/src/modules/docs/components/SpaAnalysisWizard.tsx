@@ -20,6 +20,8 @@ import type {
   IndustryType,
   ShaType,
   ExitStrategy,
+  BtaScope,
+  SeverancePayHandling,
   SpaStep1Response,
   SpaStep2Response,
 } from "../types/spa_analysis";
@@ -32,12 +34,16 @@ import {
   SHA_TYPES,
   SHA_TYPE_LABELS,
   EXIT_STRATEGY_LABELS,
+  BTA_SCOPES,
+  BTA_SCOPE_LABELS,
+  SEVERANCE_PAY_LABELS,
 } from "../types/spa_analysis";
 import SpaTextInput from "./SpaTextInput";
 import {
   VariableReviewPanel,
   ClauseReviewPanel,
   ShaClassificationPanel,
+  BtaClassificationPanel,
 } from "./AnalysisReviewPanel";
 
 interface SpaAnalysisWizardProps {
@@ -78,6 +84,9 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
   // SHA 전용 상태
   const [exitStrategy, setExitStrategy] =
     useState<ExitStrategy>("OTHER_STRATEGY");
+  // BTA 전용 상태
+  const [severancePayHandling, setSeverancePayHandling] =
+    useState<SeverancePayHandling>("OTHER_METHOD");
 
   // Step 2 결과
   const [clauses, setClauses] = useState<AnalyzedClause[]>([]);
@@ -153,9 +162,17 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
           }
         }
         setVariables(mergedVars);
-        // SHA: sha_type과 deal_structure는 동일 값 (서버 설계)
-        // sha_type이 있으면 우선 사용, 없으면 deal_structure 폴백
-        setDealStructure(result.sha_type ?? result.deal_structure);
+        // 문서 유형별 deal_structure 매핑
+        if (result.detected_doc_type === "SHA") {
+          setDealStructure(result.sha_type ?? result.deal_structure);
+        } else if (result.detected_doc_type === "BTA") {
+          setDealStructure(result.bta_scope ?? result.deal_structure);
+          setSeverancePayHandling(
+            result.severance_pay_handling ?? "OTHER_METHOD",
+          );
+        } else {
+          setDealStructure(result.deal_structure);
+        }
         setIndustryType(result.industry_type);
         setDocType(result.detected_doc_type ?? "SPA");
         setExitStrategy(result.exit_strategy ?? "OTHER_STRATEGY");
@@ -352,7 +369,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                     onChange={(e) => {
                       const next = e.target.value as DocType;
                       setDocType(next);
-                      // FE-R2: SHA↔SPA 전환 시 dealStructure 기본값 리셋
+                      // 문서 유형 전환 시 dealStructure 기본값 리셋
                       if (
                         next === "SHA" &&
                         !(SHA_TYPES as readonly string[]).includes(
@@ -361,7 +378,15 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                       ) {
                         setDealStructure("OTHER_TYPE");
                       } else if (
+                        next === "BTA" &&
+                        !(BTA_SCOPES as readonly string[]).includes(
+                          dealStructure,
+                        )
+                      ) {
+                        setDealStructure("OTHER_SCOPE");
+                      } else if (
                         next !== "SHA" &&
+                        next !== "BTA" &&
                         !(DEAL_STRUCTURES as readonly string[]).includes(
                           dealStructure,
                         )
@@ -382,7 +407,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
             </div>
           </div>
 
-          {/* SHA: ShaClassificationPanel / SPA: VariableReviewPanel 내장 분류 */}
+          {/* SHA/BTA: 전용 분류 패널 / SPA 등: VariableReviewPanel 내장 분류 */}
           {docType === "SHA" ? (
             <>
               <ShaClassificationPanel
@@ -391,6 +416,27 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                 industryType={industryType}
                 onShaTypeChange={(v) => setDealStructure(v)}
                 onExitStrategyChange={setExitStrategy}
+                onIndustryTypeChange={setIndustryType}
+                variableCount={variables.length}
+              />
+              <VariableReviewPanel
+                variables={variables}
+                dealStructure={dealStructure}
+                industryType={industryType}
+                onVariablesChange={setVariables}
+                onDealStructureChange={setDealStructure}
+                onIndustryTypeChange={setIndustryType}
+                hideClassification
+              />
+            </>
+          ) : docType === "BTA" ? (
+            <>
+              <BtaClassificationPanel
+                btaScope={dealStructure as BtaScope}
+                severancePayHandling={severancePayHandling}
+                industryType={industryType}
+                onBtaScopeChange={(v) => setDealStructure(v)}
+                onSeverancePayChange={setSeverancePayHandling}
                 onIndustryTypeChange={setIndustryType}
                 variableCount={variables.length}
               />
@@ -559,7 +605,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
               생성 요약
             </h3>
             <div
-              className={`grid grid-cols-2 gap-2 text-sm ${docType === "SHA" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}
+              className={`grid grid-cols-2 gap-2 text-sm ${docType === "SHA" || docType === "BTA" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}
             >
               <div className="flex flex-col">
                 <span className="text-text-tertiary text-xs">계약 유형</span>
@@ -594,6 +640,27 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                     </span>
                     <span className="font-medium text-text-primary">
                       {EXIT_STRATEGY_LABELS[exitStrategy] ?? exitStrategy}
+                    </span>
+                  </div>
+                </>
+              ) : docType === "BTA" ? (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      양도 범위
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {BTA_SCOPE_LABELS[dealStructure as BtaScope] ??
+                        dealStructure}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      퇴직금 처리
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {SEVERANCE_PAY_LABELS[severancePayHandling] ??
+                        severancePayHandling}
                     </span>
                   </div>
                 </>

@@ -7,9 +7,14 @@ import type {
   DistributionUpdate,
 } from "@/modules/ma/types/marketing_material";
 
-const QK = (txnId: string) => ["ma", "transactions", txnId, "marketing-materials"];
+const QK = (txnId: string) => [
+  "ma",
+  "transactions",
+  txnId,
+  "marketing-materials",
+];
 
-export function useMarketingMaterials(txnId: string) {
+export function useMarketingMaterials(txnId: string, active = true) {
   return useQuery<MarketingMaterial[]>({
     queryKey: QK(txnId),
     queryFn: async () => {
@@ -18,7 +23,7 @@ export function useMarketingMaterials(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     // GENERATING 상태 자료가 있으면 5초마다 폴링
     refetchInterval: (query) => {
       const items = query.state.data ?? [];
@@ -40,12 +45,15 @@ export function useCreateMarketingMaterial(txnId: string) {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: QK(txnId) });
-      const label = data.doc_type === "TM"
-        ? "Teaser Memo"
-        : data.doc_type === "DM"
-          ? "Discussion Memo"
-          : "Information Memo";
-      toast.success(`${label} 생성을 시작했습니다. 완료 후 다운로드 가능합니다.`);
+      const label =
+        data.doc_type === "TM"
+          ? "Teaser Memo"
+          : data.doc_type === "DM"
+            ? "Discussion Memo"
+            : "Information Memo";
+      toast.success(
+        `${label} 생성을 시작했습니다. 완료 후 다운로드 가능합니다.`,
+      );
     },
     onError: () => {
       toast.error("마케팅 자료 생성에 실패했습니다.");
@@ -102,9 +110,7 @@ export function useDeleteMarketingMaterial(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (matId: string) => {
-      await maApi.delete(
-        `/transactions/${txnId}/marketing-materials/${matId}`,
-      );
+      await maApi.delete(`/transactions/${txnId}/marketing-materials/${matId}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK(txnId) });

@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -15,15 +15,15 @@ class PermitRequirement(Base, TimestampMixin):
 
     __tablename__ = "permit_requirements"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     analysis_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("permit_analyses.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id"),
         nullable=False,
         index=True,
@@ -52,7 +52,7 @@ class PermitRequirement(Base, TimestampMixin):
     confidence: Mapped[float | None] = mapped_column(Numeric(3, 2), nullable=True)
     # 연결
     compliance_item_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("compliance_items.id", ondelete="SET NULL", use_alter=True),
         nullable=True,
     )

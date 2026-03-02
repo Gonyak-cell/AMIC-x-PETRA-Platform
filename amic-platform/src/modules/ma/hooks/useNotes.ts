@@ -12,6 +12,7 @@ import type {
 export function useNotes(
   txnId: string,
   opts?: { noteType?: NoteType; pinnedOnly?: boolean },
+  active = true,
 ) {
   return useQuery<NoteListResponse>({
     queryKey: ["ma", "transactions", txnId, "notes", opts],
@@ -24,7 +25,7 @@ export function useNotes(
       });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -45,10 +46,7 @@ export function useCreateNote(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: NoteCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/notes`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/notes`, body);
       return data as DealNote;
     },
     onSuccess: () => {

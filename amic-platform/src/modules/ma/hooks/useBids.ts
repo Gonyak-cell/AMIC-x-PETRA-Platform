@@ -8,7 +8,12 @@ import type {
   BidComparisonItem,
 } from "@/modules/ma/types/bid";
 
-export function useBids(txnId: string, buyerId?: string, bidType?: string) {
+export function useBids(
+  txnId: string,
+  buyerId?: string,
+  bidType?: string,
+  active = true,
+) {
   return useQuery<Bid[]>({
     queryKey: ["ma", "transactions", txnId, "bids", { buyerId, bidType }],
     queryFn: async () => {
@@ -20,11 +25,11 @@ export function useBids(txnId: string, buyerId?: string, bidType?: string) {
       });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useBidComparison(txnId: string) {
+export function useBidComparison(txnId: string, active = true) {
   return useQuery<BidComparisonItem[]>({
     queryKey: ["ma", "transactions", txnId, "bids", "comparison"],
     queryFn: async () => {
@@ -33,7 +38,7 @@ export function useBidComparison(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -41,10 +46,7 @@ export function useCreateBid(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: BidCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/bids`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/bids`, body);
       return data as Bid;
     },
     onSuccess: () => {
@@ -62,13 +64,7 @@ export function useCreateBid(txnId: string) {
 export function useUpdateBid(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      bidId,
-      body,
-    }: {
-      bidId: string;
-      body: BidUpdate;
-    }) => {
+    mutationFn: async ({ bidId, body }: { bidId: string; body: BidUpdate }) => {
       const { data } = await maApi.patch(
         `/transactions/${txnId}/bids/${bidId}`,
         body,

@@ -85,7 +85,7 @@ async def record(
     db: AsyncSession,
     *,
     entity_type: str,
-    entity_id: uuid.UUID,
+    entity_id: uuid.UUID | str,  # UUID는 str()로 변환하여 저장
     action: AuditAction,
     actor_email: str | None = None,
     old_value: dict | None = None,
@@ -95,7 +95,7 @@ async def record(
     """감사 로그 1건을 DB에 기록한다 (커밋은 호출 측에서)."""
     log = AuditLog(
         entity_type=entity_type,
-        entity_id=entity_id,
+        entity_id=str(entity_id),
         action=action,
         actor_email=actor_email or "SYSTEM",
         old_value=_sanitize_for_json(old_value),

@@ -15,6 +15,7 @@ import type { Transaction } from "@/modules/ma/types/transaction";
 import {
   TRANSACTION_SIDE_OPTIONS,
   TRANSACTION_STATUS_OPTIONS,
+  TRANSACTION_STATUS_VARIANT,
   PHASE_CONFIG,
 } from "@/modules/ma/constants";
 
@@ -38,17 +39,6 @@ import EditTransactionModal from "@/modules/ma/components/EditTransactionModal";
 const PHASE_LABELS: Record<string, string> = Object.fromEntries(
   PHASE_CONFIG.map((p) => [p.phase, p.label]),
 );
-
-const STATUS_VARIANT: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "neutral"
-> = {
-  DRAFT: "neutral",
-  ACTIVE: "success",
-  ON_HOLD: "warning",
-  COMPLETED: "info",
-  TERMINATED: "error",
-};
 
 const SIDE_LABEL: Record<string, string> = {
   SELL: "Sell",
@@ -106,21 +96,33 @@ export default function TransactionListPage() {
     offset: (page - 1) * pageSize,
   });
 
+  // KPI용 전체 데이터 (페이지네이션 없이)
+  const { data: allData } = useTransactions({ limit: 1000, offset: 0 });
+  const allItems = useMemo(() => allData?.items ?? [], [allData?.items]);
+
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
-  // KPI 계산
+  // KPI 계산 — 전체 데이터 기반
   const kpis = useMemo(() => {
+    const now = new Date();
     return {
-      total,
-      active: items.filter((t) => t.status === "ACTIVE").length,
-      totalValue: items.reduce(
+      total: allData?.total ?? total,
+      active: allItems.filter((t) => t.status === "ACTIVE").length,
+      totalValue: allItems.reduce(
         (sum, t) => sum + Number(t.estimated_deal_value ?? 0),
         0,
       ),
+      thisMonth: allItems.filter((t) => {
+        const d = new Date(t.created_at);
+        return (
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
+      }).length,
     };
-  }, [items, total]);
+  }, [allItems, allData?.total, total]);
 
   const columns: Column<Transaction>[] = [
     {
@@ -171,7 +173,7 @@ export default function TransactionListPage() {
       width: "100px",
       align: "center",
       render: (row) => (
-        <Badge variant={STATUS_VARIANT[row.status] ?? "neutral"}>
+        <Badge variant={TRANSACTION_STATUS_VARIANT[row.status] ?? "neutral"}>
           {row.status}
         </Badge>
       ),
@@ -259,20 +261,7 @@ export default function TransactionListPage() {
           value={formatKrwCompact(kpis.totalValue || null)}
           icon={DollarSign}
         />
-        <KpiCard
-          label="이번 달"
-          value={String(
-            items.filter((t) => {
-              const d = new Date(t.created_at);
-              const now = new Date();
-              return (
-                d.getMonth() === now.getMonth() &&
-                d.getFullYear() === now.getFullYear()
-              );
-            }).length,
-          )}
-          icon={Clock}
-        />
+        <KpiCard label="이번 달" value={String(kpis.thisMonth)} icon={Clock} />
       </div>
 
       {/* 필터 바 */}

@@ -8,18 +8,18 @@ import type {
   EarnoutSummary,
 } from "@/modules/ma/types/earnout";
 
-export function useEarnoutMilestones(txnId: string) {
+export function useEarnoutMilestones(txnId: string, active = true) {
   return useQuery<EarnoutMilestone[]>({
     queryKey: ["ma", "transactions", txnId, "earnout"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/earnout`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useEarnoutSummary(txnId: string) {
+export function useEarnoutSummary(txnId: string, active = true) {
   return useQuery<EarnoutSummary>({
     queryKey: ["ma", "transactions", txnId, "earnout", "summary"],
     queryFn: async () => {
@@ -28,7 +28,7 @@ export function useEarnoutSummary(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -36,10 +36,7 @@ export function useCreateEarnout(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: EarnoutCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/earnout`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/earnout`, body);
       return data as EarnoutMilestone;
     },
     onSuccess: () => {

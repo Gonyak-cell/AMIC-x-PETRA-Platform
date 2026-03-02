@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -15,21 +15,21 @@ class NegotiationIssue(Base, TimestampMixin):
 
     __tablename__ = "negotiation_issues"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     meeting_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("meeting_logs.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
     contract_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("contracts.id", ondelete="SET NULL"),
         nullable=True,
         index=True,

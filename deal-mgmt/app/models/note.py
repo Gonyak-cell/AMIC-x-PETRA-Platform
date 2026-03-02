@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, Enum, ForeignKey, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,14 +13,12 @@ class DealNote(Base, TimestampMixin):
 
     __tablename__ = "deal_notes"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     author_email: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     note_type: Mapped[NoteType] = mapped_column(Enum(NoteType), nullable=False, default=NoteType.COMMENT)
-    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("deal_notes.id"), nullable=True)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("deal_notes.id"), nullable=True)
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mentions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     attachments: Mapped[list | None] = mapped_column(JSONB, nullable=True)

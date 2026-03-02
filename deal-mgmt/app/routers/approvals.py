@@ -37,7 +37,7 @@ async def list_approvals(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> ApprovalListResponse:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     q = select(ApprovalRequest).where(ApprovalRequest.transaction_id == txn_id)
@@ -62,18 +62,24 @@ async def approval_summary(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> ApprovalSummary:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(ApprovalRequest).where(ApprovalRequest.transaction_id == txn_id)
-    result = await db.execute(q)
-    approvals = list(result.scalars().all())
+    q = (
+        select(ApprovalRequest.status, func.count(ApprovalRequest.id))
+        .where(ApprovalRequest.transaction_id == txn_id)
+        .group_by(ApprovalRequest.status)
+    )
+    rows = (await db.execute(q)).all()
+    counts: dict[str, int] = {str(s): c for s, c in rows}
+    total = sum(counts.values())
 
-    pending = sum(1 for a in approvals if a.status == ApprovalStatus.PENDING)
-    approved = sum(1 for a in approvals if a.status == ApprovalStatus.APPROVED)
-    rejected = sum(1 for a in approvals if a.status == ApprovalStatus.REJECTED)
-
-    return ApprovalSummary(total=len(approvals), pending=pending, approved=approved, rejected=rejected)
+    return ApprovalSummary(
+        total=total,
+        pending=counts.get(ApprovalStatus.PENDING, 0),
+        approved=counts.get(ApprovalStatus.APPROVED, 0),
+        rejected=counts.get(ApprovalStatus.REJECTED, 0),
+    )
 
 
 @router.post("/transactions/{txn_id}/approvals", response_model=ApprovalOut, status_code=201)
@@ -82,7 +88,7 @@ async def create_approval(
     body: ApprovalCreate,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> ApprovalOut:
     await transaction_service.get_transaction(db, txn_id)
     approval = ApprovalRequest(
         transaction_id=txn_id,
@@ -121,9 +127,10 @@ async def create_approval(
 async def get_approval(
     approval_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _claims: JWTClaims = Depends(get_jwt_claims),
-):
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> ApprovalOut:
     approval = await _get_approval_or_404(db, approval_id)
+    await check_client_deal_access(db, approval.transaction_id, claims)
     return ApprovalOut.model_validate(approval)
 
 
@@ -133,7 +140,7 @@ async def decide_approval(
     body: ApprovalDecision,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> ApprovalOut:
     """승인자가 승인/거부 결정을 내린다."""
     approval = await _get_approval_or_404(db, approval_id)
     if approval.status != ApprovalStatus.PENDING:
@@ -142,11 +149,11 @@ async def decide_approval(
             detail="이미 처리된 승인 요청입니다",
         )
 
-    # approvers 목록에서 해당 이메일 찾기
+    # approvers 목록에서 JWT 이메일로 찾기 (body.email 대신 claims.email로 검증)
     approvers = list(approval.approvers)
     found = False
     for approver in approvers:
-        if approver["email"] == body.email:
+        if approver["email"] == claims.email:
             approver["status"] = body.decision
             approver["comment"] = body.comment
             approver["decided_at"] = datetime.now(UTC).isoformat()
@@ -180,7 +187,7 @@ async def decide_approval(
         actor_email=claims.email,
         new_value={
             "decision": body.decision,
-            "decider": body.email,
+            "decider": claims.email,
             "overall_status": approval.status,
         },
     )
@@ -194,13 +201,18 @@ async def cancel_approval(
     approval_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> ApprovalOut:
     """요청자가 승인 요청을 취소한다."""
     approval = await _get_approval_or_404(db, approval_id)
     if approval.status != ApprovalStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="대기 중인 승인 요청만 취소할 수 있습니다",
+        )
+    if approval.requester_email != claims.email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="승인 요청자만 취소할 수 있습니다",
         )
     approval.status = ApprovalStatus.CANCELLED
     await audit_service.record(
@@ -220,15 +232,19 @@ async def cancel_approval(
 async def my_pending_approvals(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> ApprovalListResponse:
     """내가 승인해야 할 대기 중인 요청 목록."""
-    q = select(ApprovalRequest).where(ApprovalRequest.status == ApprovalStatus.PENDING)
+    # PostgreSQL JSONB 필터 (SQL 레벨에서 내 이메일 매칭)
+    q = select(ApprovalRequest).where(
+        ApprovalRequest.status == ApprovalStatus.PENDING,
+        ApprovalRequest.approvers.cast(func.text()).contains(claims.email),
+    )
     result = await db.execute(q)
-    all_pending = list(result.scalars().all())
+    candidates = list(result.scalars().all())
 
-    # approvers JSONB에서 내 이메일이 PENDING인 것만 필터링
+    # 정밀 필터: JSONB 내 해당 이메일의 status도 PENDING인지 확인
     my_items = []
-    for approval in all_pending:
+    for approval in candidates:
         for approver in approval.approvers:
             if approver.get("email") == claims.email and approver.get("status") == "PENDING":
                 my_items.append(ApprovalOut.model_validate(approval))

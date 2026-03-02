@@ -38,8 +38,21 @@ EXIT_STRATEGIES = [
     "OTHER_STRATEGY",
 ]
 
-# SPA DEAL_STRUCTURES + SHA SHA_TYPES 통합 유효값 (validator용)
-ALL_STRUCTURE_TYPES = [*DEAL_STRUCTURES, *SHA_TYPES]
+# BTA 전용 ENUM
+BTA_SCOPES = [
+    "COMPREHENSIVE_TRANSFER",
+    "PARTIAL_TRANSFER",
+    "OTHER_SCOPE",
+]
+
+SEVERANCE_PAY_HANDLING = [
+    "ASSUMED_BY_BUYER",
+    "PAID_BY_SELLER",
+    "OTHER_METHOD",
+]
+
+# SPA DEAL_STRUCTURES + SHA SHA_TYPES + BTA BTA_SCOPES 통합 유효값 (validator용)
+ALL_STRUCTURE_TYPES = [*DEAL_STRUCTURES, *SHA_TYPES, *BTA_SCOPES]
 
 INDUSTRY_TYPES = [
     "MANUFACTURING",
@@ -133,6 +146,15 @@ class SpaStep1Response(BaseModel):
         default=None,
         description="SHA 주요 Exit 전략 (IPO_FOCUSED/MNA_FOCUSED/OTHER_STRATEGY)",
     )
+    # BTA 전용 필드 (SPA/SHA에서는 None)
+    bta_scope: str | None = Field(
+        default=None,
+        description="BTA 양도 범위 (COMPREHENSIVE_TRANSFER/PARTIAL_TRANSFER/OTHER_SCOPE)",
+    )
+    severance_pay_handling: str | None = Field(
+        default=None,
+        description="BTA 퇴직금 처리 (ASSUMED_BY_BUYER/PAID_BY_SELLER/OTHER_METHOD)",
+    )
     discovered_booleans: list[DiscoveredBoolean] = Field(default_factory=list)
     llm_cost_usd: float | None = None
     model_used: str | None = None
@@ -167,6 +189,20 @@ class SpaStep1Response(BaseModel):
             return "OTHER_STRATEGY"  # LLM 잘못된 값 → 안전한 기본값
         return v
 
+    @field_validator("bta_scope")
+    @classmethod
+    def validate_bta_scope(cls, v: str | None) -> str | None:
+        if v is not None and v not in BTA_SCOPES:
+            return "OTHER_SCOPE"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
+    @field_validator("severance_pay_handling")
+    @classmethod
+    def validate_severance_pay_handling(cls, v: str | None) -> str | None:
+        if v is not None and v not in SEVERANCE_PAY_HANDLING:
+            return "OTHER_METHOD"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
     @field_validator("detected_doc_type")
     @classmethod
     def validate_detected_doc_type(cls, v: str) -> str:
@@ -176,11 +212,13 @@ class SpaStep1Response(BaseModel):
 
     @model_validator(mode="after")
     def validate_structure_for_doc_type(self) -> SpaStep1Response:
-        """SHA일 때는 SHA_TYPES만, SPA일 때는 DEAL_STRUCTURES만 허용."""
+        """SHA일 때는 SHA_TYPES만, BTA일 때는 BTA_SCOPES만, 그 외는 DEAL_STRUCTURES만 허용."""
         ds = self.deal_structure
         if self.detected_doc_type == "SHA" and ds not in SHA_TYPES:
             self.deal_structure = "OTHER_TYPE"
-        elif self.detected_doc_type != "SHA" and ds not in DEAL_STRUCTURES:
+        elif self.detected_doc_type == "BTA" and ds not in BTA_SCOPES:
+            self.deal_structure = "OTHER_SCOPE"
+        elif self.detected_doc_type not in ("SHA", "BTA") and ds not in DEAL_STRUCTURES:
             self.deal_structure = "OTHER_STRUCTURE"
         return self
 

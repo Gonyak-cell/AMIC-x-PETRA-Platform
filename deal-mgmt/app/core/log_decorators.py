@@ -63,7 +63,7 @@ def log_error_with_input(func: Callable[..., T]) -> Callable[..., T]:
 # ── 내부 헬퍼 ──────────────────────────────────────
 
 
-_SKIP_PARAMS = frozenset({"self", "cls", "db", "session", "request", "response"})
+_SKIP_PARAMS = frozenset({"self", "cls", "db", "session", "request", "response", "notes"})
 
 
 def _capture_inputs(

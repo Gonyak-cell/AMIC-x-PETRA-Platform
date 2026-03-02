@@ -78,6 +78,14 @@ export function useCreateExtraction(txnId: string) {
       qc.invalidateQueries({ queryKey: extractionQK(txnId) });
       toast.success("AI 분석을 시작했습니다.");
     },
+    onError: (error) => {
+      const detail =
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "AI 분석 생성에 실패했습니다.";
+      toast.error(detail);
+    },
   });
 }
 
@@ -131,19 +139,21 @@ export function useConfirmExtraction(txnId: string) {
       });
       // 매핑 대상 쿼리도 무효화
       if (data.target_model) {
-        if (data.target_model === "transaction") {
-          // corporate_info/financial_summary 변경 → 거래 상세 캐시 무효화
+        // 백엔드 Literal["nda","bid","contract","transaction"] 기준
+        const MODEL_TO_QK: Record<string, string> = {
+          transaction: "",
+          bid: "bids",
+          contract: "contracts",
+          nda: "ndas",
+        };
+        const qk = MODEL_TO_QK[data.target_model];
+        if (qk === "") {
           qc.invalidateQueries({
             queryKey: ["ma", "transactions", txnId],
           });
-        } else {
+        } else if (qk) {
           qc.invalidateQueries({
-            queryKey: [
-              "ma",
-              "transactions",
-              txnId,
-              data.target_model === "bid" ? "bids" : `${data.target_model}s`,
-            ],
+            queryKey: ["ma", "transactions", txnId, qk],
           });
         }
       }

@@ -34,6 +34,8 @@ import type {
   IndustryType,
   ShaType,
   ExitStrategy,
+  BtaScope,
+  SeverancePayHandling,
 } from "@/modules/docs/types/spa_analysis";
 import {
   DEAL_STRUCTURES,
@@ -44,6 +46,10 @@ import {
   SHA_TYPE_LABELS,
   EXIT_STRATEGIES,
   EXIT_STRATEGY_LABELS,
+  BTA_SCOPES,
+  BTA_SCOPE_LABELS,
+  SEVERANCE_PAY_HANDLING,
+  SEVERANCE_PAY_LABELS,
 } from "@/modules/docs/types/spa_analysis";
 
 // ── 변수 리뷰 ─────────────────────────────────────────────────────────────
@@ -768,6 +774,98 @@ export function ShaClassificationPanel({
         </label>
         <select
           id="sha-industry-type"
+          value={industryType}
+          onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {INDUSTRY_TYPES.map((it) => (
+            <option key={it} value={it}>
+              {INDUSTRY_TYPE_LABELS[it]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="ml-auto text-xs text-text-tertiary">
+        {variableCount}개 변수
+      </div>
+    </div>
+  );
+}
+
+// ── BTA 분류 패널 ────────────────────────────────────────────────────────
+
+interface BtaClassificationProps {
+  btaScope: BtaScope;
+  severancePayHandling: SeverancePayHandling;
+  industryType: IndustryType;
+  onBtaScopeChange: (v: BtaScope) => void;
+  onSeverancePayChange: (v: SeverancePayHandling) => void;
+  onIndustryTypeChange: (v: IndustryType) => void;
+  variableCount: number;
+}
+
+export function BtaClassificationPanel({
+  btaScope,
+  severancePayHandling,
+  industryType,
+  onBtaScopeChange,
+  onSeverancePayChange,
+  onIndustryTypeChange,
+  variableCount,
+}: BtaClassificationProps) {
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="bta-scope"
+          className="text-xs font-medium text-text-secondary"
+        >
+          양도 범위
+        </label>
+        <select
+          id="bta-scope"
+          value={btaScope}
+          onChange={(e) => onBtaScopeChange(e.target.value as BtaScope)}
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {BTA_SCOPES.map((s) => (
+            <option key={s} value={s}>
+              {BTA_SCOPE_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="severance-pay"
+          className="text-xs font-medium text-text-secondary"
+        >
+          퇴직금 처리
+        </label>
+        <select
+          id="severance-pay"
+          value={severancePayHandling}
+          onChange={(e) =>
+            onSeverancePayChange(e.target.value as SeverancePayHandling)
+          }
+          className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {SEVERANCE_PAY_HANDLING.map((s) => (
+            <option key={s} value={s}>
+              {SEVERANCE_PAY_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="bta-industry-type"
+          className="text-xs font-medium text-text-secondary"
+        >
+          산업 유형
+        </label>
+        <select
+          id="bta-industry-type"
           value={industryType}
           onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
           className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"

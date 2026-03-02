@@ -107,6 +107,8 @@ async def step1_extract_variables(
             discovered,
             sha_type,
             exit_strategy,
+            bta_scope,
+            severance_pay_handling,
             cost,
             model,
         ) = await spa_analysis_service.analyze_step1_variables(
@@ -136,6 +138,8 @@ async def step1_extract_variables(
         detected_doc_type=detected_doc_type,
         sha_type=sha_type,
         exit_strategy=exit_strategy,
+        bta_scope=bta_scope,
+        severance_pay_handling=severance_pay_handling,
         discovered_booleans=discovered,
         llm_cost_usd=cost if claims.role == "ADMIN" else None,
         model_used=model if claims.role == "ADMIN" else None,

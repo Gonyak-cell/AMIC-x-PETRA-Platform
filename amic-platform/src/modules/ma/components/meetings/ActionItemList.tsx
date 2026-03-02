@@ -2,15 +2,14 @@ import { useState } from "react";
 import { Plus, Trash2, Check, Circle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Badge, Button, Input } from "@/components/ui";
-import { ACTION_ITEM_STATUS_OPTIONS } from "@/modules/ma/constants";
-import type { MeetingActionItem, MeetingActionItemCreate, ActionItemStatus } from "@/modules/ma/types/meeting_log";
-
-const STATUS_VARIANT: Record<ActionItemStatus, "success" | "warning" | "neutral" | "error"> = {
-  PENDING: "neutral",
-  IN_PROGRESS: "warning",
-  COMPLETED: "success",
-  CANCELLED: "error",
-};
+import {
+  ACTION_ITEM_STATUS_OPTIONS,
+  ACTION_ITEM_STATUS_VARIANT,
+} from "@/modules/ma/constants";
+import type {
+  MeetingActionItem,
+  MeetingActionItemCreate,
+} from "@/modules/ma/types/meeting_log";
 
 interface ActionItemListProps {
   items: MeetingActionItem[];
@@ -39,7 +38,9 @@ export default function ActionItemList({
 
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-heading font-semibold text-text-dark">액션아이템</h4>
+      <h4 className="text-sm font-heading font-semibold text-text-dark">
+        액션아이템
+      </h4>
       {items.length === 0 && (
         <p className="text-xs text-text-muted">등록된 액션아이템이 없습니다.</p>
       )}
@@ -74,15 +75,18 @@ export default function ActionItemList({
               {item.title}
             </span>
             {item.assignee_name && (
-              <span className="text-xs text-text-secondary">{item.assignee_name}</span>
+              <span className="text-xs text-text-secondary">
+                {item.assignee_name}
+              </span>
             )}
             {item.due_date && (
               <span className="text-xs text-text-muted">
                 {new Date(item.due_date).toLocaleDateString("ko-KR")}
               </span>
             )}
-            <Badge variant={STATUS_VARIANT[item.status]}>
-              {ACTION_ITEM_STATUS_OPTIONS.find((o) => o.value === item.status)?.label ?? item.status}
+            <Badge variant={ACTION_ITEM_STATUS_VARIANT[item.status]}>
+              {ACTION_ITEM_STATUS_OPTIONS.find((o) => o.value === item.status)
+                ?.label ?? item.status}
             </Badge>
             {canWrite && (
               <button
@@ -103,7 +107,12 @@ export default function ActionItemList({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="새 액션아이템"
             className="flex-1 text-sm"
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAdd();
+              }
+            }}
           />
           <Input
             value={assignee}
@@ -111,7 +120,13 @@ export default function ActionItemList({
             placeholder="담당자"
             className="w-28 text-sm"
           />
-          <Button size="sm" variant="ghost" icon={Plus} onClick={handleAdd} disabled={!title.trim()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={Plus}
+            onClick={handleAdd}
+            disabled={!title.trim()}
+          >
             추가
           </Button>
         </div>

@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Enum, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -15,9 +15,9 @@ class TranscriptionJob(Base, TimestampMixin):
 
     __tablename__ = "transcription_jobs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -28,7 +28,7 @@ class TranscriptionJob(Base, TimestampMixin):
     meeting_date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
     meeting_phase: Mapped[MeetingPhase] = mapped_column(Enum(MeetingPhase), nullable=False)
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("buyer_candidates.id"),
         nullable=True,
     )
@@ -56,7 +56,7 @@ class TranscriptionJob(Base, TimestampMixin):
 
     # 확정된 미팅 로그 (approve 후)
     meeting_log_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("meeting_logs.id"),
         nullable=True,
     )

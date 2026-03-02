@@ -116,12 +116,12 @@ jobs:
             MIGRATE_MA=false
 
             if [ "$SCOPE" = "all" ] || [ "$CHANGED" = "all" ]; then
-              SERVICES="frontend nginx fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api"
+              SERVICES="frontend nginx fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api deal-mgmt-celery-worker"
               MIGRATE_FDD=true; MIGRATE_KIIS=true; MIGRATE_IM=true; MIGRATE_MA=true
             elif [ "$SCOPE" = "frontend-only" ]; then
               SERVICES="frontend nginx"
             elif [ "$SCOPE" = "backend-only" ]; then
-              SERVICES="fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api"
+              SERVICES="fdd-api kiis-api im-api im-celery-worker im-celery-beat deal-mgmt-api deal-mgmt-celery-worker"
               MIGRATE_FDD=true; MIGRATE_KIIS=true; MIGRATE_IM=true; MIGRATE_MA=true
             else
               # auto: detect from changed files
@@ -130,7 +130,7 @@ jobs:
               echo "$CHANGED" | grep -q "fdd/"             && SERVICES="$SERVICES fdd-api" && MIGRATE_FDD=true
               echo "$CHANGED" | grep -q "kiis/"            && SERVICES="$SERVICES kiis-api" && MIGRATE_KIIS=true
               echo "$CHANGED" | grep -qE "^im/"            && SERVICES="$SERVICES im-api im-celery-worker im-celery-beat" && MIGRATE_IM=true
-              echo "$CHANGED" | grep -q "deal-mgmt/"       && SERVICES="$SERVICES deal-mgmt-api" && MIGRATE_MA=true
+              echo "$CHANGED" | grep -q "deal-mgmt/"       && SERVICES="$SERVICES deal-mgmt-api deal-mgmt-celery-worker" && MIGRATE_MA=true
             fi
 
             # Deduplicate
@@ -147,9 +147,9 @@ jobs:
             echo "=== [3.5/8] Environment Validation ==="
             MISSING=""
             for VAR in SHARED_JWT_SECRET FDD_DB_PASSWORD FDD_CORS_ORIGINS \
-                       KIIS_DB_PASSWORD KIIS_CORS_ORIGINS \
-                       IM_DB_PASSWORD IM_CORS_ORIGINS \
-                       MA_DB_PASSWORD MA_CORS_ORIGINS; do
+                       KIIS_DB_PASSWORD KIIS_CORS_ORIGINS KIIS_REDIS_PASSWORD KIIS_ES_PASSWORD \
+                       IM_DB_PASSWORD IM_CORS_ORIGINS IM_REDIS_PASSWORD \
+                       MA_DB_PASSWORD MA_CORS_ORIGINS MA_REDIS_PASSWORD; do
               VAL=$(grep "^${VAR}=" .env 2>/dev/null | cut -d= -f2-)
               if [ -z "$VAL" ]; then
                 echo "  MISSING: $VAR"

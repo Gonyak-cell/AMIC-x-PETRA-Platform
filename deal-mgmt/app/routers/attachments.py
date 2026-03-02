@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
+import re
 import uuid
 from pathlib import Path
 
@@ -18,8 +21,11 @@ from app.models.enums import AttachmentEntityType, AuditAction
 from app.schemas.attachment import AttachmentListResponse, AttachmentOut
 from app.services import audit_service, transaction_service
 
+logger = logging.getLogger(__name__)
+
 UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+CHUNK_SIZE = 65_536  # 64 KB — 스트리밍 쓰기 단위
 ALLOWED_EXTENSIONS = {
     ".docx",
     ".doc",
@@ -46,6 +52,28 @@ ALLOWED_EXTENSIONS = {
 }
 VALID_ENTITY_TYPES = {e.value for e in AttachmentEntityType}
 
+# entity_id 허용 패턴: 영문 대문자, 숫자, _, - (1~50자) 또는 UUID 형식
+_ENTITY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_\-]{1,50}$")
+
+# 매직 바이트 → 실제 MIME 매핑 (확장자 위조 방지)
+_MAGIC_SIGNATURES: list[tuple[bytes, set[str]]] = [
+    (b"%PDF", {".pdf"}),
+    (b"PK\x03\x04", {".docx", ".xlsx", ".pptx", ".zip", ".hwpx"}),
+    (b"\x89PNG", {".png"}),
+    (b"\xff\xd8\xff", {".jpg", ".jpeg"}),
+    (b"HWP Document File", {".hwp"}),
+    # OLE2 Compound Document (레거시 Office: .doc, .xls, .ppt)
+    (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", {".doc", ".xls", ".ppt"}),
+    # Audio
+    (b"ID3", {".mp3"}),
+    (b"\xff\xfb", {".mp3"}),  # MP3 프레임 헤더
+    (b"fLaC", {".flac"}),
+    (b"RIFF", {".wav"}),
+    (b"OggS", {".ogg"}),
+    # ASF/WMA
+    (b"\x30\x26\xb2\x75", {".wma"}),
+]
+
 router = APIRouter(
     prefix="/transactions/{txn_id}/attachments",
     tags=["Attachments"],
@@ -61,9 +89,20 @@ async def list_attachments(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> AttachmentListResponse:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+
+    # entity_type 검증
+    if entity_type and entity_type not in VALID_ENTITY_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"유효하지 않은 entity_type입니다. 허용: {', '.join(sorted(VALID_ENTITY_TYPES))}",
+        )
+
+    # entity_id 검증 (SEC-03)
+    if entity_id is not None:
+        _validate_entity_id(entity_id)
 
     q = select(Attachment).where(Attachment.transaction_id == txn_id)
     count_q = select(func.count(Attachment.id)).where(Attachment.transaction_id == txn_id)
@@ -72,9 +111,8 @@ async def list_attachments(
         q = q.where(Attachment.entity_type == entity_type)
         count_q = count_q.where(Attachment.entity_type == entity_type)
     if entity_id:
-        parsed_eid = _parse_uuid(entity_id, "entity_id")
-        q = q.where(Attachment.entity_id == parsed_eid)
-        count_q = count_q.where(Attachment.entity_id == parsed_eid)
+        q = q.where(Attachment.entity_id == entity_id)
+        count_q = count_q.where(Attachment.entity_id == entity_id)
 
     total = (await db.execute(count_q)).scalar() or 0
     q = q.order_by(Attachment.created_at.desc()).offset(offset).limit(limit)
@@ -92,7 +130,7 @@ async def upload_attachment(
     description: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> AttachmentOut:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
@@ -103,9 +141,12 @@ async def upload_attachment(
             detail=f"유효하지 않은 entity_type입니다. 허용: {', '.join(sorted(VALID_ENTITY_TYPES))}",
         )
 
-    # 파일 크기 검증
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
+    # entity_id 검증 (SEC-03)
+    if entity_id is not None:
+        _validate_entity_id(entity_id)
+
+    # 조기 크기 검사 — Starlette UploadFile.size 활용 (P-01)
+    if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="파일 크기가 50MB를 초과합니다",
@@ -121,25 +162,52 @@ async def upload_attachment(
             detail=f"허용되지 않는 파일 형식입니다. 허용: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
 
-    # 파일 저장
+    # 다중 확장자 차단 (예: file.jpg.exe)
+    suffixes = Path(safe_filename).suffixes
+    if len(suffixes) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="다중 확장자 파일은 허용되지 않습니다",
+        )
+
+    # 매직 바이트 검증 — 첫 32바이트만 읽어 확인 (P-01)
+    header = await file.read(32)
+    _validate_magic_bytes(header, ext)
+
+    # 파일 저장 — 청크 스트리밍 (P-01: 전체 메모리 적재 방지)
     save_dir = UPLOAD_DIR / str(txn_id) / entity_type
-    save_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(save_dir.mkdir, parents=True, exist_ok=True)
 
     file_id = uuid.uuid4()
     dest_path = save_dir / f"{file_id}_{safe_filename}"
 
+    total_size = len(header)
+    size_exceeded = False
     async with aiofiles.open(dest_path, "wb") as f:
-        await f.write(content)
-
-    parsed_entity_id = _parse_uuid(entity_id, "entity_id") if entity_id else None
+        await f.write(header)
+        while True:
+            chunk = await file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE:
+                size_exceeded = True
+                break
+            await f.write(chunk)
+    if size_exceeded:
+        await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="파일 크기가 50MB를 초과합니다",
+        )
 
     attachment = Attachment(
         transaction_id=txn_id,
         entity_type=entity_type,
-        entity_id=parsed_entity_id,
+        entity_id=entity_id,
         file_path=str(dest_path),
         file_name=safe_filename,
-        file_size_bytes=len(content),
+        file_size_bytes=total_size,
         mime_type=file.content_type or "application/octet-stream",
         description=description,
         uploaded_by_email=claims.email,
@@ -165,7 +233,7 @@ async def download_attachment(
     attachment_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-):
+) -> FileResponse:
     await check_client_deal_access(db, txn_id, claims)
     attachment = await _get_attachment_or_404(db, txn_id, attachment_id)
 
@@ -191,15 +259,13 @@ async def delete_attachment(
     attachment_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
-):
+) -> None:
     await check_client_deal_access(db, txn_id, claims)
     attachment = await _get_attachment_or_404(db, txn_id, attachment_id)
 
-    # 파일 삭제
-    file_path = Path(attachment.file_path)
-    if file_path.exists():
-        file_path.unlink()
+    file_path_str = attachment.file_path  # 삭제 전 경로 보존
 
+    # DB 커밋 먼저 → 파일 삭제 best-effort (P-04: 원자성 역전 방지)
     await audit_service.record(
         db,
         entity_type="Attachment",
@@ -210,19 +276,61 @@ async def delete_attachment(
     await db.delete(attachment)
     await db.commit()
 
+    # 파일 삭제 — best-effort (DB 커밋 성공 후)
+    try:
+        file_path = Path(file_path_str)
+        if file_path.exists():
+            file_path.unlink()
+    except OSError:
+        logger.warning("파일 삭제 실패, 고아 파일 남음: %s", file_path_str)
+
 
 # ── 헬퍼 ────────────────────────────────────────────────
 
 
-def _parse_uuid(value: str | None, field_name: str = "id") -> uuid.UUID | None:
-    if not value:
-        return None
-    try:
-        return uuid.UUID(value)
-    except ValueError:
+def _validate_entity_id(entity_id: str) -> None:
+    """entity_id 길이(50자)·허용 문자 검증 (SEC-03)."""
+    if not _ENTITY_ID_PATTERN.match(entity_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"잘못된 UUID 형식입니다: {field_name}",
+            detail="entity_id는 영문, 숫자, _, - 만 허용되며 50자 이내여야 합니다",
+        )
+
+
+def _validate_magic_bytes(content: bytes, ext: str) -> None:
+    """파일 매직 바이트와 확장자 일치 여부를 검증한다."""
+    if not content:
+        return
+
+    # M4A/MP4 ISO BMFF: offset 4에서 'ftyp' 확인
+    if ext in {".m4a"} and len(content) >= 8 and content[4:8] == b"ftyp":
+        return
+
+    for signature, valid_exts in _MAGIC_SIGNATURES:
+        if content[: len(signature)] == signature:
+            if ext not in valid_exts:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"파일 내용이 확장자({ext})와 일치하지 않습니다",
+                )
+            return
+
+    # 텍스트 계열 확장자: 널바이트 체크만 적용
+    text_extensions = {".txt", ".csv"}
+    if ext in text_extensions:
+        if b"\x00" in content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"파일 내용이 텍스트 형식({ext})과 일치하지 않습니다",
+            )
+        return
+
+    # deny-by-default: 매직 시그니처 미등록 확장자 차단 (.aac 등 시그니처 없는 오디오 제외)
+    no_magic_allowed = {".aac"}
+    if ext not in no_magic_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"파일 내용이 확장자({ext})와 일치하지 않습니다",
         )
 
 

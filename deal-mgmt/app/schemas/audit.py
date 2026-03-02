@@ -13,7 +13,7 @@ class AuditLogRead(BaseModel):
 
     id: uuid.UUID
     entity_type: str
-    entity_id: uuid.UUID
+    entity_id: str
     action: str
     actor_email: str | None = None
     old_value: dict | None = None

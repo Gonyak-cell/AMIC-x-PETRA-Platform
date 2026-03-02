@@ -39,6 +39,7 @@ export function useTransactions(params?: TransactionListParams) {
       const { data } = await maApi.get("/transactions", { params });
       return data;
     },
+    staleTime: 30_000,
   });
 }
 
@@ -246,6 +247,7 @@ export function useEngagements(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 60_000,
   });
 }
 
@@ -311,6 +313,7 @@ export function useConflictCheck(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 60_000,
   });
 }
 
@@ -323,17 +326,19 @@ export function useBuyers(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 60_000,
   });
 }
 
-export function useBuyerSummary(txnId: string) {
+export function useBuyerSummary(txnId: string, active = true) {
   return useQuery<BuyerPipelineSummary>({
     queryKey: ["ma", "transactions", txnId, "buyers", "summary"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/buyers/summary`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
+    staleTime: 60_000,
   });
 }
 
@@ -417,17 +422,19 @@ export function useTimeline(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 60_000,
   });
 }
 
-export function useGanttTimeline(txnId: string) {
+export function useGanttTimeline(txnId: string, active = true) {
   return useQuery<GanttResponse>({
     queryKey: ["ma", "transactions", txnId, "timeline", "gantt"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/timeline/gantt`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
+    staleTime: 60_000,
   });
 }
 

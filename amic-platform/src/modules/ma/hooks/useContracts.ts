@@ -11,18 +11,18 @@ import type {
   AIAnalysisResult,
 } from "@/modules/ma/types/contract";
 
-export function useContracts(txnId: string) {
+export function useContracts(txnId: string, active = true) {
   return useQuery<Contract[]>({
     queryKey: ["ma", "transactions", txnId, "contracts"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/contracts`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useContractSummary(txnId: string) {
+export function useContractSummary(txnId: string, active = true) {
   return useQuery<ContractSummary>({
     queryKey: ["ma", "transactions", txnId, "contracts", "summary"],
     queryFn: async () => {
@@ -31,13 +31,20 @@ export function useContractSummary(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
 export function useContractVersions(txnId: string, contractId: string) {
   return useQuery<ContractVersion[]>({
-    queryKey: ["ma", "transactions", txnId, "contracts", contractId, "versions"],
+    queryKey: [
+      "ma",
+      "transactions",
+      txnId,
+      "contracts",
+      contractId,
+      "versions",
+    ],
     queryFn: async () => {
       const { data } = await maApi.get(
         `/transactions/${txnId}/contracts/${contractId}/versions`,

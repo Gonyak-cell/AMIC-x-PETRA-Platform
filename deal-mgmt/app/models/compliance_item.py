@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, Text, Uuid
+from sqlalchemy import Enum, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,6 +13,7 @@ class ComplianceItem(Base, TimestampMixin):
     """거래별 규제/컴플라이언스 체크리스트 항목."""
 
     __tablename__ = "compliance_items"
+    __table_args__ = (Index("ix_compliance_items_txn_status", "transaction_id", "status"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)

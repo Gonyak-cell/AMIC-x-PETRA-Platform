@@ -1,7 +1,6 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -13,12 +12,10 @@ class NDA(Base, TimestampMixin):
 
     __tablename__ = "ndas"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
     buyer_candidate_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("buyer_candidates.id"), nullable=False, index=True
+        Uuid, ForeignKey("buyer_candidates.id"), nullable=False, index=True
     )
     nda_type: Mapped[NdaType] = mapped_column(Enum(NdaType), nullable=False, default=NdaType.MUTUAL)
     status: Mapped[NdaStatus] = mapped_column(Enum(NdaStatus), nullable=False, default=NdaStatus.DRAFT)

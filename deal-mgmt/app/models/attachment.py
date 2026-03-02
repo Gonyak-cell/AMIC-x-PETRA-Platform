@@ -29,7 +29,7 @@ class Attachment(Base, TimestampMixin):
 
     # ── 다형성 참조 ───────────────────────────────────────
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    entity_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    entity_id: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
 
     # ── 파일 메타데이터 ───────────────────────────────────
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)

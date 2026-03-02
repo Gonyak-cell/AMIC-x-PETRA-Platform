@@ -90,8 +90,8 @@ services:
     volumes: []
     environment:
       DATABASE_URL: postgresql+asyncpg://kiis_user:${KIIS_DB_PASSWORD}@kiis-db:5432/kiis
-      REDIS_URL: redis://:${KIIS_REDIS_PASSWORD:-redis}@kiis-redis:6379/0
-      ELASTICSEARCH_URL: http://elastic:${KIIS_ES_PASSWORD:-changeme}@kiis-es:9200
+      REDIS_URL: redis://:${KIIS_REDIS_PASSWORD:?KIIS_REDIS_PASSWORD 필수}@kiis-redis:6379/0
+      ELASTICSEARCH_URL: http://elastic:${KIIS_ES_PASSWORD:?KIIS_ES_PASSWORD 필수}@kiis-es:9200
       ALLOWED_ORIGINS: ${KIIS_CORS_ORIGINS}
       SECRET_KEY: ${SHARED_JWT_SECRET}
       JWT_SECRET: ${SHARED_JWT_SECRET}
@@ -128,7 +128,7 @@ services:
     command:
       - redis-server
       - --requirepass
-      - ${KIIS_REDIS_PASSWORD:-redis}
+      - ${KIIS_REDIS_PASSWORD:?KIIS_REDIS_PASSWORD 필수}
       - --maxmemory
       - 256mb
       - --maxmemory-policy
@@ -144,7 +144,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=${KIIS_ES_PASSWORD:-changeme}
+      - ELASTIC_PASSWORD=${KIIS_ES_PASSWORD:?KIIS_ES_PASSWORD 필수}
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     restart: unless-stopped
     deploy:
@@ -159,8 +159,8 @@ services:
     volumes: []
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/1
       CORS_ORIGINS: ${IM_CORS_ORIGINS}
       SECRET_KEY: ${SHARED_JWT_SECRET}
       JWT_SECRET: ${SHARED_JWT_SECRET}
@@ -205,7 +205,7 @@ services:
     command:
       - redis-server
       - --requirepass
-      - ${IM_REDIS_PASSWORD:-redis}
+      - ${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}
       - --maxmemory
       - 512mb
       - --maxmemory-policy
@@ -232,8 +232,8 @@ services:
       --soft-time-limit=3300
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/1
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -248,6 +248,8 @@ services:
     volumes: []
     environment:
       DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD}@deal-mgmt-db:5432/deal_mgmt
+      REDIS_URL: redis://:${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}@deal-mgmt-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}@deal-mgmt-redis:6379/1
       JWT_SECRET: ${SHARED_JWT_SECRET}
       ALLOWED_ORIGINS: ${MA_CORS_ORIGINS}
       FDD_API_URL: http://fdd-api:8000/api/v1
@@ -273,6 +275,14 @@ services:
     ports: []
     environment:
       POSTGRES_PASSWORD: ${MA_DB_PASSWORD}
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
     restart: unless-stopped
     deploy:
       resources:
@@ -284,11 +294,73 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  deal-mgmt-redis:
+    ports: []
+    command:
+      - redis-server
+      - --requirepass
+      - ${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  deal-mgmt-celery-worker:
+    command: >
+      celery -A app.tasks.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --max-memory-per-child=250000
+      --max-tasks-per-child=100
+      --time-limit=3600
+      --soft-time-limit=3300
+    volumes: []
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD}@deal-mgmt-db:5432/deal_mgmt
+      REDIS_URL: redis://:${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}@deal-mgmt-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}@deal-mgmt-redis:6379/1
+      JWT_SECRET: ${SHARED_JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
+      CELERY_WORKER: "1"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  deal-mgmt-celery-beat:
+    command: >
+      celery -A app.tasks.celery_app beat
+      --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deal_mgmt_user:${MA_DB_PASSWORD}@deal-mgmt-db:5432/deal_mgmt
+      REDIS_URL: redis://:${MA_REDIS_PASSWORD:?MA_REDIS_PASSWORD 필수}@deal-mgmt-redis:6379/0
+      CELERY_WORKER: "1"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   im-celery-beat:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${IM_DB_PASSWORD}@im-db:5432/imgen
-      REDIS_URL: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/0
-      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:-redis}@im-redis:6379/1
+      REDIS_URL: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/0
+      REDIS_RESULT_BACKEND: redis://:${IM_REDIS_PASSWORD:?IM_REDIS_PASSWORD 필수}@im-redis:6379/1
     restart: unless-stopped
     logging:
       driver: "json-file"

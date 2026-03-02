@@ -12,7 +12,14 @@ export interface LDDReport {
   transaction_id: string;
   report_type: "FULL" | "REDFLAG";
   title: string;
-  status: "DRAFT" | "ANALYZING" | "REVIEW" | "FINALIZING" | "GENERATING" | "READY" | "FAILED";
+  status:
+    | "DRAFT"
+    | "ANALYZING"
+    | "REVIEW"
+    | "FINALIZING"
+    | "GENERATING"
+    | "READY"
+    | "FAILED";
   target_company: string | null;
   dd_period: string | null;
   law_firm: string | null;
@@ -144,14 +151,20 @@ export function useLDDReport(txnId: string, reportId: string) {
   return useQuery<LDDReport>({
     queryKey: ["ma", "ldd-reports", txnId, reportId],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/ldd-reports/${reportId}`);
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/ldd-reports/${reportId}`,
+      );
       return data;
     },
     enabled: !!txnId && !!reportId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       // ANALYZING/FINALIZING/GENERATING 중이면 5초마다 폴링
-      if (status === "ANALYZING" || status === "FINALIZING" || status === "GENERATING") {
+      if (
+        status === "ANALYZING" ||
+        status === "FINALIZING" ||
+        status === "GENERATING"
+      ) {
         return 5000;
       }
       return false;
@@ -165,7 +178,10 @@ export function useCreateLDDFromVdr(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: CreateFromVdrBody) => {
-      const { data } = await maApi.post(`/transactions/${txnId}/ldd-reports/from-vdr`, body);
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/ldd-reports/from-vdr`,
+        body,
+      );
       return data as LDDReport;
     },
     onSuccess: () => {
@@ -185,7 +201,7 @@ export function useReviewProgress(txnId: string, reportId: string) {
     queryKey: ["ma", "ldd-reports", txnId, reportId, "review-progress"],
     queryFn: async () => {
       const { data } = await maApi.get(
-        `/transactions/${txnId}/ldd-reports/${reportId}/review-progress`
+        `/transactions/${txnId}/ldd-reports/${reportId}/review-progress`,
       );
       return data;
     },
@@ -199,15 +215,20 @@ export function useReviewLDDItem(txnId: string, reportId: string) {
     mutationFn: async (body: ItemReviewBody) => {
       const { data } = await maApi.put(
         `/transactions/${txnId}/ldd-reports/${reportId}/items/${body.item_id}/review`,
-        body
+        body,
       );
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ma", "ldd-reports", txnId, reportId] });
+      qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId, reportId],
+      });
       qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId, "review-progress"],
       });
+    },
+    onError: () => {
+      toast.error("항목 리뷰 저장에 실패했습니다.");
     },
   });
 }
@@ -218,16 +239,21 @@ export function useBulkReviewLDD(txnId: string, reportId: string) {
     mutationFn: async (items: ItemReviewBody[]) => {
       const { data } = await maApi.put(
         `/transactions/${txnId}/ldd-reports/${reportId}/items/bulk-review`,
-        { items }
+        { items },
       );
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["ma", "ldd-reports", txnId, reportId] });
+      qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId, reportId],
+      });
       qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId, "review-progress"],
       });
       toast.success(`${data.applied}개 항목 리뷰가 저장되었습니다.`);
+    },
+    onError: () => {
+      toast.error("일괄 리뷰 저장에 실패했습니다.");
     },
   });
 }
@@ -240,12 +266,14 @@ export function useFinalizeLDD(txnId: string, reportId: string) {
     mutationFn: async (body: FinalizeBody = {}) => {
       const { data } = await maApi.post(
         `/transactions/${txnId}/ldd-reports/${reportId}/finalize`,
-        body
+        body,
       );
       return data as LDDReport;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ma", "ldd-reports", txnId, reportId] });
+      qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId, reportId],
+      });
       toast.success("최종 보고서 생성이 시작되었습니다.");
     },
     onError: () => {
@@ -261,7 +289,7 @@ export function useLDDReferences(txnId: string, reportId: string) {
     queryKey: ["ma", "ldd-reports", txnId, reportId, "references"],
     queryFn: async () => {
       const { data } = await maApi.get(
-        `/transactions/${txnId}/ldd-reports/${reportId}/references`
+        `/transactions/${txnId}/ldd-reports/${reportId}/references`,
       );
       return data;
     },
@@ -275,7 +303,7 @@ export function useAddLDDReference(txnId: string, reportId: string) {
     mutationFn: async (body: AddReferenceBody) => {
       const { data } = await maApi.post(
         `/transactions/${txnId}/ldd-reports/${reportId}/references`,
-        body
+        body,
       );
       return data as VdrReference;
     },
@@ -285,6 +313,9 @@ export function useAddLDDReference(txnId: string, reportId: string) {
       });
       toast.success("VDR 참조가 추가되었습니다.");
     },
+    onError: () => {
+      toast.error("VDR 참조 추가에 실패했습니다.");
+    },
   });
 }
 
@@ -293,7 +324,7 @@ export function useRemoveLDDReference(txnId: string, reportId: string) {
   return useMutation({
     mutationFn: async (refId: string) => {
       await maApi.delete(
-        `/transactions/${txnId}/ldd-reports/${reportId}/references/${refId}`
+        `/transactions/${txnId}/ldd-reports/${reportId}/references/${refId}`,
       );
     },
     onSuccess: () => {
@@ -301,6 +332,9 @@ export function useRemoveLDDReference(txnId: string, reportId: string) {
         queryKey: ["ma", "ldd-reports", txnId, reportId, "references"],
       });
       toast.success("VDR 참조가 삭제되었습니다.");
+    },
+    onError: () => {
+      toast.error("VDR 참조 삭제에 실패했습니다.");
     },
   });
 }

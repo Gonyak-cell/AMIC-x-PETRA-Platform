@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -16,12 +16,12 @@ class RFIItem(Base, TimestampMixin):
 
     __tablename__ = "rfi_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     rfi_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("rfis.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("rfis.id", ondelete="CASCADE"), nullable=False, index=True
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # 질문
@@ -52,7 +52,7 @@ class RFIItem(Base, TimestampMixin):
     source_type: Mapped[RFISourceType] = mapped_column(
         Enum(RFISourceType), nullable=False, default=RFISourceType.MANUAL
     )
-    source_ref_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    source_ref_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     source_ref_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # VDR 연결

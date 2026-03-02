@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -18,9 +18,9 @@ class VdrTextCache(Base, TimestampMixin):
 
     __tablename__ = "vdr_text_caches"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     vdr_document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("vdr_documents.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,

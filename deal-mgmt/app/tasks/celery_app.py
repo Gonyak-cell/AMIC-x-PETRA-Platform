@@ -7,6 +7,7 @@ JSON 직렬화만 허용하며, pickle은 보안상 금지한다.
 from __future__ import annotations
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import settings
 
@@ -32,5 +33,14 @@ celery_app.conf.update(
     # 결과 만료 (24시간)
     result_expires=86400,
 )
+
+# ── Celery Beat 스케줄 ──────────────────────────────────
+
+celery_app.conf.beat_schedule = {
+    "cleanup-orphan-blobs-daily": {
+        "task": "deal_mgmt.cleanup_orphan_blobs",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
 
 celery_app.autodiscover_tasks(["app.tasks"])

@@ -49,9 +49,7 @@ export function useRFI(txnId: string, rfiId: string) {
   return useQuery<RFIDetail>({
     queryKey: [...rfiKeys(txnId), rfiId],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/rfis/${rfiId}`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/rfis/${rfiId}`);
       return data;
     },
     enabled: !!txnId && !!rfiId,
@@ -64,9 +62,7 @@ export function useRFISummary(txnId: string) {
   return useQuery<RFISummary>({
     queryKey: [...rfiKeys(txnId), "summary"],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/rfis/summary`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/rfis/summary`);
       return data;
     },
     enabled: !!txnId,
@@ -79,10 +75,7 @@ export function useCreateRFI(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: RFICreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/rfis`, body);
       return data as RFI;
     },
     onSuccess: () => {
@@ -97,13 +90,7 @@ export function useCreateRFI(txnId: string) {
 export function useUpdateRFI(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      rfiId,
-      body,
-    }: {
-      rfiId: string;
-      body: RFIUpdate;
-    }) => {
+    mutationFn: async ({ rfiId, body }: { rfiId: string; body: RFIUpdate }) => {
       const { data } = await maApi.patch(
         `/transactions/${txnId}/rfis/${rfiId}`,
         body,
@@ -345,6 +332,10 @@ export function useGenerateRFIFromDD(txnId: string) {
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      // DD 체크리스트 캐시도 무효화 (DD 기반 RFI 생성 시 항목 연동 가능)
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "dd-checklist"],
+      });
       toast.success(`RFI 생성 완료: ${result.items_created}개 질문`);
     },
     onError: (err: unknown) =>
@@ -365,6 +356,10 @@ export function useSyncRFIToChecklists(txnId: string) {
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      // DD 체크리스트 캐시도 무효화 (동기화된 항목 반영)
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "dd-checklist"],
+      });
       toast.success(`${result.synced}개 항목이 체크리스트에 반영되었습니다.`);
     },
     onError: (err: unknown) =>
@@ -416,9 +411,7 @@ export function useImportRFI(txnId: string, rfiId: string) {
       toast.success("Excel 가져오기가 완료되었습니다.");
     },
     onError: (err: unknown) => {
-      toast.error(
-        extractErrorDetail(err) || "Excel 가져오기에 실패했습니다.",
-      );
+      toast.error(extractErrorDetail(err) || "Excel 가져오기에 실패했습니다.");
     },
   });
 }

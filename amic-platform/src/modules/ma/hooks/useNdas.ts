@@ -1,9 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
-import type { NDA, NDACreate, NDAUpdate, NDASummary } from "@/modules/ma/types/nda";
+import type {
+  NDA,
+  NDACreate,
+  NDAUpdate,
+  NDASummary,
+} from "@/modules/ma/types/nda";
 
-export function useNdas(txnId: string, buyerId?: string) {
+export function useNdas(txnId: string, buyerId?: string, active = true) {
   return useQuery<NDA[]>({
     queryKey: ["ma", "transactions", txnId, "ndas", { buyerId }],
     queryFn: async () => {
@@ -13,20 +18,18 @@ export function useNdas(txnId: string, buyerId?: string) {
       });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useNdaSummary(txnId: string) {
+export function useNdaSummary(txnId: string, active = true) {
   return useQuery<NDASummary>({
     queryKey: ["ma", "transactions", txnId, "ndas", "summary"],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/ndas/summary`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/ndas/summary`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -34,10 +37,7 @@ export function useCreateNda(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: NDACreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/ndas`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/ndas`, body);
       return data as NDA;
     },
     onSuccess: () => {
@@ -55,13 +55,7 @@ export function useCreateNda(txnId: string) {
 export function useUpdateNda(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      ndaId,
-      body,
-    }: {
-      ndaId: string;
-      body: NDAUpdate;
-    }) => {
+    mutationFn: async ({ ndaId, body }: { ndaId: string; body: NDAUpdate }) => {
       const { data } = await maApi.patch(
         `/transactions/${txnId}/ndas/${ndaId}`,
         body,

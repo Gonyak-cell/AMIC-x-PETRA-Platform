@@ -132,7 +132,7 @@ async def get_deals_by_client_email(
     from app.models.transaction import Transaction
 
     result = await db.execute(
-        select(DealClient, Transaction.name, Transaction.codename)
+        select(DealClient, Transaction.name, Transaction.code_name)
         .join(Transaction, DealClient.transaction_id == Transaction.id)
         .where(DealClient.email == email)
         .order_by(DealClient.created_at.desc())

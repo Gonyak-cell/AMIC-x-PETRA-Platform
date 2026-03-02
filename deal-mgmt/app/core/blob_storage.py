@@ -64,9 +64,14 @@ class BlobStorageClient:
         # 컨테이너 존재 확인, 없으면 생성
         try:
             await self._container_client.get_container_properties()
-        except Exception:
-            await self._container_client.create_container()
-            logger.info("Azure Blob 컨테이너 생성: %s", container_name)
+        except Exception as exc:
+            exc_name = type(exc).__name__
+            exc_msg = str(exc).lower()
+            if "resourcenotfounderror" in exc_name.lower() or "not found" in exc_msg:
+                await self._container_client.create_container()
+                logger.info("Azure Blob 컨테이너 생성: %s", container_name)
+            else:
+                raise
 
         self._initialized = True
         logger.info(
@@ -147,8 +152,26 @@ class BlobStorageClient:
         dest.parent.mkdir(parents=True, exist_ok=True)
 
         # 진정한 스트리밍: 전체 청크를 메모리에 모으지 않고 순차 기록
-        data = await stream.readall()
-        await asyncio.to_thread(dest.write_bytes, data)
+        with open(dest, "wb") as f:
+            await stream.readinto(f)
+
+    async def delete_blob(self, blob_name: str) -> None:
+        """업로드된 파일을 삭제한다. 존재하지 않아도 에러를 발생시키지 않는다."""
+        if self._is_local:
+            path = (_LOCAL_STORAGE_DIR / blob_name).resolve()
+            if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
+                raise ValueError(f"경로 순회 시도 감지: {blob_name}")
+            if path.exists():
+                path.unlink()
+            return
+
+        from azure.core.exceptions import ResourceNotFoundError
+
+        blob = self._container_client.get_blob_client(blob_name)
+        try:
+            await blob.delete_blob()
+        except ResourceNotFoundError:
+            return  # 이미 삭제된 blob — idempotent
 
     def generate_sas_url(self, blob_name: str, expiry_minutes: int = 60) -> str:
         """읽기 전용 SAS URL을 생성한다.

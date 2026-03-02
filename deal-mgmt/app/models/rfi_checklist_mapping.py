@@ -3,8 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -15,14 +14,14 @@ class RFIChecklistMapping(Base, TimestampMixin):
 
     __tablename__ = "rfi_checklist_mappings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     rfi_item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("rfi_items.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("rfi_items.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     target_module: Mapped[str] = mapped_column(String(20), nullable=False)  # "IM", "FDD", "DD"
-    target_checklist_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    target_item_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    target_checklist_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    target_item_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     target_field_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     synced: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

@@ -9,7 +9,7 @@ import { FM_IN_PROGRESS_STATUSES } from "@/modules/ma/types/financial_model";
 
 const QK = (txnId: string) => ["ma", "transactions", txnId, "financial-models"];
 
-export function useFinancialModels(txnId: string) {
+export function useFinancialModels(txnId: string, active = true) {
   return useQuery<FinancialModel[]>({
     queryKey: QK(txnId),
     queryFn: async () => {
@@ -18,7 +18,7 @@ export function useFinancialModels(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     // GENERATING / FINALIZING 상태 모델이 있으면 5초마다 폴링
     refetchInterval: (query) => {
       const items = query.state.data ?? [];
@@ -73,9 +73,7 @@ export function useDeleteFinancialModel(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (fmId: string) => {
-      await maApi.delete(
-        `/transactions/${txnId}/financial-models/${fmId}`,
-      );
+      await maApi.delete(`/transactions/${txnId}/financial-models/${fmId}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK(txnId) });

@@ -85,7 +85,9 @@ _VALID_STATUS_TRANSITIONS: dict[TransactionStatus, set[TransactionStatus]] = {
 
 def get_phase_completion(txn: Transaction) -> PhaseCompletionStatus:
     """현재 단계의 완료 상태를 평가한다."""
-    idx = _PHASE_INDEX[txn.phase]
+    idx = _PHASE_INDEX.get(txn.phase)
+    if idx is None:
+        raise WorkflowError(f"지원되지 않는 단계입니다: {txn.phase}")
     next_phase = _PHASE_ORDER[idx + 1] if idx < len(_PHASE_ORDER) - 1 else None
     prev_phase = _PHASE_ORDER[idx - 1] if idx > 0 else None
 
@@ -127,7 +129,9 @@ async def advance_phase(
     if txn.status != TransactionStatus.ACTIVE:
         raise WorkflowError("ACTIVE 상태의 거래만 단계를 전환할 수 있습니다")
 
-    from_idx = _PHASE_INDEX[txn.phase]
+    from_idx = _PHASE_INDEX.get(txn.phase)
+    if from_idx is None:
+        raise WorkflowError(f"지원되지 않는 단계입니다: {txn.phase}")
     to_idx = _PHASE_INDEX.get(to_phase)
     if to_idx is None:
         raise WorkflowError(f"잘못된 단계: {to_phase}")
@@ -193,7 +197,9 @@ async def request_phase_approval(
     if txn.status != TransactionStatus.ACTIVE:
         raise WorkflowError("ACTIVE 상태의 거래만 승인을 요청할 수 있습니다")
 
-    from_idx = _PHASE_INDEX[txn.phase]
+    from_idx = _PHASE_INDEX.get(txn.phase)
+    if from_idx is None:
+        raise WorkflowError(f"지원되지 않는 단계입니다: {txn.phase}")
     to_idx = _PHASE_INDEX.get(to_phase)
     if to_idx is None or (to_idx - from_idx) != 1:
         raise WorkflowError(f"{txn.phase.value} → {to_phase.value} 단계 전환에 대한 승인 요청은 허용되지 않습니다")
@@ -279,31 +285,23 @@ async def change_status(
 
 async def _check_risk_compliance_gate(db: AsyncSession, txn: Transaction) -> None:
     """CLOSING 진입 시 미완화 Critical 리스크 및 non-compliant 항목 차단."""
-    # 미완화 Critical 리스크
-    q = sa_select(RiskItem).where(
+    from sqlalchemy import func as sa_func
+
+    # 미완화 Critical 리스크 — 건수만 조회 (P-02: ORM 전체 로드 방지)
+    risk_count_q = sa_select(sa_func.count(RiskItem.id)).where(
         RiskItem.transaction_id == txn.id,
         RiskItem.severity == RiskSeverity.CRITICAL,
         RiskItem.status.notin_([RiskStatus.MITIGATED, RiskStatus.CLOSED, RiskStatus.ACCEPTED]),
     )
-    result = await db.execute(q)
-    critical_risks = list(result.scalars().all())
-    if critical_risks:
-        titles = [r.title for r in critical_risks[:3]]
-        raise WorkflowError(
-            f"Closing 진입 전 미완화 Critical 리스크를 해결해야 합니다: {', '.join(titles)}"
-            + (f" 외 {len(critical_risks) - 3}건" if len(critical_risks) > 3 else "")
-        )
+    critical_count = (await db.execute(risk_count_q)).scalar() or 0
+    if critical_count:
+        raise WorkflowError(f"Closing 진입 전 미완화 Critical 리스크 {critical_count}건을 해결해야 합니다.")
 
-    # Non-compliant 항목
-    q2 = sa_select(ComplianceItem).where(
+    # Non-compliant 항목 — 건수만 조회
+    nc_count_q = sa_select(sa_func.count(ComplianceItem.id)).where(
         ComplianceItem.transaction_id == txn.id,
         ComplianceItem.status == ComplianceStatus.NON_COMPLIANT,
     )
-    result2 = await db.execute(q2)
-    nc_items = list(result2.scalars().all())
-    if nc_items:
-        reqs = [c.requirement for c in nc_items[:3]]
-        raise WorkflowError(
-            f"Closing 진입 전 미준수 컴플라이언스 항목을 해결해야 합니다: {', '.join(reqs)}"
-            + (f" 외 {len(nc_items) - 3}건" if len(nc_items) > 3 else "")
-        )
+    nc_count = (await db.execute(nc_count_q)).scalar() or 0
+    if nc_count:
+        raise WorkflowError(f"Closing 진입 전 미준수 컴플라이언스 항목 {nc_count}건을 해결해야 합니다.")

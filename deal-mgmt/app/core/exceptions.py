@@ -102,13 +102,14 @@ async def service_unavailable_handler(request: Request, exc: ServiceUnavailableE
 
 
 async def workflow_error_handler(request: Request, exc: WorkflowError) -> JSONResponse:
-    logger.error("WorkflowError: %s", exc.message, exc_info=exc)
+    logger.error("WorkflowError [%s %s]: %s", request.method, request.url.path, exc.message, exc_info=exc)
     return _problem_response(
         422,
         "workflow:transition_failed",
         "WORKFLOW_ERROR",
         exc.message,
         error_code=exc.code,
+        instance=str(request.url.path),
     )
 
 

@@ -18,6 +18,7 @@ import {
   NEGOTIATION_ISSUE_STATUS_OPTIONS,
   NEGOTIATION_ISSUE_PRIORITY_OPTIONS,
   ISSUE_DECISION_STATUS_OPTIONS,
+  NEGOTIATION_ISSUE_STATUS_VARIANT,
 } from "@/modules/ma/constants";
 import type {
   NegotiationIssue,
@@ -25,17 +26,6 @@ import type {
   NegotiationIssueStatus,
   IssueDecisionStatus,
 } from "@/modules/ma/types/negotiation_issue";
-
-const STATUS_VARIANT: Record<
-  NegotiationIssueStatus,
-  "success" | "warning" | "neutral" | "error" | "info"
-> = {
-  OPEN: "neutral",
-  IN_PROGRESS: "warning",
-  AGREED: "success",
-  DEFERRED: "info",
-  DEADLOCKED: "error",
-};
 
 const PRIORITY_ORDER: Record<string, number> = {
   CRITICAL: 0,
@@ -248,7 +238,9 @@ export function DisputedClausesTracker({
                           )?.label
                         }
                       </Badge>
-                      <Badge variant={STATUS_VARIANT[issue.status]}>
+                      <Badge
+                        variant={NEGOTIATION_ISSUE_STATUS_VARIANT[issue.status]}
+                      >
                         {
                           NEGOTIATION_ISSUE_STATUS_OPTIONS.find(
                             (o) => o.value === issue.status,

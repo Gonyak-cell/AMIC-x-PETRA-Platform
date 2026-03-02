@@ -12,30 +12,24 @@ export function useCompliance(
   txnId: string,
   category?: string,
   status?: string,
+  active = true,
 ) {
   return useQuery<ComplianceItem[]>({
-    queryKey: [
-      "ma",
-      "transactions",
-      txnId,
-      "compliance",
-      { category, status },
-    ],
+    queryKey: ["ma", "transactions", txnId, "compliance", { category, status }],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (category) params.category = category;
       if (status) params.status = status;
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/compliance`,
-        { params },
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/compliance`, {
+        params,
+      });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useComplianceSummary(txnId: string) {
+export function useComplianceSummary(txnId: string, active = true) {
   return useQuery<ComplianceSummary>({
     queryKey: ["ma", "transactions", txnId, "compliance", "summary"],
     queryFn: async () => {
@@ -44,7 +38,7 @@ export function useComplianceSummary(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 

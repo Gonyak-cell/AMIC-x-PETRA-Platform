@@ -13,6 +13,7 @@ export function useRisks(
   category?: string,
   status?: string,
   severity?: string,
+  active = true,
 ) {
   return useQuery<RiskItem[]>({
     queryKey: [
@@ -27,26 +28,23 @@ export function useRisks(
       if (category) params.category = category;
       if (status) params.status = status;
       if (severity) params.severity = severity;
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/risks`,
-        { params },
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/risks`, {
+        params,
+      });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useRiskSummary(txnId: string) {
+export function useRiskSummary(txnId: string, active = true) {
   return useQuery<RiskSummary>({
     queryKey: ["ma", "transactions", txnId, "risks", "summary"],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/risks/summary`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/risks/summary`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -54,10 +52,7 @@ export function useCreateRisk(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: RiskItemCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/risks`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/risks`, body);
       return data as RiskItem;
     },
     onSuccess: () => {

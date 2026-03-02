@@ -9,7 +9,12 @@ import type {
 } from "@/modules/ma/types/financial_model";
 
 const QK = (txnId: string, fmId: string) => [
-  "ma", "transactions", txnId, "financial-models", fmId, "checklist",
+  "ma",
+  "transactions",
+  txnId,
+  "financial-models",
+  fmId,
+  "checklist",
 ];
 
 export function useFMChecklist(txnId: string, fmId: string) {
@@ -44,6 +49,9 @@ export function useUpdateFMChecklistItem(txnId: string, fmId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK(txnId, fmId) });
+    },
+    onError: () => {
+      toast.error("체크리스트 항목 수정에 실패했습니다.");
     },
   });
 }

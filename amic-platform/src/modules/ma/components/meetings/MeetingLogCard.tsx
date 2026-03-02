@@ -1,23 +1,27 @@
 import { Calendar, MapPin, Users, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui";
-import { MEETING_CHANNEL_OPTIONS, MEETING_STATUS_OPTIONS } from "@/modules/ma/constants";
-import type { MeetingLog, MeetingStatus } from "@/modules/ma/types/meeting_log";
-
-const STATUS_VARIANT: Record<MeetingStatus, "success" | "warning" | "neutral" | "error"> = {
-  SCHEDULED: "warning",
-  COMPLETED: "success",
-  CANCELLED: "error",
-  POSTPONED: "neutral",
-};
+import {
+  MEETING_CHANNEL_OPTIONS,
+  MEETING_STATUS_OPTIONS,
+  MEETING_STATUS_VARIANT,
+} from "@/modules/ma/constants";
+import type { MeetingLog } from "@/modules/ma/types/meeting_log";
 
 interface MeetingLogCardProps {
   meeting: MeetingLog;
   onClick: () => void;
 }
 
-export default function MeetingLogCard({ meeting, onClick }: MeetingLogCardProps) {
-  const channelLabel = MEETING_CHANNEL_OPTIONS.find((o) => o.value === meeting.channel)?.label ?? meeting.channel;
-  const statusLabel = MEETING_STATUS_OPTIONS.find((o) => o.value === meeting.status)?.label ?? meeting.status;
+export default function MeetingLogCard({
+  meeting,
+  onClick,
+}: MeetingLogCardProps) {
+  const channelLabel =
+    MEETING_CHANNEL_OPTIONS.find((o) => o.value === meeting.channel)?.label ??
+    meeting.channel;
+  const statusLabel =
+    MEETING_STATUS_OPTIONS.find((o) => o.value === meeting.status)?.label ??
+    meeting.status;
 
   return (
     <button
@@ -48,12 +52,16 @@ export default function MeetingLogCard({ meeting, onClick }: MeetingLogCardProps
             </span>
           </div>
           {meeting.summary && (
-            <p className="text-xs text-text-muted mt-1.5 line-clamp-2">{meeting.summary}</p>
+            <p className="text-xs text-text-muted mt-1.5 line-clamp-2">
+              {meeting.summary}
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-3">
-          <Badge variant="neutral" >{channelLabel}</Badge>
-          <Badge variant={STATUS_VARIANT[meeting.status]} >{statusLabel}</Badge>
+          <Badge variant="neutral">{channelLabel}</Badge>
+          <Badge variant={MEETING_STATUS_VARIANT[meeting.status]}>
+            {statusLabel}
+          </Badge>
           <ChevronRight className="h-4 w-4 text-gray-400" />
         </div>
       </div>

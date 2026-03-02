@@ -323,6 +323,8 @@ class TestStep1AnalyzeVariables:
                 discovered,
                 _sha_type,
                 _exit_strategy,
+                _bta_scope,
+                _severance_pay,
                 _cost,
                 _model,
             ) = await analyze_step1_variables("A" * 200)
@@ -898,6 +900,8 @@ class TestEmptyArrayEdgeCases:
                 _,
                 _,
                 _,
+                _,
+                _,
             ) = await analyze_step1_variables("A" * 200)
 
         assert variables == []
@@ -1323,8 +1327,8 @@ class TestShaSchemas:
         assert body.deal_structure == "POST_BUYOUT"
 
     def test_deal_structure_accepts_all_types(self) -> None:
-        """SPA + SHA 모든 구조 값 허용 (올바른 doc_type 조합)."""
-        from app.schemas.spa_analysis import DEAL_STRUCTURES, SHA_TYPES
+        """SPA + SHA + BTA 모든 구조 값 허용 (올바른 doc_type 조합)."""
+        from app.schemas.spa_analysis import BTA_SCOPES, DEAL_STRUCTURES, SHA_TYPES
 
         # SPA 유형: DEAL_STRUCTURES 값 허용
         for st in DEAL_STRUCTURES:
@@ -1345,6 +1349,17 @@ class TestShaSchemas:
                 deal_structure=st,
                 industry_type="GENERAL",
                 detected_doc_type="SHA",
+            )
+            assert resp.deal_structure == st
+
+        # BTA 유형: BTA_SCOPES 값 허용
+        for st in BTA_SCOPES:
+            resp = SpaStep1Response(
+                session_id="test",
+                variables=[],
+                deal_structure=st,
+                industry_type="GENERAL",
+                detected_doc_type="BTA",
             )
             assert resp.deal_structure == st
 
@@ -1401,6 +1416,8 @@ class TestShaStep1Service:
             discovered,
             sha_type,
             exit_strategy,
+            _bta_scope,
+            _severance_pay,
             _cost,
             _model,
         ) = result
@@ -1705,3 +1722,291 @@ class TestStep1SessionCleanup:
                 await analyze_step1_variables("A" * 200)
 
         assert len(_sessions) == sessions_before
+
+
+# ── BTA 확장 테스트 ──────────────────────────────────────────────────────────────
+
+
+class TestBtaSchemas:
+    """BTA 확장 스키마 검증 테스트."""
+
+    def test_bta_scopes_constant(self) -> None:
+        """BTA_SCOPES 상수 3개."""
+        from app.schemas.spa_analysis import BTA_SCOPES
+
+        assert "COMPREHENSIVE_TRANSFER" in BTA_SCOPES
+        assert "PARTIAL_TRANSFER" in BTA_SCOPES
+        assert "OTHER_SCOPE" in BTA_SCOPES
+        assert len(BTA_SCOPES) == 3
+
+    def test_severance_pay_handling_constant(self) -> None:
+        """SEVERANCE_PAY_HANDLING 상수 3개."""
+        from app.schemas.spa_analysis import SEVERANCE_PAY_HANDLING
+
+        assert "ASSUMED_BY_BUYER" in SEVERANCE_PAY_HANDLING
+        assert "PAID_BY_SELLER" in SEVERANCE_PAY_HANDLING
+        assert "OTHER_METHOD" in SEVERANCE_PAY_HANDLING
+        assert len(SEVERANCE_PAY_HANDLING) == 3
+
+    def test_all_structure_types_includes_bta(self) -> None:
+        """ALL_STRUCTURE_TYPES에 BTA_SCOPES 포함 확인."""
+        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+
+        assert "COMPREHENSIVE_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "PARTIAL_TRANSFER" in ALL_STRUCTURE_TYPES
+        # 기존 값도 유지
+        assert "PURE_SHARE_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "POST_BUYOUT" in ALL_STRUCTURE_TYPES
+
+    def test_step1_response_bta_fields(self) -> None:
+        """BTA 응답에서 bta_scope, severance_pay_handling 필드."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="COMPREHENSIVE_TRANSFER",
+            industry_type="MANUFACTURING",
+            detected_doc_type="BTA",
+            bta_scope="COMPREHENSIVE_TRANSFER",
+            severance_pay_handling="ASSUMED_BY_BUYER",
+        )
+        assert resp.bta_scope == "COMPREHENSIVE_TRANSFER"
+        assert resp.severance_pay_handling == "ASSUMED_BY_BUYER"
+        assert resp.detected_doc_type == "BTA"
+
+    def test_step1_response_spa_bta_fields_null(self) -> None:
+        """SPA 응답에서 BTA 필드는 None."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",
+            industry_type="GENERAL",
+        )
+        assert resp.bta_scope is None
+        assert resp.severance_pay_handling is None
+
+    def test_bta_scope_invalid_fallback(self) -> None:
+        """잘못된 bta_scope → OTHER_SCOPE 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="COMPREHENSIVE_TRANSFER",
+            industry_type="GENERAL",
+            detected_doc_type="BTA",
+            bta_scope="INVALID_SCOPE",
+        )
+        assert resp.bta_scope == "OTHER_SCOPE"
+
+    def test_severance_pay_invalid_fallback(self) -> None:
+        """잘못된 severance_pay_handling → OTHER_METHOD 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="COMPREHENSIVE_TRANSFER",
+            industry_type="GENERAL",
+            detected_doc_type="BTA",
+            severance_pay_handling="INVALID",
+        )
+        assert resp.severance_pay_handling == "OTHER_METHOD"
+
+    def test_model_validator_bta_scope_enforced(self) -> None:
+        """BTA일 때 DEAL_STRUCTURES 값 → OTHER_SCOPE 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",  # SPA 구조
+            industry_type="GENERAL",
+            detected_doc_type="BTA",
+        )
+        assert resp.deal_structure == "OTHER_SCOPE"
+
+    def test_model_validator_bta_scope_valid(self) -> None:
+        """BTA일 때 BTA_SCOPES 값 통과."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PARTIAL_TRANSFER",
+            industry_type="GENERAL",
+            detected_doc_type="BTA",
+        )
+        assert resp.deal_structure == "PARTIAL_TRANSFER"
+
+    def test_step2_request_bta_scope_accepted(self) -> None:
+        """Step2 request에 BTA_SCOPES 값 허용."""
+        from app.schemas.spa_analysis import SpaStep2Request
+
+        body = SpaStep2Request(
+            session_id="test",
+            variables=[],
+            deal_structure="COMPREHENSIVE_TRANSFER",
+            industry_type="GENERAL",
+        )
+        assert body.deal_structure == "COMPREHENSIVE_TRANSFER"
+
+
+class TestBtaStep1Service:
+    """BTA Step 1 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_bta_step1_uses_bta_prompt(self) -> None:
+        """doc_type_hint='BTA' 시 BTA 프롬프트 사용 + 필드 파싱."""
+        mock_response = json.dumps(
+            {
+                "detected_doc_type": "BTA",
+                "bta_scope": "COMPREHENSIVE_TRANSFER",
+                "severance_pay_handling": "ASSUMED_BY_BUYER",
+                "variables": [
+                    {
+                        "variable_key": "seller_name",
+                        "input_type": "TEXT",
+                        "question_label": "양도인 명칭",
+                        "confidence": 0.9,
+                    },
+                ],
+                "deal_structure": "COMPREHENSIVE_TRANSFER",
+                "industry_type": "MANUFACTURING",
+                "discovered_booleans": [
+                    {
+                        "variable_key": "has_environmental_indemnity",
+                        "question_label": "환경 면책 조항 포함 여부",
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            result = await analyze_step1_variables("A" * 200, doc_type_hint="BTA")
+
+        (
+            session_id,
+            variables,
+            deal_struct,
+            _industry,
+            detected_doc_type,
+            discovered,
+            _sha_type,
+            _exit_strategy,
+            bta_scope,
+            severance_pay,
+            _cost,
+            _model,
+        ) = result
+
+        assert detected_doc_type == "BTA"
+        assert bta_scope == "COMPREHENSIVE_TRANSFER"
+        assert severance_pay == "ASSUMED_BY_BUYER"
+        assert deal_struct == "COMPREHENSIVE_TRANSFER"
+        assert len(variables) == 1
+        assert len(discovered) == 1
+
+        # BTA 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "영업양수도계약서" in system_prompt
+        assert "bta_scope" in system_prompt
+
+        _sessions.pop(session_id, None)
+
+
+class TestBtaStep2Service:
+    """BTA Step 2 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_bta_step2_uses_bta_prompt(self) -> None:
+        """session.detected_doc_type='BTA' 시 BTA Step2 프롬프트 사용."""
+        session = AnalysisSession(
+            session_id="bta-step2-test",
+            spa_text="A" * 200,
+            detected_doc_type="BTA",
+        )
+        _sessions["bta-step2-test"] = session
+
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>BTA 전문</p>",
+                        "original_content": "<p>BTA 원문</p>",
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _cost, _model = await analyze_step2_clauses(
+                    "bta-step2-test",
+                    [],
+                    "COMPREHENSIVE_TRANSFER",
+                    "MANUFACTURING",
+                )
+
+            assert len(clauses) == 1
+
+            # BTA 프롬프트 사용 확인
+            call_args = mock_llm.call.call_args
+            system_prompt = call_args[0][0]
+            assert "BTA" in system_prompt
+            assert "영업양수도계약서" in system_prompt
+        finally:
+            _sessions.pop("bta-step2-test", None)
+
+
+class TestBtaMultiWorkerFallback:
+    """BTA 멀티워커 세션 유실 시 폴백 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_step2_bta_fallback_with_doc_type_hint(self) -> None:
+        """세션 유실 + doc_type_hint='BTA' → BTA 프롬프트 사용."""
+        mock_response = json.dumps({"clauses": []})
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step2_clauses
+
+            clauses, _, _ = await analyze_step2_clauses(
+                "bta-fallback-test",
+                [],
+                "COMPREHENSIVE_TRANSFER",
+                "GENERAL",
+                spa_text="A" * 200,
+                doc_type_hint="BTA",
+            )
+
+        assert clauses == []
+
+        # BTA 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "영업양수도계약서" in system_prompt
+
+        _sessions.pop("bta-fallback-test", None)

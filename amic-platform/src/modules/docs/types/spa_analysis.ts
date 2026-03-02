@@ -62,9 +62,41 @@ export const EXIT_STRATEGY_LABELS: Record<ExitStrategy, string> = {
   OTHER_STRATEGY: "기타",
 };
 
-// SPA DEAL_STRUCTURES + SHA SHA_TYPES 통합
-export const ALL_STRUCTURE_TYPES = [...DEAL_STRUCTURES, ...SHA_TYPES] as const;
-export type AllStructureType = DealStructure | ShaType;
+// ── BTA 전용 ENUM ─────────────────────────────────────────────────────────
+
+export const BTA_SCOPES = [
+  "COMPREHENSIVE_TRANSFER",
+  "PARTIAL_TRANSFER",
+  "OTHER_SCOPE",
+] as const;
+export type BtaScope = (typeof BTA_SCOPES)[number];
+
+export const BTA_SCOPE_LABELS: Record<BtaScope, string> = {
+  COMPREHENSIVE_TRANSFER: "포괄 양수도",
+  PARTIAL_TRANSFER: "부분 양수도",
+  OTHER_SCOPE: "기타",
+};
+
+export const SEVERANCE_PAY_HANDLING = [
+  "ASSUMED_BY_BUYER",
+  "PAID_BY_SELLER",
+  "OTHER_METHOD",
+] as const;
+export type SeverancePayHandling = (typeof SEVERANCE_PAY_HANDLING)[number];
+
+export const SEVERANCE_PAY_LABELS: Record<SeverancePayHandling, string> = {
+  ASSUMED_BY_BUYER: "매수인 승계",
+  PAID_BY_SELLER: "매도인 정산",
+  OTHER_METHOD: "기타",
+};
+
+// SPA DEAL_STRUCTURES + SHA SHA_TYPES + BTA BTA_SCOPES 통합
+export const ALL_STRUCTURE_TYPES = [
+  ...DEAL_STRUCTURES,
+  ...SHA_TYPES,
+  ...BTA_SCOPES,
+] as const;
+export type AllStructureType = DealStructure | ShaType | BtaScope;
 
 export const INDUSTRY_TYPES = [
   "MANUFACTURING",
@@ -120,6 +152,8 @@ export interface SpaStep1Response {
   detected_doc_type: DocType;
   sha_type?: ShaType | null;
   exit_strategy?: ExitStrategy | null;
+  bta_scope?: BtaScope | null;
+  severance_pay_handling?: SeverancePayHandling | null;
   discovered_booleans: DiscoveredBoolean[];
   llm_cost_usd: number | null;
   model_used: string | null;

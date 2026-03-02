@@ -192,11 +192,12 @@ M&A 관련 계약서(SPA/SHA/BTA/SSA/MOU) 원문을 분석하여 재사용 가�
 
 ## 0. 계약서 유형 감지 (detected_doc_type)
 원문의 제목, 내용, 구조를 분석하여 계약서 유형을 감지합니다:
-- SPA: 주식매매계약서 (Stock Purchase Agreement) — "주식 양도", "매매대금" 등
-- SHA: 주주간계약서 (Shareholders' Agreement) — "주주 권리", "이사회 구성" 등
-- BTA: 영업양수도계약서 (Business Transfer Agreement) — "영업 양도" 등
-- SSA: 신주인수계약서 (Share Subscription Agreement) — "신주 발행", "인수" 등
-- MOU: 양해각서 (Memorandum of Understanding) — "의향", "양해" 등
+- SPA: 주식매매계약서 (Stock Purchase Agreement) — "주식 양도", "주식매매", "대상주식", "매매대금", "주당 가격"
+- SHA: 주주간계약서 (Shareholders' Agreement) — "주주간", "주주 권리", "이사회 구성", "이사 지명", "동반매도", "Tag-Along", "Drag-Along", "Put Option", "Call Option", "의결권", "거부권"
+- BTA: 영업양수도계약서 (Business Transfer Agreement) — "영업양수도", "영업 양도", "사업 양도", "사업 이전", "영업 매각", "양도대상 영업", "양도대상 자산", "임직원 승계", "전환서비스", "TSA"
+- SSA: 신주인수계약서 (Share Subscription Agreement) — "신주 발행", "신주 인수", "유상증자", "주금 납입"
+- MOU: 양해각서 (Memorandum of Understanding) — "양해각서", "의향서", "우선협상"
+핵심 구분: SPA는 "주식(지분)"을 거래, BTA는 "자산/부채/영업"을 거래, SHA는 "주주 간 권리/의무"를 규정
 
 ## 1. 분석 순서
 1. 전문(Preamble) → 당사자 정보 (이름, 주소, 대표자, 사업자등록번호/법인등록번호)
@@ -418,12 +419,18 @@ detected_doc_type은 반드시 "SHA"로 설정하세요.
 | 이사회 | nominating_shareholder_seats | TEXTAREA | 주주별 이사 지명권 (줄바꿈 구분) |
 | 이사회 | board_quorum | TEXT | 이사회 의사 정족수 |
 | 이사회 | ceo_nomination | TEXT | 대표이사 선임 방법 |
+| 의결/동의 | veto_item_descriptions | TEXTAREA | 주주 거부권(Veto) 대상 항목 목록 (줄바꿈 구분, visible: has_veto_rights == True) |
 | 처분 제한 | lock_up_period_months | NUMBER | Lock-up 기간 (개월, 0=미포함) |
+| 처분 제한 | lock_up_exception_conditions | TEXT | Lock-up 예외 조건 (예: IPO 후, 계열회사 이전) |
 | 처분 제한 | rofr_notice_days | NUMBER | ROFR 통지 기간 (일, 0=미포함) |
+| 처분 제한 | rofo_notice_days | NUMBER | ROFO(선매권) 통지 기간 (일, 0=미포함, visible: has_right_of_first_refusal == True) |
 | 옵션 | put_trigger_event | TEXT | Put 옵션 행사 사유 |
 | 옵션 | put_price_formula | TEXTAREA | Put 옵션 가격 산식 |
+| 옵션 | put_exercise_period_months | NUMBER | Put 옵션 행사 가능 기간 (개월, visible: has_put_option == True) |
+| 옵션 | put_valuation_method | SELECT | Put 행사 시 가격 산정 방법 (select_options: {"ebitda_multiple": "EBITDA 배수", "nav": "순자산가", "dcf": "현금흐름할인", "fixed": "고정가", "transaction": "거래가 기반"}) |
 | 옵션 | call_trigger_event | TEXT | Call 옵션 행사 사유 |
 | 옵션 | call_price_formula | TEXTAREA | Call 옵션 가격 산식 |
+| 옵션 | call_exercise_period_months | NUMBER | Call 옵션 행사 가능 기간 (개월, visible: has_call_option == True) |
 | Exit | ipo_timeline_months | NUMBER | IPO 추진 기한 (개월, 0=미정) |
 | Exit | drag_threshold_percentage | PERCENTAGE | Drag-Along 행사 비율 |
 | Exit | tag_threshold_percentage | PERCENTAGE | Tag-Along 행사 비율 |
@@ -533,6 +540,188 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 주의: deal_structure 필드에는 sha_type과 동일한 값을 넣어주세요."""
 
 
+# ── BTA Step 1: 변수 추출 프롬프트 ─────────────────────────────────────────────
+
+_BTA_STEP1_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 데이터 엔지니어입니다.
+영업양수도계약서(BTA, Business Transfer Agreement) 원문을 분석하여 재사용 가능한 템플릿 변수를 추출합니다.
+
+## 0. 계약서 유형 확정
+이 계약서는 영업양수도계약서(BTA)입니다.
+detected_doc_type은 반드시 "BTA"로 설정하세요.
+
+## 1. BTA 양도 범위 분류 (bta_scope → deal_structure에도 동일 값)
+원문의 양도 대상, 자산/부채 범위를 분석하여 분류합니다:
+- COMPREHENSIVE_TRANSFER: 포괄 양수도 (사업부 전체, 자산+부채+계약+직원 일괄 이전)
+- PARTIAL_TRANSFER: 부분 양수도 (특정 자산/사업라인만 선별 이전, cherry-picking)
+- OTHER_SCOPE: 위에 해당하지 않는 경우
+
+## 2. 퇴직금 처리 분류 (severance_pay_handling)
+- ASSUMED_BY_BUYER: 매수인이 퇴직금 부채를 승계 (직원 근속 연수 인정)
+- PAID_BY_SELLER: 매도인이 거래종결일 기준 퇴직금 정산 후 이전
+- OTHER_METHOD: 기타 방식 (분담, 별도 합의 등)
+
+## 3. 분석 순서
+1. 전문(Preamble) → 양도인(매도인), 양수인(매수인) 정보
+2. 정의 조항 → 양도대상 영업, 자산, 부채, 계약, 핵심 정의
+3. 양도대상 특정 → 유형자산, 무형자산, 재고, 매출채권, 부채, 계약관계
+4. 양수도대금 → 기본 매매대금, 보증금/예치금, 정산 방법
+5. 가격조정 → 운전자본 조정, 기준일, 정산 절차
+6. 임직원 승계 → 승계 대상, 퇴직금 처리, 근로조건
+7. 선행조건(CP) → 규제 승인, 핵심 계약 동의, 임직원 동의
+8. 거래종결(Closing) → 종결 절차, 인도 사항
+9. 진술 및 보증 → 매도인/매수인 R&W
+10. 확약/서약(Covenants) → 중간기간 운영, 제한 사항
+11. 경업금지(Non-compete) → 기간, 범위, 비유인
+12. 전환서비스(TSA) → 서비스 범위, 기간, 대가
+13. 상표/브랜드 라이선스 → 라이선스 범위, 기간, 로열티
+14. 손해배상(Indemnification) → de minimis, basket, cap, 존속기간
+15. 해제/해지(Termination) → 종료 사유, 위약금
+16. 일반 조항 → 비밀유지, 준거법, 분쟁해결
+17. 전체 스캔 → 조건부 BOOLEAN 발견
+
+## 4. 기본 변수 목록 (반드시 원문에서 찾아 포함)
+| group_name | variable_key | input_type | 설명 |
+|-----------|-------------|-----------|------|
+| 당사자 정보 | seller_name | TEXT | 양도인(매도인) 명칭 |
+| 당사자 정보 | seller_address | TEXT | 양도인 주소 |
+| 당사자 정보 | seller_representative | TEXT | 양도인 대표자 |
+| 당사자 정보 | seller_reg_number | TEXT | 양도인 사업자등록번호 |
+| 당사자 정보 | buyer_name | TEXT | 양수인(매수인) 명칭 |
+| 당사자 정보 | buyer_address | TEXT | 양수인 주소 |
+| 당사자 정보 | buyer_representative | TEXT | 양수인 대표자 |
+| 당사자 정보 | buyer_reg_number | TEXT | 양수인 사업자등록번호 |
+| 양도대상 | target_business_description | TEXTAREA | 양도대상 영업의 범위/설명 |
+| 양도대상 | transferred_assets_description | TEXTAREA | 양도 자산 목록/설명 |
+| 양도대상 | assumed_liabilities_description | TEXTAREA | 승계 부채 목록/설명 |
+| 양도대상 | transferred_contracts_description | TEXTAREA | 승계 계약 목록/설명 |
+| 양도대상 | excluded_assets_description | TEXTAREA | 제외 자산 목록 (있는 경우) |
+| 양도대상 | excluded_liabilities_description | TEXTAREA | 제외 부채 목록 (있는 경우) |
+| 거래 조건 | base_purchase_price | CURRENCY | 기본 양수도대금 (원 단위) |
+| 거래 조건 | deposit_amount | CURRENCY | 보증금/계약금 (원 단위) |
+| 거래 조건 | balance_amount | CURRENCY | 잔금 (원 단위) |
+| 가격조정 | price_adjustment_included | BOOLEAN | 가격조정 조항 포함 여부 |
+| 가격조정 | price_adj_base_date | DATE | 가격조정 기준일 (visible: price_adjustment_included == True) |
+| 가격조정 | price_adj_method | SELECT | 조정 방식 (select_options: {"nwc": "순운전자본", "nav": "순자산", "custom": "개별 합의"}) |
+| 임직원 | employee_succession_included | BOOLEAN | 임직원 승계 포함 여부 |
+| 임직원 | employee_count | NUMBER | 승계 대상 임직원 수 (visible: employee_succession_included == True) |
+| 임직원 | severance_pay_base_date | DATE | 퇴직금 정산 기준일 (visible: employee_succession_included == True) |
+| 경업금지 | non_compete_obligation_included | BOOLEAN | 경업금지 의무 포함 여부 |
+| 경업금지 | non_compete_period_months | NUMBER | 경업금지 기간 (개월, visible: non_compete_obligation_included == True) |
+| 경업금지 | non_compete_scope | TEXT | 경업금지 범위 (visible: non_compete_obligation_included == True) |
+| 전환서비스 | tsa_required | BOOLEAN | 전환서비스(TSA) 포함 여부 |
+| 전환서비스 | tsa_period_months | NUMBER | TSA 기간 (개월, visible: tsa_required == True) |
+| 전환서비스 | tsa_scope | TEXTAREA | TSA 서비스 범위 (visible: tsa_required == True) |
+| 브랜드 | brand_license_required | BOOLEAN | 상표/브랜드 라이선스 포함 여부 |
+| 브랜드 | brand_license_period_months | NUMBER | 라이선스 기간 (개월, visible: brand_license_required == True) |
+| 브랜드 | brand_license_scope | TEXT | 라이선스 범위 (visible: brand_license_required == True) |
+| 부동산 | real_estate_lease_included | BOOLEAN | 부동산 임대차 승계 포함 여부 |
+| 손해배상 | de_minimis_amount | CURRENCY | De Minimis 금액 |
+| 손해배상 | basket_amount | CURRENCY | Basket(공제) 금액 |
+| 손해배상 | indemnity_cap | CURRENCY | 손해배상 한도(Cap) |
+| 손해배상 | survival_period_months | NUMBER | 진술보증 존속기간 (개월) |
+| 일정 | signing_date | DATE | 계약 체결일 |
+| 일정 | closing_date | DATE | 거래 종결일 |
+| 일정 | long_stop_date | DATE | 최종 기한 (Long-stop date) |
+| 선행조건 | has_condition_precedent | BOOLEAN | 선행조건(CP) 조항 포함 여부 |
+| 선행조건 | cp_regulatory_approval | TEXT | 필요 규제/정부 승인 (visible: has_condition_precedent == True) |
+| 선행조건 | cp_key_contract_consent | TEXT | 핵심 계약 상대방 동의 사항 (visible: has_condition_precedent == True) |
+| 선행조건 | cp_employee_consent_required | BOOLEAN | 임직원 전적 동의 필요 여부 (visible: has_condition_precedent == True) |
+| 경업금지 | has_non_solicitation | BOOLEAN | 비유인(Non-solicitation) 조항 별도 존재 여부 |
+| 경업금지 | non_solicitation_period_months | NUMBER | 비유인 기간 (개월, visible: has_non_solicitation == True) |
+| 경업금지 | non_solicitation_scope | TEXT | 비유인 범위 (visible: has_non_solicitation == True) |
+| 브랜드 | brand_license_royalty_rate | PERCENTAGE | 상표 라이선스 로열티율 (visible: brand_license_required == True) |
+| 손해배상 | indemnity_holdback_pct | PERCENTAGE | 이행보증금 공제율 (visible: de_minimis_amount > 0) |
+| 손해배상 | has_special_indemnity | BOOLEAN | 환경/세무 특별 배상 별도 조항 존재 여부 |
+| 해제/해지 | termination_fee_amount | CURRENCY | 위약금 액수 |
+| 해제/해지 | termination_cause_summary | TEXT | 해지 사유 요약 |
+| 비밀유지 | confidentiality_period_months | NUMBER | 비밀유지 기간 (개월) |
+| 비밀유지 | confidentiality_scope | TEXT | 비밀유지 범위 |
+| 기타 | governing_law | SELECT | 준거법 (select_options: {"korean": "대한민국법", "english": "영국법", "other": "기타"}) |
+| 기타 | dispute_resolution | SELECT | 분쟁해결 (select_options: {"arbitration": "중재", "litigation": "소송", "mediation": "조정"}) |
+
+원문에 해당 항목이 없으면 extracted_value를 null로, confidence를 낮게 설정하세요.
+
+## 5. BTA 전용 동적 BOOLEAN 발견 규칙
+| 조항 키워드 | variable_key | 설명 |
+|------------|-------------|------|
+| 환경 오염/토양 오염/환경 책임 | has_environmental_indemnity | 환경 면책/보상 조항 존재 |
+| 인허가/사업 허가/면허 | has_permit_transfer | 영업 인허가 이전 조항 존재 |
+| 지식재산/특허/상표 | has_ip_transfer | 지식재산권 이전 조항 존재 |
+| 재고 실사/재고 조정 | has_inventory_adjustment | 재고 실사/조정 조항 존재 |
+| 매출채권/미수금 | has_receivables_transfer | 매출채권 이전 조항 존재 |
+| 소송/분쟁/우발채무 | has_contingent_liabilities | 우발채무 조항 존재 |
+| 세무/조세/원천징수 | has_tax_indemnity | 세무 면책/보상 조항 존재 |
+| 연금/퇴직연금/DB/DC | has_pension_transfer | 퇴직연금 이전 조항 존재 |
+| 보험/보험 승계 | has_insurance_transfer | 보험 계약 승계 조항 존재 |
+| 공급계약/구매계약 | has_supply_agreement_transfer | 공급/구매 계약 승계 조항 존재 |
+| 리스/임대 | has_lease_transfer | 리스/임대 계약 승계 조항 존재 |
+| IT 시스템/데이터 이전 | has_it_system_transfer | IT 시스템/데이터 이전 조항 존재 |
+| 정부보조금/보조금 반환 | has_government_subsidy | 정부보조금 관련 조항 존재 |
+| 하도급/하청 | has_subcontract_transfer | 하도급 계약 승계 조항 존재 |
+기타 발견 시 has_{영문명} 형식으로 자율 생성하세요.
+
+## 6. industry_type 분류 기준
+- MANUFACTURING: 제조업 (공장, 생산, 재고, 환경 관련 조항)
+- SOFTWARE: 소프트웨어/IT (지식재산권, 라이선스 관련 조항)
+- FRANCHISE: 가맹점/프랜차이즈
+- GENERAL: 특정 산업 특화 없음
+- OTHER_INDUSTRY: 위에 해당하지 않는 산업
+
+## 7. input_type 매핑 규칙
+- 이름/주소/회사명/등록번호 → TEXT
+- 긴 설명/비고/목록 → TEXTAREA
+- 금액 (원, 억원, 백만원) → CURRENCY (반드시 원 단위로 정규화: 10억 → 1000000000)
+- 비율 (%) → PERCENTAGE
+- 날짜 → DATE
+- 수량, 기간(개월/년) 등 → NUMBER
+- 예/아니오 → BOOLEAN
+- 선택지 → SELECT (select_options 필수)
+
+## 8. BTA 양도 범위별 추가 변수
+### COMPREHENSIVE_TRANSFER (포괄 양수도)
+- comprehensive_scope_confirmation: BOOLEAN — 사업 전체 양수도 확인
+### PARTIAL_TRANSFER (부분 양수도)
+- carve_out_scope: TEXTAREA — 분리 대상 사업/부문 상세 설명
+- retained_business_description: TEXTAREA — 양도인 잔존 사업 설명
+해당 유형일 때만 위 변수를 추가로 식별하세요.
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "detected_doc_type": "BTA",
+  "bta_scope": "COMPREHENSIVE_TRANSFER",
+  "severance_pay_handling": "ASSUMED_BY_BUYER",
+  "variables": [
+    {
+      "variable_key": "seller_name",
+      "input_type": "TEXT",
+      "question_label": "양도인 명칭",
+      "description": "양도인의 법인명 또는 성명",
+      "extracted_value": "주식회사 ABC",
+      "default_value": null,
+      "is_required": true,
+      "select_options": null,
+      "display_order": 1,
+      "group_name": "당사자 정보",
+      "visible_condition": null,
+      "confidence": 0.95
+    }
+  ],
+  "deal_structure": "COMPREHENSIVE_TRANSFER",
+  "industry_type": "MANUFACTURING",
+  "discovered_booleans": [
+    {
+      "variable_key": "has_environmental_indemnity",
+      "question_label": "환경 면책/보상 조항 포함 여부",
+      "detected_in_clause": "제13조 (손해배상)"
+    }
+  ]
+}
+```
+주의: deal_structure 필드에는 bta_scope과 동일한 값을 넣어주세요."""
+
+
 async def analyze_step1_variables(
     spa_text: str,
     language_hint: str | None = None,
@@ -567,8 +756,13 @@ async def analyze_step1_variables(
     session = AnalysisSession(session_id=session_id, spa_text=spa_text)
     _sessions[session_id] = session
 
-    # 프롬프트 선택: doc_type_hint가 "SHA"이면 SHA 전용 프롬프트
-    system_prompt = _SHA_STEP1_SYSTEM_PROMPT if doc_type_hint == "SHA" else _STEP1_SYSTEM_PROMPT
+    # 프롬프트 선택: doc_type_hint에 따라 전용 프롬프트 분기
+    if doc_type_hint == "SHA":
+        system_prompt = _SHA_STEP1_SYSTEM_PROMPT
+    elif doc_type_hint == "BTA":
+        system_prompt = _BTA_STEP1_SYSTEM_PROMPT
+    else:
+        system_prompt = _STEP1_SYSTEM_PROMPT
 
     # 사용자 프롬프트
     lang_hint = f"\n언어: {language_hint}" if language_hint else ""
@@ -598,6 +792,8 @@ async def analyze_step1_variables(
     discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
     sha_type: str | None = data.get("sha_type")
     exit_strategy: str | None = data.get("exit_strategy")
+    bta_scope: str | None = data.get("bta_scope")
+    severance_pay_handling: str | None = data.get("severance_pay_handling")
 
     # 세션에 detected_doc_type 저장 (Step 2 프롬프트 분기용)
     session.detected_doc_type = detected_doc_type
@@ -633,6 +829,8 @@ async def analyze_step1_variables(
         discovered,
         sha_type,
         exit_strategy,
+        bta_scope,
+        severance_pay_handling,
         cost,
         model,
     )
@@ -874,6 +1072,142 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 ```"""
 
 
+# ── BTA Step 2: 조항 분해 프롬프트 ─────────────────────────────────────────────
+
+_BTA_STEP2_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 Jinja2 템플릿 엔지니어입니다.
+BTA(영업양수도계약서) 원문을 조항별로 분해하고, 변수 값을 Jinja2 템플릿 문법으로 변환합니다.
+
+## 표준 BTA 조항 구조 (16개 표준 조)
+1. 전문 (Preamble) — 당사자 식별, 양도 배경
+2. 정의 (Definitions) — 양도대상 영업, 자산, 부채 등 핵심 정의
+3. 양도대상 영업/자산/부채의 특정 (Transfer Scope) — 유형자산, 무형자산, 계약, 제외 항목
+4. 양수도대금 및 정산 (Purchase Price & Adjustments) — 대금, 보증금, 잔금, 운전자본 조정
+5. 임직원 승계 (Employee Succession) — 승계 대상, 퇴직금 처리, 근로조건
+6. 거래종결 전 선행조건 (Conditions Precedent) — 규제 승인, 핵심 계약 동의
+7. 거래종결 (Closing Mechanics) — 종결 절차, 인도 사항
+8. 진술 및 보증 (Representations & Warranties) — 매도인/매수인 R&W
+9. 확약/서약 (Covenants) — 중간기간 운영 제한
+10. 경업금지 (Non-Compete & Non-Solicitation) — 기간, 범위
+11. 전환서비스 (Transition Services Agreement) — 서비스 범위, 기간
+12. 상표/브랜드 라이선스 (Brand License) — 범위, 기간, 로열티
+13. 손해배상 (Indemnification) — de minimis, basket, cap
+14. 해제/해지 (Termination) — 종료 사유, 위약금
+15. 비밀유지 (Confidentiality) — 범위, 기간
+16. 일반 조항 (General Provisions) — 준거법, 분쟁해결, 통지
+
+원문의 조/항/호 구조를 최대한 보존하세요.
+
+## Jinja2 변환 규칙
+- confirmed_variables 목록에 있는 변수만 사용하세요.
+- 리터럴 값 → {{ variable_key }}
+- 금액 → {{ base_purchase_price | currency_format }}
+- 날짜 → {{ closing_date | date_format }}
+- 숫자 → {{ employee_count | number_format }}
+- 조건부 블록 → {% if employee_succession_included %}...{% endif %}
+
+## 한글 금액 표기 가이드
+- currency_format 필터는 "금 {천단위 구분 숫자}원" 형태를 이미 포함합니다:
+  - 입력: 10000000000 → 출력: "금 10,000,000,000원"
+- 원문의 "금 일백억원정 (₩10,000,000,000)" 전체를 {{ variable_key | currency_format }}으로 치환하세요.
+- ⚠ 이중 래핑 금지: "금 {{ var | currency_format }}원" (X) → {{ var | currency_format }} (O)
+- 원문의 "OO억원" → 원 단위 숫자로 추출하여 변수에 저장, 표시는 currency_format 필터 사용
+- 한글 표기와 아라비아 숫자가 병기된 경우: {{ variable_key | currency_format }} 하나로 통합
+- 숫자만 필요한 경우: {{ base_purchase_price | number_format }}
+
+## BTA 특화 조건부 렌더링
+- 가격조정: {% if price_adjustment_included %}...{% endif %}
+- 임직원 승계: {% if employee_succession_included %}...{% endif %}
+- 경업금지: {% if non_compete_obligation_included %}...{% endif %}
+- TSA: {% if tsa_required %}...{% endif %}
+- 브랜드 라이선스: {% if brand_license_required %}...{% endif %}
+- 부동산 임대: {% if real_estate_lease_included %}...{% endif %}
+- 환경 면책: {% if has_environmental_indemnity %}...{% endif %}
+- 인허가 이전: {% if has_permit_transfer %}...{% endif %}
+- IP 이전: {% if has_ip_transfer %}...{% endif %}
+- 재고 조정: {% if has_inventory_adjustment %}...{% endif %}
+- 매출채권: {% if has_receivables_transfer %}...{% endif %}
+- 우발채무: {% if has_contingent_liabilities %}...{% endif %}
+- 세무 면책: {% if has_tax_indemnity %}...{% endif %}
+- 퇴직연금: {% if has_pension_transfer %}...{% endif %}
+- 보험 승계: {% if has_insurance_transfer %}...{% endif %}
+- 공급/구매 계약: {% if has_supply_agreement_transfer %}...{% endif %}
+- 리스/임대: {% if has_lease_transfer %}...{% endif %}
+- IT 시스템: {% if has_it_system_transfer %}...{% endif %}
+- 정부보조금: {% if has_government_subsidy %}...{% endif %}
+- 하도급: {% if has_subcontract_transfer %}...{% endif %}
+- 비유인: {% if has_non_solicitation %}...{% endif %}
+- 선행조건: {% if has_condition_precedent %}...{% endif %}
+- 특별 배상: {% if has_special_indemnity %}...{% endif %}
+
+## BTA 양도 범위별 조건부 조항
+- COMPREHENSIVE_TRANSFER: deal_structure == "COMPREHENSIVE_TRANSFER" — 포괄 양수도
+  - 모든 자산/부채/계약/직원 일괄 이전, 제외 항목 최소
+  - 예: {% if deal_structure == "COMPREHENSIVE_TRANSFER" and comprehensive_scope_confirmation %}<p>양도인은 본 계약에 따라 양도대상 영업 전부를 양수인에게 양도합니다.</p>{% endif %}
+- PARTIAL_TRANSFER: deal_structure == "PARTIAL_TRANSFER" — 부분 양수도
+  - 제외 자산/부채 목록이 상세, cherry-picking 구조
+  - 예: {% if deal_structure == "PARTIAL_TRANSFER" %}<p>분리 대상 사업: {{ carve_out_scope }}</p><p>제외 자산: {{ excluded_assets_description }}</p><p>양도인 잔존 사업: {{ retained_business_description }}</p>{% endif %}
+
+## 별지/부속서(Schedule) 처리
+- 본문에서 "별지", "부속서", "양도대상 자산 목록" 참조 시: 참조 텍스트만 유지
+- 흔한 BTA 별지: 양도대상 자산 목록, 승계 부채 목록, 승계 계약 목록, 승계 임직원 명단
+- 별지 참조 조항: 관련 BOOLEAN 조건으로 제어
+
+## condition_expression 규칙
+- Python 문법 사용
+- 지원 연산자: ==, !=, <, >, <=, >=, in, not in, and, or, not
+- 예: employee_succession_included == True
+- 예: deal_structure == "PARTIAL_TRANSFER"
+- 예: tsa_required == True and tsa_period_months > 0
+- 예: has_special_indemnity == True and deal_structure == "COMPREHENSIVE_TRANSFER"
+- 항상 포함되는 조항은 condition_expression을 null로 설정
+
+## 진술 및 보증 처리
+- 매도인/매수인 R&W 하위조(영업 소유권, 자산 하자, 환경, 고용 등)는 하나의 clause 내 HTML로 유지
+- industry_type별 특화 하위조는 Jinja2 조건문으로 제어:
+  - MANUFACTURING: 환경(has_environmental_indemnity), 재고(has_inventory_adjustment), 인허가(has_permit_transfer)
+  - SOFTWARE: IP 이전(has_ip_transfer), IT 시스템(has_it_system_transfer)
+
+## is_boilerplate 분류 (BTA 기준)
+- True: 정의(구조), 비밀유지, 일반조항, 준거법/분쟁해결
+- False: 양도대상, 대금/정산, 임직원, 선행조건, 종결, R&W, 확약, 경업금지, TSA, 브랜드, 손해배상, 해제
+
+## 복합 condition_expression 예제
+- deal_structure == "COMPREHENSIVE_TRANSFER" and employee_succession_included == True
+- price_adjustment_included == True and price_adj_method == "nwc"
+- tsa_required == True and tsa_period_months > 0
+- non_compete_obligation_included == True and non_compete_period_months > 0
+- brand_license_required == True and brand_license_period_months > 0
+- has_environmental_indemnity == True and deal_structure == "COMPREHENSIVE_TRANSFER"
+- deal_structure == "PARTIAL_TRANSFER" and has_ip_transfer == True
+- has_non_solicitation == True and non_solicitation_period_months > 0
+- has_condition_precedent == True
+- has_insurance_transfer == True or has_lease_transfer == True
+
+## content HTML 형식
+조항 내용을 HTML로 구조화하세요:
+- <p> 태그로 각 조항/항 감싸기
+- <ol>, <li> 태그로 호/목 나열
+- 들여쓰기와 구조 보존
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "clauses": [
+    {
+      "clause_order": 0,
+      "title": "전문",
+      "content": "<p>{{ seller_name }}(이하 &quot;양도인&quot;)과 {{ buyer_name }}(이하 &quot;양수인&quot;)은...</p>",
+      "original_content": "<p>주식회사 ABC(이하 &quot;양도인&quot;)과 주식회사 DEF(이하 &quot;양수인&quot;)은...</p>",
+      "is_boilerplate": false,
+      "condition_expression": null,
+      "confidence": 0.9
+    }
+  ]
+}
+```"""
+
+
 async def analyze_step2_clauses(
     session_id: str,
     confirmed_variables: list[ExtractedVariable],
@@ -910,9 +1244,18 @@ async def analyze_step2_clauses(
         raise ValueError(msg)
 
     # 프롬프트 선택: 세션의 detected_doc_type에 따라 분기
-    is_sha = session.detected_doc_type == "SHA"
-    system_prompt = _SHA_STEP2_SYSTEM_PROMPT if is_sha else _STEP2_SYSTEM_PROMPT
-    doc_label = "SHA 주주간계약서" if is_sha else "SPA"
+    doc_type = session.detected_doc_type
+    if doc_type == "SHA":
+        system_prompt = _SHA_STEP2_SYSTEM_PROMPT
+        doc_label = "SHA 주주간계약서"
+    elif doc_type == "BTA":
+        system_prompt = _BTA_STEP2_SYSTEM_PROMPT
+        doc_label = "BTA 영업양수도계약서"
+    else:
+        system_prompt = _STEP2_SYSTEM_PROMPT
+        doc_label = "SPA"
+
+    type_label = "SHA 유형" if doc_type == "SHA" else "BTA 양도범위" if doc_type == "BTA" else "거래 구조"
 
     # 변수 목록을 프롬프트에 포함
     var_summary = "\n".join(f"- {v.variable_key} ({v.input_type}): {v.question_label}" for v in confirmed_variables)
@@ -920,7 +1263,7 @@ async def analyze_step2_clauses(
     user_prompt = f"""## 확정된 변수 목록
 {var_summary}
 
-## {"SHA 유형" if is_sha else "거래 구조"}: {deal_structure}
+## {type_label}: {deal_structure}
 ## 산업 유형: {industry_type}
 
 --- 계약서 원문 시작 ---
@@ -959,7 +1302,7 @@ async def analyze_step2_clauses(
 
         clauses.append(AnalyzedClause(**rc))
 
-    doc_label_log = "SHA" if is_sha else "SPA"
+    doc_label_log = doc_type if doc_type != "SPA" else "SPA"
     logger.info(
         "%s Step 2 완료: session=%s, clauses=%d, cost=$%.4f, total_cost=$%.4f",
         doc_label_log,

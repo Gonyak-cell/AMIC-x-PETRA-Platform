@@ -22,23 +22,24 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
 
-    # 1) MOU_SIGNED → MAIN_DUE_DILIGENCE 데이터 마이그레이션
-    op.execute(sa.text("UPDATE transactions SET phase = 'MAIN_DUE_DILIGENCE' WHERE phase = 'MOU_SIGNED'"))
-
-    # 2) AttachmentEntityType에 MILESTONE 추가
+    # 1) AttachmentEntityType에 MILESTONE 추가 (DDL 먼저 — R12-02)
     # PostgreSQL의 ALTER TYPE ... ADD VALUE는 트랜잭션 내부에서 실행 불가 →
     # autocommit_block()으로 현재 트랜잭션 밖에서 실행해야 함.
+    # DDL을 DML보다 먼저 실행하여, DDL 실패 시 DML이 커밋되지 않도록 순서 보장.
     if bind.dialect.name == "postgresql":
         with op.get_context().autocommit_block():
             op.execute(sa.text("ALTER TYPE attachmententitytype ADD VALUE IF NOT EXISTS 'MILESTONE'"))
     # SQLite: VARCHAR이므로 별도 ALTER 불필요
 
+    # 2) MOU_SIGNED → MAIN_DUE_DILIGENCE 데이터 마이그레이션
+    # NOTE: 배포 시 deploy.yml에서 마이그레이션이 코드 교체보다 먼저 실행되므로
+    # race condition(마이그레이션 중 신규 MOU_SIGNED 삽입) 가능성은 낮음.
+    op.execute(sa.text("UPDATE transactions SET phase = 'MAIN_DUE_DILIGENCE' WHERE phase = 'MOU_SIGNED'"))
+
 
 def downgrade() -> None:
-    # MOU_SIGNED 단계 복원은 불필요 — 데이터가 이미 MAIN_DUE_DILIGENCE로 이동됨.
-    # PostgreSQL enum에서 MILESTONE 제거 불가.
-    raise RuntimeError(
-        "이 마이그레이션은 롤백할 수 없습니다. "
-        "MOU_SIGNED → MAIN_DUE_DILIGENCE 데이터 이동은 비가역적이며, "
-        "PostgreSQL enum에서 MILESTONE 값을 제거할 수 없습니다."
-    )
+    # 비가역 마이그레이션 (R12-01: 표준 pass + 주석 패턴)
+    # - MOU_SIGNED → MAIN_DUE_DILIGENCE 데이터 이동은 비가역적
+    # - PostgreSQL enum에서 MILESTONE 값을 제거할 수 없음
+    # - 롤백이 필요한 경우 데이터 복원 스크립트를 수동으로 실행하세요
+    pass

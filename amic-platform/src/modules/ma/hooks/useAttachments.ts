@@ -42,6 +42,7 @@ export function useAttachments(
       );
       return data;
     },
+    // 마일스톤 첨부는 PipelineFlow에서 항상 필요하므로 탭 조건 미적용
     enabled: !!txnId,
   });
 }
@@ -77,8 +78,9 @@ export function useUploadAttachment(txnId: string) {
       qc.invalidateQueries({ queryKey: attachmentQK(txnId) });
       toast.success("파일이 업로드되었습니다.");
     },
-    onError: () => {
-      toast.error("파일 업로드에 실패했습니다.");
+    onError: (err: unknown) => {
+      const detail = err instanceof Error ? err.message : "알 수 없는 오류";
+      toast.error(`파일 업로드에 실패했습니다: ${detail}`);
     },
   });
 }
@@ -95,8 +97,9 @@ export function useDeleteAttachment(txnId: string) {
       qc.invalidateQueries({ queryKey: attachmentQK(txnId) });
       toast.success("파일이 삭제되었습니다.");
     },
-    onError: () => {
-      toast.error("파일 삭제에 실패했습니다.");
+    onError: (err: unknown) => {
+      const detail = err instanceof Error ? err.message : "알 수 없는 오류";
+      toast.error(`파일 삭제에 실패했습니다: ${detail}`);
     },
   });
 }

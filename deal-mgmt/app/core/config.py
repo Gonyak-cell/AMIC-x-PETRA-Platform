@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 3600
     DB_POOL_TIMEOUT: int = 30
 
+    # Celery 워커 전용 DB 풀 (동시성 2에 맞춤)
+    CELERY_DB_POOL_SIZE: int = 3
+    CELERY_DB_POOL_MAX_OVERFLOW: int = 2
+
     # 금융위 공공데이터포털 API (기업재무정보 수집)
     DATA_GO_KR_API_KEY: str = ""
     DATA_GO_KR_BASE_URL: str = "https://apis.data.go.kr"

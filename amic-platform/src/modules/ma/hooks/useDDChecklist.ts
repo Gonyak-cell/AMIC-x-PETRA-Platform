@@ -12,6 +12,7 @@ export function useDDChecklist(
   txnId: string,
   workstream?: string,
   status?: string,
+  active = true,
 ) {
   return useQuery<DDChecklistItem[]>({
     queryKey: [
@@ -25,17 +26,16 @@ export function useDDChecklist(
       const params: Record<string, string> = {};
       if (workstream) params.workstream = workstream;
       if (status) params.status = status;
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/dd-checklist`,
-        { params },
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/dd-checklist`, {
+        params,
+      });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useDDChecklistSummary(txnId: string) {
+export function useDDChecklistSummary(txnId: string, active = true) {
   return useQuery<DDChecklistSummary>({
     queryKey: ["ma", "transactions", txnId, "dd-checklist", "summary"],
     queryFn: async () => {
@@ -44,7 +44,7 @@ export function useDDChecklistSummary(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 

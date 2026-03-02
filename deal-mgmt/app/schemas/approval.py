@@ -45,7 +45,7 @@ class ApprovalCreate(BaseModel):
 
 
 class ApprovalDecision(BaseModel):
-    email: str
+    email: str | None = None  # deprecated — 서버는 JWT claims.email로 승인자 식별
     decision: str = Field(..., pattern="^(APPROVED|REJECTED)$")
     comment: str | None = None
 

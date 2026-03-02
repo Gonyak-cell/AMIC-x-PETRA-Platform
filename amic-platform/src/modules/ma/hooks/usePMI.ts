@@ -8,7 +8,12 @@ import type {
   PMISummary,
 } from "@/modules/ma/types/pmi";
 
-export function usePMITasks(txnId: string, category?: string, priority?: string) {
+export function usePMITasks(
+  txnId: string,
+  category?: string,
+  priority?: string,
+  active = true,
+) {
   return useQuery<PMITask[]>({
     queryKey: ["ma", "transactions", txnId, "pmi", { category, priority }],
     queryFn: async () => {
@@ -20,20 +25,18 @@ export function usePMITasks(txnId: string, category?: string, priority?: string)
       });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function usePMISummary(txnId: string) {
+export function usePMISummary(txnId: string, active = true) {
   return useQuery<PMISummary>({
     queryKey: ["ma", "transactions", txnId, "pmi", "summary"],
     queryFn: async () => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/pmi/summary`,
-      );
+      const { data } = await maApi.get(`/transactions/${txnId}/pmi/summary`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -41,10 +44,7 @@ export function useCreatePMITask(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: PMITaskCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/pmi`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/pmi`, body);
       return data as PMITask;
     },
     onSuccess: () => {

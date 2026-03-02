@@ -8,7 +8,11 @@ import type {
   ClosingChecklistSummary,
 } from "@/modules/ma/types/closing";
 
-export function useClosingChecklist(txnId: string, category?: string) {
+export function useClosingChecklist(
+  txnId: string,
+  category?: string,
+  active = true,
+) {
   return useQuery<ClosingChecklistItem[]>({
     queryKey: ["ma", "transactions", txnId, "closing", { category }],
     queryFn: async () => {
@@ -18,11 +22,11 @@ export function useClosingChecklist(txnId: string, category?: string) {
       });
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
-export function useClosingSummary(txnId: string) {
+export function useClosingSummary(txnId: string, active = true) {
   return useQuery<ClosingChecklistSummary>({
     queryKey: ["ma", "transactions", txnId, "closing", "summary"],
     queryFn: async () => {
@@ -31,7 +35,7 @@ export function useClosingSummary(txnId: string) {
       );
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
   });
 }
 
@@ -39,10 +43,7 @@ export function useCreateClosingItem(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: ClosingChecklistCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/closing`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/closing`, body);
       return data as ClosingChecklistItem;
     },
     onSuccess: () => {

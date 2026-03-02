@@ -15,8 +15,8 @@ permissions:
   pull-requests: write
 
 env:
-  NODE_VERSION: "22"
-  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.11"
   WORKING_DIR: amic-platform
 
 jobs:
@@ -114,6 +114,10 @@ jobs:
         run: |
           pip install -e ".[dev]" 2>/dev/null || pip install -e .
           pip install ruff pytest pytest-asyncio pytest-cov httpx aiosqlite python-jose[cryptography] bcrypt
+      - name: Lint (ruff check)
+        run: ruff check . --output-format=github
+      - name: Format check (ruff format)
+        run: ruff format --check .
       - name: Auth guard tests
         run: pytest tests/test_auth_guard.py -v --tb=short
         env:
@@ -150,7 +154,7 @@ jobs:
       - name: Lint (ruff check)
         run: ruff check . --output-format=github
       - name: Unit tests
-        run: pytest tests/ -v --tb=short -m "not db" || true
+        run: pytest tests/ -v --tb=short -m "not db"
         env:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
 
@@ -167,15 +171,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
           pip install -r requirements.txt 2>/dev/null || true
           pip install ruff pytest pytest-asyncio
       - name: Lint (ruff check)
-        run: ruff check src/ --output-format=github || true
+        run: ruff check src/ --output-format=github
       - name: Unit tests
-        run: pytest tests/ -v --tb=short -m "not slow and not requires_browser" || true
+        run: pytest tests/ -v --tb=short -m "not slow and not requires_browser"
 
   # ─── Stage 2: Lint + Typecheck (fast feedback) ─────────────────────
   quality:

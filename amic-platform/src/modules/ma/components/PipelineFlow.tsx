@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from "react";
-import { CheckCircle, Upload } from "lucide-react";
+import { Check, CheckCircle, Upload } from "lucide-react";
 import {
   PHASE_CONFIG,
   PHASE_MILESTONES,
@@ -18,8 +18,8 @@ interface PipelineFlowProps {
 
 /** 단계 수 기반 동적 사이징 — 단계 증감 시 자동 조절 */
 function useDynamicSizing() {
+  const count = PHASE_CONFIG.length;
   return useMemo(() => {
-    const count = PHASE_CONFIG.length;
     if (count <= 6) {
       return { height: "h-12", font: "text-sm", gap: "gap-2", arrow: 12 };
     }
@@ -27,7 +27,7 @@ function useDynamicSizing() {
       return { height: "h-11", font: "text-[13px]", gap: "gap-2", arrow: 10 };
     }
     return { height: "h-10", font: "text-xs", gap: "gap-1", arrow: 8 };
-  }, []);
+  }, [count]);
 }
 
 export default function PipelineFlow({
@@ -43,15 +43,19 @@ export default function PipelineFlow({
   const sizing = useDynamicSizing();
   const arrowPx = sizing.arrow;
 
+  /** 단계별 마일스톤 매핑 캐시 */
+  const phaseMilestoneMap = useMemo(
+    () => new Map(PHASE_MILESTONES.map((m) => [m.afterPhase, m])),
+    [],
+  );
+
   return (
-    <div className="w-full">
+    <div className="w-full" role="navigation" aria-label="딜 파이프라인 단계">
       <div className="flex items-center w-full">
         {PHASE_CONFIG.map((phase, i) => {
           const done = i < currentIdx;
           const active = i === currentIdx;
-          const milestone = PHASE_MILESTONES.find(
-            (m) => m.afterPhase === phase.phase,
-          );
+          const milestone = phaseMilestoneMap.get(phase.phase);
 
           return (
             <Fragment key={phase.phase}>
@@ -59,6 +63,17 @@ export default function PipelineFlow({
                 <button
                   type="button"
                   onClick={() => onPhaseClick(phase.phase)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowRight" && i < PHASE_CONFIG.length - 1) {
+                      e.preventDefault();
+                      onPhaseClick(PHASE_CONFIG[i + 1].phase);
+                    } else if (e.key === "ArrowLeft" && i > 0) {
+                      e.preventDefault();
+                      onPhaseClick(PHASE_CONFIG[i - 1].phase);
+                    }
+                  }}
+                  aria-label={`${phase.order}. ${phase.label}${active ? " (현재 단계)" : done ? " (완료)" : ""}`}
+                  aria-current={active ? "step" : undefined}
                   className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 >
                   <div
@@ -145,22 +160,22 @@ function MilestoneMarker({
   onClick?: () => void;
 }) {
   const Wrapper = onClick ? "button" : "div";
+  const ariaLabel = milestone.uploadable
+    ? hasDocument
+      ? `${milestone.documentLabel} 업로드 완료 — 클릭하여 관리`
+      : `${milestone.documentLabel} 업로드`
+    : milestone.label;
 
   return (
     <Wrapper
       {...(onClick ? { type: "button" as const, onClick } : {})}
+      aria-label={ariaLabel}
       className={`flex flex-col items-center mx-0.5 shrink-0 ${
         onClick
           ? "cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
           : ""
       }`}
-      title={
-        milestone.uploadable
-          ? hasDocument
-            ? `${milestone.documentLabel} 업로드 완료 — 클릭하여 관리`
-            : `${milestone.documentLabel} 업로드`
-          : milestone.label
-      }
+      title={ariaLabel}
     >
       <span className="text-[8px] font-medium text-text-secondary whitespace-nowrap mb-0.5">
         {milestone.label}
@@ -188,12 +203,14 @@ function MilestoneMarker({
           </div>
         ) : (
           <div
-            className={`w-2 h-2 rounded-full border-2 ${
+            className={`flex items-center justify-center rounded-full border-2 ${
               done
-                ? "bg-accent border-accent"
-                : "bg-white border-text-secondary/40"
+                ? "w-3.5 h-3.5 bg-accent border-accent text-white"
+                : "w-2 h-2 bg-white border-text-secondary/40"
             }`}
-          />
+          >
+            {done && <Check size={8} strokeWidth={3} />}
+          </div>
         )}
         <div className="w-px h-1.5 border-l border-dashed border-text-secondary/40" />
       </div>

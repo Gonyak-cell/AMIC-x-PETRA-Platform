@@ -2,8 +2,8 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -15,9 +15,9 @@ class PermitAnalysis(Base, TimestampMixin):
 
     __tablename__ = "permit_analyses"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("transactions.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,

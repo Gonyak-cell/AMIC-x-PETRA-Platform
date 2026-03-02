@@ -14,8 +14,8 @@ class AttachmentOut(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
     entity_type: str
-    entity_id: uuid.UUID | None = None
-    file_path: str
+    entity_id: str | None = None
+    # file_path 제거 — 서버 절대 경로 API 노출 방지 (SEC-01)
     file_name: str
     file_size_bytes: int
     mime_type: str

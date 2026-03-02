@@ -3,8 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -16,9 +15,9 @@ class RFI(Base, TimestampMixin):
 
     __tablename__ = "rfis"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     round_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
