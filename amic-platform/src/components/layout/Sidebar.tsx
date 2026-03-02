@@ -656,6 +656,14 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
                     onClick={onNavItemClick}
                   />
                 )}
+                {hasPermission("user:manage") && (
+                  <SidebarNavItem
+                    to="/admin/settings"
+                    label="Settings"
+                    icon={Settings}
+                    onClick={onNavItemClick}
+                  />
+                )}
               </SidebarSection>
             </>
           )}
