@@ -30,7 +30,7 @@ const THEME_OPTIONS: {
     label: "Modern Green",
     description: "연녹색 헤더, 점선 구분, 깔끔한 배경",
     preview: {
-      headerBg: "#4A8A4A",
+      headerBg: "#26C260",
       headerText: "#FFFFFF",
       borderStyle: "1px dashed #CCCCCC",
     },
