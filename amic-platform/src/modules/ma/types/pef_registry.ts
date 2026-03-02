@@ -6,14 +6,17 @@ export interface PefFund {
   gp1: string | null;
   gp2: string | null;
   gp3: string | null;
-  total_committed_capital: number | null;
+  /** Decimal → string 직렬화 (BE @field_serializer) */
+  total_committed_capital: string | null;
 }
 
 export interface FIRecommendation {
   gp_name: string;
-  min_fund_size: number;
+  /** Decimal → string 직렬화 (BE @field_serializer) */
+  min_fund_size: string;
   matching_funds: PefFund[];
-  total_committed_sum: number;
+  /** Decimal → string 직렬화 (BE @field_serializer) */
+  total_committed_sum: string;
   fund_count: number;
   match_reason: string;
 }

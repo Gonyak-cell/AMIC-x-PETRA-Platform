@@ -22,8 +22,12 @@ class PefFundOut(BaseModel):
 
     @field_serializer("total_committed_capital")
     @classmethod
-    def _serialize_capital(cls, v: Decimal | None) -> float | None:
-        return float(v) if v is not None else None
+    def _serialize_capital(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
+
+
+class PefCountOut(BaseModel):
+    total: int
 
 
 class FIRecommendation(BaseModel):
@@ -36,5 +40,5 @@ class FIRecommendation(BaseModel):
 
     @field_serializer("min_fund_size", "total_committed_sum")
     @classmethod
-    def _serialize_decimal(cls, v: Decimal) -> float:
-        return float(v)
+    def _serialize_decimal(cls, v: Decimal) -> str:
+        return str(v)

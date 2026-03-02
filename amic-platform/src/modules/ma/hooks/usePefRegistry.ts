@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type { FIRecommendation } from "@/modules/ma/types/pef_registry";
@@ -41,6 +42,14 @@ export function useFIRecommendations(
     },
     enabled: !!txnId,
     staleTime: 60_000,
+    retry: (failureCount, error) => {
+      // 응답이 있으면 5xx만 재시도, 4xx(422 배수 오류, 401 인증 실패 등)는 재시도하지 않음
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.status >= 500 && failureCount < 2;
+      }
+      // 네트워크 에러(응답 없음): 2회까지 재시도
+      return failureCount < 2;
+    },
   });
 }
 

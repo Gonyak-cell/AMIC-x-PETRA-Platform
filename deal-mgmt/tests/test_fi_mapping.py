@@ -10,12 +10,36 @@
 from __future__ import annotations
 
 import uuid
+from contextlib import contextmanager
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import JWTClaims, get_jwt_claims
+from app.main import app
 from app.models.pef_fund_registry import PefFundRegistry
+
+_CLIENT_CLAIMS = JWTClaims(user_id="client-user", email="client@investor.com", role="CLIENT")
+
+
+@contextmanager
+def _as_client_role():
+    """JWT claims를 CLIENT 역할로 임시 전환한다."""
+    original = app.dependency_overrides.get(get_jwt_claims)
+
+    async def _override() -> JWTClaims:
+        return _CLIENT_CLAIMS
+
+    app.dependency_overrides[get_jwt_claims] = _override
+    try:
+        yield
+    finally:
+        if original is not None:
+            app.dependency_overrides[get_jwt_claims] = original
+        else:
+            app.dependency_overrides.pop(get_jwt_claims, None)
+
 
 # ── 헬퍼 ─────────────────────────────────────────────────────
 
@@ -209,7 +233,7 @@ async def test_min_fund_size_calculation(
 
     a_cap = next((r for r in recs if r["gp_name"] == "A캐피탈"), None)
     assert a_cap is not None
-    assert a_cap["min_fund_size"] == 500.0
+    assert float(a_cap["min_fund_size"]) == 500.0
     assert a_cap["fund_count"] == 3
 
 
@@ -333,7 +357,7 @@ async def test_sort_by_min_fund_size_desc(
     assert resp.status_code == 200
     recs = resp.json()
 
-    sizes = [r["min_fund_size"] for r in recs]
+    sizes = [float(r["min_fund_size"]) for r in recs]
     assert sizes == sorted(sizes, reverse=True)
     assert recs[0]["gp_name"] == "A_GP"
 
@@ -363,10 +387,10 @@ async def test_match_reason_format(
 
     assert len(recs) == 1
     reason = recs[0]["match_reason"]
-    assert "최소 펀드" in reason
-    assert "하한" in reason
-    assert "상한" in reason
-    assert "범위 내" in reason
+    assert "최소 펀드 약정총액" in reason
+    assert "2021년 이후 결성" in reason
+    assert "펀드" in reason
+    assert "건" in reason
 
 
 @pytest.mark.asyncio
@@ -436,15 +460,15 @@ async def test_gp_deduplication_across_slots(
 
 
 @pytest.mark.asyncio
-async def test_empty_when_deal_value_is_none(
+async def test_422_when_deal_value_is_none(
     client: AsyncClient,
 ) -> None:
-    """estimated_deal_value가 None이면 빈 배열."""
+    """estimated_deal_value가 None이면 422."""
     txn_id = await _create_txn(client, None)
 
     resp = await client.get(_fi_url(txn_id))
-    assert resp.status_code == 200
-    assert resp.json() == []
+    assert resp.status_code == 422
+    assert "거래금액" in resp.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -493,6 +517,36 @@ async def test_422_invalid_upper_multiplier(
 
     resp = await client.get(_fi_url(txn_id, upper_multiplier="0.5"))
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_multiplier_boundary_equal_values(
+    client: AsyncClient,
+) -> None:
+    """lower_multiplier == upper_multiplier == 1.0 허용 (Query 제약상 역전 불가)."""
+    txn_id = await _create_txn(client, 1000)
+
+    # lower=upper=1.0 동일값은 허용
+    resp = await client.get(
+        _fi_url(txn_id, lower_multiplier="1.0", upper_multiplier="1.0"),
+    )
+    assert resp.status_code == 200
+
+    # lower < upper 정상
+    resp = await client.get(
+        _fi_url(txn_id, lower_multiplier="0.8", upper_multiplier="2.0"),
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_404_when_txn_not_found(
+    client: AsyncClient,
+) -> None:
+    """존재하지 않는 거래 ID로 FI 추천 요청 시 404."""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    resp = await client.get(_fi_url(fake_id))
+    assert resp.status_code == 404
 
 
 # ── TC-04: 타깃 기업명 기반 프로젝트 펀드 제외 ──────────────
@@ -674,15 +728,15 @@ async def test_pef_fund_count_with_search(
     assert resp.json()["total"] == 1
 
 
-# ── SCHEMA-01 직렬화 검증: Decimal → number (float) ──────────
+# ── SCHEMA-01 직렬화 검증: Decimal → str ─────────────────────
 
 
 @pytest.mark.asyncio
-async def test_decimal_serialized_as_number(
+async def test_decimal_serialized_as_str(
     client: AsyncClient,
     async_session: AsyncSession,
 ) -> None:
-    """Decimal 필드가 JSON에서 number(float)로 직렬화된다."""
+    """Decimal 필드가 JSON에서 str로 직렬화된다."""
     txn_id = await _create_txn(client, 1000)
     await _seed_pefs(
         async_session,
@@ -702,9 +756,157 @@ async def test_decimal_serialized_as_number(
 
     assert len(recs) == 1
     rec = recs[0]
-    # JSON number (float/int), not string
-    assert isinstance(rec["min_fund_size"], (int, float))
-    assert isinstance(rec["total_committed_sum"], (int, float))
+    # Decimal → str 직렬화 검증
+    assert isinstance(rec["min_fund_size"], str)
+    assert isinstance(rec["total_committed_sum"], str)
     # matching_funds 내부도 검증
     fund = rec["matching_funds"][0]
-    assert isinstance(fund["total_committed_capital"], (int, float))
+    assert isinstance(fund["total_committed_capital"], str)
+
+
+# ── TC-09: CLIENT 역할 403 테스트 ─────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_client_role_blocked_from_list_pef_funds(
+    client: AsyncClient,
+) -> None:
+    """CLIENT 역할은 PEF 목록 조회에서 403을 받는다."""
+    with _as_client_role():
+        resp = await client.get("/api/v1/pef-registry")
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_client_role_blocked_from_pef_fund_count(
+    client: AsyncClient,
+) -> None:
+    """CLIENT 역할은 PEF 건수 조회에서 403을 받는다."""
+    with _as_client_role():
+        resp = await client.get("/api/v1/pef-registry/count")
+    assert resp.status_code == 403
+
+
+# ── R-04: 배수 경계값 테스트 ────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_equal_multipliers_boundary(
+    client: AsyncClient,
+    async_session: AsyncSession,
+) -> None:
+    """lower_multiplier = upper_multiplier = 1.0 — 정확히 target 금액 GP만 매칭."""
+    txn_id = await _create_txn(client, 1000)
+    await _seed_pefs(
+        async_session,
+        [
+            {
+                "pef_name": "정확펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "정확GP",
+                "total_committed_capital": 1000,
+            },
+            {
+                "pef_name": "벗어난펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "벗어난GP",
+                "total_committed_capital": 1500,
+            },
+        ],
+    )
+
+    resp = await client.get(
+        _fi_url(txn_id, lower_multiplier="1.0", upper_multiplier="1.0"),
+    )
+    assert resp.status_code == 200
+    recs = resp.json()
+    gp_names = [r["gp_name"] for r in recs]
+    assert "정확GP" in gp_names
+    assert "벗어난GP" not in gp_names
+
+
+# ── R5-07: 정확한 경계값(equality) 포함/제외 테스트 ────────────
+
+
+@pytest.mark.asyncio
+async def test_exact_boundary_gp_included(
+    client: AsyncClient,
+    async_session: AsyncSession,
+) -> None:
+    """min_fund_size가 정확히 경계값(target*0.5, target*3.0)이면 포함된다."""
+    txn_id = await _create_txn(client, 1000)
+    await _seed_pefs(
+        async_session,
+        [
+            # min_fund_size=500 → target*0.5=500 → 정확히 하한 경계 → 포함
+            {
+                "pef_name": "하한경계펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "하한경계GP",
+                "total_committed_capital": 500,
+            },
+            # min_fund_size=3000 → target*3.0=3000 → 정확히 상한 경계 → 포함
+            {
+                "pef_name": "상한경계펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "상한경계GP",
+                "total_committed_capital": 3000,
+            },
+        ],
+    )
+
+    resp = await client.get(_fi_url(txn_id))
+    assert resp.status_code == 200
+    gp_names = [r["gp_name"] for r in resp.json()]
+    assert "하한경계GP" in gp_names
+    assert "상한경계GP" in gp_names
+
+
+# ── R5-16: capital=0/None GP 제외 테스트 ──────────────────────
+
+
+@pytest.mark.asyncio
+async def test_capital_zero_and_null_excluded(
+    client: AsyncClient,
+    async_session: AsyncSession,
+) -> None:
+    """total_committed_capital이 0이거나 None인 펀드는 매칭에서 제외된다."""
+    txn_id = await _create_txn(client, 1000)
+    await _seed_pefs(
+        async_session,
+        [
+            # capital=0 → SQL 필터(> 0)에서 제외
+            {"pef_name": "제로펀드", "registration_date": "2022-01-01", "gp1": "제로GP", "total_committed_capital": 0},
+            # capital=None → SQL 필터(IS NOT NULL)에서 제외
+            {"pef_name": "널펀드", "registration_date": "2022-01-01", "gp1": "널GP", "total_committed_capital": None},
+            # 정상 펀드
+            {
+                "pef_name": "정상펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "정상GP",
+                "total_committed_capital": 1500,
+            },
+        ],
+    )
+
+    resp = await client.get(_fi_url(txn_id))
+    assert resp.status_code == 200
+    gp_names = [r["gp_name"] for r in resp.json()]
+    assert "제로GP" not in gp_names
+    assert "널GP" not in gp_names
+    assert "정상GP" in gp_names
+
+
+# ── R5-17: CLIENT 역할 FI 추천 403 테스트 ────────────────────
+
+
+@pytest.mark.asyncio
+async def test_client_role_blocked_from_fi_recommendations(
+    client: AsyncClient,
+) -> None:
+    """CLIENT 역할은 FI 추천 엔드포인트에서 403을 받는다."""
+    txn_id = await _create_txn(client, 1000)
+
+    with _as_client_role():
+        resp = await client.get(_fi_url(txn_id))
+    assert resp.status_code == 403
