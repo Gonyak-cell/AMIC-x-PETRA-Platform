@@ -14,6 +14,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import type { VdrDocument, VdrFolder } from "@/modules/ma/types/vdr";
 import {
   MIME_TYPE_LABELS,
@@ -29,8 +30,15 @@ import {
   useCreateExtraction,
   useRetryExtraction,
 } from "@/modules/ma/hooks/useDocumentExtraction";
-import { IN_PROGRESS_STATUSES } from "@/modules/ma/types/document_extraction";
-import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
+import {
+  IN_PROGRESS_STATUSES,
+  CATEGORY_LABELS,
+  EXTRACTABLE_CATEGORIES,
+} from "@/modules/ma/types/document_extraction";
+import type {
+  DocumentExtraction,
+  DocExtractionCategory,
+} from "@/modules/ma/types/document_extraction";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
 
 interface Props {
@@ -77,6 +85,8 @@ export default function VdrDocumentList({
   const retryExtraction = useRetryExtraction(txnId);
   const suggestCategory = useSuggestVdrCategory(txnId);
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
+  // AI 분석 시작 전 카테고리 선택 대상 문서
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null);
 
   // vdr_document_id → extraction 매핑 (가장 최근 것 우선)
   const extractionByDocId = useMemo(() => {
@@ -266,17 +276,13 @@ export default function VdrDocumentList({
                       {(() => {
                         const ext = extractionByDocId.get(doc.id);
                         if (!ext) {
-                          // 추출 없음 → 새로 시작
+                          // 추출 없음 → 카테고리 선택 후 시작
                           return (
                             <button
                               type="button"
                               className="rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
                               title="AI 분석"
-                              onClick={() =>
-                                createExtraction.mutate({
-                                  vdrDocumentId: doc.id,
-                                })
-                              }
+                              onClick={() => setPendingDocId(doc.id)}
                             >
                               <Sparkles className="h-4 w-4" />
                             </button>
@@ -345,6 +351,46 @@ export default function VdrDocumentList({
           </table>
         )}
       </div>
+
+      {/* AI 분석 카테고리 선택 모달 */}
+      <Modal
+        open={pendingDocId !== null}
+        onClose={() => setPendingDocId(null)}
+        title="문서 종류 선택"
+        size="sm"
+      >
+        <p className="mb-4 text-sm text-slate-500">
+          이 문서의 종류를 선택하세요. AI가 해당 형식에 맞게 데이터를
+          추출합니다.
+        </p>
+        <div className="flex flex-col gap-1.5">
+          {(
+            Object.entries(CATEGORY_LABELS) as [DocExtractionCategory, string][]
+          ).map(([category, label]) => (
+            <button
+              key={category}
+              type="button"
+              className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+              onClick={() => {
+                if (pendingDocId) {
+                  createExtraction.mutate({
+                    vdrDocumentId: pendingDocId,
+                    docCategoryHint: category,
+                  });
+                  setPendingDocId(null);
+                }
+              }}
+            >
+              <span className="font-medium text-slate-700">{label}</span>
+              {EXTRACTABLE_CATEGORIES.has(category) ? (
+                <span className="text-xs text-emerald-600">데이터 추출</span>
+              ) : (
+                <span className="text-xs text-slate-400">분류만</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
