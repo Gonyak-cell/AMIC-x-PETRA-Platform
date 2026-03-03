@@ -5,7 +5,7 @@ import pytest
 from src.industry.base import IndustryModule
 from src.industry.models import IndustryContext, IndustryKPI
 
-from tests.test_industry.conftest import DummyIndustryModule
+from .conftest import DummyIndustryModule
 
 
 class TestIndustryModuleABC:

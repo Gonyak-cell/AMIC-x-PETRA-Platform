@@ -11,7 +11,7 @@ from src.industry.registry import (
     register_industry,
 )
 
-from tests.test_industry.conftest import DummyIndustryModule
+from .conftest import DummyIndustryModule
 
 
 class TestRegisterIndustry:
