@@ -2,6 +2,7 @@
 
 from src.api.db.models.api_key import APIKey
 from src.api.db.models.company import Company
+from src.api.db.models.diagram import Diagram
 from src.api.db.models.document import Document, DocumentStatus
 from src.api.db.models.im_checklist import ChecklistStatus, IMChecklist
 from src.api.db.models.im_checklist_item import (
@@ -20,6 +21,7 @@ __all__ = [
     "ChecklistItemStatus",
     "ChecklistStatus",
     "Company",
+    "Diagram",
     "Document",
     "DocumentStatus",
     "IMChecklist",

@@ -37,7 +37,12 @@ class SICompany(Base, TimestampMixin):
         JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
     )
-    revenue: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True, index=True)
+    revenue: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2),
+        nullable=True,
+        index=True,
+        comment="매출액(원, KRW), 예: 10_000_000_000 = 100억원",
+    )
     revenue_year: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,

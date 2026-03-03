@@ -59,6 +59,16 @@ class DocumentNotReadyError(Exception):
         super().__init__(self.message)
 
 
+class CompanyNotFoundError(Exception):
+    """SI 기업을 찾을 수 없는 오류."""
+
+    def __init__(self, company_id: object):
+        self.company_id = str(company_id)
+        self.message = f"기업을 찾을 수 없습니다: {self.company_id}"
+        self.code = ErrorCode.SI_COMPANY_NOT_FOUND
+        super().__init__(self.message)
+
+
 # ── RFC 7807 Problem Details ──────────────────────────────
 
 
@@ -144,9 +154,21 @@ async def document_not_ready_handler(request: Request, exc: DocumentNotReadyErro
     )
 
 
+async def company_not_found_handler(request: Request, exc: CompanyNotFoundError) -> JSONResponse:
+    return _problem_response(
+        404,
+        "si:company_not_found",
+        "COMPANY_NOT_FOUND",
+        exc.message,
+        error_code=exc.code,
+        company_id=exc.company_id,
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
     app.add_exception_handler(WorkflowError, workflow_error_handler)
     app.add_exception_handler(ConflictError, conflict_error_handler)
     app.add_exception_handler(DocumentNotFoundError, document_not_found_handler)
     app.add_exception_handler(DocumentNotReadyError, document_not_ready_handler)
+    app.add_exception_handler(CompanyNotFoundError, company_not_found_handler)

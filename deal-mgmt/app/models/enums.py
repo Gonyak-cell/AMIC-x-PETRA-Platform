@@ -460,6 +460,7 @@ class LDDSectionType(enum.StrEnum):
 # ── Audit ─────────────────────────────────────────────
 class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
+    READ = "READ"
     UPDATE = "UPDATE"
     DELETE = "DELETE"
     PHASE_TRANSITION = "PHASE_TRANSITION"

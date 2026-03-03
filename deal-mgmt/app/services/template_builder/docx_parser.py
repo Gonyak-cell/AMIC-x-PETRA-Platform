@@ -6,6 +6,7 @@ python-docx를 사용하며, 실패 시 빈 리스트를 반환한다.
 
 from __future__ import annotations
 
+import html
 import logging
 import re
 from pathlib import Path
@@ -132,17 +133,18 @@ def _paragraph_to_html(para: Any) -> str:
         return ""
 
     style_name = para.style.name if para.style else ""
+    escaped = html.escape(text)
 
-    # 번호 목록 항목 감지
-    if style_name.startswith("List") or text.startswith(("①", "②", "③", "④", "⑤", "1.", "2.", "3.")):
-        return f"<li>{text}</li>"
+    # 번호 목록 항목 감지: 원문자(①②…) 또는 "N." 패턴 (정규식으로 일반화)
+    if style_name.startswith("List") or text.startswith(("①", "②", "③", "④", "⑤")) or re.match(r"^\d+\.\s", text):
+        return f"<li>{escaped}</li>"
 
     # Heading 2 → 소제목
     if style_name in ("Heading 2", "Heading2", "제목 2"):
-        return f"<h3>{text}</h3>"
+        return f"<h3>{escaped}</h3>"
 
     # 일반 본문
-    return f"<p>{text}</p>"
+    return f"<p>{escaped}</p>"
 
 
 def _build_html_content(parts: list[str]) -> str:

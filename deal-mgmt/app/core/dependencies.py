@@ -96,3 +96,10 @@ async def close_all_clients() -> None:
     _kiis_instance = None
     _fdd_instance = None
     _im_instance = None
+    # KIIS DART API 전용 httpx 싱글턴 정리
+    try:
+        from app.services.si_mapping_service import close_kiis_dart_client
+
+        await close_kiis_dart_client()
+    except Exception:
+        logger.warning("KIIS DART client close failed", exc_info=True)

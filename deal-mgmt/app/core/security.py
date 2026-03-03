@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
@@ -156,3 +158,24 @@ async def check_client_deal_access(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="이 거래에 접근할 권한이 없습니다",
         )
+
+
+# ── 서비스간 JWT 발급 ──────────────────────────────────
+
+_service_token_lock = asyncio.Lock()
+
+
+async def make_service_token(audience: str = "dart-api", ttl_seconds: int = 300) -> str:
+    """서비스간 통신용 JWT를 발급한다.
+
+    asyncio.Lock으로 동시 호출 시 시크릿 로드 경합을 방지한다.
+    """
+    async with _service_token_lock:
+        now = datetime.now(UTC)
+        payload = {
+            "sub": "deal-mgmt-service",
+            "aud": audience,
+            "iat": now,
+            "exp": now + timedelta(seconds=ttl_seconds),
+        }
+        return jwt.encode(payload, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)

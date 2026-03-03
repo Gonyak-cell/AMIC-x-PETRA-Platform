@@ -14,6 +14,11 @@ from src.design_renderer.im_document import IMDocumentData
 _TOLERANCE_ABSOLUTE = 1.0  # 백만원 단위 데이터 기준 절대 허용 오차
 _TOLERANCE_RELATIVE = 0.0001  # 상대 허용 오차 (0.01%)
 
+# 영업이익 검증 완화 허용 오차 (5%)
+# 실제 재무제표에서 operating_income = GP - SGA - R&D - 기타 영업비용이므로
+# GP - SGA만으로는 정확히 일치하지 않을 수 있다.
+_TOLERANCE_RELATIVE_OP_INCOME = 0.05
+
 
 def _within_tolerance(actual: float, expected: float) -> bool:
     """절대/상대 허용 오차 내 일치 여부 판별."""
@@ -166,13 +171,20 @@ class AntiHallucinationValidator:
                         )
                     )
 
-            # operating_income = gross_profit - SGA
+            # operating_income ≈ gross_profit - SGA (simplified)
+            # 실제 재무제표에서는 R&D, 기타 영업비용 등이 추가로 차감되므로
+            # 완화된 허용 오차(_TOLERANCE_RELATIVE_OP_INCOME = 5%)를 적용한다.
             sga = fs.sga_expenses.get(year)
             oi = fs.operating_income.get(year)
 
             if gp is not None and sga is not None and oi is not None:
                 expected_oi = gp - sga
-                if not _within_tolerance(oi, expected_oi):
+                diff = abs(oi - expected_oi)
+                within = diff <= _TOLERANCE_ABSOLUTE or (
+                    expected_oi != 0.0
+                    and diff / abs(expected_oi) <= _TOLERANCE_RELATIVE_OP_INCOME
+                )
+                if not within:
                     result.issues.append(
                         ValidationIssue(
                             check_type="consistency",
@@ -180,7 +192,8 @@ class AntiHallucinationValidator:
                             message=(
                                 f"{year} operating_income({oi:,.0f}) ≠ "
                                 f"gross_profit({gp:,.0f}) - SGA({sga:,.0f}) = "
-                                f"{expected_oi:,.0f}"
+                                f"{expected_oi:,.0f} "
+                                f"(허용 오차 {_TOLERANCE_RELATIVE_OP_INCOME:.0%} 초과)"
                             ),
                             section_id="financial_analysis",
                         )

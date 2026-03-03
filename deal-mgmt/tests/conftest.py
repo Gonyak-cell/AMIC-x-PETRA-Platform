@@ -128,6 +128,18 @@ app.dependency_overrides[get_im_client] = MockIMClient
 @pytest.fixture(autouse=True)
 async def setup_database():
     """테스트마다 DB 테이블 생성/삭제 — 격리 보장."""
+    # GP 프로필 캐시 리셋 (fi_mapping_service 모듈 레벨 캐시)
+    from app.services import fi_mapping_service
+
+    fi_mapping_service._gp_cache = None
+    fi_mapping_service._gp_cache_ts = 0.0
+
+    # Rate limit 상태 리셋 (테스트 간 429 방지)
+    from app.core.rate_limiter import fi_rate_limiter, si_rate_limiter
+
+    fi_rate_limiter.clear()
+    si_rate_limiter.clear()
+
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -143,6 +155,15 @@ async def client():
         base_url="http://test",
     ) as ac:
         yield ac
+
+
+def make_claims(
+    role: str = "ADMIN",
+    email: str = "test@example.com",
+    user_id: str = "test-user-id",
+) -> JWTClaims:
+    """역할별 JWT Claims 팩토리 — 테스트에서 RBAC 검증용."""
+    return JWTClaims(user_id=user_id, email=email, role=role)
 
 
 @pytest.fixture

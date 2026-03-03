@@ -12,13 +12,23 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, func, text
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.api.db.base import Base
 
 if TYPE_CHECKING:
+    from src.api.db.models.diagram import Diagram
     from src.api.db.models.im_checklist import IMChecklist
     from src.api.db.models.im_ralph_session import IMRalphSession
     from src.api.db.models.user import User
@@ -140,6 +150,10 @@ class Document(Base):
         cascade="all, delete-orphan",
     )
     ralph_sessions: Mapped[list[IMRalphSession]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    diagrams: Mapped[list[Diagram]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
     )

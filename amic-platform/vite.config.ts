@@ -12,6 +12,7 @@ export default defineConfig({
           "react-vendor": ["react", "react-dom", "react-router-dom"],
           "query-vendor": ["@tanstack/react-query"],
           "chart-vendor": ["recharts"],
+          "excalidraw-vendor": ["@excalidraw/excalidraw"],
         },
       },
     },

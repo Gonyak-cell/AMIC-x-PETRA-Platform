@@ -47,6 +47,10 @@ class ErrorCode(IntEnum):
     COMPLIANCE_ITEM_NOT_FOUND = 6002  # 컴플라이언스 항목 미존재
     APPROVAL_NOT_FOUND = 6003  # 승인 요청 미존재
 
+    # ── 7000-7999: SI / FI 매핑 에러 ──
+    SI_COMPANY_NOT_FOUND = 7001  # SI 기업 미존재
+    SI_MAPPING_FAILED = 7002  # SI 매핑 실패
+
     # ── 9000-9099: 시스템 에러 ──
     SYS_SERVICE_UNAVAILABLE = 9001  # 외부 서비스 불가
     SYS_DB_ERROR = 9002  # DB 오류
@@ -66,6 +70,7 @@ def get_domain(code: ErrorCode) -> str:
         range(4000, 5000): "workflow",
         range(5000, 6000): "ralph",
         range(6000, 7000): "legal",
+        range(7000, 8000): "si_mapping",
         range(9000, 10000): "system",
     }
     for r, name in domain_map.items():

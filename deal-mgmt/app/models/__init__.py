@@ -100,6 +100,7 @@ from app.models.enums import (
     WorkingGroupRole,
 )
 from app.models.financial_model import FinancialModel, FMChecklist, FMChecklistItem
+from app.models.gp_profile import GpProfile
 from app.models.io_inducement import IOProductionInducement, IOValueAddedInducement
 from app.models.io_sector import IOSector
 from app.models.io_transaction import IOTransaction
@@ -130,6 +131,8 @@ from app.models.template_variable import TemplateVariable
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
 from app.models.transcription_job import TranscriptionJob
+from app.models.vc_company import VcCompany
+from app.models.vc_industry_coefficient import VcIndustryCoefficient
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.models.vdr_text_cache import VdrTextCache
@@ -195,6 +198,7 @@ __all__ = [
     "FinancialModel",
     "FinancialModelStatus",
     "FinancialModelType",
+    "GpProfile",
     "IOProductionInducement",
     "IOSector",
     "IOTransaction",
@@ -267,6 +271,8 @@ __all__ = [
     "TranscriptionJob",
     "TranscriptionJobStatus",
     "ValuationMethod",
+    "VcCompany",
+    "VcIndustryCoefficient",
     "VdrDocument",
     "VdrDocumentStatus",
     "VdrFolder",

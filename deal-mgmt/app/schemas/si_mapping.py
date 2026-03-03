@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import uuid
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
@@ -29,7 +30,9 @@ class SIMappingRequest(BaseModel):
 
     top_n: int = Field(default=5, ge=1, le=20)
     max_companies_per_panel: int = Field(default=50, ge=1, le=200)
-    min_revenue: Decimal | None = Field(default=None)
+    min_revenue: Decimal | None = Field(
+        default=None, description="최소 매출액 필터 (원 단위, 예: 10_000_000_000 = 100억원)"
+    )
     require_investment_history: bool = False
 
 
@@ -92,7 +95,7 @@ class SICandidateOut(BaseModel):
     """플랫 후보 — 테이블 렌더링용."""
 
     company: SICompanyOut
-    relation: str  # DIRECT | BACKWARD | FORWARD
+    relation: Literal["DIRECT", "BACKWARD", "FORWARD"]
     io_code: str | None = None
     io_name: str | None = None
     transaction_value: Decimal | None = None
@@ -206,3 +209,66 @@ class DeepDiveResponse(BaseModel):
     disclosures: list[DeepDiveDisclosure] = []
     sanctions: list[SanctionItem] = []
     dart_available: bool = False
+
+
+# ── ValueChain (VC) 매핑 스키마 ────────────────────────────
+
+
+class VcChainCompany(BaseModel):
+    """Value Chain 후보 기업."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company_name: str
+    industry_name: str
+    io_sector_name: str | None = None
+    corp_type: str | None = None
+    revenue: Decimal | None = None
+    listing_code: str | None = None
+
+    @field_serializer("revenue")
+    @classmethod
+    def _serialize_revenue(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
+
+
+class VcChainPanel(BaseModel):
+    """업종 단위 패널 (전방/후방 각각)."""
+
+    industry_name: str
+    coefficient: Decimal
+    companies: list[VcChainCompany] = []
+
+    @field_serializer("coefficient")
+    @classmethod
+    def _serialize_coefficient(cls, v: Decimal) -> str:
+        return str(v)
+
+
+class VcMappingResponse(BaseModel):
+    """ValueChain 매핑 전체 결과."""
+
+    target_industry: str
+    forward_chains: list[VcChainPanel]
+    backward_chains: list[VcChainPanel]
+    competitors: list[VcChainCompany]
+    total_forward: int
+    total_backward: int
+    total_competitors: int
+
+
+class VcIndustrySuggestion(BaseModel):
+    """업종명(1,574) 자동완성 결과."""
+
+    industry_name: str
+    company_count: int
+
+
+class VcDataStats(BaseModel):
+    """ValueChain 데이터 시딩 상태."""
+
+    vc_companies_count: int
+    vc_coefficients_count: int
+    revenue_count: int
+    is_seeded: bool

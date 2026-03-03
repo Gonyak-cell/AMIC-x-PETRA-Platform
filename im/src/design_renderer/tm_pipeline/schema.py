@@ -17,6 +17,7 @@ from src.design_renderer.im_document import (
     ContactInfo,
     DealStructure,
     FinancialStatements,
+    GrowthStrategy,
     IMDocumentData,
     IMStyle,
     ManagementMember,
@@ -176,6 +177,9 @@ class DocumentRenderingSpec(BaseModel):
     # 회사 개요
     company_overview: dict[str, Any] = Field(default_factory=dict)
 
+    # 성장 전략
+    growth_strategy: dict[str, Any] = Field(default_factory=dict)
+
     # 출처
     source_citations: dict[str, list[dict[str, str]]] = Field(default_factory=dict)
 
@@ -280,6 +284,18 @@ class DocumentRenderingSpec(BaseModel):
             business_description=co.get("business_description", ""),
         )
 
+    def _build_growth_strategy(self) -> GrowthStrategy | None:
+        """성장 전략 딕셔너리 → GrowthStrategy 변환."""
+        if not self.growth_strategy:
+            return None
+        gs = self.growth_strategy
+        return GrowthStrategy(
+            organic_growth=gs.get("organic_growth", []),
+            new_business=gs.get("new_business", []),
+            ma_targets=gs.get("ma_targets", []),
+            roadmap=gs.get("roadmap", {}),
+        )
+
     def to_im_document_data(self) -> IMDocumentData:
         """Pydantic 스펙 → IMDocumentData 데이터클래스 변환.
 
@@ -316,5 +332,9 @@ class DocumentRenderingSpec(BaseModel):
         # 시장 데이터
         if self.competitors:
             data.market_data = MarketData(competitors=self.competitors)
+
+        # 성장 전략
+        if self.growth_strategy:
+            data.growth_strategy = self._build_growth_strategy()
 
         return data

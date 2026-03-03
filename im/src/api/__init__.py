@@ -133,6 +133,7 @@ def _include_routers(app: FastAPI) -> None:
 
     from src.api.routes.audit import router as audit_router
     from src.api.routes.checklist import router as checklist_router
+    from src.api.routes.diagrams import router as diagrams_router
     from src.api.routes.ralph import router as ralph_router
 
     app.include_router(health_router)
@@ -142,5 +143,6 @@ def _include_routers(app: FastAPI) -> None:
     app.include_router(checklist_router)
     app.include_router(companies_router)
     app.include_router(api_keys_router)
+    app.include_router(diagrams_router)
     app.include_router(audit_router)
     app.include_router(ralph_router)

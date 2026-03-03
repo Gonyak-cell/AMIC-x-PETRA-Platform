@@ -57,6 +57,11 @@ from src.design_renderer.components.page_elements import (
     render_slide_title_html,
     render_slide_title_pptx,
 )
+from src.design_renderer.components.diagram_resolver import (
+    find_excalidraw_png,
+    insert_diagram_pptx,
+    render_diagram_pptx_with_fallback,
+)
 from src.design_renderer.components.timeline import (
     create_timeline_figure,
     render_timeline_html,
@@ -98,6 +103,10 @@ __all__ = [
     # sub_header_bar
     "render_sub_header_html",
     "render_sub_header_pptx",
+    # diagram_resolver
+    "find_excalidraw_png",
+    "insert_diagram_pptx",
+    "render_diagram_pptx_with_fallback",
     # timeline
     "create_timeline_figure",
     "render_timeline_html",

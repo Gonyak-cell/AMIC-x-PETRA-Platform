@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { Check, Paintbrush } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { PageHero } from "@/components/ui";
@@ -8,6 +9,11 @@ import {
   useUpdatePlatformSettings,
   type TableStyleTheme,
 } from "@/hooks/usePlatformSettings";
+import {
+  useSidebarAppearance,
+  SIDEBAR_THEME_VARS,
+} from "@/hooks/useSidebarAppearance";
+import type { SidebarTheme, SidebarLayout } from "@/types/settings";
 
 const THEME_OPTIONS: {
   value: TableStyleTheme;
@@ -36,6 +42,113 @@ const THEME_OPTIONS: {
     },
   },
 ];
+
+// ── Sidebar theme presets ──
+
+const SIDEBAR_THEME_PRESETS: Array<{
+  key: SidebarTheme;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "AMIC_FOREST",
+    label: "AMIC Forest",
+    description: "클래식 Forest Green 그라디언트",
+  },
+  {
+    key: "AMIC_DEEP",
+    label: "AMIC Deep",
+    description: "더 깊고 어두운 Forest 변형",
+  },
+  {
+    key: "AMIC_GLASS",
+    label: "AMIC Glass",
+    description: "글래스모피즘 반투명 스타일",
+  },
+];
+
+const SIDEBAR_ACCENT_COLORS = [
+  { hex: "#26C260", label: "AMIC Green" },
+  { hex: "#34D399", label: "Emerald" },
+  { hex: "#10B981", label: "Emerald 500" },
+  { hex: "#059669", label: "Emerald 600" },
+  { hex: "#14B8A6", label: "Teal" },
+  { hex: "#22D3EE", label: "Cyan" },
+];
+
+const SIDEBAR_LAYOUT_OPTIONS: Array<{
+  key: SidebarLayout;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "COMPACT",
+    label: "Compact",
+    description: "아이콘 + 텍스트 수평 배치",
+  },
+  {
+    key: "EXPANDED",
+    label: "Iconic",
+    description: "큰 아이콘 + 텍스트 수직 배치",
+  },
+];
+
+// ── Mini sidebar preview ──
+
+function MiniSidebarPreview({
+  theme,
+  accentColor,
+}: {
+  theme: SidebarTheme;
+  accentColor: string;
+}) {
+  const vars = SIDEBAR_THEME_VARS[theme];
+  const bgStart = vars["--sidebar-bg-start"];
+  const bgMid = vars["--sidebar-bg-mid"];
+  const bgEnd = vars["--sidebar-bg-end"];
+  const divider = vars["--sidebar-divider"];
+  const logoBg = vars["--sidebar-logo-bg"];
+
+  return (
+    <div
+      className="w-full h-full rounded-lg overflow-hidden"
+      style={{
+        background: `linear-gradient(to bottom, ${bgStart}, ${bgMid}, ${bgEnd})`,
+        backdropFilter: theme === "AMIC_GLASS" ? "blur(12px)" : undefined,
+      }}
+    >
+      <div
+        className="h-6 mx-2 mt-2 rounded-sm"
+        style={{ backgroundColor: logoBg }}
+      />
+      <div className="h-px mx-2 my-2" style={{ backgroundColor: divider }} />
+      <div className="space-y-1.5 px-2">
+        <div
+          className="h-4 rounded-sm"
+          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+        />
+        <div
+          className="h-4 rounded-sm"
+          style={{ backgroundColor: accentColor, opacity: 0.2 }}
+        />
+        <div
+          className="h-4 rounded-sm"
+          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+        />
+        <div
+          className="h-4 rounded-sm"
+          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+        />
+      </div>
+      <div className="relative -mt-[54px] ml-[calc(100%-4px)]">
+        <div
+          className="w-[3px] h-4 rounded-l-full"
+          style={{ backgroundColor: accentColor }}
+        />
+      </div>
+    </div>
+  );
+}
 
 const SAMPLE_DATA = [
   { name: "삼성전자", sector: "반도체", revenue: "302.2조" },
@@ -110,6 +223,7 @@ export default function AdminSettingsPage() {
     null,
   );
   const [activeTab, setActiveTab] = useState<TabKey>("theme");
+  const { appearance, updateAppearance } = useSidebarAppearance();
 
   const currentTheme = selectedTheme ?? settings?.table_style ?? "DEFAULT";
   const isDirty =
@@ -272,6 +386,181 @@ export default function AdminSettingsPage() {
                     ? "저장 실패 — 재시도"
                     : "저장"}
               </button>
+            </div>
+
+            {/* ── 사이드바 외관 ── */}
+            <div className="border-t border-slate-200 pt-8">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  사이드바 외관
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  사이드바 테마, 강조 색상, 레이아웃 스타일을 설정합니다. 변경
+                  사항은 즉시 반영됩니다.
+                </p>
+              </div>
+
+              {/* 사이드바 테마 선택 */}
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                  테마
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {SIDEBAR_THEME_PRESETS.map((preset) => {
+                    const selected = appearance.sidebarTheme === preset.key;
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() =>
+                          updateAppearance({ sidebarTheme: preset.key })
+                        }
+                        className={cn(
+                          "relative flex flex-col items-center rounded-xl border-2 p-3 transition-all cursor-pointer",
+                          "hover:shadow-md",
+                          selected
+                            ? "border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm"
+                            : "border-slate-200 hover:border-slate-300",
+                        )}
+                      >
+                        <div className="w-full aspect-[3/5] mb-3">
+                          <MiniSidebarPreview
+                            theme={preset.key}
+                            accentColor={appearance.sidebarAccentColor}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900">
+                          {preset.label}
+                        </span>
+                        <span className="text-xs text-slate-500 mt-0.5">
+                          {preset.description}
+                        </span>
+                        {selected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 강조 색상 */}
+              <div className="mt-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                  <Paintbrush className="h-4 w-4" />
+                  강조 색상
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {SIDEBAR_ACCENT_COLORS.map((color) => {
+                    const selected =
+                      appearance.sidebarAccentColor === color.hex;
+                    return (
+                      <button
+                        key={color.hex}
+                        type="button"
+                        onClick={() =>
+                          updateAppearance({ sidebarAccentColor: color.hex })
+                        }
+                        className={cn(
+                          "relative w-10 h-10 rounded-full transition-all cursor-pointer",
+                          "ring-offset-2 ring-offset-white",
+                          selected
+                            ? "ring-2 ring-emerald-500 scale-110"
+                            : "hover:scale-105",
+                        )}
+                        style={{ backgroundColor: color.hex }}
+                        aria-label={color.label}
+                        title={color.label}
+                      >
+                        {selected && (
+                          <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow-sm" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <label
+                    htmlFor="custom-accent"
+                    className="text-sm text-slate-500"
+                  >
+                    커스텀:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="custom-accent"
+                      value={appearance.sidebarAccentColor}
+                      onChange={(e) =>
+                        updateAppearance({ sidebarAccentColor: e.target.value })
+                      }
+                      className="w-8 h-8 rounded-full border border-slate-200 cursor-pointer"
+                    />
+                    <span className="text-xs font-mono text-slate-400">
+                      {appearance.sidebarAccentColor}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 레이아웃 스타일 */}
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                  레이아웃
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {SIDEBAR_LAYOUT_OPTIONS.map((option) => {
+                    const selected = appearance.sidebarLayout === option.key;
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() =>
+                          updateAppearance({ sidebarLayout: option.key })
+                        }
+                        className={cn(
+                          "relative flex flex-col items-center rounded-xl border-2 p-4 transition-all cursor-pointer",
+                          "hover:shadow-md",
+                          selected
+                            ? "border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm"
+                            : "border-slate-200 hover:border-slate-300",
+                        )}
+                      >
+                        <div className="w-full h-24 bg-slate-50 rounded-lg flex items-center justify-center mb-3">
+                          {option.key === "COMPACT" ? (
+                            <div className="flex gap-1.5">
+                              <div className="w-12 h-20 bg-emerald-900/20 rounded-sm" />
+                              <div className="w-32 h-20 bg-slate-200 rounded-sm" />
+                            </div>
+                          ) : (
+                            <div className="flex gap-1.5">
+                              <div className="w-8 h-20 bg-emerald-900/20 rounded-sm flex flex-col items-center gap-1 pt-1">
+                                <div className="w-4 h-4 bg-emerald-900/30 rounded-sm" />
+                                <div className="w-4 h-4 bg-emerald-500/40 rounded-sm" />
+                                <div className="w-4 h-4 bg-emerald-900/30 rounded-sm" />
+                              </div>
+                              <div className="w-36 h-20 bg-slate-200 rounded-sm" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900">
+                          {option.label}
+                        </span>
+                        <span className="text-xs text-slate-500 mt-0.5">
+                          {option.description}
+                        </span>
+                        {selected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}

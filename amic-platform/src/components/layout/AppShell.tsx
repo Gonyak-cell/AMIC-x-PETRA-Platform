@@ -111,7 +111,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       <div className="flex min-h-screen overflow-x-hidden">
         {/* Desktop Sidebar */}
-        <div className="hidden md:block sticky top-0 h-screen overflow-y-auto sidebar-scroll">
+        <div className="sticky top-0 h-fit hidden md:block">
           <Sidebar />
         </div>
 

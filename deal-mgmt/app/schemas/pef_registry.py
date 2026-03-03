@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_serializer
 
@@ -30,8 +31,30 @@ class PefCountOut(BaseModel):
     total: int
 
 
-class FIRecommendation(BaseModel):
+class GpProfileOut(BaseModel):
+    """GP 프로필 요약 (FI 추천 응답에 포함)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    raw_name: str
+    min_threshold: Decimal | None = None
+    portfolio_sectors: list[str] | None = None
+    portfolio_companies: list[str] | None = None
+    recent_pef_count: int | None = None
+    total_pef_count: int | None = None
+
+    @field_serializer("min_threshold")
+    @classmethod
+    def _serialize_threshold(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
+
+
+class FIRecommendationV2(BaseModel):
+    """GP 프로필 기반 Tier 분류가 포함된 FI 추천."""
+
     gp_name: str
+    gp_profile: GpProfileOut | None = None
+    tier: Literal[1, 2]  # 1 = 최소기준점 + 키워드, 2 = 최소기준점만 or 프로필 없음
     min_fund_size: Decimal
     matching_funds: list[PefFundOut]
     total_committed_sum: Decimal

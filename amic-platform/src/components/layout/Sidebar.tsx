@@ -41,7 +41,6 @@ import {
   Shield,
   Calculator,
   FileStack,
-  Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -287,7 +286,7 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
       )}
 
       {/* Module Navigation — all modules rendered, each with collapsible group */}
-      <div className="flex-1 overflow-y-auto py-2 px-3">
+      <div className="flex-1 py-2 px-3">
         {/* MODULES label */}
         {!isClient && (
           <h3
@@ -748,30 +747,17 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               </Badge>
             </div>
           </button>
-          <div className="flex gap-1">
-            <button
-              onClick={() => {
-                navigate("/settings/appearance");
-                onNavItemClick?.();
-              }}
-              className="flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
-              style={{ color: "var(--sidebar-text-muted)" }}
-              aria-label="Appearance settings"
-            >
-              <Palette className="h-4 w-4" />
-              <span>Appearance</span>
-            </button>
-            <button
-              onClick={async () => {
-                await logout();
-                navigate("/login", { replace: true });
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
-              style={{ color: "var(--sidebar-text-muted)" }}
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={async () => {
+              await logout();
+              navigate("/login", { replace: true });
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
+            style={{ color: "var(--sidebar-text-muted)" }}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </button>
         </div>
       )}
     </aside>

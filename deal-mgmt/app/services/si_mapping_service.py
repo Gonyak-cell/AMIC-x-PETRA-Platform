@@ -6,22 +6,27 @@ import asyncio
 import json
 import logging
 import re
+import time
 import uuid
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 import httpx
-from fastapi import HTTPException
-from jose import jwt as jose_jwt
-from sqlalchemy import func, select, text
+from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
+from app.core.config import settings
+from app.core.exceptions import CompanyNotFoundError
+from app.core.security import make_service_token
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerType
 from app.models.io_transaction import IOTransaction
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.si_company import SICompany
+from app.models.vc_company import VcCompany
+from app.models.vc_industry_coefficient import VcIndustryCoefficient
 from app.schemas.si_mapping import (
     BulkAddBuyersResponse,
     CompanyOverview,
@@ -35,6 +40,11 @@ from app.schemas.si_mapping import (
     SIDataStats,
     SIMappingResponse,
     ValueChainPanel,
+    VcChainCompany,
+    VcChainPanel,
+    VcDataStats,
+    VcIndustrySuggestion,
+    VcMappingResponse,
 )
 from app.services import audit_service
 
@@ -49,8 +59,19 @@ async def _get_kiis_http_client() -> httpx.AsyncClient:
     if _kiis_http_client is None or _kiis_http_client.is_closed:
         async with _kiis_http_lock:
             if _kiis_http_client is None or _kiis_http_client.is_closed:
-                _kiis_http_client = httpx.AsyncClient(timeout=15.0)
+                _kiis_http_client = httpx.AsyncClient(
+                    timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=10.0),
+                )
     return _kiis_http_client
+
+
+async def close_kiis_dart_client() -> None:
+    """lifespan shutdown — KIIS DART API httpx 클라이언트 커넥션 정리."""
+    global _kiis_http_client
+    async with _kiis_http_lock:
+        if _kiis_http_client is not None and not _kiis_http_client.is_closed:
+            await _kiis_http_client.aclose()
+        _kiis_http_client = None
 
 
 logger = logging.getLogger(__name__)
@@ -116,7 +137,9 @@ async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[Ksi
     pattern = f"%{escaped}%"
     q = (
         select(KsicIoMapping.ksic_code, KsicIoMapping.ksic_name)
-        .where(KsicIoMapping.ksic_code.ilike(pattern) | KsicIoMapping.ksic_name.ilike(pattern))
+        .where(
+            KsicIoMapping.ksic_code.ilike(pattern, escape="\\") | KsicIoMapping.ksic_name.ilike(pattern, escape="\\")
+        )
         .distinct()
         .limit(limit)
     )
@@ -143,10 +166,10 @@ async def map_si_candidates(
 
     # ── Step 0: 1회 전체 로딩 + 인메모리 인덱스 ─────────
     all_companies = await _load_filtered_companies(db, min_revenue, require_investment_history)
-    ksic_index = _build_ksic_index(all_companies)
+    ksic_index, sorted_keys = _build_ksic_index(all_companies)
 
     # ── Step 1: Direct Peers (동종업계) — dict 참조 ──────
-    direct_companies = _lookup_by_ksic(ksic_index, ksic_codes)
+    direct_companies = _lookup_by_ksic(ksic_index, sorted_keys, ksic_codes)
 
     # ── Step 2: Bridge (KSIC → IO 코드) ──────────────────
     q_bridge = (
@@ -173,6 +196,7 @@ async def map_si_candidates(
         direction="backward",
         top_n=top_n,
         ksic_index=ksic_index,
+        sorted_keys=sorted_keys,
         max_companies=max_companies_per_panel,
     )
 
@@ -183,6 +207,7 @@ async def map_si_candidates(
         direction="forward",
         top_n=top_n,
         ksic_index=ksic_index,
+        sorted_keys=sorted_keys,
         max_companies=max_companies_per_panel,
     )
 
@@ -227,6 +252,7 @@ async def bulk_add_to_buyers(
     actor_email: str | None = None,
 ) -> BulkAddBuyersResponse:
     """SI 매핑 결과를 BuyerCandidate로 일괄 등록."""
+    logger.info("BuyerCandidate 일괄 등록 시작: txn_id=%s, 요청=%d건", txn_id, len(si_company_ids))
     # SI 기업 조회
     q = select(SICompany).where(SICompany.id.in_(si_company_ids))
     result = await db.execute(q)
@@ -276,39 +302,17 @@ async def bulk_add_to_buyers(
 
     await db.commit()
 
+    logger.info(
+        "BuyerCandidate 일괄 등록 완료: txn_id=%s, 추가=%d건, 중복스킵=%d건",
+        txn_id,
+        len(added_ids),
+        skipped,
+    )
     return BulkAddBuyersResponse(
         added_count=len(added_ids),
         skipped_count=skipped,
         buyer_ids=added_ids,
     )
-
-
-# ── 서비스 간 통신 토큰 ──────────────────────────────────
-_service_token_cache: tuple[str, datetime] | None = None
-
-
-def _make_service_token() -> str:
-    """내부 서비스 간 통신용 단기 JWT 토큰 생성 (30초 TTL, 캐시 재사용)."""
-    global _service_token_cache
-    now = datetime.now(UTC)
-    if _service_token_cache is not None:
-        token, expires_at = _service_token_cache
-        if now < expires_at - timedelta(seconds=5):
-            return token
-
-    from app.core.config import settings
-    from app.core.security import get_jwt_secret
-
-    expires_at = now + timedelta(seconds=30)
-    payload = {
-        "sub": "deal-mgmt-service",
-        "iss": "deal-mgmt",
-        "exp": expires_at,
-        "scope": "internal",
-    }
-    token = jose_jwt.encode(payload, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
-    _service_token_cache = (token, expires_at)
-    return token
 
 
 # ── 딥다이브 ───────────────────────────────────────────────
@@ -320,13 +324,12 @@ async def get_deep_dive(
 
     KIIS API 접근 불가 시에도 SI 기업 기본 정보는 반환 (dart_available=False).
     """
-    from app.core.config import settings
 
     # 1. SI 기업 조회
     result = await db.execute(select(SICompany).where(SICompany.id == company_id))
     si_company = result.scalar_one_or_none()
     if not si_company:
-        raise HTTPException(status_code=404, detail="SI 기업을 찾을 수 없습니다")
+        raise CompanyNotFoundError(company_id)
 
     company_out = SICompanyOut.model_validate(si_company)
 
@@ -351,10 +354,10 @@ async def get_deep_dive(
 
     # 3. KIIS DART API로 corp_code 매핑 시도 (서비스 토큰 사용)
     kiis_base = settings.KIIS_API_URL.rstrip("/")
-    token = _make_service_token()
-    headers = {"Authorization": f"Bearer {token}"}
 
     try:
+        token = await make_service_token(audience="kiis-dart")
+        headers = {"Authorization": f"Bearer {token}"}
         client = await _get_kiis_http_client()
         # 기업명으로 DART 기업 검색 → corp_code 획득
         search_resp = await client.get(
@@ -387,13 +390,14 @@ async def get_deep_dive(
             f"{kiis_base}/dart/companies/{corp_code}",
             headers=headers,
         )
+        current_year = datetime.now(UTC).year
         financial_tasks = [
             client.get(
                 f"{kiis_base}/dart/companies/{corp_code}/financials",
                 headers=headers,
                 params={"bsns_year": str(year), "reprt_code": "11011", "fs_div": "CFS"},
             )
-            for year in range(2025, 2022, -1)
+            for year in range(current_year, current_year - 3, -1)
         ]
         disclosure_task = client.get(
             f"{kiis_base}/dart/disclosures",
@@ -429,8 +433,8 @@ async def get_deep_dive(
             dart_available=True,
         )
 
-    except (httpx.ConnectError, httpx.TimeoutException) as exc:
-        logger.warning("KIIS DART API 연결 실패: %s", exc)
+    except (httpx.HTTPError, RuntimeError, json.JSONDecodeError) as exc:
+        logger.warning("KIIS DART API 접근 실패: %s", exc)
         return base_response
 
 
@@ -449,7 +453,11 @@ def _parse_overview(resp: httpx.Response | BaseException) -> CompanyOverview | N
     """기업개황 응답 파싱."""
     if isinstance(resp, BaseException) or resp.status_code != 200:
         return None
-    data = resp.json()
+    try:
+        data = resp.json()
+    except json.JSONDecodeError:
+        logger.warning("기업개황 JSON 파싱 실패")
+        return None
     return CompanyOverview(
         corp_code=data.get("corp_code", ""),
         corp_name=data.get("corp_name", ""),
@@ -469,7 +477,11 @@ def _parse_financials(
     for resp in responses:
         if isinstance(resp, BaseException) or resp.status_code != 200:
             continue
-        data = resp.json()
+        try:
+            data = resp.json()
+        except json.JSONDecodeError:
+            logger.warning("재무제표 JSON 파싱 실패")
+            continue
         items = data.get("items", [])
         if not items:
             continue
@@ -500,7 +512,7 @@ def _extract_amount(items: list[dict], account_name: str) -> Decimal | None:
             if raw and raw != "-":
                 try:
                     return Decimal(raw)
-                except Exception:
+                except (InvalidOperation, ValueError):
                     logger.debug("금액 파싱 실패: account=%s, raw=%r", account_name, raw)
     return None
 
@@ -511,7 +523,11 @@ def _parse_disclosures(
     """공시 응답 파싱."""
     if isinstance(resp, BaseException) or resp.status_code != 200:
         return []
-    data = resp.json()
+    try:
+        data = resp.json()
+    except json.JSONDecodeError:
+        logger.warning("공시 JSON 파싱 실패")
+        return []
     return [
         DeepDiveDisclosure(
             rcept_dt=item.get("rcept_dt", ""),
@@ -532,7 +548,11 @@ def _parse_sanctions(
     """
     if isinstance(resp, BaseException) or resp.status_code != 200:
         return []
-    data = resp.json()
+    try:
+        data = resp.json()
+    except json.JSONDecodeError:
+        logger.warning("제재 JSON 파싱 실패")
+        return []
     return [
         SanctionItem(
             date=item.get("sanctions_date", item.get("sanction_date", item.get("date", ""))),
@@ -544,7 +564,7 @@ def _parse_sanctions(
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────
-_MAX_COMPANIES_FOR_MAPPING: int = 10_000
+_MAX_COMPANIES_FOR_MAPPING: int = 5_000
 
 
 async def _load_filtered_companies(
@@ -552,12 +572,11 @@ async def _load_filtered_companies(
     min_revenue: Decimal | None,
     require_investment_history: bool,
 ) -> list[SICompany]:
-    """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 10,000건).
+    """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 5,000건).
 
     메타데이터 컬럼(jurir_no, fina_base_date 등)은 defer로 제외하여
-    10K건 로딩 시 전송 데이터량을 줄인다.
+    전송 데이터량을 줄인다.
     """
-    from sqlalchemy.orm import defer
 
     q = select(SICompany).options(
         defer(SICompany.jurir_no),
@@ -578,10 +597,13 @@ async def _load_filtered_companies(
     return list(result.scalars().all())
 
 
-def _build_ksic_index(companies: list[SICompany]) -> dict[str, list[SICompany]]:
-    """기업 목록으로부터 {KSIC코드: [기업,...]} 인메모리 인덱스 구축.
+def _build_ksic_index(
+    companies: list[SICompany],
+) -> tuple[dict[str, list[SICompany]], tuple[str, ...]]:
+    """기업 목록으로부터 {KSIC코드: [기업,...]} 인메모리 인덱스 + 정렬 키 구축.
 
     방어 코드: ksic_codes가 str(이중 직렬화)인 경우 json.loads로 복원 시도.
+    sorted_keys는 bisect 접두사 매칭에 사용되며, 1회만 정렬한다.
     """
     index: dict[str, list[SICompany]] = {}
     for c in companies:
@@ -600,12 +622,14 @@ def _build_ksic_index(companies: list[SICompany]) -> dict[str, list[SICompany]]:
                 continue
         for code in codes:
             if isinstance(code, str) and code:
-                index.setdefault(code, []).append(c)
-    return index
+                normalized = _strip_ksic_prefix(code)
+                index.setdefault(normalized, []).append(c)
+    return index, tuple(sorted(index.keys()))
 
 
 def _lookup_by_ksic(
     ksic_index: dict[str, list[SICompany]],
+    sorted_keys: tuple[str, ...],
     ksic_codes: list[str],
 ) -> list[SICompany]:
     """인메모리 인덱스에서 KSIC 코드에 매칭되는 기업 조회 (중복 제거).
@@ -623,7 +647,6 @@ def _lookup_by_ksic(
 
     seen: set[uuid.UUID] = set()
     matched: list[SICompany] = []
-    sorted_keys = sorted(ksic_index.keys())
 
     for code in ksic_codes:
         # 1. 정확 매칭
@@ -632,7 +655,7 @@ def _lookup_by_ksic(
                 seen.add(c.id)
                 matched.append(c)
 
-        if len(code) < 2:
+        if len(code) < 3:
             continue
 
         # 2. 접두사 매칭: index_code가 code로 시작 (bisect로 범위 탐색)
@@ -648,8 +671,8 @@ def _lookup_by_ksic(
                     seen.add(c.id)
                     matched.append(c)
 
-        # 3. 역접두사 매칭: code가 index_code로 시작 (접두사 길이별 확인)
-        for length in range(2, len(code)):
+        # 3. 역접두사 매칭: code가 index_code로 시작 (최소 3글자)
+        for length in range(3, len(code)):
             prefix = code[:length]
             if prefix != code and prefix in ksic_index:
                 for c in ksic_index[prefix]:
@@ -666,6 +689,7 @@ async def _get_value_chain(
     direction: Literal["backward", "forward"],
     top_n: int,
     ksic_index: dict[str, list[SICompany]],
+    sorted_keys: tuple[str, ...],
     max_companies: int = 50,
 ) -> list[ValueChainPanel]:
     """전방/후방 Value Chain IO 코드 상위 N개 + 기업 매핑.
@@ -683,7 +707,7 @@ async def _get_value_chain(
             .where(IOTransaction.target_io_code.in_(target_io_codes))
             .where(~IOTransaction.source_io_code.in_(target_io_codes))
             .group_by(IOTransaction.source_io_code, IOTransaction.source_io_name)
-            .order_by(text("total_value DESC"))
+            .order_by(literal_column("total_value").desc())
             .limit(top_n)
         )
     else:
@@ -696,7 +720,7 @@ async def _get_value_chain(
             .where(IOTransaction.source_io_code.in_(target_io_codes))
             .where(~IOTransaction.target_io_code.in_(target_io_codes))
             .group_by(IOTransaction.target_io_code, IOTransaction.target_io_name)
-            .order_by(text("total_value DESC"))
+            .order_by(literal_column("total_value").desc())
             .limit(top_n)
         )
 
@@ -724,7 +748,7 @@ async def _get_value_chain(
         related_ksic = io_to_ksic.get(io_code, [])
         # sorted()로 새 리스트 생성 — 인메모리 인덱스 원본 보호
         companies = sorted(
-            _lookup_by_ksic(ksic_index, related_ksic),
+            _lookup_by_ksic(ksic_index, sorted_keys, related_ksic),
             key=lambda c: c.revenue if c.revenue is not None else -1,
             reverse=True,
         )[:max_companies]
@@ -793,3 +817,195 @@ def _build_flat_candidates(
                 )
 
     return candidates
+
+
+# ══════════════════════════════════════════════════════════
+# ValueChain (VC) 매핑 — 1,574 세부 업종 투입산출 계수표 기반
+# ══════════════════════════════════════════════════════════
+
+
+async def get_vc_data_stats(db: AsyncSession) -> VcDataStats:
+    """ValueChain 데이터 시딩 상태 반환 (단일 DB 왕복)."""
+
+    coeff_sub = select(func.count()).select_from(VcIndustryCoefficient).correlate(None).scalar_subquery()
+
+    agg = (
+        await db.execute(
+            select(
+                func.count().label("total"),
+                func.count(VcCompany.revenue).label("with_revenue"),
+                coeff_sub.label("coeff_total"),
+            ).select_from(VcCompany)
+        )
+    ).one()
+
+    coeff_count = agg.coeff_total or 0
+    return VcDataStats(
+        vc_companies_count=agg.total,
+        vc_coefficients_count=coeff_count,
+        revenue_count=agg.with_revenue,
+        is_seeded=agg.total > 0 and coeff_count > 0,
+    )
+
+
+async def search_vc_industries(
+    db: AsyncSession,
+    query: str,
+    limit: int = 20,
+) -> list[VcIndustrySuggestion]:
+    """업종명(1,574) 자동완성 — VcCompany.industry_name DISTINCT LIKE 검색."""
+
+    if not query or len(query) < 1:
+        return []
+
+    escaped = query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{escaped}%"
+
+    q = (
+        select(
+            VcCompany.industry_name,
+            func.count().label("cnt"),
+        )
+        .where(VcCompany.industry_name.ilike(pattern, escape="\\"))
+        .group_by(VcCompany.industry_name)
+        .order_by(func.count().desc())
+        .limit(limit)
+    )
+    result = await db.execute(q)
+    return [VcIndustrySuggestion(industry_name=row[0], company_count=row[1]) for row in result.all()]
+
+
+async def map_vc_candidates(
+    db: AsyncSession,
+    target_industry_name: str,
+    min_revenue: Decimal = Decimal("100"),
+    top_n: int = 20,
+) -> VcMappingResponse:
+    """업종명 기반 Value Chain 매핑 — 1,574 세부 업종 수준.
+
+    Args:
+        db: DB 세션
+        target_industry_name: 타겟 업종명 (1,574 중 하나)
+        min_revenue: 최소 매출액 (억원, 기본 100억)
+        top_n: 전방/후방/경쟁 각각의 최대 반환 건수
+
+    Returns:
+        전방(고객) / 후방(공급) / 경쟁(동종) 매핑 결과
+    """
+
+    _t0 = time.monotonic()
+
+    # 1. 전방 (고객): source=타겟 → 계수 높은 target 업종 top_n개
+    forward_q = (
+        select(VcIndustryCoefficient.target_industry, VcIndustryCoefficient.coefficient)
+        .where(
+            VcIndustryCoefficient.source_industry == target_industry_name,
+            VcIndustryCoefficient.target_industry != target_industry_name,
+        )
+        .order_by(VcIndustryCoefficient.coefficient.desc())
+        .limit(top_n)
+    )
+    forward_rows = (await db.execute(forward_q)).all()
+
+    # 2. 후방 (공급): target=타겟 → 계수 높은 source 업종 top_n개
+    backward_q = (
+        select(VcIndustryCoefficient.source_industry, VcIndustryCoefficient.coefficient)
+        .where(
+            VcIndustryCoefficient.target_industry == target_industry_name,
+            VcIndustryCoefficient.source_industry != target_industry_name,
+        )
+        .order_by(VcIndustryCoefficient.coefficient.desc())
+        .limit(top_n)
+    )
+    backward_rows = (await db.execute(backward_q)).all()
+
+    # 3. 경쟁: 같은 세부 업종(1,574), 매출 min_revenue↑, 내림차순 top_n개
+    competitor_q = (
+        select(VcCompany)
+        .where(
+            VcCompany.industry_name == target_industry_name,
+            VcCompany.revenue.isnot(None),
+            VcCompany.revenue >= min_revenue,
+        )
+        .order_by(VcCompany.revenue.desc())
+        .limit(top_n)
+    )
+    competitor_rows = (await db.execute(competitor_q)).scalars().all()
+
+    competitors = [VcChainCompany.model_validate(c) for c in competitor_rows]
+
+    # 4. 전방/후방 업종에 속한 기업 조회 (매출 min_revenue↑)
+    related_industries: list[str] = []
+    forward_industry_map: dict[str, Decimal] = {}
+    backward_industry_map: dict[str, Decimal] = {}
+
+    for industry, coeff in forward_rows:
+        related_industries.append(industry)
+        forward_industry_map[industry] = coeff
+
+    for industry, coeff in backward_rows:
+        related_industries.append(industry)
+        backward_industry_map[industry] = coeff
+
+    # 업종별 기업 조회 — batch IN 쿼리
+    # 전방/후방이 같은 업종을 포함할 수 있으므로 중복 제거 후 limit 계산
+    industry_companies: dict[str, list[VcChainCompany]] = {}
+    if related_industries:
+        unique_related = list(dict.fromkeys(related_industries))
+        companies_q = (
+            select(VcCompany)
+            .where(
+                VcCompany.industry_name.in_(unique_related),
+                VcCompany.revenue.isnot(None),
+                VcCompany.revenue >= min_revenue,
+            )
+            .order_by(VcCompany.revenue.desc())
+            .limit(top_n * len(unique_related))
+        )
+        company_rows = (await db.execute(companies_q)).scalars().all()
+
+        # 업종별 그룹핑 + 기업 수 제한
+        for c in company_rows:
+            if c.industry_name not in industry_companies:
+                industry_companies[c.industry_name] = []
+            if len(industry_companies[c.industry_name]) < top_n:
+                industry_companies[c.industry_name].append(VcChainCompany.model_validate(c))
+
+    # 5. 패널 조립
+    forward_chains = [
+        VcChainPanel(
+            industry_name=industry,
+            coefficient=coeff,
+            companies=industry_companies.get(industry, []),
+        )
+        for industry, coeff in forward_rows
+    ]
+
+    backward_chains = [
+        VcChainPanel(
+            industry_name=industry,
+            coefficient=coeff,
+            companies=industry_companies.get(industry, []),
+        )
+        for industry, coeff in backward_rows
+    ]
+
+    elapsed = time.monotonic() - _t0
+    logger.info(
+        "VC 매핑 완료: target=%s, forward=%d, backward=%d, competitors=%d, elapsed=%.2fs",
+        target_industry_name,
+        len(forward_chains),
+        len(backward_chains),
+        len(competitors),
+        elapsed,
+    )
+
+    return VcMappingResponse(
+        target_industry=target_industry_name,
+        forward_chains=forward_chains,
+        backward_chains=backward_chains,
+        competitors=competitors,
+        total_forward=len(forward_chains),
+        total_backward=len(backward_chains),
+        total_competitors=len(competitors),
+    )

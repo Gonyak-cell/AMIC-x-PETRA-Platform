@@ -355,16 +355,16 @@ async def test_bulk_add_nonexistent_company(client: AsyncClient, async_session: 
 
 
 async def test_prefix_matching_short_to_long(async_session: AsyncSession):
-    """접두사 매칭 — 기업 KSIC 'C1'이 조회 코드 'C10'과 매칭."""
+    """역접두사 매칭 — 기업 KSIC 'C10'이 조회 코드 'C1011'과 매칭 (최소 3글자)."""
     company = SICompany(
         id=uuid.uuid4(),
         company_name="접두사기업",
-        ksic_codes=["C1"],
+        ksic_codes=["C10"],
         revenue=10_000_000_000,
     )
-    index = _build_ksic_index([company])
-    # "C10"으로 조회 → 인덱스 키 "C1"이 "C10"의 접두사이므로 매칭
-    result = _lookup_by_ksic(index, ["C10"])
+    index, sorted_keys = _build_ksic_index([company])
+    # "C1011"으로 조회 → 인덱스 키 "C10"이 "C1011"의 접두사(3글자↑)이므로 매칭
+    result = _lookup_by_ksic(index, sorted_keys, ["C1011"])
     assert len(result) == 1
     assert result[0].company_name == "접두사기업"
 
@@ -377,29 +377,30 @@ async def test_prefix_matching_long_to_short(async_session: AsyncSession):
         ksic_codes=["C101"],
         revenue=10_000_000_000,
     )
-    index = _build_ksic_index([company])
+    index, sorted_keys = _build_ksic_index([company])
     # "C10"으로 조회 → 인덱스 키 "C101"이 "C10"으로 시작하므로 매칭
-    result = _lookup_by_ksic(index, ["C10"])
+    result = _lookup_by_ksic(index, sorted_keys, ["C10"])
     assert len(result) == 1
     assert result[0].company_name == "세부업종기업"
 
 
 async def test_prefix_matching_exact_still_works(async_session: AsyncSession):
-    """정확 매칭이 여전히 최우선으로 동작."""
+    """정확 매칭 + 접두사 매칭이 모두 동작."""
     exact = SICompany(
         id=uuid.uuid4(),
         company_name="정확매칭기업",
-        ksic_codes=["C10"],
+        ksic_codes=["C101"],
         revenue=10_000_000_000,
     )
     prefix = SICompany(
         id=uuid.uuid4(),
         company_name="접두사매칭기업",
-        ksic_codes=["C1"],
+        ksic_codes=["C10"],
         revenue=5_000_000_000,
     )
-    index = _build_ksic_index([exact, prefix])
-    result = _lookup_by_ksic(index, ["C10"])
+    index, sorted_keys = _build_ksic_index([exact, prefix])
+    # "C101" 정확 매칭 + "C10"이 역접두사 매칭
+    result = _lookup_by_ksic(index, sorted_keys, ["C101"])
     names = [c.company_name for c in result]
     assert "정확매칭기업" in names
     assert "접두사매칭기업" in names
@@ -413,8 +414,8 @@ async def test_prefix_matching_no_false_positive(async_session: AsyncSession):
         ksic_codes=["C99"],
         revenue=10_000_000_000,
     )
-    index = _build_ksic_index([company])
-    result = _lookup_by_ksic(index, ["C10"])
+    index, sorted_keys = _build_ksic_index([company])
+    result = _lookup_by_ksic(index, sorted_keys, ["C10"])
     assert len(result) == 0
 
 
@@ -427,7 +428,7 @@ async def test_build_ksic_index_handles_double_serialized():
     # 이중 직렬화 시뮬레이션: ORM을 거치지 않고 직접 str 설정
     object.__setattr__(company, "ksic_codes", json.dumps(["C10", "C20"]))
 
-    index = _build_ksic_index([company])
+    index, _sorted_keys = _build_ksic_index([company])
     assert "C10" in index
     assert "C20" in index
     assert len(index["C10"]) == 1
@@ -442,13 +443,17 @@ async def test_build_ksic_index_handles_normal_list():
         ksic_codes=["C10", "C20"],
         revenue=10_000_000_000,
     )
-    index = _build_ksic_index([company])
+    index, _sorted_keys = _build_ksic_index([company])
     assert "C10" in index
     assert "C20" in index
 
 
 async def test_map_prefix_matching_via_api(client: AsyncClient, async_session: AsyncSession):
-    """API 레벨 접두사 매칭 — 'C1' KSIC 보유 기업이 'C10' 매핑에 포함."""
+    """API 레벨 역접두사 매칭 — '101' KSIC 보유 기업이 '1011' 쿼리에 포함 (3글자↑).
+
+    주의: API는 _strip_ksic_prefix()로 쿼리 코드의 알파벳 접두사를 제거하지만,
+    인덱스 키(회사 KSIC)는 strip하지 않으므로 숫자 전용 코드를 사용해야 대칭이 맞다.
+    """
     # IO 부문 + 매핑 시딩
     sectors = [IOSector(code="IO01", name="식료품")]
     session = async_session
@@ -456,21 +461,21 @@ async def test_map_prefix_matching_via_api(client: AsyncClient, async_session: A
     await session.flush()
 
     mappings = [
-        KsicIoMapping(io_code="IO01", io_name="식료품", ksic_code="C10", ksic_name="식료품"),
+        KsicIoMapping(io_code="IO01", io_name="식료품", ksic_code="1011", ksic_name="식료품"),
     ]
     session.add_all(mappings)
 
-    # KSIC "C1" 보유 기업 (접두사 매칭 대상)
+    # KSIC "101" 보유 기업 (역접두사 매칭 대상 — 101은 1011의 접두사, 3글자↑)
     company = SICompany(
         id=uuid.uuid4(),
         company_name="접두사매칭API기업",
-        ksic_codes=["C1"],
+        ksic_codes=["101"],
         revenue=10_000_000_000,
     )
     session.add(company)
     await session.commit()
 
-    resp = await client.post("/api/v1/si-mapping/map", json={"ksic_codes": ["C10"]})
+    resp = await client.post("/api/v1/si-mapping/map", json={"ksic_codes": ["1011"]})
     assert resp.status_code == 200
     body = resp.json()
     peer_names = [p["company_name"] for p in body["direct_peers"]]

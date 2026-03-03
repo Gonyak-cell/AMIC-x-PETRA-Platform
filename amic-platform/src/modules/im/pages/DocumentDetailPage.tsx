@@ -10,15 +10,32 @@ import {
   ClipboardCheck,
   Sparkles,
 } from "lucide-react";
-import { useDocument, useCreateDocument, useDownloadDocument } from "@/modules/im/hooks/useDocuments";
+import {
+  useDocument,
+  useCreateDocument,
+  useDownloadDocument,
+} from "@/modules/im/hooks/useDocuments";
 import { useIMRalphSessions } from "@/modules/im/hooks/useIMRalphLoop";
+import { useDiagrams } from "@/modules/im/hooks/useDiagrams";
+import { DiagramsCard } from "@/modules/im/components/DiagramsCard";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import { ProgressTracker } from "@/modules/im/components/ProgressTracker";
-import { SECTION_LABEL_MAP, IN_PROGRESS_STATUSES, DATA_SOURCE_BADGE } from "@/modules/im/types/document";
+import {
+  SECTION_LABEL_MAP,
+  IN_PROGRESS_STATUSES,
+  DATA_SOURCE_BADGE,
+} from "@/modules/im/types/document";
 import { RALPH_ACTIVE_STATUSES } from "@/modules/im/types/ralph";
 import type { IMRalphSession } from "@/modules/im/types/ralph";
 import { formatBytes } from "@/lib/format";
-import { Button, Card, Breadcrumbs, Skeleton, SkeletonCard, PageHero } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Breadcrumbs,
+  Skeleton,
+  SkeletonCard,
+  PageHero,
+} from "@/components/ui";
 import type { BreadcrumbItem } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/forestgp-vc.jpg";
 
@@ -27,15 +44,29 @@ export default function DocumentDetailPage() {
   const navigate = useNavigate();
   const { data: doc, isLoading } = useDocument(documentId ?? "");
   const { data: ralphSessions } = useIMRalphSessions(documentId);
+  const { data: diagrams, isLoading: diagramsLoading } = useDiagrams(
+    documentId ?? "",
+  );
   const downloadDocument = useDownloadDocument();
   const createDocument = useCreateDocument();
-  const [downloadingFormat, setDownloadingFormat] = useState<"pptx" | "pdf" | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<
+    "pptx" | "pdf" | null
+  >(null);
   const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
 
   if (isLoading) {
     return (
-      <div className="space-y-6" role="status" aria-label="Loading document details">
+      <div
+        className="space-y-6"
+        role="status"
+        aria-label="Loading document details"
+      >
         <Skeleton className="h-4 w-48" />
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded" />
@@ -55,7 +86,11 @@ export default function DocumentDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-negative">Document not found</p>
-        <Button variant="ghost" className="mt-4" onClick={() => navigate("/im")}>
+        <Button
+          variant="ghost"
+          className="mt-4"
+          onClick={() => navigate("/im")}
+        >
           Back to Projects
         </Button>
       </div>
@@ -73,9 +108,11 @@ export default function DocumentDetailPage() {
     setDownloadingFormat(format);
     try {
       await downloadDocument.mutateAsync({ documentId: doc.id, format });
-      if (mountedRef.current) toast.success(`${format.toUpperCase()} download started`);
+      if (mountedRef.current)
+        toast.success(`${format.toUpperCase()} download started`);
     } catch {
-      if (mountedRef.current) toast.error(`Failed to download ${format.toUpperCase()}`);
+      if (mountedRef.current)
+        toast.error(`Failed to download ${format.toUpperCase()}`);
     } finally {
       if (mountedRef.current) setDownloadingFormat(null);
     }
@@ -138,15 +175,22 @@ export default function DocumentDetailPage() {
             <Building2 className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
             <div>
               <span className="text-text-secondary block">Company</span>
-              <span className="text-text-dark font-medium">{doc.company_name}</span>
+              <span className="text-text-dark font-medium">
+                {doc.company_name}
+              </span>
             </div>
           </div>
           <div>
             <span className="text-text-secondary block">Data Source</span>
             {(() => {
-              const b = DATA_SOURCE_BADGE[doc.data_source as keyof typeof DATA_SOURCE_BADGE] ?? DATA_SOURCE_BADGE.MANUAL;
+              const b =
+                DATA_SOURCE_BADGE[
+                  doc.data_source as keyof typeof DATA_SOURCE_BADGE
+                ] ?? DATA_SOURCE_BADGE.MANUAL;
               return (
-                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
+                <span
+                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}
+                >
                   {b.label}
                 </span>
               );
@@ -197,25 +241,28 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Checklist Review Link (VDR 소스만 표시) */}
-      {doc.data_source === "VDR" && <Card title="VDR Checklist" headerBar>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex-1">
-            <p className="text-sm text-text-dark">
-              Review and confirm data extracted from VDR documents.
-            </p>
-            <p className="text-xs text-text-secondary mt-1">
-              All checklist items must be confirmed before generating the final IM.
-            </p>
+      {doc.data_source === "VDR" && (
+        <Card title="VDR Checklist" headerBar>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-text-dark">
+                Review and confirm data extracted from VDR documents.
+              </p>
+              <p className="text-xs text-text-secondary mt-1">
+                All checklist items must be confirmed before generating the
+                final IM.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              icon={ClipboardCheck}
+              onClick={() => navigate(`/im/documents/${doc.id}/checklist`)}
+            >
+              Review Checklist
+            </Button>
           </div>
-          <Button
-            variant="primary"
-            icon={ClipboardCheck}
-            onClick={() => navigate(`/im/documents/${doc.id}/checklist`)}
-          >
-            Review Checklist
-          </Button>
-        </div>
-      </Card>}
+        </Card>
+      )}
 
       {/* Download Section (Completed) */}
       {doc.status === "COMPLETED" && (
@@ -303,6 +350,15 @@ export default function DocumentDetailPage() {
           </div>
         </Card>
       )}
+
+      {/* Diagrams (Excalidraw) */}
+      {doc.status === "COMPLETED" && (
+        <DiagramsCard
+          documentId={doc.id}
+          diagrams={diagrams ?? []}
+          isLoading={diagramsLoading}
+        />
+      )}
     </div>
   );
 }
@@ -338,14 +394,17 @@ function RalphSessionCard({ session }: { session: IMRalphSession }) {
               {session.final_score.toFixed(1)}/5.0
             </span>
             <span className="text-xs text-text-secondary">
-              {session.total_iterations} iteration{session.total_iterations !== 1 ? "s" : ""}
+              {session.total_iterations} iteration
+              {session.total_iterations !== 1 ? "s" : ""}
               {" · "}${session.total_cost_usd.toFixed(3)}
             </span>
           </>
         ) : session.status === "FAILED" ? (
           <span className="text-xs text-negative">
             Quality check failed
-            {session.error_message ? `: ${session.error_message.slice(0, 60)}` : ""}
+            {session.error_message
+              ? `: ${session.error_message.slice(0, 60)}`
+              : ""}
           </span>
         ) : (
           <span className="text-xs text-text-secondary">{session.status}</span>
@@ -354,7 +413,8 @@ function RalphSessionCard({ session }: { session: IMRalphSession }) {
 
       {session.critical_flags && session.critical_flags.length > 0 && (
         <span className="text-xs text-negative font-medium">
-          {session.critical_flags.length} flag{session.critical_flags.length !== 1 ? "s" : ""}
+          {session.critical_flags.length} flag
+          {session.critical_flags.length !== 1 ? "s" : ""}
         </span>
       )}
     </div>
