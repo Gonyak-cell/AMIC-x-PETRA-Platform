@@ -383,7 +383,7 @@ class SpaStep2Request(BaseModel):
         description="멀티워커 폴백용 문서 유형 (세션 유실 시 detected_doc_type 복원)",
     )
     variables: list[ExtractedVariable]
-    deal_structure: str
+    deal_structure: AllStructureType
     industry_type: str
 
     @field_validator("deal_structure")
