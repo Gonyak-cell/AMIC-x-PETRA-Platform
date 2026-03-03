@@ -103,7 +103,9 @@ INDUSTRY_SECTION_IDS = [
 ]
 
 # 전체 유효 섹션 ID (검증용)
-ALL_SECTION_IDS = SECTION_IDS + TEASER_SECTION_IDS + DM_SECTION_IDS + INDUSTRY_SECTION_IDS
+ALL_SECTION_IDS = (
+    SECTION_IDS + TEASER_SECTION_IDS + DM_SECTION_IDS + INDUSTRY_SECTION_IDS
+)
 
 # 프리셋 섹션 구성
 TITAN_SECTIONS = [
@@ -357,7 +359,9 @@ class SourceCitation:
 class ChartData:
     """차트 데이터."""
 
-    chart_type: str = ""  # "waterfall" | "combo" | "stacked_bar" | "donut" | "line" | "hbar"
+    chart_type: str = (
+        ""  # "waterfall" | "combo" | "stacked_bar" | "donut" | "line" | "hbar"
+    )
     title: str = ""
     data: dict[str, Any] = field(default_factory=dict)
     options: dict[str, Any] = field(default_factory=dict)
@@ -563,9 +567,9 @@ class IMDocumentData:
             # YoY 성장률 (최신 연도)
             latest, prev = years[-1], years[-2]
             if fs.revenue.get(prev) and fs.revenue.get(latest):
-                metrics["revenue_yoy"] = (
-                    fs.revenue[latest] - fs.revenue[prev]
-                ) / abs(fs.revenue[prev])
+                metrics["revenue_yoy"] = (fs.revenue[latest] - fs.revenue[prev]) / abs(
+                    fs.revenue[prev]
+                )
             if fs.operating_income.get(prev) and fs.operating_income.get(latest):
                 metrics["operating_income_yoy"] = (
                     fs.operating_income[latest] - fs.operating_income[prev]
@@ -579,17 +583,17 @@ class IMDocumentData:
             # CAGR (3년)
             first, last = years[-3], years[-1]
             if fs.revenue.get(first) and fs.revenue.get(last) and fs.revenue[first] > 0:
-                metrics["revenue_cagr_3y"] = (
-                    fs.revenue[last] / fs.revenue[first]
-                ) ** (1.0 / 2) - 1
+                metrics["revenue_cagr_3y"] = (fs.revenue[last] / fs.revenue[first]) ** (
+                    1.0 / 2
+                ) - 1
 
         if len(years) >= 5:
-            # CAGR (5년)
+            # CAGR (5개 연도 데이터, 4개 기간: years[-5] → years[-1])
             first, last = years[-5], years[-1]
             if fs.revenue.get(first) and fs.revenue.get(last) and fs.revenue[first] > 0:
-                metrics["revenue_cagr_5y"] = (
-                    fs.revenue[last] / fs.revenue[first]
-                ) ** (1.0 / 4) - 1
+                metrics["revenue_cagr_5y"] = (fs.revenue[last] / fs.revenue[first]) ** (
+                    1.0 / 4
+                ) - 1
 
         # 마진율 (최신 연도)
         if years:
