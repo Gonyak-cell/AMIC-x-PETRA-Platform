@@ -39,5 +39,5 @@ class ParsedFile:
             for t in self.tables[:3]:
                 s += f"\n[표: {len(t.rows)}행 × {len(t.headers)}열]"
                 if t.headers:
-                    s += f" 헤더: {', '.join(t.headers[:5])}"
+                    s += f" 헤더: {', '.join(h for h in t.headers[:5] if h is not None)}"
         return s
