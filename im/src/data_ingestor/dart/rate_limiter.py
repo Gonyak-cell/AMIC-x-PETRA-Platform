@@ -16,10 +16,12 @@ import logging
 from collections import deque
 from dataclasses import dataclass, field
 from time import monotonic
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+_T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,9 @@ class CircuitBreakerError(Exception):
     """Circuit Breaker가 열려있을 때 발생하는 예외."""
 
     def __init__(self, retry_after: float) -> None:
-        super().__init__(f"Circuit breaker is open. Retry after {retry_after:.1f} seconds.")
+        super().__init__(
+            f"Circuit breaker is open. Retry after {retry_after:.1f} seconds."
+        )
         self.retry_after = retry_after
 
 
@@ -65,7 +69,7 @@ class CircuitBreaker:
                 return CircuitState.HALF_OPEN
         return self._state
 
-    async def call[T](self, func: Callable[[], Awaitable[T]]) -> T:
+    async def call(self, func: Callable[[], Awaitable[_T]]) -> _T:
         """Circuit Breaker로 감싸서 함수 호출.
 
         Args:
@@ -81,7 +85,9 @@ class CircuitBreaker:
             current_state = self.state
 
             if current_state == CircuitState.OPEN:
-                retry_after = self.recovery_timeout - (monotonic() - (self._last_failure_time or 0))
+                retry_after = self.recovery_timeout - (
+                    monotonic() - (self._last_failure_time or 0)
+                )
                 raise CircuitBreakerError(retry_after=max(0, retry_after))
 
         try:
@@ -108,7 +114,9 @@ class CircuitBreaker:
 
             if self._state == CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN
-                logger.warning("Circuit breaker re-opened after failure in half-open state")
+                logger.warning(
+                    "Circuit breaker re-opened after failure in half-open state"
+                )
             elif self._failure_count >= self.failure_threshold:
                 self._state = CircuitState.OPEN
                 logger.warning(
@@ -159,7 +167,9 @@ class RateLimiter:
         self._total_waits = 0
 
     @classmethod
-    def get_instance(cls, name: str, max_calls: int = 100, period: float = 60.0) -> "RateLimiter":
+    def get_instance(
+        cls, name: str, max_calls: int = 100, period: float = 60.0
+    ) -> "RateLimiter":
         """싱글톤 인스턴스 반환.
 
         Args:
