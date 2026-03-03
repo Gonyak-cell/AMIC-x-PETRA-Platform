@@ -223,7 +223,7 @@ export interface SpaStep1Request {
 export interface SpaStep1Response {
   session_id: string;
   variables: ExtractedVariable[];
-  deal_structure: string; // AllStructureType (SPA/SHA/BTA/SSA/MOU)
+  deal_structure: AllStructureType;
   industry_type: IndustryType;
   detected_doc_type: DocType;
   sha_type?: ShaType | null;
@@ -257,7 +257,7 @@ export interface SpaStep2Request {
   /** 멀티워커 폴백용 — 세션 유실 시 detected_doc_type 복원 */
   doc_type_hint?: DocType;
   variables: ExtractedVariable[];
-  deal_structure: string; // AllStructureType (SPA/SHA/BTA/SSA/MOU)
+  deal_structure: AllStructureType;
   industry_type: IndustryType;
 }
 

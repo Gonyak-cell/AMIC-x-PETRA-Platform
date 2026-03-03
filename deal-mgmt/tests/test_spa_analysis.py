@@ -2698,3 +2698,73 @@ class TestOriginalContentSanitize:
             assert "정상" in clauses[0].original_content
         finally:
             _sessions.pop(session_id, None)
+
+
+# ── condition_expression 검증 테스트 ─────────────────────────────────────────
+
+
+class TestConditionExpressionValidation:
+    """validate_condition_expression 보안 + 기능 테스트."""
+
+    # ── 유효한 조건식 ──
+
+    @pytest.mark.parametrize(
+        "expr",
+        [
+            'deal_structure == "COMMON_SHARE"',
+            'deal_structure == "RCPS"',
+            'deal_structure == "CB"',
+            'deal_structure == "BW"',
+            'deal_structure == "OTHER_SECURITY"',
+            "has_anti_dilution == True",
+            "has_escrow == True and has_lock_up == True",
+            'deal_structure == "RCPS" and has_conversion_right == True',
+            'deal_structure == "CB" or deal_structure == "BW"',
+            "not has_escrow",
+            "lock_up_period_months >= 12",
+            "coupon_rate < 5",
+        ],
+    )
+    def test_valid_expressions_pass(self, expr: str) -> None:
+        assert validate_condition_expression(expr) is True
+
+    # ── 엣지 케이스 ──
+
+    def test_none_passes(self) -> None:
+        assert validate_condition_expression(None) is True
+
+    def test_empty_string_passes(self) -> None:
+        assert validate_condition_expression("") is True
+
+    # ── 금지 토큰 (보안 — injection 방어) ──
+
+    @pytest.mark.parametrize(
+        "malicious",
+        [
+            "import os",
+            "exec('x=1')",
+            "eval('1+1')",
+            "__import__('os')",
+            "open('/etc/passwd')",
+            "os.system('ls')",
+            "sys.exit()",
+            "subprocess.run('ls')",
+            "getattr(obj, 'secret')",
+            "globals()",
+        ],
+    )
+    def test_forbidden_tokens_rejected(self, malicious: str) -> None:
+        assert validate_condition_expression(malicious) is False
+
+    # ── 문법 에러 ──
+
+    @pytest.mark.parametrize(
+        "invalid",
+        [
+            'deal_structure == "RCPS" and (',
+            "has_escrow &&& True",
+            "def hack(): pass",
+        ],
+    )
+    def test_syntax_errors_rejected(self, invalid: str) -> None:
+        assert validate_condition_expression(invalid) is False
