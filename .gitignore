@@ -43,6 +43,7 @@ amic-platform/test-results/
 # Docker / Infrastructure
 certbot/
 ssl/
+ssh/
 .env.production
 backups/
 
