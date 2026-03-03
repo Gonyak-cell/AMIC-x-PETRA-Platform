@@ -115,6 +115,31 @@ export function useBatchExtract(txnId: string) {
   });
 }
 
+/** FAILED 추출 재시도 */
+export function useRetryExtraction(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (extractionId: string) => {
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/extractions/${extractionId}/retry`,
+      );
+      return data as DocumentExtraction;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: extractionQK(txnId) });
+      toast.success("AI 분석을 재시도합니다.");
+    },
+    onError: (error) => {
+      const detail =
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "재시도에 실패했습니다.";
+      toast.error(detail);
+    },
+  });
+}
+
 /** 추출 결과 확정 (검토 후 DB 매핑) */
 export function useConfirmExtraction(txnId: string) {
   const qc = useQueryClient();

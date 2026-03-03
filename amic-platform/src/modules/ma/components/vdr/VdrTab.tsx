@@ -178,6 +178,7 @@ export default function VdrTab({ txnId }: Props) {
             txnId={txnId}
             folder={selectedFolder}
             documents={documents}
+            extractions={extractionData?.items ?? []}
             isLoading={docsLoading}
             isUploading={uploadDoc.isPending}
             onUpload={(file) => uploadDoc.mutate(file)}

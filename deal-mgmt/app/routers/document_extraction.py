@@ -203,6 +203,46 @@ async def get_extraction(
     return ExtractionOut.model_validate(extraction)
 
 
+@router.post(
+    "/{extraction_id}/retry",
+    response_model=ExtractionOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def retry_extraction(
+    txn_id: uuid.UUID,
+    extraction_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """FAILED 상태의 추출을 재시도한다."""
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+
+    extraction = await svc.get_extraction(db, extraction_id)
+    if not extraction or extraction.transaction_id != txn_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="추출 작업을 찾을 수 없습니다",
+        )
+
+    try:
+        extraction = await svc.retry_extraction(db, extraction_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    await db.commit()
+    await db.refresh(extraction)
+
+    await _dispatch_extraction(extraction.id, background_tasks)
+
+    logger.info("추출 재시도: extraction=%s, user=%s", extraction_id, claims.email)
+    return ExtractionOut.model_validate(extraction)
+
+
 @router.put(
     "/{extraction_id}/confirm",
     response_model=ExtractionOut,

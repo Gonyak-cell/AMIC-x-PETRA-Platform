@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import update
 from starlette.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
@@ -13,6 +15,36 @@ from app.core.logging import setup_logging
 # 구조화 로깅 초기화 (통일 JSON 로그 스키마)
 setup_logging(level="INFO", json_output=not settings.DEBUG, service_name="deal-mgmt", log_dir=settings.LOG_DIR or None)
 logger = logging.getLogger(__name__)
+
+_STALE_THRESHOLD_MINUTES = 10
+
+
+async def _cleanup_stale_extractions() -> None:
+    """서버 시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 extraction을 FAILED로 전환."""
+    try:
+        from app.core.database import async_session_factory
+        from app.models.document_extraction import DocumentExtraction
+        from app.models.enums import ExtractionStatus
+
+        async with async_session_factory() as db:
+            stale_cutoff = datetime.now(UTC) - timedelta(minutes=_STALE_THRESHOLD_MINUTES)
+            result = await db.execute(
+                update(DocumentExtraction)
+                .where(
+                    DocumentExtraction.status.in_([ExtractionStatus.CLASSIFYING, ExtractionStatus.EXTRACTING]),
+                    DocumentExtraction.updated_at < stale_cutoff,
+                )
+                .values(
+                    status=ExtractionStatus.FAILED,
+                    error_message="서버 재시작으로 중단됨. 다시 시도해주세요.",
+                )
+            )
+            if result.rowcount:
+                await db.commit()
+                logger.info("stale extraction %d건 FAILED 처리 완료", result.rowcount)
+    except Exception:
+        logger.exception("stale extraction 정리 실패")
+
 
 # 마이그레이션 상태 추적 — health check에서 참조
 _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
@@ -27,6 +59,9 @@ async def lifespan(app: FastAPI):
     from app.core.blob_storage import blob_client
 
     await blob_client.init()
+
+    # Stale extraction 정리 — 서버 재시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 레코드 복구
+    await _cleanup_stale_extractions()
 
     # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("Deal Management application started")

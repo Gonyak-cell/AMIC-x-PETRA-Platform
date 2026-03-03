@@ -1,13 +1,16 @@
 import {
+  CheckCircle2,
   Download,
   FileText,
   FolderInput,
+  Loader2,
+  RefreshCw,
   Sparkles,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
@@ -22,13 +25,18 @@ import {
   getVdrDownloadUrl,
   useSuggestVdrCategory,
 } from "@/modules/ma/hooks/useVdr";
-import { useCreateExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
+import {
+  useCreateExtraction,
+  useRetryExtraction,
+} from "@/modules/ma/hooks/useDocumentExtraction";
+import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
 
 interface Props {
   txnId: string;
   folder: VdrFolder | null;
   documents: VdrDocument[];
+  extractions: DocumentExtraction[];
   isLoading: boolean;
   isUploading?: boolean;
   onUpload: (file: File) => void;
@@ -56,6 +64,7 @@ export default function VdrDocumentList({
   txnId,
   folder,
   documents,
+  extractions,
   isLoading,
   isUploading,
   onUpload,
@@ -64,8 +73,21 @@ export default function VdrDocumentList({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createExtraction = useCreateExtraction(txnId);
+  const retryExtraction = useRetryExtraction(txnId);
   const suggestCategory = useSuggestVdrCategory(txnId);
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
+
+  // vdr_document_id → extraction 매핑 (가장 최근 것 우선)
+  const extractionByDocId = useMemo(() => {
+    const map = new Map<string, DocumentExtraction>();
+    for (const ext of extractions) {
+      const existing = map.get(ext.vdr_document_id);
+      if (!existing || ext.created_at > existing.created_at) {
+        map.set(ext.vdr_document_id, ext);
+      }
+    }
+    return map;
+  }, [extractions]);
 
   const uploadWithSuggestion = useCallback(
     (file: File) => {
@@ -240,16 +262,66 @@ export default function VdrDocumentList({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        className="rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                        title="AI 분석"
-                        onClick={() =>
-                          createExtraction.mutate({ vdrDocumentId: doc.id })
+                      {(() => {
+                        const ext = extractionByDocId.get(doc.id);
+                        if (!ext) {
+                          // 추출 없음 → 새로 시작
+                          return (
+                            <button
+                              type="button"
+                              className="rounded p-1 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                              title="AI 분석"
+                              onClick={() =>
+                                createExtraction.mutate({
+                                  vdrDocumentId: doc.id,
+                                })
+                              }
+                            >
+                              <Sparkles className="h-4 w-4" />
+                            </button>
+                          );
                         }
-                      >
-                        <Sparkles className="h-4 w-4" />
-                      </button>
+                        if (
+                          ["PENDING", "CLASSIFYING", "EXTRACTING"].includes(
+                            ext.status,
+                          )
+                        ) {
+                          // 진행중
+                          return (
+                            <span
+                              className="flex items-center gap-1 rounded p-1 text-xs text-amber-600"
+                              title="분석 진행중"
+                            >
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            </span>
+                          );
+                        }
+                        if (ext.status === "FAILED") {
+                          // 실패 → 재시도
+                          return (
+                            <button
+                              type="button"
+                              className="rounded p-1 text-negative hover:bg-red-50"
+                              title={
+                                ext.error_message ??
+                                "분석 실패 — 클릭하여 재시도"
+                              }
+                              onClick={() => retryExtraction.mutate(ext.id)}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </button>
+                          );
+                        }
+                        // COMPLETED / CONFIRMED
+                        return (
+                          <span
+                            className="flex items-center rounded p-1 text-positive"
+                            title="분석 완료"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </span>
+                        );
+                      })()}
                       <a
                         href={getVdrDownloadUrl(txnId, doc.id)}
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-info"

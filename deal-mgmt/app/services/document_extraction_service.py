@@ -526,6 +526,33 @@ async def _run_pipeline_core(
     )
 
 
+# ── 재시도 ────────────────────────────────────────────────────
+
+
+async def retry_extraction(
+    db: AsyncSession,
+    extraction_id: uuid.UUID,
+) -> DocumentExtraction:
+    """FAILED 상태의 추출 작업을 PENDING으로 리셋한다."""
+    extraction = await get_extraction(db, extraction_id)
+    if not extraction:
+        raise ValueError("추출 레코드를 찾을 수 없습니다.")
+    if extraction.status != ExtractionStatus.FAILED:
+        raise ValueError("FAILED 상태의 추출만 재시도할 수 있습니다.")
+
+    extraction.status = ExtractionStatus.PENDING
+    extraction.error_message = None
+    extraction.doc_category = None
+    extraction.classification_confidence = None
+    extraction.extracted_data = None
+    extraction.target_model = None
+    extraction.target_id = None
+    extraction.llm_cost_usd = 0.0
+    await db.flush()
+    await db.refresh(extraction)
+    return extraction
+
+
 # ── 사용자 확정 → DB 매핑 ────────────────────────────────────
 
 
