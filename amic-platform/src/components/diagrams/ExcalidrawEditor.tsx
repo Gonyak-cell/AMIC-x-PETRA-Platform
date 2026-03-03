@@ -2,6 +2,10 @@ import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { Download, Save } from "lucide-react";
 import { toast } from "sonner";
 import { exportToBlob } from "@excalidraw/excalidraw";
+import type {
+  ExcalidrawImperativeAPI,
+  ExcalidrawInitialDataState,
+} from "@excalidraw/excalidraw/types";
 import { Button, Skeleton } from "@/components/ui";
 import { EXCALIDRAW_BG } from "./amic-palette";
 import type { ExcalidrawData } from "./types";
@@ -27,34 +31,26 @@ export function ExcalidrawEditor({
   onExportPng,
   className = "",
 }: ExcalidrawEditorProps) {
-  const excalidrawApiRef = useRef<ReturnType<
-    NonNullable<
-      Parameters<
-        typeof import("@excalidraw/excalidraw").Excalidraw
-      >[0]["excalidrawAPI"]
-    >
-  > | null>(null);
+  const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleChange = useCallback(
-    (
-      elements: readonly Record<string, unknown>[],
-      appState: Record<string, unknown>,
-    ) => {
+    (elements: readonly unknown[], appState: unknown, _files: unknown) => {
       if (readOnly || !onChange) return;
 
+      const state = appState as Record<string, unknown>;
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         const data: ExcalidrawData = {
           type: "excalidraw",
           version: 2,
           source: "amic-platform",
-          elements: elements as ExcalidrawData["elements"],
+          elements: elements as unknown as ExcalidrawData["elements"],
           appState: {
-            viewBackgroundColor: appState.viewBackgroundColor ?? EXCALIDRAW_BG,
-            gridSize: appState.gridSize ?? null,
+            viewBackgroundColor: state.viewBackgroundColor ?? EXCALIDRAW_BG,
+            gridSize: state.gridSize ?? null,
           },
           files: {},
         };
@@ -114,7 +110,7 @@ export function ExcalidrawEditor({
       type: "excalidraw",
       version: 2,
       source: "amic-platform",
-      elements: elements as ExcalidrawData["elements"],
+      elements: elements as unknown as ExcalidrawData["elements"],
       appState: {
         viewBackgroundColor: appState.viewBackgroundColor ?? EXCALIDRAW_BG,
         gridSize: appState.gridSize ?? null,
@@ -176,7 +172,10 @@ export function ExcalidrawEditor({
           }
         >
           <Excalidraw
-            initialData={initialData ?? undefined}
+            initialData={
+              (initialData ??
+                undefined) as unknown as ExcalidrawInitialDataState
+            }
             excalidrawAPI={(api) => {
               excalidrawApiRef.current = api;
             }}

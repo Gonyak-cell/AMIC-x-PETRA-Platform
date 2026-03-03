@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui";
+import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawData } from "./types";
 
 const Excalidraw = lazy(() =>
@@ -35,7 +36,7 @@ export function ExcalidrawViewer({
         }
       >
         <Excalidraw
-          initialData={data}
+          initialData={data as unknown as ExcalidrawInitialDataState}
           viewModeEnabled
           langCode="ko-KR"
           theme="light"
