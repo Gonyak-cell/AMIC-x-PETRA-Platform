@@ -18,6 +18,10 @@ import {
   useExtractions,
 } from "@/modules/ma/hooks/useDocumentExtraction";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import {
+  IN_PROGRESS_STATUSES,
+  SUCCESS_STATUSES,
+} from "@/modules/ma/types/document_extraction";
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 
 interface Props {
@@ -83,7 +87,7 @@ export default function EngagementDocUpload({
     if (!existingExtractions?.items?.length) return;
 
     const active = existingExtractions.items.find((e) =>
-      ["PENDING", "CLASSIFYING", "EXTRACTING", "COMPLETED"].includes(e.status),
+      [...IN_PROGRESS_STATUSES, ...SUCCESS_STATUSES].includes(e.status),
     );
     if (!active) return;
 

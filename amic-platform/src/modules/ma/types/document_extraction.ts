@@ -49,6 +49,16 @@ export const EXTRACTABLE_CATEGORIES: Set<DocExtractionCategory> = new Set([
   "TAX_FILING",
 ]);
 
+/** 진행중 상태 — 폴링이 필요한 상태 */
+export const IN_PROGRESS_STATUSES: ExtractionStatus[] = [
+  "PENDING",
+  "CLASSIFYING",
+  "EXTRACTING",
+];
+
+/** 완료 상태 — 성공적으로 종료된 상태 */
+export const SUCCESS_STATUSES: ExtractionStatus[] = ["COMPLETED", "CONFIRMED"];
+
 /** 매핑 가능 대상 모델 */
 export type TargetModel = "nda" | "bid" | "contract" | "transaction";
 

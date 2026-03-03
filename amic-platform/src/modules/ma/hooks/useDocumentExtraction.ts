@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
+import { IN_PROGRESS_STATUSES } from "@/modules/ma/types/document_extraction";
 import type {
   DocumentExtraction,
   ExtractionListResponse,
@@ -30,7 +31,7 @@ export function useExtractions(txnId: string) {
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
       const hasInProgress = items.some((e) =>
-        ["PENDING", "CLASSIFYING", "EXTRACTING"].includes(e.status),
+        IN_PROGRESS_STATUSES.includes(e.status),
       );
       return hasInProgress ? 3000 : false;
     },
@@ -51,9 +52,7 @@ export function useExtraction(txnId: string, id: string) {
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (!status) return false;
-      return ["PENDING", "CLASSIFYING", "EXTRACTING"].includes(status)
-        ? 2000
-        : false;
+      return IN_PROGRESS_STATUSES.includes(status) ? 2000 : false;
     },
   });
 }

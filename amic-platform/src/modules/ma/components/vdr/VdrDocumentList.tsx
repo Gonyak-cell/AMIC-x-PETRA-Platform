@@ -29,6 +29,7 @@ import {
   useCreateExtraction,
   useRetryExtraction,
 } from "@/modules/ma/hooks/useDocumentExtraction";
+import { IN_PROGRESS_STATUSES } from "@/modules/ma/types/document_extraction";
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
 
@@ -281,11 +282,7 @@ export default function VdrDocumentList({
                             </button>
                           );
                         }
-                        if (
-                          ["PENDING", "CLASSIFYING", "EXTRACTING"].includes(
-                            ext.status,
-                          )
-                        ) {
+                        if (IN_PROGRESS_STATUSES.includes(ext.status)) {
                           // 진행중
                           return (
                             <span
