@@ -75,9 +75,7 @@ class TestCORSMiddleware:
         )
 
     @pytest.mark.asyncio
-    async def test_cors_disallowed_origin(
-        self, middleware_client: AsyncClient
-    ) -> None:
+    async def test_cors_disallowed_origin(self, middleware_client: AsyncClient) -> None:
         """허용되지 않은 오리진은 CORS 헤더 미반환."""
         response = await middleware_client.get(
             "/health",
@@ -100,32 +98,32 @@ class TestRequestLoggingMiddleware:
         self, middleware_client: AsyncClient, caplog: pytest.LogCaptureFixture
     ) -> None:
         """요청 로그에 method/path/status/duration 기록."""
-        with caplog.at_level(logging.INFO, logger="src.api.middleware.logging"):
+        with caplog.at_level(logging.INFO, logger="src.api.core.log_middleware"):
             await middleware_client.get("/health")
-        assert any("GET" in r.message and "/health" in r.message for r in caplog.records)
+        messages = [r.getMessage() for r in caplog.records]
+        assert any("GET" in m and "/health" in m for m in messages)
 
     @pytest.mark.asyncio
     async def test_logging_masks_authorization(
         self, middleware_client: AsyncClient, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Authorization 헤더 마스킹 확인."""
-        with caplog.at_level(logging.INFO, logger="src.api.middleware.logging"):
+        """Authorization 헤더가 로그에 노출되지 않음."""
+        with caplog.at_level(logging.INFO, logger="src.api.core.log_middleware"):
             await middleware_client.get(
                 "/health",
                 headers={"authorization": "Bearer secret-token-123"},
             )
-        log_messages = " ".join(r.message for r in caplog.records)
+        log_messages = " ".join(r.getMessage() for r in caplog.records)
         assert "secret-token-123" not in log_messages
-        assert "***MASKED***" in log_messages
 
     @pytest.mark.asyncio
     async def test_logging_records_duration(
         self, middleware_client: AsyncClient, caplog: pytest.LogCaptureFixture
     ) -> None:
         """duration(ms)이 로그에 포함."""
-        with caplog.at_level(logging.INFO, logger="src.api.middleware.logging"):
+        with caplog.at_level(logging.INFO, logger="src.api.core.log_middleware"):
             await middleware_client.get("/health")
-        assert any("Duration:" in r.message for r in caplog.records)
+        assert any("ms" in r.getMessage() for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------

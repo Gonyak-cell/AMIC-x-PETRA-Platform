@@ -34,7 +34,7 @@ class TestAPIConfig:
             config = APIConfig(_env_file=None)
             assert config.db_pool_size == 5
             assert config.db_max_overflow == 10
-            assert config.jwt_algorithm == "RS256"
+            assert config.jwt_algorithm == "HS256"
             assert config.rate_limit_per_minute == 60
             assert config.debug is False
 

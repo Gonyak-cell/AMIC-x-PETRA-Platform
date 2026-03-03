@@ -9,6 +9,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import Request
 
 from src.api.config import APIConfig
 from src.api.exceptions import AuthenticationError
@@ -26,6 +27,14 @@ def hs256_config() -> APIConfig:
         jwt_secret_key="test-secret-key-for-jwt-tests-min32",
         jwt_algorithm="HS256",
     )
+
+
+@pytest.fixture
+def mock_request() -> MagicMock:
+    """Mock Request 객체 (쿠키 포함)."""
+    request = MagicMock(spec=Request)
+    request.cookies = {}
+    return request
 
 
 @pytest.fixture
@@ -54,17 +63,25 @@ class TestGetCurrentUser:
 
     @pytest.mark.asyncio
     async def test_jwt_auth_success(
-        self, hs256_config: APIConfig, mock_user: MagicMock, mock_session: AsyncMock
+        self,
+        hs256_config: APIConfig,
+        mock_request: MagicMock,
+        mock_user: MagicMock,
+        mock_session: AsyncMock,
     ) -> None:
         """JWT 인증 정상 흐름."""
         from src.api.dependencies import get_current_user
 
-        token = create_access_token(
-            str(mock_user.id), "USER", config=hs256_config
-        )
+        token = create_access_token(str(mock_user.id), "USER", config=hs256_config)
 
-        with patch("src.api.dependencies.verify_token") as mock_verify, \
-             patch("src.api.dependencies.is_blacklisted", new_callable=AsyncMock, return_value=False):
+        with (
+            patch("src.api.dependencies.verify_token") as mock_verify,
+            patch(
+                "src.api.dependencies.is_blacklisted",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
             mock_verify.return_value = TokenPayload(
                 sub=str(mock_user.id),
                 role="USER",
@@ -74,14 +91,20 @@ class TestGetCurrentUser:
                 token_type="access",
             )
             user = await get_current_user(
-                token=token, api_key=None, session=mock_session
+                request=mock_request,
+                token=token,
+                api_key=None,
+                session=mock_session,
             )
 
         assert user is mock_user
 
     @pytest.mark.asyncio
     async def test_api_key_auth_success(
-        self, mock_user: MagicMock, mock_session: AsyncMock
+        self,
+        mock_request: MagicMock,
+        mock_user: MagicMock,
+        mock_session: AsyncMock,
     ) -> None:
         """API Key 인증 정상 흐름."""
         from src.api.dependencies import get_current_user
@@ -89,7 +112,10 @@ class TestGetCurrentUser:
         with patch("src.api.dependencies.verify_api_key") as mock_verify_key:
             mock_verify_key.return_value = mock_user
             user = await get_current_user(
-                token=None, api_key="imgen_test_key", session=mock_session
+                request=mock_request,
+                token=None,
+                api_key="imgen_test_key",
+                session=mock_session,
             )
 
         assert user is mock_user
@@ -97,14 +123,24 @@ class TestGetCurrentUser:
 
     @pytest.mark.asyncio
     async def test_jwt_takes_priority(
-        self, hs256_config: APIConfig, mock_user: MagicMock, mock_session: AsyncMock
+        self,
+        hs256_config: APIConfig,
+        mock_request: MagicMock,
+        mock_user: MagicMock,
+        mock_session: AsyncMock,
     ) -> None:
         """JWT와 API Key 둘 다 있으면 JWT를 우선한다."""
         from src.api.dependencies import get_current_user
 
-        with patch("src.api.dependencies.verify_token") as mock_verify_jwt, \
-             patch("src.api.dependencies.verify_api_key") as mock_verify_key, \
-             patch("src.api.dependencies.is_blacklisted", new_callable=AsyncMock, return_value=False):
+        with (
+            patch("src.api.dependencies.verify_token") as mock_verify_jwt,
+            patch("src.api.dependencies.verify_api_key") as mock_verify_key,
+            patch(
+                "src.api.dependencies.is_blacklisted",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
             mock_verify_jwt.return_value = TokenPayload(
                 sub=str(mock_user.id),
                 role="USER",
@@ -114,24 +150,39 @@ class TestGetCurrentUser:
                 token_type="access",
             )
             await get_current_user(
-                token="some-jwt", api_key="imgen_key", session=mock_session
+                request=mock_request,
+                token="some-jwt",
+                api_key="imgen_key",
+                session=mock_session,
             )
 
         mock_verify_jwt.assert_called_once()
         mock_verify_key.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_no_credentials_raises_401(self) -> None:
+    async def test_no_credentials_raises_401(
+        self,
+        mock_request: MagicMock,
+    ) -> None:
         """인증 정보가 없으면 401."""
         from src.api.dependencies import get_current_user
 
         session = AsyncMock()
 
         with pytest.raises(AuthenticationError, match="인증 정보가 제공되지"):
-            await get_current_user(token=None, api_key=None, session=session)
+            await get_current_user(
+                request=mock_request,
+                token=None,
+                api_key=None,
+                session=session,
+            )
 
     @pytest.mark.asyncio
-    async def test_invalid_jwt_raises_401(self, mock_session: AsyncMock) -> None:
+    async def test_invalid_jwt_raises_401(
+        self,
+        mock_request: MagicMock,
+        mock_session: AsyncMock,
+    ) -> None:
         """잘못된 JWT → 401."""
         from src.api.dependencies import get_current_user
 
@@ -139,11 +190,18 @@ class TestGetCurrentUser:
             mock_verify.side_effect = AuthenticationError("유효하지 않은 토큰")
             with pytest.raises(AuthenticationError):
                 await get_current_user(
-                    token="invalid-jwt", api_key=None, session=mock_session
+                    request=mock_request,
+                    token="invalid-jwt",
+                    api_key=None,
+                    session=mock_session,
                 )
 
     @pytest.mark.asyncio
-    async def test_invalid_api_key_raises_401(self, mock_session: AsyncMock) -> None:
+    async def test_invalid_api_key_raises_401(
+        self,
+        mock_request: MagicMock,
+        mock_session: AsyncMock,
+    ) -> None:
         """잘못된 API Key → 401."""
         from src.api.dependencies import get_current_user
 
@@ -151,11 +209,18 @@ class TestGetCurrentUser:
             mock_verify.side_effect = AuthenticationError("유효하지 않은 API 키")
             with pytest.raises(AuthenticationError):
                 await get_current_user(
-                    token=None, api_key="invalid-key", session=mock_session
+                    request=mock_request,
+                    token=None,
+                    api_key="invalid-key",
+                    session=mock_session,
                 )
 
     @pytest.mark.asyncio
-    async def test_user_not_found_raises_401(self, mock_session: AsyncMock) -> None:
+    async def test_user_not_found_raises_401(
+        self,
+        mock_request: MagicMock,
+        mock_session: AsyncMock,
+    ) -> None:
         """DB에 없는 사용자 → 401."""
         from src.api.dependencies import get_current_user
 
@@ -163,8 +228,14 @@ class TestGetCurrentUser:
         result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = result
 
-        with patch("src.api.dependencies.verify_token") as mock_verify, \
-             patch("src.api.dependencies.is_blacklisted", new_callable=AsyncMock, return_value=False):
+        with (
+            patch("src.api.dependencies.verify_token") as mock_verify,
+            patch(
+                "src.api.dependencies.is_blacklisted",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
             mock_verify.return_value = TokenPayload(
                 sub=str(uuid.uuid4()),
                 role="USER",
@@ -175,7 +246,10 @@ class TestGetCurrentUser:
             )
             with pytest.raises(AuthenticationError, match="찾을 수 없습니다"):
                 await get_current_user(
-                    token="valid-jwt", api_key=None, session=mock_session
+                    request=mock_request,
+                    token="valid-jwt",
+                    api_key=None,
+                    session=mock_session,
                 )
 
 

@@ -169,7 +169,10 @@ class TestMergeCollectedData:
 
         dart_data = {"corp_code": "00123456", "company_name_kr": "테스트"}
         web_data = {"corp_code": "00123456", "web_data": {"extra": "info"}}
-        brand_data = {"corp_code": "00123456", "brand_assets": {"primary_color": "#000"}}
+        brand_data = {
+            "corp_code": "00123456",
+            "brand_assets": {"primary_color": "#000"},
+        }
 
         result = merge_collected_data([dart_data, web_data, brand_data], "doc-123")
 
@@ -200,8 +203,13 @@ class TestMergeCollectedData:
 class TestFinalizeDocumentTask:
     """finalize_document_task 테스트."""
 
+    @patch("src.api.tasks.progress._sync_update_document")
     @patch("src.api.tasks.generate_im.update_progress")
-    def test_returns_completed_status(self, mock_progress: MagicMock) -> None:
+    def test_returns_completed_status(
+        self,
+        mock_progress: MagicMock,
+        _mock_sync: MagicMock,
+    ) -> None:
         """완료 상태를 반환한다."""
         from src.api.tasks.generate_im import finalize_document_task
 

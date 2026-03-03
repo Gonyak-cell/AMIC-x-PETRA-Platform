@@ -82,7 +82,7 @@ class TestLoginRoute:
 
     @pytest.mark.asyncio
     async def test_login_success_200(self, unauth_client: AsyncClient) -> None:
-        """정상 로그인 시 200과 토큰 반환."""
+        """정상 로그인 시 200과 httpOnly 쿠키 설정."""
         with patch(
             "src.api.routes.auth.AuthService.login",
             new_callable=AsyncMock,
@@ -98,8 +98,11 @@ class TestLoginRoute:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["access_token"] == "access_123"
-        assert data["refresh_token"] == "refresh_123"
+        assert data["message"] == "로그인 성공"
+        # 토큰은 httpOnly 쿠키로 전달
+        cookies = {c.name: c.value for c in response.cookies.jar}
+        assert "access_token" in cookies
+        assert "refresh_token" in cookies
 
     @pytest.mark.asyncio
     async def test_login_invalid_credentials_401(
@@ -131,10 +134,8 @@ class TestRefreshRoute:
     """POST /api/v1/auth/refresh 테스트."""
 
     @pytest.mark.asyncio
-    async def test_refresh_success_200(
-        self, unauth_client: AsyncClient
-    ) -> None:
-        """유효한 refresh 토큰으로 200과 새 토큰 반환."""
+    async def test_refresh_success_200(self, unauth_client: AsyncClient) -> None:
+        """유효한 refresh 토큰(쿠키)으로 200과 갱신 메시지 반환."""
         with patch(
             "src.api.routes.auth.AuthService.refresh",
             return_value={
@@ -144,18 +145,15 @@ class TestRefreshRoute:
         ):
             response = await unauth_client.post(
                 "/api/v1/auth/refresh",
-                json={"refresh_token": "old_refresh_token"},
+                cookies={"refresh_token": "old_refresh_token"},
             )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["access_token"] == "new_access"
-        assert data["refresh_token"] == "new_refresh"
+        assert data["message"] == "토큰 갱신 성공"
 
     @pytest.mark.asyncio
-    async def test_refresh_invalid_token_401(
-        self, unauth_client: AsyncClient
-    ) -> None:
+    async def test_refresh_invalid_token_401(self, unauth_client: AsyncClient) -> None:
         """유효하지 않은 토큰 시 401."""
         with patch(
             "src.api.routes.auth.AuthService.refresh",
@@ -216,9 +214,7 @@ class TestLogoutRoute:
         assert "로그아웃" in data["message"]
 
     @pytest.mark.asyncio
-    async def test_logout_no_auth_401(
-        self, unauth_client: AsyncClient
-    ) -> None:
+    async def test_logout_no_auth_401(self, unauth_client: AsyncClient) -> None:
         """인증 없이 로그아웃 시 401."""
         response = await unauth_client.post("/api/v1/auth/logout")
         assert response.status_code == 401

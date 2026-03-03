@@ -41,6 +41,8 @@ def _make_document(owner_id: uuid.UUID, **kwargs) -> MagicMock:
     doc.corp_code = "00123456"
     doc.company_name = "테스트 주식회사"
     doc.project_name = None
+    doc.data_source = "MANUAL"
+    doc.industry = None
     doc.im_style = "FULL"
     doc.sections = []
     doc.status = kwargs.get("status", DocumentStatus.PENDING.value)
@@ -115,7 +117,12 @@ class TestCreateDocument:
         ):
             response = await route_client.post(
                 "/api/v1/documents",
-                json={"corp_code": "00123456", "im_style": "FULL"},
+                json={
+                    "company_name": "테스트 주식회사",
+                    "project_name": "프로젝트 A",
+                    "corp_code": "00123456",
+                    "im_style": "FULL",
+                },
             )
         assert response.status_code == 202
         data = response.json()
@@ -177,9 +184,7 @@ class TestGetDocument:
             new_callable=AsyncMock,
             side_effect=NotFoundError("Document", "abc"),
         ):
-            response = await route_client.get(
-                f"/api/v1/documents/{uuid.uuid4()}"
-            )
+            response = await route_client.get(f"/api/v1/documents/{uuid.uuid4()}")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -192,9 +197,7 @@ class TestGetDocument:
             new_callable=AsyncMock,
             side_effect=AuthorizationError(required_role="ADMIN"),
         ):
-            response = await route_client.get(
-                f"/api/v1/documents/{uuid.uuid4()}"
-            )
+            response = await route_client.get(f"/api/v1/documents/{uuid.uuid4()}")
         assert response.status_code == 403
 
 
@@ -214,9 +217,7 @@ class TestDownloadDocument:
         with patch(
             "src.api.routes.documents.DocumentService.get_download_path",
             new_callable=AsyncMock,
-            side_effect=NotFoundError(
-                "File", "문서가 아직 생성 완료되지 않았습니다"
-            ),
+            side_effect=NotFoundError("File", "문서가 아직 생성 완료되지 않았습니다"),
         ):
             response = await route_client.get(
                 f"/api/v1/documents/{uuid.uuid4()}/download?format=pptx"
@@ -243,9 +244,7 @@ class TestListDocuments:
             new_callable=AsyncMock,
             return_value=([doc], 1),
         ):
-            response = await route_client.get(
-                "/api/v1/documents?offset=0&limit=10"
-            )
+            response = await route_client.get("/api/v1/documents?offset=0&limit=10")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1

@@ -42,6 +42,8 @@ def _mock_document(owner_id: uuid.UUID, **kwargs) -> MagicMock:
     doc.corp_code = "00123456"
     doc.company_name = "테스트 주식회사"
     doc.project_name = kwargs.get("project_name")
+    doc.data_source = kwargs.get("data_source", "MANUAL")
+    doc.industry = kwargs.get("industry", "tech")
     doc.im_style = "FULL"
     doc.sections = []
     doc.status = kwargs.get("status", DocumentStatus.COMPLETED.value)
@@ -143,7 +145,13 @@ class TestE2EFullPipeline:
         ):
             response = await e2e_client.post(
                 "/api/v1/documents",
-                json={"corp_code": "00123456", "im_style": "FULL", "industry": "tech"},
+                json={
+                    "company_name": "테스트 주식회사",
+                    "project_name": "프로젝트 A",
+                    "corp_code": "00123456",
+                    "im_style": "FULL",
+                    "industry": "tech",
+                },
             )
         assert response.status_code == 202
         doc_id = response.json()["id"]
@@ -173,9 +181,7 @@ class TestE2EFullPipeline:
             new_callable=AsyncMock,
             return_value=failed_doc,
         ):
-            response = await e2e_client.get(
-                f"/api/v1/documents/{failed_doc.id}"
-            )
+            response = await e2e_client.get(f"/api/v1/documents/{failed_doc.id}")
         assert response.status_code == 200
         assert response.json()["status"] == "FAILED"
 
@@ -226,9 +232,7 @@ class TestE2EAuth:
     """인증/인가 E2E 테스트."""
 
     @pytest.mark.asyncio
-    async def test_unauthorized_access_401(
-        self, unauth_client: AsyncClient
-    ) -> None:
+    async def test_unauthorized_access_401(self, unauth_client: AsyncClient) -> None:
         """인증 없이 POST/GET 시 401."""
         response = await unauth_client.post(
             "/api/v1/documents",
@@ -249,9 +253,7 @@ class TestE2EAuth:
             new_callable=AsyncMock,
             side_effect=AuthorizationError(required_role="ADMIN"),
         ):
-            response = await e2e_client.get(
-                f"/api/v1/documents/{uuid.uuid4()}"
-            )
+            response = await e2e_client.get(f"/api/v1/documents/{uuid.uuid4()}")
         assert response.status_code == 403
 
 
@@ -275,9 +277,7 @@ class TestE2EPagination:
             new_callable=AsyncMock,
             return_value=(docs[:3], 5),
         ):
-            response = await e2e_client.get(
-                "/api/v1/documents?offset=0&limit=3"
-            )
+            response = await e2e_client.get("/api/v1/documents?offset=0&limit=3")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 3
@@ -297,6 +297,11 @@ class TestE2EHealth:
     @pytest.mark.asyncio
     async def test_health_endpoint(self, e2e_client: AsyncClient) -> None:
         """GET /health 는 인증 없이 접근 가능."""
-        response = await e2e_client.get("/health")
+        with patch(
+            "src.api.routes.health._check_db",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            response = await e2e_client.get("/health")
         assert response.status_code == 200
         assert response.json()["status"] == "ok"

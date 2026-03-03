@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -84,7 +84,8 @@ class TestCreateCeleryApp:
 class TestUpdateProgress:
     """진행률 업데이트 테스트."""
 
-    def test_updates_task_state(self) -> None:
+    @patch("src.api.tasks.progress._sync_update_document")
+    def test_updates_task_state(self, _mock_sync: MagicMock) -> None:
         """Celery 태스크 상태를 갱신한다."""
         from src.api.tasks.progress import update_progress
 
@@ -100,7 +101,8 @@ class TestUpdateProgress:
         assert meta["document_id"] == document_id
         assert meta["progress_pct"] == 40
 
-    def test_updates_with_details(self) -> None:
+    @patch("src.api.tasks.progress._sync_update_document")
+    def test_updates_with_details(self, _mock_sync: MagicMock) -> None:
         """추가 세부 정보가 메타에 포함된다."""
         from src.api.tasks.progress import update_progress
 

@@ -34,7 +34,12 @@ class TestHealthEndpoint:
         resp = await client.get("/health")
         assert resp.status_code == 200
 
-    async def test_returns_ok_status(self, client: AsyncClient) -> None:
+    @patch("src.api.routes.health._check_db", new_callable=AsyncMock, return_value=True)
+    async def test_returns_ok_status(
+        self,
+        _mock_db: AsyncMock,
+        client: AsyncClient,
+    ) -> None:
         """status가 'ok'이다."""
         resp = await client.get("/health")
         data = resp.json()
@@ -51,7 +56,9 @@ class TestReadyEndpoint:
     """GET /ready 테스트."""
 
     @patch("src.api.routes.health._check_db", new_callable=AsyncMock, return_value=True)
-    @patch("src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=True)
+    @patch(
+        "src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=True
+    )
     async def test_ready_when_all_up(
         self, mock_redis: AsyncMock, mock_db: AsyncMock, client: AsyncClient
     ) -> None:
@@ -63,8 +70,12 @@ class TestReadyEndpoint:
         assert data["database"] is True
         assert data["redis"] is True
 
-    @patch("src.api.routes.health._check_db", new_callable=AsyncMock, return_value=False)
-    @patch("src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=True)
+    @patch(
+        "src.api.routes.health._check_db", new_callable=AsyncMock, return_value=False
+    )
+    @patch(
+        "src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=True
+    )
     async def test_not_ready_when_db_down(
         self, mock_redis: AsyncMock, mock_db: AsyncMock, client: AsyncClient
     ) -> None:
@@ -76,7 +87,9 @@ class TestReadyEndpoint:
         assert data["database"] is False
 
     @patch("src.api.routes.health._check_db", new_callable=AsyncMock, return_value=True)
-    @patch("src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=False)
+    @patch(
+        "src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=False
+    )
     async def test_not_ready_when_redis_down(
         self, mock_redis: AsyncMock, mock_db: AsyncMock, client: AsyncClient
     ) -> None:
@@ -87,8 +100,12 @@ class TestReadyEndpoint:
         assert data["status"] == "not_ready"
         assert data["redis"] is False
 
-    @patch("src.api.routes.health._check_db", new_callable=AsyncMock, return_value=False)
-    @patch("src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=False)
+    @patch(
+        "src.api.routes.health._check_db", new_callable=AsyncMock, return_value=False
+    )
+    @patch(
+        "src.api.routes.health._check_redis", new_callable=AsyncMock, return_value=False
+    )
     async def test_not_ready_when_all_down(
         self, mock_redis: AsyncMock, mock_db: AsyncMock, client: AsyncClient
     ) -> None:

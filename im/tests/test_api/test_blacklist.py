@@ -38,7 +38,7 @@ class TestBlacklistToken:
         assert isinstance(call_args[1], int)  # TTL seconds
         assert call_args[1] > 0
         assert call_args[2] == "1"
-        mock_redis.aclose.assert_called_once()
+        mock_redis.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_blacklist_expired_token_skips(self) -> None:
@@ -80,7 +80,7 @@ class TestIsBlacklisted:
 
         assert result is True
         mock_redis.exists.assert_called_once_with(f"blacklist:jti:{jti}")
-        mock_redis.aclose.assert_called_once()
+        mock_redis.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_is_blacklisted_returns_false(self) -> None:
@@ -100,4 +100,4 @@ class TestIsBlacklisted:
 
         assert result is False
         mock_redis.exists.assert_called_once_with(f"blacklist:jti:{jti}")
-        mock_redis.aclose.assert_called_once()
+        mock_redis.close.assert_called_once()
