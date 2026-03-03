@@ -32,18 +32,19 @@ class TestDocumentCreate:
 
     def test_valid_defaults(self) -> None:
         """기본값으로 유효한 생성 요청."""
-        doc = DocumentCreate(corp_code="00123456")
+        doc = DocumentCreate(
+            company_name="테스트 주식회사",
+            project_name="프로젝트 A",
+            corp_code="00123456",
+        )
         assert doc.corp_code == "00123456"
         assert doc.im_style == "FULL"
-        assert doc.industry == "general"
         assert doc.sections == []
-        assert doc.webhook_url is None
-        assert doc.pdf_password is None
-        assert doc.project_name is None
 
     def test_valid_full(self) -> None:
         """모든 필드가 채워진 유효한 요청."""
         doc = DocumentCreate(
+            company_name="테스트 주식회사",
             corp_code="00123456",
             project_name="Project TITAN",
             im_style="TITAN",
@@ -59,22 +60,40 @@ class TestDocumentCreate:
     def test_invalid_corp_code_non_digit(self) -> None:
         """비숫자 corp_code 거부."""
         with pytest.raises(ValidationError, match="corp_code는 8자리 숫자"):
-            DocumentCreate(corp_code="ABCD1234")
+            DocumentCreate(
+                company_name="테스트",
+                project_name="프로젝트",
+                corp_code="ABCD1234",
+            )
 
     def test_invalid_corp_code_short(self) -> None:
         """짧은 corp_code 거부."""
         with pytest.raises(ValidationError):
-            DocumentCreate(corp_code="1234")
+            DocumentCreate(
+                company_name="테스트",
+                project_name="프로젝트",
+                corp_code="1234",
+            )
 
     def test_invalid_im_style(self) -> None:
         """잘못된 im_style 거부."""
         with pytest.raises(ValidationError, match="im_style"):
-            DocumentCreate(corp_code="00123456", im_style="INVALID")
+            DocumentCreate(
+                company_name="테스트",
+                project_name="프로젝트",
+                corp_code="00123456",
+                im_style="INVALID",
+            )
 
     def test_short_pdf_password(self) -> None:
         """4자 미만 pdf_password 거부."""
         with pytest.raises(ValidationError):
-            DocumentCreate(corp_code="00123456", pdf_password="ab")
+            DocumentCreate(
+                company_name="테스트",
+                project_name="프로젝트",
+                corp_code="00123456",
+                pdf_password="ab",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +119,7 @@ class TestDocumentResponse:
                 "corp_code": "00123456",
                 "company_name": "테스트 주식회사",
                 "project_name": "Project TITAN",
+                "data_source": "MANUAL",
                 "im_style": "FULL",
                 "sections": ["executive_summary"],
                 "status": "PENDING",

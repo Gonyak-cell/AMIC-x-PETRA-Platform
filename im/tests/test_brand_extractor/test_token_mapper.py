@@ -72,4 +72,4 @@ class TestBrandTokenMapper:
         # 빈값이면 IMDesignTokens의 클래스 기본값 사용
         assert tokens.logo_dark_path == "amic_logo_dark.png"
         assert tokens.logo_white_path == "amic_logo_white.png"
-        assert tokens.cover_bg_path == "amic_cover_bg.jpeg"
+        assert tokens.cover_bg_path == "forest_cover.jpg"

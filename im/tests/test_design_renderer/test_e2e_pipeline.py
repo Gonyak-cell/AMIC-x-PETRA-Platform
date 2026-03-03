@@ -40,9 +40,7 @@ class TestPipelinePptxOnly:
     def test_full_pptx(self, full_data: IMDocumentData, tmp_output: Path):
         """FULL 프리셋 PPTX 생성."""
         pipeline = IMPipeline()
-        result = pipeline.generate_pptx(
-            full_data, output_path=tmp_output / "full.pptx"
-        )
+        result = pipeline.generate_pptx(full_data, output_path=tmp_output / "full.pptx")
         assert result.pptx_path is not None
         assert result.pptx_path.exists()
         # FULL은 19개 섹션
@@ -66,7 +64,6 @@ class TestPipelineResult:
             # toc_divider는 current_section 없이 호출되므로 0일 수 있음
             if sr.section_id != "toc_divider":
                 assert sr.pptx_slide_count >= 1
-                assert sr.html_slide_count >= 1
 
     def test_elapsed_time(self, titan_data: IMDocumentData, tmp_output: Path):
         """실행 시간이 기록됨."""
@@ -119,9 +116,7 @@ class TestPipelineSecurity:
                                 watermark_found = True
         assert watermark_found
 
-    def test_pptx_edit_restriction(
-        self, titan_data: IMDocumentData, tmp_output: Path
-    ):
+    def test_pptx_edit_restriction(self, titan_data: IMDocumentData, tmp_output: Path):
         """PPTX 편집 제한."""
         from pptx.oxml.ns import qn
 

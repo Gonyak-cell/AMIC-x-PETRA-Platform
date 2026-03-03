@@ -68,19 +68,22 @@ class TestDocumentServiceCreate:
         db.commit = AsyncMock()
         db.refresh = AsyncMock()
 
-        with patch("src.api.services.document_service.DocumentService.__init__", return_value=None):
+        with patch(
+            "src.api.services.document_service.DocumentService.__init__",
+            return_value=None,
+        ):
             service = DocumentService.__new__(DocumentService)
             service.db = db
 
         create_data = DocumentCreate(
+            company_name="테스트 주식회사",
+            project_name="프로젝트 A",
             corp_code="00123456",
             im_style="FULL",
             industry="tech",
         )
 
-        with patch(
-            "src.api.tasks.generate_im.generate_im_task.delay"
-        ) as mock_delay:
+        with patch("src.api.tasks.generate_im.generate_im_task.delay") as mock_delay:
             mock_delay.return_value = MagicMock(id="task-123")
             await service.create_document(uuid.uuid4(), create_data)
 
@@ -263,12 +266,16 @@ class TestWebhookService:
     @pytest.mark.asyncio
     async def test_webhook_success(self) -> None:
         """웹훅 전송 성공."""
-        with patch("src.api.services.webhook_service.httpx.AsyncClient") as mock_client_cls:
+        with patch(
+            "src.api.services.webhook_service.httpx.AsyncClient"
+        ) as mock_client_cls:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.raise_for_status = MagicMock()
             mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client_cls.return_value.__aenter__ = AsyncMock(
+                return_value=mock_client
+            )
             mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
             result = await WebhookService.trigger(
@@ -280,12 +287,14 @@ class TestWebhookService:
     @pytest.mark.asyncio
     async def test_webhook_retry_on_failure(self) -> None:
         """웹훅 실패 시 3회 재시도."""
-        with patch("src.api.services.webhook_service.httpx.AsyncClient") as mock_client_cls:
+        with patch(
+            "src.api.services.webhook_service.httpx.AsyncClient"
+        ) as mock_client_cls:
             mock_client = AsyncMock()
-            mock_client.post = AsyncMock(
-                side_effect=Exception("connection error")
+            mock_client.post = AsyncMock(side_effect=Exception("connection error"))
+            mock_client_cls.return_value.__aenter__ = AsyncMock(
+                return_value=mock_client
             )
-            mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
             result = await WebhookService.trigger(

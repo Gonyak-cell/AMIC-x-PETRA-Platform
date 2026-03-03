@@ -39,7 +39,11 @@ class TestRenderFallbackSlidePptx:
 
     def test_contains_error_text(self, factory, prs):
         slide = render_fallback_slide_pptx(
-            factory, "market_overview", "시장 데이터 로딩 실패", prs=prs
+            factory,
+            "market_overview",
+            "시장 데이터 로딩 실패",
+            prs=prs,
+            show_error_detail=True,
         )
         texts = []
         for shape in slide.shapes:
@@ -54,7 +58,11 @@ class TestRenderFallbackSlidePptx:
     def test_long_error_truncated(self, factory, prs):
         long_error = "x" * 500
         slide = render_fallback_slide_pptx(
-            factory, "test_section", long_error, prs=prs
+            factory,
+            "test_section",
+            long_error,
+            prs=prs,
+            show_error_detail=True,
         )
         texts = []
         for shape in slide.shapes:
@@ -82,7 +90,11 @@ class TestRenderFallbackSlideHtml:
         assert "<div" in html
 
     def test_contains_section_id(self):
-        html = render_fallback_slide_html("market_overview", "에러")
+        html = render_fallback_slide_html(
+            "market_overview",
+            "에러",
+            show_error_detail=True,
+        )
         assert "market_overview" in html
 
     def test_contains_error_message(self):
@@ -90,12 +102,20 @@ class TestRenderFallbackSlideHtml:
         assert "데이터를 불러올 수 없습니다" in html
 
     def test_html_escapes_error(self):
-        html = render_fallback_slide_html("test", "<script>alert('xss')</script>")
+        html = render_fallback_slide_html(
+            "test",
+            "<script>alert('xss')</script>",
+            show_error_detail=True,
+        )
         assert "<script>" not in html
         assert "&lt;script&gt;" in html
 
     def test_long_error_truncated(self):
-        html = render_fallback_slide_html("test", "y" * 500)
+        html = render_fallback_slide_html(
+            "test",
+            "y" * 500,
+            show_error_detail=True,
+        )
         assert "..." in html
 
     def test_has_fallback_class(self):

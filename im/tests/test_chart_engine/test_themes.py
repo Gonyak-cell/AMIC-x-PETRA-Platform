@@ -22,7 +22,7 @@ class TestAMICThemeFactory:
         fig = go.Figure(go.Bar(x=["A"], y=[1]))
         theme.apply_layout(fig, title="테스트")
 
-        assert fig.layout.font.family == "NanumGothic"
+        assert fig.layout.font.family == "Noto Sans KR"
         assert fig.layout.title.text == "테스트"
 
     def test_apply_layout_custom_size(self):

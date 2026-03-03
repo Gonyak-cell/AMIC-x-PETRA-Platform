@@ -33,6 +33,7 @@ def _make_user(
     user.is_active = True
     user.email = email
     user.full_name = full_name
+    user.title = ""
     user.created_at = datetime.now(timezone.utc)
     user.updated_at = datetime.now(timezone.utc)
     return user
@@ -178,9 +179,7 @@ class TestCreateUser:
         assert data["email"] == "newuser@example.com"
 
     @pytest.mark.asyncio
-    async def test_create_user_non_admin_403(
-        self, user_client: AsyncClient
-    ) -> None:
+    async def test_create_user_non_admin_403(self, user_client: AsyncClient) -> None:
         """일반 사용자가 사용자 생성 시 403."""
         response = await user_client.post(
             "/api/v1/users",
@@ -204,9 +203,7 @@ class TestListUsers:
     """GET /api/v1/users 테스트."""
 
     @pytest.mark.asyncio
-    async def test_list_users_admin_200(
-        self, admin_client: AsyncClient
-    ) -> None:
+    async def test_list_users_admin_200(self, admin_client: AsyncClient) -> None:
         """ADMIN이 사용자 목록 조회 시 200."""
         users = [_make_user() for _ in range(3)]
 
@@ -215,9 +212,7 @@ class TestListUsers:
             new_callable=AsyncMock,
             return_value=(users, 3),
         ):
-            response = await admin_client.get(
-                "/api/v1/users?offset=0&limit=10"
-            )
+            response = await admin_client.get("/api/v1/users?offset=0&limit=10")
 
         assert response.status_code == 200
         data = response.json()
@@ -225,9 +220,7 @@ class TestListUsers:
         assert len(data["items"]) == 3
 
     @pytest.mark.asyncio
-    async def test_list_users_non_admin_403(
-        self, user_client: AsyncClient
-    ) -> None:
+    async def test_list_users_non_admin_403(self, user_client: AsyncClient) -> None:
         """일반 사용자가 목록 조회 시 403."""
         response = await user_client.get("/api/v1/users")
         assert response.status_code == 403
@@ -242,9 +235,7 @@ class TestGetUser:
     """GET /api/v1/users/{user_id} 테스트."""
 
     @pytest.mark.asyncio
-    async def test_get_user_admin_200(
-        self, admin_client: AsyncClient
-    ) -> None:
+    async def test_get_user_admin_200(self, admin_client: AsyncClient) -> None:
         """ADMIN이 특정 사용자 조회 시 200."""
         target_user = _make_user(email="target@example.com")
 
@@ -253,9 +244,7 @@ class TestGetUser:
             new_callable=AsyncMock,
             return_value=target_user,
         ):
-            response = await admin_client.get(
-                f"/api/v1/users/{target_user.id}"
-            )
+            response = await admin_client.get(f"/api/v1/users/{target_user.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -271,9 +260,7 @@ class TestAdminUpdateUser:
     """PATCH /api/v1/users/{user_id} 테스트."""
 
     @pytest.mark.asyncio
-    async def test_admin_update_user_200(
-        self, admin_client: AsyncClient
-    ) -> None:
+    async def test_admin_update_user_200(self, admin_client: AsyncClient) -> None:
         """ADMIN이 사용자 수정 시 200."""
         target_id = uuid.uuid4()
         updated_user = _make_user(
@@ -305,9 +292,7 @@ class TestDeactivateUser:
     """DELETE /api/v1/users/{user_id} 테스트."""
 
     @pytest.mark.asyncio
-    async def test_deactivate_user_admin_204(
-        self, admin_client: AsyncClient
-    ) -> None:
+    async def test_deactivate_user_admin_204(self, admin_client: AsyncClient) -> None:
         """ADMIN이 사용자 비활성화 시 204."""
         target_id = uuid.uuid4()
 
@@ -315,8 +300,6 @@ class TestDeactivateUser:
             "src.api.routes.users.UserService.deactivate",
             new_callable=AsyncMock,
         ):
-            response = await admin_client.delete(
-                f"/api/v1/users/{target_id}"
-            )
+            response = await admin_client.delete(f"/api/v1/users/{target_id}")
 
         assert response.status_code == 204
