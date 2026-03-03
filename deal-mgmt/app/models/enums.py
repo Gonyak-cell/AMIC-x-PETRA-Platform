@@ -27,6 +27,17 @@ class TransactionStatus(enum.StrEnum):
     TERMINATED = "TERMINATED"
 
 
+class DealStructure(enum.StrEnum):
+    """MA Pipeline 거래 구조 — 6개 분류."""
+
+    SHARE_ACQUISITION = "SHARE_ACQUISITION"
+    ASSET_ACQUISITION = "ASSET_ACQUISITION"
+    MERGER = "MERGER"
+    CORPORATE_SPLIT = "CORPORATE_SPLIT"
+    MBO = "MBO"
+    OTHER = "OTHER"
+
+
 class EngagementType(enum.StrEnum):
     EXCLUSIVE = "EXCLUSIVE"
     NON_EXCLUSIVE = "NON_EXCLUSIVE"

@@ -41,6 +41,7 @@ import {
   Shield,
   Calculator,
   FileStack,
+  Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -213,15 +214,21 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
   return (
     <aside
-      className={cn(
-        "w-64 bg-gradient-to-b from-amic-800 via-amic to-amic-700 min-h-screen flex flex-col shadow-sidebar",
-        className,
-      )}
+      className={cn("w-64 h-full flex flex-col shadow-sidebar", className)}
+      style={{
+        background:
+          "linear-gradient(to bottom, var(--sidebar-bg-start), var(--sidebar-bg-mid), var(--sidebar-bg-end))",
+        backdropFilter: "var(--sidebar-backdrop)",
+        WebkitBackdropFilter: "var(--sidebar-backdrop)",
+      }}
       role="navigation"
       aria-label="Main navigation"
     >
       {/* Logo */}
-      <div className="relative bg-white px-4 pt-5 pb-4">
+      <div
+        className="relative px-4 pt-5 pb-4"
+        style={{ backgroundColor: "var(--sidebar-logo-bg)" }}
+      >
         <img
           src={amicPetraLogoUrl}
           alt="AMIC x PETRABRIDGE PARTNERS"
@@ -229,7 +236,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
         />
       </div>
       {/* Gradient Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div
+        className="h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+        }}
+      />
 
       {/* Home Link + Portal Nav (hidden for CLIENT) */}
       {!isClient && (
@@ -264,14 +277,23 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
       {/* Module separator (hidden for CLIENT) */}
       {!isClient && (
-        <div className="h-px mx-3 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div
+          className="h-px mx-3"
+          style={{
+            background:
+              "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+          }}
+        />
       )}
 
       {/* Module Navigation — all modules rendered, each with collapsible group */}
       <div className="flex-1 overflow-y-auto py-2 px-3">
         {/* MODULES label */}
         {!isClient && (
-          <h3 className="px-4 mb-2 mt-2 text-[10px] font-semibold text-white/30 uppercase tracking-[0.15em]">
+          <h3
+            className="px-4 mb-2 mt-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
+            style={{ color: "var(--sidebar-text-muted)" }}
+          >
             Modules
           </h3>
         )}
@@ -629,7 +651,13 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
             hasPermission("user:manage") ||
             hasPermission("audit:view")) && (
             <>
-              <div className="h-px mx-1 my-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <div
+                className="h-px mx-1 my-2"
+                style={{
+                  background:
+                    "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+                }}
+              />
               <SidebarSection title="Admin">
                 {hasPermission("user:manage") && (
                   <SidebarNavItem
@@ -683,7 +711,10 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
 
       {/* User Info + Logout */}
       {user && (
-        <div className="border-t border-white/10 px-4 py-4">
+        <div
+          className="border-t px-4 py-4"
+          style={{ borderColor: "var(--sidebar-divider)" }}
+        >
           <button
             onClick={() => {
               navigate("/settings/profile");
@@ -717,16 +748,30 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
               </Badge>
             </div>
           </button>
-          <button
-            onClick={async () => {
-              await logout();
-              navigate("/login", { replace: true });
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={() => {
+                navigate("/settings/appearance");
+                onNavItemClick?.();
+              }}
+              className="flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
+              style={{ color: "var(--sidebar-text-muted)" }}
+              aria-label="Appearance settings"
+            >
+              <Palette className="h-4 w-4" />
+              <span>Appearance</span>
+            </button>
+            <button
+              onClick={async () => {
+                await logout();
+                navigate("/login", { replace: true });
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
     </aside>

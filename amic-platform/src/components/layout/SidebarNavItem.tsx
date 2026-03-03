@@ -15,7 +15,15 @@ export interface SidebarNavItemProps {
   onClick?: () => void;
 }
 
-export function SidebarNavItem({ to, label, icon: Icon, end, disabled, comingSoon, onClick }: SidebarNavItemProps) {
+export function SidebarNavItem({
+  to,
+  label,
+  icon: Icon,
+  end,
+  disabled,
+  comingSoon,
+  onClick,
+}: SidebarNavItemProps) {
   const iconRef = useRef<SVGSVGElement>(null);
 
   const handleMouseEnter = useCallback(() => {
@@ -23,7 +31,13 @@ export function SidebarNavItem({ to, label, icon: Icon, end, disabled, comingSoo
       gsap.fromTo(
         iconRef.current,
         { scale: 1 },
-        { scale: 1.15, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" },
+        {
+          scale: 1.15,
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.out",
+        },
       );
     }
   }, []);
@@ -31,13 +45,21 @@ export function SidebarNavItem({ to, label, icon: Icon, end, disabled, comingSoo
   if (disabled || comingSoon) {
     return (
       <span
-        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg min-h-[44px] text-white/25 cursor-not-allowed"
+        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg min-h-[44px] cursor-not-allowed"
+        style={{ color: "var(--sidebar-text)", opacity: 0.4 }}
         aria-disabled="true"
       >
         <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
         <span>{label}</span>
         {comingSoon && (
-          <span className="ml-auto text-[9px] font-semibold uppercase tracking-wider text-white/20 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
+          <span
+            className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+            style={{
+              color: "var(--sidebar-text)",
+              opacity: 0.2,
+              backgroundColor: "var(--sidebar-hover-bg)",
+            }}
+          >
             Soon
           </span>
         )}
@@ -54,16 +76,22 @@ export function SidebarNavItem({ to, label, icon: Icon, end, disabled, comingSoo
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors",
-          "min-h-[44px]", // WCAG 2.5.5 touch target
-          isActive
-            ? "bg-white/[0.08] text-white relative before:absolute before:right-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-accent before:rounded-l-full before:shadow-[0_0_8px_rgba(38,194,96,0.4)]"
-            : "text-white/60 hover:bg-white/[0.07] hover:text-white"
+          "min-h-[44px]",
+          isActive ? "sidebar-accent-bar-right" : "sidebar-hover",
         )
       }
+      style={({ isActive }) => ({
+        backgroundColor: isActive ? "var(--sidebar-active-bg)" : undefined,
+        color: isActive ? "var(--sidebar-text)" : "var(--sidebar-text-muted)",
+      })}
     >
       {({ isActive }) => (
         <>
-          <Icon ref={iconRef} className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+          <Icon
+            ref={iconRef}
+            className="h-5 w-5 flex-shrink-0"
+            aria-hidden="true"
+          />
           <span aria-current={isActive ? "page" : undefined}>{label}</span>
         </>
       )}
@@ -80,7 +108,10 @@ export interface SidebarSectionProps {
   className?: string;
 }
 
-function getInitialOpen(storageKey: string | undefined, defaultOpen: boolean): boolean {
+function getInitialOpen(
+  storageKey: string | undefined,
+  defaultOpen: boolean,
+): boolean {
   if (!storageKey) return defaultOpen;
   try {
     const stored = localStorage.getItem(`sidebar-section-${storageKey}`);
@@ -99,7 +130,9 @@ export function SidebarSection({
   storageKey,
   className,
 }: SidebarSectionProps) {
-  const [isOpen, setIsOpen] = useState(() => getInitialOpen(storageKey, defaultOpen));
+  const [isOpen, setIsOpen] = useState(() =>
+    getInitialOpen(storageKey, defaultOpen),
+  );
 
   const sectionId = `sidebar-section-${title.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -123,13 +156,14 @@ export function SidebarSection({
           onClick={toggle}
           aria-expanded={isOpen}
           aria-controls={sectionId}
-          className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-semibold text-white/30 uppercase tracking-[0.15em] hover:text-white/50 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors cursor-pointer"
+          style={{ color: "var(--sidebar-text-muted)" }}
         >
           <span>{title}</span>
           <ChevronDown
             className={cn(
               "h-3.5 w-3.5 transition-transform duration-200",
-              !isOpen && "-rotate-90"
+              !isOpen && "-rotate-90",
             )}
             aria-hidden="true"
           />
@@ -137,7 +171,8 @@ export function SidebarSection({
       ) : (
         <h3
           id={sectionId}
-          className="px-4 mb-2 text-[10px] font-semibold text-white/30 uppercase tracking-[0.15em]"
+          className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
+          style={{ color: "var(--sidebar-text-muted)" }}
         >
           {title}
         </h3>
@@ -146,7 +181,9 @@ export function SidebarSection({
         id={collapsible ? sectionId : undefined}
         className={cn(
           "overflow-hidden transition-all duration-200 ease-in-out",
-          collapsible && !isOpen ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+          collapsible && !isOpen
+            ? "max-h-0 opacity-0"
+            : "max-h-[1000px] opacity-100",
         )}
       >
         <nav
@@ -171,7 +208,13 @@ export interface SidebarPhaseItemProps {
   onClick?: () => void;
 }
 
-export function SidebarPhaseItem({ to, label, icon: Icon, status, onClick }: SidebarPhaseItemProps) {
+export function SidebarPhaseItem({
+  to,
+  label,
+  icon: Icon,
+  status,
+  onClick,
+}: SidebarPhaseItemProps) {
   const iconRef = useRef<SVGSVGElement>(null);
 
   const handleMouseEnter = useCallback(() => {
@@ -180,7 +223,13 @@ export function SidebarPhaseItem({ to, label, icon: Icon, status, onClick }: Sid
       gsap.fromTo(
         iconRef.current,
         { scale: 1 },
-        { scale: 1.15, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" },
+        {
+          scale: 1.15,
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.out",
+        },
       );
     }
   }, [status]);
@@ -189,7 +238,8 @@ export function SidebarPhaseItem({ to, label, icon: Icon, status, onClick }: Sid
   if (status === "future") {
     return (
       <span
-        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] text-white/25 cursor-not-allowed"
+        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] cursor-not-allowed"
+        style={{ color: "var(--sidebar-text)", opacity: 0.4 }}
         aria-disabled="true"
       >
         <Icon className="h-[18px] w-[18px] flex-shrink-0" aria-hidden="true" />
@@ -205,9 +255,14 @@ export function SidebarPhaseItem({ to, label, icon: Icon, status, onClick }: Sid
         to={to}
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
-        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] text-accent/80 hover:bg-white/[0.05] hover:text-accent transition-colors"
+        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] transition-colors"
+        style={{ color: "var(--sidebar-accent)", opacity: 0.8 }}
       >
-        <CheckCircle2 ref={iconRef} className="h-[18px] w-[18px] flex-shrink-0" aria-hidden="true" />
+        <CheckCircle2
+          ref={iconRef}
+          className="h-[18px] w-[18px] flex-shrink-0"
+          aria-hidden="true"
+        />
         <span>{label}</span>
       </NavLink>
     );
@@ -219,12 +274,19 @@ export function SidebarPhaseItem({ to, label, icon: Icon, status, onClick }: Sid
       to={to}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
-      className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] bg-white/[0.08] text-white relative before:absolute before:right-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-accent before:rounded-l-full before:shadow-[0_0_8px_rgba(38,194,96,0.4)] transition-colors"
+      className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] sidebar-accent-bar-right transition-colors"
+      style={{
+        backgroundColor: "var(--sidebar-active-bg)",
+        color: "var(--sidebar-text)",
+      }}
       aria-current="step"
     >
       <span className="relative flex-shrink-0">
         <Icon ref={iconRef} className="h-[18px] w-[18px]" aria-hidden="true" />
-        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent animate-pulse" />
+        <span
+          className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse"
+          style={{ backgroundColor: "var(--sidebar-accent)" }}
+        />
       </span>
       <span className="font-semibold">{label}</span>
     </NavLink>

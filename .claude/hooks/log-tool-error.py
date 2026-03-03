@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """PostToolUse / PostToolUseFailure hook: 도구 실행 에러를 logs/errors.jsonl에 자동 기록."""
+
 import json
 import os
 import re
@@ -15,14 +16,31 @@ CATEGORY_RULES = [
     (["git"], "git"),
     (["docker", "docker-compose"], "docker"),
     (["python", "node", "uvicorn", "gunicorn"], "runtime"),
+    (["pip", "uv", "poetry", "conda"], "dependency"),
+    (["ssh", "scp", "curl", "wget"], "network"),
+]
+
+# 에러 텍스트 기반 카테고리 분류 (command로 분류 안 될 때 사용)
+ERROR_CATEGORY_RULES = [
+    (["no such file", "filenotfounderror", "not found", "cannot find"], "path_error"),
+    (["encoding", "unicode", "surrogate", "codec", "charmap"], "encoding_error"),
+    (["permission denied", "access denied", "eacces"], "permission_error"),
+    (["timeout", "timed out", "connection refused"], "network_error"),
+    (["import", "modulenotfounderror", "no module named"], "import_error"),
 ]
 
 
-def categorize(command: str) -> str:
+def categorize(command: str, error_text: str = "") -> str:
     cmd = command.lower()
     for keywords, category in CATEGORY_RULES:
         if any(k in cmd for k in keywords):
             return category
+    # command로 분류 안 되면 에러 텍스트로 시도
+    if error_text:
+        err_lower = error_text.lower()
+        for keywords, category in ERROR_CATEGORY_RULES:
+            if any(k in err_lower for k in keywords):
+                return category
     return "other"
 
 
@@ -69,12 +87,24 @@ def main():
     if event == "PostToolUse":
         if tool_name != "Bash":
             sys.exit(0)
-        stdout = tool_response.get("stdout", "") if isinstance(tool_response, dict) else str(tool_response)
-        stderr = tool_response.get("stderr", "") if isinstance(tool_response, dict) else ""
-        return_code = tool_response.get("returnCode", 0) if isinstance(tool_response, dict) else 0
+        stdout = (
+            tool_response.get("stdout", "")
+            if isinstance(tool_response, dict)
+            else str(tool_response)
+        )
+        stderr = (
+            tool_response.get("stderr", "") if isinstance(tool_response, dict) else ""
+        )
+        return_code = (
+            tool_response.get("returnCode", 0) if isinstance(tool_response, dict) else 0
+        )
         if not return_code or return_code == 0:
             sys.exit(0)
-        command = tool_input.get("command", "") if isinstance(tool_input, dict) else str(tool_input)
+        command = (
+            tool_input.get("command", "")
+            if isinstance(tool_input, dict)
+            else str(tool_input)
+        )
         error_text = stderr or stdout
 
     # PostToolUseFailure: 모든 도구 실패 기록
@@ -103,7 +133,7 @@ def main():
         "command": sanitize_str(command[:300]),
         "return_code": return_code,
         "error_snippet": sanitize_str(extract_snippet(error_text)),
-        "category": categorize(command),
+        "category": categorize(command, error_text),
         "cwd": sanitize_str(data.get("cwd", "")),
     }
 

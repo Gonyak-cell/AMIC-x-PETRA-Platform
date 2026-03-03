@@ -45,6 +45,64 @@
   }
 }
 
+/* Sidebar 전용 스크롤바 (다크 배경) */
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 9999px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+/* Sidebar 테마 CSS 변수 기본값 (AMIC Forest) */
+:root {
+  --sidebar-bg-start: #07201C;
+  --sidebar-bg-mid: #0F3A32;
+  --sidebar-bg-end: #0B2D27;
+  --sidebar-text: #FFFFFF;
+  --sidebar-text-muted: rgba(255,255,255,0.6);
+  --sidebar-accent: #26C260;
+  --sidebar-accent-glow: rgba(38,194,96,0.4);
+  --sidebar-active-bg: rgba(255,255,255,0.08);
+  --sidebar-hover-bg: rgba(255,255,255,0.07);
+  --sidebar-divider: rgba(255,255,255,0.1);
+  --sidebar-logo-bg: #FFFFFF;
+  --sidebar-backdrop: none;
+}
+
+/* Sidebar 테마 인식 유틸리티 (hover + pseudo-element) */
+.sidebar-hover:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
+}
+
+.sidebar-accent-bar-right {
+  position: relative;
+}
+.sidebar-accent-bar-right::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 9999px 0 0 9999px;
+  background-color: var(--sidebar-accent);
+  box-shadow: 0 0 8px var(--sidebar-accent-glow);
+}
+
+.sidebar-accent-bar-left {
+  position: relative;
+}
+.sidebar-accent-bar-left::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 9999px 9999px 0;
+  background-color: var(--sidebar-accent);
+  box-shadow: 0 0 8px var(--sidebar-accent-glow);
+}
+
 @layer utilities {
   /* 스크롤바 숨기기 (가로 스크롤 탭 등) */
   .scrollbar-hide {

@@ -79,7 +79,13 @@ export function SidebarModuleGroup({
       gsap.fromTo(
         iconRef.current,
         { scale: 1 },
-        { scale: 1.15, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" },
+        {
+          scale: 1.15,
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.out",
+        },
       );
     }
   }, []);
@@ -98,12 +104,18 @@ export function SidebarModuleGroup({
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg",
           "text-sm font-semibold transition-colors cursor-pointer",
           "min-h-[44px]",
-          isActive
-            ? "bg-white/[0.08] text-white relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-accent before:rounded-r-full before:shadow-[0_0_8px_rgba(38,194,96,0.4)]"
-            : "text-white/60 hover:bg-white/[0.06] hover:text-white/80",
+          isActive ? "sidebar-accent-bar-left" : "sidebar-hover",
         )}
+        style={{
+          backgroundColor: isActive ? "var(--sidebar-active-bg)" : undefined,
+          color: isActive ? "var(--sidebar-text)" : "var(--sidebar-text-muted)",
+        }}
       >
-        <Icon ref={iconRef} className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+        <Icon
+          ref={iconRef}
+          className="h-5 w-5 flex-shrink-0"
+          aria-hidden="true"
+        />
         <span className="flex-1 text-left">{label}</span>
         <ChevronDown
           className={cn(
@@ -123,7 +135,10 @@ export function SidebarModuleGroup({
           isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0",
         )}
       >
-        <div className="ml-2 pl-3 border-l border-white/[0.08] mt-1 pb-1">
+        <div
+          className="ml-2 pl-3 border-l mt-1 pb-1"
+          style={{ borderColor: "var(--sidebar-divider)" }}
+        >
           {children}
         </div>
       </div>

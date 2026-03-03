@@ -93,6 +93,36 @@ ALL_STRUCTURE_TYPES = [
     *MOU_TRANSACTION_TYPES,
 ]
 
+# Literal 타입 — IDE 자동완성 + 타입 안전성
+AllStructureType = Literal[
+    # SPA
+    "PURE_SHARE_TRANSFER",
+    "CARVE_OUT",
+    "WITH_NEW_SHARES",
+    "OTHER_STRUCTURE",
+    # SHA
+    "POST_BUYOUT",
+    "JOINT_VENTURE",
+    "MINORITY_INVESTMENT",
+    "OTHER_TYPE",
+    # BTA
+    "COMPREHENSIVE_TRANSFER",
+    "PARTIAL_TRANSFER",
+    "OTHER_SCOPE",
+    # SSA
+    "COMMON_SHARE",
+    "RCPS",
+    "CB",
+    "BW",
+    "OTHER_SECURITY",
+    # MOU
+    "SHARE_PURCHASE",
+    "BUSINESS_TRANSFER",
+    "NEW_SHARE_ISSUE",
+    "COMBINED",
+    "OTHER_MOU_TYPE",
+]
+
 INDUSTRY_TYPES = [
     "MANUFACTURING",
     "SOFTWARE",
@@ -194,7 +224,7 @@ class SpaStep1Response(BaseModel):
 
     session_id: str
     variables: list[ExtractedVariable]
-    deal_structure: str  # ALL_STRUCTURE_TYPES 합집합 (DEAL_STRUCTURES+SHA_TYPES+BTA_SCOPES+SSA_SECURITY_TYPES+MOU_TRANSACTION_TYPES)
+    deal_structure: AllStructureType
     industry_type: str
     detected_doc_type: str = Field(
         default="SPA",

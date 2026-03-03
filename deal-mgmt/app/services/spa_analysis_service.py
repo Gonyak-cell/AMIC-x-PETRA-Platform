@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,6 +58,22 @@ class Step1Result(TypedDict):
     transaction_context: str | None
     mou_transaction_type: str | None
     deposit_handling: str | None
+    cost: float | None
+    model: str | None
+
+
+class LLMCallResult(NamedTuple):
+    """LLM 호출 결과 — tuple 언팩킹 호환 + 이름 기반 접근."""
+
+    data: dict[str, Any]
+    cost: float | None
+    model: str | None
+
+
+class Step2Result(NamedTuple):
+    """Step 2 조항 분해 결과 — tuple 언팩킹 호환 + 이름 기반 접근."""
+
+    clauses: list[AnalyzedClause]
     cost: float | None
     model: str | None
 
@@ -138,12 +154,8 @@ async def _call_llm_json(
     user_prompt: str,
     *,
     max_retries: int = 1,
-) -> tuple[dict[str, Any], float | None, str | None]:
-    """LLM을 호출하고 JSON 응답을 파싱한다.
-
-    Returns:
-        (파싱된 dict, 비용 USD, 사용 모델)
-    """
+) -> LLMCallResult:
+    """LLM을 호출하고 JSON 응답을 파싱한다."""
     if max_retries < 0:
         raise ValueError("max_retries는 0 이상이어야 합니다.")
     llm = _get_llm_client()
@@ -162,7 +174,7 @@ async def _call_llm_json(
             parsed = _extract_json(raw)
             cost = llm.total_cost_usd - cost_before
             model_name = getattr(llm, "_primary_model", None)
-            return parsed, cost, model_name
+            return LLMCallResult(parsed, cost, model_name)
         except TimeoutError as exc:
             raise RuntimeError(f"LLM 호출이 {_LLM_CALL_TIMEOUT:.0f}초 내에 응답하지 않았습니다.") from exc
         except (json.JSONDecodeError, ValueError) as exc:
@@ -1850,7 +1862,7 @@ async def analyze_step2_clauses(
     spa_text: str | None = None,
     doc_type_hint: str | None = None,
     owner_user_id: str = "",
-) -> tuple[list[AnalyzedClause], float | None, str | None]:
+) -> Step2Result:
     """Step 2: 확정 변수를 기반으로 조항을 분해한다.
 
     Args:
@@ -1952,7 +1964,7 @@ async def analyze_step2_clauses(
         session.cost_usd,
     )
 
-    return clauses, cost, model
+    return Step2Result(clauses, cost, model)
 
 
 # ── Step 3: 템플릿 생성 (DB 저장) ─────────────────────────────────────────────

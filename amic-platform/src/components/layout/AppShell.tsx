@@ -15,6 +15,7 @@ import { SidebarOverlay } from "./SidebarOverlay";
 import { PageTransition } from "./PageTransition";
 import { DesktopHeader } from "@/components/DesktopHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useSidebarAppearance } from "@/hooks/useSidebarAppearance";
 
 const CommandPalette = lazy(() => import("@/components/search/CommandPalette"));
 
@@ -40,6 +41,9 @@ export default function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Sidebar theme — applies CSS variables to :root on mount & change
+  useSidebarAppearance();
 
   // 768px breakpoint detection
   useEffect(() => {
@@ -107,7 +111,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       <div className="flex min-h-screen overflow-x-hidden">
         {/* Desktop Sidebar */}
-        <div className="hidden md:block">
+        <div className="hidden md:block sticky top-0 h-screen overflow-y-auto sidebar-scroll">
           <Sidebar />
         </div>
 
