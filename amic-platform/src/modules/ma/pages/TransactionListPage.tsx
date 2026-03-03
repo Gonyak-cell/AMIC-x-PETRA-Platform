@@ -1,16 +1,12 @@
 import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Plus,
-  Pencil,
-  Briefcase,
-  TrendingUp,
-  Clock,
-  DollarSign,
-} from "lucide-react";
+import { Plus, Pencil, Briefcase, TrendingUp, DollarSign } from "lucide-react";
 
-import { useTransactions } from "@/modules/ma/hooks/useTransactions";
+import {
+  useTransactions,
+  useMaStats,
+} from "@/modules/ma/hooks/useTransactions";
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
   TRANSACTION_SIDE_OPTIONS,
@@ -96,33 +92,22 @@ export default function TransactionListPage() {
     offset: (page - 1) * pageSize,
   });
 
-  // KPI용 전체 데이터 (페이지네이션 없이)
-  const { data: allData } = useTransactions({ limit: 1000, offset: 0 });
-  const allItems = useMemo(() => allData?.items ?? [], [allData?.items]);
+  // KPI 통계 (DB 집계 기반)
+  const { data: stats } = useMaStats();
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
-  // KPI 계산 — 전체 데이터 기반
-  const kpis = useMemo(() => {
-    const now = new Date();
-    return {
-      total: allData?.total ?? total,
-      active: allItems.filter((t) => t.status === "ACTIVE").length,
-      totalValue: allItems.reduce(
-        (sum, t) => sum + Number(t.estimated_deal_value ?? 0),
-        0,
-      ),
-      thisMonth: allItems.filter((t) => {
-        const d = new Date(t.created_at);
-        return (
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        );
-      }).length,
-    };
-  }, [allItems, allData?.total, total]);
+  // KPI 계산 — DB 집계 기반
+  const kpis = useMemo(
+    () => ({
+      total: stats?.total_transactions ?? total,
+      active: stats?.active_transactions ?? 0,
+      totalValue: Number(stats?.total_deal_value ?? 0),
+    }),
+    [stats, total],
+  );
 
   const columns: Column<Transaction>[] = [
     {
@@ -242,10 +227,7 @@ export default function TransactionListPage() {
       />
 
       {/* KPI 카드 */}
-      <div
-        ref={kpiRef}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
+      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard
           label="전체 거래"
           value={String(kpis.total)}
@@ -261,7 +243,6 @@ export default function TransactionListPage() {
           value={formatKrwCompact(kpis.totalValue || null)}
           icon={DollarSign}
         />
-        <KpiCard label="이번 달" value={String(kpis.thisMonth)} icon={Clock} />
       </div>
 
       {/* 필터 바 */}
