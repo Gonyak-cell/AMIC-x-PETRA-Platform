@@ -2580,3 +2580,121 @@ class TestMouMultiWorkerFallback:
         assert "양해각서" in system_prompt
 
         _sessions.pop("mou-fallback-test", None)
+
+
+# ── 추가 리뷰 이슈 테스트 ────────────────────────────────────────────────────────
+
+
+class TestSessionOwnershipValidation:
+    """T-1: 세션 소유권 검증 실패 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_get_session_rejects_wrong_owner(self) -> None:
+        """다른 사용자가 세션에 접근하면 ValueError."""
+        from app.services.spa_analysis_service import _get_session
+
+        session = AnalysisSession(
+            session_id="owner-test",
+            spa_text="A" * 200,
+            owner_user_id="user-a",
+        )
+        _sessions["owner-test"] = session
+
+        try:
+            # 소유자 일치 → 정상
+            result = _get_session("owner-test", owner_user_id="user-a")
+            assert result.session_id == "owner-test"
+
+            # 다른 사용자 → ValueError
+            with pytest.raises(ValueError, match="접근할 권한이 없습니다"):
+                _get_session("owner-test", owner_user_id="user-b")
+
+            # 빈 owner_user_id → 검증 건너뜀 (호환성)
+            result = _get_session("owner-test", owner_user_id="")
+            assert result.session_id == "owner-test"
+        finally:
+            _sessions.pop("owner-test", None)
+
+
+class TestConditionExpressionMaxLength:
+    """T-2: condition_expression max_length=500 테스트."""
+
+    def test_condition_expression_within_limit(self) -> None:
+        """500자 이하 condition_expression 허용."""
+        clause = AnalyzedClause(
+            clause_order=0,
+            title="테스트",
+            content="<p>내용</p>",
+            original_content="<p>원문</p>",
+            condition_expression="a == True",
+        )
+        assert clause.condition_expression == "a == True"
+
+    def test_condition_expression_exceeds_max_length(self) -> None:
+        """500자 초과 condition_expression 거부."""
+        with pytest.raises(
+            Exception,
+            match=r"ensure this value has at most 500|at most 500|max_length",
+        ):
+            AnalyzedClause(
+                clause_order=0,
+                title="테스트",
+                content="<p>내용</p>",
+                original_content="<p>원문</p>",
+                condition_expression="x" * 501,
+            )
+
+
+class TestOriginalContentSanitize:
+    """T-3: original_content sanitize_html 적용 확인."""
+
+    @pytest.mark.asyncio
+    async def test_step2_sanitizes_original_content(self) -> None:
+        """Step 2에서 original_content에 sanitize_html이 적용되는지 확인."""
+        session_id = "sanitize-test"
+        _sessions[session_id] = AnalysisSession(
+            session_id=session_id,
+            spa_text="A" * 200,
+        )
+
+        xss_content = '<p>정상</p><script>alert("xss")</script>'
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>안전한 내용</p>",
+                        "original_content": xss_content,
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _, _ = await analyze_step2_clauses(
+                    session_id,
+                    [],
+                    "PURE_SHARE_TRANSFER",
+                    "GENERAL",
+                )
+
+            assert len(clauses) == 1
+            # <script> 태그가 제거되었는지 확인
+            assert "<script>" not in clauses[0].original_content
+            assert "정상" in clauses[0].original_content
+        finally:
+            _sessions.pop(session_id, None)

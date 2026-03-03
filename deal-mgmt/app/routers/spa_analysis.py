@@ -105,13 +105,27 @@ async def step1_extract_variables(
             owner_user_id=claims.user_id,
         )
     except RuntimeError as exc:
-        logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
+        logger.error(
+            "Step 1 실패: txn=%s, user=%s, doc_type_hint=%s, spa_len=%d, error=%s",
+            txn_id,
+            claims.user_id,
+            body.doc_type_hint,
+            len(body.spa_text),
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="분석 서비스가 일시적으로 사용 불가능합니다. 잠시 후 다시 시도하세요.",
         ) from exc
     except ValueError as exc:
-        logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
+        logger.error(
+            "Step 1 실패: txn=%s, user=%s, doc_type_hint=%s, spa_len=%d, error=%s",
+            txn_id,
+            claims.user_id,
+            body.doc_type_hint,
+            len(body.spa_text),
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="분석 요청을 처리할 수 없습니다. 입력 데이터를 확인하세요.",
@@ -170,13 +184,13 @@ async def step2_decompose_clauses(
             owner_user_id=claims.user_id,
         )
     except RuntimeError as exc:
-        logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
+        logger.error("Step 2 실패: txn=%s, user=%s, session=%s, error=%s", txn_id, claims.user_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="분석 서비스가 일시적으로 사용 불가능합니다. 잠시 후 다시 시도하세요.",
         ) from exc
     except ValueError as exc:
-        logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
+        logger.error("Step 2 실패: txn=%s, user=%s, session=%s, error=%s", txn_id, claims.user_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="분석 요청을 처리할 수 없습니다. 세션이 만료되었거나 입력 데이터를 확인하세요.",

@@ -144,6 +144,8 @@ async def _call_llm_json(
     Returns:
         (파싱된 dict, 비용 USD, 사용 모델)
     """
+    if max_retries < 0:
+        raise ValueError("max_retries는 0 이상이어야 합니다.")
     llm = _get_llm_client()
     if not llm.is_available:
         raise RuntimeError("사용 가능한 LLM 프로바이더가 없습니다.")
@@ -1093,6 +1095,36 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 ```
 주의: deal_structure 필드에는 mou_transaction_type과 동일한 값을 넣어주세요."""
 
+# ── 프롬프트 Dispatch 맵 ──────────────────────────────────────────────────────
+
+_STEP1_PROMPT_MAP: dict[str, str] = {
+    "SHA": _SHA_STEP1_SYSTEM_PROMPT,
+    "BTA": _BTA_STEP1_SYSTEM_PROMPT,
+    "SSA": _SSA_STEP1_SYSTEM_PROMPT,
+    "MOU": _MOU_STEP1_SYSTEM_PROMPT,
+}
+
+_STEP2_PROMPT_MAP: dict[str, tuple[str, str]] | None = None
+_TYPE_LABEL_MAP: dict[str, str] = {
+    "SHA": "SHA 유형",
+    "BTA": "BTA 양도범위",
+    "SSA": "SSA 증권종류",
+    "MOU": "MOU 거래유형",
+}
+
+
+def _get_step2_prompt_map() -> dict[str, tuple[str, str]]:
+    """Step 2 프롬프트 맵을 지연 초기화하여 반환한다."""
+    global _STEP2_PROMPT_MAP
+    if _STEP2_PROMPT_MAP is None:
+        _STEP2_PROMPT_MAP = {
+            "SHA": (_SHA_STEP2_SYSTEM_PROMPT, "SHA 주주간계약서"),
+            "BTA": (_BTA_STEP2_SYSTEM_PROMPT, "BTA 영업양수도계약서"),
+            "SSA": (_SSA_STEP2_SYSTEM_PROMPT, "SSA 신주인수계약서"),
+            "MOU": (_MOU_STEP2_SYSTEM_PROMPT, "MOU 양해각서"),
+        }
+    return _STEP2_PROMPT_MAP
+
 
 async def analyze_step1_variables(
     spa_text: str,
@@ -1112,6 +1144,7 @@ async def analyze_step1_variables(
     if len(_sessions) >= _MAX_SESSIONS:
         _cleanup_expired_sessions()
         if len(_sessions) >= _MAX_SESSIONS:
+            logger.error("세션 한도 도달: user=%s, current=%d, max=%d", owner_user_id, len(_sessions), _MAX_SESSIONS)
             raise RuntimeError("분석 세션 수가 한도에 도달했습니다. 잠시 후 다시 시도하세요.")
 
     # 세션 생성 (소유자 기록 — C1 세션 소유권 검증용)
@@ -1122,17 +1155,10 @@ async def analyze_step1_variables(
     )
     _sessions[session_id] = session
 
-    # 프롬프트 선택: doc_type_hint에 따라 전용 프롬프트 분기
-    if doc_type_hint == "SHA":
-        system_prompt = _SHA_STEP1_SYSTEM_PROMPT
-    elif doc_type_hint == "BTA":
-        system_prompt = _BTA_STEP1_SYSTEM_PROMPT
-    elif doc_type_hint == "SSA":
-        system_prompt = _SSA_STEP1_SYSTEM_PROMPT
-    elif doc_type_hint == "MOU":
-        system_prompt = _MOU_STEP1_SYSTEM_PROMPT
-    else:
-        system_prompt = _STEP1_SYSTEM_PROMPT
+    # 프롬프트 선택: doc_type_hint에 따라 전용 프롬프트 분기 (dict dispatch)
+    system_prompt = _STEP1_PROMPT_MAP.get(doc_type_hint or "", _STEP1_SYSTEM_PROMPT)
+    if doc_type_hint and doc_type_hint not in _STEP1_PROMPT_MAP:
+        logger.warning("예상 밖의 doc_type_hint=%s → 기본 SPA 프롬프트 사용", doc_type_hint)
 
     # 사용자 프롬프트
     lang_hint = f"\n언어: {language_hint}" if language_hint else ""
@@ -1857,31 +1883,17 @@ async def analyze_step2_clauses(
         msg = f"세션 비용 한도 초과 (${session.cost_usd:.2f} / ${_MAX_COST_PER_SESSION:.2f})"
         raise ValueError(msg)
 
-    # 프롬프트 선택: 세션의 detected_doc_type에 따라 분기
+    # 프롬프트 선택: 세션의 detected_doc_type에 따라 분기 (dict dispatch)
     doc_type = session.detected_doc_type
-    if doc_type == "SHA":
-        system_prompt = _SHA_STEP2_SYSTEM_PROMPT
-        doc_label = "SHA 주주간계약서"
-    elif doc_type == "BTA":
-        system_prompt = _BTA_STEP2_SYSTEM_PROMPT
-        doc_label = "BTA 영업양수도계약서"
-    elif doc_type == "SSA":
-        system_prompt = _SSA_STEP2_SYSTEM_PROMPT
-        doc_label = "SSA 신주인수계약서"
-    elif doc_type == "MOU":
-        system_prompt = _MOU_STEP2_SYSTEM_PROMPT
-        doc_label = "MOU 양해각서"
-    else:
-        system_prompt = _STEP2_SYSTEM_PROMPT
-        doc_label = "SPA"
+    step2_map = _get_step2_prompt_map()
+    system_prompt, doc_label = step2_map.get(
+        doc_type,
+        (_STEP2_SYSTEM_PROMPT, "SPA"),
+    )
+    if doc_type not in step2_map and doc_type != "SPA":
+        logger.warning("예상 밖의 doc_type=%s → 기본 SPA 프롬프트 사용", doc_type)
 
-    type_label_map: dict[str, str] = {
-        "SHA": "SHA 유형",
-        "BTA": "BTA 양도범위",
-        "SSA": "SSA 증권종류",
-        "MOU": "MOU 거래유형",
-    }
-    type_label = type_label_map.get(doc_type, "거래 구조")
+    type_label = _TYPE_LABEL_MAP.get(doc_type, "거래 구조")
 
     # 변수 목록을 프롬프트에 포함
     var_summary = "\n".join(f"- {v.variable_key} ({v.input_type}): {v.question_label}" for v in confirmed_variables)
