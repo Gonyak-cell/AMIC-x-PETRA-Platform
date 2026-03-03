@@ -156,6 +156,7 @@ async def admin_update_user(
 @router.delete(
     "/{user_id}",
     status_code=204,
+    response_class=Response,
     summary="사용자 비활성화 (ADMIN)",
 )
 async def deactivate_user(

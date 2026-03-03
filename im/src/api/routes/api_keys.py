@@ -77,6 +77,7 @@ async def list_api_keys(
 @router.delete(
     "/{key_id}",
     status_code=204,
+    response_class=Response,
     summary="API 키 비활성화",
 )
 async def revoke_api_key(
