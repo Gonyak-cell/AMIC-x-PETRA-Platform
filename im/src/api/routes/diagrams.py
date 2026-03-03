@@ -238,7 +238,7 @@ async def delete_diagram(
     diagram_id: uuid.UUID,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-) -> None:
+) -> Response:
     """다이어그램을 삭제한다."""
     diagram = await _get_diagram(document_id, diagram_id, session, current_user)
     await session.delete(diagram)
@@ -250,6 +250,7 @@ async def delete_diagram(
         diagram_id,
         current_user.id,
     )
+    return Response(status_code=204)
 
 
 # ---------------------------------------------------------------------------
