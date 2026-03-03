@@ -22,6 +22,10 @@ import type {
   ExitStrategy,
   BtaScope,
   SeverancePayHandling,
+  SsaSecurityType,
+  SsaTransactionContext,
+  MouTransactionType,
+  MouDepositHandling,
   SpaStep1Response,
   SpaStep2Response,
 } from "../types/spa_analysis";
@@ -37,6 +41,12 @@ import {
   BTA_SCOPES,
   BTA_SCOPE_LABELS,
   SEVERANCE_PAY_LABELS,
+  SSA_SECURITY_TYPES,
+  SSA_SECURITY_TYPE_LABELS,
+  SSA_TRANSACTION_CONTEXT_LABELS,
+  MOU_TRANSACTION_TYPES,
+  MOU_TRANSACTION_TYPE_LABELS,
+  MOU_DEPOSIT_HANDLING_LABELS,
 } from "../types/spa_analysis";
 import SpaTextInput from "./SpaTextInput";
 import {
@@ -44,6 +54,8 @@ import {
   ClauseReviewPanel,
   ShaClassificationPanel,
   BtaClassificationPanel,
+  SsaClassificationPanel,
+  MouClassificationPanel,
 } from "./AnalysisReviewPanel";
 
 interface SpaAnalysisWizardProps {
@@ -87,6 +99,16 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
   // BTA 전용 상태
   const [severancePayHandling, setSeverancePayHandling] =
     useState<SeverancePayHandling>("OTHER_METHOD");
+  // SSA 전용 상태
+  const [securityType, setSecurityType] =
+    useState<SsaSecurityType>("OTHER_SECURITY");
+  const [transactionContext, setTransactionContext] =
+    useState<SsaTransactionContext>("OTHER_CONTEXT");
+  // MOU 전용 상태
+  const [mouTransactionType, setMouTransactionType] =
+    useState<MouTransactionType>("OTHER_MOU_TYPE");
+  const [depositHandling, setDepositHandling] =
+    useState<MouDepositHandling>("NO_DEPOSIT");
 
   // Step 2 결과
   const [clauses, setClauses] = useState<AnalyzedClause[]>([]);
@@ -170,6 +192,18 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
           setSeverancePayHandling(
             result.severance_pay_handling ?? "OTHER_METHOD",
           );
+        } else if (result.detected_doc_type === "SSA") {
+          setDealStructure(result.security_type ?? result.deal_structure);
+          setSecurityType(result.security_type ?? "OTHER_SECURITY");
+          setTransactionContext(result.transaction_context ?? "OTHER_CONTEXT");
+        } else if (result.detected_doc_type === "MOU") {
+          setDealStructure(
+            result.mou_transaction_type ?? result.deal_structure,
+          );
+          setMouTransactionType(
+            result.mou_transaction_type ?? "OTHER_MOU_TYPE",
+          );
+          setDepositHandling(result.deposit_handling ?? "NO_DEPOSIT");
         } else {
           setDealStructure(result.deal_structure);
         }
@@ -369,7 +403,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                     onChange={(e) => {
                       const next = e.target.value as DocType;
                       setDocType(next);
-                      // 문서 유형 전환 시 dealStructure 기본값 리셋
+                      // 문서 유형 전환 시 dealStructure + 전용 상태 리셋
                       if (
                         next === "SHA" &&
                         !(SHA_TYPES as readonly string[]).includes(
@@ -385,13 +419,43 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                       ) {
                         setDealStructure("OTHER_SCOPE");
                       } else if (
-                        next !== "SHA" &&
-                        next !== "BTA" &&
+                        next === "SSA" &&
+                        !(SSA_SECURITY_TYPES as readonly string[]).includes(
+                          dealStructure,
+                        )
+                      ) {
+                        setDealStructure("OTHER_SECURITY");
+                        setSecurityType("OTHER_SECURITY");
+                      } else if (
+                        next === "MOU" &&
+                        !(MOU_TRANSACTION_TYPES as readonly string[]).includes(
+                          dealStructure,
+                        )
+                      ) {
+                        setDealStructure("OTHER_MOU_TYPE");
+                        setMouTransactionType("OTHER_MOU_TYPE");
+                      } else if (
+                        !["SHA", "BTA", "SSA", "MOU"].includes(next) &&
                         !(DEAL_STRUCTURES as readonly string[]).includes(
                           dealStructure,
                         )
                       ) {
                         setDealStructure("PURE_SHARE_TRANSFER");
+                      }
+                      // 이전 유형 전용 상태 초기화
+                      if (next !== "SHA") {
+                        setExitStrategy("OTHER_STRATEGY");
+                      }
+                      if (next !== "BTA") {
+                        setSeverancePayHandling("OTHER_METHOD");
+                      }
+                      if (next !== "SSA") {
+                        setSecurityType("OTHER_SECURITY");
+                        setTransactionContext("OTHER_CONTEXT");
+                      }
+                      if (next !== "MOU") {
+                        setMouTransactionType("OTHER_MOU_TYPE");
+                        setDepositHandling("NO_DEPOSIT");
                       }
                     }}
                     className="rounded-lg border border-border bg-white px-2 py-0.5 text-xs text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
@@ -437,6 +501,54 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                 industryType={industryType}
                 onBtaScopeChange={(v) => setDealStructure(v)}
                 onSeverancePayChange={setSeverancePayHandling}
+                onIndustryTypeChange={setIndustryType}
+                variableCount={variables.length}
+              />
+              <VariableReviewPanel
+                variables={variables}
+                dealStructure={dealStructure}
+                industryType={industryType}
+                onVariablesChange={setVariables}
+                onDealStructureChange={setDealStructure}
+                onIndustryTypeChange={setIndustryType}
+                hideClassification
+              />
+            </>
+          ) : docType === "SSA" ? (
+            <>
+              <SsaClassificationPanel
+                securityType={securityType}
+                transactionContext={transactionContext}
+                industryType={industryType}
+                onSecurityTypeChange={(v) => {
+                  setSecurityType(v);
+                  setDealStructure(v);
+                }}
+                onTransactionContextChange={setTransactionContext}
+                onIndustryTypeChange={setIndustryType}
+                variableCount={variables.length}
+              />
+              <VariableReviewPanel
+                variables={variables}
+                dealStructure={dealStructure}
+                industryType={industryType}
+                onVariablesChange={setVariables}
+                onDealStructureChange={setDealStructure}
+                onIndustryTypeChange={setIndustryType}
+                hideClassification
+              />
+            </>
+          ) : docType === "MOU" ? (
+            <>
+              <MouClassificationPanel
+                mouTransactionType={mouTransactionType}
+                depositHandling={depositHandling}
+                industryType={industryType}
+                onMouTransactionTypeChange={(v) => {
+                  setMouTransactionType(v);
+                  setDealStructure(v);
+                }}
+                onDepositHandlingChange={setDepositHandling}
                 onIndustryTypeChange={setIndustryType}
                 variableCount={variables.length}
               />
@@ -605,7 +717,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
               생성 요약
             </h3>
             <div
-              className={`grid grid-cols-2 gap-2 text-sm ${docType === "SHA" || docType === "BTA" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}
+              className={`grid grid-cols-2 gap-2 text-sm ${docType === "SHA" || docType === "BTA" || docType === "SSA" || docType === "MOU" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}
             >
               <div className="flex flex-col">
                 <span className="text-text-tertiary text-xs">계약 유형</span>
@@ -661,6 +773,47 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
                     <span className="font-medium text-text-primary">
                       {SEVERANCE_PAY_LABELS[severancePayHandling] ??
                         severancePayHandling}
+                    </span>
+                  </div>
+                </>
+              ) : docType === "SSA" ? (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      증권 종류
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {SSA_SECURITY_TYPE_LABELS[securityType] ?? securityType}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      거래 맥락
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {SSA_TRANSACTION_CONTEXT_LABELS[transactionContext] ??
+                        transactionContext}
+                    </span>
+                  </div>
+                </>
+              ) : docType === "MOU" ? (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      거래 유형
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {MOU_TRANSACTION_TYPE_LABELS[mouTransactionType] ??
+                        mouTransactionType}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-text-tertiary text-xs">
+                      보증금 처리
+                    </span>
+                    <span className="font-medium text-text-primary">
+                      {MOU_DEPOSIT_HANDLING_LABELS[depositHandling] ??
+                        depositHandling}
                     </span>
                   </div>
                 </>

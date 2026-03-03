@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import ast
+import re
 import uuid
 from typing import Literal
 
@@ -51,8 +53,45 @@ SEVERANCE_PAY_HANDLING = [
     "OTHER_METHOD",
 ]
 
-# SPA DEAL_STRUCTURES + SHA SHA_TYPES + BTA BTA_SCOPES 통합 유효값 (validator용)
-ALL_STRUCTURE_TYPES = [*DEAL_STRUCTURES, *SHA_TYPES, *BTA_SCOPES]
+# SSA 전용 ENUM
+SSA_SECURITY_TYPES = [
+    "COMMON_SHARE",
+    "RCPS",
+    "CB",
+    "BW",
+    "OTHER_SECURITY",
+]
+
+SSA_TRANSACTION_CONTEXTS = [
+    "STANDALONE_INVESTMENT",
+    "PARALLEL_WITH_SPA",
+    "PARALLEL_WITH_BTA",
+    "OTHER_CONTEXT",
+]
+
+# MOU 전용 ENUM
+MOU_TRANSACTION_TYPES = [
+    "SHARE_PURCHASE",
+    "BUSINESS_TRANSFER",
+    "NEW_SHARE_ISSUE",
+    "COMBINED",
+    "OTHER_MOU_TYPE",
+]
+
+MOU_DEPOSIT_HANDLING = [
+    "REFUNDABLE",
+    "NON_REFUNDABLE",
+    "NO_DEPOSIT",
+]
+
+# SPA + SHA + BTA + SSA + MOU 통합 유효값 (validator용)
+ALL_STRUCTURE_TYPES = [
+    *DEAL_STRUCTURES,
+    *SHA_TYPES,
+    *BTA_SCOPES,
+    *SSA_SECURITY_TYPES,
+    *MOU_TRANSACTION_TYPES,
+]
 
 INDUSTRY_TYPES = [
     "MANUFACTURING",
@@ -125,8 +164,6 @@ class ExtractedVariable(BaseModel):
         """visible_condition도 condition_expression과 동일한 보안 검증 적용."""
         if v is None:
             return v
-        import ast
-        import re
 
         forbidden = re.compile(
             r"(__\w+__|import|exec|eval|compile|globals|locals|getattr|setattr|delattr|open|os\.|sys\.|subprocess)"
@@ -157,7 +194,7 @@ class SpaStep1Response(BaseModel):
 
     session_id: str
     variables: list[ExtractedVariable]
-    deal_structure: str  # SPA: DEAL_STRUCTURES / SHA: SHA_TYPES
+    deal_structure: str  # SPA/SHA/BTA/SSA/MOU 유형별 ENUM (ALL_STRUCTURE_TYPES)
     industry_type: str
     detected_doc_type: str = Field(
         default="SPA",
@@ -180,6 +217,24 @@ class SpaStep1Response(BaseModel):
     severance_pay_handling: str | None = Field(
         default=None,
         description="BTA 퇴직금 처리 (ASSUMED_BY_BUYER/PAID_BY_SELLER/OTHER_METHOD)",
+    )
+    # SSA 전용 필드 (SPA/SHA/BTA에서는 None)
+    security_type: str | None = Field(
+        default=None,
+        description="SSA 증권 종류 (COMMON_SHARE/RCPS/CB/BW/OTHER_SECURITY)",
+    )
+    transaction_context: str | None = Field(
+        default=None,
+        description="SSA 거래 맥락 (STANDALONE_INVESTMENT/PARALLEL_WITH_SPA/PARALLEL_WITH_BTA/OTHER_CONTEXT)",
+    )
+    # MOU 전용 필드 (SPA/SHA/BTA/SSA에서는 None)
+    mou_transaction_type: str | None = Field(
+        default=None,
+        description="MOU 거래 유형 (SHARE_PURCHASE/BUSINESS_TRANSFER/NEW_SHARE_ISSUE/COMBINED/OTHER_MOU_TYPE)",
+    )
+    deposit_handling: str | None = Field(
+        default=None,
+        description="MOU 보증금 처리 (REFUNDABLE/NON_REFUNDABLE/NO_DEPOSIT)",
     )
     discovered_booleans: list[DiscoveredBoolean] = Field(default_factory=list)
     llm_cost_usd: float | None = None
@@ -229,6 +284,34 @@ class SpaStep1Response(BaseModel):
             return "OTHER_METHOD"  # LLM 잘못된 값 → 안전한 기본값
         return v
 
+    @field_validator("security_type")
+    @classmethod
+    def validate_security_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in SSA_SECURITY_TYPES:
+            return "OTHER_SECURITY"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
+    @field_validator("transaction_context")
+    @classmethod
+    def validate_transaction_context(cls, v: str | None) -> str | None:
+        if v is not None and v not in SSA_TRANSACTION_CONTEXTS:
+            return "OTHER_CONTEXT"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
+    @field_validator("mou_transaction_type")
+    @classmethod
+    def validate_mou_transaction_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in MOU_TRANSACTION_TYPES:
+            return "OTHER_MOU_TYPE"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
+    @field_validator("deposit_handling")
+    @classmethod
+    def validate_deposit_handling(cls, v: str | None) -> str | None:
+        if v is not None and v not in MOU_DEPOSIT_HANDLING:
+            return "NO_DEPOSIT"  # LLM 잘못된 값 → 안전한 기본값
+        return v
+
     @field_validator("detected_doc_type")
     @classmethod
     def validate_detected_doc_type(cls, v: str) -> str:
@@ -238,13 +321,17 @@ class SpaStep1Response(BaseModel):
 
     @model_validator(mode="after")
     def validate_structure_for_doc_type(self) -> SpaStep1Response:
-        """SHA일 때는 SHA_TYPES만, BTA일 때는 BTA_SCOPES만, 그 외는 DEAL_STRUCTURES만 허용."""
+        """SHA→SHA_TYPES, BTA→BTA_SCOPES, SSA→SSA_SECURITY_TYPES, MOU→MOU_TRANSACTION_TYPES, 그 외→DEAL_STRUCTURES 허용."""
         ds = self.deal_structure
         if self.detected_doc_type == "SHA" and ds not in SHA_TYPES:
             self.deal_structure = "OTHER_TYPE"
         elif self.detected_doc_type == "BTA" and ds not in BTA_SCOPES:
             self.deal_structure = "OTHER_SCOPE"
-        elif self.detected_doc_type not in ("SHA", "BTA") and ds not in DEAL_STRUCTURES:
+        elif self.detected_doc_type == "SSA" and ds not in SSA_SECURITY_TYPES:
+            self.deal_structure = "OTHER_SECURITY"
+        elif self.detected_doc_type == "MOU" and ds not in MOU_TRANSACTION_TYPES:
+            self.deal_structure = "OTHER_MOU_TYPE"
+        elif self.detected_doc_type not in ("SHA", "BTA", "SSA", "MOU") and ds not in DEAL_STRUCTURES:
             self.deal_structure = "OTHER_STRUCTURE"
         return self
 

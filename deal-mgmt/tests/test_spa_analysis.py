@@ -365,6 +365,10 @@ class TestStep1AnalyzeVariables:
                 _exit_strategy,
                 _bta_scope,
                 _severance_pay,
+                _security_type,
+                _transaction_ctx,
+                _mou_txn_type,
+                _deposit_hdl,
                 _cost,
                 _model,
             ) = await analyze_step1_variables("A" * 200)
@@ -936,12 +940,16 @@ class TestEmptyArrayEdgeCases:
                 _industry,
                 doc_type,
                 discovered,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
+                _sha,
+                _exit,
+                _bta,
+                _sev,
+                _sec,
+                _txn,
+                _mou,
+                _dep,
+                _cost,
+                _model,
             ) = await analyze_step1_variables("A" * 200)
 
         assert variables == []
@@ -1458,6 +1466,10 @@ class TestShaStep1Service:
             exit_strategy,
             _bta_scope,
             _severance_pay,
+            _security_type,
+            _transaction_ctx,
+            _mou_txn_type,
+            _deposit_hdl,
             _cost,
             _model,
         ) = result
@@ -1937,6 +1949,10 @@ class TestBtaStep1Service:
             _exit_strategy,
             bta_scope,
             severance_pay,
+            _security_type,
+            _transaction_ctx,
+            _mou_txn_type,
+            _deposit_hdl,
             _cost,
             _model,
         ) = result
@@ -2050,3 +2066,627 @@ class TestBtaMultiWorkerFallback:
         assert "영업양수도계약서" in system_prompt
 
         _sessions.pop("bta-fallback-test", None)
+
+
+# ── SSA 확장 테스트 ──────────────────────────────────────────────────────────────
+
+
+class TestSsaSchemas:
+    """SSA 확장 스키마 검증 테스트."""
+
+    def test_ssa_security_types_constant(self) -> None:
+        """SSA_SECURITY_TYPES 상수 5개."""
+        from app.schemas.spa_analysis import SSA_SECURITY_TYPES
+
+        assert "COMMON_SHARE" in SSA_SECURITY_TYPES
+        assert "RCPS" in SSA_SECURITY_TYPES
+        assert "CB" in SSA_SECURITY_TYPES
+        assert "BW" in SSA_SECURITY_TYPES
+        assert "OTHER_SECURITY" in SSA_SECURITY_TYPES
+        assert len(SSA_SECURITY_TYPES) == 5
+
+    def test_ssa_transaction_contexts_constant(self) -> None:
+        """SSA_TRANSACTION_CONTEXTS 상수 4개."""
+        from app.schemas.spa_analysis import SSA_TRANSACTION_CONTEXTS
+
+        assert "STANDALONE_INVESTMENT" in SSA_TRANSACTION_CONTEXTS
+        assert "PARALLEL_WITH_SPA" in SSA_TRANSACTION_CONTEXTS
+        assert "PARALLEL_WITH_BTA" in SSA_TRANSACTION_CONTEXTS
+        assert "OTHER_CONTEXT" in SSA_TRANSACTION_CONTEXTS
+        assert len(SSA_TRANSACTION_CONTEXTS) == 4
+
+    def test_all_structure_types_includes_ssa(self) -> None:
+        """ALL_STRUCTURE_TYPES에 SSA_SECURITY_TYPES 포함 확인."""
+        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+
+        assert "COMMON_SHARE" in ALL_STRUCTURE_TYPES
+        assert "RCPS" in ALL_STRUCTURE_TYPES
+        assert "CB" in ALL_STRUCTURE_TYPES
+        # 기존 값도 유지
+        assert "PURE_SHARE_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "POST_BUYOUT" in ALL_STRUCTURE_TYPES
+        assert "COMPREHENSIVE_TRANSFER" in ALL_STRUCTURE_TYPES
+
+    def test_step1_response_ssa_fields(self) -> None:
+        """SSA 응답에서 security_type, transaction_context 필드."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="RCPS",
+            industry_type="SOFTWARE",
+            detected_doc_type="SSA",
+            security_type="RCPS",
+            transaction_context="STANDALONE_INVESTMENT",
+        )
+        assert resp.security_type == "RCPS"
+        assert resp.transaction_context == "STANDALONE_INVESTMENT"
+        assert resp.detected_doc_type == "SSA"
+
+    def test_step1_response_spa_ssa_fields_null(self) -> None:
+        """SPA 응답에서 SSA 필드는 None."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",
+            industry_type="GENERAL",
+        )
+        assert resp.security_type is None
+        assert resp.transaction_context is None
+
+    def test_security_type_invalid_fallback(self) -> None:
+        """잘못된 security_type → OTHER_SECURITY 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="RCPS",
+            industry_type="GENERAL",
+            detected_doc_type="SSA",
+            security_type="INVALID_TYPE",
+        )
+        assert resp.security_type == "OTHER_SECURITY"
+
+    def test_transaction_context_invalid_fallback(self) -> None:
+        """잘못된 transaction_context → OTHER_CONTEXT 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="RCPS",
+            industry_type="GENERAL",
+            detected_doc_type="SSA",
+            transaction_context="INVALID_CONTEXT",
+        )
+        assert resp.transaction_context == "OTHER_CONTEXT"
+
+    def test_model_validator_ssa_scope_enforced(self) -> None:
+        """SSA일 때 DEAL_STRUCTURES 값 → OTHER_SECURITY 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",  # SPA 구조
+            industry_type="GENERAL",
+            detected_doc_type="SSA",
+        )
+        assert resp.deal_structure == "OTHER_SECURITY"
+
+    def test_model_validator_ssa_scope_valid(self) -> None:
+        """SSA일 때 SSA_SECURITY_TYPES 값 통과."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="CB",
+            industry_type="GENERAL",
+            detected_doc_type="SSA",
+        )
+        assert resp.deal_structure == "CB"
+
+    def test_step2_request_ssa_scope_accepted(self) -> None:
+        """Step2 request에 SSA_SECURITY_TYPES 값 허용."""
+        from app.schemas.spa_analysis import SpaStep2Request
+
+        body = SpaStep2Request(
+            session_id="test",
+            variables=[],
+            deal_structure="RCPS",
+            industry_type="GENERAL",
+        )
+        assert body.deal_structure == "RCPS"
+
+    def test_deal_structure_accepts_ssa_types(self) -> None:
+        """SSA 유형: SSA_SECURITY_TYPES 값 허용."""
+        from app.schemas.spa_analysis import SSA_SECURITY_TYPES
+
+        for st in SSA_SECURITY_TYPES:
+            resp = SpaStep1Response(
+                session_id="test",
+                variables=[],
+                deal_structure=st,
+                industry_type="GENERAL",
+                detected_doc_type="SSA",
+            )
+            assert resp.deal_structure == st
+
+
+class TestSsaStep1Service:
+    """SSA Step 1 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_ssa_step1_uses_ssa_prompt(self) -> None:
+        """doc_type_hint='SSA' 시 SSA 프롬프트 사용 + 필드 파싱."""
+        mock_response = json.dumps(
+            {
+                "detected_doc_type": "SSA",
+                "security_type": "RCPS",
+                "transaction_context": "STANDALONE_INVESTMENT",
+                "variables": [
+                    {
+                        "variable_key": "issuer_name",
+                        "input_type": "TEXT",
+                        "question_label": "발행회사 명칭",
+                        "confidence": 0.9,
+                    },
+                ],
+                "deal_structure": "RCPS",
+                "industry_type": "SOFTWARE",
+                "discovered_booleans": [
+                    {
+                        "variable_key": "has_anti_dilution",
+                        "question_label": "희석방지 조항 포함 여부",
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            result = await analyze_step1_variables("A" * 200, doc_type_hint="SSA")
+
+        (
+            session_id,
+            variables,
+            deal_struct,
+            _industry,
+            detected_doc_type,
+            discovered,
+            _sha_type,
+            _exit_strategy,
+            _bta_scope,
+            _severance_pay,
+            security_type,
+            transaction_context,
+            _mou_txn_type,
+            _deposit_hdl,
+            _cost,
+            _model,
+        ) = result
+
+        assert detected_doc_type == "SSA"
+        assert security_type == "RCPS"
+        assert transaction_context == "STANDALONE_INVESTMENT"
+        assert deal_struct == "RCPS"
+        assert len(variables) == 1
+        assert variables[0].variable_key == "issuer_name"
+        assert len(discovered) == 1
+
+        # SSA 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "신주인수계약서" in system_prompt
+        assert "security_type" in system_prompt
+
+        _sessions.pop(session_id, None)
+
+
+class TestSsaStep2Service:
+    """SSA Step 2 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_ssa_step2_uses_ssa_prompt(self) -> None:
+        """session.detected_doc_type='SSA' 시 SSA Step2 프롬프트 사용."""
+        session = AnalysisSession(
+            session_id="ssa-step2-test",
+            spa_text="A" * 200,
+            detected_doc_type="SSA",
+        )
+        _sessions["ssa-step2-test"] = session
+
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>SSA 전문</p>",
+                        "original_content": "<p>SSA 원문</p>",
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _cost, _model = await analyze_step2_clauses(
+                    "ssa-step2-test",
+                    [],
+                    "RCPS",
+                    "SOFTWARE",
+                )
+
+            assert len(clauses) == 1
+            assert clauses[0].title == "전문"
+
+            # SSA 프롬프트 사용 확인
+            call_args = mock_llm.call.call_args
+            system_prompt = call_args[0][0]
+            assert "SSA" in system_prompt
+            assert "신주인수계약서" in system_prompt
+        finally:
+            _sessions.pop("ssa-step2-test", None)
+
+
+class TestSsaMultiWorkerFallback:
+    """SSA 멀티워커 세션 유실 시 폴백 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_step2_ssa_fallback_with_doc_type_hint(self) -> None:
+        """세션 유실 + doc_type_hint='SSA' → SSA 프롬프트 사용."""
+        mock_response = json.dumps({"clauses": []})
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step2_clauses
+
+            clauses, _, _ = await analyze_step2_clauses(
+                "ssa-fallback-test",
+                [],
+                "RCPS",
+                "GENERAL",
+                spa_text="A" * 200,
+                doc_type_hint="SSA",
+            )
+
+        assert clauses == []
+
+        # SSA 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "신주인수계약서" in system_prompt
+
+        _sessions.pop("ssa-fallback-test", None)
+
+
+# ── MOU 확장 테스트 ──────────────────────────────────────────────────────────────
+
+
+class TestMouSchemas:
+    """MOU 확장 스키마 검증 테스트."""
+
+    def test_mou_transaction_types_constant(self) -> None:
+        """MOU_TRANSACTION_TYPES 상수 5개."""
+        from app.schemas.spa_analysis import MOU_TRANSACTION_TYPES
+
+        assert "SHARE_PURCHASE" in MOU_TRANSACTION_TYPES
+        assert "BUSINESS_TRANSFER" in MOU_TRANSACTION_TYPES
+        assert "NEW_SHARE_ISSUE" in MOU_TRANSACTION_TYPES
+        assert "COMBINED" in MOU_TRANSACTION_TYPES
+        assert "OTHER_MOU_TYPE" in MOU_TRANSACTION_TYPES
+        assert len(MOU_TRANSACTION_TYPES) == 5
+
+    def test_mou_deposit_handling_constant(self) -> None:
+        """MOU_DEPOSIT_HANDLING 상수 3개."""
+        from app.schemas.spa_analysis import MOU_DEPOSIT_HANDLING
+
+        assert "REFUNDABLE" in MOU_DEPOSIT_HANDLING
+        assert "NON_REFUNDABLE" in MOU_DEPOSIT_HANDLING
+        assert "NO_DEPOSIT" in MOU_DEPOSIT_HANDLING
+        assert len(MOU_DEPOSIT_HANDLING) == 3
+
+    def test_all_structure_types_includes_mou(self) -> None:
+        """ALL_STRUCTURE_TYPES에 MOU_TRANSACTION_TYPES 포함 확인."""
+        from app.schemas.spa_analysis import ALL_STRUCTURE_TYPES
+
+        assert "SHARE_PURCHASE" in ALL_STRUCTURE_TYPES
+        assert "BUSINESS_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "COMBINED" in ALL_STRUCTURE_TYPES
+        # 기존 값도 유지
+        assert "PURE_SHARE_TRANSFER" in ALL_STRUCTURE_TYPES
+        assert "POST_BUYOUT" in ALL_STRUCTURE_TYPES
+        assert "RCPS" in ALL_STRUCTURE_TYPES
+
+    def test_step1_response_mou_fields(self) -> None:
+        """MOU 응답에서 mou_transaction_type, deposit_handling 필드."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="SHARE_PURCHASE",
+            industry_type="GENERAL",
+            detected_doc_type="MOU",
+            mou_transaction_type="SHARE_PURCHASE",
+            deposit_handling="NON_REFUNDABLE",
+        )
+        assert resp.mou_transaction_type == "SHARE_PURCHASE"
+        assert resp.deposit_handling == "NON_REFUNDABLE"
+        assert resp.detected_doc_type == "MOU"
+
+    def test_step1_response_spa_mou_fields_null(self) -> None:
+        """SPA 응답에서 MOU 필드는 None."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",
+            industry_type="GENERAL",
+        )
+        assert resp.mou_transaction_type is None
+        assert resp.deposit_handling is None
+
+    def test_mou_transaction_type_invalid_fallback(self) -> None:
+        """잘못된 mou_transaction_type → OTHER_MOU_TYPE 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="SHARE_PURCHASE",
+            industry_type="GENERAL",
+            detected_doc_type="MOU",
+            mou_transaction_type="INVALID_TYPE",
+        )
+        assert resp.mou_transaction_type == "OTHER_MOU_TYPE"
+
+    def test_deposit_handling_invalid_fallback(self) -> None:
+        """잘못된 deposit_handling → NO_DEPOSIT 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="SHARE_PURCHASE",
+            industry_type="GENERAL",
+            detected_doc_type="MOU",
+            deposit_handling="INVALID",
+        )
+        assert resp.deposit_handling == "NO_DEPOSIT"
+
+    def test_model_validator_mou_scope_enforced(self) -> None:
+        """MOU일 때 DEAL_STRUCTURES 값 → OTHER_MOU_TYPE 폴백."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="PURE_SHARE_TRANSFER",  # SPA 구조
+            industry_type="GENERAL",
+            detected_doc_type="MOU",
+        )
+        assert resp.deal_structure == "OTHER_MOU_TYPE"
+
+    def test_model_validator_mou_scope_valid(self) -> None:
+        """MOU일 때 MOU_TRANSACTION_TYPES 값 통과."""
+        resp = SpaStep1Response(
+            session_id="test",
+            variables=[],
+            deal_structure="COMBINED",
+            industry_type="GENERAL",
+            detected_doc_type="MOU",
+        )
+        assert resp.deal_structure == "COMBINED"
+
+    def test_step2_request_mou_type_accepted(self) -> None:
+        """Step2 request에 MOU_TRANSACTION_TYPES 값 허용."""
+        from app.schemas.spa_analysis import SpaStep2Request
+
+        body = SpaStep2Request(
+            session_id="test",
+            variables=[],
+            deal_structure="SHARE_PURCHASE",
+            industry_type="GENERAL",
+        )
+        assert body.deal_structure == "SHARE_PURCHASE"
+
+    def test_deal_structure_accepts_mou_types(self) -> None:
+        """MOU 유형: MOU_TRANSACTION_TYPES 값 허용."""
+        from app.schemas.spa_analysis import MOU_TRANSACTION_TYPES
+
+        for mt in MOU_TRANSACTION_TYPES:
+            resp = SpaStep1Response(
+                session_id="test",
+                variables=[],
+                deal_structure=mt,
+                industry_type="GENERAL",
+                detected_doc_type="MOU",
+            )
+            assert resp.deal_structure == mt
+
+
+class TestMouStep1Service:
+    """MOU Step 1 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_mou_step1_uses_mou_prompt(self) -> None:
+        """doc_type_hint='MOU' 시 MOU 프롬프트 사용 + 필드 파싱."""
+        mock_response = json.dumps(
+            {
+                "detected_doc_type": "MOU",
+                "mou_transaction_type": "SHARE_PURCHASE",
+                "deposit_handling": "NON_REFUNDABLE",
+                "variables": [
+                    {
+                        "variable_key": "seller_name",
+                        "input_type": "TEXT",
+                        "question_label": "매도인 명칭",
+                        "confidence": 0.9,
+                    },
+                ],
+                "deal_structure": "SHARE_PURCHASE",
+                "industry_type": "GENERAL",
+                "discovered_booleans": [
+                    {
+                        "variable_key": "has_exclusivity",
+                        "question_label": "독점협상권 조항 포함 여부",
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step1_variables
+
+            result = await analyze_step1_variables("A" * 200, doc_type_hint="MOU")
+
+        (
+            session_id,
+            variables,
+            deal_struct,
+            _industry,
+            detected_doc_type,
+            discovered,
+            _sha_type,
+            _exit_strategy,
+            _bta_scope,
+            _severance_pay,
+            _security_type,
+            _transaction_ctx,
+            mou_transaction_type,
+            deposit_handling,
+            _cost,
+            _model,
+        ) = result
+
+        assert detected_doc_type == "MOU"
+        assert mou_transaction_type == "SHARE_PURCHASE"
+        assert deposit_handling == "NON_REFUNDABLE"
+        assert deal_struct == "SHARE_PURCHASE"
+        assert len(variables) == 1
+        assert len(discovered) == 1
+
+        # MOU 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "양해각서" in system_prompt
+        assert "mou_transaction_type" in system_prompt
+
+        _sessions.pop(session_id, None)
+
+
+class TestMouStep2Service:
+    """MOU Step 2 서비스 테스트 (LLM Mock)."""
+
+    @pytest.mark.asyncio
+    async def test_mou_step2_uses_mou_prompt(self) -> None:
+        """session.detected_doc_type='MOU' 시 MOU Step2 프롬프트 사용."""
+        session = AnalysisSession(
+            session_id="mou-step2-test",
+            spa_text="A" * 200,
+            detected_doc_type="MOU",
+        )
+        _sessions["mou-step2-test"] = session
+
+        mock_response = json.dumps(
+            {
+                "clauses": [
+                    {
+                        "clause_order": 0,
+                        "title": "전문",
+                        "content": "<p>MOU 전문</p>",
+                        "original_content": "<p>MOU 원문</p>",
+                        "is_boilerplate": False,
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        )
+
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.05
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        try:
+            with patch(
+                "app.services.spa_analysis_service._get_llm_client",
+                return_value=mock_llm,
+            ):
+                from app.services.spa_analysis_service import analyze_step2_clauses
+
+                clauses, _cost, _model = await analyze_step2_clauses(
+                    "mou-step2-test",
+                    [],
+                    "SHARE_PURCHASE",
+                    "GENERAL",
+                )
+
+            assert len(clauses) == 1
+            assert clauses[0].title == "전문"
+
+            # MOU 프롬프트 사용 확인
+            call_args = mock_llm.call.call_args
+            system_prompt = call_args[0][0]
+            assert "MOU" in system_prompt
+            assert "양해각서" in system_prompt
+        finally:
+            _sessions.pop("mou-step2-test", None)
+
+
+class TestMouMultiWorkerFallback:
+    """MOU 멀티워커 세션 유실 시 폴백 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_step2_mou_fallback_with_doc_type_hint(self) -> None:
+        """세션 유실 + doc_type_hint='MOU' → MOU 프롬프트 사용."""
+        mock_response = json.dumps({"clauses": []})
+        mock_llm = AsyncMock()
+        mock_llm.is_available = True
+        mock_llm.total_cost_usd = 0.01
+        mock_llm.call = AsyncMock(return_value=mock_response)
+
+        with patch(
+            "app.services.spa_analysis_service._get_llm_client",
+            return_value=mock_llm,
+        ):
+            from app.services.spa_analysis_service import analyze_step2_clauses
+
+            clauses, _, _ = await analyze_step2_clauses(
+                "mou-fallback-test",
+                [],
+                "SHARE_PURCHASE",
+                "GENERAL",
+                spa_text="A" * 200,
+                doc_type_hint="MOU",
+            )
+
+        assert clauses == []
+
+        # MOU 프롬프트 사용 확인
+        call_args = mock_llm.call.call_args
+        system_prompt = call_args[0][0]
+        assert "양해각서" in system_prompt
+
+        _sessions.pop("mou-fallback-test", None)

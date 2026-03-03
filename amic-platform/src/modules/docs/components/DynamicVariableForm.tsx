@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { TemplateVariable } from "@/modules/docs/types/contract_generation";
+import { formatAmount } from "@/lib/format";
 
 interface DynamicVariableFormProps {
   variables: TemplateVariable[];
@@ -124,6 +125,9 @@ function evalSingle(expr: string, vars: Record<string, unknown>): boolean {
   }
 
   // 인식 불가 패턴 → 숨김 (BE와 동일하게 false)
+  if (import.meta.env.DEV) {
+    console.warn(`[evalCondition] 인식할 수 없는 조건식: "${expr}"`);
+  }
   return false;
 }
 
@@ -192,7 +196,7 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
   const label = (
     <label
       htmlFor={id}
-      className="mb-1 block text-xs font-medium text-text-secondary"
+      className="mb-1.5 block text-xs font-medium text-text-secondary"
     >
       {v.question_label}
       {v.is_required && <span className="ml-0.5 text-negative">*</span>}
@@ -204,29 +208,40 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
   ) : null;
 
   switch (v.input_type) {
-    case "BOOLEAN":
+    case "BOOLEAN": {
+      const checked = value === true || value === "true";
       return (
         <div className="flex flex-col">
-          <span className="mb-1 block text-xs font-medium text-text-secondary">
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">
             {v.question_label}
             {v.is_required && <span className="ml-0.5 text-negative">*</span>}
           </span>
-          <label
-            htmlFor={id}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <input
+          <div className="flex items-center gap-3">
+            <button
               id={id}
-              type="checkbox"
-              checked={value === true || value === "true"}
-              onChange={(e) => onChange(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-accent-primary focus:ring-accent-primary"
-            />
-            <span className="text-sm text-text-primary">예</span>
-          </label>
+              type="button"
+              role="switch"
+              aria-checked={checked}
+              aria-label={v.question_label}
+              onClick={() => onChange(!checked)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 ${
+                checked ? "bg-accent-primary" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  checked ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-sm text-text-primary">
+              {checked ? "예" : "아니오"}
+            </span>
+          </div>
           {desc}
         </div>
       );
+    }
 
     case "TEXTAREA":
       return (
@@ -257,7 +272,9 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
             required={v.is_required}
             aria-required={v.is_required}
           >
-            <option value="">선택하세요</option>
+            <option value="" disabled>
+              선택하세요
+            </option>
             {v.select_options &&
               Object.entries(v.select_options).map(([key, displayLabel]) => (
                 <option key={key} value={key}>
@@ -285,9 +302,63 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
         </div>
       );
 
-    case "NUMBER":
-    case "CURRENCY":
+    case "CURRENCY": {
+      const numVal = strVal ? Number(strVal) : 0;
+      return (
+        <div className="flex flex-col">
+          {label}
+          <div className="relative">
+            <input
+              id={id}
+              type="number"
+              value={strVal}
+              onChange={(e) =>
+                onChange(e.target.value ? Number(e.target.value) : null)
+              }
+              className={baseInput + " pr-8"}
+              placeholder={v.default_value ?? ""}
+              required={v.is_required}
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">
+              원
+            </span>
+          </div>
+          {numVal > 0 && (
+            <p className="mt-0.5 text-xs text-text-tertiary">
+              {formatAmount(numVal, "KRW")}원
+            </p>
+          )}
+          {desc}
+        </div>
+      );
+    }
+
     case "PERCENTAGE":
+      return (
+        <div className="flex flex-col">
+          {label}
+          <div className="relative">
+            <input
+              id={id}
+              type="number"
+              step="0.01"
+              value={strVal}
+              onChange={(e) =>
+                onChange(e.target.value ? Number(e.target.value) : null)
+              }
+              className={baseInput + " pr-8"}
+              placeholder={v.default_value ?? ""}
+              required={v.is_required}
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">
+              %
+            </span>
+          </div>
+          {desc}
+        </div>
+      );
+
+    case "NUMBER":
       return (
         <div className="flex flex-col">
           {label}

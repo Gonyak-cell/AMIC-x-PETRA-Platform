@@ -90,13 +90,89 @@ export const SEVERANCE_PAY_LABELS: Record<SeverancePayHandling, string> = {
   OTHER_METHOD: "기타",
 };
 
-// SPA DEAL_STRUCTURES + SHA SHA_TYPES + BTA BTA_SCOPES 통합
+// ── SSA 전용 ENUM ─────────────────────────────────────────────────────────
+
+export const SSA_SECURITY_TYPES = [
+  "COMMON_SHARE",
+  "RCPS",
+  "CB",
+  "BW",
+  "OTHER_SECURITY",
+] as const;
+export type SsaSecurityType = (typeof SSA_SECURITY_TYPES)[number];
+
+export const SSA_SECURITY_TYPE_LABELS: Record<SsaSecurityType, string> = {
+  COMMON_SHARE: "보통주",
+  RCPS: "상환전환우선주 (RCPS)",
+  CB: "전환사채 (CB)",
+  BW: "신주인수권부사채 (BW)",
+  OTHER_SECURITY: "기타",
+};
+
+export const SSA_TRANSACTION_CONTEXTS = [
+  "STANDALONE_INVESTMENT",
+  "PARALLEL_WITH_SPA",
+  "PARALLEL_WITH_BTA",
+  "OTHER_CONTEXT",
+] as const;
+export type SsaTransactionContext = (typeof SSA_TRANSACTION_CONTEXTS)[number];
+
+export const SSA_TRANSACTION_CONTEXT_LABELS: Record<
+  SsaTransactionContext,
+  string
+> = {
+  STANDALONE_INVESTMENT: "단독 신주투자",
+  PARALLEL_WITH_SPA: "구주매매 병행",
+  PARALLEL_WITH_BTA: "영업양수도 병행",
+  OTHER_CONTEXT: "기타",
+};
+
+// ── MOU 전용 ENUM ─────────────────────────────────────────────────────────
+
+export const MOU_TRANSACTION_TYPES = [
+  "SHARE_PURCHASE",
+  "BUSINESS_TRANSFER",
+  "NEW_SHARE_ISSUE",
+  "COMBINED",
+  "OTHER_MOU_TYPE",
+] as const;
+export type MouTransactionType = (typeof MOU_TRANSACTION_TYPES)[number];
+
+export const MOU_TRANSACTION_TYPE_LABELS: Record<MouTransactionType, string> = {
+  SHARE_PURCHASE: "주식양수도 예정",
+  BUSINESS_TRANSFER: "영업양수도 예정",
+  NEW_SHARE_ISSUE: "신주인수 예정",
+  COMBINED: "복합 구조",
+  OTHER_MOU_TYPE: "기타",
+};
+
+export const MOU_DEPOSIT_HANDLING = [
+  "REFUNDABLE",
+  "NON_REFUNDABLE",
+  "NO_DEPOSIT",
+] as const;
+export type MouDepositHandling = (typeof MOU_DEPOSIT_HANDLING)[number];
+
+export const MOU_DEPOSIT_HANDLING_LABELS: Record<MouDepositHandling, string> = {
+  REFUNDABLE: "환불 가능",
+  NON_REFUNDABLE: "환불 불가/위약금 전환",
+  NO_DEPOSIT: "보증금 없음",
+};
+
+// SPA + SHA + BTA + SSA + MOU 통합
 export const ALL_STRUCTURE_TYPES = [
   ...DEAL_STRUCTURES,
   ...SHA_TYPES,
   ...BTA_SCOPES,
+  ...SSA_SECURITY_TYPES,
+  ...MOU_TRANSACTION_TYPES,
 ] as const;
-export type AllStructureType = DealStructure | ShaType | BtaScope;
+export type AllStructureType =
+  | DealStructure
+  | ShaType
+  | BtaScope
+  | SsaSecurityType
+  | MouTransactionType;
 
 export const INDUSTRY_TYPES = [
   "MANUFACTURING",
@@ -147,13 +223,17 @@ export interface SpaStep1Request {
 export interface SpaStep1Response {
   session_id: string;
   variables: ExtractedVariable[];
-  deal_structure: string; // DealStructure | ShaType | BtaScope
+  deal_structure: string; // AllStructureType (SPA/SHA/BTA/SSA/MOU)
   industry_type: IndustryType;
   detected_doc_type: DocType;
   sha_type?: ShaType | null;
   exit_strategy?: ExitStrategy | null;
   bta_scope?: BtaScope | null;
   severance_pay_handling?: SeverancePayHandling | null;
+  security_type?: SsaSecurityType | null;
+  transaction_context?: SsaTransactionContext | null;
+  mou_transaction_type?: MouTransactionType | null;
+  deposit_handling?: MouDepositHandling | null;
   discovered_booleans: DiscoveredBoolean[];
   llm_cost_usd: number | null;
   model_used: string | null;
@@ -177,7 +257,7 @@ export interface SpaStep2Request {
   /** 멀티워커 폴백용 — 세션 유실 시 detected_doc_type 복원 */
   doc_type_hint?: DocType;
   variables: ExtractedVariable[];
-  deal_structure: string; // DealStructure | ShaType | BtaScope
+  deal_structure: string; // AllStructureType (SPA/SHA/BTA/SSA/MOU)
   industry_type: IndustryType;
 }
 

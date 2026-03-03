@@ -36,6 +36,10 @@ import type {
   ExitStrategy,
   BtaScope,
   SeverancePayHandling,
+  SsaSecurityType,
+  SsaTransactionContext,
+  MouTransactionType,
+  MouDepositHandling,
 } from "@/modules/docs/types/spa_analysis";
 import {
   DEAL_STRUCTURES,
@@ -50,6 +54,14 @@ import {
   BTA_SCOPE_LABELS,
   SEVERANCE_PAY_HANDLING,
   SEVERANCE_PAY_LABELS,
+  SSA_SECURITY_TYPES,
+  SSA_SECURITY_TYPE_LABELS,
+  SSA_TRANSACTION_CONTEXTS,
+  SSA_TRANSACTION_CONTEXT_LABELS,
+  MOU_TRANSACTION_TYPES,
+  MOU_TRANSACTION_TYPE_LABELS,
+  MOU_DEPOSIT_HANDLING,
+  MOU_DEPOSIT_HANDLING_LABELS,
 } from "@/modules/docs/types/spa_analysis";
 
 // ── 변수 리뷰 ─────────────────────────────────────────────────────────────
@@ -869,6 +881,194 @@ export function BtaClassificationPanel({
           value={industryType}
           onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
           className="rounded-lg border border-border bg-white px-2 py-1 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+        >
+          {INDUSTRY_TYPES.map((it) => (
+            <option key={it} value={it}>
+              {INDUSTRY_TYPE_LABELS[it]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="ml-auto text-xs text-text-tertiary">
+        {variableCount}개 변수
+      </div>
+    </div>
+  );
+}
+
+// ── SSA 분류 패널 ─────────────────────────────────────────────────────────
+
+interface SsaClassificationProps {
+  securityType: SsaSecurityType;
+  transactionContext: SsaTransactionContext;
+  industryType: IndustryType;
+  onSecurityTypeChange: (v: SsaSecurityType) => void;
+  onTransactionContextChange: (v: SsaTransactionContext) => void;
+  onIndustryTypeChange: (v: IndustryType) => void;
+  variableCount: number;
+}
+
+export function SsaClassificationPanel({
+  securityType,
+  transactionContext,
+  industryType,
+  onSecurityTypeChange,
+  onTransactionContextChange,
+  onIndustryTypeChange,
+  variableCount,
+}: SsaClassificationProps) {
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="ssa-security-type"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          증권 종류
+        </label>
+        <select
+          id="ssa-security-type"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={securityType}
+          onChange={(e) =>
+            onSecurityTypeChange(e.target.value as SsaSecurityType)
+          }
+        >
+          {SSA_SECURITY_TYPES.map((st) => (
+            <option key={st} value={st}>
+              {SSA_SECURITY_TYPE_LABELS[st]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="ssa-transaction-context"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          거래 맥락
+        </label>
+        <select
+          id="ssa-transaction-context"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={transactionContext}
+          onChange={(e) =>
+            onTransactionContextChange(e.target.value as SsaTransactionContext)
+          }
+        >
+          {SSA_TRANSACTION_CONTEXTS.map((tc) => (
+            <option key={tc} value={tc}>
+              {SSA_TRANSACTION_CONTEXT_LABELS[tc]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="ssa-industry-type"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          산업 유형
+        </label>
+        <select
+          id="ssa-industry-type"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={industryType}
+          onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
+        >
+          {INDUSTRY_TYPES.map((it) => (
+            <option key={it} value={it}>
+              {INDUSTRY_TYPE_LABELS[it]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="ml-auto text-xs text-text-tertiary">
+        {variableCount}개 변수
+      </div>
+    </div>
+  );
+}
+
+// ── MOU 분류 패널 ─────────────────────────────────────────────────────────
+
+interface MouClassificationProps {
+  mouTransactionType: MouTransactionType;
+  depositHandling: MouDepositHandling;
+  industryType: IndustryType;
+  onMouTransactionTypeChange: (v: MouTransactionType) => void;
+  onDepositHandlingChange: (v: MouDepositHandling) => void;
+  onIndustryTypeChange: (v: IndustryType) => void;
+  variableCount: number;
+}
+
+export function MouClassificationPanel({
+  mouTransactionType,
+  depositHandling,
+  industryType,
+  onMouTransactionTypeChange,
+  onDepositHandlingChange,
+  onIndustryTypeChange,
+  variableCount,
+}: MouClassificationProps) {
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="mou-transaction-type"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          거래 유형
+        </label>
+        <select
+          id="mou-transaction-type"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={mouTransactionType}
+          onChange={(e) =>
+            onMouTransactionTypeChange(e.target.value as MouTransactionType)
+          }
+        >
+          {MOU_TRANSACTION_TYPES.map((mt) => (
+            <option key={mt} value={mt}>
+              {MOU_TRANSACTION_TYPE_LABELS[mt]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="mou-deposit-handling"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          보증금 처리
+        </label>
+        <select
+          id="mou-deposit-handling"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={depositHandling}
+          onChange={(e) =>
+            onDepositHandlingChange(e.target.value as MouDepositHandling)
+          }
+        >
+          {MOU_DEPOSIT_HANDLING.map((dh) => (
+            <option key={dh} value={dh}>
+              {MOU_DEPOSIT_HANDLING_LABELS[dh]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="mou-industry-type"
+          className="text-sm font-medium text-text-secondary whitespace-nowrap"
+        >
+          산업 유형
+        </label>
+        <select
+          id="mou-industry-type"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          value={industryType}
+          onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
         >
           {INDUSTRY_TYPES.map((it) => (
             <option key={it} value={it}>

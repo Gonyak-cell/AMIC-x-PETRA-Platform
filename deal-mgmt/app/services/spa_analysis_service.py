@@ -722,6 +722,348 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 주의: deal_structure 필드에는 bta_scope과 동일한 값을 넣어주세요."""
 
 
+# ── SSA Step 1: 변수 추출 프롬프트 ─────────────────────────────────────────────
+
+_SSA_STEP1_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 데이터 엔지니어입니다.
+신주인수계약서(SSA, Share Subscription Agreement) 원문을 분석하여 재사용 가능한 템플릿 변수를 추출합니다.
+
+## 0. 계약서 유형 확정
+이 계약서는 신주인수계약서(SSA)입니다.
+detected_doc_type은 반드시 "SSA"로 설정하세요.
+
+## 1. SSA 증권 종류 분류 (security_type → deal_structure에도 동일 값)
+원문의 발행 증권, 투자 구조를 분석하여 분류합니다:
+- COMMON_SHARE: 보통주 신주 인수 (단순 유상증자)
+- RCPS: 상환전환우선주 (Redeemable Convertible Preferred Shares) — 전환권/상환권 부여
+- CB: 전환사채 (Convertible Bond) — 사채 + 전환권
+- BW: 신주인수권부사채 (Bond with Warrants) — 사채 + 신주인수권
+- OTHER_SECURITY: 위에 해당하지 않는 증권 (무의결권주, 종류주 등)
+
+## 2. SSA 거래 맥락 분류 (transaction_context)
+- STANDALONE_INVESTMENT: 단독 신주투자 (유상증자만 진행, 기존 주식 거래 없음)
+- PARALLEL_WITH_SPA: 구주매매 병행 (기존 주주의 지분 매각 + 신주 발행 동시 진행)
+- PARALLEL_WITH_BTA: 영업양수도 병행 (사업 이전 + 신주 투자 동시 진행)
+- OTHER_CONTEXT: 위에 해당하지 않는 거래 맥락
+
+## 3. 분석 순서
+1. 전문(Preamble) → 발행회사, 인수인(투자자), 이해관계인 정보
+2. 정의 조항 → 핵심 정의 (신주, 인수대금, 전환가, 상환가 등)
+3. 신주 발행 및 인수 → 증권 종류, 발행 주식 수, 발행가, 총 인수대금
+4. 인수대금 납입 → 납입일, 납입 방법, 분할 납입 여부
+5. 전환/상환 조건 → 전환가, 전환비율, 상환기간, 상환수익률 (RCPS/CB/BW)
+6. 선행조건(CP) → 규제 승인, 이사회 결의, 주주총회 승인
+7. 거래종결(Closing) → 종결 절차, 인도 사항
+8. 진술 및 보증(R&W) → 발행회사/인수인 R&W
+9. 확약(Covenants) → 자금 용도 제한, 경영 참여, 정보 제공
+10. 의무보유등록(Lock-up) → 보유 기간, 예외 조건
+11. 희석방지/우선매수권 → Anti-dilution, Pre-emptive Rights
+12. 손해배상(Indemnification) → de minimis, basket, cap, 존속기간
+13. 해제/해지(Termination) → 종료 사유, 위약금
+14. 비밀유지(Confidentiality) → 범위, 기간
+15. 일반조항 → 준거법, 분쟁해결, 통지
+16. 전체 스캔 → 조건부 BOOLEAN 발견
+
+## 4. 기본 변수 목록 (반드시 원문에서 찾아 포함)
+| group_name | variable_key | input_type | 설명 |
+|-----------|-------------|-----------|------|
+| 당사자 정보 | issuer_name | TEXT | 발행회사 명칭 |
+| 당사자 정보 | issuer_address | TEXT | 발행회사 주소 |
+| 당사자 정보 | issuer_representative | TEXT | 발행회사 대표자 |
+| 당사자 정보 | issuer_reg_number | TEXT | 발행회사 사업자등록번호 |
+| 당사자 정보 | subscriber_name | TEXT | 인수인(투자자) 명칭 |
+| 당사자 정보 | subscriber_address | TEXT | 인수인 주소 |
+| 당사자 정보 | subscriber_representative | TEXT | 인수인 대표자 |
+| 당사자 정보 | subscriber_reg_number | TEXT | 인수인 사업자등록번호 |
+| 증권 정보 | security_class | TEXT | 증권 종류 (보통주/RCPS/CB/BW 등) |
+| 증권 정보 | subscription_share_count | NUMBER | 인수 주식 수 |
+| 증권 정보 | issue_price_per_share | CURRENCY | 1주당 발행가 (원 단위) |
+| 증권 정보 | total_subscription_amount | CURRENCY | 총 인수대금 (원 단위) |
+| 증권 정보 | par_value | CURRENCY | 1주 액면가 |
+| 증권 정보 | post_investment_equity_ratio | PERCENTAGE | 투자 후 지분율 |
+| 납입 | payment_date | DATE | 납입일 |
+| 납입 | payment_method | TEXT | 납입 방법 (현금, 현물출자 등) |
+| 납입 | installment_payment_included | BOOLEAN | 분할 납입 여부 |
+| 전환/상환 | conversion_price | CURRENCY | 전환가 (visible: security_type in ["RCPS", "CB"]) |
+| 전환/상환 | conversion_ratio | TEXT | 전환 비율 (visible: security_type in ["RCPS", "CB"]) |
+| 전환/상환 | redemption_period_months | NUMBER | 상환 기간 (개월, visible: security_type in ["RCPS", "BW"]) |
+| 전환/상환 | redemption_yield_rate | PERCENTAGE | 상환수익률 (visible: security_type in ["RCPS", "BW"]) |
+| 전환/상환 | conversion_period_start | DATE | 전환 청구 가능 시작일 |
+| 전환/상환 | conversion_period_end | DATE | 전환 청구 가능 종료일 |
+| 자금 용도 | use_of_proceeds_description | TEXTAREA | 인수대금 사용 용도 |
+| 의무보유 | lock_up_period_months | NUMBER | 의무보유 기간 (개월, 0=미포함) |
+| 의무보유 | lock_up_exception_conditions | TEXT | 의무보유 예외 조건 |
+| 손해배상 | de_minimis_amount | CURRENCY | De Minimis 금액 |
+| 손해배상 | basket_amount | CURRENCY | Basket(공제) 금액 |
+| 손해배상 | indemnity_cap | CURRENCY | 손해배상 한도(Cap) |
+| 손해배상 | survival_period_months | NUMBER | 진술보증 존속기간 (개월) |
+| 일정 | signing_date | DATE | 계약 체결일 |
+| 일정 | closing_date | DATE | 거래 종결일 |
+| 일정 | long_stop_date | DATE | 최종 기한 (Long-stop date) |
+| 선행조건 | has_condition_precedent | BOOLEAN | 선행조건(CP) 조항 포함 여부 |
+| 선행조건 | cp_board_approval | BOOLEAN | 이사회 승인 필요 여부 (visible: has_condition_precedent == True) |
+| 선행조건 | cp_shareholder_approval | BOOLEAN | 주주총회 승인 필요 여부 (visible: has_condition_precedent == True) |
+| 선행조건 | cp_regulatory_approval | TEXT | 필요 규제/정부 승인 (visible: has_condition_precedent == True) |
+| 비밀유지 | confidentiality_period_months | NUMBER | 비밀유지 기간 (개월) |
+| 기타 | governing_law | SELECT | 준거법 (select_options: {"korean": "대한민국법", "english": "영국법", "other": "기타"}) |
+| 기타 | dispute_resolution | SELECT | 분쟁해결 (select_options: {"arbitration": "중재", "litigation": "소송", "mediation": "조정"}) |
+
+원문에 해당 항목이 없으면 extracted_value를 null로, confidence를 낮게 설정하세요.
+
+## 5. SSA 전용 동적 BOOLEAN 발견 규칙
+| 조항 키워드 | variable_key | 설명 |
+|------------|-------------|------|
+| 병행 거래/구주매매/SPA | has_parallel_transaction | 병행 거래(SPA/BTA) 조항 존재 |
+| 의무보유/Lock-up/보호예수 | has_lock_up | 의무보유 조항 존재 |
+| 자금용도 제한/사용처 | has_use_of_proceeds_restriction | 자금 용도 제한 조항 존재 |
+| 손해배상 한도/Cap | has_indemnification_cap | 손해배상 한도 조항 존재 |
+| 희석방지/Anti-dilution | has_anti_dilution | 희석방지 조항 존재 |
+| 우선분배/청산우선권 | has_liquidation_preference | 잔여재산 우선분배 조항 존재 |
+| 동반매도청구/Drag-Along | has_drag_along | 동반매도청구권 존재 |
+| 동반매도참여/Tag-Along | has_tag_along | 동반매도참여권 존재 |
+| 이사 지명/이사회 참여 | has_board_nomination_right | 이사 지명권 존재 |
+| 정보권/검사권 | has_information_rights | 재무정보 접근권/검사권 존재 |
+| 우선매수권/신주인수권 | has_preemptive_rights | 신주인수권/우선매수권 존재 |
+| 전환권 | has_conversion_right | 전환권 조항 존재 |
+| 상환권 | has_redemption_right | 상환권 조항 존재 |
+| 풋옵션 | has_put_option | 풋옵션 존재 |
+| 콜옵션 | has_call_option | 콜옵션 존재 |
+| 배당 우선 | has_dividend_preference | 배당 우선권 존재 |
+| 마일스톤 지급 | has_milestone_payment | 마일스톤 기반 추가 납입 조항 존재 |
+| 에스크로 | has_escrow | 에스크로 조항 존재 |
+기타 발견 시 has_{영문명} 형식으로 자율 생성하세요.
+
+## 6. industry_type 분류 기준
+- MANUFACTURING: 제조업 (공장, 생산, 재고, 환경 관련 조항)
+- SOFTWARE: 소프트웨어/IT (지식재산권, 라이선스 관련 조항)
+- FRANCHISE: 가맹점/프랜차이즈
+- GENERAL: 특정 산업 특화 없음
+- OTHER_INDUSTRY: 위에 해당하지 않는 산업
+
+## 7. input_type 매핑 규칙
+- 이름/주소/회사명/등록번호 → TEXT
+- 긴 설명/비고/목록 → TEXTAREA
+- 금액 (원, 억원, 백만원) → CURRENCY (반드시 원 단위로 정규화: 10억 → 1000000000)
+- 비율 (%) → PERCENTAGE
+- 날짜 → DATE
+- 수량, 기간(개월/년) 등 → NUMBER
+- 예/아니오 → BOOLEAN
+- 선택지 → SELECT (select_options 필수)
+
+## 8. 증권 종류별 추가 변수
+### RCPS (상환전환우선주)
+- preferred_dividend_rate: PERCENTAGE — 우선배당률
+- cumulative_dividend: BOOLEAN — 누적적/비누적적
+- participating_preferred: BOOLEAN — 참가적/비참가적
+### CB (전환사채)
+- coupon_rate: PERCENTAGE — 표면이율
+- maturity_date: DATE — 만기일
+- bond_amount: CURRENCY — 사채 발행 총액
+### BW (신주인수권부사채)
+- warrant_exercise_price: CURRENCY — 신주인수권 행사가격
+- warrant_exercise_ratio: PERCENTAGE — 행사 비율
+- warrant_detachable: BOOLEAN — 분리형/비분리형
+해당 유형일 때만 위 변수를 추가로 식별하세요.
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "detected_doc_type": "SSA",
+  "security_type": "RCPS",
+  "transaction_context": "STANDALONE_INVESTMENT",
+  "variables": [
+    {
+      "variable_key": "issuer_name",
+      "input_type": "TEXT",
+      "question_label": "발행회사 명칭",
+      "description": "발행회사의 법인명",
+      "extracted_value": "주식회사 ABC",
+      "default_value": null,
+      "is_required": true,
+      "select_options": null,
+      "display_order": 1,
+      "group_name": "당사자 정보",
+      "visible_condition": null,
+      "confidence": 0.95
+    }
+  ],
+  "deal_structure": "RCPS",
+  "industry_type": "SOFTWARE",
+  "discovered_booleans": [
+    {
+      "variable_key": "has_anti_dilution",
+      "question_label": "희석방지 조항 포함 여부",
+      "detected_in_clause": "제10조 (희석방지)"
+    }
+  ]
+}
+```
+주의: deal_structure 필드에는 security_type과 동일한 값을 넣어주세요."""
+
+
+# ── MOU Step 1: 변수 추출 프롬프트 ─────────────────────────────────────────────
+
+_MOU_STEP1_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 데이터 엔지니어입니다.
+양해각서(MOU, Memorandum of Understanding) 원문을 분석하여 재사용 가능한 템플릿 변수를 추출합니다.
+
+## 0. 계약서 유형 확정
+이 계약서는 양해각서(MOU)입니다.
+detected_doc_type은 반드시 "MOU"로 설정하세요.
+
+## 1. MOU 거래 유형 분류 (mou_transaction_type → deal_structure에도 동일 값)
+원문의 거래 구조, 향후 본계약 유형을 분석하여 분류합니다:
+- SHARE_PURCHASE: 주식양수도 예정 (MOU 후 SPA로 이어질 구주매매)
+- BUSINESS_TRANSFER: 영업양수도 예정 (MOU 후 BTA로 이어질 사업 양도)
+- NEW_SHARE_ISSUE: 신주인수 예정 (MOU 후 SSA/투자계약으로 이어질 유상증자)
+- COMBINED: 복합 구조 (구주매매 + 신주발행, 영업양수도 + 투자 등)
+- OTHER_MOU_TYPE: 위에 해당하지 않는 경우
+
+## 2. 보증금 처리 분류 (deposit_handling)
+- REFUNDABLE: 환불 가능 보증금 (거래 불성립 시 전액 반환)
+- NON_REFUNDABLE: 환불 불가/위약금 전환 (특정 시점 후 반환불가, 위약벌로 전환)
+- NO_DEPOSIT: 보증금 없음
+
+## 3. 분석 순서
+1. 전문(Preamble) → 매도인(양도인), 매수인(투자자) 정보
+2. 정의 조항 → 대상회사, 대상 주식/영업, 핵심 정의
+3. 거래 구조 개요 → 양도 방식(주식/영업/신주), 지분율, 거래 개요
+4. 가격 조건 → 잠정 매매대금, EBITDA 배수, 순운전자본 조정 등 산식
+5. 독점협상(Exclusivity) → 배타적 협상권 기간, 범위, 위반 시 효과
+6. 보증금/이행보증(Deposit) → 금액, 납입 방법, 반환/몰취 조건, 질권
+7. 실사(Due Diligence) → 실사 기간, 범위, 자료 접근, 비용 부담
+8. 진행 일정(Timeline) → MOU 체결일, 실사 완료일, 본계약 목표일, MOU 유효기한
+9. 텀시트/별지(Term Sheet) → 우선주 전환, 풋/콜, Drag/Tag 등 본계약 핵심 조건
+10. 종료/해제(Termination) → 해지 사유, 유효기한, 위약금
+11. 비밀유지(Confidentiality) → 범위, 기간, 위약벌
+12. 법적 구속력(Binding) → 구속력 있는 조항 범위 (비밀유지, 독점협상 등)
+13. 일반조항 → 준거법, 분쟁해결, 통지, 완전합의
+14. 전체 스캔 → 조건부 BOOLEAN 발견
+
+## 4. 기본 변수 목록 (반드시 원문에서 찾아 포함)
+| group_name | variable_key | input_type | 설명 |
+|-----------|-------------|-----------|------|
+| 당사자 정보 | seller_name | TEXT | 매도인/양도인 명칭 |
+| 당사자 정보 | seller_address | TEXT | 매도인 주소 |
+| 당사자 정보 | seller_representative | TEXT | 매도인 대표자 |
+| 당사자 정보 | buyer_name | TEXT | 매수인/투자자 명칭 |
+| 당사자 정보 | buyer_address | TEXT | 매수인 주소 |
+| 당사자 정보 | buyer_representative | TEXT | 매수인 대표자 |
+| 거래 대상 | target_company | TEXT | 대상회사 명칭 |
+| 거래 대상 | target_business_description | TEXTAREA | 거래 대상 사업/주식 설명 |
+| 거래 조건 | indicative_price | CURRENCY | 잠정 매매대금/투자금액 (원 단위) |
+| 거래 조건 | price_formula_included | BOOLEAN | 가격산정 공식 포함 여부 |
+| 거래 조건 | price_formula_description | TEXTAREA | 가격산정 기준/공식 설명 (visible: price_formula_included == True) |
+| 거래 조건 | valuation_multiple | NUMBER | EBITDA 배수 등 (visible: price_formula_included == True) |
+| 거래 조건 | equity_ratio | PERCENTAGE | 양도/투자 지분율 |
+| 독점협상 | exclusivity_period_included | BOOLEAN | 독점협상기간 포함 여부 |
+| 독점협상 | exclusivity_period_days | NUMBER | 독점협상 기간 (일, visible: exclusivity_period_included == True) |
+| 독점협상 | exclusivity_scope | TEXT | 독점협상 범위/예외 (visible: exclusivity_period_included == True) |
+| 보증금 | deposit_included | BOOLEAN | 보증금 포함 여부 |
+| 보증금 | deposit_amount | CURRENCY | 보증금 금액 (visible: deposit_included == True) |
+| 보증금 | deposit_due_date | DATE | 보증금 납입 기한 (visible: deposit_included == True) |
+| 보증금 | deposit_return_conditions | TEXTAREA | 보증금 반환 조건 (visible: deposit_included == True) |
+| 실사 | dd_period_days | NUMBER | 실사 기간 (일) |
+| 실사 | dd_scope | TEXTAREA | 실사 범위 |
+| 실사 | dd_access_scope | TEXTAREA | 실사 자료 접근 범위 |
+| 일정 | signing_date | DATE | MOU 체결일 |
+| 일정 | target_closing_date | DATE | 목표 본계약 체결일 |
+| 일정 | mou_expiry_date | DATE | MOU 유효기한 |
+| 텀시트 | term_sheet_included | BOOLEAN | 주요 조건 Term Sheet 포함 여부 |
+| 위약금 | penalty_clause_included | BOOLEAN | 위약금 조항 포함 여부 |
+| 위약금 | penalty_amount | CURRENCY | 위약금 금액 (visible: penalty_clause_included == True) |
+| 위약금 | penalty_trigger_conditions | TEXTAREA | 위약금 발동 조건 (visible: penalty_clause_included == True) |
+| 비밀유지 | confidentiality_period_months | NUMBER | 비밀유지 기간 (개월) |
+| 비밀유지 | confidentiality_penalty_amount | CURRENCY | 비밀유지 위반 위약벌 금액 |
+| 기타 | governing_law | SELECT | 준거법 (select_options: {"korean": "대한민국법", "english": "영국법", "other": "기타"}) |
+| 기타 | dispute_resolution | SELECT | 분쟁해결 (select_options: {"arbitration": "중재", "litigation": "소송", "mediation": "조정"}) |
+
+원문에 해당 항목이 없으면 extracted_value를 null로, confidence를 낮게 설정하세요.
+
+## 5. MOU 전용 동적 BOOLEAN 발견 규칙
+| 조항 키워드 | variable_key | 설명 |
+|------------|-------------|------|
+| 독점/배타적 협상/Exclusivity | has_exclusivity | 독점협상권 조항 존재 |
+| 보증금 질권/담보/Deposit Pledge | has_deposit_pledge | 보증금 질권 설정 조항 존재 |
+| 위약금/Break Fee/해약금 | has_break_fee | 거래 중단 시 위약금 조항 존재 |
+| 실사비용 보전/DD Cost | has_dd_cost_reimbursement | 실사비용 보전 조항 존재 |
+| 가격조정/운전자본/NWC | has_price_adjustment_clause | 가격조정 산식 별도 조항 존재 |
+| 텀시트/별지/Term Sheet | has_term_sheet_annex | 별지 Term Sheet 존재 |
+| 규제 승인/공정위/FTC | has_regulatory_approval | 규제 승인 조건 존재 |
+| 핵심인력/Key-Man | has_key_man_clause | 핵심 경영진 유지 조건 존재 |
+| 경업금지/Non-Compete | has_non_compete | 경업금지 조항 존재 |
+| 어닝아웃/Earnout 언급 | has_earnout_indication | 어닝아웃 관련 언급 존재 |
+| 에스크로/Escrow 언급 | has_escrow_indication | 에스크로 관련 언급 존재 |
+| 선행조건/CP | has_condition_precedent | 선행조건 조항 존재 |
+| 법적 구속력 명시 | has_binding_clause | 법적 구속력 범위 명시 조항 존재 |
+기타 발견 시 has_{영문명} 형식으로 자율 생성하세요.
+
+## 6. industry_type 분류 기준
+- MANUFACTURING: 제조업 (공장, 생산, 재고, 환경 관련 조항)
+- SOFTWARE: 소프트웨어/IT (지식재산권, 라이선스 관련 조항)
+- FRANCHISE: 가맹점/프랜차이즈
+- GENERAL: 특정 산업 특화 없음
+- OTHER_INDUSTRY: 위에 해당하지 않는 산업
+
+## 7. input_type 매핑 규칙
+- 이름/주소/회사명/등록번호 → TEXT
+- 긴 설명/비고/목록 → TEXTAREA
+- 금액 (원, 억원, 백만원) → CURRENCY (반드시 원 단위로 정규화: 10억 → 1000000000)
+- 비율 (%) → PERCENTAGE
+- 날짜 → DATE
+- 수량, 기간(개월/년/일) 등 → NUMBER
+- 예/아니오 → BOOLEAN
+- 선택지 → SELECT (select_options 필수)
+
+## 8. 거래 유형별 추가 변수
+### SHARE_PURCHASE (주식양수도 예정)
+- share_count: NUMBER — 양도 예정 주식 수
+- share_ratio: PERCENTAGE — 양도 지분율
+### BUSINESS_TRANSFER (영업양수도 예정)
+- transferred_business_scope: TEXTAREA — 양도 대상 영업 범위
+- employee_succession_mentioned: BOOLEAN — 임직원 승계 언급 여부
+### NEW_SHARE_ISSUE (신주인수 예정)
+- new_share_count: NUMBER — 발행 예정 주식 수
+- security_class: TEXT — 증권 종류 (보통주/RCPS/CB 등)
+- pre_money_valuation: CURRENCY — Pre-money 기업가치
+해당 유형일 때만 위 변수를 추가로 식별하세요.
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "detected_doc_type": "MOU",
+  "mou_transaction_type": "SHARE_PURCHASE",
+  "deposit_handling": "NON_REFUNDABLE",
+  "variables": [
+    {
+      "variable_key": "seller_name",
+      "input_type": "TEXT",
+      "question_label": "매도인 명칭",
+      "description": "매도인의 법인명 또는 성명",
+      "extracted_value": "주식회사 ABC",
+      "default_value": null,
+      "is_required": true,
+      "select_options": null,
+      "display_order": 1,
+      "group_name": "당사자 정보",
+      "visible_condition": null,
+      "confidence": 0.95
+    }
+  ],
+  "deal_structure": "SHARE_PURCHASE",
+  "industry_type": "GENERAL",
+  "discovered_booleans": [
+    {
+      "variable_key": "has_exclusivity",
+      "question_label": "독점협상권 조항 포함 여부",
+      "detected_in_clause": "제4조 (독점적 협상)"
+    }
+  ]
+}
+```
+주의: deal_structure 필드에는 mou_transaction_type과 동일한 값을 넣어주세요."""
+
+
 async def analyze_step1_variables(
     spa_text: str,
     language_hint: str | None = None,
@@ -737,6 +1079,10 @@ async def analyze_step1_variables(
     str | None,  # exit_strategy
     str | None,  # bta_scope
     str | None,  # severance_pay_handling
+    str | None,  # security_type
+    str | None,  # transaction_context
+    str | None,  # mou_transaction_type
+    str | None,  # deposit_handling
     float | None,  # cost
     str | None,  # model
 ]:
@@ -745,7 +1091,8 @@ async def analyze_step1_variables(
     Returns:
         (session_id, variables, deal_structure, industry_type, detected_doc_type,
          discovered_booleans, sha_type, exit_strategy, bta_scope,
-         severance_pay_handling, cost, model)
+         severance_pay_handling, security_type, transaction_context,
+         mou_transaction_type, deposit_handling, cost, model)
     """
     session_id = str(uuid.uuid4())
 
@@ -764,6 +1111,10 @@ async def analyze_step1_variables(
         system_prompt = _SHA_STEP1_SYSTEM_PROMPT
     elif doc_type_hint == "BTA":
         system_prompt = _BTA_STEP1_SYSTEM_PROMPT
+    elif doc_type_hint == "SSA":
+        system_prompt = _SSA_STEP1_SYSTEM_PROMPT
+    elif doc_type_hint == "MOU":
+        system_prompt = _MOU_STEP1_SYSTEM_PROMPT
     else:
         system_prompt = _STEP1_SYSTEM_PROMPT
 
@@ -787,16 +1138,24 @@ async def analyze_step1_variables(
         session.cost_usd += cost
     session.model_used = model
 
-    # 응답 파싱
-    variables = [ExtractedVariable(**v) for v in data.get("variables", [])]
-    deal_structure = data.get("deal_structure", "OTHER_STRUCTURE")
-    industry_type = data.get("industry_type", "GENERAL")
-    detected_doc_type = data.get("detected_doc_type", "SPA")
-    discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
+    # 응답 파싱 — Pydantic ValidationError 시에도 세션 정리 보장
+    try:
+        variables = [ExtractedVariable(**v) for v in data.get("variables", [])]
+        deal_structure = data.get("deal_structure", "OTHER_STRUCTURE")
+        industry_type = data.get("industry_type", "GENERAL")
+        detected_doc_type = data.get("detected_doc_type", "SPA")
+        discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
+    except Exception:
+        _sessions.pop(session_id, None)
+        raise
     sha_type: str | None = data.get("sha_type")
     exit_strategy: str | None = data.get("exit_strategy")
     bta_scope: str | None = data.get("bta_scope")
     severance_pay_handling: str | None = data.get("severance_pay_handling")
+    security_type: str | None = data.get("security_type")
+    transaction_context: str | None = data.get("transaction_context")
+    mou_transaction_type: str | None = data.get("mou_transaction_type")
+    deposit_handling: str | None = data.get("deposit_handling")
 
     # 세션에 detected_doc_type 저장 (Step 2 프롬프트 분기용)
     session.detected_doc_type = detected_doc_type
@@ -834,6 +1193,10 @@ async def analyze_step1_variables(
         exit_strategy,
         bta_scope,
         severance_pay_handling,
+        security_type,
+        transaction_context,
+        mou_transaction_type,
+        deposit_handling,
         cost,
         model,
     )
@@ -1211,6 +1574,231 @@ JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
 ```"""
 
 
+# ── SSA Step 2: 조항 분해 프롬프트 ─────────────────────────────────────────────
+
+_SSA_STEP2_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 Jinja2 템플릿 엔지니어입니다.
+SSA(신주인수계약서) 원문을 조항별로 분해하고, 변수 값을 Jinja2 템플릿 문법으로 변환합니다.
+
+## 표준 SSA 조항 구조 (13개 표준 조)
+1. 전문 (Preamble) — 당사자 식별, 투자 배경
+2. 정의 (Definitions) — 신주, 인수대금, 전환가, 상환가 등 핵심 정의
+3. 신주 발행 및 인수 (Subscription) — 증권 종류, 발행 주식 수, 발행가, 총 인수대금
+4. 인수대금 납입 (Payment) — 납입일, 납입 방법, 분할 납입
+5. 선행조건 (Conditions Precedent) — 이사회/주주총회 승인, 규제 승인
+6. 거래종결 (Closing) — 종결 절차, 인도 사항
+7. 진술 및 보증 (Representations & Warranties) — 발행회사/인수인 R&W
+8. 확약 (Covenants) — 자금 용도 제한, 경영 참여, 정보 제공
+9. 의무보유등록 (Lock-up) — 보유 기간, 예외 조건
+10. 손해배상 (Indemnification) — de minimis, basket, cap, 존속기간
+11. 해제/해지 (Termination) — 종료 사유, 위약금
+12. 비밀유지 (Confidentiality) — 범위, 기간
+13. 일반조항 (General Provisions) — 준거법, 분쟁해결, 통지
+
+원문의 조/항/호 구조를 최대한 보존하세요.
+
+## Jinja2 변환 규칙
+- confirmed_variables 목록에 있는 변수만 사용하세요.
+- 리터럴 값 → {{ variable_key }}
+- 금액 → {{ total_subscription_amount | currency_format }}
+- 날짜 → {{ payment_date | date_format }}
+- 숫자 → {{ subscription_share_count | number_format }}
+- 비율 → {{ post_investment_equity_ratio }}%
+- 조건부 블록 → {% if has_anti_dilution %}...{% endif %}
+
+## 한글 금액 표기 가이드
+- currency_format 필터는 "금 {천단위 구분 숫자}원" 형태를 이미 포함합니다:
+  - 입력: 5000000000 → 출력: "금 5,000,000,000원"
+- 원문의 "금 오십억원정 (₩5,000,000,000)" 전체를 {{ variable_key | currency_format }}으로 치환하세요.
+- ⚠ 이중 래핑 금지: "금 {{ var | currency_format }}원" (X) → {{ var | currency_format }} (O)
+- 숫자만 필요한 경우: {{ total_subscription_amount | number_format }}
+
+## SSA 특화 조건부 렌더링
+- 병행 거래: {% if has_parallel_transaction %}...{% endif %}
+- 의무보유: {% if has_lock_up %}...{% endif %}
+- 자금 용도 제한: {% if has_use_of_proceeds_restriction %}...{% endif %}
+- 손해배상 한도: {% if has_indemnification_cap %}...{% endif %}
+- 희석방지: {% if has_anti_dilution %}...{% endif %}
+- 청산우선권: {% if has_liquidation_preference %}...{% endif %}
+- Drag-Along: {% if has_drag_along %}...{% endif %}
+- Tag-Along: {% if has_tag_along %}...{% endif %}
+- 이사 지명: {% if has_board_nomination_right %}...{% endif %}
+- 정보권: {% if has_information_rights %}...{% endif %}
+- 신주인수권: {% if has_preemptive_rights %}...{% endif %}
+- 전환권: {% if has_conversion_right %}...{% endif %}
+- 상환권: {% if has_redemption_right %}...{% endif %}
+- 풋옵션: {% if has_put_option %}...{% endif %}
+- 콜옵션: {% if has_call_option %}...{% endif %}
+- 배당 우선: {% if has_dividend_preference %}...{% endif %}
+- 마일스톤: {% if has_milestone_payment %}...{% endif %}
+- 에스크로: {% if has_escrow %}...{% endif %}
+- 분할 납입: {% if installment_payment_included %}...{% endif %}
+- 선행조건: {% if has_condition_precedent %}...{% endif %}
+
+## 증권 종류별 조건부 조항
+- RCPS 관련: deal_structure == "RCPS" — 전환/상환 조건, 우선배당, 참가적/비참가적
+- CB 관련: deal_structure == "CB" — 전환사채 조건, 표면이율, 만기
+- BW 관련: deal_structure == "BW" — 신주인수권 행사가격, 분리형/비분리형
+
+## 별지/부속서(Schedule) 처리
+- 본문에서 "별지", "부속서" 참조 시: 참조 텍스트만 유지
+- 흔한 SSA 별지: 주주명부, 전환/상환 조건 상세, R&W 목록, CP 체크리스트
+
+## condition_expression 규칙
+- Python 문법 사용
+- 지원 연산자: ==, !=, <, >, <=, >=, in, not in, and, or, not
+- 예: has_anti_dilution == True
+- 예: deal_structure == "RCPS"
+- 예: has_lock_up == True and lock_up_period_months > 0
+- 항상 포함되는 조항은 condition_expression을 null로 설정
+
+## is_boilerplate 분류 (SSA 기준)
+- True: 정의(구조), 비밀유지, 일반조항, 준거법/분쟁해결
+- False: 신주 발행, 납입, 선행조건, 종결, R&W, 확약, 의무보유, 손해배상, 해제
+
+## content HTML 형식
+조항 내용을 HTML로 구조화하세요:
+- <p> 태그로 각 조항/항 감싸기
+- <ol>, <li> 태그로 호/목 나열
+- 들여쓰기와 구조 보존
+
+## 복합 condition_expression 예제
+- deal_structure == "RCPS" and has_conversion_right == True
+- deal_structure == "CB" and coupon_rate > 0
+- has_anti_dilution == True and has_preemptive_rights == True
+- has_lock_up == True and lock_up_period_months > 0
+- has_parallel_transaction == True
+- has_use_of_proceeds_restriction == True
+- has_condition_precedent == True and cp_board_approval == True
+- installment_payment_included == True
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "clauses": [
+    {
+      "clause_order": 0,
+      "title": "전문",
+      "content": "<p>{{ issuer_name }}(이하 &quot;발행회사&quot;)과 {{ subscriber_name }}(이하 &quot;인수인&quot;)은...</p>",
+      "original_content": "<p>주식회사 ABC(이하 &quot;발행회사&quot;)과 주식회사 DEF(이하 &quot;인수인&quot;)은...</p>",
+      "is_boilerplate": false,
+      "condition_expression": null,
+      "confidence": 0.9
+    }
+  ]
+}
+```"""
+
+
+# ── MOU Step 2: 조항 분해 프롬프트 ─────────────────────────────────────────────
+
+_MOU_STEP2_SYSTEM_PROMPT = """당신은 한국 M&A 법률 문서 전문가이자 Jinja2 템플릿 엔지니어입니다.
+MOU(양해각서) 원문을 조항별로 분해하고, 변수 값을 Jinja2 템플릿 문법으로 변환합니다.
+
+## 표준 MOU 조항 구조 (10개 표준 조)
+1. 전문 (Preamble) — 당사자 식별, 거래 배경
+2. 정의 (Definitions) — 대상회사, 대상 주식/영업, 핵심 용어
+3. 거래 구조 개요 (Transaction Overview) — 양도 방식, 지분율, 거래 개요
+4. 가격 조건 (Price Terms) — 잠정 매매대금, 가격산정 공식, EBITDA 배수
+5. 독점협상 (Exclusivity) — 배타적 협상권, 기간, 위반 효과
+6. 보증금/이행보증 (Deposit) — 금액, 납입, 반환/몰취 조건
+7. 실사 (Due Diligence) — 기간, 범위, 자료 접근
+8. 진행 일정 및 종료 (Timeline & Termination) — MOU 유효기한, 해지 사유
+9. 비밀유지 (Confidentiality) — 범위, 기간, 위약벌
+10. 일반조항 (General Provisions) — 법적 구속력, 준거법, 분쟁해결, 통지
+
+원문의 조/항/호 구조를 최대한 보존하세요.
+
+## Jinja2 변환 규칙
+- confirmed_variables 목록에 있는 변수만 사용하세요.
+- 리터럴 값 → {{ variable_key }}
+- 금액 → {{ indicative_price | currency_format }}
+- 날짜 → {{ signing_date | date_format }}
+- 숫자 → {{ dd_period_days | number_format }}
+- 비율 → {{ equity_ratio }}%
+- 조건부 블록 → {% if deposit_included %}...{% endif %}
+
+## 한글 금액 표기 가이드
+- currency_format 필터는 "금 {천단위 구분 숫자}원" 형태를 이미 포함합니다:
+  - 입력: 10000000000 → 출력: "금 10,000,000,000원"
+- 원문의 "금 일백억원정 (₩10,000,000,000)" 전체를 {{ variable_key | currency_format }}으로 치환하세요.
+- ⚠ 이중 래핑 금지: "금 {{ var | currency_format }}원" (X) → {{ var | currency_format }} (O)
+- 숫자만 필요한 경우: {{ indicative_price | number_format }}
+
+## MOU 특화 조건부 렌더링
+- 가격산정 공식: {% if price_formula_included %}...{% endif %}
+- 독점협상: {% if exclusivity_period_included %}...{% endif %}
+- 보증금: {% if deposit_included %}...{% endif %}
+- 텀시트: {% if term_sheet_included %}...{% endif %}
+- 위약금: {% if penalty_clause_included %}...{% endif %}
+- 보증금 질권: {% if has_deposit_pledge %}...{% endif %}
+- Break Fee: {% if has_break_fee %}...{% endif %}
+- 실사비용 보전: {% if has_dd_cost_reimbursement %}...{% endif %}
+- 가격조정 산식: {% if has_price_adjustment_clause %}...{% endif %}
+- 텀시트 별지: {% if has_term_sheet_annex %}...{% endif %}
+- 규제 승인: {% if has_regulatory_approval %}...{% endif %}
+- Key-Man: {% if has_key_man_clause %}...{% endif %}
+- 경업금지: {% if has_non_compete %}...{% endif %}
+- 선행조건: {% if has_condition_precedent %}...{% endif %}
+- 법적 구속력: {% if has_binding_clause %}...{% endif %}
+
+## MOU 거래 유형별 조건부 조항
+- SHARE_PURCHASE: deal_structure == "SHARE_PURCHASE" — 주식양수도 관련 용어/조항 사용
+- BUSINESS_TRANSFER: deal_structure == "BUSINESS_TRANSFER" — 영업양수도 관련 용어/조항 사용
+- NEW_SHARE_ISSUE: deal_structure == "NEW_SHARE_ISSUE" — 신주인수 관련 용어/조항 사용
+- COMBINED: deal_structure == "COMBINED" — 복합 구조 조항
+
+## 별지/부속서(Schedule) 처리
+- MOU 별지: 텀시트(Term Sheet), 가격산정 별지, 실사 체크리스트, 이행보증금 납입 약정
+- 별지 참조 시 참조 텍스트만 유지, 관련 BOOLEAN으로 제어
+
+## condition_expression 규칙
+- Python 문법 사용
+- 지원 연산자: ==, !=, <, >, <=, >=, in, not in, and, or, not
+- 예: deposit_included == True
+- 예: deal_structure == "SHARE_PURCHASE"
+- 예: exclusivity_period_included == True and exclusivity_period_days > 0
+- 항상 포함되는 조항은 condition_expression을 null로 설정
+
+## is_boilerplate 분류 (MOU 기준)
+- True: 정의(구조), 비밀유지(일반), 통지, 완전합의, 준거법/분쟁해결
+- False: 거래구조, 가격조건, 독점협상, 보증금, 실사, 일정/종료, 법적 구속력, 위약금
+
+## content HTML 형식
+조항 내용을 HTML로 구조화하세요:
+- <p> 태그로 각 조항/항 감싸기
+- <ol>, <li> 태그로 호/목 나열
+- 들여쓰기와 구조 보존
+
+## 복합 condition_expression 예제
+- deposit_included == True and deposit_amount > 0
+- exclusivity_period_included == True and exclusivity_period_days > 0
+- price_formula_included == True and valuation_multiple > 0
+- penalty_clause_included == True and penalty_amount > 0
+- term_sheet_included == True
+- has_binding_clause == True
+- deal_structure == "COMBINED"
+- has_dd_cost_reimbursement == True and dd_period_days > 0
+
+## 출력 형식
+JSON만 반환하세요. 설명이나 코멘트를 포함하지 마세요.
+```json
+{
+  "clauses": [
+    {
+      "clause_order": 0,
+      "title": "전문",
+      "content": "<p>{{ seller_name }}(이하 &quot;매도인&quot;)과 {{ buyer_name }}(이하 &quot;매수인&quot;)은...</p>",
+      "original_content": "<p>주식회사 ABC(이하 &quot;매도인&quot;)과 주식회사 DEF(이하 &quot;매수인&quot;)은...</p>",
+      "is_boilerplate": false,
+      "condition_expression": null,
+      "confidence": 0.9
+    }
+  ]
+}
+```"""
+
+
 async def analyze_step2_clauses(
     session_id: str,
     confirmed_variables: list[ExtractedVariable],
@@ -1259,11 +1847,27 @@ async def analyze_step2_clauses(
     elif doc_type == "BTA":
         system_prompt = _BTA_STEP2_SYSTEM_PROMPT
         doc_label = "BTA 영업양수도계약서"
+    elif doc_type == "SSA":
+        system_prompt = _SSA_STEP2_SYSTEM_PROMPT
+        doc_label = "SSA 신주인수계약서"
+    elif doc_type == "MOU":
+        system_prompt = _MOU_STEP2_SYSTEM_PROMPT
+        doc_label = "MOU 양해각서"
     else:
         system_prompt = _STEP2_SYSTEM_PROMPT
         doc_label = "SPA"
 
-    type_label = "SHA 유형" if doc_type == "SHA" else "BTA 양도범위" if doc_type == "BTA" else "거래 구조"
+    type_label = (
+        "SHA 유형"
+        if doc_type == "SHA"
+        else "BTA 양도범위"
+        if doc_type == "BTA"
+        else "SSA 증권종류"
+        if doc_type == "SSA"
+        else "MOU 거래유형"
+        if doc_type == "MOU"
+        else "거래 구조"
+    )
 
     # 변수 목록을 프롬프트에 포함
     var_summary = "\n".join(f"- {v.variable_key} ({v.input_type}): {v.question_label}" for v in confirmed_variables)
