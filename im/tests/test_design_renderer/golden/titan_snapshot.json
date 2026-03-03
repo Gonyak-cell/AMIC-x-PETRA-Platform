@@ -1,23 +1,27 @@
 {
   "version": 1,
   "preset": "TITAN",
-  "total_slides": 9,
+  "total_slides": 22,
   "slides": [
     {
       "index": 0,
-      "shape_count": 3,
+      "shape_count": 6,
       "text_content": [
         "Project TITAN",
-        "Information Memorandum\n2026-02-08"
+        "Information Memorandum",
+        "2026-02-08"
       ],
       "shape_types": [
         "picture",
+        "picture",
         "placeholder",
-        "placeholder"
+        "placeholder",
+        "text_box",
+        "text_box"
       ],
       "has_table": false,
       "has_picture": true,
-      "text_length": 46
+      "text_length": 45
     },
     {
       "index": 1,
@@ -36,7 +40,7 @@
     },
     {
       "index": 2,
-      "shape_count": 9,
+      "shape_count": 10,
       "text_content": [
         "150,000억원",
         "매출액 (2024)",
@@ -50,7 +54,10 @@
         "매출 CAGR (3Y)",
         "23.3%",
         "EBITDA 마진율",
-        "테스트기업은 국내 IT 서비스 시장의 선도기업으로..."
+        "25.0%",
+        "매출 YoY",
+        "18.7%",
+        "영업이익률"
       ],
       "shape_types": [
         "auto_shape",
@@ -58,6 +65,41 @@
         "auto_shape",
         "auto_shape",
         "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 130
+    },
+    {
+      "index": 3,
+      "shape_count": 3,
+      "text_content": [
+        "테스트기업은 국내 IT 서비스 시장의 선도기업으로..."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 30
+    },
+    {
+      "index": 4,
+      "shape_count": 4,
+      "text_content": [
+        "Key Takeaways",
+        "• 1. 매출 CAGR 22.5% (3개년)",
+        "• 2. 영업이익률 18.7%로 업계 상위",
+        "• 3. 안정적 현금흐름 및 낮은 부채비율"
+      ],
+      "shape_types": [
         "auto_shape",
         "placeholder",
         "placeholder",
@@ -65,18 +107,20 @@
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 139
+      "text_length": 83
     },
     {
-      "index": 3,
-      "shape_count": 4,
+      "index": 5,
+      "shape_count": 5,
       "text_content": [
         "테스트기업의 투자 매력은...",
-        "• 1. 매출 CAGR 22.5% (3개년)",
-        "• 2. 영업이익률 18.7%로 업계 상위",
+        "Key Investment Highlights (3)",
+        "• 1. 매출 CAGR 22.",
+        "• 2. 영업이익률 18.",
         "• 3. 안정적 현금흐름 및 낮은 부채비율"
       ],
       "shape_types": [
+        "auto_shape",
         "placeholder",
         "placeholder",
         "text_box",
@@ -84,11 +128,62 @@
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 86
+      "text_length": 98
     },
     {
-      "index": 4,
-      "shape_count": 7,
+      "index": 6,
+      "shape_count": 4,
+      "text_content": [
+        "#1  매출 CAGR 22.",
+        "5% (3개년)"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 23
+    },
+    {
+      "index": 7,
+      "shape_count": 4,
+      "text_content": [
+        "#2  영업이익률 18.",
+        "7%로 업계 상위"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 22
+    },
+    {
+      "index": 8,
+      "shape_count": 4,
+      "text_content": [
+        "#3  안정적 현금흐름 및 낮은 부채비율",
+        "안정적 현금흐름 및 낮은 부채비율"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 40
+    },
+    {
+      "index": 9,
+      "shape_count": 6,
       "text_content": [
         "500,000억원",
         "TAM",
@@ -97,8 +192,7 @@
         "50,000억원",
         "SOM",
         "8.0%",
-        "시장 성장률",
-        "국내 IT 서비스 시장 규모는..."
+        "시장 성장률"
       ],
       "shape_types": [
         "auto_shape",
@@ -106,15 +200,29 @@
         "auto_shape",
         "auto_shape",
         "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 45
+    },
+    {
+      "index": 10,
+      "shape_count": 3,
+      "text_content": [
+        "국내 IT 서비스 시장 규모는..."
+      ],
+      "shape_types": [
+        "placeholder",
         "placeholder",
         "text_box"
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 64
+      "text_length": 19
     },
     {
-      "index": 5,
+      "index": 11,
       "shape_count": 3,
       "text_content": [
         "테스트기업의 사업 구조는..."
@@ -129,7 +237,32 @@
       "text_length": 16
     },
     {
-      "index": 6,
+      "index": 12,
+      "shape_count": 6,
+      "text_content": [
+        "43.3%",
+        "매출총이익률",
+        "18.7%",
+        "영업이익률",
+        "23.3%",
+        "EBITDA 마진율",
+        "24.7%",
+        "판관비율 (2024)"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 52
+    },
+    {
+      "index": 13,
       "shape_count": 10,
       "text_content": [
         "150,000",
@@ -165,7 +298,7 @@
       "text_length": 141
     },
     {
-      "index": 7,
+      "index": 14,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -178,8 +311,120 @@
       "text_length": 0
     },
     {
-      "index": 8,
+      "index": 15,
+      "shape_count": 4,
+      "text_content": [
+        "연도별 매출 및 YoY 성장률",
+        "• 2023 매출: 120,000 (YoY +20.0%)",
+        "• 2024 매출: 150,000 (YoY +25.0%)"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 78
+    },
+    {
+      "index": 16,
+      "shape_count": 4,
+      "text_content": [
+        "연도별 수익성 지표 추이"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 13
+    },
+    {
+      "index": 17,
       "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 18,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 19,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 20,
+      "shape_count": 11,
+      "text_content": [
+        "주요 재무 비율",
+        "50.0%",
+        "부채비율",
+        "10.0%",
+        "ROE (2024)",
+        "6.7%",
+        "ROA (2024)",
+        "13.3%",
+        "순이익률",
+        "23.3%",
+        "EBITDA 마진율",
+        "43.3%",
+        "매출총이익률",
+        "18.7%",
+        "영업이익률",
+        "22.5%",
+        "매출 CAGR (3Y)"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "placeholder",
+        "placeholder"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 108
+    },
+    {
+      "index": 21,
+      "shape_count": 6,
       "text_content": [
         "Contact",
         "홍길동",
@@ -188,6 +433,9 @@
       ],
       "shape_types": [
         "picture",
+        "picture",
+        "placeholder",
+        "placeholder",
         "text_box",
         "text_box"
       ],
@@ -196,17 +444,17 @@
       "text_length": 57
     }
   ],
-  "total_shape_count": 44,
-  "total_text_length": 653,
+  "total_shape_count": 107,
+  "total_text_length": 1104,
   "section_slide_counts": {
     "cover": 1,
     "disclaimer": 1,
     "toc_divider": 0,
-    "executive_summary": 1,
-    "investment_highlights": 1,
-    "market_overview": 1,
-    "business_overview": 1,
-    "financial_analysis": 2,
+    "executive_summary": 3,
+    "investment_highlights": 4,
+    "market_overview": 2,
+    "business_overview": 2,
+    "financial_analysis": 8,
     "contact": 1
   }
 }

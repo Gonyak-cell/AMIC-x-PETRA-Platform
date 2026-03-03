@@ -1,4 +1,4 @@
-"""섹션 렌더러 테스트 — 레지스트리 18종/HTML/PPTX 출력."""
+"""섹션 렌더러 테스트 — 레지스트리 35종/HTML/PPTX 출력."""
 
 import pytest
 
@@ -8,6 +8,7 @@ from src.design_renderer.pptx_engine.slide_factory import SlideFactory
 from src.design_renderer.pptx_engine.template_manager import TemplateManager
 from src.design_renderer.section_renderers import (
     RENDERER_REGISTRY,
+    RendererNotFoundError,
     get_renderer,
 )
 
@@ -20,16 +21,14 @@ def manager() -> TemplateManager:
 class TestRendererRegistry:
     """렌더러 레지스트리."""
 
-    def test_all_21_registered(self):
-        """21개 렌더러 모두 등록됨 (19 기본 + 2 산업)."""
-        assert len(RENDERER_REGISTRY) == 21
+    def test_all_35_registered(self):
+        """35개 렌더러 모두 등록됨 (19 IM + 8 TM + 6 DM + 2 산업)."""
+        assert len(RENDERER_REGISTRY) == 35
 
     def test_all_section_ids_registered(self):
         """SECTION_IDS의 모든 ID가 등록됨."""
         for section_id in SECTION_IDS:
-            assert section_id in RENDERER_REGISTRY, (
-                f"'{section_id}' 미등록"
-            )
+            assert section_id in RENDERER_REGISTRY, f"'{section_id}' 미등록"
 
     def test_get_renderer_returns_instance(self):
         """get_renderer() → 올바른 인스턴스."""
@@ -38,34 +37,49 @@ class TestRendererRegistry:
         assert renderer.section_id == "cover"
 
     def test_get_renderer_unknown_raises(self):
-        """미등록 ID → KeyError."""
-        with pytest.raises(KeyError, match="미등록"):
+        """미등록 ID → RendererNotFoundError."""
+        with pytest.raises(RendererNotFoundError, match="미등록"):
             get_renderer("nonexistent_section")
 
 
 class TestRenderersHtmlOutput:
-    """모든 렌더러의 HTML 출력 검증."""
+    """HTML 구현이 있는 렌더러의 출력 검증."""
+
+    # PPTX 전용 렌더러 (render_html → NotImplementedError)
+    PPTX_ONLY = {
+        "business_overview",
+        "company_overview",
+        "executive_summary",
+        "financial_analysis",
+        "growth_strategy",
+        "investment_highlights",
+        "market_overview",
+        "valuation",
+    }
 
     def test_all_renderers_produce_html(self, full_data: IMDocumentData):
-        """18개 렌더러 모두 비어있지 않은 HTML 리스트 반환.
+        """HTML 구현이 있는 렌더러가 비어있지 않은 HTML 리스트 반환.
 
         toc_divider는 current_section 없이 호출 시 빈 리스트를 반환할 수 있음.
+        PPTX 전용 렌더러는 건너뛴다.
         """
         for section_id in full_data.get_active_sections():
+            if section_id in self.PPTX_ONLY:
+                continue
             renderer = get_renderer(section_id)
             # toc_divider는 current_section 인자가 필요
             if section_id == "toc_divider":
                 html_slides = renderer.render_html(
-                    full_data, tokens=DEFAULT_TOKENS, current_section="executive_summary"
+                    full_data,
+                    tokens=DEFAULT_TOKENS,
+                    current_section="executive_summary",
                 )
             else:
                 html_slides = renderer.render_html(full_data, tokens=DEFAULT_TOKENS)
             assert isinstance(html_slides, list), (
                 f"'{section_id}' render_html()이 list가 아님"
             )
-            assert len(html_slides) >= 1, (
-                f"'{section_id}' render_html()이 빈 리스트"
-            )
+            assert len(html_slides) >= 1, f"'{section_id}' render_html()이 빈 리스트"
             for slide_html in html_slides:
                 assert isinstance(slide_html, str)
                 assert len(slide_html) > 0
@@ -89,8 +103,11 @@ class TestRenderersPptxOutput:
             # toc_divider는 current_section 인자가 필요
             if section_id == "toc_divider":
                 pptx_slides = renderer.render_pptx(
-                    factory, full_data, prs=prs, tokens=DEFAULT_TOKENS,
-                    current_section="executive_summary"
+                    factory,
+                    full_data,
+                    prs=prs,
+                    tokens=DEFAULT_TOKENS,
+                    current_section="executive_summary",
                 )
             else:
                 pptx_slides = renderer.render_pptx(
@@ -99,6 +116,4 @@ class TestRenderersPptxOutput:
             assert isinstance(pptx_slides, list), (
                 f"'{section_id}' render_pptx()가 list가 아님"
             )
-            assert len(pptx_slides) >= 1, (
-                f"'{section_id}' render_pptx()가 빈 리스트"
-            )
+            assert len(pptx_slides) >= 1, f"'{section_id}' render_pptx()가 빈 리스트"

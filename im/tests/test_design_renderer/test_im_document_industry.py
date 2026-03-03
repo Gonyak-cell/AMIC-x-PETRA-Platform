@@ -17,7 +17,8 @@ class TestIndustrySectionIDs:
         assert "industry_kpi" in INDUSTRY_SECTION_IDS
         assert "industry_overview" in INDUSTRY_SECTION_IDS
         assert len(INDUSTRY_SECTION_IDS) == 2
-        assert len(ALL_SECTION_IDS) == len(SECTION_IDS) + len(INDUSTRY_SECTION_IDS)
+        # ALL = IM(19) + TM(8) + DM(6) + Industry(2) = 35
+        assert len(ALL_SECTION_IDS) == 35
 
     def test_base_section_ids_unchanged(self):
         """기존 SECTION_IDS는 19개 (valuation 추가)."""

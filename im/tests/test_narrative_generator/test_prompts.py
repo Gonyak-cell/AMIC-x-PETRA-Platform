@@ -24,12 +24,12 @@ from src.narrative_generator.prompts.section_prompts.core import ExecutiveSummar
 class TestCreateDefaultRegistry:
     """create_default_registry 함수 테스트."""
 
-    def test_default_registry_contains_15_prompts(self) -> None:
-        """기본 레지스트리가 15개 프롬프트를 포함하는지 확인한다."""
+    def test_default_registry_contains_28_prompts(self) -> None:
+        """기본 레지스트리가 28개 프롬프트를 포함하는지 확인한다 (IM 15 + TM 8 + DM 5)."""
         registry = create_default_registry()
         all_prompts = registry.get_all()
 
-        assert len(all_prompts) == 15
+        assert len(all_prompts) == 28
 
     def test_registry_get_executive_summary(self) -> None:
         """executive_summary 프롬프트가 올바르게 조회되는지 확인한다."""

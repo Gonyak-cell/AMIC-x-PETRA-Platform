@@ -116,7 +116,7 @@ class TestRegulatoryItems:
 
     def test_regulatory_items_not_empty(self) -> None:
         """REGULATORY_ITEMS가 비어있지 않다."""
-        assert len(REGULATORY_ITEMS) == 14
+        assert len(REGULATORY_ITEMS) == 17
 
     def test_all_valid_regulatory_structure(self) -> None:
         """모든 항목이 RegulatoryItem 인스턴스이고 필수 필드가 있다."""
@@ -131,12 +131,18 @@ class TestRegulatoryItems:
             assert len(item.applicable_industries) > 0
 
     def test_common_regulations_apply_to_all_industries(self) -> None:
-        """MRFTA, FSCMA, FIPA, PIPA가 4개 산업 모두에 적용된다."""
+        """MRFTA, FSCMA, FIPA, PIPA가 5개 산업 모두에 적용된다."""
         common_ids = {"mrfta_merger", "fscma", "foreign_investment", "pipa"}
         common_items = [r for r in REGULATORY_ITEMS if r.regulation_id in common_ids]
         assert len(common_items) == 4
 
-        all_industries = {"tech", "manufacturing", "healthcare", "logistics"}
+        all_industries = {
+            "tech",
+            "manufacturing",
+            "healthcare",
+            "logistics",
+            "financial_services",
+        }
         for item in common_items:
             assert set(item.applicable_industries) == all_industries
 
@@ -159,7 +165,7 @@ class TestKIFRSNotes:
 
     def test_kifrs_notes_not_empty(self) -> None:
         """KIFRS_NOTES가 비어있지 않다."""
-        assert len(KIFRS_NOTES) == 8
+        assert len(KIFRS_NOTES) == 10
 
     def test_all_valid_kifrs_structure(self) -> None:
         """모든 항목이 KIFRSNote 인스턴스이고 필수 필드가 있다."""
@@ -173,7 +179,13 @@ class TestKIFRSNotes:
     def test_common_kifrs_apply_to_all_industries(self) -> None:
         """K-IFRS 1115, 1116, 1037, 1103, 1019가 전 산업에 적용."""
         common_standards = {"1115", "1116", "1037", "1103", "1019"}
-        all_industries = {"tech", "manufacturing", "healthcare", "logistics"}
+        all_industries = {
+            "tech",
+            "manufacturing",
+            "healthcare",
+            "logistics",
+            "financial_services",
+        }
 
         for note in KIFRS_NOTES:
             if note.standard_number in common_standards:
@@ -225,11 +237,9 @@ class TestGetKoreaOverlayData:
 
     @pytest.mark.parametrize(
         "industry_id",
-        ["tech", "manufacturing", "healthcare", "logistics"],
+        ["tech", "manufacturing", "healthcare", "logistics", "financial_services"],
     )
-    def test_overlay_returns_for_supported_industries(
-        self, industry_id: str
-    ) -> None:
+    def test_overlay_returns_for_supported_industries(self, industry_id: str) -> None:
         """지원 산업에 대해 KoreaOverlayData를 반환한다."""
         result = get_korea_overlay_data(industry_id)
         assert result is not None

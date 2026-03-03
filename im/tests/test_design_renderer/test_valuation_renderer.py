@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 
 from src.design_renderer.im_document import (
-    ChartData,
     IMDocumentData,
     IMStyle,
     ValuationData,
@@ -100,60 +100,14 @@ class TestValuationRendererRegistry:
 
 
 class TestValuationRendererHtml:
-    """HTML 렌더링 테스트."""
+    """HTML 렌더링 테스트 — render_html은 PPTX 전용 전환으로 제거됨."""
 
-    def test_kpi_slide_rendered(self) -> None:
-        """KPI + narrative 슬라이드는 항상 생성된다."""
+    def test_render_html_raises_not_implemented(self) -> None:
+        """render_html()은 NotImplementedError를 발생시킨다."""
         data = _make_data_with_valuation()
         renderer = ValuationRenderer()
-        slides = renderer.render_html(data)
-        assert len(slides) >= 1
-        assert "밸류에이션 요약" in slides[0]
-        assert "EV/EBITDA" in slides[0]
-        assert "10.0x" in slides[0]
-
-    def test_scenario_table_rendered(self) -> None:
-        """IRR/MOIC 시나리오 테이블이 생성된다."""
-        data = _make_data_with_valuation()
-        renderer = ValuationRenderer()
-        slides = renderer.render_html(data)
-        # 최소 2개 슬라이드: KPI + scenario table
-        assert len(slides) >= 2
-        assert "시나리오 분석" in slides[1]
-
-    def test_exit_table_rendered(self) -> None:
-        """Exit 전략 비교 테이블이 생성된다."""
-        data = _make_data_with_valuation()
-        renderer = ValuationRenderer()
-        slides = renderer.render_html(data)
-        # Exit table 존재 확인
-        exit_slides = [s for s in slides if "Exit 전략" in s]
-        assert len(exit_slides) == 1
-
-    def test_minimal_data_single_slide(self) -> None:
-        """valuation_data가 없으면 KPI 슬라이드 1개만 생성."""
-        data = _make_minimal_data()
-        renderer = ValuationRenderer()
-        slides = renderer.render_html(data)
-        assert len(slides) == 1
-        assert "밸류에이션 요약" in slides[0]
-
-    def test_chart_slides_rendered(self) -> None:
-        """차트가 있으면 차트 슬라이드가 추가된다."""
-        data = _make_data_with_valuation()
-        data.charts = {
-            "valuation": [
-                ChartData(
-                    chart_type="heatmap",
-                    title="IRR 민감도",
-                    data={"image_path": "/tmp/heatmap.png"},
-                ),
-            ],
-        }
-        renderer = ValuationRenderer()
-        slides = renderer.render_html(data)
-        chart_slides = [s for s in slides if "IRR 민감도" in s]
-        assert len(chart_slides) == 1
+        with pytest.raises(NotImplementedError, match="PDF output removed"):
+            renderer.render_html(data)
 
 
 # ---------------------------------------------------------------------------
