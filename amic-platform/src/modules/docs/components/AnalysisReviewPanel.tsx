@@ -919,7 +919,7 @@ export function SsaClassificationPanel({
 }: SsaClassificationProps) {
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="ssa-security-type"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -928,7 +928,7 @@ export function SsaClassificationPanel({
         </label>
         <select
           id="ssa-security-type"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={securityType}
           onChange={(e) =>
             onSecurityTypeChange(e.target.value as SsaSecurityType)
@@ -941,7 +941,7 @@ export function SsaClassificationPanel({
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="ssa-transaction-context"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -950,7 +950,7 @@ export function SsaClassificationPanel({
         </label>
         <select
           id="ssa-transaction-context"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={transactionContext}
           onChange={(e) =>
             onTransactionContextChange(e.target.value as SsaTransactionContext)
@@ -963,7 +963,7 @@ export function SsaClassificationPanel({
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="ssa-industry-type"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -972,7 +972,7 @@ export function SsaClassificationPanel({
         </label>
         <select
           id="ssa-industry-type"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={industryType}
           onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
         >
@@ -1013,7 +1013,7 @@ export function MouClassificationPanel({
 }: MouClassificationProps) {
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border p-4 flex-wrap">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="mou-transaction-type"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -1022,7 +1022,7 @@ export function MouClassificationPanel({
         </label>
         <select
           id="mou-transaction-type"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={mouTransactionType}
           onChange={(e) =>
             onMouTransactionTypeChange(e.target.value as MouTransactionType)
@@ -1035,7 +1035,7 @@ export function MouClassificationPanel({
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="mou-deposit-handling"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -1044,7 +1044,7 @@ export function MouClassificationPanel({
         </label>
         <select
           id="mou-deposit-handling"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={depositHandling}
           onChange={(e) =>
             onDepositHandlingChange(e.target.value as MouDepositHandling)
@@ -1057,7 +1057,7 @@ export function MouClassificationPanel({
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
         <label
           htmlFor="mou-industry-type"
           className="text-sm font-medium text-text-secondary whitespace-nowrap"
@@ -1066,7 +1066,7 @@ export function MouClassificationPanel({
         </label>
         <select
           id="mou-industry-type"
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent-primary"
           value={industryType}
           onChange={(e) => onIndustryTypeChange(e.target.value as IndustryType)}
         >

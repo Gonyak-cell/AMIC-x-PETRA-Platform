@@ -354,38 +354,21 @@ class TestStep1AnalyzeVariables:
         with patch("app.services.spa_analysis_service._get_llm_client", return_value=mock_llm):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            (
-                session_id,
-                variables,
-                deal_struct,
-                industry,
-                detected_doc_type,
-                discovered,
-                _sha_type,
-                _exit_strategy,
-                _bta_scope,
-                _severance_pay,
-                _security_type,
-                _transaction_ctx,
-                _mou_txn_type,
-                _deposit_hdl,
-                _cost,
-                _model,
-            ) = await analyze_step1_variables("A" * 200)
+            r = await analyze_step1_variables("A" * 200)
 
-        assert session_id  # UUID 문자열
-        assert len(variables) == 2
-        assert variables[0].variable_key == "seller_name"
-        assert variables[0].input_type == "TEXT"
-        assert variables[1].input_type == "CURRENCY"
-        assert deal_struct == "PURE_SHARE_TRANSFER"
-        assert industry == "MANUFACTURING"
-        assert detected_doc_type == "SPA"
-        assert len(discovered) == 1
-        assert discovered[0].variable_key == "has_drag_along"
+        assert r["session_id"]  # UUID 문자열
+        assert len(r["variables"]) == 2
+        assert r["variables"][0].variable_key == "seller_name"
+        assert r["variables"][0].input_type == "TEXT"
+        assert r["variables"][1].input_type == "CURRENCY"
+        assert r["deal_structure"] == "PURE_SHARE_TRANSFER"
+        assert r["industry_type"] == "MANUFACTURING"
+        assert r["detected_doc_type"] == "SPA"
+        assert len(r["discovered_booleans"]) == 1
+        assert r["discovered_booleans"][0].variable_key == "has_drag_along"
 
         # 세션 정리
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
     @pytest.mark.asyncio
     async def test_step1_dedup_variables(self) -> None:
@@ -421,13 +404,13 @@ class TestStep1AnalyzeVariables:
         with patch("app.services.spa_analysis_service._get_llm_client", return_value=mock_llm):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            session_id, variables, *_ = await analyze_step1_variables("A" * 200)
+            r = await analyze_step1_variables("A" * 200)
 
         # 중복 제거 후 1개만 남아야 함
-        assert len(variables) == 1
-        assert variables[0].question_label == "매도인"
+        assert len(r["variables"]) == 1
+        assert r["variables"][0].question_label == "매도인"
 
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
 
 # ── Step 2 서비스 테스트 (LLM Mock) ───────────────────────────────────────────
@@ -933,29 +916,12 @@ class TestEmptyArrayEdgeCases:
         with patch("app.services.spa_analysis_service._get_llm_client", return_value=mock_llm):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            (
-                session_id,
-                variables,
-                _deal,
-                _industry,
-                doc_type,
-                discovered,
-                _sha,
-                _exit,
-                _bta,
-                _sev,
-                _sec,
-                _txn,
-                _mou,
-                _dep,
-                _cost,
-                _model,
-            ) = await analyze_step1_variables("A" * 200)
+            r = await analyze_step1_variables("A" * 200)
 
-        assert variables == []
-        assert discovered == []
-        assert doc_type == "MOU"
-        _sessions.pop(session_id, None)
+        assert r["variables"] == []
+        assert r["discovered_booleans"] == []
+        assert r["detected_doc_type"] == "MOU"
+        _sessions.pop(r["session_id"], None)
 
     @pytest.mark.asyncio
     async def test_step2_empty_clauses(self) -> None:
@@ -1453,34 +1419,15 @@ class TestShaStep1Service:
         ):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            result = await analyze_step1_variables("A" * 200, doc_type_hint="SHA")
+            r = await analyze_step1_variables("A" * 200, doc_type_hint="SHA")
 
-        (
-            session_id,
-            variables,
-            deal_struct,
-            _industry,
-            detected_doc_type,
-            discovered,
-            sha_type,
-            exit_strategy,
-            _bta_scope,
-            _severance_pay,
-            _security_type,
-            _transaction_ctx,
-            _mou_txn_type,
-            _deposit_hdl,
-            _cost,
-            _model,
-        ) = result
-
-        assert detected_doc_type == "SHA"
-        assert sha_type == "POST_BUYOUT"
-        assert exit_strategy == "MNA_FOCUSED"
-        assert deal_struct == "POST_BUYOUT"
-        assert len(variables) == 1
-        assert variables[0].variable_key == "shareholders"
-        assert len(discovered) == 1
+        assert r["detected_doc_type"] == "SHA"
+        assert r["sha_type"] == "POST_BUYOUT"
+        assert r["exit_strategy"] == "MNA_FOCUSED"
+        assert r["deal_structure"] == "POST_BUYOUT"
+        assert len(r["variables"]) == 1
+        assert r["variables"][0].variable_key == "shareholders"
+        assert len(r["discovered_booleans"]) == 1
 
         # LLM이 SHA 프롬프트로 호출되었는지 확인
         call_args = mock_llm.call.call_args
@@ -1488,7 +1435,7 @@ class TestShaStep1Service:
         assert "주주간계약서" in system_prompt
         assert "sha_type" in system_prompt
 
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
     @pytest.mark.asyncio
     async def test_spa_step1_still_uses_spa_prompt(self) -> None:
@@ -1521,7 +1468,7 @@ class TestShaStep1Service:
         system_prompt = call_args[0][0]
         assert "M&A 관련 계약서" in system_prompt
 
-        _sessions.pop(result[0], None)
+        _sessions.pop(result["session_id"], None)
 
 
 class TestShaStep2Service:
@@ -1936,33 +1883,14 @@ class TestBtaStep1Service:
         ):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            result = await analyze_step1_variables("A" * 200, doc_type_hint="BTA")
+            r = await analyze_step1_variables("A" * 200, doc_type_hint="BTA")
 
-        (
-            session_id,
-            variables,
-            deal_struct,
-            _industry,
-            detected_doc_type,
-            discovered,
-            _sha_type,
-            _exit_strategy,
-            bta_scope,
-            severance_pay,
-            _security_type,
-            _transaction_ctx,
-            _mou_txn_type,
-            _deposit_hdl,
-            _cost,
-            _model,
-        ) = result
-
-        assert detected_doc_type == "BTA"
-        assert bta_scope == "COMPREHENSIVE_TRANSFER"
-        assert severance_pay == "ASSUMED_BY_BUYER"
-        assert deal_struct == "COMPREHENSIVE_TRANSFER"
-        assert len(variables) == 1
-        assert len(discovered) == 1
+        assert r["detected_doc_type"] == "BTA"
+        assert r["bta_scope"] == "COMPREHENSIVE_TRANSFER"
+        assert r["severance_pay_handling"] == "ASSUMED_BY_BUYER"
+        assert r["deal_structure"] == "COMPREHENSIVE_TRANSFER"
+        assert len(r["variables"]) == 1
+        assert len(r["discovered_booleans"]) == 1
 
         # BTA 프롬프트 사용 확인
         call_args = mock_llm.call.call_args
@@ -1970,7 +1898,7 @@ class TestBtaStep1Service:
         assert "영업양수도계약서" in system_prompt
         assert "bta_scope" in system_prompt
 
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
 
 class TestBtaStep2Service:
@@ -2247,34 +2175,15 @@ class TestSsaStep1Service:
         ):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            result = await analyze_step1_variables("A" * 200, doc_type_hint="SSA")
+            r = await analyze_step1_variables("A" * 200, doc_type_hint="SSA")
 
-        (
-            session_id,
-            variables,
-            deal_struct,
-            _industry,
-            detected_doc_type,
-            discovered,
-            _sha_type,
-            _exit_strategy,
-            _bta_scope,
-            _severance_pay,
-            security_type,
-            transaction_context,
-            _mou_txn_type,
-            _deposit_hdl,
-            _cost,
-            _model,
-        ) = result
-
-        assert detected_doc_type == "SSA"
-        assert security_type == "RCPS"
-        assert transaction_context == "STANDALONE_INVESTMENT"
-        assert deal_struct == "RCPS"
-        assert len(variables) == 1
-        assert variables[0].variable_key == "issuer_name"
-        assert len(discovered) == 1
+        assert r["detected_doc_type"] == "SSA"
+        assert r["security_type"] == "RCPS"
+        assert r["transaction_context"] == "STANDALONE_INVESTMENT"
+        assert r["deal_structure"] == "RCPS"
+        assert len(r["variables"]) == 1
+        assert r["variables"][0].variable_key == "issuer_name"
+        assert len(r["discovered_booleans"]) == 1
 
         # SSA 프롬프트 사용 확인
         call_args = mock_llm.call.call_args
@@ -2282,7 +2191,7 @@ class TestSsaStep1Service:
         assert "신주인수계약서" in system_prompt
         assert "security_type" in system_prompt
 
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
 
 class TestSsaStep2Service:
@@ -2559,33 +2468,14 @@ class TestMouStep1Service:
         ):
             from app.services.spa_analysis_service import analyze_step1_variables
 
-            result = await analyze_step1_variables("A" * 200, doc_type_hint="MOU")
+            r = await analyze_step1_variables("A" * 200, doc_type_hint="MOU")
 
-        (
-            session_id,
-            variables,
-            deal_struct,
-            _industry,
-            detected_doc_type,
-            discovered,
-            _sha_type,
-            _exit_strategy,
-            _bta_scope,
-            _severance_pay,
-            _security_type,
-            _transaction_ctx,
-            mou_transaction_type,
-            deposit_handling,
-            _cost,
-            _model,
-        ) = result
-
-        assert detected_doc_type == "MOU"
-        assert mou_transaction_type == "SHARE_PURCHASE"
-        assert deposit_handling == "NON_REFUNDABLE"
-        assert deal_struct == "SHARE_PURCHASE"
-        assert len(variables) == 1
-        assert len(discovered) == 1
+        assert r["detected_doc_type"] == "MOU"
+        assert r["mou_transaction_type"] == "SHARE_PURCHASE"
+        assert r["deposit_handling"] == "NON_REFUNDABLE"
+        assert r["deal_structure"] == "SHARE_PURCHASE"
+        assert len(r["variables"]) == 1
+        assert len(r["discovered_booleans"]) == 1
 
         # MOU 프롬프트 사용 확인
         call_args = mock_llm.call.call_args
@@ -2593,7 +2483,7 @@ class TestMouStep1Service:
         assert "양해각서" in system_prompt
         assert "mou_transaction_type" in system_prompt
 
-        _sessions.pop(session_id, None)
+        _sessions.pop(r["session_id"], None)
 
 
 class TestMouStep2Service:

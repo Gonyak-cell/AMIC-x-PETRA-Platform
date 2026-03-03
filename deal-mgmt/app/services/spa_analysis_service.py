@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +40,28 @@ from app.services.contract_generation_service import (
 
 logger = logging.getLogger(__name__)
 
+
+class Step1Result(TypedDict):
+    """Step 1 분석 결과 — 이름 기반 접근으로 tuple 인덱스 오류 방지."""
+
+    session_id: str
+    variables: list[ExtractedVariable]
+    deal_structure: str
+    industry_type: str
+    detected_doc_type: str
+    discovered_booleans: list[DiscoveredBoolean]
+    sha_type: str | None
+    exit_strategy: str | None
+    bta_scope: str | None
+    severance_pay_handling: str | None
+    security_type: str | None
+    transaction_context: str | None
+    mou_transaction_type: str | None
+    deposit_handling: str | None
+    cost: float | None
+    model: str | None
+
+
 # ── 세션 관리 (인메모리, TTL 30분) ────────────────────────────────────────────
 
 _SESSION_TTL = 1800.0  # 30분
@@ -49,7 +71,10 @@ _LLM_CALL_TIMEOUT = 120.0  # LLM 호출 타임아웃 (초) (D-4)
 
 # 조건식 내 금지 토큰 (import, exec, eval, open, 던더) — defence-in-depth (B-1)
 
-_FORBIDDEN_RE = re.compile(r"\b(import|exec|eval|open)\b|__", re.IGNORECASE)
+_FORBIDDEN_RE = re.compile(
+    r"(__\w+__|import|exec|eval|compile|globals|locals|getattr|setattr|delattr|open|os\.|sys\.|subprocess)",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -58,6 +83,7 @@ class AnalysisSession:
 
     session_id: str
     spa_text: str
+    owner_user_id: str = ""
     detected_doc_type: str = "SPA"
     created_at: float = field(default_factory=time.monotonic)
     cost_usd: float = 0.0
@@ -67,12 +93,16 @@ class AnalysisSession:
 _sessions: dict[str, AnalysisSession] = {}
 
 
-def _get_session(session_id: str) -> AnalysisSession:
-    """세션을 조회한다. 만료/미존재 시 ValueError."""
+def _get_session(session_id: str, *, owner_user_id: str = "") -> AnalysisSession:
+    """세션을 조회한다. 만료/미존재/소유자 불일치 시 ValueError."""
     _cleanup_expired_sessions()
     session = _sessions.get(session_id)
     if session is None:
         msg = "분석 세션이 만료되었거나 존재하지 않습니다. Step 1부터 다시 시작하세요."
+        raise ValueError(msg)
+    # C1: 세션 소유권 검증 — 타 사용자의 계약서 원문 접근 차단
+    if owner_user_id and session.owner_user_id and session.owner_user_id != owner_user_id:
+        msg = "이 분석 세션에 접근할 권한이 없습니다."
         raise ValueError(msg)
     return session
 
@@ -131,8 +161,8 @@ async def _call_llm_json(
             cost = llm.total_cost_usd - cost_before
             model_name = getattr(llm, "_primary_model", None)
             return parsed, cost, model_name
-        except TimeoutError:
-            raise RuntimeError(f"LLM 호출이 {_LLM_CALL_TIMEOUT:.0f}초 내에 응답하지 않았습니다.")
+        except TimeoutError as exc:
+            raise RuntimeError(f"LLM 호출이 {_LLM_CALL_TIMEOUT:.0f}초 내에 응답하지 않았습니다.") from exc
         except (json.JSONDecodeError, ValueError) as exc:
             if attempt < max_retries:
                 logger.warning("LLM JSON 파싱 실패 (시도 %d/%d): %s", attempt + 1, max_retries + 1, exc)
@@ -783,10 +813,10 @@ detected_doc_type은 반드시 "SSA"로 설정하세요.
 | 납입 | payment_date | DATE | 납입일 |
 | 납입 | payment_method | TEXT | 납입 방법 (현금, 현물출자 등) |
 | 납입 | installment_payment_included | BOOLEAN | 분할 납입 여부 |
-| 전환/상환 | conversion_price | CURRENCY | 전환가 (visible: security_type in ["RCPS", "CB"]) |
-| 전환/상환 | conversion_ratio | TEXT | 전환 비율 (visible: security_type in ["RCPS", "CB"]) |
-| 전환/상환 | redemption_period_months | NUMBER | 상환 기간 (개월, visible: security_type in ["RCPS", "BW"]) |
-| 전환/상환 | redemption_yield_rate | PERCENTAGE | 상환수익률 (visible: security_type in ["RCPS", "BW"]) |
+| 전환/상환 | conversion_price | CURRENCY | 전환가 (visible: deal_structure in ["RCPS", "CB"]) |
+| 전환/상환 | conversion_ratio | TEXT | 전환 비율 (visible: deal_structure in ["RCPS", "CB"]) |
+| 전환/상환 | redemption_period_months | NUMBER | 상환 기간 (개월, visible: deal_structure in ["RCPS", "BW"]) |
+| 전환/상환 | redemption_yield_rate | PERCENTAGE | 상환수익률 (visible: deal_structure in ["RCPS", "BW"]) |
 | 전환/상환 | conversion_period_start | DATE | 전환 청구 가능 시작일 |
 | 전환/상환 | conversion_period_end | DATE | 전환 청구 가능 종료일 |
 | 자금 용도 | use_of_proceeds_description | TEXTAREA | 인수대금 사용 용도 |
@@ -1068,31 +1098,13 @@ async def analyze_step1_variables(
     spa_text: str,
     language_hint: str | None = None,
     doc_type_hint: str | None = None,
-) -> tuple[
-    str,
-    list[ExtractedVariable],
-    str,
-    str,
-    str,
-    list[DiscoveredBoolean],
-    str | None,  # sha_type
-    str | None,  # exit_strategy
-    str | None,  # bta_scope
-    str | None,  # severance_pay_handling
-    str | None,  # security_type
-    str | None,  # transaction_context
-    str | None,  # mou_transaction_type
-    str | None,  # deposit_handling
-    float | None,  # cost
-    str | None,  # model
-]:
+    *,
+    owner_user_id: str = "",
+) -> Step1Result:
     """Step 1: 계약서 원문에서 변수를 추출한다.
 
     Returns:
-        (session_id, variables, deal_structure, industry_type, detected_doc_type,
-         discovered_booleans, sha_type, exit_strategy, bta_scope,
-         severance_pay_handling, security_type, transaction_context,
-         mou_transaction_type, deposit_handling, cost, model)
+        Step1Result TypedDict — 이름 기반 키 접근으로 tuple 인덱스 오류 방지.
     """
     session_id = str(uuid.uuid4())
 
@@ -1102,8 +1114,12 @@ async def analyze_step1_variables(
         if len(_sessions) >= _MAX_SESSIONS:
             raise RuntimeError("분석 세션 수가 한도에 도달했습니다. 잠시 후 다시 시도하세요.")
 
-    # 세션 생성
-    session = AnalysisSession(session_id=session_id, spa_text=spa_text)
+    # 세션 생성 (소유자 기록 — C1 세션 소유권 검증용)
+    session = AnalysisSession(
+        session_id=session_id,
+        spa_text=spa_text,
+        owner_user_id=owner_user_id,
+    )
     _sessions[session_id] = session
 
     # 프롬프트 선택: doc_type_hint에 따라 전용 프롬프트 분기
@@ -1138,14 +1154,14 @@ async def analyze_step1_variables(
         session.cost_usd += cost
     session.model_used = model
 
-    # 응답 파싱 — Pydantic ValidationError 시에도 세션 정리 보장
+    # 응답 파싱 — ValidationError/TypeError/KeyError 시 세션 정리 보장
     try:
         variables = [ExtractedVariable(**v) for v in data.get("variables", [])]
         deal_structure = data.get("deal_structure", "OTHER_STRUCTURE")
         industry_type = data.get("industry_type", "GENERAL")
         detected_doc_type = data.get("detected_doc_type", "SPA")
         discovered = [DiscoveredBoolean(**b) for b in data.get("discovered_booleans", [])]
-    except Exception:
+    except (ValueError, TypeError, KeyError):
         _sessions.pop(session_id, None)
         raise
     sha_type: str | None = data.get("sha_type")
@@ -1182,23 +1198,23 @@ async def analyze_step1_variables(
         cost or 0.0,
     )
 
-    return (
-        session_id,
-        variables,
-        deal_structure,
-        industry_type,
-        detected_doc_type,
-        discovered,
-        sha_type,
-        exit_strategy,
-        bta_scope,
-        severance_pay_handling,
-        security_type,
-        transaction_context,
-        mou_transaction_type,
-        deposit_handling,
-        cost,
-        model,
+    return Step1Result(
+        session_id=session_id,
+        variables=variables,
+        deal_structure=deal_structure,
+        industry_type=industry_type,
+        detected_doc_type=detected_doc_type,
+        discovered_booleans=discovered,
+        sha_type=sha_type,
+        exit_strategy=exit_strategy,
+        bta_scope=bta_scope,
+        severance_pay_handling=severance_pay_handling,
+        security_type=security_type,
+        transaction_context=transaction_context,
+        mou_transaction_type=mou_transaction_type,
+        deposit_handling=deposit_handling,
+        cost=cost,
+        model=model,
     )
 
 
@@ -1807,18 +1823,20 @@ async def analyze_step2_clauses(
     *,
     spa_text: str | None = None,
     doc_type_hint: str | None = None,
+    owner_user_id: str = "",
 ) -> tuple[list[AnalyzedClause], float | None, str | None]:
     """Step 2: 확정 변수를 기반으로 조항을 분해한다.
 
     Args:
         spa_text: 멀티워커 폴백용. 세션 유실 시 이 텍스트로 임시 세션 생성.
         doc_type_hint: 멀티워커 폴백용. 세션 유실 시 detected_doc_type 복원.
+        owner_user_id: 세션 소유권 검증용 사용자 ID.
 
     Returns:
         (clauses, cost, model)
     """
     try:
-        session = _get_session(session_id)
+        session = _get_session(session_id, owner_user_id=owner_user_id)
     except ValueError:
         if spa_text:
             # 세션 한도 체크 (폴백 경로에서도 적용)
@@ -1857,17 +1875,13 @@ async def analyze_step2_clauses(
         system_prompt = _STEP2_SYSTEM_PROMPT
         doc_label = "SPA"
 
-    type_label = (
-        "SHA 유형"
-        if doc_type == "SHA"
-        else "BTA 양도범위"
-        if doc_type == "BTA"
-        else "SSA 증권종류"
-        if doc_type == "SSA"
-        else "MOU 거래유형"
-        if doc_type == "MOU"
-        else "거래 구조"
-    )
+    type_label_map: dict[str, str] = {
+        "SHA": "SHA 유형",
+        "BTA": "BTA 양도범위",
+        "SSA": "SSA 증권종류",
+        "MOU": "MOU 거래유형",
+    }
+    type_label = type_label_map.get(doc_type, "거래 구조")
 
     # 변수 목록을 프롬프트에 포함
     var_summary = "\n".join(f"- {v.variable_key} ({v.input_type}): {v.question_label}" for v in confirmed_variables)
@@ -1908,9 +1922,11 @@ async def analyze_step2_clauses(
             rc["clause_order"] = order
         seen_orders.add(order)
 
-        # LLM 응답의 content에 sanitize 적용 (XSS 방지)
+        # LLM 응답의 content/original_content에 sanitize 적용 (XSS 방지)
         if rc.get("content"):
             rc["content"] = sanitize_html(rc["content"])
+        if rc.get("original_content"):
+            rc["original_content"] = sanitize_html(rc["original_content"])
 
         clauses.append(AnalyzedClause(**rc))
 
@@ -1986,13 +2002,18 @@ async def create_template_from_analysis(
         seen_orders.add(order)
 
         sanitized_content = sanitize_html(clause.content)
+        # M4: Step 3에서 클라이언트 전송 condition_expression 재검증
+        safe_condition = clause.condition_expression
+        if safe_condition and not validate_condition_expression(safe_condition):
+            logger.warning("Step 3: 유효하지 않은 condition_expression 제거: %s", safe_condition)
+            safe_condition = None
         db_clause = ContractClause(
             template_id=template.id,
             clause_order=order,
             title=clause.title,
             content=sanitized_content,
             is_boilerplate=clause.is_boilerplate,
-            condition_expression=clause.condition_expression,
+            condition_expression=safe_condition,
         )
         db.add(db_clause)
 

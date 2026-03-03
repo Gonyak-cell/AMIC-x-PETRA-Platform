@@ -194,7 +194,7 @@ class SpaStep1Response(BaseModel):
 
     session_id: str
     variables: list[ExtractedVariable]
-    deal_structure: str  # SPA/SHA/BTA/SSA/MOU 유형별 ENUM (ALL_STRUCTURE_TYPES)
+    deal_structure: str  # ALL_STRUCTURE_TYPES 합집합 (DEAL_STRUCTURES+SHA_TYPES+BTA_SCOPES+SSA_SECURITY_TYPES+MOU_TRANSACTION_TYPES)
     industry_type: str
     detected_doc_type: str = Field(
         default="SPA",
@@ -331,7 +331,7 @@ class SpaStep1Response(BaseModel):
             self.deal_structure = "OTHER_SECURITY"
         elif self.detected_doc_type == "MOU" and ds not in MOU_TRANSACTION_TYPES:
             self.deal_structure = "OTHER_MOU_TYPE"
-        elif self.detected_doc_type not in ("SHA", "BTA", "SSA", "MOU") and ds not in DEAL_STRUCTURES:
+        elif self.detected_doc_type == "SPA" and ds not in DEAL_STRUCTURES:
             self.deal_structure = "OTHER_STRUCTURE"
         return self
 
@@ -381,7 +381,7 @@ class AnalyzedClause(BaseModel):
     content: str = Field(..., min_length=1, description="Jinja2 템플릿 변환된 HTML")
     original_content: str = Field(..., min_length=1, description="원문 HTML")
     is_boilerplate: bool = False
-    condition_expression: str | None = None
+    condition_expression: str | None = Field(default=None, max_length=500)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
 

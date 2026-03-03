@@ -36,21 +36,21 @@ _RATE_LIMIT_WINDOW = 60.0
 _RATE_LIMIT_MAX = 3
 
 
-def _check_analysis_rate(email: str) -> None:
+def _check_analysis_rate(user_id: str) -> None:
     """LLM 분석 엔드포인트 분당 요청 수를 제한한다."""
     now = time.monotonic()
-    active = [t for t in _analysis_rate.get(email, []) if now - t < _RATE_LIMIT_WINDOW]
+    active = [t for t in _analysis_rate.get(user_id, []) if now - t < _RATE_LIMIT_WINDOW]
     if len(active) >= _RATE_LIMIT_MAX:
-        _analysis_rate[email] = active
+        _analysis_rate[user_id] = active
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="SPA 분석 요청이 너무 많습니다. 1분 후 다시 시도하세요.",
         )
     active.append(now)
-    _analysis_rate[email] = active
+    _analysis_rate[user_id] = active
 
-    # 만료 키 정리
-    stale_keys = [k for k, v in _analysis_rate.items() if k != email and all(now - t >= _RATE_LIMIT_WINDOW for t in v)]
+    # 만료 키 정리 (모든 만료 키 대상 — m9 메모리 누적 방지)
+    stale_keys = [k for k, v in _analysis_rate.items() if all(now - t >= _RATE_LIMIT_WINDOW for t in v)]
     for k in stale_keys:
         del _analysis_rate[k]
 
@@ -94,63 +94,47 @@ async def step1_extract_variables(
 ) -> SpaStep1Response:
     """Step 1: SPA 원문에서 변수를 추출한다. LLM 호출 포함 (10~30초 소요)."""
     await _get_and_authorize_txn(db, txn_id, claims)
-    _check_analysis_rate(claims.email or "anonymous")
+    _check_analysis_rate(claims.user_id)
     logger.info("Step 1 요청: txn=%s, user=%s, doc_type_hint=%s", txn_id, claims.email, body.doc_type_hint)
 
     try:
-        (
-            session_id,
-            variables,
-            deal_structure,
-            industry_type,
-            detected_doc_type,
-            discovered,
-            sha_type,
-            exit_strategy,
-            bta_scope,
-            severance_pay_handling,
-            security_type,
-            transaction_context,
-            mou_transaction_type,
-            deposit_handling,
-            cost,
-            model,
-        ) = await spa_analysis_service.analyze_step1_variables(
+        r = await spa_analysis_service.analyze_step1_variables(
             body.spa_text,
             body.language_hint,
             body.doc_type_hint,
+            owner_user_id=claims.user_id,
         )
     except RuntimeError as exc:
         logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
+            detail="분석 서비스가 일시적으로 사용 불가능합니다. 잠시 후 다시 시도하세요.",
         ) from exc
     except ValueError as exc:
         logger.error("Step 1 실패: txn=%s, doc_type_hint=%s, error=%s", txn_id, body.doc_type_hint, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            detail="분석 요청을 처리할 수 없습니다. 입력 데이터를 확인하세요.",
         ) from exc
 
-    logger.info("Step 1 완료: txn=%s, session=%s, doc_type=%s", txn_id, session_id, detected_doc_type)
+    logger.info("Step 1 완료: txn=%s, session=%s, doc_type=%s", txn_id, r["session_id"], r["detected_doc_type"])
     return SpaStep1Response(
-        session_id=session_id,
-        variables=variables,
-        deal_structure=deal_structure,
-        industry_type=industry_type,
-        detected_doc_type=detected_doc_type,
-        sha_type=sha_type,
-        exit_strategy=exit_strategy,
-        bta_scope=bta_scope,
-        severance_pay_handling=severance_pay_handling,
-        security_type=security_type,
-        transaction_context=transaction_context,
-        mou_transaction_type=mou_transaction_type,
-        deposit_handling=deposit_handling,
-        discovered_booleans=discovered,
-        llm_cost_usd=cost if claims.role == "ADMIN" else None,
-        model_used=model if claims.role == "ADMIN" else None,
+        session_id=r["session_id"],
+        variables=r["variables"],
+        deal_structure=r["deal_structure"],
+        industry_type=r["industry_type"],
+        detected_doc_type=r["detected_doc_type"],
+        sha_type=r["sha_type"],
+        exit_strategy=r["exit_strategy"],
+        bta_scope=r["bta_scope"],
+        severance_pay_handling=r["severance_pay_handling"],
+        security_type=r["security_type"],
+        transaction_context=r["transaction_context"],
+        mou_transaction_type=r["mou_transaction_type"],
+        deposit_handling=r["deposit_handling"],
+        discovered_booleans=r["discovered_booleans"],
+        llm_cost_usd=r["cost"] if claims.role == "ADMIN" else None,
+        model_used=r["model"] if claims.role == "ADMIN" else None,
     )
 
 
@@ -166,7 +150,7 @@ async def step2_decompose_clauses(
 ) -> SpaStep2Response:
     """Step 2: 확정된 변수를 기반으로 조항을 분해한다. LLM 호출 포함 (10~30초 소요)."""
     await _get_and_authorize_txn(db, txn_id, claims)
-    _check_analysis_rate(claims.email or "anonymous")
+    _check_analysis_rate(claims.user_id)
     logger.info(
         "Step 2 요청: txn=%s, user=%s, session=%s, doc_type_hint=%s",
         txn_id,
@@ -183,18 +167,19 @@ async def step2_decompose_clauses(
             body.industry_type,
             spa_text=body.spa_text,
             doc_type_hint=body.doc_type_hint,
+            owner_user_id=claims.user_id,
         )
     except RuntimeError as exc:
         logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
+            detail="분석 서비스가 일시적으로 사용 불가능합니다. 잠시 후 다시 시도하세요.",
         ) from exc
     except ValueError as exc:
         logger.error("Step 2 실패: txn=%s, session=%s, error=%s", txn_id, body.session_id, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            detail="분석 요청을 처리할 수 없습니다. 세션이 만료되었거나 입력 데이터를 확인하세요.",
         ) from exc
 
     logger.info("Step 2 완료: txn=%s, session=%s, clauses=%d", txn_id, body.session_id, len(clauses))
@@ -235,7 +220,7 @@ async def step3_create_template(
         logger.error("Step 3 실패: txn=%s, doc_type=%s, error=%s", txn_id, body.doc_type, exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            detail="템플릿 생성에 실패했습니다. 입력 데이터를 확인하세요.",
         ) from exc
 
     await db.commit()

@@ -222,7 +222,7 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
               type="button"
               role="switch"
               aria-checked={checked}
-              aria-label={v.question_label}
+              aria-label={`${v.question_label}: ${checked ? "예" : "아니오"}`}
               onClick={() => onChange(!checked)}
               className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 ${
                 checked ? "bg-accent-primary" : "bg-gray-300"
@@ -275,12 +275,17 @@ function VariableInput({ variable: v, value, onChange }: VariableInputProps) {
             <option value="" disabled>
               선택하세요
             </option>
-            {v.select_options &&
+            {v.select_options && Object.keys(v.select_options).length > 0 ? (
               Object.entries(v.select_options).map(([key, displayLabel]) => (
                 <option key={key} value={key}>
                   {displayLabel}
                 </option>
-              ))}
+              ))
+            ) : (
+              <option value="" disabled>
+                옵션 없음
+              </option>
+            )}
           </select>
           {desc}
         </div>
