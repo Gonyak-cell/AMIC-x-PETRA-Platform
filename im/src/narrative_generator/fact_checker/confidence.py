@@ -175,7 +175,9 @@ class ConfidenceScorer:
             if avg_len == 0:
                 diversity_score = 0.5
             else:
-                variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
+                variance = sum((length - avg_len) ** 2 for length in lengths) / len(
+                    lengths
+                )
                 cv = (variance**0.5) / avg_len  # 변동 계수
                 # cv가 0.2~0.8 사이면 적절한 다양성
                 if 0.2 <= cv <= 0.8:

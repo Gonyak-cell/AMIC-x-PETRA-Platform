@@ -89,7 +89,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
   // Step 1 결과
   const [sessionId, setSessionId] = useState("");
   const [variables, setVariables] = useState<ExtractedVariable[]>([]);
-  const [dealStructure, setDealStructure] = useState<AllStructureType>(
+  const [dealStructure, setDealStructure] = useState<string>(
     "PURE_SHARE_TRANSFER",
   );
   const [industryType, setIndustryType] = useState<IndustryType>("GENERAL");
@@ -228,7 +228,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
         spa_text: preservedText || undefined,
         doc_type_hint: docType !== "SPA" ? docType : undefined,
         variables,
-        deal_structure: dealStructure,
+        deal_structure: dealStructure as AllStructureType,
         industry_type: industryType,
       });
       setClauses(result.clauses);
