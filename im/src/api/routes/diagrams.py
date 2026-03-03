@@ -16,7 +16,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -230,6 +230,7 @@ async def update_diagram(
 @router.delete(
     "/documents/{document_id}/diagrams/{diagram_id}",
     status_code=204,
+    response_class=Response,
     summary="다이어그램 삭제",
 )
 async def delete_diagram(
