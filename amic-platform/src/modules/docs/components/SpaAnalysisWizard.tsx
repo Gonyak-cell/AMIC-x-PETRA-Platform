@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useSpaStep1, useSpaStep2, useSpaStep3 } from "../hooks/useSpaAnalysis";
 import type {
+  AllStructureType,
   ExtractedVariable,
   AnalyzedClause,
   DocType,
@@ -88,7 +89,7 @@ export default function SpaAnalysisWizard({ txnId }: SpaAnalysisWizardProps) {
   // Step 1 결과
   const [sessionId, setSessionId] = useState("");
   const [variables, setVariables] = useState<ExtractedVariable[]>([]);
-  const [dealStructure, setDealStructure] = useState<string>(
+  const [dealStructure, setDealStructure] = useState<AllStructureType>(
     "PURE_SHARE_TRANSFER",
   );
   const [industryType, setIndustryType] = useState<IndustryType>("GENERAL");

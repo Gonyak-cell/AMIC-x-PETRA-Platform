@@ -51,7 +51,7 @@ resp = httpx.post(
         "client_name": "의뢰기업",
         "lead_advisor_email": "advisor@example.com",
         "industry": "제조업",
-        "deal_structure": "M&A",
+        "deal_structure": "SHARE_ACQUISITION",
         "estimated_deal_value": 100000000,
     },
 )

@@ -10,7 +10,7 @@ FULL_TXN = {
     "lead_advisor_email": "advisor@example.com",
     "deal_captain_email": "captain@example.com",
     "industry": "Tech",
-    "deal_structure": "100% 지분 인수",
+    "deal_structure": "SHARE_ACQUISITION",
     "estimated_deal_value": 1000000000,
 }
 
