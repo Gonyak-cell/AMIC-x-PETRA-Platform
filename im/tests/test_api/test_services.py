@@ -68,6 +68,11 @@ class TestDocumentServiceCreate:
         db.commit = AsyncMock()
         db.refresh = AsyncMock()
 
+        # 중복 체크 쿼리: 진행 중인 문서 없음
+        dup_check_result = MagicMock()
+        dup_check_result.scalar_one_or_none.return_value = None
+        db.execute = AsyncMock(return_value=dup_check_result)
+
         with patch(
             "src.api.services.document_service.DocumentService.__init__",
             return_value=None,

@@ -99,15 +99,21 @@ async def get_current_user(
         user = result.scalar_one_or_none()
         if user is None:
             # Cross-backend federation: auto-create user from FDD JWT claims
-            import jwt as _jwt
+            try:
+                import jwt as _jwt
 
-            cfg = get_config()
-            decoded = _jwt.decode(
-                token,
-                cfg.jwt_secret_key,
-                algorithms=[cfg.jwt_algorithm],
-                options={"verify_exp": False},
-            )
+                cfg = get_config()
+                decoded = _jwt.decode(
+                    token,
+                    cfg.jwt_secret_key,
+                    algorithms=[cfg.jwt_algorithm],
+                    options={"verify_exp": False},
+                )
+            except Exception:
+                raise AuthenticationError(
+                    message="사용자를 찾을 수 없습니다.",
+                    details={"reason": "user_not_found"},
+                )
             email = decoded.get("email", f"{payload.sub}@federated")
 
             # 이메일로 기존 사용자 조회 (ID가 달라도 동일 이메일이면 재사용)
