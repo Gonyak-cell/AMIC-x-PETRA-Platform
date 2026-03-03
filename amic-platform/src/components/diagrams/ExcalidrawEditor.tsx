@@ -37,7 +37,7 @@ export function ExcalidrawEditor({
   const [isExporting, setIsExporting] = useState(false);
 
   const handleChange = useCallback(
-    (elements: readonly unknown[], appState: unknown, _files: unknown) => {
+    (elements: readonly unknown[], appState: unknown) => {
       if (readOnly || !onChange) return;
 
       const state = appState as Record<string, unknown>;
