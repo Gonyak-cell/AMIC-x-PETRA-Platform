@@ -93,7 +93,7 @@ class TestDocumentServiceCreate:
             await service.create_document(uuid.uuid4(), create_data)
 
         db.add.assert_called_once()
-        assert db.commit.call_count >= 2  # 생성 + task_id 저장
+        assert db.commit.call_count >= 1  # flush 후 단일 commit
         mock_delay.assert_called_once()
 
 
