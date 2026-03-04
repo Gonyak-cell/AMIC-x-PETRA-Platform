@@ -141,30 +141,38 @@ export default function FIRecommendModal({
             <EmptyState
               icon={Building2}
               title="추천 결과 없음"
-              description="거래금액 범위에 해당하는 PEF가 없습니다. 거래금액(estimated_deal_value)을 확인해 주세요."
+              description="거래금액 범위에 해당하는 GP/PEF가 없습니다. 거래 설정에서 예상 거래 금액(억원)을 확인해 주세요."
             />
           )}
 
         {!isLoading && recommendations && recommendations.length > 0 && (
-          <div
-            className="max-h-[400px] overflow-y-auto"
-            tabIndex={0}
-            aria-label="FI 추천 목록"
-          >
-            <div role="list" className="space-y-2">
-              {recommendations.map((rec: FIRecommendation) => (
-                <FIRecommendCard
-                  key={rec.gp_name}
-                  rec={rec}
-                  isSelected={selected.has(rec.gp_name)}
-                  isExisting={existingSet.has(rec.gp_name.toLowerCase())}
-                  isExpanded={expanded.has(rec.gp_name)}
-                  onToggleSelect={toggleGP}
-                  onToggleExpand={toggleExpand}
-                />
-              ))}
+          <>
+            <p className="text-xs text-text-muted mb-2">
+              {recommendations.length}개 GP 매칭 · 2021년 이후 유효 PEF를 GP별로
+              그룹핑하여 거래금액 범위 내 상위 최대 50개를 표시합니다. 결과를
+              좁히려면 거래 설정에서 산업 키워드를 지정하세요 (Tier 1 우선
+              매칭).
+            </p>
+            <div
+              className="max-h-[400px] overflow-y-auto"
+              tabIndex={0}
+              aria-label="FI 추천 목록"
+            >
+              <div role="list" className="space-y-2">
+                {recommendations.map((rec: FIRecommendation) => (
+                  <FIRecommendCard
+                    key={rec.gp_name}
+                    rec={rec}
+                    isSelected={selected.has(rec.gp_name)}
+                    isExisting={existingSet.has(rec.gp_name.toLowerCase())}
+                    isExpanded={expanded.has(rec.gp_name)}
+                    onToggleSelect={toggleGP}
+                    onToggleExpand={toggleExpand}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
 

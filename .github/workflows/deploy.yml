@@ -289,6 +289,38 @@ jobs:
               echo "  MA not changed — skipping corp basic seed."
             fi
 
+            # ── 5.7.1. MA PEF Registry Seed ──
+            # 금감원 기관전용 PEF 레지스트리 (idempotent — 100건 이상이면 스킵)
+            echo "=== [5.7.1] MA PEF Registry Seed ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              PEF_COUNT=$(echo "$SI_STATS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('pef_fund_registry_count',0))" 2>/dev/null || echo "0")
+              if [ "$PEF_COUNT" -lt 100 ]; then
+                echo "  PEF registry: $PEF_COUNT — running seed..."
+                timeout 120 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_pef_registry 2>&1 || \
+                  echo "  WARN: PEF registry seed failed (non-blocking)"
+              else
+                echo "  PEF registry: $PEF_COUNT — already seeded, skipping."
+              fi
+            else
+              echo "  MA not changed — skipping PEF registry seed."
+            fi
+
+            # ── 5.7.2. MA GP Profile Seed ──
+            # GP 프로필 데이터 시딩 (idempotent — 100건 이상이면 스킵)
+            echo "=== [5.7.2] MA GP Profile Seed ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              GP_COUNT=$(echo "$SI_STATS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('gp_profiles_count',0))" 2>/dev/null || echo "0")
+              if [ "$GP_COUNT" -lt 100 ]; then
+                echo "  GP profiles: $GP_COUNT — running seed..."
+                timeout 120 $COMPOSE exec -T deal-mgmt-api python -m scripts.seed_gp_profiles 2>&1 || \
+                  echo "  WARN: GP profile seed failed (non-blocking)"
+              else
+                echo "  GP profiles: $GP_COUNT — already seeded, skipping."
+              fi
+            else
+              echo "  MA not changed — skipping GP profile seed."
+            fi
+
             # ── 5.8. KIIS FSS PEF GP Data Seed ──
             # 금감원 기관전용 PEF 엑셀에서 GP 전수목록 + 총약정액 합산 (idempotent UPSERT)
             echo "=== [5.8/8] KIIS FSS PEF GP Seed ==="

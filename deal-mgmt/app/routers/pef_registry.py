@@ -190,6 +190,10 @@ async def fi_recommendations(
         logger.info("거래금액 0 이하 — 추천 생략: txn_id=%s, deal_value=%s", txn_id, target_amount)
         return []
 
+    # ── 단위 변환: estimated_deal_value(원) → 억원 ────────────────
+    # PEF total_committed_capital은 억원 단위 (금감원 공시 기준)
+    target_amount = target_amount / Decimal("100000000")
+
     # ── DB 조회: 날짜 필터 + 프로젝트 펀드 제외 ────────────────
     q = select(PefFundRegistry).where(
         PefFundRegistry.registration_date.isnot(None),
