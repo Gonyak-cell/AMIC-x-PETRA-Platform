@@ -278,9 +278,11 @@ function FinancialsTab({
     { label: "매출액", value: company.revenue },
     { label: "영업이익", value: company.operating_profit },
     { label: "당기순이익", value: company.net_income },
+    { label: "법인세차감전순이익", value: company.pretax_income },
     { label: "자산총계", value: company.total_assets },
     { label: "부채총계", value: company.total_debt },
     { label: "자본총계", value: company.total_equity },
+    { label: "자본금", value: company.capital_amount },
   ].filter((row) => row.value != null);
 
   if (seededRows.length === 0) {
@@ -294,7 +296,12 @@ function FinancialsTab({
   return (
     <div className="space-y-3">
       <p className="text-xs text-text-secondary">
-        금융위 공시 기준 ({company.revenue_year ?? "-"}년)
+        금융위 공시 기준{" "}
+        {company.fina_base_date
+          ? `(${formatDate(company.fina_base_date)})`
+          : company.revenue_year
+            ? `(${company.revenue_year}년)`
+            : ""}
       </p>
       <div className="overflow-x-auto rounded-dr border border-gray-border">
         <table className="w-full text-sm">
@@ -325,6 +332,11 @@ function FinancialsTab({
           </tbody>
         </table>
       </div>
+      {company.debt_ratio != null && (
+        <p className="text-xs text-text-secondary">
+          부채비율: {parseFloat(company.debt_ratio).toFixed(2)}%
+        </p>
+      )}
     </div>
   );
 }

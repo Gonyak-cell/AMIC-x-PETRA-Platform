@@ -77,6 +77,10 @@ class SICompanyOut(BaseModel):
     market_type: str | None = None
     market_type_name: str | None = None
 
+    # 기준일자 (데이터 시점 표시용)
+    fina_base_date: str | None = None
+    corp_basic_base_date: str | None = None
+
     @field_serializer(
         "revenue",
         "operating_profit",

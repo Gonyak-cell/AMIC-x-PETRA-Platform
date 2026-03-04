@@ -31,6 +31,10 @@ export interface SICompany {
   main_business: string | null;
   market_type: string | null;
   market_type_name: string | null;
+
+  // 기준일자 (데이터 시점 표시용)
+  fina_base_date: string | null;
+  corp_basic_base_date: string | null;
 }
 
 export interface SICandidate {
