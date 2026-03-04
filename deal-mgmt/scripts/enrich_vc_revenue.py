@@ -75,26 +75,18 @@ async def enrich_from_si_companies(session: AsyncSession) -> int:
             batch_updates.append({"_vc_id": vc_id, "_revenue_val": revenue})
             matched += 1
 
-        # 배치 단위 벌크 UPDATE
+        # 배치 단위 벌크 UPDATE (Core 테이블 사용 — ORM bulk update 비호환 우회)
         if len(batch_updates) >= BATCH_SIZE:
-            stmt = (
-                update(VcCompany)
-                .where(VcCompany.id == bindparam("_vc_id"))
-                .values(revenue=bindparam("_revenue_val"))
-                .execution_options(synchronize_session=False)
-            )
+            tbl = VcCompany.__table__
+            stmt = tbl.update().where(tbl.c.id == bindparam("_vc_id")).values(revenue=bindparam("_revenue_val"))
             await session.execute(stmt, batch_updates)
             batch_updates.clear()
             logger.info("매출 교차참조: %d건 업데이트...", matched)
 
     # 잔여 배치
     if batch_updates:
-        stmt = (
-            update(VcCompany)
-            .where(VcCompany.id == bindparam("_vc_id"))
-            .values(revenue=bindparam("_revenue_val"))
-            .execution_options(synchronize_session=False)
-        )
+        tbl = VcCompany.__table__
+        stmt = tbl.update().where(tbl.c.id == bindparam("_vc_id")).values(revenue=bindparam("_revenue_val"))
         await session.execute(stmt, batch_updates)
 
     await session.commit()
