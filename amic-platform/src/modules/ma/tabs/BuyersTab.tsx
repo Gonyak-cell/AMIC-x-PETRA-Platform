@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Users, UserPlus, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,
@@ -59,7 +59,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const exportExcel = useExportBuyerExcel(txnId);
   const { data: shortListOverview } = useShortListOverview(txnId);
 
-  const corporateInfo = ((): CorporateDocsExtractedData | null => {
+  const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
     if (
       typeof v === "object" &&
@@ -67,10 +67,10 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
       ("corporate_registration_number" in v ||
         "business_registration_number" in v)
     ) {
-      return v as CorporateDocsExtractedData;
+      return v as unknown as CorporateDocsExtractedData;
     }
     return null;
-  })();
+  }, [txn?.corporate_info]);
 
   const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">(
     "long-list",
@@ -114,7 +114,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
         <input
           type="checkbox"
           checked={r.is_short_listed}
-          disabled={!canWrite}
+          disabled={!canWrite || updateBuyer.isPending}
           onChange={() =>
             updateBuyer.mutate({
               buyerId: r.id,
