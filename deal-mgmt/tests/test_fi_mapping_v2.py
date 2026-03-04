@@ -35,7 +35,8 @@ async def _create_txn(
         "lead_advisor_email": "test@example.com",
     }
     if deal_value is not None:
-        payload["estimated_deal_value"] = deal_value
+        # estimated_deal_value는 원 단위, 테스트 입력은 억원 단위
+        payload["estimated_deal_value"] = deal_value * 100_000_000
     resp = await client.post("/api/v1/transactions", json=payload)
     assert resp.status_code == 201
     return resp.json()["id"]
