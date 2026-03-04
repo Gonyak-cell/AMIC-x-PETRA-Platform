@@ -224,10 +224,10 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """활성 상태인 현재 사용자를 반환한다. 비활성이면 400을 발생시킨다."""
+    """활성 상태인 현재 사용자를 반환한다. 비활성이면 403을 발생시킨다."""
     if not current_user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="비활성화된 사용자입니다",
         )
     return current_user

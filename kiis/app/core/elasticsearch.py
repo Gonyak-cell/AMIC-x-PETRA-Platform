@@ -114,7 +114,7 @@ async def init_elasticsearch() -> None:
         info = await es_client.info()
         logger.info("Connected to ElasticSearch: %s", info["version"]["number"])
     except Exception:
-        logger.warning("Failed to connect to ElasticSearch at %s", settings.ELASTICSEARCH_URL)
+        logger.warning("Failed to connect to ElasticSearch at %s", settings.ELASTICSEARCH_URL, exc_info=True)
         await es_client.close()
         es_client = None
         return

@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.core.errors import ErrorCode
@@ -130,7 +130,7 @@ async def external_api_error_handler(request: Request, exc: ExternalAPIError) ->
     )
 
 
-def register_exception_handlers(app):
+def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DARTAPIError, dart_api_error_handler)
     app.add_exception_handler(RateLimitExceededError, rate_limit_error_handler)
     app.add_exception_handler(ExternalAPIError, external_api_error_handler)
