@@ -25,7 +25,7 @@ from app.services.fi_mapping_service import normalize_gp_name
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-EXCEL_PATH = Path(__file__).resolve().parent.parent / "app" / "marketing" / "MA_GP_v3.xlsx"
+EXCEL_PATH = Path(__file__).resolve().parent.parent / "data" / "MA_GP_v3.xlsx"
 SHEET1_NAME = "GP별 관심 FI List"
 SHEET3_NAME = "GP 연도별 활동 매트릭스"
 
