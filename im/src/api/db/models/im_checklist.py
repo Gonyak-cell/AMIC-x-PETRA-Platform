@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -60,7 +60,7 @@ class IMChecklist(Base):
 
     # VDR 관련
     vdr_document_ids: Mapped[list[Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=list,
     )
 
@@ -78,7 +78,7 @@ class IMChecklist(Base):
 
     # 파서 원시 출력 (디버깅/감사용)
     raw_extraction: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
 

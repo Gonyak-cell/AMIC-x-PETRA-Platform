@@ -156,7 +156,7 @@ async def create_from_vdr(
         checklist.extraction_task_id = extraction_task_id
         await session.commit()
     except Exception:
-        logger.warning("Celery 태스크 큐 연결 실패 — 수동 파싱 필요")
+        logger.warning("Celery 태스크 큐 연결 실패 — 수동 파싱 필요", exc_info=True)
 
     return CreateFromVdrResponse(
         document_id=doc.id,
@@ -436,7 +436,7 @@ async def confirm_checklist(
         checklist.status = ChecklistStatus.GENERATING.value
         await session.commit()
     except Exception:
-        logger.warning("Celery 태스크 큐 연결 실패")
+        logger.warning("Celery IM 생성 태스크 큐 연결 실패", exc_info=True)
 
     # Reload for response
     doc = await _get_document_with_checklist(document_id, session, current_user)
@@ -489,7 +489,7 @@ async def reparse_checklist(
         checklist.extraction_task_id = result.id
         await session.commit()
     except Exception:
-        logger.warning("Celery 태스크 큐 연결 실패")
+        logger.warning("Celery 재파싱 태스크 큐 연결 실패", exc_info=True)
 
     doc = await _get_document_with_checklist(document_id, session, current_user)
     return ChecklistResponse.model_validate(doc.checklist)

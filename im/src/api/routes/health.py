@@ -7,11 +7,14 @@
 
 from __future__ import annotations
 
+import logging
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from src.api import __version__
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
@@ -49,6 +52,7 @@ async def _check_db() -> bool:
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         return True
     except Exception:
+        logger.warning("DB 헬스체크 실패", exc_info=True)
         return False
 
 
@@ -67,6 +71,7 @@ async def _check_redis() -> bool:
         finally:
             await client.aclose()
     except Exception:
+        logger.warning("Redis 헬스체크 실패", exc_info=True)
         return False
 
 

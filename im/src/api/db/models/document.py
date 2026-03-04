@@ -18,6 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     func,
     text,
@@ -83,11 +84,11 @@ class Document(Base):
         default="FULL",
     )
     sections: Mapped[list[Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=list,
     )
     generation_config: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
 
@@ -107,7 +108,7 @@ class Document(Base):
         index=True,
     )
     stage_details: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
 

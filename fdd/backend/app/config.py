@@ -49,6 +49,11 @@ if settings.jwt_secret == _DEV_SECRET:
     )
 
 if not settings.auth_enabled:
+    if _is_production:
+        raise RuntimeError(
+            "CRITICAL: AUTH_ENABLED cannot be False in production. "
+            "Remove AUTH_ENABLED=False or set AUTH_ENABLED=True."
+        )
     _logger.warning(
         "AUTH_ENABLED=False — all requests will be processed as ADMIN dev user. "
         "Do NOT use in production."

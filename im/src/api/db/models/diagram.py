@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,7 +44,7 @@ class Diagram(Base):
 
     # Excalidraw JSON 데이터 (elements + appState + files)
     excalidraw_data: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         default=dict,
     )

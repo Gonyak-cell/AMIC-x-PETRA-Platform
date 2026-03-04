@@ -107,9 +107,16 @@ async def get_current_user(
                     token,
                     cfg.jwt_secret_key,
                     algorithms=[cfg.jwt_algorithm],
-                    options={"verify_exp": False},
+                    options={"verify_exp": True},
                 )
-            except Exception:
+            except Exception as exc:
+                import jwt as _jwt_err
+
+                if isinstance(exc, _jwt_err.ExpiredSignatureError):
+                    raise AuthenticationError(
+                        message="토큰이 만료되었습니다.",
+                        details={"reason": "token_expired"},
+                    )
                 raise AuthenticationError(
                     message="사용자를 찾을 수 없습니다.",
                     details={"reason": "user_not_found"},

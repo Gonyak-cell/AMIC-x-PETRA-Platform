@@ -5,9 +5,11 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import CurrentUser, get_current_user
+from app.auth.dependencies import CurrentUser, get_current_user, require_permission
+from app.auth.rbac import Permission
 from app.database import get_db
 from app.models.deal import Deal
 from app.models.exchange_rate import ExchangeRate, RateType
@@ -35,7 +37,7 @@ def _get_deal_or_404(db: Session, deal_id: uuid.UUID) -> Deal:
 def create_exchange_rate(
     deal_id: uuid.UUID,
     body: ExchangeRateCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = require_permission(Permission.DEAL_UPDATE),
     db: Session = Depends(get_db),
 ):
     """환율 등록."""
@@ -54,7 +56,7 @@ def create_exchange_rate(
     db.add(rate)
     try:
         db.commit()
-    except Exception:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=409,
@@ -68,7 +70,7 @@ def create_exchange_rate(
 def create_exchange_rates_bulk(
     deal_id: uuid.UUID,
     body: ExchangeRateBulkCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = require_permission(Permission.DEAL_UPDATE),
     db: Session = Depends(get_db),
 ):
     """환율 벌크 등록."""
@@ -91,7 +93,7 @@ def create_exchange_rates_bulk(
 
     try:
         db.commit()
-    except Exception:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=409,
@@ -152,7 +154,7 @@ def update_exchange_rate(
     deal_id: uuid.UUID,
     rate_id: uuid.UUID,
     body: ExchangeRateUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = require_permission(Permission.DEAL_UPDATE),
     db: Session = Depends(get_db),
 ):
     """환율 수정."""
@@ -175,7 +177,7 @@ def update_exchange_rate(
 def delete_exchange_rate(
     deal_id: uuid.UUID,
     rate_id: uuid.UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = require_permission(Permission.DEAL_UPDATE),
     db: Session = Depends(get_db),
 ):
     """환율 삭제."""

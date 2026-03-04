@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, JSON, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,15 +57,15 @@ class Company(Base):
 
     # 캐시 데이터 (JSONB)
     dart_data: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
     financial_summary: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
     brand_assets: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         default=dict,
     )
 

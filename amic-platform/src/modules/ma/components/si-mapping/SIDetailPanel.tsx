@@ -283,7 +283,7 @@ function FinancialsTab({
     { label: "부채총계", value: company.total_debt },
     { label: "자본총계", value: company.total_equity },
     { label: "자본금", value: company.capital_amount },
-  ].filter((row) => row.value != null);
+  ].filter((row): row is { label: string; value: string } => row.value != null);
 
   if (seededRows.length === 0) {
     return (
@@ -325,18 +325,19 @@ function FinancialsTab({
                   {row.label}
                 </td>
                 <td className="px-3 py-2.5 text-right font-mono tabular-nums">
-                  {formatKRW(row.value!)}
+                  {formatKRW(row.value)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {company.debt_ratio != null && (
-        <p className="text-xs text-text-secondary">
-          부채비율: {parseFloat(company.debt_ratio).toFixed(2)}%
-        </p>
-      )}
+      {company.debt_ratio != null &&
+        !Number.isNaN(parseFloat(company.debt_ratio)) && (
+          <p className="text-xs text-text-secondary">
+            부채비율: {parseFloat(company.debt_ratio).toFixed(2)}%
+          </p>
+        )}
     </div>
   );
 }
