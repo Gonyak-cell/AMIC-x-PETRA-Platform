@@ -406,11 +406,11 @@ async def test_vc_map_empty_coefficients(
 
 
 @pytest.mark.asyncio
-async def test_vc_map_competitors_null_revenue_excluded(
+async def test_vc_map_competitors_null_revenue_included(
     client: AsyncClient,
     async_session: AsyncSession,
 ) -> None:
-    """매출(revenue)이 NULL인 기업은 경쟁사에서 제외."""
+    """매출(revenue)이 NULL인 기업도 경쟁사에 포함되되, 매출 보유 기업이 먼저 정렬."""
     await _seed_vc_companies(
         async_session,
         [
@@ -425,7 +425,9 @@ async def test_vc_map_competitors_null_revenue_excluded(
     competitors = resp.json()["competitors"]
     names = [c["company_name"] for c in competitors]
     assert "매출있음A" in names
-    assert "매출없음B" not in names
+    assert "매출없음B" in names
+    # 매출 보유 기업이 NULL보다 먼저 정렬
+    assert names.index("매출있음A") < names.index("매출없음B")
 
 
 @pytest.mark.asyncio
