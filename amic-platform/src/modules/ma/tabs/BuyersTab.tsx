@@ -13,7 +13,6 @@ import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_ext
 import type {
   BuyerCandidate,
   BuyerCandidateCreate,
-  BuyerCandidateUpdate,
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
