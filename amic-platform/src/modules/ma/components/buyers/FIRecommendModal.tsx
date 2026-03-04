@@ -1,17 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Building2, TrendingUp, Target } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  Modal,
-  Spinner,
-} from "@/components/ui";
+import { AlertTriangle, Building2 } from "lucide-react";
+import { Button, EmptyState, Modal, Spinner } from "@/components/ui";
 import { useFIRecommendations } from "@/modules/ma/hooks/usePefRegistry";
 import { useAddBuyer } from "@/modules/ma/hooks/useTransactions";
 import type { FIRecommendation } from "@/modules/ma/types/pef_registry";
+import FIRecommendCard from "./FIRecommendCard";
 
 interface FIRecommendModalProps {
   open: boolean;
@@ -33,10 +27,14 @@ export default function FIRecommendModal({
   } = useFIRecommendations(txnId);
   const addBuyer = useAddBuyer(txnId);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // 모달 열릴 때 선택 초기화
+  // 모달 열릴 때 선택/확장 초기화
   useEffect(() => {
-    if (open) setSelected(new Set());
+    if (open) {
+      setSelected(new Set());
+      setExpanded(new Set());
+    }
   }, [open]);
 
   const existingSet = useMemo(
@@ -46,6 +44,15 @@ export default function FIRecommendModal({
 
   const toggleGP = (gpName: string) => {
     setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(gpName)) next.delete(gpName);
+      else next.add(gpName);
+      return next;
+    });
+  };
+
+  const toggleExpand = (gpName: string) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(gpName)) next.delete(gpName);
       else next.add(gpName);
@@ -80,13 +87,6 @@ export default function FIRecommendModal({
       toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
       onClose();
     }
-  };
-
-  const formatBillion = (v: string | number) => {
-    const n = typeof v === "string" ? parseFloat(v) : v;
-    if (isNaN(n) || n === 0) return "—";
-    if (n >= 10000) return `${(n / 10000).toFixed(1)}조`;
-    return `${n.toLocaleString()}억`;
   };
 
   return (
@@ -128,67 +128,17 @@ export default function FIRecommendModal({
             aria-label="FI 추천 목록"
           >
             <div role="list" className="space-y-2">
-              {recommendations.map((rec: FIRecommendation) => {
-                const isExisting = existingSet.has(rec.gp_name.toLowerCase());
-                const isSelected = selected.has(rec.gp_name);
-
-                return (
-                  <Card
-                    key={rec.gp_name}
-                    role="listitem"
-                    padding="sm"
-                    className={
-                      isSelected
-                        ? "ring-2 ring-accent-primary"
-                        : isExisting
-                          ? "opacity-70 bg-bg-muted"
-                          : ""
-                    }
-                  >
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={isExisting}
-                        aria-disabled={isExisting || undefined}
-                        onChange={() => !isExisting && toggleGP(rec.gp_name)}
-                        className="h-4 w-4 rounded border-border"
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
-                            {rec.gp_name}
-                          </span>
-                          {isExisting && (
-                            <Badge variant="neutral">추가됨</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-text-muted">
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3" aria-hidden="true" />
-                            펀드 {rec.fund_count}개
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Target className="h-3 w-3" aria-hidden="true" />
-                            최소 {formatBillion(rec.min_fund_size)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <TrendingUp
-                              className="h-3 w-3"
-                              aria-hidden="true"
-                            />
-                            총약정 {formatBillion(rec.total_committed_sum)}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-text-muted mt-1">
-                          {rec.match_reason}
-                        </p>
-                      </div>
-                    </label>
-                  </Card>
-                );
-              })}
+              {recommendations.map((rec: FIRecommendation) => (
+                <FIRecommendCard
+                  key={rec.gp_name}
+                  rec={rec}
+                  isSelected={selected.has(rec.gp_name)}
+                  isExisting={existingSet.has(rec.gp_name.toLowerCase())}
+                  isExpanded={expanded.has(rec.gp_name)}
+                  onToggleSelect={toggleGP}
+                  onToggleExpand={toggleExpand}
+                />
+              ))}
             </div>
           </div>
         )}

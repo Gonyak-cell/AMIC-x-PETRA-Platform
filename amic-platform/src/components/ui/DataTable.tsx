@@ -7,7 +7,7 @@ import { Skeleton } from "./Skeleton";
 export interface Column<T> {
   key: Extract<keyof T, string> | (string & {});
   /** Column heading text — accepts either `header` or `label` */
-  header?: string;
+  header?: ReactNode;
   label?: string;
   align?: "left" | "center" | "right";
   width?: string;

@@ -201,8 +201,8 @@ async def fi_recommendations(
     if exclude_project_funds:
         for keyword in _PROJECT_FUND_KEYWORDS:
             q = q.where(~PefFundRegistry.pef_name.ilike(f"%{keyword}%", escape="\\"))
-        if txn.target_company_name and len(txn.target_company_name) >= 2:
-            escaped_name = txn.target_company_name[:200].replace("%", r"\%").replace("_", r"\_")
+        if txn.target_company_name and len(txn.target_company_name.strip()) >= 2:
+            escaped_name = txn.target_company_name.strip()[:200].replace("%", r"\%").replace("_", r"\_")
             q = q.where(~PefFundRegistry.pef_name.ilike(f"%{escaped_name}%", escape="\\"))
 
     try:
@@ -212,9 +212,12 @@ async def fi_recommendations(
         raise HTTPException(status_code=503, detail="추천 데이터 조회에 실패했습니다")
 
     # ── GP 프로필 기반 Tier 분류 매칭 (v2) ─────────────────────
-    keywords_list: list[str] | None = None
+    keywords: list[str] | None = None
     if target_keywords:
-        keywords_list = [kw.strip() for kw in target_keywords.split(",") if kw.strip()]
+        keywords = fi_mapping_service.parse_industry_keywords(target_keywords)
+    elif txn.industry:
+        parsed = fi_mapping_service.parse_industry_keywords(txn.industry.strip())
+        keywords = parsed if parsed else None
 
     try:
         results = await fi_mapping_service.recommend_fi(
@@ -223,7 +226,7 @@ async def fi_recommendations(
             target_amount=target_amount,
             lower_multiplier=lower_multiplier,
             upper_multiplier=upper_multiplier,
-            target_keywords=keywords_list,
+            target_keywords=keywords,
             limit=limit,
         )
     except SQLAlchemyError:
@@ -240,6 +243,7 @@ async def fi_recommendations(
             actor_email=claims.email or claims.user_id or "unknown",
             new_value={"action": "fi_recommendations", "matched_gps": len(results)},
         )
+        await db.commit()
     except Exception:
         logger.exception("FI 추천 감사 로그 기록 실패 (결과 반환은 정상 진행)")
 

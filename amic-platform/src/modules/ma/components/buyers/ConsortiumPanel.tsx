@@ -43,6 +43,7 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
   const [coId, setCoId] = useState("");
   const [equityPct, setEquityPct] = useState("");
   const [notes, setNotes] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleCreate = () => {
     if (!leadId || !coId) {
@@ -282,19 +283,37 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                   </td>
                   {canWrite && (
                     <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
-                        title="삭제"
-                        onClick={() => {
-                          if (
-                            window.confirm("컨소시엄 매핑을 삭제하시겠습니까?")
-                          )
-                            deleteMapping.mutate(m.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {deletingId === m.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => {
+                              deleteMapping.mutate(m.id);
+                              setDeletingId(null);
+                            }}
+                          >
+                            삭제
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingId(null)}
+                          >
+                            취소
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
+                          title="삭제"
+                          aria-label="컨소시엄 매핑 삭제"
+                          onClick={() => setDeletingId(m.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

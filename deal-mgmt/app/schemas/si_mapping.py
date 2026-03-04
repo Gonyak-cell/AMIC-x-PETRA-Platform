@@ -272,3 +272,38 @@ class VcDataStats(BaseModel):
     vc_coefficients_count: int
     revenue_count: int
     is_seeded: bool
+
+
+# ── 등록번호 기반 VC 매핑 ─────────────────────────────────
+
+
+class VcCompanyLookupResult(BaseModel):
+    """등록번호로 조회된 VC 기업 정보."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company_name: str
+    industry_name: str
+    io_sector_name: str | None = None
+    corp_reg_no: str | None = None
+    biz_reg_no: str | None = None
+    revenue: Decimal | None = None
+
+    @field_serializer("revenue")
+    @classmethod
+    def _serialize_revenue(cls, v: Decimal | None) -> str | None:
+        return str(v) if v is not None else None
+
+
+class VcMappingByRegResponse(BaseModel):
+    """등록번호 기반 VC 매핑 결과 (기업 정보 + 매핑 결과)."""
+
+    company: VcCompanyLookupResult
+    mapping: VcMappingResponse
+
+
+class BulkAddVcBuyersRequest(BaseModel):
+    """VC 매핑 결과 → BuyerCandidate 일괄 등록."""
+
+    vc_company_ids: list[int] = Field(..., min_length=1, max_length=100)

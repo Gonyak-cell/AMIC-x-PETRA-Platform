@@ -3,25 +3,31 @@ import { useCallback, useState } from "react";
 import {
   useBulkAddBuyers,
   useSIMapping,
+  useVcMappingByRegistration,
 } from "@/modules/ma/hooks/useSIMapping";
+import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
   KsicSuggestion,
   SIMappingResponse,
+  VcMappingByRegResponse,
 } from "@/modules/ma/types/si_mapping";
 
 import KsicSearchInput from "./KsicSearchInput";
 import SICandidateTable from "./SICandidateTable";
 import SIDetailPanel from "./SIDetailPanel";
 import ValueChainDiagram from "./ValueChainDiagram";
+import VcMappingResult from "./VcMappingResult";
 
 interface SIMappingPanelProps {
   txnId: string;
   onClose: () => void;
+  corporateInfo?: CorporateDocsExtractedData | null;
 }
 
 export default function SIMappingPanel({
   txnId,
   onClose,
+  corporateInfo,
 }: SIMappingPanelProps) {
   // 검색 상태
   const [selectedKsic, setSelectedKsic] = useState<KsicSuggestion[]>([]);
@@ -37,6 +43,21 @@ export default function SIMappingPanel({
 
   // 딥다이브 Drawer
   const [deepDiveId, setDeepDiveId] = useState<string | null>(null);
+
+  // VC 등록번호 매핑
+  const [vcResult, setVcResult] = useState<VcMappingByRegResponse | null>(null);
+  const vcMapMutation = useVcMappingByRegistration();
+
+  const corpRegNo = corporateInfo?.corporate_registration_number ?? undefined;
+  const bizRegNo = corporateInfo?.business_registration_number ?? undefined;
+  const hasRegNo = !!(corpRegNo || bizRegNo);
+
+  const handleVcMapping = useCallback(() => {
+    vcMapMutation.mutate(
+      { corp_reg_no: corpRegNo, biz_reg_no: bizRegNo },
+      { onSuccess: (data) => setVcResult(data) },
+    );
+  }, [corpRegNo, bizRegNo, vcMapMutation]);
 
   // Mutations
   const mapMutation = useSIMapping();
@@ -120,6 +141,52 @@ export default function SIMappingPanel({
 
         {/* 본문 (스크롤) */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
+          {/* VC 자동 매핑 (법인정보 기반) */}
+          {hasRegNo && (
+            <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50/30 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-emerald-800">
+                법인정보 기반 Value Chain 매핑
+              </h3>
+              <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-emerald-700">
+                {corpRegNo && <span>법인등록번호: {corpRegNo}</span>}
+                {bizRegNo && <span>사업자등록번호: {bizRegNo}</span>}
+              </div>
+              {!vcResult && (
+                <button
+                  type="button"
+                  onClick={handleVcMapping}
+                  disabled={vcMapMutation.isPending}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {vcMapMutation.isPending
+                    ? "매핑 중..."
+                    : "Value Chain 매핑 실행"}
+                </button>
+              )}
+              {vcMapMutation.isError && (
+                <p className="mt-2 text-sm text-red-600">
+                  {vcMapMutation.error.message}
+                </p>
+              )}
+              {vcResult && (
+                <VcMappingResult
+                  txnId={txnId}
+                  company={vcResult.company}
+                  mapping={vcResult.mapping}
+                />
+              )}
+            </div>
+          )}
+
+          {/* KSIC 기반 SI 매핑 */}
+          {hasRegNo && (
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-slate-600">
+                KSIC 기반 SI 매핑
+              </h3>
+            </div>
+          )}
+
           {/* 검색 영역 */}
           <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
             <div className="grid grid-cols-[1fr_auto_auto] items-end gap-4">

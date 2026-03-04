@@ -51,7 +51,7 @@ async def _create_txn(
     target_company_name: str = "테스트타깃",
 ) -> str:
     """deal_value(억원)를 지정하여 Transaction을 생성하고 ID를 반환한다."""
-    payload: dict = {
+    payload: dict[str, object] = {
         "name": "FI 매핑 테스트",
         "code_name": f"FI-TEST-{uuid.uuid4().hex[:8]}",
         "target_company_name": target_company_name,
@@ -233,7 +233,7 @@ async def test_min_fund_size_calculation(
 
     a_cap = next((r for r in recs if r["gp_name"] == "A캐피탈"), None)
     assert a_cap is not None
-    assert float(a_cap["min_fund_size"]) == 500.0
+    assert a_cap["min_fund_size"] == 500.0
     assert a_cap["fund_count"] == 3
 
 
@@ -357,7 +357,7 @@ async def test_sort_by_min_fund_size_desc(
     assert resp.status_code == 200
     recs = resp.json()
 
-    sizes = [float(r["min_fund_size"]) for r in recs]
+    sizes = [r["min_fund_size"] for r in recs]
     assert sizes == sorted(sizes, reverse=True)
     assert recs[0]["gp_name"] == "A_GP"
 
@@ -910,3 +910,45 @@ async def test_client_role_blocked_from_fi_recommendations(
     with _as_client_role():
         resp = await client.get(_fi_url(txn_id))
     assert resp.status_code == 403
+
+
+# ── Co-GP: 총약정액이 각 GP에 그대로 적용되는지 검증 ──────────
+
+
+@pytest.mark.asyncio
+async def test_co_gp_fund_applies_full_capital_to_each_gp(
+    client: AsyncClient,
+    async_session: AsyncSession,
+) -> None:
+    """Co-GP 펀드(gp1+gp2)에서 각 GP가 총약정액 전체를 기준값으로 받는다.
+
+    펀드 총약정 1500억, GP 2개(알파GP, 베타GP) → 두 GP 모두
+    min_fund_size = 1500억으로 매칭되어야 한다 (분담 나누기 없음).
+    """
+    txn_id = await _create_txn(client, 1000)  # target: 1000억, 범위 500~3000
+    await _seed_pefs(
+        async_session,
+        [
+            {
+                "pef_name": "공동운용펀드1호",
+                "registration_date": "2022-06-01",
+                "gp1": "알파GP",
+                "gp2": "베타GP",
+                "total_committed_capital": 1500,
+            },
+        ],
+    )
+
+    resp = await client.get(_fi_url(txn_id))
+    assert resp.status_code == 200
+    data = resp.json()
+
+    gp_names = {r["gp_name"] for r in data}
+    assert "알파GP" in gp_names, "Co-GP gp1이 매칭되어야 한다"
+    assert "베타GP" in gp_names, "Co-GP gp2가 매칭되어야 한다"
+
+    for rec in data:
+        if rec["gp_name"] in ("알파GP", "베타GP"):
+            assert rec["min_fund_size"] == 1500.0, (
+                f"{rec['gp_name']}: min_fund_size가 총약정 1500이어야 한다 (분담 나누기 없음)"
+            )

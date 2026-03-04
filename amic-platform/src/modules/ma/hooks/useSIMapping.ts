@@ -5,12 +5,14 @@ import { maApi } from "@/api/maClient";
 import type {
   BulkAddBuyersRequest,
   BulkAddBuyersResponse,
+  BulkAddVcBuyersRequest,
   DeepDiveResponse,
   KsicSuggestion,
   SICompany,
   SIDataStats,
   SIMappingRequest,
   SIMappingResponse,
+  VcMappingByRegResponse,
 } from "@/modules/ma/types/si_mapping";
 
 // ── Query Keys ──────────────────────────────────────────
@@ -99,6 +101,64 @@ export function useSIMapping() {
     },
     onError: (err) => {
       toast.error(`SI 매핑 실패: ${err.message}`);
+    },
+  });
+}
+
+// ── 등록번호 기반 VC 매핑 ─────────────────────────────────
+
+export function useVcMappingByRegistration() {
+  return useMutation<
+    VcMappingByRegResponse,
+    Error,
+    {
+      corp_reg_no?: string;
+      biz_reg_no?: string;
+      min_revenue?: number;
+      top_n?: number;
+    }
+  >({
+    mutationFn: async (params) => {
+      const { data } = await maApi.get<VcMappingByRegResponse>(
+        "/si-mapping/vc-map-by-registration",
+        { params },
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`${data.company.company_name}: Value Chain 매핑 완료`);
+    },
+    onError: (err) => {
+      toast.error(`VC 매핑 실패: ${err.message}`);
+    },
+  });
+}
+
+// ── VC 기업 Long List 일괄 등록 ──────────────────────────
+
+export function useBulkAddVcBuyers(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation<BulkAddBuyersResponse, Error, BulkAddVcBuyersRequest>({
+    mutationFn: async (body) => {
+      const { data } = await maApi.post<BulkAddBuyersResponse>(
+        `/transactions/${txnId}/vc-mapping/add-buyers`,
+        body,
+      );
+      return data;
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
+      toast.success(
+        `${res.added_count}개 기업이 Long List에 추가되었습니다.` +
+          (res.skipped_count > 0
+            ? ` (${res.skipped_count}개 중복 건너뜀)`
+            : ""),
+      );
+    },
+    onError: (err) => {
+      toast.error(`Long List 등록 실패: ${err.message}`);
     },
   });
 }

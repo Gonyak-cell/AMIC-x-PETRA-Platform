@@ -1,11 +1,13 @@
+import { Badge } from "@/components/ui";
+import type { BadgeVariant } from "@/components/ui/Badge";
 import type { BuyerTier } from "@/modules/ma/types/buyer";
 import { BUYER_TIER_LABELS } from "@/modules/ma/constants";
 
-const TIER_STYLES: Record<string, string> = {
-  TIER_1: "bg-emerald-50 text-emerald-700",
-  TIER_2: "bg-blue-50 text-blue-700",
-  TIER_3: "bg-amber-50 text-amber-700",
-  NOT_TARGET: "bg-gray-100 text-gray-500",
+const TIER_VARIANTS: Record<string, BadgeVariant> = {
+  TIER_1: "success",
+  TIER_2: "info",
+  TIER_3: "warning",
+  NOT_TARGET: "neutral",
 };
 
 interface BuyerTierBadgeProps {
@@ -18,10 +20,8 @@ export default function BuyerTierBadge({ tier }: BuyerTierBadgeProps) {
   }
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TIER_STYLES[tier] ?? "bg-gray-100 text-gray-500"}`}
-    >
+    <Badge variant={TIER_VARIANTS[tier] ?? "neutral"} pill>
       {BUYER_TIER_LABELS[tier] ?? tier}
-    </span>
+    </Badge>
   );
 }

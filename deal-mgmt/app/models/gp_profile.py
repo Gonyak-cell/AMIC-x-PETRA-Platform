@@ -54,6 +54,13 @@ class GpProfile(Base, TimestampMixin):
     pef_count_2023: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pef_count_2024: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Sheet 3: 연도별 활동 매트릭스 (2010~2024, JSON {year: count})
+    yearly_pef_counts: Mapped[dict[str, int] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=True,
+        comment='연도별 PEF 결성 건수 (시트3, 예: {"2010": 2, "2021": 3})',
+    )
+
     # Sheet 1 N열: 투자분야/주요 포트폴리오 (파싱)
     portfolio_sectors: Mapped[list[str] | None] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"),

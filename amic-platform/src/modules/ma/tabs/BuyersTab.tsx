@@ -5,9 +5,11 @@ import {
   useAddBuyer,
   useUpdateBuyer,
   useExportBuyerExcel,
+  useTransaction,
 } from "@/modules/ma/hooks/useTransactions";
 import { useShortListOverview } from "@/modules/ma/hooks/useMarketingLogs";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
+import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
   BuyerCandidate,
   BuyerCandidateCreate,
@@ -50,10 +52,14 @@ interface BuyersTabProps {
 
 export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const { data: buyers } = useBuyers(txnId);
+  const { data: txn } = useTransaction(txnId);
   const addBuyer = useAddBuyer(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
   const { data: shortListOverview } = useShortListOverview(txnId);
+
+  const corporateInfo =
+    txn?.corporate_info as CorporateDocsExtractedData | null;
 
   const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">(
     "long-list",
@@ -91,7 +97,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const buyerColumns: Column<BuyerCandidate>[] = [
     {
       key: "is_short_listed" as keyof BuyerCandidate,
-      header: "",
+      header: () => <span className="sr-only">Short-List</span>,
       minWidth: "40px",
       render: (r) => (
         <input
@@ -296,6 +302,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               <SIMappingPanel
                 txnId={txnId}
                 onClose={() => setShowSIMappingModal(false)}
+                corporateInfo={corporateInfo}
               />
             )}
             {showFIRecommendModal && (

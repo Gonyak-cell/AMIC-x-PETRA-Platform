@@ -30,8 +30,10 @@ export default function MarketingStageTracker({
           return (
             <div
               key={stage}
+              role="img"
               className={`h-2 w-2 rounded-full ${done ? "bg-accent" : "bg-gray-200"}`}
               title={`${MARKETING_STAGE_LABELS[stage]}: ${done ? summary.stages[stage] : "미완료"}`}
+              aria-label={`${MARKETING_STAGE_LABELS[stage]}: ${done ? summary.stages[stage] : "미완료"}`}
             />
           );
         })}

@@ -90,6 +90,53 @@ export interface SIDataStats {
   is_seeded: boolean;
 }
 
+// ── VC(Value Chain) 매핑 ─────────────────────────────────
+
+export interface VcChainCompany {
+  id: number;
+  company_name: string;
+  industry_name: string;
+  io_sector_name: string | null;
+  corp_type: string | null;
+  revenue: string | null;
+  listing_code: string | null;
+}
+
+export interface VcChainPanel {
+  industry_name: string;
+  coefficient: string;
+  companies: VcChainCompany[];
+}
+
+export interface VcMappingResponse {
+  target_industry: string;
+  forward_chains: VcChainPanel[];
+  backward_chains: VcChainPanel[];
+  competitors: VcChainCompany[];
+  total_forward: number;
+  total_backward: number;
+  total_competitors: number;
+}
+
+export interface VcCompanyLookupResult {
+  id: number;
+  company_name: string;
+  industry_name: string;
+  io_sector_name: string | null;
+  corp_reg_no: string | null;
+  biz_reg_no: string | null;
+  revenue: string | null;
+}
+
+export interface VcMappingByRegResponse {
+  company: VcCompanyLookupResult;
+  mapping: VcMappingResponse;
+}
+
+export interface BulkAddVcBuyersRequest {
+  vc_company_ids: number[];
+}
+
 // ── 딥다이브 ──────────────────────────────────────────────
 
 export interface CompanyOverview {

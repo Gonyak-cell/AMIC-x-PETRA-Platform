@@ -42,8 +42,10 @@ from app.schemas.si_mapping import (
     ValueChainPanel,
     VcChainCompany,
     VcChainPanel,
+    VcCompanyLookupResult,
     VcDataStats,
     VcIndustrySuggestion,
+    VcMappingByRegResponse,
     VcMappingResponse,
 )
 from app.services import audit_service
@@ -1008,4 +1010,149 @@ async def map_vc_candidates(
         total_forward=len(forward_chains),
         total_backward=len(backward_chains),
         total_competitors=len(competitors),
+    )
+
+
+# ══════════════════════════════════════════════════════════
+# 등록번호 기반 VC 매핑 — 법인등록번호/사업자등록번호 → 업종 → VC 매핑
+# ══════════════════════════════════════════════════════════
+
+_REG_NO_STRIP_RE = re.compile(r"[\s\-]")
+
+
+def _normalize_reg_no(value: str) -> str:
+    """등록번호에서 하이픈·공백 제거 후 반환."""
+    return _REG_NO_STRIP_RE.sub("", value)
+
+
+async def find_vc_company_by_registration(
+    db: AsyncSession,
+    corp_reg_no: str | None = None,
+    biz_reg_no: str | None = None,
+) -> VcCompany | None:
+    """법인등록번호 또는 사업자등록번호로 VcCompany 조회.
+
+    corp_reg_no 우선, 없으면 biz_reg_no로 fallback.
+    등록번호 포맷(하이픈 유무)을 정규화하여 검색.
+    """
+    if corp_reg_no:
+        normalized = _normalize_reg_no(corp_reg_no)
+        result = await db.execute(
+            select(VcCompany).where(func.replace(VcCompany.corp_reg_no, "-", "") == normalized).limit(1)
+        )
+        company = result.scalar_one_or_none()
+        if company is not None:
+            return company
+
+    if biz_reg_no:
+        normalized = _normalize_reg_no(biz_reg_no)
+        result = await db.execute(
+            select(VcCompany).where(func.replace(VcCompany.biz_reg_no, "-", "") == normalized).limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    return None
+
+
+async def map_vc_by_registration(
+    db: AsyncSession,
+    corp_reg_no: str | None = None,
+    biz_reg_no: str | None = None,
+    min_revenue: Decimal = Decimal("100"),
+    top_n: int = 20,
+) -> VcMappingByRegResponse:
+    """등록번호 → 기업 조회 → VC 매핑 실행.
+
+    Returns:
+        VcMappingByRegResponse: 조회된 기업 정보 + 전방/후방/경쟁 매핑 결과
+
+    Raises:
+        CompanyNotFoundError: 등록번호에 해당하는 기업이 없을 때
+    """
+    company = await find_vc_company_by_registration(db, corp_reg_no, biz_reg_no)
+    if company is None:
+        raise CompanyNotFoundError(
+            f"등록번호에 해당하는 기업을 찾을 수 없습니다: 법인={corp_reg_no}, 사업자={biz_reg_no}"
+        )
+
+    mapping = await map_vc_candidates(
+        db,
+        target_industry_name=company.industry_name,
+        min_revenue=min_revenue,
+        top_n=top_n,
+    )
+
+    return VcMappingByRegResponse(
+        company=VcCompanyLookupResult.model_validate(company),
+        mapping=mapping,
+    )
+
+
+async def bulk_add_vc_to_buyers(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    vc_company_ids: list[int],
+    actor_email: str | None = None,
+) -> BulkAddBuyersResponse:
+    """VC 매핑 결과를 BuyerCandidate로 일괄 등록."""
+    logger.info(
+        "VC BuyerCandidate 일괄 등록 시작: txn_id=%s, 요청=%d건",
+        txn_id,
+        len(vc_company_ids),
+    )
+
+    q = select(VcCompany).where(VcCompany.id.in_(vc_company_ids))
+    result = await db.execute(q)
+    vc_companies = list(result.scalars().all())
+
+    existing_q = select(BuyerCandidate.company_name).where(BuyerCandidate.transaction_id == txn_id)
+    existing_result = await db.execute(existing_q)
+    existing_names = {row[0] for row in existing_result.all()}
+
+    added_ids: list[uuid.UUID] = []
+    skipped = 0
+
+    new_buyers: list[tuple[BuyerCandidate, VcCompany]] = []
+    for vc in vc_companies:
+        if vc.company_name in existing_names:
+            skipped += 1
+            continue
+        buyer = BuyerCandidate(
+            transaction_id=txn_id,
+            company_name=vc.company_name,
+            buyer_type=BuyerType.STRATEGIC,
+            status=BuyerCandidateStatus.IDENTIFIED,
+            notes=f"VC 매핑으로 추가됨 (업종: {vc.industry_name})",
+            extra_data={"vc_company_id": vc.id, "industry_name": vc.industry_name},
+        )
+        db.add(buyer)
+        new_buyers.append((buyer, vc))
+        existing_names.add(vc.company_name)
+
+    if new_buyers:
+        await db.flush()
+
+    for buyer, vc in new_buyers:
+        await audit_service.record(
+            db,
+            entity_type="BuyerCandidate",
+            entity_id=buyer.id,
+            action=AuditAction.CREATE,
+            actor_email=actor_email,
+            new_value={"company_name": vc.company_name, "source": "VC_MAPPING"},
+        )
+        added_ids.append(buyer.id)
+
+    await db.commit()
+
+    logger.info(
+        "VC BuyerCandidate 일괄 등록 완료: txn_id=%s, 추가=%d건, 중복스킵=%d건",
+        txn_id,
+        len(added_ids),
+        skipped,
+    )
+    return BulkAddBuyersResponse(
+        added_count=len(added_ids),
+        skipped_count=skipped,
+        buyer_ids=added_ids,
     )

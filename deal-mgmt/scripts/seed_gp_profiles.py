@@ -1,4 +1,4 @@
-"""GP 프로필 시딩 — MA_GP_v3.xlsx Sheet 1 → gp_profiles 테이블.
+"""GP 프로필 시딩 — MA_GP_v3.xlsx Sheet 1 + Sheet 3 → gp_profiles 테이블.
 
 사용법:
     cd deal-mgmt
@@ -26,11 +26,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 EXCEL_PATH = Path(__file__).resolve().parent.parent / "app" / "marketing" / "MA_GP_v3.xlsx"
-SHEET_NAME = "GP별 관심 FI List"
+SHEET1_NAME = "GP별 관심 FI List"
+SHEET3_NAME = "GP 연도별 활동 매트릭스"
 
-# 시작 행/열 (0-indexed)
-DATA_START_ROW = 6  # Row 6 (1-indexed) = 데이터 시작
-HEADER_ROW = 5  # Row 5 (1-indexed) = 헤더
+# Sheet 1: 시작 행 (1-indexed)
+DATA_START_ROW = 6  # Row 6 = 데이터 시작
+# Sheet 3: 시작 행 (1-indexed)
+SHEET3_HEADER_ROW = 3  # Row 3 = 헤더 (No., GP명, 최소약정, 최대약정, 2010년, ...)
+SHEET3_DATA_START_ROW = 4  # Row 4 = 데이터 시작
 
 
 def _safe_decimal(val: object) -> Decimal | None:
@@ -95,6 +98,52 @@ def parse_portfolio(raw: str | None) -> tuple[list[str], list[str]]:
     return sectors, companies
 
 
+def _parse_sheet3_yearly(wb: object) -> dict[str, dict[str, int]]:
+    """Sheet 3 '연도별 활동 매트릭스' → {GP명: {연도: 건수}} 딕셔너리.
+
+    헤더에서 연도 열을 동적으로 파싱하여 2012년 누락 등에도 대응한다.
+    """
+    try:
+        ws = wb[SHEET3_NAME]  # type: ignore[index]
+    except KeyError:
+        logger.warning("시트 '%s' 없음 — yearly_pef_counts 스킵", SHEET3_NAME)
+        return {}
+
+    # 헤더 파싱: "2010년", "2011년" 등에서 연도 추출
+    year_columns: list[tuple[int, str]] = []  # (열 인덱스, 연도 문자열)
+    for row in ws.iter_rows(min_row=SHEET3_HEADER_ROW, max_row=SHEET3_HEADER_ROW, values_only=True):
+        for col_idx, val in enumerate(row):
+            if val and isinstance(val, str) and val.endswith("년"):
+                year_str = val.replace("년", "").strip()
+                if year_str.isdigit():
+                    year_columns.append((col_idx, year_str))
+        break
+
+    if not year_columns:
+        logger.warning("시트3 헤더에서 연도 열을 찾지 못함")
+        return {}
+
+    logger.info("시트3 연도 열 %d개 감지: %s", len(year_columns), [y for _, y in year_columns])
+
+    result: dict[str, dict[str, int]] = {}
+    for row in ws.iter_rows(min_row=SHEET3_DATA_START_ROW, values_only=True):
+        gp_name = row[1]  # B열
+        if not gp_name or not str(gp_name).strip():
+            continue
+        gp_name = str(gp_name).strip()
+        yearly: dict[str, int] = {}
+        for col_idx, year in year_columns:
+            if col_idx < len(row):
+                count = _safe_int(row[col_idx])
+                if count is not None and count > 0:
+                    yearly[year] = count
+        if yearly:
+            result[gp_name] = yearly
+
+    logger.info("시트3 GP %d개 연도별 데이터 파싱 완료", len(result))
+    return result
+
+
 async def _get_engine_and_session() -> tuple:
     from app.core.config import settings
 
@@ -125,9 +174,9 @@ async def seed_gp_profiles(session: AsyncSession, force: bool = False) -> int:
 
     wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True, keep_links=False)
     try:
-        ws = wb[SHEET_NAME]
+        ws = wb[SHEET1_NAME]
     except KeyError:
-        logger.error("시트 '%s' 없음. 유효 시트: %s", SHEET_NAME, wb.sheetnames)
+        logger.error("시트 '%s' 없음. 유효 시트: %s", SHEET1_NAME, wb.sheetnames)
         wb.close()
         return 0
 
@@ -165,6 +214,12 @@ async def seed_gp_profiles(session: AsyncSession, force: bool = False) -> int:
                 "portfolio_raw": portfolio_raw,
             }
         )
+
+    # Sheet 3: 연도별 활동 매트릭스 병합
+    yearly_map = _parse_sheet3_yearly(wb)
+    for row_dict in rows_data:
+        gp_name = row_dict["raw_name"]
+        row_dict["yearly_pef_counts"] = yearly_map.get(gp_name)
 
     wb.close()
 

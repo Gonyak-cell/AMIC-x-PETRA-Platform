@@ -10,8 +10,20 @@ export interface PefFund {
   total_committed_capital: string | null;
 }
 
+export interface GpProfileOut {
+  raw_name: string;
+  /** Decimal → string 직렬화 (BE @field_serializer) */
+  min_threshold: string | null;
+  portfolio_sectors: string[] | null;
+  portfolio_companies: string[] | null;
+  recent_pef_count: number | null;
+  total_pef_count: number | null;
+}
+
 export interface FIRecommendation {
   gp_name: string;
+  gp_profile: GpProfileOut | null;
+  tier: 1 | 2;
   /** Decimal → string 직렬화 (BE @field_serializer) */
   min_fund_size: string;
   matching_funds: PefFund[];

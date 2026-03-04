@@ -113,9 +113,39 @@ async def _load_gp_profiles(db: AsyncSession) -> dict[str, GpProfile]:
             return _gp_cache
         result = await db.execute(select(GpProfile))
         profiles = result.scalars().all()
-        _gp_cache = {p.normalized_name: p for p in profiles}
-        _gp_cache_ts = now
+        cache: dict[str, GpProfile] = {}
+        for p in profiles:
+            if p.normalized_name in cache:
+                logger.warning(
+                    "중복 normalized_name=%s (raw=%s vs %s)",
+                    p.normalized_name,
+                    p.raw_name,
+                    cache[p.normalized_name].raw_name,
+                )
+            cache[p.normalized_name] = p
+        _gp_cache = cache
+        if not profiles:
+            logger.warning("GP 프로필 0건 — 60초 후 재조회")
+            _gp_cache_ts = now - _GP_CACHE_TTL + 60.0
+        else:
+            _gp_cache_ts = now
         return _gp_cache
+
+
+def _strip_paren(s: str) -> str:
+    """괄호와 그 내용을 제거하고 소문자로 변환."""
+    return re.sub(r"\s*\([^)]*\)\s*", "", s).strip().lower()
+
+
+def parse_industry_keywords(raw: str) -> list[str]:
+    """산업 키워드 문자열을 `,`와 `/`로 분리하여 리스트로 반환."""
+    result: list[str] = []
+    for seg in raw.split(","):
+        for sub in seg.split("/"):
+            kw = sub.strip()
+            if kw:
+                result.append(kw)
+    return result
 
 
 def _check_keyword_match(
@@ -125,8 +155,9 @@ def _check_keyword_match(
     """GP 포트폴리오 키워드와 타겟 키워드 교집합 확인."""
     if not target_keywords or not profile.portfolio_sectors:
         return False
-    profile_sectors = {s.strip().lower() for s in profile.portfolio_sectors if s}
-    target_set = {kw.strip().lower() for kw in target_keywords if kw}
+
+    profile_sectors = {_strip_paren(s) for s in profile.portfolio_sectors if s}
+    target_set = {_strip_paren(kw) for kw in target_keywords if kw}
     return bool(profile_sectors & target_set)
 
 
@@ -160,7 +191,7 @@ async def recommend_fi(
         lower_multiplier,
         upper_multiplier,
     )
-    _t0 = time.monotonic()
+    _start_time = time.monotonic()
     lower_bound = target_amount * lower_multiplier
     upper_bound = target_amount * upper_multiplier
 
@@ -250,7 +281,7 @@ async def recommend_fi(
     # 4. 정렬: Tier ASC → min_fund_size DESC
     recommendations.sort(key=lambda r: (r.tier, -r.min_fund_size))
     result = recommendations[:limit]
-    elapsed = time.monotonic() - _t0
+    elapsed = time.monotonic() - _start_time
     logger.info(
         "FI 추천 완료: target=%s억, matched_gps=%d, total_funds=%d, elapsed=%.2fs",
         target_amount,

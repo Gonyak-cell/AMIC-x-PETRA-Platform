@@ -26,6 +26,8 @@ class VcCompany(Base, TimestampMixin):
         Index("ix_vc_companies_industry_revenue", "industry_name", "revenue"),
         Index("ix_vc_companies_io_sector_name_revenue", "io_sector_name", "revenue"),
         Index("ix_vc_companies_io_sector_name", "io_sector_name"),
+        Index("ix_vc_companies_corp_reg_no", "corp_reg_no"),
+        Index("ix_vc_companies_biz_reg_no", "biz_reg_no"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

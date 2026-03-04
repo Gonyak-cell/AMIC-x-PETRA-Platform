@@ -11,12 +11,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.exceptions import CompanyNotFoundError
 from app.core.rate_limiter import si_rate_limiter
 from app.core.security import JWTClaims, check_client_deal_access, require_role
 from app.models.enums import AuditAction
 from app.schemas.si_mapping import (
     BulkAddBuyersRequest,
     BulkAddBuyersResponse,
+    BulkAddVcBuyersRequest,
     DeepDiveResponse,
     KsicSuggestion,
     SICompanyOut,
@@ -25,6 +27,7 @@ from app.schemas.si_mapping import (
     SIMappingResponse,
     VcDataStats,
     VcIndustrySuggestion,
+    VcMappingByRegResponse,
     VcMappingResponse,
 )
 from app.services import audit_service, si_mapping_service, transaction_service
@@ -279,4 +282,95 @@ async def map_vc(
         )
     except Exception:
         logger.exception("VC 매핑 감사 로그 기록 실패 (결과 반환은 정상 진행)")
+    return result
+
+
+# ── 등록번호 기반 VC 매핑 ─────────────────────────────────
+@router.get(
+    "/si-mapping/vc-map-by-registration",
+    response_model=VcMappingByRegResponse,
+    responses={
+        403: {"description": "접근 권한 없음"},
+        404: {"description": "기업을 찾을 수 없음"},
+        429: {"description": "요청 횟수 초과"},
+    },
+)
+async def map_vc_by_registration(
+    corp_reg_no: str | None = Query(None, max_length=20, description="법인등록번호"),
+    biz_reg_no: str | None = Query(None, max_length=20, description="사업자등록번호"),
+    min_revenue: Decimal = Query(Decimal("100"), ge=Decimal("0"), description="최소 매출액 (억원)"),
+    top_n: int = Query(20, ge=1, le=50, description="전방/후방/경쟁 각각의 최대 건수"),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(_READ_ACCESS),
+) -> VcMappingByRegResponse:
+    """법인등록번호 또는 사업자등록번호 → VC 기업 조회 → Value Chain 매핑."""
+    if not corp_reg_no and not biz_reg_no:
+        raise HTTPException(
+            status_code=422,
+            detail="corp_reg_no 또는 biz_reg_no 중 하나를 제공해야 합니다",
+        )
+    si_rate_limiter.check(claims.email or claims.user_id or "unknown")
+    try:
+        result = await si_mapping_service.map_vc_by_registration(
+            db,
+            corp_reg_no=corp_reg_no,
+            biz_reg_no=biz_reg_no,
+            min_revenue=min_revenue,
+            top_n=top_n,
+        )
+    except CompanyNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="등록번호에 해당하는 기업을 찾을 수 없습니다",
+        )
+    except SQLAlchemyError:
+        logger.exception("VC 등록번호 매핑 DB 오류: corp=%s, biz=%s", corp_reg_no, biz_reg_no)
+        raise HTTPException(status_code=503, detail="데이터베이스 오류가 발생했습니다")
+    try:
+        await audit_service.record(
+            db,
+            entity_type="VcMapping",
+            entity_id="VcMapping",
+            action=AuditAction.READ,
+            actor_email=claims.email or claims.user_id or "unknown",
+            new_value={
+                "action": "map_vc_by_registration",
+                "corp_reg_no": corp_reg_no,
+                "biz_reg_no": biz_reg_no,
+            },
+        )
+    except Exception:
+        logger.exception("VC 등록번호 매핑 감사 로그 기록 실패")
+    return result
+
+
+# ── VC 매핑 결과 → BuyerCandidate 일괄 등록 ──────────────
+@router.post(
+    "/transactions/{txn_id}/vc-mapping/add-buyers",
+    response_model=BulkAddBuyersResponse,
+    status_code=201,
+    responses={
+        403: {"description": "접근 권한 없음"},
+        404: {"description": "거래를 찾을 수 없음"},
+    },
+)
+async def bulk_add_vc_buyers(
+    txn_id: uuid.UUID,
+    body: BulkAddVcBuyersRequest,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(_WRITE_ACCESS),
+) -> BulkAddBuyersResponse:
+    """VC 매핑 결과를 BuyerCandidate로 일괄 등록."""
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+    try:
+        result = await si_mapping_service.bulk_add_vc_to_buyers(
+            db,
+            txn_id=txn_id,
+            vc_company_ids=body.vc_company_ids,
+            actor_email=claims.email or claims.user_id or "unknown",
+        )
+    except SQLAlchemyError:
+        logger.exception("VC BuyerCandidate 일괄 등록 실패: txn_id=%s", txn_id)
+        raise HTTPException(status_code=503, detail="매수후보 등록에 실패했습니다")
     return result

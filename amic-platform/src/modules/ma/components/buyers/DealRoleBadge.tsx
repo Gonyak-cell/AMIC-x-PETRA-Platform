@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui";
 import type { DealRole } from "@/modules/ma/types/buyer";
 import { DEAL_ROLE_LABELS } from "@/modules/ma/constants";
 
@@ -18,10 +19,8 @@ export default function DealRoleBadge({ role }: DealRoleBadgeProps) {
   }
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_STYLES[role] ?? "bg-gray-100 text-gray-500"}`}
-    >
+    <Badge pill className={ROLE_STYLES[role] ?? "bg-gray-100 text-gray-500"}>
       {DEAL_ROLE_LABELS[role] ?? role}
-    </span>
+    </Badge>
   );
 }
