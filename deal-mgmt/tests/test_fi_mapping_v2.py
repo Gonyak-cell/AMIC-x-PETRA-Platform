@@ -755,9 +755,9 @@ async def test_v2_backward_compat_existing_fields(
     rec = recs[0]
     # v1 필드 전체 검증
     assert isinstance(rec["gp_name"], str)
-    assert isinstance(rec["min_fund_size"], str)
+    assert isinstance(rec["min_fund_size"], (int, float))
     assert isinstance(rec["matching_funds"], list)
-    assert isinstance(rec["total_committed_sum"], str)
+    assert isinstance(rec["total_committed_sum"], (int, float))
     assert isinstance(rec["fund_count"], int)
     assert isinstance(rec["match_reason"], str)
     # v2 추가 필드

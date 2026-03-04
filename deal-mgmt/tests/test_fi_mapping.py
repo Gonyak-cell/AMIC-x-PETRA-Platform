@@ -233,7 +233,7 @@ async def test_min_fund_size_calculation(
 
     a_cap = next((r for r in recs if r["gp_name"] == "A캐피탈"), None)
     assert a_cap is not None
-    assert a_cap["min_fund_size"] == 500.0
+    assert float(a_cap["min_fund_size"]) == 500.0
     assert a_cap["fund_count"] == 3
 
 
@@ -357,7 +357,7 @@ async def test_sort_by_min_fund_size_desc(
     assert resp.status_code == 200
     recs = resp.json()
 
-    sizes = [r["min_fund_size"] for r in recs]
+    sizes = [float(r["min_fund_size"]) for r in recs]
     assert sizes == sorted(sizes, reverse=True)
     assert recs[0]["gp_name"] == "A_GP"
 
@@ -732,11 +732,11 @@ async def test_pef_fund_count_with_search(
 
 
 @pytest.mark.asyncio
-async def test_decimal_serialized_as_str(
+async def test_decimal_serialized_as_numeric(
     client: AsyncClient,
     async_session: AsyncSession,
 ) -> None:
-    """Decimal 필드가 JSON에서 str로 직렬화된다."""
+    """Decimal 필드가 JSON에서 numeric으로 직렬화된다."""
     txn_id = await _create_txn(client, 1000)
     await _seed_pefs(
         async_session,
@@ -756,9 +756,9 @@ async def test_decimal_serialized_as_str(
 
     assert len(recs) == 1
     rec = recs[0]
-    # Decimal → str 직렬화 검증
-    assert isinstance(rec["min_fund_size"], str)
-    assert isinstance(rec["total_committed_sum"], str)
+    # Decimal → float 직렬화 검증
+    assert isinstance(rec["min_fund_size"], (int, float))
+    assert isinstance(rec["total_committed_sum"], (int, float))
     # matching_funds 내부도 검증
     fund = rec["matching_funds"][0]
     assert isinstance(fund["total_committed_capital"], str)
@@ -949,6 +949,6 @@ async def test_co_gp_fund_applies_full_capital_to_each_gp(
 
     for rec in data:
         if rec["gp_name"] in ("알파GP", "베타GP"):
-            assert rec["min_fund_size"] == 1500.0, (
+            assert float(rec["min_fund_size"]) == 1500.0, (
                 f"{rec['gp_name']}: min_fund_size가 총약정 1500이어야 한다 (분담 나누기 없음)"
             )
