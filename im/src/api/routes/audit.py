@@ -89,20 +89,29 @@ async def export_audit_logs(
     db: AsyncSession = Depends(get_async_session),
 ) -> StreamingResponse:
     items, _ = await _list_audit_logs(
-        db, entity_type=entity_type, action=action,
-        start_date=start_date, end_date=end_date, limit=10000, offset=0,
+        db,
+        entity_type=entity_type,
+        action=action,
+        start_date=start_date,
+        end_date=end_date,
+        limit=10000,
+        offset=0,
     )
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Entity ID"])
     for item in items:
-        writer.writerow([
-            item.created_at.isoformat() if item.created_at else "",
-            item.actor_email or "",
-            item.action.value if hasattr(item.action, "value") else str(item.action),
-            item.entity_type,
-            str(item.entity_id),
-        ])
+        writer.writerow(
+            [
+                item.created_at.isoformat() if item.created_at else "",
+                item.actor_email or "",
+                item.action.value
+                if hasattr(item.action, "value")
+                else str(item.action),
+                item.entity_type,
+                str(item.entity_id),
+            ]
+        )
     csv_bytes = output.getvalue().encode("utf-8-sig")
     filename = f"im_audit_log_{date.today().isoformat()}.csv"
     return StreamingResponse(

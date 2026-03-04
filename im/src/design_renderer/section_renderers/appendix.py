@@ -160,12 +160,8 @@ class AppendixRenderer(BaseSectionRenderer):
                     source_items.append(detail)
 
             if source_items:
-                add_sub_header_bar(
-                    slide, "출처 및 참고자료", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "출처 및 참고자료", top=y, tokens=tokens)
                 y += 0.45
-                add_bullet_list(
-                    slide, source_items, top=y, height=3.0, tokens=tokens
-                )
+                add_bullet_list(slide, source_items, top=y, height=3.0, tokens=tokens)
 
         return [slide]

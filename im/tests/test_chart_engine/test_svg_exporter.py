@@ -38,9 +38,7 @@ class TestGraphvizToSvg:
     def test_returns_svg_string(self):
         """SVG 문자열 반환 (XML 선언 제거)."""
         mock_graph = MagicMock()
-        mock_graph.pipe.return_value = (
-            b'<?xml version="1.0" encoding="UTF-8"?>\n<svg width="100" height="100"></svg>'
-        )
+        mock_graph.pipe.return_value = b'<?xml version="1.0" encoding="UTF-8"?>\n<svg width="100" height="100"></svg>'
         result = graphviz_to_svg(mock_graph)
         assert isinstance(result, str)
         assert "<?xml" not in result

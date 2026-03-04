@@ -114,9 +114,15 @@ def sample_extracted_colors() -> list[ExtractedColor]:
     """샘플 추출 색상 리스트."""
     return [
         ExtractedColor(hex="#FF0000", rgb=(255, 0, 0), hsv=(0.0, 1.0, 1.0), ratio=0.4),
-        ExtractedColor(hex="#00FF00", rgb=(0, 255, 0), hsv=(120.0, 1.0, 1.0), ratio=0.3),
-        ExtractedColor(hex="#808080", rgb=(128, 128, 128), hsv=(0.0, 0.0, 0.502), ratio=0.2),
-        ExtractedColor(hex="#0000FF", rgb=(0, 0, 255), hsv=(240.0, 1.0, 1.0), ratio=0.1),
+        ExtractedColor(
+            hex="#00FF00", rgb=(0, 255, 0), hsv=(120.0, 1.0, 1.0), ratio=0.3
+        ),
+        ExtractedColor(
+            hex="#808080", rgb=(128, 128, 128), hsv=(0.0, 0.0, 0.502), ratio=0.2
+        ),
+        ExtractedColor(
+            hex="#0000FF", rgb=(0, 0, 255), hsv=(240.0, 1.0, 1.0), ratio=0.1
+        ),
     ]
 
 
@@ -138,13 +144,13 @@ def multicolor_image() -> Image.Image:
     for x in range(200):
         for y in range(200):
             if x < 100 and y < 100:
-                img.putpixel((x, y), (255, 0, 0))      # 빨강
+                img.putpixel((x, y), (255, 0, 0))  # 빨강
             elif x >= 100 and y < 100:
-                img.putpixel((x, y), (0, 128, 0))       # 녹색
+                img.putpixel((x, y), (0, 128, 0))  # 녹색
             elif x < 100 and y >= 100:
-                img.putpixel((x, y), (0, 0, 255))       # 파랑
+                img.putpixel((x, y), (0, 0, 255))  # 파랑
             else:
-                img.putpixel((x, y), (255, 165, 0))     # 주황
+                img.putpixel((x, y), (255, 165, 0))  # 주황
     return img
 
 
@@ -157,7 +163,7 @@ def rgba_image() -> Image.Image:
             if x < 50:
                 img.putpixel((x, y), (0, 100, 200, 255))  # 불투명
             else:
-                img.putpixel((x, y), (0, 100, 200, 0))    # 완전 투명
+                img.putpixel((x, y), (0, 100, 200, 0))  # 완전 투명
     return img
 
 

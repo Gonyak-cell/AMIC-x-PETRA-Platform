@@ -1,6 +1,5 @@
 """콘텐츠 오버플로우 테스트 — 높이 추정/분할/폰트 조절."""
 
-
 from src.design_renderer.components.content_overflow import (
     ContentBlock,
     SlideContent,
@@ -44,9 +43,7 @@ class TestSplitContentToSlides:
 
     def test_single_slide(self):
         """한 슬라이드에 들어가는 콘텐츠 → 1개 SlideContent."""
-        blocks = [
-            ContentBlock(content_type="text", data="짧은 콘텐츠")
-        ]
+        blocks = [ContentBlock(content_type="text", data="짧은 콘텐츠")]
         result = split_content_to_slides(blocks)
         assert isinstance(result, list)
         assert len(result) >= 1
@@ -54,8 +51,7 @@ class TestSplitContentToSlides:
     def test_multiple_slides(self):
         """많은 콘텐츠 → 2+ SlideContent."""
         blocks = [
-            ContentBlock(content_type="text", data="항목 " * 200)
-            for _ in range(10)
+            ContentBlock(content_type="text", data="항목 " * 200) for _ in range(10)
         ]
         result = split_content_to_slides(blocks)
         assert len(result) >= 1
@@ -85,8 +81,7 @@ class TestAutoAdjustFontSize:
     def test_minimum_font_7pt(self):
         """최소 7pt 미만으로 줄어들지 않음."""
         blocks = [
-            ContentBlock(content_type="text", data="항목 " * 2000)
-            for _ in range(50)
+            ContentBlock(content_type="text", data="항목 " * 2000) for _ in range(50)
         ]
         result = auto_adjust_font_size(blocks)
         for block in result:
@@ -104,8 +99,10 @@ class TestSlideContent:
 
     def test_total_height(self):
         """블록 높이 합산."""
-        sc = SlideContent(blocks=[
-            ContentBlock(content_type="text", data="A", estimated_height=1.0),
-            ContentBlock(content_type="text", data="B", estimated_height=2.0),
-        ])
+        sc = SlideContent(
+            blocks=[
+                ContentBlock(content_type="text", data="A", estimated_height=1.0),
+                ContentBlock(content_type="text", data="B", estimated_height=2.0),
+            ]
+        )
         assert sc.total_height == 3.0

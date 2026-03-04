@@ -36,9 +36,7 @@ class TargetPositioningRenderer(BaseSectionRenderer):
 
         co = data.company_overview
         md = data.market_data
-        narrative = html_escape(
-            data.narratives.get("target_positioning", "")
-        )
+        narrative = html_escape(data.narratives.get("target_positioning", ""))
 
         narrative_html = ""
         if narrative:
@@ -123,12 +121,14 @@ class TargetPositioningRenderer(BaseSectionRenderer):
         {competitor_html}
         """
 
-        return [build_slide_html(
-            content,
-            title="Target Positioning",
-            slide_class="slide-target-positioning",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Target Positioning",
+                slide_class="slide-target-positioning",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -164,22 +164,29 @@ class TargetPositioningRenderer(BaseSectionRenderer):
         kpis: list[dict[str, str]] = []
         if co:
             if co.key_products:
-                kpis.append({
-                    "label": "핵심 제품",
-                    "value": ", ".join(co.key_products[:2]),
-                })
+                kpis.append(
+                    {
+                        "label": "핵심 제품",
+                        "value": ", ".join(co.key_products[:2]),
+                    }
+                )
             if co.employee_count is not None:
-                kpis.append({
-                    "label": "임직원",
-                    "value": f"{co.employee_count:,}명",
-                })
+                kpis.append(
+                    {
+                        "label": "임직원",
+                        "value": f"{co.employee_count:,}명",
+                    }
+                )
         if md:
             if md.som is not None:
                 kpis.append({"label": "SOM", "value": f"{md.som:,.0f}억원"})
 
         if kpis:
             add_kpi_grid(
-                slide, kpis, top=y, tokens=tokens,
+                slide,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -194,8 +201,6 @@ class TargetPositioningRenderer(BaseSectionRenderer):
                 comp_lines.append(f"{name}{ms_str}")
             add_sub_header_bar(slide, "경쟁사 비교", top=y, tokens=tokens)
             y += 0.45
-            add_body_textbox(
-                slide, "\n".join(comp_lines), top=y, tokens=tokens
-            )
+            add_body_textbox(slide, "\n".join(comp_lines), top=y, tokens=tokens)
 
         return [slide]

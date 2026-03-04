@@ -135,11 +135,11 @@ def _set_theme_colors(prs: Presentation, tokens: IMDesignTokens) -> None:
     """테마 컬러를 AMIC 컬러로 교체."""
     c = tokens.colors
     color_map = {
-        "dk1": c.primary,        # #0F3A32
-        "accent1": c.accent,     # #26C260
-        "accent2": c.positive,   # #26C260
-        "accent3": c.caution,    # #EF6C00
-        "accent4": c.negative,   # #BC2C1A
+        "dk1": c.primary,  # #0F3A32
+        "accent1": c.accent,  # #26C260
+        "accent2": c.positive,  # #26C260
+        "accent3": c.caution,  # #EF6C00
+        "accent4": c.negative,  # #BC2C1A
     }
 
     try:

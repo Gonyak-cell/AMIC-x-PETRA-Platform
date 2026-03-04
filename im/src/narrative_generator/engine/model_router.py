@@ -207,16 +207,11 @@ class ModelRouter:
     @property
     def available_providers(self) -> list[ProviderName]:
         """사용 가능한 프로바이더 목록."""
-        return [
-            name
-            for name, p in self._providers.items()
-            if p.is_available
-        ]
+        return [name for name, p in self._providers.items() if p.is_available]
 
     @property
     def routing_summary(self) -> dict[str, str]:
         """현재 라우팅 맵 요약 (디버깅용)."""
         return {
-            section: provider.value
-            for section, provider in self._routing_map.items()
+            section: provider.value for section, provider in self._routing_map.items()
         }

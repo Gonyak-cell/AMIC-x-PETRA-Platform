@@ -34,9 +34,7 @@ class TransactionStructureRenderer(BaseSectionRenderer):
         c = tokens.colors
 
         ds = data.deal_structure
-        narrative = html_escape(
-            data.narratives.get("transaction_structure", "")
-        )
+        narrative = html_escape(data.narratives.get("transaction_structure", ""))
 
         narrative_html = ""
         if narrative:
@@ -63,10 +61,7 @@ class TransactionStructureRenderer(BaseSectionRenderer):
             # 밸류에이션
             if ds.valuation_low is not None or ds.valuation_high is not None:
                 if ds.valuation_low is not None and ds.valuation_high is not None:
-                    val_str = (
-                        f"{ds.valuation_low:,.0f} ~ "
-                        f"{ds.valuation_high:,.0f}억원"
-                    )
+                    val_str = f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"
                 elif ds.valuation_low is not None:
                     val_str = f"{ds.valuation_low:,.0f}억원~"
                 else:
@@ -105,9 +100,9 @@ class TransactionStructureRenderer(BaseSectionRenderer):
                     f'<div style="display:flex;align-items:center;'
                     f'margin-bottom:0.5em;">'
                     f'<div style="width:10px;height:10px;border-radius:50%;'
-                    f'background:{c.accent};margin-right:0.8em;'
+                    f"background:{c.accent};margin-right:0.8em;"
                     f'flex-shrink:0;"></div>'
-                    f'<div>'
+                    f"<div>"
                     f'<span style="font-weight:bold;font-size:10pt;'
                     f'color:{c.primary};">{html_escape(milestone)}</span>'
                     f'<span style="font-size:9pt;color:{c.text_secondary};'
@@ -167,29 +162,40 @@ class TransactionStructureRenderer(BaseSectionRenderer):
         if ds:
             kpis: list[dict[str, str]] = []
             if ds.transaction_type:
-                kpis.append({
-                    "label": "거래 유형",
-                    "value": ds.transaction_type.value,
-                })
+                kpis.append(
+                    {
+                        "label": "거래 유형",
+                        "value": ds.transaction_type.value,
+                    }
+                )
             if ds.stake_pct is not None:
-                kpis.append({
-                    "label": "매각 지분율",
-                    "value": f"{ds.stake_pct * 100:.1f}%",
-                })
+                kpis.append(
+                    {
+                        "label": "매각 지분율",
+                        "value": f"{ds.stake_pct * 100:.1f}%",
+                    }
+                )
             if ds.old_shares is not None:
-                kpis.append({
-                    "label": "구주 규모",
-                    "value": f"{ds.old_shares:,.0f}억원",
-                })
+                kpis.append(
+                    {
+                        "label": "구주 규모",
+                        "value": f"{ds.old_shares:,.0f}억원",
+                    }
+                )
             if ds.new_shares is not None:
-                kpis.append({
-                    "label": "신주 규모",
-                    "value": f"{ds.new_shares:,.0f}억원",
-                })
+                kpis.append(
+                    {
+                        "label": "신주 규모",
+                        "value": f"{ds.new_shares:,.0f}억원",
+                    }
+                )
 
             if kpis:
                 add_kpi_grid(
-                    slide, kpis, top=y, tokens=tokens,
+                    slide,
+                    kpis,
+                    top=y,
+                    tokens=tokens,
                     number_config=data.number_format,
                 )
                 y += 1.6
@@ -210,9 +216,7 @@ class TransactionStructureRenderer(BaseSectionRenderer):
                     detail_lines.append(f"{milestone}: {date_val}")
 
             if detail_lines:
-                add_sub_header_bar(
-                    slide, "거래 상세", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "거래 상세", top=y, tokens=tokens)
                 y += 0.45
                 add_body_textbox(
                     slide,

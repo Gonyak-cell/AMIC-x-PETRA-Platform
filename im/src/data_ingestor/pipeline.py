@@ -385,38 +385,48 @@ class DataCollectionPipeline:
         for offset in range(self._config.financial_years):
             year = base_year - offset
             task_name = f"fs_{year}"
-            tasks.append((
-                task_name,
-                self._fetch_financial_statements(corp_code, str(year), result),
-            ))
+            tasks.append(
+                (
+                    task_name,
+                    self._fetch_financial_statements(corp_code, str(year), result),
+                )
+            )
 
         # 주주정보
         if self._config.include_shareholders:
-            tasks.append((
-                "shareholders",
-                self._fetch_shareholders(corp_code, result),
-            ))
+            tasks.append(
+                (
+                    "shareholders",
+                    self._fetch_shareholders(corp_code, result),
+                )
+            )
 
         # 배당정보
         if self._config.include_dividends:
-            tasks.append((
-                "dividends",
-                self._fetch_dividends(corp_code, str(base_year), result),
-            ))
+            tasks.append(
+                (
+                    "dividends",
+                    self._fetch_dividends(corp_code, str(base_year), result),
+                )
+            )
 
         # 뉴스
         if self._config.include_news:
-            tasks.append((
-                "news",
-                self._fetch_news(company_info, result),
-            ))
+            tasks.append(
+                (
+                    "news",
+                    self._fetch_news(company_info, result),
+                )
+            )
 
         # 웹사이트 정보
         if self._config.include_web_info and getattr(company_info, "hm_url", None):
-            tasks.append((
-                "web_info",
-                self._fetch_web_info(company_info, result),
-            ))
+            tasks.append(
+                (
+                    "web_info",
+                    self._fetch_web_info(company_info, result),
+                )
+            )
 
         # 병렬 실행 (return_exceptions=True로 개별 실패 격리)
         task_names = [name for name, _ in tasks]
@@ -611,9 +621,7 @@ class DataCollectionPipeline:
             # 재무제표
             financials_list = dart_data.get("financials", [])
             for i, fs in enumerate(financials_list):
-                aggregator.add_dart_financials(
-                    fs, is_historical=(i > 0)
-                )
+                aggregator.add_dart_financials(fs, is_historical=(i > 0))
 
             # 주주정보
             shareholders = dart_data.get("shareholders")

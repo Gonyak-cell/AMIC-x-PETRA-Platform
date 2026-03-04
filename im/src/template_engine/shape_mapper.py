@@ -85,7 +85,8 @@ def get_tables(pptx_path: Path) -> list[ShapeSlot]:
 def get_text_shapes(pptx_path: Path) -> list[ShapeSlot]:
     """텍스트 shape만 필터링하여 반환한다."""
     return [
-        s for s in analyze_template(pptx_path)
+        s
+        for s in analyze_template(pptx_path)
         if s.shape_type in ("text", "auto_shape", "placeholder")
     ]
 

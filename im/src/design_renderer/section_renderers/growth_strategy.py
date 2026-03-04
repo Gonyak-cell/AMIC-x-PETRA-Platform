@@ -97,9 +97,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
             if gs.ma_targets:
                 preview = gs.ma_targets[0]
                 suffix = (
-                    f" 외 {len(gs.ma_targets) - 1}건"
-                    if len(gs.ma_targets) > 1
-                    else ""
+                    f" 외 {len(gs.ma_targets) - 1}건" if len(gs.ma_targets) > 1 else ""
                 )
                 summary_lines.append(f"M&A 전략: {preview}{suffix}")
             if gs.roadmap:
@@ -111,9 +109,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
                 )
 
             if summary_lines:
-                add_sub_header_bar(
-                    slide1, "전략 개요", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide1, "전략 개요", top=y, tokens=tokens)
                 y += 0.45
                 add_bullet_list(
                     slide1,
@@ -129,9 +125,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
         if gs and gs.organic_growth:
             slide2 = factory.add_content_slide(title="유기적 성장 전략")
             y2 = lay.content_top
-            add_sub_header_bar(
-                slide2, "유기적 성장", top=y2, tokens=tokens
-            )
+            add_sub_header_bar(slide2, "유기적 성장", top=y2, tokens=tokens)
             y2 += 0.45
             add_bullet_list(
                 slide2,
@@ -146,15 +140,11 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
         has_new_biz = gs and gs.new_business
         has_ma = gs and gs.ma_targets
         if has_new_biz or has_ma:
-            slide3 = factory.add_content_slide(
-                title="신규 사업 및 M&A 전략"
-            )
+            slide3 = factory.add_content_slide(title="신규 사업 및 M&A 전략")
             y3 = lay.content_top
 
             if has_new_biz:
-                add_sub_header_bar(
-                    slide3, "신규 사업", top=y3, tokens=tokens
-                )
+                add_sub_header_bar(slide3, "신규 사업", top=y3, tokens=tokens)
                 y3 += 0.45
                 add_bullet_list(
                     slide3,
@@ -166,9 +156,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
                 y3 += 1.2 + 0.25 * max(0, len(gs.new_business) - 3)
 
             if has_ma:
-                add_sub_header_bar(
-                    slide3, "M&A 전략", top=y3, tokens=tokens
-                )
+                add_sub_header_bar(slide3, "M&A 전략", top=y3, tokens=tokens)
                 y3 += 0.45
                 add_bullet_list(
                     slide3,
@@ -189,9 +177,7 @@ class GrowthStrategyRenderer(BaseSectionRenderer):
 
             for year, goals in sorted(gs.roadmap.items()):
                 # 연도를 서브 헤더로, 목표를 불릿으로 표시
-                add_sub_header_bar(
-                    slide4, f"{year}년 목표", top=y4, tokens=tokens
-                )
+                add_sub_header_bar(slide4, f"{year}년 목표", top=y4, tokens=tokens)
                 y4 += 0.4
                 add_bullet_list(
                     slide4,

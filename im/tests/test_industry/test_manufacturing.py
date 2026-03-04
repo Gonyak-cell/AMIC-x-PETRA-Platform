@@ -1,6 +1,5 @@
 """ManufacturingModule 테스트."""
 
-
 from src.industry.manufacturing import ManufacturingModule
 from src.industry.models import (
     IndustryChartRecommendation,

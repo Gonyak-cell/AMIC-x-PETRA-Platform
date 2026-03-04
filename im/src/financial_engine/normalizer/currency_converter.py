@@ -268,15 +268,11 @@ class CurrencyConverter:
                         to_currency=to_currency,
                         rate=Decimal(str(rate_value)),
                         source="api",
-                        as_of_date=data.get(
-                            "date", date.today().isoformat()
-                        ),
+                        as_of_date=data.get("date", date.today().isoformat()),
                     )
 
         except ImportError:
-            logger.warning(
-                "aiohttp가 설치되지 않아 API 환율 조회를 건너뜁니다."
-            )
+            logger.warning("aiohttp가 설치되지 않아 API 환율 조회를 건너뜁니다.")
             return None
         except Exception:
             logger.warning(

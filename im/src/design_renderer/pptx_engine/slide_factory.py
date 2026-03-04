@@ -164,9 +164,7 @@ class SlideFactory:
         set_font_with_ea(run, typo.font_heading)
         run.font.size = Pt(f.cover_title)
         run.font.bold = True
-        run.font.color.rgb = RGBColor.from_string(
-            c.text_white.lstrip("#")
-        )
+        run.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
         # 부제 + 날짜 (토큰 좌표)
         if subtitle or date:
@@ -184,18 +182,14 @@ class SlideFactory:
                 run.text = subtitle
                 set_font_with_ea(run, typo.font_cover_subtitle)
                 run.font.size = Pt(f.cover_subtitle)
-                run.font.color.rgb = RGBColor.from_string(
-                    c.text_white.lstrip("#")
-                )
+                run.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
             if date:
                 p = stf.add_paragraph() if subtitle else stf.paragraphs[0]
                 run = p.add_run()
                 run.text = date
                 set_font_with_ea(run, typo.font_cover_subtitle)
                 run.font.size = Pt(f.cover_date)
-                run.font.color.rgb = RGBColor.from_string(
-                    c.text_white.lstrip("#")
-                )
+                run.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
         # AMIC 로고 (흰색, 하단)
         self._add_logo(slide, logo_type="white", bottom=True)
@@ -260,9 +254,7 @@ class SlideFactory:
         run.text = text
         run.font.name = typo.font_body
         run.font.size = Pt(f.footnote)
-        run.font.color.rgb = RGBColor.from_string(
-            c.text_secondary.lstrip("#")
-        )
+        run.font.color.rgb = RGBColor.from_string(c.text_secondary.lstrip("#"))
 
         return slide
 
@@ -288,9 +280,7 @@ class SlideFactory:
 
         # 제목 플레이스홀더 설정
         if title:
-            self._manager.set_placeholder_text(
-                slide, t.layout.ph_title_idx, title
-            )
+            self._manager.set_placeholder_text(slide, t.layout.ph_title_idx, title)
 
         return slide
 
@@ -358,9 +348,7 @@ class SlideFactory:
                 set_font_with_ea(r, typo.font_body)
                 r.font.size = Pt(f.summary_text)
                 r.font.bold = True
-                r.font.color.rgb = RGBColor.from_string(
-                    c.text_white.lstrip("#")
-                )
+                r.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
                 # 직함
                 if contact.get("title"):
@@ -370,9 +358,7 @@ class SlideFactory:
                     r.text = contact["title"]
                     set_font_with_ea(r, typo.font_body)
                     r.font.size = Pt(f.footnote)
-                    r.font.color.rgb = RGBColor.from_string(
-                        c.text_white.lstrip("#")
-                    )
+                    r.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
                 # 이메일/전화
                 details = []
@@ -387,9 +373,7 @@ class SlideFactory:
                     r.text = " | ".join(details)
                     set_font_with_ea(r, typo.font_body)
                     r.font.size = Pt(f.body)
-                    r.font.color.rgb = RGBColor.from_string(
-                        c.text_white.lstrip("#")
-                    )
+                    r.font.color.rgb = RGBColor.from_string(c.text_white.lstrip("#"))
 
                 y_pos += 1.1
 
@@ -433,8 +417,6 @@ class SlideFactory:
             top = Inches(lay.margin_top)
 
         try:
-            slide.shapes.add_picture(
-                str(logo), left, top, logo_width, logo_height
-            )
+            slide.shapes.add_picture(str(logo), left, top, logo_width, logo_height)
         except Exception as e:
             logger.warning(f"로고 삽입 실패: {e}")

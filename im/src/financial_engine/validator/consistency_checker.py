@@ -186,7 +186,11 @@ class ConsistencyChecker:
                 curr_val = year_data[curr_year]
 
                 # large_change 검사: prev가 0이거나 None이면 건너뜀
-                if prev_val is not None and curr_val is not None and prev_val != Decimal("0"):
+                if (
+                    prev_val is not None
+                    and curr_val is not None
+                    and prev_val != Decimal("0")
+                ):
                     abs_prev = abs(prev_val)
                     change_ratio = float(abs(curr_val - prev_val) / abs_prev)
                     if change_ratio > self._config.large_change_threshold:

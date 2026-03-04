@@ -41,23 +41,49 @@ KEYWORD_MAP: dict[str, list[str]] = {
 
 # 연도 탐색 패턴
 YEAR_PATTERNS: list[str] = [
-    "2022", "2023", "2024", "2025", "2026",
-    "FY2022", "FY2023", "FY2024", "FY2025", "FY2026",
-    "'22", "'23", "'24", "'25", "'26",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026",
+    "FY2022",
+    "FY2023",
+    "FY2024",
+    "FY2025",
+    "FY2026",
+    "'22",
+    "'23",
+    "'24",
+    "'25",
+    "'26",
 ]
 
 # 연도 정규화 매핑 (약칭 → 4자리 연도)
 _YEAR_NORMALIZE: dict[str, str] = {
-    "'22": "2022", "'23": "2023", "'24": "2024", "'25": "2025", "'26": "2026",
-    "FY2022": "2022", "FY2023": "2023", "FY2024": "2024",
-    "FY2025": "2025", "FY2026": "2026",
+    "'22": "2022",
+    "'23": "2023",
+    "'24": "2024",
+    "'25": "2025",
+    "'26": "2026",
+    "FY2022": "2022",
+    "FY2023": "2023",
+    "FY2024": "2024",
+    "FY2025": "2025",
+    "FY2026": "2026",
 }
 
 # 재무 키워드 (연도별 매핑 대상)
 _FINANCIAL_KEYS: set[str] = {
-    "revenue", "operating_income", "ebitda", "net_income",
-    "total_assets", "total_equity", "total_debt", "cash",
-    "cogs", "gross_profit",
+    "revenue",
+    "operating_income",
+    "ebitda",
+    "net_income",
+    "total_assets",
+    "total_equity",
+    "total_debt",
+    "cash",
+    "cogs",
+    "gross_profit",
 }
 
 # 숫자 추출 정규식
@@ -153,14 +179,18 @@ class VdrAnalysisService:
                     results = self._parse_pdf(path, target_keys)
                 else:
                     logger.warning(
-                        "지원하지 않는 파일 형식: %s (%s)", path.name, suffix,
+                        "지원하지 않는 파일 형식: %s (%s)",
+                        path.name,
+                        suffix,
                     )
                     continue
 
                 all_results.extend(results)
             except Exception as exc:
                 logger.error(
-                    "VDR 문서 파싱 실패: %s — %s", path.name, exc,
+                    "VDR 문서 파싱 실패: %s — %s",
+                    path.name,
+                    exc,
                 )
 
         # 필드별 최고 신뢰도 결과만 유지
@@ -189,9 +219,7 @@ class VdrAnalysisService:
         try:
             import openpyxl
         except ImportError:
-            raise RuntimeError(
-                "openpyxl 패키지 미설치. pip install openpyxl 필요."
-            )
+            raise RuntimeError("openpyxl 패키지 미설치. pip install openpyxl 필요.")
 
         results: list[ExtractionResult] = []
         doc_name = path.name
@@ -243,14 +271,16 @@ class VdrAnalysisService:
                                 col_letter = openpyxl.utils.get_column_letter(
                                     cell.column,
                                 )
-                                results.append(ExtractionResult(
-                                    field_key=matched_key,
-                                    value=value_str,
-                                    confidence=0.85,
-                                    source_location=f"{sheet_name}:{col_letter}{row_idx}",
-                                    source_doc_name=doc_name,
-                                    fiscal_year=year,
-                                ))
+                                results.append(
+                                    ExtractionResult(
+                                        field_key=matched_key,
+                                        value=value_str,
+                                        confidence=0.85,
+                                        source_location=f"{sheet_name}:{col_letter}{row_idx}",
+                                        source_doc_name=doc_name,
+                                        fiscal_year=year,
+                                    )
+                                )
                 else:
                     # 비재무 데이터: 인접 셀 값 추출
                     for cell in row[1:]:
@@ -260,13 +290,15 @@ class VdrAnalysisService:
                                 col_letter = openpyxl.utils.get_column_letter(
                                     cell.column,
                                 )
-                                results.append(ExtractionResult(
-                                    field_key=matched_key,
-                                    value=value_str,
-                                    confidence=0.80,
-                                    source_location=f"{sheet_name}:{col_letter}{row_idx}",
-                                    source_doc_name=doc_name,
-                                ))
+                                results.append(
+                                    ExtractionResult(
+                                        field_key=matched_key,
+                                        value=value_str,
+                                        confidence=0.80,
+                                        source_location=f"{sheet_name}:{col_letter}{row_idx}",
+                                        source_doc_name=doc_name,
+                                    )
+                                )
                             break  # 첫 번째 유효한 값만 사용
 
         wb.close()
@@ -294,9 +326,7 @@ class VdrAnalysisService:
         try:
             import fitz  # PyMuPDF
         except ImportError:
-            raise RuntimeError(
-                "PyMuPDF(fitz) 패키지 미설치. pip install PyMuPDF 필요."
-            )
+            raise RuntimeError("PyMuPDF(fitz) 패키지 미설치. pip install PyMuPDF 필요.")
 
         results: list[ExtractionResult] = []
         doc_name = path.name
@@ -320,7 +350,9 @@ class VdrAnalysisService:
             except Exception as exc:
                 logger.warning(
                     "PDF 테이블 추출 실패: %s page %d — %s",
-                    doc_name, page_num, exc,
+                    doc_name,
+                    page_num,
+                    exc,
                 )
 
             # --- 텍스트 블록에서 비재무 데이터 추출 ---
@@ -392,32 +424,36 @@ class VdrAnalysisService:
                     if col_idx < len(row) and row[col_idx] is not None:
                         value_str = self._clean_number(str(row[col_idx]))
                         if value_str:
-                            results.append(ExtractionResult(
-                                field_key=matched_key,
-                                value=value_str,
-                                confidence=0.75,
-                                source_location=(
-                                    f"Page {page_num}, Table {table_idx}, "
-                                    f"Row {row_idx}"
-                                ),
-                                source_doc_name=doc_name,
-                                fiscal_year=year,
-                            ))
+                            results.append(
+                                ExtractionResult(
+                                    field_key=matched_key,
+                                    value=value_str,
+                                    confidence=0.75,
+                                    source_location=(
+                                        f"Page {page_num}, Table {table_idx}, "
+                                        f"Row {row_idx}"
+                                    ),
+                                    source_doc_name=doc_name,
+                                    fiscal_year=year,
+                                )
+                            )
             else:
                 for col_idx in range(1, len(row)):
                     if row[col_idx] is not None:
                         value_str = str(row[col_idx]).strip()
                         if value_str:
-                            results.append(ExtractionResult(
-                                field_key=matched_key,
-                                value=value_str,
-                                confidence=0.70,
-                                source_location=(
-                                    f"Page {page_num}, Table {table_idx}, "
-                                    f"Row {row_idx}"
-                                ),
-                                source_doc_name=doc_name,
-                            ))
+                            results.append(
+                                ExtractionResult(
+                                    field_key=matched_key,
+                                    value=value_str,
+                                    confidence=0.70,
+                                    source_location=(
+                                        f"Page {page_num}, Table {table_idx}, "
+                                        f"Row {row_idx}"
+                                    ),
+                                    source_doc_name=doc_name,
+                                )
+                            )
                             break
 
         return results
@@ -459,16 +495,19 @@ class VdrAnalysisService:
                     if keyword in line:
                         # "키워드: 값" 또는 "키워드 값" 패턴
                         value = self._extract_value_after_keyword(
-                            line, keyword,
+                            line,
+                            keyword,
                         )
                         if value:
-                            results.append(ExtractionResult(
-                                field_key=field_key,
-                                value=value,
-                                confidence=0.65,
-                                source_location=f"Page {page_num}, Text",
-                                source_doc_name=doc_name,
-                            ))
+                            results.append(
+                                ExtractionResult(
+                                    field_key=field_key,
+                                    value=value,
+                                    confidence=0.65,
+                                    source_location=f"Page {page_num}, Text",
+                                    source_doc_name=doc_name,
+                                )
+                            )
                             break  # 동일 line에서 같은 field_key 중복 방지
 
         return results
@@ -584,12 +623,12 @@ class VdrAnalysisService:
         if idx == -1:
             return ""
 
-        after = line[idx + len(keyword):].strip()
+        after = line[idx + len(keyword) :].strip()
 
         # 구분자 제거 (":", "：", "-", "–")
         for sep in (":", "：", "-", "–", "|"):
             if after.startswith(sep):
-                after = after[len(sep):].strip()
+                after = after[len(sep) :].strip()
                 break
 
         # 다음 구분자 또는 줄 끝까지

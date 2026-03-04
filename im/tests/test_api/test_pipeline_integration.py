@@ -98,9 +98,7 @@ def _make_full_im_data() -> IMDocumentData:
         ),
         source_citations={
             "financial_analysis": [
-                SourceCitation(
-                    source_name="금융감독원", url="https://dart.fss.or.kr"
-                )
+                SourceCitation(source_name="금융감독원", url="https://dart.fss.or.kr")
             ],
         },
         contacts=[
@@ -146,7 +144,10 @@ class TestSerializationRoundTrip:
         restored = dict_to_im_data(serialized)
 
         assert isinstance(restored.financial_statements, FinancialStatements)
-        assert restored.financial_statements.revenue == {"2023": 100_000.0, "2024": 120_000.0}
+        assert restored.financial_statements.revenue == {
+            "2023": 100_000.0,
+            "2024": 120_000.0,
+        }
 
     def test_deal_structure_roundtrip(self) -> None:
         """DealStructure + TransactionType enum 라운드트립."""

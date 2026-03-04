@@ -60,40 +60,54 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
         if years:
             latest = years[-1]
             if fs.revenue.get(latest) is not None:
-                kpis.append({
-                    "label": f"매출액 ({latest})",
-                    "value": f"{_fmt_amount(fs.revenue[latest])}",
-                })
+                kpis.append(
+                    {
+                        "label": f"매출액 ({latest})",
+                        "value": f"{_fmt_amount(fs.revenue[latest])}",
+                    }
+                )
             if fs.operating_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"영업이익 ({latest})",
-                    "value": f"{_fmt_amount(fs.operating_income[latest])}",
-                })
+                kpis.append(
+                    {
+                        "label": f"영업이익 ({latest})",
+                        "value": f"{_fmt_amount(fs.operating_income[latest])}",
+                    }
+                )
             if fs.ebitda.get(latest) is not None:
-                kpis.append({
-                    "label": f"EBITDA ({latest})",
-                    "value": f"{_fmt_amount(fs.ebitda[latest])}",
-                })
+                kpis.append(
+                    {
+                        "label": f"EBITDA ({latest})",
+                        "value": f"{_fmt_amount(fs.ebitda[latest])}",
+                    }
+                )
             if fs.net_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"순이익 ({latest})",
-                    "value": f"{_fmt_amount(fs.net_income[latest])}",
-                })
+                kpis.append(
+                    {
+                        "label": f"순이익 ({latest})",
+                        "value": f"{_fmt_amount(fs.net_income[latest])}",
+                    }
+                )
         if dm.get("operating_margin_latest") is not None:
-            kpis.append({
-                "label": "영업이익률",
-                "value": _fmt_pct(dm["operating_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "영업이익률",
+                    "value": _fmt_pct(dm["operating_margin_latest"]),
+                }
+            )
         if dm.get("ebitda_margin_latest") is not None:
-            kpis.append({
-                "label": "EBITDA 마진율",
-                "value": _fmt_pct(dm["ebitda_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "EBITDA 마진율",
+                    "value": _fmt_pct(dm["ebitda_margin_latest"]),
+                }
+            )
         if dm.get("revenue_cagr_3y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (3Y)",
-                "value": _fmt_pct(dm["revenue_cagr_3y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (3Y)",
+                    "value": _fmt_pct(dm["revenue_cagr_3y"]),
+                }
+            )
         return kpis
 
     # ------------------------------------------------------------------
@@ -234,9 +248,7 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             [("CAPEX", fs.capex)],
         )
 
-    def _build_ratio_kpis(
-        self, data: IMDocumentData
-    ) -> list[dict[str, str]]:
+    def _build_ratio_kpis(self, data: IMDocumentData) -> list[dict[str, str]]:
         """재무 비율 KPI 카드 (Slide 9).
 
         derived_metrics 에서 부채비율, ROE, ROA 등을 추출한다.
@@ -249,19 +261,23 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
 
         # 부채비율
         if dm.get("debt_to_equity_latest") is not None:
-            kpis.append({
-                "label": "부채비율",
-                "value": _fmt_pct(dm["debt_to_equity_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "부채비율",
+                    "value": _fmt_pct(dm["debt_to_equity_latest"]),
+                }
+            )
         elif years:
             latest = years[-1]
             eq = fs.total_equity.get(latest)
             liab = fs.total_liabilities.get(latest)
             if eq and eq > 0 and liab is not None:
-                kpis.append({
-                    "label": f"부채비율 ({latest})",
-                    "value": _fmt_pct(liab / eq),
-                })
+                kpis.append(
+                    {
+                        "label": f"부채비율 ({latest})",
+                        "value": _fmt_pct(liab / eq),
+                    }
+                )
 
         # ROE (순이익 / 자기자본)
         if years:
@@ -269,10 +285,12 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             ni = fs.net_income.get(latest)
             eq = fs.total_equity.get(latest)
             if ni is not None and eq and eq > 0:
-                kpis.append({
-                    "label": f"ROE ({latest})",
-                    "value": _fmt_pct(ni / eq),
-                })
+                kpis.append(
+                    {
+                        "label": f"ROE ({latest})",
+                        "value": _fmt_pct(ni / eq),
+                    }
+                )
 
         # ROA (순이익 / 총자산)
         if years:
@@ -280,56 +298,68 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             ni = fs.net_income.get(latest)
             ta = fs.total_assets.get(latest)
             if ni is not None and ta and ta > 0:
-                kpis.append({
-                    "label": f"ROA ({latest})",
-                    "value": _fmt_pct(ni / ta),
-                })
+                kpis.append(
+                    {
+                        "label": f"ROA ({latest})",
+                        "value": _fmt_pct(ni / ta),
+                    }
+                )
 
         # 순이익률
         if dm.get("net_margin_latest") is not None:
-            kpis.append({
-                "label": "순이익률",
-                "value": _fmt_pct(dm["net_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "순이익률",
+                    "value": _fmt_pct(dm["net_margin_latest"]),
+                }
+            )
 
         # EBITDA 마진율
         if dm.get("ebitda_margin_latest") is not None:
-            kpis.append({
-                "label": "EBITDA 마진율",
-                "value": _fmt_pct(dm["ebitda_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "EBITDA 마진율",
+                    "value": _fmt_pct(dm["ebitda_margin_latest"]),
+                }
+            )
 
         # 매출총이익률
         if dm.get("gross_margin_latest") is not None:
-            kpis.append({
-                "label": "매출총이익률",
-                "value": _fmt_pct(dm["gross_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출총이익률",
+                    "value": _fmt_pct(dm["gross_margin_latest"]),
+                }
+            )
 
         # 영업이익률
         if dm.get("operating_margin_latest") is not None:
-            kpis.append({
-                "label": "영업이익률",
-                "value": _fmt_pct(dm["operating_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "영업이익률",
+                    "value": _fmt_pct(dm["operating_margin_latest"]),
+                }
+            )
 
         # 매출 CAGR (3Y / 5Y)
         if dm.get("revenue_cagr_3y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (3Y)",
-                "value": _fmt_pct(dm["revenue_cagr_3y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (3Y)",
+                    "value": _fmt_pct(dm["revenue_cagr_3y"]),
+                }
+            )
         if dm.get("revenue_cagr_5y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (5Y)",
-                "value": _fmt_pct(dm["revenue_cagr_5y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (5Y)",
+                    "value": _fmt_pct(dm["revenue_cagr_5y"]),
+                }
+            )
 
         return kpis
 
-    def _build_revenue_yoy_bullets(
-        self, data: IMDocumentData
-    ) -> list[str]:
+    def _build_revenue_yoy_bullets(self, data: IMDocumentData) -> list[str]:
         """매출 YoY 정보를 bullet list 용 문자열로 생성 (Slide 3 fallback)."""
         fs = data.financial_statements
         years = fs.years
@@ -401,7 +431,10 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
         y = lay.content_top
         if kpis:
             add_kpi_grid(
-                slide1, kpis, top=y, tokens=tokens,
+                slide1,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -434,10 +467,14 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             has_img = chart_data.get("image_bytes") or chart_data.get("image_path")
             has_native_data = bool(chart.chart_type)
             title_lower = (chart.title or "").lower()
-            if (has_img or has_native_data) and revenue_chart_obj is None and (
-                "revenue" in title_lower
-                or "매출" in title_lower
-                or "revenue_yoy" in chart_data
+            if (
+                (has_img or has_native_data)
+                and revenue_chart_obj is None
+                and (
+                    "revenue" in title_lower
+                    or "매출" in title_lower
+                    or "revenue_yoy" in chart_data
+                )
             ):
                 revenue_chart_obj = chart
             else:
@@ -448,8 +485,10 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
                 title=revenue_chart_obj.title or "매출 추이"
             )
             shape = add_chart_or_image(
-                slide3, revenue_chart_obj,
-                top=lay.content_top, tokens=tokens,
+                slide3,
+                revenue_chart_obj,
+                top=lay.content_top,
+                tokens=tokens,
             )
             if shape is not None:
                 result.append(slide3)
@@ -459,12 +498,16 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
             if bullets:
                 slide3 = factory.add_content_slide(title="매출 추이")
                 add_sub_header_bar(
-                    slide3, "연도별 매출 및 YoY 성장률",
-                    top=lay.content_top, tokens=tokens,
+                    slide3,
+                    "연도별 매출 및 YoY 성장률",
+                    top=lay.content_top,
+                    tokens=tokens,
                 )
                 add_bullet_list(
-                    slide3, bullets,
-                    top=lay.content_top + 0.5, tokens=tokens,
+                    slide3,
+                    bullets,
+                    top=lay.content_top + 0.5,
+                    tokens=tokens,
                 )
                 result.append(slide3)
 
@@ -473,8 +516,10 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
         if prof_rows:
             slide4 = factory.add_content_slide(title="수익성 분석")
             add_sub_header_bar(
-                slide4, "연도별 수익성 지표 추이",
-                top=lay.content_top, tokens=tokens,
+                slide4,
+                "연도별 수익성 지표 추이",
+                top=lay.content_top,
+                tokens=tokens,
             )
             # 수익성 행의 값은 비율이므로 % 포맷 적용을 위해 직접 테이블 빌드
             # _fmt_pct 적용된 문자열 행으로 변환
@@ -556,11 +601,14 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
         if ratio_kpis:
             slide9 = factory.add_content_slide(title="재무 비율 Dashboard")
             add_sub_header_bar(
-                slide9, "주요 재무 비율",
-                top=lay.content_top, tokens=tokens,
+                slide9,
+                "주요 재무 비율",
+                top=lay.content_top,
+                tokens=tokens,
             )
             add_kpi_grid(
-                slide9, ratio_kpis,
+                slide9,
+                ratio_kpis,
                 top=lay.content_top + 0.5,
                 tokens=tokens,
                 number_config=data.number_format,
@@ -569,9 +617,7 @@ class FinancialAnalysisRenderer(BaseSectionRenderer):
 
         # ── Slide 10: 나머지 차트 슬라이드 (네이티브 또는 이미지) ──
         for chart in remaining_charts:
-            chart_slide = factory.add_content_slide(
-                title=chart.title or "재무 차트"
-            )
+            chart_slide = factory.add_content_slide(title=chart.title or "재무 차트")
             shape = add_chart_or_image(
                 chart_slide, chart, top=lay.content_top, tokens=tokens
             )

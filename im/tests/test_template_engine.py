@@ -442,8 +442,10 @@ class TestMappingTypes:
         )
 
         for mapping in [
-            NX3_DM_MAPPING, SPICY_TM_MAPPING,
-            SWITCH_TM_MAPPING, YTN_DM_MAPPING,
+            NX3_DM_MAPPING,
+            SPICY_TM_MAPPING,
+            SWITCH_TM_MAPPING,
+            YTN_DM_MAPPING,
         ]:
             for item in mapping:
                 assert isinstance(item, SlideMapping)
@@ -461,26 +463,32 @@ class TestPromptsParsing:
         """slide_idx 누락 시 기본값 0을 사용한다."""
         from src.template_engine.prompts import parse_template_content_response
 
-        result = parse_template_content_response({
-            "slides": [{"texts": {"shape1": "hello"}}],
-        })
+        result = parse_template_content_response(
+            {
+                "slides": [{"texts": {"shape1": "hello"}}],
+            }
+        )
         assert result.slides[0].slide_idx == 0
 
     def test_missing_series_fields_uses_defaults(self) -> None:
         """series의 name/values 누락 시 기본값을 사용한다."""
         from src.template_engine.prompts import parse_template_content_response
 
-        result = parse_template_content_response({
-            "slides": [{
-                "slide_idx": 1,
-                "charts": {
-                    "chart1": {
-                        "categories": ["A"],
-                        "series": [{}],
-                    },
-                },
-            }],
-        })
+        result = parse_template_content_response(
+            {
+                "slides": [
+                    {
+                        "slide_idx": 1,
+                        "charts": {
+                            "chart1": {
+                                "categories": ["A"],
+                                "series": [{}],
+                            },
+                        },
+                    }
+                ],
+            }
+        )
         chart = result.slides[0].charts["chart1"]
         assert chart.series[0].name == ""
         assert chart.series[0].values == []
@@ -489,11 +497,13 @@ class TestPromptsParsing:
         """비정상 슬라이드 데이터는 건너뛴다."""
         from src.template_engine.prompts import parse_template_content_response
 
-        result = parse_template_content_response({
-            "slides": [
-                None,
-                {"slide_idx": 2, "texts": {}},
-            ],
-        })
+        result = parse_template_content_response(
+            {
+                "slides": [
+                    None,
+                    {"slide_idx": 2, "texts": {}},
+                ],
+            }
+        )
         assert len(result.slides) == 1
         assert result.slides[0].slide_idx == 2

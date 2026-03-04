@@ -18,7 +18,12 @@ _VALID_DATA_SOURCES = {"DART", "MANUAL", "EXCEL", "VDR"}
 
 # 전용 산업 모듈이 등록된 산업
 _SUPPORTED_INDUSTRIES = {
-    "general", "tech", "manufacturing", "healthcare", "logistics", "financial_services",
+    "general",
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
 }
 # 전용 모듈 없이 GeneralModule로 폴백되는 산업 (프론트엔드에서 선택 가능)
 _BASIC_INDUSTRIES = {"real_estate", "energy", "consumer"}
@@ -28,14 +33,12 @@ _ALL_VALID_INDUSTRIES = _SUPPORTED_INDUSTRIES | _BASIC_INDUSTRIES
 class DocumentCreate(BaseModel):
     """IM 문서 생성 요청."""
 
-    company_name: str = Field(
-        min_length=1, max_length=200, description="대상 회사명"
-    )
-    project_name: str = Field(
-        min_length=1, max_length=200, description="프로젝트명"
-    )
+    company_name: str = Field(min_length=1, max_length=200, description="대상 회사명")
+    project_name: str = Field(min_length=1, max_length=200, description="프로젝트명")
     corp_code: str | None = Field(
-        default=None, min_length=8, max_length=8,
+        default=None,
+        min_length=8,
+        max_length=8,
         description="법인 코드 (8자리 숫자, DART 연동 시 필수)",
     )
     data_source: str = Field(
@@ -44,15 +47,9 @@ class DocumentCreate(BaseModel):
     im_style: str = Field(
         default="FULL", description="IM 양식 (TITAN/COVENANT/FULL/TEASER/DM/CUSTOM)"
     )
-    sections: list[str] = Field(
-        default_factory=list, description="포함 섹션 리스트"
-    )
-    industry: str = Field(
-        default="general", max_length=50, description="산업 분류"
-    )
-    webhook_url: str | None = Field(
-        default=None, description="완료 시 호출할 웹훅 URL"
-    )
+    sections: list[str] = Field(default_factory=list, description="포함 섹션 리스트")
+    industry: str = Field(default="general", max_length=50, description="산업 분류")
+    webhook_url: str | None = Field(default=None, description="완료 시 호출할 웹훅 URL")
     pdf_password: str | None = Field(
         default=None, min_length=4, description="PDF 암호 (최소 4자)"
     )

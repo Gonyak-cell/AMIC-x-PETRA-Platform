@@ -15,9 +15,9 @@ from dataclasses import dataclass
 # ---------------------------------------------------------------------------
 
 PROVIDER_CHAR_RATIOS: dict[str, float] = {
-    "openai": 3.5,       # cl100k_base
-    "anthropic": 3.3,    # Claude tokenizer ~approximate
-    "google": 3.0,       # SentencePiece ~approximate
+    "openai": 3.5,  # cl100k_base
+    "anthropic": 3.3,  # Claude tokenizer ~approximate
+    "google": 3.0,  # SentencePiece ~approximate
 }
 
 # ---------------------------------------------------------------------------

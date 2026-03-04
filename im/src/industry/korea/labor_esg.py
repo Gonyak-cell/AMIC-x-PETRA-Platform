@@ -10,7 +10,13 @@ from __future__ import annotations
 
 from src.industry.korea.models import ESGFramework, ESGRequirement, LaborItem
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 # ---------------------------------------------------------------------------
 # 노동법 항목 (6개)
@@ -56,8 +62,7 @@ LABOR_ITEMS: list[LaborItem] = [
         law_name_en="Dispatched Workers Protection Act",
         description="파견 허용 업종, 기간 제한(2년), 직접고용 의무",
         deal_impact=(
-            "불법파견 시 직접고용 간주 리스크. "
-            "IT 외주인력 파견 여부 실사 필수"
+            "불법파견 시 직접고용 간주 리스크. IT 외주인력 파견 여부 실사 필수"
         ),
         applicable_industries=["tech", "manufacturing"],
     ),
@@ -67,8 +72,7 @@ LABOR_ITEMS: list[LaborItem] = [
         law_name_en="Employee Retirement Benefit Security Act",
         description="퇴직급여(퇴직금/퇴직연금) 지급 의무",
         deal_impact=(
-            "퇴직급여 충당부채 적정성 확인. "
-            "DB→DC 전환 시 추가 부담금 발생 가능"
+            "퇴직급여 충당부채 적정성 확인. DB→DC 전환 시 추가 부담금 발생 가능"
         ),
         applicable_industries=ALL_INDUSTRIES,
     ),
@@ -77,10 +81,7 @@ LABOR_ITEMS: list[LaborItem] = [
         law_name_kr="근로기준법 (근로시간 특례)",
         law_name_en="Labor Standards Act (Working Hours Exception)",
         description="주 52시간 상한제, 특례업종 제한",
-        deal_impact=(
-            "물류/운송 특례 업종 해제 추세. "
-            "인력 추가 채용 비용 반영 필요"
-        ),
+        deal_impact=("물류/운송 특례 업종 해제 추세. 인력 추가 채용 비용 반영 필요"),
         applicable_industries=["logistics", "manufacturing"],
     ),
 ]
@@ -135,10 +136,7 @@ ESG_REQUIREMENTS: list[ESGRequirement] = [
         esg_id="tcfd_transition",
         framework=ESGFramework.TCFD,
         category="전환 리스크",
-        description=(
-            "탄소중립 전환에 따른 좌초자산, 규제비용, "
-            "시장변화 리스크 분석"
-        ),
+        description=("탄소중립 전환에 따른 좌초자산, 규제비용, 시장변화 리스크 분석"),
         mandatory=False,
         applicable_industries=["manufacturing", "logistics"],
     ),
@@ -147,10 +145,7 @@ ESG_REQUIREMENTS: list[ESGRequirement] = [
         esg_id="k_taxonomy_green",
         framework=ESGFramework.K_TAXONOMY,
         category="녹색경제",
-        description=(
-            "한국형 녹색분류체계 적합 활동 분류. "
-            "녹색금융 적격 여부 판단"
-        ),
+        description=("한국형 녹색분류체계 적합 활동 분류. 녹색금융 적격 여부 판단"),
         mandatory=False,
         applicable_industries=["manufacturing", "logistics"],
         effective_year=2023,
@@ -169,10 +164,7 @@ ESG_REQUIREMENTS: list[ESGRequirement] = [
         esg_id="csrd_supply_chain",
         framework=ESGFramework.CSRD,
         category="공급망 실사",
-        description=(
-            "EU 공급망 실사 지침 영향. "
-            "EU 수출 기업의 공급망 ESG 실사 의무"
-        ),
+        description=("EU 공급망 실사 지침 영향. EU 수출 기업의 공급망 ESG 실사 의무"),
         mandatory=True,
         applicable_industries=["manufacturing", "healthcare"],
         effective_year=2026,

@@ -127,9 +127,7 @@ class TestFetchCompany:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_fetch_company_unauthorized(
-        self, unauth_client: AsyncClient
-    ) -> None:
+    async def test_fetch_company_unauthorized(self, unauth_client: AsyncClient) -> None:
         """인증 없이 요청 시 401."""
         response = await unauth_client.post(
             "/api/v1/companies",

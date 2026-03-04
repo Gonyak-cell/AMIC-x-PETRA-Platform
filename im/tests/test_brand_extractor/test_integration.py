@@ -46,7 +46,9 @@ class TestExtractBrandIntegration:
         with patch(
             "src.brand_extractor.WebsiteExtractor.extract",
             new_callable=AsyncMock,
-            side_effect=WebsiteAccessError(url="https://test.com", original_error="fail"),
+            side_effect=WebsiteAccessError(
+                url="https://test.com", original_error="fail"
+            ),
         ):
             brand = await extract_brand(
                 "test.com",
@@ -72,18 +74,24 @@ class TestExtractBrandIntegration:
             confidence=0.95,
             source="brandfetch",
         )
-        with patch(
-            "src.brand_extractor.BrandfetchClient.extract",
-            new_callable=AsyncMock,
-            return_value=mock_brand,
-        ), patch(
-            "src.brand_extractor.BrandfetchClient.__aenter__",
-            new_callable=AsyncMock,
-        ) as mock_enter, patch(
-            "src.brand_extractor.BrandfetchClient.__aexit__",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "src.brand_extractor.BrandfetchClient.extract",
+                new_callable=AsyncMock,
+                return_value=mock_brand,
+            ),
+            patch(
+                "src.brand_extractor.BrandfetchClient.__aenter__",
+                new_callable=AsyncMock,
+            ) as mock_enter,
+            patch(
+                "src.brand_extractor.BrandfetchClient.__aexit__",
+                new_callable=AsyncMock,
+            ),
         ):
-            mock_enter.return_value = AsyncMock(extract=AsyncMock(return_value=mock_brand))
+            mock_enter.return_value = AsyncMock(
+                extract=AsyncMock(return_value=mock_brand)
+            )
             brand = await extract_brand(
                 "bf.com",
                 config=config_with_api,
@@ -108,16 +116,21 @@ class TestExtractBrandIntegration:
         # __aexit__는 return_value=False로 설정하여 예외 suppress 방지
         mock_aexit = AsyncMock(return_value=False)
 
-        with patch(
-            "src.brand_extractor.BrandfetchClient.__aenter__",
-            new_callable=AsyncMock,
-        ) as mock_enter, patch(
-            "src.brand_extractor.BrandfetchClient.__aexit__",
-            mock_aexit,
+        with (
+            patch(
+                "src.brand_extractor.BrandfetchClient.__aenter__",
+                new_callable=AsyncMock,
+            ) as mock_enter,
+            patch(
+                "src.brand_extractor.BrandfetchClient.__aexit__",
+                mock_aexit,
+            ),
         ):
             mock_client = AsyncMock()
             mock_client.extract = AsyncMock(
-                side_effect=BrandfetchAPIError(status_code=404, original_error="Not found")
+                side_effect=BrandfetchAPIError(
+                    status_code=404, original_error="Not found"
+                )
             )
             mock_enter.return_value = mock_client
 
@@ -144,7 +157,9 @@ class TestExtractBrandIntegration:
         with patch(
             "src.brand_extractor.WebsiteExtractor.extract",
             new_callable=AsyncMock,
-            side_effect=WebsiteAccessError(url="https://test.com", original_error="fail"),
+            side_effect=WebsiteAccessError(
+                url="https://test.com", original_error="fail"
+            ),
         ):
             brand = await extract_brand(
                 "test.com",

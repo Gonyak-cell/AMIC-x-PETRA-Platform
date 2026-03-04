@@ -73,12 +73,14 @@ class DmSummaryRenderer(BaseSectionRenderer):
             )
 
         content = f"{summary_html}{narrative_html}"
-        return [build_slide_html(
-            content,
-            title="Summary & Recommendations",
-            slide_class="slide-dm-summary",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Summary & Recommendations",
+                slide_class="slide-dm-summary",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -114,7 +116,9 @@ class DmSummaryRenderer(BaseSectionRenderer):
                 kpis.append({"label": "지분율", "value": f"{ds.stake_pct * 100:.1f}%"})
 
         if kpis:
-            add_kpi_grid(slide, kpis, top=y, tokens=tokens, number_config=data.number_format)
+            add_kpi_grid(
+                slide, kpis, top=y, tokens=tokens, number_config=data.number_format
+            )
             y += 1.6
 
         if narrative:

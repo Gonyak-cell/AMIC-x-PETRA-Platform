@@ -60,12 +60,14 @@ class DmInvestmentThesisRenderer(BaseSectionRenderer):
             )
 
         content = f"{narrative_html}{highlights_html}"
-        return [build_slide_html(
-            content,
-            title="Investment Thesis",
-            slide_class="slide-dm-investment-thesis",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Investment Thesis",
+                slide_class="slide-dm-investment-thesis",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,

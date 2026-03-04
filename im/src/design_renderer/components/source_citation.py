@@ -140,9 +140,7 @@ def render_footnote_pptx(
     run = p.add_run()
     run.text = footnote_str
     run.font.size = Pt(tokens.font_sizes.footnote)
-    run.font.color.rgb = RGBColor.from_string(
-        tokens.colors.text_secondary.lstrip("#")
-    )
+    run.font.color.rgb = RGBColor.from_string(tokens.colors.text_secondary.lstrip("#"))
     run.font.name = tokens.typography.font_body
 
 
@@ -171,9 +169,7 @@ def render_footnote_html(
     if tokens is None:
         tokens = DEFAULT_TOKENS
 
-    footnote_texts = [
-        html_escape(format_footnote(c, n)) for n, c in citations
-    ]
+    footnote_texts = [html_escape(format_footnote(c, n)) for n, c in citations]
     footnote_str = "출처: " + " | ".join(footnote_texts)
 
     return (

@@ -91,9 +91,7 @@ def create_cohort_heatmap_chart(
                 len=0.8,
             ),
             hovertemplate=(
-                "코호트: %{y}<br>"
-                "기간: %{x}<br>"
-                "리텐션: %{text}<extra></extra>"
+                "코호트: %{y}<br>기간: %{x}<br>리텐션: %{text}<extra></extra>"
             ),
         )
     )

@@ -266,7 +266,9 @@ class TestDataCollectionPipeline:
         mock_fs_2025 = _make_mock_financial_statements(bsns_year="2025")
         mock_fs_2024 = _make_mock_financial_statements(bsns_year="2024")
         mock_fs_2023 = _make_mock_financial_statements(bsns_year="2023")
-        mock_shareholders = [MagicMock(repror="이재용", share_count=100, share_ratio=5.0)]
+        mock_shareholders = [
+            MagicMock(repror="이재용", share_count=100, share_ratio=5.0)
+        ]
         mock_dividends = [MagicMock()]
 
         with patch("src.data_ingestor.pipeline.DartAPIClient") as MockClient:
@@ -277,7 +279,9 @@ class TestDataCollectionPipeline:
 
             mock_client.get_company_info.return_value = mock_company
             mock_client.get_financial_statements.side_effect = [
-                mock_fs_2025, mock_fs_2024, mock_fs_2023
+                mock_fs_2025,
+                mock_fs_2024,
+                mock_fs_2023,
             ]
             mock_client.get_major_shareholders.return_value = mock_shareholders
             mock_client.get_dividend.return_value = mock_dividends
@@ -319,7 +323,9 @@ class TestDataCollectionPipeline:
         """일부 재무제표 실패 시 계속 진행 테스트."""
         mock_company = _make_mock_company_info()
         mock_fs_2025 = _make_mock_financial_statements(bsns_year="2025")
-        mock_shareholders = [MagicMock(repror="이재용", share_count=100, share_ratio=5.0)]
+        mock_shareholders = [
+            MagicMock(repror="이재용", share_count=100, share_ratio=5.0)
+        ]
         mock_dividends = [MagicMock()]
 
         with patch("src.data_ingestor.pipeline.DartAPIClient") as MockClient:
@@ -372,9 +378,7 @@ class TestDataCollectionPipeline:
             assert len(result.warnings) == 2
 
     @pytest.mark.asyncio
-    async def test_collect_with_cache(
-        self, config_with_cache: PipelineConfig
-    ) -> None:
+    async def test_collect_with_cache(self, config_with_cache: PipelineConfig) -> None:
         """캐시 활성화된 파이프라인 테스트."""
         mock_company = _make_mock_company_info()
         mock_company.model_dump.return_value = {
@@ -454,7 +458,9 @@ class TestDataCollectionPipeline:
 
         with (
             patch("src.data_ingestor.pipeline.DartAPIClient") as MockClient,
-            patch("src.data_ingestor.pipeline.DataCollectionPipeline._fetch_news") as mock_fetch_news,
+            patch(
+                "src.data_ingestor.pipeline.DataCollectionPipeline._fetch_news"
+            ) as mock_fetch_news,
         ):
             mock_client = AsyncMock()
             MockClient.return_value = mock_client
@@ -490,7 +496,9 @@ class TestDataCollectionPipeline:
 
         with (
             patch("src.data_ingestor.pipeline.DartAPIClient") as MockClient,
-            patch("src.data_ingestor.pipeline.DataCollectionPipeline._fetch_web_info") as mock_fetch_web,
+            patch(
+                "src.data_ingestor.pipeline.DataCollectionPipeline._fetch_web_info"
+            ) as mock_fetch_web,
         ):
             mock_client = AsyncMock()
             MockClient.return_value = mock_client

@@ -48,36 +48,48 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
         if years:
             latest = years[-1]
             if fs.revenue.get(latest) is not None:
-                kpis.append({
-                    "label": f"매출액 ({latest})",
-                    "value": _format_amount(fs.revenue[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"매출액 ({latest})",
+                        "value": _format_amount(fs.revenue[latest]),
+                    }
+                )
             if fs.operating_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"영업이익 ({latest})",
-                    "value": _format_amount(fs.operating_income[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"영업이익 ({latest})",
+                        "value": _format_amount(fs.operating_income[latest]),
+                    }
+                )
             if fs.ebitda.get(latest) is not None:
-                kpis.append({
-                    "label": f"EBITDA ({latest})",
-                    "value": _format_amount(fs.ebitda[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"EBITDA ({latest})",
+                        "value": _format_amount(fs.ebitda[latest]),
+                    }
+                )
             if fs.net_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"순이익 ({latest})",
-                    "value": _format_amount(fs.net_income[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"순이익 ({latest})",
+                        "value": _format_amount(fs.net_income[latest]),
+                    }
+                )
 
         if dm.get("revenue_cagr_3y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (3Y)",
-                "value": _format_pct(dm["revenue_cagr_3y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (3Y)",
+                    "value": _format_pct(dm["revenue_cagr_3y"]),
+                }
+            )
         if dm.get("ebitda_margin_latest") is not None:
-            kpis.append({
-                "label": "EBITDA 마진율",
-                "value": _format_pct(dm["ebitda_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "EBITDA 마진율",
+                    "value": _format_pct(dm["ebitda_margin_latest"]),
+                }
+            )
 
         return kpis
 
@@ -95,63 +107,84 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
             latest = years[-1]
             # 1. 매출액
             if fs.revenue.get(latest) is not None:
-                kpis.append({
-                    "label": f"매출액 ({latest})",
-                    "value": _format_amount(fs.revenue[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"매출액 ({latest})",
+                        "value": _format_amount(fs.revenue[latest]),
+                    }
+                )
             # 2. 영업이익
             if fs.operating_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"영업이익 ({latest})",
-                    "value": _format_amount(fs.operating_income[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"영업이익 ({latest})",
+                        "value": _format_amount(fs.operating_income[latest]),
+                    }
+                )
             # 3. EBITDA
             if fs.ebitda.get(latest) is not None:
-                kpis.append({
-                    "label": f"EBITDA ({latest})",
-                    "value": _format_amount(fs.ebitda[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"EBITDA ({latest})",
+                        "value": _format_amount(fs.ebitda[latest]),
+                    }
+                )
             # 4. 순이익
             if fs.net_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"순이익 ({latest})",
-                    "value": _format_amount(fs.net_income[latest]),
-                })
+                kpis.append(
+                    {
+                        "label": f"순이익 ({latest})",
+                        "value": _format_amount(fs.net_income[latest]),
+                    }
+                )
 
         # 5. 매출 CAGR (3Y)
         if dm.get("revenue_cagr_3y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (3Y)",
-                "value": _format_pct(dm["revenue_cagr_3y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (3Y)",
+                    "value": _format_pct(dm["revenue_cagr_3y"]),
+                }
+            )
 
         # 6. EBITDA 마진율
         if dm.get("ebitda_margin_latest") is not None:
-            kpis.append({
-                "label": "EBITDA 마진율",
-                "value": _format_pct(dm["ebitda_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "EBITDA 마진율",
+                    "value": _format_pct(dm["ebitda_margin_latest"]),
+                }
+            )
 
         # 7. 매출 YoY 성장률
         if dm.get("revenue_yoy") is not None:
-            kpis.append({
-                "label": "매출 YoY",
-                "value": _format_pct(dm["revenue_yoy"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 YoY",
+                    "value": _format_pct(dm["revenue_yoy"]),
+                }
+            )
 
         # 8. 영업이익률
         if dm.get("operating_margin_latest") is not None:
-            kpis.append({
-                "label": "영업이익률",
-                "value": _format_pct(dm["operating_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "영업이익률",
+                    "value": _format_pct(dm["operating_margin_latest"]),
+                }
+            )
 
         # 8b. 순이익률 (영업이익률 없을 때 대체)
-        if dm.get("operating_margin_latest") is None and dm.get("net_margin_latest") is not None:
-            kpis.append({
-                "label": "순이익률",
-                "value": _format_pct(dm["net_margin_latest"]),
-            })
+        if (
+            dm.get("operating_margin_latest") is None
+            and dm.get("net_margin_latest") is not None
+        ):
+            kpis.append(
+                {
+                    "label": "순이익률",
+                    "value": _format_pct(dm["net_margin_latest"]),
+                }
+            )
 
         # 최대 8개로 제한
         return kpis[:8]
@@ -250,7 +283,9 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
         # ── Slide 1: KPI Dashboard ──────────────────────────────────
         kpis = self._build_kpis_extended(data)
         if kpis:
-            slide1 = factory.add_content_slide(title="Executive Summary — KPI Dashboard")
+            slide1 = factory.add_content_slide(
+                title="Executive Summary — KPI Dashboard"
+            )
             y = lay.content_top
             add_kpi_grid(
                 slide1,
@@ -277,12 +312,20 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
                 add_summary_textbox(slide2, summary_text, top=y, tokens=tokens)
                 y += 0.7
                 add_body_textbox(
-                    slide2, body_text, top=y, height=4.0, tokens=tokens,
+                    slide2,
+                    body_text,
+                    top=y,
+                    height=4.0,
+                    tokens=tokens,
                 )
             else:
                 # 짧은 내러티브: 본문만
                 add_body_textbox(
-                    slide2, narrative, top=y, height=4.5, tokens=tokens,
+                    slide2,
+                    narrative,
+                    top=y,
+                    height=4.5,
+                    tokens=tokens,
                 )
             slides.append(slide2)
 
@@ -294,11 +337,18 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
             )
             y = lay.content_top
             add_sub_header_bar(
-                slide3, "딜 하이라이트", top=y, tokens=tokens,
+                slide3,
+                "딜 하이라이트",
+                top=y,
+                tokens=tokens,
             )
             y += 0.45
             add_bullet_list(
-                slide3, deal_bullets, top=y, height=4.5, tokens=tokens,
+                slide3,
+                deal_bullets,
+                top=y,
+                height=4.5,
+                tokens=tokens,
             )
             slides.append(slide3)
 
@@ -310,7 +360,10 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
             )
             y = lay.content_top
             add_sub_header_bar(
-                slide4, "Key Takeaways", top=y, tokens=tokens,
+                slide4,
+                "Key Takeaways",
+                top=y,
+                tokens=tokens,
             )
             y += 0.45
             # 상위 3개만 추출
@@ -318,7 +371,11 @@ class ExecutiveSummaryRenderer(BaseSectionRenderer):
                 f"{i}. {item}" for i, item in enumerate(highlights[:3], 1)
             ]
             add_bullet_list(
-                slide4, top_highlights, top=y, height=4.0, tokens=tokens,
+                slide4,
+                top_highlights,
+                top=y,
+                height=4.0,
+                tokens=tokens,
             )
             slides.append(slide4)
 

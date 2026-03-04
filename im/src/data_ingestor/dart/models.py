@@ -70,7 +70,9 @@ class DartSearchResult(DartBaseModel):
 
     corp_code: str = Field(description="고유번호 (8자리)")
     corp_name: str = Field(description="정식명칭")
-    stock_code: str | None = Field(default=None, description="종목코드 (6자리, 비상장시 None)")
+    stock_code: str | None = Field(
+        default=None, description="종목코드 (6자리, 비상장시 None)"
+    )
     modify_date: str = Field(description="최종변경일자 (YYYYMMDD)")
 
     @field_validator("stock_code", mode="before")
@@ -111,7 +113,9 @@ class DartCompanyInfo(DartBaseModel):
     est_dt: str | None = Field(default=None, description="설립일 (YYYYMMDD)")
     acc_mt: str | None = Field(default=None, description="결산월 (MM)")
 
-    @field_validator("stock_code", "corp_name_eng", "stock_name", "hm_url", "ir_url", mode="before")
+    @field_validator(
+        "stock_code", "corp_name_eng", "stock_name", "hm_url", "ir_url", mode="before"
+    )
     @classmethod
     def empty_string_to_none(cls, v: Any) -> str | None:
         """빈 문자열을 None으로 변환."""
@@ -153,7 +157,9 @@ class DartFinancialStatement(DartBaseModel):
     """
 
     rcept_no: str = Field(description="접수번호")
-    reprt_code: str = Field(description="보고서 코드 (11011:사업, 11012:반기, 11013:1분기, 11014:3분기)")
+    reprt_code: str = Field(
+        description="보고서 코드 (11011:사업, 11012:반기, 11013:1분기, 11014:3분기)"
+    )
     bsns_year: str = Field(description="사업연도")
     corp_code: str = Field(description="고유번호")
     stock_code: str | None = Field(default=None, description="종목코드")

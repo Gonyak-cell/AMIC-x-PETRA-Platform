@@ -63,9 +63,7 @@ async def _get_document_with_checklist(
     """문서와 체크리스트(아이템 포함)를 함께 로드한다."""
     stmt = (
         select(Document)
-        .options(
-            selectinload(Document.checklist).selectinload(IMChecklist.items)
-        )
+        .options(selectinload(Document.checklist).selectinload(IMChecklist.items))
         .where(Document.id == document_id)
     )
     result = await session.execute(stmt)
@@ -152,6 +150,7 @@ async def create_from_vdr(
     extraction_task_id = None
     try:
         from src.api.tasks.vdr_extraction import extract_vdr_data_task
+
         result = extract_vdr_data_task.delay(str(doc.id), str(checklist.id))
         extraction_task_id = result.id
         checklist.extraction_task_id = extraction_task_id
@@ -186,7 +185,8 @@ async def get_checklist(
     doc = await _get_document_with_checklist(document_id, session, current_user)
     if doc.checklist is None:
         raise HTTPException(
-            status_code=404, detail="이 문서에 체크리스트가 없습니다.",
+            status_code=404,
+            detail="이 문서에 체크리스트가 없습니다.",
         )
     return ChecklistResponse.model_validate(doc.checklist)
 
@@ -206,7 +206,8 @@ async def get_checklist_summary(
     checklist = doc.checklist
     if checklist is None:
         raise HTTPException(
-            status_code=404, detail="이 문서에 체크리스트가 없습니다.",
+            status_code=404,
+            detail="이 문서에 체크리스트가 없습니다.",
         )
 
     # 카테고리별 집계
@@ -229,7 +230,8 @@ async def get_checklist_summary(
             missing=counts["missing"],
             completion_pct=(
                 round(counts["confirmed"] / counts["total"] * 100, 1)
-                if counts["total"] > 0 else 0.0
+                if counts["total"] > 0
+                else 0.0
             ),
         )
         for cat, counts in sorted(cat_map.items())
@@ -244,9 +246,7 @@ async def get_checklist_summary(
         total_items=total,
         confirmed_items=confirmed,
         missing_items=missing,
-        completion_pct=(
-            round(confirmed / total * 100, 1) if total > 0 else 0.0
-        ),
+        completion_pct=(round(confirmed / total * 100, 1) if total > 0 else 0.0),
         categories=categories,
     )
 
@@ -400,7 +400,8 @@ async def confirm_checklist(
 
     # 필수 필드 검증
     missing_required = [
-        item for item in checklist.items
+        item
+        for item in checklist.items
         if item.is_required and item.status == ChecklistItemStatus.MISSING.value
     ]
     if missing_required:
@@ -429,9 +430,8 @@ async def confirm_checklist(
         from src.api.tasks.generate_im_from_checklist import (
             generate_im_from_checklist_task,
         )
-        result = generate_im_from_checklist_task.delay(
-            str(doc.id), str(checklist.id)
-        )
+
+        result = generate_im_from_checklist_task.delay(str(doc.id), str(checklist.id))
         checklist.generation_task_id = result.id
         checklist.status = ChecklistStatus.GENERATING.value
         await session.commit()
@@ -484,6 +484,7 @@ async def reparse_checklist(
     # Celery 재파싱 태스크
     try:
         from src.api.tasks.vdr_extraction import extract_vdr_data_task
+
         result = extract_vdr_data_task.delay(str(doc.id), str(checklist.id))
         checklist.extraction_task_id = result.id
         await session.commit()

@@ -177,7 +177,9 @@ class IMChecklistItem(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "checklist_id", "field_key", "fiscal_year",
+            "checklist_id",
+            "field_key",
+            "fiscal_year",
             name="uq_im_checklist_items_checklist_field_year",
         ),
         Index("ix_im_checklist_items_checklist_category", "checklist_id", "category"),
@@ -186,4 +188,8 @@ class IMChecklistItem(Base):
     @property
     def effective_value(self) -> str | None:
         """확정값이 있으면 확정값, 없으면 추출값을 반환한다."""
-        return self.confirmed_value if self.confirmed_value is not None else self.extracted_value
+        return (
+            self.confirmed_value
+            if self.confirmed_value is not None
+            else self.extracted_value
+        )

@@ -1,6 +1,5 @@
 """HealthcareModule 테스트."""
 
-
 from src.industry.healthcare import HealthcareModule
 from src.industry.models import (
     IndustryChartRecommendation,

@@ -28,13 +28,22 @@ class TestNarrativeConfig:
         """
         # .env에서 로드된 환경변수 영향 제거
         for env_var in (
-            "OPENAI_API_KEY", "PINECONE_API_KEY", "PINECONE_ENVIRONMENT",
-            "PINECONE_INDEX_NAME", "NARRATIVE_MODEL_NAME",
-            "NARRATIVE_TEMPERATURE", "NARRATIVE_MAX_TOKENS",
-            "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
-            "CHUNK_SIZE", "CHUNK_OVERLAP", "RETRIEVAL_TOP_K",
-            "FACT_CHECK_ENABLED", "CONFIDENCE_THRESHOLD",
-            "DEFAULT_LANGUAGE", "DEFAULT_INDUSTRY",
+            "OPENAI_API_KEY",
+            "PINECONE_API_KEY",
+            "PINECONE_ENVIRONMENT",
+            "PINECONE_INDEX_NAME",
+            "NARRATIVE_MODEL_NAME",
+            "NARRATIVE_TEMPERATURE",
+            "NARRATIVE_MAX_TOKENS",
+            "EMBEDDING_MODEL",
+            "EMBEDDING_DIMENSION",
+            "CHUNK_SIZE",
+            "CHUNK_OVERLAP",
+            "RETRIEVAL_TOP_K",
+            "FACT_CHECK_ENABLED",
+            "CONFIDENCE_THRESHOLD",
+            "DEFAULT_LANGUAGE",
+            "DEFAULT_INDUSTRY",
         ):
             monkeypatch.delenv(env_var, raising=False)
 

@@ -277,9 +277,7 @@ class TestEaFontVerification:
             if rpr is None or rpr.find(_qn("a:ea")) is None:
                 missing.append((slide_idx, run.text[:30]))
 
-        assert len(missing) == 0, (
-            f"a:ea 누락 run {len(missing)}개: {missing[:10]}"
-        )
+        assert len(missing) == 0, f"a:ea 누락 run {len(missing)}개: {missing[:10]}"
 
     def test_ea_typeface_is_valid_font(self, full_pptx):
         """a:ea typeface가 허용된 폰트 중 하나."""
@@ -314,8 +312,7 @@ class TestEaFontVerification:
                 mismatched.append((slide_idx, run.text[:20], latin, ea))
 
         assert len(mismatched) == 0, (
-            f"허용되지 않은 Latin/EA 폰트 조합 {len(mismatched)}개: "
-            f"{mismatched[:10]}"
+            f"허용되지 않은 Latin/EA 폰트 조합 {len(mismatched)}개: {mismatched[:10]}"
         )
 
     def test_no_duplicate_ea_elements(self, full_pptx):
@@ -332,9 +329,7 @@ class TestEaFontVerification:
                 if ea_count > 1:
                     duplicates.append((slide_idx, ea_count))
 
-        assert len(duplicates) == 0, (
-            f"a:ea 중복 {len(duplicates)}개: {duplicates[:10]}"
-        )
+        assert len(duplicates) == 0, f"a:ea 중복 {len(duplicates)}개: {duplicates[:10]}"
 
     def test_ea_coverage_is_complete(self, full_pptx):
         """a:ea가 있는 run 수 == 전체 run 수 (100% 커버리지)."""
@@ -345,9 +340,7 @@ class TestEaFontVerification:
         with_ea = sum(1 for _, run in runs if _get_ea_typeface(run) is not None)
         coverage = with_ea / len(runs)
 
-        assert coverage == 1.0, (
-            f"ea 커버리지: {with_ea}/{len(runs)} ({coverage:.1%})"
-        )
+        assert coverage == 1.0, f"ea 커버리지: {with_ea}/{len(runs)} ({coverage:.1%})"
 
 
 # ---------------------------------------------------------------------------
@@ -453,9 +446,7 @@ class TestSlideLayoutConsistency:
             if len(slide.shapes) == 0:
                 empty_slides.append(idx)
 
-        assert len(empty_slides) == 0, (
-            f"shape 없는 슬라이드: {empty_slides}"
-        )
+        assert len(empty_slides) == 0, f"shape 없는 슬라이드: {empty_slides}"
 
     def test_contact_slide_has_contact_info(self, full_pptx):
         """마지막 슬라이드에 연락처 정보 존재."""

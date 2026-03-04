@@ -58,9 +58,7 @@ class TestNormalizeStringParsing:
         result = normalizer.normalize("-1,500", source_unit="천원")
         assert result == Decimal("-1500000")
 
-    def test_normalize_parenthetical_negative(
-        self, normalizer: UnitNormalizer
-    ) -> None:
+    def test_normalize_parenthetical_negative(self, normalizer: UnitNormalizer) -> None:
         """괄호 표기 음수를 처리한다: (500)백만원 → 음수."""
         result = normalizer.normalize("(500)백만원")
         assert result == Decimal("-500000000")

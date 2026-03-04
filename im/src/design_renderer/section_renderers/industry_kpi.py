@@ -59,14 +59,18 @@ class IndustryKPIRenderer(BaseSectionRenderer):
             return None
 
     def _build_kpi_cards(
-        self, data: IMDocumentData, module: Any,
+        self,
+        data: IMDocumentData,
+        module: Any,
     ) -> list[dict[str, str]]:
         """KPI 카드 데이터를 [{label, value}] 리스트로 변환."""
         industry_data = data.industry_data or {}
         cards: list[dict[str, str]] = []
         for kpi in module.get_kpis():
             value = _format_kpi_value(
-                kpi.kpi_id, industry_data, kpi.display_format,
+                kpi.kpi_id,
+                industry_data,
+                kpi.display_format,
             )
             cards.append({"label": kpi.name_kr, "value": value})
         return cards
@@ -93,10 +97,10 @@ class IndustryKPIRenderer(BaseSectionRenderer):
                 f'<div style="text-align:center;padding:0.6em;'
                 f'background:{c.bg_cool_grey};border-radius:4px;">'
                 f'<div style="font-size:9pt;color:{c.text_secondary};">'
-                f'{html_escape(kpi["label"])}</div>'
+                f"{html_escape(kpi['label'])}</div>"
                 f'<div style="font-size:18pt;font-weight:bold;'
                 f"color:{c.primary};font-family:'IBM Plex Mono',monospace;\">"
-                f'{html_escape(kpi["value"])}</div></div>'
+                f"{html_escape(kpi['value'])}</div></div>"
             )
         kpi_grid = (
             f'<div style="display:grid;grid-template-columns:'
@@ -157,7 +161,10 @@ class IndustryKPIRenderer(BaseSectionRenderer):
 
         if kpis:
             add_kpi_grid(
-                slide, kpis, top=y, tokens=tokens,
+                slide,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6

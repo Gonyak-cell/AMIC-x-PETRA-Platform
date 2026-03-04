@@ -19,7 +19,11 @@ from src.api.exceptions import (
     NotFoundError,
     ValidationError,
 )
-from src.api.schemas.user import AdminUserUpdateRequest, UserCreateRequest, UserUpdateRequest
+from src.api.schemas.user import (
+    AdminUserUpdateRequest,
+    UserCreateRequest,
+    UserUpdateRequest,
+)
 from src.api.security.password import hash_password, verify_password
 
 
@@ -41,9 +45,7 @@ class UserService:
         Raises:
             ConflictError: 이메일 중복.
         """
-        result = await self.db.execute(
-            select(User).where(User.email == data.email)
-        )
+        result = await self.db.execute(select(User).where(User.email == data.email))
         if result.scalar_one_or_none() is not None:
             raise ConflictError("User", data.email)
 
@@ -71,9 +73,7 @@ class UserService:
         Raises:
             NotFoundError: 사용자가 없을 때.
         """
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user is None:
             raise NotFoundError("User", str(user_id))
@@ -144,11 +144,7 @@ class UserService:
         )
         total = count_result.scalar_one()
 
-        query = (
-            base_query.order_by(User.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        query = base_query.order_by(User.created_at.desc()).offset(offset).limit(limit)
         result = await self.db.execute(query)
         items = list(result.scalars().all())
 

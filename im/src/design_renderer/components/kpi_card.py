@@ -135,9 +135,7 @@ def render_kpi_grid_pptx(
 
         # 배경색
         shape.fill.solid()
-        shape.fill.fore_color.rgb = RGBColor.from_string(
-            c.bg_cool_grey.lstrip("#")
-        )
+        shape.fill.fore_color.rgb = RGBColor.from_string(c.bg_cool_grey.lstrip("#"))
         shape.line.fill.background()
 
         # 텍스트
@@ -161,24 +159,18 @@ def render_kpi_grid_pptx(
         run_label.text = label
         set_font_with_ea(run_label, t.font_body)
         run_label.font.size = Pt(f.kpi_label)
-        run_label.font.color.rgb = RGBColor.from_string(
-            c.text_secondary.lstrip("#")
-        )
+        run_label.font.color.rgb = RGBColor.from_string(c.text_secondary.lstrip("#"))
 
         # 변동 지표
         if change is not None:
-            change_text, change_color = format_growth_indicator(
-                change, number_config
-            )
+            change_text, change_color = format_growth_indicator(change, number_config)
             p_change = tf.add_paragraph()
             p_change.alignment = PP_ALIGN.CENTER
             run_change = p_change.add_run()
             run_change.text = change_text
             set_font_with_ea(run_change, t.font_mono)
             run_change.font.size = Pt(f.small_label)
-            run_change.font.color.rgb = RGBColor.from_string(
-                change_color.lstrip("#")
-            )
+            run_change.font.color.rgb = RGBColor.from_string(change_color.lstrip("#"))
 
         shapes.append(shape)
 
@@ -226,13 +218,10 @@ def render_kpi_grid_html(
 
         change_html = ""
         if change is not None:
-            change_text, change_color = format_growth_indicator(
-                change, number_config
-            )
+            change_text, change_color = format_growth_indicator(change, number_config)
             css_class = "positive" if change > 0 else "negative" if change < 0 else ""
             change_html = (
-                f'<div class="kpi-change {css_class}">'
-                f"{html_escape(change_text)}</div>"
+                f'<div class="kpi-change {css_class}">{html_escape(change_text)}</div>'
             )
 
         cards_html += f"""<div class="kpi-card">

@@ -202,6 +202,7 @@ class PDFParser:
         if self._fitz is None:
             try:
                 import fitz
+
                 self._fitz = fitz
             except ImportError as e:
                 raise PDFParserError(
@@ -344,8 +345,7 @@ class PDFParser:
                         if rows:
                             # 빈 셀 정리
                             cleaned_rows = [
-                                [cell if cell else "" for cell in row]
-                                for row in rows
+                                [cell if cell else "" for cell in row] for row in rows
                             ]
                             header = cleaned_rows[0] if cleaned_rows else []
 
@@ -529,9 +529,7 @@ class PDFParser:
             finally:
                 doc.close()
 
-        return await asyncio.get_event_loop().run_in_executor(
-            None, _get_metadata_sync
-        )
+        return await asyncio.get_event_loop().run_in_executor(None, _get_metadata_sync)
 
     async def get_page_count(
         self,

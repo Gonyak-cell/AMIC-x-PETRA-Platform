@@ -37,11 +37,15 @@ class TestBrandfetchClient:
         mock_response = httpx.Response(
             200,
             json=brandfetch_success_response,
-            request=httpx.Request("GET", "https://api.brandfetch.io/v2/brands/samsung.com"),
+            request=httpx.Request(
+                "GET", "https://api.brandfetch.io/v2/brands/samsung.com"
+            ),
         )
 
         async with BrandfetchClient(config) as client:
-            with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                client._client, "get", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_response
                 brand = await client.extract("samsung.com")
 
@@ -58,11 +62,15 @@ class TestBrandfetchClient:
         mock_response = httpx.Response(
             401,
             json={"error": "Unauthorized"},
-            request=httpx.Request("GET", "https://api.brandfetch.io/v2/brands/test.com"),
+            request=httpx.Request(
+                "GET", "https://api.brandfetch.io/v2/brands/test.com"
+            ),
         )
 
         async with BrandfetchClient(config) as client:
-            with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                client._client, "get", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_response
                 with pytest.raises(BrandfetchAPIError) as exc_info:
                     await client.extract("test.com")
@@ -74,11 +82,15 @@ class TestBrandfetchClient:
         mock_response = httpx.Response(
             404,
             json={"error": "Not Found"},
-            request=httpx.Request("GET", "https://api.brandfetch.io/v2/brands/unknown.com"),
+            request=httpx.Request(
+                "GET", "https://api.brandfetch.io/v2/brands/unknown.com"
+            ),
         )
 
         async with BrandfetchClient(config) as client:
-            with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                client._client, "get", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_response
                 with pytest.raises(BrandfetchAPIError) as exc_info:
                     await client.extract("unknown.com")
@@ -90,11 +102,15 @@ class TestBrandfetchClient:
         mock_response = httpx.Response(
             429,
             json={"error": "Too Many Requests"},
-            request=httpx.Request("GET", "https://api.brandfetch.io/v2/brands/test.com"),
+            request=httpx.Request(
+                "GET", "https://api.brandfetch.io/v2/brands/test.com"
+            ),
         )
 
         async with BrandfetchClient(config) as client:
-            with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                client._client, "get", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_response
                 with pytest.raises(BrandfetchAPIError) as exc_info:
                     await client.extract("test.com")
@@ -121,11 +137,15 @@ class TestBrandfetchClient:
         mock_response = httpx.Response(
             200,
             json=response_data,
-            request=httpx.Request("GET", "https://api.brandfetch.io/v2/brands/nocolor.com"),
+            request=httpx.Request(
+                "GET", "https://api.brandfetch.io/v2/brands/nocolor.com"
+            ),
         )
 
         async with BrandfetchClient(config) as client:
-            with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                client._client, "get", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_response
                 brand = await client.extract("nocolor.com")
 

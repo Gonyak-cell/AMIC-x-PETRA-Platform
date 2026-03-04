@@ -23,11 +23,23 @@ from typing import Any
 
 SERVICE_NAME = "im"
 
-_SENSITIVE_KEYS = frozenset({
-    "password", "token", "secret", "api_key", "authorization",
-    "credit_card", "ssn", "jwt", "cookie", "access_token",
-    "refresh_token", "private_key", "secret_key",
-})
+_SENSITIVE_KEYS = frozenset(
+    {
+        "password",
+        "token",
+        "secret",
+        "api_key",
+        "authorization",
+        "credit_card",
+        "ssn",
+        "jwt",
+        "cookie",
+        "access_token",
+        "refresh_token",
+        "private_key",
+        "secret_key",
+    }
+)
 
 
 class JSONFormatter(logging.Formatter):

@@ -150,7 +150,9 @@ class TestToFinancialStatements:
         # FinancialStatements에 이 필드들이 존재하는지 확인
         fs = FinancialStatements()
         for field_name in expected_fields:
-            assert hasattr(fs, field_name), f"FinancialStatements에 {field_name} 필드가 없습니다"
+            assert hasattr(fs, field_name), (
+                f"FinancialStatements에 {field_name} 필드가 없습니다"
+            )
 
     def test_unmapped_accounts_tracked(self) -> None:
         """매핑되지 않은 계정명이 unmapped_accounts에 기록된다."""
@@ -220,9 +222,7 @@ class TestProcessFromDart:
             "당기순이익": {"2022": Decimal("15000"), "2023": Decimal("18000")},
         }.get(name, {})
 
-        processor = FinancialProcessor(
-            config=ProcessorConfig(validate=False)
-        )
+        processor = FinancialProcessor(config=ProcessorConfig(validate=False))
         result = processor.process_from_dart(mock_collection, consolidated=True)
 
         assert isinstance(result, ProcessingResult)
@@ -311,9 +311,7 @@ class TestIndustryMetrics:
         """미등록 industry_id는 경고를 추가하고 None을 반환한다."""
         processor = FinancialProcessor(config=ProcessorConfig(validate=False))
         raw = _make_raw_data()
-        result = processor.process(
-            raw, source_unit="원", industry_id="fintech"
-        )
+        result = processor.process(raw, source_unit="원", industry_id="fintech")
         assert result.industry_metrics is None
         assert any("미등록" in w or "fintech" in w for w in result.warnings)
 

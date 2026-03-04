@@ -23,9 +23,7 @@ class MarketOverviewRenderer(BaseSectionRenderer):
 
     section_id = "market_overview"
 
-    def _build_market_kpis(
-        self, data: IMDocumentData
-    ) -> list[dict[str, str]]:
+    def _build_market_kpis(self, data: IMDocumentData) -> list[dict[str, str]]:
         """시장 KPI 리스트 생성."""
         md = data.market_data
         if not md:
@@ -38,15 +36,19 @@ class MarketOverviewRenderer(BaseSectionRenderer):
         if md.som is not None:
             kpis.append({"label": "SOM", "value": f"{md.som:,.0f}억원"})
         if md.market_cagr is not None:
-            kpis.append({
-                "label": "시장 CAGR",
-                "value": f"{md.market_cagr * 100:.1f}%",
-            })
+            kpis.append(
+                {
+                    "label": "시장 CAGR",
+                    "value": f"{md.market_cagr * 100:.1f}%",
+                }
+            )
         elif md.market_growth_rate is not None:
-            kpis.append({
-                "label": "시장 성장률",
-                "value": f"{md.market_growth_rate * 100:.1f}%",
-            })
+            kpis.append(
+                {
+                    "label": "시장 성장률",
+                    "value": f"{md.market_growth_rate * 100:.1f}%",
+                }
+            )
         return kpis
 
     def render_html(
@@ -67,11 +69,13 @@ class MarketOverviewRenderer(BaseSectionRenderer):
             name = comp.get("name", "")
             rev = comp.get("revenue")
             ms = comp.get("market_share")
-            rows.append({
-                "label": name,
-                "매출액 (억원)": f"{rev:,.0f}" if rev is not None else "N/A",
-                "시장 점유율": f"{ms * 100:.1f}%" if ms is not None else "N/A",
-            })
+            rows.append(
+                {
+                    "label": name,
+                    "매출액 (억원)": f"{rev:,.0f}" if rev is not None else "N/A",
+                    "시장 점유율": f"{ms * 100:.1f}%" if ms is not None else "N/A",
+                }
+            )
         return headers, rows
 
     def render_pptx(
@@ -117,9 +121,7 @@ class MarketOverviewRenderer(BaseSectionRenderer):
 
             # 시장 포지셔닝 요약이 있으면 KPI 아래에 추가
             if md and md.market_position:
-                add_summary_textbox(
-                    slide1, md.market_position, top=y, tokens=tokens
-                )
+                add_summary_textbox(slide1, md.market_position, top=y, tokens=tokens)
             result.append(slide1)
 
         # ------------------------------------------------------------------
@@ -152,9 +154,7 @@ class MarketOverviewRenderer(BaseSectionRenderer):
 
             # 경쟁 우위 요소가 있으면 테이블 아래에 추가
             if md.competitive_advantages:
-                add_sub_header_bar(
-                    slide3, "경쟁 우위", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide3, "경쟁 우위", top=y, tokens=tokens)
                 y += 0.45
                 add_bullet_list(
                     slide3,
@@ -186,9 +186,7 @@ class MarketOverviewRenderer(BaseSectionRenderer):
         if md and md.regulatory_notes:
             slide5 = factory.add_content_slide(title="규제 환경")
             y = lay.content_top
-            add_sub_header_bar(
-                slide5, "주요 규제 사항", top=y, tokens=tokens
-            )
+            add_sub_header_bar(slide5, "주요 규제 사항", top=y, tokens=tokens)
             y += 0.45
             add_body_textbox(
                 slide5,

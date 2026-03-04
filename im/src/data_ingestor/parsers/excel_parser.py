@@ -155,10 +155,12 @@ class ExcelSheet:
         if header_idx < 0 or header_idx >= len(self.rows):
             return []
 
-        headers = [str(h) if h else f"col_{i}" for i, h in enumerate(self.rows[header_idx])]
+        headers = [
+            str(h) if h else f"col_{i}" for i, h in enumerate(self.rows[header_idx])
+        ]
         result = []
 
-        for row in self.rows[header_idx + 1:]:
+        for row in self.rows[header_idx + 1 :]:
             record: dict[str, Any] = {}
             for i, value in enumerate(row):
                 key = headers[i] if i < len(headers) else f"col_{i}"
@@ -192,7 +194,7 @@ class ExcelSheet:
             return pd.DataFrame(self.rows)
 
         headers = self.rows[header_idx]
-        data = self.rows[header_idx + 1:]
+        data = self.rows[header_idx + 1 :]
         return pd.DataFrame(data, columns=headers)
 
 
@@ -267,6 +269,7 @@ class ExcelParser:
         if self._openpyxl is None:
             try:
                 import openpyxl
+
                 self._openpyxl = openpyxl
             except ImportError as e:
                 raise ExcelParserError(
@@ -558,11 +561,21 @@ class ExcelParser:
                     continue
 
                 # 숫자처럼 보이는데 변환 불가능한 경우
-                if isinstance(value, str) and value.replace(",", "").replace("-", "").replace(".", "").isdigit():
+                if (
+                    isinstance(value, str)
+                    and value.replace(",", "")
+                    .replace("-", "")
+                    .replace(".", "")
+                    .isdigit()
+                ):
                     try:
                         float(value.replace(",", ""))
                     except ValueError:
-                        col_letter = chr(65 + col_idx) if col_idx < 26 else f"col{col_idx}"
-                        errors.append(f"잘못된 숫자 형식: {col_letter}{row_idx} = '{value}'")
+                        col_letter = (
+                            chr(65 + col_idx) if col_idx < 26 else f"col{col_idx}"
+                        )
+                        errors.append(
+                            f"잘못된 숫자 형식: {col_letter}{row_idx} = '{value}'"
+                        )
 
         return errors

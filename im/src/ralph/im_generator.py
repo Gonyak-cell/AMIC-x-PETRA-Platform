@@ -56,15 +56,18 @@ class IMDocumentGenerator:
 
         outline = []
         for section_id in active_sections:
-            outline.append({
-                "id": section_id,
-                "title": section_id.replace("_", " ").title(),
-                "memo_type": im_data.im_style.value if im_data.im_style else "IM",
-            })
+            outline.append(
+                {
+                    "id": section_id,
+                    "title": section_id.replace("_", " ").title(),
+                    "memo_type": im_data.im_style.value if im_data.im_style else "IM",
+                }
+            )
 
         logger.info(
             "IM 아웃라인 생성: %d개 섹션 (%s)",
-            len(outline), im_data.im_style.value if im_data.im_style else "IM",
+            len(outline),
+            im_data.im_style.value if im_data.im_style else "IM",
         )
         return outline
 
@@ -95,18 +98,26 @@ class IMDocumentGenerator:
         # 1. 피드백이 있으면 내러티브 재생성
         if feedback and self._feedback_enabled:
             await self._regenerate_narrative_with_feedback(
-                im_data, section_id, feedback,
+                im_data,
+                section_id,
+                feedback,
             )
 
         # 2. 전체 PPTX 렌더링
-        output_path = Path(self._output_dir) / f"im_ralph_iter{self._iteration_count}.pptx"
+        output_path = (
+            Path(self._output_dir) / f"im_ralph_iter{self._iteration_count}.pptx"
+        )
         pptx_path = await asyncio.to_thread(
-            self._render_pptx, im_data, str(output_path),
+            self._render_pptx,
+            im_data,
+            str(output_path),
         )
 
         logger.info(
             "IM PPTX 생성 (iteration=%d, section=%s): %s",
-            self._iteration_count, section_id, pptx_path,
+            self._iteration_count,
+            section_id,
+            pptx_path,
         )
         return pptx_path
 
@@ -151,7 +162,9 @@ class IMDocumentGenerator:
     ) -> None:
         """피드백을 반영하여 내러티브를 재생성한다."""
         try:
-            from src.narrative_generator.engine.orchestrator import NarrativeOrchestrator
+            from src.narrative_generator.engine.orchestrator import (
+                NarrativeOrchestrator,
+            )
 
             orchestrator = NarrativeOrchestrator()
             result = orchestrator.generate(
@@ -165,11 +178,13 @@ class IMDocumentGenerator:
                 im_data.narratives = result.narratives
                 # 원본 dict도 업데이트
                 from src.api.tasks.serializers import im_data_to_dict
+
                 self._im_data_dict = im_data_to_dict(im_data)
 
             logger.info(
                 "내러티브 재생성 완료 (feedback %d건, section=%s)",
-                len(feedback), section_id,
+                len(feedback),
+                section_id,
             )
         except Exception as exc:
             logger.warning("내러티브 재생성 실패 (feedback 무시): %s", exc)
@@ -184,7 +199,8 @@ class IMDocumentGenerator:
         if not result.success:
             logger.warning(
                 "PPTX 렌더링 경고: %d개 에러 — %s",
-                len(result.errors), result.errors[:3],
+                len(result.errors),
+                result.errors[:3],
             )
 
         return output_path

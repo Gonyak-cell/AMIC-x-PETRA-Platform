@@ -94,11 +94,11 @@ class AMICThemeFactory:
         """AMIC 5단계 그린 기반 차트 컬러 시퀀스 반환."""
         c = self._config.colors
         return [
-            c.primary,    # Signature Green
+            c.primary,  # Signature Green
             c.secondary,  # Solid Green
-            c.accent,     # Highlight Green
-            c.fresh,      # Fresh Green
-            c.gray_medium,   # 중립 그레이 (시맨틱 컬러 혼입 방지)
+            c.accent,  # Highlight Green
+            c.fresh,  # Fresh Green
+            c.gray_medium,  # 중립 그레이 (시맨틱 컬러 혼입 방지)
             c.text_secondary,
             c.bg_cool_grey,
         ]

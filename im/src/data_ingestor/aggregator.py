@@ -127,7 +127,9 @@ class FinancialMetric:
             return None
         if self.previous_value == 0:
             return None
-        rate = float((self.current_value - self.previous_value) / self.previous_value * 100)
+        rate = float(
+            (self.current_value - self.previous_value) / self.previous_value * 100
+        )
         self.growth_rate = rate
         return rate
 
@@ -144,13 +146,23 @@ class FinancialSummary:
 
     # 주요 수익성 지표
     revenue: FinancialMetric = field(default_factory=lambda: FinancialMetric("매출액"))
-    operating_profit: FinancialMetric = field(default_factory=lambda: FinancialMetric("영업이익"))
-    net_income: FinancialMetric = field(default_factory=lambda: FinancialMetric("당기순이익"))
+    operating_profit: FinancialMetric = field(
+        default_factory=lambda: FinancialMetric("영업이익")
+    )
+    net_income: FinancialMetric = field(
+        default_factory=lambda: FinancialMetric("당기순이익")
+    )
 
     # 주요 재무상태 지표
-    total_assets: FinancialMetric = field(default_factory=lambda: FinancialMetric("자산총계"))
-    total_liabilities: FinancialMetric = field(default_factory=lambda: FinancialMetric("부채총계"))
-    total_equity: FinancialMetric = field(default_factory=lambda: FinancialMetric("자본총계"))
+    total_assets: FinancialMetric = field(
+        default_factory=lambda: FinancialMetric("자산총계")
+    )
+    total_liabilities: FinancialMetric = field(
+        default_factory=lambda: FinancialMetric("부채총계")
+    )
+    total_equity: FinancialMetric = field(
+        default_factory=lambda: FinancialMetric("자본총계")
+    )
 
     # 추가 지표들
     additional_metrics: dict[str, FinancialMetric] = field(default_factory=dict)
@@ -191,7 +203,9 @@ class FinancialSummary:
         # 부채비율
         if self.total_equity.current_value and self.total_liabilities.current_value:
             self.debt_ratio = float(
-                self.total_liabilities.current_value / self.total_equity.current_value * 100
+                self.total_liabilities.current_value
+                / self.total_equity.current_value
+                * 100
             )
 
 
@@ -280,14 +294,15 @@ class IMDocumentData:
             "financials": {
                 "bsns_year": self.financials.bsns_year,
                 "revenue": float(self.financials.revenue.current_value or 0),
-                "operating_profit": float(self.financials.operating_profit.current_value or 0),
+                "operating_profit": float(
+                    self.financials.operating_profit.current_value or 0
+                ),
                 "net_income": float(self.financials.net_income.current_value or 0),
                 "operating_margin": self.financials.operating_margin,
                 "roe": self.financials.roe,
             },
             "shareholders": [
-                {"name": s.name, "ratio": s.share_ratio}
-                for s in self.shareholders
+                {"name": s.name, "ratio": s.share_ratio} for s in self.shareholders
             ],
             "news_count": len(self.recent_news),
             "collected_at": self.collected_at.isoformat(),
@@ -465,7 +480,9 @@ class DataAggregator:
             errors.append("기업 정보가 필요합니다. (add_dart_company)")
 
         if self._financials is None and not self._parsed_financials:
-            errors.append("재무 정보가 필요합니다. (add_dart_financials 또는 add_parsed_financials)")
+            errors.append(
+                "재무 정보가 필요합니다. (add_dart_financials 또는 add_parsed_financials)"
+            )
 
         return errors
 
@@ -530,11 +547,15 @@ class DataAggregator:
             profile.address = self._company.adres or ""
             profile.phone = self._company.phn_no or ""
             profile.fax = self._company.fax_no or ""
-            profile.fiscal_month = int(self._company.acc_mt) if self._company.acc_mt else 12
+            profile.fiscal_month = (
+                int(self._company.acc_mt) if self._company.acc_mt else 12
+            )
 
             if self._company.est_dt:
                 try:
-                    profile.establishment_date = datetime.strptime(self._company.est_dt, "%Y%m%d")
+                    profile.establishment_date = datetime.strptime(
+                        self._company.est_dt, "%Y%m%d"
+                    )
                 except Exception:
                     pass
 

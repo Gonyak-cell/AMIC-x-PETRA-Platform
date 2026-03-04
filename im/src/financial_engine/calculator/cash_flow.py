@@ -87,7 +87,9 @@ def calculate_ebitda(
 
         # 영업이익 또는 감가상각비가 None이면 건너뜀
         if oi is None or dep is None:
-            logger.debug("EBITDA 계산 건너뜀 (%s): 영업이익=%s, 감가상각비=%s", year, oi, dep)
+            logger.debug(
+                "EBITDA 계산 건너뜀 (%s): 영업이익=%s, 감가상각비=%s", year, oi, dep
+            )
             continue
 
         ebitda = oi + dep
@@ -96,9 +98,7 @@ def calculate_ebitda(
         if amortization is not None:
             amort_val = amortization.get(year)
             if amort_val is None:
-                logger.debug(
-                    "EBITDA 계산 건너뜀 (%s): 무형자산상각비가 None", year
-                )
+                logger.debug("EBITDA 계산 건너뜀 (%s): 무형자산상각비가 None", year)
                 continue
             ebitda += amort_val
 
@@ -141,9 +141,7 @@ def calculate_fcf(
         cx = capex.get(year)
 
         if ocf is None or cx is None:
-            logger.debug(
-                "FCF 계산 건너뜀 (%s): 영업활동CF=%s, CapEx=%s", year, ocf, cx
-            )
+            logger.debug("FCF 계산 건너뜀 (%s): 영업활동CF=%s, CapEx=%s", year, ocf, cx)
             continue
 
         result[year] = ocf - abs(cx)
@@ -183,9 +181,7 @@ def calculate_nwc(
         cl = current_liabilities.get(year)
 
         if ca is None or cl is None:
-            logger.debug(
-                "NWC 계산 건너뜀 (%s): 유동자산=%s, 유동부채=%s", year, ca, cl
-            )
+            logger.debug("NWC 계산 건너뜀 (%s): 유동자산=%s, 유동부채=%s", year, ca, cl)
             continue
 
         result[year] = ca - cl

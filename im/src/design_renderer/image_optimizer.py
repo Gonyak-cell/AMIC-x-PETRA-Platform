@@ -191,10 +191,9 @@ def optimize_pptx_images(
                     data = zin.read(item.filename)
 
                     # ppt/media/ 경로의 PNG 이미지만 최적화
-                    if (
-                        item.filename.startswith("ppt/media/")
-                        and item.filename.lower().endswith(".png")
-                    ):
+                    if item.filename.startswith(
+                        "ppt/media/"
+                    ) and item.filename.lower().endswith(".png"):
                         original_size = len(data)
                         data = compress_png(
                             data,

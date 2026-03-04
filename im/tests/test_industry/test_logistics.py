@@ -1,6 +1,5 @@
 """LogisticsModule 테스트."""
 
-
 from src.industry.logistics import LogisticsModule
 from src.industry.models import (
     IndustryChartRecommendation,
@@ -39,7 +38,13 @@ class TestLogisticsModule:
         """필수 KPI ID가 포함되어 있다."""
         module = LogisticsModule()
         kpi_ids = {kpi.kpi_id for kpi in module.get_kpis()}
-        expected = {"otd", "fleet_util", "rev_per_tonkm", "warehouse_util", "claims_ratio"}
+        expected = {
+            "otd",
+            "fleet_util",
+            "rev_per_tonkm",
+            "warehouse_util",
+            "claims_ratio",
+        }
         assert expected.issubset(kpi_ids)
 
     def test_kpis_all_valid_structure(self):

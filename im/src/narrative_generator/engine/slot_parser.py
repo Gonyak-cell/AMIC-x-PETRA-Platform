@@ -67,7 +67,8 @@ class SlotResponseParser:
         # 최후 폴백: 단일 슬롯이면 전체 응답 매핑
         if len(expected_slots) == 1:
             logger.warning(
-                "JSON 파싱 실패, 단일 슬롯 폴백: slot=%s", expected_slots[0],
+                "JSON 파싱 실패, 단일 슬롯 폴백: slot=%s",
+                expected_slots[0],
             )
             return {expected_slots[0]: response.strip()}
 
@@ -92,7 +93,7 @@ class SlotResponseParser:
         if start == -1 or end == -1 or end <= start:
             return None
         try:
-            return json.loads(text[start:end + 1])
+            return json.loads(text[start : end + 1])
         except json.JSONDecodeError:
             return None
 

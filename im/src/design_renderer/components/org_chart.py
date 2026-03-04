@@ -105,7 +105,6 @@ def render_org_chart_html(
             return '<div class="org-chart-container"><p>조직도 데이터 없음</p></div>'
 
         items = "".join(
-            f"<li>{node.get('label', node.get('id', ''))}</li>"
-            for node in nodes
+            f"<li>{node.get('label', node.get('id', ''))}</li>" for node in nodes
         )
         return f'<div class="org-chart-container"><ul>{items}</ul></div>'

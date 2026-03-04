@@ -977,11 +977,7 @@ def get_children(parent: StandardAccount) -> list[AccountMetadata]:
     Returns:
         해당 상위 계정을 parent로 갖는 AccountMetadata 리스트.
     """
-    return [
-        meta
-        for meta in ACCOUNT_METADATA.values()
-        if meta.parent == parent
-    ]
+    return [meta for meta in ACCOUNT_METADATA.values() if meta.parent == parent]
 
 
 def lookup(code: StandardAccount) -> AccountMetadata:
@@ -1009,14 +1005,13 @@ def lookup(code: StandardAccount) -> AccountMetadata:
 # 무결성 검증 (모듈 로드 시 실행)
 # ---------------------------------------------------------------------------
 
+
 def _validate_completeness() -> None:
     """모든 StandardAccount 멤버가 ACCOUNT_METADATA에 등록되었는지 검증한다.
 
     모듈 임포트 시 자동 실행되며, 누락된 계정이 있으면 즉시 오류를 발생시킨다.
     """
-    missing = [
-        acct for acct in StandardAccount if acct not in ACCOUNT_METADATA
-    ]
+    missing = [acct for acct in StandardAccount if acct not in ACCOUNT_METADATA]
     if missing:
         raise RuntimeError(
             f"ACCOUNT_METADATA에 누락된 StandardAccount 항목: "

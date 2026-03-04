@@ -163,12 +163,8 @@ class DealOverviewRenderer(BaseSectionRenderer):
                     f"{ds.valuation_high:,.0f}억원"
                 )
             if lines:
-                add_sub_header_bar(
-                    slide, "딜 구조", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "딜 구조", top=y, tokens=tokens)
                 y += 0.45
-                add_body_textbox(
-                    slide, "\n".join(lines), top=y, tokens=tokens
-                )
+                add_body_textbox(slide, "\n".join(lines), top=y, tokens=tokens)
 
         return [slide]

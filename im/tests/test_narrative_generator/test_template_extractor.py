@@ -145,8 +145,7 @@ class TestHeuristicAnalysis:
 
     def test_heuristic_keeps_boilerplate_as_body(self) -> None:
         text = (
-            "본 자료는 비밀유지 의무가 있습니다.\n"
-            "투자 결정은 신중히 하시기 바랍니다."
+            "본 자료는 비밀유지 의무가 있습니다.\n투자 결정은 신중히 하시기 바랍니다."
         )
         extractor = TemplateExtractor()
         result_json = extractor._analyze_heuristic(text, "disclaimer")
@@ -325,21 +324,24 @@ class TestExtractorIntegration:
             encoding="utf-8",
         )
 
-        llm_response = json.dumps({
-            "section_id": "executive_summary",
-            "slots": {
-                "company_name": {"level": "L2", "source": "company_name_kr"},
-                "revenue_info": {
-                    "level": "L3",
-                    "type": "sentence",
-                    "hint": "매출 하이라이트",
-                    "max_tokens": 60,
-                    "data_keys": ["financial_statements.revenue"],
+        llm_response = json.dumps(
+            {
+                "section_id": "executive_summary",
+                "slots": {
+                    "company_name": {"level": "L2", "source": "company_name_kr"},
+                    "revenue_info": {
+                        "level": "L3",
+                        "type": "sentence",
+                        "hint": "매출 하이라이트",
+                        "max_tokens": 60,
+                        "data_keys": ["financial_statements.revenue"],
+                    },
                 },
+                "body": "{{company_name}}(이하 대상회사)은 국내 IT 서비스 시장의 선도기업으로, {{revenue_info}}",
+                "conditional_blocks": [],
             },
-            "body": "{{company_name}}(이하 대상회사)은 국내 IT 서비스 시장의 선도기업으로, {{revenue_info}}",
-            "conditional_blocks": [],
-        }, ensure_ascii=False)
+            ensure_ascii=False,
+        )
 
         mock_client = self._create_mock_llm(llm_response)
         extractor = TemplateExtractor(llm_client=mock_client)
@@ -413,7 +415,9 @@ class TestExtractorIntegration:
         assert result.section_id == "financial_analysis"
 
     @pytest.mark.asyncio
-    async def test_extract_all_sections_with_heuristic_split(self, tmp_path: Path) -> None:
+    async def test_extract_all_sections_with_heuristic_split(
+        self, tmp_path: Path
+    ) -> None:
         """전체 보고서 추출 — 휴리스틱 섹션 분할."""
         txt_file = tmp_path / "full_report.txt"
         txt_file.write_text(
@@ -455,5 +459,8 @@ class TestExtractorUtils:
         assert "이하 생략" in result
 
     def test_escape_yaml_str(self) -> None:
-        assert TemplateExtractor._escape_yaml_str('He said "hello"') == 'He said \\"hello\\"'
+        assert (
+            TemplateExtractor._escape_yaml_str('He said "hello"')
+            == 'He said \\"hello\\"'
+        )
         assert TemplateExtractor._escape_yaml_str("back\\slash") == "back\\\\slash"

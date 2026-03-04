@@ -156,7 +156,10 @@ class TokenBudgetExceededError(LLMError):
         actual: int,
     ) -> None:
         super().__init__(
-            message=(f"토큰 예산 초과: section_id='{section_id}' " f"예산={budget}, 실제={actual}"),
+            message=(
+                f"토큰 예산 초과: section_id='{section_id}' "
+                f"예산={budget}, 실제={actual}"
+            ),
             details={
                 "section_id": section_id,
                 "budget": budget,

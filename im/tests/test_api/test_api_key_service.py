@@ -99,9 +99,7 @@ class TestAPIKeyServiceListKeys:
         scalars_mock.all = MagicMock(return_value=keys)
         list_result.scalars = MagicMock(return_value=scalars_mock)
 
-        mock_session.execute = AsyncMock(
-            side_effect=[count_result, list_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         service = APIKeyService(mock_session)
         items, total = await service.list_keys(user_id)

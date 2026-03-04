@@ -221,22 +221,14 @@ def _decimal_dict_to_float(
     d: dict[str, Decimal | None],
 ) -> dict[str, float]:
     """Decimal 딕셔너리를 float 딕셔너리로 변환한다. None 값은 제외."""
-    return {
-        year: float(val)
-        for year, val in d.items()
-        if val is not None
-    }
+    return {year: float(val) for year, val in d.items() if val is not None}
 
 
 def _filter_none_values(
     d: dict[str, Decimal | None],
 ) -> dict[str, Decimal]:
     """None 값을 제외한 Decimal 딕셔너리를 반환한다."""
-    return {
-        year: val
-        for year, val in d.items()
-        if val is not None
-    }
+    return {year: val for year, val in d.items() if val is not None}
 
 
 # ---------------------------------------------------------------------------
@@ -362,9 +354,7 @@ class FinancialProcessor:
 
         if self._config.validate:
             balance_report = self._validate_balance(mapped_data, warnings)
-            consistency_report = self._validate_consistency(
-                normalized, warnings
-            )
+            consistency_report = self._validate_consistency(normalized, warnings)
 
         return ProcessingResult(
             mapped_data=mapped_data,
@@ -492,7 +482,9 @@ class FinancialProcessor:
                         mapped_data[_SA.EBITDA] = {
                             y: v for y, v in ebitda_values.items()
                         }
-                        logger.info("EBITDA 파생 계정 산출 완료: %d개 연도", len(ebitda_values))
+                        logger.info(
+                            "EBITDA 파생 계정 산출 완료: %d개 연도", len(ebitda_values)
+                        )
             except Exception as exc:
                 msg = f"EBITDA 파생 계정 산출 실패: {exc}"
                 logger.warning(msg)
@@ -510,7 +502,9 @@ class FinancialProcessor:
                         mapped_data[_SA.FREE_CASH_FLOW] = {
                             y: v for y, v in fcf_values.items()
                         }
-                        logger.info("FCF 파생 계정 산출 완료: %d개 연도", len(fcf_values))
+                        logger.info(
+                            "FCF 파생 계정 산출 완료: %d개 연도", len(fcf_values)
+                        )
             except Exception as exc:
                 msg = f"FCF 파생 계정 산출 실패: {exc}"
                 logger.warning(msg)
@@ -581,7 +575,9 @@ class FinancialProcessor:
             return calculate_profitability(
                 revenue=self._get_account_values(mapped_data, _SA.REVENUE),
                 gross_profit=self._get_account_values(mapped_data, _SA.GROSS_PROFIT),
-                operating_income=self._get_account_values(mapped_data, _SA.OPERATING_INCOME),
+                operating_income=self._get_account_values(
+                    mapped_data, _SA.OPERATING_INCOME
+                ),
                 net_income=self._get_account_values(mapped_data, _SA.NET_INCOME),
                 total_assets=self._get_account_values(mapped_data, _SA.TOTAL_ASSETS),
                 total_equity=self._get_account_values(mapped_data, _SA.TOTAL_EQUITY),
@@ -683,7 +679,9 @@ class FinancialProcessor:
 
             # Net Debt/EBITDA에 필요한 데이터
             total_debt = self._get_account_values(mapped_data, _SA.TOTAL_DEBT) or None
-            cash = self._get_account_values(mapped_data, _SA.CASH_AND_EQUIVALENTS) or None
+            cash = (
+                self._get_account_values(mapped_data, _SA.CASH_AND_EQUIVALENTS) or None
+            )
 
             # EBITDA: mapped_data에 있으면 사용, 없으면 cash_flow에서 가져옴
             ebitda_data = self._get_account_values(mapped_data, _SA.EBITDA)
@@ -791,13 +789,9 @@ class FinancialProcessor:
                     mapped_data, industry_data, warnings
                 )
             elif industry_id == "healthcare":
-                return self._calculate_healthcare(
-                    mapped_data, industry_data, warnings
-                )
+                return self._calculate_healthcare(mapped_data, industry_data, warnings)
             elif industry_id == "logistics":
-                return self._calculate_logistics(
-                    mapped_data, industry_data, warnings
-                )
+                return self._calculate_logistics(mapped_data, industry_data, warnings)
         except Exception as exc:
             msg = f"산업별 지표 계산 실패 ({industry_id}): {exc}"
             logger.warning(msg)
@@ -847,9 +841,8 @@ class FinancialProcessor:
             revenue=self._get_account_values(mapped_data, _SA.REVENUE),
             cogs=self._get_account_values(mapped_data, _SA.COST_OF_GOODS_SOLD),
             capex=self._get_account_values(mapped_data, _SA.CAPEX),
-            avg_inventory=self._get_account_values(
-                mapped_data, _SA.INVENTORIES
-            ) or None,
+            avg_inventory=self._get_account_values(mapped_data, _SA.INVENTORIES)
+            or None,
             availability=industry_data.get("availability"),
             performance=industry_data.get("performance"),
             quality=industry_data.get("quality"),
@@ -885,9 +878,8 @@ class FinancialProcessor:
 
         return calculate_healthcare_metrics(
             revenue=self._get_account_values(mapped_data, _SA.REVENUE),
-            rd_expense=self._get_account_values(
-                mapped_data, _SA.RESEARCH_DEVELOPMENT
-            ) or None,
+            rd_expense=self._get_account_values(mapped_data, _SA.RESEARCH_DEVELOPMENT)
+            or None,
             expected_cash_flows=industry_data.get("expected_cash_flows"),
             success_probabilities=industry_data.get("success_probabilities"),
             discount_rate=discount_rate,

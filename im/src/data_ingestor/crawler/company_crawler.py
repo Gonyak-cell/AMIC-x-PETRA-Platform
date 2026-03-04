@@ -131,20 +131,39 @@ class CompanyCrawler:
 
     # 일반적인 페이지 패턴
     ABOUT_PATTERNS = [
-        "/about", "/company", "/about-us", "/aboutus", "/corporate",
-        "/introduction", "/who-we-are", "/profile",
-        "/회사소개", "/기업소개",
+        "/about",
+        "/company",
+        "/about-us",
+        "/aboutus",
+        "/corporate",
+        "/introduction",
+        "/who-we-are",
+        "/profile",
+        "/회사소개",
+        "/기업소개",
     ]
 
     IR_PATTERNS = [
-        "/ir", "/investor", "/investors", "/investor-relations",
-        "/financial", "/earnings", "/finance",
-        "/투자정보", "/IR",
+        "/ir",
+        "/investor",
+        "/investors",
+        "/investor-relations",
+        "/financial",
+        "/earnings",
+        "/finance",
+        "/투자정보",
+        "/IR",
     ]
 
     CAREERS_PATTERNS = [
-        "/careers", "/jobs", "/career", "/hiring", "/work-with-us",
-        "/채용", "/인재채용", "/recruit",
+        "/careers",
+        "/jobs",
+        "/career",
+        "/hiring",
+        "/work-with-us",
+        "/채용",
+        "/인재채용",
+        "/recruit",
     ]
 
     def __init__(
@@ -220,7 +239,9 @@ class CompanyCrawler:
             # 하위 페이지 크롤링
             if crawl_subpages:
                 if about_url:
-                    about_info = await self._crawl_about_page(engine, about_url, timeout)
+                    about_info = await self._crawl_about_page(
+                        engine, about_url, timeout
+                    )
                     info.description = about_info.get("description", "")
                     info.vision = about_info.get("vision", "")
                     info.history = about_info.get("history", [])

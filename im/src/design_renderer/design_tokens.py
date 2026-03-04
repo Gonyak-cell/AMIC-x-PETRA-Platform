@@ -71,7 +71,9 @@ class IMColorPalette:
     gray_arrow: str = "#B0B0B0"  # 비활성 화살표/연결선
 
     # Section bar
-    section_bar_bg: str = "#0F3A32"  # 섹션 타이틀 바 배경 (실측: rect fill #0F3A32 최다)
+    section_bar_bg: str = (
+        "#0F3A32"  # 섹션 타이틀 바 배경 (실측: rect fill #0F3A32 최다)
+    )
 
     # Table border
     table_border: str = "#6A6A6A"  # 테이블 가로선 색상 (실측: 0.5pt solid/dash)
@@ -99,7 +101,9 @@ class IMTypography:
     font_body: str = "Pretendard"
     font_mono: str = "Pretendard"  # KPI 숫자도 Pretendard ExtraBold
     font_fallback: str = "Noto Sans KR"
-    font_chart: str = "Noto Sans KR"  # Plotly/Kaleido 전용 (Docker에 fonts-noto-cjk 설치)
+    font_chart: str = (
+        "Noto Sans KR"  # Plotly/Kaleido 전용 (Docker에 fonts-noto-cjk 설치)
+    )
     font_cover_subtitle: str = "SUIT Medium"  # 표지 부제/날짜 전용 (TM/DM 실측)
 
     # CSS font-stack (PDF 미사용, 호환성 유지)

@@ -128,7 +128,11 @@ async def extract_brand(
 
     # 2. Website crawl
     try:
-        url = domain if domain.startswith(("http://", "https://")) else f"https://{domain}"
+        url = (
+            domain
+            if domain.startswith(("http://", "https://"))
+            else f"https://{domain}"
+        )
         logger.info("2단계: 웹사이트 크롤링 시도 — url='%s'", url)
         extractor = WebsiteExtractor(cfg)
         brand = await extractor.extract(url, company_name=company_name)

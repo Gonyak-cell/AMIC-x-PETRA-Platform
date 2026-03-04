@@ -187,9 +187,7 @@ class DocumentService:
         total = count_result.scalar_one()
 
         query = (
-            base_query.order_by(Document.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+            base_query.order_by(Document.created_at.desc()).offset(offset).limit(limit)
         )
         result = await self.db.execute(query)
         items = list(result.scalars().all())

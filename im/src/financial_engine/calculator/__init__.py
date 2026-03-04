@@ -23,7 +23,9 @@ from src.financial_engine.calculator.saas import (
 )
 
 # 산업별 지표 유니온 타입
-IndustryMetrics = SaaSMetrics | ManufacturingMetrics | HealthcareMetrics | LogisticsMetrics
+IndustryMetrics = (
+    SaaSMetrics | ManufacturingMetrics | HealthcareMetrics | LogisticsMetrics
+)
 
 __all__ = [
     # Industry calculators

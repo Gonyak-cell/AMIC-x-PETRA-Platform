@@ -63,7 +63,9 @@ class NormalizationError(FinancialEngineError):
 class UnitConversionError(NormalizationError):
     """단위 변환 실패."""
 
-    def __init__(self, value: str, source_unit: str | None = None, reason: str = "") -> None:
+    def __init__(
+        self, value: str, source_unit: str | None = None, reason: str = ""
+    ) -> None:
         super().__init__(
             message=f"단위 변환 실패: '{value}'",
             details={"value": value, "source_unit": source_unit, "reason": reason},

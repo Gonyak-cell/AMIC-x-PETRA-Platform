@@ -185,7 +185,9 @@ class DocumentChunker:
                 # 현재 버퍼에 남은 문장이 있으면 먼저 청크 생성
                 if current_sentences:
                     chunk_text = " ".join(current_sentences)
-                    chunks.append(self._make_chunk(chunk_text, len(chunks), base_metadata))
+                    chunks.append(
+                        self._make_chunk(chunk_text, len(chunks), base_metadata)
+                    )
                     current_sentences = []
                     current_tokens = 0
 
@@ -194,7 +196,10 @@ class DocumentChunker:
                 continue
 
             # 현재 버퍼 + 새 문장이 chunk_size 초과 시 청크 생성
-            if current_tokens + sentence_tokens > self._chunk_size and current_sentences:
+            if (
+                current_tokens + sentence_tokens > self._chunk_size
+                and current_sentences
+            ):
                 chunk_text = " ".join(current_sentences)
                 chunks.append(self._make_chunk(chunk_text, len(chunks), base_metadata))
 

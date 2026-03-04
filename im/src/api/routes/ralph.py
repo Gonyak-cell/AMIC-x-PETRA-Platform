@@ -120,19 +120,20 @@ async def trigger_ralph_loop(
     if doc is None:
         raise NotFoundError(resource_type="Document", identifier=str(body.document_id))
     if not doc.pptx_path:
-        raise ValidationError(field="pptx_path", reason="PPTX 파일이 생성되지 않은 문서입니다.")
+        raise ValidationError(
+            field="pptx_path", reason="PPTX 파일이 생성되지 않은 문서입니다."
+        )
 
     # 진행 중인 세션이 있는지 확인
-    active_stmt = (
-        select(IMRalphSession)
-        .where(
-            IMRalphSession.document_id == body.document_id,
-            IMRalphSession.status.in_(["PLANNING", "GENERATING", "VALIDATING"]),
-        )
+    active_stmt = select(IMRalphSession).where(
+        IMRalphSession.document_id == body.document_id,
+        IMRalphSession.status.in_(["PLANNING", "GENERATING", "VALIDATING"]),
     )
     active_result = await session.execute(active_stmt)
     if active_result.scalar_one_or_none() is not None:
-        raise ConflictError(resource_type="IMRalphSession", identifier=str(body.document_id))
+        raise ConflictError(
+            resource_type="IMRalphSession", identifier=str(body.document_id)
+        )
 
     # 세션 미리 생성
     session_id = uuid_mod.uuid4()

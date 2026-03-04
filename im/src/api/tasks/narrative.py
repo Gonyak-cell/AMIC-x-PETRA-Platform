@@ -46,7 +46,9 @@ def generate_narrative_task(
 
         return {
             "section_id": section_id,
-            "narrative": section_result.text if hasattr(section_result, "text") else str(section_result),
+            "narrative": section_result.text
+            if hasattr(section_result, "text")
+            else str(section_result),
             "status": "COMPLETED",
         }
 

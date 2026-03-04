@@ -48,7 +48,7 @@ class BusinessModelRenderer(BaseSectionRenderer):
         if co and co.business_model:
             bm_html = (
                 f'<div style="padding:0.8em;background:{c.bg_light_green};'
-                f'border-radius:4px;margin-bottom:1em;'
+                f"border-radius:4px;margin-bottom:1em;"
                 f'border-left:3px solid {c.accent};">'
                 f'<div style="font-size:11pt;font-weight:bold;'
                 f'color:{c.primary};margin-bottom:0.3em;">'
@@ -71,7 +71,7 @@ class BusinessModelRenderer(BaseSectionRenderer):
                 )
                 steps += (
                     f'<span style="display:inline-block;padding:4px 12px;'
-                    f'background:{c.primary};color:{c.text_white};'
+                    f"background:{c.primary};color:{c.text_white};"
                     f'border-radius:3px;font-size:9pt;font-weight:bold;">'
                     f"{html_escape(step)}</span>{arrow}"
                 )
@@ -126,23 +126,15 @@ class BusinessModelRenderer(BaseSectionRenderer):
             y += 0.7
 
         if co and co.business_model:
-            add_sub_header_bar(
-                slide, "비즈니스 모델", top=y, tokens=tokens
-            )
+            add_sub_header_bar(slide, "비즈니스 모델", top=y, tokens=tokens)
             y += 0.45
-            add_body_textbox(
-                slide, co.business_model, top=y, height=1.5, tokens=tokens
-            )
+            add_body_textbox(slide, co.business_model, top=y, height=1.5, tokens=tokens)
             y += 1.7
 
         if co and co.value_chain:
-            add_sub_header_bar(
-                slide, "밸류 체인", top=y, tokens=tokens
-            )
+            add_sub_header_bar(slide, "밸류 체인", top=y, tokens=tokens)
             y += 0.45
             chain_text = " → ".join(co.value_chain)
-            add_body_textbox(
-                slide, chain_text, top=y, height=0.5, tokens=tokens
-            )
+            add_body_textbox(slide, chain_text, top=y, height=0.5, tokens=tokens)
 
         return [slide]

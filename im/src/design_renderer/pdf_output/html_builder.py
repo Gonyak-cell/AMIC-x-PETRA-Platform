@@ -52,9 +52,7 @@ def build_html_document(
 
     # 페이지 번호 삽입
     if page_numbers:
-        sections_html = _inject_page_numbers(
-            sections_html, total_pages, tokens
-        )
+        sections_html = _inject_page_numbers(sections_html, total_pages, tokens)
 
     body_html = "\n".join(sections_html)
     escaped_title = html_escape(title)
@@ -78,10 +76,7 @@ def build_html_document(
 </body>
 </html>"""
 
-    logger.info(
-        f"HTML 문서 조립 완료: {len(sections_html)}페이지, "
-        f"총 {len(html):,}자"
-    )
+    logger.info(f"HTML 문서 조립 완료: {len(sections_html)}페이지, 총 {len(html):,}자")
     return html
 
 

@@ -107,10 +107,12 @@ class BusinessOverviewRenderer(BaseSectionRenderer):
                     yoy = (latest_val - prev_val) / abs(prev_val)
                     value_parts.append(f"YoY {_fmt_pct(yoy)}")
 
-            kpis.append({
-                "label": label_parts[0],
-                "value": " | ".join(value_parts),
-            })
+            kpis.append(
+                {
+                    "label": label_parts[0],
+                    "value": " | ".join(value_parts),
+                }
+            )
 
         return kpis
 
@@ -142,12 +144,8 @@ class BusinessOverviewRenderer(BaseSectionRenderer):
         result: list[Any] = []
 
         narrative = data.narratives.get("business_overview", "")
-        has_segments = bool(
-            data.segment_revenue and data.segment_revenue.segments
-        )
-        segments = (
-            data.segment_revenue.segments if has_segments else {}
-        )
+        has_segments = bool(data.segment_revenue and data.segment_revenue.segments)
+        segments = data.segment_revenue.segments if has_segments else {}
         years = self._extract_segment_years(segments) if has_segments else []
 
         # ── Slide 1: Business Overview Narrative ──
@@ -186,9 +184,7 @@ class BusinessOverviewRenderer(BaseSectionRenderer):
         if has_segments and len(segments) >= 2:
             seg_kpis = self._build_segment_kpis(segments, years)
             if seg_kpis:
-                slide3 = factory.add_content_slide(
-                    title="세그먼트별 매출 분석"
-                )
+                slide3 = factory.add_content_slide(title="세그먼트별 매출 분석")
                 y = lay.content_top
                 cols = min(len(seg_kpis), 4)
                 add_kpi_grid(
@@ -208,12 +204,8 @@ class BusinessOverviewRenderer(BaseSectionRenderer):
 
             # Customer concentration 정보 (상위 고객 수 표시)
             n_customers = len(data.key_customers)
-            concentration_text = (
-                f"총 {n_customers}개 주요 고객사"
-            )
-            add_sub_header_bar(
-                slide4, concentration_text, top=y, tokens=tokens
-            )
+            concentration_text = f"총 {n_customers}개 주요 고객사"
+            add_sub_header_bar(slide4, concentration_text, top=y, tokens=tokens)
             y += 0.45
 
             add_bullet_list(
@@ -314,9 +306,11 @@ class BusinessOverviewRenderer(BaseSectionRenderer):
             sga = fs.sga_expenses.get(latest)
             if rev and sga and rev > 0:
                 sga_ratio = sga / rev
-                kpis.append({
-                    "label": f"판관비율 ({latest})",
-                    "value": _fmt_pct(sga_ratio),
-                })
+                kpis.append(
+                    {
+                        "label": f"판관비율 ({latest})",
+                        "value": _fmt_pct(sga_ratio),
+                    }
+                )
 
         return kpis

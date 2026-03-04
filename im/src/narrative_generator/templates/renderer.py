@@ -78,7 +78,10 @@ class TemplateRenderer:
         # Step 2: L4 조건부 블록 삽입
         if template.conditional_blocks:
             text = self._apply_conditional_blocks(
-                text, template.conditional_blocks, industry, data,
+                text,
+                template.conditional_blocks,
+                industry,
+                data,
             )
 
         # Step 3: L2 단순 치환
@@ -294,20 +297,24 @@ class TemplateRenderer:
     @staticmethod
     def _resolve_base_refs(text: str, base_blocks: BaseBlocks) -> str:
         """{{@block_name}} 참조를 베이스 블록 텍스트로 치환한다."""
+
         def _replacer(match: re.Match) -> str:
             block_name = match.group(1)
             return base_blocks.get(block_name, "")
+
         return _BLOCK_REF_PATTERN.sub(_replacer, text)
 
     @staticmethod
     def _cleanup_unresolved(text: str, template: SectionTemplate) -> str:
         """미해결 슬롯을 기본값 또는 빈 문자열로 치환한다."""
+
         def _replacer(match: re.Match) -> str:
             slot_name = match.group(1)
             slot_def = template.slots.get(slot_name)
             if slot_def and slot_def.default:
                 return slot_def.default
             return ""
+
         return _SLOT_PATTERN.sub(_replacer, text)
 
     @staticmethod

@@ -125,9 +125,7 @@ def covenant_data(minimal_financial_statements: FinancialStatements) -> IMDocume
             key_products=["클라우드 인프라"],
             employee_count=300,
         ),
-        contacts=[
-            ContactInfo(name="김철수", title="Partner", email="kim@amic.co.kr")
-        ],
+        contacts=[ContactInfo(name="김철수", title="Partner", email="kim@amic.co.kr")],
         narratives={
             "executive_summary": "테스트기업은...",
             "value_creation": "가치 창출 전략은...",

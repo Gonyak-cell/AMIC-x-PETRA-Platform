@@ -105,10 +105,20 @@ def _get_layout(prs: Presentation, index: int):
     return prs.slide_masters[0].slide_layouts[index]
 
 
-def _add_textbox(slide, left_cm, top_cm, width_cm, height_cm, text,
-                 font_name=FONT_BODY, font_size_pt=10, bold=False,
-                 color_hex=COLOR_BODY, alignment=PP_ALIGN.LEFT,
-                 line_spacing_pct=None):
+def _add_textbox(
+    slide,
+    left_cm,
+    top_cm,
+    width_cm,
+    height_cm,
+    text,
+    font_name=FONT_BODY,
+    font_size_pt=10,
+    bold=False,
+    color_hex=COLOR_BODY,
+    alignment=PP_ALIGN.LEFT,
+    line_spacing_pct=None,
+):
     """텍스트 박스를 슬라이드에 추가."""
     txBox = slide.shapes.add_textbox(
         Cm(left_cm), Cm(top_cm), Cm(width_cm), Cm(height_cm)
@@ -128,11 +138,13 @@ def _add_textbox(slide, left_cm, top_cm, width_cm, height_cm, text,
         lnSpc = pPr.find(qn("a:lnSpc"))
         if lnSpc is None:
             from lxml import etree
+
             lnSpc = etree.SubElement(pPr, qn("a:lnSpc"))
         # Remove existing children
         for child in list(lnSpc):
             lnSpc.remove(child)
         from lxml import etree
+
         spcPct = etree.SubElement(lnSpc, qn("a:spcPct"))
         spcPct.set("val", str(int(line_spacing_pct * 1000)))
     run = p.add_run()
@@ -144,13 +156,27 @@ def _add_textbox(slide, left_cm, top_cm, width_cm, height_cm, text,
     return txBox
 
 
-def _add_rect(slide, left_cm, top_cm, width_cm, height_cm, fill_hex,
-              text="", font_size_pt=12, font_color_hex=COLOR_WHITE, bold=True):
+def _add_rect(
+    slide,
+    left_cm,
+    top_cm,
+    width_cm,
+    height_cm,
+    fill_hex,
+    text="",
+    font_size_pt=12,
+    font_color_hex=COLOR_WHITE,
+    bold=True,
+):
     """채우기 색상이 있는 직사각형 도형 추가."""
     from pptx.enum.shapes import MSO_SHAPE
+
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Cm(left_cm), Cm(top_cm), Cm(width_cm), Cm(height_cm),
+        Cm(left_cm),
+        Cm(top_cm),
+        Cm(width_cm),
+        Cm(height_cm),
     )
     shape.fill.solid()
     shape.fill.fore_color.rgb = RGBColor.from_string(fill_hex)
@@ -171,18 +197,42 @@ def _add_rect(slide, left_cm, top_cm, width_cm, height_cm, fill_hex,
 
 def _add_section_bars(slide, left_title="[섹션 제목 좌]", right_title="[섹션 제목 우]"):
     """듀얼 패널 섹션 바 추가."""
-    _add_rect(slide, CONTENT_LEFT, SECTION_BAR_Y, LEFT_PANEL_WIDTH,
-              SECTION_BAR_HEIGHT, COLOR_SECTION_BAR, left_title)
-    _add_rect(slide, RIGHT_PANEL_X, SECTION_BAR_Y, LEFT_PANEL_WIDTH,
-              SECTION_BAR_HEIGHT, COLOR_SECTION_BAR, right_title)
+    _add_rect(
+        slide,
+        CONTENT_LEFT,
+        SECTION_BAR_Y,
+        LEFT_PANEL_WIDTH,
+        SECTION_BAR_HEIGHT,
+        COLOR_SECTION_BAR,
+        left_title,
+    )
+    _add_rect(
+        slide,
+        RIGHT_PANEL_X,
+        SECTION_BAR_Y,
+        LEFT_PANEL_WIDTH,
+        SECTION_BAR_HEIGHT,
+        COLOR_SECTION_BAR,
+        right_title,
+    )
 
 
-def _add_placeholder_area(slide, left_cm, top_cm, width_cm, height_cm,
-                          text="[콘텐츠 영역]"):
+def _add_placeholder_area(
+    slide, left_cm, top_cm, width_cm, height_cm, text="[콘텐츠 영역]"
+):
     """연한 배경의 플레이스홀더 영역 추가."""
-    _add_rect(slide, left_cm, top_cm, width_cm, height_cm,
-              COLOR_LIGHT_GREEN, text, font_size_pt=10,
-              font_color_hex=COLOR_DARK_GREEN, bold=False)
+    _add_rect(
+        slide,
+        left_cm,
+        top_cm,
+        width_cm,
+        height_cm,
+        COLOR_LIGHT_GREEN,
+        text,
+        font_size_pt=10,
+        font_color_hex=COLOR_DARK_GREEN,
+        bold=False,
+    )
 
 
 def _build_blank_prs() -> Presentation:
@@ -203,33 +253,69 @@ def _build_blank_prs() -> Presentation:
     return prs
 
 
-def _add_forest_slide(prs, title_text, subtitle_text="", date_text="",
-                      confidential=True):
+def _add_forest_slide(
+    prs, title_text, subtitle_text="", date_text="", confidential=True
+):
     """FOREST 레이아웃 슬라이드 추가 (표지/간지/면책/연락처)."""
     layout = _get_layout(prs, LAYOUT_FOREST)
     slide = prs.slides.add_slide(layout)
 
     # Title (표지: 줄간격 90%)
-    _add_textbox(slide, CONTENT_LEFT, 6.0, 20.0, 3.0, title_text,
-                 font_name=FONT_HEADING, font_size_pt=40, bold=True,
-                 color_hex=COLOR_WHITE, line_spacing_pct=90)
+    _add_textbox(
+        slide,
+        CONTENT_LEFT,
+        6.0,
+        20.0,
+        3.0,
+        title_text,
+        font_name=FONT_HEADING,
+        font_size_pt=40,
+        bold=True,
+        color_hex=COLOR_WHITE,
+        line_spacing_pct=90,
+    )
 
     if subtitle_text:
-        _add_textbox(slide, CONTENT_LEFT, 9.5, 20.0, 1.5, subtitle_text,
-                     font_name=FONT_COVER_SUB, font_size_pt=24,
-                     color_hex=COLOR_WHITE, line_spacing_pct=110)
+        _add_textbox(
+            slide,
+            CONTENT_LEFT,
+            9.5,
+            20.0,
+            1.5,
+            subtitle_text,
+            font_name=FONT_COVER_SUB,
+            font_size_pt=24,
+            color_hex=COLOR_WHITE,
+            line_spacing_pct=110,
+        )
 
     if date_text:
-        _add_textbox(slide, CONTENT_LEFT, 11.5, 10.0, 1.0, date_text,
-                     font_name=FONT_COVER_SUB, font_size_pt=16,
-                     color_hex=COLOR_WHITE, line_spacing_pct=90)
+        _add_textbox(
+            slide,
+            CONTENT_LEFT,
+            11.5,
+            10.0,
+            1.0,
+            date_text,
+            font_name=FONT_COVER_SUB,
+            font_size_pt=16,
+            color_hex=COLOR_WHITE,
+            line_spacing_pct=90,
+        )
 
     if confidential:
-        _add_textbox(slide, CONFIDENTIAL_X, CONFIDENTIAL_Y,
-                     CONFIDENTIAL_W, CONFIDENTIAL_H,
-                     "Strictly Private & Confidential",
-                     font_name=FONT_HEADING, font_size_pt=10,
-                     color_hex=COLOR_WHITE, alignment=PP_ALIGN.RIGHT)
+        _add_textbox(
+            slide,
+            CONFIDENTIAL_X,
+            CONFIDENTIAL_Y,
+            CONFIDENTIAL_W,
+            CONFIDENTIAL_H,
+            "Strictly Private & Confidential",
+            font_name=FONT_HEADING,
+            font_size_pt=10,
+            color_hex=COLOR_WHITE,
+            alignment=PP_ALIGN.RIGHT,
+        )
 
     return slide
 
@@ -241,9 +327,17 @@ def _add_main_slide(prs, title_text, use_andersen=False):
     slide = prs.slides.add_slide(layout)
 
     # Title bar
-    _add_rect(slide, CONTENT_LEFT, CONTENT_TOP_TITLE,
-              TITLE_WIDTH, TITLE_HEIGHT, COLOR_TITLE_BAR,
-              title_text, font_size_pt=16, font_color_hex=COLOR_WHITE)
+    _add_rect(
+        slide,
+        CONTENT_LEFT,
+        CONTENT_TOP_TITLE,
+        TITLE_WIDTH,
+        TITLE_HEIGHT,
+        COLOR_TITLE_BAR,
+        title_text,
+        font_size_pt=16,
+        font_color_hex=COLOR_WHITE,
+    )
 
     return slide
 
@@ -255,9 +349,12 @@ def _add_toc_table(slide, sections: list[tuple[str, str]]):
     rows = len(sections)
     cols = 2  # 번호 | 제목
     table_shape = slide.shapes.add_table(
-        rows, cols,
-        Cm(TOC_TABLE_X), Cm(TOC_TABLE_Y),
-        Cm(TOC_TABLE_W), Cm(TOC_TABLE_H),
+        rows,
+        cols,
+        Cm(TOC_TABLE_X),
+        Cm(TOC_TABLE_Y),
+        Cm(TOC_TABLE_W),
+        Cm(TOC_TABLE_H),
     )
     table = table_shape.table
 
@@ -266,6 +363,7 @@ def _add_toc_table(slide, sections: list[tuple[str, str]]):
     tblPr = tbl.tblPr
     if tblPr is None:
         from lxml import etree
+
         tblPr = etree.SubElement(tbl, qn("a:tblPr"))
     tblPr.set("bandRow", "0")
     tblPr.set("firstRow", "0")
@@ -288,6 +386,7 @@ def _add_toc_table(slide, sections: list[tuple[str, str]]):
                 if ln is not None:
                     tcPr.remove(ln)
                 from lxml import etree
+
                 ln = etree.SubElement(tcPr, qn(f"a:{border_name}"))
                 etree.SubElement(ln, qn("a:noFill"))
             # 셀 배경 투명
@@ -295,6 +394,7 @@ def _add_toc_table(slide, sections: list[tuple[str, str]]):
             if solidFill is not None:
                 tcPr.remove(solidFill)
             from lxml import etree
+
             etree.SubElement(tcPr, qn("a:noFill"))
 
             p = cell.text_frame.paragraphs[0]
@@ -316,18 +416,34 @@ def _add_toc_slide(prs, sections: list[tuple[str, str]]):
     slide = prs.slides.add_slide(layout)
 
     # 제목 (실측: X=1.26, Y=3.80, W=9.02, H=1.06, 24pt)
-    _add_textbox(slide, 1.26, 3.80, 9.02, 1.06, "TABLE OF CONTENTS",
-                 font_name=FONT_HEADING, font_size_pt=24, bold=True,
-                 color_hex=COLOR_WHITE)
+    _add_textbox(
+        slide,
+        1.26,
+        3.80,
+        9.02,
+        1.06,
+        "TABLE OF CONTENTS",
+        font_name=FONT_HEADING,
+        font_size_pt=24,
+        bold=True,
+        color_hex=COLOR_WHITE,
+    )
 
     # 실측 좌표 기반 TOC 테이블
     _add_toc_table(slide, sections)
 
     # Confidential at bottom
-    _add_textbox(slide, CONTENT_LEFT, 17.159, 4.301, 0.365,
-                 "Strictly Private & Confidential",
-                 font_name=FONT_BODY, font_size_pt=8,
-                 color_hex=COLOR_WHITE)
+    _add_textbox(
+        slide,
+        CONTENT_LEFT,
+        17.159,
+        4.301,
+        0.365,
+        "Strictly Private & Confidential",
+        font_name=FONT_BODY,
+        font_size_pt=8,
+        color_hex=COLOR_WHITE,
+    )
 
     return slide
 
@@ -335,10 +451,17 @@ def _add_toc_slide(prs, sections: list[tuple[str, str]]):
 def _add_divider_slide(prs, section_title: str):
     """간지(Divider) 슬라이드 추가."""
     slide = _add_forest_slide(prs, section_title, confidential=False)
-    _add_textbox(slide, CONTENT_LEFT, 17.159, 4.301, 0.365,
-                 "Strictly Private & Confidential",
-                 font_name=FONT_BODY, font_size_pt=8,
-                 color_hex=COLOR_WHITE)
+    _add_textbox(
+        slide,
+        CONTENT_LEFT,
+        17.159,
+        4.301,
+        0.365,
+        "Strictly Private & Confidential",
+        font_name=FONT_BODY,
+        font_size_pt=8,
+        color_hex=COLOR_WHITE,
+    )
     return slide
 
 
@@ -356,55 +479,89 @@ def build_tm_template() -> None:
 
     # 2. Disclaimer
     slide = _add_forest_slide(prs, "DISCLAIMER", confidential=False)
-    _add_textbox(slide, CONTENT_LEFT, 8.0, FULL_WIDTH, 8.0,
-                 "[면책 조항 본문을 이곳에 입력하십시오.\n"
-                 "본 자료는 기밀 정보를 포함하고 있으며, "
-                 "수신인 이외의 자에 대한 공개, 배포 또는 복사를 금합니다.]",
-                 font_name=FONT_BODY, font_size_pt=10, color_hex=COLOR_WHITE)
+    _add_textbox(
+        slide,
+        CONTENT_LEFT,
+        8.0,
+        FULL_WIDTH,
+        8.0,
+        "[면책 조항 본문을 이곳에 입력하십시오.\n"
+        "본 자료는 기밀 정보를 포함하고 있으며, "
+        "수신인 이외의 자에 대한 공개, 배포 또는 복사를 금합니다.]",
+        font_name=FONT_BODY,
+        font_size_pt=10,
+        color_hex=COLOR_WHITE,
+    )
 
     # 3. TOC
-    _add_toc_slide(prs, [
-        ("01", "[Executive Summary]"),
-        ("02", "[Market Opportunity]"),
-        ("03", "[Target Highlights]"),
-        ("04", "[Financial Summary]"),
-    ])
+    _add_toc_slide(
+        prs,
+        [
+            ("01", "[Executive Summary]"),
+            ("02", "[Market Opportunity]"),
+            ("03", "[Target Highlights]"),
+            ("04", "[Financial Summary]"),
+        ],
+    )
 
     # 4. Executive Summary
     slide = _add_main_slide(prs, "Executive Summary")
     _add_section_bars(slide, "[기업 개요]", "[투자 하이라이트]")
-    _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                          LEFT_PANEL_WIDTH, 10.5, "[기업 정보 표]")
-    _add_placeholder_area(slide, RIGHT_PANEL_X, CONTENT_START_Y,
-                          LEFT_PANEL_WIDTH, 10.5, "[투자 하이라이트 도형]")
+    _add_placeholder_area(
+        slide, CONTENT_LEFT, CONTENT_START_Y, LEFT_PANEL_WIDTH, 10.5, "[기업 정보 표]"
+    )
+    _add_placeholder_area(
+        slide,
+        RIGHT_PANEL_X,
+        CONTENT_START_Y,
+        LEFT_PANEL_WIDTH,
+        10.5,
+        "[투자 하이라이트 도형]",
+    )
 
     # 5. Target Positioning
     slide = _add_main_slide(prs, "Target Positioning")
-    _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                          FULL_WIDTH, 10.5, "[포지셔닝 맵 영역]")
+    _add_placeholder_area(
+        slide, CONTENT_LEFT, CONTENT_START_Y, FULL_WIDTH, 10.5, "[포지셔닝 맵 영역]"
+    )
 
     # 6. Investment Highlights
     slide = _add_main_slide(prs, "Investment Highlights")
-    _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                          FULL_WIDTH, 10.5, "[투자 하이라이트 상세]")
+    _add_placeholder_area(
+        slide, CONTENT_LEFT, CONTENT_START_Y, FULL_WIDTH, 10.5, "[투자 하이라이트 상세]"
+    )
 
     # 7. Divider - Market Opportunity
     _add_divider_slide(prs, "[II. Market Opportunity]")
 
     # 8-12. Market Analysis (5 slides)
-    for i, title in enumerate([
-        "Market Overview",
-        "Demand Analysis",
-        "Supply Analysis",
-        "Competitive Landscape",
-        "Market Outlook",
-    ]):
+    for i, title in enumerate(
+        [
+            "Market Overview",
+            "Demand Analysis",
+            "Supply Analysis",
+            "Competitive Landscape",
+            "Market Outlook",
+        ]
+    ):
         slide = _add_main_slide(prs, f"[{title}]")
         _add_section_bars(slide, f"[{title}]", "[분석 요약]")
-        _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.8, "[차트 플레이스홀더]")
-        _add_placeholder_area(slide, RIGHT_PANEL_X, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.8, "[텍스트 해설]")
+        _add_placeholder_area(
+            slide,
+            CONTENT_LEFT,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.8,
+            "[차트 플레이스홀더]",
+        )
+        _add_placeholder_area(
+            slide,
+            RIGHT_PANEL_X,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.8,
+            "[텍스트 해설]",
+        )
 
     # 13. Divider - Target Highlights
     _add_divider_slide(prs, "[III. Target Highlights]")
@@ -420,10 +577,22 @@ def build_tm_template() -> None:
     ]:
         slide = _add_main_slide(prs, f"[{title}]")
         _add_section_bars(slide, f"[{title}]", "[상세 분석]")
-        _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.5, "[표/차트 플레이스홀더]")
-        _add_placeholder_area(slide, RIGHT_PANEL_X, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.5, "[텍스트/도형 플레이스홀더]")
+        _add_placeholder_area(
+            slide,
+            CONTENT_LEFT,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.5,
+            "[표/차트 플레이스홀더]",
+        )
+        _add_placeholder_area(
+            slide,
+            RIGHT_PANEL_X,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.5,
+            "[텍스트/도형 플레이스홀더]",
+        )
 
     # 20. Divider - Financial Summary
     _add_divider_slide(prs, "[IV. Financial Summary]")
@@ -439,15 +608,28 @@ def build_tm_template() -> None:
     ]:
         slide = _add_main_slide(prs, f"[{title}]")
         # 재무제표는 섹션바 없이 전체 너비 표로 직접 시작
-        _add_placeholder_area(slide, CONTENT_LEFT, FINANCIAL_START_Y,
-                              FULL_WIDTH, financial_content_h,
-                              f"[{title} 표 플레이스홀더]")
+        _add_placeholder_area(
+            slide,
+            CONTENT_LEFT,
+            FINANCIAL_START_Y,
+            FULL_WIDTH,
+            financial_content_h,
+            f"[{title} 표 플레이스홀더]",
+        )
 
     # 25. Contact
     slide = _add_forest_slide(prs, "", confidential=False)
-    _add_textbox(slide, CONTENT_LEFT, 4.0, 10.0, 2.0,
-                 "[회사명]\n[담당자명]  [직책]  [이메일]",
-                 font_name=FONT_BODY, font_size_pt=10, color_hex=COLOR_WHITE)
+    _add_textbox(
+        slide,
+        CONTENT_LEFT,
+        4.0,
+        10.0,
+        2.0,
+        "[회사명]\n[담당자명]  [직책]  [이메일]",
+        font_name=FONT_BODY,
+        font_size_pt=10,
+        color_hex=COLOR_WHITE,
+    )
 
     prs.save(str(OUTPUT_TM))
     print(f"TM template saved: {OUTPUT_TM} ({len(prs.slides)} slides)")
@@ -475,15 +657,28 @@ def build_dm_template() -> None:
     ]:
         slide = _add_main_slide(prs, f"[{title}]")
         _add_section_bars(slide, f"[{title}]", "[분석 요약]")
-        _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.5, "[표/차트 플레이스홀더]")
-        _add_placeholder_area(slide, RIGHT_PANEL_X, CONTENT_START_Y,
-                              LEFT_PANEL_WIDTH, 10.5, "[텍스트/도형 플레이스홀더]")
+        _add_placeholder_area(
+            slide,
+            CONTENT_LEFT,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.5,
+            "[표/차트 플레이스홀더]",
+        )
+        _add_placeholder_area(
+            slide,
+            RIGHT_PANEL_X,
+            CONTENT_START_Y,
+            LEFT_PANEL_WIDTH,
+            10.5,
+            "[텍스트/도형 플레이스홀더]",
+        )
 
     # 7. Summary
     slide = _add_main_slide(prs, "[Summary & Recommendations]")
-    _add_placeholder_area(slide, CONTENT_LEFT, CONTENT_START_Y,
-                          FULL_WIDTH, 10.5, "[요약 및 결론]")
+    _add_placeholder_area(
+        slide, CONTENT_LEFT, CONTENT_START_Y, FULL_WIDTH, 10.5, "[요약 및 결론]"
+    )
 
     prs.save(str(OUTPUT_DM))
     print(f"DM template saved: {OUTPUT_DM} ({len(prs.slides)} slides)")

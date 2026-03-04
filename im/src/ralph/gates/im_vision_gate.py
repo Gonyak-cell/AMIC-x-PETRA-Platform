@@ -58,10 +58,10 @@ AMIC의 공식 디자인 시스템:
 """
 
 IM_VISION_WEIGHTS: dict[str, tuple[float, str]] = {
-    "layout_balance":  (0.20, "레이아웃 균형"),
-    "color_harmony":   (0.20, "색상 조화"),
-    "typography":      (0.15, "타이포그래피"),
-    "data_viz":        (0.25, "데이터 시각화"),
+    "layout_balance": (0.20, "레이아웃 균형"),
+    "color_harmony": (0.20, "색상 조화"),
+    "typography": (0.15, "타이포그래피"),
+    "data_viz": (0.25, "데이터 시각화"),
     "professionalism": (0.20, "전문성"),
 }
 
@@ -96,27 +96,43 @@ class IMVisionGate(QualityGate):
 
         if not self._api_key:
             return self._timed_result(
-                start, [], ["Vision Gate 비활성: OpenAI API 키 미설정"], [],
-                [], cost_usd=0.0,
+                start,
+                [],
+                ["Vision Gate 비활성: OpenAI API 키 미설정"],
+                [],
+                [],
+                cost_usd=0.0,
             )
 
         try:
             images = await self._pptx_to_images(artifact_path)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"PPTX → 이미지 변환 실패: {exc}"], [], [],
+                start,
+                [],
+                [f"PPTX → 이미지 변환 실패: {exc}"],
+                [],
+                [],
             )
 
         if not images:
             return self._timed_result(
-                start, [], ["평가할 슬라이드 이미지 없음"], [], [],
+                start,
+                [],
+                ["평가할 슬라이드 이미지 없음"],
+                [],
+                [],
             )
 
         try:
             result_json = await self._call_vision_api(images)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"Vision API 호출 실패: {exc}"], [], [],
+                start,
+                [],
+                [f"Vision API 호출 실패: {exc}"],
+                [],
+                [],
                 cost_usd=0.02,
             )
 
@@ -124,7 +140,11 @@ class IMVisionGate(QualityGate):
         dimensions, issues, suggestions = self._parse_vision_response(result_json)
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, [],
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            [],
             cost_usd=0.03,
             raw_data={"slide_count": len(images)},
         )
@@ -159,8 +179,13 @@ class IMVisionGate(QualityGate):
     async def _convert_to_pdf(self, pptx_path: str, output_dir: str) -> str | None:
         """LibreOffice headless로 PPTX → PDF 변환."""
         process = await asyncio.create_subprocess_exec(
-            "libreoffice", "--headless", "--convert-to", "pdf",
-            "--outdir", output_dir, pptx_path,
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            output_dir,
+            pptx_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -216,17 +241,22 @@ class IMVisionGate(QualityGate):
         client = openai.AsyncOpenAI(api_key=self._api_key)
 
         content: list[dict[str, Any]] = [
-            {"type": "text", "text": f"다음 {len(b64_images)}장의 IM PPTX 슬라이드를 평가해주세요."},
+            {
+                "type": "text",
+                "text": f"다음 {len(b64_images)}장의 IM PPTX 슬라이드를 평가해주세요.",
+            },
         ]
 
         for i, b64 in enumerate(b64_images):
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{b64}",
-                    "detail": "high",
-                },
-            })
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{b64}",
+                        "detail": "high",
+                    },
+                }
+            )
 
         response = await client.chat.completions.create(
             model="gpt-4o",
@@ -241,7 +271,8 @@ class IMVisionGate(QualityGate):
         return response.choices[0].message.content or ""
 
     def _parse_vision_response(
-        self, response_text: str,
+        self,
+        response_text: str,
     ) -> tuple[list[DimensionScore], list[str], list[str]]:
         """Vision API 응답을 파싱하여 DimensionScore 목록을 생성한다."""
         import json
@@ -267,13 +298,15 @@ class IMVisionGate(QualityGate):
                     score = float(dim_data.get("score", 3.0))
                     feedback = dim_data.get("feedback", "")
 
-                    dimensions.append(DimensionScore(
-                        name=dim_name,
-                        label=label,
-                        score=min(5.0, max(1.0, score)),
-                        weight=weight,
-                        feedback=feedback,
-                    ))
+                    dimensions.append(
+                        DimensionScore(
+                            name=dim_name,
+                            label=label,
+                            score=min(5.0, max(1.0, score)),
+                            weight=weight,
+                            feedback=feedback,
+                        )
+                    )
 
                     if score < 3.0:
                         issues.append(f"{label}: {feedback}")
@@ -288,9 +321,14 @@ class IMVisionGate(QualityGate):
             logger.warning("Vision 응답 파싱 실패: %s", exc)
             # 파싱 실패 시 기본 점수
             for dim_name, (weight, label) in IM_VISION_WEIGHTS.items():
-                dimensions.append(DimensionScore(
-                    name=dim_name, label=label, score=3.0, weight=weight,
-                    feedback="응답 파싱 실패 — 기본 점수 적용",
-                ))
+                dimensions.append(
+                    DimensionScore(
+                        name=dim_name,
+                        label=label,
+                        score=3.0,
+                        weight=weight,
+                        feedback="응답 파싱 실패 — 기본 점수 적용",
+                    )
+                )
 
         return dimensions, issues, suggestions

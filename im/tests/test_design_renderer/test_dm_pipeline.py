@@ -181,7 +181,9 @@ class TestDmRenderersPptx:
     ):
         """최소 데이터로 PPTX 렌더링 — 에러 없이 1개 이상 슬라이드 생성."""
         renderer = get_renderer(section_id)
-        slides = renderer.render_pptx(factory, minimal_dm_data, prs=prs, tokens=DEFAULT_TOKENS)
+        slides = renderer.render_pptx(
+            factory, minimal_dm_data, prs=prs, tokens=DEFAULT_TOKENS
+        )
         assert len(slides) >= 1
 
     @pytest.mark.parametrize("section_id", DM_SECTION_IDS)
@@ -194,7 +196,9 @@ class TestDmRenderersPptx:
     ):
         """전체 데이터로 PPTX 렌더링 — 에러 없이 1개 이상 슬라이드 생성."""
         renderer = get_renderer(section_id)
-        slides = renderer.render_pptx(factory, full_dm_data, prs=prs, tokens=DEFAULT_TOKENS)
+        slides = renderer.render_pptx(
+            factory, full_dm_data, prs=prs, tokens=DEFAULT_TOKENS
+        )
         assert len(slides) >= 1
 
 
@@ -217,7 +221,9 @@ class TestDmRenderersHtml:
 
     @pytest.mark.parametrize("section_id", DM_SECTION_IDS)
     def test_render_html_minimal(
-        self, section_id: str, minimal_dm_data: IMDocumentData,
+        self,
+        section_id: str,
+        minimal_dm_data: IMDocumentData,
     ):
         """최소 데이터로 HTML 렌더링."""
         renderer = get_renderer(section_id)
@@ -227,7 +233,9 @@ class TestDmRenderersHtml:
 
     @pytest.mark.parametrize("section_id", DM_SECTION_IDS)
     def test_render_html_full(
-        self, section_id: str, full_dm_data: IMDocumentData,
+        self,
+        section_id: str,
+        full_dm_data: IMDocumentData,
     ):
         """전체 데이터로 HTML 렌더링."""
         renderer = get_renderer(section_id)

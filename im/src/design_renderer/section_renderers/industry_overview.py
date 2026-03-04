@@ -220,7 +220,11 @@ class IndustryOverviewRenderer(BaseSectionRenderer):
                     factors = ", ".join(rc.risk_factors) if rc.risk_factors else "-"
                     rows.append([rc.name_kr, rc.description, factors])
                 add_financial_table(
-                    slide2, headers=headers, rows=rows, top=y2, tokens=tokens,
+                    slide2,
+                    headers=headers,
+                    rows=rows,
+                    top=y2,
+                    tokens=tokens,
                 )
 
             result.append(slide2)

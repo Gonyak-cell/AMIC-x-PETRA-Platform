@@ -157,7 +157,9 @@ class BrandfetchClient:
 
         # 추가 색상
         additional = [
-            c.get("hex", "") for c in colors if c.get("hex") and c.get("hex") != primary_color
+            c.get("hex", "")
+            for c in colors
+            if c.get("hex") and c.get("hex") != primary_color
         ]
 
         return BrandAssets(
@@ -167,12 +169,16 @@ class BrandfetchClient:
             logo_url=logo_url,
             confidence=0.95,
             source="brandfetch",
-            additional_colors=[c if c.startswith("#") else f"#{c}" for c in additional if c],
+            additional_colors=[
+                c if c.startswith("#") else f"#{c}" for c in additional if c
+            ],
             warnings=warnings,
         )
 
     @staticmethod
-    def _select_best_logo_format(formats: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def _select_best_logo_format(
+        formats: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
         """로고 포맷 중 최적을 선택한다 (SVG > PNG > 나머지).
 
         Args:

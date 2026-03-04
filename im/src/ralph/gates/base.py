@@ -10,20 +10,20 @@ from typing import Any
 
 
 class GateVerdict(StrEnum):
-    PASS = "PASS"                 # 4.0/5.0 이상
-    CONDITIONAL_PASS = "COND"     # 3.0-3.9 — 경미한 수정 후 재평가
-    FAIL = "FAIL"                 # 3.0 미만 — 대폭 재작업
+    PASS = "PASS"  # 4.0/5.0 이상
+    CONDITIONAL_PASS = "COND"  # 3.0-3.9 — 경미한 수정 후 재평가
+    FAIL = "FAIL"  # 3.0 미만 — 대폭 재작업
 
 
 @dataclass(frozen=True)
 class DimensionScore:
     """평가 차원별 점수."""
 
-    name: str                     # 차원명 (예: "completeness")
-    label: str                    # 한글 레이블 (예: "완전성")
-    score: float                  # 0.0 ~ 5.0
-    weight: float                 # 가중치 (합계 1.0)
-    feedback: str = ""            # 구체적 개선 지시
+    name: str  # 차원명 (예: "completeness")
+    label: str  # 한글 레이블 (예: "완전성")
+    score: float  # 0.0 ~ 5.0
+    weight: float  # 가중치 (합계 1.0)
+    feedback: str = ""  # 구체적 개선 지시
 
 
 @dataclass
@@ -32,14 +32,14 @@ class GateResult:
 
     gate_name: str
     verdict: GateVerdict
-    weighted_score: float         # 가중 합산 점수 (0.0 ~ 5.0)
+    weighted_score: float  # 가중 합산 점수 (0.0 ~ 5.0)
     dimensions: list[DimensionScore] = field(default_factory=list)
-    issues: list[str] = field(default_factory=list)        # 발견된 구체적 문제
-    suggestions: list[str] = field(default_factory=list)   # 개선 지시 (위치 특정)
-    critical_flags: list[str] = field(default_factory=list) # CRITICAL Red Flag
+    issues: list[str] = field(default_factory=list)  # 발견된 구체적 문제
+    suggestions: list[str] = field(default_factory=list)  # 개선 지시 (위치 특정)
+    critical_flags: list[str] = field(default_factory=list)  # CRITICAL Red Flag
     cost_usd: float = 0.0
     duration_ms: int = 0
-    raw_data: dict[str, Any] = field(default_factory=dict) # 디버깅용 원시 데이터
+    raw_data: dict[str, Any] = field(default_factory=dict)  # 디버깅용 원시 데이터
 
     @property
     def passed(self) -> bool:

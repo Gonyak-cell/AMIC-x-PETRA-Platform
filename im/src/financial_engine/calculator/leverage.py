@@ -213,7 +213,11 @@ def calculate_leverage(
     icr = calculate_interest_coverage(operating_income, interest_expense)
 
     # Net Debt/EBITDA: 세 인자가 모두 제공된 경우에만 계산
-    if total_debt is not None and cash_and_equivalents is not None and ebitda is not None:
+    if (
+        total_debt is not None
+        and cash_and_equivalents is not None
+        and ebitda is not None
+    ):
         nd_ebitda = _calculate_net_debt_to_ebitda(
             total_debt, cash_and_equivalents, ebitda
         )

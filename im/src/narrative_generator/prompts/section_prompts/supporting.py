@@ -163,7 +163,7 @@ class ContactPrompt(BasePrompt):
         return result
 
     def _get_section_instruction(self) -> str:
-        return "## 섹션: Contact (연락처)\n" "문의처 안내 및 마무리 인사를 작성합니다.\n"
+        return "## 섹션: Contact (연락처)\n문의처 안내 및 마무리 인사를 작성합니다.\n"
 
     def _get_writing_instruction(self) -> str:
         return (

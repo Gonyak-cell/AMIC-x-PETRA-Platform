@@ -93,12 +93,14 @@ class TargetOverviewRenderer(BaseSectionRenderer):
             )
 
         content = f"{info_html}{narrative_html}{products_html}"
-        return [build_slide_html(
-            content,
-            title="Target Overview",
-            slide_class="slide-target-overview",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Target Overview",
+                slide_class="slide-target-overview",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -122,7 +124,9 @@ class TargetOverviewRenderer(BaseSectionRenderer):
         slide = factory.add_content_slide(title="Target Overview")
         co = data.company_overview
         # TM 프롬프트는 "target_overview" 키로 내러티브 생성, 폴백으로 "company_overview"
-        narrative = data.narratives.get("target_overview", "") or data.narratives.get("company_overview", "")
+        narrative = data.narratives.get("target_overview", "") or data.narratives.get(
+            "company_overview", ""
+        )
 
         y = lay.content_top
 
@@ -144,15 +148,16 @@ class TargetOverviewRenderer(BaseSectionRenderer):
                 add_sub_header_bar(slide, "회사 정보", top=y, tokens=tokens)
                 y += 0.45
                 add_body_textbox(
-                    slide, "\n".join(info_lines), top=y, height=1.2,
+                    slide,
+                    "\n".join(info_lines),
+                    top=y,
+                    height=1.2,
                     tokens=tokens,
                 )
                 y += 1.4
 
             if co.key_products:
-                add_sub_header_bar(
-                    slide, "주요 제품/서비스", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "주요 제품/서비스", top=y, tokens=tokens)
                 y += 0.45
                 add_bullet_list(
                     slide, co.key_products, top=y, height=1.5, tokens=tokens
@@ -206,12 +211,14 @@ class TargetHighlightsRenderer(BaseSectionRenderer):
             )
 
         content = f"{narrative_html}{customers_html}"
-        return [build_slide_html(
-            content,
-            title="Target Highlights",
-            slide_class="slide-target-highlights",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Target Highlights",
+                slide_class="slide-target-highlights",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -234,7 +241,9 @@ class TargetHighlightsRenderer(BaseSectionRenderer):
 
         slide = factory.add_content_slide(title="Target Highlights")
         # TM 프롬프트는 "target_highlights" 키로 내러티브 생성, 폴백으로 "business_overview"
-        narrative = data.narratives.get("target_highlights", "") or data.narratives.get("business_overview", "")
+        narrative = data.narratives.get("target_highlights", "") or data.narratives.get(
+            "business_overview", ""
+        )
 
         y = lay.content_top
 
@@ -274,8 +283,6 @@ class TargetHighlightsRenderer(BaseSectionRenderer):
         if data.key_customers:
             add_sub_header_bar(slide, "주요 고객", top=y, tokens=tokens)
             y += 0.45
-            add_bullet_list(
-                slide, data.key_customers, top=y, height=1.5, tokens=tokens
-            )
+            add_bullet_list(slide, data.key_customers, top=y, height=1.5, tokens=tokens)
 
         return [slide]

@@ -142,7 +142,7 @@ class TestWatermark:
                         for run in para.runs:
                             if "CONFIDENTIAL" in run.text:
                                 watermark_found = True
-            assert watermark_found, f"슬라이드 {i+1}에 워터마크 없음"
+            assert watermark_found, f"슬라이드 {i + 1}에 워터마크 없음"
 
     def test_watermark_skip_first(self, factory: SlideFactory, prs: Presentation):
         """skip_first_slide=True → 첫 슬라이드에 워터마크 없음."""

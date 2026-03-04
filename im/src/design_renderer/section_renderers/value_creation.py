@@ -133,9 +133,7 @@ class ValueCreationRenderer(BaseSectionRenderer):
 
         if gs:
             if gs.organic_growth:
-                add_sub_header_bar(
-                    slide, "유기적 성장", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "유기적 성장", top=y, tokens=tokens)
                 y += 0.45
                 add_bullet_list(
                     slide, gs.organic_growth, top=y, height=1.2, tokens=tokens
@@ -143,9 +141,7 @@ class ValueCreationRenderer(BaseSectionRenderer):
                 y += 1.4
 
             if gs.new_business:
-                add_sub_header_bar(
-                    slide, "신규 사업", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "신규 사업", top=y, tokens=tokens)
                 y += 0.45
                 add_bullet_list(
                     slide, gs.new_business, top=y, height=1.2, tokens=tokens
@@ -153,12 +149,8 @@ class ValueCreationRenderer(BaseSectionRenderer):
                 y += 1.4
 
             if gs.ma_targets:
-                add_sub_header_bar(
-                    slide, "M&A 전략", top=y, tokens=tokens
-                )
+                add_sub_header_bar(slide, "M&A 전략", top=y, tokens=tokens)
                 y += 0.45
-                add_bullet_list(
-                    slide, gs.ma_targets, top=y, height=1.2, tokens=tokens
-                )
+                add_bullet_list(slide, gs.ma_targets, top=y, height=1.2, tokens=tokens)
 
         return [slide]

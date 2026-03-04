@@ -52,9 +52,7 @@ def _create_mock_llm_client(response_text: str = "") -> MagicMock:
 def _create_failing_llm_client() -> MagicMock:
     """LLM 호출 시 예외를 발생시키는 모킹 클라이언트를 생성한다."""
     mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = Exception(
-        "API connection error"
-    )
+    mock_client.chat.completions.create.side_effect = Exception("API connection error")
     return mock_client
 
 
@@ -66,9 +64,7 @@ def _create_failing_llm_client() -> MagicMock:
 class TestNarrativeOrchestrator:
     """NarrativeOrchestrator 통합 파이프라인 테스트."""
 
-    def test_generate_with_mock_llm(
-        self, sample_im_data: IMDocumentData
-    ) -> None:
+    def test_generate_with_mock_llm(self, sample_im_data: IMDocumentData) -> None:
         """모킹된 LLM으로 generate()가 NarrativeResult를 반환하는지 확인한다."""
         mock_response = (
             "테스트기업은 국내 IT 서비스 시장의 선도기업으로, "

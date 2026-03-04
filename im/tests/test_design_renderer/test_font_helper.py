@@ -183,9 +183,7 @@ class TestEnsureEaFontsOnPresentation:
 
         for _ in range(3):
             slide = prs.slides.add_slide(layout)
-            txbox = slide.shapes.add_textbox(
-                Inches(1), Inches(1), Inches(5), Inches(1)
-            )
+            txbox = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(5), Inches(1))
             run = txbox.text_frame.paragraphs[0].add_run()
             run.text = "텍스트"
             run.font.name = "Pretendard"
@@ -205,18 +203,14 @@ class TestEnsureEaFontsOnPresentation:
 
         # 슬라이드 1: a:ea 있음
         slide1 = prs.slides.add_slide(layout)
-        txbox1 = slide1.shapes.add_textbox(
-            Inches(1), Inches(1), Inches(5), Inches(1)
-        )
+        txbox1 = slide1.shapes.add_textbox(Inches(1), Inches(1), Inches(5), Inches(1))
         run1 = txbox1.text_frame.paragraphs[0].add_run()
         run1.text = "이미 설정됨"
         set_font_with_ea(run1, "Inter", ea_font="Noto Sans KR")
 
         # 슬라이드 2: a:ea 없음
         slide2 = prs.slides.add_slide(layout)
-        txbox2 = slide2.shapes.add_textbox(
-            Inches(1), Inches(1), Inches(5), Inches(1)
-        )
+        txbox2 = slide2.shapes.add_textbox(Inches(1), Inches(1), Inches(5), Inches(1))
         run2 = txbox2.text_frame.paragraphs[0].add_run()
         run2.text = "설정 필요"
         run2.font.name = "Pretendard"

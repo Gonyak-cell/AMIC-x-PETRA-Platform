@@ -8,7 +8,6 @@ ORM 모델 정의, 컬럼 타입, 제약조건, 관계를 검증한다.
 from __future__ import annotations
 
 
-
 from src.api.db.base import Base
 from src.api.db.models import APIKey, Company, Document, DocumentStatus, User
 
@@ -58,8 +57,16 @@ class TestUserModel:
     def test_columns_exist(self) -> None:
         """필수 컬럼이 존재한다."""
         columns = {c.name for c in User.__table__.columns}
-        expected = {"id", "email", "hashed_password", "full_name", "role", "is_active",
-                    "created_at", "updated_at"}
+        expected = {
+            "id",
+            "email",
+            "hashed_password",
+            "full_name",
+            "role",
+            "is_active",
+            "created_at",
+            "updated_at",
+        }
         assert expected.issubset(columns)
 
     def test_email_is_unique(self) -> None:
@@ -83,9 +90,19 @@ class TestDocumentModel:
     def test_columns_exist(self) -> None:
         """필수 컬럼이 존재한다."""
         columns = {c.name for c in Document.__table__.columns}
-        expected = {"id", "owner_id", "corp_code", "company_name", "im_style",
-                    "status", "progress_pct", "celery_task_id",
-                    "pptx_path", "pdf_path", "created_at"}
+        expected = {
+            "id",
+            "owner_id",
+            "corp_code",
+            "company_name",
+            "im_style",
+            "status",
+            "progress_pct",
+            "celery_task_id",
+            "pptx_path",
+            "pdf_path",
+            "created_at",
+        }
         assert expected.issubset(columns)
 
     def test_status_default(self) -> None:
@@ -160,8 +177,16 @@ class TestAPIKeyModel:
     def test_columns_exist(self) -> None:
         """필수 컬럼이 존재한다."""
         columns = {c.name for c in APIKey.__table__.columns}
-        expected = {"id", "user_id", "key_hash", "name", "is_active",
-                    "last_used_at", "expires_at", "created_at"}
+        expected = {
+            "id",
+            "user_id",
+            "key_hash",
+            "name",
+            "is_active",
+            "last_used_at",
+            "expires_at",
+            "created_at",
+        }
         assert expected.issubset(columns)
 
 

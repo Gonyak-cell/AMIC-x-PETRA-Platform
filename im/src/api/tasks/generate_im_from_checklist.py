@@ -103,16 +103,18 @@ def generate_im_from_checklist_task(
             # 아이템 dict 변환 (세션 밖에서도 사용하기 위해)
             checklist_items: list[dict[str, Any]] = []
             for item in checklist.items:
-                checklist_items.append({
-                    "category": item.category,
-                    "field_key": item.field_key,
-                    "field_type": item.field_type,
-                    "effective_value": item.effective_value,
-                    "confirmed_value": item.confirmed_value,
-                    "extracted_value": item.extracted_value,
-                    "fiscal_year": item.fiscal_year,
-                    "unit": item.unit,
-                })
+                checklist_items.append(
+                    {
+                        "category": item.category,
+                        "field_key": item.field_key,
+                        "field_type": item.field_type,
+                        "effective_value": item.effective_value,
+                        "confirmed_value": item.confirmed_value,
+                        "extracted_value": item.extracted_value,
+                        "fiscal_year": item.fiscal_year,
+                        "unit": item.unit,
+                    }
+                )
 
             # Document에서 설정 정보 조회
             doc = session.get(Document, uuid_mod.UUID(document_id))
@@ -125,7 +127,9 @@ def generate_im_from_checklist_task(
                 "corp_code": doc.corp_code or "",
                 "im_style": doc.im_style or "FULL",
                 "industry": (doc.generation_config or {}).get("industry", ""),
-                "company_name_en": (doc.generation_config or {}).get("company_name_en", ""),
+                "company_name_en": (doc.generation_config or {}).get(
+                    "company_name_en", ""
+                ),
             }
 
         update_progress(self, document_id, "GENERATING", 15)
@@ -142,7 +146,9 @@ def generate_im_from_checklist_task(
         # Step 3: 내러티브 생성 (선택적 — LLM 불가 시 스킵)
         # ------------------------------------------------------------------
         try:
-            from src.narrative_generator.engine.orchestrator import NarrativeOrchestrator
+            from src.narrative_generator.engine.orchestrator import (
+                NarrativeOrchestrator,
+            )
 
             orchestrator = NarrativeOrchestrator()
             narrative_result = orchestrator.generate(
@@ -175,7 +181,9 @@ def generate_im_from_checklist_task(
         output_dir = Path(api_config.output_dir) / document_id
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        pptx_filename = f"IM_{im_data.company_name_kr or 'document'}_{document_id[:8]}.pptx"
+        pptx_filename = (
+            f"IM_{im_data.company_name_kr or 'document'}_{document_id[:8]}.pptx"
+        )
         pptx_path = output_dir / pptx_filename
 
         pipeline = IMPipeline()
@@ -233,7 +241,8 @@ def generate_im_from_checklist_task(
                 from src.api.tasks.serializers import im_data_to_dict
 
                 run_im_ralph_loop_task.delay(
-                    document_id=document_id, pass_number=2,
+                    document_id=document_id,
+                    pass_number=2,
                     im_data_dict=im_data_to_dict(im_data),
                 )
                 logger.info("Ralph Loop Pass 2 시작: document=%s", document_id)
@@ -264,7 +273,9 @@ def generate_im_from_checklist_task(
     except Exception as exc:
         logger.error(
             "IM 생성 실패: document=%s checklist=%s — %s",
-            document_id, checklist_id, exc,
+            document_id,
+            checklist_id,
+            exc,
         )
         if self.request.retries >= self.max_retries:
             _mark_checklist_failed(engine, checklist_id, document_id)
@@ -310,5 +321,6 @@ def _mark_checklist_failed(
     except Exception:
         logger.exception(
             "FAILED 상태 전환 실패: checklist=%s document=%s",
-            checklist_id, document_id,
+            checklist_id,
+            document_id,
         )

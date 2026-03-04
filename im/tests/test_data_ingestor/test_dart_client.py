@@ -172,7 +172,9 @@ class TestDartAPIClientMethods:
             "ceo_nm": "한종희",
         }
 
-        with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_data):
+        with patch.object(
+            client, "_request", new_callable=AsyncMock, return_value=mock_data
+        ):
             result = await client.get_company_info("00126380")
 
             assert result.corp_code == "00126380"
@@ -200,7 +202,9 @@ class TestDartAPIClientMethods:
             ],
         }
 
-        with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_data):
+        with patch.object(
+            client, "_request", new_callable=AsyncMock, return_value=mock_data
+        ):
             result = await client.get_financial_statements(
                 corp_code="00126380",
                 bsns_year="2024",
@@ -231,7 +235,9 @@ class TestDartAPIClientMethods:
             ],
         }
 
-        with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_data):
+        with patch.object(
+            client, "_request", new_callable=AsyncMock, return_value=mock_data
+        ):
             result = await client.get_major_shareholders("00126380")
 
             assert len(result) == 1

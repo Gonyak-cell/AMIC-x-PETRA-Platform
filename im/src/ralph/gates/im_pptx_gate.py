@@ -19,7 +19,14 @@ from src.ralph.gates.base import DimensionScore, GateResult, QualityGate
 
 # ── AMIC IM 디자인 상수 ──────────────────────────────────────────────────────
 
-ALLOWED_FONTS = {"SUITE", "Pretendard", "Noto Sans KR", "NanumGothic", "Arial", "Calibri"}
+ALLOWED_FONTS = {
+    "SUITE",
+    "Pretendard",
+    "Noto Sans KR",
+    "NanumGothic",
+    "Arial",
+    "Calibri",
+}
 
 AMIC_COLORS = {
     "0F3A32",  # Signature Green
@@ -27,13 +34,17 @@ AMIC_COLORS = {
     "26C260",  # Highlight Green
     "A3E96B",  # Fresh Green
     "E6FDD6",  # Light Green
-    "000000", "FFFFFF", "777777", "333333",
+    "000000",
+    "FFFFFF",
+    "777777",
+    "333333",
     "BC2C1A",  # Negative
     "EF6C00",  # Caution
     "F4F6F8",  # Cool Grey BG (RGB로 변환 시)
     "757575",  # Gray medium
     "E0E0E0",  # Gray border
-    "666666", "999999",
+    "666666",
+    "999999",
 }
 
 REQUIRED_SLIDES: dict[str, list[str]] = {
@@ -73,10 +84,15 @@ class IMPPTXProgrammaticGate(QualityGate):
 
         try:
             from pptx import Presentation
+
             prs = Presentation(artifact_path)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"PPTX 로드 실패: {exc}"], [], [f"PPTX 파일 손상: {exc}"],
+                start,
+                [],
+                [f"PPTX 로드 실패: {exc}"],
+                [],
+                [f"PPTX 파일 손상: {exc}"],
             )
 
         memo_type = prd_section.get("memo_type", "IM")
@@ -117,12 +133,18 @@ class IMPPTXProgrammaticGate(QualityGate):
         ]
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     # ── 검증 레이어 ──────────────────────────────────────────────────────────
 
-    def _check_structure(self, prs: Any, memo_type: str, prd: dict) -> tuple[float, list[str]]:
+    def _check_structure(
+        self, prs: Any, memo_type: str, prd: dict
+    ) -> tuple[float, list[str]]:
         """슬라이드 구조 검증."""
         issues: list[str] = []
         slide_count = len(prs.slides)
@@ -195,8 +217,13 @@ class IMPPTXProgrammaticGate(QualityGate):
                 if rows < 3 or cols < 2:
                     continue
 
-                last_row_text = [table.cell(rows - 1, c).text.strip() for c in range(cols)]
-                if not any(kw in last_row_text[0].lower() for kw in ["합계", "total", "소계", "계"]):
+                last_row_text = [
+                    table.cell(rows - 1, c).text.strip() for c in range(cols)
+                ]
+                if not any(
+                    kw in last_row_text[0].lower()
+                    for kw in ["합계", "total", "소계", "계"]
+                ):
                     continue
 
                 for c in range(1, cols):
@@ -217,7 +244,7 @@ class IMPPTXProgrammaticGate(QualityGate):
                     if parseable and abs(total_val - item_sum) > 0.01:
                         error_count += 1
                         issues.append(
-                            f"슬라이드 {slide_idx} 테이블: 열 {c+1} 합계={total_val}, "
+                            f"슬라이드 {slide_idx} 테이블: 열 {c + 1} 합계={total_val}, "
                             f"항목합={item_sum} (차이: {abs(total_val - item_sum):.2f})"
                         )
 
@@ -243,7 +270,9 @@ class IMPPTXProgrammaticGate(QualityGate):
                     for series in plot.series:
                         values = list(series.values)
                         if not values or all(v is None for v in values):
-                            issues.append(f"슬라이드 {slide_idx}: 차트 시리즈에 데이터 없음")
+                            issues.append(
+                                f"슬라이드 {slide_idx}: 차트 시리즈에 데이터 없음"
+                            )
 
                 if not chart.has_title:
                     issues.append(f"슬라이드 {slide_idx}: 차트 제목 없음")
@@ -318,7 +347,9 @@ class IMPPTXProgrammaticGate(QualityGate):
             if char_count < 30 and not has_chart and not has_table:
                 empty_slides += 1
                 if empty_slides <= 3:
-                    issues.append(f"슬라이드 {slide_idx}: 콘텐츠 부족 (텍스트 {char_count}자)")
+                    issues.append(
+                        f"슬라이드 {slide_idx}: 콘텐츠 부족 (텍스트 {char_count}자)"
+                    )
 
             if char_count > 800 and not has_table:
                 dense_slides += 1
@@ -334,7 +365,9 @@ class IMPPTXProgrammaticGate(QualityGate):
         """한국어 숫자 파싱 (간략 버전)."""
         if not text:
             return None
-        cleaned = text.replace(",", "").replace(" ", "").replace("원", "").replace("억", "")
+        cleaned = (
+            text.replace(",", "").replace(" ", "").replace("원", "").replace("억", "")
+        )
         cleaned = cleaned.replace("백만", "").replace("천", "")
         try:
             return float(cleaned)

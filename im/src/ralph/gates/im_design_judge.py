@@ -66,12 +66,12 @@ IM PPTX 문서의 디자인 품질을 6개 차원으로 평가합니다.
 """
 
 IM_DESIGN_WEIGHTS: dict[str, tuple[float, str]] = {
-    "information_density":   (0.20, "정보 밀도"),
-    "visual_hierarchy":      (0.20, "시각적 위계"),
-    "chart_effectiveness":   (0.20, "차트 효과성"),
-    "slide_narrative_flow":  (0.15, "내러티브 흐름"),
-    "brand_consistency":     (0.10, "브랜드 일관성"),
-    "investor_readiness":    (0.15, "투자자 준비도"),
+    "information_density": (0.20, "정보 밀도"),
+    "visual_hierarchy": (0.20, "시각적 위계"),
+    "chart_effectiveness": (0.20, "차트 효과성"),
+    "slide_narrative_flow": (0.15, "내러티브 흐름"),
+    "brand_consistency": (0.10, "브랜드 일관성"),
+    "investor_readiness": (0.15, "투자자 준비도"),
 }
 
 
@@ -102,7 +102,11 @@ class IMLLMDesignJudge(QualityGate):
 
         if self._llm_call is None:
             return self._timed_result(
-                start, [], ["LLM Design Judge 비활성: llm_call 미설정"], [], [],
+                start,
+                [],
+                ["LLM Design Judge 비활성: llm_call 미설정"],
+                [],
+                [],
             )
 
         # 1. PPTX에서 텍스트 + 구조 메타데이터 추출
@@ -110,7 +114,11 @@ class IMLLMDesignJudge(QualityGate):
             slide_metadata = self._extract_slide_metadata(artifact_path)
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"PPTX 메타데이터 추출 실패: {exc}"], [], [],
+                start,
+                [],
+                [f"PPTX 메타데이터 추출 실패: {exc}"],
+                [],
+                [],
             )
 
         # 2. LLM 호출
@@ -123,7 +131,11 @@ class IMLLMDesignJudge(QualityGate):
             )
         except Exception as exc:
             return self._timed_result(
-                start, [], [f"LLM 호출 실패: {exc}"], [], [],
+                start,
+                [],
+                [f"LLM 호출 실패: {exc}"],
+                [],
+                [],
                 cost_usd=0.02,
             )
 
@@ -131,7 +143,11 @@ class IMLLMDesignJudge(QualityGate):
         dimensions, issues, suggestions, critical_flags = self._parse_response(response)
 
         return self._timed_result(
-            start, dimensions, issues, suggestions, critical_flags,
+            start,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
             cost_usd=0.03,
             raw_data={"slide_count": len(slide_metadata)},
         )
@@ -204,22 +220,25 @@ class IMLLMDesignJudge(QualityGate):
         total_charts = sum(m["chart_count"] for m in slides_meta)
         total_tables = sum(m["table_count"] for m in slides_meta)
 
-        lines.extend([
-            "",
-            "### 통계 요약",
-            f"- 총 슬라이드: {len(slides_meta)}장",
-            f"- 총 텍스트: {total_chars:,}자",
-            f"- 차트: {total_charts}개",
-            f"- 테이블: {total_tables}개",
-            f"- 평균 텍스트/슬라이드: {total_chars // max(len(slides_meta), 1)}자",
-            "",
-            "위 구조를 기반으로 6차원 디자인 품질을 평가해주세요.",
-        ])
+        lines.extend(
+            [
+                "",
+                "### 통계 요약",
+                f"- 총 슬라이드: {len(slides_meta)}장",
+                f"- 총 텍스트: {total_chars:,}자",
+                f"- 차트: {total_charts}개",
+                f"- 테이블: {total_tables}개",
+                f"- 평균 텍스트/슬라이드: {total_chars // max(len(slides_meta), 1)}자",
+                "",
+                "위 구조를 기반으로 6차원 디자인 품질을 평가해주세요.",
+            ]
+        )
 
         return "\n".join(lines)
 
     def _parse_response(
-        self, response_text: str,
+        self,
+        response_text: str,
     ) -> tuple[list[DimensionScore], list[str], list[str], list[str]]:
         """LLM 응답을 파싱한다."""
         dimensions: list[DimensionScore] = []
@@ -243,13 +262,15 @@ class IMLLMDesignJudge(QualityGate):
                     score = float(dim_data.get("score", 3.0))
                     feedback = dim_data.get("feedback", "")
 
-                    dimensions.append(DimensionScore(
-                        name=dim_name,
-                        label=label,
-                        score=min(5.0, max(1.0, score)),
-                        weight=weight,
-                        feedback=feedback,
-                    ))
+                    dimensions.append(
+                        DimensionScore(
+                            name=dim_name,
+                            label=label,
+                            score=min(5.0, max(1.0, score)),
+                            weight=weight,
+                            feedback=feedback,
+                        )
+                    )
 
                     if score < 3.0:
                         issues.append(f"{label}: {feedback}")
@@ -260,9 +281,14 @@ class IMLLMDesignJudge(QualityGate):
         except (json.JSONDecodeError, KeyError, IndexError) as exc:
             logger.warning("LLM Design Judge 응답 파싱 실패: %s", exc)
             for dim_name, (weight, label) in IM_DESIGN_WEIGHTS.items():
-                dimensions.append(DimensionScore(
-                    name=dim_name, label=label, score=3.0, weight=weight,
-                    feedback="응답 파싱 실패 — 기본 점수 적용",
-                ))
+                dimensions.append(
+                    DimensionScore(
+                        name=dim_name,
+                        label=label,
+                        score=3.0,
+                        weight=weight,
+                        feedback="응답 파싱 실패 — 기본 점수 적용",
+                    )
+                )
 
         return dimensions, issues, suggestions, critical_flags

@@ -163,12 +163,10 @@ class AccountMapper:
         if name in self._combined_map:
             standard_code = self._combined_map[name]
             # custom_mappings에서 온 것인지 판별
-            match_type = (
-                "custom"
-                if name in self._config.custom_mappings
-                else "exact"
+            match_type = "custom" if name in self._config.custom_mappings else "exact"
+            logger.debug(
+                "정확 일치: '%s' → %s (%s)", name, standard_code.name, match_type
             )
-            logger.debug("정확 일치: '%s' → %s (%s)", name, standard_code.name, match_type)
             return AccountMapping(
                 original_name=name,
                 standard_code=standard_code,

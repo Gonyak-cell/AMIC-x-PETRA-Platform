@@ -35,9 +35,7 @@ class TestKpiCardHtml:
             {"label": "매출", "value": 150_000, "change": 0.25},
             {"label": "영업이익", "value": 28_000, "change": 0.40},
         ]
-        result = render_kpi_grid_html(
-            kpis, tokens=tokens, number_config=number_config
-        )
+        result = render_kpi_grid_html(kpis, tokens=tokens, number_config=number_config)
         assert isinstance(result, str)
         assert "매출" in result
 
@@ -55,7 +53,11 @@ class TestFinancialTableHtml:
         headers = ["항목", "2022", "2023", "2024"]
         rows = [
             {"label": "매출", "values": [100_000, 120_000, 150_000], "style": "normal"},
-            {"label": "영업이익", "values": [15_000, 20_000, 28_000], "style": "normal"},
+            {
+                "label": "영업이익",
+                "values": [15_000, 20_000, 28_000],
+                "style": "normal",
+            },
         ]
         result = render_financial_table_html(
             headers=headers, rows=rows, tokens=tokens, number_config=number_config

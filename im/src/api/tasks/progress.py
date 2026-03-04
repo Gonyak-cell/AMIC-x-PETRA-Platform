@@ -73,9 +73,7 @@ def _sync_update_document(document_id: str, **kwargs: Any) -> None:
         engine = create_engine(sync_url, pool_pre_ping=True)
         with engine.begin() as conn:
             conn.execute(
-                update(Document)
-                .where(Document.id == document_id)
-                .values(**kwargs)
+                update(Document).where(Document.id == document_id).values(**kwargs)
             )
         engine.dispose()
     except Exception:

@@ -13,9 +13,7 @@ from typing import Any
 class IndustryError(Exception):
     """Industry 모듈 최상위 예외."""
 
-    def __init__(
-        self, message: str, details: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.details = details or {}
@@ -30,10 +28,7 @@ class UnsupportedIndustryError(IndustryError):
         available: list[str] | None = None,
     ) -> None:
         super().__init__(
-            message=(
-                f"미지원 산업: '{industry_id}'. "
-                f"지원 산업: {available or []}"
-            ),
+            message=(f"미지원 산업: '{industry_id}'. 지원 산업: {available or []}"),
             details={
                 "industry_id": industry_id,
                 "available": available or [],

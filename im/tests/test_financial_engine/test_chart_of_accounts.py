@@ -95,9 +95,7 @@ class TestAccountMetadataCompleteness:
     def test_모든_StandardAccount_멤버_커버(self) -> None:
         """모든 StandardAccount 멤버가 ACCOUNT_METADATA에 등록되어 있다."""
         missing = [
-            acct.name
-            for acct in StandardAccount
-            if acct not in ACCOUNT_METADATA
+            acct.name for acct in StandardAccount if acct not in ACCOUNT_METADATA
         ]
         assert missing == [], f"ACCOUNT_METADATA에 누락된 계정: {missing}"
 
@@ -117,7 +115,11 @@ class TestGetAccountsByStatement:
 
     @pytest.mark.parametrize(
         "stmt_type",
-        [StatementType.INCOME_STATEMENT, StatementType.BALANCE_SHEET, StatementType.CASH_FLOW],
+        [
+            StatementType.INCOME_STATEMENT,
+            StatementType.BALANCE_SHEET,
+            StatementType.CASH_FLOW,
+        ],
         ids=["IS", "BS", "CF"],
     )
     def test_반환_타입_일관성(self, stmt_type: StatementType) -> None:

@@ -53,8 +53,7 @@ class DonutBuilder(NativeChartBuilder):
         if len(labels) != len(values):
             raise ChartDataError(
                 "donut",
-                f"labels 길이({len(labels)})와 "
-                f"values 길이({len(values)})가 다릅니다.",
+                f"labels 길이({len(labels)})와 values 길이({len(values)})가 다릅니다.",
             )
 
         chart_data = CategoryChartData()
@@ -81,9 +80,7 @@ class DonutBuilder(NativeChartBuilder):
         for idx in range(len(labels)):
             point = series.points[idx]
             point.format.fill.solid()
-            point.format.fill.fore_color.rgb = hex_to_rgb(
-                colors[idx % len(colors)]
-            )
+            point.format.fill.fore_color.rgb = hex_to_rgb(colors[idx % len(colors)])
 
         # 데이터 레이블: 카테고리명 + 백분율
         plot = chart.plots[0]

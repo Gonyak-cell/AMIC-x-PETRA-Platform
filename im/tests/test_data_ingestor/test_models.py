@@ -265,7 +265,9 @@ class TestFinancialStatementsCollection:
         ]
         return FinancialStatementsCollection(corp_code="00126380", items=items)
 
-    def test_filter_by_year(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_filter_by_year(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """연도별 필터링."""
         items_2023 = sample_collection.filter_by_year("2023")
         assert len(items_2023) == 2
@@ -273,19 +275,25 @@ class TestFinancialStatementsCollection:
         items_2022 = sample_collection.filter_by_year("2022")
         assert len(items_2022) == 1
 
-    def test_filter_consolidated(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_filter_consolidated(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """연결재무제표 필터링."""
         consolidated = sample_collection.filter_consolidated()
         assert len(consolidated) == 2
         assert all(item.is_consolidated for item in consolidated)
 
-    def test_filter_separate(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_filter_separate(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """별도재무제표 필터링."""
         separate = sample_collection.filter_separate()
         assert len(separate) == 1
         assert not separate[0].is_consolidated
 
-    def test_get_account_values(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_get_account_values(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """계정별 연도 값 조회."""
         values = sample_collection.get_account_values("매출액", consolidated=True)
 
@@ -293,12 +301,16 @@ class TestFinancialStatementsCollection:
         assert "2022" in values
         assert values["2023"] == Decimal("300000000000000")
 
-    def test_years_property(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_years_property(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """연도 목록 조회."""
         years = sample_collection.years
         assert years == ["2022", "2023"]
 
-    def test_account_names_property(self, sample_collection: FinancialStatementsCollection) -> None:
+    def test_account_names_property(
+        self, sample_collection: FinancialStatementsCollection
+    ) -> None:
         """계정명 목록 조회."""
         names = sample_collection.account_names
         assert "매출액" in names

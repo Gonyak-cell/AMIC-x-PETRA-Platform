@@ -127,6 +127,7 @@ class ChecklistToIMDataConverter:
         im_style_str = cfg.get("im_style")
         if im_style_str:
             from src.design_renderer.im_document import IMStyle
+
             try:
                 im_data.im_style = IMStyle(im_style_str)
             except ValueError:
@@ -174,7 +175,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value_str = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value_str = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             fiscal_year = item.get("fiscal_year")
 
             if not value_str or not fiscal_year:
@@ -220,7 +225,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             if not value:
                 continue
             field_map[field_key] = value
@@ -247,14 +256,12 @@ class ChecklistToIMDataConverter:
             overview.business_description = field_map["company_description"]
         if "certifications" in field_map:
             overview.certifications = [
-                c.strip() for c in field_map["certifications"].split(",")
-                if c.strip()
+                c.strip() for c in field_map["certifications"].split(",") if c.strip()
             ]
         products_str = field_map.get("key_products") or field_map.get("main_products")
         if products_str:
             overview.key_products = [
-                p.strip() for p in products_str.split(",")
-                if p.strip()
+                p.strip() for p in products_str.split(",") if p.strip()
             ]
 
         return overview
@@ -278,7 +285,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             if not value:
                 continue
 
@@ -330,7 +341,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             if not value:
                 continue
 
@@ -375,7 +390,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             if not value:
                 continue
 
@@ -393,11 +412,13 @@ class ChecklistToIMDataConverter:
 
             # CEO 이름 단순 필드
             if field_key == "ceo_name":
-                members.append(ManagementMember(
-                    name=value,
-                    role="CEO",
-                    title="대표이사",
-                ))
+                members.append(
+                    ManagementMember(
+                        name=value,
+                        role="CEO",
+                        title="대표이사",
+                    )
+                )
 
         # 인덱스 기반 멤버 변환
         for idx in sorted(indexed.keys()):
@@ -407,9 +428,7 @@ class ChecklistToIMDataConverter:
                 title=data.get("title", ""),
                 role=data.get("role", ""),
                 career=[
-                    c.strip()
-                    for c in data.get("career", "").split(",")
-                    if c.strip()
+                    c.strip() for c in data.get("career", "").split(",") if c.strip()
                 ],
             )
             if member.name:
@@ -436,7 +455,11 @@ class ChecklistToIMDataConverter:
 
         for item in items:
             field_key = item.get("field_key", "")
-            value = item.get("effective_value") or item.get("confirmed_value") or item.get("extracted_value")
+            value = (
+                item.get("effective_value")
+                or item.get("confirmed_value")
+                or item.get("extracted_value")
+            )
             if not value:
                 continue
 
@@ -457,7 +480,10 @@ class ChecklistToIMDataConverter:
             data = indexed[idx]
             info = ShareholderInfo(
                 name=data.get("name", ""),
-                stake_pct=self._parse_number(data.get("pct") or data.get("stake_pct") or "0") or 0.0,
+                stake_pct=self._parse_number(
+                    data.get("pct") or data.get("stake_pct") or "0"
+                )
+                or 0.0,
                 category=data.get("category", ""),
             )
             if data.get("share_count"):
@@ -507,7 +533,7 @@ class ChecklistToIMDataConverter:
         multiplier = 1.0
         for suffix, mult in _UNIT_MULTIPLIER.items():
             if cleaned.endswith(suffix):
-                cleaned = cleaned[:-len(suffix)]
+                cleaned = cleaned[: -len(suffix)]
                 multiplier = mult
                 break
 

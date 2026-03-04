@@ -85,9 +85,7 @@ def _make_pct_claim(
 class TestFactValidator:
     """FactValidator 수치 검증 테스트."""
 
-    def test_validate_with_matching_data(
-        self, sample_im_data: IMDocumentData
-    ) -> None:
+    def test_validate_with_matching_data(self, sample_im_data: IMDocumentData) -> None:
         """수치 클레임이 재무 데이터와 일치할 때 검증을 통과하는지 확인한다."""
         validator = FactValidator()
 

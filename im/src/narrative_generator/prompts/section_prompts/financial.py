@@ -89,7 +89,9 @@ class TransactionStructurePrompt(BasePrompt):
             if ds.new_shares:
                 result["신주"] = f"{ds.new_shares:,.0f}억원"
             if ds.valuation_low and ds.valuation_high:
-                result["밸류에이션"] = f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"
+                result["밸류에이션"] = (
+                    f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"
+                )
             if ds.valuation_method:
                 result["밸류에이션 방법론"] = ds.valuation_method
             if ds.timeline:

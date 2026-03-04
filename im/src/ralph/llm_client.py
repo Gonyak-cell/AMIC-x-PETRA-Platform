@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 
 # 1K 토큰당 USD (2026-02 기준 추정)
 COST_PER_1K: dict[str, dict[str, float]] = {
-    "claude-sonnet-4-20250514":  {"input": 0.003, "output": 0.015},
+    "claude-sonnet-4-20250514": {"input": 0.003, "output": 0.015},
     "claude-haiku-4-5-20251001": {"input": 0.001, "output": 0.005},
-    "gpt-4o":                    {"input": 0.0025, "output": 0.01},
-    "gpt-4o-mini":               {"input": 0.00015, "output": 0.0006},
-    "gemini-2.0-flash":          {"input": 0.0001, "output": 0.0004},
+    "gpt-4o": {"input": 0.0025, "output": 0.01},
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gemini-2.0-flash": {"input": 0.0001, "output": 0.0004},
 }
 
 
@@ -37,7 +37,9 @@ class CostTracker:
     def add(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """호출 비용을 기록하고 해당 호출 비용을 반환한다."""
         rates = COST_PER_1K.get(model, {"input": 0.003, "output": 0.015})
-        cost = (input_tokens / 1000) * rates["input"] + (output_tokens / 1000) * rates["output"]
+        cost = (input_tokens / 1000) * rates["input"] + (output_tokens / 1000) * rates[
+            "output"
+        ]
         self.accumulated_usd += cost
         self.call_count += 1
 
@@ -92,6 +94,7 @@ class _AnthropicAdapter(_LLMAdapter):
             return False
         try:
             import anthropic  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -140,6 +143,7 @@ class _OpenAIAdapter(_LLMAdapter):
             return False
         try:
             import openai  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -191,6 +195,7 @@ class _GoogleAdapter(_LLMAdapter):
             return False
         try:
             import google.generativeai  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -213,7 +218,9 @@ class _GoogleAdapter(_LLMAdapter):
             )
             response = gm.generate_content(
                 user,
-                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=4096),
+                generation_config=genai.GenerationConfig(
+                    temperature=0.3, max_output_tokens=4096
+                ),
             )
             text = response.text or ""
             usage = getattr(response, "usage_metadata", None)
@@ -265,7 +272,9 @@ class RalphLLMClient:
             anthropic_api_key=getattr(config, "anthropic_api_key", ""),
             openai_api_key=getattr(config, "openai_api_key", ""),
             google_api_key=getattr(config, "google_api_key", ""),
-            primary_model=getattr(config, "ralph_primary_model", "claude-sonnet-4-20250514"),
+            primary_model=getattr(
+                config, "ralph_primary_model", "claude-sonnet-4-20250514"
+            ),
             judge_model=getattr(config, "ralph_judge_model", "gpt-4o"),
         )
 
@@ -294,12 +303,20 @@ class RalphLLMClient:
                 self._cost_tracker.add(model_used, inp, out)
                 logger.debug(
                     "LLM 호출 성공: provider=%s, model=%s, tokens=%d+%d, cost=$%.4f",
-                    adapter.provider_name, model_used, inp, out, self._cost_tracker.accumulated_usd,
+                    adapter.provider_name,
+                    model_used,
+                    inp,
+                    out,
+                    self._cost_tracker.accumulated_usd,
                 )
                 return text
             except Exception as exc:
                 last_error = exc
-                logger.warning("LLM 호출 실패 (%s): %s — 다음 프로바이더로 폴백", adapter.provider_name, exc)
+                logger.warning(
+                    "LLM 호출 실패 (%s): %s — 다음 프로바이더로 폴백",
+                    adapter.provider_name,
+                    exc,
+                )
 
         raise RuntimeError(
             f"사용 가능한 LLM 프로바이더가 없습니다. 마지막 에러: {last_error}"
@@ -311,7 +328,9 @@ class RalphLLMClient:
             if not adapter.is_available:
                 continue
             try:
-                text, model_used, inp, out = await adapter.generate(system, user, model=model)
+                text, model_used, inp, out = await adapter.generate(
+                    system, user, model=model
+                )
                 self._cost_tracker.add(model_used, inp, out)
                 return text
             except Exception:

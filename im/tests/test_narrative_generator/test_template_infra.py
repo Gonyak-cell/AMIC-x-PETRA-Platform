@@ -29,7 +29,9 @@ from src.narrative_generator.templates.renderer import TemplateRenderer
 # 경로 상수 (실제 YAML 템플릿 디렉터리)
 # ---------------------------------------------------------------------------
 
-_TEMPLATE_DIR = Path(__file__).resolve().parents[2] / "src" / "narrative_generator" / "templates"
+_TEMPLATE_DIR = (
+    Path(__file__).resolve().parents[2] / "src" / "narrative_generator" / "templates"
+)
 
 
 # ===========================================================================
@@ -172,7 +174,9 @@ class TestTemplateRegistry:
         # tech 오버라이드에 추가 슬롯이 있어야 함
         assert len(tpl_tech.slots) >= len(tpl_base.slots)
 
-    def test_get_without_override_returns_base(self, registry: TemplateRegistry) -> None:
+    def test_get_without_override_returns_base(
+        self, registry: TemplateRegistry
+    ) -> None:
         tpl = registry.get("contact", industry="tech")
         # contact에는 tech 오버라이드 없음 → 기본 반환
         assert tpl is not None
@@ -205,7 +209,9 @@ class TestTemplateRegistry:
                 "b": SlotDefinition(name="b", level="L3", hint="기본 힌트"),
             },
             conditional_blocks=[
-                ConditionalBlock(condition="industry == 'tech'", insert_after="a", text="기본 CB"),
+                ConditionalBlock(
+                    condition="industry == 'tech'", insert_after="a", text="기본 CB"
+                ),
             ],
         )
         override = SectionTemplate(
@@ -216,7 +222,9 @@ class TestTemplateRegistry:
                 "c": SlotDefinition(name="c", level="L3", hint="신규 슬롯"),
             },
             conditional_blocks=[
-                ConditionalBlock(condition="has_market_data", insert_after="b", text="추가 CB"),
+                ConditionalBlock(
+                    condition="has_market_data", insert_after="b", text="추가 CB"
+                ),
             ],
         )
         merged = TemplateRegistry._merge_templates(base, override)
@@ -245,10 +253,12 @@ class TestTemplateRenderer:
 
     @pytest.fixture()
     def base_blocks(self) -> BaseBlocks:
-        return BaseBlocks(blocks={
-            "disclaimer_short": "면책조항 텍스트",
-            "confidentiality": "비밀유지 텍스트",
-        })
+        return BaseBlocks(
+            blocks={
+                "disclaimer_short": "면책조항 텍스트",
+                "confidentiality": "비밀유지 텍스트",
+            }
+        )
 
     def test_render_l2_only(
         self,
@@ -261,10 +271,15 @@ class TestTemplateRenderer:
             body="기업명: {{company_name}}, 날짜: {{report_date}}",
             slots={
                 "company_name": SlotDefinition(
-                    name="company_name", level="L2", source="company_name_kr",
+                    name="company_name",
+                    level="L2",
+                    source="company_name_kr",
                 ),
                 "report_date": SlotDefinition(
-                    name="report_date", level="L2", source="date", format_spec="date",
+                    name="report_date",
+                    level="L2",
+                    source="date",
+                    format_spec="date",
                 ),
             },
         )
@@ -283,7 +298,9 @@ class TestTemplateRenderer:
             body="소개: {{intro}}",
             slots={
                 "intro": SlotDefinition(
-                    name="intro", level="L3", hint="소개 텍스트",
+                    name="intro",
+                    level="L3",
+                    hint="소개 텍스트",
                 ),
             },
         )
@@ -304,7 +321,9 @@ class TestTemplateRenderer:
             slots={},
         )
         result = renderer.render(
-            template, sample_im_data, base_blocks=base_blocks,
+            template,
+            sample_im_data,
+            base_blocks=base_blocks,
         )
         assert "면책조항 텍스트" in result
         assert "{{@" not in result
@@ -331,7 +350,10 @@ class TestTemplateRenderer:
         )
         llm_slots = {"analysis": "재무 분석 결과"}
         result = renderer.render(
-            template, sample_im_data, llm_slots, industry="tech",
+            template,
+            sample_im_data,
+            llm_slots,
+            industry="tech",
         )
         assert "SaaS 특화 분석 추가" in result
         assert "재무 분석 결과" in result
@@ -358,7 +380,10 @@ class TestTemplateRenderer:
         )
         llm_slots = {"analysis": "재무 분석"}
         result = renderer.render(
-            template, sample_im_data, llm_slots, industry="manufacturing",
+            template,
+            sample_im_data,
+            llm_slots,
+            industry="manufacturing",
         )
         assert "SaaS 특화" not in result
 
@@ -374,7 +399,9 @@ class TestTemplateRenderer:
             body="값: {{unknown_slot}}",
             slots={
                 "unknown_slot": SlotDefinition(
-                    name="unknown_slot", level="L1", default="[기본값]",
+                    name="unknown_slot",
+                    level="L1",
+                    default="[기본값]",
                 ),
             },
         )
@@ -401,7 +428,9 @@ class TestTemplateRenderer:
 
     def test_format_l2_currency(self) -> None:
         """L2 currency 포맷 테스트."""
-        assert TemplateRenderer._format_l2_value(15_000_000_000, "currency") == "150억원"
+        assert (
+            TemplateRenderer._format_l2_value(15_000_000_000, "currency") == "150억원"
+        )
         assert TemplateRenderer._format_l2_value(5_000_000, "currency") == "5백만원"
         assert TemplateRenderer._format_l2_value(50_000, "currency") == "50,000원"
 
@@ -425,9 +454,14 @@ class TestTemplateRenderer:
     ) -> None:
         """dotted notation 데이터 경로 조회."""
         # 1단계
-        assert renderer._resolve_data_path(sample_im_data, "company_name_kr") == "테스트기업"
+        assert (
+            renderer._resolve_data_path(sample_im_data, "company_name_kr")
+            == "테스트기업"
+        )
         # 2단계 (중첩)
-        model = renderer._resolve_data_path(sample_im_data, "company_overview.business_model")
+        model = renderer._resolve_data_path(
+            sample_im_data, "company_overview.business_model"
+        )
         assert model == "B2B IT 서비스"
         # 리스트 인덱싱
         name = renderer._resolve_data_path(sample_im_data, "contacts.0.name")
@@ -445,27 +479,59 @@ class TestTemplateRenderer:
         """industry == 'tech' 조건 평가."""
         # sample_im_data is not needed for static method-like calls
         from unittest.mock import MagicMock
+
         mock_data = MagicMock(spec=IMDocumentData)
-        assert TemplateRenderer._evaluate_condition("industry == 'tech'", "tech", mock_data) is True
-        assert TemplateRenderer._evaluate_condition("industry == 'tech'", "healthcare", mock_data) is False
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "industry == 'tech'", "tech", mock_data
+            )
+            is True
+        )
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "industry == 'tech'", "healthcare", mock_data
+            )
+            is False
+        )
 
     def test_evaluate_condition_industry_ne(self) -> None:
         from unittest.mock import MagicMock
+
         mock_data = MagicMock(spec=IMDocumentData)
-        assert TemplateRenderer._evaluate_condition("industry != 'general'", "tech", mock_data) is True
-        assert TemplateRenderer._evaluate_condition("industry != 'general'", "general", mock_data) is False
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "industry != 'general'", "tech", mock_data
+            )
+            is True
+        )
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "industry != 'general'", "general", mock_data
+            )
+            is False
+        )
 
     def test_evaluate_condition_has_flags(
         self,
         sample_im_data: IMDocumentData,
     ) -> None:
         """has_xxx 플래그 평가."""
-        assert TemplateRenderer._evaluate_condition(
-            "has_deal_structure", "", sample_im_data,
-        ) is True
-        assert TemplateRenderer._evaluate_condition(
-            "has_market_data", "", sample_im_data,
-        ) is True
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "has_deal_structure",
+                "",
+                sample_im_data,
+            )
+            is True
+        )
+        assert (
+            TemplateRenderer._evaluate_condition(
+                "has_market_data",
+                "",
+                sample_im_data,
+            )
+            is True
+        )
 
     def test_normalize_whitespace(self) -> None:
         text = "줄1\n\n\n\n줄2  연속   공백\n줄3 \n"
@@ -492,7 +558,9 @@ class TestTemplateRenderer:
             "investment_appeal": "안정적 재무 성과와 성장 잠재력을 겸비한 매력적인 투자 기회입니다.",
         }
         result = renderer.render(
-            tpl, sample_im_data, llm_slots,
+            tpl,
+            sample_im_data,
+            llm_slots,
             industry="tech",
             base_blocks=registry.base_blocks,
         )
@@ -520,18 +588,15 @@ class TestSlotResponseParser:
         return SlotResponseParser()
 
     def test_parse_standard_json(self, parser: SlotResponseParser) -> None:
-        response = '{"company_intro": "테스트 소개", "revenue_highlight": "매출 150억원"}'
+        response = (
+            '{"company_intro": "테스트 소개", "revenue_highlight": "매출 150억원"}'
+        )
         result = parser.parse(response, ["company_intro", "revenue_highlight"])
         assert result["company_intro"] == "테스트 소개"
         assert result["revenue_highlight"] == "매출 150억원"
 
     def test_parse_json_code_block(self, parser: SlotResponseParser) -> None:
-        response = (
-            "다음은 슬롯 값입니다:\n"
-            "```json\n"
-            '{"intro": "기업 소개 텍스트"}\n'
-            "```"
-        )
+        response = '다음은 슬롯 값입니다:\n```json\n{"intro": "기업 소개 텍스트"}\n```'
         result = parser.parse(response, ["intro"])
         assert result["intro"] == "기업 소개 텍스트"
 
@@ -540,7 +605,9 @@ class TestSlotResponseParser:
         result = parser.parse(response, ["company_intro", "revenue"])
         assert "company_intro" in result
 
-    def test_parse_single_slot_fulltext_fallback(self, parser: SlotResponseParser) -> None:
+    def test_parse_single_slot_fulltext_fallback(
+        self, parser: SlotResponseParser
+    ) -> None:
         """단일 슬롯일 때 전체 응답을 매핑하는 폴백."""
         response = "테스트기업은 국내 IT 서비스 시장의 선도기업입니다."
         result = parser.parse(response, ["company_intro"])
@@ -572,11 +639,7 @@ class TestSlotResponseParser:
 
     def test_parse_json_with_surrounding_text(self, parser: SlotResponseParser) -> None:
         """JSON 앞뒤에 불필요한 텍스트가 있는 경우."""
-        response = (
-            "네, 슬롯을 채우겠습니다.\n"
-            '{"intro": "소개 텍스트"}\n'
-            "완료했습니다."
-        )
+        response = '네, 슬롯을 채우겠습니다.\n{"intro": "소개 텍스트"}\n완료했습니다.'
         result = parser.parse(response, ["intro"])
         assert result["intro"] == "소개 텍스트"
 
@@ -599,7 +662,9 @@ class TestSlotFillPromptBuilder:
         assert "슬롯" in prompt
         assert "역할" in prompt
 
-    def test_build_system_prompt_with_industry(self, builder: SlotFillPromptBuilder) -> None:
+    def test_build_system_prompt_with_industry(
+        self, builder: SlotFillPromptBuilder
+    ) -> None:
         prompt = builder.build_system_prompt(industry_context="SaaS 기업 특화")
         assert "SaaS 기업 특화" in prompt
         assert "산업 컨텍스트" in prompt
@@ -615,7 +680,9 @@ class TestSlotFillPromptBuilder:
             body="{{company_name}}은 {{company_intro}}",
             slots={
                 "company_name": SlotDefinition(
-                    name="company_name", level="L2", source="company_name_kr",
+                    name="company_name",
+                    level="L2",
+                    source="company_name_kr",
                 ),
                 "company_intro": SlotDefinition(
                     name="company_intro",
@@ -649,7 +716,9 @@ class TestSlotFillPromptBuilder:
             body="{{company_name}}",
             slots={
                 "company_name": SlotDefinition(
-                    name="company_name", level="L2", source="company_name_kr",
+                    name="company_name",
+                    level="L2",
+                    source="company_name_kr",
                 ),
             },
         )

@@ -342,7 +342,13 @@ def render_financial_table_html(
         if show_cagr:
             if cagr is not None:
                 cagr_pct = format_percentage(cagr, number_config, show_sign=True)
-                color = c.positive if cagr > 0 else c.negative if cagr < 0 else c.text_secondary
+                color = (
+                    c.positive
+                    if cagr > 0
+                    else c.negative
+                    if cagr < 0
+                    else c.text_secondary
+                )
                 tbody += f'<td style="color: {color};">{html_escape(cagr_pct)}</td>'
             else:
                 na = number_config.na_display if number_config else "N/A"

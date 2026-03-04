@@ -9,7 +9,12 @@ import pytest
 
 from src.data_ingestor.exceptions import ExcelParserError, PDFParserError
 from src.data_ingestor.parsers.excel_parser import ExcelParser, ExcelSheet
-from src.data_ingestor.parsers.pdf_parser import PDFDocument, PDFPage, PDFParser, PDFTable
+from src.data_ingestor.parsers.pdf_parser import (
+    PDFDocument,
+    PDFPage,
+    PDFParser,
+    PDFTable,
+)
 
 
 class TestPDFTable:

@@ -104,7 +104,9 @@ def _mmr_rerank(
                 max_sim_to_selected = max(max_sim_to_selected, sim)
 
             # MMR 점수
-            mmr_score = lambda_param * relevance - (1 - lambda_param) * max_sim_to_selected
+            mmr_score = (
+                lambda_param * relevance - (1 - lambda_param) * max_sim_to_selected
+            )
 
             if mmr_score > best_score:
                 best_score = mmr_score

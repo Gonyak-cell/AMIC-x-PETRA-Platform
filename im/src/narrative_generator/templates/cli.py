@@ -58,7 +58,8 @@ def _create_parser() -> argparse.ArgumentParser:
         description="참조 IM 보고서에서 YAML 부동문자 템플릿을 자동 생성합니다.",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="상세 로깅 출력",
     )
@@ -71,22 +72,26 @@ def _create_parser() -> argparse.ArgumentParser:
         help="단일 섹션의 YAML 템플릿을 추출합니다.",
     )
     extract_parser.add_argument(
-        "--file", "-f",
+        "--file",
+        "-f",
         required=True,
         help="참조 보고서 파일 경로 (PDF, PPTX, TXT)",
     )
     extract_parser.add_argument(
-        "--section", "-s",
+        "--section",
+        "-s",
         default="",
         help="섹션 ID (비어 있으면 자동 감지)",
     )
     extract_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="",
         help="출력 YAML 파일 경로 (비어 있으면 stdout)",
     )
     extract_parser.add_argument(
-        "--model", "-m",
+        "--model",
+        "-m",
         default="gpt-4o",
         help="LLM 모델명 (기본: gpt-4o)",
     )
@@ -102,17 +107,20 @@ def _create_parser() -> argparse.ArgumentParser:
         help="전체 보고서를 섹션별로 분할하여 YAML 템플릿을 추출합니다.",
     )
     extract_all_parser.add_argument(
-        "--file", "-f",
+        "--file",
+        "-f",
         required=True,
         help="참조 보고서 파일 경로 (PDF, PPTX, TXT)",
     )
     extract_all_parser.add_argument(
-        "--output-dir", "-o",
+        "--output-dir",
+        "-o",
         default=".",
         help="출력 디렉터리 경로 (기본: 현재 디렉터리)",
     )
     extract_all_parser.add_argument(
-        "--model", "-m",
+        "--model",
+        "-m",
         default="gpt-4o",
         help="LLM 모델명 (기본: gpt-4o)",
     )
@@ -128,7 +136,8 @@ def _create_parser() -> argparse.ArgumentParser:
         help="파일에서 텍스트만 추출합니다 (디버깅용).",
     )
     text_parser.add_argument(
-        "--file", "-f",
+        "--file",
+        "-f",
         required=True,
         help="파일 경로 (PDF, PPTX, TXT)",
     )
@@ -159,6 +168,7 @@ def _create_llm_client(model: str, no_llm: bool) -> tuple:
 
     try:
         from openai import OpenAI
+
         client = OpenAI()
         return client, model
     except ImportError:
@@ -261,7 +271,10 @@ async def _cmd_text(args: argparse.Namespace) -> int:
         return 1
 
     if args.max_chars and len(text) > args.max_chars:
-        text = text[:args.max_chars] + f"\n\n[... {len(text) - args.max_chars}자 생략 ...]"
+        text = (
+            text[: args.max_chars]
+            + f"\n\n[... {len(text) - args.max_chars}자 생략 ...]"
+        )
 
     print(text)
     return 0

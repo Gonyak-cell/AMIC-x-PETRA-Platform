@@ -219,7 +219,9 @@ def calculate_healthcare_metrics(
         for v in (expected_cash_flows, success_probabilities, discount_rate)
     ):
         rnpv = calculate_rnpv(
-            expected_cash_flows, success_probabilities, discount_rate  # type: ignore[arg-type]
+            expected_cash_flows,
+            success_probabilities,
+            discount_rate,  # type: ignore[arg-type]
         )
 
     # 2) 단계별 성공률 (선택)
@@ -230,9 +232,7 @@ def calculate_healthcare_metrics(
     # 3) 특허 잔여기간 (선택)
     patent_remaining: dict[str, float] = {}
     if patent_expiry_years is not None and current_year is not None:
-        patent_remaining = calculate_patent_remaining(
-            patent_expiry_years, current_year
-        )
+        patent_remaining = calculate_patent_remaining(patent_expiry_years, current_year)
 
     # 4) R&D/매출 (선택 -- rd_expense 필요)
     rd_rev: dict[str, float] = {}

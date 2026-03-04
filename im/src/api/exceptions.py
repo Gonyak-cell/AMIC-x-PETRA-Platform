@@ -38,9 +38,13 @@ class AuthenticationError(APIError):
     """인증 실패 (유효하지 않은 토큰 또는 API 키)."""
 
     def __init__(
-        self, message: str = "인증에 실패했습니다.", details: dict[str, Any] | None = None
+        self,
+        message: str = "인증에 실패했습니다.",
+        details: dict[str, Any] | None = None,
     ) -> None:
-        super().__init__(message=message, details=details, code=ErrorCode.SYS_AUTH_FAILED)
+        super().__init__(
+            message=message, details=details, code=ErrorCode.SYS_AUTH_FAILED
+        )
 
 
 class AuthorizationError(APIError):

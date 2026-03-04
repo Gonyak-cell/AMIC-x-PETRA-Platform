@@ -8,10 +8,14 @@ Pydantic BaseSettings 기반으로 DB, Redis, JWT, 외부 API 키 등 전체 설
 
 from __future__ import annotations
 
+import logging
+import os
 from functools import lru_cache
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
+
+_logger = logging.getLogger(__name__)
 
 
 class APIConfig(BaseSettings):
@@ -266,3 +270,20 @@ def get_config() -> APIConfig:
         APIConfig 인스턴스 (.env에서 로드).
     """
     return APIConfig()
+
+
+# ── Startup validation ────────────────────────────────────
+_env_name = os.getenv("ENV", "").lower()
+_is_production = _env_name in ("production", "prod")
+_is_staging = _env_name in ("staging", "stg")
+
+_cfg = get_config()
+_DEV_SECRETS = ("change-me-in-production", "")
+
+if _cfg.jwt_secret_key in _DEV_SECRETS:
+    if _is_production or _is_staging:
+        raise RuntimeError(
+            "CRITICAL: JWT_SECRET must be set in production/staging. "
+            "Generate a strong secret (≥32 chars) and set the JWT_SECRET env var."
+        )
+    _logger.warning("JWT_SECRET not set. Set JWT_SECRET in .env for production.")

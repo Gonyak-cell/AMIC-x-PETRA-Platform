@@ -67,8 +67,7 @@ class DataTransformer:
             rev_values = [revenue.get(y, 0) for y in sorted_years]
             oi_values = [operating_income.get(y, 0) for y in sorted_years]
             margin_values = [
-                oi / rev if rev != 0 else 0
-                for rev, oi in zip(rev_values, oi_values)
+                oi / rev if rev != 0 else 0 for rev, oi in zip(rev_values, oi_values)
             ]
 
             charts.append(
@@ -89,7 +88,9 @@ class DataTransformer:
         if revenue and operating_income and years:
             latest = sorted(years)[-1]
             rev = revenue.get(latest, 0)
-            cogs = getattr(financial_statements, "cost_of_goods_sold", {}).get(latest, 0)
+            cogs = getattr(financial_statements, "cost_of_goods_sold", {}).get(
+                latest, 0
+            )
             sga = getattr(financial_statements, "sga_expenses", {}).get(latest, 0)
             oi = operating_income.get(latest, 0)
 
@@ -157,10 +158,12 @@ class DataTransformer:
 
         series = []
         for seg_name, year_dict in segments.items():
-            series.append({
-                "name": seg_name,
-                "values": [year_dict.get(y, 0) for y in sorted_years],
-            })
+            series.append(
+                {
+                    "name": seg_name,
+                    "values": [year_dict.get(y, 0) for y in sorted_years],
+                }
+            )
 
         charts.append(
             ChartSpec(

@@ -252,7 +252,9 @@ class CacheManager:
             keys_to_delete = [k for k in self._memory if k.startswith(prefix)]
         else:
             # 간단한 prefix 매칭 (glob은 Redis에서 처리)
-            keys_to_delete = [k for k in self._memory if k.startswith(full_pattern.rstrip("*"))]
+            keys_to_delete = [
+                k for k in self._memory if k.startswith(full_pattern.rstrip("*"))
+            ]
 
         for k in keys_to_delete:
             del self._memory[k]
@@ -358,7 +360,8 @@ class CachedDartClient:
         corp_code: str,
         bsns_year: str,
         reprt_code: ReportCode | str = ReportCode.ANNUAL,
-        fs_div: FinancialStatementDivision | str = FinancialStatementDivision.CONSOLIDATED,
+        fs_div: FinancialStatementDivision
+        | str = FinancialStatementDivision.CONSOLIDATED,
     ) -> FinancialStatementsCollection:
         """재무제표 정보를 조회합니다 (캐시 적용).
 
@@ -371,7 +374,9 @@ class CachedDartClient:
         Returns:
             FinancialStatementsCollection 객체.
         """
-        reprt_code_value = reprt_code.value if isinstance(reprt_code, ReportCode) else reprt_code
+        reprt_code_value = (
+            reprt_code.value if isinstance(reprt_code, ReportCode) else reprt_code
+        )
         fs_div_value = (
             fs_div.value if isinstance(fs_div, FinancialStatementDivision) else fs_div
         )
@@ -383,7 +388,9 @@ class CachedDartClient:
         # 캐시 조회
         cached = await self._cache.get(cache_key)
         if cached is not None:
-            logger.debug("캐시 히트 - financial_statements: %s/%s", corp_code, bsns_year)
+            logger.debug(
+                "캐시 히트 - financial_statements: %s/%s", corp_code, bsns_year
+            )
             return FinancialStatementsCollection.model_validate(cached)
 
         # API 호출
@@ -444,7 +451,9 @@ class CachedDartClient:
         Returns:
             배당 정보 리스트.
         """
-        reprt_code_value = reprt_code.value if isinstance(reprt_code, ReportCode) else reprt_code
+        reprt_code_value = (
+            reprt_code.value if isinstance(reprt_code, ReportCode) else reprt_code
+        )
         cache_key = self._make_key("dividend", corp_code, bsns_year, reprt_code_value)
 
         cached = await self._cache.get(cache_key)

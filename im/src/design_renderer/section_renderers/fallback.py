@@ -69,9 +69,7 @@ def render_fallback_slide_pptx(
     set_font_with_ea(run_title, t.font_body)
     run_title.font.size = Pt(16)
     run_title.font.bold = True
-    run_title.font.color.rgb = RGBColor.from_string(
-        c.text_secondary.lstrip("#")
-    )
+    run_title.font.color.rgb = RGBColor.from_string(c.text_secondary.lstrip("#"))
 
     # 상세: 프로덕션에서는 에러 메시지 숨김
     p_detail = tf.add_paragraph()
@@ -84,9 +82,7 @@ def render_fallback_slide_pptx(
         run_detail.text = "해당 섹션의 데이터를 처리 중입니다."
     set_font_with_ea(run_detail, t.font_body)
     run_detail.font.size = Pt(9)
-    run_detail.font.color.rgb = RGBColor.from_string(
-        c.gray_medium.lstrip("#")
-    )
+    run_detail.font.color.rgb = RGBColor.from_string(c.gray_medium.lstrip("#"))
 
     logger.info(f"폴백 슬라이드 생성: {section_id}")
     return slide

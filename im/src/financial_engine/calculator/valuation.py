@@ -263,8 +263,9 @@ def _solve_irr(
 
     # 첫 번째 시도 실패 시 대체 초기값으로 재시도
     if guess != 0.0:
-        return _solve_irr(cash_flows, guess=0.0, max_iterations=max_iterations,
-                          tolerance=tolerance)
+        return _solve_irr(
+            cash_flows, guess=0.0, max_iterations=max_iterations, tolerance=tolerance
+        )
     return None
 
 
@@ -302,7 +303,9 @@ def calculate_irr(
         True
     """
     if entry_ev <= 0 or holding_period < 1:
-        logger.debug("IRR 계산 건너뜀: entry_ev=%s, holding_period=%s", entry_ev, holding_period)
+        logger.debug(
+            "IRR 계산 건너뜀: entry_ev=%s, holding_period=%s", entry_ev, holding_period
+        )
         return None
 
     cfs: list[float] = [float(-entry_ev)]
@@ -398,8 +401,16 @@ def calculate_irr_scenarios(
         ebitda_at_entry = cfg.get("ebitda_at_entry")
         ebitda_at_exit = cfg.get("ebitda_at_exit")
 
-        if any(v is None for v in [entry_multiple, exit_multiple, holding_period,
-                                    ebitda_at_entry, ebitda_at_exit]):
+        if any(
+            v is None
+            for v in [
+                entry_multiple,
+                exit_multiple,
+                holding_period,
+                ebitda_at_entry,
+                ebitda_at_exit,
+            ]
+        ):
             logger.debug("IRR 시나리오 '%s' 건너뜀: 필수 값 누락", name)
             continue
 
@@ -486,8 +497,11 @@ def calculate_exit_analysis(
     net_debt = net_debt_at_exit or Decimal("0")
 
     if entry_equity <= 0 or holding_period < 1:
-        logger.debug("Exit 분석 건너뜀: entry_equity=%s, holding_period=%s",
-                      entry_equity, holding_period)
+        logger.debug(
+            "Exit 분석 건너뜀: entry_equity=%s, holding_period=%s",
+            entry_equity,
+            holding_period,
+        )
         return result
 
     for mult in exit_multiples:
@@ -557,30 +571,37 @@ def calculate_valuation_metrics(
     """
     # 배수 지표
     ev_ebitda = calculate_ev_ebitda(ev, ebitda) if ev and ebitda else {}
-    pe = calculate_pe_ratio(equity_value, net_income) if equity_value and net_income else {}
+    pe = (
+        calculate_pe_ratio(equity_value, net_income)
+        if equity_value and net_income
+        else {}
+    )
     ev_rev = calculate_ev_revenue(ev, revenue) if ev and revenue else {}
 
     # IRR 시나리오
     irr_scens = (
-        calculate_irr_scenarios(irr_scenarios_config)
-        if irr_scenarios_config
-        else {}
+        calculate_irr_scenarios(irr_scenarios_config) if irr_scenarios_config else {}
     )
 
     # MOIC 시나리오
     moic_scens = (
-        calculate_moic_scenarios(moic_scenarios_config)
-        if moic_scenarios_config
-        else {}
+        calculate_moic_scenarios(moic_scenarios_config) if moic_scenarios_config else {}
     )
 
     # Exit 분석
     exit_anal: dict[str, ExitAnalysis] = {}
-    if (exit_multiples and ebitda_at_exit is not None
-            and entry_equity is not None and holding_period is not None):
+    if (
+        exit_multiples
+        and ebitda_at_exit is not None
+        and entry_equity is not None
+        and holding_period is not None
+    ):
         exit_anal = calculate_exit_analysis(
-            exit_multiples, ebitda_at_exit, entry_equity,
-            holding_period, net_debt_at_exit,
+            exit_multiples,
+            ebitda_at_exit,
+            entry_equity,
+            holding_period,
+            net_debt_at_exit,
         )
 
     return ValuationMetrics(

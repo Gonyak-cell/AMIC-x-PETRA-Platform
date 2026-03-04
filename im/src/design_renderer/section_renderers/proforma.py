@@ -42,30 +42,40 @@ class ProformaPlanRenderer(BaseSectionRenderer):
         if years:
             latest = years[-1]
             if fs.revenue.get(latest) is not None:
-                kpis.append({
-                    "label": f"매출액 ({latest})",
-                    "value": f"{fmt_amount(fs.revenue[latest])}억원",
-                })
+                kpis.append(
+                    {
+                        "label": f"매출액 ({latest})",
+                        "value": f"{fmt_amount(fs.revenue[latest])}억원",
+                    }
+                )
             if fs.operating_income.get(latest) is not None:
-                kpis.append({
-                    "label": f"영업이익 ({latest})",
-                    "value": f"{fmt_amount(fs.operating_income[latest])}억원",
-                })
+                kpis.append(
+                    {
+                        "label": f"영업이익 ({latest})",
+                        "value": f"{fmt_amount(fs.operating_income[latest])}억원",
+                    }
+                )
             if fs.ebitda.get(latest) is not None:
-                kpis.append({
-                    "label": f"EBITDA ({latest})",
-                    "value": f"{fmt_amount(fs.ebitda[latest])}억원",
-                })
+                kpis.append(
+                    {
+                        "label": f"EBITDA ({latest})",
+                        "value": f"{fmt_amount(fs.ebitda[latest])}억원",
+                    }
+                )
         if dm.get("revenue_cagr_3y") is not None:
-            kpis.append({
-                "label": "매출 CAGR (3Y)",
-                "value": fmt_pct(dm["revenue_cagr_3y"]),
-            })
+            kpis.append(
+                {
+                    "label": "매출 CAGR (3Y)",
+                    "value": fmt_pct(dm["revenue_cagr_3y"]),
+                }
+            )
         if dm.get("ebitda_margin_latest") is not None:
-            kpis.append({
-                "label": "EBITDA 마진율",
-                "value": fmt_pct(dm["ebitda_margin_latest"]),
-            })
+            kpis.append(
+                {
+                    "label": "EBITDA 마진율",
+                    "value": fmt_pct(dm["ebitda_margin_latest"]),
+                }
+            )
         return kpis
 
     def render_html(
@@ -77,9 +87,7 @@ class ProformaPlanRenderer(BaseSectionRenderer):
         tokens = tokens or DEFAULT_TOKENS
         c = tokens.colors
 
-        narrative = html_escape(
-            data.narratives.get("proforma_plan", "")
-        )
+        narrative = html_escape(data.narratives.get("proforma_plan", ""))
         kpis = self._build_kpis(data)
 
         kpi_html = ""
@@ -90,10 +98,10 @@ class ProformaPlanRenderer(BaseSectionRenderer):
                     f'<div style="text-align:center;padding:0.5em;'
                     f'background:{c.bg_cool_grey};border-radius:4px;">'
                     f'<div style="font-size:8pt;color:{c.text_secondary};">'
-                    f'{html_escape(kpi["label"])}</div>'
+                    f"{html_escape(kpi['label'])}</div>"
                     f'<div style="font-size:16pt;font-weight:bold;'
                     f"color:{c.primary};font-family:'IBM Plex Mono',monospace;\">"
-                    f'{html_escape(kpi["value"])}</div></div>'
+                    f"{html_escape(kpi['value'])}</div></div>"
                 )
             kpi_html = (
                 f'<div style="display:grid;grid-template-columns:'
@@ -110,12 +118,14 @@ class ProformaPlanRenderer(BaseSectionRenderer):
 
         content = f"{kpi_html}{narrative_html}"
 
-        return [build_slide_html(
-            content,
-            title="대상회사 Pro-Forma 사업계획",
-            slide_class="slide-proforma-plan",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="대상회사 Pro-Forma 사업계획",
+                slide_class="slide-proforma-plan",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -141,7 +151,10 @@ class ProformaPlanRenderer(BaseSectionRenderer):
 
         if kpis:
             add_kpi_grid(
-                slide, kpis, top=y, tokens=tokens,
+                slide,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -204,9 +217,7 @@ class ProformaFinancialsRenderer(BaseSectionRenderer):
         headers, rows = self._build_financial_rows(data)
 
         if not rows:
-            narrative = html_escape(
-                data.narratives.get("proforma_financials", "")
-            )
+            narrative = html_escape(data.narratives.get("proforma_financials", ""))
             if narrative:
                 content = (
                     f'<p style="font-size:10pt;color:{c.text_body};'
@@ -217,17 +228,19 @@ class ProformaFinancialsRenderer(BaseSectionRenderer):
                     f'<p style="font-size:10pt;color:{c.text_secondary};'
                     f'font-style:italic;">재무 데이터가 제공되지 않았습니다.</p>'
                 )
-            return [build_slide_html(
-                content,
-                title="대상회사 Pro-Forma 재무제표",
-                slide_class="slide-proforma-financials",
-                tokens=tokens,
-            )]
+            return [
+                build_slide_html(
+                    content,
+                    title="대상회사 Pro-Forma 재무제표",
+                    slide_class="slide-proforma-financials",
+                    tokens=tokens,
+                )
+            ]
 
         # 테이블 빌드
         th_html = "".join(
             f'<th style="padding:5px 8px;background:{c.table_header_bg};'
-            f'color:{c.text_white};font-size:9pt;'
+            f"color:{c.text_white};font-size:9pt;"
             f'text-align:{"left" if i == 0 else "right"};">'
             f"{html_escape(h)}</th>"
             for i, h in enumerate(headers)
@@ -238,7 +251,7 @@ class ProformaFinancialsRenderer(BaseSectionRenderer):
             cells = (
                 f'<td style="padding:4px 8px;font-size:9pt;'
                 f'font-weight:bold;color:{c.primary};background:{bg};">'
-                f'{html_escape(row["label"])}</td>'
+                f"{html_escape(row['label'])}</td>"
             )
             for h in headers[1:]:
                 val = row.get(h)
@@ -256,12 +269,14 @@ class ProformaFinancialsRenderer(BaseSectionRenderer):
             f"<tbody>{tr_html}</tbody></table>"
         )
 
-        return [build_slide_html(
-            table_html,
-            title="대상회사 Pro-Forma 재무제표",
-            slide_class="slide-proforma-financials",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                table_html,
+                title="대상회사 Pro-Forma 재무제표",
+                slide_class="slide-proforma-financials",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -295,8 +310,6 @@ class ProformaFinancialsRenderer(BaseSectionRenderer):
         else:
             narrative = data.narratives.get("proforma_financials", "")
             if narrative:
-                add_body_textbox(
-                    slide, narrative, top=lay.content_top, tokens=tokens
-                )
+                add_body_textbox(slide, narrative, top=lay.content_top, tokens=tokens)
 
         return [slide]

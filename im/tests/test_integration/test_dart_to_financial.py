@@ -67,25 +67,157 @@ def _make_collection(
     """
     items = [
         # --- 손익계산서 (IS) ---
-        _make_dart_item("매출액", "2022", "100000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("매출액", "2023", "120000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("영업이익", "2022", "20000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("영업이익", "2023", "25000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("당기순이익", "2022", "15000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("당기순이익", "2023", "18000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("매출원가", "2022", "60000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("매출원가", "2023", "70000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("매출총이익", "2022", "40000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("매출총이익", "2023", "50000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("판매비와관리비", "2022", "20000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
-        _make_dart_item("판매비와관리비", "2023", "25000000000", fs_div=fs_div, sj_div="IS", sj_nm="손익계산서"),
+        _make_dart_item(
+            "매출액",
+            "2022",
+            "100000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "매출액",
+            "2023",
+            "120000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "영업이익",
+            "2022",
+            "20000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "영업이익",
+            "2023",
+            "25000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "당기순이익",
+            "2022",
+            "15000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "당기순이익",
+            "2023",
+            "18000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "매출원가",
+            "2022",
+            "60000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "매출원가",
+            "2023",
+            "70000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "매출총이익",
+            "2022",
+            "40000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "매출총이익",
+            "2023",
+            "50000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "판매비와관리비",
+            "2022",
+            "20000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
+        _make_dart_item(
+            "판매비와관리비",
+            "2023",
+            "25000000000",
+            fs_div=fs_div,
+            sj_div="IS",
+            sj_nm="손익계산서",
+        ),
         # --- 재무상태표 (BS) ---
-        _make_dart_item("자산총계", "2022", "500000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
-        _make_dart_item("자산총계", "2023", "600000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
-        _make_dart_item("부채총계", "2022", "300000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
-        _make_dart_item("부채총계", "2023", "350000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
-        _make_dart_item("자본총계", "2022", "200000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
-        _make_dart_item("자본총계", "2023", "250000000000", fs_div=fs_div, sj_div="BS", sj_nm="재무상태표", fs_nm="연결재무상태표"),
+        _make_dart_item(
+            "자산총계",
+            "2022",
+            "500000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
+        _make_dart_item(
+            "자산총계",
+            "2023",
+            "600000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
+        _make_dart_item(
+            "부채총계",
+            "2022",
+            "300000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
+        _make_dart_item(
+            "부채총계",
+            "2023",
+            "350000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
+        _make_dart_item(
+            "자본총계",
+            "2022",
+            "200000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
+        _make_dart_item(
+            "자본총계",
+            "2023",
+            "250000000000",
+            fs_div=fs_div,
+            sj_div="BS",
+            sj_nm="재무상태표",
+            fs_nm="연결재무상태표",
+        ),
     ]
     return FinancialStatementsCollection(
         corp_code=_CORP_CODE,
@@ -125,7 +257,9 @@ class TestDartToFinancialE2E:
     """DART 데이터 → FinancialProcessor → FinancialStatements E2E 테스트."""
 
     def test_process_from_dart_returns_result(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """process_from_dart()가 ProcessingResult를 정상 반환한다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
@@ -133,7 +267,9 @@ class TestDartToFinancialE2E:
         assert result.mapped_data is not None
 
     def test_revenue_correctly_mapped(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """매출액이 올바르게 매핑되고 금액이 정확하다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
@@ -147,7 +283,9 @@ class TestDartToFinancialE2E:
         assert fs.revenue["2023"] == pytest.approx(120_000_000_000.0)
 
     def test_operating_income_mapped(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """영업이익이 올바르게 매핑된다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
@@ -157,17 +295,23 @@ class TestDartToFinancialE2E:
         assert fs.operating_income["2022"] == pytest.approx(20_000_000_000.0)
 
     def test_decimal_to_float_conversion(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """to_financial_statements()에서 모든 값이 float으로 변환된다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
         fs = result.to_financial_statements()
 
         for year, val in fs.revenue.items():
-            assert isinstance(val, float), f"revenue[{year}]이 float이 아닙니다: {type(val)}"
+            assert isinstance(val, float), (
+                f"revenue[{year}]이 float이 아닙니다: {type(val)}"
+            )
 
     def test_all_17_fields_populated(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """매핑 가능한 주요 필드들이 FinancialStatements에 채워진다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
@@ -182,7 +326,9 @@ class TestDartToFinancialE2E:
         assert len(fs.total_equity) > 0, "total_equity가 비어있습니다"
 
     def test_extra_dict_contains_unmapped(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """_ACCOUNT_TO_FIELD에 없는 매핑된 계정은 extra에 저장된다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)
@@ -192,7 +338,9 @@ class TestDartToFinancialE2E:
         assert isinstance(fs.extra, dict)
 
     def test_round_trip_all_fields(
-        self, processor: FinancialProcessor, collection_cfs: FinancialStatementsCollection
+        self,
+        processor: FinancialProcessor,
+        collection_cfs: FinancialStatementsCollection,
     ) -> None:
         """DART 데이터 → process → FinancialStatements의 라운드트립에서 각 필드를 검증한다."""
         result = processor.process_from_dart(collection_cfs, consolidated=True)

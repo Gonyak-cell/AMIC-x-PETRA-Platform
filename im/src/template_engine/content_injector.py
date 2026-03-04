@@ -30,7 +30,9 @@ class ContentInjector:
     # ── 텍스트 삽입 ──────────────────────────────────────────────────────
 
     @staticmethod
-    def inject_text(shape: Shape, content: str, *, preserve_format: bool = True) -> None:
+    def inject_text(
+        shape: Shape, content: str, *, preserve_format: bool = True
+    ) -> None:
         """텍스트 shape의 내용만 교체한다.
 
         preserve_format=True일 때:
@@ -152,7 +154,9 @@ class ContentInjector:
             if table_row_idx >= num_rows:
                 logger.debug(
                     "테이블 %s: 데이터 행 %d개 중 %d개만 삽입 (테이블 크기 초과)",
-                    shape.name, len(content.rows), ri,
+                    shape.name,
+                    len(content.rows),
+                    ri,
                 )
                 break
 

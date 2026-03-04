@@ -64,7 +64,8 @@ class TestIndustryKPIRendererHtml:
         """industry 설정 시 HTML 슬라이드 생성."""
         renderer = get_renderer("industry_kpi")
         slides = renderer.render_html(
-            mock_data_with_industry, tokens=DEFAULT_TOKENS,
+            mock_data_with_industry,
+            tokens=DEFAULT_TOKENS,
         )
         assert isinstance(slides, list)
         assert len(slides) >= 1
@@ -74,7 +75,8 @@ class TestIndustryKPIRendererHtml:
         """industry 미설정 시 빈 리스트."""
         renderer = get_renderer("industry_kpi")
         slides = renderer.render_html(
-            mock_data_no_industry, tokens=DEFAULT_TOKENS,
+            mock_data_no_industry,
+            tokens=DEFAULT_TOKENS,
         )
         assert slides == []
 
@@ -86,7 +88,8 @@ class TestIndustryOverviewRendererHtml:
         """industry 설정 시 HTML 슬라이드 생성."""
         renderer = get_renderer("industry_overview")
         slides = renderer.render_html(
-            mock_data_with_industry, tokens=DEFAULT_TOKENS,
+            mock_data_with_industry,
+            tokens=DEFAULT_TOKENS,
         )
         assert isinstance(slides, list)
         assert len(slides) >= 1
@@ -95,7 +98,8 @@ class TestIndustryOverviewRendererHtml:
         """industry 미설정 시 빈 리스트."""
         renderer = get_renderer("industry_overview")
         slides = renderer.render_html(
-            mock_data_no_industry, tokens=DEFAULT_TOKENS,
+            mock_data_no_industry,
+            tokens=DEFAULT_TOKENS,
         )
         assert slides == []
 
@@ -106,7 +110,10 @@ class TestIndustryKPIRendererPptx:
     @patch("src.design_renderer.pptx_engine.shape_builder.add_kpi_grid")
     @patch("src.design_renderer.pptx_engine.shape_builder.add_chart_image")
     def test_pptx_with_industry(
-        self, mock_chart, mock_kpi, mock_data_with_industry: IMDocumentData,
+        self,
+        mock_chart,
+        mock_kpi,
+        mock_data_with_industry: IMDocumentData,
     ):
         """industry 설정 시 PPTX 슬라이드 생성."""
         factory = MagicMock()
@@ -116,7 +123,10 @@ class TestIndustryKPIRendererPptx:
 
         renderer = get_renderer("industry_kpi")
         slides = renderer.render_pptx(
-            factory, mock_data_with_industry, prs=prs, tokens=DEFAULT_TOKENS,
+            factory,
+            mock_data_with_industry,
+            prs=prs,
+            tokens=DEFAULT_TOKENS,
         )
         assert isinstance(slides, list)
         assert len(slides) >= 1
@@ -130,7 +140,10 @@ class TestIndustryKPIRendererPptx:
 
         renderer = get_renderer("industry_kpi")
         slides = renderer.render_pptx(
-            factory, mock_data_no_industry, prs=prs, tokens=DEFAULT_TOKENS,
+            factory,
+            mock_data_no_industry,
+            prs=prs,
+            tokens=DEFAULT_TOKENS,
         )
         assert slides == []
 
@@ -143,7 +156,11 @@ class TestIndustryOverviewRendererPptx:
     @patch("src.design_renderer.pptx_engine.shape_builder.add_bullet_list")
     @patch("src.design_renderer.pptx_engine.shape_builder.add_body_textbox")
     def test_pptx_with_industry(
-        self, mock_body, mock_bullet, mock_chart, mock_table,
+        self,
+        mock_body,
+        mock_bullet,
+        mock_chart,
+        mock_table,
         mock_data_with_industry: IMDocumentData,
     ):
         """industry 설정 시 PPTX 슬라이드 생성."""
@@ -153,7 +170,10 @@ class TestIndustryOverviewRendererPptx:
 
         renderer = get_renderer("industry_overview")
         slides = renderer.render_pptx(
-            factory, mock_data_with_industry, prs=prs, tokens=DEFAULT_TOKENS,
+            factory,
+            mock_data_with_industry,
+            prs=prs,
+            tokens=DEFAULT_TOKENS,
         )
         assert isinstance(slides, list)
         assert len(slides) >= 1
@@ -165,6 +185,9 @@ class TestIndustryOverviewRendererPptx:
 
         renderer = get_renderer("industry_overview")
         slides = renderer.render_pptx(
-            factory, mock_data_no_industry, prs=prs, tokens=DEFAULT_TOKENS,
+            factory,
+            mock_data_no_industry,
+            prs=prs,
+            tokens=DEFAULT_TOKENS,
         )
         assert slides == []

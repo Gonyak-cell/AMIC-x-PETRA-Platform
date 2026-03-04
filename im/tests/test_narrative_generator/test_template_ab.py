@@ -22,7 +22,9 @@ from src.narrative_generator.engine.orchestrator import (
 from src.narrative_generator.engine.structured_output import SectionNarrative
 from src.narrative_generator.templates.registry import TemplateRegistry
 
-_TEMPLATE_DIR = Path(__file__).resolve().parents[2] / "src" / "narrative_generator" / "templates"
+_TEMPLATE_DIR = (
+    Path(__file__).resolve().parents[2] / "src" / "narrative_generator" / "templates"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -49,13 +51,16 @@ def _create_mock_llm_client(response_text: str = "") -> MagicMock:
 
 def _create_slot_fill_mock() -> MagicMock:
     """슬롯 채우기용 JSON 응답을 반환하는 Mock LLM."""
-    slot_response = json.dumps({
-        "company_intro": "테스트기업은 국내 B2B IT 서비스 시장의 선도기업으로, 2010년 설립 이래 지속적으로 성장하여 현재 300명의 임직원을 보유하고 있습니다.",
-        "revenue_highlight": "2024년 매출 150,000원을 기록하며 연평균 22.5% 성장하였습니다.",
-        "ebitda_comment": "EBITDA는 35,000원으로 마진 23.3%를 달성하며 수익성이 꾸준히 개선되고 있습니다.",
-        "market_opportunity": "국내 IT 서비스 시장은 TAM 500,000원 규모로, 연 8.0% 성장이 예상됩니다.",
-        "investment_appeal": "견조한 재무 성과, 확장 가능한 사업 모델, 유리한 시장 환경을 갖춘 매력적인 투자 기회입니다.",
-    }, ensure_ascii=False)
+    slot_response = json.dumps(
+        {
+            "company_intro": "테스트기업은 국내 B2B IT 서비스 시장의 선도기업으로, 2010년 설립 이래 지속적으로 성장하여 현재 300명의 임직원을 보유하고 있습니다.",
+            "revenue_highlight": "2024년 매출 150,000원을 기록하며 연평균 22.5% 성장하였습니다.",
+            "ebitda_comment": "EBITDA는 35,000원으로 마진 23.3%를 달성하며 수익성이 꾸준히 개선되고 있습니다.",
+            "market_opportunity": "국내 IT 서비스 시장은 TAM 500,000원 규모로, 연 8.0% 성장이 예상됩니다.",
+            "investment_appeal": "견조한 재무 성과, 확장 가능한 사업 모델, 유리한 시장 환경을 갖춘 매력적인 투자 기회입니다.",
+        },
+        ensure_ascii=False,
+    )
     return _create_mock_llm_client(slot_response)
 
 
@@ -329,7 +334,7 @@ class TestABComparison:
         text = result.narratives["executive_summary"]
 
         # 부동문자가 일관되게 포함
-        assert "이하 \"대상회사\"" in text
+        assert '이하 "대상회사"' in text
         assert "사업 모델의 견고함을 입증" in text
         assert "유의미한 성장 기회를 제공" in text
         assert "매력적인 수익 창출 기회" in text
@@ -368,13 +373,16 @@ class TestABComparison:
     ) -> None:
         """여러 섹션 생성 시 템플릿/레거시 혼합 동작."""
         # 슬롯 채우기 응답과 자유 생성 응답을 번갈아 반환
-        slot_response = json.dumps({
-            "company_intro": "소개",
-            "revenue_highlight": "매출 하이라이트",
-            "ebitda_comment": "EBITDA 코멘트",
-            "market_opportunity": "시장 기회",
-            "investment_appeal": "투자 매력",
-        }, ensure_ascii=False)
+        slot_response = json.dumps(
+            {
+                "company_intro": "소개",
+                "revenue_highlight": "매출 하이라이트",
+                "ebitda_comment": "EBITDA 코멘트",
+                "market_opportunity": "시장 기회",
+                "investment_appeal": "투자 매력",
+            },
+            ensure_ascii=False,
+        )
 
         mock_client = _create_mock_llm_client(slot_response)
         registry = TemplateRegistry(_TEMPLATE_DIR)

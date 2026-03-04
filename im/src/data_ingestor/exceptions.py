@@ -105,10 +105,16 @@ class PDFParserError(ParserError):
 class ExcelParserError(ParserError):
     """Excel 파싱 실패."""
 
-    def __init__(self, file_path: str, sheet_name: str | None = None, reason: str = "") -> None:
+    def __init__(
+        self, file_path: str, sheet_name: str | None = None, reason: str = ""
+    ) -> None:
         super().__init__(
             message=f"Excel 파싱 실패: {file_path}",
-            details={"file_path": file_path, "sheet_name": sheet_name, "reason": reason},
+            details={
+                "file_path": file_path,
+                "sheet_name": sheet_name,
+                "reason": reason,
+            },
         )
 
 

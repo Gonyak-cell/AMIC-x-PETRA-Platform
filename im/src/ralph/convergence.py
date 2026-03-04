@@ -12,11 +12,11 @@ from src.ralph.progress_tracker import ProgressTracker
 class ConvergenceConfig:
     """수렴 조건 설정."""
 
-    pass_threshold: float = 4.0           # 5점 만점 중 통과 기준
-    improvement_threshold: float = 0.3    # 이 이하 개선시 수렴으로 판정
-    max_iterations_per_section: int = 3   # 섹션당 최대 반복 횟수
-    max_iterations_total: int = 30        # 전체 최대 반복 횟수
-    max_cost_usd: float = 5.0            # Pass당 비용 한도
+    pass_threshold: float = 4.0  # 5점 만점 중 통과 기준
+    improvement_threshold: float = 0.3  # 이 이하 개선시 수렴으로 판정
+    max_iterations_per_section: int = 3  # 섹션당 최대 반복 횟수
+    max_iterations_total: int = 30  # 전체 최대 반복 횟수
+    max_cost_usd: float = 5.0  # Pass당 비용 한도
 
 
 @dataclass

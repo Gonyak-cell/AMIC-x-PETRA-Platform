@@ -5,9 +5,17 @@ from __future__ import annotations
 from datetime import datetime
 
 
-from src.data_ingestor.crawler.company_crawler import CompanyCrawler, CompanyWebInfo, IRDocument
+from src.data_ingestor.crawler.company_crawler import (
+    CompanyCrawler,
+    CompanyWebInfo,
+    IRDocument,
+)
 from src.data_ingestor.crawler.news_crawler import NewsArticle, NewsCrawler
-from src.data_ingestor.crawler.playwright_engine import CrawlerConfig, PageResult, PlaywrightEngine
+from src.data_ingestor.crawler.playwright_engine import (
+    CrawlerConfig,
+    PageResult,
+    PlaywrightEngine,
+)
 
 
 class TestCrawlerConfig:
@@ -202,11 +210,15 @@ class TestCompanyCrawler:
         ]
 
         # About 페이지 찾기
-        result = crawler._find_page_url(links, crawler.ABOUT_PATTERNS, "https://example.com")
+        result = crawler._find_page_url(
+            links, crawler.ABOUT_PATTERNS, "https://example.com"
+        )
         assert "/about" in result
 
         # IR 페이지 찾기
-        result = crawler._find_page_url(links, crawler.IR_PATTERNS, "https://example.com")
+        result = crawler._find_page_url(
+            links, crawler.IR_PATTERNS, "https://example.com"
+        )
         assert "/ir" in result
 
         # 없는 패턴

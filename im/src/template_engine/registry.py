@@ -60,7 +60,9 @@ def get_template_path(
         rel_path = _TEMPLATE_REGISTRY.get(key)
         if rel_path is not None:
             logger.info(
-                "템플릿 variant %r 없음 → default 사용: %s", variant, rel_path,
+                "템플릿 variant %r 없음 → default 사용: %s",
+                variant,
+                rel_path,
             )
 
     if rel_path is None:
@@ -89,7 +91,5 @@ def get_available_variants(doc_type: str) -> list[str]:
     """특정 문서 유형에 사용 가능한 variant 목록을 반환한다."""
     resolved_type = _STYLE_ALIASES.get(doc_type.upper(), doc_type.upper())
     return [
-        variant
-        for (dtype, variant) in _TEMPLATE_REGISTRY
-        if dtype == resolved_type
+        variant for (dtype, variant) in _TEMPLATE_REGISTRY if dtype == resolved_type
     ]

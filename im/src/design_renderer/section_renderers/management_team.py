@@ -58,16 +58,15 @@ class ManagementTeamRenderer(BaseSectionRenderer):
                     for c_item in member.career
                 )
                 career_html = (
-                    f'<ul style="margin:0.3em 0 0 0;'
-                    f'padding-left:1em;">{items}</ul>'
+                    f'<ul style="margin:0.3em 0 0 0;padding-left:1em;">{items}</ul>'
                 )
 
             role_badge = ""
             if role:
                 role_badge = (
                     f'<span style="display:inline-block;padding:2px 8px;'
-                    f'background:{c.accent};color:{c.text_white};'
-                    f'border-radius:10px;font-size:8pt;font-weight:bold;'
+                    f"background:{c.accent};color:{c.text_white};"
+                    f"border-radius:10px;font-size:8pt;font-weight:bold;"
                     f'margin-left:6px;">{role}</span>'
                 )
 
@@ -164,9 +163,7 @@ class ManagementTeamRenderer(BaseSectionRenderer):
             r.text = member.title
             set_font_with_ea(r, t.font_body)
             r.font.size = Pt(f.footnote)
-            r.font.color.rgb = RGBColor.from_string(
-                c.text_secondary.lstrip("#")
-            )
+            r.font.color.rgb = RGBColor.from_string(c.text_secondary.lstrip("#"))
 
             # 경력
             for career_item in member.career:
@@ -175,8 +172,6 @@ class ManagementTeamRenderer(BaseSectionRenderer):
                 r.text = f"• {career_item}"
                 set_font_with_ea(r, t.font_body)
                 r.font.size = Pt(f.small_label)
-                r.font.color.rgb = RGBColor.from_string(
-                    c.text_body.lstrip("#")
-                )
+                r.font.color.rgb = RGBColor.from_string(c.text_body.lstrip("#"))
 
         return [slide]

@@ -1,6 +1,5 @@
 """숫자 포맷터 테스트 — 통화/퍼센트/성장 표시/NaN."""
 
-
 import pytest
 
 from src.design_renderer.components.number_formatter import (
@@ -123,9 +122,7 @@ class TestApplyTableNumberFormat:
             ["항목", 100_000, 200_000],
             ["매출", 150_000, 180_000],
         ]
-        result = apply_table_number_format(
-            table, krw_config, first_col_is_label=True
-        )
+        result = apply_table_number_format(table, krw_config, first_col_is_label=True)
         assert len(result) == 2
         assert result[0][0] == "항목"  # 레이블은 그대로
         assert isinstance(result[0][1], str)  # 숫자는 문자열로 변환

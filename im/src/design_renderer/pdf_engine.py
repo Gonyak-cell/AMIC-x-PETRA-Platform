@@ -153,9 +153,7 @@ def generate_pdf(
                 "Executable doesn't exist" in error_msg
                 or "browser" in error_msg.lower()
             ):
-                logger.warning(
-                    f"Playwright 브라우저 미설치, WeasyPrint으로 폴백: {e}"
-                )
+                logger.warning(f"Playwright 브라우저 미설치, WeasyPrint으로 폴백: {e}")
                 pdf_bytes = _generate_pdf_with_weasyprint(html_content, tokens)
                 engine_used = "WeasyPrint"
             else:
@@ -167,9 +165,7 @@ def generate_pdf(
         out.write_bytes(pdf_bytes)
         logger.info(f"IM PDF 저장 ({engine_used}): {out}")
 
-    logger.info(
-        f"PDF 생성 완료 ({engine_used}): {len(pdf_bytes):,} bytes"
-    )
+    logger.info(f"PDF 생성 완료 ({engine_used}): {len(pdf_bytes):,} bytes")
     return pdf_bytes
 
 

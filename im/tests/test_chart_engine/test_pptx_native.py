@@ -30,6 +30,7 @@ from src.chart_engine.pptx_native.stacked_bar import StackedBarBuilder
 # 헬퍼
 # ---------------------------------------------------------------------------
 
+
 def _make_slide() -> Any:
     """테스트용 빈 PPTX 슬라이드 생성."""
     prs = Presentation()
@@ -270,9 +271,7 @@ class TestPptxRoundTrip:
         slide2 = prs2.slides[0]
 
         # 차트 shape이 존재하는지
-        chart_shapes = [
-            s for s in slide2.shapes if s.has_chart
-        ]
+        chart_shapes = [s for s in slide2.shapes if s.has_chart]
         assert len(chart_shapes) == 1
         assert chart_shapes[0].chart.chart_type == XL_CHART_TYPE.COLUMN_STACKED
 

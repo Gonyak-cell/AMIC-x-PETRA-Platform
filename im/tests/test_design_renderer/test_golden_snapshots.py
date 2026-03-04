@@ -315,9 +315,7 @@ class TestSnapshotExtraction:
         prs = Presentation()
         layout = prs.slide_layouts[0]
         slide = prs.slides.add_slide(layout)
-        txbox = slide.shapes.add_textbox(
-            Inches(1), Inches(1), Inches(5), Inches(1)
-        )
+        txbox = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(5), Inches(1))
         run = txbox.text_frame.paragraphs[0].add_run()
         run.text = "테스트 텍스트"
         run.font.size = Pt(12)
@@ -475,9 +473,8 @@ class TestGoldenSnapshots:
             )
 
         diffs = compare_snapshots(snapshot, golden)
-        assert len(diffs) == 0, (
-            f"TITAN 골든 불일치 ({len(diffs)}건):\n"
-            + "\n".join(f"  - {d}" for d in diffs)
+        assert len(diffs) == 0, f"TITAN 골든 불일치 ({len(diffs)}건):\n" + "\n".join(
+            f"  - {d}" for d in diffs
         )
 
     def test_covenant_golden_snapshot(
@@ -487,9 +484,7 @@ class TestGoldenSnapshots:
         update_golden: bool,
     ):
         """COVENANT 프리셋 골든 스냅샷 비교/업데이트."""
-        snapshot, _ = _generate_and_snapshot(
-            covenant_data, "COVENANT", tmp_output
-        )
+        snapshot, _ = _generate_and_snapshot(covenant_data, "COVENANT", tmp_output)
 
         if update_golden:
             path = save_golden("covenant", snapshot)
@@ -503,9 +498,8 @@ class TestGoldenSnapshots:
             )
 
         diffs = compare_snapshots(snapshot, golden)
-        assert len(diffs) == 0, (
-            f"COVENANT 골든 불일치 ({len(diffs)}건):\n"
-            + "\n".join(f"  - {d}" for d in diffs)
+        assert len(diffs) == 0, f"COVENANT 골든 불일치 ({len(diffs)}건):\n" + "\n".join(
+            f"  - {d}" for d in diffs
         )
 
     def test_full_golden_snapshot(
@@ -529,9 +523,8 @@ class TestGoldenSnapshots:
             )
 
         diffs = compare_snapshots(snapshot, golden)
-        assert len(diffs) == 0, (
-            f"FULL 골든 불일치 ({len(diffs)}건):\n"
-            + "\n".join(f"  - {d}" for d in diffs)
+        assert len(diffs) == 0, f"FULL 골든 불일치 ({len(diffs)}건):\n" + "\n".join(
+            f"  - {d}" for d in diffs
         )
 
     def test_section_slide_counts_stable(
@@ -561,18 +554,13 @@ class TestGoldenSnapshots:
         for section_id, count in section_counts.items():
             golden_count = golden_counts.get(section_id)
             if golden_count is not None and count != golden_count:
-                mismatched.append(
-                    f"{section_id}: {count} vs {golden_count}"
-                )
+                mismatched.append(f"{section_id}: {count} vs {golden_count}")
 
-        assert len(mismatched) == 0, (
-            "섹션별 슬라이드 수 불일치:\n"
-            + "\n".join(f"  - {m}" for m in mismatched)
+        assert len(mismatched) == 0, "섹션별 슬라이드 수 불일치:\n" + "\n".join(
+            f"  - {m}" for m in mismatched
         )
 
-    def test_golden_files_exist_without_update_flag(
-        self, update_golden: bool
-    ):
+    def test_golden_files_exist_without_update_flag(self, update_golden: bool):
         """--update-golden 없을 때 골든 파일 3개가 모두 존재."""
         if update_golden:
             pytest.skip("--update-golden 모드에서는 검증 불필요")

@@ -11,9 +11,7 @@ import pytest
 
 from src.api.tasks.narrative import generate_narrative_task
 
-_ORCHESTRATOR_PATH = (
-    "src.narrative_generator.engine.orchestrator.NarrativeOrchestrator"
-)
+_ORCHESTRATOR_PATH = "src.narrative_generator.engine.orchestrator.NarrativeOrchestrator"
 
 
 @pytest.fixture(autouse=True)
@@ -64,9 +62,7 @@ class TestGenerateNarrativeTask:
         mock_orchestrator.generate_section.return_value = mock_section
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = generate_narrative_task(
-            {"corp_code": "00123456"}, "executive_summary"
-        )
+        result = generate_narrative_task({"corp_code": "00123456"}, "executive_summary")
 
         assert result["status"] == "COMPLETED"
         assert result["section_id"] == "executive_summary"
@@ -78,9 +74,7 @@ class TestGenerateNarrativeTask:
         mock_dict_to_im.side_effect = RuntimeError("LLM API 오류")
 
         with pytest.raises(RuntimeError, match="LLM API"):
-            generate_narrative_task(
-                {"corp_code": "00123456"}, "executive_summary"
-            )
+            generate_narrative_task({"corp_code": "00123456"}, "executive_summary")
 
     @patch(_ORCHESTRATOR_PATH)
     @patch("src.api.tasks.narrative.dict_to_im_data")
@@ -95,9 +89,7 @@ class TestGenerateNarrativeTask:
         mock_result.text = "텍스트"
         mock_orchestrator_cls.return_value.generate_section.return_value = mock_result
 
-        result = generate_narrative_task(
-            {"corp_code": "00123456"}, "company_overview"
-        )
+        result = generate_narrative_task({"corp_code": "00123456"}, "company_overview")
 
         assert "section_id" in result
         assert "narrative" in result

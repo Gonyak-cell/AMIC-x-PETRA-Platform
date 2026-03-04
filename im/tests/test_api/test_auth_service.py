@@ -100,7 +100,9 @@ class TestAuthServiceLogin:
         with pytest.raises(AuthenticationError) as exc_info:
             await service.login("nonexistent@example.com", "password")
 
-        assert "이메일" in exc_info.value.message or "비밀번호" in exc_info.value.message
+        assert (
+            "이메일" in exc_info.value.message or "비밀번호" in exc_info.value.message
+        )
 
     @pytest.mark.asyncio
     async def test_login_inactive_user(self) -> None:

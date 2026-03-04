@@ -77,7 +77,9 @@ class TestDartAPIErrors:
 
     def test_dart_response_error(self) -> None:
         """DartResponseError 테스트."""
-        error = DartResponseError(status_code=400, response_body='{"error": "bad request"}')
+        error = DartResponseError(
+            status_code=400, response_body='{"error": "bad request"}'
+        )
         assert "HTTP 400" in error.message
         assert error.status_code == 400
         assert error.details["response_body"] == '{"error": "bad request"}'
@@ -139,7 +141,9 @@ class TestCrawlerErrors:
 
     def test_crawler_network_error(self) -> None:
         """CrawlerNetworkError 테스트."""
-        error = CrawlerNetworkError(url="https://example.com", original_error=TimeoutError())
+        error = CrawlerNetworkError(
+            url="https://example.com", original_error=TimeoutError()
+        )
         assert "네트워크 오류" in error.message
         assert error.url == "https://example.com"
 

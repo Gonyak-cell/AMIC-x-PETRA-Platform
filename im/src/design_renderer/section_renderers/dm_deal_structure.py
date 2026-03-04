@@ -50,7 +50,12 @@ class DmDealStructureRenderer(BaseSectionRenderer):
             if ds.valuation_method:
                 rows.append(("밸류에이션 방법", ds.valuation_method))
             if ds.valuation_low is not None and ds.valuation_high is not None:
-                rows.append(("밸류에이션 범위", f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"))
+                rows.append(
+                    (
+                        "밸류에이션 범위",
+                        f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원",
+                    )
+                )
             elif ds.valuation_low is not None:
                 rows.append(("밸류에이션", f"{ds.valuation_low:,.0f}억원"))
 
@@ -58,7 +63,7 @@ class DmDealStructureRenderer(BaseSectionRenderer):
                 tr_items = "".join(
                     f'<tr><td style="padding:5px 10px;font-size:9pt;'
                     f'font-weight:bold;color:{c.primary};width:35%;">'
-                    f'{html_escape(label)}</td>'
+                    f"{html_escape(label)}</td>"
                     f'<td style="padding:5px 10px;font-size:9pt;'
                     f'color:{c.text_body};">{html_escape(value)}</td></tr>'
                     for label, value in rows
@@ -77,12 +82,14 @@ class DmDealStructureRenderer(BaseSectionRenderer):
             )
 
         content = f"{deal_html}{narrative_html}"
-        return [build_slide_html(
-            content,
-            title="Deal Structure Considerations",
-            slide_class="slide-dm-deal-structure",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Deal Structure Considerations",
+                slide_class="slide-dm-deal-structure",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -115,12 +122,16 @@ class DmDealStructureRenderer(BaseSectionRenderer):
             if ds.transaction_type:
                 kpis.append({"label": "거래 유형", "value": ds.transaction_type.value})
             if ds.stake_pct is not None:
-                kpis.append({"label": "매각 지분", "value": f"{ds.stake_pct * 100:.1f}%"})
+                kpis.append(
+                    {"label": "매각 지분", "value": f"{ds.stake_pct * 100:.1f}%"}
+                )
             if ds.valuation_method:
                 kpis.append({"label": "밸류에이션", "value": ds.valuation_method})
 
         if kpis:
-            add_kpi_grid(slide, kpis, top=y, tokens=tokens, number_config=data.number_format)
+            add_kpi_grid(
+                slide, kpis, top=y, tokens=tokens, number_config=data.number_format
+            )
             y += 1.6
 
         if narrative:
@@ -135,7 +146,9 @@ class DmDealStructureRenderer(BaseSectionRenderer):
             if ds.deal_background:
                 detail_lines.append(f"거래 배경: {ds.deal_background}")
             if ds.valuation_low is not None and ds.valuation_high is not None:
-                detail_lines.append(f"밸류에이션 범위: {ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원")
+                detail_lines.append(
+                    f"밸류에이션 범위: {ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"
+                )
 
             if detail_lines:
                 add_sub_header_bar(slide, "거래 구조 상세", top=y, tokens=tokens)

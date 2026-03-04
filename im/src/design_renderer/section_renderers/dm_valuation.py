@@ -47,7 +47,9 @@ class DmValuationRenderer(BaseSectionRenderer):
             if ds.valuation_method:
                 items.append(("방법론", ds.valuation_method))
             if ds.valuation_low is not None and ds.valuation_high is not None:
-                items.append(("범위", f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원"))
+                items.append(
+                    ("범위", f"{ds.valuation_low:,.0f} ~ {ds.valuation_high:,.0f}억원")
+                )
             elif ds.valuation_low is not None:
                 items.append(("밸류에이션", f"{ds.valuation_low:,.0f}억원"))
 
@@ -76,12 +78,14 @@ class DmValuationRenderer(BaseSectionRenderer):
             )
 
         content = f"{val_html}{narrative_html}"
-        return [build_slide_html(
-            content,
-            title="Valuation Analysis",
-            slide_class="slide-dm-valuation",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Valuation Analysis",
+                slide_class="slide-dm-valuation",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -98,7 +102,10 @@ class DmValuationRenderer(BaseSectionRenderer):
         # 내러티브 키 매핑 — 원본 data 변경 방지를 위해 shallow copy 사용
         delegate_data = copy.copy(data)
         if "dm_valuation" in data.narratives and "valuation" not in data.narratives:
-            delegate_data.narratives = {**data.narratives, "valuation": data.narratives["dm_valuation"]}
+            delegate_data.narratives = {
+                **data.narratives,
+                "valuation": data.narratives["dm_valuation"],
+            }
 
         delegate = ValuationRenderer()
         return delegate.render_pptx(factory, delegate_data, prs=prs, tokens=tokens)

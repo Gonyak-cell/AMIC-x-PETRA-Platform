@@ -16,7 +16,9 @@ from src.narrative_generator.rag.chunker import DocumentChunk, DocumentChunker
 # ---------------------------------------------------------------------------
 
 
-def _build_multi_sentence_text(sentence_count: int, words_per_sentence: int = 10) -> str:
+def _build_multi_sentence_text(
+    sentence_count: int, words_per_sentence: int = 10
+) -> str:
     """지정된 수의 문장으로 구성된 테스트 텍스트를 생성한다."""
     sentences = []
     for i in range(sentence_count):
@@ -68,8 +70,14 @@ class TestDocumentChunker:
             next_words = chunks[i + 1].text.split()
             # 오버랩이 있으면 현재 청크의 뒷부분 단어 중 일부가
             # 다음 청크 앞부분에 존재
-            current_tail = set(current_words[-5:]) if len(current_words) >= 5 else set(current_words)
-            next_head = set(next_words[:10]) if len(next_words) >= 10 else set(next_words)
+            current_tail = (
+                set(current_words[-5:])
+                if len(current_words) >= 5
+                else set(current_words)
+            )
+            next_head = (
+                set(next_words[:10]) if len(next_words) >= 10 else set(next_words)
+            )
             current_tail & next_head
             # 최소한 일부 단어가 겹쳐야 함 (오버랩 설정이 있으므로)
             # NOTE: 문장 단위 오버랩이므로 완전한 단어 겹침 보장은 아님

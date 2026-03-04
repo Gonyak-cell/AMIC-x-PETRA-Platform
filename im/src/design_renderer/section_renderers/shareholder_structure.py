@@ -35,9 +35,7 @@ class ShareholderStructureRenderer(BaseSectionRenderer):
         c = tokens.colors
 
         shareholders = data.shareholders
-        narrative = html_escape(
-            data.narratives.get("shareholder_structure", "")
-        )
+        narrative = html_escape(data.narratives.get("shareholder_structure", ""))
 
         narrative_html = ""
         if narrative:
@@ -54,16 +52,14 @@ class ShareholderStructureRenderer(BaseSectionRenderer):
                 name = html_escape(sh.name)
                 category = html_escape(sh.category) if sh.category else ""
                 pct = f"{sh.stake_pct * 100:.1f}%" if sh.stake_pct else "N/A"
-                shares = (
-                    f"{sh.share_count:,}" if sh.share_count is not None else ""
-                )
+                shares = f"{sh.share_count:,}" if sh.share_count is not None else ""
 
                 # 지분율 바
                 bar_width = min(sh.stake_pct * 100, 100) if sh.stake_pct else 0
                 bar_html = (
                     f'<div style="width:80px;height:12px;'
-                    f'background:{c.bg_cool_grey};border-radius:6px;'
-                    f'display:inline-block;vertical-align:middle;'
+                    f"background:{c.bg_cool_grey};border-radius:6px;"
+                    f"display:inline-block;vertical-align:middle;"
                     f'margin-left:6px;">'
                     f'<div style="width:{bar_width}%;height:100%;'
                     f'background:{c.accent};border-radius:6px;"></div></div>'
@@ -188,11 +184,7 @@ class ShareholderStructureRenderer(BaseSectionRenderer):
             for r_idx, sh in enumerate(shareholders, 1):
                 tbl.cell(r_idx, 0).text = sh.name
                 tbl.cell(r_idx, 1).text = sh.category or ""
-                pct = (
-                    f"{sh.stake_pct * 100:.1f}%"
-                    if sh.stake_pct
-                    else "N/A"
-                )
+                pct = f"{sh.stake_pct * 100:.1f}%" if sh.stake_pct else "N/A"
                 tbl.cell(r_idx, 2).text = pct
 
                 for col_idx in range(cols):

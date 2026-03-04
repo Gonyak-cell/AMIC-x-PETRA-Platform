@@ -88,12 +88,14 @@ class DmMarketTrendsRenderer(BaseSectionRenderer):
             )
 
         content = f"{kpi_html}{narrative_html}{trends_html}"
-        return [build_slide_html(
-            content,
-            title="Market & Transaction Trends",
-            slide_class="slide-dm-market-trends",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Market & Transaction Trends",
+                slide_class="slide-dm-market-trends",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -126,12 +128,21 @@ class DmMarketTrendsRenderer(BaseSectionRenderer):
             if md.tam is not None:
                 kpis.append({"label": "시장 규모 (TAM)", "value": f"{md.tam:,.0f}억원"})
             if md.market_cagr is not None:
-                kpis.append({"label": "시장 CAGR", "value": f"{md.market_cagr * 100:.1f}%"})
+                kpis.append(
+                    {"label": "시장 CAGR", "value": f"{md.market_cagr * 100:.1f}%"}
+                )
             elif md.market_growth_rate is not None:
-                kpis.append({"label": "시장 성장률", "value": f"{md.market_growth_rate * 100:.1f}%"})
+                kpis.append(
+                    {
+                        "label": "시장 성장률",
+                        "value": f"{md.market_growth_rate * 100:.1f}%",
+                    }
+                )
 
         if kpis:
-            add_kpi_grid(slide, kpis, top=y, tokens=tokens, number_config=data.number_format)
+            add_kpi_grid(
+                slide, kpis, top=y, tokens=tokens, number_config=data.number_format
+            )
             y += 1.6
 
         if narrative:

@@ -124,9 +124,6 @@ class IMChecklist(Base):
         """아이템 상태별 집계를 갱신한다."""
         self.total_items = len(self.items)
         self.confirmed_items = sum(
-            1 for item in self.items
-            if item.status in ("CONFIRMED", "MODIFIED")
+            1 for item in self.items if item.status in ("CONFIRMED", "MODIFIED")
         )
-        self.missing_items = sum(
-            1 for item in self.items if item.status == "MISSING"
-        )
+        self.missing_items = sum(1 for item in self.items if item.status == "MISSING")

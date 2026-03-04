@@ -107,11 +107,15 @@ def chart_config_from_design_tokens(tokens: Any) -> ChartConfig:
             accent=getattr(c, "accent", ChartColorConfig.accent),
             fresh=getattr(c, "fresh", ChartColorConfig.fresh),
             text_body=getattr(c, "text_body", ChartColorConfig.text_body),
-            text_secondary=getattr(c, "text_secondary", ChartColorConfig.text_secondary),
+            text_secondary=getattr(
+                c, "text_secondary", ChartColorConfig.text_secondary
+            ),
             positive=getattr(c, "positive", ChartColorConfig.positive),
             negative=getattr(c, "negative", ChartColorConfig.negative),
             caution=getattr(c, "caution", ChartColorConfig.caution),
-            bg_light_green=getattr(c, "bg_light_green", ChartColorConfig.bg_light_green),
+            bg_light_green=getattr(
+                c, "bg_light_green", ChartColorConfig.bg_light_green
+            ),
             bg_cool_grey=getattr(c, "bg_cool_grey", ChartColorConfig.bg_cool_grey),
             text_white=getattr(c, "text_white", ChartColorConfig.text_white),
             text_dark=getattr(c, "text_dark", ChartColorConfig.text_dark),

@@ -189,9 +189,7 @@ class TestCohortHeatmapChart:
 
     def test_create(self, cohort_heatmap_data):
         """코호트 히트맵 Figure 생성."""
-        fig = create_cohort_heatmap_chart(
-            cohort_heatmap_data, title="리텐션 코호트"
-        )
+        fig = create_cohort_heatmap_chart(cohort_heatmap_data, title="리텐션 코호트")
         assert fig is not None
         assert len(fig.data) == 1
         assert fig.data[0].type == "heatmap"

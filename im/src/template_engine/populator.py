@@ -57,9 +57,7 @@ class TemplatePopulator:
             f"{uuid.uuid4().hex[:8]}.pptx"
         )
         # 파일명에 사용 불가한 문자 제거
-        output_name = "".join(
-            c for c in output_name if c not in r'\/:*?"<>|'
-        )
+        output_name = "".join(c for c in output_name if c not in r'\/:*?"<>|')
         output_path = self.output_dir / output_name
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +92,9 @@ class TemplatePopulator:
     # ── 내부 메서드 ──────────────────────────────────────────────────────
 
     def _populate_cover(
-        self, prs: Presentation, content: TemplateContent,
+        self,
+        prs: Presentation,
+        content: TemplateContent,
     ) -> None:
         """커버 슬라이드의 프로젝트명, 날짜를 교체한다."""
         if not prs.slides:
@@ -113,10 +113,15 @@ class TemplatePopulator:
                 logger.debug("커버 날짜 교체: %r → %r", text[:30], content.date)
 
             # 메모 유형 패턴 감지
-            elif any(kw in text.upper() for kw in (
-                "TEASER", "DISCUSSION MEMO", "INFORMATION MEMORANDUM",
-                "CONFIDENTIAL MEMORANDUM",
-            )):
+            elif any(
+                kw in text.upper()
+                for kw in (
+                    "TEASER",
+                    "DISCUSSION MEMO",
+                    "INFORMATION MEMORANDUM",
+                    "CONFIDENTIAL MEMORANDUM",
+                )
+            ):
                 memo_label = {
                     "TM": "TEASER MEMORANDUM",
                     "DM": "DISCUSSION MEMO",
@@ -124,7 +129,9 @@ class TemplatePopulator:
                 self.injector.inject_text(shape, memo_label)
 
     def _populate_slide(
-        self, prs: Presentation, slide_content: object,
+        self,
+        prs: Presentation,
+        slide_content: object,
     ) -> None:
         """단일 슬라이드의 shape에 콘텐츠를 삽입한다."""
         from src.template_engine.schemas import SlideContent
@@ -203,8 +210,18 @@ class TemplatePopulator:
 # ── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
 _MONTH_NAMES = {
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 }
 
 

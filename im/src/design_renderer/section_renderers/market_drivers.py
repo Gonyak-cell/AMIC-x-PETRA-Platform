@@ -43,9 +43,7 @@ class MarketOutlookRenderer(BaseSectionRenderer):
         c = tokens.colors
 
         md = data.market_data
-        narrative = html_escape(
-            data.narratives.get("market_outlook", "")
-        )
+        narrative = html_escape(data.narratives.get("market_outlook", ""))
 
         # KPI 카드
         kpi_html = ""
@@ -108,12 +106,14 @@ class MarketOutlookRenderer(BaseSectionRenderer):
         {trends_html}
         """
 
-        return [build_slide_html(
-            content,
-            title="Market Outlook",
-            slide_class="slide-market-outlook",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Market Outlook",
+                slide_class="slide-market-outlook",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -150,14 +150,19 @@ class MarketOutlookRenderer(BaseSectionRenderer):
             if md.som is not None:
                 kpis.append({"label": "SOM", "value": f"{md.som:,.0f}억원"})
             if md.market_cagr is not None:
-                kpis.append({
-                    "label": "시장 CAGR",
-                    "value": f"{md.market_cagr * 100:.1f}%",
-                })
+                kpis.append(
+                    {
+                        "label": "시장 CAGR",
+                        "value": f"{md.market_cagr * 100:.1f}%",
+                    }
+                )
 
         if kpis:
             add_kpi_grid(
-                slide, kpis, top=y, tokens=tokens,
+                slide,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -169,9 +174,7 @@ class MarketOutlookRenderer(BaseSectionRenderer):
         if md and md.industry_trends:
             add_sub_header_bar(slide, "산업 트렌드", top=y, tokens=tokens)
             y += 0.45
-            add_bullet_list(
-                slide, md.industry_trends, top=y, height=2.0, tokens=tokens
-            )
+            add_bullet_list(slide, md.industry_trends, top=y, height=2.0, tokens=tokens)
 
         return [slide]
 
@@ -196,9 +199,7 @@ class DemandDriverRenderer(BaseSectionRenderer):
         tokens = tokens or DEFAULT_TOKENS
         c = tokens.colors
 
-        narrative = html_escape(
-            data.narratives.get("demand_driver", "")
-        )
+        narrative = html_escape(data.narratives.get("demand_driver", ""))
         md = data.market_data
 
         narrative_html = ""
@@ -241,12 +242,14 @@ class DemandDriverRenderer(BaseSectionRenderer):
         {narrative_html}
         """
 
-        return [build_slide_html(
-            content,
-            title="Key Demand Driver",
-            slide_class="slide-demand-driver",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Key Demand Driver",
+                slide_class="slide-demand-driver",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -275,21 +278,28 @@ class DemandDriverRenderer(BaseSectionRenderer):
         kpis: list[dict[str, str]] = []
         if md:
             if md.market_cagr is not None:
-                kpis.append({
-                    "label": "시장 CAGR",
-                    "value": f"{md.market_cagr * 100:.1f}%",
-                })
+                kpis.append(
+                    {
+                        "label": "시장 CAGR",
+                        "value": f"{md.market_cagr * 100:.1f}%",
+                    }
+                )
             if md.market_growth_rate is not None:
-                kpis.append({
-                    "label": "연 성장률",
-                    "value": f"{md.market_growth_rate * 100:.1f}%",
-                })
+                kpis.append(
+                    {
+                        "label": "연 성장률",
+                        "value": f"{md.market_growth_rate * 100:.1f}%",
+                    }
+                )
             if md.tam is not None:
                 kpis.append({"label": "TAM", "value": f"{md.tam:,.0f}억원"})
 
         if kpis:
             add_kpi_grid(
-                slide, kpis, top=y, tokens=tokens,
+                slide,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -321,9 +331,7 @@ class SupplyDriverRenderer(BaseSectionRenderer):
         tokens = tokens or DEFAULT_TOKENS
         c = tokens.colors
 
-        narrative = html_escape(
-            data.narratives.get("supply_driver", "")
-        )
+        narrative = html_escape(data.narratives.get("supply_driver", ""))
         md = data.market_data
 
         narrative_html = ""
@@ -373,12 +381,14 @@ class SupplyDriverRenderer(BaseSectionRenderer):
         {competitor_html}
         """
 
-        return [build_slide_html(
-            content,
-            title="Key Supply Driver",
-            slide_class="slide-supply-driver",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Key Supply Driver",
+                slide_class="slide-supply-driver",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -421,12 +431,8 @@ class SupplyDriverRenderer(BaseSectionRenderer):
                 if ms is not None:
                     parts.append(f"점유율 {ms * 100:.1f}%")
                 comp_lines.append(" | ".join(parts))
-            add_sub_header_bar(
-                slide, "공급 환경 (경쟁사)", top=y, tokens=tokens
-            )
+            add_sub_header_bar(slide, "공급 환경 (경쟁사)", top=y, tokens=tokens)
             y += 0.45
-            add_body_textbox(
-                slide, "\n".join(comp_lines), top=y, tokens=tokens
-            )
+            add_body_textbox(slide, "\n".join(comp_lines), top=y, tokens=tokens)
 
         return [slide]

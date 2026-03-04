@@ -120,9 +120,7 @@ class TestCreateAPIKey:
         assert data["key"] == "imgen_raw_key_123"
 
     @pytest.mark.asyncio
-    async def test_create_api_key_no_auth_401(
-        self, unauth_client: AsyncClient
-    ) -> None:
+    async def test_create_api_key_no_auth_401(self, unauth_client: AsyncClient) -> None:
         """인증 없이 API 키 생성 시 401."""
         response = await unauth_client.post(
             "/api/v1/api-keys",
@@ -182,9 +180,7 @@ class TestRevokeAPIKey:
             "src.api.routes.api_keys.APIKeyService.revoke",
             new_callable=AsyncMock,
         ):
-            response = await route_client.delete(
-                f"/api/v1/api-keys/{key_id}"
-            )
+            response = await route_client.delete(f"/api/v1/api-keys/{key_id}")
 
         assert response.status_code == 204
 
@@ -200,8 +196,6 @@ class TestRevokeAPIKey:
             new_callable=AsyncMock,
             side_effect=NotFoundError("APIKey", str(key_id)),
         ):
-            response = await route_client.delete(
-                f"/api/v1/api-keys/{key_id}"
-            )
+            response = await route_client.delete(f"/api/v1/api-keys/{key_id}")
 
         assert response.status_code == 404

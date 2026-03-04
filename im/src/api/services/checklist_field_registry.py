@@ -61,7 +61,8 @@ def _build_financial_fields() -> list[FieldDefinition]:
                     category="FINANCIAL",
                     field_type=ftype,
                     unit=unit,
-                    is_required=key_base in ("revenue", "operating_income", "ebitda", "net_income"),
+                    is_required=key_base
+                    in ("revenue", "operating_income", "ebitda", "net_income"),
                     fiscal_year=year,
                 )
             )
@@ -78,14 +79,24 @@ _COMPANY_FIELDS: list[FieldDefinition] = [
     FieldDefinition("company_name_en", "회사명 (영문)", "COMPANY", is_required=False),
     FieldDefinition("founded_date", "설립일", "COMPANY", field_type="date"),
     FieldDefinition("ceo_name", "대표이사", "COMPANY"),
-    FieldDefinition("employee_count", "임직원 수", "COMPANY", field_type="number", unit="명"),
+    FieldDefinition(
+        "employee_count", "임직원 수", "COMPANY", field_type="number", unit="명"
+    ),
     FieldDefinition("headquarters", "본사 소재지", "COMPANY"),
-    FieldDefinition("business_registration_no", "사업자등록번호", "COMPANY", is_required=False),
+    FieldDefinition(
+        "business_registration_no", "사업자등록번호", "COMPANY", is_required=False
+    ),
     FieldDefinition("industry_classification", "업종 분류", "COMPANY"),
     FieldDefinition("main_products", "주요 제품/서비스", "COMPANY", field_type="list"),
     FieldDefinition("website", "웹사이트", "COMPANY", is_required=False),
     FieldDefinition("company_description", "회사 개요", "COMPANY"),
-    FieldDefinition("history_highlights", "주요 연혁", "COMPANY", field_type="list", is_required=False),
+    FieldDefinition(
+        "history_highlights",
+        "주요 연혁",
+        "COMPANY",
+        field_type="list",
+        is_required=False,
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -93,14 +104,38 @@ _COMPANY_FIELDS: list[FieldDefinition] = [
 # ---------------------------------------------------------------------------
 
 _MARKET_FIELDS: list[FieldDefinition] = [
-    FieldDefinition("tam", "TAM (Total Addressable Market)", "MARKET", field_type="currency", unit="억원"),
-    FieldDefinition("sam", "SAM (Serviceable Addressable Market)", "MARKET", field_type="currency", unit="억원", is_required=False),
-    FieldDefinition("som", "SOM (Serviceable Obtainable Market)", "MARKET", field_type="currency", unit="억원", is_required=False),
-    FieldDefinition("market_growth_rate", "시장 성장률", "MARKET", field_type="percentage"),
+    FieldDefinition(
+        "tam",
+        "TAM (Total Addressable Market)",
+        "MARKET",
+        field_type="currency",
+        unit="억원",
+    ),
+    FieldDefinition(
+        "sam",
+        "SAM (Serviceable Addressable Market)",
+        "MARKET",
+        field_type="currency",
+        unit="억원",
+        is_required=False,
+    ),
+    FieldDefinition(
+        "som",
+        "SOM (Serviceable Obtainable Market)",
+        "MARKET",
+        field_type="currency",
+        unit="억원",
+        is_required=False,
+    ),
+    FieldDefinition(
+        "market_growth_rate", "시장 성장률", "MARKET", field_type="percentage"
+    ),
     FieldDefinition("market_position", "시장 내 위치", "MARKET"),
     FieldDefinition("key_competitors", "주요 경쟁사", "MARKET", field_type="list"),
     FieldDefinition("competitive_advantage", "경쟁 우위", "MARKET", field_type="list"),
-    FieldDefinition("industry_trends", "산업 트렌드", "MARKET", field_type="list", is_required=False),
+    FieldDefinition(
+        "industry_trends", "산업 트렌드", "MARKET", field_type="list", is_required=False
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -111,13 +146,26 @@ _DEAL_FIELDS: list[FieldDefinition] = [
     FieldDefinition("deal_type", "거래 유형", "DEAL"),
     FieldDefinition("deal_background", "거래 배경", "DEAL"),
     FieldDefinition("stake_pct", "매각 지분율", "DEAL", field_type="percentage"),
-    FieldDefinition("asking_price", "매각 희망가", "DEAL", field_type="currency", unit="억원", is_required=False),
+    FieldDefinition(
+        "asking_price",
+        "매각 희망가",
+        "DEAL",
+        field_type="currency",
+        unit="억원",
+        is_required=False,
+    ),
     FieldDefinition("valuation_method", "밸류에이션 방법론", "DEAL"),
-    FieldDefinition("ev_ebitda_multiple", "EV/EBITDA 배수", "DEAL", field_type="number", unit="x"),
+    FieldDefinition(
+        "ev_ebitda_multiple", "EV/EBITDA 배수", "DEAL", field_type="number", unit="x"
+    ),
     FieldDefinition("deal_timeline", "거래 일정", "DEAL"),
-    FieldDefinition("key_conditions", "주요 조건", "DEAL", field_type="list", is_required=False),
+    FieldDefinition(
+        "key_conditions", "주요 조건", "DEAL", field_type="list", is_required=False
+    ),
     FieldDefinition("advisor_name", "자문사", "DEAL", is_required=False),
-    FieldDefinition("investment_highlights", "투자 하이라이트", "DEAL", field_type="list"),
+    FieldDefinition(
+        "investment_highlights", "투자 하이라이트", "DEAL", field_type="list"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -126,16 +174,22 @@ _DEAL_FIELDS: list[FieldDefinition] = [
 
 _MANAGEMENT_FIELDS: list[FieldDefinition] = []
 for _n in range(1, 6):
-    _MANAGEMENT_FIELDS.extend([
-        FieldDefinition(
-            f"mgmt_{_n}_name", f"경영진 {_n} 성명", "MANAGEMENT",
-            is_required=_n <= 2,
-        ),
-        FieldDefinition(
-            f"mgmt_{_n}_title", f"경영진 {_n} 직책", "MANAGEMENT",
-            is_required=_n <= 2,
-        ),
-    ])
+    _MANAGEMENT_FIELDS.extend(
+        [
+            FieldDefinition(
+                f"mgmt_{_n}_name",
+                f"경영진 {_n} 성명",
+                "MANAGEMENT",
+                is_required=_n <= 2,
+            ),
+            FieldDefinition(
+                f"mgmt_{_n}_title",
+                f"경영진 {_n} 직책",
+                "MANAGEMENT",
+                is_required=_n <= 2,
+            ),
+        ]
+    )
 
 # ---------------------------------------------------------------------------
 # SHAREHOLDERS (10항목: 5명 × name/pct)
@@ -143,17 +197,23 @@ for _n in range(1, 6):
 
 _SHAREHOLDERS_FIELDS: list[FieldDefinition] = []
 for _n in range(1, 6):
-    _SHAREHOLDERS_FIELDS.extend([
-        FieldDefinition(
-            f"sh_{_n}_name", f"주주 {_n} 성명", "SHAREHOLDERS",
-            is_required=_n <= 2,
-        ),
-        FieldDefinition(
-            f"sh_{_n}_pct", f"주주 {_n} 지분율", "SHAREHOLDERS",
-            field_type="percentage",
-            is_required=_n <= 2,
-        ),
-    ])
+    _SHAREHOLDERS_FIELDS.extend(
+        [
+            FieldDefinition(
+                f"sh_{_n}_name",
+                f"주주 {_n} 성명",
+                "SHAREHOLDERS",
+                is_required=_n <= 2,
+            ),
+            FieldDefinition(
+                f"sh_{_n}_pct",
+                f"주주 {_n} 지분율",
+                "SHAREHOLDERS",
+                field_type="percentage",
+                is_required=_n <= 2,
+            ),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -192,36 +252,72 @@ _TM_FINANCIAL_KEYS: frozenset[str] = frozenset(
 # DM 핵심 재무 지표: revenue, cogs, gross_profit, operating_income, ebitda, net_income (×3년 = 18)
 _DM_FINANCIAL_KEYS: frozenset[str] = frozenset(
     f"{metric}_{year}"
-    for metric in ("revenue", "cogs", "gross_profit", "operating_income", "ebitda", "net_income")
+    for metric in (
+        "revenue",
+        "cogs",
+        "gross_profit",
+        "operating_income",
+        "ebitda",
+        "net_income",
+    )
     for year in _FINANCIAL_YEARS
 )
 
 # TM COMPANY 필드 (핵심 8개)
-_TM_COMPANY_KEYS: frozenset[str] = frozenset((
-    "company_name", "company_name_en", "founded_date", "ceo_name",
-    "employee_count", "headquarters", "industry_classification", "company_description",
-))
+_TM_COMPANY_KEYS: frozenset[str] = frozenset(
+    (
+        "company_name",
+        "company_name_en",
+        "founded_date",
+        "ceo_name",
+        "employee_count",
+        "headquarters",
+        "industry_classification",
+        "company_description",
+    )
+)
 
 # DM COMPANY 필드 (핵심 6개 — 상세 사업 설명 제외)
-_DM_COMPANY_KEYS: frozenset[str] = frozenset((
-    "company_name", "company_name_en", "founded_date",
-    "ceo_name", "industry_classification", "company_description",
-))
+_DM_COMPANY_KEYS: frozenset[str] = frozenset(
+    (
+        "company_name",
+        "company_name_en",
+        "founded_date",
+        "ceo_name",
+        "industry_classification",
+        "company_description",
+    )
+)
 
 # TM/DM 공통: DEAL 필드 서브셋
-_TM_DEAL_KEYS: frozenset[str] = frozenset((
-    "deal_type", "deal_background", "stake_pct", "investment_highlights",
-))
+_TM_DEAL_KEYS: frozenset[str] = frozenset(
+    (
+        "deal_type",
+        "deal_background",
+        "stake_pct",
+        "investment_highlights",
+    )
+)
 
 # TM/DM 공통: MANAGEMENT 서브셋
-_TM_MANAGEMENT_KEYS: frozenset[str] = frozenset((
-    "mgmt_1_name", "mgmt_1_title", "mgmt_2_name", "mgmt_2_title",
-))
+_TM_MANAGEMENT_KEYS: frozenset[str] = frozenset(
+    (
+        "mgmt_1_name",
+        "mgmt_1_title",
+        "mgmt_2_name",
+        "mgmt_2_title",
+    )
+)
 
 # TM/DM 공통: SHAREHOLDERS 서브셋
-_TM_SHAREHOLDERS_KEYS: frozenset[str] = frozenset((
-    "sh_1_name", "sh_1_pct", "sh_2_name", "sh_2_pct",
-))
+_TM_SHAREHOLDERS_KEYS: frozenset[str] = frozenset(
+    (
+        "sh_1_name",
+        "sh_1_pct",
+        "sh_2_name",
+        "sh_2_pct",
+    )
+)
 
 
 def get_fields_for_style(im_style: str) -> list[FieldDefinition]:
@@ -240,16 +336,10 @@ def get_fields_for_style(im_style: str) -> list[FieldDefinition]:
     all_fields = get_all_fields()
 
     if style in ("TEASER", "TM"):
-        return [
-            f for f in all_fields
-            if _matches_tm_filter(f)
-        ]
+        return [f for f in all_fields if _matches_tm_filter(f)]
 
     if style == "DM":
-        return [
-            f for f in all_fields
-            if _matches_dm_filter(f)
-        ]
+        return [f for f in all_fields if _matches_dm_filter(f)]
 
     # 알 수 없는 스타일은 전체 반환 (안전 폴백)
     return all_fields

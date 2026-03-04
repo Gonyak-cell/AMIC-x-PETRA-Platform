@@ -127,15 +127,12 @@ class CompanyOverviewRenderer(BaseSectionRenderer):
             slide3 = factory.add_content_slide(title="주요 제품/서비스")
             y = lay.content_top
 
-            add_sub_header_bar(
-                slide3, "주요 제품/서비스", top=y, tokens=tokens
-            )
+            add_sub_header_bar(slide3, "주요 제품/서비스", top=y, tokens=tokens)
             y += 0.45
 
             # 번호 매기기 (numbered bullet list)
             numbered_items = [
-                f"{i}. {product}"
-                for i, product in enumerate(co.key_products, start=1)
+                f"{i}. {product}" for i, product in enumerate(co.key_products, start=1)
             ]
             add_body_textbox(
                 slide3,

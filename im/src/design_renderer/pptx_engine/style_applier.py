@@ -251,9 +251,7 @@ def set_edit_restriction(
 
             spin_count = 100000
             for i in range(spin_count):
-                h = hashlib.sha512(
-                    i.to_bytes(4, byteorder="little") + h
-                ).digest()
+                h = hashlib.sha512(i.to_bytes(4, byteorder="little") + h).digest()
 
             hash_b64 = base64.b64encode(h).decode("ascii")
 
@@ -323,9 +321,7 @@ def add_watermark(
         if skip_first_slide and i == 0:
             continue
 
-        txBox = slide.shapes.add_textbox(
-            center_x, center_y, shape_width, shape_height
-        )
+        txBox = slide.shapes.add_textbox(center_x, center_y, shape_width, shape_height)
         tf = txBox.text_frame
         p = tf.paragraphs[0]
         p.alignment = PP_ALIGN.CENTER

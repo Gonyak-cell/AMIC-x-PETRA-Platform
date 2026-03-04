@@ -55,9 +55,7 @@ def render_sub_header_pptx(
     # 배경색: AMIC 다크그린
     fill = shape.fill
     fill.solid()
-    fill.fore_color.rgb = RGBColor.from_string(
-        tokens.colors.primary.lstrip("#")
-    )
+    fill.fore_color.rgb = RGBColor.from_string(tokens.colors.primary.lstrip("#"))
 
     # 테두리 없음
     shape.line.fill.background()
@@ -71,9 +69,7 @@ def render_sub_header_pptx(
     run.text = text
     run.font.size = Pt(tokens.font_sizes.sub_header_bar)
     run.font.bold = True
-    run.font.color.rgb = RGBColor.from_string(
-        tokens.colors.text_white.lstrip("#")
-    )
+    run.font.color.rgb = RGBColor.from_string(tokens.colors.text_white.lstrip("#"))
     run.font.name = tokens.typography.font_body
 
     return shape

@@ -297,7 +297,10 @@ class TestCalculateValuationMetrics:
             net_income={"2023": Decimal("20000")},
             revenue={"2023": Decimal("175000")},
             moic_scenarios_config={
-                "base": {"exit_equity": Decimal("250000"), "entry_equity": Decimal("100000")},
+                "base": {
+                    "exit_equity": Decimal("250000"),
+                    "entry_equity": Decimal("100000"),
+                },
             },
             exit_multiples=[8.0, 10.0],
             ebitda_at_exit=Decimal("50000"),

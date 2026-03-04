@@ -240,9 +240,7 @@ class TestUserServiceListUsers:
         scalars_mock.all = MagicMock(return_value=users)
         list_result.scalars = MagicMock(return_value=scalars_mock)
 
-        mock_session.execute = AsyncMock(
-            side_effect=[count_result, list_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         service = UserService(mock_session)
         items, total = await service.list_users(offset=0, limit=10)

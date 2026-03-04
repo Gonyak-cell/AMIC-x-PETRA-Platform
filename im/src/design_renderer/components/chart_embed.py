@@ -74,7 +74,9 @@ def create_waterfall_chart(
     height: int = DEFAULT_HEIGHT,
 ) -> go.Figure:
     """Waterfall chart (영업이익 Bridge)."""
-    return _ce_waterfall(data, title=title, config=_tokens_to_config(tokens, width, height))
+    return _ce_waterfall(
+        data, title=title, config=_tokens_to_config(tokens, width, height)
+    )
 
 
 def create_combo_chart(
@@ -98,7 +100,9 @@ def create_stacked_bar_chart(
     height: int = DEFAULT_HEIGHT,
 ) -> go.Figure:
     """Stacked Bar chart (사업부별 매출 구성)."""
-    return _ce_stacked_bar(data, title=title, config=_tokens_to_config(tokens, width, height))
+    return _ce_stacked_bar(
+        data, title=title, config=_tokens_to_config(tokens, width, height)
+    )
 
 
 def create_donut_chart(
@@ -264,7 +268,9 @@ def embed_chart_native_or_image(
 
     # 네이티브 미지원 → 기존 Plotly → PNG 경로
     fig = create_chart(chart_data, tokens=tokens)
-    embed_chart_pptx(slide, fig, left=left, top=top, width=width, height=height, optimize=optimize)
+    embed_chart_pptx(
+        slide, fig, left=left, top=top, width=width, height=height, optimize=optimize
+    )
     return None
 
 

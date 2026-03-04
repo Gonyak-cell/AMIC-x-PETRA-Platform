@@ -10,7 +10,13 @@ from __future__ import annotations
 
 from src.industry.korea.models import KIFRSNote
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 KIFRS_NOTES: list[KIFRSNote] = [
     # ── 공통 (5개) ──
@@ -57,8 +63,7 @@ KIFRS_NOTES: list[KIFRSNote] = [
         topic_en="Business Combinations",
         description="취득법 적용, 영업권(Goodwill) 산정, PPA(매수가격배분)",
         deal_consideration=(
-            "PPA 결과에 따라 무형자산 상각비 발생. "
-            "영업권 손상검사 주기적 수행 필요"
+            "PPA 결과에 따라 무형자산 상각비 발생. 영업권 손상검사 주기적 수행 필요"
         ),
         applicable_industries=ALL_INDUSTRIES,
     ),
@@ -69,8 +74,7 @@ KIFRS_NOTES: list[KIFRSNote] = [
         topic_en="Employee Benefits",
         description="퇴직급여(DB/DC), 기타장기종업원급여 인식",
         deal_consideration=(
-            "DB형 퇴직연금 적립 부족분이 숨은 부채. "
-            "인수 후 DC 전환 비용 추정 필요"
+            "DB형 퇴직연금 적립 부족분이 숨은 부채. 인수 후 DC 전환 비용 추정 필요"
         ),
         applicable_industries=ALL_INDUSTRIES,
     ),
@@ -81,9 +85,7 @@ KIFRS_NOTES: list[KIFRSNote] = [
         topic_kr="자산손상",
         topic_en="Impairment of Assets",
         description="사용가치 또는 순공정가치로 자산손상 검사",
-        deal_consideration=(
-            "유형자산 감액 리스크. 가동률 하락 시 손상차손 인식 가능"
-        ),
+        deal_consideration=("유형자산 감액 리스크. 가동률 하락 시 손상차손 인식 가능"),
         applicable_industries=["manufacturing", "logistics"],
     ),
     # ── Tech: 무형자산 (1개) ──
@@ -94,8 +96,7 @@ KIFRS_NOTES: list[KIFRSNote] = [
         topic_en="Intangible Assets",
         description="내부 개발 소프트웨어 자산화 기준, 내용연수 결정",
         deal_consideration=(
-            "R&D 자산화 정책 차이로 이익 왜곡 가능. "
-            "자산화 비율 및 상각 기간 비교 필수"
+            "R&D 자산화 정책 차이로 이익 왜곡 가능. 자산화 비율 및 상각 기간 비교 필수"
         ),
         applicable_industries=["tech"],
     ),

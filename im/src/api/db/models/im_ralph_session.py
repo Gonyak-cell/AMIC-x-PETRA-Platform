@@ -25,7 +25,9 @@ class IMRalphSession(Base):
     __tablename__ = "im_ralph_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -35,17 +37,22 @@ class IMRalphSession(Base):
 
     # Pass 번호: 1=Draft, 2=Final
     pass_number: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1,
+        Integer,
+        nullable=False,
+        default=1,
     )
 
     # 문서 유형 (im_full, im_teaser 등)
     doc_type: Mapped[str] = mapped_column(
-        String(30), nullable=False,
+        String(30),
+        nullable=False,
     )
 
     # 상태: PLANNING / GENERATING / VALIDATING / COMPLETED / FAILED / BUDGET_EXCEEDED
     status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="PLANNING",
+        String(30),
+        nullable=False,
+        default="PLANNING",
     )
 
     # 반복 상태 (JSONB)
@@ -55,13 +62,19 @@ class IMRalphSession(Base):
 
     # 결과 집계
     total_iterations: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0,
+        Integer,
+        nullable=False,
+        default=0,
     )
     total_cost_usd: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0,
+        Float,
+        nullable=False,
+        default=0.0,
     )
     final_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0,
+        Float,
+        nullable=False,
+        default=0.0,
     )
     section_scores: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
@@ -80,10 +93,13 @@ class IMRalphSession(Base):
 
     # 타임스탬프
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships

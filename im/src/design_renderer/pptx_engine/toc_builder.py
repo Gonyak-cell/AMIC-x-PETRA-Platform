@@ -231,9 +231,7 @@ def _add_highlight_bar(
         Inches(height),
     )
     bar.fill.solid()
-    bar.fill.fore_color.rgb = RGBColor.from_string(
-        tokens.colors.accent.lstrip("#")
-    )
+    bar.fill.fore_color.rgb = RGBColor.from_string(tokens.colors.accent.lstrip("#"))
     bar.line.fill.background()
 
 
@@ -282,7 +280,10 @@ def build_tm_toc_slide(
     title_w = cm_to_inches(dp.toc_width)
 
     title_shape = slide.shapes.add_textbox(
-        Inches(title_x), Inches(title_y), Inches(title_w), Inches(0.6),
+        Inches(title_x),
+        Inches(title_y),
+        Inches(title_w),
+        Inches(0.6),
     )
     tf = title_shape.text_frame
     p = tf.paragraphs[0]
@@ -312,7 +313,10 @@ def build_tm_toc_slide(
 
         # 그룹 번호
         num_shape = slide.shapes.add_textbox(
-            Inches(title_x), Inches(group_y), Inches(0.5), Inches(0.4),
+            Inches(title_x),
+            Inches(group_y),
+            Inches(0.5),
+            Inches(0.4),
         )
         ntf = num_shape.text_frame
         p_num = ntf.paragraphs[0]
@@ -328,8 +332,10 @@ def build_tm_toc_slide(
 
         # 그룹 제목
         name_shape = slide.shapes.add_textbox(
-            Inches(title_x + 0.7), Inches(group_y),
-            Inches(title_w - 2.2), Inches(0.4),
+            Inches(title_x + 0.7),
+            Inches(group_y),
+            Inches(title_w - 2.2),
+            Inches(0.4),
         )
         stf = name_shape.text_frame
         p_name = stf.paragraphs[0]
@@ -345,8 +351,10 @@ def build_tm_toc_slide(
         # 페이지 번호
         if page_num is not None:
             pg_shape = slide.shapes.add_textbox(
-                Inches(title_x + title_w - 1.5), Inches(group_y),
-                Inches(1.5), Inches(0.4),
+                Inches(title_x + title_w - 1.5),
+                Inches(group_y),
+                Inches(1.5),
+                Inches(0.4),
             )
             ptf = pg_shape.text_frame
             p_pg = ptf.paragraphs[0]
@@ -411,15 +419,13 @@ def build_tm_toc_slide_html(
         bg = c.bg_light_green if is_current else "transparent"
         title_color = c.primary if is_current else c.text_secondary
         title_weight = "bold" if is_current else "normal"
-        title_text = html_escape(
-            group_title.upper() if is_current else group_title
-        )
+        title_text = html_escape(group_title.upper() if is_current else group_title)
 
         pg_html = ""
         if page_num is not None:
             pg_color = c.accent if is_current else c.text_secondary
             pg_html = (
-                f'<span style="font-family:\'IBM Plex Mono\',monospace;'
+                f"<span style=\"font-family:'IBM Plex Mono',monospace;"
                 f'font-size:10pt;color:{pg_color};float:right;">'
                 f"p.{page_num}</span>"
             )
@@ -438,7 +444,7 @@ def build_tm_toc_slide_html(
             f'padding:0.5em 0.8em;margin-bottom:0.6em;border-radius:2px;">'
             f'<div style="font-size:12pt;font-weight:{title_weight};'
             f'color:{title_color};">'
-            f'<span style="font-family:\'IBM Plex Mono\',monospace;'
+            f"<span style=\"font-family:'IBM Plex Mono',monospace;"
             f'margin-right:0.5em;">({idx + 1})</span>'
             f"{title_text}{pg_html}</div>"
             f"{subs_html}</div>"

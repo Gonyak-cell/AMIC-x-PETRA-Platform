@@ -136,7 +136,9 @@ class PlaywrightEngine:
         await self._ensure_browser()
         return self
 
-    async def __aexit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any
+    ) -> None:
         """비동기 컨텍스트 매니저 종료."""
         await self.close()
 
@@ -252,6 +254,7 @@ class PlaywrightEngine:
 
         try:
             import time
+
             start_time = time.monotonic()
 
             page = await context.new_page()
@@ -491,7 +494,9 @@ class PlaywrightEngine:
             text: a.innerText.trim()
         }}))
         """
-        return await self.evaluate_script(url, script, wait_until=wait_until, timeout=timeout)
+        return await self.evaluate_script(
+            url, script, wait_until=wait_until, timeout=timeout
+        )
 
     async def fill_form(
         self,
@@ -520,6 +525,7 @@ class PlaywrightEngine:
 
         try:
             import time
+
             start_time = time.monotonic()
 
             page = await context.new_page()

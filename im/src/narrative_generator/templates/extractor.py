@@ -42,10 +42,25 @@ _SECTION_PATTERNS: dict[str, list[str]] = {
     "executive_summary": ["executive summary", "경영진 요약", "요약", "개요"],
     "company_overview": ["company overview", "회사 개요", "기업 개요", "회사 소개"],
     "business_overview": ["business overview", "사업 개요", "사업 현황"],
-    "deal_overview": ["deal overview", "거래 개요", "거래 구조", "transaction overview"],
-    "financial_analysis": ["financial analysis", "재무 분석", "재무 현황", "financial overview"],
+    "deal_overview": [
+        "deal overview",
+        "거래 개요",
+        "거래 구조",
+        "transaction overview",
+    ],
+    "financial_analysis": [
+        "financial analysis",
+        "재무 분석",
+        "재무 현황",
+        "financial overview",
+    ],
     "investment_highlights": ["investment highlights", "투자 하이라이트", "투자 매력"],
-    "market_overview": ["market overview", "시장 분석", "시장 개요", "industry overview"],
+    "market_overview": [
+        "market overview",
+        "시장 분석",
+        "시장 개요",
+        "industry overview",
+    ],
     "value_creation": ["value creation", "가치 창출", "value-add"],
     "growth_strategy": ["growth strategy", "성장 전략", "strategic plan"],
     "management_team": ["management team", "경영진", "key personnel"],
@@ -291,7 +306,9 @@ class TemplateExtractor:
         if not parsed:
             warnings.append("LLM 응답 파싱 실패, 원본 응답을 YAML 주석으로 포함")
             yaml_content = self._build_fallback_yaml(
-                section_id, section_text, raw_response,
+                section_id,
+                section_text,
+                raw_response,
             )
         else:
             yaml_content = self._build_yaml(parsed, section_id, str(file_path))
@@ -321,12 +338,14 @@ class TemplateExtractor:
         file_path = Path(file_path)
         full_text = self._extract_text(file_path)
         if not full_text:
-            return [ExtractionResult(
-                section_id="unknown",
-                yaml_content="",
-                warnings=["텍스트 추출 실패"],
-                source_file=str(file_path),
-            )]
+            return [
+                ExtractionResult(
+                    section_id="unknown",
+                    yaml_content="",
+                    warnings=["텍스트 추출 실패"],
+                    source_file=str(file_path),
+                )
+            ]
 
         chunks = await self._split_sections(full_text)
         if not chunks:
@@ -403,9 +422,7 @@ class TemplateExtractor:
                     if shape.has_table:
                         table = shape.table
                         for row in table.rows:
-                            row_texts = [
-                                cell.text.strip() for cell in row.cells
-                            ]
+                            row_texts = [cell.text.strip() for cell in row.cells]
                             texts.append(" | ".join(row_texts))
                 if texts:
                     slides.append("\n".join(texts))
@@ -440,11 +457,13 @@ class TemplateExtractor:
             chunks: list[SectionChunk] = []
             for sec in sections:
                 if isinstance(sec, dict) and sec.get("section_id"):
-                    chunks.append(SectionChunk(
-                        section_id=sec["section_id"],
-                        title=sec.get("title", ""),
-                        text=sec.get("text", ""),
-                    ))
+                    chunks.append(
+                        SectionChunk(
+                            section_id=sec["section_id"],
+                            title=sec.get("title", ""),
+                            text=sec.get("text", ""),
+                        )
+                    )
             return chunks
         except Exception as exc:
             logger.warning("LLM 섹션 분할 실패: %s", exc)
@@ -477,22 +496,26 @@ class TemplateExtractor:
 
         if not splits:
             section_id = self._guess_section_id(text)
-            return [SectionChunk(
-                section_id=section_id,
-                title=section_id,
-                text=text,
-            )]
+            return [
+                SectionChunk(
+                    section_id=section_id,
+                    title=section_id,
+                    text=text,
+                )
+            ]
 
         chunks: list[SectionChunk] = []
         for i, (start, header) in enumerate(splits):
             end = splits[i + 1][0] if i + 1 < len(splits) else len(text)
             chunk_text = text[start:end].strip()
             section_id = self._guess_section_id(header + " " + chunk_text[:200])
-            chunks.append(SectionChunk(
-                section_id=section_id,
-                title=header,
-                text=chunk_text,
-            ))
+            chunks.append(
+                SectionChunk(
+                    section_id=section_id,
+                    title=header,
+                    text=chunk_text,
+                )
+            )
 
         return chunks
 
@@ -611,7 +634,7 @@ class TemplateExtractor:
         end = raw.rfind("}")
         if start != -1 and end > start:
             try:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
             except json.JSONDecodeError:
                 pass
 
@@ -636,7 +659,7 @@ class TemplateExtractor:
             end = raw.rfind(close_ch)
             if start != -1 and end > start:
                 try:
-                    return json.loads(raw[start:end + 1])
+                    return json.loads(raw[start : end + 1])
                 except json.JSONDecodeError:
                     continue
 
@@ -670,10 +693,16 @@ class TemplateExtractor:
         if slots:
             lines.append("slots:")
             # L2 먼저, L3 다음
-            l2_slots = {k: v for k, v in slots.items()
-                        if isinstance(v, dict) and v.get("level") == "L2"}
-            l3_slots = {k: v for k, v in slots.items()
-                        if isinstance(v, dict) and v.get("level") == "L3"}
+            l2_slots = {
+                k: v
+                for k, v in slots.items()
+                if isinstance(v, dict) and v.get("level") == "L2"
+            }
+            l3_slots = {
+                k: v
+                for k, v in slots.items()
+                if isinstance(v, dict) and v.get("level") == "L3"
+            }
 
             if l2_slots:
                 lines.append("  # ── L2: 단순 치환 ──")

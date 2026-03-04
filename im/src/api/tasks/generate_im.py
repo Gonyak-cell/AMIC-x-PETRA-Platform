@@ -71,7 +71,14 @@ def handle_pipeline_error(
     sync_fail_document(document_id, error=str(exc))
 
 
-@celery_app.task(bind=True, name="generate_im", max_retries=0, acks_late=True, soft_time_limit=900, time_limit=960)
+@celery_app.task(
+    bind=True,
+    name="generate_im",
+    max_retries=0,
+    acks_late=True,
+    soft_time_limit=900,
+    time_limit=960,
+)
 def generate_im_task(
     self: Any,
     document_id: str,
@@ -133,7 +140,9 @@ def generate_im_task(
 # ---------------------------------------------------------------------------
 
 
-@celery_app.task(bind=True, name="fetch_dart", base=PipelineTask, max_retries=3, acks_late=True)
+@celery_app.task(
+    bind=True, name="fetch_dart", base=PipelineTask, max_retries=3, acks_late=True
+)
 def fetch_dart_task(self: Any, corp_code: str) -> dict[str, Any]:
     """DART API에서 기업 데이터를 수집한다.
 
@@ -152,7 +161,11 @@ def fetch_dart_task(self: Any, corp_code: str) -> dict[str, Any]:
         result = _run_async(_run_collection(config, corp_code))
         if result.data is not None:
             return im_data_to_dict(result.data)
-        return {"corp_code": corp_code, "error": "수집 실패", "warnings": result.warnings}
+        return {
+            "corp_code": corp_code,
+            "error": "수집 실패",
+            "warnings": result.warnings,
+        }
     except Exception as exc:
         logger.error("DART 수집 실패: %s", exc)
         raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
@@ -166,7 +179,9 @@ async def _run_collection(config: Any, corp_code: str) -> Any:
         return await pipeline.collect(corp_code)
 
 
-@celery_app.task(bind=True, name="fetch_web", base=PipelineTask, max_retries=3, acks_late=True)
+@celery_app.task(
+    bind=True, name="fetch_web", base=PipelineTask, max_retries=3, acks_late=True
+)
 def fetch_web_task(self: Any, corp_code: str) -> dict[str, Any]:
     """웹 크롤링으로 추가 데이터를 수집한다.
 
@@ -179,10 +194,10 @@ def fetch_web_task(self: Any, corp_code: str) -> dict[str, Any]:
     return {"corp_code": corp_code, "web_data": {}}
 
 
-@celery_app.task(bind=True, name="extract_brand", base=PipelineTask, max_retries=3, acks_late=True)
-def extract_brand_task(
-    self: Any, corp_code: str, website_url: str
-) -> dict[str, Any]:
+@celery_app.task(
+    bind=True, name="extract_brand", base=PipelineTask, max_retries=3, acks_late=True
+)
+def extract_brand_task(self: Any, corp_code: str, website_url: str) -> dict[str, Any]:
     """브랜드 자산(로고, 색상)을 추출한다.
 
     Args:
@@ -205,7 +220,13 @@ def extract_brand_task(
         return {"corp_code": corp_code, "brand_assets": None}
 
 
-@celery_app.task(bind=True, name="merge_collected_data", base=PipelineTask, max_retries=0, acks_late=True)
+@celery_app.task(
+    bind=True,
+    name="merge_collected_data",
+    base=PipelineTask,
+    max_retries=0,
+    acks_late=True,
+)
 def merge_collected_data(
     self: Any,
     results: list[dict[str, Any]],
@@ -263,7 +284,13 @@ def _load_document_from_db(document_id: str) -> dict[str, Any]:
         }
 
 
-@celery_app.task(bind=True, name="build_manual_data", base=PipelineTask, max_retries=0, acks_late=True)
+@celery_app.task(
+    bind=True,
+    name="build_manual_data",
+    base=PipelineTask,
+    max_retries=0,
+    acks_late=True,
+)
 def build_manual_data_task(self: Any, document_id: str) -> dict[str, Any]:
     """수동 입력 모드: DB에서 기본 정보를 읽어 최소 im_data_dict를 구성한다.
 
@@ -281,7 +308,9 @@ def build_manual_data_task(self: Any, document_id: str) -> dict[str, Any]:
     return im_data
 
 
-@celery_app.task(bind=True, name="load_excel_data", base=PipelineTask, max_retries=1, acks_late=True)
+@celery_app.task(
+    bind=True, name="load_excel_data", base=PipelineTask, max_retries=1, acks_late=True
+)
 def load_excel_data_task(self: Any, document_id: str) -> dict[str, Any]:
     """Excel 업로드 모드: 업로드된 Excel 파일에서 재무데이터를 파싱한다.
 
@@ -339,7 +368,13 @@ def load_excel_data_task(self: Any, document_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@celery_app.task(bind=True, name="analyze_financials", base=PipelineTask, max_retries=3, acks_late=True)
+@celery_app.task(
+    bind=True,
+    name="analyze_financials",
+    base=PipelineTask,
+    max_retries=3,
+    acks_late=True,
+)
 def analyze_financials_task(
     self: Any,
     im_data_dict: dict[str, Any],
@@ -378,7 +413,9 @@ def analyze_financials_task(
     return im_data_dict
 
 
-@celery_app.task(bind=True, name="generate_content", base=PipelineTask, max_retries=2, acks_late=True)
+@celery_app.task(
+    bind=True, name="generate_content", base=PipelineTask, max_retries=2, acks_late=True
+)
 def generate_content_task(
     self: Any,
     im_data_dict: dict[str, Any],
@@ -411,7 +448,9 @@ def generate_content_task(
     return im_data_dict
 
 
-@celery_app.task(bind=True, name="render_document", base=PipelineTask, max_retries=2, acks_late=True)
+@celery_app.task(
+    bind=True, name="render_document", base=PipelineTask, max_retries=2, acks_late=True
+)
 def render_document_task(
     self: Any,
     im_data_dict: dict[str, Any],
@@ -445,7 +484,13 @@ def render_document_task(
     return im_data_dict
 
 
-@celery_app.task(bind=True, name="finalize_document", base=PipelineTask, max_retries=0, acks_late=True)
+@celery_app.task(
+    bind=True,
+    name="finalize_document",
+    base=PipelineTask,
+    max_retries=0,
+    acks_late=True,
+)
 def finalize_document_task(
     self: Any,
     im_data_dict: dict[str, Any],
@@ -475,7 +520,9 @@ def finalize_document_task(
             from src.api.tasks.ralph_loop import run_im_ralph_loop_task
 
             run_im_ralph_loop_task.delay(
-                document_id=document_id, pass_number=1, im_data_dict=im_data_dict,
+                document_id=document_id,
+                pass_number=1,
+                im_data_dict=im_data_dict,
             )
             logger.info("Ralph Loop Pass 1 시작: document=%s", document_id)
         except Exception as exc:

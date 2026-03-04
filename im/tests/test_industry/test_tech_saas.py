@@ -1,6 +1,5 @@
 """TechSaaSModule 테스트."""
 
-
 from src.industry.models import (
     IndustryChartRecommendation,
     IndustryContext,

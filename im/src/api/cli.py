@@ -32,9 +32,7 @@ async def _create_admin(email: str, password: str, full_name: str) -> None:
     db_session.init_engine()
     assert db_session.AsyncSessionFactory is not None
     async with db_session.AsyncSessionFactory() as session:  # type: AsyncSession
-        result = await session.execute(
-            select(User).where(User.email == email)
-        )
+        result = await session.execute(select(User).where(User.email == email))
         if result.scalar_one_or_none() is not None:
             print(f"이미 존재하는 이메일입니다: {email}")
             sys.exit(1)

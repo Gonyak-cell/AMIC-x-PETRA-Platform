@@ -128,9 +128,7 @@ def _build_slide_descriptions(slots: list[ShapeSlot]) -> str:
             elif s.shape_type in ("text", "auto_shape", "placeholder"):
                 preview = (s.text_preview or "")[:50]
                 if preview:
-                    lines.append(
-                        f"  - **텍스트** `{s.shape_name}` — 현재: \"{preview}\""
-                    )
+                    lines.append(f'  - **텍스트** `{s.shape_name}` — 현재: "{preview}"')
 
     return "\n".join(lines)
 
@@ -170,16 +168,19 @@ def parse_template_content_response(response_json: dict) -> TemplateContent:
                     headers=table_data.get("headers"),
                 )
 
-            slides.append(SlideContent(
-                slide_idx=slide_data.get("slide_idx", 0),
-                title=slide_data.get("title"),
-                texts=slide_data.get("texts", {}),
-                charts=charts,
-                tables=tables,
-            ))
+            slides.append(
+                SlideContent(
+                    slide_idx=slide_data.get("slide_idx", 0),
+                    title=slide_data.get("title"),
+                    texts=slide_data.get("texts", {}),
+                    charts=charts,
+                    tables=tables,
+                )
+            )
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             logger.warning(
-                "LLM 응답에서 슬라이드 파싱 실패: %s", exc,
+                "LLM 응답에서 슬라이드 파싱 실패: %s",
+                exc,
             )
             continue
 

@@ -92,9 +92,7 @@ class APIKeyService:
             NotFoundError: 키가 없을 때.
             AuthorizationError: 본인 소유가 아닐 때.
         """
-        result = await self.db.execute(
-            select(APIKey).where(APIKey.id == key_id)
-        )
+        result = await self.db.execute(select(APIKey).where(APIKey.id == key_id))
         api_key = result.scalar_one_or_none()
 
         if api_key is None:

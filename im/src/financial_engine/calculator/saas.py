@@ -466,30 +466,47 @@ def calculate_saas_metrics(
     nrr: dict[str, float] = {}
     if all(
         v is not None
-        for v in (beginning_arr, expansion_revenue, contraction_revenue, churned_revenue)
+        for v in (
+            beginning_arr,
+            expansion_revenue,
+            contraction_revenue,
+            churned_revenue,
+        )
     ):
         nrr = calculate_nrr(
-            beginning_arr, expansion_revenue, contraction_revenue, churned_revenue  # type: ignore[arg-type]
+            beginning_arr,
+            expansion_revenue,
+            contraction_revenue,
+            churned_revenue,  # type: ignore[arg-type]
         )
 
     # 3) Gross Churn (선택)
     gross_churn: dict[str, float] = {}
     if all(
-        v is not None
-        for v in (churned_revenue, contraction_revenue, beginning_arr)
+        v is not None for v in (churned_revenue, contraction_revenue, beginning_arr)
     ):
         gross_churn = calculate_gross_churn(
-            churned_revenue, contraction_revenue, beginning_arr  # type: ignore[arg-type]
+            churned_revenue,
+            contraction_revenue,
+            beginning_arr,  # type: ignore[arg-type]
         )
 
     # 4) Net Churn (선택)
     net_churn: dict[str, float] = {}
     if all(
         v is not None
-        for v in (churned_revenue, contraction_revenue, expansion_revenue, beginning_arr)
+        for v in (
+            churned_revenue,
+            contraction_revenue,
+            expansion_revenue,
+            beginning_arr,
+        )
     ):
         net_churn = calculate_net_churn(
-            churned_revenue, contraction_revenue, expansion_revenue, beginning_arr  # type: ignore[arg-type]
+            churned_revenue,
+            contraction_revenue,
+            expansion_revenue,
+            beginning_arr,  # type: ignore[arg-type]
         )
 
     # 5) LTV (선택)

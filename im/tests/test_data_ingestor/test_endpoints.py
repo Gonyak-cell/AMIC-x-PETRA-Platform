@@ -3,7 +3,6 @@
 T-D04 검증: 모든 엔드포인트 상수 정의 확인
 """
 
-
 from src.data_ingestor.dart.endpoints import (
     DART_BASE_URL,
     AccountCode,

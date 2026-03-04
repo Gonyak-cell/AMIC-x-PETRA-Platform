@@ -73,7 +73,9 @@ class NewsArticle:
             "title": self.title,
             "url": self.url,
             "source": self.source,
-            "published_at": self.published_at.isoformat() if self.published_at else None,
+            "published_at": self.published_at.isoformat()
+            if self.published_at
+            else None,
             "summary": self.summary,
             "content": self.content,
             "thumbnail_url": self.thumbnail_url,
@@ -317,7 +319,9 @@ class NewsCrawler:
                 date_str = raw.get("date", "")
                 if date_str:
                     try:
-                        published_at = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                        published_at = datetime.fromisoformat(
+                            date_str.replace("Z", "+00:00")
+                        )
                     except Exception:
                         pass
 
@@ -464,12 +468,30 @@ class NewsCrawler:
             감성 점수가 추가된 기사 리스트.
         """
         positive_keywords = [
-            "상승", "호재", "성장", "증가", "돌파", "최고",
-            "긍정", "기대", "확대", "개선", "흑자",
+            "상승",
+            "호재",
+            "성장",
+            "증가",
+            "돌파",
+            "최고",
+            "긍정",
+            "기대",
+            "확대",
+            "개선",
+            "흑자",
         ]
         negative_keywords = [
-            "하락", "악재", "감소", "축소", "위기", "최저",
-            "우려", "적자", "손실", "하향", "부진",
+            "하락",
+            "악재",
+            "감소",
+            "축소",
+            "위기",
+            "최저",
+            "우려",
+            "적자",
+            "손실",
+            "하향",
+            "부진",
         ]
 
         for article in articles:

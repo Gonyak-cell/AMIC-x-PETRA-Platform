@@ -179,4 +179,7 @@ class ConsistencyChecker:
             return True
         if a.value == 0 or b.value == 0:
             return False
-        return abs(a.value - b.value) / max(abs(a.value), abs(b.value)) <= _AMOUNT_TOLERANCE
+        return (
+            abs(a.value - b.value) / max(abs(a.value), abs(b.value))
+            <= _AMOUNT_TOLERANCE
+        )

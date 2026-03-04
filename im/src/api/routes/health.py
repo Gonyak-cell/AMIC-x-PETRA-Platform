@@ -46,9 +46,7 @@ async def _check_db() -> bool:
         if engine_ref is None:
             return False
         async with engine_ref.connect() as conn:
-            await conn.execute(
-                __import__("sqlalchemy").text("SELECT 1")
-            )
+            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         return True
     except Exception:
         return False
@@ -82,7 +80,12 @@ async def health() -> dict:
     db_ok = await _check_db()
     if db_ok:
         return {"status": "ok", "service": "im", "version": __version__, "db": "ok"}
-    return {"status": "degraded", "service": "im", "version": __version__, "db": "error"}
+    return {
+        "status": "degraded",
+        "service": "im",
+        "version": __version__,
+        "db": "error",
+    }
 
 
 @router.get(

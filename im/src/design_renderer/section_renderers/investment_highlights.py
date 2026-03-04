@@ -119,9 +119,7 @@ class InvestmentHighlightsRenderer(BaseSectionRenderer):
         for i, item in enumerate(highlights, 1):
             title, _detail = self._split_title_detail(item)
             summary_items.append(f"{i}. {title}")
-        add_bullet_list(
-            overview, summary_items, top=y, height=3.5, tokens=tokens
-        )
+        add_bullet_list(overview, summary_items, top=y, height=3.5, tokens=tokens)
         slides.append(overview)
 
         # ── Slide 2~N: Individual Highlights (최대 5장) ──
@@ -182,10 +180,6 @@ class InvestmentHighlightsRenderer(BaseSectionRenderer):
         narrative = data.narratives.get("investment_highlights", "")
 
         if len(highlights) <= 2:
-            return self._render_single_slide(
-                factory, highlights, narrative, tokens
-            )
+            return self._render_single_slide(factory, highlights, narrative, tokens)
 
-        return self._render_multi_slides(
-            factory, highlights, narrative, tokens
-        )
+        return self._render_multi_slides(factory, highlights, narrative, tokens)

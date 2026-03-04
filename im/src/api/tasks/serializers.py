@@ -29,8 +29,7 @@ def _make_json_serializable(obj: Any) -> Any:
         return obj.value
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return {
-            k: _make_json_serializable(v)
-            for k, v in dataclasses.asdict(obj).items()
+            k: _make_json_serializable(v) for k, v in dataclasses.asdict(obj).items()
         }
     if isinstance(obj, dict):
         return {k: _make_json_serializable(v) for k, v in obj.items()}
@@ -162,8 +161,7 @@ def dict_to_im_data(d: dict[str, Any]) -> Any:
         for section_id, chart_list in data["charts"].items():
             if isinstance(chart_list, list):
                 charts[section_id] = [
-                    ChartData(**c) if isinstance(c, dict) else c
-                    for c in chart_list
+                    ChartData(**c) if isinstance(c, dict) else c for c in chart_list
                 ]
             else:
                 charts[section_id] = chart_list
@@ -175,8 +173,7 @@ def dict_to_im_data(d: dict[str, Any]) -> Any:
         for section_id, cit_list in data["source_citations"].items():
             if isinstance(cit_list, list):
                 citations[section_id] = [
-                    SourceCitation(**c) if isinstance(c, dict) else c
-                    for c in cit_list
+                    SourceCitation(**c) if isinstance(c, dict) else c for c in cit_list
                 ]
             else:
                 citations[section_id] = cit_list
@@ -185,8 +182,7 @@ def dict_to_im_data(d: dict[str, Any]) -> Any:
     # ── ContactInfo list ──
     if "contacts" in data and isinstance(data["contacts"], list):
         data["contacts"] = [
-            ContactInfo(**c) if isinstance(c, dict) else c
-            for c in data["contacts"]
+            ContactInfo(**c) if isinstance(c, dict) else c for c in data["contacts"]
         ]
 
     # ── BrandAssets (런타임 import) ──

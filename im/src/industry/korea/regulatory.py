@@ -10,7 +10,13 @@ from __future__ import annotations
 
 from src.industry.korea.models import RegulatoryItem, Severity
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 REGULATORY_ITEMS: list[RegulatoryItem] = [
     # ── 공통 규제 (4개) ──

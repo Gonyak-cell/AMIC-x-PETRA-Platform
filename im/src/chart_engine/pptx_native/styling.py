@@ -23,12 +23,12 @@ def get_color_sequence(config: ChartConfig | None = None) -> list[str]:
     """AMIC 5단계 그린 + 특수색 시퀀스 반환."""
     c = (config or DEFAULT_CHART_CONFIG).colors
     return [
-        c.primary,    # #0F3A32  Signature Green
+        c.primary,  # #0F3A32  Signature Green
         c.secondary,  # #1C8F57  Solid Green
-        c.accent,     # #26C260  Highlight Green
-        c.fresh,      # #A3E96B  Fresh Green
-        c.caution,    # #EF6C00  Amber
-        c.negative,   # #BC2C1A  Red
+        c.accent,  # #26C260  Highlight Green
+        c.fresh,  # #A3E96B  Fresh Green
+        c.caution,  # #EF6C00  Amber
+        c.negative,  # #BC2C1A  Red
     ]
 
 

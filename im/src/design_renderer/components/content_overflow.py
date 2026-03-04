@@ -117,9 +117,7 @@ def _estimate_block_height(block: ContentBlock, content_width: float) -> float:
     return 1.0  # 알 수 없는 타입 기본값
 
 
-def _estimate_text_height(
-    text: str, font_size: int, width_inches: float
-) -> float:
+def _estimate_text_height(text: str, font_size: int, width_inches: float) -> float:
     """텍스트 높이 추정 (줄 수 기반, 단어 래핑 근사)."""
     if not text:
         return 0.0
@@ -202,9 +200,7 @@ def split_content_to_slides(
     is_first = True
 
     for block in blocks:
-        block_height = block.estimated_height + (
-            _BLOCK_GAP if current_blocks else 0
-        )
+        block_height = block.estimated_height + (_BLOCK_GAP if current_blocks else 0)
 
         if current_height + block_height <= max_height or not current_blocks:
             # 현재 슬라이드에 추가
@@ -223,9 +219,7 @@ def split_content_to_slides(
 
             # 분할 가능한 블록이면 분할 시도
             if block.content_type == "table" and block.can_split:
-                sub_slides = _split_table_block(
-                    block, title, max_height, tokens
-                )
+                sub_slides = _split_table_block(block, title, max_height, tokens)
                 slides.extend(sub_slides)
                 current_blocks = []
                 current_height = 0.0
@@ -259,11 +253,7 @@ def _split_table_block(
     """테이블 블록을 여러 슬라이드로 분할 (헤더 반복)."""
     data = block.data
     if not data or not isinstance(data, list) or len(data) < 2:
-        return [
-            SlideContent(
-                blocks=[block], title=title, is_continuation=True
-            )
-        ]
+        return [SlideContent(blocks=[block], title=title, is_continuation=True)]
 
     header = data[0]
     body_rows = data[1:]

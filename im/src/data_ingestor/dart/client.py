@@ -120,7 +120,9 @@ class DartAPIClient:
         await self._ensure_client()
         return self
 
-    async def __aexit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any
+    ) -> None:
         """비동기 컨텍스트 매니저 종료."""
         await self.close()
 
@@ -187,7 +189,12 @@ class DartAPIClient:
                     raise CircuitBreakerError("Circuit breaker is open")
 
                 # HTTP 요청
-                logger.debug("DART API 요청: %s (시도 %d/%d)", endpoint, attempt + 1, self._max_retries + 1)
+                logger.debug(
+                    "DART API 요청: %s (시도 %d/%d)",
+                    endpoint,
+                    attempt + 1,
+                    self._max_retries + 1,
+                )
                 response = await client.get(endpoint, params=request_params)
 
                 # 응답 처리
@@ -198,7 +205,12 @@ class DartAPIClient:
 
             except httpx.TimeoutException as e:
                 last_exception = e
-                logger.warning("DART API 타임아웃: %s (시도 %d/%d)", endpoint, attempt + 1, self._max_retries + 1)
+                logger.warning(
+                    "DART API 타임아웃: %s (시도 %d/%d)",
+                    endpoint,
+                    attempt + 1,
+                    self._max_retries + 1,
+                )
                 await self._circuit_breaker._on_failure()
 
                 if attempt < self._max_retries:
@@ -209,7 +221,12 @@ class DartAPIClient:
 
             except httpx.NetworkError as e:
                 last_exception = e
-                logger.warning("DART API 네트워크 오류: %s (시도 %d/%d)", endpoint, attempt + 1, self._max_retries + 1)
+                logger.warning(
+                    "DART API 네트워크 오류: %s (시도 %d/%d)",
+                    endpoint,
+                    attempt + 1,
+                    self._max_retries + 1,
+                )
                 await self._circuit_breaker._on_failure()
 
                 if attempt < self._max_retries:
@@ -281,7 +298,11 @@ class DartAPIClient:
                 identifier=endpoint,
             )
 
-        if status in (DartStatusCode.INVALID_KEY, DartStatusCode.DISABLED_KEY, DartStatusCode.BLOCKED_IP):
+        if status in (
+            DartStatusCode.INVALID_KEY,
+            DartStatusCode.DISABLED_KEY,
+            DartStatusCode.BLOCKED_IP,
+        ):
             raise DartAuthenticationError(api_key_hint=endpoint)
 
         if status == DartStatusCode.RATE_LIMIT_EXCEEDED:
@@ -346,7 +367,8 @@ class DartAPIClient:
         corp_code: str,
         bsns_year: str,
         reprt_code: ReportCode | str = ReportCode.ANNUAL,
-        fs_div: FinancialStatementDivision | str = FinancialStatementDivision.CONSOLIDATED,
+        fs_div: FinancialStatementDivision
+        | str = FinancialStatementDivision.CONSOLIDATED,
     ) -> FinancialStatementsCollection:
         """재무제표 정보를 조회합니다.
 
@@ -410,7 +432,8 @@ class DartAPIClient:
         corp_code: str,
         bsns_year: str,
         reprt_code: ReportCode | str = ReportCode.ANNUAL,
-        fs_div: FinancialStatementDivision | str = FinancialStatementDivision.CONSOLIDATED,
+        fs_div: FinancialStatementDivision
+        | str = FinancialStatementDivision.CONSOLIDATED,
     ) -> FinancialStatementsCollection:
         """전체 재무제표 정보를 조회합니다 (상세 계정 포함).
 
@@ -457,7 +480,9 @@ class DartAPIClient:
 
     # ===== T-D09: Major Shareholders =====
 
-    async def get_major_shareholders(self, corp_code: str) -> list[DartMajorShareholder]:
+    async def get_major_shareholders(
+        self, corp_code: str
+    ) -> list[DartMajorShareholder]:
         """최대주주 현황을 조회합니다.
 
         Args:

@@ -42,7 +42,8 @@ class ValuationRenderer(BaseSectionRenderer):
     # ------------------------------------------------------------------
 
     def _build_valuation_kpis(
-        self, data: IMDocumentData,
+        self,
+        data: IMDocumentData,
     ) -> list[dict[str, str]]:
         """밸류에이션 KPI 카드 데이터를 구성한다."""
         kpis: list[dict[str, str]] = []
@@ -53,35 +54,50 @@ class ValuationRenderer(BaseSectionRenderer):
         # 최신 연도 기준 배수 표시
         if vd.ev_ebitda:
             latest = sorted(vd.ev_ebitda.keys())[-1]
-            kpis.append({
-                "label": f"EV/EBITDA ({latest})",
-                "value": fmt_multiple(vd.ev_ebitda[latest]),
-            })
+            kpis.append(
+                {
+                    "label": f"EV/EBITDA ({latest})",
+                    "value": fmt_multiple(vd.ev_ebitda[latest]),
+                }
+            )
         if vd.pe_ratio:
             latest = sorted(vd.pe_ratio.keys())[-1]
-            kpis.append({
-                "label": f"P/E ({latest})",
-                "value": fmt_multiple(vd.pe_ratio[latest]),
-            })
+            kpis.append(
+                {
+                    "label": f"P/E ({latest})",
+                    "value": fmt_multiple(vd.pe_ratio[latest]),
+                }
+            )
         if vd.ev_revenue:
             latest = sorted(vd.ev_revenue.keys())[-1]
-            kpis.append({
-                "label": f"EV/Revenue ({latest})",
-                "value": fmt_multiple(vd.ev_revenue[latest]),
-            })
+            kpis.append(
+                {
+                    "label": f"EV/Revenue ({latest})",
+                    "value": fmt_multiple(vd.ev_revenue[latest]),
+                }
+            )
         if vd.moic_scenarios.get("base") is not None:
-            kpis.append({
-                "label": "MOIC (Base)",
-                "value": fmt_multiple(vd.moic_scenarios["base"]),
-            })
+            kpis.append(
+                {
+                    "label": "MOIC (Base)",
+                    "value": fmt_multiple(vd.moic_scenarios["base"]),
+                }
+            )
         return kpis
 
     def _build_scenario_table(
-        self, data: IMDocumentData,
+        self,
+        data: IMDocumentData,
     ) -> tuple[list[str], list[dict[str, Any]]]:
         """IRR/MOIC 시나리오 테이블 데이터를 구성한다."""
-        headers = ["시나리오", "Entry Multiple", "Exit Multiple",
-                    "보유기간", "IRR", "MOIC"]
+        headers = [
+            "시나리오",
+            "Entry Multiple",
+            "Exit Multiple",
+            "보유기간",
+            "IRR",
+            "MOIC",
+        ]
         rows: list[dict[str, Any]] = []
         vd = data.valuation_data
         if vd is None:
@@ -89,18 +105,21 @@ class ValuationRenderer(BaseSectionRenderer):
 
         for name, scen in vd.irr_scenarios.items():
             moic = vd.moic_scenarios.get(name)
-            rows.append({
-                "label": name.capitalize(),
-                "Entry Multiple": fmt_multiple(scen.get("entry_multiple")),
-                "Exit Multiple": fmt_multiple(scen.get("exit_multiple")),
-                "보유기간": f"{scen.get('holding_period', 'N/A')}년",
-                "IRR": fmt_pct(scen.get("irr"), already_percent=True),
-                "MOIC": fmt_multiple(moic) if moic else "N/A",
-            })
+            rows.append(
+                {
+                    "label": name.capitalize(),
+                    "Entry Multiple": fmt_multiple(scen.get("entry_multiple")),
+                    "Exit Multiple": fmt_multiple(scen.get("exit_multiple")),
+                    "보유기간": f"{scen.get('holding_period', 'N/A')}년",
+                    "IRR": fmt_pct(scen.get("irr"), already_percent=True),
+                    "MOIC": fmt_multiple(moic) if moic else "N/A",
+                }
+            )
         return headers, rows
 
     def _build_exit_table(
-        self, data: IMDocumentData,
+        self,
+        data: IMDocumentData,
     ) -> tuple[list[str], list[dict[str, Any]]]:
         """엑싯 전략 비교 테이블 데이터를 구성한다."""
         headers = ["Exit Multiple", "Exit EV", "Exit Equity", "MOIC", "IRR"]
@@ -110,13 +129,15 @@ class ValuationRenderer(BaseSectionRenderer):
             return headers, rows
 
         for label, ea in vd.exit_analysis.items():
-            rows.append({
-                "label": label,
-                "Exit EV": fmt_amount(ea.get("exit_ev")),
-                "Exit Equity": fmt_amount(ea.get("exit_equity")),
-                "MOIC": fmt_multiple(ea.get("moic")),
-                "IRR": fmt_pct(ea.get("irr"), already_percent=True),
-            })
+            rows.append(
+                {
+                    "label": label,
+                    "Exit EV": fmt_amount(ea.get("exit_ev")),
+                    "Exit Equity": fmt_amount(ea.get("exit_equity")),
+                    "MOIC": fmt_multiple(ea.get("moic")),
+                    "IRR": fmt_pct(ea.get("irr"), already_percent=True),
+                }
+            )
         return headers, rows
 
     # ------------------------------------------------------------------
@@ -163,7 +184,10 @@ class ValuationRenderer(BaseSectionRenderer):
         y = lay.content_top
         if kpis:
             add_kpi_grid(
-                slide1, kpis, top=y, tokens=tokens,
+                slide1,
+                kpis,
+                top=y,
+                tokens=tokens,
                 number_config=data.number_format,
             )
             y += 1.6
@@ -177,9 +201,7 @@ class ValuationRenderer(BaseSectionRenderer):
         if vd and vd.irr_scenarios:
             headers, rows = self._build_scenario_table(data)
             if rows:
-                slide2 = factory.add_content_slide(
-                    title="IRR/MOIC 시나리오 분석"
-                )
+                slide2 = factory.add_content_slide(title="IRR/MOIC 시나리오 분석")
                 add_financial_table(
                     slide2,
                     headers=headers,
@@ -205,9 +227,7 @@ class ValuationRenderer(BaseSectionRenderer):
         if vd and vd.exit_analysis:
             headers, rows = self._build_exit_table(data)
             if rows:
-                slide_exit = factory.add_content_slide(
-                    title="Exit 전략 비교"
-                )
+                slide_exit = factory.add_content_slide(title="Exit 전략 비교")
                 add_financial_table(
                     slide_exit,
                     headers=headers,

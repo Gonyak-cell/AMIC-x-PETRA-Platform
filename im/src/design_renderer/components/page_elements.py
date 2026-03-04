@@ -59,9 +59,7 @@ def render_slide_title_pptx(
     run.font.name = tokens.typography.font_heading
     run.font.size = Pt(tokens.font_sizes.slide_title)
     run.font.bold = True
-    run.font.color.rgb = RGBColor.from_string(
-        tokens.colors.primary.lstrip("#")
-    )
+    run.font.color.rgb = RGBColor.from_string(tokens.colors.primary.lstrip("#"))
 
     return True
 
@@ -101,9 +99,7 @@ def render_page_number_pptx(
     run.text = f"{page_number} / {total_pages}"
     run.font.name = tokens.typography.font_mono
     run.font.size = Pt(tokens.font_sizes.page_number)
-    run.font.color.rgb = RGBColor.from_string(
-        tokens.colors.text_secondary.lstrip("#")
-    )
+    run.font.color.rgb = RGBColor.from_string(tokens.colors.text_secondary.lstrip("#"))
 
     return True
 
@@ -134,9 +130,7 @@ def render_footer_pptx(
 
     # 페이지 번호
     if page_number is not None and total_pages is not None:
-        render_page_number_pptx(
-            slide, page_number, total_pages, tokens=tokens
-        )
+        render_page_number_pptx(slide, page_number, total_pages, tokens=tokens)
 
 
 def render_horizontal_line_pptx(

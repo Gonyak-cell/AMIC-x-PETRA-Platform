@@ -49,7 +49,7 @@ class DmRiskAssessmentRenderer(BaseSectionRenderer):
         if md and md.regulatory_notes:
             regulatory_html = (
                 f'<div style="margin-bottom:1em;padding:0.6em;'
-                f'background:{c.bg_light_green};border-radius:4px;'
+                f"background:{c.bg_light_green};border-radius:4px;"
                 f'border-left:3px solid {c.secondary};">'
                 f'<div style="font-size:9pt;font-weight:bold;'
                 f'color:{c.primary};margin-bottom:0.3em;">규제 환경</div>'
@@ -64,12 +64,14 @@ class DmRiskAssessmentRenderer(BaseSectionRenderer):
                 f'font-style:italic;">리스크 분석 데이터가 생성 후 표시됩니다.</p>'
             )
 
-        return [build_slide_html(
-            content,
-            title="Risk Assessment",
-            slide_class="slide-dm-risk-assessment",
-            tokens=tokens,
-        )]
+        return [
+            build_slide_html(
+                content,
+                title="Risk Assessment",
+                slide_class="slide-dm-risk-assessment",
+                tokens=tokens,
+            )
+        ]
 
     def render_pptx(
         self,
@@ -103,6 +105,8 @@ class DmRiskAssessmentRenderer(BaseSectionRenderer):
         if md and md.regulatory_notes:
             add_sub_header_bar(slide, "규제 환경", top=y, tokens=tokens)
             y += 0.45
-            add_body_textbox(slide, md.regulatory_notes, top=y, height=1.5, tokens=tokens)
+            add_body_textbox(
+                slide, md.regulatory_notes, top=y, height=1.5, tokens=tokens
+            )
 
         return [slide]

@@ -409,9 +409,7 @@ class TestCachedDartClient:
         """재무제표 캐시 미스 테스트."""
         async with CacheManager(cache_config) as cache:
             client = CachedDartClient(client=mock_dart_client, cache=cache)
-            result = await client.get_financial_statements(
-                "00126380", "2024"
-            )
+            result = await client.get_financial_statements("00126380", "2024")
 
             mock_dart_client.get_financial_statements.assert_called_once()
             assert result is not None
@@ -476,8 +474,6 @@ class TestCachedDartClient:
     ) -> None:
         """컨텍스트 매니저 테스트."""
         async with CacheManager(cache_config) as cache:
-            async with CachedDartClient(
-                client=mock_dart_client, cache=cache
-            ) as client:
+            async with CachedDartClient(client=mock_dart_client, cache=cache) as client:
                 result = await client.get_company_info("00126380")
                 assert result is not None

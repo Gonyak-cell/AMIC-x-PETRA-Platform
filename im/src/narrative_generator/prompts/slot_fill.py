@@ -120,9 +120,7 @@ class SlotFillPromptBuilder:
         slot_keys = list(l3_slots.keys())
         example_json = ", ".join(f'"{k}": "..."' for k in slot_keys)
         parts.append(
-            f"\n## 응답 형식\n"
-            f"다음 JSON 형식으로만 응답하십시오:\n"
-            f"{{{example_json}}}"
+            f"\n## 응답 형식\n다음 JSON 형식으로만 응답하십시오:\n{{{example_json}}}"
         )
 
         return "\n".join(parts)

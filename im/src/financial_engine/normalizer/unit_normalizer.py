@@ -81,12 +81,17 @@ UNIT_SCALES: Final[list[UnitScale]] = [
     UnitScale(
         name="원",
         multiplier=Decimal("1"),
-        patterns=[r"(?<!조\s)(?<!억\s)(?<!백만\s)(?<!천\s)원$", r"(?<!조)(?<!억)(?<!백만)(?<!천)원$"],
+        patterns=[
+            r"(?<!조\s)(?<!억\s)(?<!백만\s)(?<!천\s)원$",
+            r"(?<!조)(?<!억)(?<!백만)(?<!천)원$",
+        ],
     ),
 ]
 
 # 이름으로 빠르게 조회하기 위한 매핑
-_UNIT_BY_NAME: Final[dict[str, UnitScale]] = {scale.name: scale for scale in UNIT_SCALES}
+_UNIT_BY_NAME: Final[dict[str, UnitScale]] = {
+    scale.name: scale for scale in UNIT_SCALES
+}
 
 
 def _get_unit_by_name(name: str) -> UnitScale:

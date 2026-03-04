@@ -35,7 +35,9 @@ def create_model_router(
     cfg = config or get_config()
 
     # 프로바이더 초기화
-    providers: dict[ProviderName, OpenAIProvider | AnthropicProvider | GoogleProvider] = {}
+    providers: dict[
+        ProviderName, OpenAIProvider | AnthropicProvider | GoogleProvider
+    ] = {}
 
     openai_provider = OpenAIProvider(
         api_key=cfg.openai_api_key,

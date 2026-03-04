@@ -45,9 +45,7 @@ class AuthService:
         Raises:
             AuthenticationError: 인증 실패.
         """
-        result = await self.db.execute(
-            select(User).where(User.email == email)
-        )
+        result = await self.db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
 
         if user is None:

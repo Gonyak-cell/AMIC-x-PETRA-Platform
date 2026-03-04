@@ -88,7 +88,11 @@ class ColorExtractor:
 
         for i in range(n_clusters):
             center = kmeans.cluster_centers_[i]
-            r, g, b = int(round(center[0])), int(round(center[1])), int(round(center[2]))
+            r, g, b = (
+                int(round(center[0])),
+                int(round(center[1])),
+                int(round(center[2])),
+            )
             count = int(np.sum(labels == i))
             ratio = count / total
 
@@ -192,7 +196,9 @@ class ColorExtractor:
         # RGBA 모드에서 리사이즈를 아직 안 했으면 샘플링
         if len(pixels) > _MAX_RESIZE * _MAX_RESIZE:
             rng = np.random.default_rng(42)
-            indices = rng.choice(len(pixels), size=_MAX_RESIZE * _MAX_RESIZE, replace=False)
+            indices = rng.choice(
+                len(pixels), size=_MAX_RESIZE * _MAX_RESIZE, replace=False
+            )
             pixels = pixels[indices]
 
         # 흰색/검정 필터링

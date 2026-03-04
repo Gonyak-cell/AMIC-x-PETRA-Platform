@@ -97,11 +97,13 @@ class CostTracker:
     usage_by_provider: dict[str, dict[str, int]] = field(default_factory=dict)
 
     # 1K 토큰당 비용 (USD, 2026-02 기준)
-    COST_PER_1K: dict[str, dict[str, float]] = field(default_factory=lambda: {
-        "openai": {"input": 0.0025, "output": 0.01},
-        "anthropic": {"input": 0.003, "output": 0.015},
-        "google": {"input": 0.0001, "output": 0.0004},
-    })
+    COST_PER_1K: dict[str, dict[str, float]] = field(
+        default_factory=lambda: {
+            "openai": {"input": 0.0025, "output": 0.01},
+            "anthropic": {"input": 0.003, "output": 0.015},
+            "google": {"input": 0.0001, "output": 0.0004},
+        }
+    )
 
     def add_usage(self, provider: str, usage: dict[str, int] | None) -> None:
         """토큰 사용량을 기록하고 비용을 누적한다."""
@@ -118,7 +120,10 @@ class CostTracker:
 
         # 프로바이더별 집계
         if provider not in self.usage_by_provider:
-            self.usage_by_provider[provider] = {"prompt_tokens": 0, "completion_tokens": 0}
+            self.usage_by_provider[provider] = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+            }
         self.usage_by_provider[provider]["prompt_tokens"] += prompt_tokens
         self.usage_by_provider[provider]["completion_tokens"] += completion_tokens
 
@@ -201,9 +206,8 @@ class NarrativeOrchestrator:
             if not template_dir:
                 # 기본 경로: 패키지 내 templates/ 디렉터리
                 from pathlib import Path
-                template_dir = str(
-                    Path(__file__).resolve().parent.parent / "templates"
-                )
+
+                template_dir = str(Path(__file__).resolve().parent.parent / "templates")
             self._template_registry = TemplateRegistry(template_dir)
             self._template_renderer = TemplateRenderer()
             self._slot_fill_builder = SlotFillPromptBuilder()
@@ -256,7 +260,9 @@ class NarrativeOrchestrator:
         # 활성 섹션 결정
         active_sections = sections or data.get_active_sections()
         target_sections = [
-            s for s in active_sections if s not in _SKIP_SECTIONS and self._registry.has(s)
+            s
+            for s in active_sections
+            if s not in _SKIP_SECTIONS and self._registry.has(s)
         ]
 
         logger.info(
@@ -299,7 +305,9 @@ class NarrativeOrchestrator:
                 )
 
                 # 토큰 예산 검사 & 자르기
-                budget_check = self._token_manager.check_budget(section_id, section_narrative.text)
+                budget_check = self._token_manager.check_budget(
+                    section_id, section_narrative.text
+                )
                 if not budget_check.within_budget:
                     section_narrative = SectionNarrative(
                         section_id=section_id,
@@ -324,7 +332,9 @@ class NarrativeOrchestrator:
                     result.fact_check_reports[section_id] = fact_report
 
                     # 신뢰도 평가
-                    confidence = self._confidence_scorer.score(section_narrative, fact_report)
+                    confidence = self._confidence_scorer.score(
+                        section_narrative, fact_report
+                    )
                     result.confidence_scores[section_id] = confidence
 
                     if not confidence.is_confident:
@@ -342,7 +352,9 @@ class NarrativeOrchestrator:
 
         # --- 일관성 검사 ---
         if result.section_narratives and self._config.fact_check_enabled:
-            result.consistency_report = self._consistency_checker.check(result.section_narratives)
+            result.consistency_report = self._consistency_checker.check(
+                result.section_narratives
+            )
             if not result.consistency_report.is_consistent:
                 result.warnings.extend(result.consistency_report.warnings)
 
@@ -403,9 +415,8 @@ class NarrativeOrchestrator:
         템플릿이 있으면 슬롯 채우기 방식, 없으면 기존 자유 생성 방식.
         """
         # 템플릿 분기: 템플릿이 있으면 슬롯 채우기
-        if (
-            self._template_registry is not None
-            and self._template_registry.has(section_id)
+        if self._template_registry is not None and self._template_registry.has(
+            section_id
         ):
             return self._generate_section_template(
                 section_id=section_id,
@@ -477,8 +488,10 @@ class NarrativeOrchestrator:
 
         # 4. LLM 호출
         raw_response = self._call_llm(
-            system_prompt, user_prompt,
-            section_id=section_id, industry=industry,
+            system_prompt,
+            user_prompt,
+            section_id=section_id,
+            industry=industry,
             cost_tracker=cost_tracker,
         )
 
@@ -588,7 +601,9 @@ class NarrativeOrchestrator:
                 industry_context=industry_context,
             )
             user_prompt = self._slot_fill_builder.build_user_prompt(
-                template, data, industry_context=industry_context,
+                template,
+                data,
+                industry_context=industry_context,
             )
 
             raw_response = self._call_llm(
@@ -636,7 +651,9 @@ class NarrativeOrchestrator:
 
         if section_id == "financial_analysis" and data.financial_statements.revenue:
             latest_year = (
-                data.financial_statements.years[-1] if data.financial_statements.years else ""
+                data.financial_statements.years[-1]
+                if data.financial_statements.years
+                else ""
             )
             if latest_year:
                 parts.append(f"{latest_year}년 재무 실적")

@@ -173,7 +173,12 @@ class IMPipeline:
 
         if data.im_style == IMStyle.TEASER:
             self._render_tm_sections(
-                data, factory, prs, manifest, result, start,
+                data,
+                factory,
+                prs,
+                manifest,
+                result,
+                start,
             )
             # TM 모드에서는 for 루프 건너뜀
             active_sections = []
@@ -223,24 +228,23 @@ class IMPipeline:
                 if self._continue_on_error:
                     try:
                         render_fallback_slide_pptx(
-                            factory, section_id, str(e),
-                            prs=prs, tokens=self._tokens,
+                            factory,
+                            section_id,
+                            str(e),
+                            prs=prs,
+                            tokens=self._tokens,
                         )
                         sec_result.pptx_slide_count = 1
                         # 폴백 성공: errors → warnings 이동 (success 판정에 영향 안 줌)
                         fallback_msg = result.errors.pop()
                         result.warnings.append(f"{fallback_msg} (폴백 적용)")
                     except Exception as fallback_err:
-                        logger.error(
-                            f"폴백 슬라이드 생성도 실패: {fallback_err}"
-                        )
+                        logger.error(f"폴백 슬라이드 생성도 실패: {fallback_err}")
                 else:
                     result.success = False
                     result.elapsed_seconds = time.monotonic() - start
                     result.section_results.append(sec_result)
-                    manifest.total_elapsed_ms = (
-                        time.monotonic() - start
-                    ) * 1000
+                    manifest.total_elapsed_ms = (time.monotonic() - start) * 1000
                     result.manifest = manifest
                     return result
 
@@ -358,7 +362,13 @@ class IMPipeline:
         # --- Phase 1: cover + disclaimer ---
         for section_id in ("cover", "disclaimer"):
             self._render_single_section(
-                section_id, data, factory, prs, manifest, result, start,
+                section_id,
+                data,
+                factory,
+                prs,
+                manifest,
+                result,
+                start,
             )
 
         # --- Phase 2: 그룹별 TOC placeholder + 콘텐츠 ---
@@ -380,13 +390,25 @@ class IMPipeline:
 
             for section_id in subsections:
                 pptx_count = self._render_single_section(
-                    section_id, data, factory, prs, manifest, result, start,
+                    section_id,
+                    data,
+                    factory,
+                    prs,
+                    manifest,
+                    result,
+                    start,
                 )
                 current_slide_idx += pptx_count
 
         # --- Phase 3: contact ---
         self._render_single_section(
-            "contact", data, factory, prs, manifest, result, start,
+            "contact",
+            data,
+            factory,
+            prs,
+            manifest,
+            result,
+            start,
         )
 
         # --- Phase 4: PPTX TOC 슬라이드 채우기 ---
@@ -405,13 +427,15 @@ class IMPipeline:
                 logger.warning(
                     "TOC 페이지 번호 불일치: 그룹 '%s' → %d페이지, "
                     "전체 슬라이드 수: %d",
-                    group_key, page_num, total_slides,
+                    group_key,
+                    page_num,
+                    total_slides,
                 )
 
         logger.info(
-            "TM 2-pass 렌더링 완료: 4그룹 TOC, "
-            "페이지 번호: %s, 총 슬라이드: %d",
-            group_start_pages, total_slides,
+            "TM 2-pass 렌더링 완료: 4그룹 TOC, 페이지 번호: %s, 총 슬라이드: %d",
+            group_start_pages,
+            total_slides,
         )
 
     def _render_single_section(
@@ -467,16 +491,17 @@ class IMPipeline:
             if self._continue_on_error:
                 try:
                     render_fallback_slide_pptx(
-                        factory, section_id, str(e),
-                        prs=prs, tokens=self._tokens,
+                        factory,
+                        section_id,
+                        str(e),
+                        prs=prs,
+                        tokens=self._tokens,
                     )
                     sec_result.pptx_slide_count = 1
                     result.section_results.append(sec_result)
                     return 1
                 except Exception as fallback_err:
-                    logger.error(
-                        f"TM 폴백 슬라이드 생성도 실패: {fallback_err}"
-                    )
+                    logger.error(f"TM 폴백 슬라이드 생성도 실패: {fallback_err}")
 
             result.section_results.append(sec_result)
             return 0

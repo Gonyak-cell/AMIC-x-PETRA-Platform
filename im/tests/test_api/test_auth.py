@@ -105,7 +105,9 @@ class TestVerifyToken:
         assert isinstance(payload, TokenPayload)
         assert payload.sub == user_id
 
-    def test_expired_token_rejected(self, hs256_config: APIConfig, user_id: str) -> None:
+    def test_expired_token_rejected(
+        self, hs256_config: APIConfig, user_id: str
+    ) -> None:
         """만료된 토큰을 거부한다."""
         expired_config = APIConfig(
             _env_file=None,
@@ -126,7 +128,9 @@ class TestVerifyToken:
             "jti": str(uuid.uuid4()),
             "token_type": "access",
         }
-        token = jwt.encode(payload, "test-secret-key-for-jwt-tests-min32", algorithm="HS256")
+        token = jwt.encode(
+            payload, "test-secret-key-for-jwt-tests-min32", algorithm="HS256"
+        )
 
         with pytest.raises(AuthenticationError, match="만료"):
             verify_token(token, config=expired_config)
@@ -141,9 +145,7 @@ class TestVerifyToken:
         with pytest.raises(AuthenticationError, match="유효하지 않은"):
             verify_token(tampered, config=hs256_config)
 
-    def test_wrong_key_rejected(
-        self, hs256_config: APIConfig, user_id: str
-    ) -> None:
+    def test_wrong_key_rejected(self, hs256_config: APIConfig, user_id: str) -> None:
         """잘못된 키로 서명된 토큰을 거부한다."""
         token = create_access_token(user_id, "USER", config=hs256_config)
 

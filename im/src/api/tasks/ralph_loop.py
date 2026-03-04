@@ -106,7 +106,9 @@ def run_im_ralph_loop_task(
             }
 
         if not pptx_path:
-            logger.warning("Ralph Loop 스킵: PPTX 파일이 없음 (document=%s)", document_id)
+            logger.warning(
+                "Ralph Loop 스킵: PPTX 파일이 없음 (document=%s)", document_id
+            )
             return {
                 "document_id": document_id,
                 "status": "SKIPPED",
@@ -154,7 +156,9 @@ def run_im_ralph_loop_task(
                     section_scores=result.get("section_scores"),
                     progress=result.get("progress"),
                     output_path=result.get("output_path"),
-                    error_message=result.get("error") if not result["success"] else None,
+                    error_message=result.get("error")
+                    if not result["success"]
+                    else None,
                     critical_flags=result.get("critical_flags"),
                     learned_patterns=result.get("learned_patterns"),
                 )

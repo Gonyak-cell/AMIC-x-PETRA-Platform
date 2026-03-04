@@ -62,10 +62,7 @@ def create_sensitivity_heatmap_chart(
     z_suffix = data.get("z_suffix", "")
     colorscale = data.get("colorscale", "RdYlGn")
 
-    text = [
-        [f"{val:{z_format}}{z_suffix}" for val in row]
-        for row in z_values
-    ]
+    text = [[f"{val:{z_format}}{z_suffix}" for val in row] for row in z_values]
 
     fig = go.Figure(
         go.Heatmap(

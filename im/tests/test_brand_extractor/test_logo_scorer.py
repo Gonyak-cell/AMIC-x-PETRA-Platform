@@ -23,7 +23,11 @@ class TestLogoScorer:
     def test_high_res_png_scores_higher(self) -> None:
         """고해상도 PNG가 저해상도 JPEG보다 높은 점수."""
         score_png = self.scorer._calculate_score(
-            width=512, height=512, has_transparency=True, fmt="png", source="apple-touch-icon"
+            width=512,
+            height=512,
+            has_transparency=True,
+            fmt="png",
+            source="apple-touch-icon",
         )
         score_jpeg = self.scorer._calculate_score(
             width=100, height=100, has_transparency=False, fmt="jpeg", source="favicon"
@@ -41,17 +45,29 @@ class TestLogoScorer:
     def test_svg_gets_high_format_score(self) -> None:
         """SVG 포맷이 높은 점수를 받는지 확인."""
         score_svg = self.scorer._calculate_score(
-            width=512, height=512, has_transparency=True, fmt="svg", source="apple-touch-icon"
+            width=512,
+            height=512,
+            has_transparency=True,
+            fmt="svg",
+            source="apple-touch-icon",
         )
         score_png = self.scorer._calculate_score(
-            width=512, height=512, has_transparency=True, fmt="png", source="apple-touch-icon"
+            width=512,
+            height=512,
+            has_transparency=True,
+            fmt="png",
+            source="apple-touch-icon",
         )
         assert score_svg > score_png
 
     def test_score_range_0_to_1(self) -> None:
         """점수가 0-1 범위인지 확인."""
         score = self.scorer._calculate_score(
-            width=1024, height=1024, has_transparency=True, fmt="svg", source="apple-touch-icon"
+            width=1024,
+            height=1024,
+            has_transparency=True,
+            fmt="svg",
+            source="apple-touch-icon",
         )
         assert 0.0 <= score <= 1.0
 

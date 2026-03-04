@@ -67,7 +67,8 @@ class ChecklistBatchUpdateRequest(BaseModel):
     """체크리스트 아이템 일괄 수정 요청."""
 
     items: list[ChecklistItemBatchUpdate] = Field(
-        min_length=1, max_length=200,
+        min_length=1,
+        max_length=200,
     )
 
 
@@ -135,7 +136,8 @@ class CreateFromVdrRequest(BaseModel):
 
     transaction_id: UUID = Field(description="deal-mgmt 거래 ID")
     vdr_document_ids: list[UUID] = Field(
-        min_length=1, max_length=50,
+        min_length=1,
+        max_length=50,
         description="분석할 VDR 문서 ID 목록",
     )
     company_name: str = Field(min_length=1, max_length=200)

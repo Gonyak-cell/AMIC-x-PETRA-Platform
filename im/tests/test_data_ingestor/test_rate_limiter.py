@@ -95,7 +95,9 @@ class TestRateLimiter:
     def test_singleton_pattern(self) -> None:
         """싱글톤 패턴 동작 확인."""
         limiter1 = RateLimiter.get_instance("test", max_calls=100, period=60.0)
-        limiter2 = RateLimiter.get_instance("test", max_calls=50, period=30.0)  # 설정 무시됨
+        limiter2 = RateLimiter.get_instance(
+            "test", max_calls=50, period=30.0
+        )  # 설정 무시됨
 
         assert limiter1 is limiter2
         assert limiter1.max_calls == 100  # 첫 번째 설정 유지

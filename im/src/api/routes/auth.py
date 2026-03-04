@@ -28,9 +28,7 @@ _cookie_secure = _is_production
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-_oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login", auto_error=True
-)
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
 
 
 @router.post(
