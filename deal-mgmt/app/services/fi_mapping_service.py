@@ -115,6 +115,7 @@ async def _load_gp_profiles(db: AsyncSession) -> dict[str, GpProfile]:
         profiles = result.scalars().all()
         cache: dict[str, GpProfile] = {}
         for p in profiles:
+            db.expunge(p)  # 세션에서 분리 → commit/close 시 expired 방지
             if p.normalized_name in cache:
                 logger.warning(
                     "중복 normalized_name=%s (raw=%s vs %s)",
