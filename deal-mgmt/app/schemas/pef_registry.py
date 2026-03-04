@@ -63,5 +63,5 @@ class FIRecommendationV2(BaseModel):
 
     @field_serializer("min_fund_size", "total_committed_sum")
     @classmethod
-    def _serialize_decimal(cls, v: Decimal) -> str:
-        return str(v)
+    def _serialize_decimal(cls, v: Decimal) -> float:
+        return float(v)

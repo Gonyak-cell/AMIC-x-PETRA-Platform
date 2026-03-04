@@ -97,7 +97,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const buyerColumns: Column<BuyerCandidate>[] = [
     {
       key: "is_short_listed" as keyof BuyerCandidate,
-      header: () => <span className="sr-only">Short-List</span>,
+      header: <span className="sr-only">Short-List</span>,
       minWidth: "40px",
       render: (r) => (
         <input
