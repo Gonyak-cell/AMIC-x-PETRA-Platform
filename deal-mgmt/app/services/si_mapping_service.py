@@ -614,19 +614,18 @@ async def _load_filtered_companies(
 ) -> list[SICompany]:
     """조건 필터를 적용하여 SI 기업을 1회만 로딩 (상한: 5,000건).
 
-    메타데이터 컬럼(jurir_no, fina_base_date 등)은 defer로 제외하여
-    전송 데이터량을 줄인다.
+    메타데이터 컬럼(jurir_no, fina_report_code 등)은 defer로 제외하여
+    전송 데이터량을 줄인다. 기준일자(fina_base_date, corp_basic_base_date)는
+    API 응답에 포함되므로 defer하지 않는다.
     """
 
     q = select(SICompany).options(
         defer(SICompany.jurir_no),
         defer(SICompany.corp_code),
-        defer(SICompany.fina_base_date),
         defer(SICompany.fina_report_code),
         defer(SICompany.fina_report_name),
         defer(SICompany.fina_stat_synced_at),
         defer(SICompany.corp_basic_synced_at),
-        defer(SICompany.corp_basic_base_date),
     )
     if min_revenue is not None:
         q = q.where(SICompany.revenue >= min_revenue)
@@ -940,10 +939,9 @@ async def map_vc_candidates(
         select(VcCompany)
         .where(
             VcCompany.industry_name == target_industry_name,
-            VcCompany.revenue.isnot(None),
-            VcCompany.revenue >= min_revenue,
+            or_(VcCompany.revenue.is_(None), VcCompany.revenue >= min_revenue),
         )
-        .order_by(VcCompany.revenue.desc())
+        .order_by(VcCompany.revenue.desc().nulls_last(), VcCompany.company_name)
         .limit(top_n)
     )
     if exclude_company_id is not None:
@@ -974,10 +972,9 @@ async def map_vc_candidates(
                 select(VcCompany)
                 .where(
                     VcCompany.industry_name == ind,
-                    VcCompany.revenue.isnot(None),
-                    VcCompany.revenue >= min_revenue,
+                    or_(VcCompany.revenue.is_(None), VcCompany.revenue >= min_revenue),
                 )
-                .order_by(VcCompany.revenue.desc())
+                .order_by(VcCompany.revenue.desc().nulls_last(), VcCompany.company_name)
                 .limit(top_n)
             )
             rows = (await db.execute(ind_q)).scalars().all()
