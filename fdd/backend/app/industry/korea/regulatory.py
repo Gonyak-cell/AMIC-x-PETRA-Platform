@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from app.industry.korea.models import FDDRegulatoryItem, Severity
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 REGULATORY_ITEMS: list[FDDRegulatoryItem] = [
     # ── 공통 규제 (3개) ──

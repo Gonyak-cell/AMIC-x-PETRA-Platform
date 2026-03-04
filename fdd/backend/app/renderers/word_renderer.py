@@ -114,13 +114,13 @@ def _format_percentage(value: str | Decimal | None) -> str:
 
 def _set_cell_shading(cell: Any, hex_color: str) -> None:
     """셀 배경색을 설정합니다."""
-    shading_elm = parse_xml(
-        f'<w:shd {nsdecls("w")} w:fill="{hex_color.lstrip("#")}"/>'
-    )
+    shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{hex_color.lstrip("#")}"/>')
     cell._tc.get_or_add_tcPr().append(shading_elm)
 
 
-def _apply_table_style(table: Table, style: WordTableStyle = WordTableStyle.BODY) -> None:
+def _apply_table_style(
+    table: Table, style: WordTableStyle = WordTableStyle.BODY
+) -> None:
     """테이블에 스타일을 적용합니다."""
     styles = _get_word_styles()
 
@@ -155,7 +155,9 @@ def _render_table_block(doc: Document, block: TableBlock) -> None:
 
     # 테이블 생성
     col_count = len(block.columns)
-    row_count = len(block.rows) + (1 if block.show_header else 0) + len(block.footer_rows)
+    row_count = (
+        len(block.rows) + (1 if block.show_header else 0) + len(block.footer_rows)
+    )
 
     if col_count == 0 or row_count == 0:
         return
@@ -376,7 +378,9 @@ def _render_claim_block(doc: Document, block: ClaimBlock) -> None:
 
     # 검증 상태 표시
     status_text = "✓ Verified" if block.verified else "⚠ Unverified"
-    status_color = styles["positive_color"] if block.verified else styles["negative_color"]
+    status_color = (
+        styles["positive_color"] if block.verified else styles["negative_color"]
+    )
 
     # 카테고리 표시
     if block.category:
@@ -532,7 +536,9 @@ def _render_appendix_block(doc: Document, block: AppendixBlock) -> None:
                 # 데이터
                 for row_idx, row_data in enumerate(item.table_data, start=1):
                     for col_idx, key in enumerate(keys):
-                        table.rows[row_idx].cells[col_idx].text = str(row_data.get(key, ""))
+                        table.rows[row_idx].cells[col_idx].text = str(
+                            row_data.get(key, "")
+                        )
 
                 _apply_table_style(table)
 
@@ -672,51 +678,63 @@ def build_docx_context(report_ir: ReportIR) -> dict[str, Any]:
                 "confidentiality": block.confidentiality,
             }
         elif isinstance(block, KPIBlock):
-            context["kpis"].append({
-                "title": block.title,
-                "items": block.kpis,
-            })
+            context["kpis"].append(
+                {
+                    "title": block.title,
+                    "items": block.kpis,
+                }
+            )
         elif isinstance(block, TableBlock):
-            context["tables"].append({
-                "title": block.title,
-                "columns": [{"key": c.key, "header": c.header} for c in block.columns],
-                "rows": block.rows,
-                "footer_rows": block.footer_rows,
-            })
+            context["tables"].append(
+                {
+                    "title": block.title,
+                    "columns": [
+                        {"key": c.key, "header": c.header} for c in block.columns
+                    ],
+                    "rows": block.rows,
+                    "footer_rows": block.footer_rows,
+                }
+            )
         elif isinstance(block, ClaimBlock):
-            context["claims"].append({
-                "text": block.claim_text,
-                "verified": block.verified,
-                "category": block.category,
-                "evidence_refs": [
-                    {
-                        "source_type": ref.source_type,
-                        "source_id": ref.source_id,
-                        "description": ref.description,
-                    }
-                    for ref in block.evidence_refs
-                ],
-            })
+            context["claims"].append(
+                {
+                    "text": block.claim_text,
+                    "verified": block.verified,
+                    "category": block.category,
+                    "evidence_refs": [
+                        {
+                            "source_type": ref.source_type,
+                            "source_id": ref.source_id,
+                            "description": ref.description,
+                        }
+                        for ref in block.evidence_refs
+                    ],
+                }
+            )
         elif isinstance(block, IssueBlock):
-            context["issues"].append({
-                "title": block.title,
-                "items": [
-                    {
-                        "id": issue.issue_id,
-                        "category": issue.category,
-                        "severity": issue.severity,
-                        "title": issue.title,
-                        "status": issue.status,
-                    }
-                    for issue in block.issues
-                ],
-            })
+            context["issues"].append(
+                {
+                    "title": block.title,
+                    "items": [
+                        {
+                            "id": issue.issue_id,
+                            "category": issue.category,
+                            "severity": issue.severity,
+                            "title": issue.title,
+                            "status": issue.status,
+                        }
+                        for issue in block.issues
+                    ],
+                }
+            )
 
         # 모든 섹션을 리스트에 추가 (타입 정보 포함)
-        context["sections"].append({
-            "type": block.type.value if hasattr(block, "type") else "unknown",
-            "data": _block_to_dict(block),
-        })
+        context["sections"].append(
+            {
+                "type": block.type.value if hasattr(block, "type") else "unknown",
+                "data": _block_to_dict(block),
+            }
+        )
 
     return context
 

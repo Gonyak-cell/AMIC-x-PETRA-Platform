@@ -67,7 +67,11 @@ def build_evidence_index(
     entries: list[EvidenceIndexEntry] = []
 
     for link in links:
-        src = link.source_type.value if isinstance(link.source_type, SourceType) else str(link.source_type)
+        src = (
+            link.source_type.value
+            if isinstance(link.source_type, SourceType)
+            else str(link.source_type)
+        )
         by_source_type[src] = by_source_type.get(src, 0) + 1
         by_target_type[link.target_type] = by_target_type.get(link.target_type, 0) + 1
 

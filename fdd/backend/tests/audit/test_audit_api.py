@@ -10,12 +10,14 @@ from app.models.audit import AuditAction, AuditLog
 
 def _seed_audit_logs(db: Session, count: int = 5):
     for i in range(count):
-        db.add(AuditLog(
-            entity_type="deal",
-            entity_id=uuid.uuid4(),
-            action=AuditAction.CREATE,
-            actor=f"user{i}@fdd.dev",
-        ))
+        db.add(
+            AuditLog(
+                entity_type="deal",
+                entity_id=uuid.uuid4(),
+                action=AuditAction.CREATE,
+                actor=f"user{i}@fdd.dev",
+            )
+        )
     db.commit()
 
 
@@ -49,12 +51,14 @@ def test_search_audit_logs_pagination(client, db):
 def test_get_audit_trail(client, db):
     entity_id = uuid.uuid4()
     for action in [AuditAction.CREATE, AuditAction.UPDATE]:
-        db.add(AuditLog(
-            entity_type="deal",
-            entity_id=entity_id,
-            action=action,
-            actor="system",
-        ))
+        db.add(
+            AuditLog(
+                entity_type="deal",
+                entity_id=entity_id,
+                action=action,
+                actor="system",
+            )
+        )
     db.commit()
 
     resp = client.get(f"/api/v1/audit-logs/entity/deal/{entity_id}")

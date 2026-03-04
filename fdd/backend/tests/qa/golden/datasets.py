@@ -78,14 +78,38 @@ G_QOE_001 = GoldenCase(
                 "type": "table",
                 "title": "QoE Bridge",
                 "rows": [
-                    {"category": "Revenue", "fy2023": "10000000.0000", "fy2024": "12000000.0000"},
-                    {"category": "COGS", "fy2023": "-6000000.0000", "fy2024": "-7200000.0000"},
-                    {"category": "Gross Profit", "fy2023": "4000000.0000", "fy2024": "4800000.0000"},
-                    {"category": "SG&A", "fy2023": "-2000000.0000", "fy2024": "-2400000.0000"},
-                    {"category": "EBITDA", "fy2023": "2000000.0000", "fy2024": "2400000.0000"},
+                    {
+                        "category": "Revenue",
+                        "fy2023": "10000000.0000",
+                        "fy2024": "12000000.0000",
+                    },
+                    {
+                        "category": "COGS",
+                        "fy2023": "-6000000.0000",
+                        "fy2024": "-7200000.0000",
+                    },
+                    {
+                        "category": "Gross Profit",
+                        "fy2023": "4000000.0000",
+                        "fy2024": "4800000.0000",
+                    },
+                    {
+                        "category": "SG&A",
+                        "fy2023": "-2000000.0000",
+                        "fy2024": "-2400000.0000",
+                    },
+                    {
+                        "category": "EBITDA",
+                        "fy2023": "2000000.0000",
+                        "fy2024": "2400000.0000",
+                    },
                 ],
                 "footer_rows": [
-                    {"category": "Adjusted EBITDA", "fy2023": "2150000.0000", "fy2024": "2600000.0000"},
+                    {
+                        "category": "Adjusted EBITDA",
+                        "fy2023": "2150000.0000",
+                        "fy2024": "2600000.0000",
+                    },
                 ],
             }
         ],
@@ -97,14 +121,38 @@ G_QOE_001 = GoldenCase(
                 "type": "table",
                 "title": "QoE Bridge",
                 "rows": [
-                    {"category": "Revenue", "fy2023": "10000000.0000", "fy2024": "12000000.0000"},
-                    {"category": "COGS", "fy2023": "-6000000.0000", "fy2024": "-7200000.0000"},
-                    {"category": "Gross Profit", "fy2023": "4000000.0000", "fy2024": "4800000.0000"},
-                    {"category": "SG&A", "fy2023": "-2000000.0000", "fy2024": "-2400000.0000"},
-                    {"category": "EBITDA", "fy2023": "2000000.0000", "fy2024": "2400000.0000"},
+                    {
+                        "category": "Revenue",
+                        "fy2023": "10000000.0000",
+                        "fy2024": "12000000.0000",
+                    },
+                    {
+                        "category": "COGS",
+                        "fy2023": "-6000000.0000",
+                        "fy2024": "-7200000.0000",
+                    },
+                    {
+                        "category": "Gross Profit",
+                        "fy2023": "4000000.0000",
+                        "fy2024": "4800000.0000",
+                    },
+                    {
+                        "category": "SG&A",
+                        "fy2023": "-2000000.0000",
+                        "fy2024": "-2400000.0000",
+                    },
+                    {
+                        "category": "EBITDA",
+                        "fy2023": "2000000.0000",
+                        "fy2024": "2400000.0000",
+                    },
                 ],
                 "footer_rows": [
-                    {"category": "Adjusted EBITDA", "fy2023": "2150000.0000", "fy2024": "2600000.0000"},
+                    {
+                        "category": "Adjusted EBITDA",
+                        "fy2023": "2150000.0000",
+                        "fy2024": "2600000.0000",
+                    },
                 ],
             }
         ],
@@ -140,7 +188,10 @@ G_QOE_002 = GoldenCase(
                 "title": "QoE Bridge",
                 "rows": [
                     {"category": "Revenue", "fy2024": "10000000.0000"},
-                    {"category": "EBITDA", "fy2024": "2500000.0000"},  # 예상 (500K 차이)
+                    {
+                        "category": "EBITDA",
+                        "fy2024": "2500000.0000",
+                    },  # 예상 (500K 차이)
                 ],
             }
         ],
@@ -262,7 +313,10 @@ G_NWC_002 = GoldenCase(
                 "type": "table",
                 "title": "NWC Peg Analysis",
                 "rows": [
-                    {"method": "Average", "target_nwc": "4000000.0000"},  # 예상 (200K 차이)
+                    {
+                        "method": "Average",
+                        "target_nwc": "4000000.0000",
+                    },  # 예상 (200K 차이)
                     {"method": "Closing", "target_nwc": "4500000.0000"},
                 ],
             }
@@ -375,7 +429,11 @@ G_EVIDENCE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "FY2024 매출은 120억원으로 전년 대비 20% 증가",
                 "evidence_refs": [
-                    {"evidence_id": "ev-001", "source_type": "TB", "source_id": "TB-2024-001"},
+                    {
+                        "evidence_id": "ev-001",
+                        "source_type": "TB",
+                        "source_id": "TB-2024-001",
+                    },
                 ],
                 "verified": True,
             },
@@ -383,7 +441,11 @@ G_EVIDENCE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "비경상 법적 합의금 1.5억원 조정",
                 "evidence_refs": [
-                    {"evidence_id": "ev-002", "source_type": "GL", "source_id": "GL-2024-1523"},
+                    {
+                        "evidence_id": "ev-002",
+                        "source_type": "GL",
+                        "source_id": "GL-2024-1523",
+                    },
                 ],
                 "verified": True,
             },
@@ -396,7 +458,11 @@ G_EVIDENCE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "FY2024 매출은 120억원으로 전년 대비 20% 증가",
                 "evidence_refs": [
-                    {"evidence_id": "ev-001", "source_type": "TB", "source_id": "TB-2024-001"},
+                    {
+                        "evidence_id": "ev-001",
+                        "source_type": "TB",
+                        "source_id": "TB-2024-001",
+                    },
                 ],
                 "verified": True,
             },
@@ -404,7 +470,11 @@ G_EVIDENCE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "비경상 법적 합의금 1.5억원 조정",
                 "evidence_refs": [
-                    {"evidence_id": "ev-002", "source_type": "GL", "source_id": "GL-2024-1523"},
+                    {
+                        "evidence_id": "ev-002",
+                        "source_type": "GL",
+                        "source_id": "GL-2024-1523",
+                    },
                 ],
                 "verified": True,
             },
@@ -442,7 +512,11 @@ G_EVIDENCE_002 = GoldenCase(
                 "type": "claim",
                 "claim_text": "FY2024 EBITDA 마진은 업계 평균 대비 높음",
                 "evidence_refs": [
-                    {"evidence_id": "ev-003", "source_type": "REPORT", "source_id": "INDUSTRY-2024"},
+                    {
+                        "evidence_id": "ev-003",
+                        "source_type": "REPORT",
+                        "source_id": "INDUSTRY-2024",
+                    },
                 ],
                 "verified": True,
             },
@@ -509,7 +583,10 @@ G_LAYOUT_002 = GoldenCase(
     case_type=GoldenCaseType.LAYOUT,
     description="{{placeholder}}가 치환되지 않은 경고 케이스 (WARNING)",
     input_ir={
-        "metadata": {"deal_id": "deal-layout-002", "deal_name": "{{deal_name}}"},  # 미치환!
+        "metadata": {
+            "deal_id": "deal-layout-002",
+            "deal_name": "{{deal_name}}",
+        },  # 미치환!
         "sections": [
             {
                 "type": "cover",
@@ -606,7 +683,11 @@ G_COMPOSITE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "조정 EBITDA는 26억원으로 확인됨",
                 "evidence_refs": [
-                    {"evidence_id": "ev-full-001", "source_type": "TB", "source_id": "TB-2024"},
+                    {
+                        "evidence_id": "ev-full-001",
+                        "source_type": "TB",
+                        "source_id": "TB-2024",
+                    },
                 ],
                 "verified": True,
             },
@@ -664,7 +745,11 @@ G_COMPOSITE_001 = GoldenCase(
                 "type": "claim",
                 "claim_text": "조정 EBITDA는 26억원으로 확인됨",
                 "evidence_refs": [
-                    {"evidence_id": "ev-full-001", "source_type": "TB", "source_id": "TB-2024"},
+                    {
+                        "evidence_id": "ev-full-001",
+                        "source_type": "TB",
+                        "source_id": "TB-2024",
+                    },
                 ],
                 "verified": True,
             },
@@ -684,7 +769,10 @@ G_COMPOSITE_002 = GoldenCase(
     case_type=GoldenCaseType.COMPOSITE,
     description="수치 불일치 + Evidence 누락 + Placeholder 미치환 복합 오류",
     input_ir={
-        "metadata": {"deal_id": "deal-err-001", "deal_name": "{{company_name}}"},  # placeholder
+        "metadata": {
+            "deal_id": "deal-err-001",
+            "deal_name": "{{company_name}}",
+        },  # placeholder
         "sections": [
             {
                 "type": "table",
@@ -715,7 +803,11 @@ G_COMPOSITE_002 = GoldenCase(
                 "type": "claim",
                 "claim_text": "검토 결과 이상 없음",
                 "evidence_refs": [
-                    {"evidence_id": "ev-err-001", "source_type": "REVIEW", "source_id": "REV-001"},
+                    {
+                        "evidence_id": "ev-err-001",
+                        "source_type": "REVIEW",
+                        "source_id": "REV-001",
+                    },
                 ],
                 "verified": True,
             },

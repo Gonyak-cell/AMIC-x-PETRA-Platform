@@ -53,11 +53,13 @@ def compare_reports(
     if external_ir.get("distribution_mode") == external_mode.value:
         passed += 1
     else:
-        issues.append(ComparisonIssue(
-            severity="error",
-            location="root.distribution_mode",
-            message="외부 보고서에 배포 모드가 올바르게 표시되지 않음",
-        ))
+        issues.append(
+            ComparisonIssue(
+                severity="error",
+                location="root.distribution_mode",
+                message="외부 보고서에 배포 모드가 올바르게 표시되지 않음",
+            )
+        )
 
     # 2. 섹션별 비교
     int_sections = internal_ir.get("sections", [])
@@ -67,11 +69,13 @@ def compare_reports(
     if len(int_sections) >= len(ext_sections):
         passed += 1
     else:
-        issues.append(ComparisonIssue(
-            severity="warning",
-            location="sections",
-            message="외부 보고서에 내부 보고서보다 많은 섹션이 포함됨",
-        ))
+        issues.append(
+            ComparisonIssue(
+                severity="warning",
+                location="sections",
+                message="외부 보고서에 내부 보고서보다 많은 섹션이 포함됨",
+            )
+        )
 
     # 3. 블록별 금액 마스킹 검증
     for i, ext_section in enumerate(ext_sections):
@@ -93,12 +97,14 @@ def compare_reports(
                 if _is_masked_value(value):
                     passed += 1
                 else:
-                    issues.append(ComparisonIssue(
-                        severity="error",
-                        location=f"{location}.value",
-                        message="KPI 값이 마스킹되지 않음",
-                        detail=f"value={value}",
-                    ))
+                    issues.append(
+                        ComparisonIssue(
+                            severity="error",
+                            location=f"{location}.value",
+                            message="KPI 값이 마스킹되지 않음",
+                            detail=f"value={value}",
+                        )
+                    )
 
     return ComparisonResult(
         internal_mode=DistributionMode.INTERNAL.value,
@@ -124,36 +130,42 @@ def check_sensitive_data_leak(
     for pattern in sensitive_patterns:
         for location, text in text_content:
             if re.search(pattern, text, re.IGNORECASE):
-                issues.append(ComparisonIssue(
-                    severity="error",
-                    location=location,
-                    message=f"민감정보 패턴 감지: {pattern}",
-                    detail=f"matched in: {text[:100]}...",
-                ))
+                issues.append(
+                    ComparisonIssue(
+                        severity="error",
+                        location=location,
+                        message=f"민감정보 패턴 감지: {pattern}",
+                        detail=f"matched in: {text[:100]}...",
+                    )
+                )
 
     # 이메일 패턴 검사
     email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
     for location, text in text_content:
         matches = re.findall(email_pattern, text)
         for match in matches:
-            issues.append(ComparisonIssue(
-                severity="error",
-                location=location,
-                message="이메일 주소 누출 감지",
-                detail=f"email={match}",
-            ))
+            issues.append(
+                ComparisonIssue(
+                    severity="error",
+                    location=location,
+                    message="이메일 주소 누출 감지",
+                    detail=f"email={match}",
+                )
+            )
 
     # 전화번호 패턴 검사 (한국)
     phone_pattern = r"0\d{1,2}[-)\s]?\d{3,4}[-\s]?\d{4}"
     for location, text in text_content:
         matches = re.findall(phone_pattern, text)
         for match in matches:
-            issues.append(ComparisonIssue(
-                severity="warning",
-                location=location,
-                message="전화번호 누출 가능성",
-                detail=f"phone={match}",
-            ))
+            issues.append(
+                ComparisonIssue(
+                    severity="warning",
+                    location=location,
+                    message="전화번호 누출 가능성",
+                    detail=f"phone={match}",
+                )
+            )
 
     return issues
 
@@ -170,16 +182,24 @@ def _check_table_masking(
     issues: list[ComparisonIssue] = []
 
     for i, row in enumerate(block.get("rows", [])):
-        cells = row if isinstance(row, list) else list(row.values()) if isinstance(row, dict) else []
+        cells = (
+            row
+            if isinstance(row, list)
+            else list(row.values())
+            if isinstance(row, dict)
+            else []
+        )
         for j, cell in enumerate(cells):
             if isinstance(cell, (int, float)) and not isinstance(cell, bool):
                 checks += 1
-                issues.append(ComparisonIssue(
-                    severity="warning",
-                    location=f"{location}.rows[{i}][{j}]",
-                    message="마스킹되지 않은 숫자 값 발견",
-                    detail=f"value={cell}",
-                ))
+                issues.append(
+                    ComparisonIssue(
+                        severity="warning",
+                        location=f"{location}.rows[{i}][{j}]",
+                        message="마스킹되지 않은 숫자 값 발견",
+                        detail=f"value={cell}",
+                    )
+                )
 
     if checks == 0:
         checks = 1

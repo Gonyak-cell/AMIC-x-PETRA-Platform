@@ -98,12 +98,16 @@ class TestDetectICTransactions:
             "E2": [_acct("E2", "B", "COGS", "10800")],  # 8% 차이
         }
         # 기본 5% → 감지 안 됨
-        cands_strict, _ = detect_ic_transactions(entity_accounts, tolerance_pct=Decimal("5"))
+        cands_strict, _ = detect_ic_transactions(
+            entity_accounts, tolerance_pct=Decimal("5")
+        )
         ic_strict = [c for c in cands_strict if c.category == "REVENUE"]
         assert len(ic_strict) == 0
 
         # 10% 허용 → 감지됨
-        cands_loose, _ = detect_ic_transactions(entity_accounts, tolerance_pct=Decimal("10"))
+        cands_loose, _ = detect_ic_transactions(
+            entity_accounts, tolerance_pct=Decimal("10")
+        )
         ic_loose = [c for c in cands_loose if c.category == "REVENUE"]
         assert len(ic_loose) >= 1
 
@@ -148,7 +152,9 @@ class TestConvertFX:
         result, evidence = convert_fx(accounts, fx)
 
         # REVENUE (IS) → 평균환율 1250
-        rev_converted = [a for a in result.converted_accounts if a.category == "REVENUE"]
+        rev_converted = [
+            a for a in result.converted_accounts if a.category == "REVENUE"
+        ]
         assert rev_converted[0].amount == Decimal("1250000.0000")
 
         # AR (BS) → 기말환율 1300
@@ -163,8 +169,10 @@ class TestConvertFX:
             _acct("E1", "SUB", "CASH", "200"),
         ]
         fx = FXRate(
-            source_currency="USD", target_currency="KRW",
-            period_end_rate=Decimal("1300"), average_rate=Decimal("1250"),
+            source_currency="USD",
+            target_currency="KRW",
+            period_end_rate=Decimal("1300"),
+            average_rate=Decimal("1250"),
         )
         result, _ = convert_fx(accounts, fx)
         assert len(result.converted_accounts) == 3
@@ -173,9 +181,10 @@ class TestConvertFX:
         """환율 괴리 경고 (>10%)."""
         accounts = [_acct("E1", "SUB", "REVENUE", "100")]
         fx = FXRate(
-            source_currency="USD", target_currency="KRW",
+            source_currency="USD",
+            target_currency="KRW",
             period_end_rate=Decimal("1400"),  # 기말
-            average_rate=Decimal("1200"),      # 평균 → 16.7% 차이
+            average_rate=Decimal("1200"),  # 평균 → 16.7% 차이
         )
         result, _ = convert_fx(accounts, fx)
         assert any("FX_RATE_DIVERGENCE" in w for w in result.warnings)
@@ -183,14 +192,19 @@ class TestConvertFX:
     def test_monthly_amounts_converted(self):
         """월별 금액도 변환."""
         acct = EntityAccountData(
-            entity_id="E1", entity_code="SUB", account_code="1000",
-            account_name="Revenue", category="REVENUE",
+            entity_id="E1",
+            entity_code="SUB",
+            account_code="1000",
+            account_name="Revenue",
+            category="REVENUE",
             amount=Decimal("1000"),
             monthly_amounts={"2024-01": Decimal("500"), "2024-02": Decimal("500")},
         )
         fx = FXRate(
-            source_currency="USD", target_currency="KRW",
-            period_end_rate=Decimal("1300"), average_rate=Decimal("1250"),
+            source_currency="USD",
+            target_currency="KRW",
+            period_end_rate=Decimal("1300"),
+            average_rate=Decimal("1250"),
         )
         result, _ = convert_fx([acct], fx)
         converted = result.converted_accounts[0]
@@ -200,8 +214,10 @@ class TestConvertFX:
         """Evidence 링크."""
         accounts = [_acct("E1", "SUB", "REVENUE", "100")]
         fx = FXRate(
-            source_currency="EUR", target_currency="KRW",
-            period_end_rate=Decimal("1400"), average_rate=Decimal("1400"),
+            source_currency="EUR",
+            target_currency="KRW",
+            period_end_rate=Decimal("1400"),
+            average_rate=Decimal("1400"),
         )
         _, evidence = convert_fx(accounts, fx)
         assert len(evidence) >= 1
@@ -266,7 +282,8 @@ class TestCompareEntityPL:
             ],
         }
         result, _ = compare_entity_pl(
-            entity_accounts, categories=["REVENUE", "COGS"],
+            entity_accounts,
+            categories=["REVENUE", "COGS"],
         )
 
         assert result.categories == ["REVENUE", "COGS"]

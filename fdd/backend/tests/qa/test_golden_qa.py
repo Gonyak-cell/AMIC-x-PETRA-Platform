@@ -67,9 +67,21 @@ def run_qa_for_case(case: GoldenCase) -> tuple[bool, int, int, int]:
     layout_result, layout_findings = run_layout_qa(case.input_ir)
 
     # 통합 결과
-    total_warnings = report_result.warning_count + evidence_result.warning_count + layout_result.warning_count
-    total_errors = report_result.error_count + evidence_result.error_count + layout_result.error_count
-    total_criticals = report_result.critical_count + evidence_result.critical_count + layout_result.critical_count
+    total_warnings = (
+        report_result.warning_count
+        + evidence_result.warning_count
+        + layout_result.warning_count
+    )
+    total_errors = (
+        report_result.error_count
+        + evidence_result.error_count
+        + layout_result.error_count
+    )
+    total_criticals = (
+        report_result.critical_count
+        + evidence_result.critical_count
+        + layout_result.critical_count
+    )
 
     # 전체 통과 여부
     passed = total_errors == 0 and total_criticals == 0
@@ -87,7 +99,9 @@ class TestGoldenDatasetIntegrity:
 
     def test_dataset_count(self) -> None:
         """최소 12개 이상의 데이터셋 존재."""
-        assert len(GOLDEN_DATASETS) >= 12, f"Expected >= 12 cases, got {len(GOLDEN_DATASETS)}"
+        assert len(GOLDEN_DATASETS) >= 12, (
+            f"Expected >= 12 cases, got {len(GOLDEN_DATASETS)}"
+        )
 
     def test_all_cases_have_required_fields(self) -> None:
         """모든 케이스에 필수 필드 존재."""
@@ -114,7 +128,9 @@ class TestGoldenDatasetIntegrity:
             GoldenCaseType.LAYOUT,
             GoldenCaseType.COMPOSITE,
         }
-        assert expected_types.issubset(types_covered), f"Missing types: {expected_types - types_covered}"
+        assert expected_types.issubset(types_covered), (
+            f"Missing types: {expected_types - types_covered}"
+        )
 
     def test_passing_and_failing_cases_exist(self) -> None:
         """통과 케이스와 실패 케이스 모두 존재."""
@@ -137,8 +153,12 @@ class TestQoEGoldenCases:
         case = G_QOE_001
         passed, warnings, errors, criticals = run_qa_for_case(case)
 
-        assert passed == case.expected_passed, f"Expected passed={case.expected_passed}, got {passed}"
-        assert errors == case.expected_errors, f"Expected errors={case.expected_errors}, got {errors}"
+        assert passed == case.expected_passed, (
+            f"Expected passed={case.expected_passed}, got {passed}"
+        )
+        assert errors == case.expected_errors, (
+            f"Expected errors={case.expected_errors}, got {errors}"
+        )
 
     def test_g_qoe_002_numeric_diff(self) -> None:
         """G-QOE-002: QoE 수치 불일치 케이스."""
@@ -149,7 +169,12 @@ class TestQoEGoldenCases:
         assert result.error_count >= 1
 
         # EBITDA 수치 불일치 발견 확인
-        numeric_errors = [f for f in findings if f.check_type == QACheckType.NUMERIC_DIFF and f.severity == QASeverity.ERROR]
+        numeric_errors = [
+            f
+            for f in findings
+            if f.check_type == QACheckType.NUMERIC_DIFF
+            and f.severity == QASeverity.ERROR
+        ]
         assert len(numeric_errors) >= 1
 
     def test_g_qoe_003_structure_mismatch(self) -> None:
@@ -160,7 +185,9 @@ class TestQoEGoldenCases:
         assert result.passed is False
 
         # 구조 불일치 발견 확인
-        structure_errors = [f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH]
+        structure_errors = [
+            f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH
+        ]
         assert len(structure_errors) >= 1
 
 
@@ -261,8 +288,12 @@ class TestLayoutGoldenCases:
         result, findings = run_layout_qa(case.input_ir)
 
         # placeholder 없고 overflow 없음
-        placeholder_findings = [f for f in findings if f.check_type == QACheckType.PLACEHOLDER_MISSING]
-        overflow_findings = [f for f in findings if f.check_type == QACheckType.TEXT_OVERFLOW]
+        placeholder_findings = [
+            f for f in findings if f.check_type == QACheckType.PLACEHOLDER_MISSING
+        ]
+        overflow_findings = [
+            f for f in findings if f.check_type == QACheckType.TEXT_OVERFLOW
+        ]
 
         assert len(placeholder_findings) == 0
         assert len(overflow_findings) == 0
@@ -273,11 +304,17 @@ class TestLayoutGoldenCases:
         result, findings = run_layout_qa(case.input_ir)
 
         # placeholder 발견 확인 (metadata 1 + cover 2 + text 2 = 5개)
-        placeholder_findings = [f for f in findings if f.check_type == QACheckType.PLACEHOLDER_MISSING]
-        assert len(placeholder_findings) >= 5, f"Expected >= 5 placeholders, got {len(placeholder_findings)}"
+        placeholder_findings = [
+            f for f in findings if f.check_type == QACheckType.PLACEHOLDER_MISSING
+        ]
+        assert len(placeholder_findings) >= 5, (
+            f"Expected >= 5 placeholders, got {len(placeholder_findings)}"
+        )
 
         # 각 placeholder 확인
-        placeholder_vars = [f.context.get("variable_name") for f in placeholder_findings]
+        placeholder_vars = [
+            f.context.get("variable_name") for f in placeholder_findings
+        ]
         expected_vars = ["deal_name", "report_date", "period_start", "period_end"]
         for var in expected_vars:
             assert var in placeholder_vars, f"Missing placeholder: {var}"
@@ -313,7 +350,11 @@ class TestCompositeGoldenCases:
         assert report_result.error_count >= 1, "Expected numeric diff error"
 
         # placeholder 미치환 확인
-        placeholder_findings = [f for f in layout_findings if f.check_type == QACheckType.PLACEHOLDER_MISSING]
+        placeholder_findings = [
+            f
+            for f in layout_findings
+            if f.check_type == QACheckType.PLACEHOLDER_MISSING
+        ]
         assert len(placeholder_findings) >= 1, "Expected placeholder findings"
 
     def test_g_composite_003_empty(self) -> None:
@@ -388,8 +429,9 @@ class TestAllGoldenCases:
             # layout_qa에서 findings가 있어야 함
             layout_result, layout_findings = run_layout_qa(case.input_ir)
             if case.case_type == GoldenCaseType.LAYOUT:
-                assert layout_result.warning_count > 0 or layout_result.error_count > 0, \
-                    f"Case {case.case_id} should have layout findings"
+                assert (
+                    layout_result.warning_count > 0 or layout_result.error_count > 0
+                ), f"Case {case.case_id} should have layout findings"
 
 
 # =============================================================================

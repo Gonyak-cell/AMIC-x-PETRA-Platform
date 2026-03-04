@@ -139,7 +139,11 @@ class TestImpactLevel:
 
         assert len(deltas) == 1
         # 4개 항목 변경은 MEDIUM (>3이면 HIGH)
-        assert deltas[0].impact_level in (ImpactLevel.MEDIUM, ImpactLevel.HIGH, ImpactLevel.CRITICAL)
+        assert deltas[0].impact_level in (
+            ImpactLevel.MEDIUM,
+            ImpactLevel.HIGH,
+            ImpactLevel.CRITICAL,
+        )
 
     def test_numeric_change_low(self):
         """숫자 변경 < 1% - LOW."""
@@ -416,7 +420,9 @@ class TestCalculateDelta:
                 {"item": "Lease liability", "category": "lease", "rationale": "IFRS16"},
                 {"item": "Pension", "category": "pension", "rationale": "PBO"},  # Added
             ],
-            "cash_like": [{"item": "Restricted cash", "category": "restricted"}],  # Added
+            "cash_like": [
+                {"item": "Restricted cash", "category": "restricted"}
+            ],  # Added
         }
         old_results = {
             "qoe": {"adjusted_ebitda": "10000", "total_adjustments": "500"},

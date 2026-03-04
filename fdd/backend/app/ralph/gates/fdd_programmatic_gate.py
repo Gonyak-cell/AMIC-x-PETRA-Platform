@@ -72,7 +72,11 @@ class FDDProgrammaticGate(QualityGate):
         except json.JSONDecodeError:
             return self._timed_result(
                 start_ns,
-                dimensions=[DimensionScore("json_valid", "JSON 유효성", 0.0, 1.0, "Invalid JSON")],
+                dimensions=[
+                    DimensionScore(
+                        "json_valid", "JSON 유효성", 0.0, 1.0, "Invalid JSON"
+                    )
+                ],
                 issues=["Artifact is not valid JSON"],
                 suggestions=["Ensure LLM returns valid JSON"],
                 critical_flags=["INVALID_JSON"],
@@ -91,7 +95,9 @@ class FDDProgrammaticGate(QualityGate):
         ph_score, ph_issues = self._check_placeholder_absence(block)
 
         # 4. 구조 완전성 (15%)
-        struct_score, struct_issues = self._check_structure_completeness(block, block_type)
+        struct_score, struct_issues = self._check_structure_completeness(
+            block, block_type
+        )
 
         # 5. 체크리스트 정렬 (10%)
         cl_score, cl_issues = self._check_checklist_alignment(block)
@@ -111,30 +117,71 @@ class FDDProgrammaticGate(QualityGate):
         issues.extend(ind_issues)
 
         dimensions = [
-            DimensionScore("numerical_consistency", "수치 정합성", num_score, 0.23,
-                           "; ".join(num_issues) if num_issues else "OK"),
-            DimensionScore("evidence_coverage", "근거 참조", ev_score, 0.18,
-                           "; ".join(ev_issues) if ev_issues else "OK"),
-            DimensionScore("placeholder_absence", "플레이스홀더 부재", ph_score, 0.13,
-                           "; ".join(ph_issues) if ph_issues else "OK"),
-            DimensionScore("structure_completeness", "구조 완전성", struct_score, 0.13,
-                           "; ".join(struct_issues) if struct_issues else "OK"),
-            DimensionScore("checklist_alignment", "체크리스트 정렬", cl_score, 0.08,
-                           "; ".join(cl_issues) if cl_issues else "OK"),
-            DimensionScore("financial_statement_quality", "재무제표 품질", fs_score, 0.15,
-                           "; ".join(fs_issues) if fs_issues else "OK"),
-            DimensionScore("industry_account_coverage", "산업별 계정 커버리지", ind_score, 0.10,
-                           "; ".join(ind_issues) if ind_issues else "OK"),
+            DimensionScore(
+                "numerical_consistency",
+                "수치 정합성",
+                num_score,
+                0.23,
+                "; ".join(num_issues) if num_issues else "OK",
+            ),
+            DimensionScore(
+                "evidence_coverage",
+                "근거 참조",
+                ev_score,
+                0.18,
+                "; ".join(ev_issues) if ev_issues else "OK",
+            ),
+            DimensionScore(
+                "placeholder_absence",
+                "플레이스홀더 부재",
+                ph_score,
+                0.13,
+                "; ".join(ph_issues) if ph_issues else "OK",
+            ),
+            DimensionScore(
+                "structure_completeness",
+                "구조 완전성",
+                struct_score,
+                0.13,
+                "; ".join(struct_issues) if struct_issues else "OK",
+            ),
+            DimensionScore(
+                "checklist_alignment",
+                "체크리스트 정렬",
+                cl_score,
+                0.08,
+                "; ".join(cl_issues) if cl_issues else "OK",
+            ),
+            DimensionScore(
+                "financial_statement_quality",
+                "재무제표 품질",
+                fs_score,
+                0.15,
+                "; ".join(fs_issues) if fs_issues else "OK",
+            ),
+            DimensionScore(
+                "industry_account_coverage",
+                "산업별 계정 커버리지",
+                ind_score,
+                0.10,
+                "; ".join(ind_issues) if ind_issues else "OK",
+            ),
         ]
 
         return self._timed_result(
-            start_ns, dimensions, issues, suggestions, critical_flags,
+            start_ns,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
         )
 
     # ── Dimension Checkers ───────────────────────────────────────────────
 
     def _check_numerical_consistency(
-        self, block: dict, source: dict,
+        self,
+        block: dict,
+        source: dict,
     ) -> tuple[float, list[str]]:
         """텍스트 내 수치가 엔진 데이터와 일치하는지 검증."""
         issues: list[str] = []
@@ -165,8 +212,11 @@ class FDDProgrammaticGate(QualityGate):
             if not self._is_monetary_candidate(val, num_str, full_text):
                 continue  # 비금액 숫자(연도, 퍼센트 등) 무시
             # 소스에 근사치가 있는지 확인
-            found = any(abs(float(sn.replace(",", "")) - val) < 1.0 for sn in source_numbers
-                        if self._safe_float(sn) is not None)
+            found = any(
+                abs(float(sn.replace(",", "")) - val) < 1.0
+                for sn in source_numbers
+                if self._safe_float(sn) is not None
+            )
             if not found:
                 mismatches += 1
                 issues.append(f"Number {num_str} not found in engine data")
@@ -205,7 +255,9 @@ class FDDProgrammaticGate(QualityGate):
         return 5.0, []
 
     def _check_structure_completeness(
-        self, block: dict, block_type: str,
+        self,
+        block: dict,
+        block_type: str,
     ) -> tuple[float, list[str]]:
         """필수 필드 존재 확인."""
         issues: list[str] = []
@@ -239,7 +291,9 @@ class FDDProgrammaticGate(QualityGate):
         text_parts = self._extract_text(block)
         full_text = " ".join(text_parts).lower()
 
-        corrected_items = [c for c in self._checklist_corrections if c.get("status") == "CORRECTED"]
+        corrected_items = [
+            c for c in self._checklist_corrections if c.get("status") == "CORRECTED"
+        ]
         if not corrected_items:
             return 5.0, []
 
@@ -248,7 +302,9 @@ class FDDProgrammaticGate(QualityGate):
             correction = (item.get("user_correction") or "").lower()
             amount = (item.get("user_amount") or "").replace(",", "")
             # 키워드 기반 매칭: 의미 있는 단어(2자 이상)의 60%+ 존재 시 반영으로 판정
-            if (correction and self._correction_reflected(correction, full_text)) or (amount and amount in full_text.replace(",", "")):
+            if (correction and self._correction_reflected(correction, full_text)) or (
+                amount and amount in full_text.replace(",", "")
+            ):
                 reflected += 1
 
         if not corrected_items:
@@ -258,14 +314,20 @@ class FDDProgrammaticGate(QualityGate):
         if ratio >= 0.8:
             return 5.0, issues
         elif ratio >= 0.5:
-            issues.append(f"Only {reflected}/{len(corrected_items)} corrections reflected")
+            issues.append(
+                f"Only {reflected}/{len(corrected_items)} corrections reflected"
+            )
             return 3.5, issues
         else:
-            issues.append(f"Only {reflected}/{len(corrected_items)} corrections reflected — major gaps")
+            issues.append(
+                f"Only {reflected}/{len(corrected_items)} corrections reflected — major gaps"
+            )
             return 2.0, issues
 
     def _check_financial_statement_quality(
-        self, block: dict, source: dict,
+        self,
+        block: dict,
+        source: dict,
     ) -> tuple[float, list[str]]:
         """재무제표(IS/BS) 시트 커버리지 + 일관성 검증.
 
@@ -365,7 +427,9 @@ class FDDProgrammaticGate(QualityGate):
         return max(1.0, score), issues
 
     def _check_industry_account_coverage(
-        self, block: dict, source: dict,
+        self,
+        block: dict,
+        source: dict,
     ) -> tuple[float, list[str]]:
         """산업별 필수 계정 존재 여부 검증.
 
@@ -508,18 +572,45 @@ class FDDProgrammaticGate(QualityGate):
         # 퍼센트 인접: 숫자 직후에 %/퍼센트/포인트/bps가 오는 경우
         idx = context.find(num_str)
         if idx >= 0:
-            after = context[idx + len(num_str):idx + len(num_str) + 10]
+            after = context[idx + len(num_str) : idx + len(num_str) + 10]
             if self._PERCENT_SUFFIX_RE.search(after):
                 return False
 
         return True
 
     # 수정 텍스트에서 무시할 한국어 불용어
-    _STOP_WORDS = frozenset({
-        "이", "가", "을", "를", "에", "의", "로", "으로", "와", "과",
-        "는", "은", "도", "만", "까지", "부터", "에서", "한", "할", "하는",
-        "것", "수", "등", "및", "또는", "그", "이것", "저것",
-    })
+    _STOP_WORDS = frozenset(
+        {
+            "이",
+            "가",
+            "을",
+            "를",
+            "에",
+            "의",
+            "로",
+            "으로",
+            "와",
+            "과",
+            "는",
+            "은",
+            "도",
+            "만",
+            "까지",
+            "부터",
+            "에서",
+            "한",
+            "할",
+            "하는",
+            "것",
+            "수",
+            "등",
+            "및",
+            "또는",
+            "그",
+            "이것",
+            "저것",
+        }
+    )
 
     def _correction_reflected(self, correction: str, full_text: str) -> bool:
         """수정 텍스트의 키워드가 본문에 충분히 반영되었는지 판정.

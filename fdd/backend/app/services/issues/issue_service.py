@@ -101,9 +101,7 @@ def run_anomaly_detection(
     Returns:
         탐지 결과 요약
     """
-    logger.info(
-        f"Starting anomaly detection: deal_id={deal_id}, threshold={threshold}"
-    )
+    logger.info(f"Starting anomaly detection: deal_id={deal_id}, threshold={threshold}")
 
     # GL 전표 조회
     gl_entries = _get_gl_entries(db, deal_id)
@@ -221,7 +219,9 @@ def _generate_issue_description(result: AnomalyScoreResult) -> str:
         "탐지 요인:",
     ]
     for f in result.risk_factors:
-        lines.append(f"- [{f.factor_type}] {f.description} (기여도: {f.score_contribution:.2f})")
+        lines.append(
+            f"- [{f.factor_type}] {f.description} (기여도: {f.score_contribution:.2f})"
+        )
 
     if result.entry_data:
         lines.append("")
@@ -392,11 +392,7 @@ def update_issue_status(
 
 def get_issue_summary(db: Session, deal_id: uuid.UUID) -> IssueSummary:
     """이슈 요약 통계."""
-    issues = list(
-        db.scalars(
-            select(Issue).where(Issue.deal_id == deal_id)
-        )
-    )
+    issues = list(db.scalars(select(Issue).where(Issue.deal_id == deal_id)))
 
     by_severity: dict[str, int] = {}
     by_status: dict[str, int] = {}

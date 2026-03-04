@@ -71,7 +71,9 @@ class FDDSlotFillPromptBuilder:
         # 1. Deal info
         deal_name = data.get("deal_name", "N/A")
         industry = data.get("industry_name", "N/A")
-        parts.append(f"## Deal Information\n- Deal: {deal_name}\n- Industry: {industry}")
+        parts.append(
+            f"## Deal Information\n- Deal: {deal_name}\n- Industry: {industry}"
+        )
 
         # 2. Boilerplate context
         parts.append(f"\n## Boilerplate Context (section: {template.section_id})")
@@ -97,9 +99,7 @@ class FDDSlotFillPromptBuilder:
         slot_keys = list(l3_slots.keys())
         example_json = ", ".join(f'"{k}": "..."' for k in slot_keys)
         parts.append(
-            f"\n## Response Format\n"
-            f"Respond with JSON only:\n"
-            f"{{{example_json}}}"
+            f"\n## Response Format\nRespond with JSON only:\n{{{example_json}}}"
         )
 
         return "\n".join(parts)

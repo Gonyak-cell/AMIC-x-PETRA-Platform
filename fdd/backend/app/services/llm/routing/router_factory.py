@@ -55,7 +55,9 @@ def create_fdd_model_router(
     if fallback_order is None:
         fallback_order_str = os.getenv("FDD_LLM_FALLBACK_ORDER", "")
         if fallback_order_str:
-            fallback_order = [p.strip() for p in fallback_order_str.split(",") if p.strip()]
+            fallback_order = [
+                p.strip() for p in fallback_order_str.split(",") if p.strip()
+            ]
 
     available = [name for name, client in providers.items() if client.is_available()]
     logger.info(

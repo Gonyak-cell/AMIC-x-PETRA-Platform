@@ -101,17 +101,21 @@ def mock_llm_call():
 
     Signature: async (system_prompt, user_prompt, temperature, max_tokens) -> str
     """
+
     async def _llm_call(
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.3,
         max_tokens: int = 2048,
     ) -> str:
-        return json.dumps({
-            "type": "text",
-            "title": "Executive Summary (Refined)",
-            "content": "The target demonstrates robust operational performance with Adjusted EBITDA of ₩5,000M.",
-        })
+        return json.dumps(
+            {
+                "type": "text",
+                "title": "Executive Summary (Refined)",
+                "content": "The target demonstrates robust operational performance with Adjusted EBITDA of ₩5,000M.",
+            }
+        )
+
     return _llm_call
 
 
@@ -120,7 +124,9 @@ def mock_llm_call():
 
 class TestFDDReportGenerator:
     @pytest.mark.asyncio
-    async def test_generate_outline_extracts_refinable_sections(self, sample_ir_dict, mock_llm_call):
+    async def test_generate_outline_extracts_refinable_sections(
+        self, sample_ir_dict, mock_llm_call
+    ):
         generator = FDDReportGenerator(
             report_ir_dict=sample_ir_dict,
             llm_call=mock_llm_call,
@@ -137,7 +143,9 @@ class TestFDDReportGenerator:
         assert "table" not in section_types
 
     @pytest.mark.asyncio
-    async def test_generate_outline_has_required_fields(self, sample_ir_dict, mock_llm_call):
+    async def test_generate_outline_has_required_fields(
+        self, sample_ir_dict, mock_llm_call
+    ):
         generator = FDDReportGenerator(
             report_ir_dict=sample_ir_dict,
             llm_call=mock_llm_call,
@@ -165,17 +173,21 @@ class TestFDDReportGenerator:
         assert "content" in parsed
 
     @pytest.mark.asyncio
-    async def test_assemble_document_merges_refined(self, sample_ir_dict, mock_llm_call):
+    async def test_assemble_document_merges_refined(
+        self, sample_ir_dict, mock_llm_call
+    ):
         generator = FDDReportGenerator(
             report_ir_dict=sample_ir_dict,
             llm_call=mock_llm_call,
         )
         # Simulate refined text section
-        refined_artifact = json.dumps({
-            "type": "text",
-            "title": "Executive Summary (Refined)",
-            "content": "Refined body text here.",
-        })
+        refined_artifact = json.dumps(
+            {
+                "type": "text",
+                "title": "Executive Summary (Refined)",
+                "content": "Refined body text here.",
+            }
+        )
         section_artifacts = {"text_2": refined_artifact}
 
         result = await generator.assemble_document(section_artifacts, "")
@@ -193,11 +205,13 @@ class TestFDDProgrammaticGate:
     @pytest.mark.asyncio
     async def test_clean_text_passes(self):
         gate = FDDProgrammaticGate()
-        artifact = json.dumps({
-            "type": "text",
-            "title": "QoE Commentary",
-            "content": "Adjusted EBITDA totals ₩5,000M after normalizations.",
-        })
+        artifact = json.dumps(
+            {
+                "type": "text",
+                "title": "QoE Commentary",
+                "content": "Adjusted EBITDA totals ₩5,000M after normalizations.",
+            }
+        )
         result = await gate.evaluate(
             artifact_path=artifact,
             prd_section={"required_topics": ["EBITDA"]},
@@ -209,19 +223,23 @@ class TestFDDProgrammaticGate:
     @pytest.mark.asyncio
     async def test_placeholder_detected(self):
         gate = FDDProgrammaticGate()
-        artifact = json.dumps({
-            "type": "text",
-            "title": "Test",
-            "content": "The company [INSERT NAME] has revenue of [TBD].",
-        })
+        artifact = json.dumps(
+            {
+                "type": "text",
+                "title": "Test",
+                "content": "The company [INSERT NAME] has revenue of [TBD].",
+            }
+        )
         result = await gate.evaluate(
             artifact_path=artifact,
             prd_section={},
             source_data={},
         )
         # Should detect placeholders and score lower
-        assert any("placeholder" in i.lower() or "[INSERT" in i for i in result.issues) or \
-               result.weighted_score < 5.0
+        assert (
+            any("placeholder" in i.lower() or "[INSERT" in i for i in result.issues)
+            or result.weighted_score < 5.0
+        )
 
     @pytest.mark.asyncio
     async def test_checklist_alignment_pass2(self):
@@ -235,11 +253,13 @@ class TestFDDProgrammaticGate:
             }
         ]
         gate = FDDProgrammaticGate(checklist_corrections=corrections)
-        artifact = json.dumps({
-            "type": "text",
-            "title": "Revenue Commentary",
-            "content": "Revenue was adjusted to ₩9,500M per management correction.",
-        })
+        artifact = json.dumps(
+            {
+                "type": "text",
+                "title": "Revenue Commentary",
+                "content": "Revenue was adjusted to ₩9,500M per management correction.",
+            }
+        )
         result = await gate.evaluate(
             artifact_path=artifact,
             prd_section={},

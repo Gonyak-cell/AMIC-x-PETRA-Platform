@@ -18,11 +18,11 @@ logger = get_logger(__name__)
 class CommentaryItem:
     """생성된 코멘터리 항목."""
 
-    section_id: str               # e.g. "revenue_insight", "fcf_bridge_narrative"
+    section_id: str  # e.g. "revenue_insight", "fcf_bridge_narrative"
     title_ko: str
     title_en: str
-    content: str                  # 생성된 텍스트
-    provider: str = ""            # 사용된 LLM 프로바이더
+    content: str  # 생성된 텍스트
+    provider: str = ""  # 사용된 LLM 프로바이더
     is_fallback: bool = False
     warnings: list[str] = field(default_factory=list)
 
@@ -115,10 +115,7 @@ _COMMENTARY_TEMPLATES: dict[str, dict[str, str]] = {
             "Assess the CAPEX strategy (maintenance vs growth), intensity, and sustainability. "
             "Korean language. Under 150 words."
         ),
-        "user_template": (
-            "CAPEX 분석:\n{capex_summary}\n\n"
-            "코멘터리를 작성해주세요."
-        ),
+        "user_template": ("CAPEX 분석:\n{capex_summary}\n\n코멘터리를 작성해주세요."),
     },
     "backlog_analysis_narrative": {
         "title_ko": "수주잔액 분석 코멘터리",
@@ -163,8 +160,7 @@ _COMMENTARY_TEMPLATES: dict[str, dict[str, str]] = {
             "Korean language. Under 200 words."
         ),
         "user_template": (
-            "연결 분석:\n{consolidation_summary}\n\n"
-            "연결 분석 코멘터리를 작성해주세요."
+            "연결 분석:\n{consolidation_summary}\n\n연결 분석 코멘터리를 작성해주세요."
         ),
     },
     "interview_structuring": {

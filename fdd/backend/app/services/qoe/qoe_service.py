@@ -239,7 +239,9 @@ def run_qoe_calculation(
         industry_ctx = industry_module.get_context()
 
     candidates = detect_adjustment_candidates(
-        gl_entries, non_op_codes, ebitda_result.revenue,
+        gl_entries,
+        non_op_codes,
+        ebitda_result.revenue,
         industry_context=industry_ctx,
     )
 

@@ -37,7 +37,9 @@ class TestAccessToken:
             "exp": datetime.now(UTC) - timedelta(hours=1),
             "iat": datetime.now(UTC) - timedelta(hours=2),
         }
-        token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+        token = jwt.encode(
+            payload, settings.jwt_secret, algorithm=settings.jwt_algorithm
+        )
         with pytest.raises(AuthenticationError) as exc_info:
             decode_access_token(token)
         assert exc_info.value.code.value == 9011  # AUTH_TOKEN_EXPIRED
@@ -77,7 +79,9 @@ class TestRefreshToken:
             "exp": datetime.now(UTC) - timedelta(days=1),
             "iat": datetime.now(UTC) - timedelta(days=8),
         }
-        token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+        token = jwt.encode(
+            payload, settings.jwt_secret, algorithm=settings.jwt_algorithm
+        )
         with pytest.raises(AuthenticationError) as exc_info:
             decode_refresh_token(token)
         assert exc_info.value.code.value == 9013  # AUTH_REFRESH_TOKEN_EXPIRED

@@ -278,9 +278,7 @@ def cleanup_expired_blacklist(db: Session) -> int:
         삭제된 레코드 수.
     """
     result = db.execute(
-        delete(TokenBlacklist).where(
-            TokenBlacklist.expires_at < datetime.now(UTC)
-        )
+        delete(TokenBlacklist).where(TokenBlacklist.expires_at < datetime.now(UTC))
     )
     db.commit()
     count = result.rowcount

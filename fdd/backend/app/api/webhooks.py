@@ -41,9 +41,7 @@ def create_webhook_config(
     db: Session = Depends(get_db),
 ):
     """웹훅을 생성한다. Admin 전용."""
-    return create_webhook(
-        db, url=body.url, events=body.events, secret=body.secret
-    )
+    return create_webhook(db, url=body.url, events=body.events, secret=body.secret)
 
 
 @router.post("/webhooks/{webhook_id}/test", response_model=WebhookTestResult)

@@ -46,14 +46,25 @@ class EBITDABridgeRequest(BaseModel):
                 try:
                     float(val)
                 except ValueError as e:
-                    raise ValueError(f"values[{i}]가 유효한 숫자가 아닙니다: {val}") from e
+                    raise ValueError(
+                        f"values[{i}]가 유효한 숫자가 아닙니다: {val}"
+                    ) from e
         return v
 
-    model_config = {"json_schema_extra": {"example": {
-        "categories": ["Reported EBITDA", "일회성 비용", "비영업 수익", "Adjusted EBITDA"],
-        "values": ["1000000000", "200000000", "-50000000", None],
-        "title": "FY2025 EBITDA Bridge"
-    }}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "categories": [
+                    "Reported EBITDA",
+                    "일회성 비용",
+                    "비영업 수익",
+                    "Adjusted EBITDA",
+                ],
+                "values": ["1000000000", "200000000", "-50000000", None],
+                "title": "FY2025 EBITDA Bridge",
+            }
+        }
+    }
 
 
 class GenericWaterfallRequest(BaseModel):
@@ -95,7 +106,9 @@ class GenericWaterfallRequest(BaseModel):
                 try:
                     float(val)
                 except ValueError as e:
-                    raise ValueError(f"values[{i}]가 유효한 숫자가 아닙니다: {val}") from e
+                    raise ValueError(
+                        f"values[{i}]가 유효한 숫자가 아닙니다: {val}"
+                    ) from e
         return v
 
 
@@ -125,7 +138,9 @@ class NWCBridgeRequest(BaseModel):
                 try:
                     float(val)
                 except ValueError as e:
-                    raise ValueError(f"values[{i}]가 유효한 숫자가 아닙니다: {val}") from e
+                    raise ValueError(
+                        f"values[{i}]가 유효한 숫자가 아닙니다: {val}"
+                    ) from e
         return v
 
 
@@ -155,7 +170,9 @@ class NetDebtBridgeRequest(BaseModel):
                 try:
                     float(val)
                 except ValueError as e:
-                    raise ValueError(f"values[{i}]가 유효한 숫자가 아닙니다: {val}") from e
+                    raise ValueError(
+                        f"values[{i}]가 유효한 숫자가 아닙니다: {val}"
+                    ) from e
         return v
 
 

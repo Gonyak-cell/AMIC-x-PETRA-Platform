@@ -38,12 +38,8 @@ class ReportGenerateRequest(BaseModel):
     include_cost_structure: bool = Field(
         default=True, description="비용 구조 분석(제조원가/판관비/인건비) 포함"
     )
-    include_fcf: bool = Field(
-        default=True, description="FCF 브릿지 + CAPEX 분석 포함"
-    )
-    include_backlog: bool = Field(
-        default=True, description="수주잔액 분석 포함"
-    )
+    include_fcf: bool = Field(default=True, description="FCF 브릿지 + CAPEX 분석 포함")
+    include_backlog: bool = Field(default=True, description="수주잔액 분석 포함")
     include_consolidation_enhanced: bool = Field(
         default=True, description="연결 분석(IC 제거/엔티티별 P&L/FX) 포함"
     )

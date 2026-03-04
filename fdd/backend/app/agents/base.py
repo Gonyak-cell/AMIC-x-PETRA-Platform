@@ -145,7 +145,10 @@ class BaseAgent(ABC):
         if self._prompt_template is not None:
             return self._prompt_template
 
-        prompt_file = PROMPTS_DIR / f"{self.agent_name}_v{self.prompt_version.replace('.', '_')}.yaml"
+        prompt_file = (
+            PROMPTS_DIR
+            / f"{self.agent_name}_v{self.prompt_version.replace('.', '_')}.yaml"
+        )
 
         if not prompt_file.exists():
             logger.warning(
@@ -234,7 +237,9 @@ class BaseAgent(ABC):
                     parsed_result = self.parse_response(raw_response)
                     validation_errors: list[str] = []
                     if source_data:
-                        validation_errors = self.validate_output(parsed_result, source_data)
+                        validation_errors = self.validate_output(
+                            parsed_result, source_data
+                        )
                     return AgentResponse(
                         success=len(validation_errors) == 0,
                         result=parsed_result,
@@ -286,7 +291,9 @@ class BaseAgent(ABC):
             if llm_response is None:
                 return AgentResponse(
                     success=False,
-                    validation_errors=[f"LLM 호출 실패 (재시도 {self.config.max_retries}회): {last_error}"],
+                    validation_errors=[
+                        f"LLM 호출 실패 (재시도 {self.config.max_retries}회): {last_error}"
+                    ],
                 )
 
             raw_response = llm_response.content

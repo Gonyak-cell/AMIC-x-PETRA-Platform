@@ -65,8 +65,16 @@ class TestBlockTypesGolden:
     def test_all_block_types_exist(self) -> None:
         """모든 필수 블록 타입이 존재해야 함."""
         required_types = [
-            "cover", "kpi", "table", "chart", "text",
-            "claim", "issue", "methodology", "scope", "appendix"
+            "cover",
+            "kpi",
+            "table",
+            "chart",
+            "text",
+            "claim",
+            "issue",
+            "methodology",
+            "scope",
+            "appendix",
         ]
         for bt in required_types:
             assert bt in [b.value for b in BlockType], f"Missing block type: {bt}"
@@ -137,7 +145,11 @@ class TestKPIBlockGolden:
         """3열 레이아웃."""
         block = build_kpi_block(
             title="Key Metrics",
-            kpis=[("Metric1", "100", "단위"), ("Metric2", "200", "단위"), ("Metric3", "300", "단위")],
+            kpis=[
+                ("Metric1", "100", "단위"),
+                ("Metric2", "200", "단위"),
+                ("Metric3", "300", "단위"),
+            ],
             columns=3,
         )
         assert block.columns == 3
@@ -169,9 +181,27 @@ class TestTableBlocksGolden:
     def test_qoe_adjustments_table(self) -> None:
         """QoE 조정 상세 테이블."""
         adjustments = [
-            {"category": "Non-recurring", "description": "법적 합의금", "amount": "1,500", "status": "approved", "evidence": "Yes"},
-            {"category": "Non-operating", "description": "자산 처분익", "amount": "(500)", "status": "approved", "evidence": "Yes"},
-            {"category": "Normalization", "description": "대표이사 급여 조정", "amount": "800", "status": "proposed", "evidence": "No"},
+            {
+                "category": "Non-recurring",
+                "description": "법적 합의금",
+                "amount": "1,500",
+                "status": "approved",
+                "evidence": "Yes",
+            },
+            {
+                "category": "Non-operating",
+                "description": "자산 처분익",
+                "amount": "(500)",
+                "status": "approved",
+                "evidence": "Yes",
+            },
+            {
+                "category": "Normalization",
+                "description": "대표이사 급여 조정",
+                "amount": "800",
+                "status": "proposed",
+                "evidence": "No",
+            },
         ]
         block = build_qoe_adjustments_table_block("QoE Adjustments", adjustments)
         assert len(block.columns) == 5
@@ -180,10 +210,30 @@ class TestTableBlocksGolden:
     def test_nwc_definition_table(self) -> None:
         """NWC 정의 테이블."""
         items = [
-            {"account": "매출채권", "classification": "above_the_line", "balance": "15,000", "included": "Yes"},
-            {"account": "재고자산", "classification": "above_the_line", "balance": "8,000", "included": "Yes"},
-            {"account": "매입채무", "classification": "above_the_line", "balance": "(10,000)", "included": "Yes"},
-            {"account": "현금", "classification": "excluded", "balance": "5,000", "included": "No"},
+            {
+                "account": "매출채권",
+                "classification": "above_the_line",
+                "balance": "15,000",
+                "included": "Yes",
+            },
+            {
+                "account": "재고자산",
+                "classification": "above_the_line",
+                "balance": "8,000",
+                "included": "Yes",
+            },
+            {
+                "account": "매입채무",
+                "classification": "above_the_line",
+                "balance": "(10,000)",
+                "included": "Yes",
+            },
+            {
+                "account": "현금",
+                "classification": "excluded",
+                "balance": "5,000",
+                "included": "No",
+            },
         ]
         block = build_nwc_definition_table_block("NWC Definition", items)
         assert len(block.columns) == 4
@@ -193,9 +243,24 @@ class TestTableBlocksGolden:
         """NWC 월별 트렌드 테이블."""
         months = ["2024-10", "2024-11", "2024-12"]
         trend_data = [
-            {"item": "Current Assets", "2024-10": "50,000", "2024-11": "52,000", "2024-12": "55,000"},
-            {"item": "Current Liabilities", "2024-10": "(30,000)", "2024-11": "(31,000)", "2024-12": "(32,000)"},
-            {"item": "NWC", "2024-10": "20,000", "2024-11": "21,000", "2024-12": "23,000"},
+            {
+                "item": "Current Assets",
+                "2024-10": "50,000",
+                "2024-11": "52,000",
+                "2024-12": "55,000",
+            },
+            {
+                "item": "Current Liabilities",
+                "2024-10": "(30,000)",
+                "2024-11": "(31,000)",
+                "2024-12": "(32,000)",
+            },
+            {
+                "item": "NWC",
+                "2024-10": "20,000",
+                "2024-11": "21,000",
+                "2024-12": "23,000",
+            },
         ]
         block = build_nwc_trend_table_block("NWC Trend", trend_data, months)
         assert len(block.columns) == 4  # item + 3 months
@@ -204,10 +269,30 @@ class TestTableBlocksGolden:
     def test_nwc_peg_table(self) -> None:
         """NWC Peg 시나리오 테이블."""
         scenarios = [
-            {"method": "Average (12M)", "target_nwc": "21,000", "adjustment": "(2,000)", "notes": "Recommended"},
-            {"method": "Median (12M)", "target_nwc": "20,500", "adjustment": "(2,500)", "notes": ""},
-            {"method": "Latest Month", "target_nwc": "23,000", "adjustment": "0", "notes": ""},
-            {"method": "Buyer Proposed", "target_nwc": "18,000", "adjustment": "(5,000)", "notes": "Under discussion"},
+            {
+                "method": "Average (12M)",
+                "target_nwc": "21,000",
+                "adjustment": "(2,000)",
+                "notes": "Recommended",
+            },
+            {
+                "method": "Median (12M)",
+                "target_nwc": "20,500",
+                "adjustment": "(2,500)",
+                "notes": "",
+            },
+            {
+                "method": "Latest Month",
+                "target_nwc": "23,000",
+                "adjustment": "0",
+                "notes": "",
+            },
+            {
+                "method": "Buyer Proposed",
+                "target_nwc": "18,000",
+                "adjustment": "(5,000)",
+                "notes": "Under discussion",
+            },
         ]
         block = build_nwc_peg_table_block("NWC Peg Scenarios", scenarios)
         assert len(block.columns) == 4
@@ -216,11 +301,41 @@ class TestTableBlocksGolden:
     def test_net_debt_schedule(self) -> None:
         """Net Debt 스케줄 테이블."""
         items = [
-            {"item": "Bank Loan A", "type": "debt", "balance": "30,000", "adjustment": "0", "adjusted": "30,000"},
-            {"item": "Bank Loan B", "type": "debt", "balance": "20,000", "adjustment": "0", "adjusted": "20,000"},
-            {"item": "Lease Liabilities", "type": "debt_like", "balance": "5,000", "adjustment": "0", "adjusted": "5,000"},
-            {"item": "Cash", "type": "cash", "balance": "(8,000)", "adjustment": "0", "adjusted": "(8,000)"},
-            {"item": "Short-term Deposits", "type": "cash_like", "balance": "(2,000)", "adjustment": "0", "adjusted": "(2,000)"},
+            {
+                "item": "Bank Loan A",
+                "type": "debt",
+                "balance": "30,000",
+                "adjustment": "0",
+                "adjusted": "30,000",
+            },
+            {
+                "item": "Bank Loan B",
+                "type": "debt",
+                "balance": "20,000",
+                "adjustment": "0",
+                "adjusted": "20,000",
+            },
+            {
+                "item": "Lease Liabilities",
+                "type": "debt_like",
+                "balance": "5,000",
+                "adjustment": "0",
+                "adjusted": "5,000",
+            },
+            {
+                "item": "Cash",
+                "type": "cash",
+                "balance": "(8,000)",
+                "adjustment": "0",
+                "adjusted": "(8,000)",
+            },
+            {
+                "item": "Short-term Deposits",
+                "type": "cash_like",
+                "balance": "(2,000)",
+                "adjustment": "0",
+                "adjusted": "(2,000)",
+            },
         ]
         block = build_net_debt_schedule_block("Net Debt Schedule", items)
         assert len(block.columns) == 5
@@ -229,9 +344,27 @@ class TestTableBlocksGolden:
     def test_issue_summary_table(self) -> None:
         """이슈 요약 테이블."""
         issues = [
-            {"id": "ISS-001", "category": "QoE", "severity": "high", "title": "비경상 항목 미분류", "status": "open"},
-            {"id": "ISS-002", "category": "NWC", "severity": "medium", "title": "재고 평가 방법 변경", "status": "in_review"},
-            {"id": "ISS-003", "category": "Debt", "severity": "low", "title": "리스 계약 확인 필요", "status": "resolved"},
+            {
+                "id": "ISS-001",
+                "category": "QoE",
+                "severity": "high",
+                "title": "비경상 항목 미분류",
+                "status": "open",
+            },
+            {
+                "id": "ISS-002",
+                "category": "NWC",
+                "severity": "medium",
+                "title": "재고 평가 방법 변경",
+                "status": "in_review",
+            },
+            {
+                "id": "ISS-003",
+                "category": "Debt",
+                "severity": "low",
+                "title": "리스 계약 확인 필요",
+                "status": "resolved",
+            },
         ]
         block = build_issue_summary_table_block("Issue Summary", issues)
         assert len(block.columns) == 5
@@ -250,8 +383,20 @@ class TestChartBlockGolden:
         """EBITDA 워터폴 차트."""
         block = build_waterfall_chart_block(
             title="EBITDA Bridge (FY2025)",
-            categories=["Reported EBITDA", "Non-recurring", "Non-operating", "Normalization", "Adjusted EBITDA"],
-            values=[Decimal("15000"), Decimal("1500"), Decimal("-500"), Decimal("800"), Decimal("16800")],
+            categories=[
+                "Reported EBITDA",
+                "Non-recurring",
+                "Non-operating",
+                "Normalization",
+                "Adjusted EBITDA",
+            ],
+            values=[
+                Decimal("15000"),
+                Decimal("1500"),
+                Decimal("-500"),
+                Decimal("800"),
+                Decimal("16800"),
+            ],
         )
         assert block.chart_type == ChartType.WATERFALL
         assert len(block.data.categories) == 5
@@ -337,8 +482,20 @@ class TestIssueBlockGolden:
     def test_issue_log_block(self) -> None:
         """이슈 로그 블록."""
         issues = [
-            {"issue_id": "ISS-001", "category": "QoE", "severity": "critical", "title": "중대한 오류 발견", "status": "open"},
-            {"issue_id": "ISS-002", "category": "DATA", "severity": "high", "title": "데이터 누락", "status": "open"},
+            {
+                "issue_id": "ISS-001",
+                "category": "QoE",
+                "severity": "critical",
+                "title": "중대한 오류 발견",
+                "status": "open",
+            },
+            {
+                "issue_id": "ISS-002",
+                "category": "DATA",
+                "severity": "high",
+                "title": "데이터 누락",
+                "status": "open",
+            },
         ]
         block = build_issue_block(issues, title="Issue Log", show_resolved=False)
         assert block.type == BlockType.ISSUE
@@ -429,13 +586,31 @@ class TestReportIRGolden:
                 # KPIs
                 build_kpi_block("Summary", [("EBITDA", "15,000", "백만원")]),
                 # QoE Table
-                build_qoe_table_block("QoE", [{"category": "Revenue", "FY2025": "100,000"}], ["FY2025"]),
+                build_qoe_table_block(
+                    "QoE", [{"category": "Revenue", "FY2025": "100,000"}], ["FY2025"]
+                ),
                 # Chart
-                build_waterfall_chart_block("EBITDA Bridge", ["Start", "End"], [Decimal("10000"), Decimal("15000")]),
+                build_waterfall_chart_block(
+                    "EBITDA Bridge",
+                    ["Start", "End"],
+                    [Decimal("10000"), Decimal("15000")],
+                ),
                 # Claims
-                build_claim_block("매출 성장 확인", [("ev-1", "TB", "row-1", "TB Row")]),
+                build_claim_block(
+                    "매출 성장 확인", [("ev-1", "TB", "row-1", "TB Row")]
+                ),
                 # Issues
-                build_issue_block([{"issue_id": "1", "category": "QoE", "severity": "high", "title": "Issue", "status": "open"}]),
+                build_issue_block(
+                    [
+                        {
+                            "issue_id": "1",
+                            "category": "QoE",
+                            "severity": "high",
+                            "title": "Issue",
+                            "status": "open",
+                        }
+                    ]
+                ),
                 # Methodology
                 build_methodology_block([(1, "Step 1", "Description")]),
                 # Text
@@ -483,7 +658,12 @@ class TestSerializationGolden:
 
     def test_enum_serialization(self) -> None:
         """Enum은 value로 직렬화."""
-        block = TextBlock(content="Test", risk_level=RiskLevel.CRITICAL if hasattr(RiskLevel, "CRITICAL") else RiskLevel.HIGH)
+        block = TextBlock(
+            content="Test",
+            risk_level=RiskLevel.CRITICAL
+            if hasattr(RiskLevel, "CRITICAL")
+            else RiskLevel.HIGH,
+        )
         ir = ReportIR(sections=[block])
         result = report_ir_to_dict(ir)
 

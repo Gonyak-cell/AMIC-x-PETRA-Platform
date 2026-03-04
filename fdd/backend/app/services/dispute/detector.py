@@ -134,7 +134,10 @@ def detect_large_adjustments(
                                     description=f"Adjustment amount {amount} exceeds {threshold_percent}% of EBITDA",
                                     location=f"{block.title}:row_{idx}",
                                     highlight_style=HighlightStyle.RED_BORDER,
-                                    metadata={"amount": str(amount), "threshold": str(threshold)},
+                                    metadata={
+                                        "amount": str(amount),
+                                        "threshold": str(threshold),
+                                    },
                                 )
                             )
                 except (ValueError, TypeError):
@@ -303,7 +306,9 @@ def detect_version_change_items(
 
     for delta in deltas:
         if delta.impact_level in (ImpactLevel.HIGH, ImpactLevel.CRITICAL):
-            severity = "high" if delta.impact_level == ImpactLevel.CRITICAL else "medium"
+            severity = (
+                "high" if delta.impact_level == ImpactLevel.CRITICAL else "medium"
+            )
             items.append(
                 DisputeSensitiveItem(
                     item_id=f"ver_{delta.field}",

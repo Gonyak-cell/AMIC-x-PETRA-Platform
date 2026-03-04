@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from app.industry.korea.models import FDDTaxItem, Severity
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 TAX_ITEMS: list[FDDTaxItem] = [
     # ── 공통 세무 (5개) ──

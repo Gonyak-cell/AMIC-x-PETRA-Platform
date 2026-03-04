@@ -142,19 +142,29 @@ class MetricsCollector:
         lines: list[str] = []
 
         # api_requests_total
-        lines.append(f"# HELP {self.api_requests_total.name} {self.api_requests_total.help}")
+        lines.append(
+            f"# HELP {self.api_requests_total.name} {self.api_requests_total.help}"
+        )
         lines.append(f"# TYPE {self.api_requests_total.name} counter")
         for label, value in self.api_requests_total.labels.items():
             label_str = f'{{method="{label}"}}' if label else ""
             lines.append(f"{self.api_requests_total.name}{label_str} {value}")
 
         # api_request_duration
-        lines.append(f"# HELP {self.api_request_duration.name} {self.api_request_duration.help}")
+        lines.append(
+            f"# HELP {self.api_request_duration.name} {self.api_request_duration.help}"
+        )
         lines.append(f"# TYPE {self.api_request_duration.name} histogram")
-        lines.append(f"{self.api_request_duration.name}_count {self.api_request_duration.count()}")
-        lines.append(f"{self.api_request_duration.name}_sum {self.api_request_duration.sum():.6f}")
+        lines.append(
+            f"{self.api_request_duration.name}_count {self.api_request_duration.count()}"
+        )
+        lines.append(
+            f"{self.api_request_duration.name}_sum {self.api_request_duration.sum():.6f}"
+        )
         for bucket_label, count in self.api_request_duration.bucket_counts().items():
-            lines.append(f'{self.api_request_duration.name}_bucket{{{bucket_label.replace("_", "=")}}} {count}')
+            lines.append(
+                f"{self.api_request_duration.name}_bucket{{{bucket_label.replace('_', '=')}}} {count}"
+            )
 
         # jobs_total
         lines.append(f"# HELP {self.jobs_total.name} {self.jobs_total.help}")

@@ -430,7 +430,9 @@ class TestAnalyzeEntriesForAnomalies:
         entries = [
             _entry("E1", "100", entry_date="2025-06-15"),  # 정상
             _entry("E2", "10000000", entry_date="2025-12-31"),  # 연말 + 라운드
-            _entry("E3", "500", entry_date="2025-06-14", description="소송비용"),  # 주말+키워드
+            _entry(
+                "E3", "500", entry_date="2025-06-14", description="소송비용"
+            ),  # 주말+키워드
             _entry("E4", "200", entry_date="2025-06-15"),  # 정상
             _entry("E5", "150", entry_date="2025-06-15"),  # 정상
         ]

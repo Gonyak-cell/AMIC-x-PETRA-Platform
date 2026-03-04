@@ -27,12 +27,12 @@ class InterviewNote:
     """구조화된 인터뷰 노트."""
 
     note_id: str
-    source: str                      # "management", "employee", "third_party"
-    topic: str                       # 주제
-    content: str                     # 내용
+    source: str  # "management", "employee", "third_party"
+    topic: str  # 주제
+    content: str  # 내용
     risk_flags: list[str] = field(default_factory=list)
     themes: list[str] = field(default_factory=list)
-    sentiment: str = "neutral"       # "positive", "neutral", "negative"
+    sentiment: str = "neutral"  # "positive", "neutral", "negative"
 
 
 @dataclass(frozen=True)
@@ -40,8 +40,8 @@ class ThemeItem:
     """추출된 테마."""
 
     theme: str
-    frequency: int                   # 언급 빈도
-    sources: list[str]               # 언급 출처
+    frequency: int  # 언급 빈도
+    sources: list[str]  # 언급 출처
     sentiment_distribution: dict[str, int] = field(default_factory=dict)
     related_risks: list[str] = field(default_factory=list)
 
@@ -52,8 +52,8 @@ class InterviewStructureResult:
 
     notes: list[InterviewNote]
     total_notes: int
-    source_distribution: dict[str, int]       # {source: count}
-    topic_distribution: dict[str, int]        # {topic: count}
+    source_distribution: dict[str, int]  # {source: count}
+    topic_distribution: dict[str, int]  # {topic: count}
     risk_flag_count: int
     warnings: list[str] = field(default_factory=list)
 
@@ -64,28 +64,57 @@ class ThemeExtractionResult:
 
     themes: list[ThemeItem]
     total_themes: int
-    top_themes: list[str]                     # 상위 N 테마
-    risk_themes: list[str]                    # 리스크 관련 테마
+    top_themes: list[str]  # 상위 N 테마
+    risk_themes: list[str]  # 리스크 관련 테마
     warnings: list[str] = field(default_factory=list)
 
 
 # ── 키워드 사전 ──────────────────────────────────────────
 
 _RISK_KEYWORDS = {
-    "litigation", "lawsuit", "소송", "분쟁",
-    "compliance", "violation", "위반", "규제",
-    "fraud", "irregularity", "부정", "횡령",
-    "related party", "특수관계", "관계사",
-    "contingent", "우발", "잠재",
-    "going concern", "계속기업",
-    "impairment", "손상",
-    "covenant", "breach", "위약",
-    "turnover", "이직", "퇴직",
-    "overdue", "연체", "미수",
-    "obsolete", "진부화", "재고 부진",
-    "warranty", "보증", "하자",
-    "environmental", "환경", "오염",
-    "tax dispute", "세무 분쟁", "추징",
+    "litigation",
+    "lawsuit",
+    "소송",
+    "분쟁",
+    "compliance",
+    "violation",
+    "위반",
+    "규제",
+    "fraud",
+    "irregularity",
+    "부정",
+    "횡령",
+    "related party",
+    "특수관계",
+    "관계사",
+    "contingent",
+    "우발",
+    "잠재",
+    "going concern",
+    "계속기업",
+    "impairment",
+    "손상",
+    "covenant",
+    "breach",
+    "위약",
+    "turnover",
+    "이직",
+    "퇴직",
+    "overdue",
+    "연체",
+    "미수",
+    "obsolete",
+    "진부화",
+    "재고 부진",
+    "warranty",
+    "보증",
+    "하자",
+    "environmental",
+    "환경",
+    "오염",
+    "tax dispute",
+    "세무 분쟁",
+    "추징",
 }
 
 _TOPIC_KEYWORDS: dict[str, list[str]] = {
@@ -101,8 +130,31 @@ _TOPIC_KEYWORDS: dict[str, list[str]] = {
     "customer": ["고객", "거래처", "customer", "client"],
 }
 
-_SENTIMENT_POSITIVE = {"성장", "증가", "개선", "확대", "호전", "growth", "improvement", "increase", "positive", "strong"}
-_SENTIMENT_NEGATIVE = {"감소", "하락", "악화", "위험", "부정", "decline", "decrease", "risk", "concern", "weak", "loss"}
+_SENTIMENT_POSITIVE = {
+    "성장",
+    "증가",
+    "개선",
+    "확대",
+    "호전",
+    "growth",
+    "improvement",
+    "increase",
+    "positive",
+    "strong",
+}
+_SENTIMENT_NEGATIVE = {
+    "감소",
+    "하락",
+    "악화",
+    "위험",
+    "부정",
+    "decline",
+    "decrease",
+    "risk",
+    "concern",
+    "weak",
+    "loss",
+}
 
 
 # ── Core: Interview Structuring ──────────────────────────
@@ -188,16 +240,18 @@ def structure_interviews(
             f"INTERVIEW_SINGLE_SOURCE: All notes from '{list(source_dist.keys())[0]}'"
         )
 
-    evidence.append(EvidenceLinkData(
-        target_type="interview_structure",
-        source_type="computed",
-        source_id="interview:summary",
-        source_detail={
-            "total": len(structured),
-            "sources": dict(source_dist),
-            "risk_flags": risk_count,
-        },
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            target_type="interview_structure",
+            source_type="computed",
+            source_id="interview:summary",
+            source_detail={
+                "total": len(structured),
+                "sources": dict(source_dist),
+                "risk_flags": risk_count,
+            },
+        )
+    )
 
     return InterviewStructureResult(
         notes=structured,
@@ -259,27 +313,31 @@ def extract_themes(
     # ThemeItem 생성 + 정렬
     items: list[ThemeItem] = []
     for theme, data in theme_data.items():
-        items.append(ThemeItem(
-            theme=theme,
-            frequency=data["freq"],
-            sources=sorted(data["sources"]),
-            sentiment_distribution=dict(data["sentiments"]),
-            related_risks=sorted(data["risks"]),
-        ))
+        items.append(
+            ThemeItem(
+                theme=theme,
+                frequency=data["freq"],
+                sources=sorted(data["sources"]),
+                sentiment_distribution=dict(data["sentiments"]),
+                related_risks=sorted(data["risks"]),
+            )
+        )
 
     items.sort(key=lambda x: x.frequency, reverse=True)
     top_themes = [t.theme for t in items[:top_n]]
     risk_themes = [t.theme for t in items if t.related_risks]
 
-    evidence.append(EvidenceLinkData(
-        target_type="theme_extraction",
-        source_type="computed",
-        source_id="themes:summary",
-        source_detail={
-            "total_themes": len(items),
-            "top_themes": top_themes[:5],
-        },
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            target_type="theme_extraction",
+            source_type="computed",
+            source_id="themes:summary",
+            source_detail={
+                "total_themes": len(items),
+                "top_themes": top_themes[:5],
+            },
+        )
+    )
 
     return ThemeExtractionResult(
         themes=items,

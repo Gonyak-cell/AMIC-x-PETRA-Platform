@@ -60,11 +60,11 @@ class DocumentGenerator(Protocol):
 
 
 class LoopStatus(StrEnum):
-    PLANNING = "PLANNING"         # Phase 1: 구조 기획 중
-    GENERATING = "GENERATING"     # Phase 2: 섹션별 생성-평가 중
-    VALIDATING = "VALIDATING"     # Phase 3: 통합 검증 중
-    COMPLETED = "COMPLETED"       # 완료
-    FAILED = "FAILED"             # 실패
+    PLANNING = "PLANNING"  # Phase 1: 구조 기획 중
+    GENERATING = "GENERATING"  # Phase 2: 섹션별 생성-평가 중
+    VALIDATING = "VALIDATING"  # Phase 3: 통합 검증 중
+    COMPLETED = "COMPLETED"  # 완료
+    FAILED = "FAILED"  # 실패
     BUDGET_EXCEEDED = "BUDGET_EXCEEDED"  # 비용 초과
 
 
@@ -92,9 +92,9 @@ class LoopConfig:
     """Ralph Loop 설정."""
 
     convergence: ConvergenceConfig = field(default_factory=ConvergenceConfig)
-    gate1_first: bool = True              # Gate 1 먼저 실행 (비용 최적화)
+    gate1_first: bool = True  # Gate 1 먼저 실행 (비용 최적화)
     skip_gate2_on_gate1_fail: bool = True  # Gate 1 실패시 Gate 2 건너뜀
-    output_dir: str = ""                  # 최종 출력 디렉토리
+    output_dir: str = ""  # 최종 출력 디렉토리
 
 
 # ── 오케스트레이터 ─────────────────────────────────────────────────────────────
@@ -149,7 +149,11 @@ class RalphLoopOrchestrator:
             outline = await self._phase1_plan(source_data)
 
             # Phase 2: 섹션별 생성-평가
-            logger.info("[Ralph Loop %s] Phase 2: 섹션별 생성-평가 시작 (%d 섹션)", self._session_id[:8], len(outline))
+            logger.info(
+                "[Ralph Loop %s] Phase 2: 섹션별 생성-평가 시작 (%d 섹션)",
+                self._session_id[:8],
+                len(outline),
+            )
             section_artifacts = await self._phase2_iterate(outline, source_data)
 
             # Phase 3: 통합 검증
@@ -282,12 +286,16 @@ class RalphLoopOrchestrator:
             last_result = gate_results[-1] if gate_results else None
             if last_result:
                 verdict = self._convergence.check_section(
-                    section_id, last_result, self._tracker,
+                    section_id,
+                    last_result,
+                    self._tracker,
                 )
                 if verdict.converged:
                     logger.info(
                         "[Ralph Loop] 섹션 %s 수렴 (사유: %s, 반복: %d, 점수: %.2f)",
-                        section_id, verdict.reason, iteration + 1,
+                        section_id,
+                        verdict.reason,
+                        iteration + 1,
                         last_result.weighted_score,
                     )
                     if verdict.reason == "passed":

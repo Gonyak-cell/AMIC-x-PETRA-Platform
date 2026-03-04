@@ -101,7 +101,9 @@ class FDDIndustryModule(ABC):
         if not templates:
             return ""
 
-        parts = [f"### {self.industry_name_en} ({self.industry_name_kr}) 산업 분석 가이드\n"]
+        parts = [
+            f"### {self.industry_name_en} ({self.industry_name_kr}) 산업 분석 가이드\n"
+        ]
         for tmpl in templates:
             if tmpl.emphasis_areas:
                 parts.append("#### 핵심 분석 영역")

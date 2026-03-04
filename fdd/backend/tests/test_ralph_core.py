@@ -34,7 +34,12 @@ class TestConvergenceChecker:
     def setup_method(self):
         self.checker = ConvergenceChecker(ConvergenceConfig())
 
-    def _make_gate_result(self, score: float, passed: bool = False, critical_flags: list[str] | None = None) -> GateResult:
+    def _make_gate_result(
+        self,
+        score: float,
+        passed: bool = False,
+        critical_flags: list[str] | None = None,
+    ) -> GateResult:
         return GateResult(
             gate_name="test",
             verdict=GateVerdict.PASS if passed else GateVerdict.CONDITIONAL_PASS,
@@ -51,7 +56,9 @@ class TestConvergenceChecker:
 
     def test_critical_flag_verdict(self):
         tracker = ProgressTracker()
-        gr = self._make_gate_result(4.5, passed=True, critical_flags=["NUMERICAL_MISMATCH"])
+        gr = self._make_gate_result(
+            4.5, passed=True, critical_flags=["NUMERICAL_MISMATCH"]
+        )
         verdict = self.checker.check_section("test", gr, tracker)
         assert verdict.converged is True
         assert verdict.reason == "critical_flag"
@@ -94,7 +101,12 @@ class TestConvergenceChecker:
 
 
 class TestProgressTracker:
-    def _make_gate_result(self, score: float, issues: list[str] | None = None, suggestions: list[str] | None = None) -> GateResult:
+    def _make_gate_result(
+        self,
+        score: float,
+        issues: list[str] | None = None,
+        suggestions: list[str] | None = None,
+    ) -> GateResult:
         return GateResult(
             gate_name="test",
             verdict=GateVerdict.PASS if score >= 4.0 else GateVerdict.CONDITIONAL_PASS,
@@ -127,8 +139,12 @@ class TestProgressTracker:
 
     def test_get_feedback(self):
         tracker = ProgressTracker()
-        tracker.record("sec_1", 1,
-            self._make_gate_result(3.0, issues=["Fix placeholder"], suggestions=["Add evidence"]),
+        tracker.record(
+            "sec_1",
+            1,
+            self._make_gate_result(
+                3.0, issues=["Fix placeholder"], suggestions=["Add evidence"]
+            ),
         )
         feedback = tracker.get_feedback("sec_1")
         assert "Fix placeholder" in feedback

@@ -265,12 +265,14 @@ def detect_adjustment_candidates(
     industry_rules: list[tuple[list[str], str, Decimal, str]] = []
     if industry_context:
         for rule in industry_context.adjustment_rules:
-            industry_rules.append((
-                [kw.lower() for kw in rule.keywords],
-                rule.category,
-                rule.default_confidence,
-                rule.description_kr,
-            ))
+            industry_rules.append(
+                (
+                    [kw.lower() for kw in rule.keywords],
+                    rule.category,
+                    rule.default_confidence,
+                    rule.description_kr,
+                )
+            )
 
     # Materiality threshold: max(Revenue x 1%, 1,000,000원)
     materiality = max(
@@ -296,7 +298,12 @@ def detect_adjustment_candidates(
         # Method 0: Industry-specific rule matching (highest priority)
         matched = False
         if industry_rules:
-            for rule_keywords, rule_category, rule_confidence, rule_desc in industry_rules:
+            for (
+                rule_keywords,
+                rule_category,
+                rule_confidence,
+                rule_desc,
+            ) in industry_rules:
                 for kw in rule_keywords:
                     if kw in combined_text and entry_id not in seen_entry_ids:
                         candidates.append(

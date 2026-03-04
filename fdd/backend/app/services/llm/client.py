@@ -295,8 +295,12 @@ class GeminiClient(LLMClient):
         token_usage: dict[str, int] = {}
         if hasattr(response, "usage_metadata") and response.usage_metadata:
             token_usage = {
-                "input_tokens": getattr(response.usage_metadata, "prompt_token_count", 0),
-                "output_tokens": getattr(response.usage_metadata, "candidates_token_count", 0),
+                "input_tokens": getattr(
+                    response.usage_metadata, "prompt_token_count", 0
+                ),
+                "output_tokens": getattr(
+                    response.usage_metadata, "candidates_token_count", 0
+                ),
             }
 
         return LLMResponse(

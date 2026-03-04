@@ -177,8 +177,15 @@ class TestRenderTableBlock:
                 TableBlock(
                     title="QoE Bridge",
                     columns=[
-                        TableColumn(key="category", header="Category", align=AlignType.LEFT),
-                        TableColumn(key="amount", header="Amount", align=AlignType.RIGHT, format="currency"),
+                        TableColumn(
+                            key="category", header="Category", align=AlignType.LEFT
+                        ),
+                        TableColumn(
+                            key="amount",
+                            header="Amount",
+                            align=AlignType.RIGHT,
+                            format="currency",
+                        ),
                     ],
                     rows=[
                         {"category": "Revenue", "amount": "10000"},
@@ -335,8 +342,12 @@ class TestRenderMethodologyBlock:
                     title="Methodology",
                     introduction="This report follows FDD standards.",
                     steps=[
-                        MethodologyItem(step=1, title="Data Collection", description="Collect TB/GL"),
-                        MethodologyItem(step=2, title="Analysis", description="Perform QoE analysis"),
+                        MethodologyItem(
+                            step=1, title="Data Collection", description="Collect TB/GL"
+                        ),
+                        MethodologyItem(
+                            step=2, title="Analysis", description="Perform QoE analysis"
+                        ),
                     ],
                     limitations=["Limited access to management"],
                 )
@@ -360,10 +371,18 @@ class TestRenderScopeBlock:
                 ScopeBlock(
                     title="Scope & Definitions",
                     scope_items=[
-                        ScopeItem(category="period", label="Analysis Period", value="FY2025"),
-                        ScopeItem(category="entity", label="Target Entity", value="Target Corp"),
+                        ScopeItem(
+                            category="period", label="Analysis Period", value="FY2025"
+                        ),
+                        ScopeItem(
+                            category="entity",
+                            label="Target Entity",
+                            value="Target Corp",
+                        ),
                     ],
-                    definitions={"EBITDA": "Earnings before interest, taxes, depreciation and amortization"},
+                    definitions={
+                        "EBITDA": "Earnings before interest, taxes, depreciation and amortization"
+                    },
                 )
             ],
         )
@@ -409,7 +428,10 @@ class TestRenderChartBlock:
                 ChartBlock(
                     chart_type=ChartType.WATERFALL,
                     title="EBITDA Bridge",
-                    data=ChartData(categories=["Start", "Adj", "End"], values=[Decimal("100"), Decimal("10"), None]),
+                    data=ChartData(
+                        categories=["Start", "Adj", "End"],
+                        values=[Decimal("100"), Decimal("10"), None],
+                    ),
                 )
             ],
         )
@@ -470,7 +492,10 @@ class TestFullReportRender:
             metadata=ReportMetadata(deal_id="deal-001", deal_name="Full Report Test"),
             sections=[
                 CoverBlock(deal_name="Test Deal", target_name="Target"),
-                KPIBlock(title="Summary", kpis=[{"label": "EBITDA", "value": "100", "unit": "M"}]),
+                KPIBlock(
+                    title="Summary",
+                    kpis=[{"label": "EBITDA", "value": "100", "unit": "M"}],
+                ),
                 TableBlock(
                     title="Bridge",
                     columns=[TableColumn(key="item", header="Item")],
@@ -511,7 +536,7 @@ class TestEdgeCases:
     def test_special_characters_in_text(self):
         """특수 문자 처리."""
         ir = ReportIR(
-            metadata=ReportMetadata(deal_name="Test & <Special> \"Chars\""),
+            metadata=ReportMetadata(deal_name='Test & <Special> "Chars"'),
             sections=[
                 TextBlock(content="Special chars: & < > \" '"),
             ],

@@ -42,18 +42,18 @@ DEFAULT_FDD_ROUTING: dict[str, str] = {
     # ── 레포트 QA (분석+서술 모두에 안 쓴 프로바이더) ──
     "report_qa": "gemini",
     # ── Phase 4: 코멘터리 생성 (12개 신규) ──
-    "revenue_insight": "openai",                    # 수치 기반 매출 인사이트
+    "revenue_insight": "openai",  # 수치 기반 매출 인사이트
     "revenue_concentration_narrative": "anthropic",  # 집중도 리스크 서술
-    "cost_structure_narrative": "openai",            # 원가 구조 분석
-    "personnel_analysis_narrative": "openai",        # 인건비 분석
-    "fcf_bridge_narrative": "openai",               # FCF bridge 코멘터리
-    "capex_analysis_narrative": "anthropic",         # CAPEX 전략적 분석
-    "backlog_analysis_narrative": "openai",          # 수주 분석
-    "negative_margin_narrative": "anthropic",        # 역마진 리스크
-    "consolidation_narrative": "anthropic",          # 연결 코멘터리
-    "fx_impact_narrative": "openai",                 # 환율 영향
-    "interview_structuring": "anthropic",            # 인터뷰 구조화 (장문)
-    "qualitative_risk_extraction": "anthropic",      # 정성적 리스크
+    "cost_structure_narrative": "openai",  # 원가 구조 분석
+    "personnel_analysis_narrative": "openai",  # 인건비 분석
+    "fcf_bridge_narrative": "openai",  # FCF bridge 코멘터리
+    "capex_analysis_narrative": "anthropic",  # CAPEX 전략적 분석
+    "backlog_analysis_narrative": "openai",  # 수주 분석
+    "negative_margin_narrative": "anthropic",  # 역마진 리스크
+    "consolidation_narrative": "anthropic",  # 연결 코멘터리
+    "fx_impact_narrative": "openai",  # 환율 영향
+    "interview_structuring": "anthropic",  # 인터뷰 구조화 (장문)
+    "qualitative_risk_extraction": "anthropic",  # 정성적 리스크
 }
 
 # 폴백 체인: primary → secondary → tertiary
@@ -112,7 +112,9 @@ class FDDModelRouter:
     @property
     def available_providers(self) -> list[str]:
         """사용 가능한 프로바이더 목록."""
-        return [name for name, client in self._providers.items() if client.is_available()]
+        return [
+            name for name, client in self._providers.items() if client.is_available()
+        ]
 
     @property
     def routing_summary(self) -> dict[str, str]:

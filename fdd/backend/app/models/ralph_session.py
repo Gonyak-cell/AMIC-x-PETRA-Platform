@@ -33,7 +33,9 @@ class FddRalphSession(Base):
     __tablename__ = "fdd_ralph_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    deal_id = Column(UUID(as_uuid=True), ForeignKey("deal.id"), nullable=False, index=True)
+    deal_id = Column(
+        UUID(as_uuid=True), ForeignKey("deal.id"), nullable=False, index=True
+    )
     pass_type = Column(String(10), nullable=False)  # "draft" | "final"
     status = Column(String(20), nullable=False, default=FddRalphSessionStatus.PENDING)
 

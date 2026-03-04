@@ -47,12 +47,16 @@ def list_audit_logs(
         stmt = stmt.where(AuditLog.deal_id == deal_id)
         count_stmt = count_stmt.where(AuditLog.deal_id == deal_id)
     if start_date is not None:
-        stmt = stmt.where(AuditLog.created_at >= datetime.combine(start_date, datetime.min.time()))
+        stmt = stmt.where(
+            AuditLog.created_at >= datetime.combine(start_date, datetime.min.time())
+        )
         count_stmt = count_stmt.where(
             AuditLog.created_at >= datetime.combine(start_date, datetime.min.time())
         )
     if end_date is not None:
-        stmt = stmt.where(AuditLog.created_at <= datetime.combine(end_date, datetime.max.time()))
+        stmt = stmt.where(
+            AuditLog.created_at <= datetime.combine(end_date, datetime.max.time())
+        )
         count_stmt = count_stmt.where(
             AuditLog.created_at <= datetime.combine(end_date, datetime.max.time())
         )
@@ -126,9 +130,7 @@ def get_entity_audit_trail(
     return list(db.scalars(stmt).all())
 
 
-def compute_changed_fields(
-    before: dict | None, after: dict | None
-) -> list[str]:
+def compute_changed_fields(before: dict | None, after: dict | None) -> list[str]:
     """before/after 딕셔너리를 비교하여 변경된 필드 목록을 반환한다."""
     if before is None and after is None:
         return []

@@ -17,8 +17,16 @@ class TestStructureInterviews:
     def test_basic_structuring(self):
         """기본 인터뷰 구조화."""
         notes = [
-            {"content": "매출은 전년 대비 성장했습니다.", "source": "management", "topic": "revenue"},
-            {"content": "인건비가 증가하고 있어 비용 관리가 필요합니다.", "source": "employee", "topic": "cost"},
+            {
+                "content": "매출은 전년 대비 성장했습니다.",
+                "source": "management",
+                "topic": "revenue",
+            },
+            {
+                "content": "인건비가 증가하고 있어 비용 관리가 필요합니다.",
+                "source": "employee",
+                "topic": "cost",
+            },
         ]
         result, evidence = structure_interviews(notes)
 
@@ -31,7 +39,10 @@ class TestStructureInterviews:
         """토픽 미지정 시 자동 분류."""
         notes = [
             {"content": "매출액이 크게 증가했습니다.", "source": "management"},
-            {"content": "IT 시스템이 노후화되어 교체가 필요합니다.", "source": "employee"},
+            {
+                "content": "IT 시스템이 노후화되어 교체가 필요합니다.",
+                "source": "employee",
+            },
         ]
         result, _ = structure_interviews(notes)
 
@@ -41,7 +52,10 @@ class TestStructureInterviews:
     def test_risk_flag_detection(self):
         """리스크 키워드 감지."""
         notes = [
-            {"content": "소송 건이 진행 중이며 우발 부채 가능성이 있습니다.", "source": "management"},
+            {
+                "content": "소송 건이 진행 중이며 우발 부채 가능성이 있습니다.",
+                "source": "management",
+            },
         ]
         result, _ = structure_interviews(notes)
 
@@ -52,8 +66,14 @@ class TestStructureInterviews:
     def test_sentiment_analysis(self):
         """감정 분석."""
         notes = [
-            {"content": "매출이 크게 성장하고 시장이 확대되고 있습니다.", "source": "management"},
-            {"content": "매출이 감소하고 시장이 위축되고 있어 위험합니다.", "source": "management"},
+            {
+                "content": "매출이 크게 성장하고 시장이 확대되고 있습니다.",
+                "source": "management",
+            },
+            {
+                "content": "매출이 감소하고 시장이 위축되고 있어 위험합니다.",
+                "source": "management",
+            },
             {"content": "시스템을 교체할 예정입니다.", "source": "management"},
         ]
         result, _ = structure_interviews(notes)
@@ -122,9 +142,13 @@ class TestExtractThemes:
     def test_basic_extraction(self):
         """기본 테마 추출."""
         notes = [
-            InterviewNote("INT-001", "management", "revenue", "매출 성장", themes=["revenue"]),
+            InterviewNote(
+                "INT-001", "management", "revenue", "매출 성장", themes=["revenue"]
+            ),
             InterviewNote("INT-002", "employee", "cost", "비용 관리", themes=["cost"]),
-            InterviewNote("INT-003", "management", "revenue", "매출 확대", themes=["revenue"]),
+            InterviewNote(
+                "INT-003", "management", "revenue", "매출 확대", themes=["revenue"]
+            ),
         ]
         result, _ = extract_themes(notes)
 
@@ -135,7 +159,9 @@ class TestExtractThemes:
     def test_multi_source_tracking(self):
         """출처 다양성 추적."""
         notes = [
-            InterviewNote("INT-001", "management", "revenue", "매출", themes=["revenue"]),
+            InterviewNote(
+                "INT-001", "management", "revenue", "매출", themes=["revenue"]
+            ),
             InterviewNote("INT-002", "employee", "revenue", "매출", themes=["revenue"]),
         ]
         result, _ = extract_themes(notes)
@@ -146,22 +172,49 @@ class TestExtractThemes:
     def test_sentiment_distribution(self):
         """테마별 감정 분포."""
         notes = [
-            InterviewNote("INT-001", "mgmt", "rev", "good", themes=["revenue"], sentiment="positive"),
-            InterviewNote("INT-002", "mgmt", "rev", "bad", themes=["revenue"], sentiment="negative"),
-            InterviewNote("INT-003", "mgmt", "rev", "ok", themes=["revenue"], sentiment="neutral"),
+            InterviewNote(
+                "INT-001",
+                "mgmt",
+                "rev",
+                "good",
+                themes=["revenue"],
+                sentiment="positive",
+            ),
+            InterviewNote(
+                "INT-002",
+                "mgmt",
+                "rev",
+                "bad",
+                themes=["revenue"],
+                sentiment="negative",
+            ),
+            InterviewNote(
+                "INT-003", "mgmt", "rev", "ok", themes=["revenue"], sentiment="neutral"
+            ),
         ]
         result, _ = extract_themes(notes)
 
         rev = next(t for t in result.themes if t.theme == "revenue")
-        assert rev.sentiment_distribution == {"positive": 1, "neutral": 1, "negative": 1}
+        assert rev.sentiment_distribution == {
+            "positive": 1,
+            "neutral": 1,
+            "negative": 1,
+        }
 
     def test_risk_themes(self):
         """리스크 관련 테마."""
         notes = [
-            InterviewNote("INT-001", "mgmt", "compliance", "소송",
-                          themes=["compliance"], risk_flags=["소송"]),
-            InterviewNote("INT-002", "mgmt", "revenue", "매출 성장",
-                          themes=["revenue"]),
+            InterviewNote(
+                "INT-001",
+                "mgmt",
+                "compliance",
+                "소송",
+                themes=["compliance"],
+                risk_flags=["소송"],
+            ),
+            InterviewNote(
+                "INT-002", "mgmt", "revenue", "매출 성장", themes=["revenue"]
+            ),
         ]
         result, _ = extract_themes(notes)
 

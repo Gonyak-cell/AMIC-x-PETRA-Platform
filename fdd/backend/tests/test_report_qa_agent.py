@@ -20,27 +20,29 @@ def test_number_accuracy_detection():
     """parse_response가 수치 불일치 이슈를 올바르게 파싱해야 한다."""
     agent = ReportQAAgent()
 
-    raw_response = json.dumps({
-        "overall_score": 3,
-        "issues": [
-            {
-                "severity": "major",
-                "category": "number_accuracy",
-                "location": "executive_summary.adjusted_ebitda",
-                "description": "Adjusted EBITDA 15.2B in report vs 14.8B in source",
-                "expected": "14,800,000,000",
-                "found": "15,200,000,000",
-            },
-            {
-                "severity": "minor",
-                "category": "terminology",
-                "location": "nwc_section.title",
-                "description": "운전자본 → 순운전자본으로 수정 필요",
-            },
-        ],
-        "passed_checks": ["cross_reference", "completeness"],
-        "summary": "Adjusted EBITDA 수치 불일치 발견. 나머지 항목은 정상.",
-    })
+    raw_response = json.dumps(
+        {
+            "overall_score": 3,
+            "issues": [
+                {
+                    "severity": "major",
+                    "category": "number_accuracy",
+                    "location": "executive_summary.adjusted_ebitda",
+                    "description": "Adjusted EBITDA 15.2B in report vs 14.8B in source",
+                    "expected": "14,800,000,000",
+                    "found": "15,200,000,000",
+                },
+                {
+                    "severity": "minor",
+                    "category": "terminology",
+                    "location": "nwc_section.title",
+                    "description": "운전자본 → 순운전자본으로 수정 필요",
+                },
+            ],
+            "passed_checks": ["cross_reference", "completeness"],
+            "summary": "Adjusted EBITDA 수치 불일치 발견. 나머지 항목은 정상.",
+        }
+    )
 
     result = agent.parse_response(raw_response)
 
@@ -48,7 +50,9 @@ def test_number_accuracy_detection():
     assert len(result["issues"]) == 2
     assert result["issues"][0]["severity"] == "major"
     assert result["issues"][0]["category"] == "number_accuracy"
-    assert "14.8B" in result["issues"][0]["description"] or "14,800" in result["issues"][0].get("expected", "")
+    assert "14.8B" in result["issues"][0]["description"] or "14,800" in result[
+        "issues"
+    ][0].get("expected", "")
     assert "cross_reference" in result["passed_checks"]
     assert "completeness" in result["passed_checks"]
 

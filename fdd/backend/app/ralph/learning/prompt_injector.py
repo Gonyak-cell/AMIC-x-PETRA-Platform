@@ -47,5 +47,7 @@ class LearningPromptInjector:
             return existing_feedback
 
         enriched = list(existing_feedback)
-        enriched.append("[학습 패턴] " + " | ".join(p for p in patterns if not p.startswith("##")))
+        enriched.append(
+            "[학습 패턴] " + " | ".join(p for p in patterns if not p.startswith("##"))
+        )
         return enriched

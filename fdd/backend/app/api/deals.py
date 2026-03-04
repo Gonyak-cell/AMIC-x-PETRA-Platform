@@ -108,12 +108,27 @@ def update_deal(
 
     # Whitelist of fields allowed for update — prevents arbitrary attribute injection
     _UPDATABLE_FIELDS = {
-        "name", "deal_type", "base_currency", "reference_date",
-        "period_start", "period_end", "status",
-        "client_name", "client_contact_name", "client_contact_email",
-        "target_company_name", "team_partner_id", "team_manager_id",
-        "scope_qoe", "scope_nwc", "scope_debt", "industry", "current_phase",
-        "deal_structure", "investment_type", "seller_type",
+        "name",
+        "deal_type",
+        "base_currency",
+        "reference_date",
+        "period_start",
+        "period_end",
+        "status",
+        "client_name",
+        "client_contact_name",
+        "client_contact_email",
+        "target_company_name",
+        "team_partner_id",
+        "team_manager_id",
+        "scope_qoe",
+        "scope_nwc",
+        "scope_debt",
+        "industry",
+        "current_phase",
+        "deal_structure",
+        "investment_type",
+        "seller_type",
     }
 
     old_values = {}
@@ -404,7 +419,10 @@ def get_deal_summary(
     # QoE — use select() API for consistency
     qoe = db.scalar(
         select(QoECalculation)
-        .where(QoECalculation.deal_id == deal_id, QoECalculation.status == QoEStatus.APPROVED)
+        .where(
+            QoECalculation.deal_id == deal_id,
+            QoECalculation.status == QoEStatus.APPROVED,
+        )
         .order_by(QoECalculation.created_at.desc())
         .limit(1)
     )
@@ -418,7 +436,10 @@ def get_deal_summary(
     # NWC
     nwc = db.scalar(
         select(NWCCalculation)
-        .where(NWCCalculation.deal_id == deal_id, NWCCalculation.status == NWCStatus.APPROVED)
+        .where(
+            NWCCalculation.deal_id == deal_id,
+            NWCCalculation.status == NWCStatus.APPROVED,
+        )
         .order_by(NWCCalculation.created_at.desc())
         .limit(1)
     )
@@ -432,7 +453,10 @@ def get_deal_summary(
     # Net Debt
     debt = db.scalar(
         select(NetDebtCalculation)
-        .where(NetDebtCalculation.deal_id == deal_id, NetDebtCalculation.status == DebtStatus.APPROVED)
+        .where(
+            NetDebtCalculation.deal_id == deal_id,
+            NetDebtCalculation.status == DebtStatus.APPROVED,
+        )
         .order_by(NetDebtCalculation.created_at.desc())
         .limit(1)
     )

@@ -338,10 +338,24 @@ def test_g_nwc_15_below_line_excluded_from_nwc():
 def test_g_nwc_16_monthly_trend_basic():
     """G-NWC-16: 월별 CA/CL/NWC 정확도."""
     items = [
-        _item("1100", "매출채권", "AR", "ABOVE_LINE", "5000000", True,
-              {"2025-01": "4500000.0000", "2025-02": "5000000.0000"}),
-        _item("2000", "매입채무", "AP", "ABOVE_LINE", "3000000", False,
-              {"2025-01": "2800000.0000", "2025-02": "3000000.0000"}),
+        _item(
+            "1100",
+            "매출채권",
+            "AR",
+            "ABOVE_LINE",
+            "5000000",
+            True,
+            {"2025-01": "4500000.0000", "2025-02": "5000000.0000"},
+        ),
+        _item(
+            "2000",
+            "매입채무",
+            "AP",
+            "ABOVE_LINE",
+            "3000000",
+            False,
+            {"2025-01": "2800000.0000", "2025-02": "3000000.0000"},
+        ),
     ]
     result = calculate_nwc(items)
     assert result.monthly_trend["2025-01"]["current_assets"] == "4500000.0000"
@@ -353,8 +367,15 @@ def test_g_nwc_16_monthly_trend_basic():
 def test_g_nwc_17_monthly_single_month():
     """G-NWC-17: 단일 월."""
     items = [
-        _item("1100", "매출채권", "AR", "ABOVE_LINE", "5000000", True,
-              {"2025-06": "5000000.0000"}),
+        _item(
+            "1100",
+            "매출채권",
+            "AR",
+            "ABOVE_LINE",
+            "5000000",
+            True,
+            {"2025-06": "5000000.0000"},
+        ),
     ]
     result = calculate_nwc(items)
     assert len(result.monthly_trend) == 1
@@ -366,12 +387,33 @@ def test_g_nwc_17_monthly_single_month():
 def test_g_nwc_18_monthly_multi_account():
     """G-NWC-18: 여러 계정 월별 합산."""
     items = [
-        _item("1100", "매출채권", "AR", "ABOVE_LINE", "5000000", True,
-              {"2025-01": "4000000.0000"}),
-        _item("1200", "재고자산", "INVENTORY", "ABOVE_LINE", "8000000", True,
-              {"2025-01": "7000000.0000"}),
-        _item("2000", "매입채무", "AP", "ABOVE_LINE", "3000000", False,
-              {"2025-01": "2500000.0000"}),
+        _item(
+            "1100",
+            "매출채권",
+            "AR",
+            "ABOVE_LINE",
+            "5000000",
+            True,
+            {"2025-01": "4000000.0000"},
+        ),
+        _item(
+            "1200",
+            "재고자산",
+            "INVENTORY",
+            "ABOVE_LINE",
+            "8000000",
+            True,
+            {"2025-01": "7000000.0000"},
+        ),
+        _item(
+            "2000",
+            "매입채무",
+            "AP",
+            "ABOVE_LINE",
+            "3000000",
+            False,
+            {"2025-01": "2500000.0000"},
+        ),
     ]
     result = calculate_nwc(items)
     # CA = 4M + 7M = 11M, CL = 2.5M
@@ -383,8 +425,15 @@ def test_g_nwc_18_monthly_multi_account():
 def test_g_nwc_19_monthly_asset_only():
     """G-NWC-19: 월별 자산만 → CL = 0."""
     items = [
-        _item("1100", "매출채권", "AR", "ABOVE_LINE", "5000000", True,
-              {"2025-03": "6000000.0000"}),
+        _item(
+            "1100",
+            "매출채권",
+            "AR",
+            "ABOVE_LINE",
+            "5000000",
+            True,
+            {"2025-03": "6000000.0000"},
+        ),
     ]
     result = calculate_nwc(items)
     assert result.monthly_trend["2025-03"]["current_liabilities"] == "0.0000"
@@ -393,8 +442,15 @@ def test_g_nwc_19_monthly_asset_only():
 def test_g_nwc_20_monthly_liability_only():
     """G-NWC-20: 월별 부채만 → CA = 0, NWC 음수."""
     items = [
-        _item("2000", "매입채무", "AP", "ABOVE_LINE", "4000000", False,
-              {"2025-03": "4000000.0000"}),
+        _item(
+            "2000",
+            "매입채무",
+            "AP",
+            "ABOVE_LINE",
+            "4000000",
+            False,
+            {"2025-03": "4000000.0000"},
+        ),
     ]
     result = calculate_nwc(items)
     assert result.monthly_trend["2025-03"]["current_assets"] == "0.0000"

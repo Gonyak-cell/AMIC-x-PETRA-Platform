@@ -13,6 +13,7 @@ from app.engines.revenue_engine import (
 
 # ── Helpers ──────────────────────────────────────────────
 
+
 def _entry(
     customer: str = "",
     product: str = "",
@@ -65,11 +66,15 @@ class TestComputeRevenueBreakdown:
             _entry(customer="C사", amount="20000", period="FY2024"),
         ]
         result, evidence = compute_revenue_breakdown(
-            entries, dimension="customer", dimension_key="customer_name",
+            entries,
+            dimension="customer",
+            dimension_key="customer_name",
         )
 
         assert result.dimension == "customer"
-        assert result.total_revenue == Decimal("100000.0000")  # sum of all items in latest period
+        assert result.total_revenue == Decimal(
+            "100000.0000"
+        )  # sum of all items in latest period
         assert len(result.breakdown) == 3
         assert result.breakdown[0].name == "A사"
         assert result.breakdown[0].rank == 1
@@ -88,7 +93,10 @@ class TestComputeRevenueBreakdown:
             _entry(customer="F사", amount="2000"),
         ]
         result, _ = compute_revenue_breakdown(
-            entries, dimension="customer", dimension_key="customer_name", top_n=3,
+            entries,
+            dimension="customer",
+            dimension_key="customer_name",
+            top_n=3,
         )
 
         assert len(result.breakdown) == 4  # Top 3 + Others
@@ -101,7 +109,9 @@ class TestComputeRevenueBreakdown:
             _entry(customer="기타", amount="5000"),
         ]
         result, _ = compute_revenue_breakdown(
-            entries, dimension="customer", dimension_key="customer_name",
+            entries,
+            dimension="customer",
+            dimension_key="customer_name",
         )
 
         assert result.concentration_index > Decimal("2500")
@@ -109,7 +119,9 @@ class TestComputeRevenueBreakdown:
 
     def test_empty_entries(self):
         result, _ = compute_revenue_breakdown(
-            [], dimension="customer", dimension_key="customer_name",
+            [],
+            dimension="customer",
+            dimension_key="customer_name",
         )
         assert result.total_revenue == Decimal("0")
         assert len(result.warnings) > 0
@@ -120,7 +132,9 @@ class TestComputeRevenueBreakdown:
             _entry(customer="A사", amount="120000", period="FY2024"),
         ]
         result, _ = compute_revenue_breakdown(
-            entries, dimension="customer", dimension_key="customer_name",
+            entries,
+            dimension="customer",
+            dimension_key="customer_name",
         )
 
         a_item = result.breakdown[0]
@@ -133,7 +147,9 @@ class TestComputeRevenueBreakdown:
             _entry(product="제품B", amount="40000"),
         ]
         result, _ = compute_revenue_breakdown(
-            entries, dimension="product", dimension_key="product_name",
+            entries,
+            dimension="product",
+            dimension_key="product_name",
         )
         assert result.dimension == "product"
         assert len(result.breakdown) == 2

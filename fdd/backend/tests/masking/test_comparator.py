@@ -55,10 +55,12 @@ def test_compare_unmasked_kpi():
     internal = _make_internal_ir()
     external = {
         "distribution_mode": "EXTERNAL_BUYER",
-        "sections": [{
-            "id": "qoe",
-            "blocks": [{"type": "kpi", "value": "1234567"}],
-        }],
+        "sections": [
+            {
+                "id": "qoe",
+                "blocks": [{"type": "kpi", "value": "1234567"}],
+            }
+        ],
     }
     result = compare_reports(internal, external, DistributionMode.EXTERNAL_BUYER)
     kpi_issues = [i for i in result.issues if "KPI" in i.message]
@@ -94,12 +96,6 @@ def test_leak_check_custom_pattern():
 
 
 def test_leak_check_nested():
-    ir = {
-        "sections": [{
-            "blocks": [{
-                "cells": [{"value": "admin@fdd.dev"}]
-            }]
-        }]
-    }
+    ir = {"sections": [{"blocks": [{"cells": [{"value": "admin@fdd.dev"}]}]}]}
     issues = check_sensitive_data_leak(ir)
     assert any("이메일" in i.message for i in issues)

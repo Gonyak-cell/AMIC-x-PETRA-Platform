@@ -87,27 +87,33 @@ def export_audit_logs(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "Timestamp",
-        "User",
-        "Action",
-        "Entity Type",
-        "Entity ID",
-        "Deal ID",
-        "IP Address",
-        "Changed Fields",
-    ])
+    writer.writerow(
+        [
+            "Timestamp",
+            "User",
+            "Action",
+            "Entity Type",
+            "Entity ID",
+            "Deal ID",
+            "IP Address",
+            "Changed Fields",
+        ]
+    )
     for item in items:
-        writer.writerow([
-            item.created_at.isoformat() if item.created_at else "",
-            item.user_email or item.actor,
-            item.action.value if hasattr(item.action, "value") else str(item.action),
-            item.entity_type,
-            str(item.entity_id),
-            str(item.deal_id) if item.deal_id else "",
-            item.ip_address or "",
-            ", ".join(item.changed_fields) if item.changed_fields else "",
-        ])
+        writer.writerow(
+            [
+                item.created_at.isoformat() if item.created_at else "",
+                item.user_email or item.actor,
+                item.action.value
+                if hasattr(item.action, "value")
+                else str(item.action),
+                item.entity_type,
+                str(item.entity_id),
+                str(item.deal_id) if item.deal_id else "",
+                item.ip_address or "",
+                ", ".join(item.changed_fields) if item.changed_fields else "",
+            ]
+        )
 
     csv_bytes = output.getvalue().encode("utf-8-sig")
     filename = f"audit_log_export_{date.today().isoformat()}.csv"

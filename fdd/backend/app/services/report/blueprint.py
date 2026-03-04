@@ -16,6 +16,7 @@ from app.services.report.deal_profile import (
 
 # ── 시트별 메타데이터 ──────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class SheetBlueprint:
     """개별 시트 생성 청사진."""
@@ -24,10 +25,12 @@ class SheetBlueprint:
     title_ko: str
     title_en: str
     category: str
-    tab_color: str = "1F4E79"       # 기본 Big 4 네이비
+    tab_color: str = "1F4E79"  # 기본 Big 4 네이비
     skeleton_key: str | None = None  # YAML 스켈레톤 참조 키
-    render_type: str = "table"       # "table" | "cover" | "index" | "commentary" | "checklist"
-    order: int = 0                   # 정렬 순서
+    render_type: str = (
+        "table"  # "table" | "cover" | "index" | "commentary" | "checklist"
+    )
+    order: int = 0  # 정렬 순서
 
 
 # ── 카테고리별 탭 색상 ─────────────────────────────────────
@@ -164,15 +167,16 @@ class WorkbookBlueprint:
             if s.sheet_id == "index":
                 continue  # Index 자신은 제외
             cat_list = categories.setdefault(s.category, [])
-            cat_list.append({
-                "sheet_id": s.sheet_id,
-                "title_ko": s.title_ko,
-                "title_en": s.title_en,
-            })
+            cat_list.append(
+                {
+                    "sheet_id": s.sheet_id,
+                    "title_ko": s.title_ko,
+                    "title_en": s.title_en,
+                }
+            )
 
         return [
-            {"category": cat, "sheets": sheets}
-            for cat, sheets in categories.items()
+            {"category": cat, "sheets": sheets} for cat, sheets in categories.items()
         ]
 
     def get_summary(self) -> dict[str, Any]:

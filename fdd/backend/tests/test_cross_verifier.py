@@ -103,12 +103,16 @@ def test_blind_mode_independent():
 
     # 호출된 프롬프트를 확인
     call_kwargs = reviewer_client.chat.call_args
-    user_prompt = call_kwargs.kwargs.get("user_prompt", "") or call_kwargs[1].get("user_prompt", "")
+    user_prompt = call_kwargs.kwargs.get("user_prompt", "") or call_kwargs[1].get(
+        "user_prompt", ""
+    )
     if not user_prompt:
         # positional args fallback
         user_prompt = str(call_kwargs)
 
-    system_prompt = call_kwargs.kwargs.get("system_prompt", "") or call_kwargs[1].get("system_prompt", "")
+    system_prompt = call_kwargs.kwargs.get("system_prompt", "") or call_kwargs[1].get(
+        "system_prompt", ""
+    )
 
     # BLIND 모드: "Junior Analyst" 키워드가 없어야 함
     assert "Junior Analyst" not in system_prompt
@@ -160,7 +164,8 @@ def test_assessment_mismatch_detected():
     assert len(result.disagreements) >= 1
 
     assessment_disagreement = next(
-        (d for d in result.disagreements if d.field == "assessment"), None,
+        (d for d in result.disagreements if d.field == "assessment"),
+        None,
     )
     assert assessment_disagreement is not None
     assert assessment_disagreement.level == DisagreementLevel.MAJOR
@@ -175,10 +180,20 @@ def test_amount_variance_thresholds():
     """금액 분산이 5%+ → MODERATE, 15%+ → MAJOR로 판정되어야 한다."""
     # Case A: 7% 차이 → MODERATE
     writer_items_a = [
-        {"entry_id": "GL-A", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
+        {
+            "entry_id": "GL-A",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
     ]
     reviewer_items_a = [
-        {"entry_id": "GL-A", "assessment": "NON_RECURRING", "amount": 107000, "rationale": ""},
+        {
+            "entry_id": "GL-A",
+            "assessment": "NON_RECURRING",
+            "amount": 107000,
+            "rationale": "",
+        },
     ]
 
     reviewer_client_a = _make_reviewer_client(reviewer_items_a)
@@ -189,21 +204,34 @@ def test_amount_variance_thresholds():
         analysis_type="qoe",
     )
     result_a = agent_a.run_cross_verification(
-        _make_writer_result(writer_items_a), _make_source_data(), _make_context(),
+        _make_writer_result(writer_items_a),
+        _make_source_data(),
+        _make_context(),
     )
 
     amount_d_a = next(
-        (d for d in result_a.disagreements if d.field == "amount"), None,
+        (d for d in result_a.disagreements if d.field == "amount"),
+        None,
     )
     assert amount_d_a is not None
     assert amount_d_a.level == DisagreementLevel.MODERATE
 
     # Case B: 20% 차이 → MAJOR
     writer_items_b = [
-        {"entry_id": "GL-B", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
+        {
+            "entry_id": "GL-B",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
     ]
     reviewer_items_b = [
-        {"entry_id": "GL-B", "assessment": "NON_RECURRING", "amount": 120000, "rationale": ""},
+        {
+            "entry_id": "GL-B",
+            "assessment": "NON_RECURRING",
+            "amount": 120000,
+            "rationale": "",
+        },
     ]
 
     reviewer_client_b = _make_reviewer_client(reviewer_items_b)
@@ -214,11 +242,14 @@ def test_amount_variance_thresholds():
         analysis_type="qoe",
     )
     result_b = agent_b.run_cross_verification(
-        _make_writer_result(writer_items_b), _make_source_data(), _make_context(),
+        _make_writer_result(writer_items_b),
+        _make_source_data(),
+        _make_context(),
     )
 
     amount_d_b = next(
-        (d for d in result_b.disagreements if d.field == "amount"), None,
+        (d for d in result_b.disagreements if d.field == "amount"),
+        None,
     )
     assert amount_d_b is not None
     assert amount_d_b.level == DisagreementLevel.MAJOR
@@ -262,7 +293,8 @@ def test_auto_resolve_unclear():
 
     assert len(result.disagreements) >= 1
     assessment_d = next(
-        (d for d in result.disagreements if d.field == "assessment"), None,
+        (d for d in result.disagreements if d.field == "assessment"),
+        None,
     )
     assert assessment_d is not None
     assert assessment_d.resolved is True
@@ -276,11 +308,26 @@ def test_auto_resolve_unclear():
 def test_reviewer_only_items():
     """Reviewer만 발견한 항목이 reviewer_only_items에 포함되어야 한다."""
     writer_items = [
-        {"entry_id": "GL-001", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
+        {
+            "entry_id": "GL-001",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
     ]
     reviewer_items = [
-        {"entry_id": "GL-001", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
-        {"entry_id": "GL-002", "assessment": "OPERATING", "amount": 50000, "rationale": "Missed by writer"},
+        {
+            "entry_id": "GL-001",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
+        {
+            "entry_id": "GL-002",
+            "assessment": "OPERATING",
+            "amount": 50000,
+            "rationale": "Missed by writer",
+        },
     ]
 
     reviewer_client = _make_reviewer_client(reviewer_items)
@@ -307,7 +354,12 @@ def test_reviewer_only_items():
 def test_fallback_provider():
     """Reviewer LLM 호출이 실패하면 graceful하게 건너뛰어야 한다."""
     writer_items = [
-        {"entry_id": "GL-001", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
+        {
+            "entry_id": "GL-001",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
     ]
 
     # Reviewer가 예외를 던지도록 설정
@@ -341,7 +393,12 @@ def test_fallback_provider():
 def test_cost_limit():
     """누적 비용이 max_cost_usd를 초과하면 교차검증을 건너뛰어야 한다."""
     writer_items = [
-        {"entry_id": "GL-001", "assessment": "NON_RECURRING", "amount": 100000, "rationale": ""},
+        {
+            "entry_id": "GL-001",
+            "assessment": "NON_RECURRING",
+            "amount": 100000,
+            "rationale": "",
+        },
     ]
 
     reviewer_client = _make_reviewer_client([])
@@ -409,7 +466,8 @@ def test_auto_resolve_confidence_gap():
 
     assert len(result.disagreements) >= 1
     assessment_d = next(
-        (d for d in result.disagreements if d.field == "assessment"), None,
+        (d for d in result.disagreements if d.field == "assessment"),
+        None,
     )
     assert assessment_d is not None
     assert assessment_d.resolved is True

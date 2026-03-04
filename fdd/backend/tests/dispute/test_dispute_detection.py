@@ -43,12 +43,17 @@ def sample_report_ir_with_adjustments() -> ReportIR:
             TableBlock(
                 title="qoe_bridge",
                 columns=[
-                    TableColumn(key="category", header="Category", align=AlignType.LEFT),
+                    TableColumn(
+                        key="category", header="Category", align=AlignType.LEFT
+                    ),
                     TableColumn(key="amount", header="Amount", align=AlignType.RIGHT),
                 ],
                 rows=[
                     {"category": "Reported EBITDA", "amount": "10,000"},
-                    {"category": "Non-recurring adjustment", "amount": "1,500"},  # 15% - large
+                    {
+                        "category": "Non-recurring adjustment",
+                        "amount": "1,500",
+                    },  # 15% - large
                     {"category": "Normalization", "amount": "200"},  # 2% - small
                     {"category": "Adjusted EBITDA", "amount": "11,700"},
                 ],
@@ -66,20 +71,30 @@ def sample_report_ir_with_related_party() -> ReportIR:
             TableBlock(
                 title="transactions",
                 columns=[
-                    TableColumn(key="description", header="Description", align=AlignType.LEFT),
+                    TableColumn(
+                        key="description", header="Description", align=AlignType.LEFT
+                    ),
                     TableColumn(key="amount", header="Amount", align=AlignType.RIGHT),
                 ],
                 rows=[
                     {"description": "Regular vendor payment", "amount": "500"},
-                    {"description": "관계사 대여금", "amount": "3,000"},  # Related party
-                    {"description": "Intercompany transfer", "amount": "2,000"},  # Related party
+                    {
+                        "description": "관계사 대여금",
+                        "amount": "3,000",
+                    },  # Related party
+                    {
+                        "description": "Intercompany transfer",
+                        "amount": "2,000",
+                    },  # Related party
                 ],
             ),
             ClaimBlock(
                 claim_text="The company has significant affiliate transactions.",
                 verified=True,
                 evidence_refs=[
-                    EvidenceRef(evidence_id="ev1", source_type="FILE", source_id="doc1"),
+                    EvidenceRef(
+                        evidence_id="ev1", source_type="FILE", source_id="doc1"
+                    ),
                 ],
             ),
         ],
@@ -96,7 +111,9 @@ def sample_report_ir_with_claims() -> ReportIR:
                 claim_text="Management estimates future growth at 10%.",
                 verified=True,
                 evidence_refs=[
-                    EvidenceRef(evidence_id="ev1", source_type="FILE", source_id="doc1"),
+                    EvidenceRef(
+                        evidence_id="ev1", source_type="FILE", source_id="doc1"
+                    ),
                 ],
             ),
             ClaimBlock(
@@ -214,7 +231,9 @@ class TestDetectRelatedPartyTransactions:
             sections=[
                 TableBlock(
                     title="test",
-                    columns=[TableColumn(key="desc", header="Desc", align=AlignType.LEFT)],
+                    columns=[
+                        TableColumn(key="desc", header="Desc", align=AlignType.LEFT)
+                    ],
                     rows=[{"desc": "CUSTOM_KEYWORD transaction"}],
                 )
             ]
@@ -344,7 +363,10 @@ class TestIdentifyDisputeSensitiveItems:
 
         # Should find unverified evidence and subjective judgments
         categories = set(result.summary.keys())
-        assert DisputeCategory.UNVERIFIED_EVIDENCE in categories or DisputeCategory.SUBJECTIVE_JUDGMENT in categories
+        assert (
+            DisputeCategory.UNVERIFIED_EVIDENCE in categories
+            or DisputeCategory.SUBJECTIVE_JUDGMENT in categories
+        )
 
     def test_empty_report(self):
         """빈 리포트 처리."""

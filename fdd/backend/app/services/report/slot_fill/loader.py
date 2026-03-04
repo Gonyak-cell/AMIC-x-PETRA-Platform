@@ -169,7 +169,9 @@ class TemplateLoader:
         return templates
 
     def load_industry_override(
-        self, section_id: str, industry: str,
+        self,
+        section_id: str,
+        industry: str,
     ) -> SectionTemplate | None:
         """산업별 오버라이드 YAML을 로드한다."""
         path = self._dir / "industry_variants" / industry / f"{section_id}.yaml"

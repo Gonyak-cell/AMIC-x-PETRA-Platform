@@ -123,8 +123,7 @@ class ChecklistService:
 
         # 리뷰되지 않은 항목 확인
         pending_items = [
-            i for i in checklist.items
-            if i.status == ChecklistItemStatus.AUTO_GENERATED
+            i for i in checklist.items if i.status == ChecklistItemStatus.AUTO_GENERATED
         ]
         if pending_items:
             logger.warning(

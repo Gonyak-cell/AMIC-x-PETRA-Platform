@@ -223,7 +223,11 @@ def validate_chart_data(
             # 첫 번째 숫자 필드 찾기 (간단한 휴리스틱)
             for key, value in row.items():
                 if isinstance(value, (int, float, Decimal)) or (
-                    isinstance(value, str) and value.replace(",", "").replace("-", "").replace(".", "").isdigit()
+                    isinstance(value, str)
+                    and value.replace(",", "")
+                    .replace("-", "")
+                    .replace(".", "")
+                    .isdigit()
                 ):
                     try:
                         table_val = Decimal(str(value).replace(",", ""))

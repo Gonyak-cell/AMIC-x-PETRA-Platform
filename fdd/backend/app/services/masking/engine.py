@@ -110,13 +110,22 @@ class MaskingEngine:
             return f"[계정{self._get_hash_suffix(text)}]"
         return text
 
-    def mask_dict(self, data: dict[str, Any], sensitive_keys: set[str] | None = None) -> dict[str, Any]:
+    def mask_dict(
+        self, data: dict[str, Any], sensitive_keys: set[str] | None = None
+    ) -> dict[str, Any]:
         """딕셔너리의 민감 필드를 마스킹한다."""
         if self.config.mode == DistributionMode.INTERNAL:
             return data
 
         if sensitive_keys is None:
-            sensitive_keys = {"company_name", "person_name", "account_name", "amount", "email", "phone"}
+            sensitive_keys = {
+                "company_name",
+                "person_name",
+                "account_name",
+                "amount",
+                "email",
+                "phone",
+            }
 
         result = {}
         for key, value in data.items():
@@ -131,7 +140,9 @@ class MaskingEngine:
                 result[key] = self.mask_dict(value, sensitive_keys)
             elif isinstance(value, list):
                 result[key] = [
-                    self.mask_dict(item, sensitive_keys) if isinstance(item, dict) else item
+                    self.mask_dict(item, sensitive_keys)
+                    if isinstance(item, dict)
+                    else item
                     for item in value
                 ]
             else:

@@ -162,7 +162,9 @@ class TestAmountPatternGolden:
         """결재 한도의 97% (1억 기준)."""
         entries = [_entry("E1", "97000000")]
         results = detect_amount_pattern_anomalies(entries, Decimal("10000000000"))
-        threshold_results = [r for r in results if r.pattern_type == "threshold_clustering"]
+        threshold_results = [
+            r for r in results if r.pattern_type == "threshold_clustering"
+        ]
         assert len(threshold_results) == 1
 
     def test_golden_14_high_revenue_ratio(self):

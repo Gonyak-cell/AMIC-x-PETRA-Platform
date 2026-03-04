@@ -271,9 +271,13 @@ class FDDRalphService:
         """확정된 체크리스트에서 CORRECTED/FLAGGED 항목을 추출한다."""
         from app.models.fdd_checklist import FddChecklist
 
-        checklist = self._db.query(FddChecklist).filter(
-            FddChecklist.id == checklist_id,
-        ).first()
+        checklist = (
+            self._db.query(FddChecklist)
+            .filter(
+                FddChecklist.id == checklist_id,
+            )
+            .first()
+        )
 
         if not checklist:
             return []
@@ -282,16 +286,22 @@ class FDDRalphService:
         for item in checklist.items:
             status_val = item.status.value if item.status else ""
             if status_val in ("CORRECTED", "FLAGGED"):
-                corrections.append({
-                    "category": item.category.value if item.category else "",
-                    "title": item.title,
-                    "status": status_val,
-                    "auto_finding": item.auto_finding or "",
-                    "auto_amount": str(item.auto_amount) if item.auto_amount else "",
-                    "user_correction": item.user_correction or "",
-                    "user_amount": str(item.user_amount) if item.user_amount else "",
-                    "severity": item.severity.value if item.severity else "",
-                })
+                corrections.append(
+                    {
+                        "category": item.category.value if item.category else "",
+                        "title": item.title,
+                        "status": status_val,
+                        "auto_finding": item.auto_finding or "",
+                        "auto_amount": str(item.auto_amount)
+                        if item.auto_amount
+                        else "",
+                        "user_correction": item.user_correction or "",
+                        "user_amount": str(item.user_amount)
+                        if item.user_amount
+                        else "",
+                        "severity": item.severity.value if item.severity else "",
+                    }
+                )
 
         return corrections
 
@@ -307,7 +317,9 @@ class FDDRalphService:
                 for kpi in kpis:
                     label = (kpi.get("label") or "").lower()
                     if "ebitda" in label:
-                        source.setdefault("qoe", {})["adjusted_ebitda"] = kpi.get("value", "")
+                        source.setdefault("qoe", {})["adjusted_ebitda"] = kpi.get(
+                            "value", ""
+                        )
                     elif "nwc" in label or "working" in label:
                         source.setdefault("nwc", {})["total_nwc"] = kpi.get("value", "")
                     elif "debt" in label:
@@ -320,7 +332,9 @@ class FDDRalphService:
                 elif "nwc" in title or "working" in title:
                     source.setdefault("nwc", {})["table_data"] = section.get("rows", [])
                 elif "debt" in title:
-                    source.setdefault("debt", {})["table_data"] = section.get("rows", [])
+                    source.setdefault("debt", {})["table_data"] = section.get(
+                        "rows", []
+                    )
 
             elif block_type == "issue":
                 source["issues"] = [
@@ -332,6 +346,7 @@ class FDDRalphService:
 
     def _create_llm_call(self):
         """LLM 호출 함수를 생성한다."""
+
         async def llm_call(
             system_prompt: str,
             user_prompt: str,

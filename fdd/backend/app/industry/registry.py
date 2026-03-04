@@ -53,8 +53,7 @@ def get_fdd_industry_module(industry_id: str) -> FDDIndustryModule:
     if module is None:
         available = list(INDUSTRY_REGISTRY.keys())
         raise KeyError(
-            f"지원하지 않는 FDD 산업: '{industry_id}'. "
-            f"사용 가능: {available}"
+            f"지원하지 않는 FDD 산업: '{industry_id}'. 사용 가능: {available}"
         )
     return module
 

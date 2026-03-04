@@ -50,16 +50,16 @@ class BacklogCustomerItem:
 
     customer_name: str
     amount: Decimal
-    share_pct: Decimal          # 비중 (%)
+    share_pct: Decimal  # 비중 (%)
     order_count: int = 0
-    aging_bucket: str = ""      # 대표 aging 구간
+    aging_bucket: str = ""  # 대표 aging 구간
 
 
 @dataclass(frozen=True)
 class BacklogAgingBucket:
     """Aging 구간별 수주잔액."""
 
-    bucket: str                 # "0-3M", "3-6M", "6-12M", "12M+"
+    bucket: str  # "0-3M", "3-6M", "6-12M", "12M+"
     amount: Decimal
     share_pct: Decimal
     order_count: int = 0
@@ -73,7 +73,7 @@ class NegativeMarginOrder:
     customer_name: str
     order_amount: Decimal
     estimated_cost: Decimal
-    margin: Decimal             # (amount - cost) / amount * 100
+    margin: Decimal  # (amount - cost) / amount * 100
     reason: str = ""
 
 
@@ -83,10 +83,10 @@ class BacklogSummaryResult:
 
     total_backlog: Decimal
     backlog_by_customer: list[BacklogCustomerItem]
-    book_to_bill_ratio: Decimal | None          # 신규수주 / 매출
-    backlog_coverage_months: Decimal | None      # 잔액 / 월평균매출
-    top_n_share: Decimal                         # Top 5 비중 (%)
-    concentration_index: Decimal                 # HHI (0~10000)
+    book_to_bill_ratio: Decimal | None  # 신규수주 / 매출
+    backlog_coverage_months: Decimal | None  # 잔액 / 월평균매출
+    top_n_share: Decimal  # Top 5 비중 (%)
+    concentration_index: Decimal  # HHI (0~10000)
     order_count: int = 0
     warnings: list[str] = field(default_factory=list)
 
@@ -97,8 +97,8 @@ class BacklogAgingResult:
 
     total_backlog: Decimal
     buckets: list[BacklogAgingBucket]
-    overdue_amount: Decimal                      # 납기 초과 금액
-    overdue_share_pct: Decimal                   # 납기 초과 비중 (%)
+    overdue_amount: Decimal  # 납기 초과 금액
+    overdue_share_pct: Decimal  # 납기 초과 비중 (%)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -107,8 +107,8 @@ class NegativeMarginResult:
     """역마진 분석 결과."""
 
     negative_margin_orders: list[NegativeMarginOrder]
-    total_negative_amount: Decimal               # 역마진 수주 총액
-    total_negative_loss: Decimal                 # 역마진 손실 추정
+    total_negative_amount: Decimal  # 역마진 수주 총액
+    total_negative_loss: Decimal  # 역마진 손실 추정
     negative_count: int = 0
     warnings: list[str] = field(default_factory=list)
 
@@ -120,7 +120,7 @@ class MonthlyNewOrderResult:
     months: list[str]
     amounts: dict[str, Decimal]
     cumulative: dict[str, Decimal]
-    yoy_growth: dict[str, Decimal]              # 전년 동월 대비 증감률
+    yoy_growth: dict[str, Decimal]  # 전년 동월 대비 증감률
     warnings: list[str] = field(default_factory=list)
 
 
@@ -180,22 +180,28 @@ def compute_backlog_summary(
 
     # 거래처별 비중 + 정렬
     sorted_customers = sorted(
-        customer_totals.items(), key=lambda x: x[1], reverse=True,
+        customer_totals.items(),
+        key=lambda x: x[1],
+        reverse=True,
     )
 
     backlog_by_customer: list[BacklogCustomerItem] = []
     for cust, amount in sorted_customers:
         share = _pct(amount / total_backlog * HUNDRED) if total_backlog > ZERO else ZERO
-        backlog_by_customer.append(BacklogCustomerItem(
-            customer_name=cust,
-            amount=amount,
-            share_pct=share,
-            order_count=customer_counts.get(cust, 0),
-        ))
+        backlog_by_customer.append(
+            BacklogCustomerItem(
+                customer_name=cust,
+                amount=amount,
+                share_pct=share,
+                order_count=customer_counts.get(cust, 0),
+            )
+        )
 
     # Top N 비중
     top_n_amount = sum(item.amount for item in backlog_by_customer[:top_n])
-    top_n_share = _pct(top_n_amount / total_backlog * HUNDRED) if total_backlog > ZERO else ZERO
+    top_n_share = (
+        _pct(top_n_amount / total_backlog * HUNDRED) if total_backlog > ZERO else ZERO
+    )
 
     # HHI (Herfindahl-Hirschman Index)
     hhi = ZERO
@@ -207,7 +213,11 @@ def compute_backlog_summary(
 
     # Book-to-Bill ratio
     btb: Decimal | None = None
-    if new_orders_total is not None and revenue_total is not None and revenue_total > ZERO:
+    if (
+        new_orders_total is not None
+        and revenue_total is not None
+        and revenue_total > ZERO
+    ):
         btb = _pct(new_orders_total / revenue_total)
 
     # Backlog Coverage (개월수)
@@ -222,25 +232,25 @@ def compute_backlog_summary(
             f"BACKLOG_CONCENTRATION: Top {top_n} customers account for {top_n_share}% of backlog"
         )
     if hhi > Decimal("2500"):
-        warnings.append(
-            f"BACKLOG_HIGH_HHI: HHI {hhi} indicates high concentration"
-        )
+        warnings.append(f"BACKLOG_HIGH_HHI: HHI {hhi} indicates high concentration")
     if btb is not None and btb < Decimal("1.00"):
         warnings.append(
             f"BACKLOG_LOW_BTB: Book-to-Bill {btb} < 1.0 indicates declining order intake"
         )
 
-    evidence.append(EvidenceLinkData(
-        target_type="backlog_summary",
-        source_type="computed",
-        source_id="backlog:summary",
-        source_detail={
-            "total_backlog": str(total_backlog),
-            "customer_count": len(backlog_by_customer),
-            "top_n_share": str(top_n_share),
-            "hhi": str(hhi),
-        },
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            target_type="backlog_summary",
+            source_type="computed",
+            source_id="backlog:summary",
+            source_detail={
+                "total_backlog": str(total_backlog),
+                "customer_count": len(backlog_by_customer),
+                "top_n_share": str(top_n_share),
+                "hhi": str(hhi),
+            },
+        )
+    )
 
     return BacklogSummaryResult(
         total_backlog=total_backlog,
@@ -334,40 +344,40 @@ def compute_backlog_aging(
     for label, _, _ in buckets:
         amt = _q(bucket_amounts.get(label, ZERO))
         share = _pct(amt / total * HUNDRED) if total > ZERO else ZERO
-        result_buckets.append(BacklogAgingBucket(
-            bucket=label,
-            amount=amt,
-            share_pct=share,
-            order_count=bucket_counts.get(label, 0),
-        ))
+        result_buckets.append(
+            BacklogAgingBucket(
+                bucket=label,
+                amount=amt,
+                share_pct=share,
+                order_count=bucket_counts.get(label, 0),
+            )
+        )
 
     overdue_pct = _pct(overdue_amount / total * HUNDRED) if total > ZERO else ZERO
 
     # 경고
     if overdue_pct > Decimal("10"):
-        warnings.append(
-            f"AGING_HIGH_OVERDUE: {overdue_pct}% of backlog is overdue"
-        )
+        warnings.append(f"AGING_HIGH_OVERDUE: {overdue_pct}% of backlog is overdue")
 
     long_term_pct = ZERO
     for b in result_buckets:
         if b.bucket in ("6-12M", "12M+"):
             long_term_pct += b.share_pct
     if long_term_pct > Decimal("30"):
-        warnings.append(
-            f"AGING_LONG_TERM: {long_term_pct}% of backlog is 6M+ aging"
-        )
+        warnings.append(f"AGING_LONG_TERM: {long_term_pct}% of backlog is 6M+ aging")
 
-    evidence.append(EvidenceLinkData(
-        target_type="backlog_aging",
-        source_type="computed",
-        source_id="backlog:aging",
-        source_detail={
-            "total": str(total),
-            "overdue": str(overdue_amount),
-            "buckets": {b.bucket: str(b.amount) for b in result_buckets},
-        },
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            target_type="backlog_aging",
+            source_type="computed",
+            source_id="backlog:aging",
+            source_detail={
+                "total": str(total),
+                "overdue": str(overdue_amount),
+                "buckets": {b.bucket: str(b.amount) for b in result_buckets},
+            },
+        )
+    )
 
     return BacklogAgingResult(
         total_backlog=total,
@@ -418,16 +428,18 @@ def detect_negative_margin_orders(
 
         if cost > amount and amount > ZERO:
             margin = _pct((amount - cost) / amount * HUNDRED)
-            negatives.append(NegativeMarginOrder(
-                order_id=str(e.get(order_id_key, "")),
-                customer_name=str(e.get(customer_key, "")),
-                order_amount=amount,
-                estimated_cost=cost,
-                margin=margin,
-                reason=str(e.get(reason_key, "")),
-            ))
+            negatives.append(
+                NegativeMarginOrder(
+                    order_id=str(e.get(order_id_key, "")),
+                    customer_name=str(e.get(customer_key, "")),
+                    order_amount=amount,
+                    estimated_cost=cost,
+                    margin=margin,
+                    reason=str(e.get(reason_key, "")),
+                )
+            )
             total_neg_amount += amount
-            total_neg_loss += (cost - amount)
+            total_neg_loss += cost - amount
 
     total_neg_amount = _q(total_neg_amount)
     total_neg_loss = _q(total_neg_loss)
@@ -441,18 +453,20 @@ def detect_negative_margin_orders(
         )
 
     for neg in negatives:
-        evidence.append(EvidenceLinkData(
-            target_type="negative_margin",
-            source_type="computed",
-            source_id=f"margin:{neg.order_id}",
-            source_detail={
-                "order_id": neg.order_id,
-                "customer": neg.customer_name,
-                "amount": str(neg.order_amount),
-                "cost": str(neg.estimated_cost),
-                "margin": str(neg.margin),
-            },
-        ))
+        evidence.append(
+            EvidenceLinkData(
+                target_type="negative_margin",
+                source_type="computed",
+                source_id=f"margin:{neg.order_id}",
+                source_detail={
+                    "order_id": neg.order_id,
+                    "customer": neg.customer_name,
+                    "amount": str(neg.order_amount),
+                    "cost": str(neg.estimated_cost),
+                    "margin": str(neg.margin),
+                },
+            )
+        )
 
     return NegativeMarginResult(
         negative_margin_orders=negatives,
@@ -539,24 +553,27 @@ def compute_monthly_new_orders(
     # 경고: 3개월 연속 감소
     if len(months) >= 3:
         for i in range(2, len(months)):
-            if (amounts[months[i]] < amounts[months[i - 1]]
-                    < amounts[months[i - 2]]):
+            if amounts[months[i]] < amounts[months[i - 1]] < amounts[months[i - 2]]:
                 warnings.append(
                     f"ORDERS_DECLINING: 3+ consecutive months of declining orders "
                     f"({months[i - 2]} to {months[i]})"
                 )
                 break
 
-    evidence.append(EvidenceLinkData(
-        target_type="monthly_new_orders",
-        source_type="computed",
-        source_id="orders:monthly",
-        source_detail={
-            "months": len(months),
-            "total": str(sum(amounts.values())),
-            "avg_monthly": str(_q(sum(amounts.values()) / Decimal(str(len(months))))),
-        },
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            target_type="monthly_new_orders",
+            source_type="computed",
+            source_id="orders:monthly",
+            source_detail={
+                "months": len(months),
+                "total": str(sum(amounts.values())),
+                "avg_monthly": str(
+                    _q(sum(amounts.values()) / Decimal(str(len(months))))
+                ),
+            },
+        )
+    )
 
     return MonthlyNewOrderResult(
         months=months,

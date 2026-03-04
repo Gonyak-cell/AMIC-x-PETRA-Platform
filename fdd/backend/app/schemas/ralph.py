@@ -20,7 +20,9 @@ class RalphSessionCreate(BaseModel):
     """Ralph 세션 생성 요청."""
 
     pass_type: str = Field(description="draft | final")
-    checklist_id: str | None = Field(default=None, description="Final pass 시 체크리스트 ID")
+    checklist_id: str | None = Field(
+        default=None, description="Final pass 시 체크리스트 ID"
+    )
     config: RalphConfigRequest = Field(default_factory=RalphConfigRequest)
 
 

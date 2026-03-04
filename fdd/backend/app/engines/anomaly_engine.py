@@ -563,9 +563,7 @@ def detect_keyword_risks(
             if kw.lower() in combined:
                 # 비경상 키워드 = 높은 점수, 정상화 키워드 = 중간 점수
                 score = (
-                    Decimal("70")
-                    if kw in _NON_RECURRING_KEYWORDS
-                    else Decimal("50")
+                    Decimal("70") if kw in _NON_RECURRING_KEYWORDS else Decimal("50")
                 )
                 results.append((entry_id, kw, score))
                 break  # 첫 번째 매칭만

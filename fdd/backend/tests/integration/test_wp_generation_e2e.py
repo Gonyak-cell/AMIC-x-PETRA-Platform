@@ -45,6 +45,7 @@ from app.services.report.validation import (
 
 # ── Fixtures ───────────────────────────────────────────────
 
+
 @pytest.fixture
 def sample_deal_profile():
     """샘플 딜 프로파일 — 모든 조건 활성화."""
@@ -64,11 +65,48 @@ def sample_deal_profile():
 def sample_line_items():
     """샘플 손익계산서 행 정의."""
     return [
-        LineItemDef(code="REV", name_ko="매출액", name_en="Revenue", category="REVENUE", statement_type="IS", display_order=1),
-        LineItemDef(code="COGS", name_ko="매출원가", name_en="COGS", category="COGS", statement_type="IS", display_order=2),
-        LineItemDef(code="GP", name_ko="매출총이익", name_en="Gross Profit", category="GROSS_PROFIT", statement_type="IS", display_order=3, is_subtotal=True),
-        LineItemDef(code="SGA", name_ko="판관비", name_en="SG&A", category="SGA", statement_type="IS", display_order=4),
-        LineItemDef(code="OI", name_ko="영업이익", name_en="Operating Income", category="OPERATING_INCOME", statement_type="IS", display_order=5, is_subtotal=True),
+        LineItemDef(
+            code="REV",
+            name_ko="매출액",
+            name_en="Revenue",
+            category="REVENUE",
+            statement_type="IS",
+            display_order=1,
+        ),
+        LineItemDef(
+            code="COGS",
+            name_ko="매출원가",
+            name_en="COGS",
+            category="COGS",
+            statement_type="IS",
+            display_order=2,
+        ),
+        LineItemDef(
+            code="GP",
+            name_ko="매출총이익",
+            name_en="Gross Profit",
+            category="GROSS_PROFIT",
+            statement_type="IS",
+            display_order=3,
+            is_subtotal=True,
+        ),
+        LineItemDef(
+            code="SGA",
+            name_ko="판관비",
+            name_en="SG&A",
+            category="SGA",
+            statement_type="IS",
+            display_order=4,
+        ),
+        LineItemDef(
+            code="OI",
+            name_ko="영업이익",
+            name_en="Operating Income",
+            category="OPERATING_INCOME",
+            statement_type="IS",
+            display_order=5,
+            is_subtotal=True,
+        ),
     ]
 
 
@@ -101,6 +139,7 @@ def sample_amounts():
 
 
 # ── E2E Tests ──────────────────────────────────────────────
+
 
 class TestE2EEngineToIR:
     """엔진 → Report IR 블록 변환 E2E."""
@@ -374,11 +413,14 @@ class TestE2EQualitative:
 class TestE2EProfileVariants:
     """다양한 DealProfile 변형 E2E."""
 
-    @pytest.mark.parametrize("deal_type,expected_in,expected_not_in", [
-        ("completion_accounts", ["nwc_peg"], ["leakage_check"]),
-        ("locked_box", ["leakage_check"], ["nwc_peg"]),
-        ("general", [], ["nwc_peg", "leakage_check"]),
-    ])
+    @pytest.mark.parametrize(
+        "deal_type,expected_in,expected_not_in",
+        [
+            ("completion_accounts", ["nwc_peg"], ["leakage_check"]),
+            ("locked_box", ["leakage_check"], ["nwc_peg"]),
+            ("general", [], ["nwc_peg", "leakage_check"]),
+        ],
+    )
     def test_deal_type_variants(self, deal_type, expected_in, expected_not_in):
         """거래구조별 시트 포함/제외."""
         profile = DealProfile(deal_type=deal_type)
@@ -390,11 +432,14 @@ class TestE2EProfileVariants:
         for sheet_id in expected_not_in:
             assert sheet_id not in ids, f"{sheet_id} should not be in {deal_type}"
 
-    @pytest.mark.parametrize("entity_count,has_consolidation", [
-        (1, False),
-        (2, True),
-        (5, True),
-    ])
+    @pytest.mark.parametrize(
+        "entity_count,has_consolidation",
+        [
+            (1, False),
+            (2, True),
+            (5, True),
+        ],
+    )
     def test_entity_count_variants(self, entity_count, has_consolidation):
         """엔티티 수별 연결 시트 포함/제외."""
         profile = DealProfile(entity_count=entity_count)

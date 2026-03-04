@@ -571,7 +571,5 @@ def test_g_debt_30_e2e_with_lease_option(db: Session):
     assert calc.adjusted_net_debt == D("-3000000.0000")  # -5M + 2M = -3M
     assert calc.include_lease_liabilities is True
     # 퇴직급여 is detected as candidate
-    candidate_items = [
-        i for i in calc.items if i.detection_method == "keyword"
-    ]
+    candidate_items = [i for i in calc.items if i.detection_method == "keyword"]
     assert len(candidate_items) >= 1

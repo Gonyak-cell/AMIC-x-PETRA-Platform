@@ -117,9 +117,11 @@ class FDDReportGenerator:
         self._system_prompt = _SYSTEM_PROMPT
         if self._learned_patterns:
             from app.ralph.learning.prompt_injector import LearningPromptInjector
+
             injector = LearningPromptInjector()
             self._system_prompt = injector.enrich_system_prompt(
-                _SYSTEM_PROMPT, self._learned_patterns,
+                _SYSTEM_PROMPT,
+                self._learned_patterns,
             )
 
     async def generate_outline(
@@ -146,14 +148,20 @@ class FDDReportGenerator:
                     continue
 
             section_id = self._make_section_id(block_type, idx, section)
-            outline.append({
-                "id": section_id,
-                "index": idx,
-                "block_type": block_type,
-                "title": section.get("title") or section.get("claim_text", "")[:60],
-            })
+            outline.append(
+                {
+                    "id": section_id,
+                    "index": idx,
+                    "block_type": block_type,
+                    "title": section.get("title") or section.get("claim_text", "")[:60],
+                }
+            )
 
-        logger.info("FDD outline: %d refinable sections out of %d total", len(outline), len(sections))
+        logger.info(
+            "FDD outline: %d refinable sections out of %d total",
+            len(outline),
+            len(sections),
+        )
         return outline
 
     async def generate_section(
@@ -206,7 +214,7 @@ class FDDReportGenerator:
         response_text = await self._llm_call(
             self._system_prompt,
             user_prompt,
-            0.3,   # temperature
+            0.3,  # temperature
             2048,  # max_tokens
         )
 
@@ -280,7 +288,14 @@ class FDDReportGenerator:
         for corr in self._checklist_corrections:
             corr_cat = corr.get("category", "").lower()
             # 카테고리 매칭
-            if (block_type == "text" and corr_cat in title) or (block_type == "claim" and (corr_cat == category or corr_cat in title)) or block_type == "issue":
+            if (
+                (block_type == "text" and corr_cat in title)
+                or (
+                    block_type == "claim"
+                    and (corr_cat == category or corr_cat in title)
+                )
+                or block_type == "issue"
+            ):
                 related.append(corr)
 
         return related
@@ -316,11 +331,28 @@ class FDDReportGenerator:
         """
         # 보존할 구조적 필드
         PRESERVE_FIELDS = {
-            "type", "position", "size", "evidence_refs", "evidence_id",
-            "source_type", "source_id", "verified", "issue_id",
-            "chart_type", "data", "image_base64", "columns", "rows",
-            "footer_rows", "kpis", "scope_items", "definitions",
-            "steps", "items", "show_header", "zebra_stripe",
+            "type",
+            "position",
+            "size",
+            "evidence_refs",
+            "evidence_id",
+            "source_type",
+            "source_id",
+            "verified",
+            "issue_id",
+            "chart_type",
+            "data",
+            "image_base64",
+            "columns",
+            "rows",
+            "footer_rows",
+            "kpis",
+            "scope_items",
+            "definitions",
+            "steps",
+            "items",
+            "show_header",
+            "zebra_stripe",
         }
 
         merged = dict(original)

@@ -37,9 +37,7 @@ class AuditLog(Base):
     actor: Mapped[str] = mapped_column(String(100), nullable=False, default="system")
     old_value: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)
     new_value: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # ── Phase 2 확장 필드 (FDD-1702) ──────────────────────
     user_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

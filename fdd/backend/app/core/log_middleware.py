@@ -9,7 +9,7 @@ import logging
 import time
 
 from fastapi import FastAPI, Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from app.core.log_context import set_request_id, set_user_id
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """JSON 구조화 요청/응답 로깅 미들웨어."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:  # type: ignore[override]
         # 1. Request ID 설정 (X-Request-ID 헤더 또는 자동 생성)
-        request_id = set_request_id(
-            request.headers.get("x-request-id")
-        )
+        request_id = set_request_id(request.headers.get("x-request-id"))
 
         # 2. 인증된 사용자 ID (있으면 — auth 미들웨어가 먼저 실행된 경우)
         user_id = getattr(request.state, "user_id", None)

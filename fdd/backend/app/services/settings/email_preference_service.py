@@ -21,9 +21,7 @@ _DEFAULT_PREFS = {
 }
 
 
-def get_email_preferences(
-    db: Session, *, user_id: uuid.UUID
-) -> EmailPreference | dict:
+def get_email_preferences(db: Session, *, user_id: uuid.UUID) -> EmailPreference | dict:
     """Get email preferences for a user. Returns default dict if not found."""
     stmt = select(EmailPreference).where(EmailPreference.user_id == user_id)
     pref = db.scalar(stmt)

@@ -48,9 +48,7 @@ class Job(Base):
     deal_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("deal.id", ondelete="SET NULL"), nullable=True
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     input_params: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)
     output_result: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)

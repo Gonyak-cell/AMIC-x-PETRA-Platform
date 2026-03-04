@@ -95,7 +95,13 @@ class TestValidateTemplateAPI:
         """PPTX 검증 성공."""
         response = client.post(
             "/api/v1/templates/validate",
-            files={"file": ("test.pptx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "test.pptx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={"template_type": "pptx"},
         )
         assert response.status_code == 200
@@ -104,11 +110,19 @@ class TestValidateTemplateAPI:
         assert len(data["detected_slots"]) == 2
         assert data["contract"] is not None
 
-    def test_validate_pptx_no_slots(self, client: TestClient, sample_pptx_no_slots_bytes):
+    def test_validate_pptx_no_slots(
+        self, client: TestClient, sample_pptx_no_slots_bytes
+    ):
         """슬롯 없는 PPTX 검증."""
         response = client.post(
             "/api/v1/templates/validate",
-            files={"file": ("test.pptx", io.BytesIO(sample_pptx_no_slots_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "test.pptx",
+                    io.BytesIO(sample_pptx_no_slots_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={"template_type": "pptx"},
         )
         assert response.status_code == 200
@@ -122,7 +136,13 @@ class TestValidateTemplateAPI:
         # 있는 슬롯 기대
         response = client.post(
             "/api/v1/templates/validate",
-            files={"file": ("test.pptx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "test.pptx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={
                 "template_type": "pptx",
                 "expected_slots": ["{{SLOT:DEAL_NAME}}"],
@@ -134,7 +154,13 @@ class TestValidateTemplateAPI:
         # 없는 슬롯 기대
         response = client.post(
             "/api/v1/templates/validate",
-            files={"file": ("test.pptx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "test.pptx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={
                 "template_type": "pptx",
                 "expected_slots": ["{{SLOT:NONEXISTENT}}"],
@@ -184,7 +210,13 @@ class TestDetectSlotsAPI:
         """PPTX 슬롯 탐지."""
         response = client.post(
             "/api/v1/templates/detect-slots",
-            files={"file": ("test.pptx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "test.pptx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={"template_type": "pptx"},
         )
         assert response.status_code == 200
@@ -424,7 +456,13 @@ class TestTemplateUploadAPI:
         """템플릿 파일 업로드."""
         response = client.post(
             "/api/v1/templates/upload",
-            files={"file": ("upload_test.pptx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.presentationml.presentation")},
+            files={
+                "file": (
+                    "upload_test.pptx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
             params={
                 "template_name": "Uploaded Template",
                 "description": "Uploaded via API",
@@ -437,11 +475,19 @@ class TestTemplateUploadAPI:
         assert data["file_path"] is not None
         assert len(data["contract"]["slots"]) == 2
 
-    def test_upload_template_wrong_extension(self, client: TestClient, sample_pptx_bytes):
+    def test_upload_template_wrong_extension(
+        self, client: TestClient, sample_pptx_bytes
+    ):
         """잘못된 확장자로 업로드 실패."""
         response = client.post(
             "/api/v1/templates/upload",
-            files={"file": ("test.docx", io.BytesIO(sample_pptx_bytes), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+            files={
+                "file": (
+                    "test.docx",
+                    io.BytesIO(sample_pptx_bytes),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
             params={
                 "template_name": "Wrong Extension",
                 "template_type": "pptx",

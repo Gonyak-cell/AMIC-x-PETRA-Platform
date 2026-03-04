@@ -277,7 +277,12 @@ def analyze_calculation_impact(
     # 계산 유형별 핵심 메트릭
     key_metrics = {
         "qoe": ["reported_ebitda", "adjusted_ebitda", "total_adjustments"],
-        "nwc": ["current_assets", "current_liabilities", "net_working_capital", "target_nwc"],
+        "nwc": [
+            "current_assets",
+            "current_liabilities",
+            "net_working_capital",
+            "target_nwc",
+        ],
         "debt": ["gross_debt", "cash", "net_debt", "debt_like_items"],
     }
 
@@ -294,8 +299,12 @@ def analyze_calculation_impact(
 
             # Decimal로 변환
             try:
-                old_decimal = Decimal(str(old_value)) if old_value is not None else Decimal(0)
-                new_decimal = Decimal(str(new_value)) if new_value is not None else Decimal(0)
+                old_decimal = (
+                    Decimal(str(old_value)) if old_value is not None else Decimal(0)
+                )
+                new_decimal = (
+                    Decimal(str(new_value)) if new_value is not None else Decimal(0)
+                )
             except (ValueError, TypeError):
                 continue
 

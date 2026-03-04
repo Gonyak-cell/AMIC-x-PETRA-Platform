@@ -75,8 +75,12 @@ class TemplateSlot(BaseModel):
     )
     slot_type: SlotType = Field(..., description="슬롯 타입")
     required: bool = Field(default=True, description="필수 슬롯 여부")
-    description: str | None = Field(default=None, max_length=500, description="슬롯 설명")
-    constraints: SlotConstraints | None = Field(default=None, description="슬롯 제약 조건")
+    description: str | None = Field(
+        default=None, max_length=500, description="슬롯 설명"
+    )
+    constraints: SlotConstraints | None = Field(
+        default=None, description="슬롯 제약 조건"
+    )
     default_block_id: str | None = Field(
         default=None, description="기본 매핑될 Report IR 블록 ID"
     )
@@ -312,7 +316,9 @@ class InjectionResult(BaseModel):
     success: bool
     output_path: str | None = Field(default=None, description="생성된 파일 경로")
     output_url: str | None = Field(default=None, description="다운로드 URL")
-    filled_slots: list[str] = Field(default_factory=list, description="채워진 슬롯 목록")
+    filled_slots: list[str] = Field(
+        default_factory=list, description="채워진 슬롯 목록"
+    )
     empty_slots: list[str] = Field(default_factory=list, description="빈 슬롯 목록")
     errors: list[str] = Field(default_factory=list, description="오류 목록")
     warnings: list[str] = Field(default_factory=list, description="경고 목록")

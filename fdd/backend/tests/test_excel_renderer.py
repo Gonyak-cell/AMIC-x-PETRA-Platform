@@ -80,7 +80,9 @@ def full_ir() -> ReportIR:
             ScopeBlock(
                 title="Scope",
                 scope_items=[
-                    ScopeItem(category="period", label="분석기간", value="2024.01-2025.12"),
+                    ScopeItem(
+                        category="period", label="분석기간", value="2024.01-2025.12"
+                    ),
                     ScopeItem(category="currency", label="통화", value="KRW"),
                 ],
             ),
@@ -88,39 +90,82 @@ def full_ir() -> ReportIR:
             TableBlock(
                 title="QoE Bridge",
                 columns=[
-                    TableColumn(key="category", header="Category", width=2.5, align=AlignType.LEFT),
+                    TableColumn(
+                        key="category",
+                        header="Category",
+                        width=2.5,
+                        align=AlignType.LEFT,
+                    ),
                     TableColumn(key="reported", header="Reported", format="currency"),
-                    TableColumn(key="adjustments", header="Adjustments", format="currency"),
+                    TableColumn(
+                        key="adjustments", header="Adjustments", format="currency"
+                    ),
                     TableColumn(key="adjusted", header="Adjusted", format="currency"),
                 ],
                 rows=[
-                    {"category": "Revenue", "reported": 50000, "adjustments": -500, "adjusted": 49500},
-                    {"category": "COGS", "reported": -30000, "adjustments": 1000, "adjusted": -29000},
-                    {"category": "SG&A", "reported": -8000, "adjustments": 200, "adjusted": -7800},
+                    {
+                        "category": "Revenue",
+                        "reported": 50000,
+                        "adjustments": -500,
+                        "adjusted": 49500,
+                    },
+                    {
+                        "category": "COGS",
+                        "reported": -30000,
+                        "adjustments": 1000,
+                        "adjusted": -29000,
+                    },
+                    {
+                        "category": "SG&A",
+                        "reported": -8000,
+                        "adjustments": 200,
+                        "adjusted": -7800,
+                    },
                 ],
                 footer_rows=[
-                    {"category": "EBITDA", "reported": 12000, "adjustments": 700, "adjusted": 12700},
+                    {
+                        "category": "EBITDA",
+                        "reported": 12000,
+                        "adjustments": 700,
+                        "adjusted": 12700,
+                    },
                 ],
             ),
             # NWC Table
             TableBlock(
                 title="NWC Definition",
                 columns=[
-                    TableColumn(key="account", header="Account", width=3.0, align=AlignType.LEFT),
+                    TableColumn(
+                        key="account", header="Account", width=3.0, align=AlignType.LEFT
+                    ),
                     TableColumn(key="balance", header="Balance", format="currency"),
                     TableColumn(key="classification", header="Classification"),
                 ],
                 rows=[
-                    {"account": "매출채권", "balance": 5000, "classification": "Above Line"},
-                    {"account": "재고자산", "balance": 3000, "classification": "Above Line"},
-                    {"account": "매입채무", "balance": -4000, "classification": "Above Line"},
+                    {
+                        "account": "매출채권",
+                        "balance": 5000,
+                        "classification": "Above Line",
+                    },
+                    {
+                        "account": "재고자산",
+                        "balance": 3000,
+                        "classification": "Above Line",
+                    },
+                    {
+                        "account": "매입채무",
+                        "balance": -4000,
+                        "classification": "Above Line",
+                    },
                 ],
             ),
             # Net Debt Table
             TableBlock(
                 title="Net Debt Schedule",
                 columns=[
-                    TableColumn(key="item", header="Item", width=3.0, align=AlignType.LEFT),
+                    TableColumn(
+                        key="item", header="Item", width=3.0, align=AlignType.LEFT
+                    ),
                     TableColumn(key="amount", header="Amount", format="currency"),
                     TableColumn(key="type", header="Type"),
                 ],

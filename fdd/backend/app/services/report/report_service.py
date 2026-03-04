@@ -104,7 +104,9 @@ def _build_financial_statement_sections(
     )
 
     if not mappings:
-        logger.info("No approved account mappings for deal %s, skipping FS sheets", deal_id)
+        logger.info(
+            "No approved account mappings for deal %s, skipping FS sheets", deal_id
+        )
         # 매핑이 없어도 QoE 데이터에서 최소한의 IS를 구성
         if qoe_calc:
             _build_is_from_qoe(sections, qoe_calc)
@@ -170,7 +172,9 @@ def _build_financial_statement_sections(
 
     # ── Cash Flow (간접법 도출) ──
     if bs_items and is_items:
-        cf_rows = _derive_cash_flow(is_items, bs_items, amount_by_code, std_map, qoe_calc)
+        cf_rows = _derive_cash_flow(
+            is_items, bs_items, amount_by_code, std_map, qoe_calc
+        )
         if cf_rows:
             sections.append(build_cash_flow_block(cf_rows))
 
@@ -185,9 +189,23 @@ def _build_is_from_qoe(sections: list, qoe_calc: "QoECalculation") -> None:
         ("판매관리비", "SG&A", qoe_calc.sga, 1, False, False),
         ("감가상각비", "D&A", qoe_calc.depreciation_amortization, 1, False, False),
         ("영업이익", "Operating Income", qoe_calc.operating_income, 0, True, False),
-        ("Reported EBITDA", "Reported EBITDA", qoe_calc.reported_ebitda, 0, True, False),
+        (
+            "Reported EBITDA",
+            "Reported EBITDA",
+            qoe_calc.reported_ebitda,
+            0,
+            True,
+            False,
+        ),
         ("조정 합계", "Total Adjustments", qoe_calc.total_adjustments, 1, False, False),
-        ("Adjusted EBITDA", "Adjusted EBITDA", qoe_calc.adjusted_ebitda, 0, False, True),
+        (
+            "Adjusted EBITDA",
+            "Adjusted EBITDA",
+            qoe_calc.adjusted_ebitda,
+            0,
+            False,
+            True,
+        ),
     ]:
         rows.append(
             {
@@ -250,16 +268,38 @@ def _derive_cash_flow(
 
     operating_cf = net_income + da
     rows.append(
-        {"name_ko": "영업활동 현금흐름", "name_en": "Operating Activities", "amount": "", "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "영업활동 현금흐름",
+            "name_en": "Operating Activities",
+            "amount": "",
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
     rows.append(
-        {"name_ko": "당기순이익", "name_en": "Net Income", "amount": _decimal_to_str(net_income), "indent": 1}
+        {
+            "name_ko": "당기순이익",
+            "name_en": "Net Income",
+            "amount": _decimal_to_str(net_income),
+            "indent": 1,
+        }
     )
     rows.append(
-        {"name_ko": "감가상각비", "name_en": "Depreciation & Amortization", "amount": _decimal_to_str(da), "indent": 1}
+        {
+            "name_ko": "감가상각비",
+            "name_en": "Depreciation & Amortization",
+            "amount": _decimal_to_str(da),
+            "indent": 1,
+        }
     )
     rows.append(
-        {"name_ko": "영업활동 소계", "name_en": "Operating CF Subtotal", "amount": _decimal_to_str(operating_cf), "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "영업활동 소계",
+            "name_en": "Operating CF Subtotal",
+            "amount": _decimal_to_str(operating_cf),
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
 
     # 투자활동 CF (PPE + Intangibles) — category enum 기반
@@ -276,16 +316,38 @@ def _derive_cash_flow(
 
     investing_cf = -(ppe_amount + intangible_amount)
     rows.append(
-        {"name_ko": "투자활동 현금흐름", "name_en": "Investing Activities", "amount": "", "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "투자활동 현금흐름",
+            "name_en": "Investing Activities",
+            "amount": "",
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
     rows.append(
-        {"name_ko": "유형자산 취득", "name_en": "PPE Acquisitions", "amount": _decimal_to_str(-ppe_amount), "indent": 1}
+        {
+            "name_ko": "유형자산 취득",
+            "name_en": "PPE Acquisitions",
+            "amount": _decimal_to_str(-ppe_amount),
+            "indent": 1,
+        }
     )
     rows.append(
-        {"name_ko": "무형자산 취득", "name_en": "Intangible Acquisitions", "amount": _decimal_to_str(-intangible_amount), "indent": 1}
+        {
+            "name_ko": "무형자산 취득",
+            "name_en": "Intangible Acquisitions",
+            "amount": _decimal_to_str(-intangible_amount),
+            "indent": 1,
+        }
     )
     rows.append(
-        {"name_ko": "투자활동 소계", "name_en": "Investing CF Subtotal", "amount": _decimal_to_str(investing_cf), "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "투자활동 소계",
+            "name_en": "Investing CF Subtotal",
+            "amount": _decimal_to_str(investing_cf),
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
 
     # 재무활동 CF (Debt + Lease) — category enum 기반
@@ -298,19 +360,42 @@ def _derive_cash_flow(
             debt_amount += amount
 
     rows.append(
-        {"name_ko": "재무활동 현금흐름", "name_en": "Financing Activities", "amount": "", "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "재무활동 현금흐름",
+            "name_en": "Financing Activities",
+            "amount": "",
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
     rows.append(
-        {"name_ko": "차입금 변동", "name_en": "Debt Changes", "amount": _decimal_to_str(debt_amount), "indent": 1}
+        {
+            "name_ko": "차입금 변동",
+            "name_en": "Debt Changes",
+            "amount": _decimal_to_str(debt_amount),
+            "indent": 1,
+        }
     )
     rows.append(
-        {"name_ko": "재무활동 소계", "name_en": "Financing CF Subtotal", "amount": _decimal_to_str(debt_amount), "indent": 0, "is_subtotal": True}
+        {
+            "name_ko": "재무활동 소계",
+            "name_en": "Financing CF Subtotal",
+            "amount": _decimal_to_str(debt_amount),
+            "indent": 0,
+            "is_subtotal": True,
+        }
     )
 
     # Free Cash Flow
     fcf = operating_cf + investing_cf
     rows.append(
-        {"name_ko": "Free Cash Flow (FCF)", "name_en": "Free Cash Flow", "amount": _decimal_to_str(fcf), "indent": 0, "is_total": True}
+        {
+            "name_ko": "Free Cash Flow (FCF)",
+            "name_en": "Free Cash Flow",
+            "amount": _decimal_to_str(fcf),
+            "indent": 0,
+            "is_total": True,
+        }
     )
 
     return rows
@@ -342,10 +427,18 @@ def _build_trend_sections(
                 row: dict[str, Any] = {"item": label}
                 for m in months:
                     val = nwc_calc.monthly_trend.get(m, {})
-                    row[m] = _format_currency(Decimal(str(val.get(key, 0)))) if val.get(key) else ""
+                    row[m] = (
+                        _format_currency(Decimal(str(val.get(key, 0))))
+                        if val.get(key)
+                        else ""
+                    )
                 trend_rows.append(row)
 
-            sections.append(build_nwc_trend_table_block("NWC Monthly Trend (월별 추이)", trend_rows, months))
+            sections.append(
+                build_nwc_trend_table_block(
+                    "NWC Monthly Trend (월별 추이)", trend_rows, months
+                )
+            )
 
             # ── NWC Seasonality ──
             revenue_val = None
@@ -358,26 +451,38 @@ def _build_trend_sections(
                 nwc_pct_row: dict[str, Any] = {"item": "NWC / Revenue"}
                 for m in months:
                     val = nwc_calc.monthly_trend.get(m, {})
-                    nwc_val = Decimal(str(val.get("nwc", 0))) if val.get("nwc") else Decimal(0)
+                    nwc_val = (
+                        Decimal(str(val.get("nwc", 0)))
+                        if val.get("nwc")
+                        else Decimal(0)
+                    )
                     nwc_values.append(nwc_val)
                     pct = float(nwc_val / revenue_val * 100) if revenue_val else 0
                     nwc_pct_row[m] = f"{pct:.1f}%"
 
-                avg_nwc = sum(nwc_values) / len(nwc_values) if nwc_values else Decimal(0)
+                avg_nwc = (
+                    sum(nwc_values) / len(nwc_values) if nwc_values else Decimal(0)
+                )
                 avg_pct = float(avg_nwc / revenue_val * 100) if revenue_val else 0
                 nwc_pct_row["avg"] = f"{avg_pct:.1f}%"
 
                 # 표준편차
                 if len(nwc_values) > 1:
                     mean_f = float(avg_nwc)
-                    variance = sum((float(v) - mean_f) ** 2 for v in nwc_values) / len(nwc_values)
-                    stdev_pct = float((Decimal(str(variance ** 0.5)) / revenue_val) * 100)
+                    variance = sum((float(v) - mean_f) ** 2 for v in nwc_values) / len(
+                        nwc_values
+                    )
+                    stdev_pct = float((Decimal(str(variance**0.5)) / revenue_val) * 100)
                     nwc_pct_row["stdev"] = f"{stdev_pct:.1f}%"
                 else:
                     nwc_pct_row["stdev"] = "-"
 
                 seasonality_rows.append(nwc_pct_row)
-                sections.append(build_seasonality_block("NWC Seasonality (계절성 분석)", seasonality_rows, months))
+                sections.append(
+                    build_seasonality_block(
+                        "NWC Seasonality (계절성 분석)", seasonality_rows, months
+                    )
+                )
 
     # ── QoE YoY Comparison ──
     if qoe_calc and qoe_calc.category_breakdown:
@@ -454,7 +559,9 @@ def _build_sales_cost_sections(
             counterparty_results = db.execute(
                 select(
                     JournalEntry.counterparty,
-                    sa_func.sum(JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)).label("total"),
+                    sa_func.sum(
+                        JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)
+                    ).label("total"),
                 )
                 .where(
                     JournalEntry.deal_id == deal_id,
@@ -462,7 +569,11 @@ def _build_sales_cost_sections(
                     JournalEntry.counterparty.isnot(None),
                 )
                 .group_by(JournalEntry.counterparty)
-                .order_by(sa_func.sum(JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)).desc())
+                .order_by(
+                    sa_func.sum(
+                        JournalEntry.credit - sa_func.coalesce(JournalEntry.debit, 0)
+                    ).desc()
+                )
                 .limit(20)
             ).all()
 
@@ -483,7 +594,11 @@ def _build_sales_cost_sections(
                             "cum_pct": f"{float(cum_pct):.1f}%",
                         }
                     )
-                sections.append(build_revenue_breakdown_block("Revenue by Counterparty (거래처별 매출)", rev_rows))
+                sections.append(
+                    build_revenue_breakdown_block(
+                        "Revenue by Counterparty (거래처별 매출)", rev_rows
+                    )
+                )
 
     # ── Cost Structure ──
     if qoe_calc:
@@ -504,7 +619,9 @@ def _build_sales_cost_sections(
                     }
                 )
         if cost_rows:
-            sections.append(build_cost_structure_block("Cost Structure (원가 구조)", cost_rows))
+            sections.append(
+                build_cost_structure_block("Cost Structure (원가 구조)", cost_rows)
+            )
 
         # ── Margin Analysis ──
         margin_rows = []
@@ -519,7 +636,11 @@ def _build_sales_cost_sections(
                     pct = float(value / revenue * 100)
                     margin_rows.append({"metric": metric, "Current": f"{pct:.1f}%"})
             if margin_rows:
-                sections.append(build_margin_analysis_block("Margin Analysis (마진 분석)", margin_rows, ["Current"]))
+                sections.append(
+                    build_margin_analysis_block(
+                        "Margin Analysis (마진 분석)", margin_rows, ["Current"]
+                    )
+                )
 
         # ── Adjustment by Category ──
         if qoe_calc.adjustment_items:
@@ -531,7 +652,9 @@ def _build_sales_cost_sections(
 
             total_adj = sum(t for _, t in cat_totals.values())
             cat_rows = []
-            for cat_name, (count, total) in sorted(cat_totals.items(), key=lambda x: -x[1][1]):
+            for cat_name, (count, total) in sorted(
+                cat_totals.items(), key=lambda x: -x[1][1]
+            ):
                 pct = float(total / total_adj * 100) if total_adj else 0
                 cat_rows.append(
                     {
@@ -543,7 +666,9 @@ def _build_sales_cost_sections(
                 )
             if cat_rows:
                 sections.append(
-                    build_adjustment_by_category_block("QoE Adjustments by Category (조정 카테고리별)", cat_rows)
+                    build_adjustment_by_category_block(
+                        "QoE Adjustments by Category (조정 카테고리별)", cat_rows
+                    )
                 )
 
 
@@ -615,7 +740,9 @@ def _build_multiperiod_sections(
         is_result, _ = compute_multiperiod_is(amounts_by_period, is_defs)
         if is_result.rows:
             metrics = compute_derived_metrics(is_result)
-            sections.append(build_multiperiod_is_block(is_result, derived_metrics=metrics))
+            sections.append(
+                build_multiperiod_is_block(is_result, derived_metrics=metrics)
+            )
     except Exception as e:
         logger.warning("Multiperiod IS failed: %s", e)
 
@@ -690,18 +817,20 @@ def _build_revenue_deepdive_sections(
                 )
             )
             for entry in entries:
-                gl_entries.append({
-                    "entry_id": str(entry.id),
-                    "account_code": entry.account_code,
-                    "account_name": entry.account_name or "",
-                    "description": entry.description or "",
-                    "amount": str(entry.amount) if entry.amount else "0",
-                    "entry_date": str(entry.entry_date) if entry.entry_date else "",
-                    "customer_name": getattr(entry, "customer_name", "") or "",
-                    "product_name": getattr(entry, "product_name", "") or "",
-                    "period": getattr(entry, "period", "FY Latest") or "FY Latest",
-                    "month": str(entry.entry_date)[:7] if entry.entry_date else "",
-                })
+                gl_entries.append(
+                    {
+                        "entry_id": str(entry.id),
+                        "account_code": entry.account_code,
+                        "account_name": entry.account_name or "",
+                        "description": entry.description or "",
+                        "amount": str(entry.amount) if entry.amount else "0",
+                        "entry_date": str(entry.entry_date) if entry.entry_date else "",
+                        "customer_name": getattr(entry, "customer_name", "") or "",
+                        "product_name": getattr(entry, "product_name", "") or "",
+                        "period": getattr(entry, "period", "FY Latest") or "FY Latest",
+                        "month": str(entry.entry_date)[:7] if entry.entry_date else "",
+                    }
+                )
 
         if not gl_entries:
             return
@@ -719,10 +848,7 @@ def _build_revenue_deepdive_sections(
             )
         )
 
-        revenue_entries = [
-            e for e in gl_entries
-            if e["account_code"] in revenue_codes
-        ]
+        revenue_entries = [e for e in gl_entries if e["account_code"] in revenue_codes]
 
         if not revenue_entries:
             logger.info("No revenue GL entries for deep-dive, deal %s", deal_id)
@@ -864,14 +990,16 @@ def _build_cost_structure_sections(
                 )
             )
             for entry in entries:
-                gl_entries.append({
-                    "account_code": entry.account_code,
-                    "account_name": entry.account_name or "",
-                    "amount": str(entry.amount) if entry.amount else "0",
-                    "period": getattr(entry, "period", "FY Latest") or "FY Latest",
-                    "cost_category": getattr(entry, "cost_category", "") or "",
-                    "department": getattr(entry, "department", "") or "",
-                })
+                gl_entries.append(
+                    {
+                        "account_code": entry.account_code,
+                        "account_name": entry.account_name or "",
+                        "amount": str(entry.amount) if entry.amount else "0",
+                        "period": getattr(entry, "period", "FY Latest") or "FY Latest",
+                        "cost_category": getattr(entry, "cost_category", "") or "",
+                        "department": getattr(entry, "department", "") or "",
+                    }
+                )
 
         # 매출 데이터 (비율 계산용)
         revenue_by_period: dict[str, Decimal] | None = None
@@ -883,7 +1011,8 @@ def _build_cost_structure_sections(
         if cost_entries:
             try:
                 mfg_result, _ = compute_manufacturing_cost(
-                    cost_entries, revenue_by_period=revenue_by_period,
+                    cost_entries,
+                    revenue_by_period=revenue_by_period,
                 )
                 if mfg_result.period_labels:
                     sections.append(build_cost_manufacturing_block(mfg_result))
@@ -895,7 +1024,8 @@ def _build_cost_structure_sections(
         if sga_entries:
             try:
                 sga_result, _ = compute_sga_breakdown(
-                    sga_entries, revenue_by_period=revenue_by_period,
+                    sga_entries,
+                    revenue_by_period=revenue_by_period,
                 )
                 if sga_result.items:
                     sections.append(build_cost_sga_block(sga_result))
@@ -903,15 +1033,29 @@ def _build_cost_structure_sections(
                 logger.warning("SGA breakdown failed: %s", e)
 
         # 인건비 분석 (전체 GL에서 인건비 관련)
-        personnel_keywords = {"급여", "상여", "퇴직", "복리", "인건비", "salary", "wage", "bonus"}
+        personnel_keywords = {
+            "급여",
+            "상여",
+            "퇴직",
+            "복리",
+            "인건비",
+            "salary",
+            "wage",
+            "bonus",
+        }
         personnel_entries = [
-            e for e in gl_entries
-            if any(kw in (e.get("account_name", "") or "").lower() for kw in personnel_keywords)
+            e
+            for e in gl_entries
+            if any(
+                kw in (e.get("account_name", "") or "").lower()
+                for kw in personnel_keywords
+            )
         ]
         if personnel_entries:
             try:
                 pers_result, _ = compute_personnel_cost(
-                    personnel_entries, revenue_by_period=revenue_by_period,
+                    personnel_entries,
+                    revenue_by_period=revenue_by_period,
                 )
                 if pers_result.period_labels:
                     sections.append(build_cost_personnel_block(pers_result))
@@ -953,9 +1097,15 @@ def _build_fcf_sections(
             if len(months) >= 2:
                 prev_m = nwc_calc.monthly_trend.get(months[-2], {})
                 curr_m = nwc_calc.monthly_trend.get(months[-1], {})
-                delta_ar = Decimal(str(curr_m.get("ar", 0))) - Decimal(str(prev_m.get("ar", 0)))
-                delta_inv = Decimal(str(curr_m.get("inv", 0))) - Decimal(str(prev_m.get("inv", 0)))
-                delta_ap = Decimal(str(curr_m.get("ap", 0))) - Decimal(str(prev_m.get("ap", 0)))
+                delta_ar = Decimal(str(curr_m.get("ar", 0))) - Decimal(
+                    str(prev_m.get("ar", 0))
+                )
+                delta_inv = Decimal(str(curr_m.get("inv", 0))) - Decimal(
+                    str(prev_m.get("inv", 0))
+                )
+                delta_ap = Decimal(str(curr_m.get("ap", 0))) - Decimal(
+                    str(prev_m.get("ap", 0))
+                )
 
         # Tax (추정: EBITDA의 22%)
         tax_rate = Decimal("0.22")
@@ -984,7 +1134,11 @@ def _build_fcf_sections(
 
         # CAPEX 상세 분석
         capex_entries = [
-            {"period": "FY Latest", "capex_type": "acquisition", "amount": str(capex_estimate)},
+            {
+                "period": "FY Latest",
+                "capex_type": "acquisition",
+                "amount": str(capex_estimate),
+            },
         ]
         revenue_by_period = None
         if qoe_calc.revenue:
@@ -1031,11 +1185,13 @@ def _build_backlog_sections(
 
         # 수주 데이터 업로드 확인
         backlog_upload = db.scalars(
-            select(Upload).where(
+            select(Upload)
+            .where(
                 Upload.deal_id == deal_id,
                 Upload.upload_type == UploadType.BACKLOG,
                 Upload.status == UploadStatus.COMPLETED,
-            ).order_by(Upload.created_at.desc())
+            )
+            .order_by(Upload.created_at.desc())
         ).first()
 
         if not backlog_upload or not backlog_upload.parsed_data:
@@ -1143,15 +1299,18 @@ def _build_enhanced_consolidation_sections(
             accounts = []
             for m in mappings:
                 if m.standard_line_item and m.mapped_amount is not None:
-                    accounts.append(EntityAccountData(
-                        entity_id=eid,
-                        entity_code=entity.code,
-                        account_code=m.source_account_code or "",
-                        account_name=m.source_account_name or "",
-                        category=m.standard_line_item.category.value
-                        if m.standard_line_item.category else "",
-                        amount=m.mapped_amount,
-                    ))
+                    accounts.append(
+                        EntityAccountData(
+                            entity_id=eid,
+                            entity_code=entity.code,
+                            account_code=m.source_account_code or "",
+                            account_name=m.source_account_name or "",
+                            category=m.standard_line_item.category.value
+                            if m.standard_line_item.category
+                            else "",
+                            amount=m.mapped_amount,
+                        )
+                    )
 
             if accounts:
                 entity_accounts[eid] = accounts
@@ -1166,7 +1325,8 @@ def _build_enhanced_consolidation_sections(
 
         # 2. IC 자동 감지
         ic_candidates, _ = detect_ic_transactions(
-            entity_accounts, entity_names=entity_names,
+            entity_accounts,
+            entity_names=entity_names,
         )
         if ic_candidates:
             # IC 후보를 ConsolidationResult 형태로 변환하여 블록 생성
@@ -1178,13 +1338,15 @@ def _build_enhanced_consolidation_sections(
             ic_elims = []
             ic_total = Decimal("0")
             for cand in ic_candidates:
-                ic_elims.append(EliminationEntry(
-                    description=f"IC auto-detected ({cand.confidence}): {cand.entity_a} ↔ {cand.entity_b}",
-                    debit_entity=cand.entity_a,
-                    credit_entity=cand.entity_b,
-                    amount=min(cand.amount_a, cand.amount_b),
-                    account_category=cand.category,
-                ))
+                ic_elims.append(
+                    EliminationEntry(
+                        description=f"IC auto-detected ({cand.confidence}): {cand.entity_a} ↔ {cand.entity_b}",
+                        debit_entity=cand.entity_a,
+                        credit_entity=cand.entity_b,
+                        amount=min(cand.amount_a, cand.amount_b),
+                        account_category=cand.category,
+                    )
+                )
                 ic_total += min(cand.amount_a, cand.amount_b)
 
             mock_result = ConsolidationResult(
@@ -1206,15 +1368,27 @@ def _build_enhanced_consolidation_sections(
         if len(currencies) > 1:
             fx_rates = []
             for entity in entities:
-                if hasattr(entity, "currency") and entity.currency and entity.currency != "KRW":
+                if (
+                    hasattr(entity, "currency")
+                    and entity.currency
+                    and entity.currency != "KRW"
+                ):
                     if hasattr(entity, "fx_rate_end") and entity.fx_rate_end:
-                        fx_rates.append(FXRate(
-                            source_currency=entity.currency,
-                            target_currency="KRW",
-                            period_end_rate=Decimal(str(entity.fx_rate_end)),
-                            average_rate=Decimal(str(getattr(entity, "fx_rate_avg", entity.fx_rate_end))),
-                            period="FY Latest",
-                        ))
+                        fx_rates.append(
+                            FXRate(
+                                source_currency=entity.currency,
+                                target_currency="KRW",
+                                period_end_rate=Decimal(str(entity.fx_rate_end)),
+                                average_rate=Decimal(
+                                    str(
+                                        getattr(
+                                            entity, "fx_rate_avg", entity.fx_rate_end
+                                        )
+                                    )
+                                ),
+                                period="FY Latest",
+                            )
+                        )
             if fx_rates:
                 sections.append(build_fx_rate_summary_block(fx_rates))
 
@@ -1298,7 +1472,9 @@ def _build_reconciliation_sections(
     # Appendix: Data Sources
     uploads = list(
         db.scalars(
-            select(UploadFile).where(UploadFile.deal_id == deal_id).order_by(UploadFile.created_at)
+            select(UploadFile)
+            .where(UploadFile.deal_id == deal_id)
+            .order_by(UploadFile.created_at)
         )
     )
     if uploads:
@@ -1320,10 +1496,18 @@ def _build_reconciliation_sections(
             TableBlock(
                 title="Appendix: Data Sources (데이터 소스)",
                 columns=[
-                    TableColumn(key="filename", header="파일명", width=4.0, align=AlignType.LEFT),
-                    TableColumn(key="type", header="유형", width=1.0, align=AlignType.CENTER),
-                    TableColumn(key="rows", header="처리 행수", width=1.0, align=AlignType.RIGHT),
-                    TableColumn(key="status", header="상태", width=1.0, align=AlignType.CENTER),
+                    TableColumn(
+                        key="filename", header="파일명", width=4.0, align=AlignType.LEFT
+                    ),
+                    TableColumn(
+                        key="type", header="유형", width=1.0, align=AlignType.CENTER
+                    ),
+                    TableColumn(
+                        key="rows", header="처리 행수", width=1.0, align=AlignType.RIGHT
+                    ),
+                    TableColumn(
+                        key="status", header="상태", width=1.0, align=AlignType.CENTER
+                    ),
                 ],
                 rows=source_rows,
                 zebra_stripe=True,
@@ -1529,7 +1713,11 @@ def build_report_ir(
     scope_items = [
         ("period", "Analysis Period", "FY2024 - FY2025"),
         ("entity", "Target Entity", deal.name),
-        ("industry", "Industry", f"{industry_module.industry_name_en} ({industry_module.industry_name_kr})"),
+        (
+            "industry",
+            "Industry",
+            f"{industry_module.industry_name_en} ({industry_module.industry_name_kr})",
+        ),
         ("currency", "Currency", "KRW (백만원)"),
         ("data_sources", "Data Sources", "Trial Balance, General Ledger"),
     ]
@@ -1586,7 +1774,11 @@ def build_report_ir(
         )
         if nwc_calc:
             kpis.append(
-                ("Net Working Capital", _format_currency(nwc_calc.net_working_capital), "백만원")
+                (
+                    "Net Working Capital",
+                    _format_currency(nwc_calc.net_working_capital),
+                    "백만원",
+                )
             )
 
     # Debt 데이터 수집
@@ -1755,7 +1947,9 @@ def build_report_ir(
 
     # ═══ Phase 1: Financial Statements (IS/BS/CF from AccountMapping) ═══
     if include_financial_statements:
-        _build_financial_statement_sections(db, deal_id, sections, qoe_calc, nwc_calc, debt_calc)
+        _build_financial_statement_sections(
+            db, deal_id, sections, qoe_calc, nwc_calc, debt_calc
+        )
 
     # ═══ Phase 1.5: Multi-period FS (4yr+H1 IS/BS/CF) ═══
     if include_multiperiod:
@@ -1806,7 +2000,9 @@ def build_report_ir(
         if korea_overlay.regulatory_items:
             korea_bullets.append("**규제 검토 사항**")
             for reg in korea_overlay.regulatory_items:
-                korea_bullets.append(f"{reg.law_name_kr} ({reg.authority}): {reg.fdd_impact}")
+                korea_bullets.append(
+                    f"{reg.law_name_kr} ({reg.authority}): {reg.fdd_impact}"
+                )
 
         if korea_overlay.tax_items:
             korea_bullets.append("**세무 검토 사항**")
@@ -1881,14 +2077,20 @@ def build_report_ir(
             nwc_summary = None
             if nwc_calc:
                 nwc_summary = {
-                    "net_working_capital": _format_currency(nwc_calc.net_working_capital),
-                    "peg_target": _format_currency(nwc_calc.peg_target) if hasattr(nwc_calc, "peg_target") else "N/A",
+                    "net_working_capital": _format_currency(
+                        nwc_calc.net_working_capital
+                    ),
+                    "peg_target": _format_currency(nwc_calc.peg_target)
+                    if hasattr(nwc_calc, "peg_target")
+                    else "N/A",
                 }
             debt_summary = None
             if debt_calc:
                 debt_summary = {
                     "net_debt": _format_currency(debt_calc.net_debt),
-                    "adjusted_net_debt": _format_currency(debt_calc.adjusted_net_debt) if hasattr(debt_calc, "adjusted_net_debt") else "N/A",
+                    "adjusted_net_debt": _format_currency(debt_calc.adjusted_net_debt)
+                    if hasattr(debt_calc, "adjusted_net_debt")
+                    else "N/A",
                 }
 
             exec_summary = narrator.generate_executive_summary(
@@ -1900,7 +2102,9 @@ def build_report_ir(
             )
             if exec_summary:
                 sections.append(
-                    build_text_block(exec_summary, title="Executive Summary (AI-Generated)")
+                    build_text_block(
+                        exec_summary, title="Executive Summary (AI-Generated)"
+                    )
                 )
         except Exception as e:
             logger.warning(f"LLM narrative generation failed: {e}")
@@ -1991,11 +2195,13 @@ def _build_fdd_data_dict(
     if qoe_calc:
         top_adjs = []
         for adj in (qoe_calc.adjustment_items or [])[:5]:
-            top_adjs.append({
-                "description": adj.description or "",
-                "amount": _format_currency(adj.amount),
-                "category": adj.category.value if adj.category else "",
-            })
+            top_adjs.append(
+                {
+                    "description": adj.description or "",
+                    "amount": _format_currency(adj.amount),
+                    "category": adj.category.value if adj.category else "",
+                }
+            )
         data["qoe"] = {
             "reported_ebitda": _format_currency(qoe_calc.reported_ebitda),
             "adjusted_ebitda": _format_currency(qoe_calc.adjusted_ebitda),
@@ -2026,13 +2232,15 @@ def _build_fdd_data_dict(
         }
 
     issue_list = []
-    for issue in (issues or []):
-        issue_list.append({
-            "title": issue.title or "",
-            "severity": issue.severity.value if issue.severity else "medium",
-            "category": issue.category.value if issue.category else "",
-            "description": issue.description or "",
-        })
+    for issue in issues or []:
+        issue_list.append(
+            {
+                "title": issue.title or "",
+                "severity": issue.severity.value if issue.severity else "medium",
+                "category": issue.category.value if issue.category else "",
+                "description": issue.description or "",
+            }
+        )
     data["issues"] = issue_list
 
     return data
@@ -2081,7 +2289,12 @@ def _build_slotfill_narratives(
 
     # 2. FDD 데이터 dict 구성
     fdd_data = _build_fdd_data_dict(
-        deal, qoe_calc, nwc_calc, debt_calc, issues, industry_module,
+        deal,
+        qoe_calc,
+        nwc_calc,
+        debt_calc,
+        issues,
+        industry_module,
     )
 
     # 3. LLM 라우터 (L3 슬롯용)
@@ -2134,7 +2347,8 @@ def _build_slotfill_narratives(
                     max_tokens=512,
                 )
                 llm_slots = parser.parse(
-                    response.text, list(template.l3_slots.keys()),
+                    response.text,
+                    list(template.l3_slots.keys()),
                 )
 
             # 렌더링
@@ -2151,10 +2365,14 @@ def _build_slotfill_narratives(
             warnings = validate_narrative_claims(text, known_values)
             if warnings:
                 logger.warning(
-                    "SlotFill guardrail warnings [%s]: %s", section_id, warnings,
+                    "SlotFill guardrail warnings [%s]: %s",
+                    section_id,
+                    warnings,
                 )
 
-            title = _SECTION_TITLES.get(section_id, section_id.replace("_", " ").title())
+            title = _SECTION_TITLES.get(
+                section_id, section_id.replace("_", " ").title()
+            )
             sections.append(build_text_block(text, title=title))
 
         except Exception as e:

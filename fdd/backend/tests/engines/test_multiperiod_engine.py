@@ -20,6 +20,7 @@ from app.engines.multiperiod_engine import (
 
 # ── Helpers ──────────────────────────────────────────────
 
+
 def _def(
     code: str,
     name_ko: str,
@@ -45,14 +46,29 @@ def _def(
 IS_DEFS = [
     _def("IS-REV", "매출액", "Revenue", "REVENUE", order=10),
     _def("IS-COGS", "매출원가", "COGS", "COGS", order=20),
-    _def("IS-GP", "매출총이익", "Gross Profit", "GROSS_PROFIT", order=30, is_subtotal=True),
+    _def(
+        "IS-GP",
+        "매출총이익",
+        "Gross Profit",
+        "GROSS_PROFIT",
+        order=30,
+        is_subtotal=True,
+    ),
     _def("IS-SGA", "판관비", "SG&A", "SGA", order=40),
 ]
 
 BS_DEFS = [
     _def("BS-CASH", "현금", "Cash", "CASH", "BS", order=10),
     _def("BS-AR", "매출채권", "AR", "AR", "BS", order=20),
-    _def("BS-TOTAL", "자산총계", "Total Assets", "TOTAL", "BS", order=30, is_subtotal=True),
+    _def(
+        "BS-TOTAL",
+        "자산총계",
+        "Total Assets",
+        "TOTAL",
+        "BS",
+        order=30,
+        is_subtotal=True,
+    ),
 ]
 
 
@@ -116,7 +132,11 @@ class TestComputeYoY:
 
 class TestComputeCAGR:
     def test_basic_cagr(self):
-        periods = {"FY2020": Decimal("100"), "FY2021": Decimal("110"), "FY2022": Decimal("121")}
+        periods = {
+            "FY2020": Decimal("100"),
+            "FY2021": Decimal("110"),
+            "FY2022": Decimal("121"),
+        }
         cagr = _compute_cagr(periods, ["FY2020", "FY2021", "FY2022"])
         assert cagr is not None
         assert Decimal("9") < cagr < Decimal("11")  # ~10%
@@ -155,8 +175,8 @@ class TestComputeMultiperiodIS:
     def test_single_period(self):
         amounts = {
             "FY2024": {
-                "IS-REV": Decimal("-500000"),    # TB credit
-                "IS-COGS": Decimal("300000"),    # TB debit
+                "IS-REV": Decimal("-500000"),  # TB credit
+                "IS-COGS": Decimal("300000"),  # TB debit
                 "IS-SGA": Decimal("100000"),
             }
         }
@@ -226,18 +246,30 @@ class TestDerivedMetrics:
             period_labels=["FY2024"],
             rows=[
                 MultiPeriodRow(
-                    line_item_code="IS-REV", label_ko="매출액", label_en="Revenue",
-                    category="REVENUE", display_order=10, indent=0,
-                    is_subtotal=False, is_total=False,
+                    line_item_code="IS-REV",
+                    label_ko="매출액",
+                    label_en="Revenue",
+                    category="REVENUE",
+                    display_order=10,
+                    indent=0,
+                    is_subtotal=False,
+                    is_total=False,
                     periods={"FY2024": Decimal("100000")},
-                    yoy_changes={}, cagr=None,
+                    yoy_changes={},
+                    cagr=None,
                 ),
                 MultiPeriodRow(
-                    line_item_code="IS-GP", label_ko="매출총이익", label_en="Gross Profit",
-                    category="GROSS_PROFIT", display_order=30, indent=0,
-                    is_subtotal=True, is_total=False,
+                    line_item_code="IS-GP",
+                    label_ko="매출총이익",
+                    label_en="Gross Profit",
+                    category="GROSS_PROFIT",
+                    display_order=30,
+                    indent=0,
+                    is_subtotal=True,
+                    is_total=False,
                     periods={"FY2024": Decimal("40000")},
-                    yoy_changes={}, cagr=None,
+                    yoy_changes={},
+                    cagr=None,
                 ),
             ],
         )

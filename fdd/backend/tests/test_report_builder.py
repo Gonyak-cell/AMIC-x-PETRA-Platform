@@ -135,9 +135,23 @@ class TestTableBlock:
 
     def test_table_block_with_columns_and_rows(self) -> None:
         columns = [
-            TableColumn(key="category", header="Category", width=2.0, align=AlignType.LEFT),
-            TableColumn(key="fy2024", header="FY2024", width=1.5, align=AlignType.RIGHT, format="currency"),
-            TableColumn(key="fy2025", header="FY2025", width=1.5, align=AlignType.RIGHT, format="currency"),
+            TableColumn(
+                key="category", header="Category", width=2.0, align=AlignType.LEFT
+            ),
+            TableColumn(
+                key="fy2024",
+                header="FY2024",
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
+            ),
+            TableColumn(
+                key="fy2025",
+                header="FY2025",
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
+            ),
         ]
         rows = [
             {"category": "Revenue", "fy2024": "10,000", "fy2025": "12,000"},
@@ -228,7 +242,10 @@ class TestReportIR:
         )
         sections = [
             CoverBlock(deal_name="Project Alpha", target_name="Target Corp"),
-            KPIBlock(title="Summary", kpis=[{"label": "EBITDA", "value": "2,500", "unit": "백만원"}]),
+            KPIBlock(
+                title="Summary",
+                kpis=[{"label": "EBITDA", "value": "2,500", "unit": "백만원"}],
+            ),
         ]
         ir = ReportIR(metadata=metadata, sections=sections)
 

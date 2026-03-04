@@ -32,7 +32,8 @@ class TokenBlacklist(Base):
         nullable=False,
     )
     token_type: Mapped[str] = mapped_column(
-        String(10), nullable=False  # "access" | "refresh"
+        String(10),
+        nullable=False,  # "access" | "refresh"
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

@@ -1214,14 +1214,30 @@ def build_seasonality_block(
     for month in months:
         columns.append(
             TableColumn(
-                key=month, header=month, width=1.0, align=AlignType.RIGHT, format="percentage"
+                key=month,
+                header=month,
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
             )
         )
     columns.append(
-        TableColumn(key="avg", header="평균", width=1.0, align=AlignType.RIGHT, format="percentage")
+        TableColumn(
+            key="avg",
+            header="평균",
+            width=1.0,
+            align=AlignType.RIGHT,
+            format="percentage",
+        )
     )
     columns.append(
-        TableColumn(key="stdev", header="표준편차", width=1.0, align=AlignType.RIGHT, format="percentage")
+        TableColumn(
+            key="stdev",
+            header="표준편차",
+            width=1.0,
+            align=AlignType.RIGHT,
+            format="percentage",
+        )
     )
 
     return TableBlock(
@@ -1255,11 +1271,21 @@ def build_qoe_yoy_block(
     for period in period_columns:
         columns.append(
             TableColumn(
-                key=period, header=period, width=1.5, align=AlignType.RIGHT, format="currency"
+                key=period,
+                header=period,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
             )
         )
     columns.append(
-        TableColumn(key="change", header="증감", width=1.5, align=AlignType.RIGHT, format="currency")
+        TableColumn(
+            key="change",
+            header="증감",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
+        )
     )
     columns.append(
         TableColumn(key="change_pct", header="증감율", width=1.0, align=AlignType.RIGHT)
@@ -1295,11 +1321,21 @@ def build_monthly_is_block(
     for month in months:
         columns.append(
             TableColumn(
-                key=month, header=month, width=1.0, align=AlignType.RIGHT, format="currency"
+                key=month,
+                header=month,
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="currency",
             )
         )
     columns.append(
-        TableColumn(key="total", header="합계", width=1.2, align=AlignType.RIGHT, format="currency")
+        TableColumn(
+            key="total",
+            header="합계",
+            width=1.2,
+            align=AlignType.RIGHT,
+            format="currency",
+        )
     )
 
     return TableBlock(
@@ -1329,9 +1365,15 @@ def build_revenue_breakdown_block(
     """
     columns = [
         TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
-        TableColumn(key="counterparty", header="거래처/분류", width=3.0, align=AlignType.LEFT),
         TableColumn(
-            key="amount", header="금액", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="counterparty", header="거래처/분류", width=3.0, align=AlignType.LEFT
+        ),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(key="pct", header="비중", width=1.0, align=AlignType.RIGHT),
         TableColumn(key="cum_pct", header="누적비중", width=1.0, align=AlignType.RIGHT),
@@ -1360,9 +1402,15 @@ def build_cost_structure_block(
     columns = [
         TableColumn(key="name_ko", header="항목", width=3.0, align=AlignType.LEFT),
         TableColumn(
-            key="amount", header="금액", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="amount",
+            header="금액",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
-        TableColumn(key="pct_of_revenue", header="매출 대비", width=1.2, align=AlignType.RIGHT),
+        TableColumn(
+            key="pct_of_revenue", header="매출 대비", width=1.2, align=AlignType.RIGHT
+        ),
     ]
 
     return TableBlock(
@@ -1417,10 +1465,16 @@ def build_adjustment_by_category_block(
         category_rows: [{"category": "Non-Recurring", "count": 3, "total": "500", "pct": "40%"}]
     """
     columns = [
-        TableColumn(key="category", header="조정 카테고리", width=2.5, align=AlignType.LEFT),
+        TableColumn(
+            key="category", header="조정 카테고리", width=2.5, align=AlignType.LEFT
+        ),
         TableColumn(key="count", header="항목 수", width=1.0, align=AlignType.CENTER),
         TableColumn(
-            key="total", header="합계 금액", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="total",
+            header="합계 금액",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(key="pct", header="비중", width=1.0, align=AlignType.RIGHT),
     ]
@@ -1453,13 +1507,25 @@ def build_reconciliation_block(
     columns = [
         TableColumn(key="check", header="검증 항목", width=3.0, align=AlignType.LEFT),
         TableColumn(
-            key="expected", header="기대값", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="expected",
+            header="기대값",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(
-            key="actual", header="실제값", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="actual",
+            header="실제값",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(
-            key="difference", header="차이", width=1.5, align=AlignType.RIGHT, format="currency"
+            key="difference",
+            header="차이",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(key="status", header="결과", width=1.0, align=AlignType.CENTER),
     ]
@@ -1751,10 +1817,18 @@ def build_monthly_trend_block(
     columns = [
         TableColumn(key="month", header="월", width=1.5, align=AlignType.CENTER),
         TableColumn(
-            key="amount", header="매출액", width=2.0, align=AlignType.RIGHT, format="currency"
+            key="amount",
+            header="매출액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
         ),
         TableColumn(
-            key="yoy", header="YoY %", width=1.2, align=AlignType.RIGHT, format="percentage"
+            key="yoy",
+            header="YoY %",
+            width=1.2,
+            align=AlignType.RIGHT,
+            format="percentage",
         ),
         TableColumn(
             key="seasonality", header="계절성 지수", width=1.5, align=AlignType.RIGHT
@@ -1763,12 +1837,14 @@ def build_monthly_trend_block(
 
     rows = []
     for item in result.trend:
-        rows.append({
-            "month": item.month,
-            "amount": str(item.amount),
-            "yoy": str(item.yoy_pct) if item.yoy_pct is not None else "",
-            "seasonality": str(result.seasonality_index.get(item.month, "")),
-        })
+        rows.append(
+            {
+                "month": item.month,
+                "amount": str(item.amount),
+                "yoy": str(item.yoy_pct) if item.yoy_pct is not None else "",
+                "seasonality": str(result.seasonality_index.get(item.month, "")),
+            }
+        )
 
     # 합계/평균 행
     footer_rows = [
@@ -1818,21 +1894,28 @@ def build_cost_manufacturing_block(
     for p in result.period_labels:
         columns.append(
             TableColumn(
-                key=f"amt_{p}", header=p, width=1.5,
-                align=AlignType.RIGHT, format="currency",
+                key=f"amt_{p}",
+                header=p,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
             )
         )
         columns.append(
             TableColumn(
-                key=f"ratio_{p}", header=f"비율 {p}", width=1.0,
-                align=AlignType.RIGHT, format="percentage",
+                key=f"ratio_{p}",
+                header=f"비율 {p}",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
             )
         )
 
     rows: list[dict[str, Any]] = []
 
     def _add_row(
-        name_ko: str, name_en: str,
+        name_ko: str,
+        name_en: str,
         amounts: dict[str, Decimal],
         ratios: dict[str, Decimal],
         is_sub: bool = False,
@@ -1843,12 +1926,19 @@ def build_cost_manufacturing_block(
             row[f"ratio_{p}"] = str(ratios.get(p, ""))
         rows.append(row)
 
-    _add_row("직접재료비", "Direct Materials", result.direct_materials, result.material_ratio)
+    _add_row(
+        "직접재료비", "Direct Materials", result.direct_materials, result.material_ratio
+    )
     _add_row("직접인건비", "Direct Labor", result.direct_labor, result.labor_ratio)
-    _add_row("제조경비", "Mfg Overhead", result.manufacturing_overhead, result.overhead_ratio)
+    _add_row(
+        "제조경비", "Mfg Overhead", result.manufacturing_overhead, result.overhead_ratio
+    )
 
     # 합계 행
-    total_row: dict[str, Any] = {"name_ko": "제조원가 합계", "name_en": "Total Mfg Cost"}
+    total_row: dict[str, Any] = {
+        "name_ko": "제조원가 합계",
+        "name_en": "Total Mfg Cost",
+    }
     for p in result.period_labels:
         total_row[f"amt_{p}"] = str(result.total_cogs.get(p, ""))
         total_row[f"ratio_{p}"] = "100.00"
@@ -1882,14 +1972,31 @@ def build_cost_sga_block(
     for p in result.period_labels:
         columns.append(
             TableColumn(
-                key=f"amt_{p}", header=p, width=1.5,
-                align=AlignType.RIGHT, format="currency",
+                key=f"amt_{p}",
+                header=p,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
             )
         )
-    columns.extend([
-        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
-        TableColumn(key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"),
-    ])
+    columns.extend(
+        [
+            TableColumn(
+                key="share",
+                header="비중 %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
+            TableColumn(
+                key="yoy",
+                header="YoY %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
+        ]
+    )
 
     rows: list[dict[str, Any]] = []
     for item in result.items:
@@ -1934,7 +2041,10 @@ def build_cost_personnel_block(
     for p in result.period_labels:
         columns.append(
             TableColumn(
-                key=f"val_{p}", header=p, width=1.5, align=AlignType.RIGHT,
+                key=f"val_{p}",
+                header=p,
+                width=1.5,
+                align=AlignType.RIGHT,
             )
         )
 
@@ -1991,8 +2101,11 @@ def build_fcf_bridge_block(
     for p in result.period_labels:
         columns.append(
             TableColumn(
-                key=f"amt_{p}", header=p, width=1.5,
-                align=AlignType.RIGHT, format="currency",
+                key=f"amt_{p}",
+                header=p,
+                width=1.5,
+                align=AlignType.RIGHT,
+                format="currency",
             )
         )
 
@@ -2032,7 +2145,10 @@ def build_fcf_bridge_block(
 
     # FCF Conversion 행
     conv_idx = len(rows)
-    conv_row: dict[str, Any] = {"name_ko": "FCF Conversion (%)", "name_en": "FCF/EBITDA"}
+    conv_row: dict[str, Any] = {
+        "name_ko": "FCF Conversion (%)",
+        "name_en": "FCF/EBITDA",
+    }
     for p in result.period_labels:
         pd = result.periods.get(p)
         if pd and pd.fcf_conversion is not None:
@@ -2066,13 +2182,18 @@ def build_capex_analysis_block(
     for p in result.period_labels:
         columns.append(
             TableColumn(
-                key=f"val_{p}", header=p, width=1.5, align=AlignType.RIGHT,
+                key=f"val_{p}",
+                header=p,
+                width=1.5,
+                align=AlignType.RIGHT,
             )
         )
 
     rows: list[dict[str, Any]] = []
 
-    def _metric_row(label: str, data: dict[str, Any], fmt: str = "amount") -> dict[str, Any]:
+    def _metric_row(
+        label: str, data: dict[str, Any], fmt: str = "amount"
+    ) -> dict[str, Any]:
         row: dict[str, Any] = {"metric": label}
         for p in result.period_labels:
             val = data.get(p)
@@ -2113,8 +2234,18 @@ def build_backlog_summary_block(result: Any) -> TableBlock:
     rows = [
         {"metric": "수주잔액 합계", "value": str(result.total_backlog)},
         {"metric": "수주 건수", "value": str(result.order_count)},
-        {"metric": "Book-to-Bill Ratio", "value": str(result.book_to_bill_ratio) if result.book_to_bill_ratio else "N/A"},
-        {"metric": "수주 커버리지 (개월)", "value": str(result.backlog_coverage_months) if result.backlog_coverage_months else "N/A"},
+        {
+            "metric": "Book-to-Bill Ratio",
+            "value": str(result.book_to_bill_ratio)
+            if result.book_to_bill_ratio
+            else "N/A",
+        },
+        {
+            "metric": "수주 커버리지 (개월)",
+            "value": str(result.backlog_coverage_months)
+            if result.backlog_coverage_months
+            else "N/A",
+        },
         {"metric": "Top 5 거래처 비중 (%)", "value": str(result.top_n_share)},
         {"metric": "HHI 집중도", "value": str(result.concentration_index)},
     ]
@@ -2131,27 +2262,43 @@ def build_backlog_by_customer_block(result: Any) -> TableBlock:
     columns = [
         TableColumn(key="rank", header="#", width=0.5, align=AlignType.CENTER),
         TableColumn(key="customer", header="거래처", width=3.0, align=AlignType.LEFT),
-        TableColumn(key="amount", header="수주잔액", width=2.0, align=AlignType.RIGHT, format="currency"),
-        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(
+            key="amount",
+            header="수주잔액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+        TableColumn(
+            key="share",
+            header="비중 %",
+            width=1.0,
+            align=AlignType.RIGHT,
+            format="percentage",
+        ),
         TableColumn(key="count", header="건수", width=0.8, align=AlignType.RIGHT),
     ]
     rows = []
     for i, item in enumerate(result.backlog_by_customer, 1):
-        rows.append({
-            "rank": str(i),
-            "customer": item.customer_name,
-            "amount": str(item.amount),
-            "share": str(item.share_pct),
-            "count": str(item.order_count),
-        })
+        rows.append(
+            {
+                "rank": str(i),
+                "customer": item.customer_name,
+                "amount": str(item.amount),
+                "share": str(item.share_pct),
+                "count": str(item.order_count),
+            }
+        )
 
-    footer_rows = [{
-        "rank": "",
-        "customer": "합계 (Total)",
-        "amount": str(result.total_backlog),
-        "share": "100.00",
-        "count": str(result.order_count),
-    }]
+    footer_rows = [
+        {
+            "rank": "",
+            "customer": "합계 (Total)",
+            "amount": str(result.total_backlog),
+            "share": "100.00",
+            "count": str(result.order_count),
+        }
+    ]
 
     return TableBlock(
         title="거래처별 수주잔액 (Backlog by Customer)",
@@ -2167,27 +2314,43 @@ def build_backlog_aging_block(result: Any) -> TableBlock:
     """BacklogAgingResult → 수주 Aging 블록."""
     columns = [
         TableColumn(key="bucket", header="Aging 구간", width=2.0, align=AlignType.LEFT),
-        TableColumn(key="amount", header="금액", width=2.0, align=AlignType.RIGHT, format="currency"),
-        TableColumn(key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+        TableColumn(
+            key="share",
+            header="비중 %",
+            width=1.0,
+            align=AlignType.RIGHT,
+            format="percentage",
+        ),
         TableColumn(key="count", header="건수", width=0.8, align=AlignType.RIGHT),
     ]
     rows = []
     for b in result.buckets:
-        rows.append({
-            "bucket": b.bucket,
-            "amount": str(b.amount),
-            "share": str(b.share_pct),
-            "count": str(b.order_count),
-        })
+        rows.append(
+            {
+                "bucket": b.bucket,
+                "amount": str(b.amount),
+                "share": str(b.share_pct),
+                "count": str(b.order_count),
+            }
+        )
 
     # 납기 초과 행
     if result.overdue_amount > Decimal("0"):
-        rows.append({
-            "bucket": "납기 초과 (Overdue)",
-            "amount": str(result.overdue_amount),
-            "share": str(result.overdue_share_pct),
-            "count": "",
-        })
+        rows.append(
+            {
+                "bucket": "납기 초과 (Overdue)",
+                "amount": str(result.overdue_amount),
+                "share": str(result.overdue_share_pct),
+                "count": "",
+            }
+        )
 
     return TableBlock(
         title="수주 Aging (Backlog Aging)",
@@ -2203,30 +2366,52 @@ def build_negative_margin_block(result: Any) -> TableBlock:
     columns = [
         TableColumn(key="order_id", header="수주번호", width=1.5, align=AlignType.LEFT),
         TableColumn(key="customer", header="거래처", width=2.0, align=AlignType.LEFT),
-        TableColumn(key="amount", header="수주금액", width=1.5, align=AlignType.RIGHT, format="currency"),
-        TableColumn(key="cost", header="추정원가", width=1.5, align=AlignType.RIGHT, format="currency"),
-        TableColumn(key="margin", header="마진 %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+        TableColumn(
+            key="amount",
+            header="수주금액",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+        TableColumn(
+            key="cost",
+            header="추정원가",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+        TableColumn(
+            key="margin",
+            header="마진 %",
+            width=1.0,
+            align=AlignType.RIGHT,
+            format="percentage",
+        ),
         TableColumn(key="reason", header="사유", width=2.0, align=AlignType.LEFT),
     ]
     rows = []
     for neg in result.negative_margin_orders:
-        rows.append({
-            "order_id": neg.order_id,
-            "customer": neg.customer_name,
-            "amount": str(neg.order_amount),
-            "cost": str(neg.estimated_cost),
-            "margin": str(neg.margin),
-            "reason": neg.reason,
-        })
+        rows.append(
+            {
+                "order_id": neg.order_id,
+                "customer": neg.customer_name,
+                "amount": str(neg.order_amount),
+                "cost": str(neg.estimated_cost),
+                "margin": str(neg.margin),
+                "reason": neg.reason,
+            }
+        )
 
-    footer_rows = [{
-        "order_id": "",
-        "customer": f"합계 ({result.negative_count}건)",
-        "amount": str(result.total_negative_amount),
-        "cost": "",
-        "margin": "",
-        "reason": f"예상 손실: {result.total_negative_loss}",
-    }]
+    footer_rows = [
+        {
+            "order_id": "",
+            "customer": f"합계 ({result.negative_count}건)",
+            "amount": str(result.total_negative_amount),
+            "cost": "",
+            "margin": "",
+            "reason": f"예상 손실: {result.total_negative_loss}",
+        }
+    ]
 
     return TableBlock(
         title="역마진 분석 (Negative Margin Orders)",
@@ -2242,12 +2427,30 @@ def build_monthly_new_orders_block(result: Any) -> TableBlock:
     """MonthlyNewOrderResult → 월별 신규수주 블록."""
     columns = [
         TableColumn(key="month", header="월", width=1.5, align=AlignType.CENTER),
-        TableColumn(key="amount", header="신규수주", width=2.0, align=AlignType.RIGHT, format="currency"),
-        TableColumn(key="cumulative", header="누적", width=2.0, align=AlignType.RIGHT, format="currency"),
+        TableColumn(
+            key="amount",
+            header="신규수주",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
+        TableColumn(
+            key="cumulative",
+            header="누적",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
     ]
     if result.yoy_growth:
         columns.append(
-            TableColumn(key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+            TableColumn(
+                key="yoy",
+                header="YoY %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
         )
 
     rows = []
@@ -2278,13 +2481,31 @@ def build_entity_pl_comparison_block(result: Any) -> TableBlock:
     ]
     for ec in result.entity_codes:
         columns.append(
-            TableColumn(key=f"amt_{ec}", header=ec, width=1.8, align=AlignType.RIGHT, format="currency"),
+            TableColumn(
+                key=f"amt_{ec}",
+                header=ec,
+                width=1.8,
+                align=AlignType.RIGHT,
+                format="currency",
+            ),
         )
         columns.append(
-            TableColumn(key=f"pct_{ec}", header=f"{ec} %", width=1.0, align=AlignType.RIGHT, format="percentage"),
+            TableColumn(
+                key=f"pct_{ec}",
+                header=f"{ec} %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
         )
     columns.append(
-        TableColumn(key="total", header="연결 합계", width=1.8, align=AlignType.RIGHT, format="currency"),
+        TableColumn(
+            key="total",
+            header="연결 합계",
+            width=1.8,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
     )
 
     rows = []
@@ -2312,25 +2533,35 @@ def build_ic_elimination_block(result: Any) -> TableBlock:
         TableColumn(key="debit", header="차변 법인", width=1.5, align=AlignType.LEFT),
         TableColumn(key="credit", header="대변 법인", width=1.5, align=AlignType.LEFT),
         TableColumn(key="category", header="카테고리", width=1.5, align=AlignType.LEFT),
-        TableColumn(key="amount", header="금액", width=2.0, align=AlignType.RIGHT, format="currency"),
+        TableColumn(
+            key="amount",
+            header="금액",
+            width=2.0,
+            align=AlignType.RIGHT,
+            format="currency",
+        ),
     ]
     rows = []
     for e in result.eliminations:
-        rows.append({
-            "description": e.description,
-            "debit": e.debit_entity,
-            "credit": e.credit_entity,
-            "category": e.account_category,
-            "amount": str(e.amount),
-        })
+        rows.append(
+            {
+                "description": e.description,
+                "debit": e.debit_entity,
+                "credit": e.credit_entity,
+                "category": e.account_category,
+                "amount": str(e.amount),
+            }
+        )
 
-    footer_rows = [{
-        "description": "IC 제거 합계",
-        "debit": "",
-        "credit": "",
-        "category": "",
-        "amount": str(result.elimination_total),
-    }]
+    footer_rows = [
+        {
+            "description": "IC 제거 합계",
+            "debit": "",
+            "credit": "",
+            "category": "",
+            "amount": str(result.elimination_total),
+        }
+    ]
 
     return TableBlock(
         title="내부거래 제거 (IC Elimination Schedule)",
@@ -2347,17 +2578,31 @@ def build_fx_rate_summary_block(fx_rates: list[Any]) -> TableBlock:
     columns = [
         TableColumn(key="currency", header="통화", width=1.0, align=AlignType.CENTER),
         TableColumn(key="period", header="기간", width=1.5, align=AlignType.CENTER),
-        TableColumn(key="end_rate", header="기말 환율", width=1.5, align=AlignType.RIGHT, format="decimal"),
-        TableColumn(key="avg_rate", header="평균 환율", width=1.5, align=AlignType.RIGHT, format="decimal"),
+        TableColumn(
+            key="end_rate",
+            header="기말 환율",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="decimal",
+        ),
+        TableColumn(
+            key="avg_rate",
+            header="평균 환율",
+            width=1.5,
+            align=AlignType.RIGHT,
+            format="decimal",
+        ),
     ]
     rows = []
     for fx in fx_rates:
-        rows.append({
-            "currency": fx.source_currency,
-            "period": fx.period,
-            "end_rate": str(fx.period_end_rate),
-            "avg_rate": str(fx.average_rate),
-        })
+        rows.append(
+            {
+                "currency": fx.source_currency,
+                "period": fx.period,
+                "end_rate": str(fx.period_end_rate),
+                "avg_rate": str(fx.average_rate),
+            }
+        )
 
     return TableBlock(
         title="환율 요약 (FX Rate Summary)",
@@ -2391,14 +2636,24 @@ def _build_revenue_breakdown_table(
             )
         )
 
-    columns.extend([
-        TableColumn(
-            key="share", header="비중 %", width=1.0, align=AlignType.RIGHT, format="percentage"
-        ),
-        TableColumn(
-            key="yoy", header="YoY %", width=1.0, align=AlignType.RIGHT, format="percentage"
-        ),
-    ])
+    columns.extend(
+        [
+            TableColumn(
+                key="share",
+                header="비중 %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
+            TableColumn(
+                key="yoy",
+                header="YoY %",
+                width=1.0,
+                align=AlignType.RIGHT,
+                format="percentage",
+            ),
+        ]
+    )
 
     rows = []
     for item in result.breakdown:

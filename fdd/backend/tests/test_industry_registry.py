@@ -100,7 +100,9 @@ class TestIndustryModuleContext:
         ctx = module.get_context()
         assert len(ctx.adjustment_rules) > 0, f"{industry_id}: adjustment_rules empty"
         assert len(ctx.nwc_norms) > 0, f"{industry_id}: nwc_norms empty"
-        assert len(ctx.debt_classifications) > 0, f"{industry_id}: debt_classifications empty"
+        assert len(ctx.debt_classifications) > 0, (
+            f"{industry_id}: debt_classifications empty"
+        )
         assert len(ctx.kpi_benchmarks) > 0, f"{industry_id}: kpi_benchmarks empty"
 
     @pytest.mark.parametrize("industry_id", EXPECTED_INDUSTRY_IDS)

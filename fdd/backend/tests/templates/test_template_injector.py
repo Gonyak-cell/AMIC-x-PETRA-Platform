@@ -75,7 +75,9 @@ def sample_report_ir() -> ReportIR:
             TableBlock(
                 title="qoe_bridge",
                 columns=[
-                    TableColumn(key="category", header="Category", align=AlignType.LEFT),
+                    TableColumn(
+                        key="category", header="Category", align=AlignType.LEFT
+                    ),
                     TableColumn(key="amount", header="Amount", align=AlignType.RIGHT),
                 ],
                 rows=[
@@ -98,8 +100,18 @@ def sample_report_ir() -> ReportIR:
                 chart_type=ChartType.WATERFALL,
                 title="ebitda_bridge",
                 data=ChartData(
-                    categories=["Reported", "Non-recurring", "Normalization", "Adjusted"],
-                    values=[Decimal("10000"), Decimal("1500"), Decimal("1000"), Decimal("12500")],
+                    categories=[
+                        "Reported",
+                        "Non-recurring",
+                        "Normalization",
+                        "Adjusted",
+                    ],
+                    values=[
+                        Decimal("10000"),
+                        Decimal("1500"),
+                        Decimal("1000"),
+                        Decimal("12500"),
+                    ],
                 ),
             ),
         ],
@@ -307,9 +319,7 @@ class TestTemplateInjector:
         assert result.success is True
         # 템플릿에 NONEXISTENT 슬롯이 없으므로 empty_slots에는 포함 안 됨
 
-    def test_inject_missing_template(
-        self, sample_report_ir, sample_contract, tmp_path
-    ):
+    def test_inject_missing_template(self, sample_report_ir, sample_contract, tmp_path):
         """존재하지 않는 템플릿 처리."""
         output_path = tmp_path / "output.pptx"
 
@@ -344,9 +354,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -369,9 +377,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -397,9 +403,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -423,9 +427,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -444,9 +446,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -464,9 +464,7 @@ class TestBlockToText:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         text = injector._block_to_text(block)
@@ -491,9 +489,7 @@ class TestTypeCompatibility:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         assert injector._is_type_compatible(SlotType.TEXT, block) is True
@@ -506,9 +502,7 @@ class TestTypeCompatibility:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         assert injector._is_type_compatible(SlotType.TEXT, block) is True
@@ -521,9 +515,7 @@ class TestTypeCompatibility:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         assert injector._is_type_compatible(SlotType.TABLE, block) is True
@@ -536,9 +528,7 @@ class TestTypeCompatibility:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         assert injector._is_type_compatible(SlotType.CHART, block) is True
@@ -551,9 +541,7 @@ class TestTypeCompatibility:
                 template_path=Path("dummy.pptx"),
                 output_path=Path("output.pptx"),
                 report_ir=ReportIR(),
-                contract=TemplateContract(
-                    template_id="test", template_name="Test"
-                ),
+                contract=TemplateContract(template_id="test", template_name="Test"),
             )
         )
         assert injector._is_type_compatible(SlotType.TEXT, block) is False

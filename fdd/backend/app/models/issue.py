@@ -125,9 +125,7 @@ class Issue(Base):
     )
 
     # ── Content ──
-    title: Mapped[str] = mapped_column(
-        String(200), nullable=False, comment="이슈 제목"
-    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False, comment="이슈 제목")
     description: Mapped[str] = mapped_column(
         Text, nullable=False, comment="이슈 상세 설명"
     )

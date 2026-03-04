@@ -186,7 +186,12 @@ class CrossVerificationAgent:
         if self._accumulated_cost >= self.max_cost_usd:
             logger.warning(
                 "비용 한도 초과 — 교차검증 건너뜀",
-                extra={"ctx": {"cost": str(self._accumulated_cost), "limit": str(self.max_cost_usd)}},
+                extra={
+                    "ctx": {
+                        "cost": str(self._accumulated_cost),
+                        "limit": str(self.max_cost_usd),
+                    }
+                },
             )
             return CrossVerificationResult(
                 writer_provider=self.writer_provider,
@@ -200,7 +205,9 @@ class CrossVerificationAgent:
         # Reviewer 프롬프트 구성 및 호출
         try:
             system_prompt, user_prompt = self._build_reviewer_prompt(
-                context, writer_result, self.review_mode,
+                context,
+                writer_result,
+                self.review_mode,
             )
             reviewer_items = self._call_reviewer(system_prompt, user_prompt)
         except Exception as e:
@@ -220,7 +227,9 @@ class CrossVerificationAgent:
 
         # deterministic 비교
         disagreements, reviewer_only, writer_only = self._compare_results(
-            writer_items, reviewer_items, self.analysis_type,
+            writer_items,
+            reviewer_items,
+            self.analysis_type,
         )
 
         # 자동 해결
@@ -232,9 +241,7 @@ class CrossVerificationAgent:
         total = max(len(writer_items), len(reviewer_items))
 
         agreement_rate = (
-            Decimal(str(agreed)) / Decimal(str(total))
-            if total > 0
-            else Decimal("1.0")
+            Decimal(str(agreed)) / Decimal(str(total)) if total > 0 else Decimal("1.0")
         )
 
         return CrossVerificationResult(
@@ -274,7 +281,9 @@ class CrossVerificationAgent:
             "nwc": "NWC (Net Working Capital)",
             "debt": "Net Debt",
         }
-        analysis_label = analysis_labels.get(self.analysis_type, self.analysis_type.upper())
+        analysis_label = analysis_labels.get(
+            self.analysis_type, self.analysis_type.upper()
+        )
 
         if review_mode == ReviewMode.BLIND:
             system_prompt = (
@@ -311,21 +320,25 @@ class CrossVerificationAgent:
         ]
 
         if candidates:
-            user_parts.extend([
-                f"\n## Adjustment Candidates ({len(candidates)} items):",
-                json.dumps(candidates, ensure_ascii=False, indent=2),
-            ])
+            user_parts.extend(
+                [
+                    f"\n## Adjustment Candidates ({len(candidates)} items):",
+                    json.dumps(candidates, ensure_ascii=False, indent=2),
+                ]
+            )
 
         # INFORMED 모드에서만 Writer 결과 추가
         if review_mode == ReviewMode.INFORMED and writer_result.result:
-            user_parts.extend([
-                "\n## Junior Analyst's Classification (for review):",
-                json.dumps(
-                    writer_result.result.get("analysis_results", []),
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-            ])
+            user_parts.extend(
+                [
+                    "\n## Junior Analyst's Classification (for review):",
+                    json.dumps(
+                        writer_result.result.get("analysis_results", []),
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                ]
+            )
 
         user_prompt = "\n".join(user_parts)
         return system_prompt, user_prompt
@@ -349,7 +362,10 @@ class CrossVerificationAgent:
             user_prompt=user_prompt,
             temperature=0.0,
             max_tokens=4096,
-            json_schema={"type": "object", "properties": {"analysis_results": {"type": "array"}}},
+            json_schema={
+                "type": "object",
+                "properties": {"analysis_results": {"type": "array"}},
+            },
             timeout_seconds=60,
         )
 
@@ -460,21 +476,26 @@ class CrossVerificationAgent:
                 if pair in _QOE_MAJOR_PAIRS
                 else DisagreementLevel.MODERATE
             )
-            disagreements.append(DisagreementItem(
-                entry_id=entry_id,
-                field="assessment",
-                writer_value=w_assessment,
-                reviewer_value=r_assessment,
-                level=level,
-                writer_rationale=writer.get("rationale", ""),
-                reviewer_rationale=reviewer.get("rationale", ""),
-                writer_confidence=float(writer.get("confidence", 0)),
-                reviewer_confidence=float(reviewer.get("confidence", 0)),
-            ))
+            disagreements.append(
+                DisagreementItem(
+                    entry_id=entry_id,
+                    field="assessment",
+                    writer_value=w_assessment,
+                    reviewer_value=r_assessment,
+                    level=level,
+                    writer_rationale=writer.get("rationale", ""),
+                    reviewer_rationale=reviewer.get("rationale", ""),
+                    writer_confidence=float(writer.get("confidence", 0)),
+                    reviewer_confidence=float(reviewer.get("confidence", 0)),
+                )
+            )
 
         # 금액 불일치
         amount_disagreement = self._compare_amount(
-            entry_id, writer, reviewer, "qoe",
+            entry_id,
+            writer,
+            reviewer,
+            "qoe",
         )
         if amount_disagreement:
             disagreements.append(amount_disagreement)
@@ -494,20 +515,25 @@ class CrossVerificationAgent:
         r_class = str(reviewer.get("classification", "")).upper()
 
         if w_class != r_class:
-            disagreements.append(DisagreementItem(
-                entry_id=entry_id,
-                field="classification",
-                writer_value=w_class,
-                reviewer_value=r_class,
-                level=DisagreementLevel.MODERATE,
-                writer_rationale=writer.get("rationale", ""),
-                reviewer_rationale=reviewer.get("rationale", ""),
-                writer_confidence=float(writer.get("confidence", 0)),
-                reviewer_confidence=float(reviewer.get("confidence", 0)),
-            ))
+            disagreements.append(
+                DisagreementItem(
+                    entry_id=entry_id,
+                    field="classification",
+                    writer_value=w_class,
+                    reviewer_value=r_class,
+                    level=DisagreementLevel.MODERATE,
+                    writer_rationale=writer.get("rationale", ""),
+                    reviewer_rationale=reviewer.get("rationale", ""),
+                    writer_confidence=float(writer.get("confidence", 0)),
+                    reviewer_confidence=float(reviewer.get("confidence", 0)),
+                )
+            )
 
         amount_disagreement = self._compare_amount(
-            entry_id, writer, reviewer, "nwc",
+            entry_id,
+            writer,
+            reviewer,
+            "nwc",
         )
         if amount_disagreement:
             disagreements.append(amount_disagreement)
@@ -526,21 +552,30 @@ class CrossVerificationAgent:
         w_debt_like = writer.get("debt_like")
         r_debt_like = reviewer.get("debt_like")
 
-        if w_debt_like is not None and r_debt_like is not None and w_debt_like != r_debt_like:
-            disagreements.append(DisagreementItem(
-                entry_id=entry_id,
-                field="debt_like",
-                writer_value=str(w_debt_like),
-                reviewer_value=str(r_debt_like),
-                level=DisagreementLevel.MAJOR,
-                writer_rationale=writer.get("rationale", ""),
-                reviewer_rationale=reviewer.get("rationale", ""),
-                writer_confidence=float(writer.get("confidence", 0)),
-                reviewer_confidence=float(reviewer.get("confidence", 0)),
-            ))
+        if (
+            w_debt_like is not None
+            and r_debt_like is not None
+            and w_debt_like != r_debt_like
+        ):
+            disagreements.append(
+                DisagreementItem(
+                    entry_id=entry_id,
+                    field="debt_like",
+                    writer_value=str(w_debt_like),
+                    reviewer_value=str(r_debt_like),
+                    level=DisagreementLevel.MAJOR,
+                    writer_rationale=writer.get("rationale", ""),
+                    reviewer_rationale=reviewer.get("rationale", ""),
+                    writer_confidence=float(writer.get("confidence", 0)),
+                    reviewer_confidence=float(reviewer.get("confidence", 0)),
+                )
+            )
 
         amount_disagreement = self._compare_amount(
-            entry_id, writer, reviewer, "debt",
+            entry_id,
+            writer,
+            reviewer,
+            "debt",
         )
         if amount_disagreement:
             disagreements.append(amount_disagreement)
@@ -555,8 +590,12 @@ class CrossVerificationAgent:
         analysis_type: str,
     ) -> DisagreementItem | None:
         """금액을 비교한다."""
-        w_amount = self._to_decimal(writer.get("amount") or writer.get("adjusted_amount"))
-        r_amount = self._to_decimal(reviewer.get("amount") or reviewer.get("adjusted_amount"))
+        w_amount = self._to_decimal(
+            writer.get("amount") or writer.get("adjusted_amount")
+        )
+        r_amount = self._to_decimal(
+            reviewer.get("amount") or reviewer.get("adjusted_amount")
+        )
 
         if w_amount is None or r_amount is None:
             return None
@@ -611,16 +650,23 @@ class CrossVerificationAgent:
             # 규칙 1: UNCLEAR 해결
             if d.field == "assessment":
                 if d.writer_value == "UNCLEAR" and d.reviewer_value != "UNCLEAR":
-                    d.resolution = f"Reviewer 분류 채택 ({d.reviewer_value}): Writer가 UNCLEAR"
+                    d.resolution = (
+                        f"Reviewer 분류 채택 ({d.reviewer_value}): Writer가 UNCLEAR"
+                    )
                     d.resolved = True
                     continue
                 if d.reviewer_value == "UNCLEAR" and d.writer_value != "UNCLEAR":
-                    d.resolution = f"Writer 분류 채택 ({d.writer_value}): Reviewer가 UNCLEAR"
+                    d.resolution = (
+                        f"Writer 분류 채택 ({d.writer_value}): Reviewer가 UNCLEAR"
+                    )
                     d.resolved = True
                     continue
 
             # 규칙 2: 금액이 MINOR 이하이고 원본과 일치
-            if d.field == "amount" and d.level in (DisagreementLevel.MINOR, DisagreementLevel.MODERATE):
+            if d.field == "amount" and d.level in (
+                DisagreementLevel.MINOR,
+                DisagreementLevel.MODERATE,
+            ):
                 source_entry = source_map.get(d.entry_id, {})
                 source_amount = self._to_decimal(
                     source_entry.get("amount") or source_entry.get("adjusted_amount"),
@@ -629,11 +675,15 @@ class CrossVerificationAgent:
                     w = self._to_decimal(d.writer_value)
                     r = self._to_decimal(d.reviewer_value)
                     if w == source_amount:
-                        d.resolution = f"Writer 금액 채택: 원본과 정확히 일치 ({source_amount})"
+                        d.resolution = (
+                            f"Writer 금액 채택: 원본과 정확히 일치 ({source_amount})"
+                        )
                         d.resolved = True
                         continue
                     if r == source_amount:
-                        d.resolution = f"Reviewer 금액 채택: 원본과 정확히 일치 ({source_amount})"
+                        d.resolution = (
+                            f"Reviewer 금액 채택: 원본과 정확히 일치 ({source_amount})"
+                        )
                         d.resolved = True
                         continue
 
@@ -657,14 +707,15 @@ class CrossVerificationAgent:
 
     def _estimate_cost(self, token_usage: dict[str, int]) -> Decimal:
         """토큰 사용량에서 비용을 추정한다."""
-        rates = _COST_PER_1M_TOKENS.get(self.reviewer_provider, _COST_PER_1M_TOKENS["gemini"])
+        rates = _COST_PER_1M_TOKENS.get(
+            self.reviewer_provider, _COST_PER_1M_TOKENS["gemini"]
+        )
         input_tokens = Decimal(str(token_usage.get("input_tokens", 0)))
         output_tokens = Decimal(str(token_usage.get("output_tokens", 0)))
 
-        cost = (
-            input_tokens * rates["input"] / Decimal("1000000")
-            + output_tokens * rates["output"] / Decimal("1000000")
-        )
+        cost = input_tokens * rates["input"] / Decimal(
+            "1000000"
+        ) + output_tokens * rates["output"] / Decimal("1000000")
         return cost.quantize(Decimal("0.000001"))
 
     @staticmethod

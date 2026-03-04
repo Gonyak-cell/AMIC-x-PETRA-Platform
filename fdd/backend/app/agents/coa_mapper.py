@@ -152,13 +152,15 @@ class CoAMapperAgent(BaseAgent):
             # 소스 계정 코드가 원본에 있는지
             src_code = sugg.get("source_account_code")
             if src_code and str(src_code) not in source_codes:
-                errors.append(
-                    f"소스 계정 코드 {src_code}가 미매핑 계정 리스트에 없음"
-                )
+                errors.append(f"소스 계정 코드 {src_code}가 미매핑 계정 리스트에 없음")
 
             # 타겟 코드가 표준 라인아이템에 있는지
             target_code = sugg.get("suggested_target_code")
-            if target_code and standard_codes and str(target_code) not in standard_codes:
+            if (
+                target_code
+                and standard_codes
+                and str(target_code) not in standard_codes
+            ):
                 errors.append(
                     f"제안된 타겟 코드 {target_code}가 표준 라인아이템에 없음 (할루시네이션)"
                 )

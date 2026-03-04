@@ -26,7 +26,9 @@ class FDDNarrativeGenerator:
         industry_id: 산업 식별자 (산업별 LLM 라우팅용)
     """
 
-    def __init__(self, router: FDDModelRouter, industry_context: str = "", industry_id: str = ""):
+    def __init__(
+        self, router: FDDModelRouter, industry_context: str = "", industry_id: str = ""
+    ):
         self._router = router
         self._industry_context = industry_context
         self._industry_id = industry_id

@@ -93,7 +93,9 @@ class TestCompareTableRows:
         actual = [{"a": "1"}, {"a": "2"}]
         findings = compare_table_rows(expected, actual, ["a"], "test")
 
-        structure_findings = [f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH]
+        structure_findings = [
+            f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH
+        ]
         assert len(structure_findings) == 1
         assert structure_findings[0].expected == "3"
         assert structure_findings[0].actual == "2"
@@ -172,7 +174,9 @@ class TestCompareReportIR:
         }
 
         result, findings = compare_report_ir(expected_ir, actual_ir)
-        structure_findings = [f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH]
+        structure_findings = [
+            f for f in findings if f.check_type == QACheckType.STRUCTURE_MISMATCH
+        ]
         assert any("Section count" in f.message for f in structure_findings)
 
     def test_missing_section(self) -> None:

@@ -52,7 +52,10 @@ class JobOrchestrator:
                 action=AuditAction.CREATE,
                 actor="system",
                 user_id=user_id,
-                new_value={"job_type": job_type.value, "status": JobStatus.PENDING.value},
+                new_value={
+                    "job_type": job_type.value,
+                    "status": JobStatus.PENDING.value,
+                },
             )
         )
         self.db.commit()
@@ -85,9 +88,7 @@ class JobOrchestrator:
         self.db.commit()
         return job
 
-    def complete_job(
-        self, job_id: uuid.UUID, output_result: dict | None = None
-    ) -> Job:
+    def complete_job(self, job_id: uuid.UUID, output_result: dict | None = None) -> Job:
         """Job을 COMPLETED 상태로 전환한다."""
         job = self._get_job(job_id)
         if job.status != JobStatus.RUNNING:
@@ -126,7 +127,9 @@ class JobOrchestrator:
         """Job을 취소한다."""
         job = self._get_job(job_id)
         if job.status in (JobStatus.COMPLETED, JobStatus.CANCELLED):
-            raise ValueError(f"Job {job_id} cannot be cancelled (current: {job.status})")
+            raise ValueError(
+                f"Job {job_id} cannot be cancelled (current: {job.status})"
+            )
 
         job.status = JobStatus.CANCELLED
         job.completed_at = datetime.utcnow()
@@ -169,7 +172,10 @@ class JobOrchestrator:
         timed_out: list[Job] = []
 
         for job in running_jobs:
-            if job.started_at and (now - job.started_at).total_seconds() > job.timeout_seconds:
+            if (
+                job.started_at
+                and (now - job.started_at).total_seconds() > job.timeout_seconds
+            ):
                 self.fail_job(job.id, "Job timed out", retry=True)
                 timed_out.append(job)
 

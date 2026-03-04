@@ -45,7 +45,12 @@ from app.core.log_middleware import setup_request_logging
 from app.core.logging import get_logger, setup_logging
 
 # 구조화 로깅 초기화 (통일 JSON 로그 스키마)
-setup_logging(level=settings.log_level, json_output=True, service_name="fdd", log_dir=settings.log_dir or None)
+setup_logging(
+    level=settings.log_level,
+    json_output=True,
+    service_name="fdd",
+    log_dir=settings.log_dir or None,
+)
 logger = get_logger(__name__)
 
 _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
@@ -140,7 +145,12 @@ logger.info("Auto FDD application initialized")
 
 @app.get("/health")
 def health_check():
-    result = {"status": "ok", "service": "fdd", "version": "0.1.0", "migration_ok": _migration_ok}
+    result = {
+        "status": "ok",
+        "service": "fdd",
+        "version": "0.1.0",
+        "migration_ok": _migration_ok,
+    }
     try:
         from sqlalchemy import text
 

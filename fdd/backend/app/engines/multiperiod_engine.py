@@ -52,8 +52,8 @@ class LineItemDef:
     code: str
     name_ko: str
     name_en: str
-    category: str           # LineItemCategory value
-    statement_type: str     # "IS" | "BS"
+    category: str  # LineItemCategory value
+    statement_type: str  # "IS" | "BS"
     display_order: int
     parent_code: str | None = None
     is_subtotal: bool = False
@@ -64,7 +64,7 @@ class EvidenceLinkData:
     """Evidence link data (엔진 → 서비스 출력용, DB 저장 전)."""
 
     target_type: str
-    source_type: str        # "TB" or "MAPPING"
+    source_type: str  # "TB" or "MAPPING"
     source_id: str
     source_detail: dict[str, Any] | None = None
 
@@ -85,17 +85,17 @@ class MultiPeriodRow:
     indent: int
     is_subtotal: bool
     is_total: bool
-    periods: dict[str, Decimal]         # {"FY2022": Decimal("1234.5678"), ...}
-    yoy_changes: dict[str, Decimal]     # {"FY2023": Decimal("5.32"), ...} (%)
-    cagr: Decimal | None                # 3년+ 시 CAGR (%), None if insufficient
+    periods: dict[str, Decimal]  # {"FY2022": Decimal("1234.5678"), ...}
+    yoy_changes: dict[str, Decimal]  # {"FY2023": Decimal("5.32"), ...} (%)
+    cagr: Decimal | None  # 3년+ 시 CAGR (%), None if insufficient
 
 
 @dataclass
 class MultiPeriodResult:
     """다기간 재무제표 결과."""
 
-    statement_type: str                 # "IS" | "BS" | "CF"
-    period_labels: list[str]            # ["FY2022", "FY2023", "FY2024", "H1 2025"]
+    statement_type: str  # "IS" | "BS" | "CF"
+    period_labels: list[str]  # ["FY2022", "FY2023", "FY2024", "H1 2025"]
     rows: list[MultiPeriodRow]
     warnings: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -389,8 +389,8 @@ class DerivedMetricsRow:
 
     metric_name_ko: str
     metric_name_en: str
-    periods: dict[str, Decimal]     # 기간별 값 (%, 배수, 금액)
-    unit: str                       # "%" | "x" | "원"
+    periods: dict[str, Decimal]  # 기간별 값 (%, 배수, 금액)
+    unit: str  # "%" | "x" | "원"
 
 
 def compute_derived_metrics(

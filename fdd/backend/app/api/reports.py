@@ -83,7 +83,9 @@ async def generate_report(
         from app.services.ralph_service import FDDRalphService
 
         ralph_service = FDDRalphService(db)
-        ralph_config = request.ralph_config.model_dump() if request.ralph_config else None
+        ralph_config = (
+            request.ralph_config.model_dump() if request.ralph_config else None
+        )
         refined_ir, _ralph_session = await ralph_service.run_draft_pass(
             deal_id=deal_id,
             report_ir=report_ir,
@@ -162,10 +164,14 @@ async def generate_report(
         if request.checklist_id:
             from app.models.fdd_checklist import FddChecklist
 
-            checklist = db.query(FddChecklist).filter(
-                FddChecklist.id == request.checklist_id,
-                FddChecklist.deal_id == deal_id,
-            ).first()
+            checklist = (
+                db.query(FddChecklist)
+                .filter(
+                    FddChecklist.id == request.checklist_id,
+                    FddChecklist.deal_id == deal_id,
+                )
+                .first()
+            )
             if checklist:
                 checklist_data = {
                     "items": [
@@ -174,9 +180,13 @@ async def generate_report(
                             "title": item.title,
                             "description": item.description,
                             "auto_finding": item.auto_finding or "",
-                            "auto_amount": str(item.auto_amount) if item.auto_amount else "",
+                            "auto_amount": str(item.auto_amount)
+                            if item.auto_amount
+                            else "",
                             "user_correction": item.user_correction or "",
-                            "user_amount": str(item.user_amount) if item.user_amount else "",
+                            "user_amount": str(item.user_amount)
+                            if item.user_amount
+                            else "",
                             "status": item.status.value,
                             "severity": item.severity.value if item.severity else "",
                         }
@@ -199,7 +209,9 @@ async def generate_report(
         )
 
     # PPTX 생성 (기본값)
-    pptx_bytes = await generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
+    pptx_bytes = await generate_pptx(
+        report_ir, pptx_service_url=settings.pptx_service_url
+    )
     filename = f"FDD_Report_{report_ir.metadata.deal_name}.pptx"
 
     return StreamingResponse(
@@ -227,7 +239,9 @@ def _patch_report_ir(report_ir, ir_dict: dict) -> None:
         if block_type == "text":
             if "content" in refined:
                 section.content = refined["content"]
-            if "bullet_points" in refined and isinstance(refined["bullet_points"], list):
+            if "bullet_points" in refined and isinstance(
+                refined["bullet_points"], list
+            ):
                 section.bullet_points = refined["bullet_points"]
 
         elif block_type == "claim":
@@ -466,7 +480,9 @@ async def create_report_version(
         xlsx_buffer = render_excel_report(report_ir)
         Path(file_path).write_bytes(xlsx_buffer.getvalue())
     else:
-        pptx_bytes = await generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
+        pptx_bytes = await generate_pptx(
+            report_ir, pptx_service_url=settings.pptx_service_url
+        )
         Path(file_path).write_bytes(pptx_bytes)
 
     # Create DB record
@@ -598,9 +614,7 @@ def download_report_version(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
     elif file_format == "xlsx":
-        media_type = (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     else:
         media_type = (
             "application/vnd.openxmlformats-officedocument.presentationml.presentation"

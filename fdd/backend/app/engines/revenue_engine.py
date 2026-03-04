@@ -53,34 +53,34 @@ class EvidenceLinkData:
 class RevenueItem:
     """매출 분해 항목."""
 
-    name: str                               # 거래처명/제품명/사업부명/월
-    amounts_by_period: dict[str, Decimal]    # {"FY2023": Decimal("50000"), ...}
-    total: Decimal                           # 전체 기간 합계 (또는 최신 기간)
-    share_pct: Decimal                       # 비중 (%)
-    yoy_pct: Decimal | None                  # YoY 변동률 (%), None if insufficient
-    rank: int                                # 순위 (1-based)
+    name: str  # 거래처명/제품명/사업부명/월
+    amounts_by_period: dict[str, Decimal]  # {"FY2023": Decimal("50000"), ...}
+    total: Decimal  # 전체 기간 합계 (또는 최신 기간)
+    share_pct: Decimal  # 비중 (%)
+    yoy_pct: Decimal | None  # YoY 변동률 (%), None if insufficient
+    rank: int  # 순위 (1-based)
 
 
 @dataclass(frozen=True)
 class MonthlyTrendItem:
     """월별 추이 항목."""
 
-    month: str                              # "2024-01", "2024-02", ...
+    month: str  # "2024-01", "2024-02", ...
     amount: Decimal
-    yoy_pct: Decimal | None                 # 전년 동월 대비 %
+    yoy_pct: Decimal | None  # 전년 동월 대비 %
 
 
 @dataclass
 class RevenueBreakdownResult:
     """매출 분해 분석 결과."""
 
-    dimension: str                          # "customer" | "product" | "segment" | "month" | "region"
-    period_labels: list[str]                # 분석 대상 기간 레이블
-    breakdown: list[RevenueItem]            # 항목별 결과 (rank 순)
-    total_revenue: Decimal                  # 전체 매출 합계
-    concentration_index: Decimal            # HHI (0~10,000)
-    top_n_share: Decimal                    # Top 5 매출 비중 (%)
-    top_n_count: int                        # Top N 기준 (기본 5)
+    dimension: str  # "customer" | "product" | "segment" | "month" | "region"
+    period_labels: list[str]  # 분석 대상 기간 레이블
+    breakdown: list[RevenueItem]  # 항목별 결과 (rank 순)
+    total_revenue: Decimal  # 전체 매출 합계
+    concentration_index: Decimal  # HHI (0~10,000)
+    top_n_share: Decimal  # Top 5 매출 비중 (%)
+    top_n_count: int  # Top N 기준 (기본 5)
     warnings: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -89,13 +89,13 @@ class RevenueBreakdownResult:
 class MonthlyTrendResult:
     """월별 매출 추이 결과."""
 
-    months: list[str]                       # ["2024-01", "2024-02", ...]
-    trend: list[MonthlyTrendItem]           # 월별 데이터
-    total: Decimal                          # 전체 합계
-    average_monthly: Decimal                # 월평균
-    seasonality_index: dict[str, Decimal]   # 월별 계절성 지수 (평균=100)
-    peak_month: str                         # 최고 매출 월
-    trough_month: str                       # 최저 매출 월
+    months: list[str]  # ["2024-01", "2024-02", ...]
+    trend: list[MonthlyTrendItem]  # 월별 데이터
+    total: Decimal  # 전체 합계
+    average_monthly: Decimal  # 월평균
+    seasonality_index: dict[str, Decimal]  # 월별 계절성 지수 (평균=100)
+    peak_month: str  # 최고 매출 월
+    trough_month: str  # 최저 매출 월
     warnings: list[str] = field(default_factory=list)
 
 
@@ -285,8 +285,7 @@ def compute_revenue_breakdown(
     # 경고 생성
     if hhi > Decimal("2500"):
         warnings.append(
-            f"REVENUE_HIGH_CONCENTRATION: HHI={hhi} (>2500) — "
-            "매출 집중도가 높습니다"
+            f"REVENUE_HIGH_CONCENTRATION: HHI={hhi} (>2500) — 매출 집중도가 높습니다"
         )
 
     if top_n_share > Decimal("80"):
@@ -395,9 +394,7 @@ def compute_monthly_trend(
             if prior_val > ZERO:
                 yoy = _pct((amount - prior_val) / prior_val * HUNDRED)
 
-        trend.append(
-            MonthlyTrendItem(month=month, amount=amount, yoy_pct=yoy)
-        )
+        trend.append(MonthlyTrendItem(month=month, amount=amount, yoy_pct=yoy))
 
         evidence.append(
             EvidenceLinkData(

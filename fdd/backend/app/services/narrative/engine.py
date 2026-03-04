@@ -39,7 +39,14 @@ BUILTIN_TEMPLATES: dict[str, NarrativeTemplate] = {
 {% for adj in adjustments[:3] %}- {{ adj.category }}: {{ adj.amount }}원 ({{ adj.description }})
 {% endfor %}{% endif %}
 {% if adjustment_ratio > 0.1 %}조정비율이 {{ adjustment_ratio|round(1) }}%로 높은 편이며, 추가 검토가 필요합니다.{% endif %}""",
-        variables=["period", "reported_ebitda", "adjusted_ebitda", "adjustment_count", "adjustments", "adjustment_ratio"],
+        variables=[
+            "period",
+            "reported_ebitda",
+            "adjusted_ebitda",
+            "adjustment_count",
+            "adjustments",
+            "adjustment_ratio",
+        ],
     ),
     "qoe_adjustment_detail": NarrativeTemplate(
         name="qoe_adjustment_detail",
@@ -63,7 +70,15 @@ BUILTIN_TEMPLATES: dict[str, NarrativeTemplate] = {
 {% if peg_method %}Target NWC Peg 방식: {{ peg_method }}
 Target NWC: {{ target_nwc }}원
 {% if adjustment %}Price Adjustment: {{ adjustment }}원{% endif %}{% endif %}""",
-        variables=["period", "total_nwc", "current_assets", "current_liabilities", "peg_method", "target_nwc", "adjustment"],
+        variables=[
+            "period",
+            "total_nwc",
+            "current_assets",
+            "current_liabilities",
+            "peg_method",
+            "target_nwc",
+            "adjustment",
+        ],
     ),
     "nwc_trend": NarrativeTemplate(
         name="nwc_trend",
@@ -89,7 +104,15 @@ Target NWC: {{ target_nwc }}원
 {% endfor %}{% endif %}
 
 {% if ifrs16_impact %}IFRS 16 리스부채 영향: {{ ifrs16_impact }}원{% endif %}""",
-        variables=["period", "net_debt", "total_debt", "cash", "debt_like_items", "debt_like_total", "ifrs16_impact"],
+        variables=[
+            "period",
+            "net_debt",
+            "total_debt",
+            "cash",
+            "debt_like_items",
+            "debt_like_total",
+            "ifrs16_impact",
+        ],
     ),
     "executive_summary": NarrativeTemplate(
         name="executive_summary",
@@ -115,7 +138,16 @@ Target NWC: {{ target_nwc }}원
 {% if risk_factors %}■ Risk Factors
 {% for risk in risk_factors %}- {{ risk }}
 {% endfor %}{% endif %}""",
-        variables=["deal_name", "analysis_period", "target_name", "qoe_summary", "nwc_summary", "debt_summary", "key_findings", "risk_factors"],
+        variables=[
+            "deal_name",
+            "analysis_period",
+            "target_name",
+            "qoe_summary",
+            "nwc_summary",
+            "debt_summary",
+            "key_findings",
+            "risk_factors",
+        ],
     ),
     "issue_highlight": NarrativeTemplate(
         name="issue_highlight",
@@ -128,7 +160,14 @@ Status: {{ status }}
 {{ description }}
 
 {% if recommendation %}권고사항: {{ recommendation }}{% endif %}""",
-        variables=["severity", "title", "category", "status", "description", "recommendation"],
+        variables=[
+            "severity",
+            "title",
+            "category",
+            "status",
+            "description",
+            "recommendation",
+        ],
     ),
 }
 

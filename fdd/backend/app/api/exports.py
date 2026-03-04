@@ -46,9 +46,7 @@ def list_export_records(
     db: Session = Depends(get_db),
 ):
     """내보내기 기록을 페이징 조회한다."""
-    items, total = list_exports(
-        db, module=module, status=status, page=page, size=size
-    )
+    items, total = list_exports(db, module=module, status=status, page=page, size=size)
     return PaginatedExports(
         items=[ExportRecordRead.model_validate(item) for item in items],
         total=total,

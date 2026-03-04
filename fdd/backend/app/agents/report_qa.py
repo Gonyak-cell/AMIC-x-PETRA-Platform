@@ -48,13 +48,19 @@ class ReportQAAgent(BaseAgent):
                 deal_name=context.get("deal_name", "Unknown Deal"),
                 report_ir_json=context.get("report_ir_json", "{}"),
                 qoe_summary_json=json.dumps(
-                    context.get("qoe_summary") or {}, ensure_ascii=False, indent=2,
+                    context.get("qoe_summary") or {},
+                    ensure_ascii=False,
+                    indent=2,
                 ),
                 nwc_summary_json=json.dumps(
-                    context.get("nwc_summary") or {}, ensure_ascii=False, indent=2,
+                    context.get("nwc_summary") or {},
+                    ensure_ascii=False,
+                    indent=2,
                 ),
                 debt_summary_json=json.dumps(
-                    context.get("debt_summary") or {}, ensure_ascii=False, indent=2,
+                    context.get("debt_summary") or {},
+                    ensure_ascii=False,
+                    indent=2,
                 ),
             )
 
@@ -155,8 +161,12 @@ class ReportQAAgent(BaseAgent):
             if "description" not in issue:
                 errors.append(f"issues[{i}]: 'description' 필드 누락")
             if issue.get("severity") and issue["severity"] not in valid_severities:
-                errors.append(f"issues[{i}]: 유효하지 않은 severity '{issue['severity']}'")
+                errors.append(
+                    f"issues[{i}]: 유효하지 않은 severity '{issue['severity']}'"
+                )
             if issue.get("category") and issue["category"] not in valid_categories:
-                errors.append(f"issues[{i}]: 유효하지 않은 category '{issue['category']}'")
+                errors.append(
+                    f"issues[{i}]: 유효하지 않은 category '{issue['category']}'"
+                )
 
         return errors

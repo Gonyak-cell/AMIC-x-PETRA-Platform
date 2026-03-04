@@ -188,10 +188,10 @@ class ICCandidate:
     entity_a: str
     entity_b: str
     category: str
-    amount_a: Decimal     # A가 인식한 금액
-    amount_b: Decimal     # B가 인식한 금액 (부호 반대)
-    difference: Decimal   # 불일치 금액
-    confidence: str       # "HIGH", "MEDIUM", "LOW"
+    amount_a: Decimal  # A가 인식한 금액
+    amount_b: Decimal  # B가 인식한 금액 (부호 반대)
+    difference: Decimal  # 불일치 금액
+    confidence: str  # "HIGH", "MEDIUM", "LOW"
 
 
 def detect_ic_transactions(
@@ -233,7 +233,9 @@ def detect_ic_transactions(
         code = accounts[0].entity_code if accounts else eid
         totals: dict[str, Decimal] = {}
         for acct in accounts:
-            totals[acct.category] = totals.get(acct.category, Decimal("0")) + acct.amount
+            totals[acct.category] = (
+                totals.get(acct.category, Decimal("0")) + acct.amount
+            )
         entity_cat_totals[code] = totals
 
     candidates: list[ICCandidate] = []
@@ -241,7 +243,7 @@ def detect_ic_transactions(
 
     codes = list(entity_cat_totals.keys())
     for i, code_a in enumerate(codes):
-        for code_b in codes[i + 1:]:
+        for code_b in codes[i + 1 :]:
             for cat_a, cat_b in _IC_CATEGORY_PAIRS:
                 # A의 매출 vs B의 매입 (또는 반대)
                 for (c1, c2), (e1, e2) in [
@@ -260,27 +262,41 @@ def detect_ic_transactions(
 
                     diff = abs(amt_a - amt_b)
                     ref_amt = max(amt_a, amt_b)
-                    diff_pct = diff / ref_amt * Decimal("100") if ref_amt > Decimal("0") else Decimal("0")
+                    diff_pct = (
+                        diff / ref_amt * Decimal("100")
+                        if ref_amt > Decimal("0")
+                        else Decimal("0")
+                    )
 
                     if diff_pct <= tolerance_pct:
                         confidence = "HIGH" if diff_pct <= Decimal("1") else "MEDIUM"
                         seen.add(key)
-                        candidates.append(ICCandidate(
-                            entity_a=e1,
-                            entity_b=e2,
-                            category=c1,
-                            amount_a=amt_a.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
-                            amount_b=amt_b.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
-                            difference=diff.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
-                            confidence=confidence,
-                        ))
+                        candidates.append(
+                            ICCandidate(
+                                entity_a=e1,
+                                entity_b=e2,
+                                category=c1,
+                                amount_a=amt_a.quantize(
+                                    Decimal("0.0001"), rounding=ROUND_HALF_UP
+                                ),
+                                amount_b=amt_b.quantize(
+                                    Decimal("0.0001"), rounding=ROUND_HALF_UP
+                                ),
+                                difference=diff.quantize(
+                                    Decimal("0.0001"), rounding=ROUND_HALF_UP
+                                ),
+                                confidence=confidence,
+                            )
+                        )
 
-                        evidence.append(EvidenceLinkData(
-                            source_type="ic_detection",
-                            source_id=f"ic:{e1}:{e2}:{c1}",
-                            label=f"IC 후보: {e1}↔{e2} ({c1})",
-                            detail=f"A={amt_a}, B={amt_b}, diff={diff_pct:.2f}%",
-                        ))
+                        evidence.append(
+                            EvidenceLinkData(
+                                source_type="ic_detection",
+                                source_id=f"ic:{e1}:{e2}:{c1}",
+                                label=f"IC 후보: {e1}↔{e2} ({c1})",
+                                detail=f"A={amt_a}, B={amt_b}, diff={diff_pct:.2f}%",
+                            )
+                        )
 
     return candidates, evidence
 
@@ -292,11 +308,11 @@ def detect_ic_transactions(
 class FXRate:
     """환율 정보."""
 
-    source_currency: str          # "USD", "EUR" 등
-    target_currency: str          # "KRW"
-    period_end_rate: Decimal      # 기말 환율 (BS용)
-    average_rate: Decimal         # 평균 환율 (IS용)
-    period: str = ""              # "FY2024"
+    source_currency: str  # "USD", "EUR" 등
+    target_currency: str  # "KRW"
+    period_end_rate: Decimal  # 기말 환율 (BS용)
+    average_rate: Decimal  # 평균 환율 (IS용)
+    period: str = ""  # "FY2024"
 
 
 @dataclass
@@ -304,18 +320,32 @@ class FXConversionResult:
     """FX 변환 결과."""
 
     converted_accounts: list[EntityAccountData]
-    fx_impact_by_entity: dict[str, Decimal]     # 환산 차이
+    fx_impact_by_entity: dict[str, Decimal]  # 환산 차이
     fx_rates_used: list[FXRate]
     warnings: list[str] = field(default_factory=list)
 
 
 # BS vs IS 카테고리 분류
-_IS_CATEGORIES = frozenset({
-    "REVENUE", "COGS", "COST_OF_SALES", "SGA", "OPERATING_INCOME",
-    "INTEREST_INCOME", "INTEREST_EXPENSE", "OTHER_INCOME", "OTHER_EXPENSE",
-    "TAX_EXPENSE", "NET_INCOME", "DEPRECIATION", "AMORTIZATION",
-    "PERSONNEL_COST", "RENT_EXPENSE", "MARKETING_EXPENSE",
-})
+_IS_CATEGORIES = frozenset(
+    {
+        "REVENUE",
+        "COGS",
+        "COST_OF_SALES",
+        "SGA",
+        "OPERATING_INCOME",
+        "INTEREST_INCOME",
+        "INTEREST_EXPENSE",
+        "OTHER_INCOME",
+        "OTHER_EXPENSE",
+        "TAX_EXPENSE",
+        "NET_INCOME",
+        "DEPRECIATION",
+        "AMORTIZATION",
+        "PERSONNEL_COST",
+        "RENT_EXPENSE",
+        "MARKETING_EXPENSE",
+    }
+)
 
 
 def convert_fx(
@@ -344,50 +374,67 @@ def convert_fx(
     fx_impact: dict[str, Decimal] = {}
 
     for acct in entity_accounts:
-        rate = fx_rate.average_rate if acct.category in is_cats else fx_rate.period_end_rate
+        rate = (
+            fx_rate.average_rate
+            if acct.category in is_cats
+            else fx_rate.period_end_rate
+        )
         original = acct.amount
         converted_amount = (original * rate).quantize(
-            Decimal("0.0001"), rounding=ROUND_HALF_UP,
+            Decimal("0.0001"),
+            rounding=ROUND_HALF_UP,
         )
 
         # 월별 금액도 변환
         converted_monthly: dict[str, Decimal] = {}
         for m, amt in acct.monthly_amounts.items():
             converted_monthly[m] = (amt * fx_rate.average_rate).quantize(
-                Decimal("0.0001"), rounding=ROUND_HALF_UP,
+                Decimal("0.0001"),
+                rounding=ROUND_HALF_UP,
             )
 
-        converted.append(EntityAccountData(
-            entity_id=acct.entity_id,
-            entity_code=acct.entity_code,
-            account_code=acct.account_code,
-            account_name=acct.account_name,
-            category=acct.category,
-            amount=converted_amount,
-            monthly_amounts=converted_monthly,
-        ))
+        converted.append(
+            EntityAccountData(
+                entity_id=acct.entity_id,
+                entity_code=acct.entity_code,
+                account_code=acct.account_code,
+                account_name=acct.account_name,
+                category=acct.category,
+                amount=converted_amount,
+                monthly_amounts=converted_monthly,
+            )
+        )
 
         # FX impact 누적
         ecode = acct.entity_code
         fx_impact[ecode] = fx_impact.get(ecode, Decimal("0")) + converted_amount
 
-    if fx_rate.period_end_rate != fx_rate.average_rate and fx_rate.average_rate != Decimal("0"):
-        diff_pct = abs(fx_rate.period_end_rate - fx_rate.average_rate) / fx_rate.average_rate * Decimal("100")
+    if (
+        fx_rate.period_end_rate != fx_rate.average_rate
+        and fx_rate.average_rate != Decimal("0")
+    ):
+        diff_pct = (
+            abs(fx_rate.period_end_rate - fx_rate.average_rate)
+            / fx_rate.average_rate
+            * Decimal("100")
+        )
         if diff_pct > Decimal("10"):
             warnings.append(
                 f"FX_RATE_DIVERGENCE: End rate vs avg rate differs by {diff_pct:.1f}% "
                 f"for {fx_rate.source_currency}"
             )
 
-    evidence.append(EvidenceLinkData(
-        source_type="fx_conversion",
-        source_id=f"fx:{fx_rate.source_currency}:{fx_rate.target_currency}",
-        label=f"FX 변환: {fx_rate.source_currency} → {fx_rate.target_currency}",
-        detail=(
-            f"기말={fx_rate.period_end_rate}, 평균={fx_rate.average_rate}, "
-            f"변환 계정 {len(converted)}건"
-        ),
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            source_type="fx_conversion",
+            source_id=f"fx:{fx_rate.source_currency}:{fx_rate.target_currency}",
+            label=f"FX 변환: {fx_rate.source_currency} → {fx_rate.target_currency}",
+            detail=(
+                f"기말={fx_rate.period_end_rate}, 평균={fx_rate.average_rate}, "
+                f"변환 계정 {len(converted)}건"
+            ),
+        )
+    )
 
     return FXConversionResult(
         converted_accounts=converted,
@@ -407,8 +454,8 @@ class EntityPLComparison:
     entity_codes: list[str]
     categories: list[str]
     amounts: dict[str, dict[str, Decimal]]  # {entity_code: {category: amount}}
-    shares: dict[str, dict[str, Decimal]]   # {entity_code: {category: share%}}
-    total_row: dict[str, Decimal]           # {category: consolidated_total}
+    shares: dict[str, dict[str, Decimal]]  # {entity_code: {category: share%}}
+    total_row: dict[str, Decimal]  # {category: consolidated_total}
     warnings: list[str] = field(default_factory=list)
 
 
@@ -438,7 +485,9 @@ def compare_entity_pl(
         totals: dict[str, Decimal] = {}
         for acct in accounts:
             all_cats.add(acct.category)
-            totals[acct.category] = totals.get(acct.category, Decimal("0")) + acct.amount
+            totals[acct.category] = (
+                totals.get(acct.category, Decimal("0")) + acct.amount
+            )
         entity_totals[code] = totals
 
     cat_list = categories or sorted(all_cats)
@@ -448,8 +497,7 @@ def compare_entity_pl(
     total_row: dict[str, Decimal] = {}
     for cat in cat_list:
         total_row[cat] = sum(
-            entity_totals.get(ec, {}).get(cat, Decimal("0"))
-            for ec in entity_codes
+            entity_totals.get(ec, {}).get(cat, Decimal("0")) for ec in entity_codes
         ).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
     # 엔티티별 비중
@@ -461,7 +509,8 @@ def compare_entity_pl(
             total = total_row.get(cat, Decimal("0"))
             if total != Decimal("0"):
                 shares[ec][cat] = (amt / total * Decimal("100")).quantize(
-                    Decimal("0.01"), rounding=ROUND_HALF_UP,
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
                 )
             else:
                 shares[ec][cat] = Decimal("0")
@@ -475,12 +524,14 @@ def compare_entity_pl(
                     f"ENTITY_DOMINANT: {ec} accounts for {share_val}% of {cat}"
                 )
 
-    evidence.append(EvidenceLinkData(
-        source_type="entity_comparison",
-        source_id="pl_comparison",
-        label="엔티티별 P&L 비교",
-        detail=f"엔티티 {len(entity_codes)}개, 카테고리 {len(cat_list)}개",
-    ))
+    evidence.append(
+        EvidenceLinkData(
+            source_type="entity_comparison",
+            source_id="pl_comparison",
+            label="엔티티별 P&L 비교",
+            detail=f"엔티티 {len(entity_codes)}개, 카테고리 {len(cat_list)}개",
+        )
+    )
 
     return EntityPLComparison(
         entity_codes=entity_codes,

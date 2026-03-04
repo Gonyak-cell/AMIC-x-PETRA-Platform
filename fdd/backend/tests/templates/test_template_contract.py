@@ -203,7 +203,9 @@ class TestContractValidation:
             template_id="valid_template",
             template_name="Valid Template",
             slots=[
-                TemplateSlot(slot_id="{{SLOT:TEST}}", slot_type=SlotType.TEXT, required=True),
+                TemplateSlot(
+                    slot_id="{{SLOT:TEST}}", slot_type=SlotType.TEXT, required=True
+                ),
             ],
         )
         issues = template_service.validate_template_contract(contract)
@@ -217,7 +219,9 @@ class TestContractValidation:
             template_name="Duplicate Slots Template",
             slots=[
                 TemplateSlot(slot_id="{{SLOT:SAME}}", slot_type=SlotType.TEXT),
-                TemplateSlot(slot_id="{{SLOT:SAME}}", slot_type=SlotType.TEXT),  # Duplicate
+                TemplateSlot(
+                    slot_id="{{SLOT:SAME}}", slot_type=SlotType.TEXT
+                ),  # Duplicate
             ],
         )
         issues = template_service.validate_template_contract(contract)
@@ -229,7 +233,9 @@ class TestContractValidation:
             template_id="no_required",
             template_name="No Required Slots",
             slots=[
-                TemplateSlot(slot_id="{{SLOT:OPTIONAL}}", slot_type=SlotType.TEXT, required=False),
+                TemplateSlot(
+                    slot_id="{{SLOT:OPTIONAL}}", slot_type=SlotType.TEXT, required=False
+                ),
             ],
         )
         issues = template_service.validate_template_contract(contract)
@@ -374,7 +380,8 @@ class TestFileValidation:
         from pathlib import Path
 
         result = template_service.validate_template_file(
-            Path(sample_pptx_with_slots), template_type="docx"  # Wrong type
+            Path(sample_pptx_with_slots),
+            template_type="docx",  # Wrong type
         )
 
         assert result.is_valid is False

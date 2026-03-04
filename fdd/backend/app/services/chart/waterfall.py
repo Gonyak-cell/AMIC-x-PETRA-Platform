@@ -91,9 +91,27 @@ def create_ebitda_bridge(
                     "dash": waterfall_style.get("connector_dash", "dot"),
                 }
             },
-            increasing={"marker": {"color": waterfall_style.get("increasing_color", colors.get("positive", "#2E7D32"))}},
-            decreasing={"marker": {"color": waterfall_style.get("decreasing_color", colors.get("negative", "#E0301E"))}},
-            totals={"marker": {"color": waterfall_style.get("total_color", colors.get("primary", "#003366"))}},
+            increasing={
+                "marker": {
+                    "color": waterfall_style.get(
+                        "increasing_color", colors.get("positive", "#2E7D32")
+                    )
+                }
+            },
+            decreasing={
+                "marker": {
+                    "color": waterfall_style.get(
+                        "decreasing_color", colors.get("negative", "#E0301E")
+                    )
+                }
+            },
+            totals={
+                "marker": {
+                    "color": waterfall_style.get(
+                        "total_color", colors.get("primary", "#003366")
+                    )
+                }
+            },
             textposition="outside",
             text=text_labels,
             textfont={"size": waterfall_style.get("label_size", 10)},
@@ -198,8 +216,12 @@ def create_generic_waterfall(
                     "dash": waterfall_style.get("connector_dash", "dot"),
                 }
             },
-            increasing={"marker": {"color": waterfall_style.get("increasing_color", "#2E7D32")}},
-            decreasing={"marker": {"color": waterfall_style.get("decreasing_color", "#E0301E")}},
+            increasing={
+                "marker": {"color": waterfall_style.get("increasing_color", "#2E7D32")}
+            },
+            decreasing={
+                "marker": {"color": waterfall_style.get("decreasing_color", "#E0301E")}
+            },
             totals={"marker": {"color": waterfall_style.get("total_color", "#003366")}},
             textposition="outside",
             text=text_labels,

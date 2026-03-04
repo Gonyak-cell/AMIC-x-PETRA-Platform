@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from app.industry.korea.models import FDDKIFRSNote
 
-ALL_INDUSTRIES = ["tech", "manufacturing", "healthcare", "logistics", "financial_services"]
+ALL_INDUSTRIES = [
+    "tech",
+    "manufacturing",
+    "healthcare",
+    "logistics",
+    "financial_services",
+]
 
 KIFRS_NOTES: list[FDDKIFRSNote] = [
     # ── 공통 (5개) ──

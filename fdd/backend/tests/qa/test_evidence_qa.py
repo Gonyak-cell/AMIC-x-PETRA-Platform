@@ -72,7 +72,9 @@ class TestCheckIrEvidenceCoverage:
         evidence_index = {"ev-001": {}}
 
         findings = check_ir_evidence_coverage(ir, evidence_index)
-        broken_findings = [f for f in findings if f.check_type == QACheckType.EVIDENCE_BROKEN]
+        broken_findings = [
+            f for f in findings if f.check_type == QACheckType.EVIDENCE_BROKEN
+        ]
         assert len(broken_findings) == 1
         assert broken_findings[0].evidence_id == "invalid-id"
 

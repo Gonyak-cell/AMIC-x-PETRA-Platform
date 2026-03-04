@@ -55,7 +55,9 @@ class RetentionPolicy:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_expiry_date(self, data_type: DataType, from_date: datetime | None = None) -> datetime:
+    def get_expiry_date(
+        self, data_type: DataType, from_date: datetime | None = None
+    ) -> datetime:
         """데이터 유형에 대한 만료일을 계산한다."""
         base = from_date or datetime.utcnow()
         period = RETENTION_PERIODS[data_type]
@@ -109,9 +111,7 @@ class RetentionPolicy:
             cutoff_date=cutoff,
         )
 
-    def set_audit_log_expiry(
-        self, *, data_type: DataType = DataType.AUDIT_LOG
-    ) -> int:
+    def set_audit_log_expiry(self, *, data_type: DataType = DataType.AUDIT_LOG) -> int:
         """expires_at이 NULL인 감사 로그에 만료일을 설정한다."""
         period = RETENTION_PERIODS[data_type]
         stmt = (

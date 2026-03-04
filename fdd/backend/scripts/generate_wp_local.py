@@ -114,19 +114,29 @@ def _block_to_json(block: Any) -> str:
     if hasattr(block, "rows"):
         rows = block.rows
         title = getattr(block, "title", "")
-        return json.dumps({
-            "type": "table",
-            "title": title,
-            "content": title,
-            "rows": rows[:20],  # 토큰 절약: 상위 20행
-        }, ensure_ascii=False, default=str)
+        return json.dumps(
+            {
+                "type": "table",
+                "title": title,
+                "content": title,
+                "rows": rows[:20],  # 토큰 절약: 상위 20행
+            },
+            ensure_ascii=False,
+            default=str,
+        )
     if hasattr(block, "issues"):
-        return json.dumps({
-            "type": "issue",
-            "issues": getattr(block, "issues", [])[:10],
-            "content": str(getattr(block, "title", "")),
-        }, ensure_ascii=False, default=str)
-    return json.dumps({"type": "unknown", "content": str(block)[:500]}, ensure_ascii=False)
+        return json.dumps(
+            {
+                "type": "issue",
+                "issues": getattr(block, "issues", [])[:10],
+                "content": str(getattr(block, "title", "")),
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+    return json.dumps(
+        {"type": "unknown", "content": str(block)[:500]}, ensure_ascii=False
+    )
 
 
 def _block_to_dict(block: Any) -> dict[str, Any]:
@@ -165,7 +175,9 @@ def parse_financial_statements(input_dir: Path) -> dict[str, Any]:
 
     result: dict[str, Any] = {"bs": {}, "is": {}}
 
-    def _parse_sheet(ws: Any, period_labels: list[str]) -> dict[str, dict[str, Decimal]]:
+    def _parse_sheet(
+        ws: Any, period_labels: list[str]
+    ) -> dict[str, dict[str, Decimal]]:
         """BS/IS 공통 파싱 — B/C, D/E coalesce 후 백만원 변환."""
         data: dict[str, dict[str, Decimal]] = {lbl: {} for lbl in period_labels}
         for row_idx, row in enumerate(ws.iter_rows(values_only=True), 1):
@@ -226,7 +238,9 @@ def parse_business_unit_pl(input_dir: Path) -> dict[str, dict[str, Decimal]]:
 
         if row_idx <= 3:
             for col_idx, cell_str in enumerate(row_strs):
-                if "년" in cell_str and any(y in cell_str for y in ["2022", "2023", "2024", "2025"]):
+                if "년" in cell_str and any(
+                    y in cell_str for y in ["2022", "2023", "2024", "2025"]
+                ):
                     label = cell_str.replace("년", "").strip()
                     if " " in label:
                         parts = label.split()
@@ -315,7 +329,9 @@ def parse_customer_revenue(input_dir: Path) -> list[dict[str, Any]]:
         for row_idx, row in enumerate(ws.iter_rows(values_only=True), 1):
             if row_idx < data_start or row is None:
                 continue
-            amount = _safe_decimal(row[header_map["amount"]] if header_map["amount"] < len(row) else None)
+            amount = _safe_decimal(
+                row[header_map["amount"]] if header_map["amount"] < len(row) else None
+            )
             if amount == ZERO:
                 continue
 
@@ -344,13 +360,15 @@ def parse_customer_revenue(input_dir: Path) -> list[dict[str, Any]]:
                 elif raw:
                     month_str = str(raw).strip()[:7]
 
-            entries.append({
-                "customer_name": cust_name,
-                "product_name": prod_name,
-                "period": period,
-                "month": month_str,
-                "amount": str(amount),
-            })
+            entries.append(
+                {
+                    "customer_name": cust_name,
+                    "product_name": prod_name,
+                    "period": period,
+                    "month": month_str,
+                    "amount": str(amount),
+                }
+            )
 
     wb.close()
     print(f"    -> {len(entries)} revenue entries loaded")
@@ -434,15 +452,17 @@ def parse_purchase_ledger(input_dir: Path) -> list[dict[str, Any]]:
             if any(k in cust for k in ["합계", "소계", "총계"]):
                 continue
 
-            entries.append({
-                "customer": cust,
-                "product": str(_get("product") or "").strip(),
-                "segment": str(_get("segment") or "").strip(),
-                "period": period,
-                "revenue": str(revenue),
-                "cost": str(cost),
-                "margin": str(_safe_decimal(_get("margin"))),
-            })
+            entries.append(
+                {
+                    "customer": cust,
+                    "product": str(_get("product") or "").strip(),
+                    "segment": str(_get("segment") or "").strip(),
+                    "period": period,
+                    "revenue": str(revenue),
+                    "cost": str(cost),
+                    "margin": str(_safe_decimal(_get("margin"))),
+                }
+            )
 
     wb.close()
     print(f"    -> {len(entries)} purchase entries loaded")
@@ -532,7 +552,9 @@ def parse_debt_schedule(input_dir: Path) -> list[dict[str, Any]]:
         if rate_raw is not None:
             rate_dec = _safe_decimal(rate_raw)
             if rate_dec != ZERO:
-                rate_str = f"{float(rate_dec) * 100:.2f}%" if rate_dec < 1 else f"{rate_dec}%"
+                rate_str = (
+                    f"{float(rate_dec) * 100:.2f}%" if rate_dec < 1 else f"{rate_dec}%"
+                )
 
         maturity_raw = _get("maturity")
         maturity_str = ""
@@ -542,17 +564,19 @@ def parse_debt_schedule(input_dir: Path) -> list[dict[str, Any]]:
             maturity_str = str(maturity_raw).strip()
 
         balance_m = _to_millions(balance)
-        items.append({
-            "item": f"{bank} - {str(_get('description') or str(_get('type') or '')).strip()}",
-            "type": "debt",
-            "balance": _fmt(balance_m),
-            "adjustment": "",
-            "adjusted": _fmt(balance_m),
-            "rate": rate_str,
-            "maturity": maturity_str,
-            "_balance_dec": balance_m,
-            "_rate_dec": rate_dec,
-        })
+        items.append(
+            {
+                "item": f"{bank} - {str(_get('description') or str(_get('type') or '')).strip()}",
+                "type": "debt",
+                "balance": _fmt(balance_m),
+                "adjustment": "",
+                "adjusted": _fmt(balance_m),
+                "rate": rate_str,
+                "maturity": maturity_str,
+                "_balance_dec": balance_m,
+                "_rate_dec": rate_dec,
+            }
+        )
 
     wb.close()
     print(f"    -> {len(items)} debt items loaded")
@@ -567,7 +591,9 @@ def parse_debt_schedule(input_dir: Path) -> list[dict[str, Any]]:
 def parse_fixed_assets(input_dir: Path) -> dict[str, dict[str, Decimal]]:
     """연도별 유형자산 합계 (원 단위 → 백만원)."""
     asset_dir = input_dir / "21. 유무형자산"
-    candidates = list(asset_dir.glob("*유형자산*감가상각*.xlsx")) if asset_dir.exists() else []
+    candidates = (
+        list(asset_dir.glob("*유형자산*감가상각*.xlsx")) if asset_dir.exists() else []
+    )
     if not candidates:
         candidates = list(input_dir.glob("**/유형자산*감가상각*.xlsx"))
     if not candidates:
@@ -588,7 +614,12 @@ def parse_fixed_assets(input_dir: Path) -> dict[str, dict[str, Decimal]]:
             continue
         period = f"FY{year_str[:4]}"
         ws = wb[sheet_name]
-        totals = {"취득원가": ZERO, "감가상각누계": ZERO, "미상각잔액": ZERO, "당기상각비": ZERO}
+        totals = {
+            "취득원가": ZERO,
+            "감가상각누계": ZERO,
+            "미상각잔액": ZERO,
+            "당기상각비": ZERO,
+        }
 
         for row in ws.iter_rows(values_only=True):
             if not row or not row[0]:
@@ -661,7 +692,9 @@ class RuleBasedCommentary:
             if prev_rev != ZERO and curr_rev != ZERO:
                 yoy = float((curr_rev - prev_rev) / prev_rev * _HUNDRED)
                 direction = "증가" if yoy > 0 else "감소"
-                bullets.append(f"{curr_p} 매출 {abs(yoy):.1f}% {direction} ({_fmt(prev_rev)}M -> {_fmt(curr_rev)}M)")
+                bullets.append(
+                    f"{curr_p} 매출 {abs(yoy):.1f}% {direction} ({_fmt(prev_rev)}M -> {_fmt(curr_rev)}M)"
+                )
 
         # 마진 추이
         for p in periods:
@@ -679,7 +712,9 @@ class RuleBasedCommentary:
                 n = len(periods) - 2
                 if n > 0:
                     cagr = float((float(last_rev / first_rev) ** (1.0 / n) - 1) * 100)
-                    bullets.append(f"매출 CAGR ({periods[0]}~{periods[-2]}): {cagr:.1f}%")
+                    bullets.append(
+                        f"매출 CAGR ({periods[0]}~{periods[-2]}): {cagr:.1f}%"
+                    )
 
         return bullets
 
@@ -700,7 +735,9 @@ class RuleBasedCommentary:
             bullets.append(f"분산 시장 (HHI: {hhi:,.0f})")
 
         if top1_share > Decimal("30"):
-            bullets.append(f"최대 거래처 '{top1_name}' 비중 {top1_share:.1f}% -- Key-man risk 존재")
+            bullets.append(
+                f"최대 거래처 '{top1_name}' 비중 {top1_share:.1f}% -- Key-man risk 존재"
+            )
 
         if top5_share > Decimal("70"):
             bullets.append(f"Top 5 거래처 비중 {top5_share:.1f}% -- 거래처 다변화 필요")
@@ -719,7 +756,9 @@ class RuleBasedCommentary:
         if total == ZERO:
             return bullets
 
-        bullets.append(f"총 차입금 {_fmt(total)}M, 현금 {_fmt(cash)}M, Net Debt {_fmt(total - cash)}M")
+        bullets.append(
+            f"총 차입금 {_fmt(total)}M, 현금 {_fmt(cash)}M, Net Debt {_fmt(total - cash)}M"
+        )
 
         # 가중평균 금리
         weighted_rate = ZERO
@@ -753,7 +792,9 @@ class RuleBasedCommentary:
                     pass
         if total > ZERO and near_term > ZERO:
             pct = float(near_term / total * _HUNDRED)
-            bullets.append(f"12개월 내 만기 도래 {_fmt(near_term)}M ({pct:.0f}%) -- 차환 계획 확인 필요")
+            bullets.append(
+                f"12개월 내 만기 도래 {_fmt(near_term)}M ({pct:.0f}%) -- 차환 계획 확인 필요"
+            )
 
         return bullets
 
@@ -771,7 +812,9 @@ class RuleBasedCommentary:
         ccc = ar_days + inv_days - ap_days
 
         if ar_days > Decimal("60"):
-            bullets.append(f"매출채권 회전일수 {ar_days:.0f}일 -- 업종 평균(45-60일) 대비 지연")
+            bullets.append(
+                f"매출채권 회전일수 {ar_days:.0f}일 -- 업종 평균(45-60일) 대비 지연"
+            )
         elif ar_days > ZERO:
             bullets.append(f"매출채권 회전일수 {ar_days:.0f}일")
 
@@ -784,7 +827,11 @@ class RuleBasedCommentary:
             bullets.append(f"매입채무 회전일수 {ap_days:.0f}일")
 
         if ccc > ZERO:
-            level = "양호" if ccc < Decimal("60") else ("관리 필요" if ccc < Decimal("90") else "개선 시급")
+            level = (
+                "양호"
+                if ccc < Decimal("60")
+                else ("관리 필요" if ccc < Decimal("90") else "개선 시급")
+            )
             bullets.append(f"Cash Conversion Cycle {ccc:.0f}일 -- {level}")
 
         return bullets
@@ -806,67 +853,79 @@ class RuleBasedCommentary:
             rev = items.get("매출액", ZERO)
             gp = items.get("매출이익", items.get("매출총이익", ZERO))
             if rev > ZERO and gp < ZERO:
-                issues.append({
-                    "title": f"{p} 매출총이익 적자",
-                    "severity": "HIGH",
-                    "category": "Profitability",
-                    "description": f"{p} 매출총이익 적자 ({_fmt(gp)}M). 원가율 점검 필요.",
-                    "status": "Open",
-                })
+                issues.append(
+                    {
+                        "title": f"{p} 매출총이익 적자",
+                        "severity": "HIGH",
+                        "category": "Profitability",
+                        "description": f"{p} 매출총이익 적자 ({_fmt(gp)}M). 원가율 점검 필요.",
+                        "status": "Open",
+                    }
+                )
             # GP 마진 급락 (전년 대비 -5%p 이상)
             if rev > ZERO and gp > ZERO:
                 gp_margin = float(gp / rev * _HUNDRED)
                 if gp_margin < 25:
-                    issues.append({
-                        "title": f"{p} GP 마진 악화",
-                        "severity": "MEDIUM",
-                        "category": "Profitability",
-                        "description": f"{p} 매출총이익률 {gp_margin:.1f}%. 원가율 상승 추세 점검 필요.",
-                        "status": "Open",
-                    })
+                    issues.append(
+                        {
+                            "title": f"{p} GP 마진 악화",
+                            "severity": "MEDIUM",
+                            "category": "Profitability",
+                            "description": f"{p} 매출총이익률 {gp_margin:.1f}%. 원가율 상승 추세 점검 필요.",
+                            "status": "Open",
+                        }
+                    )
 
         # FY24.9M 재무제표 영업손실 확인
         is_fy24 = fs_data.get("is", {}).get("FY24.9M", {})
         for k, v in is_fy24.items():
             if "영업" in k and "손" in k and v < ZERO:
-                issues.append({
-                    "title": "FY24.9M 영업적자 (재무제표 기준)",
-                    "severity": "HIGH",
-                    "category": "Profitability",
-                    "description": f"영업손실 {_fmt(abs(v))}M. 판관비 > 매출총이익.",
-                    "status": "Open",
-                })
+                issues.append(
+                    {
+                        "title": "FY24.9M 영업적자 (재무제표 기준)",
+                        "severity": "HIGH",
+                        "category": "Profitability",
+                        "description": f"영업손실 {_fmt(abs(v))}M. 판관비 > 매출총이익.",
+                        "status": "Open",
+                    }
+                )
                 break
             if "영업" in k and "이익" in k and v < ZERO:
-                issues.append({
-                    "title": "FY24.9M 영업적자 (재무제표 기준)",
-                    "severity": "HIGH",
-                    "category": "Profitability",
-                    "description": f"영업손실 {_fmt(abs(v))}M.",
-                    "status": "Open",
-                })
+                issues.append(
+                    {
+                        "title": "FY24.9M 영업적자 (재무제표 기준)",
+                        "severity": "HIGH",
+                        "category": "Profitability",
+                        "description": f"영업손실 {_fmt(abs(v))}M.",
+                        "status": "Open",
+                    }
+                )
                 break
 
         # 2. 매출 집중도
         if hhi > Decimal("2500"):
-            issues.append({
-                "title": "매출 고집중 (HHI > 2,500)",
-                "severity": "MEDIUM",
-                "category": "Revenue Risk",
-                "description": f"HHI {hhi:,.0f}. 특정 거래처 의존도 높아 거래처 이탈 시 매출 급감 리스크.",
-                "status": "Open",
-            })
+            issues.append(
+                {
+                    "title": "매출 고집중 (HHI > 2,500)",
+                    "severity": "MEDIUM",
+                    "category": "Revenue Risk",
+                    "description": f"HHI {hhi:,.0f}. 특정 거래처 의존도 높아 거래처 이탈 시 매출 급감 리스크.",
+                    "status": "Open",
+                }
+            )
 
         # 3. NWC
         td = nwc_data.get("turnover_days", {})
         if td.get("ar_days", ZERO) > Decimal("90"):
-            issues.append({
-                "title": "매출채권 회전 지연",
-                "severity": "MEDIUM",
-                "category": "Working Capital",
-                "description": f"AR Days {td['ar_days']:.0f}일. 대손 리스크 점검 필요.",
-                "status": "Open",
-            })
+            issues.append(
+                {
+                    "title": "매출채권 회전 지연",
+                    "severity": "MEDIUM",
+                    "category": "Working Capital",
+                    "description": f"AR Days {td['ar_days']:.0f}일. 대손 리스크 점검 필요.",
+                    "status": "Open",
+                }
+            )
 
         # 4. 차입금 만기 집중
         total_debt = sum(d.get("_balance_dec", ZERO) for d in debt_items)
@@ -876,13 +935,15 @@ class RuleBasedCommentary:
             for k, v in is_fy24.items():
                 if "국고" in k or "보조금" in k:
                     if v > ZERO:
-                        issues.append({
-                            "title": "국고보조금 의존",
-                            "severity": "MEDIUM",
-                            "category": "Earnings Quality",
-                            "description": f"국고보조금 {_fmt(v)}M -- Normalized EBITDA에서 제외 검토 필요.",
-                            "status": "Open",
-                        })
+                        issues.append(
+                            {
+                                "title": "국고보조금 의존",
+                                "severity": "MEDIUM",
+                                "category": "Earnings Quality",
+                                "description": f"국고보조금 {_fmt(v)}M -- Normalized EBITDA에서 제외 검토 필요.",
+                                "status": "Open",
+                            }
+                        )
                     break
 
         return issues
@@ -914,9 +975,13 @@ class LLMCommentaryOverlay:
     Guardrails로 할루시네이션/백분율/방향 불일치를 검증한다.
     """
 
-    def __init__(self, router: Any, known_values: dict[str, str] | None = None,
-                 known_pcts: dict[str, str] | None = None,
-                 known_trends: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        router: Any,
+        known_values: dict[str, str] | None = None,
+        known_pcts: dict[str, str] | None = None,
+        known_trends: dict[str, str] | None = None,
+    ) -> None:
         self._router = router
         self._known_values = known_values or {}
         self._known_pcts = known_pcts or {}
@@ -971,6 +1036,7 @@ class LLMCommentaryOverlay:
     def _is_false_positive(warning: str) -> bool:
         """Guardrail 경고가 false positive인지 판단한다."""
         import re
+
         # 경고 메시지에서 숫자 추출
         num_match = re.search(r"'([\d,]+\.?\d*)'", warning)
         if not num_match:
@@ -1006,7 +1072,9 @@ class LLMCommentaryOverlay:
                 max_tokens=max_tokens,
                 timeout_seconds=45,
             )
-            _p(f"      [LLM] {section_id}: {resp.provider}/{resp.model} ({resp.token_usage})")
+            _p(
+                f"      [LLM] {section_id}: {resp.provider}/{resp.model} ({resp.token_usage})"
+            )
             text = resp.text.strip()
         except Exception as e:
             _p(f"      [LLM] {section_id} primary failed: {e}")
@@ -1029,7 +1097,9 @@ class LLMCommentaryOverlay:
                         text = resp.content.strip()
                         break
                 except Exception as fallback_err:
-                    _p(f"      [LLM] {section_id} fallback {name} failed: {str(fallback_err)[:100]}")
+                    _p(
+                        f"      [LLM] {section_id} fallback {name} failed: {str(fallback_err)[:100]}"
+                    )
                     continue
 
         if not text:
@@ -1057,7 +1127,11 @@ class LLMCommentaryOverlay:
             sga = items.get("판매비와관리비", items.get("판관비", ZERO))
             gp_margin = float(gp / rev * 100) if rev else 0
             op_margin = float(op / rev * 100) if rev else 0
-            yoy_rev = f" (YoY {float((rev - prev_rev) / prev_rev * 100):+.1f}%)" if prev_rev > ZERO else ""
+            yoy_rev = (
+                f" (YoY {float((rev - prev_rev) / prev_rev * 100):+.1f}%)"
+                if prev_rev > ZERO
+                else ""
+            )
             data_lines.append(
                 f"| {p} | {_fmt(rev)}M{yoy_rev} | {_fmt(cogs)}M | {_fmt(gp)}M ({gp_margin:.1f}%) | "
                 f"{_fmt(sga)}M | {_fmt(op)}M ({op_margin:.1f}%) |"
@@ -1098,7 +1172,13 @@ class LLMCommentaryOverlay:
         rule_commentary: list[str],
     ) -> str:
         """매출 집중도 분석 보강 — Customer Concentration Risk."""
-        hhi_level = "고집중 (High)" if hhi > 2500 else "중집중 (Moderate)" if hhi > 1500 else "분산 (Low)"
+        hhi_level = (
+            "고집중 (High)"
+            if hhi > 2500
+            else "중집중 (Moderate)"
+            if hhi > 1500
+            else "분산 (Low)"
+        )
         prompt = (
             "# Customer Concentration Risk Analysis\n\n"
             "## 매출 집중도 지표\n"
@@ -1137,7 +1217,9 @@ class LLMCommentaryOverlay:
         item_lines = []
         for item in nwc_items[:10]:
             if isinstance(item, dict):
-                item_lines.append(f"- {item.get('label', item.get('name', '?'))}: {_fmt(item.get('amount', ZERO))}M")
+                item_lines.append(
+                    f"- {item.get('label', item.get('name', '?'))}: {_fmt(item.get('amount', ZERO))}M"
+                )
 
         prompt = (
             "# Net Working Capital 심층 분석\n\n"
@@ -1148,7 +1230,11 @@ class LLMCommentaryOverlay:
             f"| Inventory Days (재고 회전일수) | {inv_days:.0f}일 | {'⚠ 장기' if inv_days > 90 else '양호'} |\n"
             f"| AP Days (매입채무 회전일수) | {ap_days:.0f}일 | - |\n"
             f"| **CCC (Cash Conversion Cycle)** | **{ccc:.0f}일** | {'⚠ 비효율' if ccc > 90 else '양호'} |\n\n"
-            + ("## NWC 구성 항목\n" + "\n".join(item_lines) + "\n\n" if item_lines else "")
+            + (
+                "## NWC 구성 항목\n" + "\n".join(item_lines) + "\n\n"
+                if item_lines
+                else ""
+            )
             + "## 규칙 기반 분석 결과\n"
             + "\n".join(f"- {b}" for b in rule_commentary)
             + "\n\n## 분석 요구사항\n\n"
@@ -1243,8 +1329,16 @@ class LLMCommentaryOverlay:
             op = items.get("영업이익", ZERO)
             margin = float(gp / rev * 100) if rev else 0
             op_margin = float(op / rev * 100) if rev else 0
-            yoy_rev = f" (YoY {float((rev - prev_rev) / prev_rev * 100):+.1f}%)" if prev_rev > ZERO else ""
-            yoy_gp = f" (YoY {float((gp - prev_gp) / prev_gp * 100):+.1f}%)" if prev_gp > ZERO else ""
+            yoy_rev = (
+                f" (YoY {float((rev - prev_rev) / prev_rev * 100):+.1f}%)"
+                if prev_rev > ZERO
+                else ""
+            )
+            yoy_gp = (
+                f" (YoY {float((gp - prev_gp) / prev_gp * 100):+.1f}%)"
+                if prev_gp > ZERO
+                else ""
+            )
             is_summary.append(
                 f"{p}: 매출 {_fmt(rev)}M{yoy_rev}, GP {_fmt(gp)}M ({margin:.1f}%){yoy_gp}, "
                 f"영업이익 {_fmt(op)}M ({op_margin:.1f}%)"
@@ -1267,7 +1361,11 @@ class LLMCommentaryOverlay:
 
         # 차입금
         total_debt = sum(d.get("_balance_dec", ZERO) for d in debt_items)
-        cash = sum(d.get("_balance_dec", ZERO) for d in debt_items if "예금" in d.get("lender", "") or "현금" in d.get("lender", ""))
+        cash = sum(
+            d.get("_balance_dec", ZERO)
+            for d in debt_items
+            if "예금" in d.get("lender", "") or "현금" in d.get("lender", "")
+        )
         net_debt = total_debt
 
         # 차입 상세
@@ -1406,10 +1504,13 @@ def _generate_with_quality_loop(
             break
 
         # Gate 1: Programmatic 평가
-        artifact_json = json.dumps({
-            "type": "text",
-            "content": content,
-        }, ensure_ascii=False)
+        artifact_json = json.dumps(
+            {
+                "type": "text",
+                "content": content,
+            },
+            ensure_ascii=False,
+        )
         prd = {"id": section_id, "block_type": "text"}
 
         try:
@@ -1436,17 +1537,23 @@ def _generate_with_quality_loop(
             try:
                 verdict = convergence.check_section(section_id, result, tracker)
                 if verdict.converged:
-                    _p(f"      [Loop] {section_id} converged: {verdict.reason} (score={score:.2f})")
+                    _p(
+                        f"      [Loop] {section_id} converged: {verdict.reason} (score={score:.2f})"
+                    )
                     break
             except Exception:
                 pass
 
         # 통과 기준 달성이면 조기 종료
         if result.passed:
-            _p(f"      [Loop] {section_id} PASS at iter {iteration+1} (score={score:.2f})")
+            _p(
+                f"      [Loop] {section_id} PASS at iter {iteration + 1} (score={score:.2f})"
+            )
             break
 
-        _p(f"      [Loop] {section_id} iter {iteration+1}: score={score:.2f}, retrying...")
+        _p(
+            f"      [Loop] {section_id} iter {iteration + 1}: score={score:.2f}, retrying..."
+        )
 
     return best_content
 
@@ -1474,28 +1581,34 @@ def _run_section_gates(
 
         try:
             result = _run_gate_sync(gate, artifact_json, prd)
-            gate_results.append({
-                "section": title[:40],
-                "gate": "Programmatic",
-                "score": f"{result.weighted_score:.2f}/5.0",
-                "verdict": result.verdict.value,
-                "issues": len(result.issues),
-                "status": "PASS" if result.passed else ("COND" if result.verdict.value == "COND" else "FAIL"),
-            })
+            gate_results.append(
+                {
+                    "section": title[:40],
+                    "gate": "Programmatic",
+                    "score": f"{result.weighted_score:.2f}/5.0",
+                    "verdict": result.verdict.value,
+                    "issues": len(result.issues),
+                    "status": "PASS"
+                    if result.passed
+                    else ("COND" if result.verdict.value == "COND" else "FAIL"),
+                }
+            )
             if tracker is not None:
                 try:
                     tracker.record(section_id, 0, result)
                 except Exception:
                     pass
         except Exception as e:
-            gate_results.append({
-                "section": title[:40],
-                "gate": "Programmatic",
-                "score": "N/A",
-                "verdict": "ERROR",
-                "issues": 0,
-                "status": str(e)[:50],
-            })
+            gate_results.append(
+                {
+                    "section": title[:40],
+                    "gate": "Programmatic",
+                    "score": "N/A",
+                    "verdict": "ERROR",
+                    "issues": 0,
+                    "status": str(e)[:50],
+                }
+            )
 
     return gate_results
 
@@ -1535,8 +1648,12 @@ def compute_local_nwc(
                     val += amount
             nwc[nwc_name] = val
         nwc["NWC"] = (
-            nwc.get("매출채권", ZERO) + nwc.get("재고자산", ZERO) + nwc.get("선급금", ZERO)
-            - nwc.get("매입채무", ZERO) - nwc.get("미지급금", ZERO) - nwc.get("선수금", ZERO)
+            nwc.get("매출채권", ZERO)
+            + nwc.get("재고자산", ZERO)
+            + nwc.get("선급금", ZERO)
+            - nwc.get("매입채무", ZERO)
+            - nwc.get("미지급금", ZERO)
+            - nwc.get("선수금", ZERO)
         )
         nwc_by_period[period] = nwc
 
@@ -1563,7 +1680,9 @@ def compute_local_nwc(
     ap = fy24_bs.get("매입채무", ZERO)
 
     td["ar_days"] = _q(ar / annualized_rev * _365) if annualized_rev > ZERO else ZERO
-    td["inventory_days"] = _q(inv / annualized_cogs * _365) if annualized_cogs > ZERO else ZERO
+    td["inventory_days"] = (
+        _q(inv / annualized_cogs * _365) if annualized_cogs > ZERO else ZERO
+    )
     td["ap_days"] = _q(ap / annualized_cogs * _365) if annualized_cogs > ZERO else ZERO
 
     # NWC 테이블 rows
@@ -1665,10 +1784,16 @@ def build_pl_overview(
     # IS 세부 항목을 fs_data["is"]에서 가져오기 (가능한 경우)
     # 없으면 bu_pl 사용
     is_accounts = [
-        "매출액", "매출원가", "매출총이익",
-        "판매비와관리비", "영업이익",
-        "영업외수익", "영업외비용",
-        "법인세차감전이익", "법인세등", "당기순이익",
+        "매출액",
+        "매출원가",
+        "매출총이익",
+        "판매비와관리비",
+        "영업이익",
+        "영업외수익",
+        "영업외비용",
+        "법인세차감전이익",
+        "법인세등",
+        "당기순이익",
     ]
 
     # fs_data["is"]에서 세부 항목 추출 (더 상세)
@@ -1677,7 +1802,17 @@ def build_pl_overview(
         sample_period = list(fs_data["is"].keys())[0] if fs_data["is"] else None
         if sample_period:
             for acct in fs_data["is"][sample_period].keys():
-                is_subtotal = any(k in acct for k in ["매출총이익", "영업이익", "당기순이익", "합계", "총계", "법인세차감전"])
+                is_subtotal = any(
+                    k in acct
+                    for k in [
+                        "매출총이익",
+                        "영업이익",
+                        "당기순이익",
+                        "합계",
+                        "총계",
+                        "법인세차감전",
+                    ]
+                )
                 indent = 0 if is_subtotal or acct in is_accounts else 1
                 all_accounts.append((acct, indent))
     if not all_accounts:
@@ -1710,8 +1845,16 @@ def build_pl_overview(
         rows.append(row)
 
     # 하단: 마진 분석
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
-    rows.append({"account": "주요 마진 분석", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""}
+    )
+    rows.append(
+        {
+            "account": "주요 마진 분석",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "comment": "",
+        }
+    )
 
     margin_items = ["영업이익률", "당기순이익률", "판관비율", "인건비율"]
     for margin_name in margin_items:
@@ -1729,39 +1872,70 @@ def build_pl_overview(
                 op = items.get("영업이익", ZERO)
                 if op == ZERO and fs_data.get("is") and p in fs_data["is"]:
                     op = _safe_decimal(fs_data["is"][p].get("영업이익", 0))
-                row[f"fy_{pi}"] = f"{float(op / rev * _HUNDRED):.1f}%" if op != ZERO else ""
+                row[f"fy_{pi}"] = (
+                    f"{float(op / rev * _HUNDRED):.1f}%" if op != ZERO else ""
+                )
             elif margin_name == "당기순이익률":
                 ni = items.get("당기순이익", ZERO)
                 if ni == ZERO and fs_data.get("is") and p in fs_data["is"]:
-                    ni = _safe_decimal(fs_data["is"][p].get("당기순이익", fs_data["is"][p].get("당기순이익(손실)", 0)))
-                row[f"fy_{pi}"] = f"{float(ni / rev * _HUNDRED):.1f}%" if ni != ZERO else ""
+                    ni = _safe_decimal(
+                        fs_data["is"][p].get(
+                            "당기순이익", fs_data["is"][p].get("당기순이익(손실)", 0)
+                        )
+                    )
+                row[f"fy_{pi}"] = (
+                    f"{float(ni / rev * _HUNDRED):.1f}%" if ni != ZERO else ""
+                )
             elif margin_name == "판관비율":
                 sga = items.get("판매비와관리비", items.get("판관비", ZERO))
                 if sga == ZERO and fs_data.get("is") and p in fs_data["is"]:
                     sga = _safe_decimal(fs_data["is"][p].get("판매비와관리비", 0))
-                row[f"fy_{pi}"] = f"{float(sga / rev * _HUNDRED):.1f}%" if sga != ZERO else ""
+                row[f"fy_{pi}"] = (
+                    f"{float(sga / rev * _HUNDRED):.1f}%" if sga != ZERO else ""
+                )
             elif margin_name == "인건비율":
                 labor_keys = ["직원급여", "급여", "퇴직급여", "복리후생비"]
                 labor_total = ZERO
                 src = fs_data["is"].get(p, {}) if fs_data.get("is") else {}
                 for lk in labor_keys:
                     labor_total += _safe_decimal(src.get(lk, items.get(lk, 0)))
-                row[f"fy_{pi}"] = f"{float(labor_total / rev * _HUNDRED):.1f}%" if labor_total != ZERO else ""
+                row[f"fy_{pi}"] = (
+                    f"{float(labor_total / rev * _HUNDRED):.1f}%"
+                    if labor_total != ZERO
+                    else ""
+                )
         row["comment"] = ""
         rows.append(row)
 
     # 컬럼 구성
     cols = [TableColumn(key="account", header="구분", width=3.0, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
         if pi > 0:
             yr_curr = re.search(r"(\d{4})", periods[pi])
             yr_prev = re.search(r"(\d{4})", periods[pi - 1])
-            yr_label = f"{yr_curr.group(1)}/{yr_prev.group(1)}" if yr_curr and yr_prev else f"{pi}"
-            cols.append(TableColumn(key=f"yoy_{pi}", header=f"YoY ({yr_label})", width=1.2, align=AlignType.CENTER))
-    cols.append(TableColumn(key="comment", header="Comment", width=4.0, align=AlignType.LEFT))
+            yr_label = (
+                f"{yr_curr.group(1)}/{yr_prev.group(1)}"
+                if yr_curr and yr_prev
+                else f"{pi}"
+            )
+            cols.append(
+                TableColumn(
+                    key=f"yoy_{pi}",
+                    header=f"YoY ({yr_label})",
+                    width=1.2,
+                    align=AlignType.CENTER,
+                )
+            )
+    cols.append(
+        TableColumn(key="comment", header="Comment", width=4.0, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="PL Overview", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="PL Overview", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_qoe_block(
@@ -1778,7 +1952,9 @@ def build_qoe_block(
     periods = sorted(bu_pl.keys())
     rows: list[dict[str, Any]] = []
 
-    def _row(label: str, vals: dict[str, Decimal], rationale: str = "", indent: int = 0) -> dict:
+    def _row(
+        label: str, vals: dict[str, Decimal], rationale: str = "", indent: int = 0
+    ) -> dict:
         r: dict[str, Any] = {"account": ("  " * indent) + label}
         for pi, p in enumerate(periods):
             v = vals.get(p, ZERO)
@@ -1804,21 +1980,39 @@ def build_qoe_block(
             rows.append(_row(sub, sub_vals, indent=1))
 
     # Revenue Adjustments (규칙 기반)
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
-    rows.append({"account": "Revenue Adjustments:", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""}
+    )
+    rows.append(
+        {
+            "account": "Revenue Adjustments:",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "rationale": "",
+        }
+    )
 
     # 일회성 수익 탐지 (전기 대비 2배 이상 증가 후 감소)
     adj_rev = dict(rev_by_period)  # 기본은 조정 없음
     rows.append(_row("B. Adjusted Revenue (조정 매출액)", adj_rev))
 
     # C. Reported Operating Profit
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""}
+    )
     op_by_period = {p: bu_pl[p].get("영업이익", ZERO) for p in periods}
     rows.append(_row("C. Reported Operating Profit (보고 영업이익)", op_by_period))
 
     # D. Reported EBITDA 산출
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
-    rows.append({"account": "D. Reported EBITDA 산출:", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""}
+    )
+    rows.append(
+        {
+            "account": "D. Reported EBITDA 산출:",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "rationale": "",
+        }
+    )
     rows.append(_row("보고 영업이익(손실)", op_by_period))
 
     depr_by_period: dict[str, Decimal] = {}
@@ -1828,7 +2022,10 @@ def build_qoe_block(
         fs_is = fs_data.get("is", {}).get(p, {})
         depr = ZERO
         amort = ZERO
-        for k, v in {**items, **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.items():
+        for k, v in {
+            **items,
+            **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+        }.items():
             if "감가상각" in k and "무형" not in k and v != ZERO:
                 depr = max(depr, abs(v))
             if "무형자산상각" in k and v != ZERO:
@@ -1837,17 +2034,34 @@ def build_qoe_block(
         amort_by_period[p] = amort
 
     rows.append(_row("(+) 감가상각비", depr_by_period, "유형자산 감가상각", indent=1))
-    rows.append(_row("(+) 무형자산상각비", amort_by_period, "소프트웨어, 상표권 상각 등", indent=1))
+    rows.append(
+        _row(
+            "(+) 무형자산상각비",
+            amort_by_period,
+            "소프트웨어, 상표권 상각 등",
+            indent=1,
+        )
+    )
 
     ebitda_by_period = {
-        p: op_by_period.get(p, ZERO) + depr_by_period.get(p, ZERO) + amort_by_period.get(p, ZERO)
+        p: op_by_period.get(p, ZERO)
+        + depr_by_period.get(p, ZERO)
+        + amort_by_period.get(p, ZERO)
         for p in periods
     }
     rows.append(_row("D. Reported EBITDA", ebitda_by_period))
 
     # E. EBITDA Adjustments
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
-    rows.append({"account": "E. EBITDA Adjustments:", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""}
+    )
+    rows.append(
+        {
+            "account": "E. EBITDA Adjustments:",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "rationale": "",
+        }
+    )
 
     # 규칙 기반 조정 항목 탐지
     adj_total_by_period: dict[str, Decimal] = {p: ZERO for p in periods}
@@ -1860,7 +2074,14 @@ def build_qoe_block(
             v_dec = _safe_decimal(v)
             if ("국고" in k or "보조금" in k) and v_dec > ZERO:
                 neg_vals = {p: -v_dec}
-                rows.append(_row(f"({adj_idx}) {k} 제거", neg_vals, "비경상 정부지원금 — Normalized EBITDA에서 제거", indent=1))
+                rows.append(
+                    _row(
+                        f"({adj_idx}) {k} 제거",
+                        neg_vals,
+                        "비경상 정부지원금 — Normalized EBITDA에서 제거",
+                        indent=1,
+                    )
+                )
                 adj_total_by_period[p] += -v_dec
                 adj_idx += 1
 
@@ -1869,9 +2090,18 @@ def build_qoe_block(
         fs_is = fs_data.get("is", {}).get(p, {})
         for k, v in fs_is.items():
             v_dec = _safe_decimal(v)
-            if "잡이익" in k and abs(v_dec) > _safe_decimal(rev_by_period.get(p, 0)) * Decimal("0.01"):
+            if "잡이익" in k and abs(v_dec) > _safe_decimal(
+                rev_by_period.get(p, 0)
+            ) * Decimal("0.01"):
                 neg_vals = {p: -v_dec}
-                rows.append(_row(f"({adj_idx}) 비경상적 {k} 제거", neg_vals, "일회성 항목 (자산처분익 등)", indent=1))
+                rows.append(
+                    _row(
+                        f"({adj_idx}) 비경상적 {k} 제거",
+                        neg_vals,
+                        "일회성 항목 (자산처분익 등)",
+                        indent=1,
+                    )
+                )
                 adj_total_by_period[p] += -v_dec
                 adj_idx += 1
 
@@ -1885,14 +2115,26 @@ def build_qoe_block(
                     adj_vals[p] = v
                     adj_total_by_period[p] += v
             if adj_vals:
-                rows.append(_row(f"({adj_idx}) {adj.get('label', 'LLM 조정')}", adj_vals, adj.get("rationale", ""), indent=1))
+                rows.append(
+                    _row(
+                        f"({adj_idx}) {adj.get('label', 'LLM 조정')}",
+                        adj_vals,
+                        adj.get("rationale", ""),
+                        indent=1,
+                    )
+                )
                 adj_idx += 1
 
     rows.append(_row("총 EBITDA 조정액", adj_total_by_period))
 
     # F. Adjusted EBITDA
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""})
-    adj_ebitda = {p: ebitda_by_period.get(p, ZERO) + adj_total_by_period.get(p, ZERO) for p in periods}
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "rationale": ""}
+    )
+    adj_ebitda = {
+        p: ebitda_by_period.get(p, ZERO) + adj_total_by_period.get(p, ZERO)
+        for p in periods
+    }
     rows.append(_row("F. Adjusted EBITDA", adj_ebitda))
 
     # Adjusted EBITDA Margin
@@ -1901,7 +2143,9 @@ def build_qoe_block(
         adj_rev_p = adj_rev.get(p, ZERO)
         adj_ebitda_p = adj_ebitda.get(p, ZERO)
         if adj_rev_p != ZERO:
-            margin_row[f"fy_{pi}"] = f"{float(adj_ebitda_p / adj_rev_p * _HUNDRED):.1f}%"
+            margin_row[f"fy_{pi}"] = (
+                f"{float(adj_ebitda_p / adj_rev_p * _HUNDRED):.1f}%"
+            )
         else:
             margin_row[f"fy_{pi}"] = ""
     margin_row["rationale"] = "Adjusted EBITDA / Adjusted Revenue"
@@ -1910,10 +2154,24 @@ def build_qoe_block(
     # 컬럼
     cols = [TableColumn(key="account", header="구분", width=3.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="rationale", header="비고 / Adjustment Rationale", width=5.0, align=AlignType.LEFT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
+    cols.append(
+        TableColumn(
+            key="rationale",
+            header="비고 / Adjustment Rationale",
+            width=5.0,
+            align=AlignType.LEFT,
+        )
+    )
 
-    return TableBlock(title="QoE (Quality of Earnings)", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="QoE (Quality of Earnings)",
+        columns=cols,
+        rows=rows,
+        metadata={"style": "table"},
+    )
 
 
 def build_bs_overview(
@@ -1938,7 +2196,17 @@ def build_bs_overview(
 
     rows: list[dict[str, Any]] = []
     for acct in all_accounts:
-        is_subtotal = any(k in acct for k in ["자산총계", "부채총계", "자본총계", "부채및자본총계", "합계", "소계"])
+        is_subtotal = any(
+            k in acct
+            for k in [
+                "자산총계",
+                "부채총계",
+                "자본총계",
+                "부채및자본총계",
+                "합계",
+                "소계",
+            ]
+        )
         row: dict[str, Any] = {
             "account": acct if is_subtotal else f"  {acct}",
         }
@@ -1959,11 +2227,24 @@ def build_bs_overview(
 
     cols = [TableColumn(key="account", header="구분", width=3.0, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="delta", header=f"증감 ({periods[-1][:4]} vs {periods[-2][:4]})" if len(periods) >= 2 else "증감", width=1.5, align=AlignType.RIGHT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
+    cols.append(
+        TableColumn(
+            key="delta",
+            header=f"증감 ({periods[-1][:4]} vs {periods[-2][:4]})"
+            if len(periods) >= 2
+            else "증감",
+            width=1.5,
+            align=AlignType.RIGHT,
+        )
+    )
     cols.append(TableColumn(key="note", header="비고", width=3.0, align=AlignType.LEFT))
 
-    return TableBlock(title="BS Overview", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="BS Overview", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_qoa_block(
@@ -1988,18 +2269,35 @@ def build_qoa_block(
 
     # A. Net Debt / (Cash) Analysis
     rows.append(_simple_row("A. Net Debt / (Cash) Analysis", {}))
-    rows.append(_simple_row("현금 및 현금성자산", {periods[-1]: _fmt(cash_total)} if cash_total != ZERO else {}))
+    rows.append(
+        _simple_row(
+            "현금 및 현금성자산",
+            {periods[-1]: _fmt(cash_total)} if cash_total != ZERO else {},
+        )
+    )
 
     total_debt = sum(d.get("_balance_dec", ZERO) for d in debt_items)
     for d in debt_items:
         bal = d.get("_balance_dec", ZERO)
         if bal != ZERO:
-            rows.append(_simple_row(f"  {d.get('lender', '?')}", {periods[-1]: _fmt(bal)}, f"금리 {d.get('_rate_dec', ZERO):.1f}%, 만기 {d.get('maturity', 'N/A')}"))
+            rows.append(
+                _simple_row(
+                    f"  {d.get('lender', '?')}",
+                    {periods[-1]: _fmt(bal)},
+                    f"금리 {d.get('_rate_dec', ZERO):.1f}%, 만기 {d.get('maturity', 'N/A')}",
+                )
+            )
 
     rows.append(_simple_row("Total Debt", {periods[-1]: _fmt(total_debt)}))
     net_debt = total_debt - cash_total
     nd_label = "Net Debt" if net_debt > ZERO else "Net Debt / (Net Cash)"
-    rows.append(_simple_row(nd_label, {periods[-1]: _fmt(net_debt)}, "마이너스 = Net Cash 포지션" if net_debt < ZERO else ""))
+    rows.append(
+        _simple_row(
+            nd_label,
+            {periods[-1]: _fmt(net_debt)},
+            "마이너스 = Net Cash 포지션" if net_debt < ZERO else "",
+        )
+    )
 
     # Debt-like Items
     rows.append(_simple_row("", {}))
@@ -2035,10 +2333,17 @@ def build_qoa_block(
 
     cols = [TableColumn(key="account", header="구분", width=3.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
     cols.append(TableColumn(key="note", header="비고", width=4.0, align=AlignType.LEFT))
 
-    return TableBlock(title="QoA (Quality of Net Assets)", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="QoA (Quality of Net Assets)",
+        columns=cols,
+        rows=rows,
+        metadata={"style": "table"},
+    )
 
 
 def build_revenue_analysis(
@@ -2060,19 +2365,37 @@ def build_revenue_analysis(
     for pi, p in enumerate(periods):
         total_row[f"fy_{pi}"] = _fmt(rev_by_period[p])
         if pi > 0:
-            total_row[f"yoy_{pi}"] = _yoy(rev_by_period[p], rev_by_period[periods[pi-1]])
+            total_row[f"yoy_{pi}"] = _yoy(
+                rev_by_period[p], rev_by_period[periods[pi - 1]]
+            )
     total_row["comment"] = ""
     rows.append(total_row)
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""}
+    )
 
     # 매출 유형별 (fs_data IS에서 매출 하위 항목 추출)
-    rows.append({"account": "매출 유형별 분석:", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
+    rows.append(
+        {
+            "account": "매출 유형별 분석:",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "comment": "",
+        }
+    )
     rev_subs: dict[str, dict[str, Decimal]] = {}
     for p in periods:
         items = bu_pl[p]
         fs_is = fs_data.get("is", {}).get(p, {})
-        for k, v in {**items, **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.items():
-            if k != "매출액" and ("매출" in k or "수수료" in k or "수익" in k) and "총이익" not in k and "원가" not in k:
+        for k, v in {
+            **items,
+            **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+        }.items():
+            if (
+                k != "매출액"
+                and ("매출" in k or "수수료" in k or "수익" in k)
+                and "총이익" not in k
+                and "원가" not in k
+            ):
                 v_dec = _safe_decimal(v) if not isinstance(v, Decimal) else v
                 if v_dec != ZERO:
                     rev_subs.setdefault(k, {})[p] = v_dec
@@ -2082,13 +2405,23 @@ def build_revenue_analysis(
         for pi, p in enumerate(periods):
             sub_row[f"fy_{pi}"] = _fmt(sub_vals.get(p, ZERO))
             if pi > 0:
-                sub_row[f"yoy_{pi}"] = _yoy(sub_vals.get(p, ZERO), sub_vals.get(periods[pi-1], ZERO))
+                sub_row[f"yoy_{pi}"] = _yoy(
+                    sub_vals.get(p, ZERO), sub_vals.get(periods[pi - 1], ZERO)
+                )
         sub_row["comment"] = ""
         rows.append(sub_row)
 
     # 구성비
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
-    rows.append({"account": "매출 구성비 (%):", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
+    rows.append(
+        {"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""}
+    )
+    rows.append(
+        {
+            "account": "매출 구성비 (%):",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            "comment": "",
+        }
+    )
     for sub_name, sub_vals in rev_subs.items():
         pct_row: dict[str, Any] = {"account": f"  {sub_name} 비중"}
         for pi, p in enumerate(periods):
@@ -2103,24 +2436,64 @@ def build_revenue_analysis(
 
     # 집중도 정보
     if hhi > ZERO:
-        rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
-        rows.append({"account": f"매출 집중도 (HHI): {hhi:,.0f}", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": "2,500+ = 고집중"})
+        rows.append(
+            {
+                "account": "",
+                **{f"fy_{i}": "" for i in range(len(periods))},
+                "comment": "",
+            }
+        )
+        rows.append(
+            {
+                "account": f"매출 집중도 (HHI): {hhi:,.0f}",
+                **{f"fy_{i}": "" for i in range(len(periods))},
+                "comment": "2,500+ = 고집중",
+            }
+        )
 
     # Key Observations
     if observations:
-        rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
-        rows.append({"account": "Key Observations:", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": ""})
+        rows.append(
+            {
+                "account": "",
+                **{f"fy_{i}": "" for i in range(len(periods))},
+                "comment": "",
+            }
+        )
+        rows.append(
+            {
+                "account": "Key Observations:",
+                **{f"fy_{i}": "" for i in range(len(periods))},
+                "comment": "",
+            }
+        )
         for idx_o, obs in enumerate(observations, 1):
-            rows.append({"account": f"  {idx_o}", **{f"fy_{i}": "" for i in range(len(periods))}, "comment": obs})
+            rows.append(
+                {
+                    "account": f"  {idx_o}",
+                    **{f"fy_{i}": "" for i in range(len(periods))},
+                    "comment": obs,
+                }
+            )
 
     cols = [TableColumn(key="account", header="구분", width=2.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
         if pi > 0:
-            cols.append(TableColumn(key=f"yoy_{pi}", header="YoY", width=1.0, align=AlignType.CENTER))
-    cols.append(TableColumn(key="comment", header="Comment", width=5.0, align=AlignType.LEFT))
+            cols.append(
+                TableColumn(
+                    key=f"yoy_{pi}", header="YoY", width=1.0, align=AlignType.CENTER
+                )
+            )
+    cols.append(
+        TableColumn(key="comment", header="Comment", width=5.0, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="Revenue Analysis", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="Revenue Analysis", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_sga_block(
@@ -2152,10 +2525,19 @@ def build_sga_block(
             sga = _safe_decimal(fs_data["is"][p].get("판매비와관리비", 0))
         sga_total_row[f"fy_{pi}"] = _fmt(sga)
         rev = rev_by_p.get(p, ZERO)
-        sga_total_row[f"pct_{pi}"] = f"{float(sga / rev * _HUNDRED):.1f}%" if rev != ZERO and sga != ZERO else ""
+        sga_total_row[f"pct_{pi}"] = (
+            f"{float(sga / rev * _HUNDRED):.1f}%" if rev != ZERO and sga != ZERO else ""
+        )
     sga_total_row["comment"] = ""
     rows.append(sga_total_row)
-    rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, **{f"pct_{i}": "" for i in range(len(periods))}, "comment": ""})
+    rows.append(
+        {
+            "account": "",
+            **{f"fy_{i}": "" for i in range(len(periods))},
+            **{f"pct_{i}": "" for i in range(len(periods))},
+            "comment": "",
+        }
+    )
 
     # 카테고리별
     for cat_name, keywords in categories.items():
@@ -2165,7 +2547,10 @@ def build_sga_block(
         for p in periods:
             items = bu_pl[p]
             fs_is = fs_data.get("is", {}).get(p, {})
-            for k, v in {**items, **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.items():
+            for k, v in {
+                **items,
+                **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+            }.items():
                 v_dec = _safe_decimal(v) if not isinstance(v, Decimal) else v
                 if any(kw in k for kw in keywords) and abs(v_dec) > ZERO:
                     found = False
@@ -2184,7 +2569,11 @@ def build_sga_block(
             for pi, p in enumerate(periods):
                 cat_row[f"fy_{pi}"] = _fmt(cat_total[p])
                 rev = rev_by_p.get(p, ZERO)
-                cat_row[f"pct_{pi}"] = f"{float(cat_total[p] / rev * _HUNDRED):.1f}%" if rev != ZERO and cat_total[p] != ZERO else ""
+                cat_row[f"pct_{pi}"] = (
+                    f"{float(cat_total[p] / rev * _HUNDRED):.1f}%"
+                    if rev != ZERO and cat_total[p] != ZERO
+                    else ""
+                )
             cat_row["comment"] = ""
             rows.append(cat_row)
 
@@ -2195,11 +2584,22 @@ def build_sga_block(
                     v = sub_vals.get(p, ZERO)
                     sub_row[f"fy_{pi}"] = _fmt(v)
                     rev = rev_by_p.get(p, ZERO)
-                    sub_row[f"pct_{pi}"] = f"{float(abs(v) / rev * _HUNDRED):.1f}%" if rev != ZERO and v != ZERO else ""
+                    sub_row[f"pct_{pi}"] = (
+                        f"{float(abs(v) / rev * _HUNDRED):.1f}%"
+                        if rev != ZERO and v != ZERO
+                        else ""
+                    )
                 sub_row["comment"] = ""
                 rows.append(sub_row)
 
-            rows.append({"account": "", **{f"fy_{i}": "" for i in range(len(periods))}, **{f"pct_{i}": "" for i in range(len(periods))}, "comment": ""})
+            rows.append(
+                {
+                    "account": "",
+                    **{f"fy_{i}": "" for i in range(len(periods))},
+                    **{f"pct_{i}": "" for i in range(len(periods))},
+                    "comment": "",
+                }
+            )
 
     # 기타 판관비 (카테고리에 안 들어간 항목)
     all_categorized: set[str] = set()
@@ -2209,10 +2609,29 @@ def build_sga_block(
     other_items: list[tuple[str, dict[str, Decimal]]] = []
     for p in periods:
         fs_is = fs_data.get("is", {}).get(p, {})
-        sga_keys = [k for k in {**bu_pl[p], **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.keys()
-                     if k not in {"매출액", "매출원가", "매출총이익", "매출이익", "영업이익", "판매비와관리비", "판관비",
-                                  "영업외수익", "영업외비용", "법인세차감전이익", "법인세등", "당기순이익"}
-                     and not any(kw in k for kw in sum(categories.values(), []))]
+        sga_keys = [
+            k
+            for k in {
+                **bu_pl[p],
+                **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+            }.keys()
+            if k
+            not in {
+                "매출액",
+                "매출원가",
+                "매출총이익",
+                "매출이익",
+                "영업이익",
+                "판매비와관리비",
+                "판관비",
+                "영업외수익",
+                "영업외비용",
+                "법인세차감전이익",
+                "법인세등",
+                "당기순이익",
+            }
+            and not any(kw in k for kw in sum(categories.values(), []))
+        ]
         for k in sga_keys:
             v = _safe_decimal(bu_pl[p].get(k, fs_is.get(k, 0)))
             if abs(v) > ZERO:
@@ -2227,11 +2646,21 @@ def build_sga_block(
 
     cols = [TableColumn(key="account", header="과목", width=2.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-        cols.append(TableColumn(key=f"pct_{pi}", header="% Rev", width=1.0, align=AlignType.CENTER))
-    cols.append(TableColumn(key="comment", header="Comment", width=3.5, align=AlignType.LEFT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
+        cols.append(
+            TableColumn(
+                key=f"pct_{pi}", header="% Rev", width=1.0, align=AlignType.CENTER
+            )
+        )
+    cols.append(
+        TableColumn(key="comment", header="Comment", width=3.5, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="SGA Analysis", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="SGA Analysis", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_labor_block(
@@ -2270,12 +2699,23 @@ def build_labor_block(
         if has_data:
             rows.append(_lrow(f"  {comp}", comp_vals))
 
-    rows.append(_lrow("인건비 합계", {p: _fmt(labor_totals[p]) for p in periods if labor_totals[p] != ZERO}))
+    rows.append(
+        _lrow(
+            "인건비 합계",
+            {p: _fmt(labor_totals[p]) for p in periods if labor_totals[p] != ZERO},
+        )
+    )
 
     # B. 인원 (데이터 없으면 N/A)
     rows.append(_lrow("", {}))
     rows.append(_lrow("B. 인원 현황", {}))
-    rows.append(_lrow("  인원수", {p: "N/A (데이터 없음)" for p in periods}, "급여대장 기준 인원 필요"))
+    rows.append(
+        _lrow(
+            "  인원수",
+            {p: "N/A (데이터 없음)" for p in periods},
+            "급여대장 기준 인원 필요",
+        )
+    )
 
     # C. 인건비율
     rows.append(_lrow("", {}))
@@ -2291,10 +2731,16 @@ def build_labor_block(
 
     cols = [TableColumn(key="account", header="구분", width=2.5, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=2.0, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="note", header="Comment", width=4.0, align=AlignType.LEFT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=2.0, align=AlignType.RIGHT)
+        )
+    cols.append(
+        TableColumn(key="note", header="Comment", width=4.0, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="Labor Analysis", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="Labor Analysis", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_nwc_block(
@@ -2308,7 +2754,9 @@ def build_nwc_block(
     periods = sorted(bu_pl.keys())
     rows: list[dict[str, Any]] = []
 
-    def _nrow(label: str, vals: dict[str, str], delta: str = "", note: str = "") -> dict:
+    def _nrow(
+        label: str, vals: dict[str, str], delta: str = "", note: str = ""
+    ) -> dict:
         r: dict[str, Any] = {"account": label}
         for pi, p in enumerate(periods):
             r[f"fy_{pi}"] = vals.get(p, "")
@@ -2344,7 +2792,9 @@ def build_nwc_block(
                         delta_str = _fmt(last - prev)
                 rows.append(_nrow(f"  {key}", vals, delta_str))
 
-        total_vals = {p: _fmt(group_total[p]) for p in periods if group_total[p] != ZERO}
+        total_vals = {
+            p: _fmt(group_total[p]) for p in periods if group_total[p] != ZERO
+        }
         delta_t = ""
         if len(periods) >= 2:
             delta_t = _fmt(group_total[periods[-1]] - group_total[periods[-2]])
@@ -2362,22 +2812,44 @@ def build_nwc_block(
     rows.append(_nrow("", {}))
     nwc_total = nwc_data.get("items", [])
     td = nwc_data.get("turnover_days", {})
-    rows.append(_nrow("Net Working Capital", {}, note="매출채권 + 기타자산 - 매입채무 - 기타부채"))
+    rows.append(
+        _nrow(
+            "Net Working Capital", {}, note="매출채권 + 기타자산 - 매입채무 - 기타부채"
+        )
+    )
 
     # DSO/DPO
     rows.append(_nrow("", {}))
     ar_days = td.get("ar_days", 0)
     ap_days = td.get("ap_days", 0)
-    rows.append(_nrow("DSO (매출채권 회전일수)", {periods[-1]: f"{ar_days:.0f}일"} if periods else {}))
-    rows.append(_nrow("DPO (매입채무 회전일수)", {periods[-1]: f"{ap_days:.0f}일"} if periods else {}))
+    rows.append(
+        _nrow(
+            "DSO (매출채권 회전일수)",
+            {periods[-1]: f"{ar_days:.0f}일"} if periods else {},
+        )
+    )
+    rows.append(
+        _nrow(
+            "DPO (매입채무 회전일수)",
+            {periods[-1]: f"{ap_days:.0f}일"} if periods else {},
+        )
+    )
 
     cols = [TableColumn(key="account", header="구분", width=3.0, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="delta", header="Δ 증감", width=1.5, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="note", header="Comment", width=3.5, align=AlignType.LEFT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
+    cols.append(
+        TableColumn(key="delta", header="Δ 증감", width=1.5, align=AlignType.RIGHT)
+    )
+    cols.append(
+        TableColumn(key="note", header="Comment", width=3.5, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="NWC Analysis", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="NWC Analysis", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_capex_block(
@@ -2429,9 +2901,14 @@ def build_capex_block(
         items = bu_pl[p]
         fs_is = fs_data.get("is", {}).get(p, {})
         depr = ZERO
-        for k, v in {**items, **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.items():
+        for k, v in {
+            **items,
+            **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+        }.items():
             if "감가상각" in k and "무형" not in k:
-                depr = max(depr, abs(_safe_decimal(v) if not isinstance(v, Decimal) else v))
+                depr = max(
+                    depr, abs(_safe_decimal(v) if not isinstance(v, Decimal) else v)
+                )
         if depr != ZERO:
             depr_vals[p] = _fmt(depr)
     rows.append(_crow("  감가상각비", depr_vals))
@@ -2446,19 +2923,34 @@ def build_capex_block(
         # CapEx는 감가상각비를 대용 (실제 취득 데이터 없으면)
         depr = ZERO
         fs_is = fs_data.get("is", {}).get(p, {})
-        for k, v in {**bu_pl[p], **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()}}.items():
+        for k, v in {
+            **bu_pl[p],
+            **{kk: _safe_decimal(vv) for kk, vv in fs_is.items()},
+        }.items():
             if "감가상각" in k:
                 depr += abs(_safe_decimal(v) if not isinstance(v, Decimal) else v)
         if rev != ZERO and depr != ZERO:
             capex_rev_vals[p] = f"{float(depr / rev * _HUNDRED):.1f}%"
-    rows.append(_crow("CapEx / Revenue", capex_rev_vals, "감가상각비 기준 (Maintenance CapEx proxy)"))
+    rows.append(
+        _crow(
+            "CapEx / Revenue",
+            capex_rev_vals,
+            "감가상각비 기준 (Maintenance CapEx proxy)",
+        )
+    )
 
     cols = [TableColumn(key="account", header="구분", width=3.0, align=AlignType.LEFT)]
     for pi, p in enumerate(periods):
-        cols.append(TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT))
-    cols.append(TableColumn(key="note", header="Comment", width=4.0, align=AlignType.LEFT))
+        cols.append(
+            TableColumn(key=f"fy_{pi}", header=p, width=1.8, align=AlignType.RIGHT)
+        )
+    cols.append(
+        TableColumn(key="note", header="Comment", width=4.0, align=AlignType.LEFT)
+    )
 
-    return TableBlock(title="CapEx Analysis", columns=cols, rows=rows, metadata={"style": "table"})
+    return TableBlock(
+        title="CapEx Analysis", columns=cols, rows=rows, metadata={"style": "table"}
+    )
 
 
 def build_cross_checks(
@@ -2474,25 +2966,34 @@ def build_cross_checks(
     bu_fy23_rev = bu_pl.get("FY2023", {}).get("매출액", ZERO)
     fs_fy23_rev = ZERO
     # 정규화 후 키: "FY2023" 또는 원본 "FY23"
-    fs_is_fy23 = fs_data.get("is", {}).get("FY2023", fs_data.get("is", {}).get("FY23", {}))
+    fs_is_fy23 = fs_data.get("is", {}).get(
+        "FY2023", fs_data.get("is", {}).get("FY23", {})
+    )
     for k, v in fs_is_fy23.items():
         clean_k = k.replace(" ", "")
         # 매출(액)에 매칭하되, 매출원가/매출총이익은 제외
-        if "매출" in clean_k and "원가" not in clean_k and "이익" not in clean_k and "총" not in clean_k:
+        if (
+            "매출" in clean_k
+            and "원가" not in clean_k
+            and "이익" not in clean_k
+            and "총" not in clean_k
+        ):
             val = _safe_decimal(v)
             if val > ZERO:
                 fs_fy23_rev = val
                 break
     diff1 = bu_fy23_rev - fs_fy23_rev
-    checks.append({
-        "check": "BU P&L 매출 vs FS IS 매출 (FY2023)",
-        "source_a": "12-1. 사업부 매출이익현황",
-        "source_b": "33. 재무제표 — 손익계산서",
-        "expected": _fmt(bu_fy23_rev),
-        "actual": _fmt(fs_fy23_rev),
-        "difference": _fmt(abs(diff1)),
-        "status": "Pass" if abs(diff1) < Decimal("10") else "Fail",
-    })
+    checks.append(
+        {
+            "check": "BU P&L 매출 vs FS IS 매출 (FY2023)",
+            "source_a": "12-1. 사업부 매출이익현황",
+            "source_b": "33. 재무제표 — 손익계산서",
+            "expected": _fmt(bu_fy23_rev),
+            "actual": _fmt(fs_fy23_rev),
+            "difference": _fmt(abs(diff1)),
+            "status": "Pass" if abs(diff1) < Decimal("10") else "Fail",
+        }
+    )
 
     # 2. BS 차입금 vs 차입금 현황표
     bs_debt = ZERO
@@ -2503,15 +3004,17 @@ def build_cross_checks(
             bs_debt += _safe_decimal(v)
     schedule_debt = sum(d.get("_balance_dec", ZERO) for d in debt_items)
     diff2 = bs_debt - schedule_debt
-    checks.append({
-        "check": "BS 차입금 vs 차입금 현황표 잔액",
-        "source_a": "33. 재무제표 — 재무상태표",
-        "source_b": "26. 차입금 현황표",
-        "expected": _fmt(bs_debt),
-        "actual": _fmt(schedule_debt),
-        "difference": _fmt(abs(diff2)),
-        "status": "Pass" if abs(diff2) < Decimal("100") else "Fail",
-    })
+    checks.append(
+        {
+            "check": "BS 차입금 vs 차입금 현황표 잔액",
+            "source_a": "33. 재무제표 — 재무상태표",
+            "source_b": "26. 차입금 현황표",
+            "expected": _fmt(bs_debt),
+            "actual": _fmt(schedule_debt),
+            "difference": _fmt(abs(diff2)),
+            "status": "Pass" if abs(diff2) < Decimal("100") else "Fail",
+        }
+    )
 
     # 3. BS 자산 = 부채 + 자본 (대차균형 검증)
     for period in sorted(bs_data.keys()):
@@ -2529,15 +3032,17 @@ def build_cross_checks(
                 total_equity = v
         if total_asset > ZERO:
             diff3 = total_asset - (total_liab + total_equity)
-            checks.append({
-                "check": f"BS 대차균형 ({period})",
-                "source_a": f"자산총계 {_fmt(total_asset)}",
-                "source_b": f"부채+자본 {_fmt(total_liab + total_equity)}",
-                "expected": _fmt(total_asset),
-                "actual": _fmt(total_liab + total_equity),
-                "difference": _fmt(abs(diff3)),
-                "status": "Pass" if abs(diff3) < Decimal("1") else "Fail",
-            })
+            checks.append(
+                {
+                    "check": f"BS 대차균형 ({period})",
+                    "source_a": f"자산총계 {_fmt(total_asset)}",
+                    "source_b": f"부채+자본 {_fmt(total_liab + total_equity)}",
+                    "expected": _fmt(total_asset),
+                    "actual": _fmt(total_liab + total_equity),
+                    "difference": _fmt(abs(diff3)),
+                    "status": "Pass" if abs(diff3) < Decimal("1") else "Fail",
+                }
+            )
 
     return checks
 
@@ -2659,12 +3164,14 @@ def build_report(
             from app.ralph.progress_tracker import ProgressTracker
 
             tracker = ProgressTracker()
-            convergence = ConvergenceChecker(ConvergenceConfig(
-                pass_threshold=quality_threshold,
-                improvement_threshold=0.3,
-                max_iterations_per_section=max_llm_iterations,
-                max_cost_usd=5.0,
-            ))
+            convergence = ConvergenceChecker(
+                ConvergenceConfig(
+                    pass_threshold=quality_threshold,
+                    improvement_threshold=0.3,
+                    max_iterations_per_section=max_llm_iterations,
+                    max_cost_usd=5.0,
+                )
+            )
             _p("[Quality] Ralph Loop infrastructure initialized")
         except ImportError as e:
             _p(f"[Quality] Ralph Loop not available ({e}) — single-pass mode")
@@ -2705,7 +3212,9 @@ def build_report(
         fs_data.get("bs", {}),
         fs_data.get("is", {}),
     )
-    _p(f"    [OK] NWC: {len(nwc_data['items'])} items, AR Days={nwc_data['turnover_days'].get('ar_days', 0):.0f}")
+    _p(
+        f"    [OK] NWC: {len(nwc_data['items'])} items, AR Days={nwc_data['turnover_days'].get('ar_days', 0):.0f}"
+    )
 
     # ── FS 기간 키 정규화 (FY23 → FY2023, FY24.9M → FY2024) ──
     bu_period_keys = sorted(bu_pl.keys())
@@ -2754,7 +3263,9 @@ def build_report(
             if isinstance(nwc_item, dict):
                 nwc_amt = nwc_item.get("amount", ZERO)
                 if isinstance(nwc_amt, Decimal) and abs(nwc_amt) >= Decimal("100"):
-                    known_vals[f"nwc_{nwc_item.get('label', 'item')}"] = str(int(nwc_amt))
+                    known_vals[f"nwc_{nwc_item.get('label', 'item')}"] = str(
+                        int(nwc_amt)
+                    )
         # YoY 트렌드
         if len(periods) >= 2:
             prev_items = bu_pl[periods[-2]]
@@ -2763,7 +3274,9 @@ def build_report(
                 prev_val = prev_items.get(metric_name, ZERO)
                 curr_val = curr_items.get(metric_name, ZERO)
                 if prev_val > ZERO and curr_val > ZERO:
-                    known_trends[metric_name] = "increase" if curr_val > prev_val else "decrease"
+                    known_trends[metric_name] = (
+                        "increase" if curr_val > prev_val else "decrease"
+                    )
                     # YoY 변동률도 known_pcts에 등록
                     yoy_pct = float((curr_val - prev_val) / prev_val * _HUNDRED)
                     known_pcts[f"{metric_name}_YoY"] = f"{yoy_pct:.1f}"
@@ -2778,45 +3291,91 @@ def build_report(
     period_labels = sorted(bu_pl.keys())
 
     # ── 1. Cover ──
-    sections.append(CoverBlock(
-        deal_name=deal_name,
-        deal_type="Financial Due Diligence",
-        target_name=f"{deal_name}주식회사",
-        date=date.today(),
-        prepared_by="AMIC x PETRA Platform",
-        confidentiality="CONFIDENTIAL",
-    ))
+    sections.append(
+        CoverBlock(
+            deal_name=deal_name,
+            deal_type="Financial Due Diligence",
+            target_name=f"{deal_name}주식회사",
+            date=date.today(),
+            prepared_by="AMIC x PETRA Platform",
+            confidentiality="CONFIDENTIAL",
+        )
+    )
 
     # ── 1b. Project Overview (TOC + 프로젝트 정보) ──
     overview_rows: list[dict[str, Any]] = [
         {"item": "대상 기업", "section": f"{deal_name}주식회사", "description": ""},
-        {"item": "분석 기간", "section": f"{period_labels[0]} ~ {period_labels[-1]}" if period_labels else "N/A", "description": ""},
+        {
+            "item": "분석 기간",
+            "section": f"{period_labels[0]} ~ {period_labels[-1]}"
+            if period_labels
+            else "N/A",
+            "description": "",
+        },
         {"item": "통화/단위", "section": "KRW (백만원)", "description": ""},
-        {"item": "데이터 소스", "section": "재무제표, BU P&L, 매출원장, 매입원장, 차입금현황표, 유형자산명세서", "description": ""},
+        {
+            "item": "데이터 소스",
+            "section": "재무제표, BU P&L, 매출원장, 매입원장, 차입금현황표, 유형자산명세서",
+            "description": "",
+        },
         {"item": "---", "section": "--- Table of Contents ---", "description": "---"},
         {"item": "1", "section": "Cover", "description": "프로젝트 개요"},
-        {"item": "2", "section": "Executive Summary", "description": "핵심 분석 요약 (AI 생성)"},
-        {"item": "3", "section": "PL Overview", "description": "다기간 손익계산서 + YoY + 마진분석"},
-        {"item": "4", "section": "QoE", "description": "Quality of Earnings — Adjusted EBITDA Bridge"},
-        {"item": "5", "section": "BS Overview", "description": "다기간 재무상태표 + 증감"},
-        {"item": "6", "section": "QoA", "description": "Quality of Net Assets — Net Debt + NWC"},
-        {"item": "7", "section": "Revenue", "description": "매출 유형별 분석 + 구성비 + 집중도"},
+        {
+            "item": "2",
+            "section": "Executive Summary",
+            "description": "핵심 분석 요약 (AI 생성)",
+        },
+        {
+            "item": "3",
+            "section": "PL Overview",
+            "description": "다기간 손익계산서 + YoY + 마진분석",
+        },
+        {
+            "item": "4",
+            "section": "QoE",
+            "description": "Quality of Earnings — Adjusted EBITDA Bridge",
+        },
+        {
+            "item": "5",
+            "section": "BS Overview",
+            "description": "다기간 재무상태표 + 증감",
+        },
+        {
+            "item": "6",
+            "section": "QoA",
+            "description": "Quality of Net Assets — Net Debt + NWC",
+        },
+        {
+            "item": "7",
+            "section": "Revenue",
+            "description": "매출 유형별 분석 + 구성비 + 집중도",
+        },
         {"item": "8", "section": "SGA", "description": "카테고리별 판관비 + %Revenue"},
         {"item": "9", "section": "Labor", "description": "인건비 + 인원 + 인건비율"},
         {"item": "10", "section": "NWC", "description": "순운전자본 + DSO/DPO + 변동"},
         {"item": "11", "section": "CapEx", "description": "유형/무형자산 + CapEx 역산"},
-        {"item": "12", "section": "Key Issues & Findings", "description": "핵심 발견사항 및 리스크"},
+        {
+            "item": "12",
+            "section": "Key Issues & Findings",
+            "description": "핵심 발견사항 및 리스크",
+        },
     ]
-    sections.append(TableBlock(
-        title="Project Overview",
-        columns=[
-            TableColumn(key="item", header="#", width=0.8, align=AlignType.CENTER),
-            TableColumn(key="section", header="시트 / 정보", width=3.0, align=AlignType.LEFT),
-            TableColumn(key="description", header="설명", width=5.0, align=AlignType.LEFT),
-        ],
-        rows=overview_rows,
-        metadata={"style": "table"},
-    ))
+    sections.append(
+        TableBlock(
+            title="Project Overview",
+            columns=[
+                TableColumn(key="item", header="#", width=0.8, align=AlignType.CENTER),
+                TableColumn(
+                    key="section", header="시트 / 정보", width=3.0, align=AlignType.LEFT
+                ),
+                TableColumn(
+                    key="description", header="설명", width=5.0, align=AlignType.LEFT
+                ),
+            ],
+            rows=overview_rows,
+            metadata={"style": "table"},
+        )
+    )
     _p("    [OK] Project Overview (TOC)")
 
     # ── 사전 계산: Revenue HHI ──
@@ -2829,8 +3388,11 @@ def build_report(
     if customer_entries:
         try:
             from app.engines.revenue_engine import compute_revenue_breakdown
+
             cust_result, _ = compute_revenue_breakdown(
-                customer_entries, dimension="customer", dimension_key="customer_name",
+                customer_entries,
+                dimension="customer",
+                dimension_key="customer_name",
             )
             if cust_result.breakdown:
                 hhi = cust_result.concentration_index or ZERO
@@ -2838,9 +3400,13 @@ def build_report(
                 top1 = cust_result.breakdown[0]
                 top1_name = top1.name
                 top1_share = top1.share_pct
-                revenue_observations = commentary.for_revenue_concentration(hhi, top5_share, top1_name, top1_share)
+                revenue_observations = commentary.for_revenue_concentration(
+                    hhi, top5_share, top1_name, top1_share
+                )
                 if llm_overlay and revenue_observations:
-                    llm_rev = llm_overlay.enhance_revenue(hhi, top5_share, top1_name, top1_share, revenue_observations)
+                    llm_rev = llm_overlay.enhance_revenue(
+                        hhi, top5_share, top1_name, top1_share, revenue_observations
+                    )
                     if llm_rev:
                         for line in llm_rev.split("\n"):
                             line = line.strip()
@@ -2859,13 +3425,25 @@ def build_report(
         for key in ["매출 ", "GP 마진", "매출 CAGR"]:
             if key in bullet:
                 if "매출 CAGR" in bullet:
-                    commentary_map["매출액"] = commentary_map.get("매출액", "") + " | " + bullet if "매출액" in commentary_map else bullet
+                    commentary_map["매출액"] = (
+                        commentary_map.get("매출액", "") + " | " + bullet
+                        if "매출액" in commentary_map
+                        else bullet
+                    )
                 elif "GP 마진" in bullet:
                     for p in sorted(bu_pl.keys()):
                         if p in bullet:
-                            commentary_map["매출총이익"] = commentary_map.get("매출총이익", "") + "; " + bullet if "매출총이익" in commentary_map else bullet
+                            commentary_map["매출총이익"] = (
+                                commentary_map.get("매출총이익", "") + "; " + bullet
+                                if "매출총이익" in commentary_map
+                                else bullet
+                            )
                 else:
-                    commentary_map["매출액"] = commentary_map.get("매출액", "") + "; " + bullet if "매출액" in commentary_map else bullet
+                    commentary_map["매출액"] = (
+                        commentary_map.get("매출액", "") + "; " + bullet
+                        if "매출액" in commentary_map
+                        else bullet
+                    )
     if llm_overlay:
         llm_is_text = llm_overlay.enhance_is(bu_pl, is_commentary)
         if llm_is_text:
@@ -2895,7 +3473,9 @@ def build_report(
     _p(f"    [OK] QoA: {len(qoa_block.rows)} rows")
 
     # ── 7. Revenue Analysis ──
-    rev_block = build_revenue_analysis(bu_pl, fs_data, customer_entries, hhi, revenue_observations)
+    rev_block = build_revenue_analysis(
+        bu_pl, fs_data, customer_entries, hhi, revenue_observations
+    )
     sections.append(rev_block)
     _p(f"    [OK] Revenue: {len(rev_block.rows)} rows")
 
@@ -2926,9 +3506,13 @@ def build_report(
         _p(f"    [OK] Cross-check: {pass_count}/{len(checks)} passed")
 
     # ── 12. Key Issues & Findings ──
-    issues = commentary.for_issues(bu_pl, hhi, nwc_data, debt_items, cash_total, fs_data)
+    issues = commentary.for_issues(
+        bu_pl, hhi, nwc_data, debt_items, cash_total, fs_data
+    )
     if issues:
-        sections.append(build_issue_block(issues, title="Key Issues & Findings (핵심 발견사항)"))
+        sections.append(
+            build_issue_block(issues, title="Key Issues & Findings (핵심 발견사항)")
+        )
         _p(f"    [OK] Issues: {len(issues)} items detected")
 
     # ── LLM Executive Summary (--use-llm 전용, Ralph Loop 적용) ──
@@ -2937,13 +3521,19 @@ def build_report(
 
         def _gen_es() -> str:
             return llm_overlay.generate_executive_summary(
-                deal_name, bu_pl, hhi, nwc_data, debt_items, issues,
+                deal_name,
+                bu_pl,
+                hhi,
+                nwc_data,
+                debt_items,
+                issues,
             )
 
         # Quality Loop: 점수 < threshold이면 최대 max_iter까지 재생성
         if tracker and convergence:
             llm_es = _generate_with_quality_loop(
-                _gen_es, "executive_summary",
+                _gen_es,
+                "executive_summary",
                 source_data={"financial_statements": {}},
                 tracker=tracker,
                 convergence=convergence,
@@ -2959,15 +3549,25 @@ def build_report(
                 line = line.strip()
                 if line:
                     es_rows.append({"section": "", "content": line})
-            sections.insert(2, TableBlock(  # Cover 다음, IS 앞에 삽입
-                title="Executive Summary (AI)",
-                columns=[
-                    TableColumn(key="section", header="", width=1.0, align=AlignType.LEFT),
-                    TableColumn(key="content", header="분석", width=8.0, align=AlignType.LEFT),
-                ],
-                rows=es_rows,
-                metadata={"style": "table"},
-            ))
+            sections.insert(
+                2,
+                TableBlock(  # Cover 다음, IS 앞에 삽입
+                    title="Executive Summary (AI)",
+                    columns=[
+                        TableColumn(
+                            key="section", header="", width=1.0, align=AlignType.LEFT
+                        ),
+                        TableColumn(
+                            key="content",
+                            header="분석",
+                            width=8.0,
+                            align=AlignType.LEFT,
+                        ),
+                    ],
+                    rows=es_rows,
+                    metadata={"style": "table"},
+                ),
+            )
             _p(f"    [OK] Executive Summary: {len(es_rows)} lines")
 
     # ── Quality Gate 평가 (전체 섹션) ──
@@ -2983,6 +3583,7 @@ def build_report(
         # Cross-validation (validation.py)
         try:
             from app.services.report.validation import run_full_validation
+
             ir_dict = {"sections": [_block_to_dict(s) for s in sections]}
             validation_result = run_full_validation(ir_dict)
             v_passed = validation_result.get("passed", 0)
@@ -3004,61 +3605,77 @@ def build_report(
         pass_count_q = sum(1 for g in gate_results if g["status"] == "PASS")
         cond_count = sum(1 for g in gate_results if g["status"] == "COND")
         fail_count = sum(1 for g in gate_results if g["status"] == "FAIL")
-        avg_score = sum(float(g["score"].split("/")[0]) for g in gate_results if "/" in g.get("score", "")) / max(total_sections, 1)
+        avg_score = sum(
+            float(g["score"].split("/")[0])
+            for g in gate_results
+            if "/" in g.get("score", "")
+        ) / max(total_sections, 1)
         v_passed = validation_result.get("passed", 0)
         v_total = validation_result.get("total_rules", 0)
         guardrail_count = len(_guardrail_warnings)
 
-        quality_rows.append({
-            "section": "=== QUALITY SUMMARY ===",
-            "gate": "",
-            "score": f"평균 {avg_score:.2f}/5.0",
-            "detail": f"PASS: {pass_count_q} | COND: {cond_count} | FAIL: {fail_count}",
-            "status": "PASS" if fail_count == 0 else "REVIEW",
-        })
-        quality_rows.append({
-            "section": "교차검증 (Cross-validation)",
-            "gate": "",
-            "score": f"{v_passed}/{v_total}",
-            "detail": f"통과 {v_passed}건, 총 {v_total}건",
-            "status": "PASS" if v_passed == v_total else "REVIEW",
-        })
-        if guardrail_count > 0:
-            quality_rows.append({
-                "section": "Guardrails (할루시네이션 검증)",
+        quality_rows.append(
+            {
+                "section": "=== QUALITY SUMMARY ===",
                 "gate": "",
-                "score": f"{guardrail_count}건",
-                "detail": "아래 경고 상세 참조",
-                "status": "WARNING",
-            })
-        quality_rows.append({
-            "section": "---",
-            "gate": "---",
-            "score": "---",
-            "detail": "--- 아래: 섹션별 상세 ---",
-            "status": "---",
-        })
+                "score": f"평균 {avg_score:.2f}/5.0",
+                "detail": f"PASS: {pass_count_q} | COND: {cond_count} | FAIL: {fail_count}",
+                "status": "PASS" if fail_count == 0 else "REVIEW",
+            }
+        )
+        quality_rows.append(
+            {
+                "section": "교차검증 (Cross-validation)",
+                "gate": "",
+                "score": f"{v_passed}/{v_total}",
+                "detail": f"통과 {v_passed}건, 총 {v_total}건",
+                "status": "PASS" if v_passed == v_total else "REVIEW",
+            }
+        )
+        if guardrail_count > 0:
+            quality_rows.append(
+                {
+                    "section": "Guardrails (할루시네이션 검증)",
+                    "gate": "",
+                    "score": f"{guardrail_count}건",
+                    "detail": "아래 경고 상세 참조",
+                    "status": "WARNING",
+                }
+            )
+        quality_rows.append(
+            {
+                "section": "---",
+                "gate": "---",
+                "score": "---",
+                "detail": "--- 아래: 섹션별 상세 ---",
+                "status": "---",
+            }
+        )
 
         # ── 1. Programmatic Gate 결과 (차원별 점수 포함) ──
         for gr in gate_results:
             # 기본 행
-            quality_rows.append({
-                "section": gr["section"],
-                "gate": gr["gate"],
-                "score": gr["score"],
-                "detail": f"Verdict: {gr['verdict']}, Issues: {gr['issues']}",
-                "status": gr["status"],
-            })
+            quality_rows.append(
+                {
+                    "section": gr["section"],
+                    "gate": gr["gate"],
+                    "score": gr["score"],
+                    "detail": f"Verdict: {gr['verdict']}, Issues: {gr['issues']}",
+                    "status": gr["status"],
+                }
+            )
 
         # ── 1b. ProgressTracker에서 차원별 점수 추출 ──
         if tracker is not None:
-            quality_rows.append({
-                "section": "---",
-                "gate": "---",
-                "score": "---",
-                "detail": "--- 차원별 점수 (Programmatic Gate) ---",
-                "status": "---",
-            })
+            quality_rows.append(
+                {
+                    "section": "---",
+                    "gate": "---",
+                    "score": "---",
+                    "detail": "--- 차원별 점수 (Programmatic Gate) ---",
+                    "status": "---",
+                }
+            )
             try:
                 for section_id, records in tracker._records.items():
                     if not records:
@@ -3070,103 +3687,145 @@ def build_report(
                             feedback_text = dim.get("feedback", "")
                             if not feedback_text or feedback_text == "":
                                 feedback_text = "양호"
-                            quality_rows.append({
-                                "section": f"  {section_id}",
-                                "gate": dim.get("label", dim.get("name", "")),
-                                "score": f"{dim.get('score', 0):.1f} (w={dim.get('weight', 0):.0%})",
-                                "detail": feedback_text[:80],
-                                "status": "OK" if dim.get("score", 0) >= 4.0 else "LOW",
-                            })
+                            quality_rows.append(
+                                {
+                                    "section": f"  {section_id}",
+                                    "gate": dim.get("label", dim.get("name", "")),
+                                    "score": f"{dim.get('score', 0):.1f} (w={dim.get('weight', 0):.0%})",
+                                    "detail": feedback_text[:80],
+                                    "status": "OK"
+                                    if dim.get("score", 0) >= 4.0
+                                    else "LOW",
+                                }
+                            )
             except Exception:
                 pass  # ProgressTracker 접근 실패 시 스킵
 
         # ── 2. Cross-validation 결과 ──
         if validation_result.get("rules"):
-            quality_rows.append({
-                "section": "---",
-                "gate": "---",
-                "score": "---",
-                "detail": "--- 교차검증 상세 ---",
-                "status": "---",
-            })
+            quality_rows.append(
+                {
+                    "section": "---",
+                    "gate": "---",
+                    "score": "---",
+                    "detail": "--- 교차검증 상세 ---",
+                    "status": "---",
+                }
+            )
             for rule in validation_result.get("rules", []):
                 detail_parts = []
                 if rule.get("expected"):
                     detail_parts.append(f"Expected: {rule['expected']}")
                 if rule.get("actual"):
                     detail_parts.append(f"Actual: {rule['actual']}")
-                quality_rows.append({
-                    "section": rule.get("rule_id", ""),
-                    "gate": "Cross-validation",
-                    "score": rule.get("status", ""),
-                    "detail": rule.get("message", "") + (" | " + ", ".join(detail_parts) if detail_parts else ""),
-                    "status": rule.get("status", ""),
-                })
+                quality_rows.append(
+                    {
+                        "section": rule.get("rule_id", ""),
+                        "gate": "Cross-validation",
+                        "score": rule.get("status", ""),
+                        "detail": rule.get("message", "")
+                        + (" | " + ", ".join(detail_parts) if detail_parts else ""),
+                        "status": rule.get("status", ""),
+                    }
+                )
 
         # ── 3. Guardrail 경고 ──
         if _guardrail_warnings:
-            quality_rows.append({
-                "section": "---",
-                "gate": "---",
-                "score": "---",
-                "detail": "--- Guardrail 경고 (할루시네이션 검증) ---",
-                "status": "---",
-            })
+            quality_rows.append(
+                {
+                    "section": "---",
+                    "gate": "---",
+                    "score": "---",
+                    "detail": "--- Guardrail 경고 (할루시네이션 검증) ---",
+                    "status": "---",
+                }
+            )
             for warning in _guardrail_warnings:
-                quality_rows.append({
-                    "section": "Guardrails",
-                    "gate": "Hallucination",
-                    "score": "—",
-                    "detail": warning[:100],
-                    "status": "WARNING",
-                })
+                quality_rows.append(
+                    {
+                        "section": "Guardrails",
+                        "gate": "Hallucination",
+                        "score": "—",
+                        "detail": warning[:100],
+                        "status": "WARNING",
+                    }
+                )
 
         # ── 4. 개선 제안 ──
         suggestions: list[str] = []
         if avg_score < 3.5:
-            suggestions.append("전체 평균 점수가 3.5 미만 — 데이터 품질 또는 파싱 정확도 개선 필요")
+            suggestions.append(
+                "전체 평균 점수가 3.5 미만 — 데이터 품질 또는 파싱 정확도 개선 필요"
+            )
         if fail_count > 0:
-            suggestions.append(f"FAIL 섹션 {fail_count}개 — 해당 섹션 데이터 소스 재검토 필요")
+            suggestions.append(
+                f"FAIL 섹션 {fail_count}개 — 해당 섹션 데이터 소스 재검토 필요"
+            )
         if guardrail_count > 3:
-            suggestions.append(f"Guardrail 경고 {guardrail_count}건 — LLM 코멘터리 교차검증 강화 권장")
+            suggestions.append(
+                f"Guardrail 경고 {guardrail_count}건 — LLM 코멘터리 교차검증 강화 권장"
+            )
         if v_passed < v_total:
             suggestions.append("교차검증 불일치 — 재무제표 간 수치 정합성 재확인 필요")
 
         if suggestions:
-            quality_rows.append({
-                "section": "---",
-                "gate": "---",
-                "score": "---",
-                "detail": "--- 품질 개선 제안 ---",
-                "status": "---",
-            })
+            quality_rows.append(
+                {
+                    "section": "---",
+                    "gate": "---",
+                    "score": "---",
+                    "detail": "--- 품질 개선 제안 ---",
+                    "status": "---",
+                }
+            )
             for idx_s, suggestion in enumerate(suggestions, 1):
-                quality_rows.append({
-                    "section": f"제안 #{idx_s}",
-                    "gate": "Recommendation",
-                    "score": "—",
-                    "detail": suggestion,
-                    "status": "ACTION",
-                })
+                quality_rows.append(
+                    {
+                        "section": f"제안 #{idx_s}",
+                        "gate": "Recommendation",
+                        "score": "—",
+                        "detail": suggestion,
+                        "status": "ACTION",
+                    }
+                )
 
         if quality_rows:
             quality_cols = [
-                TableColumn(key="section", header="Section", width=2.5, align=AlignType.LEFT),
-                TableColumn(key="gate", header="Gate / 차원", width=2.0, align=AlignType.LEFT),
-                TableColumn(key="score", header="Score", width=1.5, align=AlignType.CENTER),
-                TableColumn(key="detail", header="상세 / 피드백", width=5.0, align=AlignType.LEFT),
-                TableColumn(key="status", header="Status", width=1.0, align=AlignType.CENTER),
+                TableColumn(
+                    key="section", header="Section", width=2.5, align=AlignType.LEFT
+                ),
+                TableColumn(
+                    key="gate", header="Gate / 차원", width=2.0, align=AlignType.LEFT
+                ),
+                TableColumn(
+                    key="score", header="Score", width=1.5, align=AlignType.CENTER
+                ),
+                TableColumn(
+                    key="detail",
+                    header="상세 / 피드백",
+                    width=5.0,
+                    align=AlignType.LEFT,
+                ),
+                TableColumn(
+                    key="status", header="Status", width=1.0, align=AlignType.CENTER
+                ),
             ]
-            sections.append(TableBlock(
-                title="Quality Report",
-                columns=quality_cols,
-                rows=quality_rows,
-                metadata={"style": "table"},
-            ))
+            sections.append(
+                TableBlock(
+                    title="Quality Report",
+                    columns=quality_cols,
+                    rows=quality_rows,
+                    metadata={"style": "table"},
+                )
+            )
             _p(f"    [Quality] Quality Report: {len(quality_rows)} items")
 
     # ── Report IR 조립 ──
-    engine_versions = {"multiperiod": "0.1.0", "revenue": "0.1.0", "commentary": "rule-based-v1"}
+    engine_versions = {
+        "multiperiod": "0.1.0",
+        "revenue": "0.1.0",
+        "commentary": "rule-based-v1",
+    }
     if not no_quality:
         engine_versions["quality_gate"] = "ralph-loop-v1"
 
@@ -3186,22 +3845,45 @@ def build_report(
 def main() -> None:
     parser = argparse.ArgumentParser(description="FDD Working Paper 로컬 생성")
     parser.add_argument("--input-dir", required=True, help="실사자료 FDD 폴더 경로")
-    parser.add_argument("--output", default="./generated/WizCore_FDD_WP.xlsx", help="출력 Excel 파일 경로")
+    parser.add_argument(
+        "--output",
+        default="./generated/WizCore_FDD_WP.xlsx",
+        help="출력 Excel 파일 경로",
+    )
     parser.add_argument("--deal-name", default="WizCore", help="딜 이름")
     parser.add_argument("--industry", default="general", help="산업 식별자")
-    parser.add_argument("--use-llm", action="store_true", help="LLM 코멘터리 활성화 (API 키 필요)")
-    parser.add_argument("--no-quality", action="store_true", help="품질 검증 비활성화 (속도 우선)")
-    parser.add_argument("--quality-threshold", type=float, default=3.5, help="LLM 반복 중단 기준 (기본 3.5)")
-    parser.add_argument("--max-llm-iterations", type=int, default=3, help="LLM 섹션당 최대 반복 (기본 3)")
+    parser.add_argument(
+        "--use-llm", action="store_true", help="LLM 코멘터리 활성화 (API 키 필요)"
+    )
+    parser.add_argument(
+        "--no-quality", action="store_true", help="품질 검증 비활성화 (속도 우선)"
+    )
+    parser.add_argument(
+        "--quality-threshold",
+        type=float,
+        default=3.5,
+        help="LLM 반복 중단 기준 (기본 3.5)",
+    )
+    parser.add_argument(
+        "--max-llm-iterations",
+        type=int,
+        default=3,
+        help="LLM 섹션당 최대 반복 (기본 3)",
+    )
     args = parser.parse_args()
 
     # .env 파일에서 환경변수 로딩 (dotenv 있으면)
     if args.use_llm:
         try:
             from dotenv import load_dotenv
+
             # 탐색 순서: fdd/backend/.env → fdd/.env → 프로젝트 루트/.env
             base = Path(__file__).resolve().parent.parent
-            for env_candidate in [base / ".env", base.parent / ".env", base.parent.parent / ".env"]:
+            for env_candidate in [
+                base / ".env",
+                base.parent / ".env",
+                base.parent.parent / ".env",
+            ]:
                 if env_candidate.exists():
                     load_dotenv(env_candidate)
                     print(f"[ENV] Loaded {env_candidate}")
@@ -3229,6 +3911,7 @@ def main() -> None:
 
     print("\n[Rendering] Generating Excel WP...")
     from app.renderers.excel_renderer import render_excel_report
+
     render_excel_report(report_ir, output_path=output_path)
 
     print(f"\n{'=' * 60}")

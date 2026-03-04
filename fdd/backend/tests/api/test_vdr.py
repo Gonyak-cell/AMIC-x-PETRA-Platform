@@ -52,7 +52,9 @@ class TestVdrInit:
         )
         assert fs_folder["is_required"] is True
 
-    def test_init_already_initialized(self, client: TestClient, admin_headers: dict) -> None:
+    def test_init_already_initialized(
+        self, client: TestClient, admin_headers: dict
+    ) -> None:
         """POST /vdr/init when folders exist returns 400."""
         deal_id = _create_deal(client, admin_headers)
 
@@ -101,7 +103,9 @@ class TestVdrFolders:
             assert isinstance(node["children"], list)
             assert node["file_count"] == 0
 
-    def test_create_custom_folder(self, client: TestClient, admin_headers: dict) -> None:
+    def test_create_custom_folder(
+        self, client: TestClient, admin_headers: dict
+    ) -> None:
         """POST /vdr/folders creates a custom folder."""
         deal_id = _create_deal(client, admin_headers)
 

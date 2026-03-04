@@ -25,7 +25,11 @@ def test_get_expiry_date():
 
     from app.database import Base
 
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(bind=engine)
     db = sessionmaker(bind=engine)()
 
@@ -45,18 +49,33 @@ def test_count_expired_audit_logs(db: Session):
     past = datetime.utcnow() - timedelta(days=1)
     future = datetime.utcnow() + timedelta(days=30)
 
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system", expires_at=past,
-    ))
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system", expires_at=future,
-    ))
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system", expires_at=None,
-    ))
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+            expires_at=past,
+        )
+    )
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+            expires_at=future,
+        )
+    )
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+            expires_at=None,
+        )
+    )
     db.commit()
 
     policy = RetentionPolicy(db)
@@ -66,10 +85,15 @@ def test_count_expired_audit_logs(db: Session):
 def test_purge_dry_run(db: Session):
     """dry_run=True이면 실제 삭제하지 않는다."""
     past = datetime.utcnow() - timedelta(days=1)
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system", expires_at=past,
-    ))
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+            expires_at=past,
+        )
+    )
     db.commit()
 
     policy = RetentionPolicy(db)
@@ -84,10 +108,15 @@ def test_purge_actual(db: Session):
     """dry_run=False이면 실제로 삭제한다."""
     past = datetime.utcnow() - timedelta(days=1)
     for _ in range(3):
-        db.add(AuditLog(
-            entity_type="test", entity_id=uuid.uuid4(),
-            action=AuditAction.CREATE, actor="system", expires_at=past,
-        ))
+        db.add(
+            AuditLog(
+                entity_type="test",
+                entity_id=uuid.uuid4(),
+                action=AuditAction.CREATE,
+                actor="system",
+                expires_at=past,
+            )
+        )
     db.commit()
 
     policy = RetentionPolicy(db)
@@ -99,10 +128,14 @@ def test_purge_actual(db: Session):
 
 def test_retention_summary(db: Session):
     """보존 정책 요약 정보를 반환한다."""
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system",
-    ))
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+        )
+    )
     db.commit()
 
     policy = RetentionPolicy(db)
@@ -124,10 +157,15 @@ def test_retention_api_summary(client, db):
 def test_retention_api_purge_dry_run(client, db):
     """파기 API (dry_run)."""
     past = datetime.utcnow() - timedelta(days=1)
-    db.add(AuditLog(
-        entity_type="test", entity_id=uuid.uuid4(),
-        action=AuditAction.CREATE, actor="system", expires_at=past,
-    ))
+    db.add(
+        AuditLog(
+            entity_type="test",
+            entity_id=uuid.uuid4(),
+            action=AuditAction.CREATE,
+            actor="system",
+            expires_at=past,
+        )
+    )
     db.commit()
 
     resp = client.post("/api/v1/retention/purge/audit-logs", params={"dry_run": True})

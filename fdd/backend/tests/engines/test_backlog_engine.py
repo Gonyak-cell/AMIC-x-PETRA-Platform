@@ -182,7 +182,7 @@ class TestComputeBacklogAging:
         """장기 수주 경고 (6M+ > 30%)."""
         entries = [
             {"amount": "20000", "remaining_months": 1},
-            {"amount": "40000", "remaining_months": 9},   # 6-12M
+            {"amount": "40000", "remaining_months": 9},  # 6-12M
             {"amount": "30000", "remaining_months": 18},  # 12M+
         ]
         result, _ = compute_backlog_aging(entries)

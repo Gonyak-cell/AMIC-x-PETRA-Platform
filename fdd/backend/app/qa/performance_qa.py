@@ -170,7 +170,10 @@ def measure_operation(
             message=f"SLA exceeded: {elapsed:.2f}s > {sla.max_seconds}s",
             expected=f"<= {sla.max_seconds}s",
             actual=f"{elapsed:.2f}s",
-            context={"data_size": data_size, "utilization": round(elapsed / sla.max_seconds, 3)},
+            context={
+                "data_size": data_size,
+                "utilization": round(elapsed / sla.max_seconds, 3),
+            },
         )
     elif warning:
         finding = QAFinding(
@@ -180,7 +183,10 @@ def measure_operation(
             message=f"SLA warning: {elapsed:.2f}s > {sla.max_seconds * sla.warning_threshold:.2f}s (80% threshold)",
             expected=f"<= {sla.max_seconds * sla.warning_threshold:.2f}s",
             actual=f"{elapsed:.2f}s",
-            context={"data_size": data_size, "utilization": round(elapsed / sla.max_seconds, 3)},
+            context={
+                "data_size": data_size,
+                "utilization": round(elapsed / sla.max_seconds, 3),
+            },
         )
     else:
         finding = QAFinding(
@@ -190,7 +196,10 @@ def measure_operation(
             message=f"SLA passed: {elapsed:.2f}s <= {sla.max_seconds}s",
             expected=f"<= {sla.max_seconds}s",
             actual=f"{elapsed:.2f}s",
-            context={"data_size": data_size, "utilization": round(elapsed / sla.max_seconds, 3)},
+            context={
+                "data_size": data_size,
+                "utilization": round(elapsed / sla.max_seconds, 3),
+            },
         )
 
     measurement = PerformanceMeasurement(

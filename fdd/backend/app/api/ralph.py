@@ -35,10 +35,14 @@ async def create_ralph_session(
     from app.services.ralph_service import FDDRalphService
 
     if body.pass_type not in ("draft", "final"):
-        raise HTTPException(status_code=400, detail="pass_type must be 'draft' or 'final'")
+        raise HTTPException(
+            status_code=400, detail="pass_type must be 'draft' or 'final'"
+        )
 
     if body.pass_type == "final" and not body.checklist_id:
-        raise HTTPException(status_code=400, detail="checklist_id required for final pass")
+        raise HTTPException(
+            status_code=400, detail="checklist_id required for final pass"
+        )
 
     # Report IR 생성
     report_ir = build_report_ir(db=db, deal_id=deal_id)
@@ -124,7 +128,9 @@ def _session_to_read(session: FddRalphSession) -> RalphSessionRead:
         pass_type=session.pass_type,
         status=session.status,
         checklist_id=str(session.checklist_id) if session.checklist_id else None,
-        report_version_id=str(session.report_version_id) if session.report_version_id else None,
+        report_version_id=str(session.report_version_id)
+        if session.report_version_id
+        else None,
         total_iterations=session.total_iterations or 0,
         total_cost_usd=session.total_cost_usd or 0.0,
         final_score=session.final_score or 0.0,

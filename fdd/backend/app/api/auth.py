@@ -211,7 +211,9 @@ def create_user(
     db: Session = Depends(get_db),
 ):
     """새 사용자 생성 (Admin 전용)."""
-    return register_user(db, body.email, body.password, body.display_name, body.role, body.title)
+    return register_user(
+        db, body.email, body.password, body.display_name, body.role, body.title
+    )
 
 
 @router.put("/users/{user_id}", response_model=UserRead)

@@ -86,7 +86,9 @@ class TestRalphSessionDetail:
         )
         assert resp.status_code == 404
 
-    def test_get_session_wrong_deal(self, client, db, deal, ralph_session, auth_headers, test_user):
+    def test_get_session_wrong_deal(
+        self, client, db, deal, ralph_session, auth_headers, test_user
+    ):
         """Deal ID가 다른 세션은 404를 반환해야 한다."""
         other_deal = Deal(
             name="Other Deal",

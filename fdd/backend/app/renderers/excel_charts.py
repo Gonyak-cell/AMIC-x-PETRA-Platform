@@ -256,7 +256,15 @@ def render_concentration_chart(
     chart.set_categories(cats_ref)
 
     # 색상 팔레트 적용
-    pie_colors = [_PRIMARY, _ACCENT1, _ACCENT3, _ACCENT4, _ACCENT2, _ACCENT5, _LIGHT_GRAY]
+    pie_colors = [
+        _PRIMARY,
+        _ACCENT1,
+        _ACCENT3,
+        _ACCENT4,
+        _ACCENT2,
+        _ACCENT5,
+        _LIGHT_GRAY,
+    ]
     if chart.series:
         series = chart.series[0]
         num_points = end_row - start_row

@@ -64,7 +64,9 @@ _ZEBRA_FILL = PatternFill(start_color=_LIGHT_BG, end_color=_LIGHT_BG, fill_type=
 
 # Severity-based fills
 _SEVERITY_FILLS = {
-    "critical": PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid"),
+    "critical": PatternFill(
+        start_color="FFCCCC", end_color="FFCCCC", fill_type="solid"
+    ),
     "high": PatternFill(start_color="FFE0CC", end_color="FFE0CC", fill_type="solid"),
     "medium": PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid"),
     "low": PatternFill(start_color="CCE5CC", end_color="CCE5CC", fill_type="solid"),
@@ -72,11 +74,19 @@ _SEVERITY_FILLS = {
 
 # Checklist status fills
 _STATUS_FILLS = {
-    "AUTO_GENERATED": PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid"),
-    "CONFIRMED": PatternFill(start_color="CCE5CC", end_color="CCE5CC", fill_type="solid"),
-    "CORRECTED": PatternFill(start_color="CCE0FF", end_color="CCE0FF", fill_type="solid"),
+    "AUTO_GENERATED": PatternFill(
+        start_color="F0F0F0", end_color="F0F0F0", fill_type="solid"
+    ),
+    "CONFIRMED": PatternFill(
+        start_color="CCE5CC", end_color="CCE5CC", fill_type="solid"
+    ),
+    "CORRECTED": PatternFill(
+        start_color="CCE0FF", end_color="CCE0FF", fill_type="solid"
+    ),
     "FLAGGED": PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid"),
-    "NOT_APPLICABLE": PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid"),
+    "NOT_APPLICABLE": PatternFill(
+        start_color="E0E0E0", end_color="E0E0E0", fill_type="solid"
+    ),
 }
 
 # ── Financial Statement 전문 스타일 ──
@@ -91,12 +101,18 @@ _FS_TOTAL_BORDER = Border(
     bottom=Side(style="double", color=_PRIMARY),
     top=Side(style="thin", color=_PRIMARY),
 )
-_FS_SECTION_FILL = PatternFill(start_color="E8EEF4", end_color="E8EEF4", fill_type="solid")
+_FS_SECTION_FILL = PatternFill(
+    start_color="E8EEF4", end_color="E8EEF4", fill_type="solid"
+)
 _FS_UNIT_FONT = Font(name="맑은 고딕", size=8, italic=True, color=_NEUTRAL)
 _POSITIVE_FONT = Font(name="맑은 고딕", size=9, color=_POSITIVE)
 _NEGATIVE_FONT = Font(name="맑은 고딕", size=9, color=_NEGATIVE)
-_POSITIVE_FILL = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
-_NEGATIVE_FILL = PatternFill(start_color="FFEBEE", end_color="FFEBEE", fill_type="solid")
+_POSITIVE_FILL = PatternFill(
+    start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"
+)
+_NEGATIVE_FILL = PatternFill(
+    start_color="FFEBEE", end_color="FFEBEE", fill_type="solid"
+)
 _INDEX_LINK_FONT = Font(name="맑은 고딕", size=10, underline="single", color="0563C1")
 _INDEX_CATEGORY_FONT = Font(name="맑은 고딕", size=11, bold=True, color=_PRIMARY)
 _PASS_FILL = PatternFill(start_color="CCE5CC", end_color="CCE5CC", fill_type="solid")
@@ -104,15 +120,15 @@ _FAIL_FILL = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="so
 
 # 시트 탭 색상 (RRGGBB)
 _TAB_COLORS = {
-    "fs": "003366",       # 파랑 — 재무제표
-    "qoe": "2E7D32",      # 초록 — QoE
-    "nwc": "E65100",      # 주황 — NWC
-    "debt": "E0301E",     # 빨강 — Net Debt
-    "trend": "1565C0",    # 파랑계 — 트렌드
-    "sales": "6A1B9A",    # 보라 — 매출/원가
-    "recon": "37474F",    # 짙은회색 — Reconciliation
-    "appendix": "9E9E9E", # 회색 — 부록
-    "index": "000000",    # 검정 — Index
+    "fs": "003366",  # 파랑 — 재무제표
+    "qoe": "2E7D32",  # 초록 — QoE
+    "nwc": "E65100",  # 주황 — NWC
+    "debt": "E0301E",  # 빨강 — Net Debt
+    "trend": "1565C0",  # 파랑계 — 트렌드
+    "sales": "6A1B9A",  # 보라 — 매출/원가
+    "recon": "37474F",  # 짙은회색 — Reconciliation
+    "appendix": "9E9E9E",  # 회색 — 부록
+    "index": "000000",  # 검정 — Index
 }
 
 
@@ -214,12 +230,18 @@ def _auto_row_height(
             # 명시적 줄바꿈 + 표시 너비 기반 래핑 추정
             for line in text.split("\n"):
                 display_width = _display_width(line)
-                line_wraps = max(1, -(-display_width // col_width_chars))  # ceil division
+                line_wraps = max(
+                    1, -(-display_width // col_width_chars)
+                )  # ceil division
                 max_lines = max(max_lines, line_wraps)
 
         # 첫 행(또는 bold 폰트)이면 헤더 높이 사용
         first_cell = row_cells[0]
-        base = header_height if (row_num == 1 or (first_cell.font and first_cell.font.bold)) else default_height
+        base = (
+            header_height
+            if (row_num == 1 or (first_cell.font and first_cell.font.bold))
+            else default_height
+        )
         ws.row_dimensions[row_num].height = min(base * max_lines, max_height)
 
 
@@ -371,9 +393,7 @@ def _render_cover_sheet(wb: Workbook, report_ir: ReportIR) -> None:
     _auto_width(ws)
 
 
-def _render_table_sheet(
-    wb: Workbook, block: TableBlock, sheet_name: str
-) -> None:
+def _render_table_sheet(wb: Workbook, block: TableBlock, sheet_name: str) -> None:
     """TableBlock을 별도 시트로 렌더링."""
     ws = wb.create_sheet(title=sheet_name[:31])  # Excel 시트명 최대 31자
     row = 1
@@ -548,7 +568,9 @@ def _render_checklist_sheet(
             item.get("vdr_sources", ""),
         ]
         for col_idx, value in enumerate(values, start=1):
-            formatted = _format_cell_value(value, "currency" if col_idx in (4, 6) else None)
+            formatted = _format_cell_value(
+                value, "currency" if col_idx in (4, 6) else None
+            )
             cell = ws.cell(row=row, column=col_idx, value=formatted)
             cell.font = _BODY_FONT
             cell.border = _THIN_BORDER
@@ -701,9 +723,7 @@ def _render_financial_statement_sheet(
     _auto_row_height(ws, col_width_chars=35)
 
 
-def _render_trend_sheet(
-    wb: Workbook, block: TableBlock, sheet_name: str
-) -> None:
+def _render_trend_sheet(wb: Workbook, block: TableBlock, sheet_name: str) -> None:
     """트렌드/월별 분석 시트 렌더링.
 
     metadata.style == "trend" 또는 "seasonality"
@@ -774,7 +794,11 @@ def _render_trend_sheet(
                 cell.alignment = Alignment(horizontal="right", vertical="center")
 
             # 비율 컬럼이 아닌 증감 컬럼의 셀별 색상
-            if col_idx > 1 and col_def.format == "currency" and isinstance(value, float):
+            if (
+                col_idx > 1
+                and col_def.format == "currency"
+                and isinstance(value, float)
+            ):
                 if any(
                     k in col_def.key.lower()
                     for k in ("change", "variance", "delta", "diff", "증감")
@@ -861,7 +885,10 @@ def _render_reconciliation_sheet(
             cell = ws.cell(row=row, column=col_idx, value=value)
             cell.font = _BODY_FONT
             cell.border = _THIN_BORDER
-            cell.alignment = Alignment(horizontal="center" if col_idx == result_col_idx else "left", vertical="center")
+            cell.alignment = Alignment(
+                horizontal="center" if col_idx == result_col_idx else "left",
+                vertical="center",
+            )
 
             if col_def.format == "currency" and isinstance(value, float):
                 cell.number_format = "#,##0"
@@ -915,17 +942,77 @@ def _render_index_sheet(wb: Workbook) -> None:
         if sheet == "Index":
             continue
         name_lower = sheet.lower()
-        if any(k in name_lower for k in ("income statement", "balance sheet", "cash flow", "손익", "재무상태", "현금흐름", "multi-period")):
+        if any(
+            k in name_lower
+            for k in (
+                "income statement",
+                "balance sheet",
+                "cash flow",
+                "손익",
+                "재무상태",
+                "현금흐름",
+                "multi-period",
+            )
+        ):
             categories["재무제표 (Financial Statements)"].append(sheet)
-        elif any(k in name_lower for k in ("revenue by", "revenue monthly", "revenue concentration", "거래처별", "제품별", "매출 집중")):
+        elif any(
+            k in name_lower
+            for k in (
+                "revenue by",
+                "revenue monthly",
+                "revenue concentration",
+                "거래처별",
+                "제품별",
+                "매출 집중",
+            )
+        ):
             categories["매출 분석 (Revenue Analysis)"].append(sheet)
-        elif any(k in name_lower for k in ("cost", "margin", "sga", "manufacturing", "personnel", "원가", "판관비", "인건비")):
+        elif any(
+            k in name_lower
+            for k in (
+                "cost",
+                "margin",
+                "sga",
+                "manufacturing",
+                "personnel",
+                "원가",
+                "판관비",
+                "인건비",
+            )
+        ):
             categories["비용 분석 (Cost Structure)"].append(sheet)
-        elif any(k in name_lower for k in ("fcf", "free cash flow", "capex", "잉여현금")):
+        elif any(
+            k in name_lower for k in ("fcf", "free cash flow", "capex", "잉여현금")
+        ):
             categories["FCF 분석 (Free Cash Flow)"].append(sheet)
-        elif any(k in name_lower for k in ("backlog", "수주", "order backlog", "aging", "negative margin", "역마진", "new orders", "신규수주")):
+        elif any(
+            k in name_lower
+            for k in (
+                "backlog",
+                "수주",
+                "order backlog",
+                "aging",
+                "negative margin",
+                "역마진",
+                "new orders",
+                "신규수주",
+            )
+        ):
             categories["수주 분석 (Order Backlog)"].append(sheet)
-        elif any(k in name_lower for k in ("entity p&l", "ic elimination", "consolidat", "fx rate", "fx summary", "법인별", "내부거래", "연결", "환율")):
+        elif any(
+            k in name_lower
+            for k in (
+                "entity p&l",
+                "ic elimination",
+                "consolidat",
+                "fx rate",
+                "fx summary",
+                "법인별",
+                "내부거래",
+                "연결",
+                "환율",
+            )
+        ):
             categories["연결 분석 (Consolidation)"].append(sheet)
         elif "qoe" in name_lower or "ebitda" in name_lower:
             categories["QoE 분석 (Quality of Earnings)"].append(sheet)
@@ -933,7 +1020,10 @@ def _render_index_sheet(wb: Workbook) -> None:
             categories["NWC 분석 (Net Working Capital)"].append(sheet)
         elif "debt" in name_lower:
             categories["Net Debt"].append(sheet)
-        elif any(k in name_lower for k in ("trend", "monthly", "seasonality", "yoy", "트렌드")):
+        elif any(
+            k in name_lower
+            for k in ("trend", "monthly", "seasonality", "yoy", "트렌드")
+        ):
             categories["트렌드 분석 (Trends)"].append(sheet)
         elif any(k in name_lower for k in ("reconciliation", "검증", "recon")):
             categories["검증 (Reconciliation)"].append(sheet)
@@ -995,8 +1085,13 @@ def _classify_table_block(block: TableBlock) -> tuple[str, str]:
         return (title[:31], "table")
     if style in ("cost_breakdown", "personnel_analysis", "capex_analysis"):
         return (title[:31], "table")
-    if style in ("backlog_summary", "backlog_customer", "backlog_aging",
-                  "negative_margin", "monthly_orders"):
+    if style in (
+        "backlog_summary",
+        "backlog_customer",
+        "backlog_aging",
+        "negative_margin",
+        "monthly_orders",
+    ):
         return (title[:31], "table")
     if style in ("entity_comparison", "ic_elimination", "fx_summary"):
         return (title[:31], "table")
@@ -1082,7 +1177,11 @@ def render_excel_report(
                         title="QoE EBITDA Bridge",
                     )
                 # Revenue Breakdown → 바 차트
-                elif "revenue" in title_lower and "breakdown" in title_lower and block.rows:
+                elif (
+                    "revenue" in title_lower
+                    and "breakdown" in title_lower
+                    and block.rows
+                ):
                     from app.renderers.excel_charts import render_bar_chart
 
                     ws = wb[sheet_name]

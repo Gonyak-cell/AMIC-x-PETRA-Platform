@@ -15,6 +15,7 @@ from app.engines.cost_engine import (
 
 # ── Helpers ──────────────────────────────────────────────
 
+
 def _cost_entry(
     period: str = "FY2024",
     category: str = "direct_material",

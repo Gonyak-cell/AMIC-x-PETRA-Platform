@@ -63,9 +63,7 @@ class TestCreateEBITDABridge:
         categories = ["Reported", "Adjusted"]
         values = [Decimal("500"), None]
 
-        result = create_ebitda_bridge(
-            categories, values, title="FY2025 EBITDA Bridge"
-        )
+        result = create_ebitda_bridge(categories, values, title="FY2025 EBITDA Bridge")
 
         assert isinstance(result, BytesIO)
 
@@ -128,9 +126,7 @@ class TestCreateGenericWaterfall:
         values = [Decimal("100"), Decimal("50"), Decimal("-30"), Decimal("120")]
         measures = ["absolute", "relative", "relative", "total"]
 
-        result = create_generic_waterfall(
-            categories, values, measures=measures
-        )
+        result = create_generic_waterfall(categories, values, measures=measures)
 
         assert isinstance(result, BytesIO)
 
@@ -140,9 +136,7 @@ class TestCreateGenericWaterfall:
         values = [Decimal("100"), Decimal("120"), Decimal("90"), Decimal("150")]
         measures = ["absolute"] * 4
 
-        result = create_generic_waterfall(
-            categories, values, measures=measures
-        )
+        result = create_generic_waterfall(categories, values, measures=measures)
 
         assert isinstance(result, BytesIO)
 
@@ -193,8 +187,6 @@ class TestDesignSystemIntegration:
             "total_color": "#0000FF",
         }
 
-        result = create_ebitda_bridge(
-            categories, values, design_override=override
-        )
+        result = create_ebitda_bridge(categories, values, design_override=override)
 
         assert isinstance(result, BytesIO)

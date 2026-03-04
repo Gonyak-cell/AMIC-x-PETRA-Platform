@@ -47,7 +47,9 @@ class AnalysisRun(Base):
         nullable=True,
     )
     trigger: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="manual",
+        String(50),
+        nullable=False,
+        default="manual",
         comment="분석 트리거: manual, vdr_upload, scheduled",
     )
     status: Mapped[AnalysisRunStatus] = mapped_column(

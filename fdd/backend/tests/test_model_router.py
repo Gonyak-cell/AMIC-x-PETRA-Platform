@@ -79,7 +79,9 @@ class TestResolve:
         """primary + 1차 폴백 불가 시 2차 폴백."""
         providers = _make_all_available()
         providers["openai"] = _make_mock_client(LLMProvider.OPENAI, available=False)
-        providers["anthropic"] = _make_mock_client(LLMProvider.ANTHROPIC, available=False)
+        providers["anthropic"] = _make_mock_client(
+            LLMProvider.ANTHROPIC, available=False
+        )
 
         router = FDDModelRouter(providers=providers)
         decision = router.resolve("qoe_adjustment_classification")
@@ -145,7 +147,9 @@ class TestGenerate:
     def test_generate_with_fallback(self):
         """primary 불가 시 fallback provider로 generate."""
         providers = _make_all_available()
-        providers["anthropic"] = _make_mock_client(LLMProvider.ANTHROPIC, available=False)
+        providers["anthropic"] = _make_mock_client(
+            LLMProvider.ANTHROPIC, available=False
+        )
 
         router = FDDModelRouter(providers=providers)
         response = router.generate(

@@ -119,7 +119,11 @@ class TestGenerateNarrative:
                 "adjusted_ebitda": "1,200,000",
                 "adjustment_count": 3,
                 "adjustments": [
-                    {"category": "Non-recurring", "amount": "100,000", "description": "Legal settlement"},
+                    {
+                        "category": "Non-recurring",
+                        "amount": "100,000",
+                        "description": "Legal settlement",
+                    },
                 ],
                 "adjustment_ratio": 20.0,
             },
@@ -156,8 +160,16 @@ class TestGenerateQoENarrative:
             reported_ebitda=Decimal("1000000000"),
             adjusted_ebitda=Decimal("1200000000"),
             adjustments=[
-                {"category": "Non-recurring", "amount": "100,000,000", "description": "일회성 비용"},
-                {"category": "Non-operating", "amount": "50,000,000", "description": "비영업 수익"},
+                {
+                    "category": "Non-recurring",
+                    "amount": "100,000,000",
+                    "description": "일회성 비용",
+                },
+                {
+                    "category": "Non-operating",
+                    "amount": "50,000,000",
+                    "description": "비영업 수익",
+                },
             ],
         )
         assert "FY2025" in result
@@ -181,7 +193,11 @@ class TestGenerateQoENarrative:
             reported_ebitda=Decimal("1000"),
             adjusted_ebitda=Decimal("1500"),  # 50% 조정
             adjustments=[
-                {"category": "Non-recurring", "amount": "500", "description": "큰 조정"},
+                {
+                    "category": "Non-recurring",
+                    "amount": "500",
+                    "description": "큰 조정",
+                },
             ],
         )
         assert "검토" in result or "높" in result
@@ -313,7 +329,11 @@ class TestKoreanNarratives:
             reported_ebitda=Decimal("10000000000"),  # 100억
             adjusted_ebitda=Decimal("12000000000"),  # 120억
             adjustments=[
-                {"category": "일회성", "amount": "2,000,000,000", "description": "법적 합의금"},
+                {
+                    "category": "일회성",
+                    "amount": "2,000,000,000",
+                    "description": "법적 합의금",
+                },
             ],
         )
         assert "2025년 12월" in result

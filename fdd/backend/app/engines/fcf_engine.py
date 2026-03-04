@@ -61,16 +61,16 @@ class FCFPeriodData:
 
     ebitda: Decimal = ZERO
     depreciation_amortization: Decimal = ZERO
-    working_capital_change: Decimal = ZERO   # ΔAR + ΔInventory - ΔAP (증가 = 음수)
+    working_capital_change: Decimal = ZERO  # ΔAR + ΔInventory - ΔAP (증가 = 음수)
     tax_paid: Decimal = ZERO
     other_operating: Decimal = ZERO
-    operating_cash_flow: Decimal = ZERO      # = EBITDA + WC변동 - tax + other
+    operating_cash_flow: Decimal = ZERO  # = EBITDA + WC변동 - tax + other
     total_capex: Decimal = ZERO
-    maintenance_capex: Decimal = ZERO        # ≈ D&A (유지보수)
-    growth_capex: Decimal = ZERO             # = total - maintenance
+    maintenance_capex: Decimal = ZERO  # ≈ D&A (유지보수)
+    growth_capex: Decimal = ZERO  # = total - maintenance
     other_investing: Decimal = ZERO
-    free_cash_flow: Decimal = ZERO           # = OCF - CAPEX
-    fcf_conversion: Decimal | None = None    # FCF / EBITDA (%)
+    free_cash_flow: Decimal = ZERO  # = OCF - CAPEX
+    fcf_conversion: Decimal | None = None  # FCF / EBITDA (%)
 
 
 @dataclass
@@ -78,8 +78,8 @@ class FCFBridgeResult:
     """FCF Bridge 분석 결과."""
 
     period_labels: list[str]
-    periods: dict[str, FCFPeriodData]        # 기간별 FCF
-    bridge_items: list[FCFBridgeItem]        # 최신 기간 워터폴 차트용
+    periods: dict[str, FCFPeriodData]  # 기간별 FCF
+    bridge_items: list[FCFBridgeItem]  # 최신 기간 워터폴 차트용
     summary_kpis: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
@@ -92,10 +92,10 @@ class CAPEXAnalysisResult:
     total_capex: dict[str, Decimal]
     maintenance_capex: dict[str, Decimal]
     growth_capex: dict[str, Decimal]
-    capex_to_revenue: dict[str, Decimal]     # CAPEX / 매출 (%)
-    capex_to_da: dict[str, Decimal]          # CAPEX / D&A (배수)
-    asset_additions: dict[str, Decimal]      # 유무형자산 취득
-    asset_disposals: dict[str, Decimal]      # 유무형자산 처분
+    capex_to_revenue: dict[str, Decimal]  # CAPEX / 매출 (%)
+    capex_to_da: dict[str, Decimal]  # CAPEX / D&A (배수)
+    asset_additions: dict[str, Decimal]  # 유무형자산 취득
+    asset_disposals: dict[str, Decimal]  # 유무형자산 처분
     warnings: list[str] = field(default_factory=list)
 
 
@@ -135,7 +135,9 @@ def compute_fcf_bridge(
 
     if not fcf_inputs:
         return FCFBridgeResult(
-            period_labels=[], periods={}, bridge_items=[],
+            period_labels=[],
+            periods={},
+            bridge_items=[],
             warnings=["FCF_EMPTY: No FCF input data"],
         ), evidence
 
@@ -192,18 +194,20 @@ def compute_fcf_bridge(
         )
 
         # Evidence
-        evidence.append(EvidenceLinkData(
-            target_type="fcf_bridge",
-            source_type="computed",
-            source_id=f"fcf:{p}",
-            source_detail={
-                "period": p,
-                "ebitda": str(ebitda),
-                "ocf": str(ocf),
-                "capex": str(total_capex),
-                "fcf": str(fcf),
-            },
-        ))
+        evidence.append(
+            EvidenceLinkData(
+                target_type="fcf_bridge",
+                source_type="computed",
+                source_id=f"fcf:{p}",
+                source_detail={
+                    "period": p,
+                    "ebitda": str(ebitda),
+                    "ocf": str(ocf),
+                    "capex": str(total_capex),
+                    "fcf": str(fcf),
+                },
+            )
+        )
 
     # 최신 기간 워터폴 차트용 bridge_items
     latest = period_labels[-1] if period_labels else ""
@@ -216,7 +220,9 @@ def compute_fcf_bridge(
         summary["latest_fcf"] = str(lp.free_cash_flow)
         summary["latest_ocf"] = str(lp.operating_cash_flow)
         summary["latest_ebitda"] = str(lp.ebitda)
-        summary["fcf_conversion"] = str(lp.fcf_conversion) if lp.fcf_conversion else "N/A"
+        summary["fcf_conversion"] = (
+            str(lp.fcf_conversion) if lp.fcf_conversion else "N/A"
+        )
 
     # 경고: 낮은 FCF conversion
     for p, pd in periods.items():
@@ -240,17 +246,30 @@ def _build_bridge_items(pd: FCFPeriodData) -> list[FCFBridgeItem]:
     """워터폴 차트용 bridge 항목 생성."""
     return [
         FCFBridgeItem("FCF-EBITDA", "EBITDA", "EBITDA", pd.ebitda),
-        FCFBridgeItem("FCF-WC", "운전자본 변동", "Working Capital Change", pd.working_capital_change),
-        FCFBridgeItem("FCF-TAX", "법인세 납부", "Tax Paid", -pd.tax_paid),
-        FCFBridgeItem("FCF-OTHER-OP", "기타 영업활동", "Other Operating", pd.other_operating),
         FCFBridgeItem(
-            "FCF-OCF", "영업현금흐름", "Operating CF",
-            pd.operating_cash_flow, is_subtotal=True,
+            "FCF-WC",
+            "운전자본 변동",
+            "Working Capital Change",
+            pd.working_capital_change,
+        ),
+        FCFBridgeItem("FCF-TAX", "법인세 납부", "Tax Paid", -pd.tax_paid),
+        FCFBridgeItem(
+            "FCF-OTHER-OP", "기타 영업활동", "Other Operating", pd.other_operating
+        ),
+        FCFBridgeItem(
+            "FCF-OCF",
+            "영업현금흐름",
+            "Operating CF",
+            pd.operating_cash_flow,
+            is_subtotal=True,
         ),
         FCFBridgeItem("FCF-CAPEX", "CAPEX", "Capital Expenditures", -pd.total_capex),
         FCFBridgeItem(
-            "FCF-FCF", "잉여현금흐름", "Free Cash Flow",
-            pd.free_cash_flow, is_total=True,
+            "FCF-FCF",
+            "잉여현금흐름",
+            "Free Cash Flow",
+            pd.free_cash_flow,
+            is_total=True,
         ),
     ]
 
@@ -332,17 +351,19 @@ def compute_capex_analysis(
     # Evidence
     for p in period_labels:
         if total_capex.get(p, ZERO) > ZERO:
-            evidence.append(EvidenceLinkData(
-                target_type="capex_analysis",
-                source_type="computed",
-                source_id=f"capex:{p}",
-                source_detail={
-                    "period": p,
-                    "total": str(total_capex[p]),
-                    "maintenance": str(maint[p]),
-                    "growth": str(growth[p]),
-                },
-            ))
+            evidence.append(
+                EvidenceLinkData(
+                    target_type="capex_analysis",
+                    source_type="computed",
+                    source_id=f"capex:{p}",
+                    source_detail={
+                        "period": p,
+                        "total": str(total_capex[p]),
+                        "maintenance": str(maint[p]),
+                        "growth": str(growth[p]),
+                    },
+                )
+            )
 
     return CAPEXAnalysisResult(
         period_labels=period_labels,

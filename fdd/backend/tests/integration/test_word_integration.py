@@ -49,8 +49,16 @@ class TestFullFDDReport:
             reported_ebitda=Decimal("10000000000"),
             adjusted_ebitda=Decimal("12000000000"),
             adjustments=[
-                {"category": "Non-recurring", "amount": "1,500,000,000", "description": "Legal settlement"},
-                {"category": "Non-operating", "amount": "500,000,000", "description": "FX gain"},
+                {
+                    "category": "Non-recurring",
+                    "amount": "1,500,000,000",
+                    "description": "Legal settlement",
+                },
+                {
+                    "category": "Non-operating",
+                    "amount": "500,000,000",
+                    "description": "FX gain",
+                },
             ],
         )
 
@@ -127,7 +135,12 @@ class TestFullFDDReport:
                 build_claim_block(
                     claim_text="Revenue growth of 15% is supported by customer contract analysis.",
                     evidence_refs=[
-                        ("ev-001", "FILE", "customer_contracts.xlsx", "Customer contract summary"),
+                        (
+                            "ev-001",
+                            "FILE",
+                            "customer_contracts.xlsx",
+                            "Customer contract summary",
+                        ),
                     ],
                     category="QoE",
                 ),
@@ -235,7 +248,10 @@ class TestDocxTemplateContext:
             metadata=ReportMetadata(deal_id="ctx-001", deal_name="Context Test"),
             sections=[
                 CoverBlock(deal_name="Test Deal", target_name="Target"),
-                KPIBlock(title="KPIs", kpis=[{"label": "EBITDA", "value": "100", "unit": "M"}]),
+                KPIBlock(
+                    title="KPIs",
+                    kpis=[{"label": "EBITDA", "value": "100", "unit": "M"}],
+                ),
                 TableBlock(
                     title="Data",
                     columns=[TableColumn(key="a", header="A")],
@@ -403,18 +419,29 @@ class TestReportWithAllBlockTypes:
             metadata=ReportMetadata(deal_name="All Blocks"),
             sections=[
                 CoverBlock(deal_name="All Blocks Report"),
-                KPIBlock(title="KPIs", kpis=[{"label": "Test", "value": "100", "unit": "M"}]),
+                KPIBlock(
+                    title="KPIs", kpis=[{"label": "Test", "value": "100", "unit": "M"}]
+                ),
                 TableBlock(
                     title="Table",
                     columns=[TableColumn(key="a", header="A")],
                     rows=[{"a": "1"}],
                 ),
                 ChartBlock(chart_type=ChartType.BAR, title="Chart"),
-                TextBlock(title="Text", content="Some text.", risk_level=RiskLevel.MEDIUM),
+                TextBlock(
+                    title="Text", content="Some text.", risk_level=RiskLevel.MEDIUM
+                ),
                 ClaimBlock(claim_text="A claim", verified=False),
                 IssueBlock(
                     title="Issues",
-                    issues=[IssueItem(issue_id="I1", category="QoE", severity="high", title="Issue 1")],
+                    issues=[
+                        IssueItem(
+                            issue_id="I1",
+                            category="QoE",
+                            severity="high",
+                            title="Issue 1",
+                        )
+                    ],
                 ),
                 MethodologyBlock(
                     title="Methodology",
@@ -422,11 +449,15 @@ class TestReportWithAllBlockTypes:
                 ),
                 ScopeBlock(
                     title="Scope",
-                    scope_items=[ScopeItem(category="period", label="Period", value="FY2025")],
+                    scope_items=[
+                        ScopeItem(category="period", label="Period", value="FY2025")
+                    ],
                 ),
                 AppendixBlock(
                     title="Appendix",
-                    items=[AppendixItem(title="Data Sources", content="List of sources")],
+                    items=[
+                        AppendixItem(title="Data Sources", content="List of sources")
+                    ],
                 ),
             ],
         )

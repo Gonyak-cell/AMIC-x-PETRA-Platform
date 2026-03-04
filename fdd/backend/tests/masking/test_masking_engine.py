@@ -21,7 +21,9 @@ def test_mask_amount_internal():
 
 
 def test_mask_amount_x_mask():
-    config = MaskingConfig(mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.X_MASK)
+    config = MaskingConfig(
+        mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.X_MASK
+    )
     engine = MaskingEngine(config)
     result = engine.mask_amount(Decimal("1234567"))
     assert "X" in result
@@ -29,7 +31,9 @@ def test_mask_amount_x_mask():
 
 
 def test_mask_amount_x_mask_negative():
-    config = MaskingConfig(mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.X_MASK)
+    config = MaskingConfig(
+        mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.X_MASK
+    )
     engine = MaskingEngine(config)
     result = engine.mask_amount(Decimal("-500000"))
     assert result.startswith("-")
@@ -37,27 +41,35 @@ def test_mask_amount_x_mask_negative():
 
 
 def test_mask_amount_hide():
-    config = MaskingConfig(mode=DistributionMode.REDACTED, amount_mode=AmountMaskMode.HIDE)
+    config = MaskingConfig(
+        mode=DistributionMode.REDACTED, amount_mode=AmountMaskMode.HIDE
+    )
     engine = MaskingEngine(config)
     assert engine.mask_amount(Decimal("1000")) == "[금액 숨김]"
 
 
 def test_mask_amount_range_under_1k():
-    config = MaskingConfig(mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE)
+    config = MaskingConfig(
+        mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE
+    )
     engine = MaskingEngine(config)
     result = engine.mask_amount(Decimal("500"))
     assert "미만" in result
 
 
 def test_mask_amount_range_millions():
-    config = MaskingConfig(mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE)
+    config = MaskingConfig(
+        mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE
+    )
     engine = MaskingEngine(config)
     result = engine.mask_amount(Decimal("5500000"))
     assert "M" in result
 
 
 def test_mask_amount_range_billions():
-    config = MaskingConfig(mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE)
+    config = MaskingConfig(
+        mode=DistributionMode.EXTERNAL_BUYER, amount_mode=AmountMaskMode.RANGE
+    )
     engine = MaskingEngine(config)
     result = engine.mask_amount(Decimal("2500000000"))
     assert "B" in result
@@ -146,13 +158,15 @@ def test_mask_report_ir_internal():
 def test_mask_report_ir_external():
     engine = MaskingEngine.for_mode(DistributionMode.EXTERNAL_BUYER)
     ir = {
-        "sections": [{
-            "id": "qoe",
-            "blocks": [
-                {"type": "kpi", "value": "1234567"},
-                {"type": "table", "rows": [{"a": 100, "b": "text"}]},
-            ],
-        }],
+        "sections": [
+            {
+                "id": "qoe",
+                "blocks": [
+                    {"type": "kpi", "value": "1234567"},
+                    {"type": "table", "rows": [{"a": 100, "b": "text"}]},
+                ],
+            }
+        ],
     }
     result = engine.mask_report_ir(ir)
     assert result["distribution_mode"] == "EXTERNAL_BUYER"

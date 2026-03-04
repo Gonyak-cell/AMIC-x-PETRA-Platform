@@ -256,7 +256,10 @@ class AnalysisOrchestrator:
             cv_results: dict[str, Any] = {}
             if self.cross_verify_enabled:
                 cv_results = self._run_cross_verification(
-                    deal_id, qoe_calc, nwc_calc, debt_calc,
+                    deal_id,
+                    qoe_calc,
+                    nwc_calc,
+                    debt_calc,
                     completed_files=completed_files,
                 )
                 run.cross_verify_summary = cv_results
@@ -365,7 +368,9 @@ class AnalysisOrchestrator:
             from app.services.debt.debt_service import run_net_debt_calculation
 
             return run_net_debt_calculation(
-                self.db, deal_id, snapshot_id,
+                self.db,
+                deal_id,
+                snapshot_id,
                 include_lease_liabilities=True,
                 include_deferred_revenue=False,
             )
@@ -562,7 +567,11 @@ class AnalysisOrchestrator:
 
         config = self.cross_verify_config
         review_mode = ReviewMode(config.review_mode)
-        results: dict[str, dict[str, Any] | None] = {"qoe": None, "nwc": None, "debt": None}
+        results: dict[str, dict[str, Any] | None] = {
+            "qoe": None,
+            "nwc": None,
+            "debt": None,
+        }
 
         # VDR 파싱 데이터에서 GL 항목 추출
         gl_entries = self._extract_gl_entries(completed_files or [])
@@ -587,7 +596,9 @@ class AnalysisOrchestrator:
 
                 reviewer_section = f"cross_verify_{analysis_type}"
                 writer_provider = DEFAULT_FDD_ROUTING.get(writer_section, "openai")
-                reviewer_provider = DEFAULT_FDD_ROUTING.get(reviewer_section, "anthropic")
+                reviewer_provider = DEFAULT_FDD_ROUTING.get(
+                    reviewer_section, "anthropic"
+                )
 
                 reviewer_client = create_llm_client(reviewer_provider)
                 if not reviewer_client.is_available():
@@ -621,13 +632,17 @@ class AnalysisOrchestrator:
                 }
 
                 cv_result: CrossVerificationResult = agent.run_cross_verification(
-                    writer_result, source_data, context,
+                    writer_result,
+                    source_data,
+                    context,
                 )
                 results[analysis_type] = asdict(cv_result)
 
             except Exception as e:
                 logger.error(
-                    "%s 교차검증 실패: %s", analysis_type, e,
+                    "%s 교차검증 실패: %s",
+                    analysis_type,
+                    e,
                     extra={"ctx": {"deal_id": str(deal_id)}},
                 )
 
@@ -643,11 +658,13 @@ class AnalysisOrchestrator:
                 entries.append(entry)
             # TB(Trial Balance) 데이터가 있으면 추출
             for account in parsed.get("tb_accounts", []):
-                entries.append({
-                    "entry_id": account.get("account_code", ""),
-                    "account_name": account.get("account_name", ""),
-                    "amount": account.get("amount", 0),
-                })
+                entries.append(
+                    {
+                        "entry_id": account.get("account_code", ""),
+                        "account_name": account.get("account_name", ""),
+                        "amount": account.get("amount", 0),
+                    }
+                )
         return entries
 
     def _calc_to_items(self, calc, analysis_type: str) -> list[dict[str, Any]]:
@@ -655,43 +672,53 @@ class AnalysisOrchestrator:
         items: list[dict[str, Any]] = []
 
         if analysis_type == "qoe" and hasattr(calc, "adjustment_items"):
-            for adj in (calc.adjustment_items or []):
-                items.append({
-                    "entry_id": str(getattr(adj, "id", "")),
-                    "assessment": getattr(adj, "category", "OPERATING"),
-                    "amount": str(getattr(adj, "amount", 0)),
-                    "rationale": getattr(adj, "description", ""),
-                    "confidence": getattr(adj, "confidence", 0.8),
-                })
+            for adj in calc.adjustment_items or []:
+                items.append(
+                    {
+                        "entry_id": str(getattr(adj, "id", "")),
+                        "assessment": getattr(adj, "category", "OPERATING"),
+                        "amount": str(getattr(adj, "amount", 0)),
+                        "rationale": getattr(adj, "description", ""),
+                        "confidence": getattr(adj, "confidence", 0.8),
+                    }
+                )
 
         elif analysis_type == "nwc" and hasattr(calc, "line_items"):
-            for li in (calc.line_items or []):
-                items.append({
-                    "entry_id": str(getattr(li, "account_code", getattr(li, "id", ""))),
-                    "classification": getattr(li, "classification", "").name
-                    if hasattr(getattr(li, "classification", None), "name")
-                    else str(getattr(li, "classification", "")),
-                    "amount": str(getattr(li, "amount", 0)),
-                    "rationale": getattr(li, "account_name", ""),
-                    "confidence": 0.8,
-                })
+            for li in calc.line_items or []:
+                items.append(
+                    {
+                        "entry_id": str(
+                            getattr(li, "account_code", getattr(li, "id", ""))
+                        ),
+                        "classification": getattr(li, "classification", "").name
+                        if hasattr(getattr(li, "classification", None), "name")
+                        else str(getattr(li, "classification", "")),
+                        "amount": str(getattr(li, "amount", 0)),
+                        "rationale": getattr(li, "account_name", ""),
+                        "confidence": 0.8,
+                    }
+                )
 
         elif analysis_type == "debt" and hasattr(calc, "items"):
-            for di in (calc.items or []):
-                items.append({
-                    "entry_id": str(getattr(di, "source_account_code", getattr(di, "id", ""))),
-                    "item_type": getattr(di, "item_type", "").name
-                    if hasattr(getattr(di, "item_type", None), "name")
-                    else str(getattr(di, "item_type", "")),
-                    "debt_like": getattr(di, "item_type", "").name in ("DEBT_LIKE",)
-                    if hasattr(getattr(di, "item_type", None), "name")
-                    else False,
-                    "amount": str(getattr(di, "amount", 0)),
-                    "rationale": getattr(di, "description", ""),
-                    "confidence": float(getattr(di, "confidence_score", 80)) / 100
-                    if getattr(di, "confidence_score", None) is not None
-                    else 0.8,
-                })
+            for di in calc.items or []:
+                items.append(
+                    {
+                        "entry_id": str(
+                            getattr(di, "source_account_code", getattr(di, "id", ""))
+                        ),
+                        "item_type": getattr(di, "item_type", "").name
+                        if hasattr(getattr(di, "item_type", None), "name")
+                        else str(getattr(di, "item_type", "")),
+                        "debt_like": getattr(di, "item_type", "").name in ("DEBT_LIKE",)
+                        if hasattr(getattr(di, "item_type", None), "name")
+                        else False,
+                        "amount": str(getattr(di, "amount", 0)),
+                        "rationale": getattr(di, "description", ""),
+                        "confidence": float(getattr(di, "confidence_score", 80)) / 100
+                        if getattr(di, "confidence_score", None) is not None
+                        else 0.8,
+                    }
+                )
 
         return items
 
@@ -737,7 +764,11 @@ class AnalysisOrchestrator:
             # 모든 관련 카테고리 항목에 FLAGGED 마킹
             flag_notes = []
             for d in disagreements:
-                resolved_text = f" [자동해결: {d.get('resolution', '')}]" if d.get("resolved") else ""
+                resolved_text = (
+                    f" [자동해결: {d.get('resolution', '')}]"
+                    if d.get("resolved")
+                    else ""
+                )
                 flag_notes.append(
                     f"[{d.get('level', 'UNKNOWN')}] {d.get('field', '')}: "
                     f"Writer={d.get('writer_value', '')} vs Reviewer={d.get('reviewer_value', '')}"

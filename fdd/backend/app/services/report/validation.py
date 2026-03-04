@@ -89,6 +89,7 @@ RULES: dict[str, ValidationRule] = {
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────
 
+
 def _extract_value_from_sections(
     sections: list[dict[str, Any]],
     block_title_pattern: str,
@@ -151,6 +152,7 @@ def _values_match(
 
 
 # ── 개별 검증 함수 ─────────────────────────────────────────
+
 
 def validate_is_qoe_revenue(
     sections: list[dict[str, Any]],
@@ -224,16 +226,15 @@ def validate_debt_net(
 ) -> ValidationResult:
     """Net Debt == Total Debt - Cash."""
     total_debt = _extract_value_from_sections(
-        sections, r"Net Debt|Debt Schedule|순차입금",
-        r"Total.*Debt|차입금.*합계|총차입금"
+        sections,
+        r"Net Debt|Debt Schedule|순차입금",
+        r"Total.*Debt|차입금.*합계|총차입금",
     )
     cash = _extract_value_from_sections(
-        sections, r"Net Debt|Debt Schedule|순차입금",
-        r"Cash|현금|현금성"
+        sections, r"Net Debt|Debt Schedule|순차입금", r"Cash|현금|현금성"
     )
     net_debt = _extract_value_from_sections(
-        sections, r"Net Debt|Debt Schedule|순차입금",
-        r"Net Debt|순차입금"
+        sections, r"Net Debt|Debt Schedule|순차입금", r"Net Debt|순차입금"
     )
 
     if total_debt is None or cash is None or net_debt is None:
@@ -298,8 +299,7 @@ def validate_revenue_breakdown_total(
         sections, r"IS|손익계산서|Income Statement", r"매출액|Revenue"
     )
     breakdown_total = _extract_footer_value(
-        sections, r"거래처별|Revenue by Customer|매출.*Customer",
-        r"합계|Total|전체"
+        sections, r"거래처별|Revenue by Customer|매출.*Customer", r"합계|Total|전체"
     )
 
     if is_revenue is None or breakdown_total is None:
@@ -327,8 +327,26 @@ def validate_commentary_direction(
     actual_yoy: Decimal,
 ) -> ValidationResult:
     """코멘터리 내 증가/감소 표현이 실제 YoY 방향과 일치하는지 확인."""
-    increase_words = {"증가", "상승", "성장", "개선", "확대", "increase", "grew", "improved"}
-    decrease_words = {"감소", "하락", "축소", "악화", "위축", "decrease", "declined", "deteriorated"}
+    increase_words = {
+        "증가",
+        "상승",
+        "성장",
+        "개선",
+        "확대",
+        "increase",
+        "grew",
+        "improved",
+    }
+    decrease_words = {
+        "감소",
+        "하락",
+        "축소",
+        "악화",
+        "위축",
+        "decrease",
+        "declined",
+        "deteriorated",
+    }
 
     text_lower = commentary_text.lower()
     mentions_increase = any(w in text_lower for w in increase_words)
@@ -343,13 +361,17 @@ def validate_commentary_direction(
         )
 
     actual_direction = "increase" if actual_yoy > Decimal("0") else "decrease"
-    commentary_direction = "increase" if mentions_increase and not mentions_decrease else "decrease"
+    commentary_direction = (
+        "increase" if mentions_increase and not mentions_decrease else "decrease"
+    )
 
     passed = actual_direction == commentary_direction
     return ValidationResult(
         rule_id="COMMENTARY_DIRECTION",
         passed=passed,
-        message=f"{metric_name}: 코멘터리 방향 일치" if passed else f"{metric_name}: 코멘터리 방향 불일치",
+        message=f"{metric_name}: 코멘터리 방향 일치"
+        if passed
+        else f"{metric_name}: 코멘터리 방향 불일치",
         expected=actual_direction,
         actual=commentary_direction,
         severity=RULES["COMMENTARY_DIRECTION"].severity,
@@ -357,6 +379,7 @@ def validate_commentary_direction(
 
 
 # ── 메인 검증 오케스트레이터 ───────────────────────────────
+
 
 def run_cross_validation(
     report_ir: dict[str, Any],
@@ -401,9 +424,7 @@ def run_cross_validation(
         )
 
     duration_ms = (time.perf_counter() - start_time) * 1000
-    qa_result = create_result_from_findings(
-        "cross_validation", findings, duration_ms
-    )
+    qa_result = create_result_from_findings("cross_validation", findings, duration_ms)
     return qa_result, findings
 
 

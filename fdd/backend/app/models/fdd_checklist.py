@@ -163,15 +163,11 @@ class FddChecklistItem(Base):
 
     # 자동 분석 결과
     auto_finding: Mapped[str | None] = mapped_column(Text, nullable=True)
-    auto_amount: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 4), nullable=True
-    )
+    auto_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     # 사용자 수정
     user_correction: Mapped[str | None] = mapped_column(Text, nullable=True)
-    user_amount: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 4), nullable=True
-    )
+    user_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     # 상태 및 메타데이터
     status: Mapped[ChecklistItemStatus] = mapped_column(
@@ -253,9 +249,7 @@ class ChecklistItemVdrLink(Base):
     )
 
     # Relationships
-    checklist_item: Mapped[FddChecklistItem] = relationship(
-        back_populates="vdr_links"
-    )
+    checklist_item: Mapped[FddChecklistItem] = relationship(back_populates="vdr_links")
 
     __table_args__ = (
         Index("ix_checklist_vdr_item", "checklist_item_id"),

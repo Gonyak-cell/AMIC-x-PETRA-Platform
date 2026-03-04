@@ -38,9 +38,7 @@ def read_all_notifications(
     return {"updated": count}
 
 
-@router.patch(
-    "/notifications/{notification_id}/read", response_model=NotificationRead
-)
+@router.patch("/notifications/{notification_id}/read", response_model=NotificationRead)
 def read_notification(
     notification_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),

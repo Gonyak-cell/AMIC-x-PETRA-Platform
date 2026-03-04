@@ -116,7 +116,7 @@ class FDDLLMJudgeGate(QualityGate):
             response_text = await self._llm_call(
                 _JUDGE_SYSTEM_PROMPT,
                 user_prompt,
-                0.1,   # temperature (일관된 평가)
+                0.1,  # temperature (일관된 평가)
                 1024,  # max_tokens
             )
             eval_result = self._parse_evaluation(response_text)
@@ -136,22 +136,29 @@ class FDDLLMJudgeGate(QualityGate):
         for dim_data in eval_result.get("dimensions", []):
             dim_name = dim_data.get("name", "")
             label, weight = _DIMENSION_WEIGHTS.get(dim_name, (dim_name, 0.1))
-            dimensions.append(DimensionScore(
-                name=dim_name,
-                label=label,
-                score=min(5.0, max(0.0, float(dim_data.get("score", 0)))),
-                weight=weight,
-                feedback=dim_data.get("feedback", ""),
-            ))
+            dimensions.append(
+                DimensionScore(
+                    name=dim_name,
+                    label=label,
+                    score=min(5.0, max(0.0, float(dim_data.get("score", 0)))),
+                    weight=weight,
+                    feedback=dim_data.get("feedback", ""),
+                )
+            )
 
         # 누락된 차원 기본값 추가
         evaluated_names = {d.name for d in dimensions}
         for dim_name, (label, weight) in _DIMENSION_WEIGHTS.items():
             if dim_name not in evaluated_names:
-                dimensions.append(DimensionScore(
-                    name=dim_name, label=label, score=3.0, weight=weight,
-                    feedback="Not evaluated",
-                ))
+                dimensions.append(
+                    DimensionScore(
+                        name=dim_name,
+                        label=label,
+                        score=3.0,
+                        weight=weight,
+                        feedback="Not evaluated",
+                    )
+                )
 
         critical_flags = eval_result.get("critical_flags", [])
         overall = eval_result.get("overall_feedback", "")
@@ -169,7 +176,11 @@ class FDDLLMJudgeGate(QualityGate):
             suggestions.append(f"[Overall] {overall}")
 
         return self._timed_result(
-            start_ns, dimensions, issues, suggestions, critical_flags,
+            start_ns,
+            dimensions,
+            issues,
+            suggestions,
+            critical_flags,
             cost_usd=0.03,  # estimated LLM cost per evaluation
         )
 
@@ -192,7 +203,11 @@ class FDDLLMJudgeGate(QualityGate):
             logger.warning("Failed to parse LLM judge response as JSON")
             return {
                 "dimensions": [
-                    {"name": "parse_error", "score": 2.0, "feedback": "Could not parse LLM response"},
+                    {
+                        "name": "parse_error",
+                        "score": 2.0,
+                        "feedback": "Could not parse LLM response",
+                    },
                 ],
                 "critical_flags": [],
                 "overall_feedback": "Evaluation parse error",

@@ -21,9 +21,7 @@ def create_access_token(
     role: str,
 ) -> str:
     """JWT Access Token을 생성한다."""
-    expire = datetime.now(UTC) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "email": email,

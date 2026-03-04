@@ -84,7 +84,9 @@ def detect_slots_from_pptx(file_path: Path) -> list[DetectedSlot]:
                         slot_type=slot_type,
                         location=f"Slide {slide_idx}",
                         raw_text=text,
-                        shape_id=str(shape.shape_id) if hasattr(shape, "shape_id") else None,
+                        shape_id=str(shape.shape_id)
+                        if hasattr(shape, "shape_id")
+                        else None,
                     )
                 )
 
@@ -207,7 +209,9 @@ def validate_template_file(
         )
 
     if issues:
-        return TemplateValidationResult(is_valid=False, detected_slots=[], issues=issues)
+        return TemplateValidationResult(
+            is_valid=False, detected_slots=[], issues=issues
+        )
 
     # 슬롯 탐지
     if template_type == "pptx":

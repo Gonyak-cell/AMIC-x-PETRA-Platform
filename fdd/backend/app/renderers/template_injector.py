@@ -160,7 +160,12 @@ class TemplateInjector:
     def _is_type_compatible(self, slot_type: SlotType, block: ReportBlock) -> bool:
         """슬롯 타입과 블록 타입 호환성 검사."""
         type_map = {
-            SlotType.TEXT: (BlockType.TEXT, BlockType.CLAIM, BlockType.SCOPE, BlockType.METHODOLOGY),
+            SlotType.TEXT: (
+                BlockType.TEXT,
+                BlockType.CLAIM,
+                BlockType.SCOPE,
+                BlockType.METHODOLOGY,
+            ),
             SlotType.TABLE: (BlockType.TABLE, BlockType.ISSUE),
             SlotType.CHART: (BlockType.CHART,),
             SlotType.IMAGE: (BlockType.CHART, BlockType.COVER),  # 차트 이미지 포함
@@ -251,7 +256,9 @@ class TemplateInjector:
                 for row in table.rows:
                     for cell in row.cells:
                         for para in cell.paragraphs:
-                            self._process_docx_paragraph(para, filled_slots, empty_slots)
+                            self._process_docx_paragraph(
+                                para, filled_slots, empty_slots
+                            )
 
             # 저장
             doc.save(str(self.context.output_path))
@@ -344,7 +351,14 @@ class TemplateInjector:
             # 차트는 타이틀과 데이터 요약
             if block.data:
                 data_summary = ", ".join(
-                    [f"{c}: {v}" for c, v in zip(block.data.categories[:3], block.data.values[:3], strict=False)]
+                    [
+                        f"{c}: {v}"
+                        for c, v in zip(
+                            block.data.categories[:3],
+                            block.data.values[:3],
+                            strict=False,
+                        )
+                    ]
                 )
                 return f"{block.title}\n{data_summary}"
             return block.title

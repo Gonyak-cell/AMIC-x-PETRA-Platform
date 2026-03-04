@@ -338,7 +338,9 @@ def upload_template(
     if not validation_result.is_valid:
         # 검증 실패 시 파일 삭제
         file_path.unlink(missing_ok=True)
-        error_msgs = [i.message for i in validation_result.issues if i.severity == "error"]
+        error_msgs = [
+            i.message for i in validation_result.issues if i.severity == "error"
+        ]
         raise ValidationError(
             ErrorCode.TEMPLATE_VALIDATION_FAILED,
             f"Template validation failed: {'; '.join(error_msgs)}",
@@ -364,9 +366,7 @@ def upload_template(
         description=description,
     )
 
-    template = template_service.create_template(
-        db, template_data, file_path=file_path
-    )
+    template = template_service.create_template(db, template_data, file_path=file_path)
     db.commit()
 
     return template_service.template_to_read(template)

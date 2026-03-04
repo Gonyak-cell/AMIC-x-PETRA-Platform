@@ -57,7 +57,9 @@ class Template(Base):
         Enum(TemplateStatus), nullable=False, default=TemplateStatus.DRAFT
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_by: Mapped[str] = mapped_column(String(100), nullable=False, default="system")
+    created_by: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="system"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

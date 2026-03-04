@@ -56,7 +56,9 @@ class TestSLADefinition:
         """SLA 값 합리성 검증."""
         for name, sla in DEFAULT_SLAS.items():
             assert sla.max_seconds > 0, f"SLA {name} has non-positive max_seconds"
-            assert 0 < sla.warning_threshold <= 1, f"SLA {name} has invalid warning_threshold"
+            assert 0 < sla.warning_threshold <= 1, (
+                f"SLA {name} has invalid warning_threshold"
+            )
 
     def test_gl_ingest_slas_scaling(self) -> None:
         """GL Ingest SLA 스케일링 확인."""
@@ -65,7 +67,9 @@ class TestSLADefinition:
 
         # 100K → 1M (10배) 시 시간은 최대 10배 이내
         ratio = sla_1m.max_seconds / sla_100k.max_seconds
-        assert ratio <= 15, f"1M GL ingest SLA should be at most 15x of 100K, got {ratio}x"
+        assert ratio <= 15, (
+            f"1M GL ingest SLA should be at most 15x of 100K, got {ratio}x"
+        )
 
 
 # =============================================================================
@@ -106,7 +110,9 @@ class TestMeasureOperation:
 
     def test_warning_threshold(self) -> None:
         """경고 임계값 도달 시 WARNING."""
-        sla = SLADefinition(operation="test_warning", max_seconds=1.0, warning_threshold=0.1)
+        sla = SLADefinition(
+            operation="test_warning", max_seconds=1.0, warning_threshold=0.1
+        )
 
         def borderline_op() -> None:
             time.sleep(0.15)  # 150ms = 15% of 1s
@@ -523,7 +529,7 @@ class TestPerformanceRegression:
             if regression_ratio > regression_threshold:
                 pytest.fail(
                     f"Performance regression in {op_name}: "
-                    f"{baseline_time}s -> {current_time}s ({regression_ratio*100:.1f}% slower)"
+                    f"{baseline_time}s -> {current_time}s ({regression_ratio * 100:.1f}% slower)"
                 )
 
     def test_performance_trend(self) -> None:
@@ -543,4 +549,6 @@ class TestPerformanceRegression:
         current_ms = 510
         deviation = (current_ms - avg) / avg
 
-        assert deviation < 0.3, f"Performance deviation {deviation*100:.1f}% exceeds 30% threshold"
+        assert deviation < 0.3, (
+            f"Performance deviation {deviation * 100:.1f}% exceeds 30% threshold"
+        )

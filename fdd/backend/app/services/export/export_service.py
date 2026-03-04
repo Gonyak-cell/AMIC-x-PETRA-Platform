@@ -43,9 +43,7 @@ def get_export_by_id(db: Session, export_id: uuid.UUID) -> ExportRecord | None:
     return db.get(ExportRecord, export_id)
 
 
-def get_exports_by_ids(
-    db: Session, export_ids: list[uuid.UUID]
-) -> list[ExportRecord]:
+def get_exports_by_ids(db: Session, export_ids: list[uuid.UUID]) -> list[ExportRecord]:
     """Get multiple export records by IDs."""
     stmt = select(ExportRecord).where(ExportRecord.id.in_(export_ids))
     return list(db.scalars(stmt).all())

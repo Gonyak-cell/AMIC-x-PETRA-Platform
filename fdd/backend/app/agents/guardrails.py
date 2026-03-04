@@ -51,7 +51,9 @@ def validate_amounts_exist(
     for amt in llm_amounts:
         amt_str = str(amt).strip()
         if amt_str not in source_amounts:
-            errors.append(f"금액 {amt_str}이 소스 데이터에 존재하지 않음 (할루시네이션 의심)")
+            errors.append(
+                f"금액 {amt_str}이 소스 데이터에 존재하지 않음 (할루시네이션 의심)"
+            )
 
     return errors
 
@@ -85,7 +87,9 @@ def validate_entry_ids_exist(
 
     for eid in llm_ids:
         if eid not in source_ids:
-            errors.append(f"전표 ID {eid}가 소스 데이터에 존재하지 않음 (할루시네이션 의심)")
+            errors.append(
+                f"전표 ID {eid}가 소스 데이터에 존재하지 않음 (할루시네이션 의심)"
+            )
 
     return errors
 
@@ -404,8 +408,28 @@ def validate_trend_direction(
         경고 메시지 목록
     """
     warnings = []
-    increase_words = {"증가", "상승", "성장", "확대", "호전", "increase", "growth", "rise", "grew"}
-    decrease_words = {"감소", "하락", "축소", "악화", "위축", "decrease", "decline", "drop", "fell"}
+    increase_words = {
+        "증가",
+        "상승",
+        "성장",
+        "확대",
+        "호전",
+        "increase",
+        "growth",
+        "rise",
+        "grew",
+    }
+    decrease_words = {
+        "감소",
+        "하락",
+        "축소",
+        "악화",
+        "위축",
+        "decrease",
+        "decline",
+        "drop",
+        "fell",
+    }
 
     text_lower = text.lower()
 
@@ -416,7 +440,7 @@ def validate_trend_direction(
 
         # 메트릭 주변 텍스트에서 방향 감지
         idx = text_lower.index(metric_lower)
-        context = text_lower[max(0, idx - 50):idx + len(metric_lower) + 50]
+        context = text_lower[max(0, idx - 50) : idx + len(metric_lower) + 50]
 
         text_says_increase = any(w in context for w in increase_words)
         text_says_decrease = any(w in context for w in decrease_words)
