@@ -5,12 +5,13 @@ SICompany 테이블의 revenue 데이터를 VcCompany에 복사한다.
   Tier 1: 회사명 정확 일치 (strip only)
   Tier 2: 법인등록번호 매칭 (jurir_no ↔ corp_reg_no)
   Tier 3: 정규화 회사명 일치 (법인격 접두사/접미사 제거 + 공백 제거)
-  Tier 4: Fuzzy 매칭 (rapidfuzz token_sort_ratio ≥ 90)
+  Tier 4: Fuzzy 매칭 (rapidfuzz token_sort_ratio ≥ 95)
 
 사용법:
     cd deal-mgmt
     python -m scripts.enrich_vc_revenue            # 실행
     python -m scripts.enrich_vc_revenue --dry-run   # 미리보기 (UPDATE 없음)
+    python -m scripts.enrich_vc_revenue --reset     # revenue 전체 초기화 후 재적용
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ import re
 from decimal import Decimal
 
 from rapidfuzz import fuzz, process
-from sqlalchemy import bindparam, select
+from sqlalchemy import bindparam, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -237,7 +238,7 @@ async def enrich_from_si_companies(session: AsyncSession, *, dry_run: bool = Fal
                 norm,
                 si_norm_names,
                 scorer=fuzz.token_sort_ratio,
-                score_cutoff=90,
+                score_cutoff=95,
             )
             if result is not None:
                 matched_norm, score, _idx = result
@@ -270,9 +271,23 @@ async def enrich_from_si_companies(session: AsyncSession, *, dry_run: bool = Fal
     return tier_counts
 
 
-async def main(*, dry_run: bool = False) -> None:
+async def _reset_all_revenue(session: AsyncSession) -> int:
+    """VcCompany.revenue 전체 NULL 초기화."""
+    from app.models.vc_company import VcCompany
+
+    tbl = VcCompany.__table__
+    result = await session.execute(tbl.update().where(tbl.c.revenue.isnot(None)).values(revenue=None))
+    await session.commit()
+    count = result.rowcount  # type: ignore[union-attr]
+    logger.info("VcCompany revenue 초기화: %d건 → NULL", count)
+    return count
+
+
+async def main(*, dry_run: bool = False, reset: bool = False) -> None:
     engine, session_factory = await _get_engine_and_session()
     async with session_factory() as session:
+        if reset:
+            await _reset_all_revenue(session)
         await enrich_from_si_companies(session, dry_run=dry_run)
     await engine.dispose()
     logger.info("VcCompany 매출 enrichment 완료!")
@@ -281,5 +296,6 @@ async def main(*, dry_run: bool = False) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VcCompany 매출 교차참조 (4-Tier)")
     parser.add_argument("--dry-run", action="store_true", help="UPDATE 없이 매칭 결과만 출력")
+    parser.add_argument("--reset", action="store_true", help="revenue 전체 초기화 후 재적용")
     args = parser.parse_args()
-    asyncio.run(main(dry_run=args.dry_run))
+    asyncio.run(main(dry_run=args.dry_run, reset=args.reset))
