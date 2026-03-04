@@ -449,6 +449,7 @@ async def get_deep_dive(
             params={"corp_code": corp_code},
         )
 
+        num_fin_years = len(financial_tasks)
         responses = await asyncio.gather(
             overview_task,
             *financial_tasks,
@@ -459,9 +460,9 @@ async def get_deep_dive(
 
         # 4. 결과 파싱
         overview = _parse_overview(responses[0])
-        financials = _parse_financials(responses[1:4])
-        disclosures = _parse_disclosures(responses[4])
-        sanctions = _parse_sanctions(responses[5])
+        financials = _parse_financials(responses[1 : 1 + num_fin_years])
+        disclosures = _parse_disclosures(responses[1 + num_fin_years])
+        sanctions = _parse_sanctions(responses[2 + num_fin_years])
 
         return DeepDiveResponse(
             company=company_out,
@@ -547,7 +548,7 @@ def _extract_amount(items: list[dict], account_name: str) -> Decimal | None:
     """재무제표 항목에서 특정 계정의 당기금액 추출 (Decimal 정밀도 보존)."""
     for item in items:
         if account_name in item.get("account_nm", ""):
-            raw = item.get("thstrm_amount", "").replace(",", "")
+            raw = (item.get("thstrm_amount") or "").replace(",", "")
             if raw and raw != "-":
                 try:
                     return Decimal(raw)
@@ -789,7 +790,7 @@ async def _get_value_chain(
             ValueChainPanel(
                 io_code=io_code,
                 io_name=io_name or "",
-                transaction_value=total_val if total_val else Decimal("0"),
+                transaction_value=total_val if total_val is not None else Decimal("0"),
                 companies=[SICompanyOut.model_validate(c) for c in companies],
             )
         )

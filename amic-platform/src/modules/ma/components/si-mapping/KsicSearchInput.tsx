@@ -127,6 +127,13 @@ export default function KsicSearchInput({
       {/* 검색 입력 */}
       <input
         type="text"
+        role="combobox"
+        aria-expanded={isOpen && filteredSuggestions.length > 0}
+        aria-autocomplete="list"
+        aria-controls="ksic-listbox"
+        aria-activedescendant={
+          highlightIdx >= 0 ? `ksic-option-${highlightIdx}` : undefined
+        }
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -141,11 +148,18 @@ export default function KsicSearchInput({
 
       {/* 드롭다운 */}
       {isOpen && filteredSuggestions.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <ul
+          id="ksic-listbox"
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+        >
           {filteredSuggestions.map((item, idx) => (
             <li key={item.code}>
               <button
                 type="button"
+                id={`ksic-option-${idx}`}
+                role="option"
+                aria-selected={idx === highlightIdx}
                 onClick={() => handleSelect(item)}
                 className={cn(
                   "w-full px-3 py-2 text-left text-sm hover:bg-emerald-50",

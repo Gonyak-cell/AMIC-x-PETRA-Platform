@@ -135,8 +135,8 @@ export default function SIDetailPanel({
             id={`tabpanel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
           >
-            {activeTab === "overview" && (
-              <OverviewTab company={company!} overview={overview ?? null} />
+            {activeTab === "overview" && company && (
+              <OverviewTab company={company} overview={overview ?? null} />
             )}
             {activeTab === "financials" && (
               <FinancialsTab

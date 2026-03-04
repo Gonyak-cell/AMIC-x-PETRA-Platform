@@ -312,8 +312,13 @@ export default function VcMappingResult({
       {/* Long List 등록 버튼 */}
       <div
         aria-hidden={selectedIds.size === 0}
-        className={`flex justify-end transition-opacity ${selectedIds.size > 0 ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`flex items-center justify-end gap-3 transition-opacity ${selectedIds.size > 0 ? "opacity-100" : "pointer-events-none opacity-0"}`}
       >
+        {bulkAddMutation.isError && (
+          <p role="alert" className="text-sm text-red-600">
+            {bulkAddMutation.error.message}
+          </p>
+        )}
         <button
           type="button"
           onClick={handleBulkAdd}

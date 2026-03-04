@@ -50,6 +50,19 @@ export default function SICandidateTable({
     onToggleAll(filtered.map((c) => c.company.id));
   }, [onToggleAll, filtered]);
 
+  const relationCounts = useMemo(() => {
+    const counts = {
+      ALL: candidates.length,
+      DIRECT: 0,
+      BACKWARD: 0,
+      FORWARD: 0,
+    };
+    for (const c of candidates) {
+      counts[c.relation]++;
+    }
+    return counts;
+  }, [candidates]);
+
   if (candidates.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-slate-400">
@@ -63,28 +76,22 @@ export default function SICandidateTable({
       {/* 필터 */}
       <div className="mb-3 flex items-center gap-2">
         <span className="text-xs font-medium text-slate-500">필터:</span>
-        {(["ALL", "DIRECT", "BACKWARD", "FORWARD"] as const).map((key) => {
-          const isActive = relationFilter === key;
-          const count =
-            key === "ALL"
-              ? candidates.length
-              : candidates.filter((c) => c.relation === key).length;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setRelationFilter(key)}
-              className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                isActive
-                  ? "bg-slate-800 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-              )}
-            >
-              {key === "ALL" ? "전체" : RELATION_CONFIG[key].label} ({count})
-            </button>
-          );
-        })}
+        {(["ALL", "DIRECT", "BACKWARD", "FORWARD"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setRelationFilter(key)}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+              relationFilter === key
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+            )}
+          >
+            {key === "ALL" ? "전체" : RELATION_CONFIG[key].label} (
+            {relationCounts[key]})
+          </button>
+        ))}
       </div>
 
       {/* 테이블 */}
@@ -126,7 +133,10 @@ export default function SICandidateTable({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((c) => {
-              const rel = RELATION_CONFIG[c.relation];
+              const rel = RELATION_CONFIG[c.relation] ?? {
+                label: c.relation,
+                badgeCls: "bg-slate-100 text-slate-600",
+              };
               const isChecked = selectedIds.has(c.company.id);
               return (
                 <tr

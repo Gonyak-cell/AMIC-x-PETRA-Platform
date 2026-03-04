@@ -31,7 +31,7 @@ class SICompany(Base, TimestampMixin):
     corp_code: Mapped[str | None] = mapped_column(
         String(10),
         nullable=True,
-        comment="사업자등록번호 (하이픈 제거)",
+        comment="DART 기업 고유번호 (8자리)",
     )
     ksic_codes: Mapped[list | None] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"),

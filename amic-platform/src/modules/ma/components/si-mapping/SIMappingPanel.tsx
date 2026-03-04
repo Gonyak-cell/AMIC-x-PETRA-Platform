@@ -251,7 +251,7 @@ export default function SIMappingPanel({
                 </button>
               )}
               {vcMapMutation.isError && (
-                <p className="mt-2 text-sm text-red-600">
+                <p role="alert" className="mt-2 text-sm text-red-600">
                   {vcMapMutation.error.message}
                 </p>
               )}
@@ -307,7 +307,7 @@ export default function SIMappingPanel({
               </button>
             </div>
             {mapMutation.isError && (
-              <p className="mt-2 text-sm text-red-600">
+              <p role="alert" className="mt-2 text-sm text-red-600">
                 {mapMutation.error.message}
               </p>
             )}
@@ -356,16 +356,23 @@ export default function SIMappingPanel({
             닫기
           </button>
           {mappingResult && (
-            <button
-              type="button"
-              onClick={handleBulkAdd}
-              disabled={selectedIds.size === 0 || bulkAddMutation.isPending}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {bulkAddMutation.isPending
-                ? "등록 중..."
-                : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
-            </button>
+            <div className="flex items-center gap-3">
+              {bulkAddMutation.isError && (
+                <p role="alert" className="text-sm text-red-600">
+                  {bulkAddMutation.error.message}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleBulkAdd}
+                disabled={selectedIds.size === 0 || bulkAddMutation.isPending}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {bulkAddMutation.isPending
+                  ? "등록 중..."
+                  : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
+              </button>
+            </div>
           )}
         </div>
       </div>

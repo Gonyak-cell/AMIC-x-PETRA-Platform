@@ -31,7 +31,9 @@ class SIMappingRequest(BaseModel):
     top_n: int = Field(default=5, ge=1, le=20)
     max_companies_per_panel: int = Field(default=50, ge=1, le=200)
     min_revenue: Decimal | None = Field(
-        default=None, description="최소 매출액 필터 (원 단위, 예: 10_000_000_000 = 100억원)"
+        default=None,
+        ge=Decimal("0"),
+        description="최소 매출액 필터 (원 단위, 예: 10_000_000_000 = 100억원)",
     )
     require_investment_history: bool = False
 
