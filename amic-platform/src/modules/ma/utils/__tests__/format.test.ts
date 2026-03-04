@@ -29,4 +29,13 @@ describe("formatBillions", () => {
     expect(formatBillions("500")).toBe("500억");
     expect(formatBillions("15000")).toBe("1.5조");
   });
+
+  it("소수점 입력 → 반올림 포맷", () => {
+    expect(formatBillions("1234.56")).toBe("1,235억");
+    expect(formatBillions(999.4)).toBe("999억");
+  });
+
+  it("경계값 9999.5 → 조 변환 아닌 억 포맷", () => {
+    expect(formatBillions(9999.5)).toBe("10,000억");
+  });
 });

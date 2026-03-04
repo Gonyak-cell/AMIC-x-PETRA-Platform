@@ -77,6 +77,7 @@ export interface BulkAddBuyersRequest {
 export interface BulkAddBuyersResponse {
   added_count: number;
   skipped_count: number;
+  not_found_count: number;
   buyer_ids: string[];
 }
 
@@ -135,6 +136,11 @@ export interface VcMappingByRegResponse {
 
 export interface BulkAddVcBuyersRequest {
   vc_company_ids: number[];
+}
+
+export interface VcIndustrySuggestion {
+  industry_name: string;
+  company_count: number;
 }
 
 // ── 딥다이브 ──────────────────────────────────────────────

@@ -20,7 +20,7 @@ interface SICandidateTableProps {
   candidates: SICandidate[];
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
-  onToggleAll: () => void;
+  onToggleAll: (filteredIds: string[]) => void;
   onCompanyClick?: (id: string) => void;
 }
 
@@ -47,8 +47,8 @@ export default function SICandidateTable({
     filtered.length > 0 && filtered.every((c) => selectedIds.has(c.company.id));
 
   const handleToggleAll = useCallback(() => {
-    onToggleAll();
-  }, [onToggleAll]);
+    onToggleAll(filtered.map((c) => c.company.id));
+  }, [onToggleAll, filtered]);
 
   if (candidates.length === 0) {
     return (
@@ -89,7 +89,10 @@ export default function SICandidateTable({
 
       {/* 테이블 */}
       <div className="overflow-x-auto rounded-lg border border-slate-200">
-        <table className="w-full text-left text-sm">
+        <table
+          className="w-full text-left text-sm"
+          aria-label="SI 후보 기업 목록"
+        >
           <thead className="border-b border-slate-200 bg-slate-50">
             <tr>
               <th className="w-10 px-3 py-2">
@@ -97,6 +100,7 @@ export default function SICandidateTable({
                   type="checkbox"
                   checked={allSelected}
                   onChange={handleToggleAll}
+                  aria-label="전체 선택"
                   className="rounded border-slate-300"
                 />
               </th>
@@ -137,6 +141,7 @@ export default function SICandidateTable({
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => onToggle(c.company.id)}
+                      aria-label={`${c.company.company_name} 선택`}
                       className="rounded border-slate-300"
                     />
                   </td>

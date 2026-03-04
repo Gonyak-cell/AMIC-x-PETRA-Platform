@@ -60,11 +60,13 @@ class DocumentNotReadyError(Exception):
 
 
 class CompanyNotFoundError(Exception):
-    """SI 기업을 찾을 수 없는 오류."""
+    """SI/VC 기업을 찾을 수 없는 오류."""
 
-    def __init__(self, company_id: object):
-        self.company_id = str(company_id)
-        self.message = f"기업을 찾을 수 없습니다: {self.company_id}"
+    def __init__(self, company_id: object = None, *, message: str | None = None):
+        self.company_id = str(company_id) if company_id is not None else None
+        self.message = message or (
+            f"기업을 찾을 수 없습니다: {self.company_id}" if self.company_id else "기업을 찾을 수 없습니다"
+        )
         self.code = ErrorCode.SI_COMPANY_NOT_FOUND
         super().__init__(self.message)
 
@@ -124,6 +126,7 @@ async def workflow_error_handler(request: Request, exc: WorkflowError) -> JSONRe
 
 
 async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
+    logger.warning("ConflictError: %s (path=%s)", exc.message, request.url.path)
     return _problem_response(
         409,
         "domain:conflict",
@@ -134,6 +137,7 @@ async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONRe
 
 
 async def document_not_found_handler(request: Request, exc: DocumentNotFoundError) -> JSONResponse:
+    logger.warning("DocumentNotFoundError: %s (path=%s)", exc.message, request.url.path)
     return _problem_response(
         404,
         "document:not_found",
@@ -144,6 +148,7 @@ async def document_not_found_handler(request: Request, exc: DocumentNotFoundErro
 
 
 async def document_not_ready_handler(request: Request, exc: DocumentNotReadyError) -> JSONResponse:
+    logger.warning("DocumentNotReadyError: %s (path=%s, status=%s)", exc.message, request.url.path, exc.current_status)
     return _problem_response(
         400,
         "document:not_ready",
@@ -155,13 +160,17 @@ async def document_not_ready_handler(request: Request, exc: DocumentNotReadyErro
 
 
 async def company_not_found_handler(request: Request, exc: CompanyNotFoundError) -> JSONResponse:
+    logger.warning("CompanyNotFoundError: %s (path=%s)", exc.message, request.url.path)
+    extra: dict[str, Any] = {}
+    if exc.company_id is not None:
+        extra["company_id"] = exc.company_id
     return _problem_response(
         404,
         "si:company_not_found",
         "COMPANY_NOT_FOUND",
         exc.message,
         error_code=exc.code,
-        company_id=exc.company_id,
+        **extra,
     )
 
 

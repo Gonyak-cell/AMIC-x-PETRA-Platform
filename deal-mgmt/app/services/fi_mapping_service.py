@@ -122,7 +122,7 @@ async def _load_gp_profiles(db: AsyncSession) -> dict[str, GpProfile]:
                     p.raw_name,
                     cache[p.normalized_name].raw_name,
                 )
-            cache[p.normalized_name] = p
+            cache[p.normalized_name] = p  # last-write-wins: DB 순서 기준 최신 레코드 우선
         _gp_cache = cache
         if not profiles:
             logger.warning("GP 프로필 0건 — 60초 후 재조회")

@@ -67,4 +67,4 @@ class InMemoryRateLimiter:
 
 # ── 모듈 레벨 공유 인스턴스 ──────────────────────────────
 fi_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
-si_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
+si_rate_limiter = InMemoryRateLimiter(max_calls=5, window_seconds=60.0)

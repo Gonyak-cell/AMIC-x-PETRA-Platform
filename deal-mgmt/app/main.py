@@ -71,6 +71,9 @@ async def lifespan(app: FastAPI):
     from app.core.dependencies import close_all_clients
 
     await close_all_clients()
+    from app.services.si_mapping_service import close_kiis_dart_client
+
+    await close_kiis_dart_client()
     logger.info("Deal Management application stopped")
 
 

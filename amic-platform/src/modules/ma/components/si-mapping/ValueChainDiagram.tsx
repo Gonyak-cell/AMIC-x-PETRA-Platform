@@ -76,7 +76,7 @@ export default function ValueChainDiagram({
       {/* 화살표 → */}
       <div className="flex h-full items-center pt-6">
         <div className="h-px w-6 bg-slate-300" />
-        <div className="h-0 w-0 border-y-4 border-l-6 border-y-transparent border-l-slate-300" />
+        <div className="h-0 w-0 border-y-4 border-l-[6px] border-y-transparent border-l-slate-300" />
       </div>
 
       {/* 중앙: 타겟/동종업계 */}
@@ -104,7 +104,7 @@ export default function ValueChainDiagram({
       {/* 화살표 → */}
       <div className="flex h-full items-center pt-6">
         <div className="h-px w-6 bg-slate-300" />
-        <div className="h-0 w-0 border-y-4 border-l-6 border-y-transparent border-l-slate-300" />
+        <div className="h-0 w-0 border-y-4 border-l-[6px] border-y-transparent border-l-slate-300" />
       </div>
 
       {/* 오른쪽: 전방산업 (수요자) */}

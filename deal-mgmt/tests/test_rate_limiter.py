@@ -86,7 +86,7 @@ def test_rate_limiter_retry_after_header() -> None:
 
 async def test_map_si_429_rate_limit(client: AsyncClient) -> None:
     """POST /si-mapping/map — rate limit 초과 시 429 응답 + Retry-After 헤더."""
-    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=10)
+    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=5)
     resp = await client.post(
         "/api/v1/si-mapping/map",
         json={"ksic_codes": ["C10"], "top_n": 5},
@@ -100,7 +100,7 @@ async def test_map_si_429_rate_limit(client: AsyncClient) -> None:
 
 async def test_map_vc_429_rate_limit(client: AsyncClient) -> None:
     """GET /si-mapping/vc-map — rate limit 초과 시 429 응답."""
-    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=10)
+    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=5)
     resp = await client.get(
         "/api/v1/si-mapping/vc-map",
         params={"industry": "식품"},
@@ -111,7 +111,7 @@ async def test_map_vc_429_rate_limit(client: AsyncClient) -> None:
 
 async def test_map_si_200_after_rate_limit_reset(client: AsyncClient) -> None:
     """rate limit clear 후 재요청은 정상 처리된다 (429 아님)."""
-    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=10)
+    _fill_limiter(si_rate_limiter, _USER_EMAIL, count=5)
     # 첫 요청 → 429
     r1 = await client.post(
         "/api/v1/si-mapping/map",

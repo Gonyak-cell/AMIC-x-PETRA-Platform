@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import JWTClaims, get_jwt_claims
 from app.main import app
+from app.models.gp_profile import GpProfile
 from app.models.pef_fund_registry import PefFundRegistry
 
 _CLIENT_CLAIMS = JWTClaims(user_id="client-user", email="client@investor.com", role="CLIENT")
@@ -952,3 +953,65 @@ async def test_co_gp_fund_applies_full_capital_to_each_gp(
             assert float(rec["min_fund_size"]) == 1500.0, (
                 f"{rec['gp_name']}: min_fund_size가 총약정 1500이어야 한다 (분담 나누기 없음)"
             )
+
+
+# ── Tier 1/2 혼합 정렬 검증 ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tier1_sorted_before_tier2_regardless_of_fund_size(
+    client: AsyncClient,
+    async_session: AsyncSession,
+) -> None:
+    """Tier 1 GP가 Tier 2 GP보다 항상 앞에 정렬된다 (min_fund_size 무관).
+
+    Tier 2 GP에 더 큰 min_fund_size를 부여하여
+    정렬 기준이 (tier ASC, min_fund_size DESC)임을 검증한다.
+    """
+    txn_id = await _create_txn(client, 1000)
+
+    # Tier 2 GP — 프로필 없음, 큰 펀드 (min_fund_size = 2500)
+    # Tier 1 GP — 프로필 + 키워드 매칭, 작은 펀드 (min_fund_size = 800)
+    await _seed_pefs(
+        async_session,
+        [
+            {
+                "pef_name": "대형무프로필펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "대형GP",
+                "total_committed_capital": 2500,
+            },
+            {
+                "pef_name": "소형프로필펀드",
+                "registration_date": "2022-01-01",
+                "gp1": "프로필GP",
+                "total_committed_capital": 800,
+            },
+        ],
+    )
+
+    # 프로필GP에 GpProfile 시딩 (portfolio_sectors = ["IT"] → 키워드 매칭 대상)
+    from app.services.fi_mapping_service import normalize_gp_name
+
+    gp = GpProfile(
+        raw_name="프로필GP",
+        normalized_name=normalize_gp_name("프로필GP"),
+        portfolio_sectors=["IT", "헬스케어"],
+    )
+    async_session.add(gp)
+    await async_session.commit()
+
+    # target_keywords=IT → 프로필GP가 Tier 1으로 승격
+    resp = await client.get(_fi_url(txn_id, target_keywords="IT"))
+    assert resp.status_code == 200
+    recs = resp.json()
+
+    assert len(recs) == 2, f"2개 GP가 매칭되어야 한다 (실제: {len(recs)})"
+
+    # Tier 1 (프로필GP, 800억) → Tier 2 (대형GP, 2500억) 순서
+    assert recs[0]["gp_name"] == "프로필GP", f"Tier 1 GP가 첫 번째여야 한다 (실제: {recs[0]['gp_name']})"
+    assert recs[0]["tier"] == 1
+    assert recs[1]["gp_name"] == "대형GP"
+    assert recs[1]["tier"] == 2
+    # Tier 2의 min_fund_size가 더 크지만 뒤에 위치
+    assert float(recs[1]["min_fund_size"]) > float(recs[0]["min_fund_size"])

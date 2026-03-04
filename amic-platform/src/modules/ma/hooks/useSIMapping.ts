@@ -1,7 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { maApi } from "@/api/maClient";
+
+/** axios 에러에서 BE detail 메시지 추출 (없으면 기본 message) */
+function extractDetail(err: Error): string {
+  if (isAxiosError(err)) {
+    const detail = (err.response?.data as { detail?: string } | undefined)
+      ?.detail;
+    if (detail) return detail;
+  }
+  return err.message;
+}
 import type {
   BulkAddBuyersRequest,
   BulkAddBuyersResponse,
@@ -100,7 +111,7 @@ export function useSIMapping() {
       toast.success(`${data.all_candidates.length}개 후보 기업 발견`);
     },
     onError: (err) => {
-      toast.error(`SI 매핑 실패: ${err.message}`);
+      toast.error(`SI 매핑 실패: ${extractDetail(err)}`);
     },
   });
 }
@@ -129,7 +140,7 @@ export function useVcMappingByRegistration() {
       toast.success(`${data.company.company_name}: Value Chain 매핑 완료`);
     },
     onError: (err) => {
-      toast.error(`VC 매핑 실패: ${err.message}`);
+      toast.error(`VC 매핑 실패: ${extractDetail(err)}`);
     },
   });
 }
@@ -158,7 +169,7 @@ export function useBulkAddVcBuyers(txnId: string) {
       );
     },
     onError: (err) => {
-      toast.error(`Long List 등록 실패: ${err.message}`);
+      toast.error(`Long List 등록 실패: ${extractDetail(err)}`);
     },
   });
 }
@@ -187,7 +198,7 @@ export function useBulkAddBuyers(txnId: string) {
       );
     },
     onError: (err) => {
-      toast.error(`Long List 등록 실패: ${err.message}`);
+      toast.error(`Long List 등록 실패: ${extractDetail(err)}`);
     },
   });
 }

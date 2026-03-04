@@ -54,6 +54,13 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
       toast.error("Lead와 Co-investor는 동일할 수 없습니다.");
       return;
     }
+    if (equityPct) {
+      const pct = Number(equityPct);
+      if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+        toast.error("지분율은 0~100% 범위여야 합니다.");
+        return;
+      }
+    }
     createMapping.mutate(
       {
         lead_buyer_id: leadId,
@@ -288,10 +295,11 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                           <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => {
-                              deleteMapping.mutate(m.id);
-                              setDeletingId(null);
-                            }}
+                            onClick={() =>
+                              deleteMapping.mutate(m.id, {
+                                onSettled: () => setDeletingId(null),
+                              })
+                            }
                           >
                             삭제
                           </Button>
@@ -308,7 +316,7 @@ export default function ConsortiumPanel({ txnId, buyers, canWrite }: Props) {
                           type="button"
                           className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
                           title="삭제"
-                          aria-label="컨소시엄 매핑 삭제"
+                          aria-label={`${m.lead_buyer_name} ↔ ${m.co_investor_buyer_name} 매핑 삭제`}
                           onClick={() => setDeletingId(m.id)}
                         >
                           <Trash2 className="h-4 w-4" />

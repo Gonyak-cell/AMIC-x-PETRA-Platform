@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Users, UserPlus, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,
@@ -27,7 +27,9 @@ import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import ConsortiumPanel from "@/modules/ma/components/buyers/ConsortiumPanel";
 import ShortListOverview from "@/modules/ma/components/buyers/ShortListOverview";
 import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
-import SIMappingPanel from "@/modules/ma/components/si-mapping/SIMappingPanel";
+const SIMappingPanel = lazy(
+  () => import("@/modules/ma/components/si-mapping/SIMappingPanel"),
+);
 import SIDetailPanel from "@/modules/ma/components/si-mapping/SIDetailPanel";
 import { toast } from "sonner";
 
@@ -58,8 +60,18 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const exportExcel = useExportBuyerExcel(txnId);
   const { data: shortListOverview } = useShortListOverview(txnId);
 
-  const corporateInfo =
-    txn?.corporate_info as CorporateDocsExtractedData | null;
+  const corporateInfo = ((): CorporateDocsExtractedData | null => {
+    const v = txn?.corporate_info;
+    if (
+      typeof v === "object" &&
+      v !== null &&
+      ("corporate_registration_number" in v ||
+        "business_registration_number" in v)
+    ) {
+      return v as CorporateDocsExtractedData;
+    }
+    return null;
+  })();
 
   const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">(
     "long-list",
@@ -109,7 +121,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               buyerId: r.id,
               body: {
                 is_short_listed: !r.is_short_listed,
-              } as BuyerCandidateUpdate & { is_short_listed: boolean },
+              },
             })
           }
           className="h-4 w-4 rounded border-border-default accent-accent"
@@ -250,7 +262,10 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             {canWrite && (
               <Button
                 icon={UserPlus}
-                onClick={() => setShowBuyerModal(true)}
+                onClick={() => {
+                  setBuyerForm({ company_name: "", buyer_type: "STRATEGIC" });
+                  setShowBuyerModal(true);
+                }}
                 variant="ghost"
               >
                 후보 추가
@@ -299,11 +314,19 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               )}
             </Card>
             {showSIMappingModal && (
-              <SIMappingPanel
-                txnId={txnId}
-                onClose={() => setShowSIMappingModal(false)}
-                corporateInfo={corporateInfo}
-              />
+              <Suspense
+                fallback={
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    로딩 중...
+                  </p>
+                }
+              >
+                <SIMappingPanel
+                  txnId={txnId}
+                  onClose={() => setShowSIMappingModal(false)}
+                  corporateInfo={corporateInfo}
+                />
+              </Suspense>
             )}
             {showFIRecommendModal && (
               <FIRecommendModal

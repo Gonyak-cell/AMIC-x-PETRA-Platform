@@ -136,6 +136,7 @@ class SIMappingResponse(BaseModel):
 class BulkAddBuyersResponse(BaseModel):
     added_count: int
     skipped_count: int
+    not_found_count: int = 0
     buyer_ids: list[uuid.UUID]
 
 
@@ -289,6 +290,16 @@ class VcCompanyLookupResult(BaseModel):
     corp_reg_no: str | None = None
     biz_reg_no: str | None = None
     revenue: Decimal | None = None
+
+    @field_serializer("corp_reg_no", "biz_reg_no")
+    @classmethod
+    def _mask_registration(cls, v: str | None) -> str | None:
+        if not v:
+            return None
+        clean = re.sub(r"[\s\-]", "", v)
+        if len(clean) <= 6:
+            return clean[:3] + "***"
+        return clean[:6] + "*" * (len(clean) - 6)
 
     @field_serializer("revenue")
     @classmethod

@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import { useBulkAddVcBuyers } from "@/modules/ma/hooks/useSIMapping";
 import type {
@@ -7,6 +8,7 @@ import type {
   VcCompanyLookupResult,
   VcMappingResponse,
 } from "@/modules/ma/types/si_mapping";
+import { formatBillions } from "@/modules/ma/utils/format";
 
 type VcTab = "forward" | "backward" | "competitors";
 
@@ -16,15 +18,7 @@ interface VcMappingResultProps {
   mapping: VcMappingResponse;
 }
 
-function formatRevenue(value: string | null): string {
-  if (!value) return "-";
-  const num = Number(value);
-  if (Number.isNaN(num)) return value;
-  if (num >= 10000) return `${(num / 10000).toFixed(1)}조`;
-  return `${num.toLocaleString()}억`;
-}
-
-function CompanyRow({
+const CompanyRow = memo(function CompanyRow({
   company,
   checked,
   onToggle,
@@ -38,6 +32,7 @@ function CompanyRow({
       <td className="px-3 py-2">
         <input
           type="checkbox"
+          aria-label={`${company.company_name} 선택`}
           checked={checked}
           onChange={() => onToggle(company.id)}
           className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
@@ -50,16 +45,16 @@ function CompanyRow({
         {company.industry_name}
       </td>
       <td className="px-3 py-2 text-right text-sm text-slate-600">
-        {formatRevenue(company.revenue)}
+        {formatBillions(company.revenue)}
       </td>
       <td className="px-3 py-2 text-sm text-slate-500">
         {company.corp_type ?? "-"}
       </td>
     </tr>
   );
-}
+});
 
-function ChainPanelCard({
+const ChainPanelCard = memo(function ChainPanelCard({
   panel,
   selectedIds,
   onToggle,
@@ -79,6 +74,7 @@ function ChainPanelCard({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50"
       >
         <div className="flex items-center gap-3">
@@ -93,6 +89,7 @@ function ChainPanelCard({
           </span>
         </div>
         <svg
+          aria-hidden="true"
           className={`h-4 w-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
@@ -110,11 +107,21 @@ function ChainPanelCard({
         <table className="w-full">
           <thead>
             <tr className="border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500">
-              <th className="w-10 px-3 py-2" />
-              <th className="px-3 py-2 text-left font-medium">기업명</th>
-              <th className="px-3 py-2 text-left font-medium">업종</th>
-              <th className="px-3 py-2 text-right font-medium">매출</th>
-              <th className="px-3 py-2 text-left font-medium">법인구분</th>
+              <th scope="col" className="w-10 px-3 py-2">
+                <span className="sr-only">선택</span>
+              </th>
+              <th scope="col" className="px-3 py-2 text-left font-medium">
+                기업명
+              </th>
+              <th scope="col" className="px-3 py-2 text-left font-medium">
+                업종
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                매출
+              </th>
+              <th scope="col" className="px-3 py-2 text-left font-medium">
+                법인구분
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -131,7 +138,7 @@ function ChainPanelCard({
       )}
     </div>
   );
-}
+});
 
 const TAB_CONFIG: { key: VcTab; label: string }[] = [
   { key: "forward", label: "전방 (고객)" },
@@ -157,27 +164,31 @@ export default function VcMappingResult({
     });
   }, []);
 
-  const handleBulkAdd = useCallback(() => {
+  const handleBulkAdd = () => {
     if (selectedIds.size === 0) return;
+    const MAX_BULK = 100;
+    if (selectedIds.size > MAX_BULK) {
+      toast.warning(`최대 ${MAX_BULK}건까지 일괄 등록할 수 있습니다.`);
+      return;
+    }
     bulkAddMutation.mutate(
       { vc_company_ids: Array.from(selectedIds) },
       { onSuccess: () => setSelectedIds(new Set()) },
     );
-  }, [selectedIds, bulkAddMutation]);
+  };
 
-  const currentPanels =
-    activeTab === "forward"
-      ? mapping.forward_chains
-      : activeTab === "backward"
-        ? mapping.backward_chains
-        : [];
-
-  const currentCount =
-    activeTab === "forward"
-      ? mapping.total_forward
-      : activeTab === "backward"
-        ? mapping.total_backward
-        : mapping.total_competitors;
+  const panelsMap: Record<VcTab, VcChainPanel[]> = {
+    forward: mapping.forward_chains,
+    backward: mapping.backward_chains,
+    competitors: [],
+  };
+  const countMap: Record<VcTab, number> = {
+    forward: mapping.total_forward,
+    backward: mapping.total_backward,
+    competitors: mapping.total_competitors,
+  };
+  const currentPanels = panelsMap[activeTab];
+  const currentCount = countMap[activeTab];
 
   return (
     <div className="space-y-4">
@@ -200,51 +211,66 @@ export default function VcMappingResult({
               <span>사업자등록번호: {company.biz_reg_no}</span>
             )}
             {company.revenue && (
-              <span>매출: {formatRevenue(company.revenue)}</span>
+              <span>매출: {formatBillions(company.revenue)}</span>
             )}
           </div>
         </div>
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
-        {TAB_CONFIG.map(({ key, label }) => {
-          const count =
-            key === "forward"
-              ? mapping.total_forward
-              : key === "backward"
-                ? mapping.total_backward
-                : mapping.total_competitors;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveTab(key)}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === key
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {label} ({count})
-            </button>
-          );
-        })}
+      <div role="tablist" className="flex gap-1 rounded-lg bg-slate-100 p-1">
+        {TAB_CONFIG.map(({ key, label }) => (
+          <button
+            key={key}
+            id={`vc-tab-${key}`}
+            role="tab"
+            aria-selected={activeTab === key}
+            aria-controls={`vc-tabpanel-${key}`}
+            type="button"
+            onClick={() => {
+              setActiveTab(key);
+              setSelectedIds(new Set());
+            }}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === key
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {label} ({countMap[key]})
+          </button>
+        ))}
       </div>
 
       {/* 패널 목록 또는 경쟁사 테이블 */}
-      <div className="space-y-3">
+      <div
+        role="tabpanel"
+        id={`vc-tabpanel-${activeTab}`}
+        aria-labelledby={`vc-tab-${activeTab}`}
+        className="space-y-3"
+      >
         {activeTab === "competitors" ? (
           mapping.competitors.length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/50 text-xs text-slate-500">
-                    <th className="w-10 px-3 py-2" />
-                    <th className="px-3 py-2 text-left font-medium">기업명</th>
-                    <th className="px-3 py-2 text-left font-medium">업종</th>
-                    <th className="px-3 py-2 text-right font-medium">매출</th>
-                    <th className="px-3 py-2 text-left font-medium">
+                    <th scope="col" className="w-10 px-3 py-2">
+                      <span className="sr-only">선택</span>
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium">
+                      기업명
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium">
+                      업종
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-right font-medium"
+                    >
+                      매출
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium">
                       법인구분
                     </th>
                   </tr>
@@ -269,7 +295,7 @@ export default function VcMappingResult({
         ) : currentPanels.length > 0 ? (
           currentPanels.map((panel) => (
             <ChainPanelCard
-              key={panel.industry_name}
+              key={`${activeTab}-${panel.industry_name}`}
               panel={panel}
               selectedIds={selectedIds}
               onToggle={handleToggle}
@@ -284,20 +310,21 @@ export default function VcMappingResult({
       </div>
 
       {/* Long List 등록 버튼 */}
-      {selectedIds.size > 0 && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleBulkAdd}
-            disabled={bulkAddMutation.isPending}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {bulkAddMutation.isPending
-              ? "등록 중..."
-              : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
-          </button>
-        </div>
-      )}
+      <div
+        aria-hidden={selectedIds.size === 0}
+        className={`flex justify-end transition-opacity ${selectedIds.size > 0 ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        <button
+          type="button"
+          onClick={handleBulkAdd}
+          disabled={bulkAddMutation.isPending || selectedIds.size === 0}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {bulkAddMutation.isPending
+            ? "등록 중..."
+            : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
+        </button>
+      </div>
     </div>
   );
 }

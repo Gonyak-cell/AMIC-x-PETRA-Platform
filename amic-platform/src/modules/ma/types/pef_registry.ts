@@ -24,11 +24,11 @@ export interface FIRecommendation {
   gp_name: string;
   gp_profile: GpProfileOut | null;
   tier: 1 | 2;
-  /** Decimal → string 직렬화 (BE @field_serializer) */
-  min_fund_size: string;
+  /** Decimal → float 직렬화 (BE @field_serializer) */
+  min_fund_size: number;
   matching_funds: PefFund[];
-  /** Decimal → string 직렬화 (BE @field_serializer) */
-  total_committed_sum: string;
+  /** Decimal → float 직렬화 (BE @field_serializer) */
+  total_committed_sum: number;
   fund_count: number;
   match_reason: string;
 }

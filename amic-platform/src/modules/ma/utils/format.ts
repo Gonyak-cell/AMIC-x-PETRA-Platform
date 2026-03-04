@@ -45,13 +45,15 @@ export function formatISODate(iso: string): string {
   });
 }
 
-/** 억원 단위 값을 읽기 쉬운 한국어로 포맷 (1조 이상 → X.X조, 그 외 → X,XXX억). */
+/** 억원 단위 값을 읽기 쉬운 한국어로 포맷 (1조 이상 → X.X조, 그 외 → X,XXX억, 음수 지원). */
 export function formatBillions(value: string | number | null): string {
   if (value == null) return "-";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "-";
-  if (num >= 10000) return `${(num / 10000).toFixed(1)}조`;
-  return `${Math.round(num).toLocaleString()}억`;
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
+  if (abs >= 10000) return `${sign}${(abs / 10000).toFixed(1)}조`;
+  return `${sign}${Math.round(abs).toLocaleString()}억`;
 }
 
 /** 바이트 → 사람이 읽을 수 있는 크기 (B / KB / MB). */

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import bisect as _bisect
 import json
 import logging
 import re
@@ -10,10 +11,11 @@ import time
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
-from sqlalchemy import func, literal_column, select
+from sqlalchemy import func, literal_column, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -131,13 +133,13 @@ async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[Ksi
     """KSIC 코드/이름 검색 — 자동완성용."""
     if not query or len(query) < 1:
         return []
-    q = query.strip()
+    trimmed = query.strip()
     # 검색용: 선행 알파벳 제거 (J58 → 58, ILIKE '%58%'로 58211 등 매칭)
-    cleaned = re.sub(r"^[A-Za-z]+", "", q)
-    cleaned = cleaned if cleaned else q  # 알파벳만 입력 시 원본 유지 (이름 검색용)
+    cleaned = re.sub(r"^[A-Za-z]+", "", trimmed)
+    cleaned = cleaned if cleaned else trimmed  # 알파벳만 입력 시 원본 유지 (이름 검색용)
     escaped = cleaned.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     pattern = f"%{escaped}%"
-    q = (
+    stmt = (
         select(KsicIoMapping.ksic_code, KsicIoMapping.ksic_name)
         .where(
             KsicIoMapping.ksic_code.ilike(pattern, escape="\\") | KsicIoMapping.ksic_name.ilike(pattern, escape="\\")
@@ -145,7 +147,7 @@ async def search_ksic(db: AsyncSession, query: str, limit: int = 20) -> list[Ksi
         .distinct()
         .limit(limit)
     )
-    result = await db.execute(q)
+    result = await db.execute(stmt)
     return [KsicSuggestion(code=row[0], name=row[1] or "") for row in result.all()]
 
 
@@ -162,6 +164,14 @@ async def map_si_candidates(
 
     성능 최적화: 기업 테이블을 1회만 로딩하여 인메모리 KSIC 인덱스를 구축한 후,
     이후 모든 KSIC→기업 검색은 dict 참조로 수행 (DB 쿼리 ~33 → ~5).
+
+    Args:
+        db: DB 세션
+        ksic_codes: KSIC 코드 목록
+        top_n: Value Chain 방향별 최대 IO 코드 수
+        max_companies_per_panel: IO 코드별 최대 기업 수
+        min_revenue: 최소 매출액 (원 단위, None이면 필터 없음)
+        require_investment_history: 투자 이력 필수 여부
     """
     # 대분류 알파벳 접두사 제거 (J58211 → 58211)
     ksic_codes = [c for c in (_strip_ksic_prefix(c) for c in ksic_codes) if c]
@@ -254,16 +264,34 @@ async def bulk_add_to_buyers(
     actor_email: str | None = None,
 ) -> BulkAddBuyersResponse:
     """SI 매핑 결과를 BuyerCandidate로 일괄 등록."""
+    if len(si_company_ids) > 100:
+        raise ValueError("일괄 등록은 최대 100건까지 가능합니다")
+
     logger.info("BuyerCandidate 일괄 등록 시작: txn_id=%s, 요청=%d건", txn_id, len(si_company_ids))
     # SI 기업 조회
-    q = select(SICompany).where(SICompany.id.in_(si_company_ids))
-    result = await db.execute(q)
+    si_q = select(SICompany).where(SICompany.id.in_(si_company_ids))
+    result = await db.execute(si_q)
     si_companies = list(result.scalars().all())
 
-    # 이미 등록된 기업명 확인 (중복 방지)
-    existing_q = select(BuyerCandidate.company_name).where(BuyerCandidate.transaction_id == txn_id)
+    # 미발견 ID 추적
+    found_ids = {si.id for si in si_companies}
+    not_found_ids = [sid for sid in si_company_ids if sid not in found_ids]
+    if not_found_ids:
+        logger.warning("SI BuyerCandidate 일괄 등록: 미발견 ID %d건 — %s", len(not_found_ids), not_found_ids[:5])
+
+    # 이미 등록된 기업명 + si_company_id 이중 중복 검사 (VC 버전과 동일 패턴)
+    existing_q = select(BuyerCandidate.company_name, BuyerCandidate.extra_data).where(
+        BuyerCandidate.transaction_id == txn_id,
+    )
     existing_result = await db.execute(existing_q)
-    existing_names = {row[0] for row in existing_result.all()}
+    existing_names: set[str] = set()
+    existing_si_ids: set[str] = set()
+    for row in existing_result.all():
+        existing_names.add(row[0])
+        if isinstance(row[1], dict):
+            si_id = row[1].get("si_company_id")
+            if si_id:
+                existing_si_ids.add(str(si_id))
 
     added_ids: list[uuid.UUID] = []
     skipped = 0
@@ -271,7 +299,7 @@ async def bulk_add_to_buyers(
     # 1) 모든 BuyerCandidate를 생성하고 add (flush 없이)
     new_buyers: list[tuple[BuyerCandidate, SICompany]] = []
     for si in si_companies:
-        if si.company_name in existing_names:
+        if si.company_name in existing_names or str(si.id) in existing_si_ids:
             skipped += 1
             continue
         buyer = BuyerCandidate(
@@ -288,18 +316,26 @@ async def bulk_add_to_buyers(
 
     # 2) 한 번에 flush → ID 할당 (N회 → 1회)
     if new_buyers:
-        await db.flush()
+        try:
+            await db.flush()
+        except SQLAlchemyError:
+            await db.rollback()
+            raise
 
-    # 3) 배치 audit 기록
+    # 3) 배치 audit 기록 — 개별 감사 실패 시에도 BuyerCandidate 등록은 유지
+    #    (감사 로그는 best-effort, 등록 누락보다 감사 누락이 허용 가능)
     for buyer, si in new_buyers:
-        await audit_service.record(
-            db,
-            entity_type="BuyerCandidate",
-            entity_id=buyer.id,
-            action=AuditAction.CREATE,
-            actor_email=actor_email,
-            new_value={"company_name": si.company_name, "source": "SI_MAPPING"},
-        )
+        try:
+            await audit_service.record(
+                db,
+                entity_type="BuyerCandidate",
+                entity_id=buyer.id,
+                action=AuditAction.CREATE,
+                actor_email=actor_email,
+                new_value={"company_name": si.company_name, "source": "SI_MAPPING"},
+            )
+        except Exception:
+            logger.exception("SI BuyerCandidate 감사 로그 실패: buyer_id=%s", buyer.id)
         added_ids.append(buyer.id)
 
     await db.commit()
@@ -313,6 +349,7 @@ async def bulk_add_to_buyers(
     return BulkAddBuyersResponse(
         added_count=len(added_ids),
         skipped_count=skipped,
+        not_found_count=len(not_found_ids),
         buyer_ids=added_ids,
     )
 
@@ -645,8 +682,6 @@ def _lookup_by_ksic(
 
     성능 최적화: 정렬된 키 + bisect로 접두사 매칭 O(K*N) → O(K*(logN+M)).
     """
-    import bisect as _bisect
-
     seen: set[uuid.UUID] = set()
     matched: list[SICompany] = []
 
@@ -700,33 +735,28 @@ async def _get_value_chain(
     KSIC→기업 검색은 인메모리 인덱스를 참조 (DB 쿼리 0).
     """
     if direction == "backward":
-        q = (
-            select(
-                IOTransaction.source_io_code,
-                IOTransaction.source_io_name,
-                func.sum(IOTransaction.transaction_value).label("total_value"),
-            )
-            .where(IOTransaction.target_io_code.in_(target_io_codes))
-            .where(~IOTransaction.source_io_code.in_(target_io_codes))
-            .group_by(IOTransaction.source_io_code, IOTransaction.source_io_name)
-            .order_by(literal_column("total_value").desc())
-            .limit(top_n)
-        )
+        select_col, name_col = IOTransaction.source_io_code, IOTransaction.source_io_name
+        filter_col = IOTransaction.target_io_code
+        exclude_col = IOTransaction.source_io_code
     else:
-        q = (
-            select(
-                IOTransaction.target_io_code,
-                IOTransaction.target_io_name,
-                func.sum(IOTransaction.transaction_value).label("total_value"),
-            )
-            .where(IOTransaction.source_io_code.in_(target_io_codes))
-            .where(~IOTransaction.target_io_code.in_(target_io_codes))
-            .group_by(IOTransaction.target_io_code, IOTransaction.target_io_name)
-            .order_by(literal_column("total_value").desc())
-            .limit(top_n)
-        )
+        select_col, name_col = IOTransaction.target_io_code, IOTransaction.target_io_name
+        filter_col = IOTransaction.source_io_code
+        exclude_col = IOTransaction.target_io_code
 
-    result = await db.execute(q)
+    chain_q = (
+        select(
+            select_col,
+            name_col,
+            func.sum(IOTransaction.transaction_value).label("total_value"),
+        )
+        .where(filter_col.in_(target_io_codes))
+        .where(~exclude_col.in_(target_io_codes))
+        .group_by(select_col, name_col)
+        .order_by(literal_column("total_value").desc())
+        .limit(top_n)
+    )
+
+    result = await db.execute(chain_q)
     rows = result.all()
 
     if not rows:
@@ -777,46 +807,27 @@ def _build_flat_candidates(
     seen_ids: set[uuid.UUID] = set()
     candidates: list[SICandidateOut] = []
 
-    # Direct peers
-    for c in direct_companies:
-        if c.id not in seen_ids:
-            seen_ids.add(c.id)
+    # Direct peers → (company_obj, relation, panel_or_none) 형태로 통합
+    entries: list[tuple[SICompanyOut, str, ValueChainPanel | None]] = [
+        (SICompanyOut.model_validate(c), "DIRECT", None) for c in direct_companies
+    ]
+    for relation, panels in [("BACKWARD", backward_panels), ("FORWARD", forward_panels)]:
+        for panel in panels:
+            for c in panel.companies:
+                entries.append((c, relation, panel))
+
+    for company, relation, panel in entries:
+        if company.id not in seen_ids:
+            seen_ids.add(company.id)
             candidates.append(
                 SICandidateOut(
-                    company=SICompanyOut.model_validate(c),
-                    relation="DIRECT",
+                    company=company,
+                    relation=relation,
+                    io_code=panel.io_code if panel else None,
+                    io_name=panel.io_name if panel else None,
+                    transaction_value=panel.transaction_value if panel else None,
                 )
             )
-
-    # Backward
-    for panel in backward_panels:
-        for c in panel.companies:
-            if c.id not in seen_ids:
-                seen_ids.add(c.id)
-                candidates.append(
-                    SICandidateOut(
-                        company=c,
-                        relation="BACKWARD",
-                        io_code=panel.io_code,
-                        io_name=panel.io_name,
-                        transaction_value=panel.transaction_value,
-                    )
-                )
-
-    # Forward
-    for panel in forward_panels:
-        for c in panel.companies:
-            if c.id not in seen_ids:
-                seen_ids.add(c.id)
-                candidates.append(
-                    SICandidateOut(
-                        company=c,
-                        relation="FORWARD",
-                        io_code=panel.io_code,
-                        io_name=panel.io_name,
-                        transaction_value=panel.transaction_value,
-                    )
-                )
 
     return candidates
 
@@ -882,6 +893,7 @@ async def map_vc_candidates(
     target_industry_name: str,
     min_revenue: Decimal = Decimal("100"),
     top_n: int = 20,
+    exclude_company_id: int | None = None,
 ) -> VcMappingResponse:
     """업종명 기반 Value Chain 매핑 — 1,574 세부 업종 수준.
 
@@ -890,6 +902,7 @@ async def map_vc_candidates(
         target_industry_name: 타겟 업종명 (1,574 중 하나)
         min_revenue: 최소 매출액 (억원, 기본 100억)
         top_n: 전방/후방/경쟁 각각의 최대 반환 건수
+        exclude_company_id: 경쟁사 결과에서 제외할 대상 기업 ID
 
     Returns:
         전방(고객) / 후방(공급) / 경쟁(동종) 매핑 결과
@@ -932,6 +945,8 @@ async def map_vc_candidates(
         .order_by(VcCompany.revenue.desc())
         .limit(top_n)
     )
+    if exclude_company_id is not None:
+        competitor_q = competitor_q.where(VcCompany.id != exclude_company_id)
     competitor_rows = (await db.execute(competitor_q)).scalars().all()
 
     competitors = [VcChainCompany.model_validate(c) for c in competitor_rows]
@@ -949,29 +964,23 @@ async def map_vc_candidates(
         related_industries.append(industry)
         backward_industry_map[industry] = coeff
 
-    # 업종별 기업 조회 — batch IN 쿼리
-    # 전방/후방이 같은 업종을 포함할 수 있으므로 중복 제거 후 limit 계산
+    # 업종별 기업 조회 — 업종당 top_n 보장을 위해 개별 쿼리
     industry_companies: dict[str, list[VcChainCompany]] = {}
     if related_industries:
         unique_related = list(dict.fromkeys(related_industries))
-        companies_q = (
-            select(VcCompany)
-            .where(
-                VcCompany.industry_name.in_(unique_related),
-                VcCompany.revenue.isnot(None),
-                VcCompany.revenue >= min_revenue,
+        for ind in unique_related:
+            ind_q = (
+                select(VcCompany)
+                .where(
+                    VcCompany.industry_name == ind,
+                    VcCompany.revenue.isnot(None),
+                    VcCompany.revenue >= min_revenue,
+                )
+                .order_by(VcCompany.revenue.desc())
+                .limit(top_n)
             )
-            .order_by(VcCompany.revenue.desc())
-            .limit(top_n * len(unique_related))
-        )
-        company_rows = (await db.execute(companies_q)).scalars().all()
-
-        # 업종별 그룹핑 + 기업 수 제한
-        for c in company_rows:
-            if c.industry_name not in industry_companies:
-                industry_companies[c.industry_name] = []
-            if len(industry_companies[c.industry_name]) < top_n:
-                industry_companies[c.industry_name].append(VcChainCompany.model_validate(c))
+            rows = (await db.execute(ind_q)).scalars().all()
+            industry_companies[ind] = [VcChainCompany.model_validate(c) for c in rows]
 
     # 5. 패널 조립
     forward_chains = [
@@ -1025,6 +1034,11 @@ def _normalize_reg_no(value: str) -> str:
     return _REG_NO_STRIP_RE.sub("", value)
 
 
+def _strip_reg_col(col: Any) -> Any:
+    """DB 컬럼에서 하이픈·공백을 제거하는 SQL 표현식."""
+    return func.replace(func.replace(col, "-", ""), " ", "")
+
+
 async def find_vc_company_by_registration(
     db: AsyncSession,
     corp_reg_no: str | None = None,
@@ -1033,22 +1047,34 @@ async def find_vc_company_by_registration(
     """법인등록번호 또는 사업자등록번호로 VcCompany 조회.
 
     corp_reg_no 우선, 없으면 biz_reg_no로 fallback.
-    등록번호 포맷(하이픈 유무)을 정규화하여 검색.
+    두 값이 모두 있으면 OR 결합으로 1회 쿼리.
+    등록번호 포맷(하이픈·공백 유무)을 정규화하여 검색.
     """
+    if corp_reg_no and biz_reg_no:
+        normalized_corp = _normalize_reg_no(corp_reg_no)
+        normalized_biz = _normalize_reg_no(biz_reg_no)
+        result = await db.execute(
+            select(VcCompany)
+            .where(
+                or_(
+                    _strip_reg_col(VcCompany.corp_reg_no) == normalized_corp,
+                    _strip_reg_col(VcCompany.biz_reg_no) == normalized_biz,
+                )
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     if corp_reg_no:
         normalized = _normalize_reg_no(corp_reg_no)
-        result = await db.execute(
-            select(VcCompany).where(func.replace(VcCompany.corp_reg_no, "-", "") == normalized).limit(1)
-        )
+        result = await db.execute(select(VcCompany).where(_strip_reg_col(VcCompany.corp_reg_no) == normalized).limit(1))
         company = result.scalar_one_or_none()
         if company is not None:
             return company
 
     if biz_reg_no:
         normalized = _normalize_reg_no(biz_reg_no)
-        result = await db.execute(
-            select(VcCompany).where(func.replace(VcCompany.biz_reg_no, "-", "") == normalized).limit(1)
-        )
+        result = await db.execute(select(VcCompany).where(_strip_reg_col(VcCompany.biz_reg_no) == normalized).limit(1))
         return result.scalar_one_or_none()
 
     return None
@@ -1071,15 +1097,28 @@ async def map_vc_by_registration(
     """
     company = await find_vc_company_by_registration(db, corp_reg_no, biz_reg_no)
     if company is None:
-        raise CompanyNotFoundError(
-            f"등록번호에 해당하는 기업을 찾을 수 없습니다: 법인={corp_reg_no}, 사업자={biz_reg_no}"
+        logger.warning(
+            "VC 등록번호 매핑 실패: 기업 미발견 (corp_reg_no=%s, biz_reg_no=%s 제공)",
+            bool(corp_reg_no),
+            bool(biz_reg_no),
         )
+        raise CompanyNotFoundError(
+            message="등록번호에 해당하는 기업을 찾을 수 없습니다",
+        )
+
+    logger.info(
+        "VC 등록번호 매핑: company=%s (id=%d), industry=%s",
+        company.company_name,
+        company.id,
+        company.industry_name,
+    )
 
     mapping = await map_vc_candidates(
         db,
         target_industry_name=company.industry_name,
         min_revenue=min_revenue,
         top_n=top_n,
+        exclude_company_id=company.id,
     )
 
     return VcMappingByRegResponse(
@@ -1095,26 +1134,49 @@ async def bulk_add_vc_to_buyers(
     actor_email: str | None = None,
 ) -> BulkAddBuyersResponse:
     """VC 매핑 결과를 BuyerCandidate로 일괄 등록."""
+    if len(vc_company_ids) > 100:
+        raise ValueError("일괄 등록은 최대 100건까지 가능합니다")
+
     logger.info(
         "VC BuyerCandidate 일괄 등록 시작: txn_id=%s, 요청=%d건",
         txn_id,
         len(vc_company_ids),
     )
 
-    q = select(VcCompany).where(VcCompany.id.in_(vc_company_ids))
-    result = await db.execute(q)
+    vc_q = select(VcCompany).where(VcCompany.id.in_(vc_company_ids))
+    result = await db.execute(vc_q)
     vc_companies = list(result.scalars().all())
 
-    existing_q = select(BuyerCandidate.company_name).where(BuyerCandidate.transaction_id == txn_id)
+    # R6-B02: 미발견 ID 추적 + R4-O2: 로깅
+    found_ids = {vc.id for vc in vc_companies}
+    not_found_ids = [vid for vid in vc_company_ids if vid not in found_ids]
+    if not_found_ids:
+        logger.warning(
+            "VC BuyerCandidate 일괄 등록: 미발견 ID %d건 — %s",
+            len(not_found_ids),
+            not_found_ids[:10],
+        )
+
+    # R6-B03: company_name + vc_company_id 이중 중복 검사
+    existing_q = select(BuyerCandidate.company_name, BuyerCandidate.extra_data).where(
+        BuyerCandidate.transaction_id == txn_id,
+    )
     existing_result = await db.execute(existing_q)
-    existing_names = {row[0] for row in existing_result.all()}
+    existing_names: set[str] = set()
+    existing_vc_ids: set[str] = set()
+    for row in existing_result.all():
+        existing_names.add(row[0])
+        if isinstance(row[1], dict):
+            vc_id = row[1].get("vc_company_id")
+            if vc_id:
+                existing_vc_ids.add(str(vc_id))
 
     added_ids: list[uuid.UUID] = []
     skipped = 0
 
     new_buyers: list[tuple[BuyerCandidate, VcCompany]] = []
     for vc in vc_companies:
-        if vc.company_name in existing_names:
+        if vc.company_name in existing_names or str(vc.id) in existing_vc_ids:
             skipped += 1
             continue
         buyer = BuyerCandidate(
@@ -1123,36 +1185,45 @@ async def bulk_add_vc_to_buyers(
             buyer_type=BuyerType.STRATEGIC,
             status=BuyerCandidateStatus.IDENTIFIED,
             notes=f"VC 매핑으로 추가됨 (업종: {vc.industry_name})",
-            extra_data={"vc_company_id": vc.id, "industry_name": vc.industry_name},
+            extra_data={"vc_company_id": str(vc.id), "industry_name": vc.industry_name},
         )
         db.add(buyer)
         new_buyers.append((buyer, vc))
         existing_names.add(vc.company_name)
 
     if new_buyers:
-        await db.flush()
+        try:
+            await db.flush()
+        except SQLAlchemyError:
+            await db.rollback()
+            raise
 
     for buyer, vc in new_buyers:
-        await audit_service.record(
-            db,
-            entity_type="BuyerCandidate",
-            entity_id=buyer.id,
-            action=AuditAction.CREATE,
-            actor_email=actor_email,
-            new_value={"company_name": vc.company_name, "source": "VC_MAPPING"},
-        )
+        try:
+            await audit_service.record(
+                db,
+                entity_type="BuyerCandidate",
+                entity_id=buyer.id,
+                action=AuditAction.CREATE,
+                actor_email=actor_email,
+                new_value={"company_name": vc.company_name, "source": "VC_MAPPING"},
+            )
+        except Exception:
+            logger.exception("VC BuyerCandidate 감사 로그 실패: buyer_id=%s", buyer.id)
         added_ids.append(buyer.id)
 
     await db.commit()
 
     logger.info(
-        "VC BuyerCandidate 일괄 등록 완료: txn_id=%s, 추가=%d건, 중복스킵=%d건",
+        "VC BuyerCandidate 일괄 등록 완료: txn_id=%s, 추가=%d건, 중복스킵=%d건, 미발견=%d건",
         txn_id,
         len(added_ids),
         skipped,
+        len(not_found_ids),
     )
     return BulkAddBuyersResponse(
         added_count=len(added_ids),
         skipped_count=skipped,
+        not_found_count=len(not_found_ids),
         buyer_ids=added_ids,
     )

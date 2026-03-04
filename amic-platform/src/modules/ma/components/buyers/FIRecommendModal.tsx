@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Building2 } from "lucide-react";
 import { Button, EmptyState, Modal, Spinner } from "@/components/ui";
+import { maApi } from "@/api/maClient";
 import { useFIRecommendations } from "@/modules/ma/hooks/usePefRegistry";
-import { useAddBuyer } from "@/modules/ma/hooks/useTransactions";
 import type { FIRecommendation } from "@/modules/ma/types/pef_registry";
 import FIRecommendCard from "./FIRecommendCard";
 
@@ -25,8 +26,9 @@ export default function FIRecommendModal({
     isLoading,
     isError,
   } = useFIRecommendations(txnId);
-  const addBuyer = useAddBuyer(txnId);
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // 모달 열릴 때 선택/확장 초기화
@@ -69,23 +71,45 @@ export default function FIRecommendModal({
       return;
     }
 
-    const results = await Promise.allSettled(
-      toAdd.map((gpName) =>
-        addBuyer.mutateAsync({
-          company_name: gpName,
-          buyer_type: "FINANCIAL_SPONSOR",
-        }),
-      ),
-    );
+    setIsSubmitting(true);
+    try {
+      const results = await Promise.allSettled(
+        toAdd.map((gpName) =>
+          maApi.post(`/transactions/${txnId}/buyers`, {
+            company_name: gpName,
+            buyer_type: "FINANCIAL_SPONSOR",
+          }),
+        ),
+      );
 
-    const added = results.filter((r) => r.status === "fulfilled").length;
-    const failed = toAdd.length - added;
-    if (failed > 0) {
-      toast.error(`${failed}개 GP 추가 실패`);
-    }
-    if (added > 0) {
-      toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
-      onClose();
+      const added = results.filter((r) => r.status === "fulfilled").length;
+      const rejected = results.filter(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
+      const failed = rejected.length;
+      if (added > 0) {
+        qc.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "buyers"],
+        });
+      }
+      if (added > 0 && failed === 0) {
+        toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
+        onClose();
+      } else if (added > 0 && failed > 0) {
+        const reason =
+          rejected[0]?.reason instanceof Error
+            ? rejected[0].reason.message
+            : "알 수 없는 오류";
+        toast.warning(`${added}개 추가 완료, ${failed}개 실패 — ${reason}`);
+      } else if (failed > 0) {
+        const reason =
+          rejected[0]?.reason instanceof Error
+            ? rejected[0].reason.message
+            : "알 수 없는 오류";
+        toast.error(`${failed}개 GP 추가 실패: ${reason}`);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -158,8 +182,8 @@ export default function FIRecommendModal({
           </Button>
           <Button
             onClick={handleAdd}
-            disabled={selected.size === 0}
-            loading={addBuyer.isPending}
+            disabled={selected.size === 0 || isSubmitting}
+            loading={isSubmitting}
           >
             Long List에 추가
           </Button>

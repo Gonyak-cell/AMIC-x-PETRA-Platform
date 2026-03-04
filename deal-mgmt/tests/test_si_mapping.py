@@ -1,7 +1,12 @@
-"""SI(전략적 투자자) 자동 매핑 API + 서비스 테스트."""
+"""SI(전략적 투자자) 자동 매핑 API + 서비스 테스트.
+
+SI 매핑(KSIC 기반)과 VC 매핑(업종 계수 기반)을 모두 커버합니다.
+파일이 커지면 test_si_mapping.py / test_vc_mapping.py로 분리를 고려하세요.
+"""
 
 import json
 import uuid
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -11,7 +16,10 @@ from app.models.io_sector import IOSector
 from app.models.io_transaction import IOTransaction
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.si_company import SICompany
-from app.services.si_mapping_service import _build_ksic_index, _lookup_by_ksic
+from app.services.si_mapping_service import (
+    _build_ksic_index,
+    _lookup_by_ksic,
+)
 
 pytestmark = pytest.mark.anyio
 
@@ -349,6 +357,7 @@ async def test_bulk_add_nonexistent_company(client: AsyncClient, async_session: 
     assert resp.status_code == 201
     body = resp.json()
     assert body["added_count"] == 0
+    assert body["skipped_count"] == 0
 
 
 # ── 접두사 매칭 + 이중 직렬화 방어 테스트 ─────────────────
@@ -480,3 +489,189 @@ async def test_map_prefix_matching_via_api(client: AsyncClient, async_session: A
     body = resp.json()
     peer_names = [p["company_name"] for p in body["direct_peers"]]
     assert "접두사매칭API기업" in peer_names
+
+
+# ══════════════════════════════════════════════════════════
+# 등록번호 기반 VC 매핑 테스트
+# ══════════════════════════════════════════════════════════
+
+
+async def _seed_vc_company(session: AsyncSession) -> int:
+    """테스트용 VcCompany 1건 시드."""
+    from app.models.vc_company import VcCompany
+
+    vc = VcCompany(
+        company_name="테스트전자",
+        industry_name="반도체 제조업",
+        corp_reg_no="110111-1234567",
+        biz_reg_no="101-81-12345",
+        revenue=Decimal("5000.00"),
+    )
+    session.add(vc)
+    await session.flush()
+    return vc.id
+
+
+async def _seed_vc_companies(session: AsyncSession) -> list[int]:
+    """테스트용 VcCompany 3건 시드 (bulk_add 테스트용)."""
+    from app.models.vc_company import VcCompany
+
+    companies = [
+        VcCompany(
+            company_name="VC기업A",
+            industry_name="반도체 제조업",
+            revenue=Decimal("1000.00"),
+        ),
+        VcCompany(
+            company_name="VC기업B",
+            industry_name="화학 제조업",
+            revenue=Decimal("2000.00"),
+        ),
+        VcCompany(
+            company_name="VC기업C",
+            industry_name="전자부품 제조업",
+            revenue=Decimal("3000.00"),
+        ),
+    ]
+    session.add_all(companies)
+    await session.flush()
+    return [c.id for c in companies]
+
+
+async def test_normalize_reg_no_strips_hyphens_spaces() -> None:
+    """_normalize_reg_no가 하이픈과 공백을 모두 제거."""
+    from app.services.si_mapping_service import _normalize_reg_no
+
+    assert _normalize_reg_no("110111-1234567") == "1101111234567"
+    assert _normalize_reg_no("101-81-12345") == "1018112345"
+    assert _normalize_reg_no("110111 1234567") == "1101111234567"
+    assert _normalize_reg_no("110111- 1234567") == "1101111234567"
+    assert _normalize_reg_no("1234567890") == "1234567890"
+
+
+async def test_find_vc_company_by_corp_reg_no(async_session: AsyncSession) -> None:
+    """법인등록번호로 VcCompany를 정확히 조회."""
+    from app.services.si_mapping_service import find_vc_company_by_registration
+
+    await _seed_vc_company(async_session)
+    await async_session.commit()
+
+    # 하이픈 포함 검색
+    result = await find_vc_company_by_registration(async_session, corp_reg_no="110111-1234567")
+    assert result is not None
+    assert result.company_name == "테스트전자"
+    assert result.industry_name == "반도체 제조업"
+    assert result.revenue == Decimal("5000.00")
+
+    # 하이픈 없이 검색
+    result = await find_vc_company_by_registration(async_session, corp_reg_no="1101111234567")
+    assert result is not None
+    assert result.company_name == "테스트전자"
+
+
+async def test_find_vc_company_by_biz_reg_no(async_session: AsyncSession) -> None:
+    """사업자등록번호 fallback 조회."""
+    from app.services.si_mapping_service import find_vc_company_by_registration
+
+    await _seed_vc_company(async_session)
+    await async_session.commit()
+
+    result = await find_vc_company_by_registration(async_session, biz_reg_no="101-81-12345")
+    assert result is not None
+    assert result.company_name == "테스트전자"
+
+
+async def test_find_vc_company_not_found(async_session: AsyncSession) -> None:
+    """등록번호가 없으면 None 반환."""
+    from app.services.si_mapping_service import find_vc_company_by_registration
+
+    result = await find_vc_company_by_registration(async_session, corp_reg_no="999999-9999999")
+    assert result is None
+
+
+async def test_find_vc_company_by_both_reg_nos(async_session: AsyncSession) -> None:
+    """corp_reg_no + biz_reg_no 동시 제공 시 OR 쿼리."""
+    from app.services.si_mapping_service import find_vc_company_by_registration
+
+    await _seed_vc_company(async_session)
+    await async_session.commit()
+
+    result = await find_vc_company_by_registration(
+        async_session,
+        corp_reg_no="110111-1234567",
+        biz_reg_no="101-81-12345",
+    )
+    assert result is not None
+    assert result.company_name == "테스트전자"
+
+
+async def test_normalize_reg_no_edge_cases() -> None:
+    """_normalize_reg_no 경계값 테스트."""
+    from app.services.si_mapping_service import _normalize_reg_no
+
+    assert _normalize_reg_no("") == ""
+    assert _normalize_reg_no("   ") == ""
+    assert _normalize_reg_no("---") == ""
+    assert _normalize_reg_no("- - -") == ""
+
+
+# ── VC → BuyerCandidate 일괄 등록 ─────────────────────────
+
+
+async def test_bulk_add_vc_buyers(
+    client: AsyncClient,
+    async_session: AsyncSession,
+    transaction_id: str,
+) -> None:
+    """VC 기업 → BuyerCandidate 정상 등록."""
+    vc_ids = await _seed_vc_companies(async_session)
+    await async_session.commit()
+    resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/vc-mapping/add-buyers",
+        json={"vc_company_ids": [vc_ids[0], vc_ids[1]]},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["added_count"] == 2
+    assert body["skipped_count"] == 0
+    assert len(body["buyer_ids"]) == 2
+
+
+async def test_bulk_add_vc_buyers_skip_duplicates(
+    client: AsyncClient,
+    async_session: AsyncSession,
+    transaction_id: str,
+) -> None:
+    """VC 기업 중복 등록 시 skip."""
+    vc_ids = await _seed_vc_companies(async_session)
+    await async_session.commit()
+    # 첫 번째 등록
+    await client.post(
+        f"/api/v1/transactions/{transaction_id}/vc-mapping/add-buyers",
+        json={"vc_company_ids": [vc_ids[0]]},
+    )
+    # 두 번째 등록 (중복 + 신규)
+    resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/vc-mapping/add-buyers",
+        json={"vc_company_ids": [vc_ids[0], vc_ids[1]]},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["added_count"] == 1  # vc_ids[1]만 추가
+    assert body["skipped_count"] == 1  # vc_ids[0]은 skip
+
+
+async def test_bulk_add_vc_buyers_not_found(
+    client: AsyncClient,
+    async_session: AsyncSession,
+    transaction_id: str,
+) -> None:
+    """존재하지 않는 VC 기업 ID → not_found."""
+    resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/vc-mapping/add-buyers",
+        json={"vc_company_ids": [999999]},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["added_count"] == 0
+    assert body["not_found_count"] == 1

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 import { cn } from "@/lib/cn";
 import { useKsicSearch } from "@/modules/ma/hooks/useSIMapping";
@@ -16,6 +22,7 @@ export default function KsicSearchInput({
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // 디바운스 (300ms)
@@ -48,6 +55,7 @@ export default function KsicSearchInput({
       }
       setQuery("");
       setIsOpen(false);
+      setHighlightIdx(-1);
     },
     [selectedCodes, onSelect],
   );
@@ -62,6 +70,30 @@ export default function KsicSearchInput({
   // 이미 선택된 코드는 드롭다운에서 제외
   const filteredSuggestions = suggestions.filter(
     (s) => !selectedCodes.find((sc) => sc.code === s.code),
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (!isOpen || filteredSuggestions.length === 0) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightIdx((prev) =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : 0,
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightIdx((prev) =>
+          prev > 0 ? prev - 1 : filteredSuggestions.length - 1,
+        );
+      } else if (e.key === "Enter" && highlightIdx >= 0) {
+        e.preventDefault();
+        handleSelect(filteredSuggestions[highlightIdx]);
+      } else if (e.key === "Escape") {
+        setIsOpen(false);
+        setHighlightIdx(-1);
+      }
+    },
+    [isOpen, filteredSuggestions, highlightIdx, handleSelect],
   );
 
   return (
@@ -82,6 +114,7 @@ export default function KsicSearchInput({
               <button
                 type="button"
                 onClick={() => handleRemove(item.code)}
+                aria-label={`${item.code} ${item.name} 제거`}
                 className="ml-0.5 text-emerald-500 hover:text-emerald-800"
               >
                 &times;
@@ -98,8 +131,10 @@ export default function KsicSearchInput({
         onChange={(e) => {
           setQuery(e.target.value);
           setIsOpen(true);
+          setHighlightIdx(-1);
         }}
         onFocus={() => query.length >= 1 && setIsOpen(true)}
+        onKeyDown={handleKeyDown}
         placeholder="KSIC 코드 또는 산업명 검색 (예: C10, 식료품)"
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
       />
@@ -107,7 +142,7 @@ export default function KsicSearchInput({
       {/* 드롭다운 */}
       {isOpen && filteredSuggestions.length > 0 && (
         <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-          {filteredSuggestions.map((item) => (
+          {filteredSuggestions.map((item, idx) => (
             <li key={item.code}>
               <button
                 type="button"
@@ -115,6 +150,7 @@ export default function KsicSearchInput({
                 className={cn(
                   "w-full px-3 py-2 text-left text-sm hover:bg-emerald-50",
                   "flex items-center gap-2",
+                  idx === highlightIdx && "bg-emerald-50",
                 )}
               >
                 <span className="font-mono text-xs font-semibold text-emerald-600">
