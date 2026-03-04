@@ -78,7 +78,10 @@ async def enrich_from_si_companies(session: AsyncSession) -> int:
         # 배치 단위 벌크 UPDATE
         if len(batch_updates) >= BATCH_SIZE:
             stmt = (
-                update(VcCompany).where(VcCompany.id == bindparam("_vc_id")).values(revenue=bindparam("_revenue_val"))
+                update(VcCompany)
+                .where(VcCompany.id == bindparam("_vc_id"))
+                .values(revenue=bindparam("_revenue_val"))
+                .execution_options(synchronize_session=False)
             )
             await session.execute(stmt, batch_updates)
             batch_updates.clear()
@@ -86,7 +89,12 @@ async def enrich_from_si_companies(session: AsyncSession) -> int:
 
     # 잔여 배치
     if batch_updates:
-        stmt = update(VcCompany).where(VcCompany.id == bindparam("_vc_id")).values(revenue=bindparam("_revenue_val"))
+        stmt = (
+            update(VcCompany)
+            .where(VcCompany.id == bindparam("_vc_id"))
+            .values(revenue=bindparam("_revenue_val"))
+            .execution_options(synchronize_session=False)
+        )
         await session.execute(stmt, batch_updates)
 
     await session.commit()
