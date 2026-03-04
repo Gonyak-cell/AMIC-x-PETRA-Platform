@@ -35,6 +35,8 @@ dependencies = [
     "redis>=5.2.0",
     # Azure Blob Storage (VDR)
     "azure-storage-blob[aio]>=12.20.0",
+    # Fuzzy matching — VcCompany enrichment
+    "rapidfuzz>=3.0.0",
 ]
 
 [project.optional-dependencies]
