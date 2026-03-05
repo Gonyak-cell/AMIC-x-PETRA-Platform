@@ -265,7 +265,7 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     common_shares: "보통주식 수",
     preferred_shares: "종류주식 수",
     business_type: "업태",
-    business_item: "종목",
+    business_item: "사업 목적",
     head_office_address: "본점",
     directors: "임원에 관한 사항",
     corporate_purpose: "목적사항",
