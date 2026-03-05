@@ -7,6 +7,7 @@ Revision ID: 066
 Revises: 065
 """
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = "066"
@@ -18,8 +19,9 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        op.execute("ALTER TYPE docextractioncategory ADD VALUE IF NOT EXISTS 'REGISTRY_DOCS'")
-        op.execute("ALTER TYPE docextractioncategory ADD VALUE IF NOT EXISTS 'BIZ_REG_DOCS'")
+        with op.get_context().autocommit_block():
+            op.execute(sa.text("ALTER TYPE docextractioncategory ADD VALUE IF NOT EXISTS 'REGISTRY_DOCS'"))
+            op.execute(sa.text("ALTER TYPE docextractioncategory ADD VALUE IF NOT EXISTS 'BIZ_REG_DOCS'"))
 
 
 def downgrade() -> None:
