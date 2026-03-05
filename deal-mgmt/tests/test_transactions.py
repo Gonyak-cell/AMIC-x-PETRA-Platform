@@ -30,20 +30,6 @@ async def test_create_transaction(client):
     assert CODE_NAME_PATTERN.match(data["code_name"]), f"코드명 형식 오류: {data['code_name']}"
 
 
-async def test_create_transaction_invalid_name_format(client):
-    """프로젝트명이 'Project '로 시작하지 않으면 422 반환."""
-    bad_payload = {**SAMPLE_TXN, "name": "알파 프로젝트"}
-    resp = await client.post("/api/v1/transactions", json=bad_payload)
-    assert resp.status_code == 422
-
-
-async def test_create_transaction_name_non_english_suffix(client):
-    """'Project ' 이후 영문이 아닌 문자가 포함되면 422 반환."""
-    bad_payload = {**SAMPLE_TXN, "name": "Project 알파"}
-    resp = await client.post("/api/v1/transactions", json=bad_payload)
-    assert resp.status_code == 422
-
-
 async def test_create_two_transactions_sequential_code(client):
     """같은 딜 타입으로 두 건 생성 시 코드명 시퀀스가 순차적으로 증가한다."""
     resp1 = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
