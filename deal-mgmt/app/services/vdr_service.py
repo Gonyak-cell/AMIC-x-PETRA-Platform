@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -385,3 +386,121 @@ async def get_folder_document_counts(
     )
     result = await db.execute(q)
     return {row.folder_id: row.cnt for row in result.all()}
+
+
+# ── 자동 라우팅 업로드 ────────────────────────────────────────
+
+
+async def resolve_folder_by_category(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    category: VdrFolderCategory,
+) -> VdrFolder | None:
+    """카테고리로 최상위 폴더를 조회한다. 없으면 None."""
+    q = select(VdrFolder).where(
+        VdrFolder.transaction_id == transaction_id,
+        VdrFolder.category == category,
+        VdrFolder.parent_id.is_(None),
+    )
+    result = await db.execute(q)
+    return result.scalar_one_or_none()
+
+
+async def resolve_fallback_folder(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> VdrFolder | None:
+    """폴백 폴더를 반환한다. 1차: CORPORATE, 2차: order_index 첫 번째 폴더."""
+    corporate = await resolve_folder_by_category(db, transaction_id, VdrFolderCategory.CORPORATE)
+    if corporate:
+        return corporate
+
+    q = (
+        select(VdrFolder)
+        .where(VdrFolder.transaction_id == transaction_id)
+        .order_by(VdrFolder.order_index, VdrFolder.name)
+        .limit(1)
+    )
+    result = await db.execute(q)
+    return result.scalar_one_or_none()
+
+
+def resolve_unique_filename(original_name: str, has_duplicate: bool) -> str:
+    """중복 시 타임스탬프 접미사를 추가한 파일명을 반환한다.
+
+    마이크로초(%f)까지 포함하여 동일 초 내 동시 업로드 충돌을 방지한다.
+    """
+    if not has_duplicate:
+        return original_name
+    p = Path(original_name)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    return f"{p.stem}_{timestamp}{p.suffix}"
+
+
+async def _check_duplicate_filename(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    original_name: str,
+) -> bool:
+    """동일 폴더 내 동일 파일명의 활성 문서가 존재하면 True."""
+    count = await db.scalar(
+        select(func.count())
+        .select_from(VdrDocument)
+        .where(
+            VdrDocument.transaction_id == transaction_id,
+            VdrDocument.folder_id == folder_id,
+            VdrDocument.original_name == original_name,
+            VdrDocument.status == VdrDocumentStatus.ACTIVE,
+        )
+    )
+    return (count or 0) > 0
+
+
+async def auto_upload_document(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    original_name: str,
+    file_content: bytes,
+    mime_type: str,
+    uploaded_by_email: str | None = None,
+    description: str | None = None,
+) -> tuple[VdrDocument, VdrFolder, VdrFolderCategory | None]:
+    """파일을 분석하여 자동으로 폴더를 선택해 업로드한다.
+
+    Returns:
+        (업로드된 문서, 라우팅된 폴더, 라우팅 카테고리 또는 폴백 시 None)
+    """
+    from app.services.vdr_categorization_service import auto_route
+
+    ext = Path(original_name).suffix.lower()
+    routed_category = auto_route(original_name, ext, mime_type, len(file_content))
+
+    folder: VdrFolder | None = None
+
+    if routed_category is not None:
+        folder = await resolve_folder_by_category(db, transaction_id, routed_category)
+
+    if folder is None:
+        folder = await resolve_fallback_folder(db, transaction_id)
+        routed_category = None  # 폴백 사용 시 None으로 표시
+
+    if folder is None:
+        raise ValueError("VDR이 초기화되지 않았습니다. 먼저 폴더 구조를 초기화해 주세요.")
+
+    has_dup = await _check_duplicate_filename(db, transaction_id, folder.id, original_name)
+    final_name = resolve_unique_filename(original_name, has_dup)
+
+    doc = await upload_document(
+        db,
+        transaction_id=transaction_id,
+        folder_id=folder.id,
+        original_name=final_name,
+        file_content=file_content,
+        mime_type=mime_type,
+        uploaded_by_email=uploaded_by_email,
+        description=description,
+    )
+
+    # routed_category=None 이면 폴백 사용, 라우터에서 VdrAutoUploadResult 조립 시 참조
+    return doc, folder, routed_category

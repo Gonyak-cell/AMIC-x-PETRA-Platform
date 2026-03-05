@@ -110,3 +110,16 @@ class VdrOverviewItem(BaseModel):
     total_documents: int
     total_size_bytes: int
     last_upload_at: datetime | None
+
+
+class VdrAutoUploadResult(BaseModel):
+    """자동 라우팅 업로드 결과."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    document: VdrDocumentOut
+    routed_folder: VdrFolderOut
+    routed_category: VdrFolderCategory | None
+    was_fallback: bool
+    original_name_renamed: bool
+    final_name: str

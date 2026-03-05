@@ -433,3 +433,106 @@ class TestVdrOverview:
         assert item["total_documents"] == 1
         assert item["total_size_bytes"] == len(content)
         assert item["last_upload_at"] is not None
+
+
+# ── Auto Upload ───────────────────────────────────────────────
+
+
+class TestVdrAutoUpload:
+    async def test_auto_upload_financial_xlsx_routes_to_financial(self, client: AsyncClient, transaction_id: str):
+        """재무제표.xlsx → FINANCIAL 폴더 자동 라우팅."""
+        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+
+        content = b"fake xlsx content for test"
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={
+                "file": (
+                    "재무제표_2024.xlsx",
+                    io.BytesIO(content),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["routed_category"] == "FINANCIAL"
+        assert data["was_fallback"] is False
+        assert data["routed_folder"]["category"] == "FINANCIAL"
+        assert data["document"]["original_name"] == "재무제표_2024.xlsx"
+        assert data["original_name_renamed"] is False
+
+    async def test_auto_upload_unknown_file_uses_fallback(self, client: AsyncClient, transaction_id: str):
+        """분류 불가 파일 → CORPORATE 폴백."""
+        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+
+        content = b"random content"
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": ("xyzabc_random_doc.pdf", io.BytesIO(content), "application/pdf")},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["was_fallback"] is True
+        assert data["routed_category"] is None
+        assert data["routed_folder"]["category"] == "CORPORATE"
+
+    async def test_auto_upload_duplicate_renames_file(self, client: AsyncClient, transaction_id: str):
+        """동일 파일명 두 번 업로드 → 두 번째는 타임스탬프 접미사."""
+        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+
+        content = b"pdf content"
+        filename = "계약서.pdf"
+
+        # 첫 번째 업로드
+        resp1 = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": (filename, io.BytesIO(content), "application/pdf")},
+        )
+        assert resp1.status_code == 201
+        assert resp1.json()["original_name_renamed"] is False
+
+        # 두 번째 업로드 (동일 파일명 동일 폴더)
+        resp2 = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": (filename, io.BytesIO(content), "application/pdf")},
+        )
+        assert resp2.status_code == 201
+        data2 = resp2.json()
+        assert data2["original_name_renamed"] is True
+        # 파일명이 변경됨 (타임스탬프 포함)
+        assert data2["final_name"] != filename
+        assert "계약서_" in data2["final_name"]
+
+    async def test_auto_upload_vdr_not_initialized_returns_400(self, client: AsyncClient, transaction_id: str):
+        """VDR 미초기화 시 400 Bad Request."""
+        # VDR init 없이 바로 auto-upload
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": ("test.pdf", io.BytesIO(b"content"), "application/pdf")},
+        )
+        assert resp.status_code == 400
+        assert "초기화" in resp.json()["detail"]
+
+    async def test_auto_upload_hwp_routes_to_tax(self, client: AsyncClient, transaction_id: str):
+        """.hwp + 납세 키워드 → TAX 폴더."""
+        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+
+        content = b"hwp content"
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": ("납세증명서.hwp", io.BytesIO(content), "application/haansofthwp")},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["routed_category"] == "TAX"
+        assert data["was_fallback"] is False
+
+    async def test_auto_upload_invalid_extension_returns_400(self, client: AsyncClient, transaction_id: str):
+        """허용되지 않는 확장자 → 400."""
+        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
+            files={"file": ("virus.exe", io.BytesIO(b"MZ"), "application/pdf")},
+        )
+        assert resp.status_code == 400

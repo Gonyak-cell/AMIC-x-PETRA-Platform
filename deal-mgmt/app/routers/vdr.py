@@ -18,6 +18,7 @@ from app.models.enums import VdrDocumentStatus
 from app.models.transaction import Transaction
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import (
+    VdrAutoUploadResult,
     VdrDocumentOut,
     VdrDocumentUpdate,
     VdrFolderCreate,
@@ -48,6 +49,20 @@ _ALLOWED_MIME_TYPES = {
     "text/plain",
     "text/csv",
     "application/zip",
+    # 신규: M&A 실사 특화 포맷
+    "application/haansofthwp",  # .hwp
+    "application/x-hwp",  # .hwp 변형
+    "image/vnd.dwg",  # .dwg
+    "application/dxf",  # .dxf
+    "application/x-tar",  # .tar
+    "application/gzip",  # .gz
+    "application/json",  # .json
+    # NOTE: application/octet-stream은 의도적으로 제외.
+    # .dwg/.shp 등은 _EXTENSION_MIME_MAP에서 확장자별로만 허용.
+    "application/vnd.google-earth.kml+xml",  # .kml
+    "application/x-iwork-keynote-sffkey",  # .key
+    "message/rfc822",  # .eml
+    "application/vnd.ms-outlook",  # .msg
 }
 
 # 최대 파일 크기: 100MB
@@ -68,8 +83,68 @@ _EXTENSION_MIME_MAP: dict[str, set[str]] = {
     ".txt": {"text/plain"},
     ".csv": {"text/csv", "text/plain"},
     ".zip": {"application/zip"},
+    # 신규: M&A 실사 특화 포맷
+    ".hwp": {"application/haansofthwp", "application/x-hwp"},
+    ".dwg": {"image/vnd.dwg", "application/octet-stream"},
+    ".dxf": {"application/dxf", "application/octet-stream"},
+    ".tar": {"application/x-tar"},
+    ".gz": {"application/gzip"},
+    ".sql": {"text/plain"},
+    ".json": {"application/json"},
+    ".shp": {"application/octet-stream"},
+    ".kml": {"application/vnd.google-earth.kml+xml"},
+    ".key": {"application/x-iwork-keynote-sffkey"},
+    ".eml": {"message/rfc822"},
+    ".msg": {"application/vnd.ms-outlook"},
 }
 _ALLOWED_EXTENSIONS = frozenset(_EXTENSION_MIME_MAP.keys())
+
+
+async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
+    """업로드 파일의 확장자·MIME·크기를 검증하고 콘텐츠를 읽는다.
+
+    검증 순서:
+      1) 확장자 화이트리스트 (`_ALLOWED_EXTENSIONS`)
+      2) MIME 검증: 확장자별 매핑 우선, 없으면 전역 화이트리스트 폴백
+      3) 파일 크기 (`_MAX_FILE_SIZE`)
+
+    Returns:
+        (filename, ext, content_type, content)
+    """
+    filename = file.filename or "untitled"
+    ext = Path(filename).suffix.lower()
+
+    # 1) 확장자 화이트리스트 검증
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않는 파일 확장자입니다: {ext}",
+        )
+
+    # 2) MIME 검증: 확장자별 매핑이 있으면 교차 검증, 없으면 전역 화이트리스트
+    content_type = file.content_type or "application/octet-stream"
+    expected_mimes = _EXTENSION_MIME_MAP.get(ext)
+    if expected_mimes:
+        if content_type not in expected_mimes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"파일 확장자({ext})와 MIME 타입({content_type})이 일치하지 않습니다.",
+            )
+    elif content_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않는 파일 형식입니다: {content_type}",
+        )
+
+    # 3) 파일 크기 검증
+    content = await file.read()
+    if len(content) > _MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
+        )
+
+    return filename, ext, content_type, content
 
 
 async def _get_and_authorize_txn(
@@ -231,45 +306,14 @@ async def upload_document(
 ):
     """VDR에 파일을 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
-
-    # 1) 확장자 화이트리스트 검증
-    filename = file.filename or "untitled"
-    ext = Path(filename).suffix.lower()
-    if ext not in _ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"허용되지 않는 파일 확장자입니다: {ext}",
-        )
-
-    # 2) MIME 타입 화이트리스트 검증
-    content_type = file.content_type or "application/octet-stream"
-    if content_type not in _ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"허용되지 않는 파일 형식입니다: {content_type}",
-        )
-
-    # 3) 확장자-MIME 교차 검증 (MIME 조작 방어)
-    expected_mimes = _EXTENSION_MIME_MAP.get(ext)
-    if expected_mimes and content_type not in expected_mimes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"파일 확장자({ext})와 MIME 타입({content_type})이 일치하지 않습니다.",
-        )
-
-    content = await file.read()
-    if len(content) > _MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
-        )
+    filename, _ext, content_type, content = await _validate_upload(file)
 
     try:
         doc = await vdr_service.upload_document(
             db=db,
             transaction_id=txn_id,
             folder_id=folder_id,
-            original_name=file.filename or "untitled",
+            original_name=filename,
             file_content=content,
             mime_type=content_type,
             uploaded_by_email=claims.email,
@@ -430,3 +474,52 @@ async def suggest_folder_category(
         "suggested_category": category.value,
         "suggested_folder_id": str(folder_id) if folder_id else None,
     }
+
+
+# ── 자동 라우팅 업로드 ────────────────────────────────────────
+
+
+@router.post(
+    "/documents/auto-upload",
+    response_model=VdrAutoUploadResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def auto_upload_document(
+    txn_id: uuid.UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """파일을 분석하여 적합한 VDR 폴더에 자동으로 업로드한다.
+
+    폴더 선택 없이 파일명·확장자·MIME·정규식을 다차원 스코어링으로 분석하여
+    최적 폴더를 자동 선택한다. 매칭 폴더 없으면 CORPORATE(또는 첫 폴더)에 폴백.
+    """
+    await _get_and_authorize_txn(db, txn_id, claims)
+    filename, _ext, content_type, content = await _validate_upload(file)
+
+    try:
+        doc, folder, routed_category = await vdr_service.auto_upload_document(
+            db=db,
+            transaction_id=txn_id,
+            original_name=filename,
+            file_content=content,
+            mime_type=content_type,
+            uploaded_by_email=claims.email,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    was_fallback = routed_category is None
+    original_name_renamed = doc.original_name != filename
+
+    return VdrAutoUploadResult(
+        document=VdrDocumentOut.model_validate(doc),
+        routed_folder=VdrFolderOut.model_validate(folder),
+        routed_category=routed_category,
+        was_fallback=was_fallback,
+        original_name_renamed=original_name_renamed,
+        final_name=doc.original_name,
+    )
