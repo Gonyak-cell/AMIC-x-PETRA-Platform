@@ -13,9 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.db.models.audit import AuditLog
 from src.api.db.session import get_async_session
+from src.api.dependencies import get_current_user
 from src.api.schemas.audit import AuditLogListResponse, AuditLogRead
 
-router = APIRouter(prefix="/api/v1/audit-logs", tags=["Audit"])
+router = APIRouter(
+    prefix="/api/v1/audit-logs",
+    tags=["Audit"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 async def _list_audit_logs(

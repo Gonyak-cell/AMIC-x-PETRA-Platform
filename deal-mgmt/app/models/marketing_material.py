@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,7 +35,7 @@ class MarketingMaterial(Base, TimestampMixin):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 콘텐츠 파라미터 (memo_generator content JSON) ───────────
-    parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    parameters: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # ── 생성된 파일 정보 ───────────────────────────────────────
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -43,7 +43,9 @@ class MarketingMaterial(Base, TimestampMixin):
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # ── 배포 추적 ──────────────────────────────────────────────
-    distributed_to: Mapped[list | None] = mapped_column(JSONB, nullable=True)  # ["회사명/이메일", ...]
+    distributed_to: Mapped[list | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )  # ["회사명/이메일", ...]
     distributed_at: Mapped[str | None] = mapped_column(String(50), nullable=True)  # ISO datetime string
 
     # ── 생성자 ─────────────────────────────────────────────────

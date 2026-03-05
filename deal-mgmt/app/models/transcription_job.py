@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Enum, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,7 +34,7 @@ class TranscriptionJob(Base, TimestampMixin):
     )
 
     # 참석자 (사용자 입력, JSON 배열)
-    attendees_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    attendees_json: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 오디오 파일
     audio_file_path: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -52,7 +52,7 @@ class TranscriptionJob(Base, TimestampMixin):
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # LLM 구조화 결과
-    minutes_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    minutes_json: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 확정된 미팅 로그 (approve 후)
     meeting_log_id: Mapped[uuid.UUID | None] = mapped_column(

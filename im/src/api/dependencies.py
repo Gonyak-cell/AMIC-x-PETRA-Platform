@@ -61,8 +61,15 @@ async def get_current_user(
     Raises:
         AuthenticationError: 인증 정보가 없거나 유효하지 않은 경우.
     """
-    # Dev 모드: 인증 우회
+    # Dev 모드: 인증 우회 (프로덕션 환경에서는 차단)
     if not get_config().auth_enabled:
+        import os
+
+        _env = os.getenv("ENV", "").lower()
+        if _env not in ("local", "dev", "test"):
+            raise RuntimeError(
+                f"CRITICAL: AUTH_ENABLED=False is only allowed in local/dev/test, got ENV={_env!r}"
+            )
         return _dev_user()
 
     # Authorization 헤더 없으면 쿠키 폴백

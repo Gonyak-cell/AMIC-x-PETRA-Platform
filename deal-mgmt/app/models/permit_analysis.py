@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, Uuid
+from sqlalchemy import JSON, Enum, ForeignKey, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,8 +29,8 @@ class PermitAnalysis(Base, TimestampMixin):
         default=PermitAnalysisStatus.PENDING,
     )
     # 입력 데이터
-    business_types: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    existing_permits: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    business_types: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    existing_permits: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     # 분석 메타
     analysis_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
     llm_cost_usd: Mapped[float | None] = mapped_column(Numeric(8, 4), nullable=True)

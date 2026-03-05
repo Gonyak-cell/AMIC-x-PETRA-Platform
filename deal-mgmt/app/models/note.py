@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, Enum, ForeignKey, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,5 +20,5 @@ class DealNote(Base, TimestampMixin):
     note_type: Mapped[NoteType] = mapped_column(Enum(NoteType), nullable=False, default=NoteType.COMMENT)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("deal_notes.id"), nullable=True)
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    mentions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    attachments: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    mentions: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    attachments: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)

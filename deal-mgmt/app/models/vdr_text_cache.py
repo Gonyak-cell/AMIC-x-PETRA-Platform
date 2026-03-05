@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,8 +28,8 @@ class VdrTextCache(Base, TimestampMixin):
     sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)  # pdf, docx, xlsx
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tables_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    ddrl_sections: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    tables_json: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    ddrl_sections: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     text_length: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_valid: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

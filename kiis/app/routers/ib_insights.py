@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.redis import get_redis
-from app.core.security import get_current_active_user
+from app.core.security import get_current_active_user, get_jwt_claims
 from app.models.ib_article import (
     IB_CRAWL_LOCK_KEY,
     IB_CRAWL_LOCK_TTL,
@@ -34,7 +34,7 @@ IBSourceFilter = Literal["investchosun", "dealsite", "ibtomato", "bloter"]
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_jwt_claims)])
 
 # 서비스 싱글턴 (lifespan에서 관리하지 않으므로 lazy init)
 _crawl_service: IBCrawlService | None = None

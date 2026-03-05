@@ -134,8 +134,8 @@ async def get_jwt_claims(
         sub: str | None = payload.get("sub")
         if sub is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
 
     claims = JWTClaims(
         user_id=sub,
@@ -177,8 +177,8 @@ async def get_current_user(
         sub: str | None = payload.get("sub")
         if sub is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
 
     # 2. sub가 UUID이면 FDD 토큰 → email로 KIIS User 조회
     if _is_uuid(sub):

@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,10 +47,10 @@ class MeetingLog(Base, TimestampMixin):
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 제공 자료 목록 [{name, description?, url?}]
-    provided_materials: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    provided_materials: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 첨부파일
-    attachments: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    attachments: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 마케팅 전용: 매수인 연결
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(

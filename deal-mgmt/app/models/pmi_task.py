@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,6 @@ class PMITask(Base, TimestampMixin):
     start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     due_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     completed_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    dependency_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    dependency_ids: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

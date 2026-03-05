@@ -83,9 +83,9 @@ async def get_jwt_claims(
         sub: str | None = payload.get("sub")
         if sub is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as exc:
         logger.debug("JWT decode failed", exc_info=True)
-        raise credentials_exception
+        raise credentials_exception from exc
 
     return JWTClaims(
         user_id=sub,

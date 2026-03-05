@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,7 +35,7 @@ class RFIItem(Base, TimestampMixin):
 
     # 응답
     response: Mapped[str | None] = mapped_column(Text, nullable=True)
-    response_documents: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    response_documents: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     responded_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
@@ -56,7 +56,7 @@ class RFIItem(Base, TimestampMixin):
     source_ref_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # VDR 연결
-    vdr_document_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    vdr_document_ids: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # 메모
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

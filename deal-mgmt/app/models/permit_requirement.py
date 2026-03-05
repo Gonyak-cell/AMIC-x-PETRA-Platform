@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, Numeric, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,7 +40,7 @@ class PermitRequirement(Base, TimestampMixin):
     post_filing_deadline_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     calculated_deadline: Mapped[str | None] = mapped_column(String(10), nullable=True)
     # 필요 서류
-    required_documents: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    required_documents: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     # 상태 추적
     status: Mapped[PermitRequirementStatus] = mapped_column(
         Enum(PermitRequirementStatus),
