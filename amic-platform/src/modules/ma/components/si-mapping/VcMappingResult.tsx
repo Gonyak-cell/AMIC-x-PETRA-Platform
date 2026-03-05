@@ -283,7 +283,7 @@ export default function VcMappingResult({
               bulkAddMutation.reset();
               tablistRef.current
                 ?.querySelectorAll<HTMLButtonElement>("[role=tab]")
-                [nextIdx]?.focus();
+                ?.[nextIdx]?.focus();
             }}
             className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === key
