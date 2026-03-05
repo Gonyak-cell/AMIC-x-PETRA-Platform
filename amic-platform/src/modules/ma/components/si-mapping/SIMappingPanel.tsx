@@ -17,6 +17,7 @@ import SICandidateTable from "./SICandidateTable";
 import SIDetailPanel from "./SIDetailPanel";
 import ValueChainDiagram from "./ValueChainDiagram";
 import VcMappingResult from "./VcMappingResult";
+import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 
 interface SIMappingPanelProps {
   txnId: string;
@@ -229,7 +230,7 @@ export default function SIMappingPanel({
         {/* 본문 (스크롤) */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {/* VC 자동 매핑 (법인정보 기반) */}
-          {hasRegNo && (
+          {hasRegNo ? (
             <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50/30 p-4">
               <h3 className="mb-2 text-sm font-semibold text-emerald-800">
                 법인정보 기반 Value Chain 매핑
@@ -262,6 +263,20 @@ export default function SIMappingPanel({
                   mapping={vcResult.mapping}
                 />
               )}
+            </div>
+          ) : (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50/30 p-4">
+              <div className="mb-3">
+                <h3 className="mb-0.5 text-sm font-semibold text-amber-800">
+                  법인정보 기반 Value Chain 매핑
+                </h3>
+                <p className="text-xs text-amber-700">
+                  자동 매핑을 위해 법인등기부등본 또는 사업자등록증을
+                  업로드하세요. 업로드 후 Overview의 법인 정보도 자동으로
+                  업데이트됩니다.
+                </p>
+              </div>
+              <EngagementDocUpload txnId={txnId} />
             </div>
           )}
 
