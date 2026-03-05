@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.models.enums import VdrFolderCategory
@@ -11,7 +11,13 @@ from app.models.enums import VdrFolderCategory
 
 @dataclass
 class FolderRule:
-    """VDR 폴더 자동 분류 규칙."""
+    """VDR 폴더 자동 분류 규칙.
+
+    Attributes:
+        personal_info_flag: True이면 정규식 패턴이 주민등록번호 등 개인정보를
+            포함한다는 것을 의미한다. 현재 HR 카테고리에만 설정되며,
+            향후 개인정보 감지·경고 기능 확장 시 활용 예정.
+    """
 
     category: VdrFolderCategory
     keywords: list[str]  # 파일명 포함 시 +60점 (첫 매칭)
@@ -22,6 +28,11 @@ class FolderRule:
     size_bonus_score: int  # 크기 보너스 점수
     personal_info_flag: bool = False  # HR: 주민번호 패턴 매칭 시 개인정보 플래그
     tiebreak_group: int = 3  # 1=도메인특화, 2=재무/세무, 3=기타
+    # __post_init__에서 regex_patterns를 사전 컴파일하여 채운다.
+    compiled_patterns: list[re.Pattern[str]] = field(default_factory=list, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.compiled_patterns = [re.compile(p) for p in self.regex_patterns]
 
 
 # ── 카테고리별 분류 규칙 (12개) ──────────────────────────────────────────────
@@ -54,7 +65,7 @@ _FOLDER_RULES: list[FolderRule] = [
             "corporate",
             "articles",
             # 추가
-            "조직도",
+            "조직도",  # NOTE: HR에도 동일 키워드 존재. 동점 시 tiebreak로 HR(G1) 우선.
             "주권",
             "사업자등록증",
             "주주총회",
@@ -128,7 +139,6 @@ _FOLDER_RULES: list[FolderRule] = [
             "납세증명",
             "원천징수",
             "지방세",
-            "Tax",
             "NTS",
             "홈택스",
         ],
@@ -155,7 +165,7 @@ _FOLDER_RULES: list[FolderRule] = [
             "근로계약",
             "퇴직",
             "인원현황",
-            "조직도",
+            "조직도",  # NOTE: CORPORATE에도 동일 키워드 존재. 동점 시 tiebreak로 HR(G1) 우선.
             "HR",
             "employment",
             "payroll",
@@ -166,7 +176,6 @@ _FOLDER_RULES: list[FolderRule] = [
             "징계",
             "퇴직금",
             "4대보험",
-            "Payroll",
         ],
         preferred_extensions={".xlsx", ".pdf", ".docx"},
         preferred_mimes={
@@ -198,7 +207,6 @@ _FOLDER_RULES: list[FolderRule] = [
             "건축물대장",
             "고정자산",
             "설비명세",
-            "Lease",
         ],
         preferred_extensions={".pdf", ".docx", ".dwg", ".dxf"},
         preferred_mimes={
@@ -228,8 +236,6 @@ _FOLDER_RULES: list[FolderRule] = [
             "발명",
             "특허증",
             "출원",
-            "Patent",
-            "Trademark",
         ],
         preferred_extensions={".pdf", ".docx"},
         preferred_mimes={"application/pdf"},
@@ -311,8 +317,6 @@ _FOLDER_RULES: list[FolderRule] = [
             "산재보험",
             "화재보험",
             "임원배상",
-            "Insurance",
-            "Policy",
         ],
         preferred_extensions={".pdf", ".docx"},
         preferred_mimes={"application/pdf"},
@@ -373,8 +377,6 @@ _FOLDER_RULES: list[FolderRule] = [
             # 추가
             "판결문",
             "인허가",
-            "Agreement",
-            "Contract",
         ],
         preferred_extensions={".pdf", ".docx", ".eml", ".msg"},
         preferred_mimes={
@@ -438,7 +440,7 @@ def _keyword_matches(kw_lower: str, name_lower: str) -> bool:
     영문 글자(a-zA-Z) 경계만 확인하는 lookaround를 사용한다.
     """
     if len(kw_lower) <= _SHORT_KW_BOUNDARY_LEN and kw_lower.isascii():
-        return bool(re.search(rf"(?<![a-zA-Z]){re.escape(kw_lower)}(?![a-zA-Z])", name_lower, re.IGNORECASE))
+        return bool(re.search(rf"(?<![a-zA-Z]){re.escape(kw_lower)}(?![a-zA-Z])", name_lower))
     return kw_lower in name_lower
 
 
@@ -487,8 +489,9 @@ def score_document(
             score += 20
 
         # 3) 정규식 패턴 매칭: +20점 (파일명, 첫 매칭에서 중단)
-        for pattern in rule.regex_patterns:
-            if re.search(pattern, filename):
+        #    compiled_patterns는 __post_init__에서 사전 컴파일됨
+        for compiled in rule.compiled_patterns:
+            if compiled.search(filename):
                 score += 20
                 break
 

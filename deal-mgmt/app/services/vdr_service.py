@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -208,11 +207,22 @@ async def upload_document(
     mime_type: str,
     uploaded_by_email: str | None = None,
     description: str | None = None,
+    *,
+    _folder_verified: bool = False,
 ) -> VdrDocument:
-    """파일을 Azure Blob(또는 로컬 폴백)에 저장하고 메타데이터를 DB에 기록한다."""
-    await get_folder(db, transaction_id, folder_id)
+    """파일을 Azure Blob(또는 로컬 폴백)에 저장하고 메타데이터를 DB에 기록한다.
 
-    sha256 = hashlib.sha256(file_content).hexdigest()
+    Args:
+        _folder_verified: True이면 폴더 존재 확인을 건너뛴다.
+            auto_upload_document()처럼 이미 폴더를 검증한 호출자 전용.
+    """
+    if not _folder_verified:
+        await get_folder(db, transaction_id, folder_id)
+
+    import asyncio
+
+    sha256 = await asyncio.to_thread(hashlib.sha256, file_content)
+    sha256_hex = sha256.hexdigest()
 
     ext = Path(original_name).suffix.lower()
     stored_name = f"{uuid.uuid4()}{ext}"
@@ -229,7 +239,7 @@ async def upload_document(
         file_path=blob_name,
         file_size_bytes=len(file_content),
         mime_type=mime_type,
-        sha256_hash=sha256,
+        sha256_hash=sha256_hex,
         uploaded_by_email=uploaded_by_email,
         description=description,
     )
@@ -426,15 +436,15 @@ async def resolve_fallback_folder(
 
 
 def resolve_unique_filename(original_name: str, has_duplicate: bool) -> str:
-    """중복 시 타임스탬프 접미사를 추가한 파일명을 반환한다.
+    """중복 시 uuid4 접미사를 추가한 파일명을 반환한다.
 
-    마이크로초(%f)까지 포함하여 동일 초 내 동시 업로드 충돌을 방지한다.
+    uuid4 12자리를 사용하여 TOCTOU 경쟁 조건에서도 충돌을 방지한다.
     """
     if not has_duplicate:
         return original_name
     p = Path(original_name)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    return f"{p.stem}_{timestamp}{p.suffix}"
+    suffix_id = uuid.uuid4().hex[:12]
+    return f"{p.stem}_{suffix_id}{p.suffix}"
 
 
 async def _check_duplicate_filename(
@@ -500,6 +510,7 @@ async def auto_upload_document(
         mime_type=mime_type,
         uploaded_by_email=uploaded_by_email,
         description=description,
+        _folder_verified=True,
     )
 
     # routed_category=None 이면 폴백 사용, 라우터에서 VdrAutoUploadResult 조립 시 참조

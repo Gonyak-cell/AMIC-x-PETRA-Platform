@@ -140,6 +140,11 @@ async def setup_database():
     fi_rate_limiter.clear()
     si_rate_limiter.clear()
 
+    # VDR 업로드 Rate limiter 리셋
+    from app.routers.vdr import _upload_limiter
+
+    _upload_limiter.clear()
+
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

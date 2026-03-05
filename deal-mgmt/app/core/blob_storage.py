@@ -109,7 +109,7 @@ class BlobStorageClient:
             if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
                 raise ValueError(f"경로 순회 시도 감지: {blob_name}")
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
+            await asyncio.to_thread(path.write_bytes, data)
             return blob_name
 
         from azure.storage.blob import ContentSettings
@@ -128,7 +128,7 @@ class BlobStorageClient:
             path = (_LOCAL_STORAGE_DIR / blob_name).resolve()
             if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
                 raise ValueError(f"경로 순회 시도 감지: {blob_name}")
-            return path.read_bytes()
+            return await asyncio.to_thread(path.read_bytes)
 
         blob_client = self._container_client.get_blob_client(blob_name)
         stream = await blob_client.download_blob()

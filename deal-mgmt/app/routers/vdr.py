@@ -6,13 +6,14 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
+from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import VdrDocumentStatus
 from app.models.transaction import Transaction
@@ -99,6 +100,9 @@ _EXTENSION_MIME_MAP: dict[str, set[str]] = {
 }
 _ALLOWED_EXTENSIONS = frozenset(_EXTENSION_MIME_MAP.keys())
 
+# VDR 업로드 엔드포인트 Rate Limiter (분당 20건/사용자)
+_upload_limiter = InMemoryRateLimiter(max_calls=20, window_seconds=60.0)
+
 
 async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
     """업로드 파일의 확장자·MIME·크기를 검증하고 콘텐츠를 읽는다.
@@ -111,7 +115,9 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
     Returns:
         (filename, ext, content_type, content)
     """
-    filename = file.filename or "untitled"
+    # 경로 탐색 방지: 파일명에서 디렉토리 구성 요소 제거
+    raw_name = file.filename or "untitled"
+    filename = Path(raw_name).name
     ext = Path(filename).suffix.lower()
 
     # 1) 확장자 화이트리스트 검증
@@ -136,7 +142,14 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
             detail=f"허용되지 않는 파일 형식입니다: {content_type}",
         )
 
-    # 3) 파일 크기 검증
+    # 3) 파일 크기 사전검증 (Content-Length 헤더 기반, OOM 방어)
+    if file.size is not None and file.size > _MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
+        )
+
+    # 4) 파일 크기 실측 검증 (Content-Length 조작 방어)
     content = await file.read()
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(
@@ -306,6 +319,7 @@ async def upload_document(
 ):
     """VDR에 파일을 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
     filename, _ext, content_type, content = await _validate_upload(file)
 
     try:
@@ -377,7 +391,7 @@ async def download_document(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(doc.original_name)}"},
         )
 
-    sas_url = blob_client.generate_sas_url(doc.file_path, expiry_minutes=60)
+    sas_url = blob_client.generate_sas_url(doc.file_path, expiry_minutes=15)
     return RedirectResponse(url=sas_url, status_code=307)
 
 
@@ -446,7 +460,7 @@ def _build_tree(
 @router.post("/suggest-category")
 async def suggest_folder_category(
     txn_id: uuid.UUID,
-    filename: str,
+    filename: str = Query(..., max_length=500),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> dict:
@@ -459,20 +473,12 @@ async def suggest_folder_category(
     if category is None:
         return {"suggested_category": None, "suggested_folder_id": None}
 
-    # 해당 카테고리의 폴더 ID 조회
-    from sqlalchemy import select as sa_select
-
-    q = sa_select(VdrFolder.id).where(
-        VdrFolder.transaction_id == txn_id,
-        VdrFolder.category == category,
-        VdrFolder.parent_id.is_(None),
-    )
-    result = await db.execute(q)
-    folder_id = result.scalar_one_or_none()
+    # 해당 카테고리의 폴더 ID를 vdr_service를 통해 조회
+    folder = await vdr_service.resolve_folder_by_category(db, txn_id, category)
 
     return {
         "suggested_category": category.value,
-        "suggested_folder_id": str(folder_id) if folder_id else None,
+        "suggested_folder_id": str(folder.id) if folder else None,
     }
 
 
@@ -496,6 +502,7 @@ async def auto_upload_document(
     최적 폴더를 자동 선택한다. 매칭 폴더 없으면 CORPORATE(또는 첫 폴더)에 폴백.
     """
     await _get_and_authorize_txn(db, txn_id, claims)
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
     filename, _ext, content_type, content = await _validate_upload(file)
 
     try:

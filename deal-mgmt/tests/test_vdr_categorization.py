@@ -5,7 +5,11 @@ from __future__ import annotations
 import pytest
 
 from app.models.enums import VdrFolderCategory
-from app.services.vdr_categorization_service import auto_route, score_document, suggest_category
+from app.services.vdr_categorization_service import (
+    auto_route,
+    score_document,
+    suggest_category,
+)
 
 # ── score_document ────────────────────────────────────────────
 
@@ -216,3 +220,79 @@ class TestEdgeCases:
         ext = "." + filename.rsplit(".", 1)[-1]
         result = auto_route(filename, ext, "application/octet-stream", 0)
         assert result == expected
+
+
+# ── _keyword_matches 단어 경계 매칭 (L-9) ──────────────────────
+
+
+class TestKeywordMatches:
+    """짧은 ASCII 키워드의 단어 경계 매칭 검증."""
+
+    def test_short_keyword_exact_match(self) -> None:
+        """'BS'가 독립 단어로 존재하면 매칭."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("bs", "bs_report.pdf") is True
+
+    def test_short_keyword_in_longer_word_no_match(self) -> None:
+        """'BS'가 'business'의 부분 문자열이면 매칭 안 됨."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("bs", "business_plan.pdf") is False
+
+    def test_short_keyword_with_underscore_prefix(self) -> None:
+        """'IT'가 '_IT_'처럼 비영문 문자로 감싸이면 매칭."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("it", "my_it_report.pdf") is True
+
+    def test_short_keyword_with_hangul_boundary(self) -> None:
+        """'ESG'가 한글 문자 경계에서 매칭 (ESG_보고서)."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("esg", "esg_보고서.pdf") is True
+
+    def test_long_keyword_substring_match(self) -> None:
+        """4글자 이상 키워드는 단순 부분 문자열 매칭."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("financial", "financial_report.pdf") is True
+
+    def test_korean_keyword_substring_match(self) -> None:
+        """한글 키워드는 부분 문자열 매칭."""
+        from app.services.vdr_categorization_service import _keyword_matches
+
+        assert _keyword_matches("재무", "재무제표_2024.xlsx") is True
+
+
+# ── _MIN_SCORE_TO_ROUTE 경계 테스트 (L-10) ─────────────────────
+
+
+class TestMinScoreThreshold:
+    """확장자/MIME만 매칭(20점)인 경우 라우팅 안 됨 확인."""
+
+    def test_extension_only_match_below_threshold(self) -> None:
+        """키워드 없이 확장자만 매칭되면 None (20점 < _MIN_SCORE_TO_ROUTE)."""
+        from app.services.vdr_categorization_service import _MIN_SCORE_TO_ROUTE
+
+        assert _MIN_SCORE_TO_ROUTE == 60  # 현재 기준값 확인
+
+        # 키워드가 없는 임의 파일에 .hwp 확장자 → TAX 확장자 점수 20점만
+        result = auto_route("임의파일명xyzabc.hwp", ".hwp", "application/haansofthwp", 0)
+        assert result is None
+
+    def test_keyword_match_reaches_threshold(self) -> None:
+        """키워드 매칭(60점)이면 라우팅 성공."""
+        result = auto_route("재무제표.txt", ".txt", "text/plain", 0)
+        assert result == VdrFolderCategory.FINANCIAL
+
+    def test_keyword_plus_extension_above_threshold(self) -> None:
+        """키워드(60) + 확장자(20) = 80점 → 확실히 라우팅."""
+        scores = score_document(
+            filename="재무제표.xlsx",
+            extension=".xlsx",
+            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file_size_bytes=0,
+        )
+        score_map = dict(scores)
+        assert score_map.get(VdrFolderCategory.FINANCIAL, 0) >= 80
