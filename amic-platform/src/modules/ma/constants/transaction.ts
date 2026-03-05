@@ -1,5 +1,13 @@
 import type { SelectOption } from "@/components/ui";
 
+// ── Deal Type ─────────────────────────────────────────
+export const DEAL_TYPE_OPTIONS: SelectOption[] = [
+  { value: "MA", label: "MA — M&A (인수합병)" },
+  { value: "PE", label: "PE — Private Equity" },
+  { value: "RE", label: "RE — Real Estate" },
+  { value: "IB", label: "IB — Investment Banking" },
+];
+
 // ── Transaction Side ──────────────────────────────────
 export const TRANSACTION_SIDE_OPTIONS: SelectOption[] = [
   { value: "", label: "전체" },

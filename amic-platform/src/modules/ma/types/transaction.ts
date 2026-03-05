@@ -1,3 +1,5 @@
+export type DealType = "MA" | "PE" | "RE" | "IB";
+
 export type TransactionSide = "SELL" | "BUY" | "DUAL";
 
 export type TransactionPhase =
@@ -48,6 +50,7 @@ export interface Transaction {
   id: string;
   code_name: string;
   name: string;
+  deal_type: DealType;
   side: TransactionSide;
   phase: TransactionPhase;
   status: TransactionStatus;
@@ -86,7 +89,7 @@ export interface Transaction {
 
 export interface TransactionCreate {
   name: string;
-  code_name: string;
+  deal_type: DealType;
   side: TransactionSide;
   target_company_name: string;
   target_corp_code?: string;
@@ -115,7 +118,7 @@ export interface TransactionCreate {
 
 export interface TransactionUpdate {
   name?: string;
-  code_name?: string;
+  deal_type?: DealType;
   side?: TransactionSide;
   target_company_name?: string;
   target_corp_code?: string;

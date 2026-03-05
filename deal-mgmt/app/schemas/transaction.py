@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.models.enums import (
     DealStructure,
+    DealType,
     TransactionPhase,
     TransactionSide,
     TransactionStatus,
@@ -21,6 +23,7 @@ class TransactionOut(BaseModel):
     id: uuid.UUID
     code_name: str
     name: str
+    deal_type: DealType
     side: TransactionSide
     phase: TransactionPhase
     status: TransactionStatus
@@ -65,7 +68,7 @@ class TransactionOut(BaseModel):
 # ── Create ──────────────────────────────────────────────
 class TransactionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    code_name: str = Field(..., min_length=1, max_length=100)
+    deal_type: DealType
     side: TransactionSide
     target_company_name: str = Field(..., min_length=1, max_length=200)
     target_corp_code: str | None = Field(None, max_length=20)
@@ -93,11 +96,21 @@ class TransactionCreate(BaseModel):
     exclusivity_deadline: str | None = Field(None, max_length=10)
     notes: str | None = None
 
+    @field_validator("name")
+    @classmethod
+    def name_must_be_project_format(cls, v: str) -> str:
+        if not v.startswith("Project "):
+            raise ValueError("프로젝트명은 'Project '로 시작해야 합니다")
+        suffix = v[len("Project ") :]
+        if not re.match(r"^[A-Za-z][A-Za-z\s]*$", suffix):
+            raise ValueError("'Project ' 이후는 영문자만 사용 가능합니다")
+        return v
+
 
 # ── Update ──────────────────────────────────────────────
 class TransactionUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
-    code_name: str | None = Field(None, min_length=1, max_length=100)
+    deal_type: DealType | None = None
     side: TransactionSide | None = None
     target_company_name: str | None = Field(None, min_length=1, max_length=200)
     target_corp_code: str | None = Field(None, max_length=20)

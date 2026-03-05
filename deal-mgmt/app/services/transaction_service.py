@@ -3,16 +3,44 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.closing_checklist import ClosingChecklist
-from app.models.enums import AuditAction, ClosingCategory, TransactionPhase, TransactionStatus
+from app.models.enums import AuditAction, ClosingCategory, DealType, TransactionPhase, TransactionStatus
 from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 from app.services import audit_service
+
+
+async def _generate_code_name(
+    db: AsyncSession,
+    deal_type: DealType,
+    project_name: str,
+    year: int,
+) -> str:
+    """코드명 자동 생성.
+
+    형식: {TYPE}{YY}-{ABB}-{NN}
+    예시: MA26-EDW-01 (2026년 첫 번째 MA 딜, Project Edward)
+    """
+    abbr = project_name.removeprefix("Project ").strip()[:3].upper()
+    year_suffix = str(year)[2:]
+
+    result = await db.execute(
+        select(func.count(Transaction.id)).where(
+            Transaction.deal_type == deal_type,
+            func.extract("year", Transaction.created_at) == year,
+            Transaction.is_deleted.is_(False),
+        )
+    )
+    seq = (result.scalar_one() or 0) + 1
+    return f"{deal_type.value}{year_suffix}-{abbr}-{seq:02d}"
+
 
 # M&A Closing에서 공통으로 요구되는 표준 체크리스트 항목
 _STANDARD_CLOSING_ITEMS: list[dict] = [
@@ -174,29 +202,32 @@ async def create_transaction(
     body: TransactionCreate,
     actor_email: str | None = None,
 ) -> Transaction:
-    """거래 생성."""
-    # code_name 중복 체크
-    exists = (
-        await db.execute(
-            select(Transaction.id).where(
-                Transaction.code_name == body.code_name,
-                Transaction.is_deleted.is_(False),
-            )
-        )
-    ).scalar_one_or_none()
-    if exists:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"코드네임 '{body.code_name}'이(가) 이미 사용 중입니다",
-        )
+    """거래 생성 — 코드명 자동 부여."""
+    year = datetime.now().year
+    code_name = await _generate_code_name(db, body.deal_type, body.name, year)
+    data = body.model_dump()
 
     txn = Transaction(
-        **body.model_dump(),
+        **data,
+        code_name=code_name,
         phase=TransactionPhase.ENGAGEMENT,
         status=TransactionStatus.DRAFT,
     )
     db.add(txn)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        # 동시 생성으로 인한 UniqueConstraint 충돌 — seq+1로 1회 재시도
+        await db.rollback()
+        code_name = await _generate_code_name(db, body.deal_type, body.name, year)
+        txn = Transaction(
+            **data,
+            code_name=code_name,
+            phase=TransactionPhase.ENGAGEMENT,
+            status=TransactionStatus.DRAFT,
+        )
+        db.add(txn)
+        await db.flush()
 
     await audit_service.record(
         db,
@@ -204,7 +235,7 @@ async def create_transaction(
         entity_id=txn.id,
         action=AuditAction.CREATE,
         actor_email=actor_email,
-        new_value=body.model_dump(),
+        new_value={**data, "code_name": code_name},
     )
 
     # 표준 Closing 체크리스트 자동 생성
@@ -227,23 +258,6 @@ async def update_transaction(
     update_data = body.model_dump(exclude_unset=True)
     if not update_data:
         return txn
-
-    # code_name 변경 시 중복 체크
-    if "code_name" in update_data and update_data["code_name"] != txn.code_name:
-        exists = (
-            await db.execute(
-                select(Transaction.id).where(
-                    Transaction.code_name == update_data["code_name"],
-                    Transaction.is_deleted.is_(False),
-                    Transaction.id != txn_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if exists:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"코드네임 '{update_data['code_name']}'이(가) 이미 사용 중입니다",
-            )
 
     old_value = {k: getattr(txn, k) for k in update_data}
     for k, v in update_data.items():

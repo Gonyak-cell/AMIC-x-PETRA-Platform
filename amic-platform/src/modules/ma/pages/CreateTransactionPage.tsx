@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronDown } from "lucide-react";
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
 import type {
   TransactionCreate,
+  DealType,
   DealStructure,
   InvestmentType,
 } from "@/modules/ma/types/transaction";
@@ -14,6 +15,7 @@ import {
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
+  DEAL_TYPE_OPTIONS,
 } from "@/modules/ma/constants";
 
 import { Button, Card, Input, Select, PageHero } from "@/components/ui";
@@ -22,13 +24,26 @@ import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 const SIDE_OPTIONS = TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "");
 
 const INITIAL: TransactionCreate = {
-  name: "",
-  code_name: "",
+  name: "Project ",
+  deal_type: "MA",
   side: "SELL",
   target_company_name: "",
   client_name: "",
   lead_advisor_email: "",
 };
+
+/** "Project "로 시작하는 이름에서 suffix(뒷부분)를 추출 */
+function getSuffix(name: string): string {
+  return name.startsWith("Project ") ? name.slice("Project ".length) : name;
+}
+
+/** 코드명 미리보기: MA26-EDW-?? */
+function previewCode(dealType: DealType, name: string): string {
+  const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
+  if (!suffix) return "";
+  const yy = new Date().getFullYear().toString().slice(2);
+  return `${dealType}${yy}-${suffix}-??`;
+}
 
 export default function CreateTransactionPage() {
   const navigate = useNavigate();
@@ -44,9 +59,10 @@ export default function CreateTransactionPage() {
     val: TransactionCreate[K],
   ) => setForm((prev) => ({ ...prev, [key]: val }));
 
+  const suffix = getSuffix(form.name);
   const canSubmit =
-    form.name.trim() &&
-    form.code_name.trim() &&
+    suffix.trim().length > 0 &&
+    form.deal_type &&
     form.target_company_name.trim() &&
     form.client_name.trim() &&
     form.lead_advisor_email.trim();
@@ -58,6 +74,8 @@ export default function CreateTransactionPage() {
       onSuccess: (txn) => navigate(`/ma/transactions/${txn.id}`),
     });
   };
+
+  const preview = previewCode(form.deal_type, form.name);
 
   return (
     <div className="space-y-6">
@@ -91,21 +109,45 @@ export default function CreateTransactionPage() {
                 Required
               </legend>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="거래명"
-                  required
-                  value={form.name}
-                  onChange={(e) => set("name", e.target.value)}
-                  placeholder="프로젝트 명칭"
-                />
-                <Input
-                  label="코드네임"
-                  required
-                  value={form.code_name}
-                  onChange={(e) => set("code_name", e.target.value)}
-                  placeholder="보안 코드 (예: Project Phoenix)"
-                />
+              {/* 딜 타입 */}
+              <Select
+                label="딜 타입"
+                options={DEAL_TYPE_OPTIONS}
+                value={form.deal_type}
+                onChange={(e) => set("deal_type", e.target.value as DealType)}
+              />
+
+              {/* 프로젝트명: "Project " 고정 접두사 */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  프로젝트명 <span className="text-destructive">*</span>
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-border bg-surface-subtle text-sm font-medium text-text-muted select-none">
+                    Project
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                    placeholder="Edward"
+                    value={suffix}
+                    onChange={(e) => {
+                      // 영문자·공백만 허용
+                      const clean = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                      set("name", `Project ${clean}`);
+                    }}
+                  />
+                </div>
+                {/* 코드 미리보기 */}
+                {preview && (
+                  <p className="mt-1.5 text-xs text-text-muted">
+                    예상 코드:{" "}
+                    <code className="font-mono font-semibold text-accent">
+                      {preview}
+                    </code>
+                  </p>
+                )}
               </div>
 
               <Select

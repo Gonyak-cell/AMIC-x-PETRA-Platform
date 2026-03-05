@@ -113,9 +113,9 @@ export default function TransactionListPage() {
     {
       key: "code_name",
       header: "Code",
-      width: "120px",
+      width: "140px",
       render: (row) => (
-        <span className="font-mono text-sm font-medium text-accent">
+        <span className="font-mono text-sm font-medium text-accent whitespace-nowrap">
           {row.code_name}
         </span>
       ),

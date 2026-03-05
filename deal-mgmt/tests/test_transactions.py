@@ -1,13 +1,18 @@
 """Transaction CRUD API 테스트."""
 
+import re
+
 SAMPLE_TXN = {
-    "name": "프로젝트 알파",
-    "code_name": "ALPHA-001",
+    "name": "Project Alpha",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",
     "lead_advisor_email": "advisor@example.com",
 }
+
+# 코드명 자동 생성 패턴: MA26-ALP-01 형식
+CODE_NAME_PATTERN = re.compile(r"^(MA|PE|RE|IB)\d{2}-[A-Z]{1,3}-\d{2}$")
 
 
 # ── Create ─────────────────────────────────────────────────
@@ -15,18 +20,41 @@ async def test_create_transaction(client):
     resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["name"] == "프로젝트 알파"
-    assert data["code_name"] == "ALPHA-001"
+    assert data["name"] == "Project Alpha"
+    assert data["deal_type"] == "MA"
     assert data["side"] == "SELL"
     assert data["phase"] == "ENGAGEMENT"
     assert data["status"] == "DRAFT"
     assert data["id"] is not None
+    # 코드명이 자동 생성 패턴을 따르는지 확인
+    assert CODE_NAME_PATTERN.match(data["code_name"]), f"코드명 형식 오류: {data['code_name']}"
 
 
-async def test_create_duplicate_code_name(client):
-    await client.post("/api/v1/transactions", json=SAMPLE_TXN)
-    resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
-    assert resp.status_code == 409
+async def test_create_transaction_invalid_name_format(client):
+    """프로젝트명이 'Project '로 시작하지 않으면 422 반환."""
+    bad_payload = {**SAMPLE_TXN, "name": "알파 프로젝트"}
+    resp = await client.post("/api/v1/transactions", json=bad_payload)
+    assert resp.status_code == 422
+
+
+async def test_create_transaction_name_non_english_suffix(client):
+    """'Project ' 이후 영문이 아닌 문자가 포함되면 422 반환."""
+    bad_payload = {**SAMPLE_TXN, "name": "Project 알파"}
+    resp = await client.post("/api/v1/transactions", json=bad_payload)
+    assert resp.status_code == 422
+
+
+async def test_create_two_transactions_sequential_code(client):
+    """같은 딜 타입으로 두 건 생성 시 코드명 시퀀스가 순차적으로 증가한다."""
+    resp1 = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
+    txn2 = {**SAMPLE_TXN, "name": "Project Beta"}
+    resp2 = await client.post("/api/v1/transactions", json=txn2)
+    assert resp1.status_code == 201
+    assert resp2.status_code == 201
+    code1 = resp1.json()["code_name"]
+    code2 = resp2.json()["code_name"]
+    # 두 코드명이 다른지 확인 (중복 없음)
+    assert code1 != code2
 
 
 # ── Read ───────────────────────────────────────────────────
@@ -37,7 +65,7 @@ async def test_get_transaction(client):
     resp = await client.get(f"/api/v1/transactions/{txn_id}")
     assert resp.status_code == 200
     assert resp.json()["id"] == txn_id
-    assert resp.json()["name"] == "프로젝트 알파"
+    assert resp.json()["name"] == "Project Alpha"
 
 
 async def test_get_nonexistent_transaction(client):
@@ -57,7 +85,7 @@ async def test_list_transactions(client):
 
 async def test_list_transactions_search(client):
     await client.post("/api/v1/transactions", json=SAMPLE_TXN)
-    resp = await client.get("/api/v1/transactions", params={"search": "알파"})
+    resp = await client.get("/api/v1/transactions", params={"search": "Alpha"})
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
 
@@ -71,9 +99,10 @@ async def test_list_transactions_filter_side(client):
 
 
 async def test_list_transactions_pagination(client):
-    # 3건 생성
-    for i in range(3):
-        txn = {**SAMPLE_TXN, "code_name": f"PAGE-{i:03d}", "name": f"거래 {i}"}
+    # 3건 생성 (이름을 달리하여 코드명 중복 방지)
+    names = ["Project Charlie", "Project Delta", "Project Echo"]
+    for name in names:
+        txn = {**SAMPLE_TXN, "name": name}
         await client.post("/api/v1/transactions", json=txn)
 
     resp = await client.get("/api/v1/transactions", params={"limit": 2, "offset": 0})
@@ -92,25 +121,13 @@ async def test_update_transaction(client):
 
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}",
-        json={"name": "프로젝트 베타", "industry": "Tech"},
+        json={"industry": "Tech"},
     )
     assert resp.status_code == 200
-    assert resp.json()["name"] == "프로젝트 베타"
     assert resp.json()["industry"] == "Tech"
-
-
-async def test_update_code_name_duplicate(client):
-    await client.post("/api/v1/transactions", json=SAMPLE_TXN)
-    txn2 = {**SAMPLE_TXN, "code_name": "BETA-001", "name": "프로젝트 베타"}
-    resp2 = await client.post("/api/v1/transactions", json=txn2)
-    txn2_id = resp2.json()["id"]
-
-    # BETA-001 → ALPHA-001 (이미 존재)
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn2_id}",
-        json={"code_name": "ALPHA-001"},
-    )
-    assert resp.status_code == 409
+    # code_name은 수정 불가 — 기존 값 유지
+    original_code = create_resp.json()["code_name"]
+    assert resp.json()["code_name"] == original_code
 
 
 # ── Delete (Soft) ──────────────────────────────────────────

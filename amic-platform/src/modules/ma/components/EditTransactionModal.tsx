@@ -6,6 +6,7 @@ import type {
   Transaction,
   TransactionUpdate,
   TransactionSide,
+  DealType,
   DealStructure,
   InvestmentType,
   Currency,
@@ -15,6 +16,7 @@ import {
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
+  DEAL_TYPE_OPTIONS,
 } from "@/modules/ma/constants";
 
 import { Button, Input, Modal, Select } from "@/components/ui";
@@ -40,8 +42,7 @@ export default function EditTransactionModal({
   useEffect(() => {
     if (open) {
       setForm({
-        name: transaction.name,
-        code_name: transaction.code_name,
+        deal_type: transaction.deal_type,
         side: transaction.side,
         target_company_name: transaction.target_company_name,
         client_name: transaction.client_name,
@@ -65,8 +66,6 @@ export default function EditTransactionModal({
   ) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const canSubmit =
-    (form.name ?? "").toString().trim() &&
-    (form.code_name ?? "").toString().trim() &&
     (form.target_company_name ?? "").toString().trim() &&
     (form.client_name ?? "").toString().trim() &&
     (form.lead_advisor_email ?? "").toString().trim();
@@ -74,9 +73,8 @@ export default function EditTransactionModal({
   // 변경된 필드만 추출
   const buildPatch = (): TransactionUpdate => {
     const patch: TransactionUpdate = {};
-    if (form.name !== transaction.name) patch.name = form.name;
-    if (form.code_name !== transaction.code_name)
-      patch.code_name = form.code_name;
+    if (form.deal_type !== transaction.deal_type)
+      patch.deal_type = form.deal_type;
     if (form.side !== transaction.side) patch.side = form.side;
     if (form.target_company_name !== transaction.target_company_name)
       patch.target_company_name = form.target_company_name;
@@ -127,6 +125,19 @@ export default function EditTransactionModal({
   return (
     <Modal open={open} onClose={onClose} title="거래 정보 수정" size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* 코드명 (읽기 전용) */}
+        <div>
+          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            코드명
+          </label>
+          <div className="px-3 py-2 rounded-md border border-border bg-surface-subtle text-sm font-mono font-semibold text-accent select-none">
+            {transaction.code_name}
+          </div>
+          <p className="mt-1 text-xs text-text-muted">
+            코드명은 자동 부여되며 수정할 수 없습니다.
+          </p>
+        </div>
+
         {/* 필수 필드 */}
         <fieldset className="space-y-4">
           <legend className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
@@ -134,28 +145,19 @@ export default function EditTransactionModal({
           </legend>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="거래명"
-              required
-              value={form.name ?? ""}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="프로젝트 명칭"
+            <Select
+              label="딜 타입"
+              options={DEAL_TYPE_OPTIONS}
+              value={form.deal_type ?? "MA"}
+              onChange={(e) => set("deal_type", e.target.value as DealType)}
             />
-            <Input
-              label="코드네임"
-              required
-              value={form.code_name ?? ""}
-              onChange={(e) => set("code_name", e.target.value)}
-              placeholder="보안 코드"
+            <Select
+              label="자문 유형"
+              options={SIDE_OPTIONS}
+              value={form.side ?? "SELL"}
+              onChange={(e) => set("side", e.target.value as TransactionSide)}
             />
           </div>
-
-          <Select
-            label="자문 유형"
-            options={SIDE_OPTIONS}
-            value={form.side ?? "SELL"}
-            onChange={(e) => set("side", e.target.value as TransactionSide)}
-          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
