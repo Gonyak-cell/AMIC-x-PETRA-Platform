@@ -24,7 +24,9 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column(
             "excalidraw_data",
-            postgresql.JSONB(astext_type=sa.Text()),
+            sa.JSON().with_variant(
+                postgresql.JSONB(astext_type=sa.Text()), "postgresql"
+            ),
             nullable=True,
         ),
         sa.Column("png_path", sa.String(length=500), nullable=True),
