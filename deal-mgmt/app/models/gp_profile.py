@@ -73,3 +73,6 @@ class GpProfile(Base, TimestampMixin):
         comment="투자기업명 리스트 (N열 파싱)",
     )
     portfolio_raw: Mapped[str | None] = mapped_column(Text, nullable=True, comment="N열 원문")
+
+    # CI 로고 URL (thevc.kr 기준, O열 수동 입력)
+    logo_url: Mapped[str | None] = mapped_column(String(2048), nullable=True, comment="O열 CI 로고 URL")

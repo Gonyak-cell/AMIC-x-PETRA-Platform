@@ -56,6 +56,7 @@ class GpProfileListItemOut(BaseModel):
 
     id: uuid.UUID
     raw_name: str
+    logo_url: str | None = None
     total_committed_sum: Decimal | None = None
     recent_pef_count: int | None = None
     total_pef_count: int | None = None

@@ -193,6 +193,10 @@ async def seed_gp_profiles(session: AsyncSession, force: bool = False) -> int:
         portfolio_raw = str(row[13]).strip() if row[13] else None
         sectors, companies = parse_portfolio(portfolio_raw)
 
+        # O열(index 14): CI 로고 URL (thevc.kr, 수동 입력 — 없으면 None)
+        logo_raw = row[14] if len(row) > 14 else None
+        logo_url = str(logo_raw).strip() if logo_raw and str(logo_raw).strip() not in ("", "None", "-") else None
+
         rows_data.append(
             {
                 "id": uuid.uuid4(),
@@ -212,6 +216,7 @@ async def seed_gp_profiles(session: AsyncSession, force: bool = False) -> int:
                 "portfolio_sectors": sectors if sectors else None,
                 "portfolio_companies": companies if companies else None,
                 "portfolio_raw": portfolio_raw,
+                "logo_url": logo_url,  # O열
             }
         )
 
