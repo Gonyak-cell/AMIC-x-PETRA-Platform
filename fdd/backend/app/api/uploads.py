@@ -37,7 +37,7 @@ router = APIRouter()
     response_model=UploadFileRead,
     status_code=201,
 )
-async def upload_file(
+def upload_file(
     deal_id: uuid.UUID,
     file: FastAPIUploadFile = File(...),
     current_user: CurrentUser = require_permission(Permission.UPLOAD_CREATE),
@@ -58,7 +58,7 @@ async def upload_file(
         )
 
     # Read content and compute hash
-    content = await file.read()
+    content = file.file.read()
     file_hash = hashlib.sha256(content).hexdigest()
 
     # Check for duplicate upload (same file hash in same deal)

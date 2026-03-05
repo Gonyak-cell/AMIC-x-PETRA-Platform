@@ -46,7 +46,7 @@ def _parse_values(values: list[str | None]) -> list[Decimal | None]:
         }
     },
 )
-async def generate_ebitda_bridge(
+def generate_ebitda_bridge(
     request: EBITDABridgeRequest,
     current_user: CurrentUser = Depends(get_current_user),
     design_system: dict[str, Any] = Depends(get_design_system),
@@ -95,7 +95,7 @@ async def generate_ebitda_bridge(
         }
     },
 )
-async def generate_nwc_bridge(
+def generate_nwc_bridge(
     request: NWCBridgeRequest,
     current_user: CurrentUser = Depends(get_current_user),
     design_system: dict[str, Any] = Depends(get_design_system),
@@ -137,7 +137,7 @@ async def generate_nwc_bridge(
         }
     },
 )
-async def generate_net_debt_bridge(
+def generate_net_debt_bridge(
     request: NetDebtBridgeRequest,
     current_user: CurrentUser = Depends(get_current_user),
     design_system: dict[str, Any] = Depends(get_design_system),
@@ -179,7 +179,7 @@ async def generate_net_debt_bridge(
         }
     },
 )
-async def generate_generic_waterfall(
+def generate_generic_waterfall(
     request: GenericWaterfallRequest,
     current_user: CurrentUser = Depends(get_current_user),
     design_system: dict[str, Any] = Depends(get_design_system),

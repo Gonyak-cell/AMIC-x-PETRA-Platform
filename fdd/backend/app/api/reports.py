@@ -1,5 +1,6 @@
 """Reports API endpoints."""
 
+import asyncio
 import io
 import os
 from datetime import UTC, datetime
@@ -39,7 +40,7 @@ router = APIRouter(prefix="/deals/{deal_id}/reports", tags=["reports"])
 
 
 @router.post("/generate")
-async def generate_report(
+def generate_report(
     deal_id: UUID,
     request: ReportGenerateRequest,
     current_user: CurrentUser = require_permission(Permission.REPORT_GENERATE),
@@ -86,11 +87,13 @@ async def generate_report(
         ralph_config = (
             request.ralph_config.model_dump() if request.ralph_config else None
         )
-        refined_ir, _ralph_session = await ralph_service.run_draft_pass(
-            deal_id=deal_id,
-            report_ir=report_ir,
-            config=ralph_config,
-            actor=current_user.email,
+        refined_ir, _ralph_session = asyncio.run(
+            ralph_service.run_draft_pass(
+                deal_id=deal_id,
+                report_ir=report_ir,
+                config=ralph_config,
+                actor=current_user.email,
+            )
         )
         ir_dict = refined_ir  # Ralph가 반환한 Refined IR dict 사용
 
@@ -209,8 +212,8 @@ async def generate_report(
         )
 
     # PPTX 생성 (기본값)
-    pptx_bytes = await generate_pptx(
-        report_ir, pptx_service_url=settings.pptx_service_url
+    pptx_bytes = asyncio.run(
+        generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
     )
     filename = f"FDD_Report_{report_ir.metadata.deal_name}.pptx"
 
@@ -427,7 +430,7 @@ def list_report_versions(
 
 
 @router.post("/versions", response_model=ReportVersionRead, status_code=201)
-async def create_report_version(
+def create_report_version(
     deal_id: UUID,
     body: ReportVersionCreate,
     current_user: CurrentUser = require_permission(Permission.REPORT_GENERATE),
@@ -480,8 +483,8 @@ async def create_report_version(
         xlsx_buffer = render_excel_report(report_ir)
         Path(file_path).write_bytes(xlsx_buffer.getvalue())
     else:
-        pptx_bytes = await generate_pptx(
-            report_ir, pptx_service_url=settings.pptx_service_url
+        pptx_bytes = asyncio.run(
+            generate_pptx(report_ir, pptx_service_url=settings.pptx_service_url)
         )
         Path(file_path).write_bytes(pptx_bytes)
 

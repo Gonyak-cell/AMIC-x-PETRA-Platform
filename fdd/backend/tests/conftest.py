@@ -125,6 +125,22 @@ def test_client(db: Session):
 
 
 # ──────────────────────────────────────────────
+# Auth: 테스트 환경 기본 인증 비활성화
+# ──────────────────────────────────────────────
+@pytest.fixture(autouse=True)
+def _disable_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """모든 테스트에서 인증을 비활성화.
+
+    대부분의 테스트가 auth_enabled=False를 가정하고 작성되어 있으므로
+    autouse로 일괄 적용한다. JWT 토큰 검증이 필요한 보안 테스트는
+    dependency_overrides를 직접 설정하는 방식으로 독립 동작한다.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "auth_enabled", False)
+
+
+# ──────────────────────────────────────────────
 # Auth Fixtures
 # ──────────────────────────────────────────────
 @pytest.fixture
