@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { gsap } from "@/lib/gsap";
 import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
-import { useVcMappingByRegistration } from "@/modules/ma/hooks/useSIMapping";
+import {
+  useSICompanyByName,
+  useVcMappingByRegistration,
+} from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type { VcMappingByRegResponse } from "@/modules/ma/types/si_mapping";
 
 import SIDetailPanel from "./SIDetailPanel";
 import VcMappingResult from "./VcMappingResult";
+
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 interface SIMappingPanelProps {
   txnId: string;
@@ -20,36 +27,36 @@ export default function SIMappingPanel({
   onClose,
   corporateInfo,
 }: SIMappingPanelProps) {
-  // 딥다이브 Drawer
-  const [deepDiveId, setDeepDiveId] = useState<string | null>(null);
+  // 딥다이브 — 기업명 기반 조회 (VC 기업 integer PK → SI 기업 UUID 변환)
+  const [deepDiveName, setDeepDiveName] = useState<string | null>(null);
+  const siLookup = useSICompanyByName(deepDiveName);
+  const resolvedId = siLookup.data?.id ?? null;
 
   // VC 등록번호 매핑
   const [vcResult, setVcResult] = useState<VcMappingByRegResponse | null>(null);
   const vcMapMutation = useVcMappingByRegistration();
 
-  // Focus trap ref (wrapper 전체)
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Refs
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  // GSAP 애니메이션 ref
-  const backdropRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
 
-  // 접근성 — 고유 ID 생성 (중복 ID 방지)
+  // 접근성 — 고유 ID 생성
   const titleId = useId();
 
-  // 퇴장 애니메이션 후 onClose 호출
+  // 퇴장 애니메이션 후 dialog.close() + onClose 호출
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
 
     const tl = gsap.timeline({
       onComplete: () => {
-        const elToFocus = previousFocusRef.current;
+        dialogRef.current?.close();
         onClose();
         requestAnimationFrame(() => {
-          elToFocus?.focus();
+          previousFocusRef.current?.focus();
         });
       },
     });
@@ -67,14 +74,12 @@ export default function SIMappingPanel({
     );
   }, [onClose]);
 
-  // 모달 열릴 때 이전 포커스 저장
+  // 마운트 시 dialog.showModal() + GSAP 진입 애니메이션
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement;
-  }, []);
-
-  // 진입 애니메이션 (Modal.tsx 패턴과 동일)
-  useEffect(() => {
     isClosingRef.current = false;
+    dialogRef.current?.showModal();
+
     const tl = gsap.timeline();
     tl.fromTo(
       backdropRef.current,
@@ -87,53 +92,25 @@ export default function SIMappingPanel({
       { scale: 1, opacity: 1, y: 0, duration: 0.35, ease: "power3.out" },
       "-=0.15",
     );
+
+    requestAnimationFrame(() => {
+      const first =
+        contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      first?.focus();
+    });
+
     return () => {
       tl.kill();
     };
   }, []);
 
-  // Escape 키 핸들러 — deepDiveId 활성화 시 SlidePanel이 자체 cancel 이벤트로 처리
+  // 딥다이브 기업 조회 실패 시 알림
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // deepDiveId 활성화 → SlidePanel(dialog top layer)이 자체 cancel 이벤트로 처리
-        if (deepDiveId) return;
-        handleClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, deepDiveId]);
-
-  // Focus trap
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const FOCUSABLE =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const focusable = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    panel.addEventListener("keydown", handleKeyDown);
-    requestAnimationFrame(() => {
-      const first = panel.querySelector<HTMLElement>(FOCUSABLE);
-      first?.focus();
-    });
-    return () => panel.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    if (deepDiveName && siLookup.isSuccess && !siLookup.data) {
+      toast.info("해당 기업의 상세 정보를 조회할 수 없습니다.");
+      setDeepDiveName(null);
+    }
+  }, [deepDiveName, siLookup.isSuccess, siLookup.data]);
 
   const corpRegNo = corporateInfo?.corporate_registration_number ?? undefined;
   const bizRegNo = corporateInfo?.business_registration_number ?? undefined;
@@ -148,14 +125,16 @@ export default function SIMappingPanel({
   }, [corpRegNo, bizRegNo, runVcMapping]);
 
   return (
-    <div
-      ref={panelRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 z-50 bg-transparent p-0 m-0 max-w-none max-h-none w-full h-full backdrop:bg-transparent"
+      onCancel={(e) => {
+        e.preventDefault();
+        handleClose();
+      }}
       aria-labelledby={titleId}
     >
-      {/* 백드롭 (애니메이션용 별도 레이어 — 직접 onClick으로 닫기) */}
+      {/* 백드롭 (애니메이션용 별도 레이어) */}
       <div
         ref={backdropRef}
         className="fixed inset-0 bg-amic-900/70 backdrop-blur-sm"
@@ -164,119 +143,126 @@ export default function SIMappingPanel({
       />
 
       {/* 모달 콘텐츠 */}
-      <div
-        ref={contentRef}
-        className="relative flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl"
-        style={{ opacity: 0 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <div>
-            <h2 id={titleId} className="text-lg font-bold text-slate-800">
-              SI 자동 매핑
-            </h2>
-            <p className="text-sm text-slate-500">
-              법인정보 기반 Value Chain 자동 매핑
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="SI 매핑 패널 닫기"
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          >
-            <svg
-              aria-hidden="true"
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* 본문 (스크롤) */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {/* VC 자동 매핑 (법인정보 기반) */}
-          {hasRegNo ? (
-            <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50/30 p-4">
-              <h3 className="mb-2 text-sm font-semibold text-emerald-800">
-                법인정보 기반 Value Chain 매핑
-              </h3>
-              <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-emerald-700">
-                {corpRegNo && <span>법인등록번호: {corpRegNo}</span>}
-                {bizRegNo && <span>사업자등록번호: {bizRegNo}</span>}
-              </div>
-              {!vcResult && (
-                <button
-                  type="button"
-                  onClick={handleVcMapping}
-                  disabled={vcMapMutation.isPending}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {vcMapMutation.isPending
-                    ? "매핑 중..."
-                    : "Value Chain 매핑 실행"}
-                </button>
-              )}
-              {vcMapMutation.isError && (
-                <p role="alert" className="mt-2 text-sm text-red-600">
-                  {vcMapMutation.error.message}
-                </p>
-              )}
-              {vcResult && (
-                <VcMappingResult
-                  txnId={txnId}
-                  company={vcResult.company}
-                  mapping={vcResult.mapping}
-                  onCompanyClick={(id) => setDeepDiveId(id)}
-                />
-              )}
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <div
+          ref={contentRef}
+          className="relative flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl"
+          style={{ opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 헤더 */}
+          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <div>
+              <h2 id={titleId} className="text-lg font-bold text-slate-800">
+                SI 자동 매핑
+              </h2>
+              <p className="text-sm text-slate-500">
+                법인정보 기반 Value Chain 자동 매핑
+              </p>
             </div>
-          ) : (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50/30 p-4">
-              <div className="mb-3">
-                <h3 className="mb-0.5 text-sm font-semibold text-amber-800">
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label="SI 매핑 패널 닫기"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            >
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* 본문 (스크롤) */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {/* VC 자동 매핑 (법인정보 기반) */}
+            {hasRegNo ? (
+              <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50/30 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-emerald-800">
                   법인정보 기반 Value Chain 매핑
                 </h3>
-                <p className="text-xs text-amber-700">
-                  자동 매핑을 위해 법인등기부등본 또는 사업자등록증을
-                  업로드하세요. 업로드 후 Overview의 법인 정보도 자동으로
-                  업데이트됩니다.
-                </p>
+                <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-emerald-700">
+                  {corpRegNo && <span>법인등록번호: {corpRegNo}</span>}
+                  {bizRegNo && <span>사업자등록번호: {bizRegNo}</span>}
+                </div>
+                {!vcResult && (
+                  <button
+                    type="button"
+                    onClick={handleVcMapping}
+                    disabled={vcMapMutation.isPending}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {vcMapMutation.isPending
+                      ? "매핑 중..."
+                      : "Value Chain 매핑 실행"}
+                  </button>
+                )}
+                {vcMapMutation.isError && (
+                  <div role="alert" className="mt-2 space-y-0.5">
+                    <p className="text-sm text-red-600">
+                      {vcMapMutation.error.message}
+                    </p>
+                    <p className="text-xs text-red-500">
+                      잠시 후 다시 시도해 주세요.
+                    </p>
+                  </div>
+                )}
+                {vcResult && (
+                  <VcMappingResult
+                    txnId={txnId}
+                    company={vcResult.company}
+                    mapping={vcResult.mapping}
+                    onCompanyClick={setDeepDiveName}
+                  />
+                )}
               </div>
-              <EngagementDocUpload txnId={txnId} />
-            </div>
-          )}
+            ) : (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50/30 p-4">
+                <div className="mb-3">
+                  <h3 className="mb-0.5 text-sm font-semibold text-amber-800">
+                    법인정보 기반 Value Chain 매핑
+                  </h3>
+                  <p className="text-xs text-amber-700">
+                    자동 매핑을 위해 법인등기부등본 또는 사업자등록증을
+                    업로드하세요. 업로드 후 Overview의 법인 정보도 자동으로
+                    업데이트됩니다.
+                  </p>
+                </div>
+                <EngagementDocUpload txnId={txnId} />
+              </div>
+            )}
 
-          {/* KSIC 기반 SI 매핑 — 현재 비활성화 */}
-        </div>
+            {/* KSIC 기반 SI 매핑 — 현재 비활성화 */}
+          </div>
 
-        {/* 푸터 */}
-        <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            닫기
-          </button>
+          {/* 푸터 */}
+          <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 기업 상세 패널 */}
       <SIDetailPanel
-        companyId={deepDiveId}
-        onClose={() => setDeepDiveId(null)}
+        companyId={resolvedId}
+        onClose={() => setDeepDiveName(null)}
       />
-    </div>
+    </dialog>
   );
 }

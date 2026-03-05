@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useBulkAddVcBuyers } from "@/modules/ma/hooks/useSIMapping";
@@ -16,7 +16,7 @@ interface VcMappingResultProps {
   txnId: string;
   company: VcCompanyLookupResult;
   mapping: VcMappingResponse;
-  onCompanyClick?: (id: string) => void;
+  onCompanyClick?: (name: string) => void;
 }
 
 const CompanyRow = memo(function CompanyRow({
@@ -28,7 +28,7 @@ const CompanyRow = memo(function CompanyRow({
   company: VcChainCompany;
   checked: boolean;
   onToggle: (id: number) => void;
-  onCompanyClick?: (id: string) => void;
+  onCompanyClick?: (name: string) => void;
 }) {
   return (
     <tr className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
@@ -45,8 +45,8 @@ const CompanyRow = memo(function CompanyRow({
         {onCompanyClick ? (
           <button
             type="button"
-            onClick={() => onCompanyClick(String(company.id))}
-            className="text-left text-accent hover:underline"
+            onClick={() => onCompanyClick(company.company_name)}
+            className="text-left text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
           >
             {company.company_name}
           </button>
@@ -76,7 +76,7 @@ const ChainPanelCard = memo(function ChainPanelCard({
   panel: VcChainPanel;
   selectedIds: Set<number>;
   onToggle: (id: number) => void;
-  onCompanyClick?: (id: string) => void;
+  onCompanyClick?: (name: string) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const coeff = Number(panel.coefficient);
@@ -171,6 +171,7 @@ export default function VcMappingResult({
   const [activeTab, setActiveTab] = useState<VcTab>("forward");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const bulkAddMutation = useBulkAddVcBuyers(txnId);
+  const tablistRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -235,18 +236,40 @@ export default function VcMappingResult({
       </div>
 
       {/* 탭 */}
-      <div role="tablist" className="flex gap-1 rounded-lg bg-slate-100 p-1">
-        {TAB_CONFIG.map(({ key, label }) => (
+      <div
+        ref={tablistRef}
+        role="tablist"
+        className="flex gap-1 rounded-lg bg-slate-100 p-1"
+      >
+        {TAB_CONFIG.map(({ key, label }, idx) => (
           <button
             key={key}
             id={`vc-tab-${key}`}
             role="tab"
             aria-selected={activeTab === key}
             aria-controls={`vc-tabpanel-${key}`}
+            tabIndex={activeTab === key ? 0 : -1}
             type="button"
             onClick={() => {
               setActiveTab(key);
               setSelectedIds(new Set());
+              bulkAddMutation.reset();
+            }}
+            onKeyDown={(e) => {
+              let nextIdx = idx;
+              if (e.key === "ArrowRight")
+                nextIdx = (idx + 1) % TAB_CONFIG.length;
+              else if (e.key === "ArrowLeft")
+                nextIdx = (idx - 1 + TAB_CONFIG.length) % TAB_CONFIG.length;
+              else return;
+              e.preventDefault();
+              const nextKey = TAB_CONFIG[nextIdx].key;
+              setActiveTab(nextKey);
+              setSelectedIds(new Set());
+              bulkAddMutation.reset();
+              tablistRef.current
+                ?.querySelectorAll<HTMLButtonElement>("[role=tab]")
+                [nextIdx]?.focus();
             }}
             className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === key
