@@ -94,15 +94,30 @@ export function useDeleteTransaction() {
     mutationFn: async (txnId: string) => {
       await maApi.delete(`/transactions/${txnId}`);
     },
+    onMutate: async (txnId) => {
+      // 삭제 시작 시 관련 쿼리 즉시 취소 → refetch 방지
+      await qc.cancelQueries({ queryKey: ["ma", "transactions", txnId] });
+    },
     onSuccess: (_data, txnId) => {
-      // 삭제된 거래의 모든 관련 쿼리를 캐시에서 제거 (refetch 방지)
-      qc.removeQueries({ queryKey: ["ma", "transactions", txnId] });
-      // 거래 목록 + 대시보드 갱신
-      qc.invalidateQueries({ queryKey: ["ma", "transactions"] });
-      qc.invalidateQueries({ queryKey: ["ma", "dashboard"] });
+      // removeQueries 의도적 미호출: 컴포넌트 마운트 상태에서
+      // removeQueries → observer 재생성 → refetch → 404 유발
+      // navigate 후 unmount 시 React Query GC가 자동 정리
+
+      // 삭제된 거래의 하위 쿼리를 제외하고 목록/대시보드만 갱신
+      qc.invalidateQueries({
+        predicate: (query) => {
+          const k = query.queryKey;
+          if (k[0] !== "ma") return false;
+          if (k[1] === "dashboard") return true;
+          if (k[1] === "transactions") return k[2] !== txnId;
+          return false;
+        },
+      });
       toast.success("거래가 삭제되었습니다.");
     },
-    onError: () => {
+    onError: (_err, txnId) => {
+      // 실패 시 취소된 쿼리 다시 활성화
+      qc.invalidateQueries({ queryKey: ["ma", "transactions", txnId] });
       toast.error("거래 삭제 중 오류가 발생했습니다.");
     },
   });
