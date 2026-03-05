@@ -110,3 +110,58 @@ export const SPONSOR_BADGE_VARIANT: Record<
   corporate_cvc: "warning",
   holding_cvc: "neutral",
 };
+
+/* ── deal-mgmt GP 프로필 연동 ── */
+
+/** deal-mgmt /pef-registry/gp-profiles API 응답 타입 */
+export interface GpProfileFromMA {
+  id: string;
+  raw_name: string;
+  total_committed_sum: number | null;
+  recent_pef_count: number | null;
+  total_pef_count: number | null;
+  portfolio_sectors: string[] | null;
+  portfolio_companies: string[] | null;
+  yearly_pef_counts: Record<string, number> | null;
+}
+
+/** GpProfileFromMA → GPResearchItem 변환 어댑터 */
+export function adaptGpProfileToResearchItem(
+  gp: GpProfileFromMA,
+): GPResearchItem {
+  return {
+    id: gp.id,
+    name: gp.raw_name,
+    established: "-",
+    licenses: ["pef"],
+    sponsorType: "independent",
+    cumAum: gp.total_committed_sum ?? 0,
+    activeFundCount: gp.recent_pef_count ?? 0,
+    totalFundCount: gp.total_pef_count ?? 0,
+    portfolioCompanyCount: gp.portfolio_companies?.length ?? 0,
+    estimatedDryPowder: 0,
+    keyPerson: "-",
+    fundHistory: Object.entries(gp.yearly_pef_counts ?? {}).map(
+      ([year, count]) => ({
+        year: Number(year),
+        commitAmount: count,
+        cumAum: 0,
+      }),
+    ),
+    irrScatter: [],
+    sectorAllocation: (gp.portfolio_sectors ?? []).map((sector) => ({
+      sector,
+      value: 0,
+    })),
+    portfolioCompanies: (gp.portfolio_companies ?? []).map((name) => ({
+      name,
+      sector: "-",
+      investDate: "-",
+      investAmount: 0,
+      coGPs: [],
+      status: "active" as const,
+    })),
+    keyManList: [],
+    newsTimeline: [],
+  };
+}

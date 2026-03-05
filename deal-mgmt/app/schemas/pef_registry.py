@@ -49,6 +49,26 @@ class GpProfileOut(BaseModel):
         return str(v) if v is not None else None
 
 
+class GpProfileListItemOut(BaseModel):
+    """GP 프로필 목록 항목 — KIIS GP Research 연결용."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    raw_name: str
+    total_committed_sum: Decimal | None = None
+    recent_pef_count: int | None = None
+    total_pef_count: int | None = None
+    portfolio_sectors: list[str] | None = None
+    portfolio_companies: list[str] | None = None
+    yearly_pef_counts: dict[str, int] | None = None
+
+    @field_serializer("total_committed_sum")
+    @classmethod
+    def _serialize_sum(cls, v: Decimal | None) -> float | None:
+        return float(v) if v is not None else None
+
+
 class FIRecommendationV2(BaseModel):
     """GP 프로필 기반 Tier 분류가 포함된 FI 추천."""
 

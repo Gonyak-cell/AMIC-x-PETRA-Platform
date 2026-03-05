@@ -25,8 +25,9 @@ from app.core.database import get_db
 from app.core.rate_limiter import fi_rate_limiter
 from app.core.security import JWTClaims, require_role
 from app.models.enums import AuditAction
+from app.models.gp_profile import GpProfile
 from app.models.pef_fund_registry import PefFundRegistry
-from app.schemas.pef_registry import FIRecommendationV2, PefCountOut, PefFundOut
+from app.schemas.pef_registry import FIRecommendationV2, GpProfileListItemOut, PefCountOut, PefFundOut
 from app.services import audit_service, fi_mapping_service, transaction_service
 
 if TYPE_CHECKING:
@@ -113,6 +114,29 @@ async def pef_fund_count(
         raise HTTPException(status_code=503, detail="PEF 데이터 조회에 실패했습니다")
     logger.debug("PEF 건수 조회: search=%s, total=%d", safe_search, total)
     return PefCountOut(total=total)
+
+
+@router.get(
+    "/pef-registry/gp-profiles",
+    response_model=list[GpProfileListItemOut],
+    responses={
+        403: {"description": "접근 권한 없음"},
+        503: {"description": "DB 조회 실패"},
+    },
+)
+async def list_gp_profiles(
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(_READ_ACCESS),
+) -> list[GpProfile]:
+    """GP 프로필 전수 목록 조회 — KIIS GP Research 연결용 (358개 PEF GP)."""
+    try:
+        result = await db.execute(select(GpProfile).order_by(GpProfile.raw_name))
+    except SQLAlchemyError:
+        logger.exception("GP 프로필 목록 조회 실패")
+        raise HTTPException(status_code=503, detail="GP 프로필 데이터 조회에 실패했습니다")
+    rows = result.scalars().all()
+    logger.debug("GP 프로필 목록 조회: count=%d", len(rows))
+    return rows
 
 
 @router.get(
