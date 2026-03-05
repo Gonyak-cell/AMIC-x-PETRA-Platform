@@ -4,7 +4,7 @@ import pytest
 
 SAMPLE_TXN = {
     "name": "재무모델 테스트 거래",
-    "code_name": "FM-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "테스트 대상기업",
     "client_name": "테스트 의뢰기업",
@@ -44,8 +44,8 @@ async def _other_txn(client):
         "/api/v1/transactions",
         json={
             **SAMPLE_TXN,
-            "code_name": "FM-002",
             "name": "격리 테스트 거래",
+            "deal_type": "MA",
         },
     )
     assert resp.status_code == 201

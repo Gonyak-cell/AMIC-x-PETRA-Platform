@@ -133,18 +133,9 @@ export default function TransactionOverviewTab({
             </dd>
             <dt className="text-text-muted">코드네임</dt>
             <dd>
-              <input
-                key={`codename-${txn.updated_at}`}
-                type="text"
-                className={cn(INLINE_INPUT_CLS, "w-40 font-mono")}
-                defaultValue={txn.code_name}
-                onBlur={(e) => {
-                  const v = e.target.value.trim();
-                  if (v && v !== txn.code_name)
-                    updateTxn.mutate({ code_name: v });
-                }}
-                disabled={!canWrite()}
-              />
+              <span className="font-mono text-sm font-medium text-accent select-all">
+                {txn.code_name}
+              </span>
             </dd>
             <dt className="text-text-muted">대상기업</dt>
             <dd>

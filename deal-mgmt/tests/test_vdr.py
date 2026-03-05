@@ -246,7 +246,7 @@ class TestVdrIsolation:
             "/api/v1/transactions",
             json={
                 "name": "VDR Isolation Test",
-                "code_name": f"VDR-ISO-{uuid.uuid4().hex[:8]}",
+                "deal_type": "MA",
                 "target_company_name": "격리 테스트",
                 "client_name": "테스트",
                 "side": "BUY",

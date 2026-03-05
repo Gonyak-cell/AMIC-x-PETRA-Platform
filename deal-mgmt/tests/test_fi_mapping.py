@@ -54,7 +54,7 @@ async def _create_txn(
     """deal_value(억원)를 지정하여 Transaction을 생성하고 ID를 반환한다."""
     payload: dict[str, object] = {
         "name": "FI 매핑 테스트",
-        "code_name": f"FI-TEST-{uuid.uuid4().hex[:8]}",
+        "deal_type": "MA",
         "target_company_name": target_company_name,
         "client_name": "테스트고객",
         "side": "SELL",

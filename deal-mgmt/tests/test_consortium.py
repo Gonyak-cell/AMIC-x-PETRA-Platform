@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "프로젝트 델타",
-    "code_name": "DELTA-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "델타기업",
     "client_name": "의뢰기업",
@@ -86,8 +86,8 @@ async def test_duplicate_pair_rejected(client) -> None:
 
 
 async def test_cross_txn_buyer_rejected(client) -> None:
-    txn1 = await _create_txn(client, code_name="T1")
-    txn2 = await _create_txn(client, code_name="T2")
+    txn1 = await _create_txn(client)
+    txn2 = await _create_txn(client)
     lead = await _add_buyer(client, txn1, company_name="A")
     co = await _add_buyer(client, txn2, company_name="B")
 

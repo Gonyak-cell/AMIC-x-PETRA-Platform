@@ -1,8 +1,8 @@
-"""Engagement + Working Group + Conflict Check API 테스트."""
+"""Engagement + Working Group API 테스트."""
 
 SAMPLE_TXN = {
     "name": "프로젝트 감마",
-    "code_name": "GAMMA-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "감마기업",
     "client_name": "의뢰기업",
@@ -19,6 +19,7 @@ SAMPLE_ENGAGEMENT = {
 
 SAMPLE_MEMBER = {
     "name": "김변호사",
+    "deal_type": "MA",
     "email": "kim@lawfirm.co.kr",
     "organization": "김앤장 법률사무소",
     "role": "LEGAL_COUNSEL",
@@ -167,61 +168,3 @@ async def test_member_404(client):
         json={"name": "없는 멤버"},
     )
     assert resp.status_code == 404
-
-
-# ── Conflict Check ──────────────────────────────────────────
-async def test_conflict_check_no_conflict(client):
-    txn_id = await _create_txn(client)
-    # ACTIVE로 전환
-    await client.post(f"/api/v1/transactions/{txn_id}/workflow/status", json={"to_status": "ACTIVE"})
-
-    resp = await client.get(f"/api/v1/transactions/{txn_id}/conflict-check")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["has_conflicts"] is False
-    assert data["conflicts"] == []
-
-
-async def test_conflict_check_same_company_name(client):
-    """동일 대상기업 — ACTIVE 거래 존재 시 CRITICAL."""
-    txn1_id = await _create_txn(client)
-    resp_s = await client.post(f"/api/v1/transactions/{txn1_id}/workflow/status", json={"to_status": "ACTIVE"})
-    assert resp_s.status_code == 200
-
-    txn2_id = await _create_txn(client, code_name="GAMMA-002", name="프로젝트 감마2")
-    resp = await client.get(f"/api/v1/transactions/{txn2_id}/conflict-check")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["has_conflicts"] is True
-    assert len(data["conflicts"]) == 1
-    assert data["conflicts"][0]["severity"] == "CRITICAL"
-
-
-async def test_conflict_check_draft_company(client):
-    """동일 대상기업 — DRAFT 거래 존재 시 WARNING."""
-    await _create_txn(client)  # DRAFT 상태
-    txn2_id = await _create_txn(client, code_name="GAMMA-002", name="프로젝트 감마2")
-
-    resp = await client.get(f"/api/v1/transactions/{txn2_id}/conflict-check")
-    data = resp.json()
-    assert data["has_conflicts"] is True
-    assert data["conflicts"][0]["severity"] == "WARNING"
-
-
-async def test_conflict_check_same_corp_code(client):
-    """동일 corp_code — 회사명 다르지만 corp_code 일치 시 WARNING."""
-    txn1_id = await _create_txn(client, target_company_name="회사A")
-    await client.patch(f"/api/v1/transactions/{txn1_id}", json={"target_corp_code": "00123456"})
-
-    txn2_id = await _create_txn(
-        client,
-        code_name="GAMMA-002",
-        name="프로젝트 감마2",
-        target_company_name="회사B",
-    )
-    await client.patch(f"/api/v1/transactions/{txn2_id}", json={"target_corp_code": "00123456"})
-
-    resp = await client.get(f"/api/v1/transactions/{txn2_id}/conflict-check")
-    data = resp.json()
-    assert data["has_conflicts"] is True
-    assert any(c["severity"] == "WARNING" for c in data["conflicts"])

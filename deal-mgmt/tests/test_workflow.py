@@ -3,7 +3,7 @@
 # 전제 조건을 모두 충족하는 거래 데이터
 FULL_TXN = {
     "name": "워크플로우 테스트",
-    "code_name": "WF-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",
@@ -15,10 +15,9 @@ FULL_TXN = {
 }
 
 
-async def _create_active_txn(client, code_name: str = "WF-001") -> str:
+async def _create_active_txn(client) -> str:
     """ACTIVE 상태의 거래를 생성하는 헬퍼."""
-    txn = {**FULL_TXN, "code_name": code_name}
-    resp = await client.post("/api/v1/transactions", json=txn)
+    resp = await client.post("/api/v1/transactions", json=FULL_TXN)
     txn_id = resp.json()["id"]
     # DRAFT → ACTIVE
     await client.post(
@@ -105,7 +104,7 @@ async def test_status_active_to_on_hold(client):
 
 
 async def test_status_on_hold_to_active(client):
-    txn_id = await _create_active_txn(client, code_name="WF-HOLD")
+    txn_id = await _create_active_txn(client)
 
     await client.post(
         f"/api/v1/transactions/{txn_id}/workflow/status",
@@ -120,7 +119,7 @@ async def test_status_on_hold_to_active(client):
 
 
 async def test_status_completed_is_terminal(client):
-    txn_id = await _create_active_txn(client, code_name="WF-COMP")
+    txn_id = await _create_active_txn(client)
 
     await client.post(
         f"/api/v1/transactions/{txn_id}/workflow/status",
@@ -136,7 +135,7 @@ async def test_status_completed_is_terminal(client):
 
 # ── Phase Advance ──────────────────────────────────────────
 async def test_advance_engagement_to_preparation(client):
-    txn_id = await _create_active_txn(client, code_name="WF-ADV1")
+    txn_id = await _create_active_txn(client)
 
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/workflow/advance",
@@ -147,7 +146,7 @@ async def test_advance_engagement_to_preparation(client):
 
 
 async def test_advance_skip_phase_fails(client):
-    txn_id = await _create_active_txn(client, code_name="WF-SKIP")
+    txn_id = await _create_active_txn(client)
 
     # ENGAGEMENT → MARKETING (2단계 건너뛰기 — 불가)
     resp = await client.post(
@@ -158,7 +157,7 @@ async def test_advance_skip_phase_fails(client):
 
 
 async def test_advance_requires_active_status(client):
-    resp = await client.post("/api/v1/transactions", json={**FULL_TXN, "code_name": "WF-DRAFT"})
+    resp = await client.post("/api/v1/transactions", json=FULL_TXN)
     txn_id = resp.json()["id"]
 
     # DRAFT 상태에서 advance 시도
@@ -171,7 +170,7 @@ async def test_advance_requires_active_status(client):
 
 # ── Phase Rollback ─────────────────────────────────────────
 async def test_rollback_phase(client):
-    txn_id = await _create_active_txn(client, code_name="WF-ROLL")
+    txn_id = await _create_active_txn(client)
 
     # ENGAGEMENT → PREPARATION
     await client.post(
@@ -189,7 +188,7 @@ async def test_rollback_phase(client):
 
 # ── Multi-phase Advance ───────────────────────────────────
 async def test_advance_through_multiple_phases(client):
-    txn_id = await _create_active_txn(client, code_name="WF-MULTI")
+    txn_id = await _create_active_txn(client)
 
     phases = [
         "PREPARATION",
@@ -212,7 +211,7 @@ async def test_advance_through_multiple_phases(client):
 # ── REQUIRED 충족 + RECOMMENDED 충족 시 all_met=True ──────
 async def test_full_prerequisites_all_met(client):
     """모든 전제 조건(REQUIRED + RECOMMENDED) 충족 시 all_met=True, has_warnings=False."""
-    txn_id = await _create_active_txn(client, code_name="WF-FULL")
+    txn_id = await _create_active_txn(client)
 
     # ENGAGEMENT → PREPARATION
     await client.post(
@@ -236,7 +235,7 @@ async def test_advance_with_recommended_warnings(client):
     # industry 없는 거래 (MARKETING의 RECOMMENDED 조건)
     txn_without_industry = {
         "name": "권장 미충족 거래",
-        "code_name": "WF-REC",
+        "deal_type": "MA",
         "side": "SELL",
         "target_company_name": "대상기업",
         "client_name": "의뢰기업",
@@ -270,7 +269,7 @@ async def test_phase_status_has_warnings_when_recommended_unmet(client):
     """RECOMMENDED 미충족 시 has_warnings=True 확인."""
     txn_without_industry = {
         "name": "경고 테스트",
-        "code_name": "WF-WARN",
+        "deal_type": "MA",
         "side": "SELL",
         "target_company_name": "대상기업",
         "client_name": "의뢰기업",
@@ -302,7 +301,7 @@ async def test_phase_status_has_warnings_when_recommended_unmet(client):
 # ── Milestone Upload (entity_id string 허용) ────────────
 async def test_milestone_upload(client):
     """마일스톤 문서를 entity_type=MILESTONE, entity_id=문자열로 업로드."""
-    txn_id = await _create_active_txn(client, code_name="WF-MILE")
+    txn_id = await _create_active_txn(client)
 
     import io
 
@@ -326,7 +325,7 @@ async def test_milestone_upload(client):
 
 async def test_milestone_list_filter(client):
     """마일스톤 첨부파일을 entity_id 문자열로 필터 조회."""
-    txn_id = await _create_active_txn(client, code_name="WF-MILF")
+    txn_id = await _create_active_txn(client)
 
     import io
 
@@ -357,7 +356,7 @@ async def test_unsupported_phase_returns_422(client):
     """deprecated 단계(MOU_SIGNED) 거래의 phase-status 조회 시 422."""
     # 이 테스트는 workflow_engine의 방어 코드를 검증함.
     # DB에 직접 MOU_SIGNED를 설정할 수 없으므로 잘못된 단계 전환 시도로 확인.
-    txn_id = await _create_active_txn(client, code_name="WF-UNSUP")
+    txn_id = await _create_active_txn(client)
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/workflow/advance",
         json={"to_phase": "MOU_SIGNED"},
@@ -368,7 +367,7 @@ async def test_unsupported_phase_returns_422(client):
 
 async def test_magic_bytes_mismatch_rejected(client):
     """확장자와 매직바이트가 불일치하면 400."""
-    txn_id = await _create_active_txn(client, code_name="WF-MAGIC")
+    txn_id = await _create_active_txn(client)
 
     import io
 

@@ -50,7 +50,7 @@ async def test_client_cannot_create_transaction(client):
             "/api/v1/transactions",
             json={
                 "name": "클라이언트 생성 시도",
-                "code_name": "CLIENT-001",
+                "deal_type": "MA",
                 "side": "SELL",
                 "target_company_name": "기업",
                 "client_name": "고객",
@@ -116,7 +116,7 @@ async def test_analyst_can_create_transaction(client):
             "/api/v1/transactions",
             json={
                 "name": "분석가 생성 거래",
-                "code_name": "ANALYST-001",
+                "deal_type": "MA",
                 "side": "SELL",
                 "target_company_name": "기업",
                 "client_name": "고객",
@@ -145,7 +145,7 @@ async def test_manager_can_create_transaction(client):
             "/api/v1/transactions",
             json={
                 "name": "매니저 생성 거래",
-                "code_name": "MGR-001",
+                "deal_type": "MA",
                 "side": "BUY",
                 "target_company_name": "대상기업",
                 "client_name": "고객기업",

@@ -64,7 +64,7 @@ ADMIN_CLAIMS = JWTClaims(
 
 SAMPLE_TXN = {
     "name": "프로젝트 클라이언트",
-    "code_name": "CLIENT-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",
@@ -238,8 +238,8 @@ class TestClientDealIsolation:
     ) -> None:
         """CLIENT가 접근 권한 없는 딜에 403을 받는다."""
         _set_claims(ADMIN_CLAIMS)
-        txn_own = await _create_txn(http_client, code_name="OWN-001")
-        txn_other = await _create_txn(http_client, code_name="OTHER-001")
+        txn_own = await _create_txn(http_client)
+        txn_other = await _create_txn(http_client)
 
         await _grant_deal_access(async_session, txn_own, CLIENT_CLAIMS.email)
 
@@ -256,8 +256,8 @@ class TestClientDealIsolation:
     ) -> None:
         """CLIENT가 접근 권한 없는 딜의 컨소시엄에 403을 받는다."""
         _set_claims(ADMIN_CLAIMS)
-        txn_own = await _create_txn(http_client, code_name="OWN-002")
-        txn_other = await _create_txn(http_client, code_name="OTHER-002")
+        txn_own = await _create_txn(http_client)
+        txn_other = await _create_txn(http_client)
 
         await _grant_deal_access(async_session, txn_own, CLIENT_CLAIMS.email)
 

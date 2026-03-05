@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "Closing 테스트 거래",
-    "code_name": "CLS-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",

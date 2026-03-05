@@ -180,7 +180,7 @@ async def transaction_id(client: AsyncClient) -> str:
         "/api/v1/transactions",
         json={
             "name": "Test Transaction",
-            "code_name": f"TEST-{id(client)}",
+            "deal_type": "MA",
             "target_company_name": "테스트 기업",
             "client_name": "테스트 고객",
             "side": "SELL",
@@ -198,7 +198,7 @@ async def sample_transaction(client: AsyncClient) -> dict:
         "/api/v1/transactions",
         json={
             "name": "마케팅자료 테스트 거래",
-            "code_name": "MKTING-001",
+            "deal_type": "MA",
             "side": "SELL",
             "target_company_name": "테스트 대상기업",
             "client_name": "테스트 의뢰기업",
@@ -216,7 +216,7 @@ async def another_transaction(client: AsyncClient) -> dict:
         "/api/v1/transactions",
         json={
             "name": "격리 테스트 거래",
-            "code_name": "MKTING-002",
+            "deal_type": "MA",
             "side": "BUY",
             "target_company_name": "격리 대상기업",
             "client_name": "격리 의뢰기업",

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.enums import (
     DealStructure,
@@ -95,16 +94,6 @@ class TransactionCreate(BaseModel):
     exclusivity: bool | None = None
     exclusivity_deadline: str | None = Field(None, max_length=10)
     notes: str | None = None
-
-    @field_validator("name")
-    @classmethod
-    def name_must_be_project_format(cls, v: str) -> str:
-        if not v.startswith("Project "):
-            raise ValueError("프로젝트명은 'Project '로 시작해야 합니다")
-        suffix = v[len("Project ") :]
-        if not re.match(r"^[A-Za-z][A-Za-z\s]*$", suffix):
-            raise ValueError("'Project ' 이후는 영문자만 사용 가능합니다")
-        return v
 
 
 # ── Update ──────────────────────────────────────────────

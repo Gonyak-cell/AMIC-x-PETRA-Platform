@@ -6,7 +6,7 @@ from sqlalchemy import update
 
 SAMPLE_TXN = {
     "name": "LDD 리뷰 테스트 거래",
-    "code_name": "LDD-REVIEW-001",
+    "deal_type": "MA",
     "side": "BUY",
     "target_company_name": "주식회사 대상기업",
     "client_name": "주식회사 의뢰기업",
@@ -142,6 +142,7 @@ async def test_compute_counts_with_review_sections(client):
                 {
                     "item_id": "CORP-01",
                     "name": "설립/등기/정관 검토",
+                    "deal_type": "MA",
                     "status": "OK",
                     "issue_level": None,
                     "risk_color": "",
@@ -160,6 +161,7 @@ async def test_compute_counts_with_review_sections(client):
                 {
                     "item_id": "CORP-02",
                     "name": "이사회 의사록 검토",
+                    "deal_type": "MA",
                     "status": "ISSUE",
                     "issue_level": "HIGH",
                     "risk_color": "AMBER",

@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "NDA 테스트 거래",
-    "code_name": "NDA-001",
+    "deal_type": "MA",
     "side": "SELL",
     "target_company_name": "NDA기업",
     "client_name": "의뢰기업",

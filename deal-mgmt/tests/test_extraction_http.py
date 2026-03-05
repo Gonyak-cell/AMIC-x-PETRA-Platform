@@ -8,7 +8,7 @@ async def _create_txn(client) -> str:
         "/api/v1/transactions",
         json={
             "name": "추출 테스트 거래",
-            "code_name": "EXT-001",
+            "deal_type": "MA",
             "side": "SELL",
             "target_company_name": "기업",
             "client_name": "고객",
