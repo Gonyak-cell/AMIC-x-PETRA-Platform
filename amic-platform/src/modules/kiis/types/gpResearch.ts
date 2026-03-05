@@ -117,6 +117,7 @@ export const SPONSOR_BADGE_VARIANT: Record<
 export interface GpProfileFromMA {
   id: string;
   raw_name: string;
+  logo_url?: string | null;
   total_committed_sum: number | null;
   recent_pef_count: number | null;
   total_pef_count: number | null;
@@ -132,6 +133,7 @@ export function adaptGpProfileToResearchItem(
   return {
     id: gp.id,
     name: gp.raw_name,
+    logoUrl: gp.logo_url ?? undefined,
     established: "-",
     licenses: ["pef"],
     sponsorType: "independent",

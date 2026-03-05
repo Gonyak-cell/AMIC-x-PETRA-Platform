@@ -137,5 +137,6 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": ["ui-friend"]
 }
