@@ -138,3 +138,13 @@ export const PHASE_MILESTONES: PhaseMilestone[] = [
   },
   { afterPhase: "CLOSING", label: "Closing" },
 ];
+
+/** PipelineFlow 표시 전용 — POST_CLOSING 스테퍼에서 숨김 */
+export const PIPELINE_PHASES = PHASE_CONFIG.filter(
+  (p) => p.phase !== "POST_CLOSING",
+);
+
+/** PipelineFlow 표시 전용 — Closing displayonly 마일스톤 마커 숨김 */
+export const PIPELINE_MILESTONES = PHASE_MILESTONES.filter(
+  (m) => m.afterPhase !== "CLOSING",
+);

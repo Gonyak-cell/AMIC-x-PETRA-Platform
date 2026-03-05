@@ -1,8 +1,8 @@
 import { Fragment, useMemo } from "react";
 import { Check, CheckCircle, Upload } from "lucide-react";
 import {
-  PHASE_CONFIG,
-  PHASE_MILESTONES,
+  PIPELINE_PHASES,
+  PIPELINE_MILESTONES,
   type PhaseMilestone,
 } from "@/modules/ma/constants";
 import type { TransactionPhase } from "@/modules/ma/types/transaction";
@@ -18,7 +18,7 @@ interface PipelineFlowProps {
 
 /** 단계 수 기반 동적 사이징 — 단계 증감 시 자동 조절 */
 function useDynamicSizing() {
-  const count = PHASE_CONFIG.length;
+  const count = PIPELINE_PHASES.length;
   return useMemo(() => {
     if (count <= 6) {
       return { height: "h-12", font: "text-sm", gap: "gap-2", arrow: 12 };
@@ -36,23 +36,22 @@ export default function PipelineFlow({
   onMilestoneClick,
   milestoneDocuments,
 }: PipelineFlowProps) {
-  const currentIdx = Math.max(
-    0,
-    PHASE_CONFIG.findIndex((p) => p.phase === currentPhase),
-  );
+  const rawIdx = PIPELINE_PHASES.findIndex((p) => p.phase === currentPhase);
+  // rawIdx === -1 → 숨겨진 단계(POST_CLOSING 등)가 현재 단계 → 모든 스테퍼 단계를 완료로 표시
+  const currentIdx = rawIdx === -1 ? PIPELINE_PHASES.length : rawIdx;
   const sizing = useDynamicSizing();
   const arrowPx = sizing.arrow;
 
   /** 단계별 마일스톤 매핑 캐시 */
   const phaseMilestoneMap = useMemo(
-    () => new Map(PHASE_MILESTONES.map((m) => [m.afterPhase, m])),
+    () => new Map(PIPELINE_MILESTONES.map((m) => [m.afterPhase, m])),
     [],
   );
 
   return (
     <div className="w-full" role="navigation" aria-label="딜 파이프라인 단계">
       <div className="flex items-center w-full">
-        {PHASE_CONFIG.map((phase, i) => {
+        {PIPELINE_PHASES.map((phase, i) => {
           const done = i < currentIdx;
           const active = i === currentIdx;
           const milestone = phaseMilestoneMap.get(phase.phase);
@@ -64,12 +63,15 @@ export default function PipelineFlow({
                   type="button"
                   onClick={() => onPhaseClick(phase.phase)}
                   onKeyDown={(e) => {
-                    if (e.key === "ArrowRight" && i < PHASE_CONFIG.length - 1) {
+                    if (
+                      e.key === "ArrowRight" &&
+                      i < PIPELINE_PHASES.length - 1
+                    ) {
                       e.preventDefault();
-                      onPhaseClick(PHASE_CONFIG[i + 1].phase);
+                      onPhaseClick(PIPELINE_PHASES[i + 1].phase);
                     } else if (e.key === "ArrowLeft" && i > 0) {
                       e.preventDefault();
-                      onPhaseClick(PHASE_CONFIG[i - 1].phase);
+                      onPhaseClick(PIPELINE_PHASES[i - 1].phase);
                     }
                   }}
                   aria-label={`${phase.order}. ${phase.label}${active ? " (현재 단계)" : done ? " (완료)" : ""}`}
@@ -92,12 +94,12 @@ export default function PipelineFlow({
                       clipPath:
                         i === 0
                           ? `polygon(0 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%)`
-                          : i === PHASE_CONFIG.length - 1
+                          : i === PIPELINE_PHASES.length - 1
                             ? `polygon(${arrowPx}px 0, 100% 0, 100% 100%, 0 100%, ${arrowPx}px 50%)`
                             : `polygon(${arrowPx}px 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%, ${arrowPx}px 50%)`,
                       paddingLeft: i === 0 ? "8px" : `${arrowPx + 4}px`,
                       paddingRight:
-                        i === PHASE_CONFIG.length - 1
+                        i === PIPELINE_PHASES.length - 1
                           ? "8px"
                           : `${arrowPx + 4}px`,
                     }}
@@ -123,7 +125,7 @@ export default function PipelineFlow({
                 </button>
               </div>
 
-              {milestone && i < PHASE_CONFIG.length - 1 && (
+              {milestone && i < PIPELINE_PHASES.length - 1 && (
                 <MilestoneMarker
                   milestone={milestone}
                   done={done}
