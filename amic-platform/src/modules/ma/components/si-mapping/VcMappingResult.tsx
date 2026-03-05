@@ -146,25 +146,7 @@ const ChainPanelCard = memo(function ChainPanelCard({
       </button>
       {expanded && panel.companies.length > 0 && (
         <table className="w-full">
-          <thead>
-            <tr className="border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500">
-              <th scope="col" className="w-10 px-3 py-2">
-                <span className="sr-only">선택</span>
-              </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
-                기업명
-              </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
-                업종
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                매출
-              </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
-                법인구분
-              </th>
-            </tr>
-          </thead>
+          <CompanyTableHeader trClassName="border-t border-slate-100" />
           <tbody>
             {panel.companies.map((c) => (
               <CompanyRow
@@ -325,28 +307,7 @@ export default function VcMappingResult({
           mapping.competitors.length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50 text-xs text-slate-500">
-                    <th scope="col" className="w-10 px-3 py-2">
-                      <span className="sr-only">선택</span>
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-left font-medium">
-                      기업명
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-left font-medium">
-                      업종
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-2 text-right font-medium"
-                    >
-                      매출
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-left font-medium">
-                      법인구분
-                    </th>
-                  </tr>
-                </thead>
+                <CompanyTableHeader trClassName="border-b border-slate-100" />
                 <tbody>
                   {mapping.competitors.map((c) => (
                     <CompanyRow
