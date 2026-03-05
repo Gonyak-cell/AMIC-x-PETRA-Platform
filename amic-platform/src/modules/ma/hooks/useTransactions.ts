@@ -17,7 +17,6 @@ import type {
   EngagementCreate,
   WorkingGroupMember,
   WorkingGroupMemberCreate,
-  ConflictCheckResult,
 } from "@/modules/ma/types/engagement";
 import type {
   BuyerCandidate,
@@ -301,19 +300,6 @@ export function useAddMember(txnId: string) {
     onError: () => {
       toast.error("멤버 추가에 실패했습니다.");
     },
-  });
-}
-
-// ── Conflict Check ─────────────────────────────────────
-export function useConflictCheck(txnId: string) {
-  return useQuery<ConflictCheckResult>({
-    queryKey: ["ma", "transactions", txnId, "conflict-check"],
-    queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/conflict-check`);
-      return data;
-    },
-    enabled: !!txnId,
-    staleTime: 60_000,
   });
 }
 

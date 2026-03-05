@@ -31,15 +31,6 @@ class WorkflowError(Exception):
         super().__init__(message)
 
 
-class ConflictError(Exception):
-    """이해충돌 감지 오류"""
-
-    def __init__(self, message: str):
-        self.message = message
-        self.code = ErrorCode.SYS_CONFLICT
-        super().__init__(message)
-
-
 class DocumentNotFoundError(Exception):
     """법률 문서 또는 트랜잭션 문서를 찾을 수 없는 오류."""
 
@@ -125,17 +116,6 @@ async def workflow_error_handler(request: Request, exc: WorkflowError) -> JSONRe
     )
 
 
-async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
-    logger.warning("ConflictError: %s (path=%s)", exc.message, request.url.path)
-    return _problem_response(
-        409,
-        "domain:conflict",
-        "CONFLICT_ERROR",
-        exc.message,
-        error_code=exc.code,
-    )
-
-
 async def document_not_found_handler(request: Request, exc: DocumentNotFoundError) -> JSONResponse:
     logger.warning("DocumentNotFoundError: %s (path=%s)", exc.message, request.url.path)
     return _problem_response(
@@ -177,7 +157,6 @@ async def company_not_found_handler(request: Request, exc: CompanyNotFoundError)
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
     app.add_exception_handler(WorkflowError, workflow_error_handler)
-    app.add_exception_handler(ConflictError, conflict_error_handler)
     app.add_exception_handler(DocumentNotFoundError, document_not_found_handler)
     app.add_exception_handler(DocumentNotReadyError, document_not_ready_handler)
     app.add_exception_handler(CompanyNotFoundError, company_not_found_handler)

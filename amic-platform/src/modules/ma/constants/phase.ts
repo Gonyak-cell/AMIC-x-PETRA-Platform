@@ -13,7 +13,7 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
   {
     phase: "ENGAGEMENT",
     label: "수임",
-    description: "클라이언트 수임계약 체결 및 이해충돌 검토",
+    description: "클라이언트 수임계약 체결",
     icon: "Handshake",
     order: 1,
   },

@@ -56,7 +56,6 @@ class ErrorCode(IntEnum):
     SYS_DB_ERROR = 9002  # DB 오류
     SYS_AUTH_FAILED = 9010  # 인증 실패
     SYS_AUTH_FORBIDDEN = 9011  # 권한 부족
-    SYS_CONFLICT = 9020  # 이해충돌
     SYS_INTERNAL = 9999  # 내부 오류
 
 

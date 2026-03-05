@@ -12,11 +12,8 @@ from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.engagement import Engagement
 from app.models.enums import AuditAction
-from app.models.transaction import Transaction
 from app.models.working_group import WorkingGroupMember
 from app.schemas.engagement import (
-    ConflictCheckResponse,
-    ConflictItem,
     EngagementCreate,
     EngagementOut,
     EngagementUpdate,
@@ -218,51 +215,3 @@ async def remove_member(
     )
     await db.delete(member)
     await db.commit()
-
-
-# ── Conflict Check ──────────────────────────────────────
-@router.get("/conflict-check", response_model=ConflictCheckResponse)
-async def check_conflicts(
-    txn_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
-):
-    """이해충돌 체크 — 동일 대상기업을 가진 다른 ACTIVE 거래 탐지."""
-    txn = await transaction_service.get_transaction(db, txn_id)
-    await check_client_deal_access(db, txn_id, claims)
-    conflicts: list[ConflictItem] = []
-
-    # 동일 대상기업 + corp_code 매칭
-    q = select(Transaction).where(
-        Transaction.id != txn_id,
-        Transaction.is_deleted.is_(False),
-        Transaction.status.in_(["ACTIVE", "DRAFT"]),
-    )
-    result = await db.execute(q)
-    for other in result.scalars().all():
-        # 회사명 일치
-        if other.target_company_name.strip().lower() == txn.target_company_name.strip().lower():
-            severity = "CRITICAL" if other.status.value == "ACTIVE" else "WARNING"
-            conflicts.append(
-                ConflictItem(
-                    severity=severity,
-                    message=(
-                        f"동일 대상기업 '{txn.target_company_name}'에 대한 "
-                        f"{'진행 중인' if severity == 'CRITICAL' else '초안'} 거래가 있습니다"
-                    ),
-                    related_transaction_id=str(other.id),
-                    related_transaction_name=other.name,
-                )
-            )
-        # corp_code 일치
-        elif txn.target_corp_code and other.target_corp_code == txn.target_corp_code:
-            conflicts.append(
-                ConflictItem(
-                    severity="WARNING",
-                    message=f"동일 corp_code ({txn.target_corp_code})를 사용하는 거래가 있습니다",
-                    related_transaction_id=str(other.id),
-                    related_transaction_name=other.name,
-                )
-            )
-
-    return ConflictCheckResponse(has_conflicts=len(conflicts) > 0, conflicts=conflicts)

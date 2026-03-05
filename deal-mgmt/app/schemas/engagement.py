@@ -69,16 +69,3 @@ class WorkingGroupMemberUpdate(BaseModel):
     role: WorkingGroupRole | None = None
     phone: str | None = Field(None, max_length=20)
     is_active: bool | None = None
-
-
-# ── Conflict Check ──────────────────────────────────────
-class ConflictItem(BaseModel):
-    severity: str  # CRITICAL, WARNING, INFO
-    message: str
-    related_transaction_id: str | None = None
-    related_transaction_name: str | None = None
-
-
-class ConflictCheckResponse(BaseModel):
-    has_conflicts: bool
-    conflicts: list[ConflictItem]

@@ -65,17 +65,3 @@ export interface WorkingGroupMemberCreate {
   role: WorkingGroupRole;
   phone?: string;
 }
-
-export type ConflictSeverity = "CRITICAL" | "WARNING" | "INFO";
-
-export interface ConflictCheckResult {
-  has_conflicts: boolean;
-  conflicts: ConflictItem[];
-}
-
-export interface ConflictItem {
-  severity: ConflictSeverity;
-  message: string;
-  related_transaction_id: string | null;
-  related_transaction_name: string | null;
-}
