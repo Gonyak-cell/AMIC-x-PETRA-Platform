@@ -14,15 +14,22 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
+import os
 import re
 import sys
 import time
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
 import httpx
 import openpyxl
+from azure.storage.blob import BlobSasPermissions, BlobServiceClient, ContentSettings, generate_blob_sas
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -32,6 +39,12 @@ SHEET1_NAME = "GP별 관심 FI List"
 DATA_START_ROW = 6  # 데이터 시작 행 (1-indexed)
 LOGO_COL = 15  # O열 = 1-indexed (openpyxl)
 LOGO_HEADER_ROW = 5  # 헤더 행 (데이터 시작 - 1)
+
+# Azure Blob Storage
+AZURE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+AZURE_CONTAINER = os.getenv("AZURE_VDR_CONTAINER_NAME", "amic-vdr")
+LOGO_BLOB_PREFIX = "gp-logos"
+SAS_EXPIRY_DAYS = 5 * 365  # 5년
 
 REQUEST_TIMEOUT = 10.0
 DELAY_BETWEEN = 0.3  # seconds between requests
@@ -606,8 +619,43 @@ def _search_domain_ddg(gp_name: str, client: httpx.Client) -> str | None:
     return None
 
 
-def fetch_logo(gp_name: str, client: httpx.Client, search: bool = True) -> tuple[str | None, str]:
-    """GP명에 대한 로고 URL과 취득 방법 반환."""
+def _safe_blob_name(gp_name: str) -> str:
+    """GP명을 Azure Blob 파일명으로 변환 (URL-safe ASCII, 16자 MD5)."""
+    return hashlib.md5(gp_name.encode("utf-8")).hexdigest()[:16]
+
+
+def _upload_image_to_blob(
+    blob_service: BlobServiceClient,
+    data: bytes,
+    blob_name: str,
+    content_type: str = "image/png",
+) -> str | None:
+    """이미지를 Azure Blob에 업로드하고 5년 SAS URL 반환."""
+    try:
+        account_name = blob_service.account_name
+        account_key = blob_service.credential.account_key
+        blob_client_obj = blob_service.get_blob_client(container=AZURE_CONTAINER, blob=blob_name)
+        blob_client_obj.upload_blob(
+            data,
+            overwrite=True,
+            content_settings=ContentSettings(content_type=content_type),
+        )
+        sas_token = generate_blob_sas(
+            account_name=account_name,
+            container_name=AZURE_CONTAINER,
+            blob_name=blob_name,
+            account_key=account_key,
+            permission=BlobSasPermissions(read=True),
+            expiry=datetime.now(tz=UTC) + timedelta(days=SAS_EXPIRY_DAYS),
+        )
+        return f"https://{account_name}.blob.core.windows.net/{AZURE_CONTAINER}/{blob_name}?{sas_token}"
+    except Exception as e:
+        logger.warning("Blob 업로드 실패: %s — %s", blob_name, e)
+        return None
+
+
+def _fetch_logo_url(gp_name: str, client: httpx.Client, search: bool = True) -> tuple[str | None, str]:
+    """GP명에 대한 로고 URL과 취득 방법 반환 (내부용)."""
     domain = _find_domain(gp_name)
 
     # 도메인 매핑 없으면 DuckDuckGo 검색 시도
@@ -636,6 +684,30 @@ def fetch_logo(gp_name: str, client: httpx.Client, search: bool = True) -> tuple
         return url, "og_image"
 
     return None, "domain_only"  # 도메인은 있지만 로고 URL 못 찾음
+
+
+def fetch_logo(
+    gp_name: str,
+    client: httpx.Client,
+    blob_service: BlobServiceClient | None = None,
+    search: bool = True,
+) -> tuple[str | None, str]:
+    """GP명에 대한 로고 URL과 취득 방법 반환. blob_service 있으면 Azure Blob에 업로드."""
+    url, method = _fetch_logo_url(gp_name, client, search)
+
+    if url and blob_service:
+        try:
+            img_resp = client.get(url, timeout=REQUEST_TIMEOUT, follow_redirects=True)
+            ct = img_resp.headers.get("content-type", "image/png").split(";")[0].strip()
+            if img_resp.status_code == 200 and ct.startswith("image/"):
+                blob_name = f"{LOGO_BLOB_PREFIX}/{_safe_blob_name(gp_name)}.png"
+                blob_url = _upload_image_to_blob(blob_service, img_resp.content, blob_name, ct)
+                if blob_url:
+                    return blob_url, f"blob_{method}"
+        except Exception as e:
+            logger.warning("이미지 다운로드 실패: %s — %s", url, e)
+
+    return url, method
 
 
 def main(dry_run: bool = False, overwrite: bool = False, search: bool = True) -> None:
@@ -682,6 +754,13 @@ def main(dry_run: bool = False, overwrite: bool = False, search: bool = True) ->
         "skipped": 0,
     }
 
+    blob_service: BlobServiceClient | None = None
+    if AZURE_CONNECTION_STRING and not dry_run:
+        blob_service = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
+        logger.info("Azure Blob Storage 연결 완료 (컨테이너: %s)", AZURE_CONTAINER)
+    else:
+        logger.warning("AZURE_STORAGE_CONNECTION_STRING 없음 또는 dry_run — Blob 업로드 스킵")
+
     with httpx.Client(headers=HEADERS, follow_redirects=True) as client:
         for excel_row, gp_name, existing_logo in gp_rows:
             if existing_logo and not overwrite:
@@ -690,17 +769,17 @@ def main(dry_run: bool = False, overwrite: bool = False, search: bool = True) ->
                 continue
 
             logger.info("[행%03d] %s", excel_row, gp_name)
-            logo_url, method = fetch_logo(gp_name, client, search=search)
+            logo_url, method = fetch_logo(gp_name, client, blob_service=blob_service, search=search)
 
             if logo_url:
                 short = logo_url[:80] + ("…" if len(logo_url) > 80 else "")
                 logger.info("  ✓ [%s] %s", method, short)
                 if not dry_run:
                     ws.cell(row=excel_row, column=LOGO_COL).value = logo_url
-                stats[method] += 1
+                stats[method] = stats.get(method, 0) + 1
             else:
                 logger.info("  ✗ [%s]", method)
-                stats[method] += 1
+                stats[method] = stats.get(method, 0) + 1
 
             time.sleep(DELAY_BETWEEN)
 
@@ -708,16 +787,18 @@ def main(dry_run: bool = False, overwrite: bool = False, search: bool = True) ->
         wb.save(EXCEL_PATH)
         logger.info("저장 완료: %s", EXCEL_PATH)
 
-    total_found = stats["clearbit"] + stats["og_image"] + stats["ddg_og_image"]
+    blob_count = sum(v for k, v in stats.items() if k.startswith("blob_"))
+    total_found = stats.get("clearbit", 0) + stats.get("og_image", 0) + stats.get("ddg_og_image", 0) + blob_count
     logger.info(
-        "완료 — 로고 발견 %d개 (Clearbit=%d, og:image=%d, DDG+og=%d) | DDG도메인없이=%d | 도메인없음=%d | 스킵=%d",
+        "완료 — 로고 발견 %d개 (Blob업로드=%d, Clearbit=%d, og:image=%d, DDG+og=%d) | DDG도메인없이=%d | 도메인없음=%d | 스킵=%d",
         total_found,
-        stats["clearbit"],
-        stats["og_image"],
-        stats["ddg_og_image"],
-        stats["ddg_no_image"],
-        stats["no_domain"],
-        stats["skipped"],
+        blob_count,
+        stats.get("clearbit", 0),
+        stats.get("og_image", 0),
+        stats.get("ddg_og_image", 0),
+        stats.get("ddg_no_image", 0),
+        stats.get("no_domain", 0),
+        stats.get("skipped", 0),
     )
 
 
