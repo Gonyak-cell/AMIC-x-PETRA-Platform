@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
+import { koreanToEnglish } from "@/modules/ma/utils/koreanToEnglish";
 import type {
   TransactionCreate,
   DealType,
@@ -133,9 +134,14 @@ export default function CreateTransactionPage() {
                     placeholder="Edward"
                     value={suffix}
                     onChange={(e) => {
-                      // 영문자·공백만 허용
-                      const clean = e.target.value.replace(/[^A-Za-z\s]/g, "");
-                      set("name", `Project ${clean}`);
+                      const converted = koreanToEnglish(e.target.value);
+                      const clean = converted.replace(/[^A-Za-z\s]/g, "");
+                      // 첫 글자 대문자 강제
+                      const capitalized =
+                        clean.length > 0
+                          ? clean.charAt(0).toUpperCase() + clean.slice(1)
+                          : clean;
+                      set("name", `Project ${capitalized}`);
                     }}
                   />
                 </div>
