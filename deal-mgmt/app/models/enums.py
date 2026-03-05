@@ -767,7 +767,9 @@ class DocExtractionCategory(enum.StrEnum):
     NDA = "NDA"  # 비밀유지계약서
     LOI_MOU = "LOI_MOU"  # LOI, MOU, IOI
     SPA_BTA = "SPA_BTA"  # SPA, SHA, BTA, SSA
-    CORPORATE_DOCS = "CORPORATE_DOCS"  # 등기부등본, 사업자등록증
+    CORPORATE_DOCS = "CORPORATE_DOCS"  # 등기부등본, 사업자등록증 (레거시 — 두 종류 혼합)
+    REGISTRY_DOCS = "REGISTRY_DOCS"  # 법인등기부등본
+    BIZ_REG_DOCS = "BIZ_REG_DOCS"  # 사업자등록증
     TAX_FILING = "TAX_FILING"  # 세무신고서, 법인세 신고서
     TEASER_IM = "TEASER_IM"  # Teaser, IM, CIM (향후 확장)
     DD_REPORT = "DD_REPORT"  # FDD/LDD/TDD 보고서 (향후 확장)

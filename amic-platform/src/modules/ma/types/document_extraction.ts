@@ -5,6 +5,8 @@ export type DocExtractionCategory =
   | "LOI_MOU"
   | "SPA_BTA"
   | "CORPORATE_DOCS"
+  | "REGISTRY_DOCS"
+  | "BIZ_REG_DOCS"
   | "TAX_FILING"
   | "TEASER_IM"
   | "DD_REPORT"
@@ -24,6 +26,8 @@ export const CATEGORY_LABELS: Record<DocExtractionCategory, string> = {
   LOI_MOU: "LOI/MOU (인수의향서)",
   SPA_BTA: "SPA/BTA (주식매매계약)",
   CORPORATE_DOCS: "등기부등본/사업자등록증",
+  REGISTRY_DOCS: "법인등기부등본",
+  BIZ_REG_DOCS: "사업자등록증",
   TAX_FILING: "세무신고서",
   TEASER_IM: "Teaser/IM",
   DD_REPORT: "DD 보고서",
@@ -46,6 +50,8 @@ export const EXTRACTABLE_CATEGORIES: Set<DocExtractionCategory> = new Set([
   "LOI_MOU",
   "SPA_BTA",
   "CORPORATE_DOCS",
+  "REGISTRY_DOCS",
+  "BIZ_REG_DOCS",
   "TAX_FILING",
 ]);
 
@@ -269,6 +275,25 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     head_office_address: "본점",
     directors: "임원에 관한 사항",
     corporate_purpose: "목적사항",
+  },
+  REGISTRY_DOCS: {
+    company_name: "상호",
+    representative_name: "대표이사",
+    establishment_date: "설립일",
+    corporate_registration_number: "법인등록번호",
+    capital_amount: "자본금의 액",
+    total_shares_issued: "발행주식의 총수",
+    par_value_per_share: "1주의 금액",
+    common_shares: "보통주식 수",
+    preferred_shares: "종류주식 수",
+    head_office_address: "본점",
+    directors: "임원에 관한 사항",
+    corporate_purpose: "목적사항",
+  },
+  BIZ_REG_DOCS: {
+    business_registration_number: "사업자등록번호",
+    business_type: "업태",
+    business_item: "종목",
   },
   TAX_FILING: {
     fiscal_year: "사업연도",

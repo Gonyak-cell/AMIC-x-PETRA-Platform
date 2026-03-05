@@ -79,6 +79,17 @@ function SectionHeader({
   );
 }
 
+// ── 카드 헤더 배지 ─────────────────────────────────────────
+
+function BothCompleteActions() {
+  return (
+    <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+      <CheckCircle2 className="h-3.5 w-3.5" />
+      법인등기부/사업자등록증 업로드 완료
+    </span>
+  );
+}
+
 // ── 법인등기부 섹션 ────────────────────────────────────────
 
 function RegistryBasicInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
@@ -234,17 +245,6 @@ function BizRegInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
   );
 }
 
-// ── 카드 헤더 배지 ─────────────────────────────────────────
-
-function BothCompleteActions() {
-  return (
-    <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-      <CheckCircle2 className="h-3.5 w-3.5" />
-      법인등기부/사업자등록증 업로드 완료
-    </span>
-  );
-}
-
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 
 export default function CompanyInfoCard({ txn }: Props) {
@@ -253,7 +253,7 @@ export default function CompanyInfoCard({ txn }: Props) {
   const [showBizRegUpload, setShowBizRegUpload] = useState(false);
 
   const hasRegistry = !!(ci?.corporate_registration_number || ci?.company_name);
-  const hasBizReg = !!(ci?.business_registration_number || ci?.business_type);
+  const hasBizReg = !!ci?.business_registration_number;
   const bothComplete = hasRegistry && hasBizReg;
 
   return (
@@ -287,7 +287,7 @@ export default function CompanyInfoCard({ txn }: Props) {
               <div className="mt-3">
                 <EngagementDocUpload
                   txnId={txn.id}
-                  docCategoryHint="CORPORATE_DOCS"
+                  docCategoryHint="REGISTRY_DOCS"
                 />
               </div>
             )
@@ -315,7 +315,7 @@ export default function CompanyInfoCard({ txn }: Props) {
               <div className="mt-3">
                 <EngagementDocUpload
                   txnId={txn.id}
-                  docCategoryHint="CORPORATE_DOCS"
+                  docCategoryHint="BIZ_REG_DOCS"
                 />
               </div>
             )

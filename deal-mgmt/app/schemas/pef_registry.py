@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
 
 class PefFundOut(BaseModel):
@@ -63,6 +63,16 @@ class GpProfileListItemOut(BaseModel):
     portfolio_sectors: list[str] | None = None
     portfolio_companies: list[str] | None = None
     yearly_pef_counts: dict[str, int] | None = None
+
+    @field_validator("logo_url", mode="before")
+    @classmethod
+    def validate_logo_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = str(v).strip()
+        if not v.startswith(("http://", "https://")):
+            return None
+        return v
 
     @field_serializer("total_committed_sum")
     @classmethod

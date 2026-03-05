@@ -1,6 +1,5 @@
 """Ralph Loop API 엔드포인트."""
 
-import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,7 +21,7 @@ router = APIRouter(prefix="/deals/{deal_id}/ralph", tags=["ralph"])
 
 
 @router.post("/sessions", response_model=RalphSessionRead, status_code=201)
-def create_ralph_session(
+async def create_ralph_session(
     deal_id: UUID,
     body: RalphSessionCreate,
     current_user: CurrentUser = require_permission(Permission.REPORT_GENERATE),
@@ -51,22 +50,18 @@ def create_ralph_session(
     service = FDDRalphService(db)
 
     if body.pass_type == "draft":
-        refined_ir, session = asyncio.run(
-            service.run_draft_pass(
-                deal_id=deal_id,
-                report_ir=report_ir,
-                config=body.config.model_dump() if body.config else None,
-                actor=current_user.email,
-            )
+        refined_ir, session = await service.run_draft_pass(
+            deal_id=deal_id,
+            report_ir=report_ir,
+            config=body.config.model_dump() if body.config else None,
+            actor=current_user.email,
         )
     else:
-        refined_ir, session = asyncio.run(
-            service.run_final_pass(
-                deal_id=deal_id,
-                report_ir=report_ir,
-                checklist_id=UUID(body.checklist_id),
-                actor=current_user.email,
-            )
+        refined_ir, session = await service.run_final_pass(
+            deal_id=deal_id,
+            report_ir=report_ir,
+            checklist_id=UUID(body.checklist_id),
+            actor=current_user.email,
         )
 
     return _session_to_read(session)

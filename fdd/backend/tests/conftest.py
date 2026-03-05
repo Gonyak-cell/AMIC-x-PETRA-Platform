@@ -39,6 +39,9 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     config.addinivalue_line("markers", "db: tests requiring database")
     config.addinivalue_line("markers", "unit: pure unit tests without DB")
+    config.addinivalue_line(
+        "markers", "enable_auth: opt out of autouse auth disabling for security tests"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -128,13 +131,17 @@ def test_client(db: Session):
 # Auth: 테스트 환경 기본 인증 비활성화
 # ──────────────────────────────────────────────
 @pytest.fixture(autouse=True)
-def _disable_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def _disable_auth(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """모든 테스트에서 인증을 비활성화.
 
     대부분의 테스트가 auth_enabled=False를 가정하고 작성되어 있으므로
-    autouse로 일괄 적용한다. JWT 토큰 검증이 필요한 보안 테스트는
-    dependency_overrides를 직접 설정하는 방식으로 독립 동작한다.
+    autouse로 일괄 적용한다. @pytest.mark.enable_auth 마커가 있는
+    보안 테스트는 인증을 유지한다.
     """
+    if request.node.get_closest_marker("enable_auth"):
+        return
     from app.config import settings
 
     monkeypatch.setattr(settings, "auth_enabled", False)
