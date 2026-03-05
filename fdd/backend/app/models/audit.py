@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,12 +32,12 @@ class AuditLog(Base):
         UUID(as_uuid=True), ForeignKey("deal.id", ondelete="SET NULL"), nullable=True
     )
     entity_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(Uuid(), nullable=False)
     action: Mapped[AuditAction] = mapped_column(Enum(AuditAction), nullable=False)
     actor: Mapped[str] = mapped_column(String(100), nullable=False, default="system")
     old_value: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)
     new_value: Mapped[dict | None] = mapped_column(JsonbColumn, nullable=True)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(), nullable=True)
 
     # ── Phase 2 확장 필드 (FDD-1702) ──────────────────────
     user_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
