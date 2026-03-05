@@ -17,11 +17,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute("CREATE TYPE dealtype AS ENUM ('MA', 'PE', 'RE', 'IB')")
     op.add_column(
         "transactions",
         sa.Column(
             "deal_type",
-            sa.Enum("MA", "PE", "RE", "IB", name="dealtype"),
+            sa.Enum("MA", "PE", "RE", "IB", name="dealtype", create_type=False),
             nullable=False,
             server_default="MA",
             comment="거래 유형 (코드명 접두사 기준)",
