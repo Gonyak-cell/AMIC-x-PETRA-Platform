@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { gsap } from "@/lib/gsap";
 import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import { useVcMappingByRegistration } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
@@ -26,40 +27,83 @@ export default function SIMappingPanel({
   const [vcResult, setVcResult] = useState<VcMappingByRegResponse | null>(null);
   const vcMapMutation = useVcMappingByRegistration();
 
-  // Focus trap ref
+  // Focus trap ref (wrapper 전체)
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // 모달 열릴 때 이전 포커스 저장 + 닫힐 때 복원
+  // GSAP 애니메이션 ref
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isClosingRef = useRef(false);
+
+  // 접근성 — 고유 ID 생성 (중복 ID 방지)
+  const titleId = useId();
+
+  // 퇴장 애니메이션 후 onClose 호출
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        const elToFocus = previousFocusRef.current;
+        onClose();
+        requestAnimationFrame(() => {
+          elToFocus?.focus();
+        });
+      },
+    });
+    tl.to(contentRef.current, {
+      scale: 0.95,
+      opacity: 0,
+      y: 12,
+      duration: 0.25,
+      ease: "power2.in",
+    });
+    tl.to(
+      backdropRef.current,
+      { opacity: 0, duration: 0.2, ease: "power2.in" },
+      "-=0.15",
+    );
+  }, [onClose]);
+
+  // 모달 열릴 때 이전 포커스 저장
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement;
+  }, []);
+
+  // 진입 애니메이션 (Modal.tsx 패턴과 동일)
+  useEffect(() => {
+    isClosingRef.current = false;
+    const tl = gsap.timeline();
+    tl.fromTo(
+      backdropRef.current,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.3, ease: "power2.out" },
+    );
+    tl.fromTo(
+      contentRef.current,
+      { scale: 0.95, opacity: 0, y: 16 },
+      { scale: 1, opacity: 1, y: 0, duration: 0.35, ease: "power3.out" },
+      "-=0.15",
+    );
     return () => {
-      previousFocusRef.current?.focus();
+      tl.kill();
     };
   }, []);
 
-  // Escape 키 핸들러 — 하위 패널이 열려 있으면 그것만 닫기
+  // Escape 키 핸들러 — deepDiveId 활성화 시 SlidePanel이 자체 cancel 이벤트로 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (deepDiveId) {
-          setDeepDiveId(null);
-        } else {
-          onClose();
-        }
+        // deepDiveId 활성화 → SlidePanel(dialog top layer)이 자체 cancel 이벤트로 처리
+        if (deepDiveId) return;
+        handleClose();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, deepDiveId]);
-
-  // Body scroll lock
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+  }, [handleClose, deepDiveId]);
 
   // Focus trap
   useEffect(() => {
@@ -106,22 +150,30 @@ export default function SIMappingPanel({
   return (
     <div
       ref={panelRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="si-mapping-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      aria-labelledby={titleId}
     >
-      <div className="flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl">
+      {/* 백드롭 (애니메이션용 별도 레이어 — 직접 onClick으로 닫기) */}
+      <div
+        ref={backdropRef}
+        className="fixed inset-0 bg-amic-900/70 backdrop-blur-sm"
+        style={{ opacity: 0 }}
+        onClick={handleClose}
+      />
+
+      {/* 모달 콘텐츠 */}
+      <div
+        ref={contentRef}
+        className="relative flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl"
+        style={{ opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2
-              id="si-mapping-title"
-              className="text-lg font-bold text-slate-800"
-            >
+            <h2 id={titleId} className="text-lg font-bold text-slate-800">
               SI 자동 매핑
             </h2>
             <p className="text-sm text-slate-500">
@@ -130,7 +182,7 @@ export default function SIMappingPanel({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="SI 매핑 패널 닫기"
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
           >
@@ -185,6 +237,7 @@ export default function SIMappingPanel({
                   txnId={txnId}
                   company={vcResult.company}
                   mapping={vcResult.mapping}
+                  onCompanyClick={(id) => setDeepDiveId(id)}
                 />
               )}
             </div>
@@ -211,7 +264,7 @@ export default function SIMappingPanel({
         <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             닫기

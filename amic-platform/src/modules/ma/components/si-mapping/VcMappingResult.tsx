@@ -16,16 +16,19 @@ interface VcMappingResultProps {
   txnId: string;
   company: VcCompanyLookupResult;
   mapping: VcMappingResponse;
+  onCompanyClick?: (id: string) => void;
 }
 
 const CompanyRow = memo(function CompanyRow({
   company,
   checked,
   onToggle,
+  onCompanyClick,
 }: {
   company: VcChainCompany;
   checked: boolean;
   onToggle: (id: number) => void;
+  onCompanyClick?: (id: string) => void;
 }) {
   return (
     <tr className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
@@ -39,7 +42,17 @@ const CompanyRow = memo(function CompanyRow({
         />
       </td>
       <td className="px-3 py-2 text-sm font-medium text-slate-800">
-        {company.company_name}
+        {onCompanyClick ? (
+          <button
+            type="button"
+            onClick={() => onCompanyClick(String(company.id))}
+            className="text-left text-accent hover:underline"
+          >
+            {company.company_name}
+          </button>
+        ) : (
+          company.company_name
+        )}
       </td>
       <td className="px-3 py-2 text-sm text-slate-600">
         {company.industry_name}
@@ -58,10 +71,12 @@ const ChainPanelCard = memo(function ChainPanelCard({
   panel,
   selectedIds,
   onToggle,
+  onCompanyClick,
 }: {
   panel: VcChainPanel;
   selectedIds: Set<number>;
   onToggle: (id: number) => void;
+  onCompanyClick?: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const coeff = Number(panel.coefficient);
@@ -131,6 +146,7 @@ const ChainPanelCard = memo(function ChainPanelCard({
                 company={c}
                 checked={selectedIds.has(c.id)}
                 onToggle={onToggle}
+                onCompanyClick={onCompanyClick}
               />
             ))}
           </tbody>
@@ -150,6 +166,7 @@ export default function VcMappingResult({
   txnId,
   company,
   mapping,
+  onCompanyClick,
 }: VcMappingResultProps) {
   const [activeTab, setActiveTab] = useState<VcTab>("forward");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -282,6 +299,7 @@ export default function VcMappingResult({
                       company={c}
                       checked={selectedIds.has(c.id)}
                       onToggle={handleToggle}
+                      onCompanyClick={onCompanyClick}
                     />
                   ))}
                 </tbody>
@@ -299,6 +317,7 @@ export default function VcMappingResult({
               panel={panel}
               selectedIds={selectedIds}
               onToggle={handleToggle}
+              onCompanyClick={onCompanyClick}
             />
           ))
         ) : (
