@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import {
   useBulkAddBuyers,
   useSIMapping,
@@ -17,7 +18,6 @@ import SICandidateTable from "./SICandidateTable";
 import SIDetailPanel from "./SIDetailPanel";
 import ValueChainDiagram from "./ValueChainDiagram";
 import VcMappingResult from "./VcMappingResult";
-import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 
 interface SIMappingPanelProps {
   txnId: string;
