@@ -115,7 +115,9 @@ export default function SIMappingPanel({
     if (!deepDiveName) return;
     if (siLookup.isFetching) {
       const id = toast.loading("기업 정보 조회 중...");
-      return () => toast.dismiss(id);
+      return () => {
+        toast.dismiss(id);
+      };
     }
     if (siLookup.isError) {
       toast.error("기업 정보 조회 중 오류가 발생했습니다.");
