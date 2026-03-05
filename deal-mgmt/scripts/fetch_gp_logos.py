@@ -34,6 +34,10 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+# Azure SDK HTTP 요청 verbose 로그 억제
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+logging.getLogger("azure.storage").setLevel(logging.WARNING)
+
 EXCEL_PATH = Path(__file__).resolve().parent.parent / "data" / "MA_GP_v3.xlsx"
 SHEET1_NAME = "GP별 관심 FI List"
 DATA_START_ROW = 6  # 데이터 시작 행 (1-indexed)
