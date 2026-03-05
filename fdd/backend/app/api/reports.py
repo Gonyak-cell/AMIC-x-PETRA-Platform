@@ -1,13 +1,15 @@
 """Reports API endpoints."""
 
+import asyncio
 import io
 import os
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -56,25 +58,28 @@ async def generate_report(
         format=docx: DOCX 파일 다운로드
         format=json: Report IR JSON
     """
-    # Report IR 생성
-    report_ir = build_report_ir(
-        db=db,
-        deal_id=deal_id,
-        include_qoe=request.include_qoe,
-        include_nwc=request.include_nwc,
-        include_debt=request.include_debt,
-        include_issues=request.include_issues,
-        include_financial_statements=request.include_financial_statements,
-        include_trends=request.include_trends,
-        include_sales_analysis=request.include_sales_analysis,
-        include_multiperiod=request.include_multiperiod,
-        include_revenue_deepdive=request.include_revenue_deepdive,
-        include_cost_structure=request.include_cost_structure,
-        include_fcf=request.include_fcf,
-        include_backlog=request.include_backlog,
-        include_consolidation_enhanced=request.include_consolidation_enhanced,
-        use_llm_narratives=request.use_llm_narratives,
-        use_template_slotfill=request.use_template_slotfill,
+    # Report IR 생성 (이벤트 루프 블로킹 방지: threadpool에서 실행)
+    report_ir = await asyncio.to_thread(
+        partial(
+            build_report_ir,
+            db=db,
+            deal_id=deal_id,
+            include_qoe=request.include_qoe,
+            include_nwc=request.include_nwc,
+            include_debt=request.include_debt,
+            include_issues=request.include_issues,
+            include_financial_statements=request.include_financial_statements,
+            include_trends=request.include_trends,
+            include_sales_analysis=request.include_sales_analysis,
+            include_multiperiod=request.include_multiperiod,
+            include_revenue_deepdive=request.include_revenue_deepdive,
+            include_cost_structure=request.include_cost_structure,
+            include_fcf=request.include_fcf,
+            include_backlog=request.include_backlog,
+            include_consolidation_enhanced=request.include_consolidation_enhanced,
+            use_llm_narratives=request.use_llm_narratives,
+            use_template_slotfill=request.use_template_slotfill,
+        )
     )
 
     # Ralph Loop Pass 1: Draft Refinement
@@ -454,17 +459,20 @@ async def create_report_version(
     )
     next_version = (latest_version or 0) + 1
 
-    # Build report IR
-    report_ir = build_report_ir(
-        db=db,
-        deal_id=deal_id,
-        include_qoe=body.include_qoe,
-        include_nwc=body.include_nwc,
-        include_debt=body.include_debt,
-        include_issues=body.include_issues,
-        include_financial_statements=body.include_financial_statements,
-        include_trends=body.include_trends,
-        include_sales_analysis=body.include_sales_analysis,
+    # Build report IR (이벤트 루프 블로킹 방지: threadpool에서 실행)
+    report_ir = await asyncio.to_thread(
+        partial(
+            build_report_ir,
+            db=db,
+            deal_id=deal_id,
+            include_qoe=body.include_qoe,
+            include_nwc=body.include_nwc,
+            include_debt=body.include_debt,
+            include_issues=body.include_issues,
+            include_financial_statements=body.include_financial_statements,
+            include_trends=body.include_trends,
+            include_sales_analysis=body.include_sales_analysis,
+        )
     )
 
     # Generate file
@@ -622,10 +630,8 @@ def download_report_version(
 
     filename = f"FDD_Report_v{version}.{file_format}"
 
-    return StreamingResponse(
-        open(file_path, "rb"),
+    return FileResponse(
+        path=file_path,
         media_type=media_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-        },
+        filename=filename,
     )

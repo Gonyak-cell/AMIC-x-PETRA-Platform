@@ -1,5 +1,7 @@
 """Ralph Loop API 엔드포인트."""
 
+import asyncio
+from functools import partial
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -44,8 +46,10 @@ async def create_ralph_session(
             status_code=400, detail="checklist_id required for final pass"
         )
 
-    # Report IR 생성
-    report_ir = build_report_ir(db=db, deal_id=deal_id)
+    # Report IR 생성 (이벤트 루프 블로킹 방지: threadpool에서 실행)
+    report_ir = await asyncio.to_thread(
+        partial(build_report_ir, db=db, deal_id=deal_id)
+    )
 
     service = FDDRalphService(db)
 

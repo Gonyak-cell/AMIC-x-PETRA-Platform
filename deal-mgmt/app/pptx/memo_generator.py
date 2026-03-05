@@ -40,7 +40,7 @@ TEMPLATES_DIR = _THIS_DIR.parent.parent / "templates" / "memorandum"
 TEMPLATE_PATH = TEMPLATES_DIR / "memorandum_master.pptx"
 LOGO_PATH = TEMPLATES_DIR / "logo.png"
 
-# ── 디자인 상수 (SPICY TM 분석 결과 기준) ──────────────────────
+# ── 디자인 상수 (MA26-SPI-02 TM 분석 결과 기준) ──────────────────
 
 SLIDE_WIDTH_INCHES = 10.8333
 SLIDE_HEIGHT_INCHES = 7.5
