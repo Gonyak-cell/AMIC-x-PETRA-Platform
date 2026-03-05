@@ -45,7 +45,6 @@ import {
   TEAM_MEMBERS,
 } from "@/modules/ma/constants";
 import CompanyInfoCard from "@/modules/ma/components/overview/CompanyInfoCard";
-import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 
 import {
   Badge,
@@ -473,13 +472,7 @@ export default function TransactionOverviewTab({
       </Card>
       {/* 회사 정보 — 전체 너비 */}
       <div className="lg:col-span-2">
-        {txn.corporate_info ? (
-          <CompanyInfoCard txn={txn} />
-        ) : (
-          <Card title="회사 정보" headerBar>
-            <EngagementDocUpload txnId={id} docCategoryHint="CORPORATE_DOCS" />
-          </Card>
-        )}
+        <CompanyInfoCard txn={txn} />
       </div>
 
       {/* 서비스 연동 — 전체 너비 */}
