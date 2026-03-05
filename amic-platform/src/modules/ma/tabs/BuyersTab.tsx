@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Users, UserPlus, Download, Building2, Sparkles } from "lucide-react";
+import { Users, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,
   useAddBuyer,
@@ -258,58 +258,68 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 Excel
               </Button>
             )}
-            {canWrite && (
-              <Button
-                icon={UserPlus}
-                onClick={() => {
-                  setBuyerForm({ company_name: "", buyer_type: "STRATEGIC" });
-                  setShowBuyerModal(true);
-                }}
-                variant="ghost"
-              >
-                후보 추가
-              </Button>
-            )}
           </div>
         </div>
 
         {buyerSubTab === "long-list" && (
           <>
-            <div className="mb-3 flex justify-end gap-2">
-              <Button
-                icon={Building2}
-                onClick={() => setShowFIRecommendModal(true)}
-                variant="secondary"
-                size="sm"
-              >
-                FI 자동 추천
-              </Button>
-              <Button
-                icon={Sparkles}
-                onClick={() => setShowSIMappingModal(true)}
-                variant="secondary"
-                size="sm"
-              >
-                SI 자동 매핑
-              </Button>
-            </div>
             <Card title="Long List" headerBar padding="none">
               {!allBuyers.length ? (
-                <EmptyState
-                  icon={Users}
-                  title="Long List 후보 없음"
-                  description="잠재 매수자를 추가하세요."
-                  actionLabel={canWrite ? "후보 추가" : undefined}
-                  onAction={
-                    canWrite ? () => setShowBuyerModal(true) : undefined
-                  }
-                />
+                <>
+                  <EmptyState
+                    icon={Users}
+                    title="Long List 후보 없음"
+                    description="AI 자동 매핑으로 후보를 추가하세요."
+                  />
+                  {canWrite && (
+                    <div className="flex justify-center gap-3 pb-6">
+                      <Button
+                        icon={Building2}
+                        onClick={() => setShowFIRecommendModal(true)}
+                        variant="primary"
+                        size="sm"
+                      >
+                        FI 자동 추천
+                      </Button>
+                      <Button
+                        icon={Sparkles}
+                        onClick={() => setShowSIMappingModal(true)}
+                        variant="primary"
+                        size="sm"
+                      >
+                        SI 자동 매핑
+                      </Button>
+                    </div>
+                  )}
+                </>
               ) : (
-                <DataTable
-                  columns={buyerColumns}
-                  data={allBuyers}
-                  keyField="id"
-                />
+                <>
+                  {canWrite && (
+                    <div className="flex justify-end gap-2 border-b border-border-default px-4 py-2">
+                      <Button
+                        icon={Building2}
+                        onClick={() => setShowFIRecommendModal(true)}
+                        variant="primary"
+                        size="sm"
+                      >
+                        FI 자동 추천
+                      </Button>
+                      <Button
+                        icon={Sparkles}
+                        onClick={() => setShowSIMappingModal(true)}
+                        variant="primary"
+                        size="sm"
+                      >
+                        SI 자동 매핑
+                      </Button>
+                    </div>
+                  )}
+                  <DataTable
+                    columns={buyerColumns}
+                    data={allBuyers}
+                    keyField="id"
+                  />
+                </>
               )}
             </Card>
             {showSIMappingModal && (
