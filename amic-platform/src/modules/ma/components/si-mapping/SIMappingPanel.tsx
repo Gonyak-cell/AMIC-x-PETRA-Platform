@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { X } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 import { gsap } from "@/lib/gsap";
 import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import {
@@ -42,6 +45,7 @@ export default function SIMappingPanel({
   const contentRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
+  const exitTlRef = useRef<gsap.core.Timeline | null>(null);
 
   // 접근성 — 고유 ID 생성
   const titleId = useId();
@@ -60,6 +64,7 @@ export default function SIMappingPanel({
         });
       },
     });
+    exitTlRef.current = tl;
     tl.to(contentRef.current, {
       scale: 0.95,
       opacity: 0,
@@ -101,16 +106,31 @@ export default function SIMappingPanel({
 
     return () => {
       tl.kill();
+      exitTlRef.current?.kill();
     };
   }, []);
 
-  // 딥다이브 기업 조회 실패 시 알림
+  // 딥다이브 기업 조회 상태 처리 (loading → error/empty 통합)
   useEffect(() => {
-    if (deepDiveName && siLookup.isSuccess && !siLookup.data) {
+    if (!deepDiveName) return;
+    if (siLookup.isFetching) {
+      const id = toast.loading("기업 정보 조회 중...");
+      return () => toast.dismiss(id);
+    }
+    if (siLookup.isError) {
+      toast.error("기업 정보 조회 중 오류가 발생했습니다.");
+      setDeepDiveName(null);
+    } else if (siLookup.isSuccess && !siLookup.data) {
       toast.info("해당 기업의 상세 정보를 조회할 수 없습니다.");
       setDeepDiveName(null);
     }
-  }, [deepDiveName, siLookup.isSuccess, siLookup.data]);
+  }, [
+    deepDiveName,
+    siLookup.isFetching,
+    siLookup.isError,
+    siLookup.isSuccess,
+    siLookup.data,
+  ]);
 
   const corpRegNo = corporateInfo?.corporate_registration_number ?? undefined;
   const bizRegNo = corporateInfo?.business_registration_number ?? undefined;
@@ -160,27 +180,15 @@ export default function SIMappingPanel({
                 법인정보 기반 Value Chain 자동 매핑
               </p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleClose}
+              className="p-1.5"
               aria-label="SI 매핑 패널 닫기"
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             >
-              <svg
-                aria-hidden="true"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X className="h-5 w-5" />
+            </Button>
           </div>
 
           {/* 본문 (스크롤) */}
@@ -200,6 +208,7 @@ export default function SIMappingPanel({
                     type="button"
                     onClick={handleVcMapping}
                     disabled={vcMapMutation.isPending}
+                    aria-busy={vcMapMutation.isPending}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {vcMapMutation.isPending
@@ -247,13 +256,9 @@ export default function SIMappingPanel({
 
           {/* 푸터 */}
           <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-            >
+            <Button variant="ghost" size="sm" onClick={handleClose}>
               닫기
-            </button>
+            </Button>
           </div>
         </div>
       </div>

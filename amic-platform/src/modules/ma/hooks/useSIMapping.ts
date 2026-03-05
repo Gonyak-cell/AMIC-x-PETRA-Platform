@@ -139,9 +139,7 @@ export function useVcMappingByRegistration() {
     onSuccess: (data) => {
       toast.success(`${data.company.company_name}: Value Chain 매핑 완료`);
     },
-    onError: (err) => {
-      toast.error(`VC 매핑 실패: ${extractDetail(err)}`);
-    },
+    // onError toast 제거 — SIMappingPanel이 인라인 에러 UI로 처리 (IMP-1)
   });
 }
 

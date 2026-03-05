@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useBulkAddVcBuyers } from "@/modules/ma/hooks/useSIMapping";
@@ -66,6 +66,32 @@ const CompanyRow = memo(function CompanyRow({
     </tr>
   );
 });
+
+function CompanyTableHeader({ trClassName }: { trClassName?: string }) {
+  return (
+    <thead>
+      <tr
+        className={`bg-slate-50/50 text-xs text-slate-500 ${trClassName ?? ""}`}
+      >
+        <th scope="col" className="w-10 px-3 py-2">
+          <span className="sr-only">선택</span>
+        </th>
+        <th scope="col" className="px-3 py-2 text-left font-medium">
+          기업명
+        </th>
+        <th scope="col" className="px-3 py-2 text-left font-medium">
+          업종
+        </th>
+        <th scope="col" className="px-3 py-2 text-right font-medium">
+          매출
+        </th>
+        <th scope="col" className="px-3 py-2 text-left font-medium">
+          법인구분
+        </th>
+      </tr>
+    </thead>
+  );
+}
 
 const ChainPanelCard = memo(function ChainPanelCard({
   panel,
@@ -195,16 +221,22 @@ export default function VcMappingResult({
     );
   };
 
-  const panelsMap: Record<VcTab, VcChainPanel[]> = {
-    forward: mapping.forward_chains,
-    backward: mapping.backward_chains,
-    competitors: [],
-  };
-  const countMap: Record<VcTab, number> = {
-    forward: mapping.total_forward,
-    backward: mapping.total_backward,
-    competitors: mapping.total_competitors,
-  };
+  const panelsMap = useMemo<Record<VcTab, VcChainPanel[]>>(
+    () => ({
+      forward: mapping.forward_chains,
+      backward: mapping.backward_chains,
+      competitors: [],
+    }),
+    [mapping.forward_chains, mapping.backward_chains],
+  );
+  const countMap = useMemo<Record<VcTab, number>>(
+    () => ({
+      forward: mapping.total_forward,
+      backward: mapping.total_backward,
+      competitors: mapping.total_competitors,
+    }),
+    [mapping.total_forward, mapping.total_backward, mapping.total_competitors],
+  );
   const currentPanels = panelsMap[activeTab];
   const currentCount = countMap[activeTab];
 
@@ -365,6 +397,7 @@ export default function VcMappingResult({
           type="button"
           onClick={handleBulkAdd}
           disabled={bulkAddMutation.isPending || selectedIds.size === 0}
+          aria-busy={bulkAddMutation.isPending}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {bulkAddMutation.isPending
