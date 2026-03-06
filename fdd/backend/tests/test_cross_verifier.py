@@ -178,12 +178,12 @@ def test_assessment_mismatch_detected():
 
 def test_amount_variance_thresholds():
     """금액 분산이 5%+ → MODERATE, 15%+ → MAJOR로 판정되어야 한다."""
-    # Case A: 7% 차이 → MODERATE
+    # Case A: 7% 차이 → MODERATE (materiality threshold 1백만원 초과 필요)
     writer_items_a = [
         {
             "entry_id": "GL-A",
             "assessment": "NON_RECURRING",
-            "amount": 100000,
+            "amount": 100000000,
             "rationale": "",
         },
     ]
@@ -191,7 +191,7 @@ def test_amount_variance_thresholds():
         {
             "entry_id": "GL-A",
             "assessment": "NON_RECURRING",
-            "amount": 107000,
+            "amount": 107000000,
             "rationale": "",
         },
     ]
@@ -216,12 +216,12 @@ def test_amount_variance_thresholds():
     assert amount_d_a is not None
     assert amount_d_a.level == DisagreementLevel.MODERATE
 
-    # Case B: 20% 차이 → MAJOR
+    # Case B: 20% 차이 → MAJOR (materiality threshold 1백만원 초과 필요)
     writer_items_b = [
         {
             "entry_id": "GL-B",
             "assessment": "NON_RECURRING",
-            "amount": 100000,
+            "amount": 100000000,
             "rationale": "",
         },
     ]
@@ -229,7 +229,7 @@ def test_amount_variance_thresholds():
         {
             "entry_id": "GL-B",
             "assessment": "NON_RECURRING",
-            "amount": 120000,
+            "amount": 120000000,
             "rationale": "",
         },
     ]
