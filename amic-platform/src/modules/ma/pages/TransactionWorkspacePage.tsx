@@ -151,6 +151,25 @@ export default function TransactionWorkspacePage() {
     prevPhaseRef.current = txn.phase;
   }, [txn?.phase, id, navigate]);
 
+  // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트
+  const initialRedirectDone = useRef(false);
+  useEffect(() => {
+    if (!txn?.phase) return;
+    if (initialRedirectDone.current) return;
+    if (splat) {
+      initialRedirectDone.current = true;
+      return;
+    }
+    if (viewedPhase) return;
+    const phase = txn.phase as TransactionPhase;
+    const defaultTab = PHASE_TAB_MAP[phase];
+    if (defaultTab && defaultTab !== "overview") {
+      initialRedirectDone.current = true;
+      navigate(`/ma/transactions/${id}/${defaultTab}`, { replace: true });
+    }
+    initialRedirectDone.current = true;
+  }, [txn?.phase, id, navigate, splat, viewedPhase]);
+
   // 마일스톤 문서 존재 여부 조회
   const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");
   const milestoneDocuments = useMemo(() => {
