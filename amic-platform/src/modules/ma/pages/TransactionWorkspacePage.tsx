@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   useParams,
   useNavigate,
@@ -137,6 +137,19 @@ export default function TransactionWorkspacePage() {
   const { data: txn, isLoading } = useTransaction(id);
   const { data: phaseStatus } = usePhaseCompletion(id);
   useAutoAdvanceNotification(id);
+
+  // 단계 전환 시 viewPhase 자동 정리 + 새 단계 기본 탭으로 이동
+  const prevPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!txn?.phase) return;
+    if (prevPhaseRef.current !== null && txn.phase !== prevPhaseRef.current) {
+      const newPhase = txn.phase as TransactionPhase;
+      const defaultTab = PHASE_TAB_MAP[newPhase];
+      const tabPath = defaultTab === "overview" ? "" : `/${defaultTab}`;
+      navigate(`/ma/transactions/${id}${tabPath}`, { replace: true });
+    }
+    prevPhaseRef.current = txn.phase;
+  }, [txn?.phase, id, navigate]);
 
   // 마일스톤 문서 존재 여부 조회
   const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");
