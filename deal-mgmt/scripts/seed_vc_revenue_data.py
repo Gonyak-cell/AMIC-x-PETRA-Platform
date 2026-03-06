@@ -102,7 +102,7 @@ def _extract_revenue(items: list[dict]) -> float | None:
 # ── Phase 1: DB 크로스레퍼런스 ──
 
 
-async def phase1_cross_reference(session: AsyncSession, year: int) -> int:
+async def phase1_cross_reference(session: AsyncSession) -> int:
     """SICompany.revenue -> VcCompany.revenue 크로스레퍼런스.
 
     매칭 조건: REPLACE(REPLACE(vc.corp_reg_no, '-', ''), ' ', '') = si.jurir_no
@@ -360,6 +360,18 @@ async def main(
     from app.core.config import settings
     from app.models.vc_company import VcCompany
 
+    # --phase1-only와 --phase2-only 동시 사용 방지
+    if phase1_only and phase2_only:
+        logger.error("--phase1-only와 --phase2-only를 동시에 사용할 수 없습니다.")
+        return
+
+    # Phase 2 실행 예정 시 API 키 사전 검증
+    if not phase1_only:
+        api_key = settings.DATA_GO_KR_API_KEY
+        if not api_key:
+            logger.error("DATA_GO_KR_API_KEY가 설정되지 않았습니다. .env에 추가하세요.")
+            return
+
     print("=" * 60)
     print("  VcCompany 매출 데이터 하이브리드 시딩")
     print("  Phase 1: SICompany 크로스레퍼런스")
@@ -401,7 +413,7 @@ async def main(
 
         # Phase 1
         if not phase2_only:
-            phase1_count = await phase1_cross_reference(session, year)
+            phase1_count = await phase1_cross_reference(session)
 
         # Phase 2
         if not phase1_only:
