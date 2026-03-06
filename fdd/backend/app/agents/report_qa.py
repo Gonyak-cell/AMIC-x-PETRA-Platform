@@ -87,18 +87,10 @@ class ReportQAAgent(BaseAgent):
           "summary": "..."
         }
         """
-        try:
-            json_str = raw_response
-            if "```json" in raw_response:
-                start = raw_response.find("```json") + 7
-                end = raw_response.find("```", start)
-                json_str = raw_response[start:end].strip()
-            elif "```" in raw_response:
-                start = raw_response.find("```") + 3
-                end = raw_response.find("```", start)
-                json_str = raw_response[start:end].strip()
+        from app.agents.cross_verifier import _extract_json
 
-            parsed = json.loads(json_str)
+        try:
+            parsed = _extract_json(raw_response)
 
             # 기본 구조 보장
             if "overall_score" not in parsed:
@@ -112,7 +104,7 @@ class ReportQAAgent(BaseAgent):
 
             return parsed
 
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Report QA 응답 파싱 실패: {e}")
             return {
                 "overall_score": 0,

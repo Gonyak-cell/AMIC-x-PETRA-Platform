@@ -13,6 +13,7 @@ Writer(기존 분석 에이전트)의 결과를 다른 LLM 프로바이더로 �
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
@@ -37,6 +38,14 @@ class ReviewMode(str, Enum):
 
     BLIND = "BLIND"
     INFORMED = "INFORMED"
+
+
+class VerificationStatus(str, Enum):
+    """교차검증 실행 상태."""
+
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
 
 
 class DisagreementLevel(str, Enum):
@@ -64,6 +73,7 @@ class DisagreementItem:
     reviewer_confidence: float = 0.0
     resolution: str | None = None
     resolved: bool = False
+    rule_id: str | None = None
 
 
 @dataclass
@@ -73,6 +83,7 @@ class CrossVerificationResult:
     writer_provider: str
     reviewer_provider: str
     review_mode: ReviewMode
+    status: VerificationStatus
     total_items: int
     agreed_items: int
     disagreements: list[DisagreementItem] = field(default_factory=list)
@@ -94,11 +105,18 @@ _QOE_MAJOR_PAIRS: set[frozenset[str]] = {
 }
 
 # 분석 타입별 금액 임계값
+# NWC는 QoE/Debt보다 타이트한 임계값 사용:
+#   - NWC Peg은 밸류에이션에 직접 반영되어 소폭 차이도 가격 조정에 영향
+#   - QoE 조정항목은 경상/비경상 분류가 핵심이라 금액 허용 범위가 더 넓음
 _AMOUNT_THRESHOLDS: dict[str, dict[str, Decimal]] = {
     "qoe": {"moderate": Decimal("0.05"), "major": Decimal("0.15")},
     "nwc": {"moderate": Decimal("0.03"), "major": Decimal("0.10")},
     "debt": {"moderate": Decimal("0.05"), "major": Decimal("0.15")},
 }
+
+# 최소 금액 임계값 (원) — 이 금액 미만 불일치는 MINOR 이하로 취급
+# 예: Writer=0, Reviewer=10원 → 100% 분산이지만 사소한 불일치
+_MATERIALITY_THRESHOLD: Decimal = Decimal("1000000")  # 1백만원
 
 
 class CrossVerificationAgent:
@@ -165,6 +183,7 @@ class CrossVerificationAgent:
                 writer_provider=self.writer_provider,
                 reviewer_provider=self.reviewer_provider,
                 review_mode=self.review_mode,
+                status=VerificationStatus.SKIPPED,
                 total_items=0,
                 agreed_items=0,
                 agreement_rate=Decimal("1.0"),
@@ -177,6 +196,7 @@ class CrossVerificationAgent:
                 writer_provider=self.writer_provider,
                 reviewer_provider=self.reviewer_provider,
                 review_mode=self.review_mode,
+                status=VerificationStatus.SKIPPED,
                 total_items=0,
                 agreed_items=0,
                 agreement_rate=Decimal("1.0"),
@@ -197,6 +217,7 @@ class CrossVerificationAgent:
                 writer_provider=self.writer_provider,
                 reviewer_provider=self.reviewer_provider,
                 review_mode=self.review_mode,
+                status=VerificationStatus.SKIPPED,
                 total_items=len(writer_items),
                 agreed_items=0,
                 agreement_rate=Decimal("0"),
@@ -219,6 +240,7 @@ class CrossVerificationAgent:
                 writer_provider=self.writer_provider,
                 reviewer_provider=self.reviewer_provider,
                 review_mode=self.review_mode,
+                status=VerificationStatus.FAILED,
                 total_items=len(writer_items),
                 agreed_items=0,
                 agreement_rate=Decimal("0"),
@@ -248,6 +270,7 @@ class CrossVerificationAgent:
             writer_provider=self.writer_provider,
             reviewer_provider=self.reviewer_provider,
             review_mode=self.review_mode,
+            status=VerificationStatus.COMPLETED,
             total_items=total,
             agreed_items=agreed,
             disagreements=resolved_disagreements,
@@ -292,7 +315,8 @@ class CrossVerificationAgent:
                 "Output JSON with an 'analysis_results' array matching the standard output schema.\n"
                 "Each item must have: entry_id, assessment, rationale, confidence (0.0-1.0), "
                 "recommended_action.\n"
-                "Be thorough — flag any entries that seem unusual or require further review."
+                "Focus on precision: only flag items where you have clear evidence from the "
+                "source data. Do not speculate or flag items based on general suspicion."
             )
         else:
             system_prompt = (
@@ -300,11 +324,12 @@ class CrossVerificationAgent:
                 "A junior analyst has classified the provided GL entries.\n"
                 "Your task:\n"
                 "1. Verify each classification independently\n"
-                "2. Challenge any disagreements with counter-rationale\n"
+                "2. Challenge disagreements only with specific counter-evidence\n"
                 "3. Identify entries the junior analyst may have missed\n"
                 "Output JSON with an 'analysis_results' array.\n"
                 "Each item must have: entry_id, assessment, rationale, confidence (0.0-1.0), "
-                "recommended_action."
+                "recommended_action.\n"
+                "Prioritize precision over recall — only disagree when you have clear evidence."
             )
 
         # User prompt: 동일한 소스 데이터
@@ -372,23 +397,13 @@ class CrossVerificationAgent:
         # 비용 누적
         self._accumulated_cost += self._estimate_cost(response.token_usage)
 
-        # JSON 파싱
+        # JSON 파싱 — 정규식으로 코드블록 내 JSON 추출 (중첩 ``` 안전)
         raw = response.content
         try:
-            json_str = raw
-            if "```json" in raw:
-                start = raw.find("```json") + 7
-                end = raw.find("```", start)
-                json_str = raw[start:end].strip()
-            elif "```" in raw:
-                start = raw.find("```") + 3
-                end = raw.find("```", start)
-                json_str = raw[start:end].strip()
-
-            parsed = json.loads(json_str)
+            parsed = _extract_json(raw)
             return parsed.get("analysis_results", [])
 
-        except (json.JSONDecodeError, AttributeError) as e:
+        except (json.JSONDecodeError, AttributeError, ValueError) as e:
             logger.error(f"Reviewer 응답 파싱 실패: {e}")
             return []
 
@@ -602,12 +617,17 @@ class CrossVerificationAgent:
         if w_amount == Decimal("0") and r_amount == Decimal("0"):
             return None
 
+        # 금액 차이의 절대값이 materiality threshold 미만이면 무시
+        absolute_diff = abs(w_amount - r_amount)
+        if absolute_diff < _MATERIALITY_THRESHOLD:
+            return None
+
         # 분산 계산
         base = max(abs(w_amount), abs(r_amount))
         if base == Decimal("0"):
             return None
 
-        variance = abs(w_amount - r_amount) / base
+        variance = absolute_diff / base
         thresholds = _AMOUNT_THRESHOLDS.get(analysis_type, _AMOUNT_THRESHOLDS["qoe"])
 
         if variance >= thresholds["major"]:
@@ -654,12 +674,14 @@ class CrossVerificationAgent:
                         f"Reviewer 분류 채택 ({d.reviewer_value}): Writer가 UNCLEAR"
                     )
                     d.resolved = True
+                    d.rule_id = "RULE_UNCLEAR"
                     continue
                 if d.reviewer_value == "UNCLEAR" and d.writer_value != "UNCLEAR":
                     d.resolution = (
                         f"Writer 분류 채택 ({d.writer_value}): Reviewer가 UNCLEAR"
                     )
                     d.resolved = True
+                    d.rule_id = "RULE_UNCLEAR"
                     continue
 
             # 규칙 2: 금액이 MINOR 이하이고 원본과 일치
@@ -679,12 +701,14 @@ class CrossVerificationAgent:
                             f"Writer 금액 채택: 원본과 정확히 일치 ({source_amount})"
                         )
                         d.resolved = True
+                        d.rule_id = "RULE_SOURCE_MATCH"
                         continue
                     if r == source_amount:
                         d.resolution = (
                             f"Reviewer 금액 채택: 원본과 정확히 일치 ({source_amount})"
                         )
                         d.resolved = True
+                        d.rule_id = "RULE_SOURCE_MATCH"
                         continue
 
             # 규칙 3: confidence 차이 0.4+ → 높은 쪽 채택
@@ -702,6 +726,7 @@ class CrossVerificationAgent:
                             f"{d.writer_confidence:.2f}, 차이 {diff:.2f})"
                         )
                     d.resolved = True
+                    d.rule_id = "RULE_CONFIDENCE"
 
         return disagreements
 
@@ -727,3 +752,35 @@ class CrossVerificationAgent:
             return Decimal(str(value))
         except Exception:
             return None
+
+
+# ── JSON 파싱 유틸리티 ──────────────────────────────────────────
+
+_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*\n(.*?)\n\s*```", re.DOTALL)
+
+
+def _extract_json(raw: str) -> dict[str, Any]:
+    """LLM 응답에서 JSON을 안전하게 추출한다.
+
+    1. 코드블록 (```json ... ```) 내 JSON을 정규식으로 추출
+    2. 코드블록이 없으면 전체 문자열을 JSON으로 파싱
+    3. 여러 코드블록이 있으면 첫 번째 유효한 JSON 사용
+
+    Raises:
+        ValueError: JSON을 추출할 수 없을 때
+    """
+    # 1차: 코드블록 내 JSON 추출
+    matches = _JSON_BLOCK_RE.findall(raw)
+    for match in matches:
+        try:
+            return json.loads(match.strip())
+        except json.JSONDecodeError:
+            continue
+
+    # 2차: 전체 문자열을 JSON으로 시도
+    try:
+        return json.loads(raw.strip())
+    except json.JSONDecodeError:
+        pass
+
+    raise ValueError(f"JSON 추출 실패: 응답 길이={len(raw)}")

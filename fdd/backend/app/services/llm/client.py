@@ -241,6 +241,8 @@ class GeminiClient(LLMClient):
         self._api_key = os.getenv("GOOGLE_API_KEY", "")
         self._model = os.getenv("GOOGLE_MODEL_NAME", self.DEFAULT_MODEL)
         self._client: Any = None
+        # 모델 인스턴스 캐싱 (system_prompt hash → GenerativeModel)
+        self._model_cache: dict[str, Any] = {}
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -253,6 +255,41 @@ class GeminiClient(LLMClient):
     def is_available(self) -> bool:
         return bool(self._api_key)
 
+    def _get_safety_settings(self) -> list[dict[str, str]]:
+        """금융 분석에 적합한 안전 설정을 반환한다.
+
+        'high risk', 'critical' 등 금융 용어가 차단되지 않도록
+        모든 안전 카테고리를 BLOCK_NONE으로 설정.
+        """
+        return [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
+
+    def _get_model_instance(
+        self,
+        model_name: str,
+        system_prompt: str,
+        generation_config: dict[str, Any],
+    ) -> Any:
+        """system_prompt 해시 기반 캐싱된 모델 인스턴스를 반환한다."""
+        import hashlib
+
+        genai = self._get_client()
+        cache_key = hashlib.md5(f"{model_name}:{system_prompt}".encode()).hexdigest()
+
+        if cache_key not in self._model_cache:
+            self._model_cache[cache_key] = genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=system_prompt,
+                generation_config=generation_config,
+                safety_settings=self._get_safety_settings(),
+            )
+
+        return self._model_cache[cache_key]
+
     def chat(
         self,
         *,
@@ -264,7 +301,6 @@ class GeminiClient(LLMClient):
         json_schema: dict[str, Any] | None = None,
         timeout_seconds: int = 60,
     ) -> LLMResponse:
-        genai = self._get_client()
         model_name = model or self._model
 
         generation_config: dict[str, Any] = {
@@ -275,10 +311,10 @@ class GeminiClient(LLMClient):
         if json_schema:
             generation_config["response_mime_type"] = "application/json"
 
-        model_instance = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_prompt,
-            generation_config=generation_config,
+        model_instance = self._get_model_instance(
+            model_name,
+            system_prompt,
+            generation_config,
         )
 
         logger.info(
