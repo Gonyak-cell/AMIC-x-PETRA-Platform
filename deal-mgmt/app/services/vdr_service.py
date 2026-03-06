@@ -299,10 +299,71 @@ async def delete_document(
     transaction_id: uuid.UUID,
     doc_id: uuid.UUID,
 ) -> None:
-    """문서를 소프트 삭제한다 (상태를 DELETED로 변경)."""
+    """문서를 소프트 삭제하고, 관련 추출 데이터를 정리한다."""
     doc = await get_document(db, transaction_id, doc_id)
     doc.status = VdrDocumentStatus.DELETED
+
+    # 관련 extraction 정리 + corporate_info 리셋
+    await _cleanup_extractions_for_document(db, transaction_id, doc_id)
+
     await db.commit()
+
+
+async def _cleanup_extractions_for_document(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    doc_id: uuid.UUID,
+) -> None:
+    """삭제된 문서에 연결된 추출 데이터를 정리한다."""
+    from app.models.document_extraction import DocumentExtraction
+    from app.models.transaction import Transaction
+
+    result = await db.execute(
+        select(DocumentExtraction).where(
+            DocumentExtraction.vdr_document_id == doc_id,
+            DocumentExtraction.transaction_id == transaction_id,
+        )
+    )
+    extractions = result.scalars().all()
+    if not extractions:
+        return
+
+    txn = await db.get(Transaction, transaction_id)
+    if not txn:
+        return
+
+    registry_keys = {
+        "company_name",
+        "representative_name",
+        "establishment_date",
+        "corporate_registration_number",
+        "head_office_address",
+        "capital_amount",
+        "total_shares_issued",
+        "par_value_per_share",
+        "common_shares",
+        "preferred_shares",
+        "directors",
+        "corporate_purpose",
+    }
+    biz_keys = {"business_registration_number", "business_type", "business_item"}
+
+    for ext in extractions:
+        # CONFIRMED + transaction 매핑인 경우 corporate_info 정리
+        if ext.target_model == "transaction" and txn.corporate_info:
+            cat = ext.doc_category
+            if cat in ("CORPORATE_DOCS", "REGISTRY_DOCS"):
+                txn.corporate_info = {k: v for k, v in txn.corporate_info.items() if k not in registry_keys}
+            elif cat == "BIZ_REG_DOCS":
+                txn.corporate_info = {k: v for k, v in txn.corporate_info.items() if k not in biz_keys}
+
+            # 빈 dict → None으로 정리
+            if not txn.corporate_info:
+                txn.corporate_info = None
+
+        # extraction 레코드 무효화
+        ext.status = "FAILED"
+        ext.error_message = "원본 문서 삭제됨"
 
 
 async def get_vdr_summary(

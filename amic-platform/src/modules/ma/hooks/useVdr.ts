@@ -230,6 +230,10 @@ export function useDeleteVdrDocument(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "vdr"],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId],
+        exact: true,
+      });
       toast.success("문서가 삭제되었습니다.");
     },
     onError: () => {
