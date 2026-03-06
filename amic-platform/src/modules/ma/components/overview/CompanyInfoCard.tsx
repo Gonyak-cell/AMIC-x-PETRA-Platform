@@ -32,8 +32,8 @@ function formatKRW(amount: number): string {
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <>
-      <dt className="text-text-muted text-sm">{label}</dt>
-      <dd className="text-sm">{value ?? "-"}</dd>
+      <dt className="text-text-secondary text-sm">{label}</dt>
+      <dd className="text-sm font-medium text-text-body">{value ?? "-"}</dd>
     </>
   );
 }
@@ -119,7 +119,7 @@ function CapitalSection({ ci }: { ci: CorporateDocsExtractedData }) {
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         자본 및 주식
       </h4>
-      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5">
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5 [&>dd]:text-right">
         <FieldRow
           label="자본금"
           value={
@@ -190,26 +190,24 @@ function DirectorsSection({ directors }: { directors: CorporateDirector[] }) {
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         임원 정보
       </h4>
-      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-1.5">
+      <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-4 gap-y-2 items-center">
+        <span className="text-[11px] text-text-muted">직책</span>
+        <span className="text-[11px] text-text-muted">성명</span>
+        <span className="text-[11px] text-text-muted">생년월일</span>
+        <span className="text-[11px] text-text-muted">취임일</span>
         {sorted.map((d, i) => (
           <Fragment key={i}>
-            <dt className="flex items-center">
-              <DirectorBadge position={d.position} />
-            </dt>
-            <dd className="flex items-baseline gap-2 text-sm">
-              <span className="font-medium">{d.name}</span>
-              {d.birth_date && (
-                <span className="text-text-muted text-xs">{d.birth_date}</span>
-              )}
-              {d.appointment_date && (
-                <span className="text-text-muted text-xs">
-                  취임 {d.appointment_date}
-                </span>
-              )}
-            </dd>
+            <DirectorBadge position={d.position} />
+            <span className="text-sm font-medium text-text-body">{d.name}</span>
+            <span className="text-xs text-text-secondary font-mono">
+              {d.birth_date ?? "-"}
+            </span>
+            <span className="text-xs text-text-secondary font-mono">
+              {d.appointment_date ?? "-"}
+            </span>
           </Fragment>
         ))}
-      </dl>
+      </div>
     </div>
   );
 }
@@ -252,7 +250,7 @@ function BusinessPurposeSection({ purpose }: { purpose: string }) {
           {leftCol.map((item, i) => (
             <li
               key={i}
-              className="text-xs text-text-secondary leading-relaxed truncate"
+              className="text-xs text-text-secondary leading-relaxed break-words"
               title={item}
             >
               · {item}
@@ -263,7 +261,7 @@ function BusinessPurposeSection({ purpose }: { purpose: string }) {
           {rightCol.map((item, i) => (
             <li
               key={i}
-              className="text-xs text-text-secondary leading-relaxed truncate"
+              className="text-xs text-text-secondary leading-relaxed break-words"
               title={item}
             >
               · {item}
@@ -333,13 +331,13 @@ export default function CompanyInfoCard({ txn }: Props) {
               {/* 좌측: subgrid로 행 정렬 */}
               <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
                 <RegistryBasicInfoSection ci={ci} />
-                <div className="hidden md:block border-t border-gray-border my-6" />
+                <div className="hidden md:block border-t border-gray-border my-4" />
                 <CapitalSection ci={ci} />
               </div>
               {/* 우측: subgrid로 행 정렬 */}
               <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
                 <DirectorsSection directors={ci.directors ?? []} />
-                <div className="hidden md:block border-t border-gray-border my-6" />
+                <div className="hidden md:block border-t border-gray-border my-4" />
                 {ci.corporate_purpose ? (
                   <BusinessPurposeSection purpose={ci.corporate_purpose} />
                 ) : (
