@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { UploadCloud, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Transaction } from "@/modules/ma/types/transaction";
@@ -116,7 +116,7 @@ function RegistryBasicInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
 
 function CapitalSection({ ci }: { ci: CorporateDocsExtractedData }) {
   return (
-    <div className="border-t border-gray-border pt-4">
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         자본 및 주식
       </h4>
@@ -184,42 +184,73 @@ function DirectorBadge({ position }: { position: string }) {
 
 function DirectorsSection({ directors }: { directors: CorporateDirector[] }) {
   const sorted = sortDirectorsByPosition(directors);
-  if (sorted.length === 0) return null;
+  if (sorted.length === 0) return <div />;
 
   return (
-    <div className="border-t border-gray-border pt-4">
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         임원 정보
       </h4>
-      <div className="space-y-1.5">
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-1.5">
         {sorted.map((d, i) => (
-          <div key={i} className="flex items-baseline gap-2 text-sm">
-            <DirectorBadge position={d.position} />
-            <span className="font-medium">{d.name}</span>
-            {d.birth_date && (
-              <span className="text-text-muted text-xs">{d.birth_date}</span>
-            )}
-            {d.appointment_date && (
-              <span className="text-text-muted text-xs">
-                취임 {d.appointment_date}
-              </span>
-            )}
-          </div>
+          <Fragment key={i}>
+            <dt className="flex items-center">
+              <DirectorBadge position={d.position} />
+            </dt>
+            <dd className="flex items-baseline gap-2 text-sm">
+              <span className="font-medium">{d.name}</span>
+              {d.birth_date && (
+                <span className="text-text-muted text-xs">{d.birth_date}</span>
+              )}
+              {d.appointment_date && (
+                <span className="text-text-muted text-xs">
+                  취임 {d.appointment_date}
+                </span>
+              )}
+            </dd>
+          </Fragment>
         ))}
-      </div>
+      </dl>
     </div>
   );
 }
 
 function PurposeSection({ purpose }: { purpose: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = purpose
+    .split(/[,،]\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const VISIBLE_COUNT = 10;
+  const hasMore = items.length > VISIBLE_COUNT;
+  const visibleItems = expanded ? items : items.slice(0, VISIBLE_COUNT);
+
   return (
-    <div className="border-t border-gray-border pt-4">
-      <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
-        목적사항
-      </h4>
-      <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
-        {purpose}
-      </p>
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-semibold text-text-secondary uppercase">
+          목적사항
+          <span className="ml-1 text-text-muted font-normal">
+            ({items.length}건)
+          </span>
+        </h4>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-accent hover:text-accent/80 transition-colors"
+          >
+            {expanded ? "접기" : `+${items.length - VISIBLE_COUNT}건 더보기`}
+          </button>
+        )}
+      </div>
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+        {visibleItems.map((item, i) => (
+          <li key={i} className="text-sm text-text-secondary leading-relaxed">
+            · {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -228,20 +259,24 @@ function PurposeSection({ purpose }: { purpose: string }) {
 
 function BizRegInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
   return (
-    <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5">
-      <FieldRow
-        label="사업자등록번호"
-        value={
-          ci.business_registration_number && (
-            <span className="font-mono text-xs">
-              {ci.business_registration_number}
-            </span>
-          )
-        }
-      />
-      <FieldRow label="업태" value={ci.business_type} />
-      <FieldRow label="종목" value={ci.business_item} />
-    </dl>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5">
+        <FieldRow
+          label="사업자등록번호"
+          value={
+            ci.business_registration_number && (
+              <span className="font-mono text-xs">
+                {ci.business_registration_number}
+              </span>
+            )
+          }
+        />
+      </dl>
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5">
+        <FieldRow label="업태" value={ci.business_type} />
+        <FieldRow label="종목" value={ci.business_item} />
+      </dl>
+    </div>
   );
 }
 
@@ -274,13 +309,23 @@ export default function CompanyInfoCard({ txn }: Props) {
             onUploadToggle={() => setShowRegistryUpload((v) => !v)}
           />
           {hasRegistry && ci ? (
-            <div className="space-y-4">
-              <RegistryBasicInfoSection ci={ci} />
-              <CapitalSection ci={ci} />
-              <DirectorsSection directors={ci.directors ?? []} />
-              {ci.corporate_purpose && (
-                <PurposeSection purpose={ci.corporate_purpose} />
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-0">
+              {/* 좌측: subgrid로 행 정렬 */}
+              <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
+                <RegistryBasicInfoSection ci={ci} />
+                <div className="hidden md:block border-t border-gray-border my-4" />
+                <CapitalSection ci={ci} />
+              </div>
+              {/* 우측: subgrid로 행 정렬 */}
+              <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
+                <DirectorsSection directors={ci.directors ?? []} />
+                <div className="hidden md:block border-t border-gray-border my-4" />
+                {ci.corporate_purpose ? (
+                  <PurposeSection purpose={ci.corporate_purpose} />
+                ) : (
+                  <div />
+                )}
+              </div>
             </div>
           ) : (
             showRegistryUpload && (
