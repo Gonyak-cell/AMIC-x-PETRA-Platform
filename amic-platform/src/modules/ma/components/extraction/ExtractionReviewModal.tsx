@@ -72,12 +72,10 @@ export default function ExtractionReviewModal({
   if (!extraction) return null;
 
   const category = extraction.doc_category;
-  const fieldLabels = category ? FIELD_LABELS[category] ?? {} : {};
-  const isExtractable = category
-    ? EXTRACTABLE_CATEGORIES.has(category)
-    : false;
+  const fieldLabels = category ? (FIELD_LABELS[category] ?? {}) : {};
+  const isExtractable = category ? EXTRACTABLE_CATEGORIES.has(category) : false;
   const allowedTargets = category
-    ? CATEGORY_ALLOWED_TARGETS[category] ?? []
+    ? (CATEGORY_ALLOWED_TARGETS[category] ?? [])
     : [];
 
   const confidencePct = extraction.classification_confidence
@@ -100,8 +98,7 @@ export default function ExtractionReviewModal({
     );
   };
 
-  const isConfirmable =
-    extraction.status === "COMPLETED" && isExtractable;
+  const isConfirmable = extraction.status === "COMPLETED" && isExtractable;
 
   return (
     <Modal
@@ -139,10 +136,7 @@ export default function ExtractionReviewModal({
             </Badge>
           )}
           {confidencePct !== null && (
-            <Badge
-              variant={confidencePct >= 80 ? "success" : "warning"}
-              pill
-            >
+            <Badge variant={confidencePct >= 80 ? "success" : "warning"} pill>
               신뢰도 {confidencePct}%
             </Badge>
           )}
@@ -215,16 +209,12 @@ export default function ExtractionReviewModal({
         {/* 매핑 대상 선택 */}
         {isConfirmable && allowedTargets.length > 0 && (
           <div className="space-y-3 border-t border-gray-border pt-4">
-            <h3 className="text-sm font-semibold text-text-dark">
-              매핑 대상
-            </h3>
+            <h3 className="text-sm font-semibold text-text-dark">매핑 대상</h3>
             <div className="flex items-center gap-4">
               <select
                 className="border rounded px-3 py-2 text-sm flex-1"
                 value={targetModel}
-                onChange={(e) =>
-                  setTargetModel(e.target.value as TargetModel)
-                }
+                onChange={(e) => setTargetModel(e.target.value as TargetModel)}
               >
                 {allowedTargets.map((t) => (
                   <option key={t} value={t}>
@@ -279,17 +269,20 @@ function FieldEditor({
             {label}
           </label>
           <div className="space-y-1.5">
-            {sortDirectorsByPosition(value as Array<{
-              position: string; name: string; birth_date: string | null; appointment_date: string | null;
-            }>).map((dir, i) => {
+            {sortDirectorsByPosition(
+              value as Array<{
+                position: string;
+                name: string;
+                birth_date: string | null;
+                appointment_date: string | null;
+              }>,
+            ).map((dir, i) => {
               return (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <span className="inline-flex items-center rounded bg-bg-cool px-1.5 py-0.5 text-xs font-medium text-text-secondary whitespace-nowrap">
                     {dir.position}
                   </span>
-                  <span className="font-medium text-text-dark">
-                    {dir.name}
-                  </span>
+                  <span className="font-medium text-text-dark">{dir.name}</span>
                   {dir.birth_date && (
                     <span className="text-xs text-text-tertiary">
                       {dir.birth_date}
@@ -318,11 +311,7 @@ function FieldEditor({
           rows={Math.max(2, value.length)}
           value={value.join("\n")}
           onChange={(e) =>
-            onChange(
-              e.target.value
-                .split("\n")
-                .filter((s) => s.trim()),
-            )
+            onChange(e.target.value.split("\n").filter((s) => s.trim()))
           }
           disabled={disabled}
           placeholder="한 줄에 하나씩 입력"
@@ -376,10 +365,7 @@ function FieldEditor({
   }
 
   // 긴 텍스트 (risk_summary, corporate_purpose)
-  if (
-    fieldKey === "risk_summary" ||
-    fieldKey === "corporate_purpose"
-  ) {
+  if (fieldKey === "risk_summary") {
     return (
       <div>
         <label className="block text-xs font-medium text-text-secondary mb-1">

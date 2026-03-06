@@ -15,6 +15,17 @@ interface Props {
 
 // ── 유틸 ──────────────────────────────────────────────────
 
+/** 하위 호환: 기존 string 데이터도 배열로 변환 */
+function normalizePurposes(value: unknown): string[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string")
+    return value
+      .split(/\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  return [];
+}
+
 function formatKRW(amount: number): string {
   if (amount >= 1_0000_0000) {
     const eok = amount / 1_0000_0000;
@@ -115,7 +126,7 @@ function RegistryBasicInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
 
 function CapitalSection({ ci }: { ci: CorporateDocsExtractedData }) {
   return (
-    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-2">
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         자본 및 주식
       </h4>
@@ -186,7 +197,7 @@ function DirectorsSection({ directors }: { directors: CorporateDirector[] }) {
   if (sorted.length === 0) return <div />;
 
   return (
-    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0 md:pb-2">
       <h4 className="text-xs font-semibold text-text-secondary uppercase mb-3">
         임원 정보
       </h4>
@@ -212,27 +223,23 @@ function DirectorsSection({ directors }: { directors: CorporateDirector[] }) {
   );
 }
 
-function BusinessPurposeSection({ purpose }: { purpose: string }) {
+function BusinessPurposeSection({ purposes }: { purposes: string[] }) {
   const [expanded, setExpanded] = useState(false);
-  const items = purpose
-    .split(/[,،\n]\s*/)
-    .map((s) => s.trim())
-    .filter(Boolean);
   const VISIBLE_COUNT = 10;
-  const hasMore = items.length > VISIBLE_COUNT;
-  const visibleItems = expanded ? items : items.slice(0, VISIBLE_COUNT);
+  const hasMore = purposes.length > VISIBLE_COUNT;
+  const visibleItems = expanded ? purposes : purposes.slice(0, VISIBLE_COUNT);
 
   const half = Math.ceil(visibleItems.length / 2);
   const leftCol = visibleItems.slice(0, half);
   const rightCol = visibleItems.slice(half);
 
   return (
-    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
+    <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-2">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-semibold text-text-secondary uppercase">
           사업목적
           <span className="ml-1 text-text-muted font-normal">
-            ({items.length}건)
+            ({purposes.length}건)
           </span>
         </h4>
         {hasMore && (
@@ -241,7 +248,7 @@ function BusinessPurposeSection({ purpose }: { purpose: string }) {
             onClick={() => setExpanded((v) => !v)}
             className="text-xs text-accent hover:text-accent/80 transition-colors"
           >
-            {expanded ? "접기" : `+${items.length - VISIBLE_COUNT}건 더보기`}
+            {expanded ? "접기" : `+${purposes.length - VISIBLE_COUNT}건 더보기`}
           </button>
         )}
       </div>
@@ -339,7 +346,9 @@ export default function CompanyInfoCard({ txn }: Props) {
                 <DirectorsSection directors={ci.directors ?? []} />
                 <div className="hidden md:block border-t border-gray-border my-4" />
                 {ci.corporate_purpose ? (
-                  <BusinessPurposeSection purpose={ci.corporate_purpose} />
+                  <BusinessPurposeSection
+                    purposes={normalizePurposes(ci.corporate_purpose)}
+                  />
                 ) : (
                   <div />
                 )}

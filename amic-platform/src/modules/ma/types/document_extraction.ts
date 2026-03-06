@@ -198,7 +198,7 @@ export interface CorporateDocsExtractedData {
   business_item: string | null;
   head_office_address: string | null;
   directors: CorporateDirector[] | null;
-  corporate_purpose: string | null;
+  corporate_purpose: string[] | null;
 }
 
 export interface TaxFilingExtractedData {
@@ -274,7 +274,7 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     business_item: "사업 목적",
     head_office_address: "본점",
     directors: "임원에 관한 사항",
-    corporate_purpose: "목적사항",
+    corporate_purpose: "사업목적",
   },
   REGISTRY_DOCS: {
     company_name: "상호",
@@ -288,7 +288,7 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     preferred_shares: "종류주식 수",
     head_office_address: "본점",
     directors: "임원에 관한 사항",
-    corporate_purpose: "목적사항",
+    corporate_purpose: "사업목적",
   },
   BIZ_REG_DOCS: {
     business_registration_number: "사업자등록번호",
