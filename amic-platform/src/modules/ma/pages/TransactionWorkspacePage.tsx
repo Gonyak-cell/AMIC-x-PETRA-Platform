@@ -331,9 +331,20 @@ export default function TransactionWorkspacePage() {
                     variant="ghost"
                     icon={ArrowLeft}
                     onClick={() =>
-                      advancePhase.mutate({
-                        to_phase: phaseStatus.previous_phase!,
-                      })
+                      advancePhase.mutate(
+                        { to_phase: phaseStatus.previous_phase! },
+                        {
+                          onSuccess: (updatedTxn) => {
+                            const phase = updatedTxn.phase as TransactionPhase;
+                            const defaultTab = PHASE_TAB_MAP[phase];
+                            const tabPath =
+                              defaultTab === "overview" ? "" : `/${defaultTab}`;
+                            navigate(`/ma/transactions/${id}${tabPath}`, {
+                              replace: true,
+                            });
+                          },
+                        },
+                      )
                     }
                     loading={advancePhase.isPending}
                     className="!text-white/80 hover:!text-white hover:!bg-white/10"
@@ -348,9 +359,20 @@ export default function TransactionWorkspacePage() {
                   <Button
                     icon={ArrowRight}
                     onClick={() =>
-                      advancePhase.mutate({
-                        to_phase: phaseStatus.next_phase!,
-                      })
+                      advancePhase.mutate(
+                        { to_phase: phaseStatus.next_phase! },
+                        {
+                          onSuccess: (updatedTxn) => {
+                            const phase = updatedTxn.phase as TransactionPhase;
+                            const defaultTab = PHASE_TAB_MAP[phase];
+                            const tabPath =
+                              defaultTab === "overview" ? "" : `/${defaultTab}`;
+                            navigate(`/ma/transactions/${id}${tabPath}`, {
+                              replace: true,
+                            });
+                          },
+                        },
+                      )
                     }
                     loading={advancePhase.isPending}
                   >
