@@ -2,11 +2,11 @@
 
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import VdrDocumentStatus
+from app.models.enums import VdrClassificationStatus, VdrDocumentStatus
 
 
 class VdrDocument(Base, TimestampMixin):
@@ -44,6 +44,13 @@ class VdrDocument(Base, TimestampMixin):
     status: Mapped[VdrDocumentStatus] = mapped_column(
         Enum(VdrDocumentStatus), nullable=False, default=VdrDocumentStatus.ACTIVE
     )
+
+    # ── 자동 분류 ─────────────────────────────────────
+    classification_status: Mapped[VdrClassificationStatus | None] = mapped_column(
+        Enum(VdrClassificationStatus), nullable=True, default=None
+    )
+    classification_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    manual_review_needed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
 
     # ── 설명 ──────────────────────────────────────────
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -3,6 +3,8 @@ import { toast } from "sonner";
 
 import { maApi } from "@/api/maClient";
 import type {
+  ClassificationStatusItem,
+  DirectUploadBatchResult,
   VdrDocument,
   VdrDocumentUpdate,
   VdrFolder,
@@ -10,6 +12,7 @@ import type {
   VdrFolderUpdate,
   VdrSummary,
 } from "@/modules/ma/types/vdr";
+import { CLASSIFICATION_POLL_INTERVAL_MS } from "@/modules/ma/types/vdr";
 
 // ── Query Keys ─────────────────────────────────────────
 
@@ -220,6 +223,66 @@ export function useDeleteVdrDocument(txnId: string) {
   });
 }
 
+// ── Direct Upload ────────────────────────────────────────
+
+/** 다중 파일 Direct Upload (폴더 미지정, AI 자동 분류) */
+export function useDirectUpload(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f));
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/vdr/documents/direct-upload`,
+        formData,
+      );
+      return data as DirectUploadBatchResult;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: folderQK(txnId) });
+      qc.invalidateQueries({ queryKey: summaryQK(txnId) });
+    },
+    onError: () => {
+      toast.error("파일 업로드에 실패했습니다.");
+    },
+  });
+}
+
+/** 2차 심사 상태 폴링 */
+export function useClassificationStatus(txnId: string, docIds: string[]) {
+  return useQuery<ClassificationStatusItem[]>({
+    queryKey: [
+      "ma",
+      "transactions",
+      txnId,
+      "vdr",
+      "classification-status",
+      docIds,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      docIds.forEach((id) => params.append("doc_ids", id));
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/vdr/documents/classification-status?${params}`,
+      );
+      return data;
+    },
+    enabled: docIds.length > 0,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return CLASSIFICATION_POLL_INTERVAL_MS;
+      const allResolved = data.every(
+        (item) => item.classification_status !== "PENDING_REVIEW",
+      );
+      return allResolved ? false : CLASSIFICATION_POLL_INTERVAL_MS;
+    },
+    retry: 3,
+    meta: {
+      errorMessage: "분류 상태 조회에 실패했습니다.",
+    },
+  });
+}
+
 /** VDR 문서 다운로드 URL */
 export function getVdrDownloadUrl(txnId: string, docId: string): string {
   return `/api/ma/transactions/${txnId}/vdr/documents/${docId}/download`;
@@ -229,11 +292,11 @@ export function getVdrDownloadUrl(txnId: string, docId: string): string {
 export function useSuggestVdrCategory(txnId: string) {
   return useMutation({
     mutationFn: async (filename: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/vdr/suggest-category`,
-        { filename },
-      );
-      return data as { category: string | null; folder_name: string | null };
+      const { data } = await maApi.post<{
+        category: string | null;
+        folder_name: string | null;
+      }>(`/transactions/${txnId}/vdr/suggest-category`, { filename });
+      return data;
     },
   });
 }

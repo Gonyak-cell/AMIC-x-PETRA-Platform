@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import RedirectResponse, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
@@ -15,10 +18,16 @@ from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import VdrDocumentStatus
+from app.models.enums import VdrClassificationStatus, VdrDocumentStatus
 from app.models.transaction import Transaction
+from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import (
+    ClassificationStatusOut,
+    DirectUploadBatchResult,
+    DirectUploadFileResult,
+    FailedFileInfo,
+    SuggestCategoryRequest,
     VdrAutoUploadResult,
     VdrDocumentOut,
     VdrDocumentUpdate,
@@ -30,6 +39,8 @@ from app.schemas.vdr import (
     VdrSummaryOut,
 )
 from app.services import transaction_service, vdr_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/transactions/{txn_id}/vdr",
@@ -460,7 +471,7 @@ def _build_tree(
 @router.post("/suggest-category")
 async def suggest_folder_category(
     txn_id: uuid.UUID,
-    filename: str = Query(..., max_length=500),
+    body: SuggestCategoryRequest,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> dict:
@@ -469,16 +480,15 @@ async def suggest_folder_category(
 
     from app.services.vdr_categorization_service import suggest_category
 
-    category = suggest_category(filename)
+    category = suggest_category(body.filename)
     if category is None:
-        return {"suggested_category": None, "suggested_folder_id": None}
+        return {"category": None, "folder_name": None}
 
-    # 해당 카테고리의 폴더 ID를 vdr_service를 통해 조회
     folder = await vdr_service.resolve_folder_by_category(db, txn_id, category)
 
     return {
-        "suggested_category": category.value,
-        "suggested_folder_id": str(folder.id) if folder else None,
+        "category": category.value,
+        "folder_name": folder.name if folder else None,
     }
 
 
@@ -530,3 +540,231 @@ async def auto_upload_document(
         original_name_renamed=original_name_renamed,
         final_name=doc.original_name,
     )
+
+
+# ── Direct Upload (다중 파일 빠른 업로드) ─────────────────────
+
+_MAX_DIRECT_UPLOAD_FILES = 20
+_MAX_CLASSIFICATION_POLL_DOCS = 50
+_classification_semaphore = asyncio.Semaphore(5)
+
+
+async def _run_secondary_classification(
+    document_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+) -> None:
+    """BackgroundTasks에서 실행되는 2차 심사 래퍼. 새 DB 세션 사용."""
+    from app.core.database import async_session_factory
+    from app.services.vdr_classification_service import classify_document_by_content
+
+    async with _classification_semaphore, async_session_factory() as db:
+        try:
+            result = await classify_document_by_content(db, document_id, transaction_id)
+            logger.info("2차 심사 완료: doc=%s, txn=%s → %s", document_id, transaction_id, result)
+        except Exception:
+            logger.exception("2차 심사 실패: doc=%s, txn=%s", document_id, transaction_id)
+            try:
+                await db.rollback()
+                doc = await db.get(VdrDocument, document_id)
+                if doc and doc.classification_status == VdrClassificationStatus.PENDING_REVIEW:
+                    doc.classification_status = VdrClassificationStatus.MANUAL_REVIEW
+                    doc.manual_review_needed = True
+                    await db.commit()
+                    logger.info("2차 심사 실패 폴백: doc=%s → MANUAL_REVIEW", document_id)
+            except Exception:
+                logger.exception("2차 심사 폴백 상태 업데이트 실패: doc=%s", document_id)
+
+
+@router.post(
+    "/documents/direct-upload",
+    response_model=DirectUploadBatchResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def direct_upload(
+    txn_id: uuid.UUID,
+    files: list[UploadFile],
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """다중 파일을 폴더 지정 없이 업로드 — 1차 심사 + 2차 심사 자동 디스패치.
+
+    1차 심사(메타데이터 스코어링)로 즉시 분류되는 파일은 해당 폴더에 배치하고,
+    미확정 파일은 CORPORATE 폴백 폴더에 임시 배치 후 백그라운드 2차 심사를 시작한다.
+    """
+    if len(files) > _MAX_DIRECT_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"한 번에 최대 {_MAX_DIRECT_UPLOAD_FILES}개 파일까지 업로드할 수 있습니다.",
+        )
+    await _get_and_authorize_txn(db, txn_id, claims)
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
+
+    from app.services.vdr_categorization_service import auto_route, score_document
+
+    results: list[DirectUploadFileResult] = []
+    pending_doc_ids: list[uuid.UUID] = []
+    failed_files: list[FailedFileInfo] = []
+
+    for file in files:
+        filename, ext, content_type, content = await _validate_upload(file)
+
+        # 1차 심사: 메타데이터 스코어링
+        scores = score_document(filename, ext, content_type, len(content))
+        top_score = scores[0][1] if scores else 0
+        routed_category = auto_route(filename, ext, content_type, len(content))
+
+        if routed_category is not None:
+            # 1차 심사 통과 → 해당 폴더에 즉시 배치
+            try:
+                doc, folder, _ = await vdr_service.auto_upload_document(
+                    db=db,
+                    transaction_id=txn_id,
+                    original_name=filename,
+                    file_content=content,
+                    mime_type=content_type,
+                    uploaded_by_email=claims.email,
+                )
+            except (ValueError, DocumentNotFoundError) as exc:
+                logger.warning("Direct upload 1차 통과 파일 업로드 실패: txn=%s, file=%s — %s", txn_id, filename, exc)
+                failed_files.append(FailedFileInfo(filename=filename, reason=str(exc)))
+                continue
+
+            doc.classification_status = VdrClassificationStatus.DIRECT
+            doc.classification_score = top_score
+
+            results.append(
+                DirectUploadFileResult(
+                    document=VdrDocumentOut.model_validate(doc),
+                    routed_folder=VdrFolderOut.model_validate(folder),
+                    routed_category=routed_category,
+                    classification_status=VdrClassificationStatus.DIRECT,
+                    score=top_score,
+                    was_fallback=False,
+                )
+            )
+        else:
+            # 1차 심사 미통과 → CORPORATE 폴백 + 2차 심사 예약
+            fallback = await vdr_service.resolve_fallback_folder(db, txn_id)
+            if fallback is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="VDR이 초기화되지 않았습니다. 먼저 폴더 구조를 초기화해 주세요.",
+                )
+
+            try:
+                doc = await vdr_service.upload_document(
+                    db=db,
+                    transaction_id=txn_id,
+                    folder_id=fallback.id,
+                    original_name=filename,
+                    file_content=content,
+                    mime_type=content_type,
+                    uploaded_by_email=claims.email,
+                    _folder_verified=True,
+                )
+            except DocumentNotFoundError as exc:
+                logger.warning("Direct upload 폴백 업로드 실패: txn=%s, file=%s — %s", txn_id, filename, exc)
+                failed_files.append(FailedFileInfo(filename=filename, reason=str(exc)))
+                continue
+
+            doc.classification_status = VdrClassificationStatus.PENDING_REVIEW
+            doc.classification_score = top_score
+            pending_doc_ids.append(doc.id)
+
+            results.append(
+                DirectUploadFileResult(
+                    document=VdrDocumentOut.model_validate(doc),
+                    routed_folder=VdrFolderOut.model_validate(fallback),
+                    routed_category=None,
+                    classification_status=VdrClassificationStatus.PENDING_REVIEW,
+                    score=top_score,
+                    was_fallback=True,
+                )
+            )
+
+    await db.commit()
+
+    # 2차 심사 비동기 디스패치 (1차 미통과 파일만)
+    for doc_id in pending_doc_ids:
+        background_tasks.add_task(_run_secondary_classification, doc_id, txn_id)
+
+    logger.info(
+        "Direct upload 완료: txn=%s, user=%s, total=%d, pending=%d, failed=%d",
+        txn_id,
+        claims.email,
+        len(results),
+        len(pending_doc_ids),
+        len(failed_files),
+    )
+
+    return DirectUploadBatchResult(
+        results=results,
+        pending_review_count=len(pending_doc_ids),
+        total_uploaded=len(results),
+        failed_files=failed_files,
+    )
+
+
+# ── 2차 심사 상태 조회 ────────────────────────────────────────
+
+
+@router.get(
+    "/documents/classification-status",
+    response_model=list[ClassificationStatusOut],
+)
+async def get_classification_status(
+    txn_id: uuid.UUID,
+    doc_ids: list[uuid.UUID] = Query(...),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """2차 심사 대기 중인 문서들의 분류 상태를 조회한다 (FE 폴링용)."""
+    if len(doc_ids) > _MAX_CLASSIFICATION_POLL_DOCS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"한 번에 최대 {_MAX_CLASSIFICATION_POLL_DOCS}개 문서까지 조회할 수 있습니다.",
+        )
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    stmt = select(VdrDocument).where(
+        VdrDocument.transaction_id == txn_id,
+        VdrDocument.id.in_(doc_ids),
+    )
+    result = await db.execute(stmt)
+    docs = list(result.scalars().all())
+
+    # 재분류된 문서의 폴더 정보를 한 번에 조회 (N+1 방지)
+    classified_folder_ids = {
+        doc.folder_id
+        for doc in docs
+        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id
+    }
+    folder_map: dict[uuid.UUID, VdrFolder] = {}
+    if classified_folder_ids:
+        folder_stmt = select(VdrFolder).where(VdrFolder.id.in_(classified_folder_ids))
+        folder_result = await db.execute(folder_stmt)
+        for folder in folder_result.scalars().all():
+            folder_map[folder.id] = folder
+
+    items: list[ClassificationStatusOut] = []
+    for doc in docs:
+        folder_out: VdrFolderOut | None = None
+        folder_category = None
+        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id:
+            folder = folder_map.get(doc.folder_id)
+            if folder:
+                folder_out = VdrFolderOut.model_validate(folder)
+                folder_category = folder.category
+
+        items.append(
+            ClassificationStatusOut(
+                document_id=doc.id,
+                classification_status=doc.classification_status or VdrClassificationStatus.MANUAL,
+                routed_folder=folder_out,
+                routed_category=folder_category,
+                manual_review_needed=doc.manual_review_needed,
+            )
+        )
+
+    return items

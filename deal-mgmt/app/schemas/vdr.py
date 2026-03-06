@@ -7,7 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import VdrDocumentStatus, VdrFolderCategory
+from app.models.enums import VdrClassificationStatus, VdrDocumentStatus, VdrFolderCategory
 
 # ── 폴더 스키마 ───────────────────────────────────────────
 
@@ -77,6 +77,9 @@ class VdrDocumentOut(BaseModel):
     status: VdrDocumentStatus
     description: str | None
     uploaded_by_email: str | None
+    classification_status: VdrClassificationStatus | None = None
+    classification_score: int | None = None
+    manual_review_needed: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -123,3 +126,49 @@ class VdrAutoUploadResult(BaseModel):
     was_fallback: bool
     original_name_renamed: bool
     final_name: str
+
+
+# ── Direct Upload 스키마 ──────────────────────────────────
+
+
+class SuggestCategoryRequest(BaseModel):
+    """파일명 기반 카테고리 추천 요청."""
+
+    filename: str = Field(..., min_length=1, max_length=500)
+
+
+class FailedFileInfo(BaseModel):
+    """Direct Upload 실패 파일 정보."""
+
+    filename: str
+    reason: str
+
+
+class DirectUploadFileResult(BaseModel):
+    """Direct Upload 개별 파일 분류 결과."""
+
+    document: VdrDocumentOut
+    routed_folder: VdrFolderOut
+    routed_category: VdrFolderCategory | None
+    classification_status: VdrClassificationStatus
+    score: int
+    was_fallback: bool
+
+
+class DirectUploadBatchResult(BaseModel):
+    """Direct Upload 다중 파일 배치 결과."""
+
+    results: list[DirectUploadFileResult]
+    pending_review_count: int
+    total_uploaded: int
+    failed_files: list[FailedFileInfo] = []
+
+
+class ClassificationStatusOut(BaseModel):
+    """2차 심사 상태 조회 응답."""
+
+    document_id: uuid.UUID
+    classification_status: VdrClassificationStatus
+    routed_folder: VdrFolderOut | None = None
+    routed_category: VdrFolderCategory | None = None
+    manual_review_needed: bool

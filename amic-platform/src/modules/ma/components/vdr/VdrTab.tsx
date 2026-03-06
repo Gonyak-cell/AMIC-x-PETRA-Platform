@@ -4,8 +4,9 @@ import {
   Files,
   FolderTree,
   Sparkles,
+  Upload,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -21,9 +22,14 @@ import {
   useUploadVdrDocument,
   useDeleteVdrDocument,
 } from "@/modules/ma/hooks/useVdr";
-import type { VdrFolder } from "@/modules/ma/types/vdr";
+import type {
+  VdrFolder,
+  DirectUploadBatchResult,
+} from "@/modules/ma/types/vdr";
 
 import ExtractionList from "../extraction/ExtractionList";
+import DirectUploadResultModal from "./DirectUploadResultModal";
+import DirectUploadZone from "./DirectUploadZone";
 import VdrDocumentList from "./VdrDocumentList";
 import VdrFolderTree from "./VdrFolderTree";
 
@@ -71,6 +77,9 @@ export default function VdrTab({ txnId }: Props) {
   const deleteFolder = useDeleteVdrFolder(txnId);
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [showDirectUpload, setShowDirectUpload] = useState(false);
+  const [directUploadResult, setDirectUploadResult] =
+    useState<DirectUploadBatchResult | null>(null);
 
   const selectedFolder = useMemo(
     () => (selectedFolderId ? findFolder(folders, selectedFolderId) : null),
@@ -86,6 +95,14 @@ export default function VdrTab({ txnId }: Props) {
   const deleteDoc = useDeleteVdrDocument(txnId);
   const { data: extractionData } = useExtractions(txnId);
   const extractionCount = extractionData?.total ?? 0;
+
+  const handleDirectUploadComplete = useCallback(
+    (result: DirectUploadBatchResult) => {
+      setDirectUploadResult(result);
+      setShowDirectUpload(false);
+    },
+    [],
+  );
 
   // ── 초기화 전 상태 ────────────────────────────────────
   if (!summaryLoading && summary && !summary.initialized) {
@@ -128,30 +145,49 @@ export default function VdrTab({ txnId }: Props) {
   // ── 초기화 완료 상태 ──────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* KPI 요약 */}
+      {/* KPI 요약 + 빠른 업로드 버튼 */}
       {summary && (
-        <div className="grid grid-cols-4 gap-4">
-          <KpiCard
-            label="폴더"
-            value={String(summary.total_folders)}
-            icon={FolderTree}
-          />
-          <KpiCard
-            label="문서"
-            value={String(summary.total_documents)}
-            icon={Files}
-          />
-          <KpiCard
-            label="총 용량"
-            value={formatBytes(summary.total_size_bytes)}
-            icon={HardDrive}
-          />
-          <KpiCard
-            label="AI 분석"
-            value={String(extractionCount)}
-            icon={Sparkles}
-          />
+        <div className="flex items-start gap-4">
+          <div className="grid grid-cols-4 gap-4 flex-1">
+            <KpiCard
+              label="폴더"
+              value={String(summary.total_folders)}
+              icon={FolderTree}
+            />
+            <KpiCard
+              label="문서"
+              value={String(summary.total_documents)}
+              icon={Files}
+            />
+            <KpiCard
+              label="총 용량"
+              value={formatBytes(summary.total_size_bytes)}
+              icon={HardDrive}
+            />
+            <KpiCard
+              label="AI 분석"
+              value={String(extractionCount)}
+              icon={Sparkles}
+            />
+          </div>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={() => setShowDirectUpload(!showDirectUpload)}
+            className="mt-1 flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <Upload className="h-4 w-4" />
+            빠른 업로드
+          </Button>
         </div>
+      )}
+
+      {/* 빠른 업로드 영역 (토글) */}
+      {showDirectUpload && (
+        <DirectUploadZone
+          txnId={txnId}
+          onUploadComplete={handleDirectUploadComplete}
+        />
       )}
 
       {/* 2-column 레이아웃 */}
@@ -199,6 +235,16 @@ export default function VdrTab({ txnId }: Props) {
           </h3>
           <ExtractionList txnId={txnId} />
         </div>
+      )}
+
+      {/* Direct Upload 결과 모달 */}
+      {directUploadResult && (
+        <DirectUploadResultModal
+          open={directUploadResult !== null}
+          onClose={() => setDirectUploadResult(null)}
+          txnId={txnId}
+          result={directUploadResult}
+        />
       )}
     </div>
   );

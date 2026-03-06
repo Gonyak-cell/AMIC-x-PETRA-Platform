@@ -511,6 +511,16 @@ class VdrDocumentStatus(enum.StrEnum):
     DELETED = "DELETED"
 
 
+class VdrClassificationStatus(enum.StrEnum):
+    """VDR 문서 자동 분류 상태."""
+
+    DIRECT = "DIRECT"  # 1차 심사(메타데이터)로 확정 (Early Exit)
+    PENDING_REVIEW = "PENDING_REVIEW"  # 2차 심사(본문 LLM) 대기 중
+    CLASSIFIED = "CLASSIFIED"  # 2차 심사 완료 → 재분류됨
+    MANUAL_REVIEW = "MANUAL_REVIEW"  # 2차 심사 실패 → 수동 확인 필요
+    MANUAL = "MANUAL"  # 사용자가 폴더를 직접 지정
+
+
 # ── Meeting Logs (마케팅/협상 미팅 로그) ────────────────
 class MeetingPhase(enum.StrEnum):
     MARKETING = "MARKETING"
