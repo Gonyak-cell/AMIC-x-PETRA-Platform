@@ -109,7 +109,6 @@ function RegistryBasicInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
         }
       />
       <FieldRow label="본점 소재지" value={ci.head_office_address} />
-      <FieldRow label="사업 목적" value={ci.business_item} />
     </dl>
   );
 }
@@ -215,21 +214,25 @@ function DirectorsSection({ directors }: { directors: CorporateDirector[] }) {
   );
 }
 
-function PurposeSection({ purpose }: { purpose: string }) {
+function BusinessPurposeSection({ purpose }: { purpose: string }) {
   const [expanded, setExpanded] = useState(false);
   const items = purpose
-    .split(/[,،]\s*/)
+    .split(/[,،\n]\s*/)
     .map((s) => s.trim())
     .filter(Boolean);
   const VISIBLE_COUNT = 10;
   const hasMore = items.length > VISIBLE_COUNT;
   const visibleItems = expanded ? items : items.slice(0, VISIBLE_COUNT);
 
+  const half = Math.ceil(visibleItems.length / 2);
+  const leftCol = visibleItems.slice(0, half);
+  const rightCol = visibleItems.slice(half);
+
   return (
     <div className="border-t border-gray-border pt-4 md:border-t-0 md:pt-0">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-semibold text-text-secondary uppercase">
-          목적사항
+          사업목적
           <span className="ml-1 text-text-muted font-normal">
             ({items.length}건)
           </span>
@@ -244,13 +247,30 @@ function PurposeSection({ purpose }: { purpose: string }) {
           </button>
         )}
       </div>
-      <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-        {visibleItems.map((item, i) => (
-          <li key={i} className="text-sm text-text-secondary leading-relaxed">
-            · {item}
-          </li>
-        ))}
-      </ul>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+        <ul className="space-y-1">
+          {leftCol.map((item, i) => (
+            <li
+              key={i}
+              className="text-xs text-text-secondary leading-relaxed truncate"
+              title={item}
+            >
+              · {item}
+            </li>
+          ))}
+        </ul>
+        <ul className="space-y-1">
+          {rightCol.map((item, i) => (
+            <li
+              key={i}
+              className="text-xs text-text-secondary leading-relaxed truncate"
+              title={item}
+            >
+              · {item}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -313,15 +333,15 @@ export default function CompanyInfoCard({ txn }: Props) {
               {/* 좌측: subgrid로 행 정렬 */}
               <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
                 <RegistryBasicInfoSection ci={ci} />
-                <div className="hidden md:block border-t border-gray-border my-4" />
+                <div className="hidden md:block border-t border-gray-border my-6" />
                 <CapitalSection ci={ci} />
               </div>
               {/* 우측: subgrid로 행 정렬 */}
               <div className="space-y-4 md:space-y-0 md:row-span-3 md:grid md:grid-rows-[subgrid]">
                 <DirectorsSection directors={ci.directors ?? []} />
-                <div className="hidden md:block border-t border-gray-border my-4" />
+                <div className="hidden md:block border-t border-gray-border my-6" />
                 {ci.corporate_purpose ? (
-                  <PurposeSection purpose={ci.corporate_purpose} />
+                  <BusinessPurposeSection purpose={ci.corporate_purpose} />
                 ) : (
                   <div />
                 )}
