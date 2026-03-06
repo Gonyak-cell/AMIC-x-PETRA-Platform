@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   Download,
+  Files,
   FileText,
   FolderInput,
   Loader2,
@@ -51,6 +52,7 @@ interface Props {
   onUpload: (file: File) => void;
   onDelete: (docId: string) => void;
   onNavigateToFolder?: (category: string) => void;
+  folderMap?: Map<string, string>;
 }
 
 function validateFile(file: File): string | null {
@@ -79,6 +81,7 @@ export default function VdrDocumentList({
   onUpload,
   onDelete,
   onNavigateToFolder,
+  folderMap,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createExtraction = useCreateExtraction(txnId);
@@ -87,6 +90,8 @@ export default function VdrDocumentList({
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
   // AI 분석 시작 전 카테고리 선택 대상 문서
   const [pendingDocId, setPendingDocId] = useState<string | null>(null);
+
+  const isAllFilesMode = !folder && folderMap !== undefined;
 
   // vdr_document_id → extraction 매핑 (가장 최근 것 우선)
   const extractionByDocId = useMemo(() => {
@@ -139,7 +144,7 @@ export default function VdrDocumentList({
     [uploadWithSuggestion],
   );
 
-  if (!folder) {
+  if (!folder && !isAllFilesMode) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-slate-400">
         좌측에서 폴더를 선택하세요
@@ -153,37 +158,41 @@ export default function VdrDocumentList({
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">
-            {folder.name}
+            {isAllFilesMode ? "전체 파일" : folder?.name}
           </h3>
           <p className="text-xs text-slate-400">{documents.length}개 파일</p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={isUploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="mr-1 h-3.5 w-3.5" />
-          {isUploading ? "업로드 중..." : "업로드"}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          multiple
-          accept={VDR_CONSTRAINTS.ACCEPT_EXTENSIONS}
-          onChange={(e) => {
-            for (const file of Array.from(e.target.files ?? [])) {
-              const error = validateFile(file);
-              if (error) {
-                toast.error(error);
-                continue;
-              }
-              uploadWithSuggestion(file);
-            }
-            e.target.value = "";
-          }}
-        />
+        {!isAllFilesMode && (
+          <>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="mr-1 h-3.5 w-3.5" />
+              {isUploading ? "업로드 중..." : "업로드"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              accept={VDR_CONSTRAINTS.ACCEPT_EXTENSIONS}
+              onChange={(e) => {
+                for (const file of Array.from(e.target.files ?? [])) {
+                  const error = validateFile(file);
+                  if (error) {
+                    toast.error(error);
+                    continue;
+                  }
+                  uploadWithSuggestion(file);
+                }
+                e.target.value = "";
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Category Suggestion Banner */}
@@ -224,23 +233,41 @@ export default function VdrDocumentList({
       {/* Drop zone + list */}
       <div
         className="flex-1 overflow-y-auto"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
+        onDragOver={isAllFilesMode ? undefined : (e) => e.preventDefault()}
+        onDrop={isAllFilesMode ? undefined : handleDrop}
       >
         {isLoading ? (
           <div className="flex h-32 items-center justify-center text-sm text-slate-400">
             불러오는 중...
           </div>
         ) : documents.length === 0 ? (
-          <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-slate-400">
-            <Upload className="h-8 w-8 text-slate-300" />
-            <p>파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요</p>
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-slate-400">
+            {isAllFilesMode ? (
+              <>
+                <Files className="h-10 w-10 text-slate-200" />
+                <p className="text-base font-medium text-slate-400">
+                  파일을 업로드하세요
+                </p>
+                <p className="text-xs text-slate-300">
+                  좌측에서 폴더를 선택한 후 파일을 업로드하거나, 빠른 업로드를
+                  이용하세요
+                </p>
+              </>
+            ) : (
+              <>
+                <Upload className="h-8 w-8 text-slate-300" />
+                <p>파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요</p>
+              </>
+            )}
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="border-b border-slate-100 text-left text-xs text-slate-500">
               <tr>
                 <th className="px-4 py-2 font-medium">파일명</th>
+                {isAllFilesMode && (
+                  <th className="px-4 py-2 font-medium">폴더</th>
+                )}
                 <th className="px-4 py-2 font-medium">형식</th>
                 <th className="px-4 py-2 font-medium">크기</th>
                 <th className="px-4 py-2 font-medium">업로드일</th>
@@ -261,6 +288,11 @@ export default function VdrDocumentList({
                       </span>
                     </div>
                   </td>
+                  {isAllFilesMode && (
+                    <td className="px-4 py-2 text-xs text-slate-500">
+                      {folderMap?.get(doc.folder_id) ?? "-"}
+                    </td>
+                  )}
                   <td className="px-4 py-2 text-slate-500">
                     {MIME_TYPE_LABELS[doc.mime_type] ??
                       doc.mime_type.split("/")[1]}

@@ -19,6 +19,7 @@ import {
   useCreateVdrFolder,
   useDeleteVdrFolder,
   useVdrDocuments,
+  useVdrAllDocuments,
   useUploadVdrDocument,
   useDeleteVdrDocument,
 } from "@/modules/ma/hooks/useVdr";
@@ -53,6 +54,19 @@ function findFolder(folders: VdrFolder[], id: string): VdrFolder | null {
     if (found) return found;
   }
   return null;
+}
+
+/** flat tree를 folder_id → folder_name 맵으로 변환 */
+function buildFolderMap(folders: VdrFolder[]): Map<string, string> {
+  const map = new Map<string, string>();
+  function walk(list: VdrFolder[]) {
+    for (const f of list) {
+      map.set(f.id, f.name);
+      walk(f.children);
+    }
+  }
+  walk(folders);
+  return map;
 }
 
 /** flat tree에서 category로 폴더를 검색 */
@@ -90,6 +104,11 @@ export default function VdrTab({ txnId }: Props) {
     txnId,
     selectedFolderId,
   );
+
+  const { data: allDocuments = [], isLoading: allDocsLoading } =
+    useVdrAllDocuments(txnId, !selectedFolderId);
+
+  const folderMap = useMemo(() => buildFolderMap(folders), [folders]);
 
   const uploadDoc = useUploadVdrDocument(txnId, selectedFolderId ?? "");
   const deleteDoc = useDeleteVdrDocument(txnId);
@@ -213,12 +232,13 @@ export default function VdrTab({ txnId }: Props) {
           <VdrDocumentList
             txnId={txnId}
             folder={selectedFolder}
-            documents={documents}
+            documents={selectedFolder ? documents : allDocuments}
             extractions={extractionData?.items ?? []}
-            isLoading={docsLoading}
+            isLoading={selectedFolder ? docsLoading : allDocsLoading}
             isUploading={uploadDoc.isPending}
             onUpload={(file) => uploadDoc.mutate(file)}
             onDelete={(docId) => deleteDoc.mutate(docId)}
+            folderMap={selectedFolder ? undefined : folderMap}
             onNavigateToFolder={(category) => {
               const target = findFolderByCategory(folders, category);
               if (target) setSelectedFolderId(target.id);

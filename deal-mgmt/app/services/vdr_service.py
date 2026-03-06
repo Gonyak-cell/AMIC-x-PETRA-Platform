@@ -181,6 +181,23 @@ async def list_documents(
     return list(result.scalars().all())
 
 
+async def list_all_documents(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> list[VdrDocument]:
+    """거래의 전체 활성 문서 목록을 조회한다 (폴더 무관)."""
+    q = (
+        select(VdrDocument)
+        .where(
+            VdrDocument.transaction_id == transaction_id,
+            VdrDocument.status == VdrDocumentStatus.ACTIVE,
+        )
+        .order_by(VdrDocument.created_at.desc())
+    )
+    result = await db.execute(q)
+    return list(result.scalars().all())
+
+
 async def get_document(
     db: AsyncSession,
     transaction_id: uuid.UUID,

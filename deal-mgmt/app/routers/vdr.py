@@ -303,6 +303,18 @@ async def delete_folder(
 # ── 문서 CRUD ───────────────────────────────────────────────
 
 
+@router.get("/documents", response_model=list[VdrDocumentOut])
+async def list_all_documents(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """거래의 전체 문서 목록 조회 (폴더 무관)."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    docs = await vdr_service.list_all_documents(db, txn_id)
+    return [VdrDocumentOut.model_validate(d) for d in docs]
+
+
 @router.get("/folders/{folder_id}/documents", response_model=list[VdrDocumentOut])
 async def list_documents(
     txn_id: uuid.UUID,

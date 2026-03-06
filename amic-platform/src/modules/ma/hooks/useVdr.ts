@@ -28,6 +28,8 @@ const docQK = (txnId: string, folderId: string) =>
     folderId,
     "documents",
   ] as const;
+const allDocQK = (txnId: string) =>
+  ["ma", "transactions", txnId, "vdr", "all-documents"] as const;
 const summaryQK = (txnId: string) =>
   ["ma", "transactions", txnId, "vdr", "summary"] as const;
 
@@ -153,6 +155,18 @@ export function useVdrDocuments(txnId: string, folderId: string | null) {
   });
 }
 
+/** 거래의 전체 문서 목록 조회 (폴더 무관). */
+export function useVdrAllDocuments(txnId: string, enabled: boolean = true) {
+  return useQuery<VdrDocument[]>({
+    queryKey: allDocQK(txnId),
+    queryFn: async () => {
+      const { data } = await maApi.get(`/transactions/${txnId}/vdr/documents`);
+      return data;
+    },
+    enabled: !!txnId && enabled,
+  });
+}
+
 export function useUploadVdrDocument(txnId: string, folderId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -169,6 +183,7 @@ export function useUploadVdrDocument(txnId: string, folderId: string) {
       qc.invalidateQueries({ queryKey: docQK(txnId, folderId) });
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
+      qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("파일이 업로드되었습니다.");
     },
     onError: () => {
@@ -241,6 +256,7 @@ export function useDirectUpload(txnId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
+      qc.invalidateQueries({ queryKey: allDocQK(txnId) });
     },
     onError: () => {
       toast.error("파일 업로드에 실패했습니다.");
