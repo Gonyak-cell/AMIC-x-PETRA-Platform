@@ -30,7 +30,7 @@ from app.models.enums import (
 from app.models.risk_item import RiskItem
 from app.models.timeline import DealTimeline
 from app.models.transaction import Transaction
-from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite, PrerequisiteLevel
+from app.schemas.workflow import PhaseCompletionStatus, PhasePrerequisite
 from app.services import audit_service
 
 # 순서가 있는 8단계 (MOU_SIGNED는 마일스톤으로 전환, 독립 단계에서 제거)
@@ -47,28 +47,20 @@ _PHASE_ORDER: list[TransactionPhase] = [
 
 _PHASE_INDEX: dict[TransactionPhase, int] = {p: i for i, p in enumerate(_PHASE_ORDER)}
 
-# 단계별 전제 조건 (필드, 라벨, 수준)
-# REQUIRED: 미충족 시 전진 차단
-# RECOMMENDED: 미충족 시 경고만 표시, 전진 가능
-_PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str, PrerequisiteLevel]]] = {
+# 단계별 전제 조건 (필드, 라벨)
+# 미충족 시 전진 차단
+_PHASE_PREREQUISITES: dict[TransactionPhase, list[tuple[str, str]]] = {
     Phase.ENGAGEMENT: [],
     Phase.PREPARATION: [
-        ("client_name", "클라이언트 정보", PrerequisiteLevel.REQUIRED),
-        ("lead_advisor_email", "리드 어드바이저", PrerequisiteLevel.REQUIRED),
+        ("client_name", "클라이언트 정보"),
+        ("lead_advisor_email", "리드 어드바이저"),
     ],
     Phase.MARKETING: [
-        ("target_company_name", "대상 기업 정보", PrerequisiteLevel.REQUIRED),
-        ("industry", "산업 분류", PrerequisiteLevel.RECOMMENDED),
+        ("target_company_name", "대상 기업 정보"),
     ],
-    Phase.BIDDING: [
-        ("deal_structure", "딜 구조", PrerequisiteLevel.RECOMMENDED),
-    ],
-    Phase.MAIN_DUE_DILIGENCE: [
-        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
-    ],
-    Phase.NEGOTIATION: [
-        ("estimated_deal_value", "예상 거래 금액", PrerequisiteLevel.RECOMMENDED),
-    ],
+    Phase.BIDDING: [],
+    Phase.MAIN_DUE_DILIGENCE: [],
+    Phase.NEGOTIATION: [],
     Phase.CLOSING: [],
     Phase.POST_CLOSING: [],
 }
@@ -93,24 +85,18 @@ def get_phase_completion(txn: Transaction) -> PhaseCompletionStatus:
 
     prerequisites: list[PhasePrerequisite] = []
     if next_phase and next_phase in _PHASE_PREREQUISITES:
-        for field, label, level in _PHASE_PREREQUISITES[next_phase]:
+        for field, label in _PHASE_PREREQUISITES[next_phase]:
             val = getattr(txn, field, None)
             satisfied = val is not None and val != ""
-            prerequisites.append(PhasePrerequisite(field=field, label=label, satisfied=satisfied, level=level))
+            prerequisites.append(PhasePrerequisite(field=field, label=label, satisfied=satisfied))
 
     all_met = all(p.satisfied for p in prerequisites) if prerequisites else True
-    required_items = [p for p in prerequisites if p.level == PrerequisiteLevel.REQUIRED]
-    recommended_items = [p for p in prerequisites if p.level == PrerequisiteLevel.RECOMMENDED]
-    required_met = all(p.satisfied for p in required_items) if required_items else True
-    has_warnings = any(not p.satisfied for p in recommended_items)
-    can_advance = required_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
+    can_advance = all_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
 
     return PhaseCompletionStatus(
         current_phase=txn.phase,
         prerequisites=prerequisites,
         all_met=all_met,
-        required_met=required_met,
-        has_warnings=has_warnings,
         can_advance=can_advance,
         next_phase=next_phase,
         previous_phase=prev_phase,
@@ -142,13 +128,11 @@ async def advance_phase(
             f"{txn.phase.value} → {to_phase.value} 전환은 허용되지 않습니다. 한 단계 앞/뒤로만 이동할 수 있습니다."
         )
 
-    # 전진 시 필수(REQUIRED) 전제 조건 체크
+    # 전진 시 전제 조건 체크
     if diff == 1:
         completion = get_phase_completion(txn)
-        if not completion.required_met:
-            unmet = [
-                p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED
-            ]
+        if not completion.all_met:
+            unmet = [p.label for p in completion.prerequisites if not p.satisfied]
             raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
     # NEGOTIATION → CLOSING: 리스크/컴플라이언스 게이트
@@ -204,10 +188,10 @@ async def request_phase_approval(
     if to_idx is None or (to_idx - from_idx) != 1:
         raise WorkflowError(f"{txn.phase.value} → {to_phase.value} 단계 전환에 대한 승인 요청은 허용되지 않습니다")
 
-    # 필수(REQUIRED) 전제 조건 체크
+    # 전제 조건 체크
     completion = get_phase_completion(txn)
-    if not completion.required_met:
-        unmet = [p.label for p in completion.prerequisites if not p.satisfied and p.level == PrerequisiteLevel.REQUIRED]
+    if not completion.all_met:
+        unmet = [p.label for p in completion.prerequisites if not p.satisfied]
         raise WorkflowError(f"승인 요청 전 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
     approvers = [

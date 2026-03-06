@@ -6,14 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Play,
-  Pause,
-  AlertTriangle,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, Pause, Trash2 } from "lucide-react";
 import {
   useTransaction,
   useDeleteTransaction,
@@ -339,28 +332,20 @@ export default function TransactionWorkspacePage() {
                   </Button>
                 )}
                 {phaseStatus?.can_advance && phaseStatus.next_phase && (
-                  <div className="flex items-center gap-2">
-                    {phaseStatus.has_warnings && (
-                      <span className="flex items-center gap-1 text-xs text-caution">
-                        <AlertTriangle size={12} />
-                        권장 항목 미완료
-                      </span>
-                    )}
-                    <Button
-                      icon={ArrowRight}
-                      onClick={() =>
-                        advancePhase.mutate({
-                          to_phase: phaseStatus.next_phase!,
-                        })
-                      }
-                      loading={advancePhase.isPending}
-                    >
-                      {PHASE_CONFIG.find(
-                        (p) => p.phase === phaseStatus.next_phase,
-                      )?.label ?? "다음"}{" "}
-                      단계로
-                    </Button>
-                  </div>
+                  <Button
+                    icon={ArrowRight}
+                    onClick={() =>
+                      advancePhase.mutate({
+                        to_phase: phaseStatus.next_phase!,
+                      })
+                    }
+                    loading={advancePhase.isPending}
+                  >
+                    {PHASE_CONFIG.find(
+                      (p) => p.phase === phaseStatus.next_phase,
+                    )?.label ?? "다음"}{" "}
+                    단계로
+                  </Button>
                 )}
                 <Button
                   variant="ghost"

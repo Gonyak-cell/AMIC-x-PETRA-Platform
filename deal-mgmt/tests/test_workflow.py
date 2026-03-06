@@ -40,19 +40,20 @@ async def test_phase_status_initial(client):
     assert data["previous_phase"] is None
 
 
-async def test_phase_status_shows_levels(client):
-    """phase-status 응답에 level, required_met, has_warnings 포함 확인."""
+async def test_phase_status_fields(client):
+    """phase-status 응답에 필수 필드 포함 확인."""
     resp = await client.post("/api/v1/transactions", json=FULL_TXN)
     txn_id = resp.json()["id"]
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/workflow/phase-status")
     assert resp.status_code == 200
     data = resp.json()
-    assert "required_met" in data
-    assert "has_warnings" in data
+    assert "all_met" in data
+    assert "can_advance" in data
     for prereq in data["prerequisites"]:
-        assert "level" in prereq
-        assert prereq["level"] in ("REQUIRED", "RECOMMENDED")
+        assert "field" in prereq
+        assert "label" in prereq
+        assert "satisfied" in prereq
 
 
 # ── Status Change ──────────────────────────────────────────
@@ -208,9 +209,9 @@ async def test_advance_through_multiple_phases(client):
         assert resp.json()["phase"] == phase
 
 
-# ── REQUIRED 충족 + RECOMMENDED 충족 시 all_met=True ──────
+# ── 전제 조건 충족 시 all_met=True ──────────────────────
 async def test_full_prerequisites_all_met(client):
-    """모든 전제 조건(REQUIRED + RECOMMENDED) 충족 시 all_met=True, has_warnings=False."""
+    """모든 전제 조건 충족 시 all_met=True."""
     txn_id = await _create_active_txn(client)
 
     # ENGAGEMENT → PREPARATION
@@ -219,82 +220,10 @@ async def test_full_prerequisites_all_met(client):
         json={"to_phase": "PREPARATION"},
     )
 
-    # FULL_TXN에 industry가 있으므로 RECOMMENDED도 충족
     resp = await client.get(f"/api/v1/transactions/{txn_id}/workflow/phase-status")
     assert resp.status_code == 200
     data = resp.json()
     assert data["all_met"] is True
-    assert data["required_met"] is True
-    assert data["has_warnings"] is False
-    assert data["can_advance"] is True
-
-
-# ── RECOMMENDED 미충족 시 전진 가능 ──────────────────────
-async def test_advance_with_recommended_warnings(client):
-    """RECOMMENDED 전제 조건 미충족 시에도 전진 가능."""
-    # industry 없는 거래 (MARKETING의 RECOMMENDED 조건)
-    txn_without_industry = {
-        "name": "권장 미충족 거래",
-        "deal_type": "MA",
-        "side": "SELL",
-        "target_company_name": "대상기업",
-        "client_name": "의뢰기업",
-        "lead_advisor_email": "advisor@example.com",
-    }
-    resp = await client.post("/api/v1/transactions", json=txn_without_industry)
-    txn_id = resp.json()["id"]
-
-    # DRAFT → ACTIVE
-    await client.post(
-        f"/api/v1/transactions/{txn_id}/workflow/status",
-        json={"to_status": "ACTIVE"},
-    )
-    # ENGAGEMENT → PREPARATION (OK: REQUIRED 충족)
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/workflow/advance",
-        json={"to_phase": "PREPARATION"},
-    )
-    assert resp.status_code == 200
-
-    # PREPARATION → MARKETING (OK: industry는 RECOMMENDED이므로 전진 가능)
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/workflow/advance",
-        json={"to_phase": "MARKETING"},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["phase"] == "MARKETING"
-
-
-async def test_phase_status_has_warnings_when_recommended_unmet(client):
-    """RECOMMENDED 미충족 시 has_warnings=True 확인."""
-    txn_without_industry = {
-        "name": "경고 테스트",
-        "deal_type": "MA",
-        "side": "SELL",
-        "target_company_name": "대상기업",
-        "client_name": "의뢰기업",
-        "lead_advisor_email": "advisor@example.com",
-    }
-    resp = await client.post("/api/v1/transactions", json=txn_without_industry)
-    txn_id = resp.json()["id"]
-
-    # DRAFT → ACTIVE
-    await client.post(
-        f"/api/v1/transactions/{txn_id}/workflow/status",
-        json={"to_status": "ACTIVE"},
-    )
-    # ENGAGEMENT → PREPARATION
-    await client.post(
-        f"/api/v1/transactions/{txn_id}/workflow/advance",
-        json={"to_phase": "PREPARATION"},
-    )
-
-    # PREPARATION에서 phase-status 조회 — industry가 RECOMMENDED 미충족
-    resp = await client.get(f"/api/v1/transactions/{txn_id}/workflow/phase-status")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["required_met"] is True
-    assert data["has_warnings"] is True
     assert data["can_advance"] is True
 
 

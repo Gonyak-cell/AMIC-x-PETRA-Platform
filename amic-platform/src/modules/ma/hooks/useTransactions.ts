@@ -189,44 +189,21 @@ export function useAutoAdvanceNotification(txnId: string) {
         PHASE_CONFIG.find((p) => p.phase === phaseStatus.next_phase)?.label ??
         phaseStatus.next_phase;
 
-      if (phaseStatus.has_warnings) {
-        toast.info(
-          `${nextLabel} 단계로 진행할 수 있습니다 (권장 항목 미완료)`,
-          {
-            action: {
-              label: "진행하기",
-              onClick: () =>
-                advanceRef.current.mutate({
-                  to_phase: phaseStatus.next_phase!,
-                }),
-            },
-            duration: 10000,
-          },
-        );
-      } else {
-        toast.success(
-          `모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`,
-          {
-            action: {
-              label: "진행하기",
-              onClick: () =>
-                advanceRef.current.mutate({
-                  to_phase: phaseStatus.next_phase!,
-                }),
-            },
-            duration: 10000,
-          },
-        );
-      }
+      toast.success(`모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`, {
+        action: {
+          label: "진행하기",
+          onClick: () =>
+            advanceRef.current.mutate({
+              to_phase: phaseStatus.next_phase!,
+            }),
+        },
+        duration: 10000,
+      });
     }
 
     prevCanAdvance.current = phaseStatus.can_advance;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    phaseStatus?.can_advance,
-    phaseStatus?.has_warnings,
-    phaseStatus?.next_phase,
-  ]);
+  }, [phaseStatus?.can_advance, phaseStatus?.next_phase]);
 }
 
 export function useChangeStatus(txnId: string) {
