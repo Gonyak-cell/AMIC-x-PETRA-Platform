@@ -100,8 +100,8 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
                 {step.label}
               </span>
 
-              {/* 전환율 */}
-              {rate != null && (
+              {/* 전환율 (Short List 제외 — 패널 내부에 표시) */}
+              {rate != null && step.label !== "Short List" && (
                 <span className="text-[10px] text-text-secondary">{rate}%</span>
               )}
             </div>

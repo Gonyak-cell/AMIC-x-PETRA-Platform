@@ -11,6 +11,7 @@ interface ShortListMasterListProps {
   overviewData: BuyerStageSummary[];
   selectedBuyerId: string | null;
   onSelectBuyer: (buyerId: string) => void;
+  totalBuyerCount: number;
 }
 
 export default function ShortListMasterList({
@@ -18,6 +19,7 @@ export default function ShortListMasterList({
   overviewData,
   selectedBuyerId,
   onSelectBuyer,
+  totalBuyerCount,
 }: ShortListMasterListProps) {
   if (buyers.length === 0) {
     return (
@@ -31,7 +33,14 @@ export default function ShortListMasterList({
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-text-muted mb-2">{buyers.length}개 후보</p>
+      <p className="text-xs text-text-muted mb-2">
+        {buyers.length}개 후보
+        {totalBuyerCount > 0 && (
+          <span className="ml-2 text-text-secondary">
+            숏리스트 전환율 {Math.round((buyers.length / totalBuyerCount) * 100)}%
+          </span>
+        )}
+      </p>
 
       <div className="space-y-1 overflow-y-auto">
         {buyers.map((buyer) => {

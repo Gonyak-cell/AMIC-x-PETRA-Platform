@@ -416,6 +416,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               overviewData={shortListOverview ?? []}
               selectedBuyerId={selectedBuyerId}
               onSelectBuyer={setSelectedBuyerId}
+              totalBuyerCount={allBuyers.length}
             />
             <BuyerDetailPanel
               txnId={txnId}
