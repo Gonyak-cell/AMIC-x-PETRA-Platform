@@ -403,7 +403,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             {showSIMappingModal && (
               <Suspense
                 fallback={
-                  <p className="py-8 text-center text-sm text-slate-400">
+                  <p className="py-8 text-center text-sm text-text-muted">
                     로딩 중...
                   </p>
                 }
@@ -440,7 +440,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             {shortListViewMode === "kanban" && (
               <Suspense
                 fallback={
-                  <p className="py-8 text-center text-sm text-slate-400">
+                  <p className="py-8 text-center text-sm text-text-muted">
                     로딩 중...
                   </p>
                 }
@@ -457,7 +457,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             {shortListViewMode === "timeline" && (
               <Suspense
                 fallback={
-                  <p className="py-8 text-center text-sm text-slate-400">
+                  <p className="py-8 text-center text-sm text-text-muted">
                     로딩 중...
                   </p>
                 }
