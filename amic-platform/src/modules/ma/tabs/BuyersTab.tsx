@@ -234,7 +234,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     },
   ];
 
-  const allBuyers = buyers ?? [];
+  const allBuyers = useMemo(() => buyers ?? [], [buyers]);
   const shortListBuyers = allBuyers.filter((b) => b.is_short_listed);
 
   // Client-side filtering for Long List
