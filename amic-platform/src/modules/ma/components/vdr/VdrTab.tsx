@@ -6,7 +6,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -95,6 +95,35 @@ export default function VdrTab({ txnId }: Props) {
   const [showDirectUpload, setShowDirectUpload] = useState(false);
   const [directUploadResult, setDirectUploadResult] =
     useState<DirectUploadBatchResult | null>(null);
+
+  // ── 리사이즈 상태 ─────────────────────────────────────
+  const [topHeight, setTopHeight] = useState(400);
+  const isDragging = useRef(false);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      const startY = e.clientY;
+      const startHeight = topHeight;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!isDragging.current) return;
+        const delta = ev.clientY - startY;
+        setTopHeight(Math.max(200, Math.min(800, startHeight + delta)));
+      };
+
+      const onMouseUp = () => {
+        isDragging.current = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [topHeight],
+  );
 
   const selectedFolder = useMemo(
     () => (selectedFolderId ? findFolder(folders, selectedFolderId) : null),
@@ -210,45 +239,57 @@ export default function VdrTab({ txnId }: Props) {
         />
       )}
 
-      {/* 3-column 레이아웃 */}
-      <div className="grid grid-cols-[280px_1fr_360px] gap-4">
-        {/* 좌측: 폴더 트리 */}
-        <Card padding="none" className="h-[520px] overflow-hidden">
-          <VdrFolderTree
-            folders={folders}
-            selectedFolderId={selectedFolderId}
-            onSelectFolder={setSelectedFolderId}
-            onCreateFolder={(name, parentId) =>
-              createFolder.mutate({ name, parent_id: parentId })
-            }
-            onDeleteFolder={(id) => {
-              if (selectedFolderId === id) setSelectedFolderId(null);
-              deleteFolder.mutate(id);
-            }}
-          />
-        </Card>
+      {/* 2-column 레이아웃 + 하단 Q&A */}
+      <div className="flex flex-col">
+        {/* 상단: 폴더 트리 + 문서 목록 */}
+        <div
+          className="grid grid-cols-[280px_1fr] gap-4"
+          style={{ height: topHeight }}
+        >
+          <Card padding="none" className="h-full overflow-hidden">
+            <VdrFolderTree
+              folders={folders}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={setSelectedFolderId}
+              onCreateFolder={(name, parentId) =>
+                createFolder.mutate({ name, parent_id: parentId })
+              }
+              onDeleteFolder={(id) => {
+                if (selectedFolderId === id) setSelectedFolderId(null);
+                deleteFolder.mutate(id);
+              }}
+            />
+          </Card>
 
-        {/* 중앙: 문서 목록 */}
-        <Card padding="none" className="h-[520px] overflow-hidden">
-          <VdrDocumentList
-            txnId={txnId}
-            folder={selectedFolder}
-            documents={selectedFolder ? documents : allDocuments}
-            extractions={extractionData?.items ?? []}
-            isLoading={selectedFolder ? docsLoading : allDocsLoading}
-            isUploading={uploadDoc.isPending}
-            onUpload={(file) => uploadDoc.mutate(file)}
-            onDelete={(docId) => deleteDoc.mutate(docId)}
-            folderMap={selectedFolder ? undefined : folderMap}
-            onNavigateToFolder={(category) => {
-              const target = findFolderByCategory(folders, category);
-              if (target) setSelectedFolderId(target.id);
-            }}
-          />
-        </Card>
+          <Card padding="none" className="h-full overflow-hidden">
+            <VdrDocumentList
+              txnId={txnId}
+              folder={selectedFolder}
+              documents={selectedFolder ? documents : allDocuments}
+              extractions={extractionData?.items ?? []}
+              isLoading={selectedFolder ? docsLoading : allDocsLoading}
+              isUploading={uploadDoc.isPending}
+              onUpload={(file) => uploadDoc.mutate(file)}
+              onDelete={(docId) => deleteDoc.mutate(docId)}
+              folderMap={selectedFolder ? undefined : folderMap}
+              onNavigateToFolder={(category) => {
+                const target = findFolderByCategory(folders, category);
+                if (target) setSelectedFolderId(target.id);
+              }}
+            />
+          </Card>
+        </div>
 
-        {/* 우측: Q&A 패널 */}
-        <div className="h-[520px]">
+        {/* 드래그 리사이즈 핸들 */}
+        <div
+          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-1 rounded"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="w-12 h-1 rounded-full bg-border group-hover:bg-accent/40 transition-colors" />
+        </div>
+
+        {/* 하단: Q&A 패널 */}
+        <div className="h-[300px]">
           <VdrQAPanel txnId={txnId} />
         </div>
       </div>
