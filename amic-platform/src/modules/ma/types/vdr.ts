@@ -134,6 +134,7 @@ export interface VdrQAMessage {
   content: string;
   sources?: VdrQASource[];
   isError?: boolean;
+  isIncomplete?: boolean;
   timestamp: string;
 }
 
@@ -151,9 +152,9 @@ export interface VdrQASourcesEvent {
 
 export interface VdrQAErrorEvent {
   message: string;
+  conversation_id?: string;
 }
 
-export type VdrQASSEEventType = "token" | "sources" | "done" | "error";
 
 // ── VDR 요약 ─────────────────────────────────────────────
 

@@ -162,6 +162,7 @@ export default function VdrDocumentSelector({
                 type="button"
                 onClick={() => toggleFolder(group.folder.id)}
                 className="p-0.5"
+                aria-expanded={expandedFolders.has(group.folder.id)}
                 aria-label={`${group.folder.name} 폴더 ${expandedFolders.has(group.folder.id) ? "접기" : "펼치기"}`}
               >
                 {expandedFolders.has(group.folder.id) ? (

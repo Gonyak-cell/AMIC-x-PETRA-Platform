@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from urllib.parse import quote
 
@@ -13,9 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
+from app.core.config import settings
 from app.core.database import async_session_factory, get_db
 from app.core.exceptions import DocumentNotFoundError
-from app.core.rate_limiter import InMemoryRateLimiter
+from app.core.rate_limiter import InMemoryRateLimiter, qa_rate_limiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import VdrClassificationStatus, VdrDocumentStatus
 from app.models.transaction import Transaction
@@ -42,6 +45,7 @@ from app.schemas.vdr import (
 )
 from app.services import transaction_service, vdr_service
 from app.services.vdr_classification_service import run_secondary_classification as _run_secondary_classification
+from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
 
 logger = logging.getLogger(__name__)
 
@@ -834,13 +838,6 @@ async def stream_vdr_question(
     DB 세션을 수동으로 생성하여 prepare_qa_context() 완료 후 즉시 반환한다.
     스트리밍 generator는 DB 세션에 의존하지 않는다.
     """
-    import json as _json
-    from collections.abc import AsyncGenerator as _AsyncGen
-
-    from app.core.config import settings
-    from app.core.rate_limiter import qa_rate_limiter
-    from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
-
     qa_rate_limiter.check(claims.user_id)
 
     if not settings.VDR_QA_ENABLED:
@@ -874,8 +871,8 @@ async def stream_vdr_question(
     # prepare에서 QAResult가 반환되면 early exit (거부/에러)
     if isinstance(ctx_or_result, QAResult):
 
-        async def _error_stream() -> _AsyncGen[str, None]:
-            yield f"event: error\ndata: {_json.dumps({'message': ctx_or_result.answer}, ensure_ascii=False)}\n\n"
+        async def _error_stream() -> AsyncGenerator[str, None]:
+            yield f"event: error\ndata: {json.dumps({'message': ctx_or_result.answer, 'conversation_id': ctx_or_result.conversation_id}, ensure_ascii=False)}\n\n"
             yield "event: done\ndata: {}\n\n"
 
         return StreamingResponse(

@@ -33,11 +33,12 @@ function parseSSEEvents(text: string): { event: string; data: string }[] {
     if (!block.trim()) continue;
 
     let event = "";
-    let data = "";
+    const dataLines: string[] = [];
     for (const line of block.split("\n")) {
       if (line.startsWith("event: ")) event = line.slice(7);
-      else if (line.startsWith("data: ")) data = line.slice(6);
+      else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
     }
+    const data = dataLines.join("\n");
     if (event && data) events.push({ event, data });
   }
 
@@ -90,15 +91,14 @@ export function useVdrQA(txnId: string) {
         pendingTokens.length = 0;
         rafId = null;
         setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
+          const lastIdx = prev.length - 1;
+          const last = prev[lastIdx];
           if (last?.role === "assistant") {
-            updated[updated.length - 1] = {
-              ...last,
-              content: last.content + text,
-            };
+            const updated = prev.slice();
+            updated[lastIdx] = { ...last, content: last.content + text };
+            return updated;
           }
-          return updated;
+          return prev;
         });
       }
 
@@ -137,7 +137,14 @@ export function useVdrQA(txnId: string) {
         if (response.status === 401) {
           const refreshed = await refreshAuth();
           if (refreshed) {
-            response = await fetch(sseUrl, fetchOpts);
+            // 재시도 시 Authorization 헤더 갱신 (쿠키 기반이므로 헤더는 보조적)
+            const freshAuthHeader =
+              maApi.defaults.headers.common?.["Authorization"] ??
+              maApi.defaults.headers?.["Authorization"];
+            if (typeof freshAuthHeader === "string") {
+              fetchHeaders["Authorization"] = freshAuthHeader;
+            }
+            response = await fetch(sseUrl, { ...fetchOpts, headers: fetchHeaders });
           } else {
             emitForceLogout();
             throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요.");
@@ -225,10 +232,20 @@ export function useVdrQA(txnId: string) {
         if (rafId !== null) cancelAnimationFrame(rafId);
         flushTokens();
 
-        // done 이벤트 없이 스트림이 끊긴 경우
+        // done 이벤트 없이 스트림이 끊긴 경우 — 부분 응답 표시
         if (!receivedDone) {
           toast.error("Q&A 오류", {
             description: "응답이 완료되지 않았습니다. 다시 시도해 주세요.",
+          });
+          setMessages((prev) => {
+            const lastIdx = prev.length - 1;
+            const last = prev[lastIdx];
+            if (last?.role === "assistant" && last.content) {
+              const updated = prev.slice();
+              updated[lastIdx] = { ...last, isIncomplete: true };
+              return updated;
+            }
+            return prev;
           });
         }
       } catch (err) {

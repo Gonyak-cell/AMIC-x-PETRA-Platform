@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -195,7 +196,7 @@ class VdrQASourceOut(BaseModel):
 
     document_id: str
     document_name: str
-    relevance: str
+    relevance: Literal["high", "medium", "low", "referenced"]  # fmt: skip
 
 
 class VdrQAResponse(BaseModel):
