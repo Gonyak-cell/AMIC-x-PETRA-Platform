@@ -115,6 +115,7 @@ from app.models.meeting_action_item import MeetingActionItem
 from app.models.meeting_attendee import MeetingAttendee
 from app.models.meeting_log import MeetingLog
 from app.models.nda import NDA
+from app.models.nda_markup import NdaMarkup
 from app.models.negotiation_issue import NegotiationIssue
 from app.models.note import DealNote
 from app.models.pef_fund_registry import PefFundRegistry
@@ -227,6 +228,7 @@ __all__ = [
     "MeetingLog",
     "MeetingPhase",
     "MeetingStatus",
+    "NdaMarkup",
     "NdaStatus",
     "NdaType",
     "NegotiationIssue",

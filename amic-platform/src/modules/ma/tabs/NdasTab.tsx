@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Trash2, Shield } from "lucide-react";
+import { Plus, Trash2, Shield, FileText } from "lucide-react";
+import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import {
   useNdas,
   useNdaSummary,
@@ -39,6 +40,9 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
   const deleteNda = useDeleteNda(txnId);
 
   const [showNdaModal, setShowNdaModal] = useState(false);
+  const [versionPanelNdaId, setVersionPanelNdaId] = useState<string | null>(
+    null,
+  );
   const [ndaForm, setNdaForm] = useState<NDACreate>({
     buyer_candidate_id: "",
     nda_type: "MUTUAL",
@@ -195,6 +199,22 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
                 ),
               },
               {
+                key: "markups",
+                header: "버전",
+                width: "80px",
+                render: (r) => (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={FileText}
+                    onClick={() => setVersionPanelNdaId(r.id)}
+                    className="!px-2 !py-0.5 text-xs"
+                  >
+                    버전
+                  </Button>
+                ),
+              },
+              {
                 key: "actions",
                 header: "",
                 width: "40px",
@@ -306,6 +326,25 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           </div>
         </form>
       </Modal>
+
+      {/* NDA 버전 관리 패널 */}
+      {versionPanelNdaId && (
+        <NdaVersionPanel
+          open={!!versionPanelNdaId}
+          onClose={() => setVersionPanelNdaId(null)}
+          txnId={txnId}
+          ndaId={versionPanelNdaId}
+          ndaLabel={
+            buyers?.find(
+              (b) =>
+                b.id ===
+                ndas?.find((n) => n.id === versionPanelNdaId)
+                  ?.buyer_candidate_id,
+            )?.company_name ?? "NDA"
+          }
+          canWrite={canWrite}
+        />
+      )}
     </div>
   );
 }

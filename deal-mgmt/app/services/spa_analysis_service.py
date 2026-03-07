@@ -194,6 +194,10 @@ async def _call_llm_json(
     raise RuntimeError("unreachable")  # pragma: no cover
 
 
+# 공개 별칭 — 다른 서비스 모듈(nda_analysis_service 등)에서 사용
+call_llm_json = _call_llm_json
+
+
 def _extract_json(text: str) -> dict[str, Any] | list[Any]:
     """LLM 출력에서 JSON 객체 또는 배열을 추출한다."""
     stripped = text.strip()

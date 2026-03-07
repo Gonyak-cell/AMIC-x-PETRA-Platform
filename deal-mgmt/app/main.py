@@ -171,6 +171,7 @@ from app.routers import (
     legal_documents,
     marketing_materials,
     meeting_logs,
+    nda_markups,
     ndas,
     negotiation_issues,
     notes,
@@ -201,6 +202,7 @@ app.include_router(buyer_marketing.router, prefix="/api/v1")
 app.include_router(buyers.router, prefix="/api/v1")
 app.include_router(consortium.router, prefix="/api/v1")
 app.include_router(ndas.router, prefix="/api/v1")
+app.include_router(nda_markups.router, prefix="/api/v1")
 app.include_router(bids.router, prefix="/api/v1")
 app.include_router(dd_checklists.router, prefix="/api/v1")
 app.include_router(contracts.router, prefix="/api/v1")
