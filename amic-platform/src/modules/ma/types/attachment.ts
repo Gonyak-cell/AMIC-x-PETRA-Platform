@@ -13,7 +13,6 @@ export interface Attachment {
   transaction_id: string;
   entity_type: AttachmentEntityType;
   entity_id: string | null;
-  file_path: string;
   file_name: string;
   file_size_bytes: number;
   mime_type: string;

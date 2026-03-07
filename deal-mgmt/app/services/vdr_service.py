@@ -60,7 +60,16 @@ async def init_vdr_folders(
     db: AsyncSession,
     transaction_id: uuid.UUID,
 ) -> list[VdrFolder]:
-    """기본 VDR 폴더 구조를 생성한다. 이미 존재하면 예외 발생."""
+    """기본 VDR 폴더 구조를 생성한다. 이미 존재하면 예외 발생.
+
+    C-01 fix: SELECT FOR UPDATE로 transaction row를 잠가 TOCTOU 방지.
+    동시 요청이 들어와도 하나만 폴더를 생성하고 나머지는 ValueError를 받는다.
+    """
+    from app.models.transaction import Transaction
+
+    # transaction row를 FOR UPDATE로 잠금 — 동시 초기화 직렬화
+    await db.scalar(select(Transaction.id).where(Transaction.id == transaction_id).with_for_update())
+
     existing = await db.scalar(
         select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id)
     )

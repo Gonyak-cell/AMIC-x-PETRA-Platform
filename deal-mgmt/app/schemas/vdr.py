@@ -204,4 +204,4 @@ class VdrQAResponse(BaseModel):
     answer: str
     sources: list[VdrQASourceOut]
     conversation_id: str
-    cost_usd: float
+    cost_usd: float | None = None

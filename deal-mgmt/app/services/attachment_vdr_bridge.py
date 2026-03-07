@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.models.attachment import Attachment
 from app.models.enums import AuditAction, VdrClassificationStatus
 from app.models.vdr_document import VdrDocument
@@ -98,6 +99,7 @@ async def sync_attachment_to_vdr(
         VdrSyncResult — 성공 시
         None — 연동 실패 시 (attachment 자체는 영향 없음)
     """
+    doc: VdrDocument | None = None
     try:
         # M-5: 경로 순회 방지 — file_path가 업로드 디렉토리 내에 있는지 검증
         resolved = file_path.resolve()
@@ -214,6 +216,20 @@ async def sync_attachment_to_vdr(
             )
 
     except Exception:
+        # E-02: 세션 정리 — auto_commit=False 사용 시 호출자 책임
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+
+        # E-01: 고아 blob 정리 — doc이 생성됐으면 blob 삭제 시도
+        if doc is not None and getattr(doc, "file_path", None):
+            try:
+                await blob_client.delete_blob(doc.file_path)
+                logger.info("고아 blob 삭제 성공: %s", doc.file_path)
+            except Exception as cleanup_err:
+                logger.warning("고아 blob 삭제 실패: %s (error=%s)", doc.file_path, cleanup_err)
+
         logger.exception(
             "VDR 연동 실패: txn=%s, attachment=%s, file=%s",
             transaction_id,

@@ -305,3 +305,158 @@ async def test_sync_path_traversal_blocked(
         )
 
     assert result is None
+
+
+# ── Test 6: commit 실패 → rollback + blob cleanup (E-01/E-02) ──
+
+
+@patch("app.services.attachment_vdr_bridge.blob_client")
+@patch("app.services.attachment_vdr_bridge.vdr_service")
+@patch("app.services.attachment_vdr_bridge.auto_route")
+@patch("app.services.attachment_vdr_bridge.score_document")
+@patch("app.services.attachment_vdr_bridge.audit_service")
+async def test_sync_commit_failure_triggers_rollback_and_blob_cleanup(
+    mock_audit: MagicMock,
+    mock_score: MagicMock,
+    mock_route: MagicMock,
+    mock_vdr: MagicMock,
+    mock_blob: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """commit 실패 시 rollback + 고아 blob 삭제가 수행된다."""
+    db = _make_db()
+    txn_id = uuid.uuid4()
+    attachment = _make_attachment()
+    folder = _make_folder(category=VdrFolderCategory.FINANCIAL)
+    doc = _make_doc(folder.id)
+    doc.file_path = f"{txn_id}/{folder.id}/test.pdf"
+
+    file_path = tmp_path / "test.pdf"
+    file_path.write_bytes(b"%PDF-1.4 test content")
+
+    mock_vdr.init_vdr_folders = AsyncMock()
+    mock_route.return_value = VdrFolderCategory.FINANCIAL
+    mock_score.return_value = [(VdrFolderCategory.FINANCIAL, 85)]
+    mock_vdr.resolve_folder_by_category = AsyncMock(return_value=folder)
+    mock_vdr.check_duplicate_filename = AsyncMock(return_value=False)
+    mock_vdr.resolve_unique_filename.return_value = attachment.file_name
+    mock_vdr.upload_document = AsyncMock(return_value=doc)
+    mock_audit.record = AsyncMock()
+    mock_blob.delete_blob = AsyncMock()
+
+    # commit에서 예외 발생
+    db.commit = AsyncMock(side_effect=RuntimeError("DB commit failed"))
+    bg_tasks = MagicMock()
+
+    with patch("app.services.attachment_vdr_bridge._UPLOAD_DIR", tmp_path):
+        result = await sync_attachment_to_vdr(
+            db=db,
+            transaction_id=txn_id,
+            attachment=attachment,
+            file_path=file_path,
+            background_tasks=bg_tasks,
+        )
+
+    assert result is None
+    # rollback이 호출되었는지 확인
+    db.rollback.assert_awaited()
+    # blob 삭제가 호출되었는지 확인
+    mock_blob.delete_blob.assert_awaited_once_with(doc.file_path)
+
+
+# ── Test 7: resolve_folder_by_category=None → fallback 사용 ───
+
+
+@patch("app.services.attachment_vdr_bridge.vdr_service")
+@patch("app.services.attachment_vdr_bridge.auto_route")
+@patch("app.services.attachment_vdr_bridge.score_document")
+@patch("app.services.attachment_vdr_bridge.audit_service")
+async def test_sync_category_folder_none_uses_fallback(
+    mock_audit: MagicMock,
+    mock_score: MagicMock,
+    mock_route: MagicMock,
+    mock_vdr: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """resolve_folder_by_category가 None이면 fallback 폴더를 사용한다."""
+    db = _make_db()
+    txn_id = uuid.uuid4()
+    attachment = _make_attachment()
+    fallback = _make_folder(name="기업 일반")
+    doc = _make_doc(fallback.id)
+
+    file_path = tmp_path / "test.pdf"
+    file_path.write_bytes(b"%PDF-1.4 test content")
+
+    mock_vdr.init_vdr_folders = AsyncMock()
+    mock_route.return_value = VdrFolderCategory.FINANCIAL
+    mock_score.return_value = [(VdrFolderCategory.FINANCIAL, 60)]
+    mock_vdr.resolve_folder_by_category = AsyncMock(return_value=None)
+    mock_vdr.resolve_fallback_folder = AsyncMock(return_value=fallback)
+    mock_vdr.check_duplicate_filename = AsyncMock(return_value=False)
+    mock_vdr.resolve_unique_filename.return_value = attachment.file_name
+    mock_vdr.upload_document = AsyncMock(return_value=doc)
+    mock_audit.record = AsyncMock()
+    bg_tasks = MagicMock()
+
+    with patch("app.services.attachment_vdr_bridge._UPLOAD_DIR", tmp_path):
+        result = await sync_attachment_to_vdr(
+            db=db,
+            transaction_id=txn_id,
+            attachment=attachment,
+            file_path=file_path,
+            background_tasks=bg_tasks,
+        )
+
+    assert result is not None
+    assert result.folder is fallback
+    mock_vdr.resolve_fallback_folder.assert_awaited_once()
+
+
+# ── Test 8: 중복 파일명 → unique 이름 사용 ──────────────────
+
+
+@patch("app.services.attachment_vdr_bridge.vdr_service")
+@patch("app.services.attachment_vdr_bridge.auto_route")
+@patch("app.services.attachment_vdr_bridge.score_document")
+@patch("app.services.attachment_vdr_bridge.audit_service")
+async def test_sync_duplicate_filename_resolved(
+    mock_audit: MagicMock,
+    mock_score: MagicMock,
+    mock_route: MagicMock,
+    mock_vdr: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """중복 파일명이 있으면 resolve_unique_filename으로 유니크 이름이 사용된다."""
+    db = _make_db()
+    txn_id = uuid.uuid4()
+    attachment = _make_attachment(file_name="재무제표.pdf")
+    folder = _make_folder(category=VdrFolderCategory.FINANCIAL)
+    doc = _make_doc(folder.id)
+
+    file_path = tmp_path / "test.pdf"
+    file_path.write_bytes(b"%PDF-1.4 test content")
+
+    mock_vdr.init_vdr_folders = AsyncMock()
+    mock_route.return_value = VdrFolderCategory.FINANCIAL
+    mock_score.return_value = [(VdrFolderCategory.FINANCIAL, 90)]
+    mock_vdr.resolve_folder_by_category = AsyncMock(return_value=folder)
+    mock_vdr.check_duplicate_filename = AsyncMock(return_value=True)
+    mock_vdr.resolve_unique_filename.return_value = "재무제표_1.pdf"
+    mock_vdr.upload_document = AsyncMock(return_value=doc)
+    mock_audit.record = AsyncMock()
+    bg_tasks = MagicMock()
+
+    with patch("app.services.attachment_vdr_bridge._UPLOAD_DIR", tmp_path):
+        result = await sync_attachment_to_vdr(
+            db=db,
+            transaction_id=txn_id,
+            attachment=attachment,
+            file_path=file_path,
+            background_tasks=bg_tasks,
+        )
+
+    assert result is not None
+    # upload_document에 유니크 이름이 전달되었는지 확인
+    call_kwargs = mock_vdr.upload_document.call_args.kwargs
+    assert call_kwargs["original_name"] == "재무제표_1.pdf"
