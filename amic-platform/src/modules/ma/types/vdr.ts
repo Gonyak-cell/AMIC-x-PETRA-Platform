@@ -108,6 +108,34 @@ export interface ClassificationStatusItem {
   manual_review_needed: boolean;
 }
 
+// ── Q&A ─────────────────────────────────────────────────
+
+export interface VdrQARequest {
+  question: string;
+  document_ids?: string[];
+  conversation_id?: string;
+}
+
+export interface VdrQASource {
+  document_id: string;
+  document_name: string;
+  relevance: "high" | "medium" | "low";
+}
+
+export interface VdrQAResponse {
+  answer: string;
+  sources: VdrQASource[];
+  conversation_id: string;
+  cost_usd: number;
+}
+
+export interface VdrQAMessage {
+  role: "user" | "assistant";
+  content: string;
+  sources?: VdrQASource[];
+  timestamp: string;
+}
+
 // ── VDR 요약 ─────────────────────────────────────────────
 
 export interface VdrSummary {

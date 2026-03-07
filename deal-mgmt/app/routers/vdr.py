@@ -36,6 +36,9 @@ from app.schemas.vdr import (
     VdrFolderTreeOut,
     VdrFolderUpdate,
     VdrInitRequest,
+    VdrQARequest,
+    VdrQAResponse,
+    VdrQASourceOut,
     VdrSummaryOut,
 )
 from app.services import transaction_service, vdr_service
@@ -780,3 +783,62 @@ async def get_classification_status(
         )
 
     return items
+
+
+# ── Q&A ───────────────────────────────────────────────────
+
+
+@router.post("/qa", response_model=VdrQAResponse, summary="VDR 문서 기반 Q&A")
+async def ask_vdr_question(
+    txn_id: uuid.UUID,
+    body: VdrQARequest,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> VdrQAResponse:
+    """VDR 문서들을 참조하여 자연어 질문에 답변한다.
+
+    Gemini File API의 1M 토큰 컨텍스트를 활용하여
+    VDR 전체(또는 지정) 문서를 기반으로 답변을 생성한다.
+    """
+    from app.core.config import settings
+
+    if not settings.VDR_QA_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="VDR Q&A 기능이 비활성화되어 있습니다.",
+        )
+
+    if not settings.GOOGLE_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google API 키가 설정되지 않았습니다.",
+        )
+
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    from app.services.vdr_qa_service import ask_question
+
+    result = await ask_question(
+        db=db,
+        transaction_id=txn_id,
+        question=body.question,
+        document_ids=body.document_ids,
+        conversation_id=body.conversation_id,
+        api_key=settings.GOOGLE_API_KEY,
+        max_documents=settings.VDR_QA_MAX_DOCUMENTS,
+        max_tokens=settings.VDR_QA_MAX_TOKENS,
+    )
+
+    return VdrQAResponse(
+        answer=result.answer,
+        sources=[
+            VdrQASourceOut(
+                document_id=s.document_id,
+                document_name=s.document_name,
+                relevance=s.relevance,
+            )
+            for s in result.sources
+        ],
+        conversation_id=result.conversation_id,
+        cost_usd=result.cost_usd,
+    )

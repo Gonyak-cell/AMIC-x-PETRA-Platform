@@ -165,6 +165,20 @@ async def classify_document_by_content(
     # ── 3. 민감정보 마스킹 + 샘플링 ─────────────────
     text_sample = _mask_sensitive_info(parsed.text[:_MAX_TEXT_SAMPLE])
 
+    # ── 3.5 Gemini File API 분류 시도 (전체 문서 기반) ──
+    from app.core.config import settings as _settings
+
+    if _settings.GEMINI_VDR_CLASSIFICATION_ENABLED:
+        try:
+            from app.services.gemini_classification_service import classify_with_file_api
+
+            gemini_result = await classify_with_file_api(db, document_id, transaction_id)
+            if gemini_result == VdrClassificationStatus.CLASSIFIED:
+                return gemini_result
+            logger.info("Gemini 분류 불확실 → 기존 LLM 폴백: doc=%s", document_id)
+        except Exception:
+            logger.warning("Gemini 분류 실패 → 기존 LLM 폴백: doc=%s", document_id)
+
     # ── 4. LLM 분류 추론 ────────────────────────────
     try:
         from app.core.config import settings

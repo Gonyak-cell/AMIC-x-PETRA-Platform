@@ -1,8 +1,9 @@
 """VDR 문서 모델 — M&A 실사 자료실 파일 메타데이터 관리."""
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -51,6 +52,10 @@ class VdrDocument(Base, TimestampMixin):
     )
     classification_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     manual_review_needed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
+    # ── Gemini File API 캐시 ──────────────────────────
+    gemini_file_uri: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    gemini_file_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # ── 설명 ──────────────────────────────────────────
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

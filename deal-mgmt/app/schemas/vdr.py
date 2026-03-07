@@ -172,3 +172,31 @@ class ClassificationStatusOut(BaseModel):
     routed_folder: VdrFolderOut | None = None
     routed_category: VdrFolderCategory | None = None
     manual_review_needed: bool
+
+
+# ── Q&A 스키마 ────────────────────────────────────────────
+
+
+class VdrQARequest(BaseModel):
+    """VDR Q&A 질문 요청."""
+
+    question: str = Field(..., min_length=1, max_length=2000)
+    document_ids: list[uuid.UUID] | None = Field(None, description="참조할 문서 ID 리스트 (빈 값이면 전체 문서 대상)")
+    conversation_id: str | None = Field(None, description="대화 세션 ID (연속 질문 시 이전 conversation_id 전달)")
+
+
+class VdrQASourceOut(BaseModel):
+    """Q&A 답변 참조 문서."""
+
+    document_id: str
+    document_name: str
+    relevance: str
+
+
+class VdrQAResponse(BaseModel):
+    """VDR Q&A 답변 응답."""
+
+    answer: str
+    sources: list[VdrQASourceOut]
+    conversation_id: str
+    cost_usd: float
