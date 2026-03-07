@@ -881,7 +881,7 @@ async def stream_vdr_question(
         return StreamingResponse(
             _error_stream(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff"},
         )
 
     # DB 세션이 이미 반환된 상태에서 스트리밍 시작
@@ -893,5 +893,6 @@ async def stream_vdr_question(
         headers={
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
+            "X-Content-Type-Options": "nosniff",
         },
     )

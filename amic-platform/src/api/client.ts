@@ -15,6 +15,31 @@ const REFRESH_URL =
 // ── Shared refresh promise to deduplicate concurrent 401 retries ──
 let refreshPromise: Promise<boolean> | null = null;
 
+/**
+ * 토큰 갱신을 시도한다. 성공 시 true, 실패 시 false.
+ * axios 인터셉터와 native fetch 양쪽에서 호출 가능하도록 독립 함수로 분리.
+ * 동시 호출 시 refreshPromise를 공유하여 1회만 실행된다.
+ */
+export async function refreshAuth(): Promise<boolean> {
+  try {
+    if (!refreshPromise) {
+      refreshPromise = axios
+        .post<{ message: string }>(
+          REFRESH_URL,
+          {},
+          { withCredentials: true },
+        )
+        .then(() => true)
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+    return await refreshPromise;
+  } catch {
+    return false;
+  }
+}
+
 function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
   // Request: FormData 전송 시 Content-Type 제거 (브라우저가 multipart boundary 자동 설정)
   instance.interceptors.request.use((config) => {
@@ -44,32 +69,14 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
       original._retry = true;
 
       try {
-        if (!refreshPromise) {
-          // FDD is the central auth provider — all modules share this refresh endpoint
-          // Refresh Token은 쿠키로 자동 전송됨
-          refreshPromise = axios
-            .post<{ message: string }>(
-              REFRESH_URL,
-              {}, // body 비우기 (쿠키로 전송됨)
-              { withCredentials: true }, // 쿠키 전송 활성화
-            )
-            .then(() => {
-              // 토큰 저장 불필요 (쿠키 자동 갱신)
-              return true;
-            })
-            .finally(() => {
-              refreshPromise = null;
-            });
-        }
-
-        await refreshPromise;
-        return instance(original);
-      } catch (refreshErr) {
-        const is401 =
-          axios.isAxiosError(refreshErr) && refreshErr.response?.status === 401;
-        if (is401) {
+        const refreshed = await refreshAuth();
+        if (!refreshed) {
           emitForceLogout();
+          return Promise.reject(error);
         }
+        return instance(original);
+      } catch {
+        emitForceLogout();
         return Promise.reject(error);
       }
     },

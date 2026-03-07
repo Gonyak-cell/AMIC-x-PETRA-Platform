@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { maApi } from "@/api/maClient";
+import { refreshAuth } from "@/api/client";
+import { emitForceLogout } from "@/lib/auth-events";
 import type {
   VdrQAErrorEvent,
   VdrQAMessage,
@@ -110,16 +112,37 @@ export function useVdrQA(txnId: string) {
         });
 
         const baseURL = maApi.defaults.baseURL ?? "/api/ma";
-        const response = await fetch(
-          `${baseURL}/transactions/${txnId}/vdr/qa/stream`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body,
-            signal: controller.signal,
-          },
-        );
+        const fetchHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        const authHeader =
+          maApi.defaults.headers.common?.["Authorization"] ??
+          maApi.defaults.headers?.["Authorization"];
+        if (typeof authHeader === "string") {
+          fetchHeaders["Authorization"] = authHeader;
+        }
+
+        const sseUrl = `${baseURL}/transactions/${txnId}/vdr/qa/stream`;
+        const fetchOpts: RequestInit = {
+          method: "POST",
+          headers: fetchHeaders,
+          credentials: "include",
+          body,
+          signal: controller.signal,
+        };
+
+        let response = await fetch(sseUrl, fetchOpts);
+
+        // 401 → 토큰 갱신 후 1회 재시도
+        if (response.status === 401) {
+          const refreshed = await refreshAuth();
+          if (refreshed) {
+            response = await fetch(sseUrl, fetchOpts);
+          } else {
+            emitForceLogout();
+            throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요.");
+          }
+        }
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -210,7 +233,17 @@ export function useVdrQA(txnId: string) {
         }
       } catch (err) {
         if (rafId !== null) cancelAnimationFrame(rafId);
-        if ((err as Error).name === "AbortError") return;
+        if ((err as Error).name === "AbortError") {
+          // 빈 assistant 메시지 정리
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && !last.content) {
+              return prev.slice(0, -1);
+            }
+            return prev;
+          });
+          return;
+        }
 
         toast.error("Q&A 오류", {
           description: (err as Error).message || "답변 생성에 실패했습니다.",

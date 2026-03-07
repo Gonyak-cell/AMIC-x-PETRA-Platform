@@ -165,7 +165,7 @@ export default function VdrQAPanel({ txnId }: VdrQAPanelProps) {
       />
 
       {/* 메시지 영역 */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 min-h-0" aria-live="polite" aria-label="채팅 메시지">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 min-h-0" role="log" aria-live="polite" aria-label="채팅 메시지" tabIndex={0}>
         {messages.length === 0 && !isStreaming ? (
           <PanelEmptyState
             icon={MessageSquare}

@@ -13,9 +13,11 @@ VDR에 업로드된 문서들을 Gemini File API로 전달하고,
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
+import shutil
 import tempfile
 import time
 import unicodedata
@@ -52,6 +54,34 @@ _FINGERPRINT_WINDOW = 256
 # NOTE: 멀티 워커(uvicorn --workers > 1) 환경에서는 워커별로 분리됨.
 # 프로덕션에서 안정적 멀티턴이 필요하면 Redis 기반 저장소로 전환 필요.
 _conversation_store: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
+
+
+def check_worker_compatibility() -> None:
+    """멀티 워커 환경에서 인메모리 저장소의 제약을 경고한다 (F-10)."""
+    import os
+    import sys
+
+    # uvicorn --workers N 감지
+    for i, arg in enumerate(sys.argv):
+        if arg == "--workers" and i + 1 < len(sys.argv):
+            try:
+                workers = int(sys.argv[i + 1])
+            except ValueError:
+                return
+            if workers > 1:
+                logger.warning(
+                    "VDR Q&A: --workers=%d 환경에서 인메모리 대화 저장소 사용 중. "
+                    "대화 연속성이 보장되지 않습니다. Redis 기반 저장소 전환을 권장합니다.",
+                    workers,
+                )
+            return
+    # WEB_CONCURRENCY 환경변수 감지
+    concurrency = os.environ.get("WEB_CONCURRENCY")
+    if concurrency and int(concurrency) > 1:
+        logger.warning(
+            "VDR Q&A: WEB_CONCURRENCY=%s 환경에서 인메모리 대화 저장소 사용 중. 대화 연속성이 보장되지 않습니다.",
+            concurrency,
+        )
 
 
 def _store_key(user_sub: str, txn_id: uuid.UUID, conv_id: str) -> str:
@@ -238,7 +268,14 @@ async def _resolve_file_refs(
         return uri
 
     tasks = [_resolve_one(uri) for uri, _name in file_refs]
-    return list(await asyncio.gather(*tasks))
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    resolved: list[Any] = []
+    for i, result in enumerate(results):
+        if isinstance(result, BaseException):
+            logger.warning("파일 참조 해석 실패 (건너뜀): uri=%s — %s", file_refs[i][0], result)
+            continue
+        resolved.append(result)
+    return resolved
 
 
 def _format_sse(event: str, data: dict[str, object]) -> str:
@@ -250,11 +287,20 @@ def _format_sse(event: str, data: dict[str, object]) -> str:
 
 _MAX_MODEL_CACHE = 8
 _model_cache: OrderedDict[str, genai.GenerativeModel] = OrderedDict()
+_model_cache_lock = asyncio.Lock()
 
 
-def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
-    """Gemini 모델 인스턴스를 캐시하여 재사용한다 (genai.configure 호출 최소화)."""
-    cache_key = f"{api_key}:{model_name}"
+def _api_key_hash(api_key: str) -> str:
+    """API 키를 SHA-256 해시로 변환하여 메모리 노출을 방지한다 (N-01)."""
+    return hashlib.sha256(api_key.encode()).hexdigest()[:16]
+
+
+def _get_model_sync(api_key: str, model_name: str) -> genai.GenerativeModel:
+    """Gemini 모델 인스턴스를 캐시하여 재사용한다 (genai.configure 호출 최소화).
+
+    NOTE: 이 함수는 _model_cache_lock 내에서 호출해야 한다.
+    """
+    cache_key = f"{_api_key_hash(api_key)}:{model_name}"
     cached = _model_cache.get(cache_key)
     if cached is not None:
         _model_cache.move_to_end(cache_key)
@@ -268,6 +314,12 @@ def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
     while len(_model_cache) > _MAX_MODEL_CACHE:
         _model_cache.popitem(last=False)
     return model
+
+
+async def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
+    """genai.configure + 모델 생성을 원자적으로 실행한다 (F-04: 경쟁 조건 방지)."""
+    async with _model_cache_lock:
+        return _get_model_sync(api_key, model_name)
 
 
 # ── DB 작업 함수 ──────────────────────────────────────────
@@ -350,10 +402,7 @@ async def _ensure_file_uris(
         except Exception:
             logger.warning("문서 업로드 실패 (건너뜀): doc=%s", doc.id, exc_info=True)
         finally:
-            if tmp_path.exists():
-                tmp_path.unlink(missing_ok=True)
-            if tmp_dir.exists():
-                tmp_dir.rmdir()
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return refs, ref_doc_info
 
@@ -461,7 +510,7 @@ async def ask_question(
         return ctx
 
     # Gemini 호출
-    model = _get_model(ctx.api_key, ctx.model_name)
+    model = await _get_model(ctx.api_key, ctx.model_name)
 
     # 파일 참조 + 히스토리 + 질문 조립
     contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
@@ -561,7 +610,7 @@ async def ask_question_stream(
     Yields:
         SSE 형식 문자열 (event: token/sources/done/error).
     """
-    model = _get_model(ctx.api_key, ctx.model_name)
+    model = await _get_model(ctx.api_key, ctx.model_name)
 
     # 파일 참조 + 히스토리 + 질문 조립
     contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
@@ -671,6 +720,15 @@ async def ask_question_stream(
 
     elapsed = time.monotonic() - start_time
 
+    # F-13: 빈 응답 처리 — 모든 chunk가 비어있는 경우
+    if not chunks:
+        yield _format_sse(
+            "error",
+            {"message": "답변을 생성하지 못했습니다. 다시 시도해 주세요.", "conversation_id": ctx.conv_id},
+        )
+        yield _format_sse("done", {})
+        return
+
     # 응답 후처리
     accumulated = "".join(chunks)
     answer_text, no_relevant = _sanitize_answer(accumulated)
@@ -691,10 +749,10 @@ async def ask_question_stream(
     )
 
     # sanitize로 내용이 변경되었으면 FE에 최종 텍스트 전달
+    # F-11: cost_usd는 서버 로그에만 기록, 클라이언트에 노출하지 않음
     sources_data: dict[str, object] = {
         "sources": sources,
         "conversation_id": ctx.conv_id,
-        "cost_usd": cost,
     }
     if answer_text != accumulated:
         sources_data["final_content"] = answer_text

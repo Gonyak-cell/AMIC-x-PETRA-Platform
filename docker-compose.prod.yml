@@ -260,6 +260,8 @@ services:
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
       AZURE_VDR_CONTAINER_NAME: ${AZURE_VDR_CONTAINER_NAME:-amic-vdr}
       DEBUG: "false"
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      VDR_QA_ENABLED: ${VDR_QA_ENABLED:-false}
     restart: unless-stopped
     deploy:
       resources:

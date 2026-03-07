@@ -146,7 +146,6 @@ export interface VdrQATokenEvent {
 export interface VdrQASourcesEvent {
   sources: VdrQASource[];
   conversation_id: string;
-  cost_usd: number;
   final_content?: string;
 }
 
