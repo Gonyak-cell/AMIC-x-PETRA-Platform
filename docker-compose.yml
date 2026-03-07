@@ -58,6 +58,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
       AUTH_ENABLED: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     depends_on:
       fdd-db:
         condition: service_healthy
@@ -115,6 +118,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
       AUTH_ENABLED: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       DATA_GO_KR_API_KEY: ${DATA_GO_KR_API_KEY:-}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
@@ -206,6 +212,9 @@ services:
       DATA_GO_KR_API_KEY: ${MA_DATA_GO_KR_API_KEY:-}
       DEBUG: "true"
       AUTH_ENABLED: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./deal-mgmt:/app
@@ -326,6 +335,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-shared-jwt-secret-change-in-production}
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
       AUTH_ENABLED: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       DEAL_MGMT_INTERNAL_URL: http://deal-mgmt-api:8000
       INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dev-internal-key}
       RALPH_PASS_THRESHOLD: "4.0"

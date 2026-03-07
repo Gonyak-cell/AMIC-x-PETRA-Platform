@@ -8,6 +8,7 @@ Step 3: 최종 확정 → DB 저장 (ContractTemplate + Clauses + Variables)
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import logging
 import re
@@ -17,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any, NamedTuple, TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.models.contract_clause import ContractClause
@@ -32,11 +34,14 @@ from app.schemas.spa_analysis import (
     AnalyzedClause,
     DiscoveredBoolean,
     ExtractedVariable,
+    RedlineIssueSchema,
 )
+from app.services import redline_engine
 from app.services.contract_generation_service import (
     _parse_expression,
     sanitize_html,
 )
+from app.services.redline_prompts import build_step4_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +70,7 @@ class Step1Result(TypedDict):
 class LLMCallResult(NamedTuple):
     """LLM 호출 결과 — tuple 언팩킹 호환 + 이름 기반 접근."""
 
-    data: dict[str, Any]
+    data: dict[str, Any] | list[Any]
     cost: float | None
     model: str | None
 
@@ -116,8 +121,8 @@ def _get_session(session_id: str, *, owner_user_id: str = "") -> AnalysisSession
     if session is None:
         msg = "분석 세션이 만료되었거나 존재하지 않습니다. Step 1부터 다시 시작하세요."
         raise ValueError(msg)
-    # C1: 세션 소유권 검증 — 타 사용자의 계약서 원문 접근 차단
-    if owner_user_id and session.owner_user_id and session.owner_user_id != owner_user_id:
+    # C1: 세션 소유권 검증 — 타 사용자의 계약서 원문 접근 차단 (fail-closed)
+    if session.owner_user_id and session.owner_user_id != owner_user_id:
         msg = "이 분석 세션에 접근할 권한이 없습니다."
         raise ValueError(msg)
     return session
@@ -154,6 +159,7 @@ async def _call_llm_json(
     user_prompt: str,
     *,
     max_retries: int = 1,
+    max_tokens: int = 4096,
 ) -> LLMCallResult:
     """LLM을 호출하고 JSON 응답을 파싱한다."""
     if max_retries < 0:
@@ -167,7 +173,7 @@ async def _call_llm_json(
     for attempt in range(max_retries + 1):
         try:
             raw = await asyncio.wait_for(
-                llm.call(system_prompt, user_prompt),
+                llm.call(system_prompt, user_prompt, max_tokens=max_tokens),
                 timeout=_LLM_CALL_TIMEOUT,
             )
             # LLM 출력에서 JSON 블록 추출 (```json ... ``` 또는 순수 JSON)
@@ -176,6 +182,7 @@ async def _call_llm_json(
             model_name = getattr(llm, "_primary_model", None)
             return LLMCallResult(parsed, cost, model_name)
         except TimeoutError as exc:
+            logger.error("LLM 호출 타임아웃: timeout=%.0fs", _LLM_CALL_TIMEOUT)
             raise RuntimeError(f"LLM 호출이 {_LLM_CALL_TIMEOUT:.0f}초 내에 응답하지 않았습니다.") from exc
         except (json.JSONDecodeError, ValueError) as exc:
             if attempt < max_retries:
@@ -186,8 +193,8 @@ async def _call_llm_json(
     raise RuntimeError("unreachable")  # pragma: no cover
 
 
-def _extract_json(text: str) -> dict[str, Any]:
-    """LLM 출력에서 JSON 객체를 추출한다."""
+def _extract_json(text: str) -> dict[str, Any] | list[Any]:
+    """LLM 출력에서 JSON 객체 또는 배열을 추출한다."""
     stripped = text.strip()
 
     # ```json ... ``` 블록 추출
@@ -202,8 +209,8 @@ def _extract_json(text: str) -> dict[str, Any]:
 
     # 순수 JSON 파싱
     result = json.loads(stripped)
-    if not isinstance(result, dict):
-        msg = f"JSON 최상위가 object가 아닙니다: {type(result).__name__}"
+    if not isinstance(result, (dict, list)):
+        msg = f"JSON 최상위가 object 또는 array가 아닙니다: {type(result).__name__}"
         raise ValueError(msg)
     return result
 
@@ -2079,3 +2086,97 @@ async def create_template_from_analysis(
     )
 
     return template
+
+
+# ── Step 4: 교차 검증 Redline ────────────────────────────────────────────────
+
+
+_ISSUE_ID_RE = re.compile(r"^ISSUE-(\d+)$")
+
+
+async def analyze_step4_redline(
+    file_bytes: bytes,
+    due_diligence_text: str,
+    *,
+    leverage: str = "STRONG",
+    deal_size: str = "MEDIUM",
+    industry_type: str = "GENERAL",
+    rwi_status: str = "NO_RWI",
+    jurisdiction: str = "DOMESTIC_KR",
+    owner_user_id: str = "",
+) -> tuple[io.BytesIO, float | None, str | None, int, int]:
+    """Step 4: SPA .docx 교차 검증 + Tracked Changes 생성.
+
+    반환: (docx_bytesio, llm_cost_usd, model_used, issues_count, skipped_count)
+    """
+    logger.info(
+        "Step 4 서비스 진입: owner=%s, leverage=%s, deal_size=%s, file_size=%d",
+        owner_user_id,
+        leverage,
+        deal_size,
+        len(file_bytes),
+    )
+
+    # 1. DOCX -> plain text 추출
+    spa_text = await run_in_threadpool(redline_engine.extract_paragraphs_text, file_bytes)
+    if len(spa_text) < 100:
+        raise ValueError("DOCX에서 추출된 텍스트가 너무 짧습니다 (최소 100자 필요).")
+
+    # 2. 시스템 프롬프트 조립
+    system_prompt = build_step4_prompt(
+        leverage=leverage,
+        deal_size=deal_size,
+        industry_type=industry_type,
+        rwi_status=rwi_status,
+        jurisdiction=jurisdiction,
+    )
+
+    # 3. User 메시지 조립
+    user_prompt = f"[대상 문서]\n{spa_text}\n\n[실사 보고서]\n{due_diligence_text}"
+
+    # 4. LLM 호출 (JSON 파싱 + 1회 재시도)
+    t0_llm = time.monotonic()
+    result = await _call_llm_json(system_prompt, user_prompt, max_retries=1, max_tokens=16384)
+    logger.info("Step 4 LLM 호출 완료: elapsed=%.1fs", time.monotonic() - t0_llm)
+    cost = result.cost
+    model_name = result.model
+    parsed = result.data
+    del user_prompt, spa_text  # 대용량 문자열 메모리 조기 해제
+
+    # 5. JSON 구조 정규화
+    issues_list: list[dict[str, Any]] = []
+    if isinstance(parsed, list):
+        issues_list = parsed
+    elif isinstance(parsed, dict) and "issues" in parsed:
+        issues_list = parsed["issues"]
+    elif isinstance(parsed, dict):
+        issues_list = [parsed]
+
+    # 6. issue_id 정규화 (ISSUE-NNN → ISS-NNN) + Pydantic 검증
+    valid_issues: list[dict[str, Any]] = []
+    skipped_count = 0
+    for i, item in enumerate(issues_list):
+        try:
+            # ISSUE-NNN → ISS-NNN 정규화
+            if isinstance(item, dict) and "issue_id" in item:
+                m = _ISSUE_ID_RE.match(str(item["issue_id"]))
+                if m:
+                    item["issue_id"] = f"ISS-{int(m.group(1)):03d}"
+
+            validated = RedlineIssueSchema.model_validate(item)
+            valid_issues.append(validated.model_dump())
+        except (ValueError, TypeError) as exc:
+            logger.warning("Step 4 이슈 검증 실패 (항목 %d): %s", i, exc)
+            skipped_count += 1
+
+    if not valid_issues:
+        raise ValueError(
+            f"LLM이 반환한 {len(issues_list)}건의 이슈 중 유효한 항목이 없습니다. 프롬프트 또는 입력 문서를 확인하세요."
+        )
+
+    # 7. Redline 적용 (CPU 바운드 → 스레드 풀)
+    t0_ooxml = time.monotonic()
+    result_docx: io.BytesIO = await run_in_threadpool(redline_engine.apply_redlines, file_bytes, valid_issues)
+    logger.info("Step 4 OOXML 처리 완료: elapsed=%.1fs, issues=%d", time.monotonic() - t0_ooxml, len(valid_issues))
+
+    return result_docx, cost, model_name, len(valid_issues), skipped_count

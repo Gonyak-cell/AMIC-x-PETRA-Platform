@@ -453,3 +453,52 @@ class SpaStep3Response(BaseModel):
     variables_count: int
     clauses_count: int
     message: str
+
+
+# ── Step 4: 교차 검증 Redline ────────────────────────────────────────────────
+
+
+class RedlineIssueSchema(BaseModel):
+    """LLM 반환 교차 검증 이슈 (파싱 + 검증용)."""
+
+    issue_id: str = Field(..., pattern=r"^ISS-\d{3,}$")
+    clause_ref: str = Field(..., max_length=200)
+    severity: Literal["High", "Medium", "Low"]
+    rationale: str = Field(..., max_length=5000)
+    original_target_text: str = Field(..., min_length=5, max_length=5000)
+    proposed_redline: str = Field(..., min_length=5, max_length=10000)
+
+    @field_validator("original_target_text")
+    @classmethod
+    def validate_no_newlines(cls, v: str) -> str:
+        """문단 간 교차 타겟팅 차단 — 줄바꿈 포함 시 검증 오류."""
+        if "\n" in v or "\r" in v:
+            raise ValueError(
+                "original_target_text에 줄바꿈이 포함되어 있습니다. 반드시 단일 문단 내의 문구로 한정하세요."
+            )
+        return v
+
+    @field_validator("proposed_redline")
+    @classmethod
+    def validate_redline_tags(cls, v: str) -> str:
+        """[DEL]/[INS] 태그 쌍 검증 + 개별 태그 내용 길이 제한."""
+        import re as _re
+
+        del_opens = v.count("[DEL]")
+        del_closes = v.count("[/DEL]")
+        ins_opens = v.count("[INS]")
+        ins_closes = v.count("[/INS]")
+
+        if del_opens != del_closes:
+            raise ValueError(f"[DEL] 태그 불일치: 열림={del_opens}, 닫힘={del_closes}")
+        if ins_opens != ins_closes:
+            raise ValueError(f"[INS] 태그 불일치: 열림={ins_opens}, 닫힘={ins_closes}")
+        if del_opens == 0 and ins_opens == 0:
+            raise ValueError("proposed_redline에 [DEL] 또는 [INS] 태그가 하나도 없습니다.")
+
+        max_tag_len = 2000
+        for tag in ("DEL", "INS"):
+            for m in _re.finditer(rf"\[{tag}\](.*?)\[/{tag}\]", v, _re.DOTALL):
+                if len(m.group(1)) > max_tag_len:
+                    raise ValueError(f"[{tag}] 태그 내용이 {max_tag_len}자를 초과합니다 ({len(m.group(1))}자).")
+        return v
