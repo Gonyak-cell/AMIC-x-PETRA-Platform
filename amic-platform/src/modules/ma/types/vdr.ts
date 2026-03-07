@@ -119,7 +119,7 @@ export interface VdrQARequest {
 export interface VdrQASource {
   document_id: string;
   document_name: string;
-  relevance: "high" | "medium" | "low";
+  relevance?: "high" | "medium" | "low" | "referenced";
 }
 
 export interface VdrQAResponse {
@@ -133,8 +133,28 @@ export interface VdrQAMessage {
   role: "user" | "assistant";
   content: string;
   sources?: VdrQASource[];
+  isError?: boolean;
   timestamp: string;
 }
+
+// ── SSE 스트리밍 이벤트 ──────────────────────────────────
+
+export interface VdrQATokenEvent {
+  text: string;
+}
+
+export interface VdrQASourcesEvent {
+  sources: VdrQASource[];
+  conversation_id: string;
+  cost_usd: number;
+  final_content?: string;
+}
+
+export interface VdrQAErrorEvent {
+  message: string;
+}
+
+export type VdrQASSEEventType = "token" | "sources" | "done" | "error";
 
 // ── VDR 요약 ─────────────────────────────────────────────
 

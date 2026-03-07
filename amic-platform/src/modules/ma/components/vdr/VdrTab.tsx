@@ -29,6 +29,7 @@ import type {
 } from "@/modules/ma/types/vdr";
 
 import ExtractionList from "../extraction/ExtractionList";
+import VdrQAPanel from "../VdrQAPanel";
 import DirectUploadResultModal from "./DirectUploadResultModal";
 import DirectUploadZone from "./DirectUploadZone";
 import VdrDocumentList from "./VdrDocumentList";
@@ -209,8 +210,8 @@ export default function VdrTab({ txnId }: Props) {
         />
       )}
 
-      {/* 2-column 레이아웃 */}
-      <div className="grid grid-cols-[280px_1fr] gap-4">
+      {/* 3-column 레이아웃 */}
+      <div className="grid grid-cols-[280px_1fr_360px] gap-4">
         {/* 좌측: 폴더 트리 */}
         <Card padding="none" className="h-[520px] overflow-hidden">
           <VdrFolderTree
@@ -227,7 +228,7 @@ export default function VdrTab({ txnId }: Props) {
           />
         </Card>
 
-        {/* 우측: 문서 목록 */}
+        {/* 중앙: 문서 목록 */}
         <Card padding="none" className="h-[520px] overflow-hidden">
           <VdrDocumentList
             txnId={txnId}
@@ -245,6 +246,11 @@ export default function VdrTab({ txnId }: Props) {
             }}
           />
         </Card>
+
+        {/* 우측: Q&A 패널 */}
+        <div className="h-[520px]">
+          <VdrQAPanel txnId={txnId} />
+        </div>
       </div>
 
       {/* AI 분석 결과 */}

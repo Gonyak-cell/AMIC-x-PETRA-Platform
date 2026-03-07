@@ -9,6 +9,8 @@ from fastapi import HTTPException, status
 
 logger = logging.getLogger(__name__)
 
+_CLEANUP_INTERVAL = 60.0  # stale 키 정리 주기 (초)
+
 
 class InMemoryRateLimiter:
     """인메모리 슬라이딩 윈도우 기반 요청 횟수 제한기.
@@ -31,6 +33,7 @@ class InMemoryRateLimiter:
         self._max_calls = max_calls
         self._window = window_seconds
         self._store: dict[str, list[float]] = {}
+        self._last_cleanup = 0.0
 
     def check(self, identifier: str) -> None:
         """요청 횟수를 확인하고 초과 시 429 HTTPException을 발생시킨다."""
@@ -55,10 +58,14 @@ class InMemoryRateLimiter:
         active.append(now)
         self._store[identifier] = active
 
-        # stale 키 정리
-        stale_keys = [k for k, v in self._store.items() if k != identifier and all(now - t >= self._window for t in v)]
-        for k in stale_keys:
-            del self._store[k]
+        # M-04: 주기적 stale 키 정리 (매 요청이 아닌 _CLEANUP_INTERVAL 마다)
+        if now - self._last_cleanup >= _CLEANUP_INTERVAL:
+            self._last_cleanup = now
+            stale_keys = [
+                k for k, v in self._store.items() if k != identifier and all(now - t >= self._window for t in v)
+            ]
+            for k in stale_keys:
+                del self._store[k]
 
     def clear(self) -> None:
         """테스트용 — 모든 상태를 초기화한다."""
@@ -68,3 +75,4 @@ class InMemoryRateLimiter:
 # ── 모듈 레벨 공유 인스턴스 ──────────────────────────────
 fi_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
 si_rate_limiter = InMemoryRateLimiter(max_calls=5, window_seconds=60.0)
+qa_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)

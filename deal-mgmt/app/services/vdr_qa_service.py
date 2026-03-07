@@ -25,6 +25,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import google.generativeai as genai
 from sqlalchemy import select
@@ -60,6 +61,9 @@ def _store_key(user_sub: str, txn_id: uuid.UUID, conv_id: str) -> str:
 
 def _save_conversation(key: str, history: list[dict[str, str]]) -> None:
     """대화 히스토리를 저장하고, 최대 크기를 초과하면 가장 오래된 항목을 제거한다."""
+    # M-03: 히스토리가 _MAX_HISTORY_MESSAGES를 초과하면 오래된 턴 제거
+    if len(history) > _MAX_HISTORY_MESSAGES:
+        history = history[-_MAX_HISTORY_MESSAGES:]
     _conversation_store[key] = history
     _conversation_store.move_to_end(key)
     while len(_conversation_store) > _MAX_CONVERSATIONS:
@@ -94,7 +98,7 @@ class QAPreparedContext:
     conv_id: str
     store_key: str
     history: list[dict[str, str]]
-    api_key: str
+    api_key: str = field(repr=False)
     model_name: str
     user_sub: str
     transaction_id: uuid.UUID
@@ -196,33 +200,45 @@ def _sanitize_answer(answer: str) -> tuple[str, bool]:
     return answer, False
 
 
-def _build_history_contents(history: list[dict[str, str]]) -> list[dict[str, object]]:
+def _build_history_contents(history: list[dict[str, str]]) -> list[dict[str, Any]]:
     """대화 히스토리를 Gemini multi-turn 형식으로 변환한다.
 
     Gemini SDK는 {"role": "user"/"model", "parts": [...]} 형식을 요구한다.
     """
-    contents: list[dict[str, object]] = []
+    contents: list[dict[str, Any]] = []
     for msg in history[-_MAX_HISTORY_MESSAGES:]:
         role = "model" if msg["role"] == "assistant" else "user"
         contents.append({"role": role, "parts": [msg["content"]]})
     return contents
 
 
+async def _build_gemini_contents(
+    file_refs: list[tuple[str, str]],
+    history: list[dict[str, str]],
+    question: str,
+) -> list[Any]:
+    """파일 참조 + 히스토리 + 질문을 Gemini contents 형식으로 조립한다."""
+    contents: list[Any] = await _resolve_file_refs(file_refs)
+    contents.extend(_build_history_contents(history))
+    contents.append(question)
+    return contents
+
+
 async def _resolve_file_refs(
     file_refs: list[tuple[str, str]],
-    api_key: str,
-) -> list[object]:
-    """Gemini File URI를 실제 파일 참조 객체로 변환한다 (이벤트 루프 블로킹 방지)."""
-    genai.configure(api_key=api_key)
+) -> list[Any]:
+    """Gemini File URI를 실제 파일 참조 객체로 변환한다 (이벤트 루프 블로킹 방지).
 
-    contents: list[object] = []
-    for uri, _name in file_refs:
+    genai.configure()는 _get_model()에서 이미 호출되므로 여기서는 생략한다.
+    """
+
+    async def _resolve_one(uri: str) -> Any:
         if "files/" in uri:
-            file_obj = await asyncio.to_thread(genai.get_file, uri.split("/")[-1])
-            contents.append(file_obj)
-        else:
-            contents.append(uri)
-    return contents
+            return await asyncio.to_thread(genai.get_file, uri.split("/")[-1])
+        return uri
+
+    tasks = [_resolve_one(uri) for uri, _name in file_refs]
+    return list(await asyncio.gather(*tasks))
 
 
 def _format_sse(event: str, data: dict[str, object]) -> str:
@@ -232,7 +248,8 @@ def _format_sse(event: str, data: dict[str, object]) -> str:
 
 # ── 모델 캐시 ─────────────────────────────────────────────
 
-_model_cache: dict[str, genai.GenerativeModel] = {}
+_MAX_MODEL_CACHE = 8
+_model_cache: OrderedDict[str, genai.GenerativeModel] = OrderedDict()
 
 
 def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
@@ -240,6 +257,7 @@ def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
     cache_key = f"{api_key}:{model_name}"
     cached = _model_cache.get(cache_key)
     if cached is not None:
+        _model_cache.move_to_end(cache_key)
         return cached
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
@@ -247,6 +265,8 @@ def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
         system_instruction=_QA_SYSTEM_PROMPT,
     )
     _model_cache[cache_key] = model
+    while len(_model_cache) > _MAX_MODEL_CACHE:
+        _model_cache.popitem(last=False)
     return model
 
 
@@ -444,9 +464,7 @@ async def ask_question(
     model = _get_model(ctx.api_key, ctx.model_name)
 
     # 파일 참조 + 히스토리 + 질문 조립
-    contents: list[object] = await _resolve_file_refs(ctx.file_refs, ctx.api_key)
-    contents.extend(_build_history_contents(ctx.history))
-    contents.append(question)
+    contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
 
     start_time = time.monotonic()
     try:
@@ -545,12 +563,10 @@ async def ask_question_stream(
     """
     model = _get_model(ctx.api_key, ctx.model_name)
 
-    # 파일 참조 변환 (이벤트 루프 블로킹 방지)
-    contents: list[object] = await _resolve_file_refs(ctx.file_refs, ctx.api_key)
-    contents.extend(_build_history_contents(ctx.history))
-    contents.append(question)
+    # 파일 참조 + 히스토리 + 질문 조립
+    contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
 
-    accumulated = ""
+    chunks: list[str] = []
     cost = 0.0
     input_tokens = 0
     output_tokens = 0
@@ -573,6 +589,12 @@ async def ask_question_stream(
         async for chunk in response:
             # RESIL-03: 절대 세션 타임아웃 체크
             if time.monotonic() > session_deadline:
+                # J-07: 부분 응답이라도 히스토리에 저장
+                if chunks:
+                    partial = "".join(chunks)
+                    ctx.history.append({"role": "user", "content": question})
+                    ctx.history.append({"role": "assistant", "content": partial})
+                    _save_conversation(ctx.store_key, ctx.history)
                 yield _format_sse(
                     "error",
                     {
@@ -586,10 +608,10 @@ async def ask_question_stream(
             if not text:
                 continue
 
-            accumulated += text
+            chunks.append(text)
 
-            # OPS-002: 슬라이딩 윈도우 기반 보안 검사
-            window = accumulated[-_FINGERPRINT_WINDOW:] if len(accumulated) > _FINGERPRINT_WINDOW else accumulated
+            # OPS-002: 슬라이딩 윈도우 기반 보안 검사 (최근 청크만 결합)
+            window = "".join(chunks[-10:])[-_FINGERPRINT_WINDOW:]
             leaked = any(fp in window for fp in _SYSTEM_PROMPT_FINGERPRINTS)
             if leaked:
                 yield _format_sse(
@@ -615,6 +637,12 @@ async def ask_question_stream(
             logger.debug("비용 계산 실패 (무시)", exc_info=True)
 
     except TimeoutError:
+        # J-07: 타임아웃 시 부분 응답 히스토리 저장
+        if chunks:
+            partial = "".join(chunks)
+            ctx.history.append({"role": "user", "content": question})
+            ctx.history.append({"role": "assistant", "content": partial})
+            _save_conversation(ctx.store_key, ctx.history)
         yield _format_sse(
             "error",
             {
@@ -644,6 +672,7 @@ async def ask_question_stream(
     elapsed = time.monotonic() - start_time
 
     # 응답 후처리
+    accumulated = "".join(chunks)
     answer_text, no_relevant = _sanitize_answer(accumulated)
 
     # 대화 히스토리 업데이트
