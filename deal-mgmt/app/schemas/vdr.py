@@ -182,7 +182,12 @@ class VdrQARequest(BaseModel):
 
     question: str = Field(..., min_length=1, max_length=2000)
     document_ids: list[uuid.UUID] | None = Field(None, description="참조할 문서 ID 리스트 (빈 값이면 전체 문서 대상)")
-    conversation_id: str | None = Field(None, description="대화 세션 ID (연속 질문 시 이전 conversation_id 전달)")
+    conversation_id: str | None = Field(
+        None,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="대화 세션 ID (연속 질문 시 이전 conversation_id 전달)",
+    )
 
 
 class VdrQASourceOut(BaseModel):
