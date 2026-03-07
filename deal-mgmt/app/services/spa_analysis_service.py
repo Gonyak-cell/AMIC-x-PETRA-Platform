@@ -2166,7 +2166,17 @@ async def analyze_step4_redline(
             validated = RedlineIssueSchema.model_validate(item)
             valid_issues.append(validated.model_dump())
         except (ValueError, TypeError) as exc:
-            logger.warning("Step 4 이슈 검증 실패 (항목 %d): %s", i, exc)
+            issue_id = item.get("issue_id", "N/A") if isinstance(item, dict) else "N/A"
+            clause_ref = item.get("clause_ref", "N/A") if isinstance(item, dict) else "N/A"
+            severity = item.get("severity", "N/A") if isinstance(item, dict) else "N/A"
+            logger.warning(
+                "Step 4 이슈 검증 실패 (항목 %d): issue=%s, clause=%s, severity=%s, error=%s",
+                i,
+                issue_id,
+                clause_ref,
+                severity,
+                exc,
+            )
             skipped_count += 1
 
     if not valid_issues:

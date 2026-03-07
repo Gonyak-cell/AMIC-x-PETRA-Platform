@@ -37,6 +37,19 @@ COMMENTS_CT = "application/vnd.openxmlformats-officedocument.wordprocessingml.co
 
 NSMAP = {"w": W_NS}
 
+# ── 모듈 레벨 상수 ──────────────────────────────────────────────────────────
+
+_REDLINE_PATTERN = re.compile(r"\[DEL\](.*?)\[/DEL\]|\[INS\](.*?)\[/INS\]", re.DOTALL)
+
+_SMART_CHAR_REPLACEMENTS: dict[str, str] = {
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2014": "-",
+    "\u2013": "-",
+}
+
 
 # ── 핵심 데이터 구조 ─────────────────────────────────────────────────────────
 
@@ -223,7 +236,14 @@ def apply_redlines(
     date_str = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # 4: 각 issue 처리 (개별 이슈 예외 시 skip — R4-C4)
+    # char_map 캐시: 문단별 _build_char_map 결과를 캐싱하여 O(I×P×C) → O(P×C) 최적화.
+    # 주의: _split_run_at / _inject_deletion 등이 XML 트리를 변형하므로,
+    # 이슈 처리 후 해당 문단의 캐시가 stale 상태가 될 수 있다.
+    # 매칭 성공 시 해당 문단의 캐시를 무효화하여 이후 이슈에서 재계산하도록 한다.
+    para_cache: dict[int, tuple[str, list[CharMapping]]] = {}
     first_paragraph = all_paragraphs[0] if all_paragraphs else None
+    success_count = 0
+    fail_count = 0
     for issue in issues:
         try:
             _apply_single_issue(
@@ -234,8 +254,11 @@ def apply_redlines(
                 rev_counter=rev_counter,
                 author=author,
                 date_str=date_str,
+                para_cache=para_cache,
             )
+            success_count += 1
         except Exception:
+            fail_count += 1
             issue_id = issue.get("issue_id", "ISS-000")
             clause_ref_log = issue.get("clause_ref", "N/A")
             severity_log = issue.get("severity", "N/A")
@@ -254,6 +277,13 @@ def apply_redlines(
                 first_run = first_paragraph.find(f".//{W}r")
                 if first_run is not None:
                     _anchor_comment_to_run(first_run, cid)
+
+    logger.info(
+        "apply_redlines 완료: 성공=%d, 실패=%d, 총=%d",
+        success_count,
+        fail_count,
+        len(issues),
+    )
 
     # 5: 직렬화
     modified_xml = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
@@ -274,6 +304,7 @@ def _apply_single_issue(
     rev_counter: _RevIdCounter,
     author: str,
     date_str: str,
+    para_cache: dict[int, tuple[str, list[CharMapping]]] | None = None,
 ) -> None:
     """단일 이슈를 문서에 적용한다. 실패 시 예외를 raise한다."""
     original_target = issue.get("original_target_text", "")
@@ -290,7 +321,7 @@ def _apply_single_issue(
         return
 
     # 4b: 타겟 텍스트 검색
-    match = _find_target_in_paragraphs(all_paragraphs, original_target)
+    match = _find_target_in_paragraphs(all_paragraphs, original_target, para_cache=para_cache)
     if match is None:
         # 4c: 매칭 실패 -> 문서 최상단에 실패 메모 삽입
         logger.warning("매칭 실패: issue=%s, target='%s...'", issue_id, original_target[:50])
@@ -303,6 +334,10 @@ def _apply_single_issue(
         return
 
     paragraph, start_idx, end_idx, _merged_text, char_map = match
+
+    # 매칭된 문단의 캐시 무효화 — XML 트리 변형으로 stale 방지
+    if para_cache is not None:
+        para_cache.pop(id(paragraph), None)
 
     # 4d~4e: Run 경계 분할 및 대상 Run 수집
     target_runs = _collect_and_split_target_runs(char_map, start_idx, end_idx)
@@ -377,18 +412,10 @@ def _normalize_with_index_map(text: str) -> tuple[str, list[int]]:
     """
     # 1. 유니코드 정규화 + 문자 치환 (길이 불변 치환)
     text = unicodedata.normalize("NFKC", text)
-    replacements = {
-        "\u2018": "'",
-        "\u2019": "'",
-        "\u201c": '"',
-        "\u201d": '"',
-        "\u2014": "-",
-        "\u2013": "-",
-    }
     chars = list(text)
     for i, ch in enumerate(chars):
-        if ch in replacements:
-            chars[i] = replacements[ch]
+        if ch in _SMART_CHAR_REPLACEMENTS:
+            chars[i] = _SMART_CHAR_REPLACEMENTS[ch]
     text = "".join(chars)
 
     # 2. 연속 공백 축소 + 인덱스 매핑
@@ -413,12 +440,23 @@ def _normalize_with_index_map(text: str) -> tuple[str, list[int]]:
 def _find_target_in_paragraphs(
     paragraphs: list[etree._Element],
     target_text: str,
+    *,
+    para_cache: dict[int, tuple[str, list[CharMapping]]] | None = None,
 ) -> tuple[etree._Element, int, int, str, list[CharMapping]] | None:
-    """모든 문단에서 target_text를 검색."""
+    """모든 문단에서 target_text를 검색.
+
+    para_cache가 제공되면 _build_char_map 결과를 캐시에서 조회한다.
+    """
     norm_target = _normalize_text_for_matching(target_text)
 
     for para in paragraphs:
-        merged, char_map = _build_char_map(para)
+        para_id = id(para)
+        if para_cache is not None and para_id in para_cache:
+            merged, char_map = para_cache[para_id]
+        else:
+            merged, char_map = _build_char_map(para)
+            if para_cache is not None:
+                para_cache[para_id] = (merged, char_map)
         if not merged:
             continue
 
@@ -647,10 +685,9 @@ def _inject_insertion(
 def _parse_redline_markup(proposed_redline: str) -> list[RedlineSegment]:
     """정규식으로 [DEL]...[/DEL], [INS]...[/INS] 파싱."""
     segments: list[RedlineSegment] = []
-    pattern = re.compile(r"\[DEL\](.*?)\[/DEL\]|\[INS\](.*?)\[/INS\]", re.DOTALL)
 
     last_end = 0
-    for m in pattern.finditer(proposed_redline):
+    for m in _REDLINE_PATTERN.finditer(proposed_redline):
         # KEEP: 태그 사이의 텍스트
         if m.start() > last_end:
             keep_text = proposed_redline[last_end : m.start()]
@@ -899,7 +936,8 @@ def _repack_docx(
         if comments_xml is not None:
             skip_files.add("word/comments.xml")
 
-        for item in zf_in.infolist():
+        all_items = zf_in.infolist()
+        for item in all_items:
             # ZIP Slip 방어: 경로 순회 차단
             if ".." in item.filename or item.filename.startswith("/"):
                 logger.warning("ZIP Slip 의심 엔트리 무시: %s", item.filename)
@@ -929,7 +967,7 @@ def _repack_docx(
 
         # .rels 파일이 ZIP에 없었으나 comments_xml이 필요한 경우 → 폴백 생성
         if comments_xml is not None:
-            rels_exists = any(item.filename == "word/_rels/document.xml.rels" for item in zf_in.infolist())
+            rels_exists = any(item.filename == "word/_rels/document.xml.rels" for item in all_items)
             if not rels_exists:
                 rels_fallback = _create_default_rels_with_comments()
                 zf_out.writestr("word/_rels/document.xml.rels", rels_fallback)

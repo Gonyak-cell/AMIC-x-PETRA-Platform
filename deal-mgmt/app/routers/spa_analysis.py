@@ -261,7 +261,16 @@ async def step3_create_template(
 _STEP4_MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 
-@router.post("/step4-redline")
+@router.post(
+    "/step4-redline",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "content": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {}},
+            "description": "Tracked Changes가 적용된 .docx 파일",
+        },
+    },
+)
 async def step4_generate_redline(
     txn_id: uuid.UUID,
     file: UploadFile = File(..., description="SPA 원본 .docx 파일"),
@@ -356,7 +365,7 @@ async def step4_generate_redline(
             detail="업로드된 파일을 처리할 수 없습니다. 유효한 .docx 파일인지 확인하세요.",
         ) from exc
     except zipfile.BadZipFile as exc:
-        logger.error("Step 4 잘못된 ZIP: txn=%s, user=%s", txn_id, claims.user_id)
+        logger.error("Step 4 잘못된 ZIP: txn=%s, user=%s", txn_id, claims.user_id, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="업로드된 파일이 유효한 .docx 형식이 아닙니다.",
