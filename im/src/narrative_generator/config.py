@@ -129,6 +129,16 @@ class NarrativeConfig(BaseSettings):
         description="신뢰도 점수 경고 임계값",
     )
 
+    # ── Gemini Long-Context (VDR 문서 기반 번들 생성) ──
+    gemini_long_context_enabled: bool = Field(
+        default=False,
+        description="Gemini File API 1M 컨텍스트 번들 생성 활성화 (market_overview, company_overview, investment_highlights)",
+    )
+    gemini_long_context_model: str = Field(
+        default="gemini-2.0-flash",
+        description="Long-Context 번들 생성에 사용할 Gemini 모델명",
+    )
+
     # ── Multi-Model Routing ──
     llm_routing_map: str = Field(
         default="",

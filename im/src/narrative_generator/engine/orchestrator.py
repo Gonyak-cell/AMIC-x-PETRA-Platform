@@ -277,8 +277,23 @@ class NarrativeOrchestrator:
         if variant:
             industry_context = variant.format_context()
 
+        # --- Gemini Long-Context 번들 생성 (market/company/investment) ---
+        bundled_sections: set[str] = set()
+        if self._config.gemini_long_context_enabled and self._config.has_google:
+            bundled_sections = self._try_long_context_bundle(
+                data=data,
+                target_sections=target_sections,
+                industry=industry,
+                result=result,
+                cost_tracker=cost_tracker,
+            )
+
         # --- 각 섹션 생성 ---
         for section_id in target_sections:
+            # Long-Context 번들로 이미 생성된 섹션 스킵
+            if section_id in bundled_sections:
+                continue
+
             # 비용 한도 초과 검사
             if cost_tracker.is_over_budget:
                 result.warnings.append(
@@ -643,6 +658,89 @@ class NarrativeOrchestrator:
             key_claims=[],
             metadata={"mode": "template", "l3_slots_filled": len(llm_slots)},
         )
+
+    def _try_long_context_bundle(
+        self,
+        data: IMDocumentData,
+        target_sections: list[str],
+        industry: str,
+        result: NarrativeResult,
+        cost_tracker: CostTracker,
+    ) -> set[str]:
+        """Gemini Long-Context로 3개 섹션 번들 생성을 시도한다.
+
+        Returns:
+            성공적으로 번들 생성된 섹션 ID 집합.
+            실패 시 빈 set → 기존 개별 생성 폴백.
+        """
+        from src.narrative_generator.engine.providers.gemini_longcontext_provider import (
+            LONG_CONTEXT_SECTIONS,
+            GeminiLongContextProvider,
+        )
+
+        # 번들 대상 섹션이 target_sections에 있는지 확인
+        eligible = [s for s in target_sections if s in LONG_CONTEXT_SECTIONS]
+        if not eligible:
+            return set()
+
+        try:
+            provider = GeminiLongContextProvider(
+                api_key=self._config.google_api_key,
+                model_name=self._config.gemini_long_context_model,
+            )
+            if not provider.is_available:
+                return set()
+
+            # VDR 문서 경로 수집 (data에 vdr_file_paths가 있는 경우)
+            file_paths: list[str] = getattr(data, "vdr_file_paths", []) or []
+            if not file_paths:
+                logger.info("VDR 파일 경로 없음 — Long-Context 번들 건너뜀")
+                return set()
+
+            # 추가 컨텍스트 구성
+            additional_context_parts: list[str] = []
+            if data.company_name_kr:
+                additional_context_parts.append(f"기업명: {data.company_name_kr}")
+            if hasattr(data, "financial_statements") and data.financial_statements:
+                fs = data.financial_statements
+                if fs.revenue and fs.years:
+                    additional_context_parts.append(
+                        f"최근 매출: {fs.years[-1]}년 {fs.revenue[-1]:,.0f}"
+                    )
+
+            bundle_results = provider.generate_bundle(
+                file_paths=file_paths,
+                company_name=data.company_name_kr or "",
+                industry=industry,
+                additional_context="\n".join(additional_context_parts),
+            )
+
+            # 비용 추적
+            for section_id, resp in bundle_results.items():
+                if cost_tracker is not None and resp.usage:
+                    cost_tracker.add_usage(resp.provider.value, resp.usage)
+
+            # 결과 저장
+            bundled: set[str] = set()
+            for section_id, resp in bundle_results.items():
+                narrative = parse_narrative_response(resp.text, section_id)
+                result.narratives[section_id] = narrative.text
+                result.section_narratives[section_id] = narrative
+                bundled.add(section_id)
+
+            if bundled:
+                logger.info(
+                    "Long-Context 번들 생성 성공: %d개 섹션 (%s)",
+                    len(bundled),
+                    ", ".join(sorted(bundled)),
+                )
+            return bundled
+
+        except Exception:
+            logger.warning(
+                "Long-Context 번들 생성 실패 → 기존 개별 생성 폴백", exc_info=True
+            )
+            return set()
 
     @staticmethod
     def _build_rag_query(section_id: str, data: IMDocumentData) -> str:
