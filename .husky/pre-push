@@ -47,7 +47,7 @@ CHANGED_TS=$(git diff "$REMOTE"...HEAD --name-only -- '*.ts' '*.tsx' 2>/dev/null
 if [ -n "$CHANGED_TS" ]; then
   if [ -d "amic-platform/node_modules" ]; then
     echo "Pre-push: Running TypeScript type check..."
-    if ! (cd amic-platform && npx tsc --noEmit); then
+    if ! (cd amic-platform && npx tsc -b --noEmit); then
       echo ""
       echo "❌ PRE-PUSH BLOCKED: TypeScript 타입 에러가 있습니다."
       echo ""
