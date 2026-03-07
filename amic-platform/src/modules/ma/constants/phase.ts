@@ -94,7 +94,7 @@ export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
     "vdr",
   ],
   MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
-  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "buyers", "vdr"],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr"],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"], // deprecated -- 호환성 유지
   MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
   NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
