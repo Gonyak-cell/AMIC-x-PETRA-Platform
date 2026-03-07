@@ -90,10 +90,6 @@ export const BUYER_STATUS_OPTIONS: SelectOption[] = [
   { value: "LOI_RECEIVED", label: "LOI 접수" },
   { value: "LOI_ACCEPTED", label: "LOI 수락" },
   { value: "SELECTED", label: "최종 선정" },
-  { value: "REJECTED", label: "거절" },
-  { value: "BID_SUBMITTED", label: "입찰 제출" },
-  { value: "BID_NOT_SUBMITTED", label: "미제출" },
-  { value: "BID_DROPPED", label: "입찰 포기" },
 ];
 
 // ── 매수자 Long List / Short List 분류 ────────────────
