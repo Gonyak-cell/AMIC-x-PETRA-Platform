@@ -8,6 +8,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class VdrSyncInfo(BaseModel):
+    """VDR 자동 연동 결과 정보."""
+
+    vdr_document_id: uuid.UUID
+    folder_name: str
+    category: str | None = None
+    classification_status: str
+
+
 class AttachmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,6 +32,7 @@ class AttachmentOut(BaseModel):
     uploaded_by_email: str | None = None
     created_at: datetime
     updated_at: datetime
+    vdr_sync: VdrSyncInfo | None = None
 
 
 class AttachmentListResponse(BaseModel):

@@ -74,9 +74,19 @@ export function useUploadAttachment(txnId: string) {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: attachmentQK(txnId) });
-      toast.success("파일이 업로드되었습니다.");
+      // VDR 캐시 무효화 (자동 연동으로 VDR 문서가 추가되었을 수 있음)
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "vdr"],
+      });
+      if (data.vdr_sync) {
+        toast.success(
+          `파일이 업로드되었습니다. VDR '${data.vdr_sync.folder_name}' 폴더에 자동 분류됨`,
+        );
+      } else {
+        toast.success("파일이 업로드되었습니다.");
+      }
     },
     onError: (err: unknown) => {
       const detail = err instanceof Error ? err.message : "알 수 없는 오류";

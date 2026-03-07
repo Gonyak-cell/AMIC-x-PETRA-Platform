@@ -525,7 +525,7 @@ def resolve_unique_filename(original_name: str, has_duplicate: bool) -> str:
     return f"{p.stem}_{suffix_id}{p.suffix}"
 
 
-async def _check_duplicate_filename(
+async def check_duplicate_filename(
     db: AsyncSession,
     transaction_id: uuid.UUID,
     folder_id: uuid.UUID,
@@ -576,7 +576,7 @@ async def auto_upload_document(
     if folder is None:
         raise ValueError("VDR이 초기화되지 않았습니다. 먼저 폴더 구조를 초기화해 주세요.")
 
-    has_dup = await _check_duplicate_filename(db, transaction_id, folder.id, original_name)
+    has_dup = await check_duplicate_filename(db, transaction_id, folder.id, original_name)
     final_name = resolve_unique_filename(original_name, has_dup)
 
     doc = await upload_document(

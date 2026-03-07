@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
-from app.core.database import get_db
+from app.core.database import async_session_factory, get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
@@ -42,6 +41,7 @@ from app.schemas.vdr import (
     VdrSummaryOut,
 )
 from app.services import transaction_service, vdr_service
+from app.services.vdr_classification_service import run_secondary_classification as _run_secondary_classification
 
 logger = logging.getLogger(__name__)
 
@@ -561,33 +561,8 @@ async def auto_upload_document(
 
 _MAX_DIRECT_UPLOAD_FILES = 20
 _MAX_CLASSIFICATION_POLL_DOCS = 50
-_classification_semaphore = asyncio.Semaphore(5)
 
-
-async def _run_secondary_classification(
-    document_id: uuid.UUID,
-    transaction_id: uuid.UUID,
-) -> None:
-    """BackgroundTasks에서 실행되는 2차 심사 래퍼. 새 DB 세션 사용."""
-    from app.core.database import async_session_factory
-    from app.services.vdr_classification_service import classify_document_by_content
-
-    async with _classification_semaphore, async_session_factory() as db:
-        try:
-            result = await classify_document_by_content(db, document_id, transaction_id)
-            logger.info("2차 심사 완료: doc=%s, txn=%s → %s", document_id, transaction_id, result)
-        except Exception:
-            logger.exception("2차 심사 실패: doc=%s, txn=%s", document_id, transaction_id)
-            try:
-                await db.rollback()
-                doc = await db.get(VdrDocument, document_id)
-                if doc and doc.classification_status == VdrClassificationStatus.PENDING_REVIEW:
-                    doc.classification_status = VdrClassificationStatus.MANUAL_REVIEW
-                    doc.manual_review_needed = True
-                    await db.commit()
-                    logger.info("2차 심사 실패 폴백: doc=%s → MANUAL_REVIEW", document_id)
-            except Exception:
-                logger.exception("2차 심사 폴백 상태 업데이트 실패: doc=%s", document_id)
+# 2차 심사 래퍼 — 서비스 레이어에서 import (의존성 방향: router → service)
 
 
 @router.post(
@@ -801,6 +776,9 @@ async def ask_vdr_question(
     VDR 전체(또는 지정) 문서를 기반으로 답변을 생성한다.
     """
     from app.core.config import settings
+    from app.core.rate_limiter import qa_rate_limiter
+
+    qa_rate_limiter.check(claims.sub)
 
     if not settings.VDR_QA_ENABLED:
         raise HTTPException(
@@ -824,6 +802,7 @@ async def ask_vdr_question(
         question=body.question,
         document_ids=body.document_ids,
         conversation_id=body.conversation_id,
+        user_sub=claims.sub,
         api_key=settings.GOOGLE_API_KEY,
         max_documents=settings.VDR_QA_MAX_DOCUMENTS,
         max_tokens=settings.VDR_QA_MAX_TOKENS,
@@ -841,4 +820,78 @@ async def ask_vdr_question(
         ],
         conversation_id=result.conversation_id,
         cost_usd=result.cost_usd,
+    )
+
+
+@router.post("/qa/stream", summary="VDR 문서 기반 Q&A (SSE 스트리밍)")
+async def stream_vdr_question(
+    txn_id: uuid.UUID,
+    body: VdrQARequest,
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> StreamingResponse:
+    """VDR 문서들을 참조하여 자연어 질문에 SSE 스트리밍으로 답변한다.
+
+    DB 세션을 수동으로 생성하여 prepare_qa_context() 완료 후 즉시 반환한다.
+    스트리밍 generator는 DB 세션에 의존하지 않는다.
+    """
+    import json as _json
+    from collections.abc import AsyncGenerator as _AsyncGen
+
+    from app.core.config import settings
+    from app.core.rate_limiter import qa_rate_limiter
+    from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
+
+    qa_rate_limiter.check(claims.sub)
+
+    if not settings.VDR_QA_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="VDR Q&A 기능이 비활성화되어 있습니다.",
+        )
+
+    if not settings.GOOGLE_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google API 키가 설정되지 않았습니다.",
+        )
+
+    # DB 세션을 수동으로 생성하여 prepare 단계에서만 사용 후 즉시 반환
+    async with async_session_factory() as db:
+        await _get_and_authorize_txn(db, txn_id, claims)
+
+        ctx_or_result = await prepare_qa_context(
+            db=db,
+            transaction_id=txn_id,
+            question=body.question,
+            document_ids=body.document_ids,
+            conversation_id=body.conversation_id,
+            user_sub=claims.sub,
+            api_key=settings.GOOGLE_API_KEY,
+            max_documents=settings.VDR_QA_MAX_DOCUMENTS,
+            max_tokens=settings.VDR_QA_MAX_TOKENS,
+        )
+
+    # prepare에서 QAResult가 반환되면 early exit (거부/에러)
+    if isinstance(ctx_or_result, QAResult):
+
+        async def _error_stream() -> _AsyncGen[str, None]:
+            yield f"event: error\ndata: {_json.dumps({'message': ctx_or_result.answer}, ensure_ascii=False)}\n\n"
+            yield "event: done\ndata: {}\n\n"
+
+        return StreamingResponse(
+            _error_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    # DB 세션이 이미 반환된 상태에서 스트리밍 시작
+    stream = ask_question_stream(ctx_or_result, body.question)
+
+    return StreamingResponse(
+        stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )

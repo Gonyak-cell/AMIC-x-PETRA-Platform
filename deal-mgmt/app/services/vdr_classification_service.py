@@ -275,3 +275,33 @@ async def _resolve_folder_by_category(
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+# ── 2차 심사 BackgroundTask 래퍼 ──────────────────────────────
+
+_classification_semaphore = asyncio.Semaphore(5)
+
+
+async def run_secondary_classification(
+    document_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+) -> None:
+    """BackgroundTasks에서 실행되는 2차 심사 래퍼. 새 DB 세션 사용."""
+    from app.core.database import async_session_factory
+
+    async with _classification_semaphore, async_session_factory() as db:
+        try:
+            result = await classify_document_by_content(db, document_id, transaction_id)
+            logger.info("2차 심사 완료: doc=%s, txn=%s → %s", document_id, transaction_id, result)
+        except Exception:
+            logger.exception("2차 심사 실패: doc=%s, txn=%s", document_id, transaction_id)
+            try:
+                await db.rollback()
+                doc = await db.get(VdrDocument, document_id)
+                if doc and doc.classification_status == VdrClassificationStatus.PENDING_REVIEW:
+                    doc.classification_status = VdrClassificationStatus.MANUAL_REVIEW
+                    doc.manual_review_needed = True
+                    await db.commit()
+                    logger.info("2차 심사 실패 폴백: doc=%s → MANUAL_REVIEW", document_id)
+            except Exception:
+                logger.exception("2차 심사 폴백 상태 업데이트 실패: doc=%s", document_id)

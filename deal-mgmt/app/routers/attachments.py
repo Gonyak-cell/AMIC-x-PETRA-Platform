@@ -9,22 +9,37 @@ import uuid
 from pathlib import Path
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.attachment import Attachment
 from app.models.enums import AttachmentEntityType, AuditAction
-from app.schemas.attachment import AttachmentListResponse, AttachmentOut
+from app.schemas.attachment import AttachmentListResponse, AttachmentOut, VdrSyncInfo
 from app.services import audit_service, transaction_service
+from app.services.attachment_vdr_bridge import check_vdr_write_permission, sync_attachment_to_vdr
 
 logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+# M1 fix: 업로드 Rate Limiter (VDR과 동일 수준: 분당 20건/사용자)
+_upload_limiter = InMemoryRateLimiter(max_calls=20, window_seconds=60.0)
 CHUNK_SIZE = 65_536  # 64 KB — 스트리밍 쓰기 단위
 ALLOWED_EXTENSIONS = {
     ".docx",
@@ -97,7 +112,7 @@ async def list_attachments(
     if entity_type and entity_type not in VALID_ENTITY_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"유효하지 않은 entity_type입니다. 허용: {', '.join(sorted(VALID_ENTITY_TYPES))}",
+            detail="유효하지 않은 entity_type입니다",
         )
 
     # entity_id 검증 (SEC-03)
@@ -124,6 +139,7 @@ async def list_attachments(
 @router.post("", response_model=AttachmentOut, status_code=201)
 async def upload_attachment(
     txn_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     entity_type: str = Form(...),
     entity_id: str | None = Form(None),
@@ -131,14 +147,15 @@ async def upload_attachment(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> AttachmentOut:
-    await transaction_service.get_transaction(db, txn_id)
+    txn = await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    _upload_limiter.check(f"attachment_upload:{claims.email or claims.user_id}")
 
     # entity_type 검증
     if entity_type not in VALID_ENTITY_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"유효하지 않은 entity_type입니다. 허용: {', '.join(sorted(VALID_ENTITY_TYPES))}",
+            detail="유효하지 않은 entity_type입니다",
         )
 
     # entity_id 검증 (SEC-03)
@@ -224,7 +241,41 @@ async def upload_attachment(
     )
     await db.commit()
     await db.refresh(attachment)
-    return AttachmentOut.model_validate(attachment)
+
+    # ── VDR 자동 연동 (best-effort) ──────────────────────
+    # H1 fix: VDR 쓰기 권한이 있는 사용자만 연동 (ADMIN / lead_advisor / deal_captain)
+    vdr_sync = None
+    has_vdr_access = check_vdr_write_permission(
+        claims.role,
+        claims.email,
+        txn.lead_advisor_email,
+        txn.deal_captain_email,
+    )
+    if has_vdr_access:
+        try:
+            # H2 fix: file_path 전달 — 브릿지 내부에서만 메모리 적재
+            vdr_result = await sync_attachment_to_vdr(
+                db,
+                txn_id,
+                attachment,
+                dest_path,
+                background_tasks,
+            )
+            if vdr_result:
+                vdr_sync = VdrSyncInfo(
+                    vdr_document_id=vdr_result.document.id,
+                    folder_name=vdr_result.folder.name,
+                    category=vdr_result.category,
+                    classification_status=vdr_result.classification_status.value,
+                )
+        except Exception:
+            # W1 fix: 실패 시 dirty state 정리
+            await db.rollback()
+            logger.warning("VDR 연동 실패: txn=%s, attachment=%s", txn_id, attachment.id, exc_info=True)
+
+    result = AttachmentOut.model_validate(attachment)
+    result.vdr_sync = vdr_sync
+    return result
 
 
 @router.get("/{attachment_id}/download")

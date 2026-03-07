@@ -37,6 +37,11 @@ class Attachment(Base, TimestampMixin):
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False, default="application/octet-stream")
 
+    # ── VDR 연동 ─────────────────────────────────────────
+    vdr_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True
+    )
+
     # ── 메타 ──────────────────────────────────────────────
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     uploaded_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

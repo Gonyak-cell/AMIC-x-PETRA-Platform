@@ -1,5 +1,13 @@
 /** 범용 첨부파일 타입. */
 
+/** VDR 자동 연동 결과 정보. */
+export interface VdrSyncInfo {
+  vdr_document_id: string;
+  folder_name: string;
+  category: string | null;
+  classification_status: string;
+}
+
 export interface Attachment {
   id: string;
   transaction_id: string;
@@ -13,6 +21,7 @@ export interface Attachment {
   uploaded_by_email: string | null;
   created_at: string;
   updated_at: string;
+  vdr_sync?: VdrSyncInfo | null;
 }
 
 export interface AttachmentListResponse {
