@@ -9,6 +9,8 @@ import type { TransactionPhase } from "@/modules/ma/types/transaction";
 
 interface PipelineFlowProps {
   currentPhase: TransactionPhase;
+  /** 사용자가 클릭하여 보고 있는 단계 (현재 단계와 다를 수 있음) */
+  viewedPhase?: TransactionPhase | null;
   onPhaseClick: (phase: TransactionPhase) => void;
   /** 업로드 가능한 마일스톤 클릭 핸들러 */
   onMilestoneClick?: (milestone: PhaseMilestone) => void;
@@ -32,6 +34,7 @@ function useDynamicSizing() {
 
 export default function PipelineFlow({
   currentPhase,
+  viewedPhase,
   onPhaseClick,
   onMilestoneClick,
   milestoneDocuments,
@@ -39,6 +42,9 @@ export default function PipelineFlow({
   const rawIdx = PIPELINE_PHASES.findIndex((p) => p.phase === currentPhase);
   // rawIdx === -1 → 숨겨진 단계(POST_CLOSING 등)가 현재 단계 → 모든 스테퍼 단계를 완료로 표시
   const currentIdx = rawIdx === -1 ? PIPELINE_PHASES.length : rawIdx;
+  const viewedIdx = viewedPhase
+    ? PIPELINE_PHASES.findIndex((p) => p.phase === viewedPhase)
+    : -1;
   const sizing = useDynamicSizing();
   const arrowPx = sizing.arrow;
 
@@ -54,6 +60,7 @@ export default function PipelineFlow({
         {PIPELINE_PHASES.map((phase, i) => {
           const done = i < currentIdx;
           const active = i === currentIdx;
+          const viewed = viewedIdx >= 0 && i === viewedIdx && !active;
           const milestone = phaseMilestoneMap.get(phase.phase);
 
           return (
@@ -74,7 +81,7 @@ export default function PipelineFlow({
                       onPhaseClick(PIPELINE_PHASES[i - 1].phase);
                     }
                   }}
-                  aria-label={`${phase.order}. ${phase.label}${active ? " (현재 단계)" : done ? " (완료)" : ""}`}
+                  aria-label={`${phase.order}. ${phase.label}${active ? " (현재 단계)" : viewed ? " (선택됨)" : done ? " (완료)" : ""}`}
                   aria-current={active ? "step" : undefined}
                   className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 >
@@ -85,9 +92,11 @@ export default function PipelineFlow({
                       ${
                         active
                           ? "bg-accent text-white"
-                          : done
-                            ? "bg-accent/10 text-accent"
-                            : "bg-bg-cool text-text-muted hover:bg-gray-100"
+                          : viewed
+                            ? "bg-accent/20 text-accent ring-2 ring-accent/60 ring-inset"
+                            : done
+                              ? "bg-accent/10 text-accent"
+                              : "bg-bg-cool text-text-muted hover:bg-gray-100"
                       }
                     `}
                     style={{

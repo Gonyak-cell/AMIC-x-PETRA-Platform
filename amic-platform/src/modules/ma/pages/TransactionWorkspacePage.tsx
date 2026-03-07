@@ -453,6 +453,7 @@ export default function TransactionWorkspacePage() {
         <div className="relative">
           <PipelineFlow
             currentPhase={txn.phase}
+            viewedPhase={viewedPhase}
             onPhaseClick={(phase) => {
               setActiveMilestone(null);
               const currentIdx = PHASE_CONFIG.findIndex(
