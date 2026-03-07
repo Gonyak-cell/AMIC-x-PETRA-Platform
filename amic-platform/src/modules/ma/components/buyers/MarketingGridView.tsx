@@ -4,10 +4,7 @@ import BuyerTierBadge from "./BuyerTierBadge";
 import MarketingGridCell from "./MarketingGridCell";
 import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
-import type {
-  BuyerStageSummary,
-  MarketingStage,
-} from "@/modules/ma/types/marketing_log";
+import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 
 interface MarketingGridViewProps {
   buyers: BuyerCandidate[];

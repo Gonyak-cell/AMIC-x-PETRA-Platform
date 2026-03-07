@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
-import { Badge, Button } from "@/components/ui";
+import { Badge } from "@/components/ui";
 import {
   useMarketingLogs,
   useDeleteMarketingLog,
