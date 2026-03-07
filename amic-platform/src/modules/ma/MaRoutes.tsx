@@ -4,9 +4,7 @@ import { Spinner } from "@/components/ui";
 import { MaErrorBoundary } from "./components/MaErrorBoundary";
 
 const TransactionListPage = lazy(() => import("./pages/TransactionListPage"));
-const CreateTransactionPage = lazy(
-  () => import("./pages/CreateTransactionPage"),
-);
+const DealSetupWizardPage = lazy(() => import("./pages/DealSetupWizardPage"));
 const TransactionWorkspacePage = lazy(
   () => import("./pages/TransactionWorkspacePage"),
 );
@@ -17,7 +15,7 @@ export default function MaRoutes() {
       <Suspense fallback={<Spinner />}>
         <Routes>
           <Route path="transactions" element={<TransactionListPage />} />
-          <Route path="transactions/new" element={<CreateTransactionPage />} />
+          <Route path="transactions/new" element={<DealSetupWizardPage />} />
           <Route
             path="transactions/:txnId/*"
             element={<TransactionWorkspacePage />}

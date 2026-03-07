@@ -160,6 +160,7 @@ from app.routers import (
     dashboard,
     dd_checklists,
     deal_clients,
+    deal_setup,
     document_extraction,
     earnout,
     engagements,
@@ -240,6 +241,7 @@ app.include_router(si_mapping.router, prefix="/api/v1")
 app.include_router(admin_settings.router, prefix="/api/v1")
 app.include_router(pef_registry.router, prefix="/api/v1")
 app.include_router(spa_analysis.router, prefix="/api/v1")
+app.include_router(deal_setup.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])
