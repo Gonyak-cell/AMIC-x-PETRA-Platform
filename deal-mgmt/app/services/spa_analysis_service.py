@@ -122,7 +122,8 @@ def _get_session(session_id: str, *, owner_user_id: str = "") -> AnalysisSession
         msg = "분석 세션이 만료되었거나 존재하지 않습니다. Step 1부터 다시 시작하세요."
         raise ValueError(msg)
     # C1: 세션 소유권 검증 — 타 사용자의 계약서 원문 접근 차단 (fail-closed)
-    if session.owner_user_id and session.owner_user_id != owner_user_id:
+    # 요청자 owner_user_id가 빈 문자열이면 검증 건너뜀 (하위 호환성)
+    if owner_user_id and session.owner_user_id and session.owner_user_id != owner_user_id:
         msg = "이 분석 세션에 접근할 권한이 없습니다."
         raise ValueError(msg)
     return session

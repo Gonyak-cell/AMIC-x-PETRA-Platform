@@ -225,9 +225,10 @@ class TestExtractJson:
         with pytest.raises(json.JSONDecodeError):
             _extract_json("not json")
 
-    def test_non_object_raises(self) -> None:
-        with pytest.raises(ValueError, match="object"):
-            _extract_json("[1, 2, 3]")
+    def test_array_is_accepted(self) -> None:
+        """JSON 배열도 유효한 반환값으로 허용 (Redline Step 4 이슈 배열 등)."""
+        result = _extract_json("[1, 2, 3]")
+        assert result == [1, 2, 3]
 
 
 # ── 조건식 검증 테스트 ────────────────────────────────────────────────────────
@@ -1233,7 +1234,7 @@ class TestLlmCallTimeout:
         from app.services.spa_analysis_service import _call_llm_json
 
         # 타임아웃보다 오래 걸리는 mock LLM
-        async def slow_call(_sys: str, _usr: str) -> str:
+        async def slow_call(_sys: str, _usr: str, *, max_tokens: int = 4096) -> str:
             await asyncio.sleep(10)
             return '{"result": "too late"}'
 

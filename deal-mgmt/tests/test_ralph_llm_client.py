@@ -150,12 +150,12 @@ class TestRalphLLMClient:
         call_log = []
 
         # 첫 번째 어댑터: 실패
-        async def fail_generate(system, user, *, model=None):
+        async def fail_generate(system, user, *, model=None, max_tokens=4096):
             call_log.append("anthropic")
             raise ConnectionError("fail")
 
         # 두 번째 어댑터: 성공
-        async def ok_generate(system, user, *, model=None):
+        async def ok_generate(system, user, *, model=None, max_tokens=4096):
             call_log.append("openai")
             return "response text", "gpt-4o", 100, 50
 
@@ -176,7 +176,7 @@ class TestRalphLLMClient:
         """첫 어댑터 성공 시 바로 반환, 두 번째는 호출하지 않는다."""
         client = RalphLLMClient(anthropic_api_key="a", openai_api_key="b")
 
-        async def ok_generate(system, user, *, model=None):
+        async def ok_generate(system, user, *, model=None, max_tokens=4096):
             return "claude response", "claude-sonnet-4-20250514", 200, 100
 
         type(client._adapters[0]).is_available = property(lambda self: True)
@@ -194,7 +194,7 @@ class TestRalphLLMClient:
 
         call_count = {"model": 0, "default": 0}
 
-        async def fail_model(system, user, *, model=None):
+        async def fail_model(system, user, *, model=None, max_tokens=4096):
             if model == "specific-model":
                 call_count["model"] += 1
                 raise ValueError("model not supported")
