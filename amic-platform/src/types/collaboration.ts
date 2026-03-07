@@ -1,4 +1,4 @@
-export type CommentEntityType = "deal" | "issue" | "document";
+export type CommentEntityType = "deal" | "issue" | "document" | "buyer";
 
 export interface Comment {
   id: string;

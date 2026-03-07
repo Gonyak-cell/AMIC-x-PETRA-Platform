@@ -24,7 +24,11 @@ import {
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import ConsortiumPanel from "@/modules/ma/components/buyers/ConsortiumPanel";
-import ShortListOverview from "@/modules/ma/components/buyers/ShortListOverview";
+import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
+import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
+import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
+import ShortListMasterList from "@/modules/ma/components/buyers/ShortListMasterList";
+import BuyerDetailPanel from "@/modules/ma/components/buyers/BuyerDetailPanel";
 import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
 const SIMappingPanel = lazy(
   () => import("@/modules/ma/components/si-mapping/SIMappingPanel"),
@@ -85,6 +89,17 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   >(null);
   const { data: searchedSICompany, isFetched: siNameFetched } =
     useSICompanyByName(buyerDetailSearchName);
+
+  // Short List detail panel state
+  const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
+
+  // Long List filter state
+  const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
+    type: null,
+    tier: null,
+    status: null,
+    search: "",
+  });
 
   useEffect(() => {
     if (!buyerDetailSearchName || !siNameFetched) return;
@@ -222,9 +237,41 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const allBuyers = buyers ?? [];
   const shortListBuyers = allBuyers.filter((b) => b.is_short_listed);
 
+  // Client-side filtering for Long List
+  const filteredBuyers = useMemo(() => {
+    let result = allBuyers;
+    if (longListFilters.type) {
+      result = result.filter((b) => b.buyer_type === longListFilters.type);
+    }
+    if (longListFilters.tier) {
+      result = result.filter((b) => b.tier === longListFilters.tier);
+    }
+    if (longListFilters.status) {
+      result = result.filter((b) => b.status === longListFilters.status);
+    }
+    if (longListFilters.search) {
+      const q = longListFilters.search.toLowerCase();
+      result = result.filter((b) => b.company_name.toLowerCase().includes(q));
+    }
+    return result;
+  }, [allBuyers, longListFilters]);
+
+  // Derive selected buyer and its stage summary for SlidePanel
+  const selectedBuyer = useMemo(
+    () => allBuyers.find((b) => b.id === selectedBuyerId) ?? null,
+    [allBuyers, selectedBuyerId],
+  );
+  const selectedStageSummary = useMemo(
+    () => (shortListOverview ?? []).find((s) => s.buyer_id === selectedBuyerId),
+    [shortListOverview, selectedBuyerId],
+  );
+
   return (
     <>
       <div className="space-y-4">
+        {/* Funnel KPI Bar */}
+        <FunnelKPIBar buyers={allBuyers} />
+
         <div className="flex items-center justify-between">
           <Tabs
             tabs={[
@@ -295,28 +342,42 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               ) : (
                 <>
                   {canWrite && (
-                    <div className="flex justify-end gap-2 border-b border-border-default px-4 py-2">
-                      <Button
-                        icon={Building2}
-                        onClick={() => setShowFIRecommendModal(true)}
-                        variant="primary"
-                        size="sm"
-                      >
-                        FI 자동 추천
-                      </Button>
-                      <Button
-                        icon={Sparkles}
-                        onClick={() => setShowSIMappingModal(true)}
-                        variant="primary"
-                        size="sm"
-                      >
-                        SI 자동 매핑
-                      </Button>
+                    <div className="flex items-center justify-between border-b border-border-default px-4 py-2">
+                      <LongListFilters
+                        filters={longListFilters}
+                        onChange={setLongListFilters}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          icon={Building2}
+                          onClick={() => setShowFIRecommendModal(true)}
+                          variant="primary"
+                          size="sm"
+                        >
+                          FI 자동 추천
+                        </Button>
+                        <Button
+                          icon={Sparkles}
+                          onClick={() => setShowSIMappingModal(true)}
+                          variant="primary"
+                          size="sm"
+                        >
+                          SI 자동 매핑
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {!canWrite && (
+                    <div className="border-b border-border-default px-4 py-2">
+                      <LongListFilters
+                        filters={longListFilters}
+                        onChange={setLongListFilters}
+                      />
                     </div>
                   )}
                   <DataTable
                     columns={buyerColumns}
-                    data={allBuyers}
+                    data={filteredBuyers}
                     keyField="id"
                   />
                 </>
@@ -350,10 +411,17 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
         {buyerSubTab === "short-list" && (
           <>
-            <ShortListOverview
-              txnId={txnId}
-              buyers={allBuyers}
+            <ShortListMasterList
+              buyers={shortListBuyers}
               overviewData={shortListOverview ?? []}
+              selectedBuyerId={selectedBuyerId}
+              onSelectBuyer={setSelectedBuyerId}
+            />
+            <BuyerDetailPanel
+              txnId={txnId}
+              buyer={selectedBuyer}
+              stageSummary={selectedStageSummary}
+              onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
             />
             <ConsortiumPanel
