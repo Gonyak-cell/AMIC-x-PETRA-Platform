@@ -63,9 +63,22 @@ export default function PipelineFlow({
           const viewed = viewedIdx >= 0 && i === viewedIdx && !active;
           const milestone = phaseMilestoneMap.get(phase.phase);
 
+          const chevronClip =
+                i === 0
+                  ? `polygon(0 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%)`
+                  : i === PIPELINE_PHASES.length - 1
+                    ? `polygon(${arrowPx}px 0, 100% 0, 100% 100%, 0 100%, ${arrowPx}px 50%)`
+                    : `polygon(${arrowPx}px 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%, ${arrowPx}px 50%)`;
+
           return (
             <Fragment key={phase.phase}>
-              <div className="flex items-center flex-1 min-w-0">
+              <div className="relative flex items-center flex-1 min-w-0">
+                {viewed && (
+                  <div
+                    className="absolute inset-[-2px] bg-accent/50 z-0"
+                    style={{ clipPath: chevronClip }}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => onPhaseClick(phase.phase)}
@@ -83,7 +96,7 @@ export default function PipelineFlow({
                   }}
                   aria-label={`${phase.order}. ${phase.label}${active ? " (현재 단계)" : viewed ? " (선택됨)" : done ? " (완료)" : ""}`}
                   aria-current={active ? "step" : undefined}
-                  className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                  className="w-full relative z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 >
                   <div
                     className={`
@@ -93,19 +106,14 @@ export default function PipelineFlow({
                         active
                           ? "bg-accent text-white"
                           : viewed
-                            ? "bg-accent/20 text-accent ring-2 ring-accent/60 ring-inset"
+                            ? "bg-accent/20 text-accent"
                             : done
                               ? "bg-accent/10 text-accent"
                               : "bg-bg-cool text-text-muted hover:bg-gray-100"
                       }
                     `}
                     style={{
-                      clipPath:
-                        i === 0
-                          ? `polygon(0 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%)`
-                          : i === PIPELINE_PHASES.length - 1
-                            ? `polygon(${arrowPx}px 0, 100% 0, 100% 100%, 0 100%, ${arrowPx}px 50%)`
-                            : `polygon(${arrowPx}px 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%, ${arrowPx}px 50%)`,
+                      clipPath: chevronClip,
                       paddingLeft: i === 0 ? "8px" : `${arrowPx + 4}px`,
                       paddingRight:
                         i === PIPELINE_PHASES.length - 1
