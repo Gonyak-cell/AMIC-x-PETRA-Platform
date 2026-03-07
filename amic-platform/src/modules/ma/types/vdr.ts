@@ -126,7 +126,7 @@ export interface VdrQAResponse {
   answer: string;
   sources: VdrQASource[];
   conversation_id: string;
-  cost_usd: number;
+  cost_usd: number | null;
 }
 
 export interface VdrQAMessage {

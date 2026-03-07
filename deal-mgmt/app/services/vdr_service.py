@@ -36,6 +36,23 @@ _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
 ]
 
 
+# ── VDR 권한 ─────────────────────────────────────────────────
+
+_VDR_WRITE_ROLES = frozenset({"ADMIN"})
+
+
+def check_vdr_write_permission(
+    role: str,
+    email: str | None,
+    lead_advisor_email: str | None,
+    deal_captain_email: str | None,
+) -> bool:
+    """VDR 쓰기 권한을 확인한다. ADMIN 또는 lead_advisor/deal_captain이면 True."""
+    if role in _VDR_WRITE_ROLES:
+        return True
+    return bool(email and email in (lead_advisor_email, deal_captain_email))
+
+
 # ── 폴더 CRUD ────────────────────────────────────────────────
 
 
@@ -226,12 +243,15 @@ async def upload_document(
     description: str | None = None,
     *,
     _folder_verified: bool = False,
+    auto_commit: bool = True,
 ) -> VdrDocument:
     """파일을 Azure Blob(또는 로컬 폴백)에 저장하고 메타데이터를 DB에 기록한다.
 
     Args:
         _folder_verified: True이면 폴더 존재 확인을 건너뛴다.
             auto_upload_document()처럼 이미 폴더를 검증한 호출자 전용.
+        auto_commit: False이면 db.commit()을 건너뛴다.
+            호출자가 추가 변경 후 직접 커밋할 때 사용 (이중 커밋 방지).
     """
     if not _folder_verified:
         await get_folder(db, transaction_id, folder_id)
@@ -261,16 +281,19 @@ async def upload_document(
         description=description,
     )
     db.add(doc)
-    try:
-        await db.commit()
-        await db.refresh(doc)
-    except Exception:
-        await db.rollback()
+    if auto_commit:
         try:
-            await blob_client.delete_blob(blob_name)
-        except Exception as cleanup_err:
-            logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
-        raise
+            await db.commit()
+            await db.refresh(doc)
+        except Exception:
+            await db.rollback()
+            try:
+                await blob_client.delete_blob(blob_name)
+            except Exception as cleanup_err:
+                logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
+            raise
+    else:
+        await db.flush()
     return doc
 
 

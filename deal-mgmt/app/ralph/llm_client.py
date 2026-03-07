@@ -67,7 +67,9 @@ class _LLMAdapter(ABC):
     def is_available(self) -> bool: ...
 
     @abstractmethod
-    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
+    async def generate(
+        self, system: str, user: str, *, model: str | None = None, max_tokens: int = 4096
+    ) -> tuple[str, str, int, int]:
         """(text, model_used, input_tokens, output_tokens)를 반환."""
         ...
 
@@ -98,7 +100,9 @@ class _AnthropicAdapter(_LLMAdapter):
         except ImportError:
             return False
 
-    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
+    async def generate(
+        self, system: str, user: str, *, model: str | None = None, max_tokens: int = 4096
+    ) -> tuple[str, str, int, int]:
         import anthropic
 
         if self._client is None:
@@ -110,7 +114,7 @@ class _AnthropicAdapter(_LLMAdapter):
         model_id = model or self._model
         response = await self._client.messages.create(
             model=model_id,
-            max_tokens=4096,
+            max_tokens=max_tokens,
             temperature=0.3,
             system=system,
             messages=[{"role": "user", "content": user}],
@@ -149,7 +153,9 @@ class _OpenAIAdapter(_LLMAdapter):
         except ImportError:
             return False
 
-    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
+    async def generate(
+        self, system: str, user: str, *, model: str | None = None, max_tokens: int = 4096
+    ) -> tuple[str, str, int, int]:
         import openai
 
         if self._client is None:
@@ -162,7 +168,7 @@ class _OpenAIAdapter(_LLMAdapter):
         response = await self._client.chat.completions.create(
             model=model_id,
             temperature=0.3,
-            max_tokens=4096,
+            max_tokens=max_tokens,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
@@ -202,7 +208,9 @@ class _GoogleAdapter(_LLMAdapter):
         except ImportError:
             return False
 
-    async def generate(self, system: str, user: str, *, model: str | None = None) -> tuple[str, str, int, int]:
+    async def generate(
+        self, system: str, user: str, *, model: str | None = None, max_tokens: int = 4096
+    ) -> tuple[str, str, int, int]:
         import google.generativeai as genai
 
         if not self._configured:
@@ -218,7 +226,7 @@ class _GoogleAdapter(_LLMAdapter):
             )
             response = gm.generate_content(
                 user,
-                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=16384),
+                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=max_tokens),
             )
             text = response.text or ""
             # Gemini usage 추출
@@ -288,7 +296,7 @@ class RalphLLMClient:
     def total_cost_usd(self) -> float:
         return self._cost_tracker.accumulated_usd
 
-    async def call(self, system: str, user: str) -> str:
+    async def call(self, system: str, user: str, *, max_tokens: int = 4096) -> str:
         """LLM 호출 — 폴백 체인 순서대로 시도, 비용 자동 기록.
 
         이 메서드의 시그니처 `async (str, str) -> str`는
@@ -300,7 +308,7 @@ class RalphLLMClient:
             if not adapter.is_available:
                 continue
             try:
-                text, model_used, inp, out = await adapter.generate(system, user)
+                text, model_used, inp, out = await adapter.generate(system, user, max_tokens=max_tokens)
                 self._cost_tracker.add(model_used, inp, out)
                 logger.debug(
                     "LLM 호출 성공: provider=%s, model=%s, tokens=%d+%d, cost=$%.4f",

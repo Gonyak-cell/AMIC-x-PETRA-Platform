@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import VdrClassificationStatus, VdrFolderCategory
 from app.models.vdr_document import VdrDocument
-from app.models.vdr_folder import VdrFolder
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +226,9 @@ async def classify_document_by_content(
 
     # ── 6. 폴더 이동 ────────────────────────────────
     target_category = VdrFolderCategory(category_str)
-    target_folder = await _resolve_folder_by_category(db, transaction_id, target_category)
+    from app.services import vdr_service
+
+    target_folder = await vdr_service.resolve_folder_by_category(db, transaction_id, target_category)
 
     if target_folder is None:
         logger.warning(
@@ -255,31 +256,10 @@ async def classify_document_by_content(
     return VdrClassificationStatus.CLASSIFIED
 
 
-# ── 내부 헬퍼 ─────────────────────────────────────────────────
-
-
-async def _resolve_folder_by_category(
-    db: AsyncSession,
-    transaction_id: uuid.UUID,
-    category: VdrFolderCategory,
-) -> VdrFolder | None:
-    """카테고리에 해당하는 최상위 VDR 폴더 조회."""
-    stmt = (
-        select(VdrFolder)
-        .where(
-            VdrFolder.transaction_id == transaction_id,
-            VdrFolder.category == category,
-            VdrFolder.parent_id.is_(None),
-        )
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
-
-
 # ── 2차 심사 BackgroundTask 래퍼 ──────────────────────────────
 
-_classification_semaphore = asyncio.Semaphore(5)
+MAX_CONCURRENT_CLASSIFICATIONS = 5
+_classification_semaphore = asyncio.Semaphore(MAX_CONCURRENT_CLASSIFICATIONS)
 
 
 async def run_secondary_classification(
@@ -304,4 +284,4 @@ async def run_secondary_classification(
                     await db.commit()
                     logger.info("2차 심사 실패 폴백: doc=%s → MANUAL_REVIEW", document_id)
             except Exception:
-                logger.exception("2차 심사 폴백 상태 업데이트 실패: doc=%s", document_id)
+                logger.exception("2차 심사 폴백 상태 업데이트 실패: doc=%s, txn=%s", document_id, transaction_id)

@@ -6,6 +6,7 @@ AI 기반 폴더 분류를 수행한다.  연동은 best-effort — 실패 시�
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
@@ -22,6 +23,9 @@ from app.services import audit_service, vdr_service
 from app.services.vdr_categorization_service import auto_route, score_document
 
 logger = logging.getLogger(__name__)
+
+# 업로드 디렉토리 — file_path 경로 검증용 (M-5)
+_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
 
 
 async def _record_vdr_sync_audit(
@@ -47,10 +51,6 @@ async def _record_vdr_sync_audit(
     )
 
 
-# VDR 연동 허용 역할 — VDR 직접 업로드와 동일 수준
-_VDR_WRITE_ROLES = frozenset({"ADMIN"})
-
-
 @dataclass
 class VdrSyncResult:
     """VDR 연동 결과."""
@@ -59,6 +59,7 @@ class VdrSyncResult:
     folder: VdrFolder
     category: str | None
     classification_status: VdrClassificationStatus
+    routing_score: int  # 1차 심사 점수 (0–100)
     needs_secondary: bool  # 2차 심사 필요 여부
 
 
@@ -75,18 +76,6 @@ async def _ensure_vdr_initialized(
         pass
 
 
-def check_vdr_write_permission(
-    role: str,
-    email: str | None,
-    lead_advisor_email: str | None,
-    deal_captain_email: str | None,
-) -> bool:
-    """VDR 쓰기 권한을 확인한다. VDR 직접 업로드와 동일 기준."""
-    if role in _VDR_WRITE_ROLES:
-        return True
-    return bool(email and email in (lead_advisor_email, deal_captain_email))
-
-
 async def sync_attachment_to_vdr(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -96,10 +85,11 @@ async def sync_attachment_to_vdr(
 ) -> VdrSyncResult | None:
     """첨부 파일을 VDR에 자동 연동한다.
 
-    1) VDR 미초기화 시 자동 초기화
-    2) 1차 심사(메타데이터 스코어링)로 폴더 배치
-    3) 1차 미통과 시 2차 심사(LLM) 비동기 예약
-    4) attachment.vdr_document_id 설정
+    1) file_path 경로 검증 (경로 순회 방지)
+    2) VDR 미초기화 시 자동 초기화
+    3) 1차 심사(메타데이터 스코어링)로 폴더 배치
+    4) 1차 미통과 시 2차 심사(LLM) 비동기 예약
+    5) attachment.vdr_document_id 설정
 
     Args:
         file_path: 디스크에 저장된 첨부파일 경로 (메모리 적재 최소화)
@@ -109,12 +99,20 @@ async def sync_attachment_to_vdr(
         None — 연동 실패 시 (attachment 자체는 영향 없음)
     """
     try:
+        # M-5: 경로 순회 방지 — file_path가 업로드 디렉토리 내에 있는지 검증
+        resolved = file_path.resolve()
+        if not resolved.is_relative_to(_UPLOAD_DIR.resolve()):
+            logger.error(
+                "경로 순회 시도 차단: file_path=%s, expected_dir=%s",
+                file_path,
+                _UPLOAD_DIR,
+            )
+            return None
+
         # VDR 초기화 확인/자동 생성
         await _ensure_vdr_initialized(db, transaction_id)
 
         # 파일 콘텐츠 읽기 — VDR blob 저장에 필요
-        import asyncio
-
         file_content = await asyncio.to_thread(file_path.read_bytes)
 
         # 1차 심사
@@ -125,7 +123,6 @@ async def sync_attachment_to_vdr(
 
         if routed_category is not None:
             # 1차 심사 통과 → 해당 카테고리 폴더에 직접 배치
-            # C1 fix: auto_upload_document 대신 직접 호출하여 auto_route 중복 실행 방지
             folder = await vdr_service.resolve_folder_by_category(db, transaction_id, routed_category)
             if folder is None:
                 folder = await vdr_service.resolve_fallback_folder(db, transaction_id)
@@ -141,6 +138,7 @@ async def sync_attachment_to_vdr(
             )
             final_name = vdr_service.resolve_unique_filename(attachment.file_name, has_dup)
 
+            # C-1 fix: auto_commit=False로 이중 커밋 방지 — 단일 커밋으로 통합
             doc = await vdr_service.upload_document(
                 db=db,
                 transaction_id=transaction_id,
@@ -151,6 +149,7 @@ async def sync_attachment_to_vdr(
                 uploaded_by_email=attachment.uploaded_by_email,
                 description=f"첨부파일 자동 연동 (attachment_id={attachment.id})",
                 _folder_verified=True,
+                auto_commit=False,
             )
             doc.classification_status = VdrClassificationStatus.DIRECT
             doc.classification_score = top_score
@@ -158,15 +157,16 @@ async def sync_attachment_to_vdr(
             # attachment ↔ VDR 문서 참조 연결
             attachment.vdr_document_id = doc.id
 
-            # M2 fix: VDR 자동 연동 감사 로그
             await _record_vdr_sync_audit(db, attachment, doc, folder, VdrClassificationStatus.DIRECT)
             await db.commit()
+            await db.refresh(doc)
 
             return VdrSyncResult(
                 document=doc,
                 folder=folder,
                 category=routed_category.value if routed_category else None,
                 classification_status=VdrClassificationStatus.DIRECT,
+                routing_score=top_score,
                 needs_secondary=False,
             )
         else:
@@ -176,6 +176,7 @@ async def sync_attachment_to_vdr(
                 logger.error("VDR 폴백 폴더 없음: txn=%s", transaction_id)
                 return None
 
+            # C-1 fix: auto_commit=False로 이중 커밋 방지 — 단일 커밋으로 통합
             doc = await vdr_service.upload_document(
                 db=db,
                 transaction_id=transaction_id,
@@ -186,6 +187,7 @@ async def sync_attachment_to_vdr(
                 uploaded_by_email=attachment.uploaded_by_email,
                 description=f"첨부파일 자동 연동 (attachment_id={attachment.id})",
                 _folder_verified=True,
+                auto_commit=False,
             )
             doc.classification_status = VdrClassificationStatus.PENDING_REVIEW
             doc.classification_score = top_score
@@ -193,11 +195,11 @@ async def sync_attachment_to_vdr(
             # attachment ↔ VDR 문서 참조 연결
             attachment.vdr_document_id = doc.id
 
-            # M2 fix: VDR 자동 연동 감사 로그
             await _record_vdr_sync_audit(db, attachment, doc, fallback, VdrClassificationStatus.PENDING_REVIEW)
             await db.commit()
+            await db.refresh(doc)
 
-            # 2차 심사 비동기 디스패치 (W2 fix: 서비스 레이어에서 import)
+            # 2차 심사 비동기 디스패치
             from app.services.vdr_classification_service import run_secondary_classification
 
             background_tasks.add_task(run_secondary_classification, doc.id, transaction_id)
@@ -207,9 +209,15 @@ async def sync_attachment_to_vdr(
                 folder=fallback,
                 category=None,
                 classification_status=VdrClassificationStatus.PENDING_REVIEW,
+                routing_score=top_score,
                 needs_secondary=True,
             )
 
     except Exception:
-        logger.exception("VDR 연동 실패: txn=%s, attachment=%s", transaction_id, attachment.id)
+        logger.exception(
+            "VDR 연동 실패: txn=%s, attachment=%s, file=%s",
+            transaction_id,
+            attachment.id,
+            attachment.file_name,
+        )
         return None

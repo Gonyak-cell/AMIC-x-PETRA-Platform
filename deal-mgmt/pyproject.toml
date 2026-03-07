@@ -37,6 +37,8 @@ dependencies = [
     "azure-storage-blob[aio]>=12.20.0",
     # Fuzzy matching — VcCompany enrichment
     "rapidfuzz>=3.0.0",
+    # OOXML 조작 — Redline Engine (Tracked Changes)
+    "lxml>=5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -88,6 +90,8 @@ extend-immutable-calls = [
 # HWP parser / LLM client: imports used only for isinstance/availability check
 "app/ralph/parsers/hwp_parser.py" = ["F401"]
 "app/ralph/llm_client.py" = ["F401"]
+# OOXML redline engine: camelCase XML element names are conventional
+"app/services/redline_engine.py" = ["N806"]
 # main.py: routers imported after app setup (FastAPI pattern)
 "app/main.py" = ["E402"]
 # Test files: Korean law names trigger N802, sys.path setup requires E402, Roman numeral chapter vars N806

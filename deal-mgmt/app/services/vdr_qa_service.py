@@ -16,6 +16,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import re
 import shutil
 import tempfile
@@ -58,8 +59,8 @@ _conversation_store: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
 
 def check_worker_compatibility() -> None:
     """멀티 워커 환경에서 인메모리 저장소의 제약을 경고한다 (F-10)."""
-    import os
-    import sys
+
+    import sys  # sys.argv는 함수 스코프에서만 사용
 
     # uvicorn --workers N 감지
     for i, arg in enumerate(sys.argv):

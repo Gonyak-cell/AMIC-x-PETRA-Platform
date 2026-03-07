@@ -31,7 +31,8 @@ from app.models.attachment import Attachment
 from app.models.enums import AttachmentEntityType, AuditAction
 from app.schemas.attachment import AttachmentListResponse, AttachmentOut, VdrSyncInfo
 from app.services import audit_service, transaction_service
-from app.services.attachment_vdr_bridge import check_vdr_write_permission, sync_attachment_to_vdr
+from app.services.attachment_vdr_bridge import sync_attachment_to_vdr
+from app.services.vdr_service import check_vdr_write_permission
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +243,9 @@ async def upload_attachment(
     await db.commit()
     await db.refresh(attachment)
 
+    # M-1 fix: rollback 시 attachment 객체가 expire 되므로 미리 직렬화
+    result = AttachmentOut.model_validate(attachment)
+
     # ── VDR 자동 연동 (best-effort) ──────────────────────
     # H1 fix: VDR 쓰기 권한이 있는 사용자만 연동 (ADMIN / lead_advisor / deal_captain)
     vdr_sync = None
@@ -253,7 +257,6 @@ async def upload_attachment(
     )
     if has_vdr_access:
         try:
-            # H2 fix: file_path 전달 — 브릿지 내부에서만 메모리 적재
             vdr_result = await sync_attachment_to_vdr(
                 db,
                 txn_id,
@@ -269,11 +272,9 @@ async def upload_attachment(
                     classification_status=vdr_result.classification_status.value,
                 )
         except Exception:
-            # W1 fix: 실패 시 dirty state 정리
             await db.rollback()
             logger.warning("VDR 연동 실패: txn=%s, attachment=%s", txn_id, attachment.id, exc_info=True)
 
-    result = AttachmentOut.model_validate(attachment)
     result.vdr_sync = vdr_sync
     return result
 

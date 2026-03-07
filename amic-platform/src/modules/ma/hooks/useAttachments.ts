@@ -105,6 +105,9 @@ export function useDeleteAttachment(txnId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: attachmentQK(txnId) });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "vdr"],
+      });
       toast.success("파일이 삭제되었습니다.");
     },
     onError: (err: unknown) => {

@@ -75,9 +75,15 @@ export const ATTACHMENT_CONSTRAINTS = {
     ".png",
     ".jpg",
     ".jpeg",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".ogg",
+    ".aac",
+    ".wma",
   ]),
   ACCEPT_EXTENSIONS:
-    ".docx,.doc,.pdf,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt,.csv,.zip,.png,.jpg,.jpeg",
+    ".docx,.doc,.pdf,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt,.csv,.zip,.png,.jpg,.jpeg,.mp3,.wav,.m4a,.ogg,.aac,.wma",
 };
 
 /** MIME 타입 → 라벨 매핑. */
@@ -97,4 +103,10 @@ export const ATTACHMENT_MIME_LABELS: Record<string, string> = {
   "application/zip": "ZIP",
   "image/png": "PNG",
   "image/jpeg": "JPEG",
+  "audio/mpeg": "MP3",
+  "audio/wav": "WAV",
+  "audio/x-m4a": "M4A",
+  "audio/ogg": "OGG",
+  "audio/aac": "AAC",
+  "audio/x-ms-wma": "WMA",
 };

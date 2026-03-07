@@ -30,8 +30,10 @@ def upgrade() -> None:
         ["id"],
         ondelete="SET NULL",
     )
+    op.create_index("ix_attachments_vdr_document_id", "attachments", ["vdr_document_id"])
 
 
 def downgrade() -> None:
+    op.drop_index("ix_attachments_vdr_document_id", table_name="attachments")
     op.drop_constraint("fk_attachments_vdr_document_id", "attachments", type_="foreignkey")
     op.drop_column("attachments", "vdr_document_id")

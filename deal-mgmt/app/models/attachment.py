@@ -39,7 +39,7 @@ class Attachment(Base, TimestampMixin):
 
     # ── VDR 연동 ─────────────────────────────────────────
     vdr_document_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # ── 메타 ──────────────────────────────────────────────

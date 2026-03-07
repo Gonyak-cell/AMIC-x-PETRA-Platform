@@ -345,7 +345,7 @@ async def upload_document(
 ):
     """VDR에 파일을 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
-    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
     filename, _ext, content_type, content = await _validate_upload(file)
 
     try:
@@ -527,7 +527,7 @@ async def auto_upload_document(
     최적 폴더를 자동 선택한다. 매칭 폴더 없으면 CORPORATE(또는 첫 폴더)에 폴백.
     """
     await _get_and_authorize_txn(db, txn_id, claims)
-    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
     filename, _ext, content_type, content = await _validate_upload(file)
 
     try:
@@ -588,7 +588,7 @@ async def direct_upload(
             detail=f"한 번에 최대 {_MAX_DIRECT_UPLOAD_FILES}개 파일까지 업로드할 수 있습니다.",
         )
     await _get_and_authorize_txn(db, txn_id, claims)
-    _upload_limiter.check(f"vdr_upload:{claims.email or claims.sub}")
+    _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
 
     from app.services.vdr_categorization_service import auto_route, score_document
 
@@ -778,7 +778,7 @@ async def ask_vdr_question(
     from app.core.config import settings
     from app.core.rate_limiter import qa_rate_limiter
 
-    qa_rate_limiter.check(claims.sub)
+    qa_rate_limiter.check(claims.user_id)
 
     if not settings.VDR_QA_ENABLED:
         raise HTTPException(
@@ -802,7 +802,7 @@ async def ask_vdr_question(
         question=body.question,
         document_ids=body.document_ids,
         conversation_id=body.conversation_id,
-        user_sub=claims.sub,
+        user_sub=claims.user_id,
         api_key=settings.GOOGLE_API_KEY,
         max_documents=settings.VDR_QA_MAX_DOCUMENTS,
         max_tokens=settings.VDR_QA_MAX_TOKENS,
@@ -819,7 +819,7 @@ async def ask_vdr_question(
             for s in result.sources
         ],
         conversation_id=result.conversation_id,
-        cost_usd=result.cost_usd,
+        cost_usd=result.cost_usd if claims.role == "ADMIN" else None,
     )
 
 
@@ -841,7 +841,7 @@ async def stream_vdr_question(
     from app.core.rate_limiter import qa_rate_limiter
     from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
 
-    qa_rate_limiter.check(claims.sub)
+    qa_rate_limiter.check(claims.user_id)
 
     if not settings.VDR_QA_ENABLED:
         raise HTTPException(
@@ -865,7 +865,7 @@ async def stream_vdr_question(
             question=body.question,
             document_ids=body.document_ids,
             conversation_id=body.conversation_id,
-            user_sub=claims.sub,
+            user_sub=claims.user_id,
             api_key=settings.GOOGLE_API_KEY,
             max_documents=settings.VDR_QA_MAX_DOCUMENTS,
             max_tokens=settings.VDR_QA_MAX_TOKENS,
