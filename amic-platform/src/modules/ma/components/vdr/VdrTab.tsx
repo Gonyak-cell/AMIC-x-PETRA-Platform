@@ -289,7 +289,7 @@ export default function VdrTab({ txnId }: Props) {
         </div>
 
         {/* 하단: Q&A 패널 */}
-        <div className="h-[300px]">
+        <div className="min-h-[300px]">
           <VdrQAPanel txnId={txnId} />
         </div>
       </div>
