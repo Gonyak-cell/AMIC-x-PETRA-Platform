@@ -1,5 +1,6 @@
 import type { SelectOption } from "@/components/ui";
 import type { BuyerStatus } from "../types/buyer";
+import type { MarketingStage } from "../types/marketing_log";
 
 // ── Deal Role (컨소시엄 역할) ────────────────────────
 export const DEAL_ROLE_OPTIONS: SelectOption[] = [
@@ -47,6 +48,15 @@ export const BUYER_TIER_LABELS: Record<string, string> = {
 };
 
 // ── Marketing Stage ─────────────────────────────────
+export const MARKETING_STAGES: MarketingStage[] = [
+  "IDENTIFIED",
+  "EMAIL_SENT",
+  "PHONE_CALL",
+  "ADVISOR_MEETING",
+  "NDA_SIGNED",
+  "TARGET_MEETING",
+];
+
 export const MARKETING_STAGE_LABELS: Record<string, string> = {
   IDENTIFIED: "식별",
   EMAIL_SENT: "메일전송",

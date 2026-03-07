@@ -30,6 +30,15 @@ import type { LongListFilterState } from "@/modules/ma/components/buyers/LongLis
 import ShortListMasterList from "@/modules/ma/components/buyers/ShortListMasterList";
 import BuyerDetailPanel from "@/modules/ma/components/buyers/BuyerDetailPanel";
 import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
+import ShortListViewToggle from "@/modules/ma/components/buyers/ShortListViewToggle";
+import type { ShortListViewMode } from "@/modules/ma/components/buyers/ShortListViewToggle";
+import MarketingGridView from "@/modules/ma/components/buyers/MarketingGridView";
+const MarketingTimelineView = lazy(
+  () => import("@/modules/ma/components/buyers/MarketingTimelineView"),
+);
+const MarketingKanbanView = lazy(
+  () => import("@/modules/ma/components/buyers/MarketingKanbanView"),
+);
 const SIMappingPanel = lazy(
   () => import("@/modules/ma/components/si-mapping/SIMappingPanel"),
 );
@@ -92,6 +101,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
   // Short List detail panel state
   const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
+  const [shortListViewMode, setShortListViewMode] =
+    useState<ShortListViewMode>("grid");
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -294,6 +305,12 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             size="sm"
           />
           <div className="flex items-center gap-2">
+            {buyerSubTab === "short-list" && (
+              <ShortListViewToggle
+                viewMode={shortListViewMode}
+                onViewModeChange={setShortListViewMode}
+              />
+            )}
             {buyerSubTab === "long-list" && (
               <Button
                 icon={Download}
@@ -411,6 +428,49 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
         {buyerSubTab === "short-list" && (
           <>
+            {shortListViewMode === "grid" && (
+              <MarketingGridView
+                buyers={shortListBuyers}
+                overviewData={shortListOverview ?? []}
+                onSelectBuyer={setSelectedBuyerId}
+                canWrite={canWrite}
+                txnId={txnId}
+              />
+            )}
+            {shortListViewMode === "kanban" && (
+              <Suspense
+                fallback={
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    로딩 중...
+                  </p>
+                }
+              >
+                <MarketingKanbanView
+                  buyers={shortListBuyers}
+                  overviewData={shortListOverview ?? []}
+                  onSelectBuyer={setSelectedBuyerId}
+                  canWrite={canWrite}
+                  txnId={txnId}
+                />
+              </Suspense>
+            )}
+            {shortListViewMode === "timeline" && (
+              <Suspense
+                fallback={
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    로딩 중...
+                  </p>
+                }
+              >
+                <MarketingTimelineView
+                  buyers={shortListBuyers}
+                  overviewData={shortListOverview ?? []}
+                  onSelectBuyer={setSelectedBuyerId}
+                  canWrite={canWrite}
+                  txnId={txnId}
+                />
+              </Suspense>
+            )}
             <ShortListMasterList
               buyers={shortListBuyers}
               overviewData={shortListOverview ?? []}

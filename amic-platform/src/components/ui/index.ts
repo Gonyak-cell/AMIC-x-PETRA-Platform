@@ -77,3 +77,6 @@ export type { CheckboxGroupProps, CheckboxGroupOption } from "./CheckboxGroup";
 
 export { SlidePanel } from "./SlidePanel";
 export type { SlidePanelProps } from "./SlidePanel";
+
+export { Popover } from "./Popover";
+export type { PopoverProps } from "./Popover";
