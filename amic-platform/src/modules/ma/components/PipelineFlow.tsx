@@ -72,13 +72,7 @@ export default function PipelineFlow({
 
           return (
             <Fragment key={phase.phase}>
-              <div className="relative flex items-center flex-1 min-w-0">
-                {viewed && (
-                  <div
-                    className="absolute inset-[-2px] bg-accent/50 z-0"
-                    style={{ clipPath: chevronClip }}
-                  />
-                )}
+              <div className={`relative flex items-center flex-1 min-w-0 ${viewed ? "border-b-[3px] border-accent" : ""}`}>
                 <button
                   type="button"
                   onClick={() => onPhaseClick(phase.phase)}
@@ -106,7 +100,7 @@ export default function PipelineFlow({
                         active
                           ? "bg-accent text-white"
                           : viewed
-                            ? "bg-accent/20 text-accent"
+                            ? "bg-accent/10 text-accent font-bold"
                             : done
                               ? "bg-accent/10 text-accent"
                               : "bg-bg-cool text-text-muted hover:bg-gray-100"

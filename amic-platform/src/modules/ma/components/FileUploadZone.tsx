@@ -195,11 +195,11 @@ export default function FileUploadZone({
   if (embedded) {
     return (
       <div
-        className="mt-4 border-t border-slate-100 pt-4"
+        className="mt-4 border-t border-slate-100 pt-4 px-4"
         onDragOver={(e) => e.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-medium text-slate-500">
             첨부 파일
             {items.length > 0 && (
