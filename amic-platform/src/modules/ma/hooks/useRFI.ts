@@ -57,6 +57,7 @@ export function useRFIItems(txnId: string, filters?: RFIItemFilters) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 10_000,
   });
 }
 
@@ -262,11 +263,7 @@ export function useCreateThread(txnId: string, itemId: string) {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: [...rfiKeys(txnId), "items", itemId, "threads"],
-      });
-      qc.invalidateQueries({ queryKey: [...rfiKeys(txnId), "items", itemId] });
-      qc.invalidateQueries({ queryKey: [...rfiKeys(txnId), "items"], exact: false });
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
       toast.success("답변이 등록되었습니다");
     },
     onError: (err) => {

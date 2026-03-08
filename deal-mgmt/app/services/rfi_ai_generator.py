@@ -180,8 +180,10 @@ async def generate_rfi_items(
             created_by_email=created_by_email,
         )
         db.add(item)
-        await db.flush()  # 다음 채번을 위해 즉시 flush
         created += 1
+
+    if created:
+        await db.flush()
     logger.info(
         "AI RFI 생성 완료: txn=%s, items=%d, cost=$%.4f, model=%s",
         txn_id,

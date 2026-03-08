@@ -141,7 +141,7 @@ export interface RFIAttachmentMapInput {
 // ── Dashboard ───────────────────────────────────────────
 
 export interface RFICategoryBreakdown {
-  category: string;
+  category: RFICategoryV2;
   total: number;
   open: number;
   answered: number;
@@ -152,7 +152,7 @@ export interface RFICategoryBreakdown {
 
 export interface RFIDashboardSummary {
   total_items: number;
-  status_counts: Record<string, number>;
+  status_counts: Partial<Record<RFIItemStatusV2, number>>;
   category_breakdown: RFICategoryBreakdown[];
   aging_items: RFIItemListOut[];
 }
