@@ -90,7 +90,14 @@ if [ -n "$CHANGED_PY" ]; then
     for MODULE in deal-mgmt kiis fdd/backend; do
       MODULE_FILES=$(echo "$CHANGED_PY" | grep "^${MODULE}/" | sed "s|^${MODULE}/||" || true)
       if [ -n "$MODULE_FILES" ] && [ -d "$MODULE" ]; then
-        if ! (cd "$MODULE" && echo "$MODULE_FILES" | xargs python -m ruff check 2>&1); then
+        # 삭제된 파일 제외 (E902 방지)
+        EXISTING_FILES=""
+        for f in $MODULE_FILES; do
+          [ -f "${MODULE}/${f}" ] && EXISTING_FILES="$EXISTING_FILES $f"
+        done
+        EXISTING_FILES=$(echo "$EXISTING_FILES" | xargs)
+        if [ -z "$EXISTING_FILES" ]; then continue; fi
+        if ! (cd "$MODULE" && echo "$EXISTING_FILES" | xargs python -m ruff check 2>&1); then
           RUFF_FULL_FAILED=true
         fi
       fi
