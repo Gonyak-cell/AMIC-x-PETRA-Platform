@@ -22,6 +22,8 @@ from app.models.enums import RFIAuthorRole
 from app.schemas.rfi_v2 import (
     RFIAttachmentMapInput,
     RFIAttachmentOut,
+    RFIAutoGenerateRequest,
+    RFIAutoGenerateResult,
     RFIDashboardSummary,
     RFIExcelImportResult,
     RFIItemBatchCreate,
@@ -419,3 +421,47 @@ async def import_excel(
         await db.commit()
 
     return result
+
+
+# ── AI Generate ──────────────────────────────────────────
+
+
+@router.post("/generate", response_model=RFIAutoGenerateResult)
+async def generate_rfi(
+    txn_id: uuid.UUID,
+    payload: RFIAutoGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+) -> RFIAutoGenerateResult:
+    """AI 기반 초기 RFI 질의 자동 생성."""
+    from app.core.config import settings
+    from app.ralph.llm_client import RalphLLMClient
+    from app.services.rfi_ai_generator import generate_rfi_items
+
+    await transaction_service.get_transaction(db, txn_id)
+
+    llm_client = RalphLLMClient.from_settings(settings)
+    if not llm_client.is_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LLM 프로바이더가 설정되지 않았습니다. API 키를 확인하세요.",
+        )
+
+    items_created, cost_usd, model_used = await generate_rfi_items(
+        db,
+        txn_id,
+        industry=payload.industry,
+        deal_purpose=payload.deal_purpose,
+        focus_areas=payload.focus_areas,
+        additional_context=payload.additional_context,
+        created_by_email=claims.email or "ai-generator",
+        llm_client=llm_client,
+    )
+
+    await db.commit()
+
+    return RFIAutoGenerateResult(
+        items_created=items_created,
+        cost_usd=round(cost_usd, 4),
+        model_used=model_used,
+    )

@@ -179,3 +179,23 @@ class RFIReportPayload(BaseModel):
 
 class RFIItemBatchCreate(BaseModel):
     items: list[RFIItemCreateV2] = Field(..., min_length=1)
+
+
+# ── AI Generate ──────────────────────────────────────────
+
+
+class RFIAutoGenerateRequest(BaseModel):
+    """AI 초기 RFI 생성 요청."""
+
+    industry: str = Field(..., min_length=1, description="산업군 (예: 제조업, IT, 헬스케어)")
+    deal_purpose: str = Field(..., min_length=1, description="거래 목적 (예: 경영권 인수, 소수 지분 투자)")
+    focus_areas: list[str] = Field(default_factory=list, description="중점 분석 영역 (예: 재무, 법률, 노무)")
+    additional_context: str = Field(default="", description="추가 컨텍스트")
+
+
+class RFIAutoGenerateResult(BaseModel):
+    """AI 초기 RFI 생성 결과."""
+
+    items_created: int
+    cost_usd: float
+    model_used: str
