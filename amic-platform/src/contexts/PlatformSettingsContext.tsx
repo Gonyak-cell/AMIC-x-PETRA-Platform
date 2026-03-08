@@ -32,7 +32,7 @@ const CSS_VARS: Record<TableStyleTheme, Record<string, string>> = {
     "--table-header-bg": "#26C260",
     "--table-header-text": "#FFFFFF",
     "--table-header-font-weight": "700",
-    "--table-row-border": "1px dashed #CCCCCC",
+    "--table-row-border": "1px solid #CCCCCC",
     "--table-row-border-last": "1px solid #CCCCCC",
     "--table-row-hover": "rgba(38,194,96,0.05)",
     "--table-summary-color": "#26C260",
