@@ -119,6 +119,10 @@ app = FastAPI(
             "name": "Document Extraction",
             "description": "문서 AI 추출 — VDR 문서 자동 분류 + 핵심 데이터 추출 (NDA/LOI/SPA/등기부등본/세무신고서)",
         },
+        {
+            "name": "Document Versions",
+            "description": "문서 버전 관리 — SHA-256 중복 차단 + 리비전 이력 추적",
+        },
     ],
 )
 
@@ -163,6 +167,7 @@ from app.routers import (
     deal_clients,
     deal_setup,
     document_extraction,
+    document_versions,
     earnout,
     engagements,
     financial_models,
@@ -230,6 +235,7 @@ app.include_router(deal_clients.admin_router, prefix="/api/v1")
 app.include_router(meeting_logs.router, prefix="/api/v1")
 app.include_router(negotiation_issues.router, prefix="/api/v1")
 app.include_router(contract_markups.router, prefix="/api/v1")
+app.include_router(document_versions.router, prefix="/api/v1")
 app.include_router(permits.router, prefix="/api/v1")
 app.include_router(permits.kb_router, prefix="/api/v1")
 app.include_router(client_portal.router, prefix="/api/v1")

@@ -163,6 +163,34 @@ async def create_nda_markup(
         actor_email=claims.email,
         new_value={"version": next_ver, "label": version_label, "date": version_date},
     )
+
+    # VCS 연동 — DocumentMaster + Revision 자동 생성
+    try:
+        from app.models.enums import UploadSource
+        from app.services import document_version_service
+
+        doc_master = await document_version_service.find_or_create_for_nda(
+            db,
+            transaction_id=txn_id,
+            nda_id=nda_id,
+            doc_name=version_label,
+            created_by_email=claims.email,
+        )
+        await document_version_service.upload_revision(
+            db,
+            document_id=doc_master.id,
+            file_content=content,
+            file_name=safe_filename,
+            mime_type=file.content_type,
+            upload_source=UploadSource.NDA_MARKUP,
+            changes_summary=changes_summary,
+            uploaded_by_email=claims.email,
+            source_entity_type="NdaMarkup",
+            source_entity_id=str(markup.id),
+        )
+    except Exception:
+        logger.warning("VCS 연동 실패 (NDA 마크업)", exc_info=True)
+
     await db.commit()
     await db.refresh(markup)
     return NdaMarkupOut.model_validate(markup)

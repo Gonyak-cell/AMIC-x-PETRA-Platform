@@ -837,3 +837,43 @@ class ContractTemplateStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
     ARCHIVED = "ARCHIVED"
+
+
+# ── Document Version Control System (VCS) ────────────────
+
+
+class DocumentType(enum.StrEnum):
+    """문서 원장 유형 — 버전 관리 대상 문서 분류."""
+
+    CONTRACT_SPA = "CONTRACT_SPA"
+    CONTRACT_AMENDMENT = "CONTRACT_AMENDMENT"
+    CONTRACT_SIDE_LETTER = "CONTRACT_SIDE_LETTER"
+    CONTRACT_SHA = "CONTRACT_SHA"
+    CONTRACT_ESCROW = "CONTRACT_ESCROW"
+    CONTRACT_BTA = "CONTRACT_BTA"
+    CONTRACT_SSA = "CONTRACT_SSA"
+    CONTRACT_OTHER = "CONTRACT_OTHER"
+    NDA = "NDA"
+    RFI_EXCEL = "RFI_EXCEL"
+    MEETING_MINUTES = "MEETING_MINUTES"
+    DD_REPORT = "DD_REPORT"
+    OTHER = "OTHER"
+
+
+class UploadSource(enum.StrEnum):
+    """리비전 업로드 경로 — 어떤 경로로 리비전이 생성되었는지."""
+
+    MANUAL = "MANUAL"
+    CONTRACT_MARKUP = "CONTRACT_MARKUP"
+    NDA_MARKUP = "NDA_MARKUP"
+    RFI_IMPORT = "RFI_IMPORT"
+    SYSTEM = "SYSTEM"
+
+
+class DocumentBlockType(enum.StrEnum):
+    """문서 블록 유형 — Phase 2 텍스트 비교용 스텁."""
+
+    CLAUSE = "CLAUSE"
+    PARAGRAPH = "PARAGRAPH"
+    TABLE_ROW = "TABLE_ROW"
+    HEADER = "HEADER"

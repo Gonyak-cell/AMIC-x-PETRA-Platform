@@ -17,7 +17,7 @@ from app.models.contract import Contract
 from app.models.contract_markup import ContractMarkup
 from app.models.enums import AuditAction
 from app.schemas.contract_markup import ContractMarkupListResponse, ContractMarkupOut
-from app.services import audit_service, transaction_service
+from app.services import audit_service, document_version_service, transaction_service
 
 UPLOAD_DIR = Path("uploads/markups")
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
@@ -141,6 +141,39 @@ async def create_markup(
         actor_email=claims.email,
         new_value={"version": next_ver, "label": version_label},
     )
+
+    # VCS 연동 — DocumentMaster + Revision 자동 생성
+    try:
+        from app.models.enums import UploadSource
+
+        contract_obj = await _get_contract_or_404(db, txn_id, contract_id)
+        doc_master = await document_version_service.find_or_create_for_contract(
+            db,
+            transaction_id=txn_id,
+            contract_id=contract_id,
+            contract_type=contract_obj.contract_type.value
+            if hasattr(contract_obj.contract_type, "value")
+            else str(contract_obj.contract_type),
+            doc_name=version_label,
+            created_by_email=claims.email,
+        )
+        await document_version_service.upload_revision(
+            db,
+            document_id=doc_master.id,
+            file_content=content,
+            file_name=safe_filename,
+            mime_type=file.content_type,
+            upload_source=UploadSource.CONTRACT_MARKUP,
+            changes_summary=changes_summary,
+            uploaded_by_email=claims.email,
+            source_entity_type="ContractMarkup",
+            source_entity_id=str(markup.id),
+        )
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).warning("VCS 연동 실패 (계약 마크업)", exc_info=True)
+
     await db.commit()
     await db.refresh(markup)
     return ContractMarkupOut.model_validate(markup)

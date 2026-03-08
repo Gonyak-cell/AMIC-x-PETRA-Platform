@@ -15,6 +15,9 @@ from app.models.contract_template import ContractTemplate
 from app.models.contract_version import ContractVersion
 from app.models.dd_checklist import DDChecklist
 from app.models.deal_client import DealClient
+from app.models.document_block import DocumentBlock
+from app.models.document_master import DocumentMaster
+from app.models.document_revision import DocumentRevision
 from app.models.earnout import EarnoutMilestone
 from app.models.engagement import Engagement
 from app.models.enums import (
@@ -42,6 +45,8 @@ from app.models.enums import (
     DDChecklistStatus,
     DDWorkstream,
     DealRole,
+    DocumentBlockType,
+    DocumentType,
     EarnoutMetric,
     EarnoutStatus,
     EngagementType,
@@ -93,6 +98,7 @@ from app.models.enums import (
     TransactionSide,
     TransactionStatus,
     TranscriptionJobStatus,
+    UploadSource,
     ValuationMethod,
     VdrClassificationStatus,
     VdrDocumentStatus,
@@ -184,6 +190,11 @@ __all__ = [
     "DealNote",
     "DealRole",
     "DealTimeline",
+    "DocumentBlock",
+    "DocumentBlockType",
+    "DocumentMaster",
+    "DocumentRevision",
+    "DocumentType",
     "EarnoutMetric",
     "EarnoutMilestone",
     "EarnoutStatus",
@@ -271,6 +282,7 @@ __all__ = [
     "TransactionStatus",
     "TranscriptionJob",
     "TranscriptionJobStatus",
+    "UploadSource",
     "ValuationMethod",
     "VcCompany",
     "VcIndustryCoefficient",
