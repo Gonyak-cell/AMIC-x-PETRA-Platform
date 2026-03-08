@@ -26,7 +26,7 @@ import {
   RFI_ITEM_STATUS_LABELS,
   RFI_CATEGORY_LABELS,
 } from "@/modules/ma/constants";
-import type { RFIItemStatusV2, RFICategoryV2 } from "@/modules/ma/types/rfi";
+import type { RFIItemStatusV2 } from "@/modules/ma/types/rfi";
 
 // ── Constants ───────────────────────────────────────────
 
@@ -102,7 +102,7 @@ export default function RFIDashboard({ txnId }: RFIDashboardProps) {
 
   // -- Bar chart data
   const barData = category_breakdown.map((cat) => ({
-    name: RFI_CATEGORY_LABELS[cat.category as RFICategoryV2] ?? cat.category,
+    name: RFI_CATEGORY_LABELS[cat.category] ?? cat.category,
     response_pct: cat.response_pct,
     total: cat.total,
   }));

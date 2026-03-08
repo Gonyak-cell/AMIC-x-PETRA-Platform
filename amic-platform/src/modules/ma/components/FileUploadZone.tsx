@@ -104,11 +104,11 @@ export default function FileUploadZone({
     <>
       {items.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-slate-400"
+          className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-text-muted"
           onDragOver={(e) => e.preventDefault()}
           onDrop={readOnly ? undefined : handleDrop}
         >
-          <Upload className="h-8 w-8 text-slate-300" />
+          <Upload className="h-8 w-8 text-text-muted" />
           <p>파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요</p>
           <p className="text-xs">
             최대 {ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX,
@@ -117,44 +117,44 @@ export default function FileUploadZone({
         </div>
       ) : (
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-100 text-left text-xs text-slate-500">
+          <thead className="border-b border-gray-border text-left text-xs text-text-secondary">
             <tr>
-              <th className="px-4 py-2 font-medium">파일명</th>
-              <th className="px-4 py-2 font-medium">형식</th>
-              <th className="px-4 py-2 font-medium">크기</th>
-              <th className="px-4 py-2 font-medium">업로드일</th>
-              <th className="px-4 py-2 font-medium" />
+              <th className="px-5 py-2 font-medium">파일명</th>
+              <th className="px-5 py-2 font-medium">형식</th>
+              <th className="px-5 py-2 font-medium">크기</th>
+              <th className="px-5 py-2 font-medium">업로드일</th>
+              <th className="px-5 py-2 font-medium" />
             </tr>
           </thead>
           <tbody>
             {items.map((att) => (
               <tr
                 key={att.id}
-                className="border-b border-slate-50 hover:bg-slate-50"
+                className="border-b border-gray-border/50 hover:bg-bg-cool/50"
               >
-                <td className="px-4 py-2">
+                <td className="px-5 py-2">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                    <FileText className="h-4 w-4 shrink-0 text-text-muted" />
                     <span className="truncate" title={att.file_name}>
                       {att.file_name}
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-2 text-slate-500">
+                <td className="px-5 py-2 text-text-secondary">
                   {ATTACHMENT_MIME_LABELS[att.mime_type] ??
                     att.mime_type.split("/")[1]}
                 </td>
-                <td className="px-4 py-2 text-slate-500">
+                <td className="px-5 py-2 text-text-secondary">
                   {formatFileSize(att.file_size_bytes)}
                 </td>
-                <td className="px-4 py-2 text-slate-500">
+                <td className="px-5 py-2 text-text-secondary">
                   {formatISODate(att.created_at)}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-5 py-2">
                   <div className="flex items-center gap-1">
                     <a
                       href={getAttachmentDownloadUrl(txnId, att.id)}
-                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-info"
+                      className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
                       title="다운로드"
                     >
                       <Download className="h-4 w-4" />
@@ -162,7 +162,7 @@ export default function FileUploadZone({
                     {!readOnly && (
                       <button
                         type="button"
-                        className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-negative"
+                        className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
                         title="삭제"
                         onClick={() => deleteMutation.mutate(att.id)}
                       >
@@ -195,15 +195,15 @@ export default function FileUploadZone({
   if (embedded) {
     return (
       <div
-        className="mt-4 border-t border-slate-100 pt-4 px-4"
+        className="mt-4 border-t border-gray-border pt-4 px-5"
         onDragOver={(e) => e.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-slate-500">
+          <span className="text-xs font-medium text-text-secondary">
             첨부 파일
             {items.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+              <span className="ml-1.5 rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
                 {items.length}
               </span>
             )}
@@ -230,18 +230,18 @@ export default function FileUploadZone({
   const header = (
     <button
       type="button"
-      className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+      className="flex w-full items-center gap-2 rounded-lg border border-gray-border bg-white px-4 py-2.5 text-left text-sm hover:bg-bg-cool/50"
       onClick={() => setExpanded((v) => !v)}
     >
       {expanded ? (
-        <ChevronDown className="h-4 w-4 text-slate-400" />
+        <ChevronDown className="h-4 w-4 text-text-muted" />
       ) : (
-        <ChevronRight className="h-4 w-4 text-slate-400" />
+        <ChevronRight className="h-4 w-4 text-text-muted" />
       )}
-      <Paperclip className="h-4 w-4 text-slate-500" />
-      <span className="font-medium text-slate-700">{title}</span>
+      <Paperclip className="h-4 w-4 text-text-secondary" />
+      <span className="font-medium text-text-dark">{title}</span>
       {items.length > 0 && (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+        <span className="rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
           {items.length}
         </span>
       )}
@@ -258,20 +258,20 @@ export default function FileUploadZone({
       {compact && header}
 
       <div
-        className={`${compact ? "mt-1 " : ""}rounded-lg border border-slate-200 bg-white`}
+        className={`${compact ? "mt-1 " : ""}rounded-lg border border-gray-border bg-white`}
         onDragOver={(e) => e.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
         {/* 헤더 바 (비접이식 모드) */}
         {!compact && (
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b border-gray-border px-4 py-2.5">
             <div className="flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">
+              <Paperclip className="h-4 w-4 text-text-secondary" />
+              <span className="text-sm font-medium text-text-dark">
                 {title}
               </span>
               {items.length > 0 && (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                <span className="rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
                   {items.length}
                 </span>
               )}
@@ -292,7 +292,7 @@ export default function FileUploadZone({
 
         {/* 업로드 버튼 (접이식 모드) */}
         {compact && !readOnly && (
-          <div className="flex justify-end border-b border-slate-100 px-4 py-2">
+          <div className="flex justify-end border-b border-gray-border px-4 py-2">
             <Button
               variant="ghost"
               size="sm"

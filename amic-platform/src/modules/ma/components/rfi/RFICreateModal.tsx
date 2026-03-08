@@ -92,13 +92,13 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-category"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               카테고리 <span className="text-red-500">*</span>
             </label>
             <select
               id="rfi-category"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.category}
               onChange={(e) => update("category", e.target.value as RFICategoryV2 | "")}
             >
@@ -114,13 +114,13 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-priority"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               우선순위
             </label>
             <select
               id="rfi-priority"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.priority}
               onChange={(e) => update("priority", e.target.value as RFIPriority)}
             >
@@ -137,13 +137,13 @@ export default function RFICreateModal({
         <div>
           <label
             htmlFor="rfi-question"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium text-text-body mb-1"
           >
             질의 내용 <span className="text-red-500">*</span>
           </label>
           <textarea
             id="rfi-question"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+            className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             rows={4}
             placeholder="질의 내용을 입력하세요"
             value={form.question_text}
@@ -156,14 +156,14 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-target-doc"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               대상 문서
             </label>
             <input
               id="rfi-target-doc"
               type="text"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               placeholder="예: 재무제표, 계약서"
               value={form.target_doc}
               onChange={(e) => update("target_doc", e.target.value)}
@@ -173,14 +173,14 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-assignee"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               담당자 이메일
             </label>
             <input
               id="rfi-assignee"
               type="email"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               placeholder="example@company.com"
               value={form.assignee_email}
               onChange={(e) => update("assignee_email", e.target.value)}
@@ -193,14 +193,14 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-due-date"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               마감일
             </label>
             <input
               id="rfi-due-date"
               type="date"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.due_date}
               onChange={(e) => update("due_date", e.target.value)}
             />
@@ -209,14 +209,14 @@ export default function RFICreateModal({
           <div>
             <label
               htmlFor="rfi-section-tag"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               리포트 섹션 태그
             </label>
             <input
               id="rfi-section-tag"
               type="text"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               placeholder="예: 3.1 재무분석"
               value={form.report_section_tag}
               onChange={(e) => update("report_section_tag", e.target.value)}
@@ -228,13 +228,13 @@ export default function RFICreateModal({
         <div>
           <label
             htmlFor="rfi-memo"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium text-text-body mb-1"
           >
             내부 메모
           </label>
           <textarea
             id="rfi-memo"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+            className="w-full border border-gray-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             rows={2}
             placeholder="내부 참고용 메모 (대상에게 표시되지 않음)"
             value={form.internal_memo}
@@ -243,7 +243,7 @@ export default function RFICreateModal({
         </div>
 
         {/* Footer buttons */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+        <div className="flex justify-end gap-2 pt-2 border-t border-gray-border">
           <Button variant="secondary" onClick={handleClose}>
             취소
           </Button>

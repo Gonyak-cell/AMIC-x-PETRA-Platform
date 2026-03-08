@@ -122,6 +122,8 @@ async def create_items_batch(
     await check_client_deal_access(db, txn_id, claims)
     items = await rfi_v2_service.create_items_batch(db, txn_id, payload.items, created_by=claims.email)
     await db.commit()
+    for item in items:
+        await db.refresh(item)
     return [RFIItemOut.model_validate(i) for i in items]
 
 

@@ -84,7 +84,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
       {/* Top bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-900">RFI 관리</h2>
+          <h2 className="text-lg font-semibold text-text-dark">RFI 관리</h2>
 
           {/* Tab buttons */}
           <div className="flex items-center gap-1 ml-4" role="tablist">
@@ -194,7 +194,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <div>
             <label
               htmlFor="gen-industry"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               산업군 <span className="text-red-500">*</span>
             </label>
@@ -204,13 +204,13 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               value={genIndustry}
               onChange={(e) => setGenIndustry(e.target.value)}
               placeholder="예: 제조업, IT/소프트웨어, 유통"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             />
           </div>
           <div>
             <label
               htmlFor="gen-purpose"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               거래 목적 <span className="text-red-500">*</span>
             </label>
@@ -220,13 +220,13 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               value={genPurpose}
               onChange={(e) => setGenPurpose(e.target.value)}
               placeholder="예: 경영권 인수, 지분 투자, 합병"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             />
           </div>
           <div>
             <label
               htmlFor="gen-focus"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-body mb-1"
             >
               중점 분야 (쉼표 구분)
             </label>
@@ -236,11 +236,11 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               value={genFocusAreas}
               onChange={(e) => setGenFocusAreas(e.target.value)}
               placeholder="예: 재무, 법률, 인사, IT"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-100">
+        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-border">
           <Button
             size="sm"
             variant="secondary"
