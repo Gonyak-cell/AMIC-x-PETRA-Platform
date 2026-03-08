@@ -8,6 +8,7 @@ import {
   useTransaction,
 } from "@/modules/ma/hooks/useTransactions";
 import { useShortListOverview } from "@/modules/ma/hooks/useMarketingLogs";
+import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
@@ -23,7 +24,6 @@ import {
 } from "@/modules/ma/constants";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
-import ConsortiumPanel from "@/modules/ma/components/buyers/ConsortiumPanel";
 import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
 import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
 import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
@@ -246,7 +246,77 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   ];
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
-  const shortListBuyers = allBuyers.filter((b) => b.is_short_listed);
+  const realShortList = allBuyers.filter((b) => b.is_short_listed);
+
+  // ── Dev-only mock data for Short List preview ──────────
+  const DEV_MOCK_BUYERS: BuyerCandidate[] = import.meta.env.DEV
+    ? [
+        {
+          id: "mock-1", transaction_id: txnId, company_name: "삼성물산",
+          contact_name: "김철수", contact_email: null, contact_phone: null,
+          buyer_type: "STRATEGIC", status: "NDA_SIGNED", tier: "TIER_1",
+          deal_role: "SOLE_BUYER", is_short_listed: true, corp_code: null,
+          ioi_value: "150000000000", ioi_date: "2026-03-01",
+          loi_value: null, loi_date: null, final_offer_value: null,
+          rejection_reason: null, notes: null, extra_data: null,
+          created_at: "2026-02-20T09:00:00Z", updated_at: "2026-03-05T14:00:00Z",
+        },
+        {
+          id: "mock-2", transaction_id: txnId, company_name: "SK스퀘어",
+          contact_name: "이영희", contact_email: null, contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR", status: "INTEREST_CONFIRMED", tier: "TIER_2",
+          deal_role: "CO_INVESTOR", is_short_listed: true, corp_code: null,
+          ioi_value: null, ioi_date: null,
+          loi_value: null, loi_date: null, final_offer_value: null,
+          rejection_reason: null, notes: null, extra_data: null,
+          created_at: "2026-02-22T10:00:00Z", updated_at: "2026-03-04T11:00:00Z",
+        },
+        {
+          id: "mock-3", transaction_id: txnId, company_name: "한화투자증권",
+          contact_name: "박지민", contact_email: null, contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR", status: "CIM_SENT", tier: "TIER_1",
+          deal_role: "FINANCING_PROVIDER", is_short_listed: true, corp_code: null,
+          ioi_value: "200000000000", ioi_date: "2026-03-02",
+          loi_value: null, loi_date: null, final_offer_value: null,
+          rejection_reason: null, notes: null, extra_data: null,
+          created_at: "2026-02-25T08:00:00Z", updated_at: "2026-03-06T16:00:00Z",
+        },
+        {
+          id: "mock-4", transaction_id: txnId, company_name: "미래에셋자산운용",
+          contact_name: null, contact_email: null, contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR", status: "CONTACTED", tier: "TIER_3",
+          deal_role: null, is_short_listed: true, corp_code: null,
+          ioi_value: null, ioi_date: null,
+          loi_value: null, loi_date: null, final_offer_value: null,
+          rejection_reason: null, notes: null, extra_data: null,
+          created_at: "2026-02-28T13:00:00Z", updated_at: "2026-03-07T09:00:00Z",
+        },
+      ]
+    : [];
+
+  const DEV_MOCK_OVERVIEW: BuyerStageSummary[] = import.meta.env.DEV
+    ? [
+        {
+          buyer_id: "mock-1",
+          stages: { IDENTIFIED: "2026-02-20", EMAIL_SENT: "2026-02-21", PHONE_CALL: "2026-02-23", ADVISOR_MEETING: "2026-02-28", NDA_SIGNED: "2026-03-01", TARGET_MEETING: null },
+        },
+        {
+          buyer_id: "mock-2",
+          stages: { IDENTIFIED: "2026-02-22", EMAIL_SENT: "2026-02-24", PHONE_CALL: "2026-02-26", ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+        },
+        {
+          buyer_id: "mock-3",
+          stages: { IDENTIFIED: "2026-02-25", EMAIL_SENT: "2026-02-26", PHONE_CALL: null, ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+        },
+        {
+          buyer_id: "mock-4",
+          stages: { IDENTIFIED: "2026-02-28", EMAIL_SENT: null, PHONE_CALL: null, ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+        },
+      ]
+    : [];
+
+  const shortListBuyers = realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
+  const devOverview = realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW;
 
   // Client-side filtering for Long List
   const filteredBuyers = useMemo(() => {
@@ -431,7 +501,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             {shortListViewMode === "grid" && (
               <MarketingGridView
                 buyers={shortListBuyers}
-                overviewData={shortListOverview ?? []}
+                overviewData={[...(shortListOverview ?? []), ...devOverview]}
                 onSelectBuyer={setSelectedBuyerId}
                 canWrite={canWrite}
                 txnId={txnId}
@@ -447,7 +517,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               >
                 <MarketingKanbanView
                   buyers={shortListBuyers}
-                  overviewData={shortListOverview ?? []}
+                  overviewData={[...(shortListOverview ?? []), ...devOverview]}
                   onSelectBuyer={setSelectedBuyerId}
                   canWrite={canWrite}
                   txnId={txnId}
@@ -464,20 +534,22 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               >
                 <MarketingTimelineView
                   buyers={shortListBuyers}
-                  overviewData={shortListOverview ?? []}
+                  overviewData={[...(shortListOverview ?? []), ...devOverview]}
                   onSelectBuyer={setSelectedBuyerId}
                   canWrite={canWrite}
                   txnId={txnId}
                 />
               </Suspense>
             )}
-            <ShortListMasterList
-              buyers={shortListBuyers}
-              overviewData={shortListOverview ?? []}
-              selectedBuyerId={selectedBuyerId}
-              onSelectBuyer={setSelectedBuyerId}
-              totalBuyerCount={allBuyers.length}
-            />
+            {shortListBuyers.length > 0 && (
+              <ShortListMasterList
+                buyers={shortListBuyers}
+                overviewData={[...(shortListOverview ?? []), ...devOverview]}
+                selectedBuyerId={selectedBuyerId}
+                onSelectBuyer={setSelectedBuyerId}
+                totalBuyerCount={allBuyers.length}
+              />
+            )}
             <BuyerDetailPanel
               txnId={txnId}
               buyer={selectedBuyer}
@@ -485,11 +557,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
             />
-            <ConsortiumPanel
-              txnId={txnId}
-              buyers={allBuyers}
-              canWrite={canWrite}
-            />
+            {/* ConsortiumPanel 일시 숨김 */}
           </>
         )}
 
