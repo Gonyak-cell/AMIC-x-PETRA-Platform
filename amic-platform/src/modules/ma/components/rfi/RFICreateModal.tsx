@@ -1,141 +1,257 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { useCreateRFI } from "@/modules/ma/hooks/useRFI";
-import type { RFICreate } from "@/modules/ma/types/rfi";
+import { useCreateRFIItem } from "@/modules/ma/hooks/useRFI";
+import {
+  RFI_CATEGORY_OPTIONS,
+  RFI_PRIORITY_OPTIONS,
+} from "@/modules/ma/constants";
+import type {
+  RFIItemCreate,
+  RFICategoryV2,
+  RFIPriority,
+} from "@/modules/ma/types/rfi";
 
 interface RFICreateModalProps {
   txnId: string;
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-const INITIAL_FORM: RFICreate = {
-  title: "",
-  round_number: 1,
-  description: "",
-  recipient_name: "",
-  recipient_email: "",
-  recipient_company: "",
+interface FormState {
+  category: string;
+  question_text: string;
+  priority: string;
+  target_doc: string;
+  assignee_email: string;
+  due_date: string;
+  internal_memo: string;
+  report_section_tag: string;
+}
+
+const INITIAL_FORM: FormState = {
+  category: "",
+  question_text: "",
+  priority: "MEDIUM",
+  target_doc: "",
+  assignee_email: "",
   due_date: "",
-  notes: "",
+  internal_memo: "",
+  report_section_tag: "",
 };
 
-export default function RFICreateModal({ txnId, open, onClose }: RFICreateModalProps) {
-  const createRFI = useCreateRFI(txnId);
-  const [form, setForm] = useState<RFICreate>({ ...INITIAL_FORM });
+const categoryOptions = RFI_CATEGORY_OPTIONS.filter((opt) => opt.value !== "");
+const priorityOptions = RFI_PRIORITY_OPTIONS.filter((opt) => opt.value !== "");
+
+export default function RFICreateModal({
+  txnId,
+  isOpen,
+  onClose,
+}: RFICreateModalProps) {
+  const createRFIItem = useCreateRFIItem(txnId);
+  const [form, setForm] = useState<FormState>({ ...INITIAL_FORM });
+
+  const canSubmit = form.category !== "" && form.question_text.trim() !== "";
+
+  const handleClose = () => {
+    setForm({ ...INITIAL_FORM });
+    onClose();
+  };
 
   const handleSubmit = () => {
-    if (!form.title.trim()) return;
-    const body: RFICreate = {
-      ...form,
-      description: form.description || undefined,
-      recipient_name: form.recipient_name || undefined,
-      recipient_email: form.recipient_email || undefined,
-      recipient_company: form.recipient_company || undefined,
+    if (!canSubmit) return;
+
+    const body: RFIItemCreate = {
+      category: form.category as RFICategoryV2,
+      question_text: form.question_text.trim(),
+      priority: (form.priority || undefined) as RFIPriority | undefined,
+      target_doc: form.target_doc.trim() || undefined,
+      assignee_email: form.assignee_email.trim() || undefined,
       due_date: form.due_date || undefined,
-      notes: form.notes || undefined,
+      internal_memo: form.internal_memo.trim() || undefined,
+      report_section_tag: form.report_section_tag.trim() || undefined,
     };
-    createRFI.mutate(body, {
+
+    createRFIItem.mutate(body, {
       onSuccess: () => {
-        onClose();
-        setForm({ ...INITIAL_FORM });
+        handleClose();
       },
     });
   };
 
+  const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="RFI 생성">
-      <div className="space-y-4">
+    <Modal open={isOpen} onClose={handleClose} title="질의 추가" size="lg">
+      <div className="space-y-5">
+        {/* Row 1: 카테고리 + 우선순위 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="rfi-category"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              카테고리 <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="rfi-category"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              value={form.category}
+              onChange={(e) => update("category", e.target.value)}
+            >
+              <option value="">선택하세요</option>
+              {categoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="rfi-priority"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              우선순위
+            </label>
+            <select
+              id="rfi-priority"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              value={form.priority}
+              onChange={(e) => update("priority", e.target.value)}
+            >
+              {priorityOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: 질의 내용 (full-width textarea) */}
         <div>
-          <label htmlFor="rfi-title" className="block text-sm font-medium text-gray-700 mb-1">제목 *</label>
-          <input
-            id="rfi-title"
-            type="text"
-            className="w-full border rounded px-3 py-2 text-sm"
-            placeholder="예: 1차 RFI — 재무/법률"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          <label
+            htmlFor="rfi-question"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            질의 내용 <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="rfi-question"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+            rows={4}
+            placeholder="질의 내용을 입력하세요"
+            value={form.question_text}
+            onChange={(e) => update("question_text", e.target.value)}
           />
         </div>
 
+        {/* Row 3: 대상 문서 + 담당자 이메일 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="rfi-round" className="block text-sm font-medium text-gray-700 mb-1">라운드</label>
+            <label
+              htmlFor="rfi-target-doc"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              대상 문서
+            </label>
             <input
-              id="rfi-round"
-              type="number"
-              min={1}
-              className="w-full border rounded px-3 py-2 text-sm"
-              value={form.round_number}
-              onChange={(e) => setForm({ ...form, round_number: Number(e.target.value) })}
+              id="rfi-target-doc"
+              type="text"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              placeholder="예: 재무제표, 계약서"
+              value={form.target_doc}
+              onChange={(e) => update("target_doc", e.target.value)}
             />
           </div>
+
           <div>
-            <label htmlFor="rfi-due-date" className="block text-sm font-medium text-gray-700 mb-1">마감일</label>
+            <label
+              htmlFor="rfi-assignee"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              담당자 이메일
+            </label>
+            <input
+              id="rfi-assignee"
+              type="text"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              placeholder="example@company.com"
+              value={form.assignee_email}
+              onChange={(e) => update("assignee_email", e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Row 4: 마감일 + 리포트 섹션 태그 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="rfi-due-date"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              마감일
+            </label>
             <input
               id="rfi-due-date"
               type="date"
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.due_date}
-              onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+              onChange={(e) => update("due_date", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="rfi-section-tag"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              리포트 섹션 태그
+            </label>
+            <input
+              id="rfi-section-tag"
+              type="text"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              placeholder="예: 3.1 재무분석"
+              value={form.report_section_tag}
+              onChange={(e) => update("report_section_tag", e.target.value)}
             />
           </div>
         </div>
 
+        {/* Row 5: 내부 메모 (full-width textarea) */}
         <div>
-          <label htmlFor="rfi-description" className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+          <label
+            htmlFor="rfi-memo"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            내부 메모
+          </label>
           <textarea
-            id="rfi-description"
-            className="w-full border rounded px-3 py-2 text-sm"
+            id="rfi-memo"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
             rows={2}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="내부 참고용 메모 (대상에게 표시되지 않음)"
+            value={form.internal_memo}
+            onChange={(e) => update("internal_memo", e.target.value)}
           />
         </div>
 
-        <div className="border-t pt-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">수신자 정보</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="rfi-recipient-name" className="block text-xs text-gray-500 mb-1">담당자명</label>
-              <input
-                id="rfi-recipient-name"
-                type="text"
-                className="w-full border rounded px-3 py-2 text-sm"
-                value={form.recipient_name}
-                onChange={(e) => setForm({ ...form, recipient_name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="rfi-recipient-email" className="block text-xs text-gray-500 mb-1">이메일</label>
-              <input
-                id="rfi-recipient-email"
-                type="email"
-                className="w-full border rounded px-3 py-2 text-sm"
-                value={form.recipient_email}
-                onChange={(e) => setForm({ ...form, recipient_email: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="mt-2">
-            <label htmlFor="rfi-recipient-company" className="block text-xs text-gray-500 mb-1">회사명</label>
-            <input
-              id="rfi-recipient-company"
-              type="text"
-              className="w-full border rounded px-3 py-2 text-sm"
-              value={form.recipient_company}
-              onChange={(e) => setForm({ ...form, recipient_company: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={onClose}>
+        {/* Footer buttons */}
+        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+          <Button variant="secondary" onClick={handleClose}>
             취소
           </Button>
-          <Button onClick={handleSubmit} disabled={!form.title.trim() || createRFI.isPending}>
-            {createRFI.isPending ? "생성 중..." : "RFI 생성"}
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit || createRFIItem.isPending}
+          >
+            {createRFIItem.isPending ? "생성 중..." : "질의 추가"}
           </Button>
         </div>
       </div>

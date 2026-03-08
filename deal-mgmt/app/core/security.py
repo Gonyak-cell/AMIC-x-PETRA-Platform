@@ -160,6 +160,21 @@ async def check_client_deal_access(
         )
 
 
+# ── RFI 역할 매핑 ──────────────────────────────────────
+
+
+def get_rfi_author_role(claims: JWTClaims) -> RFIAuthorRole:  # noqa: F821
+    """JWT role을 RFI author role로 매핑.
+
+    CLIENT → TARGET, 그 외(ADMIN/MANAGER/ANALYST) → ADVISOR.
+    """
+    from app.models.enums import RFIAuthorRole
+
+    if claims.role == _CLIENT_ROLE:
+        return RFIAuthorRole.TARGET
+    return RFIAuthorRole.ADVISOR
+
+
 # ── 서비스간 JWT 발급 ──────────────────────────────────
 
 _service_token_lock = asyncio.Lock()

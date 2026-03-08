@@ -77,11 +77,10 @@ from app.models.enums import (
     PMICategory,
     PMIPriority,
     PMITaskStatus,
-    RFICategory,
-    RFIItemPriority,
-    RFIItemStatus,
-    RFISourceType,
-    RFIStatus,
+    RFIAuthorRole,
+    RFICategoryV2,
+    RFIItemStatusV2,
+    RFIPriority,
     RiskCategory,
     RiskLikelihood,
     RiskSeverity,
@@ -124,9 +123,9 @@ from app.models.permit_requirement import PermitRequirement
 from app.models.platform_settings import PlatformSettings
 from app.models.pmi_task import PMITask
 from app.models.ralph_session import RalphSession
-from app.models.rfi import RFI
-from app.models.rfi_checklist_mapping import RFIChecklistMapping
-from app.models.rfi_item import RFIItem
+from app.models.rfi_attachment import RFIAttachment
+from app.models.rfi_item_v2 import RFIItemV2
+from app.models.rfi_thread import RFIThread
 from app.models.risk_item import RiskItem
 from app.models.si_company import SICompany
 from app.models.template_variable import TemplateVariable
@@ -142,7 +141,6 @@ from app.models.working_group import WorkingGroupMember
 
 __all__ = [
     "NDA",
-    "RFI",
     "ActionItemStatus",
     "ApprovalRequest",
     "ApprovalStatus",
@@ -247,13 +245,13 @@ __all__ = [
     "PermitRequirementStatus",
     "PermitTimingType",
     "PlatformSettings",
-    "RFICategory",
-    "RFIChecklistMapping",
-    "RFIItem",
-    "RFIItemPriority",
-    "RFIItemStatus",
-    "RFISourceType",
-    "RFIStatus",
+    "RFIAttachment",
+    "RFIAuthorRole",
+    "RFICategoryV2",
+    "RFIItemStatusV2",
+    "RFIItemV2",
+    "RFIPriority",
+    "RFIThread",
     "RalphSession",
     "RiskCategory",
     "RiskItem",

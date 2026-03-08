@@ -715,37 +715,18 @@ class FMChecklistSeverity(enum.StrEnum):
     INFO = "INFO"
 
 
-# ── RFI (Request for Information) ─────────────────────────
+# ── RFI V2 (Request for Information — 질의 원장 + 스레드 이력) ──
 
 
-class RFIStatus(enum.StrEnum):
-    DRAFT = "DRAFT"
-    SENT = "SENT"
-    PARTIALLY_RESPONDED = "PARTIALLY_RESPONDED"
-    FULLY_RESPONDED = "FULLY_RESPONDED"
-    CLOSED = "CLOSED"
-    CANCELLED = "CANCELLED"
-
-
-class RFIItemStatus(enum.StrEnum):
-    PENDING = "PENDING"
-    RESPONDED = "RESPONDED"
+class RFIItemStatusV2(enum.StrEnum):
+    OPEN = "OPEN"
+    ANSWERED = "ANSWERED"
     CLARIFICATION_NEEDED = "CLARIFICATION_NEEDED"
-    ACCEPTED = "ACCEPTED"
-    NOT_APPLICABLE = "NOT_APPLICABLE"
+    CLOSED = "CLOSED"
 
 
-class RFIItemPriority(enum.StrEnum):
-    CRITICAL = "CRITICAL"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-
-
-class RFICategory(enum.StrEnum):
-    GENERAL = "GENERAL"
+class RFICategoryV2(enum.StrEnum):
     FINANCIAL = "FINANCIAL"
-    TAX = "TAX"
     LEGAL = "LEGAL"
     OPERATIONAL = "OPERATIONAL"
     COMMERCIAL = "COMMERCIAL"
@@ -756,16 +737,20 @@ class RFICategory(enum.StrEnum):
     IP = "IP"
     REAL_ESTATE = "REAL_ESTATE"
     VALUATION = "VALUATION"
+    CORPORATE = "CORPORATE"
+    TAX = "TAX"
     OTHER = "OTHER"
 
 
-class RFISourceType(enum.StrEnum):
-    MANUAL = "MANUAL"
-    IM_CHECKLIST = "IM_CHECKLIST"
-    FDD_CHECKLIST = "FDD_CHECKLIST"
-    DD_CHECKLIST = "DD_CHECKLIST"
-    EXCEL_IMPORT = "EXCEL_IMPORT"
-    AI_SUGGESTED = "AI_SUGGESTED"
+class RFIPriority(enum.StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RFIAuthorRole(enum.StrEnum):
+    ADVISOR = "ADVISOR"
+    TARGET = "TARGET"
 
 
 # ── Document Extraction (AI 문서 분류/추출) ──────────────

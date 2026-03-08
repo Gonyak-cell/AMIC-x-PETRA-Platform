@@ -2,229 +2,178 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type {
-  RFI,
-  RFICreate,
-  RFIDetail,
-  RFIExcelImportResult,
-  RFIItem,
+  RFIItemV2,
+  RFIItemListOut,
   RFIItemCreate,
-  RFIItemRespondInput,
-  RFIItemReviewInput,
   RFIItemUpdate,
-  RFISummary,
-  RFIUpdate,
+  RFIItemBatchCreate,
+  RFIThreadCreate,
+  RFIThread,
+  RFIAttachment,
+  RFIAttachmentMapInput,
+  RFIDashboardSummary,
+  RFIExcelImportResult,
   RFIAutoGenerateResult,
+  RFIReportPayload,
 } from "@/modules/ma/types/rfi";
 
 const KEY = "ma";
-const rfiKeys = (txnId: string) => [KEY, "transactions", txnId, "rfis"];
+const rfiKeys = (txnId: string) => [KEY, "transactions", txnId, "rfi"];
 
-/** 서버 에러 응답에서 detail 메시지를 추출한다. */
 function extractErrorDetail(err: unknown): string | undefined {
   return (err as { response?: { data?: { detail?: string } } })?.response?.data
     ?.detail;
 }
 
-// ── RFI 목록 ──────────────────────────────────────────
+/* ------------------------------------------------------------------ */
+/*  Queries                                                           */
+/* ------------------------------------------------------------------ */
 
-export function useRFIs(txnId: string, status?: string, roundNumber?: number) {
-  return useQuery<RFI[]>({
-    queryKey: [...rfiKeys(txnId), { status, roundNumber }],
+interface RFIItemFilters {
+  category?: string;
+  status?: string;
+  priority?: string;
+  search?: string;
+}
+
+/** 1. RFI 항목 목록 */
+export function useRFIItems(txnId: string, filters?: RFIItemFilters) {
+  return useQuery<RFIItemListOut>({
+    queryKey: [...rfiKeys(txnId), "items", filters ?? {}],
     queryFn: async () => {
-      const params: Record<string, string | number> = {};
-      if (status) params.status = status;
-      if (roundNumber) params.round_number = roundNumber;
-      const { data } = await maApi.get(`/transactions/${txnId}/rfis`, {
-        params,
-      });
+      const params: Record<string, string> = {};
+      if (filters?.category) params.category = filters.category;
+      if (filters?.status) params.status = filters.status;
+      if (filters?.priority) params.priority = filters.priority;
+      if (filters?.search) params.search = filters.search;
+      const { data } = await maApi.get<RFIItemListOut>(
+        `/transactions/${txnId}/rfi/items`,
+        { params },
+      );
       return data;
     },
     enabled: !!txnId,
   });
 }
 
-// ── RFI 상세 ──────────────────────────────────────────
-
-export function useRFI(txnId: string, rfiId: string) {
-  return useQuery<RFIDetail>({
-    queryKey: [...rfiKeys(txnId), rfiId],
+/** 2. RFI 항목 상세 */
+export function useRFIItem(txnId: string, itemId: string) {
+  return useQuery<RFIItemV2>({
+    queryKey: [...rfiKeys(txnId), "items", itemId],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/rfis/${rfiId}`);
+      const { data } = await maApi.get<RFIItemV2>(
+        `/transactions/${txnId}/rfi/items/${itemId}`,
+      );
       return data;
     },
-    enabled: !!txnId && !!rfiId,
+    enabled: !!txnId && !!itemId,
   });
 }
 
-// ── RFI Summary ───────────────────────────────────────
-
-export function useRFISummary(txnId: string) {
-  return useQuery<RFISummary>({
-    queryKey: [...rfiKeys(txnId), "summary"],
+/** 3. RFI 대시보드 요약 */
+export function useRFIDashboard(txnId: string) {
+  return useQuery<RFIDashboardSummary>({
+    queryKey: [...rfiKeys(txnId), "dashboard"],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/rfis/summary`);
+      const { data } = await maApi.get<RFIDashboardSummary>(
+        `/transactions/${txnId}/rfi/dashboard`,
+      );
       return data;
     },
     enabled: !!txnId,
   });
 }
 
-// ── RFI CRUD ──────────────────────────────────────────
-
-export function useCreateRFI(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body: RFICreate) => {
-      const { data } = await maApi.post(`/transactions/${txnId}/rfis`, body);
-      return data as RFI;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("RFI가 생성되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 생성에 실패했습니다."),
-  });
-}
-
-export function useUpdateRFI(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ rfiId, body }: { rfiId: string; body: RFIUpdate }) => {
-      const { data } = await maApi.patch(
-        `/transactions/${txnId}/rfis/${rfiId}`,
-        body,
+/** 9. RFI 스레드 목록 */
+export function useRFIThreads(txnId: string, itemId: string) {
+  return useQuery<RFIThread[]>({
+    queryKey: [...rfiKeys(txnId), "items", itemId, "threads"],
+    queryFn: async () => {
+      const { data } = await maApi.get<RFIThread[]>(
+        `/transactions/${txnId}/rfi/items/${itemId}/threads`,
       );
-      return data as RFI;
+      return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("RFI가 수정되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 수정에 실패했습니다."),
+    enabled: !!txnId && !!itemId,
   });
 }
 
-export function useDeleteRFI(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (rfiId: string) => {
-      await maApi.delete(`/transactions/${txnId}/rfis/${rfiId}`);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("RFI가 삭제되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 삭제에 실패했습니다."),
-  });
-}
-
-// ── RFI 워크플로우 ────────────────────────────────────
-
-export function useSendRFI(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (rfiId: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/send`,
+/** 11. 미매핑 첨부파일 목록 */
+export function useUnassignedAttachments(txnId: string) {
+  return useQuery<RFIAttachment[]>({
+    queryKey: [...rfiKeys(txnId), "attachments", "unassigned"],
+    queryFn: async () => {
+      const { data } = await maApi.get<RFIAttachment[]>(
+        `/transactions/${txnId}/rfi/attachments/unassigned`,
       );
-      return data as RFI;
+      return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("RFI가 발송되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 발송에 실패했습니다."),
+    enabled: !!txnId,
   });
 }
 
-export function useCloseRFI(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (rfiId: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/close`,
+/** 18. RFI 리포트 페이로드 */
+export function useRFIReportPayload(txnId: string) {
+  return useQuery<RFIReportPayload>({
+    queryKey: [...rfiKeys(txnId), "report-payload"],
+    queryFn: async () => {
+      const { data } = await maApi.get<RFIReportPayload>(
+        `/transactions/${txnId}/rfi/report-payload`,
       );
-      return data as RFI;
+      return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("RFI가 마감되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 마감에 실패했습니다."),
+    enabled: !!txnId,
   });
 }
 
-export function useExtendRFIDeadline(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      rfiId,
-      dueDate,
-    }: {
-      rfiId: string;
-      dueDate: string;
-    }) => {
-      const { data } = await maApi.patch(
-        `/transactions/${txnId}/rfis/${rfiId}/extend-deadline`,
-        { due_date: dueDate },
-      );
-      return data as RFI;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("마감일이 연장되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "마감일 연장에 실패했습니다."),
-  });
-}
+/* ------------------------------------------------------------------ */
+/*  Mutations                                                         */
+/* ------------------------------------------------------------------ */
 
-// ── RFI Item CRUD ─────────────────────────────────────
-
-export function useCreateRFIItem(txnId: string, rfiId: string) {
+/** 4. RFI 항목 생성 */
+export function useCreateRFIItem(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: RFIItemCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/items`,
+      const { data } = await maApi.post<RFIItemV2>(
+        `/transactions/${txnId}/rfi/items`,
         body,
       );
-      return data as RFIItem;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("질문이 추가되었습니다.");
+      toast.success("질의가 생성되었습니다");
     },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "질문 추가에 실패했습니다."),
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "질의 생성에 실패했습니다");
+    },
   });
 }
 
-export function useBatchCreateRFIItems(txnId: string, rfiId: string) {
+/** 5. RFI 항목 일괄 생성 */
+export function useBatchCreateRFIItems(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (items: RFIItemCreate[]) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/items/batch`,
-        { items },
+    mutationFn: async (body: RFIItemBatchCreate) => {
+      const { data } = await maApi.post<RFIItemV2[]>(
+        `/transactions/${txnId}/rfi/items/batch`,
+        body,
       );
-      return data as RFIItem[];
+      return data;
     },
     onSuccess: (items) => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success(`${items.length}개 질문이 추가되었습니다.`);
+      toast.success(`${items.length}개 질의가 생성되었습니다`);
     },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "질문 일괄 추가에 실패했습니다."),
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "일괄 생성에 실패했습니다");
+    },
   });
 }
 
-export function useUpdateRFIItem(txnId: string, rfiId: string) {
+/** 6. RFI 항목 수정 */
+export function useUpdateRFIItem(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
@@ -234,184 +183,234 @@ export function useUpdateRFIItem(txnId: string, rfiId: string) {
       itemId: string;
       body: RFIItemUpdate;
     }) => {
-      const { data } = await maApi.patch(
-        `/transactions/${txnId}/rfis/${rfiId}/items/${itemId}`,
+      const { data } = await maApi.patch<RFIItemV2>(
+        `/transactions/${txnId}/rfi/items/${itemId}`,
         body,
-      );
-      return data as RFIItem;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("질문이 수정되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "질문 수정에 실패했습니다."),
-  });
-}
-
-export function useDeleteRFIItem(txnId: string, rfiId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (itemId: string) => {
-      await maApi.delete(
-        `/transactions/${txnId}/rfis/${rfiId}/items/${itemId}`,
-      );
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("질문이 삭제되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "질문 삭제에 실패했습니다."),
-  });
-}
-
-// ── 응답 / 검토 ───────────────────────────────────────
-
-export function useRespondRFIItem(txnId: string, rfiId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      itemId,
-      body,
-    }: {
-      itemId: string;
-      body: RFIItemRespondInput;
-    }) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/items/${itemId}/respond`,
-        body,
-      );
-      return data as RFIItem;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("응답이 저장되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "응답 저장에 실패했습니다."),
-  });
-}
-
-export function useReviewRFIItem(txnId: string, rfiId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      itemId,
-      body,
-    }: {
-      itemId: string;
-      body: RFIItemReviewInput;
-    }) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/items/${itemId}/review`,
-        body,
-      );
-      return data as RFIItem;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("검토가 완료되었습니다.");
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "검토에 실패했습니다."),
-  });
-}
-
-// ── 자동 생성 ─────────────────────────────────────────
-
-export function useGenerateRFIFromDD(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (title?: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/generate-from-dd`,
-        { title: title || "DD 체크리스트 기반 RFI" },
-      );
-      return data as RFIAutoGenerateResult;
-    },
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      // DD 체크리스트 캐시도 무효화 (DD 기반 RFI 생성 시 항목 연동 가능)
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "dd-checklist"],
-      });
-      toast.success(`RFI 생성 완료: ${result.items_created}개 질문`);
-    },
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "RFI 자동 생성에 실패했습니다."),
-  });
-}
-
-// ── 동기화 ────────────────────────────────────────────
-
-export function useSyncRFIToChecklists(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (rfiId: string) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/rfis/${rfiId}/sync-to-checklists`,
-      );
-      return data as { synced: number };
-    },
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      // DD 체크리스트 캐시도 무효화 (동기화된 항목 반영)
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "dd-checklist"],
-      });
-      toast.success(`${result.synced}개 항목이 체크리스트에 반영되었습니다.`);
-    },
-    onError: (err: unknown) =>
-      toast.error(
-        extractErrorDetail(err) || "체크리스트 동기화에 실패했습니다.",
-      ),
-  });
-}
-
-// ── Excel 내보내기 ────────────────────────────────────
-
-export function useExportRFI(txnId: string) {
-  return useMutation({
-    mutationFn: async (rfiId: string) => {
-      const { data } = await maApi.get(
-        `/transactions/${txnId}/rfis/${rfiId}/export`,
-        { responseType: "blob" },
-      );
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `RFI_${rfiId}.xlsx`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    },
-    onSuccess: () => toast.success("Excel 파일이 다운로드되었습니다."),
-    onError: (err: unknown) =>
-      toast.error(extractErrorDetail(err) || "Excel 내보내기에 실패했습니다."),
-  });
-}
-
-// ── Excel 가져오기 ────────────────────────────────────
-
-export function useImportRFI(txnId: string, rfiId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const { data } = await maApi.post<RFIExcelImportResult>(
-        `/transactions/${txnId}/rfis/${rfiId}/import`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
       );
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      toast.success("Excel 가져오기가 완료되었습니다.");
+      toast.success("질의가 수정되었습니다");
     },
-    onError: (err: unknown) => {
-      toast.error(extractErrorDetail(err) || "Excel 가져오기에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "질의 수정에 실패했습니다");
+    },
+  });
+}
+
+/** 7. RFI 항목 삭제 */
+export function useDeleteRFIItem(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      await maApi.delete(`/transactions/${txnId}/rfi/items/${itemId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      toast.success("질의가 삭제되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "질의 삭제에 실패했습니다");
+    },
+  });
+}
+
+/** 8. RFI 항목 마감 */
+export function useCloseRFIItem(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      const { data } = await maApi.patch<RFIItemV2>(
+        `/transactions/${txnId}/rfi/items/${itemId}/close`,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      toast.success("질의가 마감되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "질의 마감에 실패했습니다");
+    },
+  });
+}
+
+/** 10. 스레드(답변) 생성 */
+export function useCreateThread(txnId: string, itemId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RFIThreadCreate) => {
+      const { data } = await maApi.post<RFIThread>(
+        `/transactions/${txnId}/rfi/items/${itemId}/threads`,
+        body,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: [...rfiKeys(txnId), "items", itemId, "threads"],
+      });
+      qc.invalidateQueries({ queryKey: [...rfiKeys(txnId), "items", itemId] });
+      toast.success("답변이 등록되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "답변 등록에 실패했습니다");
+    },
+  });
+}
+
+/** 12. 첨부파일 업로드 */
+export function useUploadAttachments(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      const { data } = await maApi.post<RFIAttachment[]>(
+        `/transactions/${txnId}/rfi/attachments`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return data;
+    },
+    onSuccess: (attachments) => {
+      qc.invalidateQueries({
+        queryKey: [...rfiKeys(txnId), "attachments"],
+      });
+      toast.success(`${attachments.length}개 파일이 업로드되었습니다`);
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "파일 업로드에 실패했습니다");
+    },
+  });
+}
+
+/** 13. 첨부파일 매핑 */
+export function useMapAttachment(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      fileId,
+      body,
+    }: {
+      fileId: string;
+      body: RFIAttachmentMapInput;
+    }) => {
+      const { data } = await maApi.post<RFIAttachment>(
+        `/transactions/${txnId}/rfi/attachments/${fileId}/map`,
+        body,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      toast.success("파일이 매핑되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "파일 매핑에 실패했습니다");
+    },
+  });
+}
+
+/** 14. 첨부파일 삭제 */
+export function useDeleteAttachment(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (fileId: string) => {
+      await maApi.delete(`/transactions/${txnId}/rfi/attachments/${fileId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: [...rfiKeys(txnId), "attachments"],
+      });
+      toast.success("파일이 삭제되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "파일 삭제에 실패했습니다");
+    },
+  });
+}
+
+/** 15. Excel 내보내기 */
+export function useExportRFI(txnId: string) {
+  return useMutation({
+    mutationFn: async (roleType?: string) => {
+      const { data } = await maApi.get(`/transactions/${txnId}/rfi/export`, {
+        params: roleType ? { role_type: roleType } : undefined,
+        responseType: "blob",
+      });
+      return data as Blob;
+    },
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `rfi_export_${txnId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Excel 파일이 다운로드되었습니다");
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "Excel 내보내기에 실패했습니다");
+    },
+  });
+}
+
+/** 16. Excel 가져오기 */
+export function useImportRFI(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await maApi.post<RFIExcelImportResult>(
+        `/transactions/${txnId}/rfi/import`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return data;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+
+      const errors = result.errors ?? 0;
+      const conflicts = result.conflicts ?? 0;
+
+      if (errors > 0 || conflicts > 0) {
+        toast.warning(`가져오기 실패: ${errors}건 오류, ${conflicts}건 충돌`);
+      } else {
+        const updated = result.updated ?? 0;
+        const mapped = result.file_mapped ?? 0;
+        toast.success(
+          `가져오기 완료: ${updated}건 업데이트, ${mapped}건 파일 매핑`,
+        );
+      }
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "Excel 가져오기에 실패했습니다");
+    },
+  });
+}
+
+/** 17. AI RFI 자동 생성 */
+export function useGenerateRFI(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      const { data } = await maApi.post<RFIAutoGenerateResult>(
+        `/transactions/${txnId}/rfi/generate`,
+        body,
+      );
+      return data;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
+      const count = result.items?.length ?? 0;
+      toast.success(`AI 생성 완료: ${count}개 질의`);
+    },
+    onError: (err) => {
+      toast.error(extractErrorDetail(err) ?? "AI RFI 생성에 실패했습니다");
     },
   });
 }

@@ -1,4 +1,4 @@
-import type { RFIStatus } from "../types/rfi";
+import type { RFIItemStatusV2 } from "../types/rfi";
 import type { NegotiationIssueStatus } from "../types/negotiation_issue";
 import type { MeetingStatus, ActionItemStatus } from "../types/meeting_log";
 
@@ -15,13 +15,11 @@ export const TRANSACTION_STATUS_VARIANT: Record<string, BadgeVariant> = {
   BID_DROPPED: "error",
 };
 
-export const RFI_STATUS_VARIANT: Record<RFIStatus, BadgeVariant> = {
-  DRAFT: "neutral",
-  SENT: "info",
-  PARTIALLY_RESPONDED: "warning",
-  FULLY_RESPONDED: "success",
+export const RFI_ITEM_STATUS_VARIANT: Record<RFIItemStatusV2, BadgeVariant> = {
+  OPEN: "warning",
+  ANSWERED: "success",
+  CLARIFICATION_NEEDED: "info",
   CLOSED: "neutral",
-  CANCELLED: "error",
 };
 
 export const NEGOTIATION_ISSUE_STATUS_VARIANT: Record<

@@ -1,26 +1,15 @@
-// ── RFI Status ────────────────────────────────────────
+// ── RFI V2 Types — 질의 원장 + 스레드 이력 기반 ──────────
 
-export type RFIStatus =
-  | "DRAFT"
-  | "SENT"
-  | "PARTIALLY_RESPONDED"
-  | "FULLY_RESPONDED"
-  | "CLOSED"
-  | "CANCELLED";
+// ── Enums ────────────────────────────────────────────────
 
-export type RFIItemStatus =
-  | "PENDING"
-  | "RESPONDED"
+export type RFIItemStatusV2 =
+  | "OPEN"
+  | "ANSWERED"
   | "CLARIFICATION_NEEDED"
-  | "ACCEPTED"
-  | "NOT_APPLICABLE";
+  | "CLOSED";
 
-export type RFIItemPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-
-export type RFICategory =
-  | "GENERAL"
+export type RFICategoryV2 =
   | "FINANCIAL"
-  | "TAX"
   | "LEGAL"
   | "OPERATIONAL"
   | "COMMERCIAL"
@@ -31,172 +20,169 @@ export type RFICategory =
   | "IP"
   | "REAL_ESTATE"
   | "VALUATION"
+  | "CORPORATE"
+  | "TAX"
   | "OTHER";
 
-export type RFISourceType =
-  | "MANUAL"
-  | "IM_CHECKLIST"
-  | "FDD_CHECKLIST"
-  | "DD_CHECKLIST"
-  | "EXCEL_IMPORT"
-  | "AI_SUGGESTED";
+export type RFIPriority = "HIGH" | "MEDIUM" | "LOW";
 
-// ── RFI ───────────────────────────────────────────────
+export type RFIAuthorRole = "ADVISOR" | "TARGET";
 
-export interface RFI {
+// ── Thread (답변/추가질의 — insert-only) ─────────────────
+
+export interface RFIThread {
   id: string;
-  transaction_id: string;
-  round_number: number;
-  title: string;
-  description: string | null;
-  status: RFIStatus;
-  recipient_name: string | null;
-  recipient_email: string | null;
-  recipient_company: string | null;
-  due_date: string | null;
-  sent_at: string | null;
-  closed_at: string | null;
-  total_items: number;
-  responded_items: number;
-  accepted_items: number;
-  created_by_email: string | null;
-  notes: string | null;
+  item_id: string;
+  round_num: number;
+  author_email: string;
+  author_role: RFIAuthorRole;
+  content_text: string;
+  is_published: boolean;
   created_at: string;
-  updated_at: string;
 }
 
-export interface RFIDetail extends RFI {
-  items: RFIItem[];
-}
+// ── Attachment (증빙 자료) ───────────────────────────────
 
-// ── RFI Item ──────────────────────────────────────────
-
-export interface RFIChecklistMapping {
+export interface RFIAttachment {
   id: string;
-  rfi_item_id: string;
-  target_module: string;
-  target_checklist_id: string | null;
-  target_item_id: string | null;
-  target_field_key: string | null;
-  synced: boolean;
-  synced_at: string | null;
-  synced_value: string | null;
-}
-
-export interface RFIItem {
-  id: string;
-  rfi_id: string;
+  thread_id: string | null;
+  item_id: string | null;
   transaction_id: string;
-  question_number: number;
-  category: RFICategory;
-  question: string;
-  question_detail: string | null;
-  priority: RFIItemPriority;
-  response: string | null;
-  response_documents: Record<string, unknown>[] | null;
-  responded_at: string | null;
-  responded_by: string | null;
-  reviewer_comment: string | null;
-  reviewer_email: string | null;
-  status: RFIItemStatus;
+  vdr_index: string | null;
+  file_name: string;
+  file_url: string;
+  is_mapped: boolean;
+  created_at: string;
+}
+
+// ── RFI Item (질의 원장) ────────────────────────────────
+
+export interface RFIItemV2 {
+  id: string;
+  transaction_id: string;
+  item_number: string;
+  category: RFICategoryV2;
+  priority: RFIPriority;
+  target_doc: string | null;
+  question_text: string;
+  current_status: RFIItemStatusV2;
+  internal_memo: string | null;
+  report_section_tag: string | null;
   assignee_email: string | null;
   due_date: string | null;
-  source_type: RFISourceType;
-  source_ref_id: string | null;
-  source_ref_key: string | null;
-  vdr_document_ids: string[] | null;
-  notes: string | null;
-  follow_up_question: string | null;
-  checklist_mappings: RFIChecklistMapping[];
+  created_by_email: string | null;
+  version: number;
+  is_deleted: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
+  threads: RFIThread[];
+  attachments: RFIAttachment[];
 }
 
-// ── Create / Update ───────────────────────────────────
-
-export interface RFICreate {
-  round_number?: number;
-  title: string;
-  description?: string;
-  recipient_name?: string;
-  recipient_email?: string;
-  recipient_company?: string;
-  due_date?: string;
-  notes?: string;
+export interface RFIItemListOut {
+  id: string;
+  transaction_id: string;
+  item_number: string;
+  category: RFICategoryV2;
+  priority: RFIPriority;
+  target_doc: string | null;
+  question_text: string;
+  current_status: RFIItemStatusV2;
+  report_section_tag: string | null;
+  assignee_email: string | null;
+  due_date: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string | null;
+  thread_count: number;
+  attachment_count: number;
 }
 
-export interface RFIUpdate {
-  title?: string;
-  description?: string;
-  recipient_name?: string;
-  recipient_email?: string;
-  recipient_company?: string;
-  due_date?: string;
-  notes?: string;
-}
+// ── Create / Update ─────────────────────────────────────
 
 export interface RFIItemCreate {
-  category: RFICategory;
-  question: string;
-  question_detail?: string;
-  priority?: RFIItemPriority;
+  category: RFICategoryV2;
+  question_text: string;
+  priority?: RFIPriority;
+  target_doc?: string;
   assignee_email?: string;
   due_date?: string;
-  source_type?: RFISourceType;
-  source_ref_id?: string;
-  source_ref_key?: string;
-  notes?: string;
+  internal_memo?: string;
+  report_section_tag?: string;
 }
 
 export interface RFIItemUpdate {
-  category?: RFICategory;
-  question?: string;
-  question_detail?: string;
-  priority?: RFIItemPriority;
+  category?: RFICategoryV2;
+  question_text?: string;
+  priority?: RFIPriority;
+  target_doc?: string;
   assignee_email?: string;
   due_date?: string;
-  status?: RFIItemStatus;
-  notes?: string;
+  internal_memo?: string;
+  report_section_tag?: string;
+  current_status?: RFIItemStatusV2;
+  version: number;
 }
 
-export interface RFIItemRespondInput {
-  response: string;
-  response_documents?: Record<string, unknown>[];
+export interface RFIItemBatchCreate {
+  items: RFIItemCreate[];
 }
 
-export interface RFIItemReviewInput {
-  status: "ACCEPTED" | "CLARIFICATION_NEEDED";
-  reviewer_comment?: string;
-  follow_up_question?: string;
+export interface RFIThreadCreate {
+  content_text: string;
+  is_published?: boolean;
 }
 
-// ── Summary ───────────────────────────────────────────
+export interface RFIAttachmentMapInput {
+  item_id?: string;
+  thread_id?: string;
+}
 
-export interface RFICategorySummary {
-  category: RFICategory;
+// ── Dashboard ───────────────────────────────────────────
+
+export interface RFICategoryBreakdown {
+  category: string;
   total: number;
-  responded: number;
-  accepted: number;
-  pending: number;
+  open: number;
+  answered: number;
+  closed: number;
+  clarification_needed: number;
+  response_pct: number;
 }
 
-export interface RFISummary {
-  total_rfis: number;
+export interface RFIDashboardSummary {
   total_items: number;
-  responded_items: number;
-  accepted_items: number;
-  overall_response_pct: number;
-  overdue_items: number;
-  by_category: RFICategorySummary[];
+  status_counts: Record<string, number>;
+  category_breakdown: RFICategoryBreakdown[];
+  aging_items: RFIItemListOut[];
 }
 
-export interface RFIAutoGenerateResult {
-  rfi_id: string;
-  items_created: number;
-}
+// ── Excel ───────────────────────────────────────────────
 
 export interface RFIExcelImportResult {
-  items_imported: number;
   items_updated: number;
-  errors: string[];
+  threads_created: number;
+  files_matched: number;
+  files_unmatched: number;
+  errors: Array<Record<string, string | number>>;
+  conflicts: Array<Record<string, string | number>>;
+}
+
+// ── Report Bridge ───────────────────────────────────────
+
+export interface RFIVerifiedFact {
+  original_question: string;
+  target_company_answers: string[];
+  referenced_vdr_files: string[];
+}
+
+export interface RFIReportPayload {
+  report_section: string;
+  verified_facts: RFIVerifiedFact[];
+}
+
+// ── AI Generate ─────────────────────────────────────────
+
+export interface RFIAutoGenerateResult {
+  items_created: number;
 }

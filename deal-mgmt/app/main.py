@@ -113,7 +113,7 @@ app = FastAPI(
         {"name": "Transcription", "description": "녹음 변환 — 오디오 업로드 + Clova STT + LLM 회의록 자동 생성"},
         {
             "name": "RFI",
-            "description": "RFI (Request for Information) — 정보 요청 관리, Excel 가져오기/내보내기, 체크리스트 연동",
+            "description": "RFI V2 — 질의 원장 + 스레드 이력, 동적 Excel, 퍼지 매칭 파일 매핑, 보고서 브릿지",
         },
         {
             "name": "Document Extraction",
@@ -179,7 +179,7 @@ from app.routers import (
     permits,
     pmi,
     ralph,
-    rfi,
+    rfi_v2,
     risks,
     si_mapping,
     spa_analysis,
@@ -234,7 +234,7 @@ app.include_router(permits.router, prefix="/api/v1")
 app.include_router(permits.kb_router, prefix="/api/v1")
 app.include_router(client_portal.router, prefix="/api/v1")
 app.include_router(transcription.router, prefix="/api/v1")
-app.include_router(rfi.router, prefix="/api/v1")
+app.include_router(rfi_v2.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(vdr_internal.router, prefix="/api/v1")
 app.include_router(document_extraction.router, prefix="/api/v1")
