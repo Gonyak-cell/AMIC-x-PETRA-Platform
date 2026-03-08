@@ -20,8 +20,6 @@ import {
 import { RFI_ITEM_STATUS_VARIANT } from "@/modules/ma/constants/status-variants";
 import type {
   RFIItemListOut,
-  RFICategoryV2,
-  RFIItemStatusV2,
   RFIPriority,
 } from "@/modules/ma/types/rfi";
 

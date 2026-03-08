@@ -158,8 +158,8 @@ export default function RFIDashboard({ txnId }: RFIDashboardProps) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `${value}건`,
+                  formatter={(value: number | undefined, name: string) => [
+                    `${value ?? 0}건`,
                     name,
                   ]}
                 />
@@ -190,7 +190,7 @@ export default function RFIDashboard({ txnId }: RFIDashboardProps) {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`${value}%`, "응답률"]}
+                  formatter={(value: number | undefined) => [`${value ?? 0}%`, "응답률"]}
                 />
                 <Bar
                   dataKey="response_pct"
