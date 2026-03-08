@@ -65,7 +65,7 @@ export default function VdrFolderTree({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto py-1 pb-6">
+      <div className="flex-1 overflow-y-auto py-1 pb-16">
         {folders.map((folder) => (
           <VdrFolderItem
             key={folder.id}
