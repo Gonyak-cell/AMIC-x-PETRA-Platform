@@ -159,16 +159,19 @@ async def generate_rfi_items(
         logger.warning("AI RFI 생성: 유효한 질의가 없습니다 (txn=%s)", txn_id)
         return 0, cost_delta, model_used
 
-    # DB에 저장 — 각 item마다 현재 count 기반 채번 (rfi_v2_service._next_item_number 동일 로직)
+    # DB에 저장 — 초기 count 1회 조회 후 메모리에서 증분 (N+1 방지)
     year = datetime.now(UTC).year
+    count_result = await db.execute(
+        select(func.count(RFIItemV2.id)).where(RFIItemV2.transaction_id == txn_id),
+    )
+    base_seq = count_result.scalar() or 0
     created = 0
     for item_data in parsed:
-        count_result = await db.execute(select(func.count(RFIItemV2.id)).where(RFIItemV2.transaction_id == txn_id))
-        seq = (count_result.scalar() or 0) + 1
+        base_seq += 1
         item = RFIItemV2(
             id=uuid.uuid4(),
             transaction_id=txn_id,
-            item_number=f"RFI-{year}-{seq:03d}",
+            item_number=f"RFI-{year}-{base_seq:03d}",
             category=RFICategoryV2(item_data["category"]),
             priority=RFIPriority(item_data["priority"]),
             target_doc=item_data.get("target_doc") or None,

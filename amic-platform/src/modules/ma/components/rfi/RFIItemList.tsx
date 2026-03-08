@@ -36,6 +36,21 @@ interface RFIItemListProps {
   onSelectItem: (itemId: string) => void;
 }
 
+// ── Helpers (pure, no component state dependency) ────
+function formatDate(iso: string | null): string {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max) + "...";
+}
+
 // ── Component ──────────────────────────────────────────
 export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
   const [category, setCategory] = useState("");
@@ -70,20 +85,6 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
     e.stopPropagation();
     if (!window.confirm("이 질의를 삭제하시겠습니까?")) return;
     deleteMutation.mutate(itemId);
-  };
-
-  const formatDate = (iso: string | null): string => {
-    if (!iso) return "-";
-    return new Date(iso).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
-
-  const truncate = (text: string, max: number): string => {
-    if (text.length <= max) return text;
-    return text.slice(0, max) + "...";
   };
 
   // ── Filter bar ─────────────────────────────────────

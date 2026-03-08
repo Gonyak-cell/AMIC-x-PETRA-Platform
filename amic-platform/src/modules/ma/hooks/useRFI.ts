@@ -85,6 +85,7 @@ export function useRFIDashboard(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 30_000,
   });
 }
 
@@ -127,6 +128,7 @@ export function useRFIReportPayload(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    staleTime: 60_000,
   });
 }
 
