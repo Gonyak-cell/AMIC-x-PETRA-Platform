@@ -183,6 +183,15 @@ export interface RFIReportPayload {
 
 // ── AI Generate ─────────────────────────────────────────
 
+export interface RFIAutoGenerateRequest {
+  industry: string;
+  deal_purpose: string;
+  focus_areas: string[];
+  additional_context?: string;
+}
+
 export interface RFIAutoGenerateResult {
   items_created: number;
+  cost_usd: number;
+  model_used: string;
 }

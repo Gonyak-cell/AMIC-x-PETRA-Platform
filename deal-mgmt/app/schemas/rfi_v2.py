@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import RFIAuthorRole, RFICategoryV2, RFIItemStatusV2, RFIPriority
 
@@ -13,7 +13,7 @@ from app.models.enums import RFIAuthorRole, RFICategoryV2, RFIItemStatusV2, RFIP
 
 
 class RFIThreadCreate(BaseModel):
-    content_text: str = Field(..., min_length=1)
+    content_text: str = Field(..., min_length=1, max_length=10000)
     is_published: bool = True
 
 
@@ -55,29 +55,35 @@ class RFIAttachmentMapInput(BaseModel):
     item_id: uuid.UUID | None = None
     thread_id: uuid.UUID | None = None
 
+    @model_validator(mode="after")
+    def require_at_least_one(self) -> RFIAttachmentMapInput:
+        if self.item_id is None and self.thread_id is None:
+            raise ValueError("item_id 또는 thread_id 중 하나는 필수입니다")
+        return self
+
 
 # ── RFI Item ──────────────────────────────────────────────
 
 
 class RFIItemCreateV2(BaseModel):
     category: RFICategoryV2
-    question_text: str = Field(..., min_length=1)
+    question_text: str = Field(..., min_length=1, max_length=5000)
     priority: RFIPriority = RFIPriority.MEDIUM
     target_doc: str | None = Field(None, max_length=100)
     assignee_email: str | None = Field(None, max_length=255)
     due_date: str | None = Field(None, max_length=10)
-    internal_memo: str | None = None
+    internal_memo: str | None = Field(None, max_length=5000)
     report_section_tag: str | None = Field(None, max_length=100)
 
 
 class RFIItemUpdateV2(BaseModel):
     category: RFICategoryV2 | None = None
-    question_text: str | None = Field(None, min_length=1)
+    question_text: str | None = Field(None, min_length=1, max_length=5000)
     priority: RFIPriority | None = None
     target_doc: str | None = Field(None, max_length=100)
     assignee_email: str | None = Field(None, max_length=255)
     due_date: str | None = Field(None, max_length=10)
-    internal_memo: str | None = None
+    internal_memo: str | None = Field(None, max_length=5000)
     report_section_tag: str | None = Field(None, max_length=100)
     current_status: RFIItemStatusV2 | None = None
     version: int = Field(..., description="낙관적 락 — DB 버전과 일치해야 수정 가능")
@@ -187,10 +193,21 @@ class RFIItemBatchCreate(BaseModel):
 class RFIAutoGenerateRequest(BaseModel):
     """AI 초기 RFI 생성 요청."""
 
-    industry: str = Field(..., min_length=1, description="산업군 (예: 제조업, IT, 헬스케어)")
-    deal_purpose: str = Field(..., min_length=1, description="거래 목적 (예: 경영권 인수, 소수 지분 투자)")
-    focus_areas: list[str] = Field(default_factory=list, description="중점 분석 영역 (예: 재무, 법률, 노무)")
-    additional_context: str = Field(default="", description="추가 컨텍스트")
+    industry: str = Field(..., min_length=1, max_length=200, description="산업군 (예: 제조업, IT, 헬스케어)")
+    deal_purpose: str = Field(
+        ..., min_length=1, max_length=500, description="거래 목적 (예: 경영권 인수, 소수 지분 투자)"
+    )
+    focus_areas: list[str] = Field(
+        default_factory=list, max_length=20, description="중점 분석 영역 (예: 재무, 법률, 노무)"
+    )
+    additional_context: str = Field(default="", max_length=2000, description="추가 컨텍스트")
+
+    @model_validator(mode="after")
+    def validate_focus_area_lengths(self) -> RFIAutoGenerateRequest:
+        for i, area in enumerate(self.focus_areas):
+            if len(area) > 100:
+                raise ValueError(f"focus_areas[{i}]는 100자 이내여야 합니다")
+        return self
 
 
 class RFIAutoGenerateResult(BaseModel):

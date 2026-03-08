@@ -54,7 +54,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
     return f;
   }, [category, status, priority, search]);
 
-  const { data, isLoading } = useRFIItems(txnId, filters);
+  const { data, isLoading, isError } = useRFIItems(txnId, filters);
   const deleteMutation = useDeleteRFIItem(txnId);
 
   const items: RFIItemListOut[] = Array.isArray(data) ? data : [];
@@ -70,6 +70,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
 
   const handleDelete = (e: React.MouseEvent, itemId: string) => {
     e.stopPropagation();
+    if (!window.confirm("이 질의를 삭제하시겠습니까?")) return;
     deleteMutation.mutate(itemId);
   };
 
@@ -98,6 +99,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="질문 검색..."
+          aria-label="질문 검색"
           className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-border rounded-dr bg-bg-white placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
@@ -106,6 +108,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value)}
+        aria-label="카테고리 필터"
         className="text-sm border border-gray-border rounded-dr px-2 py-1.5 bg-bg-white text-text-dark focus:outline-none focus:ring-1 focus:ring-blue-500"
       >
         {RFI_CATEGORY_OPTIONS.map((opt) => (
@@ -119,6 +122,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
       <select
         value={status}
         onChange={(e) => setStatus(e.target.value)}
+        aria-label="상태 필터"
         className="text-sm border border-gray-border rounded-dr px-2 py-1.5 bg-bg-white text-text-dark focus:outline-none focus:ring-1 focus:ring-blue-500"
       >
         {RFI_ITEM_STATUS_OPTIONS.map((opt) => (
@@ -132,6 +136,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
       <select
         value={priority}
         onChange={(e) => setPriority(e.target.value)}
+        aria-label="우선순위 필터"
         className="text-sm border border-gray-border rounded-dr px-2 py-1.5 bg-bg-white text-text-dark focus:outline-none focus:ring-1 focus:ring-blue-500"
       >
         {RFI_PRIORITY_OPTIONS.map((opt) => (
@@ -143,12 +148,24 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
 
       {/* Reset */}
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={resetFilters}>
+        <Button variant="ghost" size="sm" onClick={resetFilters} aria-label="필터 초기화">
           <X className="h-4 w-4" />
         </Button>
       )}
     </div>
   );
+
+  // ── Error state ───────────────────────────────────
+  if (isError) {
+    return (
+      <div className="rounded-dr border border-gray-border shadow-dr-sm bg-bg-white">
+        {filterBar}
+        <div className="flex flex-col items-center justify-center py-16 text-red-600">
+          <p className="text-sm">데이터를 불러오는 중 오류가 발생했습니다.</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Loading state ──────────────────────────────────
   if (isLoading) {
@@ -197,6 +214,14 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
                 <tr
                   key={item.id}
                   onClick={() => onSelectItem(item.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectItem(item.id);
+                    }
+                  }}
                   className="border-b border-gray-border last:border-b-0 cursor-pointer hover:bg-bg-cool/50 transition-colors"
                 >
                   <td className="px-3 py-2.5 font-mono text-text-secondary whitespace-nowrap">
@@ -246,6 +271,7 @@ export default function RFIItemList({ txnId, onSelectItem }: RFIItemListProps) {
                         className="p-1 rounded text-text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
                         onClick={(e) => handleDelete(e, item.id)}
                         title="삭제"
+                        aria-label={`${item.item_number} 삭제`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

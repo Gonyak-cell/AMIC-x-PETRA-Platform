@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from urllib.parse import quote
 
@@ -60,7 +61,7 @@ async def list_items(
     await check_client_deal_access(db, txn_id, claims)
     is_advisor = get_rfi_author_role(claims) == RFIAuthorRole.ADVISOR
 
-    items, _total = await rfi_v2_service.list_items(
+    items = await rfi_v2_service.list_items(
         db,
         txn_id,
         category=category,
@@ -103,6 +104,7 @@ async def create_item(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIItemOut:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     item = await rfi_v2_service.create_item(db, txn_id, payload, created_by=claims.email)
     await db.commit()
     await db.refresh(item)
@@ -117,7 +119,9 @@ async def create_items_batch(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> list[RFIItemOut]:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     items = await rfi_v2_service.create_items_batch(db, txn_id, payload.items, created_by=claims.email)
+    await db.commit()
     return [RFIItemOut.model_validate(i) for i in items]
 
 
@@ -130,6 +134,7 @@ async def update_item(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIItemOut:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     item = await rfi_v2_service.update_item(db, txn_id, item_id, payload, updated_by=claims.email)
     await db.commit()
     await db.refresh(item)
@@ -144,6 +149,7 @@ async def delete_item(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     await rfi_v2_service.soft_delete_item(db, txn_id, item_id, deleted_by=claims.email)
     await db.commit()
 
@@ -157,6 +163,7 @@ async def close_item(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIItemOut:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     item = await rfi_v2_service.close_item(db, txn_id, item_id, version, closed_by=claims.email)
     await db.commit()
     await db.refresh(item)
@@ -175,7 +182,7 @@ async def list_threads(
 ) -> list[RFIThreadOut]:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    threads = await rfi_v2_service.list_threads(db, item_id)
+    threads = await rfi_v2_service.list_threads(db, txn_id, item_id)
     return [RFIThreadOut.model_validate(t) for t in threads]
 
 
@@ -213,7 +220,8 @@ async def update_thread(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIThreadOut:
     await transaction_service.get_transaction(db, txn_id)
-    thread = await rfi_v2_service.update_thread_publish(db, tid, payload.is_published)
+    await check_client_deal_access(db, txn_id, claims)
+    thread = await rfi_v2_service.update_thread_publish(db, txn_id, item_id, tid, payload.is_published)
     await db.commit()
     return RFIThreadOut.model_validate(thread)
 
@@ -245,6 +253,27 @@ async def list_unassigned(
     return [RFIAttachmentOut.model_validate(a) for a in attachments]
 
 
+_ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".csv",
+    ".txt",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".hwp",
+    ".hwpx",
+}
+_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50MB
+
+
 @router.post("/attachments", response_model=list[RFIAttachmentOut], status_code=status.HTTP_201_CREATED)
 async def upload_attachments(
     txn_id: uuid.UUID,
@@ -256,16 +285,33 @@ async def upload_attachments(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    results: list[RFIAttachmentOut] = []
+    # Step 1: 모든 파일 사전 검증 (확장자 + 크기) — 부분 업로드 방지
+    file_contents: list[tuple[str, bytes]] = []
     for f in files:
+        ext = os.path.splitext(f.filename or "")[1].lower()
+        if ext not in _ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"허용되지 않는 파일 형식입니다: {ext}",
+            )
         content = await f.read()
-        blob_path = f"rfi/{txn_id}/{uuid.uuid4()}/{f.filename}"
+        if len(content) > _MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"파일 크기가 제한(50MB)을 초과합니다: {f.filename}",
+            )
+        file_contents.append((f.filename or "unknown", content))
+
+    # Step 2: 검증 통과 후 Blob 업로드 + DB 메타 생성
+    results: list[RFIAttachmentOut] = []
+    for filename, content in file_contents:
+        blob_path = f"rfi/{txn_id}/{uuid.uuid4()}/{filename}"
         file_url = await blob_client.upload(blob_path, content)
 
         attachment = await rfi_attachment_service.create_attachment(
             db,
             txn_id,
-            file_name=f.filename or "unknown",
+            file_name=filename,
             file_url=file_url,
             created_by=claims.email,
         )
@@ -284,6 +330,7 @@ async def map_attachment(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIAttachmentOut:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     attachment = await rfi_attachment_service.map_attachment(
         db,
         txn_id,
@@ -304,6 +351,7 @@ async def delete_attachment(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     await rfi_attachment_service.delete_attachment(db, txn_id, file_id, deleted_by=claims.email)
     await db.commit()
 
@@ -316,22 +364,10 @@ async def download_attachment(
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> StreamingResponse:
     """파일 다운로드 — Pre-signed URL 또는 서버 프록시."""
-    from sqlalchemy import select as sa_select
-
-    from app.models.rfi_attachment import RFIAttachment
-
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    result = await db.execute(
-        sa_select(RFIAttachment).where(
-            RFIAttachment.id == file_id,
-            RFIAttachment.transaction_id == txn_id,
-        )
-    )
-    attachment = result.scalar_one_or_none()
-    if attachment is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="파일을 찾을 수 없습니다")
+    attachment = await rfi_attachment_service.get_attachment(db, txn_id, file_id)
 
     data = await blob_client.download(attachment.file_url)
     encoded_name = quote(attachment.file_name)
@@ -366,6 +402,7 @@ async def report_payload(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> list[RFIReportPayload]:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     return await rfi_v2_service.get_report_payload(db, txn_id)
 
 
@@ -439,6 +476,7 @@ async def generate_rfi(
     from app.services.rfi_ai_generator import generate_rfi_items
 
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
 
     llm_client = RalphLLMClient.from_settings(settings)
     if not llm_client.is_available:

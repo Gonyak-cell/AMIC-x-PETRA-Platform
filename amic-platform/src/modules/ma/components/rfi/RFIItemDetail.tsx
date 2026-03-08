@@ -57,6 +57,16 @@ function formatDateTime(iso: string): string {
   });
 }
 
+
+
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
 /* ------------------------------------------------------------------ */
 /*  Sub-components                                                     */
 /* ------------------------------------------------------------------ */
@@ -106,7 +116,7 @@ function ThreadBubble({
         {/* Linked attachments */}
         {linkedAttachments.length > 0 && (
           <div className="mt-2 space-y-1">
-            {linkedAttachments.map((att) => (
+            {linkedAttachments.filter((att) => isSafeUrl(att.file_url)).map((att) => (
               <a
                 key={att.id}
                 href={att.file_url}
@@ -139,7 +149,7 @@ export default function RFIItemDetail({
   itemId,
   onBack,
 }: RFIItemDetailProps) {
-  const { data: item, isLoading } = useRFIItem(txnId, itemId);
+  const { data: item, isLoading, isError } = useRFIItem(txnId, itemId);
   const createThread = useCreateThread(txnId, itemId);
   const closeItem = useCloseRFIItem(txnId);
 
@@ -171,10 +181,28 @@ export default function RFIItemDetail({
   }
 
   function handleClose() {
-    closeItem.mutate(itemId);
+    if (!item) return;
+    closeItem.mutate({ itemId, version: item.version });
   }
 
   /* ── Loading ──────────────────────────────────────────── */
+
+  if (isError) {
+    return (
+      <div className="text-center py-12 text-red-600">
+        <p className="text-sm">데이터를 불러오는 중 오류가 발생했습니다.</p>
+        <Button
+          variant="ghost"
+          icon={ArrowLeft}
+          onClick={onBack}
+          size="sm"
+          className="mt-4"
+        >
+          목록으로
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -315,6 +343,7 @@ export default function RFIItemDetail({
         <form onSubmit={handleSubmitReply} className="space-y-2">
           <textarea
             className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-y min-h-[80px]"
+            aria-label="답변 내용"
             placeholder="답변을 입력하세요..."
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
@@ -341,7 +370,7 @@ export default function RFIItemDetail({
             첨부파일 ({itemAttachments.length})
           </h4>
           <div className="space-y-1">
-            {itemAttachments.map((att) => (
+            {itemAttachments.filter((att) => isSafeUrl(att.file_url)).map((att) => (
               <a
                 key={att.id}
                 href={att.file_url}

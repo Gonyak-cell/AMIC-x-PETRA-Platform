@@ -29,7 +29,7 @@ class RFIThread(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # 관계
-    item = relationship("RFIItemV2", back_populates="threads")
+    item: Mapped["RFIItemV2"] = relationship("RFIItemV2", back_populates="threads")  # noqa: F821
     attachments: Mapped[list["RFIAttachment"]] = relationship(  # noqa: F821
         "RFIAttachment",
         back_populates="thread",

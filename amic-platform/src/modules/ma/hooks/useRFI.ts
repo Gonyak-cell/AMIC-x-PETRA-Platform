@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type {
@@ -13,6 +14,7 @@ import type {
   RFIAttachmentMapInput,
   RFIDashboardSummary,
   RFIExcelImportResult,
+  RFIAutoGenerateRequest,
   RFIAutoGenerateResult,
   RFIReportPayload,
 } from "@/modules/ma/types/rfi";
@@ -21,8 +23,10 @@ const KEY = "ma";
 const rfiKeys = (txnId: string) => [KEY, "transactions", txnId, "rfi"];
 
 function extractErrorDetail(err: unknown): string | undefined {
-  return (err as { response?: { data?: { detail?: string } } })?.response?.data
-    ?.detail;
+  if (isAxiosError<{ detail?: string }>(err)) {
+    return err.response?.data?.detail;
+  }
+  return undefined;
 }
 
 /* ------------------------------------------------------------------ */
@@ -38,7 +42,7 @@ interface RFIItemFilters {
 
 /** 1. RFI 항목 목록 */
 export function useRFIItems(txnId: string, filters?: RFIItemFilters) {
-  return useQuery<RFIItemListOut>({
+  return useQuery<RFIItemListOut[]>({
     queryKey: [...rfiKeys(txnId), "items", filters ?? {}],
     queryFn: async () => {
       const params: Record<string, string> = {};
@@ -46,7 +50,7 @@ export function useRFIItems(txnId: string, filters?: RFIItemFilters) {
       if (filters?.status) params.status = filters.status;
       if (filters?.priority) params.priority = filters.priority;
       if (filters?.search) params.search = filters.search;
-      const { data } = await maApi.get<RFIItemListOut>(
+      const { data } = await maApi.get<RFIItemListOut[]>(
         `/transactions/${txnId}/rfi/items`,
         { params },
       );
@@ -114,10 +118,10 @@ export function useUnassignedAttachments(txnId: string) {
 
 /** 18. RFI 리포트 페이로드 */
 export function useRFIReportPayload(txnId: string) {
-  return useQuery<RFIReportPayload>({
+  return useQuery<RFIReportPayload[]>({
     queryKey: [...rfiKeys(txnId), "report-payload"],
     queryFn: async () => {
-      const { data } = await maApi.get<RFIReportPayload>(
+      const { data } = await maApi.get<RFIReportPayload[]>(
         `/transactions/${txnId}/rfi/report-payload`,
       );
       return data;
@@ -220,9 +224,17 @@ export function useDeleteRFIItem(txnId: string) {
 export function useCloseRFIItem(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (itemId: string) => {
+    mutationFn: async ({
+      itemId,
+      version,
+    }: {
+      itemId: string;
+      version: number;
+    }) => {
       const { data } = await maApi.patch<RFIItemV2>(
         `/transactions/${txnId}/rfi/items/${itemId}/close`,
+        undefined,
+        { params: { version } },
       );
       return data;
     },
@@ -252,6 +264,7 @@ export function useCreateThread(txnId: string, itemId: string) {
         queryKey: [...rfiKeys(txnId), "items", itemId, "threads"],
       });
       qc.invalidateQueries({ queryKey: [...rfiKeys(txnId), "items", itemId] });
+      qc.invalidateQueries({ queryKey: [...rfiKeys(txnId), "items"], exact: false });
       toast.success("답변이 등록되었습니다");
     },
     onError: (err) => {
@@ -335,9 +348,8 @@ export function useDeleteAttachment(txnId: string) {
 /** 15. Excel 내보내기 */
 export function useExportRFI(txnId: string) {
   return useMutation({
-    mutationFn: async (roleType?: string) => {
+    mutationFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/rfi/export`, {
-        params: roleType ? { role_type: roleType } : undefined,
         responseType: "blob",
       });
       return data as Blob;
@@ -374,14 +386,16 @@ export function useImportRFI(txnId: string) {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
 
-      const errors = result.errors ?? 0;
-      const conflicts = result.conflicts ?? 0;
+      const errorCount = result.errors?.length ?? 0;
+      const conflictCount = result.conflicts?.length ?? 0;
 
-      if (errors > 0 || conflicts > 0) {
-        toast.warning(`가져오기 실패: ${errors}건 오류, ${conflicts}건 충돌`);
+      if (errorCount > 0 || conflictCount > 0) {
+        toast.warning(
+          `가져오기 실패: ${errorCount}건 오류, ${conflictCount}건 충돌`,
+        );
       } else {
-        const updated = result.updated ?? 0;
-        const mapped = result.file_mapped ?? 0;
+        const updated = result.items_updated ?? 0;
+        const mapped = result.files_matched ?? 0;
         toast.success(
           `가져오기 완료: ${updated}건 업데이트, ${mapped}건 파일 매핑`,
         );
@@ -397,7 +411,7 @@ export function useImportRFI(txnId: string) {
 export function useGenerateRFI(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: Record<string, unknown>) => {
+    mutationFn: async (body: RFIAutoGenerateRequest) => {
       const { data } = await maApi.post<RFIAutoGenerateResult>(
         `/transactions/${txnId}/rfi/generate`,
         body,
@@ -406,7 +420,7 @@ export function useGenerateRFI(txnId: string) {
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: rfiKeys(txnId) });
-      const count = result.items?.length ?? 0;
+      const count = result.items_created;
       toast.success(`AI 생성 완료: ${count}개 질의`);
     },
     onError: (err) => {

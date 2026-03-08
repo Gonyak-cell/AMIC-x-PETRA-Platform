@@ -19,9 +19,9 @@ interface RFICreateModalProps {
 }
 
 interface FormState {
-  category: string;
+  category: RFICategoryV2 | "";
   question_text: string;
-  priority: string;
+  priority: RFIPriority;
   target_doc: string;
   assignee_email: string;
   due_date: string;
@@ -61,10 +61,11 @@ export default function RFICreateModal({
   const handleSubmit = () => {
     if (!canSubmit) return;
 
+    if (form.category === "") return;
     const body: RFIItemCreate = {
-      category: form.category as RFICategoryV2,
+      category: form.category,
       question_text: form.question_text.trim(),
-      priority: (form.priority || undefined) as RFIPriority | undefined,
+      priority: form.priority || undefined,
       target_doc: form.target_doc.trim() || undefined,
       assignee_email: form.assignee_email.trim() || undefined,
       due_date: form.due_date || undefined,
@@ -99,7 +100,7 @@ export default function RFICreateModal({
               id="rfi-category"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.category}
-              onChange={(e) => update("category", e.target.value)}
+              onChange={(e) => update("category", e.target.value as RFICategoryV2 | "")}
             >
               <option value="">선택하세요</option>
               {categoryOptions.map((opt) => (
@@ -121,7 +122,7 @@ export default function RFICreateModal({
               id="rfi-priority"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               value={form.priority}
-              onChange={(e) => update("priority", e.target.value)}
+              onChange={(e) => update("priority", e.target.value as RFIPriority)}
             >
               {priorityOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -178,7 +179,7 @@ export default function RFICreateModal({
             </label>
             <input
               id="rfi-assignee"
-              type="text"
+              type="email"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
               placeholder="example@company.com"
               value={form.assignee_email}

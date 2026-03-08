@@ -11,6 +11,7 @@ Step 5: 결과 반환
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -24,6 +25,8 @@ from app.models.rfi_item_v2 import RFIItemV2
 from app.models.rfi_thread import RFIThread
 from app.schemas.rfi_v2 import RFIExcelImportResult
 from app.services import audit_service
+
+logger = logging.getLogger(__name__)
 
 # ── 상수 ──────────────────────────────────────────────────
 
@@ -167,14 +170,25 @@ async def import_rfi_excel(
     # ── Step 3: 스레드 누적 ─────────────────────────────────
 
     threads_created = 0
-    items_updated = 0
+    updated_item_ids: set[uuid.UUID] = set()
     created_threads: list[tuple[RFIThread, str]] = []
     # (thread, file_ref_text) — Step 4에서 매핑용
 
+    # 배치로 모든 item의 max round_num 조회 (N+1 방지)
+    valid_item_ids = [item.id for _, item, _, _ in valid_rows]
+    max_rounds: dict[uuid.UUID, int] = {}
+    if valid_item_ids:
+        round_result = await db.execute(
+            select(RFIThread.item_id, func.max(RFIThread.round_num))
+            .where(RFIThread.item_id.in_(valid_item_ids))
+            .group_by(RFIThread.item_id)
+        )
+        max_rounds = {row[0]: row[1] or 0 for row in round_result.all()}
+
     for _excel_row, item, answer_text, file_ref_text in valid_rows:
-        # 다음 round_num
-        max_round_result = await db.execute(select(func.max(RFIThread.round_num)).where(RFIThread.item_id == item.id))
-        next_round = (max_round_result.scalar() or 0) + 1
+        next_round = max_rounds.get(item.id, 0) + 1
+        # 같은 item에 대해 여러 행이 있을 수 있으므로 카운터 증가
+        max_rounds[item.id] = next_round
 
         thread = RFIThread(
             item_id=item.id,
@@ -191,7 +205,7 @@ async def import_rfi_excel(
         item.version += 1
         item.updated_at = datetime.now(UTC)
         threads_created += 1
-        items_updated += 1
+        updated_item_ids.add(item.id)
 
         created_threads.append((thread, file_ref_text))
 
@@ -243,6 +257,15 @@ async def import_rfi_excel(
 
     # ── Step 5: 결과 반환 ──────────────────────────────────
 
+    items_updated = len(updated_item_ids)
+    logger.info(
+        "RFI Excel Import 완료: txn=%s, updated=%d, threads=%d, matched=%d, unmatched=%d",
+        txn_id,
+        items_updated,
+        threads_created,
+        files_matched,
+        files_unmatched,
+    )
     return RFIExcelImportResult(
         items_updated=items_updated,
         threads_created=threads_created,

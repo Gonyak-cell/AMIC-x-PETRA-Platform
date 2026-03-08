@@ -26,11 +26,7 @@ import {
   RFI_ITEM_STATUS_LABELS,
   RFI_CATEGORY_LABELS,
 } from "@/modules/ma/constants";
-import type {
-  RFIItemStatusV2,
-  RFICategoryV2,
-  RFIItemListOut,
-} from "@/modules/ma/types/rfi";
+import type { RFIItemStatusV2, RFICategoryV2 } from "@/modules/ma/types/rfi";
 
 // ── Constants ───────────────────────────────────────────
 
@@ -212,7 +208,7 @@ export default function RFIDashboard({ txnId }: RFIDashboardProps) {
       {aging_items.length > 0 && (
         <Card title="장기 미답변 항목" padding="md" variant="default">
           <div className="flex flex-col gap-2">
-            {aging_items.map((item: RFIItemListOut) => {
+            {aging_items.map((item) => {
               const days = daysSince(item.created_at);
               return (
                 <div

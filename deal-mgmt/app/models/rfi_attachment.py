@@ -33,5 +33,9 @@ class RFIAttachment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # 관계
-    thread = relationship("RFIThread", back_populates="attachments", foreign_keys=[thread_id])
-    item = relationship("RFIItemV2", back_populates="attachments", foreign_keys=[item_id])
+    thread: Mapped["RFIThread"] = relationship(  # noqa: F821
+        "RFIThread", back_populates="attachments", foreign_keys=[thread_id]
+    )
+    item: Mapped["RFIItemV2"] = relationship(  # noqa: F821
+        "RFIItemV2", back_populates="attachments", foreign_keys=[item_id]
+    )

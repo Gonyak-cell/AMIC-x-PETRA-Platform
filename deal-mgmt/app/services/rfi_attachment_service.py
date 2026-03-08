@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.models.enums import AuditAction
 from app.models.rfi_attachment import RFIAttachment
 from app.services import audit_service
+
+logger = logging.getLogger(__name__)
 
 
 async def list_attachments(
@@ -114,7 +118,28 @@ async def delete_attachment(
     if attachment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="첨부 파일을 찾을 수 없습니다")
 
+    # Blob 파일 삭제 (DB 삭제 전 실행 — DB 롤백 시 Blob만 삭제되는 것이 고아 파일만 남는 것보다 안전)
+    await blob_client.delete_blob(attachment.file_url)
+
     await db.delete(attachment)
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.DELETE, "rfi_attachment", str(file_id), deleted_by)
+
+
+async def get_attachment(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    file_id: uuid.UUID,
+) -> RFIAttachment:
+    """첨부 파일 단건 조회 (txn 소유권 검증 포함)."""
+    result = await db.execute(
+        select(RFIAttachment).where(
+            RFIAttachment.id == file_id,
+            RFIAttachment.transaction_id == txn_id,
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if attachment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="첨부 파일을 찾을 수 없습니다")
+    return attachment

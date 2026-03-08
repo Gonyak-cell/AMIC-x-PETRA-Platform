@@ -9,7 +9,11 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import UTC, datetime
 
+from fastapi import HTTPException
+from fastapi import status as http_status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import RFICategoryV2, RFIPriority
@@ -143,27 +147,28 @@ async def generate_rfi_items(
     if tracker.usage_by_model:
         model_used = list(tracker.usage_by_model.keys())[-1]
 
-    parsed = _parse_llm_response(raw_response)
+    try:
+        parsed = _parse_llm_response(raw_response)
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.error("AI RFI 생성: LLM 응답 파싱 실패 (txn=%s): %s", txn_id, exc)
+        raise HTTPException(
+            status_code=http_status.HTTP_502_BAD_GATEWAY,
+            detail="AI 응답을 파싱할 수 없습니다. 다시 시도해 주세요.",
+        ) from exc
     if not parsed:
         logger.warning("AI RFI 생성: 유효한 질의가 없습니다 (txn=%s)", txn_id)
         return 0, cost_delta, model_used
 
-    # 기존 항목 수 조회 (item_number 채번용)
-    from sqlalchemy import func, select
-
-    count_result = await db.execute(
-        select(func.count()).select_from(RFIItemV2).where(RFIItemV2.transaction_id == txn_id)
-    )
-    existing_count = count_result.scalar() or 0
-
-    # DB에 저장
+    # DB에 저장 — 각 item마다 현재 count 기반 채번 (rfi_v2_service._next_item_number 동일 로직)
+    year = datetime.now(UTC).year
     created = 0
-    for i, item_data in enumerate(parsed):
-        seq = existing_count + i + 1
+    for item_data in parsed:
+        count_result = await db.execute(select(func.count(RFIItemV2.id)).where(RFIItemV2.transaction_id == txn_id))
+        seq = (count_result.scalar() or 0) + 1
         item = RFIItemV2(
             id=uuid.uuid4(),
             transaction_id=txn_id,
-            item_number=f"RFI-{seq:03d}",
+            item_number=f"RFI-{year}-{seq:03d}",
             category=RFICategoryV2(item_data["category"]),
             priority=RFIPriority(item_data["priority"]),
             target_doc=item_data.get("target_doc") or None,
@@ -172,9 +177,8 @@ async def generate_rfi_items(
             created_by_email=created_by_email,
         )
         db.add(item)
+        await db.flush()  # 다음 채번을 위해 즉시 flush
         created += 1
-
-    await db.flush()
     logger.info(
         "AI RFI 생성 완료: txn=%s, items=%d, cost=$%.4f, model=%s",
         txn_id,

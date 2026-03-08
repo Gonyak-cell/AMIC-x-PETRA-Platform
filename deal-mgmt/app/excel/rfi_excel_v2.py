@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -26,6 +27,8 @@ from sqlalchemy.orm import selectinload
 from app.models.enums import RFIAuthorRole
 from app.models.rfi_item_v2 import RFIItemV2
 from app.models.rfi_thread import RFIThread
+
+logger = logging.getLogger(__name__)
 
 
 def _build_history_text(threads: list[RFIThread]) -> str:

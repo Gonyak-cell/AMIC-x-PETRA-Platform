@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -24,6 +25,8 @@ from app.schemas.rfi_v2 import (
     RFIVerifiedFact,
 )
 from app.services import audit_service
+
+logger = logging.getLogger(__name__)
 
 # ── Item Number 채번 ──────────────────────────────────────
 
@@ -50,42 +53,42 @@ async def list_items(
     limit: int = 50,
     offset: int = 0,
     is_advisor: bool = True,
-) -> tuple[list[RFIItemV2], int]:
+) -> list[RFIItemV2]:
     """질의 목록 조회 (소프트 삭제 제외, 필터링)."""
     q = select(RFIItemV2).where(
-        RFIItemV2.transaction_id == txn_id,
-        RFIItemV2.is_deleted.is_(False),
-    )
-    count_q = select(func.count(RFIItemV2.id)).where(
         RFIItemV2.transaction_id == txn_id,
         RFIItemV2.is_deleted.is_(False),
     )
 
     if category:
         q = q.where(RFIItemV2.category == category)
-        count_q = count_q.where(RFIItemV2.category == category)
     if item_status:
         q = q.where(RFIItemV2.current_status == item_status)
-        count_q = count_q.where(RFIItemV2.current_status == item_status)
     if priority:
         q = q.where(RFIItemV2.priority == priority)
-        count_q = count_q.where(RFIItemV2.priority == priority)
     if search:
-        q = q.where(RFIItemV2.question_text.ilike(f"%{search}%"))
-        count_q = count_q.where(RFIItemV2.question_text.ilike(f"%{search}%"))
+        escaped = search.replace("%", r"\%").replace("_", r"\_")
+        q = q.where(RFIItemV2.question_text.ilike(f"%{escaped}%", escape="\\"))
 
-    total = (await db.execute(count_q)).scalar() or 0
-
-    q = q.order_by(RFIItemV2.created_at.desc()).offset(offset).limit(limit)
+    q = (
+        q.options(
+            selectinload(RFIItemV2.threads),
+            selectinload(RFIItemV2.attachments),
+        )
+        .order_by(RFIItemV2.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     result = await db.execute(q)
     items = list(result.scalars().all())
 
-    # TARGET은 internal_memo 숨김
+    # TARGET은 internal_memo 숨김 — ORM 객체를 세션에서 분리하여 DB 영속화 방지
     if not is_advisor:
         for item in items:
+            db.expunge(item)
             item.internal_memo = None
 
-    return items, total
+    return items
 
 
 async def get_item(
@@ -113,7 +116,9 @@ async def get_item(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFI 항목을 찾을 수 없습니다")
 
+    # TARGET은 internal_memo 숨김 — ORM 객체를 세션에서 분리하여 DB 영속화 방지
     if not is_advisor:
+        db.expunge(item)
         item.internal_memo = None
 
     return item
@@ -145,6 +150,7 @@ async def create_item(
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_item", str(item.id), created_by)
+    logger.info("RFI 항목 생성: txn=%s, item=%s, number=%s", txn_id, item.id, item.item_number)
     return item
 
 
@@ -160,7 +166,6 @@ async def create_items_batch(
     for payload in items:
         item = await create_item(db, txn_id, payload, created_by=created_by)
         created.append(item)
-    await db.commit()
     return created
 
 
@@ -191,6 +196,7 @@ async def update_item(
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.UPDATE, "rfi_item", str(item.id), updated_by)
+    logger.info("RFI 항목 수정: txn=%s, item=%s, version=%d", txn_id, item.id, item.version)
     return item
 
 
@@ -213,6 +219,7 @@ async def soft_delete_item(
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.DELETE, "rfi_item", str(item.id), deleted_by)
+    logger.info("RFI 항목 삭제: txn=%s, item=%s", txn_id, item.id)
 
 
 async def close_item(
@@ -236,6 +243,7 @@ async def close_item(
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.UPDATE, "rfi_item", str(item.id), closed_by)
+    logger.info("RFI 항목 마감: txn=%s, item=%s", txn_id, item.id)
     return item
 
 
@@ -244,9 +252,12 @@ async def close_item(
 
 async def list_threads(
     db: AsyncSession,
+    txn_id: uuid.UUID,
     item_id: uuid.UUID,
 ) -> list[RFIThread]:
-    """스레드 이력 조회."""
+    """스레드 이력 조회 — item이 해당 txn에 속하는지 검증."""
+    # item 소유권 검증
+    await get_item(db, txn_id, item_id)
     result = await db.execute(select(RFIThread).where(RFIThread.item_id == item_id).order_by(RFIThread.round_num))
     return list(result.scalars().all())
 
@@ -294,16 +305,20 @@ async def create_thread(
     await db.flush()
 
     await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_thread", str(thread.id), author_email)
+    logger.info("RFI 스레드 생성: txn=%s, item=%s, thread=%s, round=%d", txn_id, item_id, thread.id, next_round)
     return thread
 
 
 async def update_thread_publish(
     db: AsyncSession,
+    txn_id: uuid.UUID,
+    item_id: uuid.UUID,
     thread_id: uuid.UUID,
     is_published: bool,
 ) -> RFIThread:
-    """임시저장 → 게시 전환."""
-    result = await db.execute(select(RFIThread).where(RFIThread.id == thread_id))
+    """임시저장 → 게시 전환 — item/txn 소유권 검증 포함."""
+    await get_item(db, txn_id, item_id)
+    result = await db.execute(select(RFIThread).where(RFIThread.id == thread_id, RFIThread.item_id == item_id))
     thread = result.scalar_one_or_none()
     if thread is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="스레드를 찾을 수 없습니다")
@@ -360,7 +375,8 @@ async def get_dashboard(db: AsyncSession, txn_id: uuid.UUID) -> RFIDashboardSumm
     aging_items: list[RFIItemListOut] = []
     for item in all_items:
         if item.current_status == RFIItemStatusV2.OPEN and item.created_at:
-            age = (now - item.created_at.replace(tzinfo=None if item.created_at.tzinfo else UTC)).days
+            created = item.created_at if item.created_at.tzinfo else item.created_at.replace(tzinfo=UTC)
+            age = (now - created).days
             if age >= 7:
                 aging_items.append(RFIItemListOut.model_validate(item))
 

@@ -64,15 +64,15 @@ export default function PipelineFlow({
           const milestone = phaseMilestoneMap.get(phase.phase);
 
           const chevronClip =
-                i === 0
-                  ? `polygon(0 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%)`
-                  : i === PIPELINE_PHASES.length - 1
-                    ? `polygon(${arrowPx}px 0, 100% 0, 100% 100%, 0 100%, ${arrowPx}px 50%)`
-                    : `polygon(${arrowPx}px 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%, ${arrowPx}px 50%)`;
+            i === 0
+              ? `polygon(0 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%)`
+              : i === PIPELINE_PHASES.length - 1
+                ? `polygon(${arrowPx}px 0, 100% 0, 100% 100%, 0 100%, ${arrowPx}px 50%)`
+                : `polygon(${arrowPx}px 0, calc(100% - ${arrowPx}px) 0, 100% 50%, calc(100% - ${arrowPx}px) 100%, 0 100%, ${arrowPx}px 50%)`;
 
           return (
             <Fragment key={phase.phase}>
-              <div className={`relative flex items-center flex-1 min-w-0 ${viewed ? "border-b-[3px] border-accent" : ""}`}>
+              <div className="relative flex items-center flex-1 min-w-0">
                 <button
                   type="button"
                   onClick={() => onPhaseClick(phase.phase)}
@@ -134,6 +134,16 @@ export default function PipelineFlow({
                     </span>
                   </div>
                 </button>
+                {viewed && (
+                  <div
+                    className="absolute bottom-0 h-[3px] bg-accent"
+                    style={{
+                      left: i === 0 ? 0 : 0,
+                      right:
+                        i === PIPELINE_PHASES.length - 1 ? 0 : `${arrowPx}px`,
+                    }}
+                  />
+                )}
               </div>
 
               {milestone && i < PIPELINE_PHASES.length - 1 && (
