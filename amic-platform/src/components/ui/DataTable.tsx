@@ -322,7 +322,10 @@ export function DataTable<T extends object>({
                       striped && rowIndex % 2 === 1
                         ? "var(--table-stripe-bg, #F7F8FA)"
                         : undefined,
-                    borderBottom: "var(--table-row-border, 1px solid #E5E7EB)",
+                    borderBottom:
+                      rowIndex === data.length - 1
+                        ? "var(--table-row-border-last, 1px solid #E5E7EB)"
+                        : "var(--table-row-border, 1px solid #E5E7EB)",
                   }}
                   onClick={() => onRowClick?.(row)}
                   onKeyDown={
