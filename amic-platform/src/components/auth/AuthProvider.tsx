@@ -12,6 +12,17 @@ import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 import type { AuthUser, AuthState } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
 
+/** 사이드바 메뉴 상태(sessionStorage) 일괄 초기화 */
+function clearSidebarStorage(): void {
+  try {
+    Object.keys(sessionStorage)
+      .filter(k => k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"))
+      .forEach(k => sessionStorage.removeItem(k));
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({
@@ -29,6 +40,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const handler = () => {
       // 쿠키는 백엔드가 삭제함
       queryClient.clear();
+      clearSidebarStorage();
       setState({ user: null, isAuthenticated: false, isLoading: false });
     };
     window.addEventListener(AUTH_LOGOUT_EVENT, handler);
