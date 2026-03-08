@@ -61,7 +61,9 @@ async def create_attachment(
     db.add(attachment)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_attachment", str(attachment.id), created_by)
+    await audit_service.record(
+        db, entity_type="rfi_attachment", entity_id=attachment.id, action=AuditAction.CREATE, actor_email=created_by
+    )
     return attachment
 
 
@@ -96,7 +98,9 @@ async def map_attachment(
     attachment.is_mapped = True
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.UPDATE, "rfi_attachment", str(attachment.id), mapped_by)
+    await audit_service.record(
+        db, entity_type="rfi_attachment", entity_id=attachment.id, action=AuditAction.UPDATE, actor_email=mapped_by
+    )
     return attachment
 
 
@@ -124,7 +128,9 @@ async def delete_attachment(
     await db.delete(attachment)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.DELETE, "rfi_attachment", str(file_id), deleted_by)
+    await audit_service.record(
+        db, entity_type="rfi_attachment", entity_id=file_id, action=AuditAction.DELETE, actor_email=deleted_by
+    )
 
 
 async def get_attachment(

@@ -213,7 +213,9 @@ async def import_rfi_excel(
 
     # 감사 로그
     for thread, _ in created_threads:
-        await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_thread", str(thread.id), author_email)
+        await audit_service.record(
+            db, entity_type="rfi_thread", entity_id=thread.id, action=AuditAction.CREATE, actor_email=author_email
+        )
 
     # ── Step 4: 퍼지 매칭 ──────────────────────────────────
 

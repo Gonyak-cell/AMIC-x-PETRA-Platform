@@ -149,7 +149,9 @@ async def create_item(
     db.add(item)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_item", str(item.id), created_by)
+    await audit_service.record(
+        db, entity_type="rfi_item", entity_id=item.id, action=AuditAction.CREATE, actor_email=created_by
+    )
     logger.info("RFI 항목 생성: txn=%s, item=%s, number=%s", txn_id, item.id, item.item_number)
     return item
 
@@ -187,7 +189,7 @@ async def update_item(
             detail="다른 사용자가 이 항목을 수정했습니다. 새로고침 후 다시 시도하세요.",
         )
 
-    update_data = payload.model_dump(exclude_unset=True, exclude={"version"})
+    update_data = payload.model_dump(exclude_unset=True, exclude={"version", "current_status"})
     for key, value in update_data.items():
         setattr(item, key, value)
 
@@ -195,7 +197,9 @@ async def update_item(
     item.updated_at = datetime.now(UTC)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.UPDATE, "rfi_item", str(item.id), updated_by)
+    await audit_service.record(
+        db, entity_type="rfi_item", entity_id=item.id, action=AuditAction.UPDATE, actor_email=updated_by
+    )
     logger.info("RFI 항목 수정: txn=%s, item=%s, version=%d", txn_id, item.id, item.version)
     return item
 
@@ -218,7 +222,9 @@ async def soft_delete_item(
     item.updated_at = datetime.now(UTC)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.DELETE, "rfi_item", str(item.id), deleted_by)
+    await audit_service.record(
+        db, entity_type="rfi_item", entity_id=item.id, action=AuditAction.DELETE, actor_email=deleted_by
+    )
     logger.info("RFI 항목 삭제: txn=%s, item=%s", txn_id, item.id)
 
 
@@ -242,7 +248,9 @@ async def close_item(
     item.updated_at = datetime.now(UTC)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.UPDATE, "rfi_item", str(item.id), closed_by)
+    await audit_service.record(
+        db, entity_type="rfi_item", entity_id=item.id, action=AuditAction.UPDATE, actor_email=closed_by
+    )
     logger.info("RFI 항목 마감: txn=%s, item=%s", txn_id, item.id)
     return item
 
@@ -256,10 +264,9 @@ async def list_threads(
     item_id: uuid.UUID,
 ) -> list[RFIThread]:
     """스레드 이력 조회 — item이 해당 txn에 속하는지 검증."""
-    # item 소유권 검증
-    await get_item(db, txn_id, item_id)
-    result = await db.execute(select(RFIThread).where(RFIThread.item_id == item_id).order_by(RFIThread.round_num))
-    return list(result.scalars().all())
+    # item 소유권 검증 + selectinload된 threads 재사용 (중복 쿼리 방지)
+    item = await get_item(db, txn_id, item_id)
+    return sorted(item.threads, key=lambda t: t.round_num)
 
 
 async def create_thread(
@@ -304,7 +311,9 @@ async def create_thread(
     item.updated_at = datetime.now(UTC)
     await db.flush()
 
-    await audit_service.log(db, txn_id, AuditAction.CREATE, "rfi_thread", str(thread.id), author_email)
+    await audit_service.record(
+        db, entity_type="rfi_thread", entity_id=thread.id, action=AuditAction.CREATE, actor_email=author_email
+    )
     logger.info("RFI 스레드 생성: txn=%s, item=%s, thread=%s, round=%d", txn_id, item_id, thread.id, next_round)
     return thread
 
