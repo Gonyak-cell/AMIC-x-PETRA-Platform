@@ -282,7 +282,7 @@ export default function VdrTab({ txnId }: Props) {
 
         {/* 드래그 리사이즈 핸들 */}
         <div
-          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-1 rounded"
+          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-2 rounded"
           onMouseDown={handleMouseDown}
         >
           <div className="w-12 h-1 rounded-full bg-border group-hover:bg-accent/40 transition-colors" />
