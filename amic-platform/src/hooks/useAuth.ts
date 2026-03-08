@@ -47,6 +47,10 @@ export function useAuth() {
     } finally {
       // 쿠키는 백엔드가 삭제함
       queryClient.clear();
+      // 사이드바 메뉴 상태 초기화 (로그아웃 시 하위 메뉴 접힘)
+      Object.keys(sessionStorage)
+        .filter(k => k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"))
+        .forEach(k => sessionStorage.removeItem(k));
       setAuthState({ user: null, isAuthenticated: false, isLoading: false });
     }
   }, [setAuthState, queryClient]);

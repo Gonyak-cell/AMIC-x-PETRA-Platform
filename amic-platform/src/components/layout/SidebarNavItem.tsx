@@ -114,10 +114,10 @@ function getInitialOpen(
 ): boolean {
   if (!storageKey) return defaultOpen;
   try {
-    const stored = localStorage.getItem(`sidebar-section-${storageKey}`);
+    const stored = sessionStorage.getItem(`sidebar-section-${storageKey}`);
     if (stored !== null) return stored === "true";
   } catch {
-    // localStorage unavailable
+    // sessionStorage unavailable
   }
   return defaultOpen;
 }
@@ -141,9 +141,9 @@ export function SidebarSection({
     setIsOpen(next);
     if (storageKey) {
       try {
-        localStorage.setItem(`sidebar-section-${storageKey}`, String(next));
+        sessionStorage.setItem(`sidebar-section-${storageKey}`, String(next));
       } catch {
-        // localStorage unavailable
+        // sessionStorage unavailable
       }
     }
   };

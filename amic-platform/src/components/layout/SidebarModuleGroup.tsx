@@ -19,19 +19,19 @@ export interface SidebarModuleGroupProps {
 
 function getInitialOpen(storageKey: string, defaultOpen: boolean): boolean {
   try {
-    const stored = localStorage.getItem(`sidebar-module-${storageKey}`);
+    const stored = sessionStorage.getItem(`sidebar-module-${storageKey}`);
     if (stored !== null) return stored === "true";
   } catch {
-    // localStorage unavailable
+    // sessionStorage unavailable
   }
   return defaultOpen;
 }
 
 function persistState(storageKey: string, open: boolean) {
   try {
-    localStorage.setItem(`sidebar-module-${storageKey}`, String(open));
+    sessionStorage.setItem(`sidebar-module-${storageKey}`, String(open));
   } catch {
-    // localStorage unavailable
+    // sessionStorage unavailable
   }
 }
 
