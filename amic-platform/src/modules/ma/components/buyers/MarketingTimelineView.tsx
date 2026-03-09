@@ -27,9 +27,6 @@ function latestStageIndex(
   return -1;
 }
 
-/** IOI_RECEIVED 단계 특수 컬러 */
-const IOI_STAGE: MarketingStage = "IOI_RECEIVED";
-
 export default function MarketingTimelineView({
   buyers,
   overviewData,
@@ -133,9 +130,9 @@ export default function MarketingTimelineView({
                 ) : (
                   <div className="relative ml-1.5">
                     {completedStages.map((item, idx) => {
-                      const isIOI = item.stage === IOI_STAGE;
+                      const isNDA = item.stage === "NDA_SIGNED";
                       const isLast = idx === completedStages.length - 1;
-                      const ioiAmount = isIOI ? buyer.ioi_value : null;
+                      
 
                       return (
                         <div key={item.stage} className="flex items-start gap-3 relative">
@@ -143,7 +140,7 @@ export default function MarketingTimelineView({
                           <div className="flex flex-col items-center">
                             <div
                               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 ${
-                                isIOI ? "bg-orange-400" : "bg-accent"
+                                isNDA ? "bg-accent ring-2 ring-accent/30" : "bg-accent"
                               }`}
                             />
                             {!isLast && (
@@ -157,12 +154,11 @@ export default function MarketingTimelineView({
                             </span>
                             <span
                               className={`text-sm font-semibold ml-2 ${
-                                isIOI ? "text-orange-500" : "text-text-dark"
+                                "text-text-dark"
                               }`}
                             >
                               {MARKETING_STAGE_LABELS[item.stage]}
-                              {ioiAmount && ` (${ioiAmount})`}
-                            </span>
+                                                          </span>
                           </div>
                         </div>
                       );

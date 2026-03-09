@@ -6,7 +6,6 @@ import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import { buildStageMap, MARKETING_STAGES } from "@/modules/ma/constants";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InterestIndicator from "./InterestIndicator";
-import MarketingStageTracker from "./MarketingStageTracker";
 
 interface ShortListMasterListProps {
   buyers: BuyerCandidate[];
@@ -61,7 +60,6 @@ export default function ShortListMasterList({
         {buyers.map((buyer) => {
           const isSelected = selectedBuyerId === buyer.id;
           const stages = stageMap.get(buyer.id);
-          const summary = stages ? { buyer_id: buyer.id, stages } as BuyerStageSummary : undefined;
           const isDropped = buyer.status === "BID_DROPPED";
           const completedCount = stages
             ? MARKETING_STAGES.filter((s) => stages[s]).length

@@ -49,7 +49,7 @@ export default function ShortListSummaryBar({
       color: "text-solid-green",
     },
     { label: "TIER 1", value: tier1Count, color: "text-amic-500" },
-    { label: "평균 진행률", value: "${avgPct}%", color: "text-amic-300" },
+    { label: "평균 진행률", value: `${avgPct}%`, color: "text-amic-300" },
   ];
 
   return (
