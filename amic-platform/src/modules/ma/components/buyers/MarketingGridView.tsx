@@ -42,7 +42,9 @@ export default function MarketingGridView({
   });
 
   return (
-    <div className="overflow-x-auto border border-gray-border rounded-dr">
+    <div>
+      <p className="text-xs font-medium text-accent mb-2">Grid View — 매수자 × 마케팅 단계</p>
+      <div className="overflow-x-auto border border-gray-border rounded-dr">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-bg-cool border-b border-gray-border">
@@ -70,9 +72,16 @@ export default function MarketingGridView({
               >
                 <td className="px-3 py-1.5 border-r border-gray-border">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-text-dark text-xs truncate max-w-[120px]">
-                      {buyer.company_name}
-                    </span>
+                    <div className="min-w-0">
+                      <span className="font-medium text-text-dark text-xs truncate block max-w-[120px]">
+                        {buyer.company_name}
+                      </span>
+                      {buyer.contact_name && (
+                        <span className="text-[10px] text-text-muted truncate block max-w-[120px]">
+                          {buyer.contact_name}
+                        </span>
+                      )}
+                    </div>
                     {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
                   </div>
                 </td>
@@ -101,6 +110,7 @@ export default function MarketingGridView({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export const MARKETING_STAGES: MarketingStage[] = [
   "TARGET_MEETING",
 ];
 
-export const MARKETING_STAGE_LABELS: Record<string, string> = {
+export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
   IDENTIFIED: "식별",
   EMAIL_SENT: "메일전송",
   PHONE_CALL: "전화",

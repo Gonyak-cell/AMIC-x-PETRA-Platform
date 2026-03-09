@@ -23,17 +23,18 @@ export default function ShortListViewToggle({
   onViewModeChange,
 }: ShortListViewToggleProps) {
   return (
-    <div className="inline-flex rounded-md border border-gray-border bg-bg-cool p-0.5 gap-0.5">
+    <div role="group" aria-label="뷰 전환" className="inline-flex rounded-md border border-gray-border bg-bg-cool p-0.5 gap-0.5">
       {VIEWS.map(({ mode, icon: Icon, label }) => (
         <button
           key={mode}
           type="button"
           onClick={() => onViewModeChange(mode)}
           title={label}
+          aria-pressed={viewMode === mode}
           className={cn(
             "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
             viewMode === mode
-              ? "bg-white text-accent shadow-sm font-medium"
+              ? "bg-accent text-white shadow-sm font-medium"
               : "text-text-muted hover:text-text-dark",
           )}
         >

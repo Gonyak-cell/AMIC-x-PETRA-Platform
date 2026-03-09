@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
+import InterestIndicator from "./InterestIndicator";
 import InlineLogInput from "./InlineLogInput";
 import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
@@ -56,7 +57,9 @@ export default function MarketingKanbanView({
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div>
+      <p className="text-xs font-medium text-accent mb-2">Kanban View — 단계별 칸반 보드</p>
+      <div className="flex gap-3 overflow-x-auto pb-2">
       {MARKETING_STAGES.map((stage) => {
         const stageBuyers = columns.get(stage) ?? [];
         const nextStageIdx = MARKETING_STAGES.indexOf(stage) + 1;
@@ -95,12 +98,20 @@ export default function MarketingKanbanView({
                       type="button"
                       onClick={() => onSelectBuyer(buyer.id)}
                       className="p-0.5 text-text-muted hover:text-accent transition-colors"
-                      aria-label="상세 보기"
+                      aria-label={`${buyer.company_name} 상세 보기`}
                     >
                       <ChevronRight className="h-3 w-3" />
                     </button>
                   </div>
-                  {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
+                  {buyer.contact_name && (
+                    <p className="text-[10px] text-text-muted mb-1 truncate">
+                      {buyer.contact_name}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
+                    {buyer.tier && <InterestIndicator tier={buyer.tier} />}
+                  </div>
                   {canWrite && nextStage && (
                     <div className="mt-1.5 pt-1.5 border-t border-gray-border">
                       <InlineLogInput
@@ -122,6 +133,7 @@ export default function MarketingKanbanView({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

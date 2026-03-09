@@ -55,7 +55,7 @@ export default function BuyerSummarySection({
   stageSummary,
 }: BuyerSummarySectionProps) {
   const hasDart = !!buyer.corp_code;
-  const { data: dartSummary, isLoading: dartLoading } = useDartFinancialSummary(
+  const { data: dartSummary, isLoading: dartLoading, isError: dartError } = useDartFinancialSummary(
     txnId,
     buyer.id,
     hasDart,
@@ -102,7 +102,27 @@ export default function BuyerSummarySection({
         </section>
       )}
 
-      {/* 섹션 3: DART 재무 요약 */}
+      {/* 섹션 3: 거래 정보 (IOI/LOI) */}
+      {(buyer.ioi_value != null || buyer.ioi_date != null || buyer.loi_value != null || buyer.loi_date != null) && (
+        <section>
+          <h3 className="text-sm font-semibold text-text-dark mb-3">거래 정보</h3>
+          <dl className="grid grid-cols-2 gap-4">
+            <InfoItem label="IOI 금액">
+              {buyer.ioi_value ? formatAmountKRW(Number(buyer.ioi_value)) : "-"}
+            </InfoItem>
+            <InfoItem label="IOI 일자">{buyer.ioi_date ?? "-"}</InfoItem>
+            <InfoItem label="LOI 금액">
+              {buyer.loi_value ? formatAmountKRW(Number(buyer.loi_value)) : "-"}
+            </InfoItem>
+            <InfoItem label="LOI 일자">{buyer.loi_date ?? "-"}</InfoItem>
+            {buyer.final_offer_value && (
+              <InfoItem label="최종 제안가">{formatAmountKRW(Number(buyer.final_offer_value))}</InfoItem>
+            )}
+          </dl>
+        </section>
+      )}
+
+      {/* 섹션 4: DART 재무 요약 */}
       {hasDart && (
         <section>
           <h3 className="text-sm font-semibold text-text-dark mb-3">
@@ -112,6 +132,8 @@ export default function BuyerSummarySection({
             <div className="flex items-center justify-center py-6">
               <Spinner size="sm" />
             </div>
+          ) : dartError ? (
+            <p className="text-xs text-red-500">재무 정보를 불러올 수 없습니다.</p>
           ) : dartSummary ? (
             <div>
               {dartSummary.fiscal_year && (

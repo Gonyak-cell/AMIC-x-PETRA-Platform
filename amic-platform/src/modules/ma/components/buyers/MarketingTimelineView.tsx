@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InlineLogInput from "./InlineLogInput";
@@ -55,10 +55,15 @@ export default function MarketingTimelineView({
   });
 
   return (
-    <div className="space-y-3">
+    <div>
+      <p className="text-xs font-medium text-accent mb-2">Timeline View — 진행률 바 + 카드</p>
+      <div className="space-y-3">
       {sorted.map((buyer) => {
         const stages = stageMap.get(buyer.id);
         const currentIdx = stages ? latestStageIndex(stages) : -1;
+        const pct = Math.round(
+          ((currentIdx + 1) / MARKETING_STAGES.length) * 100,
+        );
         const nextStage =
           currentIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[currentIdx + 1] : null;
 
@@ -78,12 +83,17 @@ export default function MarketingTimelineView({
                     {MARKETING_STAGE_LABELS[MARKETING_STAGES[currentIdx]]}
                   </Badge>
                 )}
+                {currentIdx >= 0 && (
+                  <span className="text-[10px] font-semibold text-accent">
+                    {pct}%
+                  </span>
+                )}
               </div>
               <button
                 type="button"
                 onClick={() => onSelectBuyer(buyer.id)}
                 className="p-1 text-text-muted hover:text-accent transition-colors"
-                aria-label="상세 보기"
+                aria-label={`${buyer.company_name} 상세 보기`}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -117,20 +127,28 @@ export default function MarketingTimelineView({
               })}
             </div>
 
-            {/* Inline input for next stage */}
-            {canWrite && nextStage && (
-              <div className="mt-2 pt-2 border-t border-gray-border">
-                <InlineLogInput
-                  txnId={txnId}
-                  buyerId={buyer.id}
-                  defaultStage={nextStage}
-                  compact
-                />
+            {/* Inline input for next stage OR completion indicator */}
+            {!nextStage && currentIdx >= 0 ? (
+              <div className="mt-2 pt-2 border-t border-gray-border flex items-center gap-1 text-accent">
+                <Check className="h-3.5 w-3.5" />
+                <span className="text-xs font-semibold">모든 단계 완료</span>
               </div>
+            ) : (
+              canWrite && nextStage && (
+                <div className="mt-2 pt-2 border-t border-gray-border">
+                  <InlineLogInput
+                    txnId={txnId}
+                    buyerId={buyer.id}
+                    defaultStage={nextStage}
+                    compact
+                  />
+                </div>
+              )
             )}
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

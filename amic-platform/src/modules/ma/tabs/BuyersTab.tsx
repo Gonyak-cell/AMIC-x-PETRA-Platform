@@ -25,6 +25,7 @@ import {
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
+import ShortListSummaryBar from "@/modules/ma/components/buyers/ShortListSummaryBar";
 import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
 import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
 import ShortListMasterList from "@/modules/ma/components/buyers/ShortListMasterList";
@@ -161,6 +162,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
       render: (r) => {
         const siId = (r.extra_data as Record<string, unknown> | null)
           ?.si_company_id as string | undefined;
+
         return (
           <div>
             <button
@@ -252,44 +254,100 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const DEV_MOCK_BUYERS: BuyerCandidate[] = import.meta.env.DEV
     ? [
         {
-          id: "mock-1", transaction_id: txnId, company_name: "삼성물산",
-          contact_name: "김철수", contact_email: null, contact_phone: null,
-          buyer_type: "STRATEGIC", status: "NDA_SIGNED", tier: "TIER_1",
-          deal_role: "SOLE_BUYER", is_short_listed: true, corp_code: null,
-          ioi_value: "150000000000", ioi_date: "2026-03-01",
-          loi_value: null, loi_date: null, final_offer_value: null,
-          rejection_reason: null, notes: null, extra_data: null,
-          created_at: "2026-02-20T09:00:00Z", updated_at: "2026-03-05T14:00:00Z",
+          id: "mock-1",
+          transaction_id: txnId,
+          company_name: "삼성물산",
+          contact_name: "김철수",
+          contact_email: null,
+          contact_phone: null,
+          buyer_type: "STRATEGIC",
+          status: "NDA_SIGNED",
+          tier: "TIER_1",
+          deal_role: "SOLE_BUYER",
+          is_short_listed: true,
+          corp_code: null,
+          ioi_value: "150000000000",
+          ioi_date: "2026-03-01",
+          loi_value: null,
+          loi_date: null,
+          final_offer_value: null,
+          rejection_reason: null,
+          notes: null,
+          extra_data: null,
+          created_at: "2026-02-20T09:00:00Z",
+          updated_at: "2026-03-05T14:00:00Z",
         },
         {
-          id: "mock-2", transaction_id: txnId, company_name: "SK스퀘어",
-          contact_name: "이영희", contact_email: null, contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR", status: "INTEREST_CONFIRMED", tier: "TIER_2",
-          deal_role: "CO_INVESTOR", is_short_listed: true, corp_code: null,
-          ioi_value: null, ioi_date: null,
-          loi_value: null, loi_date: null, final_offer_value: null,
-          rejection_reason: null, notes: null, extra_data: null,
-          created_at: "2026-02-22T10:00:00Z", updated_at: "2026-03-04T11:00:00Z",
+          id: "mock-2",
+          transaction_id: txnId,
+          company_name: "SK스퀘어",
+          contact_name: "이영희",
+          contact_email: null,
+          contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR",
+          status: "INTEREST_CONFIRMED",
+          tier: "TIER_2",
+          deal_role: "CO_INVESTOR",
+          is_short_listed: true,
+          corp_code: null,
+          ioi_value: null,
+          ioi_date: null,
+          loi_value: null,
+          loi_date: null,
+          final_offer_value: null,
+          rejection_reason: null,
+          notes: null,
+          extra_data: null,
+          created_at: "2026-02-22T10:00:00Z",
+          updated_at: "2026-03-04T11:00:00Z",
         },
         {
-          id: "mock-3", transaction_id: txnId, company_name: "한화투자증권",
-          contact_name: "박지민", contact_email: null, contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR", status: "CIM_SENT", tier: "TIER_1",
-          deal_role: "FINANCING_PROVIDER", is_short_listed: true, corp_code: null,
-          ioi_value: "200000000000", ioi_date: "2026-03-02",
-          loi_value: null, loi_date: null, final_offer_value: null,
-          rejection_reason: null, notes: null, extra_data: null,
-          created_at: "2026-02-25T08:00:00Z", updated_at: "2026-03-06T16:00:00Z",
+          id: "mock-3",
+          transaction_id: txnId,
+          company_name: "한화투자증권",
+          contact_name: "박지민",
+          contact_email: null,
+          contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR",
+          status: "CIM_SENT",
+          tier: "TIER_1",
+          deal_role: "FINANCING_PROVIDER",
+          is_short_listed: true,
+          corp_code: null,
+          ioi_value: "200000000000",
+          ioi_date: "2026-03-02",
+          loi_value: null,
+          loi_date: null,
+          final_offer_value: null,
+          rejection_reason: null,
+          notes: null,
+          extra_data: null,
+          created_at: "2026-02-25T08:00:00Z",
+          updated_at: "2026-03-06T16:00:00Z",
         },
         {
-          id: "mock-4", transaction_id: txnId, company_name: "미래에셋자산운용",
-          contact_name: null, contact_email: null, contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR", status: "CONTACTED", tier: "TIER_3",
-          deal_role: null, is_short_listed: true, corp_code: null,
-          ioi_value: null, ioi_date: null,
-          loi_value: null, loi_date: null, final_offer_value: null,
-          rejection_reason: null, notes: null, extra_data: null,
-          created_at: "2026-02-28T13:00:00Z", updated_at: "2026-03-07T09:00:00Z",
+          id: "mock-4",
+          transaction_id: txnId,
+          company_name: "미래에셋자산운용",
+          contact_name: null,
+          contact_email: null,
+          contact_phone: null,
+          buyer_type: "FINANCIAL_SPONSOR",
+          status: "CONTACTED",
+          tier: "TIER_3",
+          deal_role: null,
+          is_short_listed: true,
+          corp_code: null,
+          ioi_value: null,
+          ioi_date: null,
+          loi_value: null,
+          loi_date: null,
+          final_offer_value: null,
+          rejection_reason: null,
+          notes: null,
+          extra_data: null,
+          created_at: "2026-02-28T13:00:00Z",
+          updated_at: "2026-03-07T09:00:00Z",
         },
       ]
     : [];
@@ -298,25 +356,55 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     ? [
         {
           buyer_id: "mock-1",
-          stages: { IDENTIFIED: "2026-02-20", EMAIL_SENT: "2026-02-21", PHONE_CALL: "2026-02-23", ADVISOR_MEETING: "2026-02-28", NDA_SIGNED: "2026-03-01", TARGET_MEETING: null },
+          stages: {
+            IDENTIFIED: "2026-02-20",
+            EMAIL_SENT: "2026-02-21",
+            PHONE_CALL: "2026-02-23",
+            ADVISOR_MEETING: "2026-02-28",
+            NDA_SIGNED: "2026-03-01",
+            TARGET_MEETING: null,
+          },
         },
         {
           buyer_id: "mock-2",
-          stages: { IDENTIFIED: "2026-02-22", EMAIL_SENT: "2026-02-24", PHONE_CALL: "2026-02-26", ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+          stages: {
+            IDENTIFIED: "2026-02-22",
+            EMAIL_SENT: "2026-02-24",
+            PHONE_CALL: "2026-02-26",
+            ADVISOR_MEETING: null,
+            NDA_SIGNED: null,
+            TARGET_MEETING: null,
+          },
         },
         {
           buyer_id: "mock-3",
-          stages: { IDENTIFIED: "2026-02-25", EMAIL_SENT: "2026-02-26", PHONE_CALL: null, ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+          stages: {
+            IDENTIFIED: "2026-02-25",
+            EMAIL_SENT: "2026-02-26",
+            PHONE_CALL: null,
+            ADVISOR_MEETING: null,
+            NDA_SIGNED: null,
+            TARGET_MEETING: null,
+          },
         },
         {
           buyer_id: "mock-4",
-          stages: { IDENTIFIED: "2026-02-28", EMAIL_SENT: null, PHONE_CALL: null, ADVISOR_MEETING: null, NDA_SIGNED: null, TARGET_MEETING: null },
+          stages: {
+            IDENTIFIED: "2026-02-28",
+            EMAIL_SENT: null,
+            PHONE_CALL: null,
+            ADVISOR_MEETING: null,
+            NDA_SIGNED: null,
+            TARGET_MEETING: null,
+          },
         },
       ]
     : [];
 
-  const shortListBuyers = realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
+  const shortListBuyers =
+    realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
   const devOverview = realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW;
+  const overviewMerged = [...(shortListOverview ?? []), ...devOverview];
 
   // Client-side filtering for Long List
   const filteredBuyers = useMemo(() => {
@@ -498,58 +586,71 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
         {buyerSubTab === "short-list" && (
           <>
-            {shortListViewMode === "grid" && (
-              <MarketingGridView
-                buyers={shortListBuyers}
-                overviewData={[...(shortListOverview ?? []), ...devOverview]}
-                onSelectBuyer={setSelectedBuyerId}
-                canWrite={canWrite}
-                txnId={txnId}
-              />
-            )}
-            {shortListViewMode === "kanban" && (
-              <Suspense
-                fallback={
-                  <p className="py-8 text-center text-sm text-text-muted">
-                    로딩 중...
-                  </p>
-                }
-              >
-                <MarketingKanbanView
-                  buyers={shortListBuyers}
-                  overviewData={[...(shortListOverview ?? []), ...devOverview]}
-                  onSelectBuyer={setSelectedBuyerId}
-                  canWrite={canWrite}
-                  txnId={txnId}
-                />
-              </Suspense>
-            )}
-            {shortListViewMode === "timeline" && (
-              <Suspense
-                fallback={
-                  <p className="py-8 text-center text-sm text-text-muted">
-                    로딩 중...
-                  </p>
-                }
-              >
-                <MarketingTimelineView
-                  buyers={shortListBuyers}
-                  overviewData={[...(shortListOverview ?? []), ...devOverview]}
-                  onSelectBuyer={setSelectedBuyerId}
-                  canWrite={canWrite}
-                  txnId={txnId}
-                />
-              </Suspense>
-            )}
-            {shortListBuyers.length > 0 && (
-              <ShortListMasterList
-                buyers={shortListBuyers}
-                overviewData={[...(shortListOverview ?? []), ...devOverview]}
-                selectedBuyerId={selectedBuyerId}
-                onSelectBuyer={setSelectedBuyerId}
-                totalBuyerCount={allBuyers.length}
-              />
-            )}
+            <ShortListSummaryBar
+              buyers={shortListBuyers}
+              overviewData={overviewMerged}
+            />
+
+            <div className="flex gap-4">
+              {shortListBuyers.length > 0 && (
+                <div className="w-[280px] flex-shrink-0">
+                  <ShortListMasterList
+                    buyers={shortListBuyers}
+                    overviewData={overviewMerged}
+                    selectedBuyerId={selectedBuyerId}
+                    onSelectBuyer={setSelectedBuyerId}
+                    totalBuyerCount={allBuyers.length}
+                  />
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                {shortListViewMode === "grid" && (
+                  <MarketingGridView
+                    buyers={shortListBuyers}
+                    overviewData={overviewMerged}
+                    onSelectBuyer={setSelectedBuyerId}
+                    canWrite={canWrite}
+                    txnId={txnId}
+                  />
+                )}
+                {shortListViewMode === "kanban" && (
+                  <Suspense
+                    fallback={
+                      <p className="py-8 text-center text-sm text-text-muted">
+                        로딩 중...
+                      </p>
+                    }
+                  >
+                    <MarketingKanbanView
+                      buyers={shortListBuyers}
+                      overviewData={overviewMerged}
+                      onSelectBuyer={setSelectedBuyerId}
+                      canWrite={canWrite}
+                      txnId={txnId}
+                    />
+                  </Suspense>
+                )}
+                {shortListViewMode === "timeline" && (
+                  <Suspense
+                    fallback={
+                      <p className="py-8 text-center text-sm text-text-muted">
+                        로딩 중...
+                      </p>
+                    }
+                  >
+                    <MarketingTimelineView
+                      buyers={shortListBuyers}
+                      overviewData={overviewMerged}
+                      onSelectBuyer={setSelectedBuyerId}
+                      canWrite={canWrite}
+                      txnId={txnId}
+                    />
+                  </Suspense>
+                )}
+              </div>
+            </div>
+
             <BuyerDetailPanel
               txnId={txnId}
               buyer={selectedBuyer}
@@ -557,7 +658,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
             />
-            {/* ConsortiumPanel 일시 숨김 */}
           </>
         )}
 
