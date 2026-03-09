@@ -17,6 +17,8 @@ export default function ShortListSummaryBar({
 }: ShortListSummaryBarProps) {
   const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
 
+  const dropCount = buyers.filter((b) => b.status === "BID_DROPPED").length;
+  const activeCount = buyers.length - dropCount;
   const ndaCount = overviewData.filter((s) => s.stages.NDA_SIGNED).length;
   const targetMeetingCount = overviewData.filter(
     (s) => s.stages.TARGET_MEETING,
@@ -28,7 +30,7 @@ export default function ShortListSummaryBar({
     let total = 0;
     for (const b of buyers) {
       const stages = stageMap.get(b.id);
-      if (!stages) continue; // 0% 기여 (total에 더하지 않음)
+      if (!stages) continue;
       const done = MARKETING_STAGES.filter(
         (s: MarketingStage) => stages[s],
       ).length;
@@ -38,19 +40,20 @@ export default function ShortListSummaryBar({
   }, [buyers, stageMap]);
 
   const cards = [
-    { label: "전체 후보", value: buyers.length, color: "text-amic-400" },
+    { label: "ACTIVE 후보", value: activeCount, color: "text-text-dark" },
+    { label: "DROP", value: dropCount, color: "text-orange-500" },
     { label: "NDA 체결", value: ndaCount, color: "text-amic-400" },
     {
       label: "대상미팅 완료",
       value: targetMeetingCount,
       color: "text-solid-green",
     },
-    { label: "Tier 1", value: tier1Count, color: "text-amic-500" },
-    { label: "평균 진행률", value: `${avgPct}%`, color: "text-amic-300" },
+    { label: "TIER 1", value: tier1Count, color: "text-amic-500" },
+    { label: "평균 진행률", value: "${avgPct}%", color: "text-amic-300" },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
       {cards.map((card) => (
         <div
           key={card.label}
