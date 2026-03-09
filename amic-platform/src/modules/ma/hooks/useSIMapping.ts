@@ -3,6 +3,17 @@ import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { maApi } from "@/api/maClient";
+import type {
+  BulkAddBuyersRequest,
+  BulkAddBuyersResponse,
+  DeepDiveResponse,
+  KsicSuggestion,
+  SICompany,
+  SIDataStats,
+  SIMappingRequest,
+  SIMappingResponse,
+  VcMappingByRegResponse,
+} from "@/modules/ma/types/si_mapping";
 
 /** axios 에러에서 BE detail 메시지 추출 (없으면 기본 message) */
 function extractDetail(err: Error): string {
@@ -13,18 +24,6 @@ function extractDetail(err: Error): string {
   }
   return err.message;
 }
-import type {
-  BulkAddBuyersRequest,
-  BulkAddBuyersResponse,
-  BulkAddVcBuyersRequest,
-  DeepDiveResponse,
-  KsicSuggestion,
-  SICompany,
-  SIDataStats,
-  SIMappingRequest,
-  SIMappingResponse,
-  VcMappingByRegResponse,
-} from "@/modules/ma/types/si_mapping";
 
 // ── Query Keys ──────────────────────────────────────────
 
@@ -34,6 +33,8 @@ const siQK = {
   deepDive: (id: string) => ["ma", "si-mapping", "deep-dive", id] as const,
   searchByName: (name: string) =>
     ["ma", "si-mapping", "search-by-name", name] as const,
+  vcMappingResult: (txnId: string) =>
+    ["ma", "si-mapping", "vc-result", txnId] as const,
 };
 
 // ── 데이터 통계 ──────────────────────────────────────────
@@ -116,9 +117,22 @@ export function useSIMapping() {
   });
 }
 
+// ── VC 매핑 결과 캐시 조회 ──────────────────────────────
+
+export function useVcMappingResult(txnId: string) {
+  return useQuery<VcMappingByRegResponse | null>({
+    queryKey: siQK.vcMappingResult(txnId),
+    queryFn: () => null,
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+}
+
 // ── 등록번호 기반 VC 매핑 ─────────────────────────────────
 
-export function useVcMappingByRegistration() {
+export function useVcMappingByRegistration(txnId: string) {
+  const qc = useQueryClient();
   return useMutation<
     VcMappingByRegResponse,
     Error,
@@ -137,6 +151,7 @@ export function useVcMappingByRegistration() {
       return data;
     },
     onSuccess: (data) => {
+      qc.setQueryData(siQK.vcMappingResult(txnId), data);
       toast.success(`${data.company.company_name}: Value Chain 매핑 완료`);
     },
     // onError toast 제거 — SIMappingPanel이 인라인 에러 UI로 처리 (IMP-1)

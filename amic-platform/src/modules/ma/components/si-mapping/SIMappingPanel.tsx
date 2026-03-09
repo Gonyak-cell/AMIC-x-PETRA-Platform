@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { gsap } from "@/lib/gsap";
 import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
 import {
+  useBulkAddVcBuyers,
   useSICompanyByName,
   useVcMappingByRegistration,
+  useVcMappingResult,
 } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
-import type { VcMappingByRegResponse } from "@/modules/ma/types/si_mapping";
 
 import SIDetailPanel from "./SIDetailPanel";
 import VcMappingResult from "./VcMappingResult";
@@ -35,9 +35,40 @@ export default function SIMappingPanel({
   const siLookup = useSICompanyByName(deepDiveName);
   const resolvedId = siLookup.data?.id ?? null;
 
-  // VC 등록번호 매핑
-  const [vcResult, setVcResult] = useState<VcMappingByRegResponse | null>(null);
-  const vcMapMutation = useVcMappingByRegistration();
+  // VC 등록번호 매핑 (React Query 캐시로 모달 재열기 시 유지)
+  const { data: vcResult } = useVcMappingResult(txnId);
+  const vcMapMutation = useVcMappingByRegistration(txnId);
+
+  // VC 기업 선택 상태 (Long List 추가용)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const bulkAddMutation = useBulkAddVcBuyers(txnId);
+  const { mutate: bulkAddMutate, reset: resetBulkAdd } = bulkAddMutation;
+
+  const handleToggle = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    resetBulkAdd();
+  }, [resetBulkAdd]);
+
+  const handleBulkAdd = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    if (selectedIds.size > 100) {
+      toast.warning("최대 100건까지 일괄 등록할 수 있습니다.");
+      return;
+    }
+    bulkAddMutate(
+      { vc_company_ids: Array.from(selectedIds) },
+      { onSuccess: () => setSelectedIds(new Set()) },
+    );
+  }, [selectedIds, bulkAddMutate]);
 
   // Refs
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -140,10 +171,7 @@ export default function SIMappingPanel({
 
   const { mutate: runVcMapping } = vcMapMutation;
   const handleVcMapping = useCallback(() => {
-    runVcMapping(
-      { corp_reg_no: corpRegNo, biz_reg_no: bizRegNo },
-      { onSuccess: (data) => setVcResult(data) },
-    );
+    runVcMapping({ corp_reg_no: corpRegNo, biz_reg_no: bizRegNo });
   }, [corpRegNo, bizRegNo, runVcMapping]);
 
   return (
@@ -230,10 +258,12 @@ export default function SIMappingPanel({
                 )}
                 {vcResult && (
                   <VcMappingResult
-                    txnId={txnId}
                     company={vcResult.company}
                     mapping={vcResult.mapping}
                     onCompanyClick={setDeepDiveName}
+                    selectedIds={selectedIds}
+                    onToggle={handleToggle}
+                    onClearSelection={handleClearSelection}
                   />
                 )}
               </div>
@@ -261,6 +291,26 @@ export default function SIMappingPanel({
             <Button variant="ghost" size="sm" onClick={handleClose}>
               닫기
             </Button>
+            <div className="flex items-center gap-3">
+              {bulkAddMutation.isError && (
+                <p role="alert" className="text-sm text-red-600">
+                  {bulkAddMutation.error.message}
+                </p>
+              )}
+              {vcResult && selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkAdd}
+                  disabled={bulkAddMutation.isPending}
+                  aria-busy={bulkAddMutation.isPending}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {bulkAddMutation.isPending
+                    ? "등록 중..."
+                    : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

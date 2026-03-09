@@ -1,7 +1,5 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { memo, useMemo, useRef, useState } from "react";
 
-import { useBulkAddVcBuyers } from "@/modules/ma/hooks/useSIMapping";
 import type {
   VcChainCompany,
   VcChainPanel,
@@ -13,10 +11,12 @@ import { formatBillions } from "@/modules/ma/utils/format";
 type VcTab = "forward" | "backward" | "competitors";
 
 interface VcMappingResultProps {
-  txnId: string;
   company: VcCompanyLookupResult;
   mapping: VcMappingResponse;
   onCompanyClick?: (name: string) => void;
+  selectedIds: Set<number>;
+  onToggle: (id: number) => void;
+  onClearSelection: () => void;
 }
 
 const CompanyRow = memo(function CompanyRow({
@@ -104,7 +104,7 @@ const ChainPanelCard = memo(function ChainPanelCard({
   onToggle: (id: number) => void;
   onCompanyClick?: (name: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const coeff = Number(panel.coefficient);
   const coeffDisplay = Number.isNaN(coeff)
     ? panel.coefficient
@@ -171,37 +171,15 @@ const TAB_CONFIG: { key: VcTab; label: string }[] = [
 ];
 
 export default function VcMappingResult({
-  txnId,
   company,
   mapping,
   onCompanyClick,
+  selectedIds,
+  onToggle,
+  onClearSelection,
 }: VcMappingResultProps) {
   const [activeTab, setActiveTab] = useState<VcTab>("forward");
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const bulkAddMutation = useBulkAddVcBuyers(txnId);
   const tablistRef = useRef<HTMLDivElement>(null);
-
-  const handleToggle = useCallback((id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const handleBulkAdd = () => {
-    if (selectedIds.size === 0) return;
-    const MAX_BULK = 100;
-    if (selectedIds.size > MAX_BULK) {
-      toast.warning(`최대 ${MAX_BULK}건까지 일괄 등록할 수 있습니다.`);
-      return;
-    }
-    bulkAddMutation.mutate(
-      { vc_company_ids: Array.from(selectedIds) },
-      { onSuccess: () => setSelectedIds(new Set()) },
-    );
-  };
 
   const panelsMap = useMemo<Record<VcTab, VcChainPanel[]>>(
     () => ({
@@ -266,8 +244,7 @@ export default function VcMappingResult({
             type="button"
             onClick={() => {
               setActiveTab(key);
-              setSelectedIds(new Set());
-              bulkAddMutation.reset();
+              onClearSelection();
             }}
             onKeyDown={(e) => {
               let nextIdx = idx;
@@ -279,8 +256,7 @@ export default function VcMappingResult({
               e.preventDefault();
               const nextKey = TAB_CONFIG[nextIdx].key;
               setActiveTab(nextKey);
-              setSelectedIds(new Set());
-              bulkAddMutation.reset();
+              onClearSelection();
               tablistRef.current
                 ?.querySelectorAll<HTMLButtonElement>("[role=tab]")
                 ?.[nextIdx]?.focus();
@@ -314,7 +290,7 @@ export default function VcMappingResult({
                       key={c.id}
                       company={c}
                       checked={selectedIds.has(c.id)}
-                      onToggle={handleToggle}
+                      onToggle={onToggle}
                       onCompanyClick={onCompanyClick}
                     />
                   ))}
@@ -332,7 +308,7 @@ export default function VcMappingResult({
               key={`${activeTab}-${panel.industry_name}`}
               panel={panel}
               selectedIds={selectedIds}
-              onToggle={handleToggle}
+              onToggle={onToggle}
               onCompanyClick={onCompanyClick}
             />
           ))
@@ -344,28 +320,6 @@ export default function VcMappingResult({
         )}
       </div>
 
-      {/* Long List 등록 버튼 */}
-      <div
-        aria-hidden={selectedIds.size === 0}
-        className={`flex items-center justify-end gap-3 transition-opacity ${selectedIds.size > 0 ? "opacity-100" : "pointer-events-none opacity-0"}`}
-      >
-        {bulkAddMutation.isError && (
-          <p role="alert" className="text-sm text-red-600">
-            {bulkAddMutation.error.message}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={handleBulkAdd}
-          disabled={bulkAddMutation.isPending || selectedIds.size === 0}
-          aria-busy={bulkAddMutation.isPending}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {bulkAddMutation.isPending
-            ? "등록 중..."
-            : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
-        </button>
-      </div>
     </div>
   );
 }
