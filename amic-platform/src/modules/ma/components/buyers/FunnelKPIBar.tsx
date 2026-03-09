@@ -4,6 +4,7 @@ import {
   FUNNEL_NDA_AND_AFTER,
   FUNNEL_CIM_AND_AFTER,
   FUNNEL_DD_AND_AFTER,
+  isShortListed,
 } from "@/modules/ma/constants";
 
 interface FunnelKPIBarProps {
@@ -17,7 +18,7 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
     let cim = 0;
     let dd = 0;
     for (const b of buyers) {
-      if (b.is_short_listed) shortList++;
+      if (isShortListed(b)) shortList++;
       if (FUNNEL_NDA_AND_AFTER.has(b.status)) nda++;
       if (FUNNEL_CIM_AND_AFTER.has(b.status)) cim++;
       if (FUNNEL_DD_AND_AFTER.has(b.status)) dd++;

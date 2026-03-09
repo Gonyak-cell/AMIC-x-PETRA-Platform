@@ -29,6 +29,7 @@ import {
   MARKETING_STAGE_OPTIONS,
   MARKETING_STAGE_LABELS,
   BUYER_TIER_LABELS,
+  isShortListed,
 } from "@/modules/ma/constants";
 import BuyerTierBadge from "./BuyerTierBadge";
 import DealRoleBadge from "./DealRoleBadge";
@@ -368,7 +369,7 @@ export default function ShortListOverview({
   canWrite,
 }: ShortListOverviewProps) {
   const shortListBuyers = useMemo(
-    () => buyers.filter((b) => b.is_short_listed),
+    () => buyers.filter(isShortListed),
     [buyers],
   );
 

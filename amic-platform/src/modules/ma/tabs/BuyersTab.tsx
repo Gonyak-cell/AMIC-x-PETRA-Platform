@@ -25,6 +25,7 @@ import {
   BUYER_TYPE_OPTIONS,
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
+  isShortListed,
 } from "@/modules/ma/constants";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
@@ -235,7 +236,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
   const realShortList = useMemo(
-    () => allBuyers.filter((b) => b.is_short_listed),
+    () => allBuyers.filter(isShortListed),
     [allBuyers],
   );
 
