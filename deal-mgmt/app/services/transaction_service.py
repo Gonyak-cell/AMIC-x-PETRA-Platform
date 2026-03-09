@@ -26,7 +26,7 @@ async def _generate_code_name(
     """코드명 자동 생성.
 
     형식: {TYPE}{YY}-{ABB}-{NN}
-    예시: MA26-EDW-01 (2026년 첫 번째 MA 딜, Project Edward)
+    예시: SE26-EDW-01 (2026년 첫 번째 매각 자문 딜, Project Edward)
     """
     abbr = project_name.removeprefix("Project ").strip()[:3].upper()
     year_suffix = str(year)[2:]
@@ -241,6 +241,11 @@ async def create_transaction(
     # 표준 Closing 체크리스트 자동 생성
     for item_data in _STANDARD_CLOSING_ITEMS:
         db.add(ClosingChecklist(transaction_id=txn.id, **item_data))
+
+    # VDR 기본 폴더 자동 생성 (12개)
+    from app.services.vdr_service import create_default_folders
+
+    create_default_folders(db, txn.id)
 
     await db.commit()
     await db.refresh(txn)

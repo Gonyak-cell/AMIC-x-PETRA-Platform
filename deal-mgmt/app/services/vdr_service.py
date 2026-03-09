@@ -19,7 +19,7 @@ from app.schemas.vdr import VdrDocumentUpdate, VdrFolderCreate, VdrFolderUpdate
 
 logger = logging.getLogger(__name__)
 
-# M&A 실사 VDR 기본 폴더 (11개)
+# M&A 실사 VDR 기본 폴더 (12개)
 _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
     (VdrFolderCategory.CORPORATE, "기업 일반", True),
     (VdrFolderCategory.FINANCIAL, "재무 자료", True),
@@ -56,6 +56,29 @@ def check_vdr_write_permission(
 # ── 폴더 CRUD ────────────────────────────────────────────────
 
 
+def create_default_folders(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> list[VdrFolder]:
+    """기본 VDR 폴더를 db.add만 수행한다 (commit 없음).
+
+    호출자가 트랜잭션을 직접 관리할 때 사용 (예: create_transaction).
+    독립 호출 시에는 init_vdr_folders()를 사용.
+    """
+    created: list[VdrFolder] = []
+    for idx, (category, name, is_required) in enumerate(_DEFAULT_FOLDERS):
+        folder = VdrFolder(
+            transaction_id=transaction_id,
+            name=name,
+            category=category,
+            order_index=idx,
+            is_required=is_required,
+        )
+        db.add(folder)
+        created.append(folder)
+    return created
+
+
 async def init_vdr_folders(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -76,17 +99,7 @@ async def init_vdr_folders(
     if existing and existing > 0:
         raise ValueError("이 거래의 VDR 폴더가 이미 초기화되어 있습니다.")
 
-    created: list[VdrFolder] = []
-    for idx, (category, name, is_required) in enumerate(_DEFAULT_FOLDERS):
-        folder = VdrFolder(
-            transaction_id=transaction_id,
-            name=name,
-            category=category,
-            order_index=idx,
-            is_required=is_required,
-        )
-        db.add(folder)
-        created.append(folder)
+    created = create_default_folders(db, transaction_id)
 
     await db.commit()
     for f in created:
