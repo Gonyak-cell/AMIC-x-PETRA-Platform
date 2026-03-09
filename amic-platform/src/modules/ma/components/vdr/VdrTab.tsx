@@ -1,13 +1,15 @@
 import {
-  FolderLock,
   HardDrive,
   Files,
   FolderTree,
   Sparkles,
   Upload,
 } from "lucide-react";
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
+
+import { maApi } from "@/api/maClient";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { KpiCard } from "@/components/ui/KpiCard";
@@ -15,7 +17,6 @@ import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
 import {
   useVdrSummary,
   useVdrFolders,
-  useInitVdr,
   useCreateVdrFolder,
   useDeleteVdrFolder,
   useVdrDocuments,
@@ -84,12 +85,30 @@ function findFolderByCategory(
 }
 
 export default function VdrTab({ txnId }: Props) {
+  const qc = useQueryClient();
   const { data: summary, isLoading: summaryLoading } = useVdrSummary(txnId);
   const { data: folders = [], isLoading: foldersLoading } =
     useVdrFolders(txnId);
-  const initVdr = useInitVdr(txnId);
   const createFolder = useCreateVdrFolder(txnId);
   const deleteFolder = useDeleteVdrFolder(txnId);
+
+  // 기존 미초기화 거래 자동 처리
+  const autoInitRef = useRef(false);
+  useEffect(() => {
+    if (summary && !summary.initialized && !autoInitRef.current) {
+      autoInitRef.current = true;
+      maApi
+        .post(`/transactions/${txnId}/vdr/init`, {})
+        .then(() => {
+          qc.invalidateQueries({
+            queryKey: ["ma", "transactions", txnId, "vdr"],
+          });
+        })
+        .catch(() => {
+          autoInitRef.current = false;
+        });
+    }
+  }, [summary, txnId, qc]);
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showDirectUpload, setShowDirectUpload] = useState(false);
@@ -152,33 +171,6 @@ export default function VdrTab({ txnId }: Props) {
     },
     [],
   );
-
-  // ── 초기화 전 상태 ────────────────────────────────────
-  if (!summaryLoading && summary && !summary.initialized) {
-    return (
-      <Card padding="lg">
-        <div className="flex flex-col items-center gap-4 py-12 text-center">
-          <FolderLock className="h-12 w-12 text-slate-300" />
-          <div>
-            <h3 className="text-lg font-semibold text-slate-700">
-              VDR (Virtual Data Room)
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              실사 자료실을 초기화하면 M&A 실사에 필요한 11개 기본 폴더가
-              자동으로 생성됩니다.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            onClick={() => initVdr.mutate()}
-            disabled={initVdr.isPending}
-          >
-            {initVdr.isPending ? "초기화 중..." : "VDR 초기화"}
-          </Button>
-        </div>
-      </Card>
-    );
-  }
 
   // ── 로딩 ──────────────────────────────────────────────
   if (summaryLoading || foldersLoading) {

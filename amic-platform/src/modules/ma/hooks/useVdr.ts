@@ -59,24 +59,6 @@ export function useVdrFolders(txnId: string) {
   });
 }
 
-export function useInitVdr(txnId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const { data } = await maApi.post(`/transactions/${txnId}/vdr/init`, {});
-      return data as VdrFolder[];
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: folderQK(txnId) });
-      qc.invalidateQueries({ queryKey: summaryQK(txnId) });
-      toast.success("VDR이 초기화되었습니다.");
-    },
-    onError: () => {
-      toast.error("VDR 초기화에 실패했습니다.");
-    },
-  });
-}
-
 export function useCreateVdrFolder(txnId: string) {
   const qc = useQueryClient();
   return useMutation({

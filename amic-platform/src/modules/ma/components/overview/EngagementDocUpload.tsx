@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useQueryClient } from "@tanstack/react-query";
 import { maApi } from "@/api/maClient";
-import { useVdrFolders, useInitVdr } from "@/modules/ma/hooks/useVdr";
+import { useVdrFolders } from "@/modules/ma/hooks/useVdr";
 import {
   useCreateExtraction,
   useExtraction,
@@ -67,8 +67,7 @@ export default function EngagementDocUpload({
 
   // VDR 훅
   const qc = useQueryClient();
-  const { data: folders, refetch: refetchFolders } = useVdrFolders(txnId);
-  const initVdr = useInitVdr(txnId);
+  const { data: folders } = useVdrFolders(txnId);
   const createExtraction = useCreateExtraction(txnId);
 
   // "01. CORPORATE" 폴더 찾기
@@ -170,18 +169,12 @@ export default function EngagementDocUpload({
       setStep("uploading");
 
       try {
-        // 1. VDR 미초기화 → 초기화
-        let targetFolderId = corporateFolder?.id;
+        // VDR CORPORATE 폴더에 업로드
+        const targetFolderId = corporateFolder?.id;
         if (!targetFolderId) {
-          const initResult = await initVdr.mutateAsync();
-          const corporate = initResult.find((f) => f.category === "CORPORATE");
-          targetFolderId = corporate?.id;
-          if (!targetFolderId) {
-            setStep("failed");
-            setErrorMsg("VDR CORPORATE 폴더를 찾을 수 없습니다.");
-            return;
-          }
-          await refetchFolders();
+          setStep("failed");
+          setErrorMsg("VDR CORPORATE 폴더를 찾을 수 없습니다.");
+          return;
         }
 
         // 2. 파일 업로드
@@ -223,12 +216,10 @@ export default function EngagementDocUpload({
     },
     [
       corporateFolder,
-      initVdr,
       createExtraction,
       txnId,
       docCategoryHint,
       validateFile,
-      refetchFolders,
       qc,
     ],
   );

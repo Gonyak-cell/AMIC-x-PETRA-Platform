@@ -85,7 +85,7 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
 export const ALWAYS_VISIBLE_TABS = ["overview"] as const;
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
-  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi"],
+  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi", "vdr"],
   PREPARATION: [
     ...ALWAYS_VISIBLE_TABS,
     "marketing-materials",
