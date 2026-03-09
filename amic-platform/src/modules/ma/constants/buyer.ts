@@ -78,7 +78,7 @@ export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
 // ── Stage Map Utility ──────────────────────────────
 export function buildStageMap(
   overviewData: BuyerStageSummary[],
-): Map<string, Record<MarketingStage, string | null>> {
+): Map<string, Partial<Record<MarketingStage, string | null>>> {
   return new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
 }
 
@@ -107,6 +107,10 @@ export const BUYER_STATUS_OPTIONS: SelectOption[] = [
   { value: "LOI_RECEIVED", label: "LOI 접수" },
   { value: "LOI_ACCEPTED", label: "LOI 수락" },
   { value: "SELECTED", label: "최종 선정" },
+  { value: "REJECTED", label: "거절" },
+  { value: "BID_SUBMITTED", label: "입찰 제출" },
+  { value: "BID_NOT_SUBMITTED", label: "입찰 미제출" },
+  { value: "BID_DROPPED", label: "입찰 철회" },
 ];
 
 // ── 매수자 Long List / Short List 분류 ────────────────
@@ -127,4 +131,51 @@ export const SHORT_LIST_STATUSES: BuyerStatus[] = [
   "LOI_ACCEPTED",
   "SELECTED",
   "REJECTED",
+  "BID_SUBMITTED",
+  "BID_NOT_SUBMITTED",
+  "BID_DROPPED",
 ];
+
+// ── Funnel KPI 단계별 상태 분류 ──────────────────────
+// REJECTED는 터미널 상태이므로 퍼널 단계에 포함하지 않음
+export const FUNNEL_NDA_AND_AFTER: ReadonlySet<string> = new Set<BuyerStatus>([
+  "NDA_SIGNED",
+  "CIM_SENT",
+  "INTEREST_CONFIRMED",
+  "IOI_RECEIVED",
+  "IOI_ACCEPTED",
+  "DD_GRANTED",
+  "DD_IN_PROGRESS",
+  "LOI_RECEIVED",
+  "LOI_ACCEPTED",
+  "SELECTED",
+  "BID_SUBMITTED",
+  "BID_NOT_SUBMITTED",
+  "BID_DROPPED",
+]);
+
+export const FUNNEL_CIM_AND_AFTER: ReadonlySet<string> = new Set<BuyerStatus>([
+  "CIM_SENT",
+  "INTEREST_CONFIRMED",
+  "IOI_RECEIVED",
+  "IOI_ACCEPTED",
+  "DD_GRANTED",
+  "DD_IN_PROGRESS",
+  "LOI_RECEIVED",
+  "LOI_ACCEPTED",
+  "SELECTED",
+  "BID_SUBMITTED",
+  "BID_NOT_SUBMITTED",
+  "BID_DROPPED",
+]);
+
+export const FUNNEL_DD_AND_AFTER: ReadonlySet<string> = new Set<BuyerStatus>([
+  "DD_GRANTED",
+  "DD_IN_PROGRESS",
+  "LOI_RECEIVED",
+  "LOI_ACCEPTED",
+  "SELECTED",
+  "BID_SUBMITTED",
+  "BID_NOT_SUBMITTED",
+  "BID_DROPPED",
+]);

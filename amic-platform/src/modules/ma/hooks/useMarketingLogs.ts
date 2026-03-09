@@ -60,10 +60,13 @@ export function useCreateMarketingLog(txnId: string, buyerId: string) {
           "stage-summary",
         ],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
       toast.success("마케팅 로그가 생성되었습니다.");
     },
-    onError: () => {
-      toast.error("마케팅 로그 생성에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "마케팅 로그 생성에 실패했습니다.");
     },
   });
 }
@@ -96,10 +99,13 @@ export function useUpdateMarketingLog(txnId: string, buyerId: string) {
           "stage-summary",
         ],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
       toast.success("마케팅 로그가 수정되었습니다.");
     },
-    onError: () => {
-      toast.error("마케팅 로그 수정에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "마케팅 로그 수정에 실패했습니다.");
     },
   });
 }
@@ -124,10 +130,13 @@ export function useDeleteMarketingLog(txnId: string, buyerId: string) {
           "stage-summary",
         ],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
       toast.success("마케팅 로그가 삭제되었습니다.");
     },
-    onError: () => {
-      toast.error("마케팅 로그 삭제에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "마케팅 로그 삭제에 실패했습니다.");
     },
   });
 }

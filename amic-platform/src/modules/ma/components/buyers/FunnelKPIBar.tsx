@@ -1,67 +1,35 @@
+import { useMemo } from "react";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
+import {
+  FUNNEL_NDA_AND_AFTER,
+  FUNNEL_CIM_AND_AFTER,
+  FUNNEL_DD_AND_AFTER,
+} from "@/modules/ma/constants";
 
 interface FunnelKPIBarProps {
   buyers: BuyerCandidate[];
 }
 
-const NDA_AND_AFTER = new Set([
-  "NDA_SIGNED",
-  "CIM_SENT",
-  "INTEREST_CONFIRMED",
-  "IOI_RECEIVED",
-  "IOI_ACCEPTED",
-  "DD_GRANTED",
-  "DD_IN_PROGRESS",
-  "LOI_RECEIVED",
-  "LOI_ACCEPTED",
-  "SELECTED",
-  "BID_SUBMITTED",
-]);
-
-const CIM_AND_AFTER = new Set([
-  "CIM_SENT",
-  "INTEREST_CONFIRMED",
-  "IOI_RECEIVED",
-  "IOI_ACCEPTED",
-  "DD_GRANTED",
-  "DD_IN_PROGRESS",
-  "LOI_RECEIVED",
-  "LOI_ACCEPTED",
-  "SELECTED",
-  "BID_SUBMITTED",
-]);
-
-const DD_STATUSES = new Set([
-  "DD_GRANTED",
-  "DD_IN_PROGRESS",
-  "LOI_RECEIVED",
-  "LOI_ACCEPTED",
-  "SELECTED",
-]);
-
 export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
-  const steps = [
-    {
-      label: "Long List",
-      count: buyers.length,
-    },
-    {
-      label: "Short List",
-      count: buyers.filter((b) => b.is_short_listed).length,
-    },
-    {
-      label: "NDA 체결",
-      count: buyers.filter((b) => NDA_AND_AFTER.has(b.status)).length,
-    },
-    {
-      label: "IM 발송",
-      count: buyers.filter((b) => CIM_AND_AFTER.has(b.status)).length,
-    },
-    {
-      label: "DD 진행",
-      count: buyers.filter((b) => DD_STATUSES.has(b.status)).length,
-    },
-  ];
+  const steps = useMemo(() => {
+    let shortList = 0;
+    let nda = 0;
+    let cim = 0;
+    let dd = 0;
+    for (const b of buyers) {
+      if (b.is_short_listed) shortList++;
+      if (FUNNEL_NDA_AND_AFTER.has(b.status)) nda++;
+      if (FUNNEL_CIM_AND_AFTER.has(b.status)) cim++;
+      if (FUNNEL_DD_AND_AFTER.has(b.status)) dd++;
+    }
+    return [
+      { label: "Long List", count: buyers.length },
+      { label: "Short List", count: shortList },
+      { label: "NDA 체결", count: nda },
+      { label: "IM 발송", count: cim },
+      { label: "DD 진행", count: dd },
+    ];
+  }, [buyers]);
 
   return (
     <div className="flex items-center gap-1 font-body">

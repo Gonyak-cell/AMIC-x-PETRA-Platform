@@ -1,4 +1,5 @@
-import { MARKETING_STAGES } from "@/modules/ma/constants";
+import { useMemo } from "react";
+import { MARKETING_STAGES, buildStageMap } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type {
   BuyerStageSummary,
@@ -14,7 +15,7 @@ export default function ShortListSummaryBar({
   buyers,
   overviewData,
 }: ShortListSummaryBarProps) {
-  const stageMap = new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
+  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
 
   const ndaCount = overviewData.filter((s) => s.stages.NDA_SIGNED).length;
   const targetMeetingCount = overviewData.filter(

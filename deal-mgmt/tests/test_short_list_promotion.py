@@ -298,3 +298,27 @@ async def test_toggle_short_listed_via_patch(client):
     )
     assert resp.status_code == 200
     assert resp.json()["is_short_listed"] is False
+
+
+async def test_tier_overrides_is_short_listed_mismatch(client):
+    """Tier + is_short_listed 동시 PATCH 시 Tier가 우선한다."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    # Tier=TIER_1 + is_short_listed=False 동시 전송 → Tier 우선 → True
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_1", "is_short_listed": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["tier"] == "TIER_1"
+    assert resp.json()["is_short_listed"] is True
+
+    # Tier=NOT_TARGET + is_short_listed=True 동시 전송 → Tier 우선 → False
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "NOT_TARGET", "is_short_listed": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["tier"] == "NOT_TARGET"
+    assert resp.json()["is_short_listed"] is False

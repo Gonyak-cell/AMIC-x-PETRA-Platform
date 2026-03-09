@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
+import { buildStageMap } from "@/modules/ma/constants";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InterestIndicator from "./InterestIndicator";
 import MarketingStageTracker from "./MarketingStageTracker";
@@ -21,6 +23,8 @@ export default function ShortListMasterList({
   onSelectBuyer,
   totalBuyerCount,
 }: ShortListMasterListProps) {
+  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
+
   if (buyers.length === 0) {
     return (
       <EmptyState
@@ -45,7 +49,8 @@ export default function ShortListMasterList({
       <div className="space-y-1 overflow-y-auto">
         {buyers.map((buyer) => {
           const isSelected = selectedBuyerId === buyer.id;
-          const summary = overviewData.find((s) => s.buyer_id === buyer.id);
+          const stages = stageMap.get(buyer.id);
+          const summary = stages ? { buyer_id: buyer.id, stages } as BuyerStageSummary : undefined;
 
           return (
             <button

@@ -32,7 +32,7 @@ export interface MarketingLogUpdate {
 
 export interface BuyerStageSummary {
   buyer_id: string;
-  stages: Record<MarketingStage, string | null>;
+  stages: Partial<Record<MarketingStage, string | null>>;
 }
 
 export interface DartCompanySuggestion {

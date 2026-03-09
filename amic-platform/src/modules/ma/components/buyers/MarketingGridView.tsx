@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
@@ -21,6 +22,21 @@ export default function MarketingGridView({
   canWrite,
   txnId,
 }: MarketingGridViewProps) {
+  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
+
+  // 완료 단계 수 기준 내림차순 정렬
+  const sorted = useMemo(
+    () =>
+      [...buyers].sort((a, b) => {
+        const aStages = stageMap.get(a.id);
+        const bStages = stageMap.get(b.id);
+        const aCount = aStages ? MARKETING_STAGES.filter((s) => aStages[s]).length : 0;
+        const bCount = bStages ? MARKETING_STAGES.filter((s) => bStages[s]).length : 0;
+        return bCount - aCount;
+      }),
+    [buyers, stageMap],
+  );
+
   if (buyers.length === 0) {
     return (
       <EmptyState
@@ -30,22 +46,11 @@ export default function MarketingGridView({
     );
   }
 
-  const stageMap = buildStageMap(overviewData);
-
-  // 완료 단계 수 기준 내림차순 정렬
-  const sorted = [...buyers].sort((a, b) => {
-    const aStages = stageMap.get(a.id);
-    const bStages = stageMap.get(b.id);
-    const aCount = aStages ? MARKETING_STAGES.filter((s) => aStages[s]).length : 0;
-    const bCount = bStages ? MARKETING_STAGES.filter((s) => bStages[s]).length : 0;
-    return bCount - aCount;
-  });
-
   return (
     <div>
       <p className="text-xs font-medium text-accent mb-2">Grid View — 매수자 × 마케팅 단계</p>
       <div className="overflow-x-auto border border-gray-border rounded-dr">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" aria-label="매수자별 마케팅 단계 현황">
         <thead>
           <tr className="bg-bg-cool border-b border-gray-border">
             <th className="text-left px-3 py-2 font-medium text-text-dark whitespace-nowrap min-w-[160px]">

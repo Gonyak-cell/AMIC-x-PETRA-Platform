@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
@@ -18,7 +19,7 @@ interface MarketingTimelineViewProps {
 }
 
 function latestStageIndex(
-  stages: Record<MarketingStage, string | null>,
+  stages: Partial<Record<MarketingStage, string | null>>,
 ): number {
   for (let i = MARKETING_STAGES.length - 1; i >= 0; i--) {
     if (stages[MARKETING_STAGES[i]]) return i;
@@ -33,6 +34,22 @@ export default function MarketingTimelineView({
   canWrite,
   txnId,
 }: MarketingTimelineViewProps) {
+  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
+
+  const sorted = useMemo(
+    () =>
+      [...buyers].sort((a, b) => {
+        const aIdx = latestStageIndex(
+          stageMap.get(a.id) ?? ({} as Partial<Record<MarketingStage, string | null>>),
+        );
+        const bIdx = latestStageIndex(
+          stageMap.get(b.id) ?? ({} as Partial<Record<MarketingStage, string | null>>),
+        );
+        return bIdx - aIdx;
+      }),
+    [buyers, stageMap],
+  );
+
   if (buyers.length === 0) {
     return (
       <EmptyState
@@ -42,18 +59,6 @@ export default function MarketingTimelineView({
     );
   }
 
-  const stageMap = buildStageMap(overviewData);
-
-  const sorted = [...buyers].sort((a, b) => {
-    const aIdx = latestStageIndex(
-      stageMap.get(a.id) ?? ({} as Record<MarketingStage, string | null>),
-    );
-    const bIdx = latestStageIndex(
-      stageMap.get(b.id) ?? ({} as Record<MarketingStage, string | null>),
-    );
-    return bIdx - aIdx;
-  });
-
   return (
     <div>
       <p className="text-xs font-medium text-accent mb-2">Timeline View — 진행률 바 + 카드</p>
@@ -61,9 +66,9 @@ export default function MarketingTimelineView({
       {sorted.map((buyer) => {
         const stages = stageMap.get(buyer.id);
         const currentIdx = stages ? latestStageIndex(stages) : -1;
-        const pct = Math.round(
-          ((currentIdx + 1) / MARKETING_STAGES.length) * 100,
-        );
+        const pct = currentIdx >= 0
+          ? Math.round(((currentIdx + 1) / MARKETING_STAGES.length) * 100)
+          : 0;
         const nextStage =
           currentIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[currentIdx + 1] : null;
 

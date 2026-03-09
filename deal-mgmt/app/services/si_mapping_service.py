@@ -1180,7 +1180,7 @@ async def bulk_add_vc_to_buyers(
         buyer = BuyerCandidate(
             transaction_id=txn_id,
             company_name=vc.company_name,
-            buyer_type=BuyerType.STRATEGIC,
+            buyer_type=BuyerType.FINANCIAL_SPONSOR,
             status=BuyerCandidateStatus.IDENTIFIED,
             notes=f"VC 매핑으로 추가됨 (업종: {vc.industry_name})",
             extra_data={"vc_company_id": str(vc.id), "industry_name": vc.industry_name},

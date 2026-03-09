@@ -68,7 +68,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const { data: txn } = useTransaction(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
-  const { data: shortListOverview, isError: isOverviewError } = useShortListOverview(txnId);
+  const { data: shortListOverview, isError: isOverviewError, refetch: refetchOverview } = useShortListOverview(txnId);
 
   const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
@@ -121,7 +121,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   }, [searchedSICompany, buyerDetailSearchName, siNameFetched]);
 
 
-  const buyerColumns: Column<BuyerCandidate>[] = [
+  const buyerColumns: Column<BuyerCandidate>[] = useMemo(() => [
     {
       key: "company_name",
       header: "회사명",
@@ -212,10 +212,10 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
         </Badge>
       ),
     },
-  ];
+  ], [canWrite, updateBuyer]);
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
-  const realShortList = allBuyers.filter((b) => b.is_short_listed);
+  const realShortList = useMemo(() => allBuyers.filter((b) => b.is_short_listed), [allBuyers]);
 
   // ── Dev-only mock data for Short List preview ──────────
   const DEV_MOCK_BUYERS = useMemo(() => createDevMockBuyers(txnId), [txnId]);
@@ -223,8 +223,13 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
   const shortListBuyers =
     realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
-  const devOverview = realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW;
-  const overviewMerged = [...(shortListOverview ?? []), ...devOverview];
+  const overviewMerged = useMemo(
+    () => [
+      ...(shortListOverview ?? []),
+      ...(realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW),
+    ],
+    [shortListOverview, realShortList.length, DEV_MOCK_OVERVIEW],
+  );
 
 
   // Client-side filtering for Long List
@@ -290,24 +295,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 onViewModeChange={setShortListViewMode}
               />
             )}
-            {(isBuyersError || isOverviewError) && (
-          <div className="flex items-center justify-between rounded-dr border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm text-red-700">
-              {isBuyersError
-                ? "매수자 목록을 불러오는 중 오류가 발생했습니다."
-                : "Short List 개요 데이터를 불러오는 중 오류가 발생했습니다."}
-            </p>
-            <button
-              type="button"
-              className="text-sm font-medium text-red-700 underline hover:text-red-900"
-              onClick={() => refetchBuyers()}
-            >
-              재시도
-            </button>
-          </div>
-        )}
-
-        {buyerSubTab === "long-list" && (
+            {buyerSubTab === "long-list" && (
               <Button
                 icon={Download}
                 onClick={() => exportExcel.mutate()}
@@ -320,6 +308,28 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             )}
           </div>
         </div>
+
+        {(isBuyersError || isOverviewError) && (
+          <div
+            role="alert"
+            className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+          >
+            <p className="text-sm text-red-700">
+              {isBuyersError
+                ? "매수자 목록을 불러오는 중 오류가 발생했습니다."
+                : "Short List 개요 데이터를 불러오는 중 오류가 발생했습니다."}
+            </p>
+            <button
+              type="button"
+              className="text-sm font-medium text-red-700 underline hover:text-red-900"
+              onClick={() =>
+                isBuyersError ? refetchBuyers() : refetchOverview()
+              }
+            >
+              재시도
+            </button>
+          </div>
+        )}
 
         {buyerSubTab === "long-list" && (
           <>

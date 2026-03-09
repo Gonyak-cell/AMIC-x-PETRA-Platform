@@ -64,8 +64,8 @@ export function useCreateTransaction() {
       qc.invalidateQueries({ queryKey: ["ma", "transactions"] });
       toast.success("거래가 성공적으로 생성되었습니다.");
     },
-    onError: () => {
-      toast.error("거래 생성 중 오류가 발생했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "거래 생성 중 오류가 발생했습니다.");
     },
   });
 }
@@ -82,8 +82,8 @@ export function useUpdateTransaction(txnId: string) {
       qc.invalidateQueries({ queryKey: ["ma", "transactions", txnId] });
       toast.success("거래가 수정되었습니다.");
     },
-    onError: () => {
-      toast.error("거래 수정 중 오류가 발생했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "거래 수정 중 오류가 발생했습니다.");
     },
   });
 }
@@ -258,8 +258,8 @@ export function useCreateEngagement(txnId: string) {
       });
       toast.success("수임계약이 등록되었습니다.");
     },
-    onError: () => {
-      toast.error("수임계약 등록에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "수임계약 등록에 실패했습니다.");
     },
   });
 }
@@ -289,8 +289,8 @@ export function useAddMember(txnId: string) {
       });
       toast.success("멤버가 추가되었습니다.");
     },
-    onError: () => {
-      toast.error("멤버 추가에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "멤버 추가에 실패했습니다.");
     },
   });
 }
@@ -333,8 +333,8 @@ export function useAddBuyer(txnId: string) {
       });
       toast.success("매수자 후보가 추가되었습니다.");
     },
-    onError: () => {
-      toast.error("매수자 추가에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "매수자 추가에 실패했습니다.");
     },
   });
 }
@@ -361,8 +361,8 @@ export function useUpdateBuyer(txnId: string) {
       });
       toast.success("매수자 정보가 수정되었습니다.");
     },
-    onError: () => {
-      toast.error("매수자 정보 수정에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "매수자 정보 수정에 실패했습니다.");
     },
   });
 }
@@ -385,8 +385,8 @@ export function useExportBuyerExcel(txnId: string) {
       URL.revokeObjectURL(url);
       toast.success("엑셀 파일이 다운로드되었습니다.");
     },
-    onError: () => {
-      toast.error("엑셀 다운로드에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "엑셀 다운로드에 실패했습니다.");
     },
   });
 }
@@ -432,8 +432,8 @@ export function useAddTimelineEvent(txnId: string) {
       });
       toast.success("이벤트가 추가되었습니다.");
     },
-    onError: () => {
-      toast.error("이벤트 추가에 실패했습니다.");
+    onError: (err: Error) => {
+      toast.error(err.message || "이벤트 추가에 실패했습니다.");
     },
   });
 }

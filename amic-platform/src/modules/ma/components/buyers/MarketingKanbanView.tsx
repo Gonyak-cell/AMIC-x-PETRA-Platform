@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
@@ -19,7 +20,7 @@ interface MarketingKanbanViewProps {
 }
 
 function latestStage(
-  stages: Record<MarketingStage, string | null>,
+  stages: Partial<Record<MarketingStage, string | null>>,
 ): MarketingStage {
   for (let i = MARKETING_STAGES.length - 1; i >= 0; i--) {
     if (stages[MARKETING_STAGES[i]]) return MARKETING_STAGES[i];
@@ -34,6 +35,8 @@ export default function MarketingKanbanView({
   canWrite,
   txnId,
 }: MarketingKanbanViewProps) {
+  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
+
   if (buyers.length === 0) {
     return (
       <EmptyState
@@ -42,8 +45,6 @@ export default function MarketingKanbanView({
       />
     );
   }
-
-  const stageMap = buildStageMap(overviewData);
 
   // Group buyers by their latest completed stage
   const columns = new Map<MarketingStage, BuyerCandidate[]>();

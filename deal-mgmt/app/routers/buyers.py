@@ -29,6 +29,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/buyers", tags=["Buyers"])
 
+_SHORT_LIST_TIERS = frozenset({BuyerTier.TIER_1, BuyerTier.TIER_2, BuyerTier.TIER_3})
+
+
+def _sync_tier_short_list(data: dict[str, object]) -> None:
+    """Tier 값에 따라 is_short_listed를 동기화한다 (SSOT).
+
+    tier + is_short_listed가 동시에 전달되더라도 tier가 우선한다.
+    tier가 없으면 is_short_listed 직접 PATCH를 허용한다.
+    """
+    tier = data.get("tier")
+    if tier is not None or "tier" in data:
+        data["is_short_listed"] = tier in _SHORT_LIST_TIERS
+
+
 # ── BuyerCandidateStatus 상태 전이 규칙 ──────────────────
 # M&A 파이프라인 기반: 선형 진행 + REJECTED 분기 + BID 분기
 # 종단 상태(SELECTED, REJECTED, BID_DROPPED)에서는 전이 불가
@@ -145,13 +159,7 @@ async def add_buyer(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     data = body.model_dump()
-    # Tier → is_short_listed 자동 동기화 (update_buyer와 동일 패턴)
-    if data.get("tier") is not None:
-        data["is_short_listed"] = data["tier"] in (
-            BuyerTier.TIER_1,
-            BuyerTier.TIER_2,
-            BuyerTier.TIER_3,
-        )
+    _sync_tier_short_list(data)
 
     buyer = BuyerCandidate(transaction_id=txn_id, **data)
     db.add(buyer)
@@ -253,13 +261,13 @@ async def update_buyer(
                 detail="상태 전이 불가: 현재 상태에서 요청한 상태로 전환할 수 없습니다",
             )
 
-    # Tier → is_short_listed 자동 동기화 (Tier 없이 is_short_listed 직접 PATCH도 허용)
+    _sync_tier_short_list(update_data)
     if "tier" in update_data:
-        new_tier = update_data["tier"]
-        update_data["is_short_listed"] = new_tier in (
-            BuyerTier.TIER_1,
-            BuyerTier.TIER_2,
-            BuyerTier.TIER_3,
+        logger.debug(
+            "Tier 동기화: buyer=%s, tier=%s → is_short_listed=%s",
+            buyer_id,
+            update_data.get("tier"),
+            update_data.get("is_short_listed"),
         )
 
     old_value = {k: getattr(buyer, k, None) for k in update_data}

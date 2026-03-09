@@ -88,7 +88,7 @@ export function createDevMockBuyers(txnId: string): BuyerCandidate[] {
       contact_email: null,
       contact_phone: null,
       buyer_type: "FINANCIAL_SPONSOR",
-      status: "CONTACTED",
+      status: "NDA_SIGNED",
       tier: "TIER_3",
       deal_role: null,
       is_short_listed: true,
