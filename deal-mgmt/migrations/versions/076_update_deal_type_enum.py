@@ -32,6 +32,8 @@ def upgrade() -> None:
         # PostgreSQL: ENUM 타입 교체 전략
         # 1) 새 ENUM 타입 생성
         op.execute("CREATE TYPE dealtype_new AS ENUM ('SE', 'BU', 'ISSUE', 'HYB', 'GEN')")
+        # 1.5) 기존 DEFAULT 제거 (구 enum 타입에 묶여 있어 타입 변환 차단)
+        op.execute("ALTER TABLE transactions ALTER COLUMN deal_type DROP DEFAULT")
         # 2) 기존 데이터를 text로 변환 후 매핑
         op.execute(
             """
