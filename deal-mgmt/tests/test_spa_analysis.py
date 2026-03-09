@@ -833,7 +833,8 @@ class TestLLMRetry:
 
     @pytest.mark.asyncio
     async def test_llm_unavailable_raises(self) -> None:
-        """LLM 프로바이더 불가 시 RuntimeError."""
+        """LLM 프로바이더 불가 시 ServiceUnavailableError."""
+        from app.core.exceptions import ServiceUnavailableError
         from app.services.spa_analysis_service import _call_llm_json
 
         mock_llm = AsyncMock()
@@ -841,7 +842,7 @@ class TestLLMRetry:
 
         with (
             patch("app.services.spa_analysis_service._get_llm_client", return_value=mock_llm),
-            pytest.raises(RuntimeError, match="LLM 프로바이더"),
+            pytest.raises(ServiceUnavailableError, match="LLM 프로바이더"),
         ):
             await _call_llm_json("system", "user")
 

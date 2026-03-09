@@ -98,26 +98,50 @@ async def test_client_cannot_create_transaction(client):
     assert resp.status_code == 403
 
 
-@pytest.mark.usefixtures("_as_client")
 async def test_client_cannot_create_buyer(client, transaction_id):
-    resp = await client.post(
-        f"/api/v1/transactions/{transaction_id}/buyers",
-        json={"company_name": "클라이언트추가기업", "buyer_type": "STRATEGIC"},
-    )
-    assert resp.status_code == 403
+    """CLIENT 역할은 매수자 추가 불가 (transaction_id는 ADMIN으로 먼저 생성)."""
+    prev = app.dependency_overrides.get(get_jwt_claims)
+
+    async def _override() -> JWTClaims:
+        return CLIENT_CLAIMS
+
+    app.dependency_overrides[get_jwt_claims] = _override
+    try:
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/buyers",
+            json={"company_name": "클라이언트추가기업", "buyer_type": "STRATEGIC"},
+        )
+        assert resp.status_code == 403
+    finally:
+        if prev is not None:
+            app.dependency_overrides[get_jwt_claims] = prev
+        else:
+            app.dependency_overrides.pop(get_jwt_claims, None)
 
 
-@pytest.mark.usefixtures("_as_client")
 async def test_client_cannot_create_approval(client, transaction_id):
-    resp = await client.post(
-        f"/api/v1/transactions/{transaction_id}/approvals",
-        json={
-            "approval_type": "PHASE_ADVANCE",
-            "title": "클라이언트 승인 시도",
-            "approvers": [{"email": "boss@example.com", "role": "대표"}],
-        },
-    )
-    assert resp.status_code == 403
+    """CLIENT 역할은 승인 생성 불가 (transaction_id는 ADMIN으로 먼저 생성)."""
+    prev = app.dependency_overrides.get(get_jwt_claims)
+
+    async def _override() -> JWTClaims:
+        return CLIENT_CLAIMS
+
+    app.dependency_overrides[get_jwt_claims] = _override
+    try:
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/approvals",
+            json={
+                "approval_type": "PHASE_ADVANCE",
+                "title": "클라이언트 승인 시도",
+                "approvers": [{"email": "boss@example.com", "role": "대표"}],
+            },
+        )
+        assert resp.status_code == 403
+    finally:
+        if prev is not None:
+            app.dependency_overrides[get_jwt_claims] = prev
+        else:
+            app.dependency_overrides.pop(get_jwt_claims, None)
 
 
 # ── ANALYST: 읽기/쓰기 모두 허용 ─────────────────────────

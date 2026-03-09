@@ -243,7 +243,7 @@ async def test_list_includes_deal_role(client) -> None:
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers")
     assert resp.status_code == 200
-    data = resp.json()
+    data = resp.json()["items"]
     assert any(b["deal_role"] == "SOLE_BUYER" for b in data)
 
 

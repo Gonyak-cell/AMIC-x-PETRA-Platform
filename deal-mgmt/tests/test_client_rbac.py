@@ -198,7 +198,7 @@ class TestClientReadAccess:
             f"/api/v1/transactions/{txn_id}/buyers",
         )
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["items"]) == 1
 
     async def test_client_can_read_own_deal_consortium(
         self,

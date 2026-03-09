@@ -64,7 +64,7 @@ async def list_items(
     is_advisor = get_rfi_author_role(claims) == RFIAuthorRole.ADVISOR
 
     # 총 건수 조회
-    from app.models.rfi_v2 import RFIItemV2 as RFIItemModel
+    from app.models.rfi_item_v2 import RFIItemV2 as RFIItemModel
 
     count_base = select(func.count(RFIItemModel.id)).where(
         RFIItemModel.transaction_id == txn_id,

@@ -90,7 +90,7 @@ async def test_tier_filter(client):
         params={"tier": "TIER_1"},
     )
     assert resp.status_code == 200
-    data = resp.json()
+    data = resp.json()["items"]
     assert len(data) == 1
     assert data[0]["company_name"] == "A사"
 

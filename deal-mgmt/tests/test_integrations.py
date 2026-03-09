@@ -155,39 +155,30 @@ async def test_fdd_link_error_on_service_failure(client: AsyncClient, transactio
         f"/api/v1/transactions/{transaction_id}/integrations/fdd/link",
         json={"target_name": "테스트 기업"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 502
     data = resp.json()
-    assert data["service"] == "FDD"
-    assert data["status"] == "error"
-    assert data["error"] is not None
-    assert "연결 불가" in data["error"]
+    assert "FDD" in data["detail"]
 
 
 @pytest.mark.usefixtures("_override_failing_im")
 async def test_im_link_error_on_service_failure(client: AsyncClient, transaction_id: str):
-    """IM 서비스 장애 → status=error 응답."""
+    """IM 서비스 장애 → 502 응답."""
     resp = await client.post(
         f"/api/v1/transactions/{transaction_id}/integrations/im/link",
         json={"company_name": "테스트 기업", "project_name": "프로젝트 A"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 502
     data = resp.json()
-    assert data["service"] == "IM"
-    assert data["status"] == "error"
-    assert data["error"] is not None
-    assert "연결 불가" in data["error"]
+    assert "IM" in data["detail"]
 
 
 @pytest.mark.usefixtures("_override_failing_kiis")
 async def test_kiis_search_error_on_service_failure(client: AsyncClient, transaction_id: str):
-    """KIIS 서비스 장애 → status=error 응답."""
+    """KIIS 서비스 장애 → 502 응답."""
     resp = await client.get(
         f"/api/v1/transactions/{transaction_id}/integrations/kiis/company",
         params={"q": "삼성"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 502
     data = resp.json()
-    assert data["service"] == "KIIS"
-    assert data["status"] == "error"
-    assert data["error"] is not None
-    assert "연결 불가" in data["error"]
+    assert "KIIS" in data["detail"]

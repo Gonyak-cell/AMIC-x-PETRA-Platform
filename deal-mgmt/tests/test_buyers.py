@@ -95,7 +95,7 @@ async def test_list_buyers(client):
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers")
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
+    assert len(resp.json()["items"]) == 2
 
 
 async def test_list_buyers_filter_status(client):
@@ -106,11 +106,11 @@ async def test_list_buyers_filter_status(client):
 
     # IDENTIFIED 필터 → 0건
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers", params={"status": "IDENTIFIED"})
-    assert len(resp.json()) == 0
+    assert len(resp.json()["items"]) == 0
 
     # NDA_SENT 필터 → 1건
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers", params={"status": "NDA_SENT"})
-    assert len(resp.json()) == 1
+    assert len(resp.json()["items"]) == 1
 
 
 async def test_list_buyers_filter_type(client):
@@ -119,8 +119,8 @@ async def test_list_buyers_filter_type(client):
     await _add_buyer(client, txn_id, company_name="MBK Partners", buyer_type="FINANCIAL_SPONSOR")
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers", params={"type": "STRATEGIC"})
-    assert len(resp.json()) == 1
-    assert resp.json()[0]["company_name"] == "삼성물산"
+    assert len(resp.json()["items"]) == 1
+    assert resp.json()["items"][0]["company_name"] == "삼성물산"
 
 
 # ── Update ─────────────────────────────────────────────────
@@ -233,7 +233,7 @@ async def test_remove_buyer(client):
 
     # 삭제 후 목록에서 제외
     list_resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers")
-    assert len(list_resp.json()) == 0
+    assert len(list_resp.json()["items"]) == 0
 
 
 async def test_remove_buyer_404(client):

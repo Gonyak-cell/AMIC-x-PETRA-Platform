@@ -50,7 +50,7 @@ async def test_list_items(client):
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/rfi/items")
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
+    assert len(resp.json()["items"]) == 2
 
 
 async def test_list_items_filter_category(client):
@@ -63,8 +63,8 @@ async def test_list_items_filter_category(client):
         params={"category": "FINANCIAL"},
     )
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
-    assert resp.json()[0]["category"] == "FINANCIAL"
+    assert len(resp.json()["items"]) == 1
+    assert resp.json()["items"][0]["category"] == "FINANCIAL"
 
 
 async def test_list_items_filter_status(client):
@@ -76,7 +76,7 @@ async def test_list_items_filter_status(client):
         params={"status": "OPEN"},
     )
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
+    assert len(resp.json()["items"]) == 1
 
 
 async def test_get_item_detail(client):
@@ -134,7 +134,7 @@ async def test_delete_item(client):
 
     # 삭제 후 목록에서 안 보임
     resp2 = await client.get(f"/api/v1/transactions/{txn_id}/rfi/items")
-    assert len(resp2.json()) == 0
+    assert len(resp2.json()["items"]) == 0
 
 
 async def test_delete_non_open_item_fails(client):
@@ -343,8 +343,8 @@ async def test_search_items(client):
         params={"search": "감사보고서"},
     )
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
-    assert "감사보고서" in resp.json()[0]["question_text"]
+    assert len(resp.json()["items"]) == 1
+    assert "감사보고서" in resp.json()["items"][0]["question_text"]
 
 
 # ── Internal Memo ────────────────────────────────────────

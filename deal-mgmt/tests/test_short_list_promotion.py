@@ -213,14 +213,14 @@ async def test_is_short_listed_filter(client):
     # is_short_listed=true 필터
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=true")
     assert resp.status_code == 200
-    data = resp.json()
+    data = resp.json()["items"]
     assert len(data) == 1
     assert data[0]["id"] == b1["id"]
 
     # is_short_listed=false 필터
     resp_false = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=false")
     assert resp_false.status_code == 200
-    data_false = resp_false.json()
+    data_false = resp_false.json()["items"]
     assert len(data_false) == 1
     assert data_false[0]["is_short_listed"] is False
 
