@@ -1,0 +1,158 @@
+/**
+ * Dev-only mock data for Short List preview.
+ * Only loaded when import.meta.env.DEV is true.
+ */
+import type { BuyerCandidate } from "../types/buyer";
+import type { BuyerStageSummary } from "../types/marketing_log";
+
+export function createDevMockBuyers(txnId: string): BuyerCandidate[] {
+  if (!import.meta.env.DEV) return [];
+  return [
+    {
+      id: "mock-1",
+      transaction_id: txnId,
+      company_name: "삼성물산",
+      contact_name: "김철수",
+      contact_email: null,
+      contact_phone: null,
+      buyer_type: "STRATEGIC",
+      status: "NDA_SIGNED",
+      tier: "TIER_1",
+      deal_role: "SOLE_BUYER",
+      is_short_listed: true,
+      corp_code: null,
+      ioi_value: "150000000000",
+      ioi_date: "2026-03-01",
+      loi_value: null,
+      loi_date: null,
+      final_offer_value: null,
+      rejection_reason: null,
+      notes: null,
+      extra_data: null,
+      created_at: "2026-02-20T09:00:00Z",
+      updated_at: "2026-03-05T14:00:00Z",
+    },
+    {
+      id: "mock-2",
+      transaction_id: txnId,
+      company_name: "SK스퀘어",
+      contact_name: "이영희",
+      contact_email: null,
+      contact_phone: null,
+      buyer_type: "FINANCIAL_SPONSOR",
+      status: "INTEREST_CONFIRMED",
+      tier: "TIER_2",
+      deal_role: "CO_INVESTOR",
+      is_short_listed: true,
+      corp_code: null,
+      ioi_value: null,
+      ioi_date: null,
+      loi_value: null,
+      loi_date: null,
+      final_offer_value: null,
+      rejection_reason: null,
+      notes: null,
+      extra_data: null,
+      created_at: "2026-02-22T10:00:00Z",
+      updated_at: "2026-03-04T11:00:00Z",
+    },
+    {
+      id: "mock-3",
+      transaction_id: txnId,
+      company_name: "한화투자증권",
+      contact_name: "박지민",
+      contact_email: null,
+      contact_phone: null,
+      buyer_type: "FINANCIAL_SPONSOR",
+      status: "CIM_SENT",
+      tier: "TIER_1",
+      deal_role: "FINANCING_PROVIDER",
+      is_short_listed: true,
+      corp_code: null,
+      ioi_value: "200000000000",
+      ioi_date: "2026-03-02",
+      loi_value: null,
+      loi_date: null,
+      final_offer_value: null,
+      rejection_reason: null,
+      notes: null,
+      extra_data: null,
+      created_at: "2026-02-25T08:00:00Z",
+      updated_at: "2026-03-06T16:00:00Z",
+    },
+    {
+      id: "mock-4",
+      transaction_id: txnId,
+      company_name: "미래에셋자산운용",
+      contact_name: null,
+      contact_email: null,
+      contact_phone: null,
+      buyer_type: "FINANCIAL_SPONSOR",
+      status: "CONTACTED",
+      tier: "TIER_3",
+      deal_role: null,
+      is_short_listed: true,
+      corp_code: null,
+      ioi_value: null,
+      ioi_date: null,
+      loi_value: null,
+      loi_date: null,
+      final_offer_value: null,
+      rejection_reason: null,
+      notes: null,
+      extra_data: null,
+      created_at: "2026-02-28T13:00:00Z",
+      updated_at: "2026-03-07T09:00:00Z",
+    },
+  ];
+}
+
+export function createDevMockOverview(): BuyerStageSummary[] {
+  if (!import.meta.env.DEV) return [];
+  return [
+    {
+      buyer_id: "mock-1",
+      stages: {
+        IDENTIFIED: "2026-02-20",
+        EMAIL_SENT: "2026-02-21",
+        PHONE_CALL: "2026-02-23",
+        ADVISOR_MEETING: "2026-02-28",
+        NDA_SIGNED: "2026-03-01",
+        TARGET_MEETING: null,
+      },
+    },
+    {
+      buyer_id: "mock-2",
+      stages: {
+        IDENTIFIED: "2026-02-22",
+        EMAIL_SENT: "2026-02-24",
+        PHONE_CALL: "2026-02-26",
+        ADVISOR_MEETING: null,
+        NDA_SIGNED: null,
+        TARGET_MEETING: null,
+      },
+    },
+    {
+      buyer_id: "mock-3",
+      stages: {
+        IDENTIFIED: "2026-02-25",
+        EMAIL_SENT: "2026-02-26",
+        PHONE_CALL: null,
+        ADVISOR_MEETING: null,
+        NDA_SIGNED: null,
+        TARGET_MEETING: null,
+      },
+    },
+    {
+      buyer_id: "mock-4",
+      stages: {
+        IDENTIFIED: "2026-02-28",
+        EMAIL_SENT: null,
+        PHONE_CALL: null,
+        ADVISOR_MEETING: null,
+        NDA_SIGNED: null,
+        TARGET_MEETING: null,
+      },
+    },
+  ];
+}

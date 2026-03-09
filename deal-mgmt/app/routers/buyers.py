@@ -22,7 +22,6 @@ from app.schemas.buyer import (
     BuyerCandidateOut,
     BuyerCandidateUpdate,
     BuyerPipelineSummary,
-    ShortListPromoteRequest,
 )
 from app.services import audit_service, transaction_service
 
@@ -53,24 +52,6 @@ _BUYER_STATUS_TRANSITIONS: dict[BuyerCandidateStatus, set[BuyerCandidateStatus]]
     _S.BID_NOT_SUBMITTED: {_S.BID_SUBMITTED, _S.BID_DROPPED, _S.REJECTED},
     _S.BID_DROPPED: set(),
 }
-
-_CONTACT_FIELDS = ("contact_name", "contact_email", "contact_phone")
-
-
-def _validate_contact_for_short_list(
-    contact_name: str | None,
-    contact_email: str | None,
-    contact_phone: str | None,
-) -> list[str]:
-    """Short-List 승격에 필요한 연락처 누락 필드 목록을 반환한다."""
-    lacks: list[str] = []
-    if not contact_name:
-        lacks.append("contact_name")
-    if not contact_email:
-        lacks.append("contact_email")
-    if not contact_phone:
-        lacks.append("contact_phone")
-    return lacks
 
 
 @router.get("", response_model=list[BuyerCandidateOut])
@@ -163,7 +144,11 @@ async def add_buyer(
 ) -> BuyerCandidateOut:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    buyer = BuyerCandidate(transaction_id=txn_id, **body.model_dump())
+    data = body.model_dump()
+    # Tier → is_short_listed 자동 동기화
+    if data.get("tier") in (BuyerTier.TIER_1, BuyerTier.TIER_2, BuyerTier.TIER_3):
+        data["is_short_listed"] = True
+    buyer = BuyerCandidate(transaction_id=txn_id, **data)
     db.add(buyer)
     await db.flush()
     await audit_service.record(
@@ -177,67 +162,6 @@ async def add_buyer(
     await db.commit()
     await db.refresh(buyer)
     return BuyerCandidateOut.model_validate(buyer)
-
-
-@router.post("/promote-short-list", response_model=list[BuyerCandidateOut])
-async def promote_short_list(
-    txn_id: uuid.UUID,
-    body: ShortListPromoteRequest,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
-) -> list[BuyerCandidateOut]:
-    """체크된 매수자들을 Short-List로 승격한다.
-
-    contact_name, contact_email, contact_phone 중 하나라도 없으면 422.
-    """
-    await transaction_service.get_transaction(db, txn_id)
-    await check_client_deal_access(db, txn_id, claims)
-
-    q = select(BuyerCandidate).where(
-        BuyerCandidate.transaction_id == txn_id,
-        BuyerCandidate.id.in_(body.buyer_ids),
-    )
-    buyers_list = list((await db.execute(q)).scalars().all())
-
-    if len(buyers_list) != len(body.buyer_ids):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="일부 매수자 후보를 찾을 수 없습니다",
-        )
-
-    # 연락처 필수 검증
-    missing: list[dict] = []
-    for b in buyers_list:
-        lacks = _validate_contact_for_short_list(b.contact_name, b.contact_email, b.contact_phone)
-        if lacks:
-            missing.append({"buyer_id": str(b.id), "company_name": b.company_name, "missing_fields": lacks})
-
-    if missing:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"message": "Short-List 승격을 위해 연락처 정보가 필요합니다", "missing_contact": missing},
-        )
-
-    for b in buyers_list:
-        prev = b.is_short_listed
-        b.is_short_listed = True
-        await audit_service.record(
-            db,
-            entity_type="BuyerCandidate",
-            entity_id=b.id,
-            action=AuditAction.UPDATE,
-            actor_email=claims.email,
-            old_value={"is_short_listed": prev},
-            new_value={"is_short_listed": True},
-            notes="Short-List 승격",
-        )
-
-    await db.commit()
-    # 서버측 updated_at 갱신값 반영을 위해 일괄 재조회 (개별 refresh 대신)
-    refreshed = list(
-        (await db.execute(select(BuyerCandidate).where(BuyerCandidate.id.in_(body.buyer_ids)))).scalars().all()
-    )
-    return [BuyerCandidateOut.model_validate(b) for b in refreshed]
 
 
 @router.get("/bidding-summary", response_model=BiddingSummary)
@@ -324,27 +248,14 @@ async def update_buyer(
                 detail="상태 전이 불가: 현재 상태에서 요청한 상태로 전환할 수 없습니다",
             )
 
-    # is_short_listed=True 설정 시 연락처 필수 검증 (promote-short-list 우회 방지)
-    if update_data.get("is_short_listed") is True and not buyer.is_short_listed:
-        lacks = _validate_contact_for_short_list(
-            update_data.get("contact_name", buyer.contact_name),
-            update_data.get("contact_email", buyer.contact_email),
-            update_data.get("contact_phone", buyer.contact_phone),
+    # Tier → is_short_listed 자동 동기화
+    if "tier" in update_data:
+        new_tier = update_data["tier"]
+        update_data["is_short_listed"] = new_tier in (
+            BuyerTier.TIER_1,
+            BuyerTier.TIER_2,
+            BuyerTier.TIER_3,
         )
-        if lacks:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"message": "Short-List 승격을 위해 연락처 정보가 필요합니다", "missing_fields": lacks},
-            )
-
-    # is_short_listed=True인 상태에서 연락처 필드 null화 방지 (M-B2)
-    if buyer.is_short_listed and update_data.get("is_short_listed") is not False:
-        for field in _CONTACT_FIELDS:
-            if field in update_data and not update_data[field]:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Short-List 상태에서는 {field}을(를) 비울 수 없습니다",
-                )
 
     old_value = {k: getattr(buyer, k, None) for k in update_data}
     for k, v in update_data.items():

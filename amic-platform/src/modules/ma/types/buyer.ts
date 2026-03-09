@@ -99,9 +99,6 @@ export interface BuyerPipelineSummary {
   avg_loi_value: string | null;
 }
 
-export interface ShortListPromoteRequest {
-  buyer_ids: string[];
-}
 
 export interface BiddingSummary {
   total_bidders: number;

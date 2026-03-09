@@ -1,4 +1,4 @@
-"""Short-List 승격 + 입찰 상태 + is_short_listed 필터 테스트."""
+"""Tier 기반 Short-List 자동 승격 + 입찰 상태 + 필터 테스트."""
 
 SAMPLE_TXN = {
     "name": "프로젝트 델타",
@@ -75,46 +75,127 @@ async def _advance_to_status(client, txn_id: str, buyer_id: str, target: str) ->
         assert resp.status_code == 200, f"Failed transition to {s}: {resp.text}"
 
 
-# ── Short-List Promotion ──────────────────────────────────
+# ── Tier 기반 Short-List 자동 승격 ─────────────────────────
 
 
-async def test_promote_with_contact_info(client):
-    """연락처가 있는 buyer → 승격 성공, is_short_listed=True."""
-    txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id)
-
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [buyer["id"]]},
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data) == 1
-    assert data[0]["is_short_listed"] is True
-
-
-async def test_promote_missing_contact(client):
-    """연락처 없는 buyer → 422, 누락 필드 목록."""
-    txn_id = await _create_txn(client)
-    # 연락처 없이 직접 생성 (BUYER_WITH_CONTACT 기본값 회피)
-    resp0 = await client.post(f"/api/v1/transactions/{txn_id}/buyers", json=BUYER_NO_CONTACT)
-    assert resp0.status_code == 201
-    buyer = resp0.json()
-
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [buyer["id"]]},
-    )
-    assert resp.status_code == 422
-    data = resp.json()
-    assert "missing_contact" in data["detail"]
-
-
-async def test_is_short_listed_default_false(client):
-    """신규 buyer의 is_short_listed 기본값은 False."""
+async def test_tier_1_auto_short_list(client):
+    """Tier 1 설정 → is_short_listed=True 자동 승격."""
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
     assert buyer["is_short_listed"] is False
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_1"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is True
+    assert resp.json()["tier"] == "TIER_1"
+
+
+async def test_tier_2_auto_short_list(client):
+    """Tier 2 설정 → is_short_listed=True 자동 승격."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_2"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is True
+
+
+async def test_tier_3_auto_short_list(client):
+    """Tier 3 설정 → is_short_listed=True 자동 승격."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_3"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is True
+
+
+async def test_not_target_removes_short_list(client):
+    """NOT_TARGET 설정 → is_short_listed=False 자동 해제."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    # 먼저 Tier 1로 승격
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_1"},
+    )
+
+    # NOT_TARGET으로 변경 → Short List 해제
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "NOT_TARGET"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is False
+    assert resp.json()["tier"] == "NOT_TARGET"
+
+
+async def test_null_tier_removes_short_list(client):
+    """Tier를 null로 설정 → is_short_listed=False 자동 해제."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    # 먼저 Tier 1로 승격
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_1"},
+    )
+
+    # Tier null로 변경 → Short List 해제
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": None},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is False
+    assert resp.json()["tier"] is None
+
+
+async def test_no_contact_required_for_short_list(client):
+    """연락처 없이 Tier 1 설정 → 성공 (422 아님)."""
+    txn_id = await _create_txn(client)
+    resp = await client.post(f"/api/v1/transactions/{txn_id}/buyers", json=BUYER_NO_CONTACT)
+    assert resp.status_code == 201
+    buyer = resp.json()
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"tier": "TIER_1"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is True
+
+
+async def test_add_buyer_with_tier_auto_short_list(client):
+    """POST 생성 시 tier=TIER_1 → is_short_listed=True 자동 설정."""
+    txn_id = await _create_txn(client)
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/buyers",
+        json={**BUYER_NO_CONTACT, "tier": "TIER_1"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["is_short_listed"] is True
+    assert resp.json()["tier"] == "TIER_1"
+
+
+async def test_add_buyer_without_tier_not_short_listed(client):
+    """POST 생성 시 tier 미지정 → is_short_listed=False 기본값."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+    assert buyer["is_short_listed"] is False
+
+
+# ── is_short_listed 필터 ─────────────────────────────────
 
 
 async def test_is_short_listed_filter(client):
@@ -123,10 +204,10 @@ async def test_is_short_listed_filter(client):
     b1 = await _add_buyer(client, txn_id, company_name="기업1")
     await _add_buyer(client, txn_id, company_name="기업2")
 
-    # b1만 승격
-    await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [b1["id"]]},
+    # b1만 Tier 1로 승격
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
+        json={"tier": "TIER_1"},
     )
 
     # is_short_listed=true 필터
@@ -198,7 +279,7 @@ async def test_invalid_status_transition(client):
 
 
 async def test_toggle_short_listed_via_patch(client):
-    """PATCH로 is_short_listed 토글 가능."""
+    """PATCH로 is_short_listed 직접 토글 가능 (Tier 없이)."""
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
@@ -217,60 +298,3 @@ async def test_toggle_short_listed_via_patch(client):
     )
     assert resp.status_code == 200
     assert resp.json()["is_short_listed"] is False
-
-
-# ── Boundary / Edge-case Tests ────────────────────────────
-
-
-async def test_promote_empty_buyer_ids(client):
-    """빈 buyer_ids 목록 → 빈 결과 (에러 아님)."""
-    txn_id = await _create_txn(client)
-
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": []},
-    )
-    assert resp.status_code == 200
-    assert resp.json() == []
-
-
-async def test_promote_already_promoted(client):
-    """이미 Short-List인 buyer 재승격 → 멱등 성공."""
-    txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id)
-
-    # 첫 번째 승격
-    resp1 = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [buyer["id"]]},
-    )
-    assert resp1.status_code == 200
-
-    # 두 번째 승격 (멱등)
-    resp2 = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [buyer["id"]]},
-    )
-    assert resp2.status_code == 200
-    assert resp2.json()[0]["is_short_listed"] is True
-
-
-async def test_promote_partial_contact_failure(client):
-    """일부 buyer만 연락처 누락 → 전체 422 (부분 승격 불가)."""
-    txn_id = await _create_txn(client)
-
-    # 연락처 있는 buyer
-    b_ok = await _add_buyer(client, txn_id, company_name="연락처있음")
-
-    # 연락처 없는 buyer
-    resp_no = await client.post(f"/api/v1/transactions/{txn_id}/buyers", json=BUYER_NO_CONTACT)
-    assert resp_no.status_code == 201
-    b_no = resp_no.json()
-
-    # 둘 다 동시 승격 시도 → 연락처 없는 buyer 때문에 422
-    resp = await client.post(
-        f"/api/v1/transactions/{txn_id}/buyers/promote-short-list",
-        json={"buyer_ids": [b_ok["id"], b_no["id"]]},
-    )
-    assert resp.status_code == 422
-    assert "missing_contact" in resp.json()["detail"]

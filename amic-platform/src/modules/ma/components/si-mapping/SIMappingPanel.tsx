@@ -234,17 +234,14 @@ export default function SIMappingPanel({
                   {bizRegNo && <span>사업자등록번호: {bizRegNo}</span>}
                 </div>
                 {!vcResult && (
-                  <button
-                    type="button"
+                  <Button
                     onClick={handleVcMapping}
-                    disabled={vcMapMutation.isPending}
-                    aria-busy={vcMapMutation.isPending}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    loading={vcMapMutation.isPending}
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
                   >
-                    {vcMapMutation.isPending
-                      ? "매핑 중..."
-                      : "Value Chain 매핑 실행"}
-                  </button>
+                    Value Chain 매핑 실행
+                  </Button>
                 )}
                 {vcMapMutation.isError && (
                   <div role="alert" className="mt-2 space-y-0.5">
@@ -288,27 +285,34 @@ export default function SIMappingPanel({
 
           {/* 푸터 */}
           <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
-            <Button variant="ghost" size="sm" onClick={handleClose}>
-              닫기
-            </Button>
-            <div className="flex items-center gap-3">
+            {/* 좌측: 선택 개수 (FI 패턴) */}
+            <span
+              className="text-xs text-slate-500"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : " "}
+            </span>
+
+            {/* 우측: 닫기 + Long List 추가 (FI 패턴) */}
+            <div className="flex items-center gap-2">
               {bulkAddMutation.isError && (
                 <p role="alert" className="text-sm text-red-600">
                   {bulkAddMutation.error.message}
                 </p>
               )}
-              {vcResult && selectedIds.size > 0 && (
-                <button
-                  type="button"
+              <Button variant="ghost" size="sm" onClick={handleClose}>
+                닫기
+              </Button>
+              {vcResult && (
+                <Button
                   onClick={handleBulkAdd}
-                  disabled={bulkAddMutation.isPending}
-                  aria-busy={bulkAddMutation.isPending}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={selectedIds.size === 0}
+                  loading={bulkAddMutation.isPending}
+                  size="sm"
                 >
-                  {bulkAddMutation.isPending
-                    ? "등록 중..."
-                    : `선택 항목 Long List에 추가 (${selectedIds.size}개)`}
-                </button>
+                  Long List에 추가
+                </Button>
               )}
             </div>
           </div>

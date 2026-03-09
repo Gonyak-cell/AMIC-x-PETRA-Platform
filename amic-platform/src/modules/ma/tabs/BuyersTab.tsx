@@ -2,18 +2,15 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Users, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,
-  useAddBuyer,
   useUpdateBuyer,
   useExportBuyerExcel,
   useTransaction,
 } from "@/modules/ma/hooks/useTransactions";
 import { useShortListOverview } from "@/modules/ma/hooks/useMarketingLogs";
-import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
   BuyerCandidate,
-  BuyerCandidateCreate,
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
@@ -22,6 +19,10 @@ import {
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
 } from "@/modules/ma/constants";
+import {
+  createDevMockBuyers,
+  createDevMockOverview,
+} from "@/modules/ma/constants/devMockBuyers";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
@@ -53,9 +54,6 @@ import {
   DataTable,
   EmptyState,
   InlineSelect,
-  Input,
-  Modal,
-  Select,
   Tabs,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
@@ -68,7 +66,6 @@ interface BuyersTabProps {
 export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const { data: buyers } = useBuyers(txnId);
   const { data: txn } = useTransaction(txnId);
-  const addBuyer = useAddBuyer(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
   const { data: shortListOverview } = useShortListOverview(txnId);
@@ -123,38 +120,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     setBuyerDetailSearchName(null);
   }, [searchedSICompany, buyerDetailSearchName, siNameFetched]);
 
-  // Buyer modal state
-  const [showBuyerModal, setShowBuyerModal] = useState(false);
-  const [buyerForm, setBuyerForm] = useState<BuyerCandidateCreate>({
-    company_name: "",
-    buyer_type: "STRATEGIC",
-  });
-
-  const tierOptions = BUYER_TIER_OPTIONS.filter((o) => o.value !== "");
 
   const buyerColumns: Column<BuyerCandidate>[] = [
-    {
-      key: "is_short_listed" as keyof BuyerCandidate,
-      header: <span className="sr-only">Short-List</span>,
-      minWidth: "40px",
-      render: (r) => (
-        <input
-          type="checkbox"
-          checked={r.is_short_listed}
-          disabled={!canWrite || updateBuyer.isPending}
-          onChange={() =>
-            updateBuyer.mutate({
-              buyerId: r.id,
-              body: {
-                is_short_listed: !r.is_short_listed,
-              },
-            })
-          }
-          className="h-4 w-4 rounded border-border-default accent-accent"
-          title={r.is_short_listed ? "Short-List 해제" : "Short-List 승격"}
-        />
-      ),
-    },
     {
       key: "company_name",
       header: "회사명",
@@ -195,7 +162,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
       render: (r) =>
         canWrite ? (
           <InlineSelect
-            options={[{ value: "", label: "-" }, ...tierOptions]}
+            options={[{ value: "", label: "-" }, ...BUYER_TIER_OPTIONS.filter((o) => o.value !== "")]}
             value={r.tier ?? ""}
             onChange={(val) =>
               updateBuyer.mutate({
@@ -251,160 +218,14 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const realShortList = allBuyers.filter((b) => b.is_short_listed);
 
   // ── Dev-only mock data for Short List preview ──────────
-  const DEV_MOCK_BUYERS: BuyerCandidate[] = import.meta.env.DEV
-    ? [
-        {
-          id: "mock-1",
-          transaction_id: txnId,
-          company_name: "삼성물산",
-          contact_name: "김철수",
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "STRATEGIC",
-          status: "NDA_SIGNED",
-          tier: "TIER_1",
-          deal_role: "SOLE_BUYER",
-          is_short_listed: true,
-          corp_code: null,
-          ioi_value: "150000000000",
-          ioi_date: "2026-03-01",
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-02-20T09:00:00Z",
-          updated_at: "2026-03-05T14:00:00Z",
-        },
-        {
-          id: "mock-2",
-          transaction_id: txnId,
-          company_name: "SK스퀘어",
-          contact_name: "이영희",
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR",
-          status: "INTEREST_CONFIRMED",
-          tier: "TIER_2",
-          deal_role: "CO_INVESTOR",
-          is_short_listed: true,
-          corp_code: null,
-          ioi_value: null,
-          ioi_date: null,
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-02-22T10:00:00Z",
-          updated_at: "2026-03-04T11:00:00Z",
-        },
-        {
-          id: "mock-3",
-          transaction_id: txnId,
-          company_name: "한화투자증권",
-          contact_name: "박지민",
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR",
-          status: "CIM_SENT",
-          tier: "TIER_1",
-          deal_role: "FINANCING_PROVIDER",
-          is_short_listed: true,
-          corp_code: null,
-          ioi_value: "200000000000",
-          ioi_date: "2026-03-02",
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-02-25T08:00:00Z",
-          updated_at: "2026-03-06T16:00:00Z",
-        },
-        {
-          id: "mock-4",
-          transaction_id: txnId,
-          company_name: "미래에셋자산운용",
-          contact_name: null,
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR",
-          status: "CONTACTED",
-          tier: "TIER_3",
-          deal_role: null,
-          is_short_listed: true,
-          corp_code: null,
-          ioi_value: null,
-          ioi_date: null,
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-02-28T13:00:00Z",
-          updated_at: "2026-03-07T09:00:00Z",
-        },
-      ]
-    : [];
-
-  const DEV_MOCK_OVERVIEW: BuyerStageSummary[] = import.meta.env.DEV
-    ? [
-        {
-          buyer_id: "mock-1",
-          stages: {
-            IDENTIFIED: "2026-02-20",
-            EMAIL_SENT: "2026-02-21",
-            PHONE_CALL: "2026-02-23",
-            ADVISOR_MEETING: "2026-02-28",
-            NDA_SIGNED: "2026-03-01",
-            TARGET_MEETING: null,
-          },
-        },
-        {
-          buyer_id: "mock-2",
-          stages: {
-            IDENTIFIED: "2026-02-22",
-            EMAIL_SENT: "2026-02-24",
-            PHONE_CALL: "2026-02-26",
-            ADVISOR_MEETING: null,
-            NDA_SIGNED: null,
-            TARGET_MEETING: null,
-          },
-        },
-        {
-          buyer_id: "mock-3",
-          stages: {
-            IDENTIFIED: "2026-02-25",
-            EMAIL_SENT: "2026-02-26",
-            PHONE_CALL: null,
-            ADVISOR_MEETING: null,
-            NDA_SIGNED: null,
-            TARGET_MEETING: null,
-          },
-        },
-        {
-          buyer_id: "mock-4",
-          stages: {
-            IDENTIFIED: "2026-02-28",
-            EMAIL_SENT: null,
-            PHONE_CALL: null,
-            ADVISOR_MEETING: null,
-            NDA_SIGNED: null,
-            TARGET_MEETING: null,
-          },
-        },
-      ]
-    : [];
+  const DEV_MOCK_BUYERS = createDevMockBuyers(txnId);
+  const DEV_MOCK_OVERVIEW = createDevMockOverview();
 
   const shortListBuyers =
     realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
   const devOverview = realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW;
   const overviewMerged = [...(shortListOverview ?? []), ...devOverview];
+
 
   // Client-side filtering for Long List
   const filteredBuyers = useMemo(() => {
@@ -667,92 +488,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
         />
       </div>
 
-      {/* Buyer 추가 모달 */}
-      <Modal
-        open={showBuyerModal}
-        onClose={() => setShowBuyerModal(false)}
-        title="매수자 후보 추가"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            addBuyer.mutate(buyerForm, {
-              onSuccess: () => {
-                setShowBuyerModal(false);
-                setBuyerForm({ company_name: "", buyer_type: "STRATEGIC" });
-              },
-            });
-          }}
-          className="space-y-4"
-        >
-          <Input
-            label="회사명"
-            required
-            value={buyerForm.company_name}
-            onChange={(e) =>
-              setBuyerForm({ ...buyerForm, company_name: e.target.value })
-            }
-            placeholder="매수 후보 기업명"
-          />
-          <Select
-            label="유형"
-            options={BUYER_TYPE_OPTIONS.filter((o) => o.value !== "")}
-            value={buyerForm.buyer_type}
-            onChange={(e) =>
-              setBuyerForm({
-                ...buyerForm,
-                buyer_type: e.target
-                  .value as BuyerCandidateCreate["buyer_type"],
-              })
-            }
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="담당자"
-              value={buyerForm.contact_name ?? ""}
-              onChange={(e) =>
-                setBuyerForm({
-                  ...buyerForm,
-                  contact_name: e.target.value || undefined,
-                })
-              }
-            />
-            <Input
-              label="이메일"
-              type="email"
-              value={buyerForm.contact_email ?? ""}
-              onChange={(e) =>
-                setBuyerForm({
-                  ...buyerForm,
-                  contact_email: e.target.value || undefined,
-                })
-              }
-            />
-          </div>
-          <Input
-            label="비고"
-            value={buyerForm.notes ?? ""}
-            onChange={(e) =>
-              setBuyerForm({
-                ...buyerForm,
-                notes: e.target.value || undefined,
-              })
-            }
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => setShowBuyerModal(false)}
-            >
-              취소
-            </Button>
-            <Button type="submit" loading={addBuyer.isPending}>
-              추가
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </>
   );
 }

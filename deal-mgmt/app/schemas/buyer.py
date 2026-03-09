@@ -109,10 +109,6 @@ class BuyerPipelineSummary(BaseModel):
         return str(v) if v is not None else None
 
 
-class ShortListPromoteRequest(BaseModel):
-    buyer_ids: list[uuid.UUID] = Field(..., max_length=100)
-
-
 class BiddingSummary(BaseModel):
     total_bidders: int
     bid_submitted: int

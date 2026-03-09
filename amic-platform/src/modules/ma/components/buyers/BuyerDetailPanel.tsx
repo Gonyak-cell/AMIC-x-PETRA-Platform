@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SlidePanel, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui/Tabs";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
@@ -39,6 +39,10 @@ export default function BuyerDetailPanel({
   canWrite,
 }: BuyerDetailPanelProps) {
   const [activeTab, setActiveTab] = useState("summary");
+
+  useEffect(() => {
+    setActiveTab("summary");
+  }, [buyer?.id]);
 
   const isOpen = !!buyer;
 

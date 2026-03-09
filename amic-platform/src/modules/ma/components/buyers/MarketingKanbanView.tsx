@@ -97,10 +97,10 @@ export default function MarketingKanbanView({
                     <button
                       type="button"
                       onClick={() => onSelectBuyer(buyer.id)}
-                      className="p-0.5 text-text-muted hover:text-accent transition-colors"
+                      className="p-2 -m-1.5 text-text-muted hover:text-accent transition-colors"
                       aria-label={`${buyer.company_name} 상세 보기`}
                     >
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                   {buyer.contact_name && (

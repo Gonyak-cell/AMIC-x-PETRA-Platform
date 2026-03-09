@@ -1,6 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type { FIRecommendation } from "@/modules/ma/types/pef_registry";
 import type { BiddingSummary } from "@/modules/ma/types/buyer";
@@ -64,26 +63,5 @@ export function useBiddingSummary(txnId: string) {
     },
     enabled: !!txnId,
     staleTime: 30_000,
-  });
-}
-
-export function usePromoteShortList(txnId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (buyerIds: string[]) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/buyers/promote-short-list`,
-        { buyer_ids: buyerIds },
-      );
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "buyers"],
-      });
-    },
-    onError: () => {
-      toast.error("Short-List 승격에 실패했습니다.");
-    },
   });
 }
