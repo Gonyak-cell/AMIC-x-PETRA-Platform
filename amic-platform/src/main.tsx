@@ -14,7 +14,6 @@ initSentry();
 
 function handleGlobalError(error: Error) {
   const message = error.message || "요청 처리 중 오류가 발생했습니다";
-  // DEBUG: API 에러 시 요청 URL 포함하여 표시
   const axiosErr = error as { config?: { method?: string; url?: string; baseURL?: string } };
   const url = axiosErr.config?.url;
   const base = axiosErr.config?.baseURL;
@@ -22,10 +21,8 @@ function handleGlobalError(error: Error) {
   if (url) {
     const fullPath = base ? `${base}${url}` : url;
     console.error(`[API Error] ${method} ${fullPath}:`, message);
-    toast.error(`${message}\n${method} ${fullPath}`);
-  } else {
-    toast.error(message);
   }
+  toast.error(message);
 }
 
 const queryClient = new QueryClient({
@@ -33,7 +30,11 @@ const queryClient = new QueryClient({
     onError: handleGlobalError,
   }),
   mutationCache: new MutationCache({
-    onError: handleGlobalError,
+    onError: (error, _variables, _context, mutation) => {
+      if (!mutation.options.onError) {
+        handleGlobalError(error);
+      }
+    },
   }),
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },

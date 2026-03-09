@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import { toast } from "sonner";
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   RFIItemV2,
   RFIItemListOut,
+  RFIItemListResponse,
   RFIItemCreate,
   RFIItemUpdate,
   RFIItemBatchCreate,
@@ -21,13 +22,6 @@ import type {
 
 const KEY = "ma";
 const rfiKeys = (txnId: string) => [KEY, "transactions", txnId, "rfi"];
-
-function extractErrorDetail(err: unknown): string | undefined {
-  if (isAxiosError<{ detail?: string }>(err)) {
-    return err.response?.data?.detail;
-  }
-  return undefined;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Queries                                                           */
@@ -50,11 +44,11 @@ export function useRFIItems(txnId: string, filters?: RFIItemFilters) {
       if (filters?.status) params.status = filters.status;
       if (filters?.priority) params.priority = filters.priority;
       if (filters?.search) params.search = filters.search;
-      const { data } = await maApi.get<RFIItemListOut[]>(
+      const { data } = await maApi.get<RFIItemListResponse>(
         `/transactions/${txnId}/rfi/items`,
         { params },
       );
-      return data;
+      return data.items;
     },
     enabled: !!txnId,
     staleTime: 10_000,
@@ -153,7 +147,7 @@ export function useCreateRFIItem(txnId: string) {
       toast.success("질의가 생성되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "질의 생성에 실패했습니다");
+      toast.error(extractApiError(err, "질의 생성에 실패했습니다"));
     },
   });
 }
@@ -174,7 +168,7 @@ export function useBatchCreateRFIItems(txnId: string) {
       toast.success(`${items.length}개 질의가 생성되었습니다`);
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "일괄 생성에 실패했습니다");
+      toast.error(extractApiError(err, "일괄 생성에 실패했습니다"));
     },
   });
 }
@@ -201,7 +195,7 @@ export function useUpdateRFIItem(txnId: string) {
       toast.success("질의가 수정되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "질의 수정에 실패했습니다");
+      toast.error(extractApiError(err, "질의 수정에 실패했습니다"));
     },
   });
 }
@@ -218,7 +212,7 @@ export function useDeleteRFIItem(txnId: string) {
       toast.success("질의가 삭제되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "질의 삭제에 실패했습니다");
+      toast.error(extractApiError(err, "질의 삭제에 실패했습니다"));
     },
   });
 }
@@ -246,7 +240,7 @@ export function useCloseRFIItem(txnId: string) {
       toast.success("질의가 마감되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "질의 마감에 실패했습니다");
+      toast.error(extractApiError(err, "질의 마감에 실패했습니다"));
     },
   });
 }
@@ -267,7 +261,7 @@ export function useCreateThread(txnId: string, itemId: string) {
       toast.success("답변이 등록되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "답변 등록에 실패했습니다");
+      toast.error(extractApiError(err, "답변 등록에 실패했습니다"));
     },
   });
 }
@@ -293,7 +287,7 @@ export function useUploadAttachments(txnId: string) {
       toast.success(`${attachments.length}개 파일이 업로드되었습니다`);
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "파일 업로드에 실패했습니다");
+      toast.error(extractApiError(err, "파일 업로드에 실패했습니다"));
     },
   });
 }
@@ -320,7 +314,7 @@ export function useMapAttachment(txnId: string) {
       toast.success("파일이 매핑되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "파일 매핑에 실패했습니다");
+      toast.error(extractApiError(err, "파일 매핑에 실패했습니다"));
     },
   });
 }
@@ -339,7 +333,7 @@ export function useDeleteAttachment(txnId: string) {
       toast.success("파일이 삭제되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "파일 삭제에 실패했습니다");
+      toast.error(extractApiError(err, "파일 삭제에 실패했습니다"));
     },
   });
 }
@@ -363,7 +357,7 @@ export function useExportRFI(txnId: string) {
       toast.success("Excel 파일이 다운로드되었습니다");
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "Excel 내보내기에 실패했습니다");
+      toast.error(extractApiError(err, "Excel 내보내기에 실패했습니다"));
     },
   });
 }
@@ -401,7 +395,7 @@ export function useImportRFI(txnId: string) {
       }
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "Excel 가져오기에 실패했습니다");
+      toast.error(extractApiError(err, "Excel 가져오기에 실패했습니다"));
     },
   });
 }
@@ -423,7 +417,7 @@ export function useGenerateRFI(txnId: string) {
       toast.success(`AI 생성 완료: ${count}개 질의`);
     },
     onError: (err) => {
-      toast.error(extractErrorDetail(err) ?? "AI RFI 생성에 실패했습니다");
+      toast.error(extractApiError(err, "AI RFI 생성에 실패했습니다"));
     },
   });
 }

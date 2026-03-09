@@ -71,7 +71,7 @@ async def link_fdd(
         return IntegrationResult(service="FDD", status="linked", data=result)
     except Exception as e:
         logger.warning("FDD link failed for txn %s: %s", txn_id, e)
-        return IntegrationResult(service="FDD", status="error", error=str(e))
+        raise HTTPException(status_code=502, detail="FDD 서비스 연결에 실패했습니다") from e
 
 
 @router.get("/fdd/status", response_model=IntegrationResult)
@@ -91,7 +91,7 @@ async def fdd_status(
         return IntegrationResult(service="FDD", status="ok", data=result)
     except Exception as e:
         logger.warning("FDD status query failed for txn %s, deal %s: %s", txn_id, deal_id, e)
-        return IntegrationResult(service="FDD", status="error", error=str(e))
+        raise HTTPException(status_code=502, detail="FDD 상태 조회에 실패했습니다") from e
 
 
 # ── IM ───────────────────────────────────────────────────
@@ -123,7 +123,7 @@ async def link_im(
         return IntegrationResult(service="IM", status="linked", data=result)
     except Exception as e:
         logger.warning("IM link failed for txn %s: %s", txn_id, e)
-        return IntegrationResult(service="IM", status="error", error=str(e))
+        raise HTTPException(status_code=502, detail="IM 서비스 연결에 실패했습니다") from e
 
 
 @router.get("/im/status", response_model=IntegrationResult)
@@ -143,7 +143,7 @@ async def im_status(
         return IntegrationResult(service="IM", status="ok", data=result)
     except Exception as e:
         logger.warning("IM status query failed for txn %s, doc %s: %s", txn_id, document_id, e)
-        return IntegrationResult(service="IM", status="error", error=str(e))
+        raise HTTPException(status_code=502, detail="IM 상태 조회에 실패했습니다") from e
 
 
 # ── KIIS ─────────────────────────────────────────────────
@@ -166,4 +166,4 @@ async def kiis_company_search(
         return IntegrationResult(service="KIIS", status="ok", data={"items": results})
     except Exception as e:
         logger.warning("KIIS company search failed for txn %s, q=%s: %s", txn_id, q, e)
-        return IntegrationResult(service="KIIS", status="error", error=str(e))
+        raise HTTPException(status_code=502, detail="KIIS 기업 검색에 실패했습니다") from e

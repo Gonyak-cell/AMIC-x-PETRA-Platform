@@ -52,8 +52,8 @@ async def ai_setup_from_text(
     except Exception as exc:
         logger.exception("딜 셋업 AI 미리보기 실패: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"AI 분석에 실패했습니다: {exc}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.",
         ) from exc
 
 
@@ -86,8 +86,8 @@ async def ai_setup_from_excel(
     except Exception as exc:
         logger.exception("딜 셋업 AI 엑셀 분석 실패: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"엑셀 AI 분석에 실패했습니다: {exc}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="엑셀 AI 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.",
         ) from exc
 
 
@@ -98,4 +98,11 @@ async def ai_setup_confirm(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> DealSetupResult:
     """미리보기 확인 → DB에 벌크 저장."""
-    return await deal_setup_service.confirm_deal_setup(db, body, actor_email=claims.email or "unknown")
+    try:
+        return await deal_setup_service.confirm_deal_setup(db, body, actor_email=claims.email or "unknown")
+    except Exception as exc:
+        logger.exception("거래 확정 중 오류")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="거래 확정에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from exc

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   NdaMarkup,
@@ -43,8 +44,8 @@ export function useCreateNdaMarkup(txnId: string, ndaId: string) {
       qc.invalidateQueries({ queryKey: KEY(txnId, ndaId) });
       toast.success("NDA 마크업 버전이 업로드되었습니다.");
     },
-    onError: () => {
-      toast.error("NDA 마크업 업로드에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "NDA 마크업 업로드에 실패했습니다."));
     },
   });
 }
@@ -61,8 +62,8 @@ export function useDeleteNdaMarkup(txnId: string, ndaId: string) {
       qc.invalidateQueries({ queryKey: KEY(txnId, ndaId) });
       toast.success("NDA 마크업 버전이 삭제되었습니다.");
     },
-    onError: () => {
-      toast.error("NDA 마크업 삭제에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "NDA 마크업 삭제에 실패했습니다."));
     },
   });
 }
@@ -112,8 +113,8 @@ export function useGenerateNdaRedline(txnId: string, ndaId: string) {
       qc.invalidateQueries({ queryKey: KEY(txnId, ndaId) });
       toast.success(`Redline 생성 완료 (${result.issuesCount}건 이슈 검출)`);
     },
-    onError: () => {
-      toast.error("Redline 생성에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "Redline 생성에 실패했습니다."));
     },
   });
 }
@@ -123,5 +124,5 @@ export function getNdaMarkupDownloadUrl(
   ndaId: string,
   markupId: string,
 ): string {
-  return `/api/v1/transactions/${txnId}/ndas/${ndaId}/markups/${markupId}/download`;
+  return `/api/ma/transactions/${txnId}/ndas/${ndaId}/markups/${markupId}/download`;
 }
