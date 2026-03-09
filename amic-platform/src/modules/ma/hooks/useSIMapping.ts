@@ -6,6 +6,7 @@ import { maApi } from "@/api/maClient";
 import type {
   BulkAddBuyersRequest,
   BulkAddBuyersResponse,
+  BulkAddVcBuyersRequest,
   DeepDiveResponse,
   KsicSuggestion,
   SICompany,
