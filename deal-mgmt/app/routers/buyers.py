@@ -145,9 +145,14 @@ async def add_buyer(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     data = body.model_dump()
-    # Tier → is_short_listed 자동 동기화
-    if data.get("tier") in (BuyerTier.TIER_1, BuyerTier.TIER_2, BuyerTier.TIER_3):
-        data["is_short_listed"] = True
+    # Tier → is_short_listed 자동 동기화 (update_buyer와 동일 패턴)
+    if data.get("tier") is not None:
+        data["is_short_listed"] = data["tier"] in (
+            BuyerTier.TIER_1,
+            BuyerTier.TIER_2,
+            BuyerTier.TIER_3,
+        )
+
     buyer = BuyerCandidate(transaction_id=txn_id, **data)
     db.add(buyer)
     await db.flush()
@@ -157,7 +162,7 @@ async def add_buyer(
         entity_id=buyer.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
-        new_value=body.model_dump(mode="json"),
+        new_value=data,
     )
     await db.commit()
     await db.refresh(buyer)
@@ -248,7 +253,7 @@ async def update_buyer(
                 detail="상태 전이 불가: 현재 상태에서 요청한 상태로 전환할 수 없습니다",
             )
 
-    # Tier → is_short_listed 자동 동기화
+    # Tier → is_short_listed 자동 동기화 (Tier 없이 is_short_listed 직접 PATCH도 허용)
     if "tier" in update_data:
         new_tier = update_data["tier"]
         update_data["is_short_listed"] = new_tier in (

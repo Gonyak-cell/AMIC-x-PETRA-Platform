@@ -87,6 +87,7 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
                     ? "bg-accent text-white"
                     : "bg-gray-100 text-text-muted"
                 }`}
+                aria-label={`${step.label} ${step.count}명`}
               >
                 {step.count}
               </div>
@@ -102,7 +103,7 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
 
               {/* 전환율 (Short List 제외 — 패널 내부에 표시) */}
               {rate != null && step.label !== "Short List" && (
-                <span className="text-[10px] text-text-secondary">{rate}%</span>
+                <span className="text-[10px] text-text-secondary" aria-label={`전환율 ${rate}%`}>{rate}%</span>
               )}
             </div>
           </div>

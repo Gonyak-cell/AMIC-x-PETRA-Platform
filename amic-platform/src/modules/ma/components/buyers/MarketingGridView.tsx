@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import MarketingGridCell from "./MarketingGridCell";
-import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
+import { MARKETING_STAGES, MARKETING_STAGE_LABELS, buildStageMap } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 
@@ -30,7 +30,7 @@ export default function MarketingGridView({
     );
   }
 
-  const stageMap = new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
+  const stageMap = buildStageMap(overviewData);
 
   // 완료 단계 수 기준 내림차순 정렬
   const sorted = [...buyers].sort((a, b) => {

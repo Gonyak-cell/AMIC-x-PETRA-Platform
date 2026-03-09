@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InterestIndicator from "./InterestIndicator";
 import InlineLogInput from "./InlineLogInput";
-import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
+import { MARKETING_STAGES, MARKETING_STAGE_LABELS, buildStageMap } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type {
   BuyerStageSummary,
@@ -43,7 +43,7 @@ export default function MarketingKanbanView({
     );
   }
 
-  const stageMap = new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
+  const stageMap = buildStageMap(overviewData);
 
   // Group buyers by their latest completed stage
   const columns = new Map<MarketingStage, BuyerCandidate[]>();

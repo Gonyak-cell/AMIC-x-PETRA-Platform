@@ -2,7 +2,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InlineLogInput from "./InlineLogInput";
-import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
+import { MARKETING_STAGES, MARKETING_STAGE_LABELS, buildStageMap } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type {
   BuyerStageSummary,
@@ -42,7 +42,7 @@ export default function MarketingTimelineView({
     );
   }
 
-  const stageMap = new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
+  const stageMap = buildStageMap(overviewData);
 
   const sorted = [...buyers].sort((a, b) => {
     const aIdx = latestStageIndex(

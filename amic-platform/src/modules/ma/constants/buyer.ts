@@ -1,6 +1,6 @@
 import type { SelectOption } from "@/components/ui";
 import type { BuyerStatus } from "../types/buyer";
-import type { MarketingStage } from "../types/marketing_log";
+import type { BuyerStageSummary, MarketingStage } from "../types/marketing_log";
 
 // ── Deal Role (컨소시엄 역할) ────────────────────────
 export const DEAL_ROLE_OPTIONS: SelectOption[] = [
@@ -74,6 +74,13 @@ export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
   { value: "NDA_SIGNED", label: "NDA 체결" },
   { value: "TARGET_MEETING", label: "대상회사 미팅" },
 ];
+
+// ── Stage Map Utility ──────────────────────────────
+export function buildStageMap(
+  overviewData: BuyerStageSummary[],
+): Map<string, Record<MarketingStage, string | null>> {
+  return new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
+}
 
 // ── Buyer Type ────────────────────────────────────────
 export const BUYER_TYPE_OPTIONS: SelectOption[] = [

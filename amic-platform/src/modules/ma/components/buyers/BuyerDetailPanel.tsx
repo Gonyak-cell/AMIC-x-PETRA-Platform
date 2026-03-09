@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SlidePanel, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui/Tabs";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
@@ -39,9 +39,11 @@ export default function BuyerDetailPanel({
   canWrite,
 }: BuyerDetailPanelProps) {
   const [activeTab, setActiveTab] = useState("summary");
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveTab("summary");
+    contentRef.current?.scrollTo(0, 0);
   }, [buyer?.id]);
 
   const isOpen = !!buyer;
@@ -55,7 +57,7 @@ export default function BuyerDetailPanel({
       width="xl"
     >
       {buyer && (
-        <div className="flex flex-col h-full">
+        <div ref={contentRef} className="flex flex-col h-full overflow-y-auto">
           <Tabs
             tabs={TABS}
             activeTab={activeTab}

@@ -1,15 +1,8 @@
 import { Check } from "lucide-react";
-import { MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
+import { MARKETING_STAGES, MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 
-const STAGES = [
-  "IDENTIFIED",
-  "EMAIL_SENT",
-  "PHONE_CALL",
-  "ADVISOR_MEETING",
-  "NDA_SIGNED",
-  "TARGET_MEETING",
-] as const;
+
 
 interface MarketingStageTrackerProps {
   summary: BuyerStageSummary;
@@ -20,12 +13,12 @@ export default function MarketingStageTracker({
   summary,
   compact = false,
 }: MarketingStageTrackerProps) {
-  const completedCount = STAGES.filter((s) => summary.stages[s] != null).length;
+  const completedCount = MARKETING_STAGES.filter((s) => summary.stages[s] != null).length;
 
   if (compact) {
     return (
       <div className="flex items-center gap-1">
-        {STAGES.map((stage) => {
+        {MARKETING_STAGES.map((stage) => {
           const done = summary.stages[stage] != null;
           return (
             <div
@@ -38,7 +31,7 @@ export default function MarketingStageTracker({
           );
         })}
         <span className="ml-1 text-xs text-text-muted">
-          {completedCount}/{STAGES.length}
+          {completedCount}/{MARKETING_STAGES.length}
         </span>
       </div>
     );
@@ -46,7 +39,7 @@ export default function MarketingStageTracker({
 
   return (
     <div className="flex items-center gap-0.5">
-      {STAGES.map((stage, idx) => {
+      {MARKETING_STAGES.map((stage, idx) => {
         const done = summary.stages[stage] != null;
         const dateStr = summary.stages[stage];
         return (

@@ -64,11 +64,11 @@ interface BuyersTabProps {
 }
 
 export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
-  const { data: buyers } = useBuyers(txnId);
+  const { data: buyers, isError: isBuyersError, refetch: refetchBuyers } = useBuyers(txnId);
   const { data: txn } = useTransaction(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
-  const { data: shortListOverview } = useShortListOverview(txnId);
+  const { data: shortListOverview, isError: isOverviewError } = useShortListOverview(txnId);
 
   const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
@@ -218,8 +218,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const realShortList = allBuyers.filter((b) => b.is_short_listed);
 
   // ── Dev-only mock data for Short List preview ──────────
-  const DEV_MOCK_BUYERS = createDevMockBuyers(txnId);
-  const DEV_MOCK_OVERVIEW = createDevMockOverview();
+  const DEV_MOCK_BUYERS = useMemo(() => createDevMockBuyers(txnId), [txnId]);
+  const DEV_MOCK_OVERVIEW = useMemo(() => createDevMockOverview(), []);
 
   const shortListBuyers =
     realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
@@ -290,7 +290,24 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 onViewModeChange={setShortListViewMode}
               />
             )}
-            {buyerSubTab === "long-list" && (
+            {(isBuyersError || isOverviewError) && (
+          <div className="flex items-center justify-between rounded-dr border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-700">
+              {isBuyersError
+                ? "매수자 목록을 불러오는 중 오류가 발생했습니다."
+                : "Short List 개요 데이터를 불러오는 중 오류가 발생했습니다."}
+            </p>
+            <button
+              type="button"
+              className="text-sm font-medium text-red-700 underline hover:text-red-900"
+              onClick={() => refetchBuyers()}
+            >
+              재시도
+            </button>
+          </div>
+        )}
+
+        {buyerSubTab === "long-list" && (
               <Button
                 icon={Download}
                 onClick={() => exportExcel.mutate()}
