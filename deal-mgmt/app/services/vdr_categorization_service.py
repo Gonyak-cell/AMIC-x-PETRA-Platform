@@ -366,6 +366,8 @@ _FOLDER_RULES: list[FolderRule] = [
             "화재보험",
             "임원배상",
             # 영문 보강
+            "claims",
+            "liability",
             "coverage",
             "underwriting",
         ],
@@ -504,12 +506,16 @@ _SHORT_KW_BOUNDARY_LEN = 3
 
 
 def _keyword_matches(kw_lower: str, name_lower: str) -> bool:
-    """키워드 매칭. 짧은 ASCII 키워드는 영문 글자 경계 매칭을 적용한다.
+    """키워드 매칭. ASCII 키워드는 영문 글자 경계 매칭을 적용한다.
 
     ``\\b``는 ``_``를 word character로 취급하여 ``ESG_보고서``에서 실패하므로,
     영문 글자(a-zA-Z) 경계만 확인하는 lookaround를 사용한다.
+
+    모든 ASCII 키워드에 경계 매칭을 적용하여 부분 문자열 오매칭을 방지한다.
+    예: ``lease`` in ``release`` → 차단, ``liability`` in ``reliability`` → 차단.
+    한글 키워드는 음절 단위로 구분되므로 ``in`` 연산자를 사용한다.
     """
-    if len(kw_lower) <= _SHORT_KW_BOUNDARY_LEN and kw_lower.isascii():
+    if kw_lower.isascii():
         return bool(re.search(rf"(?<![a-zA-Z]){re.escape(kw_lower)}(?![a-zA-Z])", name_lower))
     return kw_lower in name_lower
 
@@ -542,6 +548,9 @@ def score_document(
         (카테고리, 점수) 튜플 목록, 점수 내림차순 정렬. 점수 0인 카테고리 제외.
     """
     name_lower = filename.lower()
+    # 파일명 구분자를 공백으로 정규화하여 다중 단어 키워드 매칭 지원
+    # 예: "balance_sheet_2024.xlsx" → "balance sheet 2024.xlsx"
+    name_for_kw = name_lower.replace("_", " ").replace("-", " ")
     scores: list[tuple[VdrFolderCategory, int]] = []
 
     for rule in _FOLDER_RULES:
@@ -550,7 +559,7 @@ def score_document(
         # 1) 키워드 매칭: +60점 (첫 매칭에서 중단)
         #    짧은 ASCII 키워드는 단어 경계 매칭 적용
         for kw in rule.keywords:
-            if _keyword_matches(kw.lower(), name_lower):
+            if _keyword_matches(kw.lower(), name_for_kw):
                 score += 60
                 break
 
