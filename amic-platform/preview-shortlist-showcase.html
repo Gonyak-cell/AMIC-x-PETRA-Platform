@@ -18,20 +18,21 @@
   .sidebar.collapsed .master-list { opacity: 0; pointer-events: none; }
   .main { flex: 1; overflow-y: auto; padding: 24px 32px; }
 
-/* ── Sidebar Toggle ── */
+  /* ── Sidebar Toggle ── */
   .sidebar-toggle { position: absolute; top: 16px; right: -14px; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: background 0.15s; color: #6b7280; }
   .sidebar-toggle:hover { background: #f9fafb; color: #1a1a2e; }
+  .sidebar-toggle:focus-visible { outline: 2px solid #16a34a; outline-offset: 2px; }
   .sidebar-toggle svg { transition: transform 0.2s ease; }
   .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
 
   /* ── Sidebar Header ── */
   .sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid #e5e7eb; }
-  .sidebar-header h2 { font-size: 14px; font-weight: 700; color: #1a1a2e; }
-  .sidebar-stats { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .sidebar-header h2 { font-size: 14px; font-weight: 700; color: #1a1a2e; transition: opacity 0.15s ease; }
+  .sidebar-stats { font-size: 11px; color: #6b7280; margin-top: 4px; transition: opacity 0.15s ease; }
   .sidebar-stats .rate { color: #16a34a; font-weight: 600; }
 
   /* ── Master List ── */
-  .master-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .master-list { flex: 1; overflow-y: auto; padding: 8px; transition: opacity 0.15s ease; }
   .master-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all .4s ease; border: none; background: none; width: 100%; text-align: left; }
   .master-item:hover { background: #f9fafb; }
   .master-item.selected { background: rgba(22,163,74,0.05); border-left: 3px solid #16a34a; }
@@ -225,6 +226,9 @@
   @media (max-width: 768px) {
     .page { flex-direction: column; height: auto; }
     .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e5e7eb; max-height: 200px; }
+    .sidebar.collapsed { width: 100%; max-height: 48px; }
+    .sidebar-toggle { right: 16px; top: 10px; }
+    .sidebar.collapsed .sidebar-toggle svg { transform: rotate(90deg); }
     .main { padding: 12px 16px; }
     .kanban { flex-direction: column; }
     .kanban-col { width: 100%; }
@@ -408,55 +412,55 @@ function latestStageIdx(buyer) {
 }
 function formatDate(d) { return d ? d.slice(5) : ''; }
 function createTierBadge(tier) {
-  var span = document.createElement('span');
+  const span = document.createElement('span');
   span.className = 'tier ' + (tier ? TIER_CLASS[tier] : 'tier-na');
   span.textContent = tier ? TIER_LABEL[tier] : '미분류';
   return span;
 }
 function createInterestBars(tier) {
-  var level = tier === 'TIER_1' ? 3 : tier === 'TIER_2' ? 2 : 1;
-  var wrap = document.createElement('div');
+  const level = tier === 'TIER_1' ? 3 : tier === 'TIER_2' ? 2 : 1;
+  const wrap = document.createElement('div');
   wrap.className = 'interest';
-  for (var i = 1; i <= 3; i++) {
-    var bar = document.createElement('div');
+  for (let i = 1; i <= 3; i++) {
+    const bar = document.createElement('div');
     bar.className = 'bar h' + i + ' ' + (level >= i ? 'active' : 'inactive');
     wrap.appendChild(bar);
   }
   return wrap;
 }
 function createStageDots(buyer) {
-  var cc = completedCount(buyer);
-  var wrap = document.createElement('div');
+  const cc = completedCount(buyer);
+  const wrap = document.createElement('div');
   wrap.className = 'stage-dots';
   STAGES.forEach(function(s) {
-    var dot = document.createElement('div');
+    const dot = document.createElement('div');
     dot.className = 'stage-dot ' + (buyer.stages[s] ? 'done' : 'empty');
     dot.title = STAGE_LABELS[s] + ': ' + (buyer.stages[s] || '미완료');
     wrap.appendChild(dot);
   });
-  var countSpan = document.createElement('span');
+  const countSpan = document.createElement('span');
   countSpan.className = 'stage-count';
   countSpan.textContent = cc + '/6';
   wrap.appendChild(countSpan);
   return wrap;
 }
 function checkSvg(size) {
-  var style = size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '';
+  const style = size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '';
   return '<svg viewBox="0 0 24 24" class="check-svg"' + style + '><polyline points="20 6 9 17 4 12"/></svg>';
 }
 // [m-03] 공통 헬퍼
 function appendDropBadge(parent) {
-  var badge = document.createElement('span');
+  const badge = document.createElement('span');
   badge.className = 'drop-badge';
   badge.textContent = 'Drop';
   parent.appendChild(badge);
 }
 
-var ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-var ARROW_SVG_SM = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+const ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+const ARROW_SVG_SM = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
 
 function createArrowBtn(buyerId, small) {
-  var btn = document.createElement('button');
+  const btn = document.createElement('button');
   btn.className = 'arrow-btn';
   btn.setAttribute('aria-label', '상세 보기');
   btn.onclick = function(e) { e.stopPropagation(); selectBuyer(buyerId); };
@@ -479,7 +483,7 @@ function getSorted() {
 // [M-01] kanban next stage date
 function setNextStageDate(buyerId, nextStage, dateValue) {
   if (!dateValue) return;
-  var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+  const buyer = BUYERS.find(function(b) { return b.id === buyerId; });
   if (!buyer) return;
   buyer.stages[nextStage] = dateValue;
   renderAll();
@@ -496,16 +500,16 @@ function toggleDropStatus(buyerId) {
 // ── 수동 로그 추가 ──
 function addCustomLog(buyerId) {
   try {
-    var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+    const buyer = BUYERS.find(function(b) { return b.id === buyerId; });
     if (!buyer) return;
-    var dateInput = document.getElementById('log-date-' + buyerId);
-    var contentInput = document.getElementById('log-content-' + buyerId);
+    const dateInput = document.getElementById('log-date-' + buyerId);
+    const contentInput = document.getElementById('log-content-' + buyerId);
     if (!dateInput || !contentInput) return;
-    var date = dateInput.value, content = contentInput.value.trim();
+    const date = dateInput.value, content = contentInput.value.trim();
     if (!date || !content) return;
-    var minDate = '2020-01-01';
-    var today = new Date();
-    var maxDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+    const minDate = '2020-01-01';
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
     if (date < minDate || date > maxDate) {
       dateInput.classList.add('input-error');
       setTimeout(function() { dateInput.classList.remove('input-error'); }, 2000);
@@ -520,7 +524,7 @@ function addCustomLog(buyerId) {
 
 // [L-04] 로그 삭제
 function deleteCustomLog(buyerId, logIndex) {
-  var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+  const buyer = BUYERS.find(function(b) { return b.id === buyerId; });
   if (!buyer || logIndex < 0 || logIndex >= buyer.custom_logs.length) return;
   buyer.custom_logs.splice(logIndex, 1);
   renderTimeline();
@@ -607,7 +611,7 @@ function renderMasterList(sorted) {
     btn.appendChild(info);
 
     // Right side — use innerHTML for complex nested structures (static data only)
-    var right = document.createElement('div');
+    const right = document.createElement('div');
     right.className = 'master-right';
     right.appendChild(createTierBadge(b.tier));
     right.appendChild(createInterestBars(b.tier));
@@ -684,7 +688,7 @@ function renderGrid(sorted) {
       tr.appendChild(td);
     });
 
-    var tdArrow = document.createElement('td');
+    const tdArrow = document.createElement('td');
     tdArrow.style.textAlign = 'center';
     tdArrow.style.borderLeft = '1px solid #e5e7eb';
     tdArrow.appendChild(createArrowBtn(b.id, false));
@@ -767,7 +771,7 @@ function renderKanban() {
         card.appendChild(contact);
       }
 
-      var meta = document.createElement('div');
+      const meta = document.createElement('div');
       meta.className = 'card-meta';
       meta.appendChild(createTierBadge(b.tier));
       meta.appendChild(createInterestBars(b.tier));
@@ -906,12 +910,12 @@ function renderTimeline() {
       dateSpan.className = 'v-timeline-date';
       dateSpan.textContent = ev.date;
       content.appendChild(dateSpan);
-      var labelSpan = document.createElement('span');
+      const labelSpan = document.createElement('span');
       labelSpan.className = 'v-timeline-label ' + ev.type;
       labelSpan.textContent = ev.label;
       content.appendChild(labelSpan);
       if (ev.type === 'log' && ev.logIndex !== undefined) {
-        var delBtn = document.createElement('button');
+        const delBtn = document.createElement('button');
         delBtn.className = 'log-delete-btn';
         delBtn.textContent = '×';
         delBtn.title = '로그 삭제';
@@ -1113,7 +1117,7 @@ function selectBuyer(id) {
   renderDetail(selectedBuyerId ? buyer : null);
 }
 
-var currentView = 'grid';
+let currentView = 'grid';
 
 function switchView(id, btn) {
   currentView = id;
@@ -1135,12 +1139,12 @@ function renderCurrentView() {
 }
 
 function renderAll() {
-  var sorted = getSorted();
+  const sorted = getSorted();
   renderSummary();
   renderMasterList(sorted);
   renderCurrentView();
   if (selectedBuyerId) {
-    var buyer = BUYERS.find(function(b) { return b.id === selectedBuyerId; });
+    const buyer = BUYERS.find(function(b) { return b.id === selectedBuyerId; });
     renderDetail(buyer || null);
   }
 }
