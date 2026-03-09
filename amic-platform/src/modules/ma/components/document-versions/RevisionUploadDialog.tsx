@@ -1,7 +1,8 @@
-import { useState, useRef, useId, useEffect } from "react";
+import { useState, useRef, useId } from "react";
 import { Upload } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { useUploadRevision } from "@/modules/ma/hooks/useDocumentVersions";
+import { useFocusTrap } from "@/modules/ma/hooks/useFocusTrap";
 
 interface RevisionUploadDialogProps {
   open: boolean;
@@ -21,15 +22,9 @@ export default function RevisionUploadDialog({
   const fileInputId = useId();
   const titleId = useId();
   const [changesSummary, setChangesSummary] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useFocusTrap(dialogRef, open, onClose);
 
   if (!open) return null;
 
@@ -51,12 +46,14 @@ export default function RevisionUploadDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+        onClick={(e) => e.stopPropagation()}
       >
         <h3
           id={titleId}

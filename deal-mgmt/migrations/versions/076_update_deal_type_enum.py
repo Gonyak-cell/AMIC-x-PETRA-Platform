@@ -68,6 +68,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # ⚠️ 데이터 손실 경고:
+    # ISSUE→MA, HYB→MA, GEN→IB 매핑은 비가역적이다.
+    # 다운그레이드 후 다시 업그레이드하면 ISSUE/HYB 구분이 사라지고
+    # 모두 SE(=MA)로 통합된다. RE와 GEN도 구분이 소실된다.
+    # 프로덕션에서 다운그레이드 전 반드시 데이터 백업을 수행할 것.
     bind = op.get_bind()
     dialect = bind.dialect.name
 

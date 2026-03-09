@@ -1,11 +1,6 @@
-import {
-  HardDrive,
-  Files,
-  FolderTree,
-  Sparkles,
-  Upload,
-} from "lucide-react";
+import { HardDrive, Files, FolderTree, Sparkles, Upload } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { toast } from "sonner";
 
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -92,21 +87,43 @@ export default function VdrTab({ txnId }: Props) {
   const createFolder = useCreateVdrFolder(txnId);
   const deleteFolder = useDeleteVdrFolder(txnId);
 
-  // 기존 미초기화 거래 자동 처리
+  // 기존 미초기화 거래 자동 처리 (최대 3회 재시도)
   const autoInitRef = useRef(false);
+  const retryCountRef = useRef(0);
   useEffect(() => {
-    if (summary && !summary.initialized && !autoInitRef.current) {
+    if (
+      summary &&
+      !summary.initialized &&
+      !autoInitRef.current &&
+      retryCountRef.current < 3
+    ) {
       autoInitRef.current = true;
-      maApi
-        .post(`/transactions/${txnId}/vdr/init`, {})
-        .then(() => {
-          qc.invalidateQueries({
-            queryKey: ["ma", "transactions", txnId, "vdr"],
+      const attempt = retryCountRef.current;
+      retryCountRef.current += 1;
+      const delay = attempt > 0 ? Math.min(1000 * 2 ** attempt, 8000) : 0;
+      const timer = window.setTimeout(() => {
+        maApi
+          .post(`/transactions/${txnId}/vdr/init`, {})
+          .then(() => {
+            qc.invalidateQueries({
+              queryKey: ["ma", "transactions", txnId, "vdr"],
+            });
+          })
+          .catch((err: unknown) => {
+            if (import.meta.env.DEV) console.error("[VDR init]", err);
+            autoInitRef.current = false;
+            if (retryCountRef.current >= 3) {
+              toast.error(
+                "VDR 초기화에 실패했습니다. 새로고침 후 다시 시도해 주세요.",
+              );
+            } else {
+              qc.invalidateQueries({
+                queryKey: ["ma", "transactions", txnId, "vdr"],
+              });
+            }
           });
-        })
-        .catch(() => {
-          autoInitRef.current = false;
-        });
+      }, delay);
+      return () => window.clearTimeout(timer);
     }
   }, [summary, txnId, qc]);
 
@@ -274,8 +291,21 @@ export default function VdrTab({ txnId }: Props) {
 
         {/* 드래그 리사이즈 핸들 */}
         <div
-          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-2 rounded"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="패널 크기 조절"
+          tabIndex={0}
+          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-2 rounded focus:outline-none focus:ring-2 focus:ring-accent/50"
           onMouseDown={handleMouseDown}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setTopHeight((h) => Math.max(200, h - 40));
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setTopHeight((h) => Math.min(800, h + 40));
+            }
+          }}
         >
           <div className="w-12 h-1 rounded-full bg-border group-hover:bg-accent/40 transition-colors" />
         </div>

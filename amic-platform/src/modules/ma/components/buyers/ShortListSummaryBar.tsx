@@ -23,26 +23,31 @@ export default function ShortListSummaryBar({
   ).length;
   const tier1Count = buyers.filter((b) => b.tier === "TIER_1").length;
 
-  const avgPct =
-    buyers.length > 0
-      ? Math.round(
-          buyers.reduce((sum, b) => {
-            const stages = stageMap.get(b.id);
-            if (!stages) return sum;
-            const done = MARKETING_STAGES.filter(
-              (s: MarketingStage) => stages[s],
-            ).length;
-            return sum + (done / MARKETING_STAGES.length) * 100;
-          }, 0) / buyers.length,
-        )
-      : 0;
+  const avgPct = useMemo(() => {
+    let total = 0;
+    let count = 0;
+    for (const b of buyers) {
+      const stages = stageMap.get(b.id);
+      if (!stages) continue;
+      const done = MARKETING_STAGES.filter(
+        (s: MarketingStage) => stages[s],
+      ).length;
+      total += (done / MARKETING_STAGES.length) * 100;
+      count += 1;
+    }
+    return count > 0 ? Math.round(total / count) : 0;
+  }, [buyers, stageMap]);
 
   const cards = [
-    { label: "전체 후보", value: buyers.length, color: "text-accent" },
-    { label: "NDA 체결", value: ndaCount, color: "text-blue-600" },
-    { label: "대상미팅 완료", value: targetMeetingCount, color: "text-emerald-600" },
-    { label: "Tier 1", value: tier1Count, color: "text-amber-600" },
-    { label: "평균 진행률", value: `${avgPct}%`, color: "text-violet-600" },
+    { label: "전체 후보", value: buyers.length, color: "text-amic-400" },
+    { label: "NDA 체결", value: ndaCount, color: "text-amic-400" },
+    {
+      label: "대상미팅 완료",
+      value: targetMeetingCount,
+      color: "text-solid-green",
+    },
+    { label: "Tier 1", value: tier1Count, color: "text-amic-500" },
+    { label: "평균 진행률", value: `${avgPct}%`, color: "text-amic-300" },
   ];
 
   return (

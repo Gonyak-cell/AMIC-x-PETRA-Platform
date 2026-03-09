@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   ClassificationStatusItem,
@@ -73,8 +74,8 @@ export function useCreateVdrFolder(txnId: string) {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       toast.success("폴더가 생성되었습니다.");
     },
-    onError: () => {
-      toast.error("폴더 생성에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "폴더 생성에 실패했습니다."));
     },
   });
 }
@@ -99,8 +100,8 @@ export function useUpdateVdrFolder(txnId: string) {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       toast.success("폴더가 수정되었습니다.");
     },
-    onError: () => {
-      toast.error("폴더 수정에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "폴더 수정에 실패했습니다."));
     },
   });
 }
@@ -116,8 +117,8 @@ export function useDeleteVdrFolder(txnId: string) {
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
       toast.success("폴더가 삭제되었습니다.");
     },
-    onError: () => {
-      toast.error("폴더 삭제에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "폴더 삭제에 실패했습니다."));
     },
   });
 }
@@ -168,8 +169,8 @@ export function useUploadVdrDocument(txnId: string, folderId: string) {
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("파일이 업로드되었습니다.");
     },
-    onError: () => {
-      toast.error("파일 업로드에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "파일 업로드에 실패했습니다."));
     },
   });
 }
@@ -191,13 +192,12 @@ export function useUpdateVdrDocument(txnId: string) {
       return data as VdrDocument;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "vdr"],
-      });
+      qc.invalidateQueries({ queryKey: folderQK(txnId) });
+      qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("문서가 수정되었습니다.");
     },
-    onError: () => {
-      toast.error("문서 수정에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "문서 수정에 실패했습니다."));
     },
   });
 }
@@ -218,8 +218,8 @@ export function useDeleteVdrDocument(txnId: string) {
       });
       toast.success("문서가 삭제되었습니다.");
     },
-    onError: () => {
-      toast.error("문서 삭제에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "문서 삭제에 실패했습니다."));
     },
   });
 }
@@ -244,8 +244,8 @@ export function useDirectUpload(txnId: string) {
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
     },
-    onError: () => {
-      toast.error("파일 업로드에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "파일 업로드에 실패했습니다."));
     },
   });
 }

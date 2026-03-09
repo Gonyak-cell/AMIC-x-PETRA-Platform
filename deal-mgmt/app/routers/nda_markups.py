@@ -73,6 +73,7 @@ async def get_nda_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> NdaMarkupOut:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     await _get_nda_or_404(db, txn_id, nda_id)
     markup = await _get_markup_or_404(db, nda_id, markup_id)
@@ -96,6 +97,7 @@ async def create_nda_markup(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> NdaMarkupOut:
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
     nda = await _get_nda_or_404(db, txn_id, nda_id)
 
     # version_date 형식 검증 (YYYY-MM-DD)
@@ -107,6 +109,12 @@ async def create_nda_markup(
 
     # 파일 크기 검증
     content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        logger.warning(
+            "대용량 파일 업로드 (NDA 마크업) size=%d nda_id=%s",
+            len(content),
+            nda_id,
+        )
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -164,34 +172,45 @@ async def create_nda_markup(
         new_value={"version": next_ver, "label": version_label, "date": version_date},
     )
 
-    # VCS 연동 — DocumentMaster + Revision 자동 생성
+    # VCS 연동 — DocumentMaster + Revision 자동 생성 (savepoint로 격리)
     try:
-        from app.models.enums import UploadSource
-        from app.services import document_version_service
+        async with db.begin_nested():
+            from app.models.enums import UploadSource
+            from app.services import document_version_service
 
-        doc_master = await document_version_service.find_or_create_for_nda(
-            db,
-            transaction_id=txn_id,
-            nda_id=nda_id,
-            doc_name=version_label,
-            created_by_email=claims.email,
-        )
-        await document_version_service.upload_revision(
-            db,
-            document_id=doc_master.id,
-            file_content=content,
-            file_name=safe_filename,
-            mime_type=file.content_type,
-            upload_source=UploadSource.NDA_MARKUP,
-            changes_summary=changes_summary,
-            uploaded_by_email=claims.email,
-            source_entity_type="NdaMarkup",
-            source_entity_id=str(markup.id),
-        )
+            doc_master = await document_version_service.find_or_create_for_nda(
+                db,
+                transaction_id=txn_id,
+                nda_id=nda_id,
+                doc_name=version_label,
+                created_by_email=claims.email,
+            )
+            await document_version_service.upload_revision(
+                db,
+                document_id=doc_master.id,
+                file_content=content,
+                file_name=safe_filename,
+                mime_type=file.content_type,
+                upload_source=UploadSource.NDA_MARKUP,
+                changes_summary=changes_summary,
+                uploaded_by_email=claims.email,
+                source_entity_type="NdaMarkup",
+                source_entity_id=str(markup.id),
+            )
     except Exception:
-        logger.warning("VCS 연동 실패 (NDA 마크업)", exc_info=True)
+        logger.error(
+            "VCS 연동 실패 (NDA 마크업) nda_id=%s markup_id=%s",
+            nda_id,
+            markup.id,
+            exc_info=True,
+        )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        if dest_path.exists():
+            dest_path.unlink(missing_ok=True)
+        raise
     await db.refresh(markup)
     return NdaMarkupOut.model_validate(markup)
 
@@ -207,6 +226,7 @@ async def download_nda_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> FileResponse:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     await _get_nda_or_404(db, txn_id, nda_id)
     markup = await _get_markup_or_404(db, nda_id, markup_id)
@@ -241,6 +261,7 @@ async def delete_nda_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> None:
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     await _get_nda_or_404(db, txn_id, nda_id)
     markup = await _get_markup_or_404(db, nda_id, markup_id)
@@ -280,6 +301,7 @@ async def generate_nda_redline(
     """
     from app.services import nda_analysis_service, redline_engine
 
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     nda = await _get_nda_or_404(db, txn_id, nda_id)
     current_markup = await _get_markup_or_404(db, nda_id, markup_id)
@@ -291,8 +313,12 @@ async def generate_nda_redline(
     if party_side not in ("SELL", "BUY"):
         raise HTTPException(status_code=400, detail="party_side는 SELL 또는 BUY여야 합니다")
 
-    # 현재 버전 파일 읽기 (async)
+    # 현재 버전 파일 읽기 (async) — 경로 탐색 방어 포함
     current_file_path = Path(current_markup.file_path)
+    try:
+        current_file_path.resolve().relative_to(UPLOAD_DIR.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다")
     current_bytes = await run_in_threadpool(current_file_path.read_bytes)
 
     # 참조 버전 결정
@@ -304,6 +330,10 @@ async def generate_nda_redline(
         if not base_markup.file_path or not Path(base_markup.file_path).exists():
             raise HTTPException(status_code=404, detail="기준 버전의 파일이 없습니다")
         base_path = Path(base_markup.file_path)
+        try:
+            base_path.resolve().relative_to(UPLOAD_DIR.resolve())
+        except ValueError:
+            raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다")
         reference_text = await run_in_threadpool(lambda: redline_engine.extract_paragraphs_text(base_path.read_bytes()))
     else:
         # 직전 버전 자동 선택
@@ -337,9 +367,9 @@ async def generate_nda_redline(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except RuntimeError as exc:
+    except RuntimeError:
         logger.exception("NDA Redline 생성 중 런타임 에러")
-        raise HTTPException(status_code=503, detail=f"Redline 생성 실패: {exc}")
+        raise HTTPException(status_code=503, detail="Redline 생성에 일시적 오류가 발생했습니다. 다시 시도해 주세요.")
 
     # Redline 파일 저장 (async)
     nda_dir = UPLOAD_DIR / str(nda_id)

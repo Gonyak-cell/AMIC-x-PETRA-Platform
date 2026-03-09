@@ -328,7 +328,7 @@ async def remove_buyer(
             "status": buyer.status,
             "buyer_type": buyer.buyer_type,
             "deal_role": buyer.deal_role,
-            "contact_name": buyer.contact_name,
+            "contact_name": (buyer.contact_name[0] + "***") if buyer.contact_name else None,
             "corp_code": buyer.corp_code,
         },
         notes=cascade_notes,

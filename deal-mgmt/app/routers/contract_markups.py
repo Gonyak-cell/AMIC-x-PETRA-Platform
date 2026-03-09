@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
 
@@ -61,7 +62,9 @@ async def get_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await _get_contract_or_404(db, txn_id, contract_id)
     markup = await _get_markup_or_404(db, contract_id, markup_id)
     return ContractMarkupOut.model_validate(markup)
 
@@ -80,10 +83,17 @@ async def create_markup(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
-    await _get_contract_or_404(db, txn_id, contract_id)
+    await check_client_deal_access(db, txn_id, claims)
+    contract_obj = await _get_contract_or_404(db, txn_id, contract_id)
 
     # 파일 크기 검증
     content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        logging.getLogger(__name__).warning(
+            "대용량 파일 업로드 (계약 마크업) size=%d contract_id=%s",
+            len(content),
+            contract_id,
+        )
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="파일 크기가 50MB를 초과합니다"
@@ -142,39 +152,47 @@ async def create_markup(
         new_value={"version": next_ver, "label": version_label},
     )
 
-    # VCS 연동 — DocumentMaster + Revision 자동 생성
+    # VCS 연동 — DocumentMaster + Revision 자동 생성 (savepoint로 격리)
     try:
-        from app.models.enums import UploadSource
+        async with db.begin_nested():
+            from app.models.enums import UploadSource
 
-        contract_obj = await _get_contract_or_404(db, txn_id, contract_id)
-        doc_master = await document_version_service.find_or_create_for_contract(
-            db,
-            transaction_id=txn_id,
-            contract_id=contract_id,
-            contract_type=contract_obj.contract_type.value
-            if hasattr(contract_obj.contract_type, "value")
-            else str(contract_obj.contract_type),
-            doc_name=version_label,
-            created_by_email=claims.email,
-        )
-        await document_version_service.upload_revision(
-            db,
-            document_id=doc_master.id,
-            file_content=content,
-            file_name=safe_filename,
-            mime_type=file.content_type,
-            upload_source=UploadSource.CONTRACT_MARKUP,
-            changes_summary=changes_summary,
-            uploaded_by_email=claims.email,
-            source_entity_type="ContractMarkup",
-            source_entity_id=str(markup.id),
-        )
+            doc_master = await document_version_service.find_or_create_for_contract(
+                db,
+                transaction_id=txn_id,
+                contract_id=contract_id,
+                contract_type=contract_obj.contract_type.value
+                if hasattr(contract_obj.contract_type, "value")
+                else str(contract_obj.contract_type),
+                doc_name=version_label,
+                created_by_email=claims.email,
+            )
+            await document_version_service.upload_revision(
+                db,
+                document_id=doc_master.id,
+                file_content=content,
+                file_name=safe_filename,
+                mime_type=file.content_type,
+                upload_source=UploadSource.CONTRACT_MARKUP,
+                changes_summary=changes_summary,
+                uploaded_by_email=claims.email,
+                source_entity_type="ContractMarkup",
+                source_entity_id=str(markup.id),
+            )
     except Exception:
-        import logging
+        logging.getLogger(__name__).error(
+            "VCS 연동 실패 (계약 마크업) contract_id=%s markup_id=%s",
+            contract_id,
+            markup.id,
+            exc_info=True,
+        )
 
-        logging.getLogger(__name__).warning("VCS 연동 실패 (계약 마크업)", exc_info=True)
-
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        if dest_path.exists():
+            dest_path.unlink(missing_ok=True)
+        raise
     await db.refresh(markup)
     return ContractMarkupOut.model_validate(markup)
 
@@ -187,7 +205,9 @@ async def download_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await _get_contract_or_404(db, txn_id, contract_id)
     markup = await _get_markup_or_404(db, contract_id, markup_id)
 
     if not markup.file_path:
@@ -217,7 +237,9 @@ async def delete_markup(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
+    await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await _get_contract_or_404(db, txn_id, contract_id)
     markup = await _get_markup_or_404(db, contract_id, markup_id)
 
     # 파일 삭제

@@ -15,9 +15,7 @@ export function useDealSetupFromText() {
       const { data } = await maApi.post("/transactions/ai-setup", body);
       return data;
     },
-    onError: () => {
-      toast.error("AI 분석에 실패했습니다. 다시 시도해 주세요.");
-    },
+
   });
 }
 
@@ -34,9 +32,7 @@ export function useDealSetupFromExcel() {
       );
       return data;
     },
-    onError: () => {
-      toast.error("엑셀 AI 분석에 실패했습니다. 다시 시도해 주세요.");
-    },
+
   });
 }
 
@@ -54,8 +50,6 @@ export function useConfirmDealSetup() {
         `거래가 생성되었습니다 (DD ${result.dd_checklist_count}건, 타임라인 ${result.timeline_count}건)`,
       );
     },
-    onError: () => {
-      toast.error("거래 생성에 실패했습니다.");
-    },
+
   });
 }

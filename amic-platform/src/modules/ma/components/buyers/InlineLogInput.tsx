@@ -12,6 +12,8 @@ interface InlineLogInputProps {
   defaultStage?: MarketingStage;
   /** 저장 완료 후 콜백 */
   onComplete?: () => void;
+  /** Escape 키 등으로 입력 취소 시 콜백 */
+  onCancel?: () => void;
   /** true: 날짜+저장만 (그리드 셀용), false: 전체 폼 */
   compact?: boolean;
 }
@@ -29,6 +31,7 @@ export default function InlineLogInput({
   buyerId,
   defaultStage,
   onComplete,
+  onCancel,
   compact = false,
 }: InlineLogInputProps) {
   const [stage, setStage] = useState<MarketingStage>(
@@ -59,12 +62,13 @@ export default function InlineLogInput({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" onKeyDown={(e) => { if (e.key === "Escape") onCancel?.(); }}>
         <input
           type="date"
           value={logDate}
           onChange={(e) => setLogDate(e.target.value)}
           className="h-7 px-1.5 text-xs border border-gray-border rounded bg-white focus:ring-1 focus:ring-accent"
+          aria-label="접촉 날짜"
         />
         <Button
           size="sm"
@@ -81,12 +85,13 @@ export default function InlineLogInput({
   }
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-bg-cool rounded border border-gray-border">
+    <div className="flex items-center gap-2 p-2 bg-bg-cool rounded border border-gray-border" onKeyDown={(e) => { if (e.key === "Escape") onCancel?.(); }}>
       {!defaultStage && (
         <select
           value={stage}
           onChange={(e) => setStage(e.target.value as MarketingStage)}
           className="h-7 px-1.5 text-xs border border-gray-border rounded bg-white focus:ring-1 focus:ring-accent"
+          aria-label="접촉 유형"
         >
           {MARKETING_STAGE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -100,12 +105,15 @@ export default function InlineLogInput({
         value={logDate}
         onChange={(e) => setLogDate(e.target.value)}
         className="h-7 px-1.5 text-xs border border-gray-border rounded bg-white focus:ring-1 focus:ring-accent"
+        aria-label="접촉 날짜"
       />
       <input
         type="text"
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="활동 내용 (선택)"
+        aria-label="활동 내용"
+        maxLength={500}
         className="h-7 flex-1 min-w-0 px-2 text-xs border border-gray-border rounded bg-white focus:ring-1 focus:ring-accent"
         onKeyDown={(e) => {
           if (e.key === "Enter") handleSubmit();

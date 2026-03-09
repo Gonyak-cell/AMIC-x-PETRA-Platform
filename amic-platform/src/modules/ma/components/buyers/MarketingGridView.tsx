@@ -49,7 +49,7 @@ export default function MarketingGridView({
   return (
     <div>
       <p className="text-xs font-medium text-accent mb-2">Grid View — 매수자 × 마케팅 단계</p>
-      <div className="overflow-x-auto border border-gray-border rounded-dr">
+      <div className="overflow-x-auto border border-gray-border rounded-dr" tabIndex={0} role="region" aria-label="바이어 그리드 스크롤">
       <table className="w-full text-sm" aria-label="매수자별 마케팅 단계 현황">
         <thead>
           <tr className="bg-bg-cool border-b border-gray-border">
@@ -64,7 +64,7 @@ export default function MarketingGridView({
                 {MARKETING_STAGE_LABELS[s]}
               </th>
             ))}
-            <th className="w-10 border-l border-gray-border" />
+            <th className="w-10 border-l border-gray-border"><span className="sr-only">상세</span></th>
           </tr>
         </thead>
         <tbody>
@@ -98,13 +98,14 @@ export default function MarketingGridView({
                     stage={stage}
                     dateValue={stages?.[stage] ?? null}
                     canWrite={canWrite}
+                    buyerName={buyer.company_name}
                   />
                 ))}
                 <td className="text-center border-l border-gray-border">
                   <button
                     type="button"
                     onClick={() => onSelectBuyer(buyer.id)}
-                    className="p-1 text-text-muted hover:text-accent transition-colors"
+                    className="p-1 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-accent transition-colors"
                     aria-label={`${buyer.company_name} 상세`}
                   >
                     <ChevronRight className="h-4 w-4" />

@@ -105,7 +105,7 @@ export default function MarketingTimelineView({
             </div>
 
             {/* Timeline bar */}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.5" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="마케팅 진행률">
               {MARKETING_STAGES.map((stage, idx) => {
                 const date = stages?.[stage] ?? null;
                 const completed = !!date;

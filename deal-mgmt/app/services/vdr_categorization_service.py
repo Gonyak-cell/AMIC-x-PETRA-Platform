@@ -8,6 +8,9 @@ from pathlib import Path
 
 from app.models.enums import VdrFolderCategory
 
+# ASCII 키워드 경계 매칭 정규식 캐시 (모듈 로드 시 1회 컴파일)
+_ASCII_KW_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+
 
 @dataclass
 class FolderRule:
@@ -491,6 +494,13 @@ _FOLDER_RULES: list[FolderRule] = [
         tiebreak_group=3,
     ),
 ]
+
+# ASCII 키워드 패턴 사전 컴파일 (모듈 로드 시 1회)
+for _rule in _FOLDER_RULES:
+    for _kw in _rule.keywords:
+        _kw_lower = _kw.lower()
+        if _kw_lower.isascii() and _kw_lower not in _ASCII_KW_PATTERN_CACHE:
+            _ASCII_KW_PATTERN_CACHE[_kw_lower] = re.compile(rf"(?<![a-zA-Z]){re.escape(_kw_lower)}(?![a-zA-Z])")
 
 # 타이브레이크 맵: 카테고리 → 그룹 번호 (낮을수록 우선, 모듈 로드 시 1회 생성)
 _TIEBREAK_MAP: dict[VdrFolderCategory, int] = {rule.category: rule.tiebreak_group for rule in _FOLDER_RULES}

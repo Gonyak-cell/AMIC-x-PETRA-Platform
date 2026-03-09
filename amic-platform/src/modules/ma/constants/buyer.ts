@@ -94,6 +94,7 @@ export const BUYER_TYPE_OPTIONS: SelectOption[] = [
 
 // ── Buyer Status ──────────────────────────────────────
 export const BUYER_STATUS_OPTIONS: SelectOption[] = [
+  { value: "", label: "전체" },
   { value: "IDENTIFIED", label: "식별" },
   { value: "CONTACTED", label: "접촉" },
   { value: "NDA_SENT", label: "NDA 발송" },

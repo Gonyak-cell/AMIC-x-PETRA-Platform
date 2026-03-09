@@ -46,7 +46,7 @@ export default function ShortListMasterList({
         )}
       </p>
 
-      <div className="space-y-1 overflow-y-auto">
+      <div className="space-y-1 overflow-y-auto" aria-label="Short List 후보 목록">
         {buyers.map((buyer) => {
           const isSelected = selectedBuyerId === buyer.id;
           const stages = stageMap.get(buyer.id);

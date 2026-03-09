@@ -80,6 +80,9 @@ async def close_kiis_dart_client() -> None:
 
 logger = logging.getLogger(__name__)
 
+# 동시 SI 매핑 요청 제한 — _load_filtered_companies 리소스 보호
+_si_mapping_semaphore = asyncio.Semaphore(3)
+
 
 # ── 데이터 통계 ───────────────────────────────────────────
 async def get_data_stats(db: AsyncSession) -> SIDataStats:
@@ -177,7 +180,8 @@ async def map_si_candidates(
     ksic_codes = [c for c in (_strip_ksic_prefix(c) for c in ksic_codes) if c]
 
     # ── Step 0: 1회 전체 로딩 + 인메모리 인덱스 ─────────
-    all_companies = await _load_filtered_companies(db, min_revenue, require_investment_history)
+    async with _si_mapping_semaphore:
+        all_companies = await _load_filtered_companies(db, min_revenue, require_investment_history)
     ksic_index, sorted_keys = _build_ksic_index(all_companies)
 
     # ── Step 1: Direct Peers (동종업계) — dict 참조 ──────
@@ -324,6 +328,7 @@ async def bulk_add_to_buyers(
 
     # 3) 배치 audit 기록 — 개별 감사 실패 시에도 BuyerCandidate 등록은 유지
     #    (감사 로그는 best-effort, 등록 누락보다 감사 누락이 허용 가능)
+    audit_fail_count = 0
     for buyer, si in new_buyers:
         try:
             await audit_service.record(
@@ -335,8 +340,16 @@ async def bulk_add_to_buyers(
                 new_value={"company_name": si.company_name, "source": "SI_MAPPING"},
             )
         except Exception:
+            audit_fail_count += 1
             logger.exception("SI BuyerCandidate 감사 로그 실패: buyer_id=%s", buyer.id)
         added_ids.append(buyer.id)
+    if audit_fail_count > 0:
+        logger.warning(
+            "SI 감사 로그 실패 임계값 초과: txn_id=%s, 실패=%d/%d건",
+            txn_id,
+            audit_fail_count,
+            len(new_buyers),
+        )
 
     await db.commit()
 
@@ -1196,6 +1209,7 @@ async def bulk_add_vc_to_buyers(
             await db.rollback()
             raise
 
+    audit_fail_count = 0
     for buyer, vc in new_buyers:
         try:
             await audit_service.record(
@@ -1207,8 +1221,16 @@ async def bulk_add_vc_to_buyers(
                 new_value={"company_name": vc.company_name, "source": "VC_MAPPING"},
             )
         except Exception:
+            audit_fail_count += 1
             logger.exception("VC BuyerCandidate 감사 로그 실패: buyer_id=%s", buyer.id)
         added_ids.append(buyer.id)
+    if audit_fail_count > 0:
+        logger.warning(
+            "VC 감사 로그 실패 임계값 초과: txn_id=%s, 실패=%d/%d건",
+            txn_id,
+            audit_fail_count,
+            len(new_buyers),
+        )
 
     await db.commit()
 

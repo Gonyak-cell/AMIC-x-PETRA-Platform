@@ -75,61 +75,65 @@ function ExpandedContent({
   const [showLogModal, setShowLogModal] = useState(false);
   const [logForm, setLogForm] = useState<MarketingLogCreate>({
     stage: "IDENTIFIED",
-    log_date: new Date().toISOString().slice(0, 10),
+    log_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(),
     content: "",
   });
 
-  const logColumns: Column<MarketingLog>[] = [
-    {
-      key: "log_date",
-      header: "일자",
-      render: (r) => <span className="text-xs font-mono">{r.log_date}</span>,
-    },
-    {
-      key: "stage",
-      header: "단계",
-      render: (r) => (
-        <Badge variant="info">
-          {MARKETING_STAGE_LABELS[r.stage] ?? r.stage}
-        </Badge>
-      ),
-    },
-    {
-      key: "content",
-      header: "내용",
-      render: (r) => (
-        <span className="text-xs text-text-secondary line-clamp-2">
-          {r.content || "-"}
-        </span>
-      ),
-    },
-  ];
+  const logColumns: Column<MarketingLog>[] = useMemo(() => {
+    const cols: Column<MarketingLog>[] = [
+      {
+        key: "log_date",
+        header: "일자",
+        render: (r) => <span className="text-xs font-mono">{r.log_date}</span>,
+      },
+      {
+        key: "stage",
+        header: "단계",
+        render: (r) => (
+          <Badge variant="info">
+            {MARKETING_STAGE_LABELS[r.stage] ?? r.stage}
+          </Badge>
+        ),
+      },
+      {
+        key: "content",
+        header: "내용",
+        render: (r) => (
+          <span className="text-xs text-text-secondary line-clamp-2">
+            {r.content || "-"}
+          </span>
+        ),
+      },
+    ];
 
-  if (canWrite) {
-    logColumns.push({
-      key: "actions" as keyof MarketingLog,
-      header: "",
-      render: (r) => (
-        <button
-          type="button"
-          className="text-xs text-negative hover:underline"
-          onClick={(e) => {
-            e.stopPropagation();
-            toast("마케팅 로그를 삭제하시겠습니까?", {
-              action: {
-                label: "삭제",
-                onClick: () => deleteLog.mutate(r.id),
-              },
-              cancel: { label: "취소", onClick: () => {} },
-              duration: 8000,
-            });
-          }}
-        >
-          삭제
-        </button>
-      ),
-    });
-  }
+    if (canWrite) {
+      cols.push({
+        key: "actions" as keyof MarketingLog,
+        header: "",
+        render: (r) => (
+          <button
+            type="button"
+            className="text-xs text-negative hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              toast("마케팅 로그를 삭제하시겠습니까?", {
+                action: {
+                  label: "삭제",
+                  onClick: () => deleteLog.mutate(r.id),
+                },
+                cancel: { label: "취소", onClick: () => {} },
+                duration: 8000,
+              });
+            }}
+          >
+            삭제
+          </button>
+        ),
+      });
+    }
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deleteLog는 이벤트 핸들러 내에서만 사용
+  }, [canWrite]);
 
   return (
     <div className="px-4 pb-4 pt-1 space-y-3">
@@ -277,6 +281,7 @@ function BuyerRow({
       <button
         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-bg-cool/50 transition-colors"
         aria-expanded={expanded}
+        aria-label={`${buyer.company_name} 상세 정보 ${expanded ? "접기" : "펼치기"}`}
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? (
@@ -339,12 +344,13 @@ function DartMetric({
   suffix,
 }: {
   label: string;
-  value: number | null;
+  value: string | number | null;
   suffix?: string;
 }) {
+  const num = value == null ? null : typeof value === "string" ? parseFloat(value) : value;
   const display =
-    value != null
-      ? `${value >= 1_0000_0000 ? `${(value / 1_0000_0000).toFixed(1)}억` : value.toLocaleString()}${suffix ?? ""}`
+    num != null && !isNaN(num)
+      ? `${num >= 1_0000_0000 ? `${(num / 1_0000_0000).toFixed(1)}억` : num.toLocaleString()}${suffix ?? ""}`
       : "-";
 
   return (

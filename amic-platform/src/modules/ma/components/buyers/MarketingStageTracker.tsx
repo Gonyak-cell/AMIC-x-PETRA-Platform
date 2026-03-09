@@ -17,13 +17,13 @@ export default function MarketingStageTracker({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" role="list">
         {MARKETING_STAGES.map((stage) => {
           const done = summary.stages[stage] != null;
           return (
             <div
               key={stage}
-              role="img"
+              role="listitem"
               className={`h-2 w-2 rounded-full ${done ? "bg-accent" : "bg-gray-200"}`}
               title={`${MARKETING_STAGE_LABELS[stage]}: ${done ? summary.stages[stage] : "미완료"}`}
               aria-label={`${MARKETING_STAGE_LABELS[stage]}: ${done ? summary.stages[stage] : "미완료"}`}
@@ -38,12 +38,12 @@ export default function MarketingStageTracker({
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-0.5" role="list">
       {MARKETING_STAGES.map((stage, idx) => {
         const done = summary.stages[stage] != null;
         const dateStr = summary.stages[stage];
         return (
-          <div key={stage} className="flex items-center">
+          <div key={stage} role="listitem" aria-label={`${MARKETING_STAGE_LABELS[stage]} ${done ? "완료" : "미완료"}`} className="flex items-center">
             {idx > 0 && (
               <div
                 className={`h-px w-4 ${done ? "bg-accent" : "bg-gray-200"}`}
@@ -57,6 +57,7 @@ export default function MarketingStageTracker({
                     : "border border-gray-300 bg-white text-text-muted"
                 }`}
                 title={MARKETING_STAGE_LABELS[stage]}
+                aria-label={`${MARKETING_STAGE_LABELS[stage]} ${done ? "완료" : "미완료"}`}
               >
                 {done ? <Check className="h-3.5 w-3.5" /> : idx + 1}
               </div>

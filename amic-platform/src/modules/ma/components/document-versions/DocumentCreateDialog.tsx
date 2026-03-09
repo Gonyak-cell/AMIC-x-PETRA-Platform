@@ -1,8 +1,9 @@
-import { useState, useEffect, useId } from "react";
+import { useState, useId, useRef } from "react";
 import { Plus } from "lucide-react";
 import { Button, Input, Select } from "@/components/ui";
 import type { DocumentType } from "@/modules/ma/types/document_version";
 import { useCreateDocument } from "@/modules/ma/hooks/useDocumentVersions";
+import { useFocusTrap } from "@/modules/ma/hooks/useFocusTrap";
 
 const DOC_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
   { value: "CONTRACT_SPA", label: "SPA (주식매매계약)" },
@@ -37,15 +38,9 @@ export default function DocumentCreateDialog({
   const [description, setDescription] = useState("");
   const titleId = useId();
   const descId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useFocusTrap(dialogRef, open, onClose);
 
   if (!open) return null;
 
@@ -66,12 +61,14 @@ export default function DocumentCreateDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+        onClick={(e) => e.stopPropagation()}
       >
         <h3
           id={titleId}

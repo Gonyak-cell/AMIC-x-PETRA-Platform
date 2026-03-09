@@ -82,9 +82,9 @@ export interface BuyerCandidateUpdate {
   is_short_listed?: boolean;
   corp_code?: string;
   ioi_value?: string | null;
-  ioi_date?: string;
+  ioi_date?: string | null;
   loi_value?: string | null;
-  loi_date?: string;
+  loi_date?: string | null;
   final_offer_value?: string | null;
   rejection_reason?: string;
   notes?: string;
@@ -98,7 +98,6 @@ export interface BuyerPipelineSummary {
   avg_ioi_value: string | null;
   avg_loi_value: string | null;
 }
-
 
 export interface BiddingSummary {
   total_bidders: number;

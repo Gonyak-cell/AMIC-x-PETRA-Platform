@@ -11,6 +11,7 @@ interface MarketingGridCellProps {
   stage: MarketingStage;
   dateValue: string | null;
   canWrite: boolean;
+  buyerName?: string;
 }
 
 export default function MarketingGridCell({
@@ -19,6 +20,7 @@ export default function MarketingGridCell({
   stage,
   dateValue,
   canWrite,
+  buyerName,
 }: MarketingGridCellProps) {
   const cellRef = useRef<HTMLTableCellElement>(null);
   const [showInput, setShowInput] = useState(false);
@@ -40,8 +42,9 @@ export default function MarketingGridCell({
       ref={cellRef}
       tabIndex={0}
       role="button"
+      aria-label={buyerName ? `${buyerName} ${stage} 활동 기록` : undefined}
       onClick={handleClick}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
+      onKeyDown={(e) => { if (e.key === "Escape" && showInput) { setShowInput(false); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
       className={cn(
         "px-2 py-1.5 text-center text-xs cursor-pointer transition-colors border-r border-gray-border",
         isEmpty

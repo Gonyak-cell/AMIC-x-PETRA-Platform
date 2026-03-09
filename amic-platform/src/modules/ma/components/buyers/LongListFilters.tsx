@@ -40,6 +40,7 @@ export default function LongListFilters({
           options={BUYER_TYPE_OPTIONS}
           value={filters.type ?? ""}
           onChange={handleSelect("type")}
+          aria-label="유형 필터"
         />
       </div>
 
@@ -48,6 +49,7 @@ export default function LongListFilters({
           options={BUYER_TIER_OPTIONS}
           value={filters.tier ?? ""}
           onChange={handleSelect("tier")}
+          aria-label="Tier 필터"
         />
       </div>
 
@@ -56,6 +58,7 @@ export default function LongListFilters({
           options={BUYER_STATUS_OPTIONS}
           value={filters.status ?? ""}
           onChange={handleSelect("status")}
+          aria-label="상태 필터"
         />
       </div>
 
@@ -66,6 +69,7 @@ export default function LongListFilters({
           onChange={handleSearch}
           placeholder="회사명 검색..."
           className="pl-9"
+          aria-label="회사명 검색"
         />
       </div>
     </div>

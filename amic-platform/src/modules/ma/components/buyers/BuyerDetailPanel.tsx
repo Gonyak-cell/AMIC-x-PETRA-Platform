@@ -86,6 +86,7 @@ export default function BuyerDetailPanel({
             )}
             {activeTab === "feedback" && (
               <BuyerFeedbackSection
+                key={buyer.id}
                 txnId={txnId}
                 buyer={buyer}
                 canWrite={canWrite}

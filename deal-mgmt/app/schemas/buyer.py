@@ -53,15 +53,21 @@ class BuyerCandidateCreate(BaseModel):
     tier: BuyerTier | None = None
     corp_code: str | None = Field(None, max_length=8)
     deal_role: DealRole | None = None
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=5000)
     extra_data: dict[str, Any] | None = None
 
     @field_validator("extra_data")
     @classmethod
     def validate_extra_data_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
-        if v is not None and len(v) > 50:
-            msg = "extra_data는 최대 50개 키까지 허용됩니다"
-            raise ValueError(msg)
+        if v is not None:
+            if len(v) > 50:
+                msg = "extra_data는 최대 50개 키까지 허용됩니다"
+                raise ValueError(msg)
+            import json
+
+            if len(json.dumps(v, ensure_ascii=False).encode("utf-8")) > 10240:
+                msg = "extra_data must be under 10KB"
+                raise ValueError(msg)
         return v
 
 
@@ -84,15 +90,21 @@ class BuyerCandidateUpdate(BaseModel):
     loi_date: str | None = Field(None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
     final_offer_value: Decimal | None = None
     rejection_reason: str | None = None
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=5000)
     extra_data: dict[str, Any] | None = None
 
     @field_validator("extra_data")
     @classmethod
     def validate_extra_data_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
-        if v is not None and len(v) > 50:
-            msg = "extra_data는 최대 50개 키까지 허용됩니다"
-            raise ValueError(msg)
+        if v is not None:
+            if len(v) > 50:
+                msg = "extra_data는 최대 50개 키까지 허용됩니다"
+                raise ValueError(msg)
+            import json
+
+            if len(json.dumps(v, ensure_ascii=False).encode("utf-8")) > 10240:
+                msg = "extra_data must be under 10KB"
+                raise ValueError(msg)
         return v
 
 

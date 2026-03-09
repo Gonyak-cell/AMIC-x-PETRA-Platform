@@ -1,4 +1,11 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useDeferredValue,
+  lazy,
+  Suspense,
+} from "react";
 import { Users, Download, Building2, Sparkles } from "lucide-react";
 import {
   useBuyers,
@@ -19,10 +26,7 @@ import {
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
 } from "@/modules/ma/constants";
-import {
-  createDevMockBuyers,
-  createDevMockOverview,
-} from "@/modules/ma/constants/devMockBuyers";
+import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
@@ -54,6 +58,7 @@ import {
   DataTable,
   EmptyState,
   InlineSelect,
+  Spinner,
   Tabs,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
@@ -64,11 +69,20 @@ interface BuyersTabProps {
 }
 
 export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
-  const { data: buyers, isError: isBuyersError, refetch: refetchBuyers } = useBuyers(txnId);
+  const {
+    data: buyers,
+    isLoading: isBuyersLoading,
+    isError: isBuyersError,
+    refetch: refetchBuyers,
+  } = useBuyers(txnId);
   const { data: txn } = useTransaction(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
-  const { data: shortListOverview, isError: isOverviewError, refetch: refetchOverview } = useShortListOverview(txnId);
+  const {
+    data: shortListOverview,
+    isError: isOverviewError,
+    refetch: refetchOverview,
+  } = useShortListOverview(txnId);
 
   const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
@@ -120,119 +134,137 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     setBuyerDetailSearchName(null);
   }, [searchedSICompany, buyerDetailSearchName, siNameFetched]);
 
+  const buyerColumns: Column<BuyerCandidate>[] = useMemo(
+    () => [
+      {
+        key: "company_name",
+        header: "회사명",
+        minWidth: "160px",
+        render: (r) => {
+          const siId = (r.extra_data as Record<string, unknown> | null)
+            ?.si_company_id as string | undefined;
 
-  const buyerColumns: Column<BuyerCandidate>[] = useMemo(() => [
-    {
-      key: "company_name",
-      header: "회사명",
-      minWidth: "160px",
-      render: (r) => {
-        const siId = (r.extra_data as Record<string, unknown> | null)
-          ?.si_company_id as string | undefined;
-
-        return (
-          <div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (siId) {
-                  setBuyerDetailCompanyId(siId);
-                } else {
-                  setBuyerDetailSearchName(r.company_name);
-                }
-              }}
-              className="text-left font-medium hover:text-accent hover:underline"
-            >
-              {r.company_name}
-            </button>
-            {r.contact_name && (
-              <span className="block text-xs text-text-muted">
-                {r.contact_name}
-              </span>
-            )}
-          </div>
-        );
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (siId) {
+                    setBuyerDetailCompanyId(siId);
+                  } else {
+                    setBuyerDetailSearchName(r.company_name);
+                  }
+                }}
+                className="text-left font-medium hover:text-accent hover:underline"
+              >
+                {r.company_name}
+              </button>
+              {r.contact_name && (
+                <span className="block text-xs text-text-muted">
+                  {r.contact_name}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
-    },
-    {
-      key: "tier",
-      header: "Tier",
-      minWidth: "100px",
-      render: (r) =>
-        canWrite ? (
-          <InlineSelect
-            options={[{ value: "", label: "-" }, ...BUYER_TIER_OPTIONS.filter((o) => o.value !== "")]}
-            value={r.tier ?? ""}
-            onChange={(val) =>
-              updateBuyer.mutate({
-                buyerId: r.id,
-                body: {
-                  tier: (val || undefined) as BuyerTier | undefined,
-                },
-              })
-            }
-          />
-        ) : (
-          <BuyerTierBadge tier={r.tier} />
+      {
+        key: "tier",
+        header: "Tier",
+        minWidth: "100px",
+        render: (r) =>
+          canWrite ? (
+            <InlineSelect
+              options={[
+                { value: "", label: "-" },
+                ...BUYER_TIER_OPTIONS.filter((o) => o.value !== ""),
+              ]}
+              value={r.tier ?? ""}
+              onChange={(val) =>
+                updateBuyer.mutate({
+                  buyerId: r.id,
+                  body: {
+                    tier: (val || undefined) as BuyerTier | undefined,
+                  },
+                })
+              }
+            />
+          ) : (
+            <BuyerTierBadge tier={r.tier} />
+          ),
+      },
+      {
+        key: "deal_role",
+        header: "역할",
+        minWidth: "120px",
+        render: (r) => {
+          const roleOptions = DEAL_ROLE_OPTIONS.filter((o) => o.value !== "");
+          return canWrite ? (
+            <InlineSelect
+              options={[{ value: "", label: "-" }, ...roleOptions]}
+              value={r.deal_role ?? ""}
+              onChange={(val) =>
+                updateBuyer.mutate({
+                  buyerId: r.id,
+                  body: {
+                    deal_role: (val || undefined) as DealRole | undefined,
+                  },
+                })
+              }
+            />
+          ) : (
+            <DealRoleBadge role={r.deal_role} />
+          );
+        },
+      },
+      {
+        key: "buyer_type",
+        header: "유형",
+        minWidth: "100px",
+        render: (r) => (
+          <Badge variant="neutral">
+            {BUYER_TYPE_OPTIONS.find((o) => o.value === r.buyer_type)?.label ??
+              r.buyer_type}
+          </Badge>
         ),
-    },
-    {
-      key: "deal_role",
-      header: "역할",
-      minWidth: "120px",
-      render: (r) => {
-        const roleOptions = DEAL_ROLE_OPTIONS.filter((o) => o.value !== "");
-        return canWrite ? (
-          <InlineSelect
-            options={[{ value: "", label: "-" }, ...roleOptions]}
-            value={r.deal_role ?? ""}
-            onChange={(val) =>
-              updateBuyer.mutate({
-                buyerId: r.id,
-                body: {
-                  deal_role: (val || undefined) as DealRole | undefined,
-                },
-              })
-            }
-          />
-        ) : (
-          <DealRoleBadge role={r.deal_role} />
-        );
       },
-    },
-    {
-      key: "buyer_type",
-      header: "유형",
-      minWidth: "100px",
-      render: (r) => (
-        <Badge variant="neutral">
-          {BUYER_TYPE_OPTIONS.find((o) => o.value === r.buyer_type)?.label ??
-            r.buyer_type}
-        </Badge>
-      ),
-    },
-  ], [canWrite, updateBuyer]);
+    ],
+    [canWrite, updateBuyer],
+  );
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
-  const realShortList = useMemo(() => allBuyers.filter((b) => b.is_short_listed), [allBuyers]);
+  const realShortList = useMemo(
+    () => allBuyers.filter((b) => b.is_short_listed),
+    [allBuyers],
+  );
 
-  // ── Dev-only mock data for Short List preview ──────────
-  const DEV_MOCK_BUYERS = useMemo(() => createDevMockBuyers(txnId), [txnId]);
-  const DEV_MOCK_OVERVIEW = useMemo(() => createDevMockOverview(), []);
+  // ── Dev-only mock data for Short List preview (동적 import) ──
+  const [devMockBuyers, setDevMockBuyers] = useState<BuyerCandidate[]>([]);
+  const [devMockOverview, setDevMockOverview] = useState<BuyerStageSummary[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    import("@/modules/ma/constants/devMockBuyers").then((mod) => {
+      setDevMockBuyers(mod.createDevMockBuyers(txnId));
+      setDevMockOverview(mod.createDevMockOverview());
+    });
+  }, [txnId]);
 
   const shortListBuyers =
-    realShortList.length > 0 ? realShortList : DEV_MOCK_BUYERS;
+    realShortList.length > 0 ? realShortList : devMockBuyers;
   const overviewMerged = useMemo(
     () => [
       ...(shortListOverview ?? []),
-      ...(realShortList.length > 0 ? [] : DEV_MOCK_OVERVIEW),
+      ...(realShortList.length > 0 ? [] : devMockOverview),
     ],
-    [shortListOverview, realShortList.length, DEV_MOCK_OVERVIEW],
+    [shortListOverview, realShortList.length, devMockOverview],
   );
 
-
   // Client-side filtering for Long List
+  const deferredSearch = useDeferredValue(longListFilters.search);
   const filteredBuyers = useMemo(() => {
     let result = allBuyers;
     if (longListFilters.type) {
@@ -244,12 +276,18 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     if (longListFilters.status) {
       result = result.filter((b) => b.status === longListFilters.status);
     }
-    if (longListFilters.search) {
-      const q = longListFilters.search.toLowerCase();
+    if (deferredSearch) {
+      const q = deferredSearch.toLowerCase();
       result = result.filter((b) => b.company_name.toLowerCase().includes(q));
     }
     return result;
-  }, [allBuyers, longListFilters]);
+  }, [
+    allBuyers,
+    longListFilters.type,
+    longListFilters.tier,
+    longListFilters.status,
+    deferredSearch,
+  ]);
 
   // Derive selected buyer and its stage summary for SlidePanel
   const selectedBuyer = useMemo(
@@ -289,13 +327,13 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             size="sm"
           />
           <div className="flex items-center gap-2">
-            {buyerSubTab === "short-list" && (
+            {!isBuyersLoading && buyerSubTab === "short-list" && (
               <ShortListViewToggle
                 viewMode={shortListViewMode}
                 onViewModeChange={setShortListViewMode}
               />
             )}
-            {buyerSubTab === "long-list" && (
+            {!isBuyersLoading && buyerSubTab === "long-list" && (
               <Button
                 icon={Download}
                 onClick={() => exportExcel.mutate()}
@@ -308,6 +346,12 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             )}
           </div>
         </div>
+
+        {isBuyersLoading && (
+          <div className="flex justify-center py-12">
+            <Spinner />
+          </div>
+        )}
 
         {(isBuyersError || isOverviewError) && (
           <div
@@ -514,7 +558,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
           onClose={() => setBuyerDetailCompanyId(null)}
         />
       </div>
-
     </>
   );
 }

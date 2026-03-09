@@ -194,7 +194,7 @@ async def create_thread(
     item_id: uuid.UUID,
     payload: RFIThreadCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIThreadOut:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
@@ -221,6 +221,7 @@ async def update_thread(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIThreadOut:
+    """게시 상태 변경. 거래 접근 + 쓰기 권한 검증. thread 소유자 검증은 팀 워크플로우 특성상 미적용."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     thread = await rfi_v2_service.update_thread_publish(db, txn_id, item_id, tid, payload.is_published)
@@ -281,7 +282,7 @@ async def upload_attachments(
     txn_id: uuid.UUID,
     files: list[UploadFile],
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ) -> list[RFIAttachmentOut]:
     """다중 파일 업로드 → Azure Blob → DB 메타 생성."""
     await transaction_service.get_transaction(db, txn_id)
@@ -401,7 +402,7 @@ async def rfi_dashboard(
 async def report_payload(
     txn_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ) -> list[RFIReportPayload]:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
@@ -439,7 +440,7 @@ async def import_excel(
     txn_id: uuid.UUID,
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
+    claims: JWTClaims = Depends(require_write_access()),
 ) -> RFIExcelImportResult:
     """역방향 Excel 가져오기 — 엑셀만 전송, 파일은 사전 업로드."""
     from app.services.rfi_import_pipeline import import_rfi_excel
@@ -455,9 +456,11 @@ async def import_excel(
         author_email=claims.email or "target@import",
     )
 
-    # 에러/충돌이 없으면 커밋
+    # 에러/충돌이 없으면 커밋, 있으면 롤백
     if not result.errors and not result.conflicts:
         await db.commit()
+    else:
+        await db.rollback()
 
     return result
 

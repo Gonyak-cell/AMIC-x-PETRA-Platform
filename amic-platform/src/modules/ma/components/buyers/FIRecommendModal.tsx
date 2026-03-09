@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import { extractApiError } from "@/api/errors";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Building2 } from "lucide-react";
 import { Button, EmptyState, Modal, Spinner } from "@/components/ui";
@@ -73,40 +74,60 @@ export default function FIRecommendModal({
 
     setIsSubmitting(true);
     try {
-      const results = await Promise.allSettled(
-        toAdd.map((gpName) =>
-          maApi.post(`/transactions/${txnId}/buyers`, {
-            company_name: gpName,
-            buyer_type: "FINANCIAL_SPONSOR",
-          }),
-        ),
-      );
+      // 서버 부하 방지: 5건씩 순차 배치 실행
+      const BATCH_SIZE = 5;
+      const results: PromiseSettledResult<unknown>[] = [];
+      for (let i = 0; i < toAdd.length; i += BATCH_SIZE) {
+        const chunk = toAdd.slice(i, i + BATCH_SIZE);
+        const batch = await Promise.allSettled(
+          chunk.map((gpName) =>
+            maApi.post(`/transactions/${txnId}/buyers`, {
+              company_name: gpName,
+              buyer_type: "FINANCIAL_SPONSOR",
+            }),
+          ),
+        );
+        results.push(...batch);
+      }
 
-      const added = results.filter((r) => r.status === "fulfilled").length;
-      const rejected = results.filter(
-        (r): r is PromiseRejectedResult => r.status === "rejected",
-      );
-      const failed = rejected.length;
-      if (added > 0) {
+      const succeededNames: string[] = [];
+      const failedNames: string[] = [];
+      let firstError = "";
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === "fulfilled") {
+          succeededNames.push(toAdd[i]);
+        } else {
+          failedNames.push(toAdd[i]);
+          if (!firstError) {
+            firstError = extractApiError(
+              (results[i] as PromiseRejectedResult).reason,
+              "알 수 없는 오류",
+            );
+          }
+        }
+      }
+      if (succeededNames.length > 0) {
         qc.invalidateQueries({
           queryKey: ["ma", "transactions", txnId, "buyers"],
         });
+        // 성공한 항목을 selected에서 제거하여 재시도 시 중복 방지
+        setSelected((prev) => {
+          const next = new Set(prev);
+          for (const name of succeededNames) next.delete(name);
+          return next;
+        });
       }
-      if (added > 0 && failed === 0) {
-        toast.success(`${added}개 FI 후보가 Long List에 추가되었습니다.`);
+      if (succeededNames.length > 0 && failedNames.length === 0) {
+        toast.success(`${succeededNames.length}개 FI 후보가 Long List에 추가되었습니다.`);
         onClose();
-      } else if (added > 0 && failed > 0) {
-        const reason =
-          rejected[0]?.reason instanceof Error
-            ? rejected[0].reason.message
-            : "알 수 없는 오류";
-        toast.warning(`${added}개 추가 완료, ${failed}개 실패 — ${reason}`);
-      } else if (failed > 0) {
-        const reason =
-          rejected[0]?.reason instanceof Error
-            ? rejected[0].reason.message
-            : "알 수 없는 오류";
-        toast.error(`${failed}개 GP 추가 실패: ${reason}`);
+      } else if (succeededNames.length > 0 && failedNames.length > 0) {
+        toast.warning(
+          `${succeededNames.length}개 추가 완료, ${failedNames.length}개 실패 (${failedNames.join(", ")}): ${firstError}`,
+        );
+      } else if (failedNames.length > 0) {
+        toast.error(
+          `${failedNames.length}개 GP 추가 실패: ${failedNames.join(", ")} — ${firstError}`,
+        );
       }
     } finally {
       setIsSubmitting(false);

@@ -32,7 +32,7 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
   }, [buyers]);
 
   return (
-    <div className="flex items-center gap-1 font-body">
+    <div className="flex items-center gap-1 font-body overflow-x-auto" role="group" aria-label="매수자 퍼널 현황">
       {steps.map((step, idx) => {
         const prev = idx > 0 ? steps[idx - 1].count : null;
         const rate =

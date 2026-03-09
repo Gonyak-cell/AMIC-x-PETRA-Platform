@@ -58,9 +58,9 @@ export default function MarketingKanbanView({
   }
 
   return (
-    <div>
+    <div aria-label="단계별 바이어 현황">
       <p className="text-xs font-medium text-accent mb-2">Kanban View — 단계별 칸반 보드</p>
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex gap-3 overflow-x-auto pb-2" tabIndex={0} role="region" aria-label="단계별 바이어 현황 스크롤">
       {MARKETING_STAGES.map((stage) => {
         const stageBuyers = columns.get(stage) ?? [];
         const nextStageIdx = MARKETING_STAGES.indexOf(stage) + 1;
@@ -70,6 +70,8 @@ export default function MarketingKanbanView({
         return (
           <div
             key={stage}
+            role="group"
+            aria-label={MARKETING_STAGE_LABELS[stage]}
             className="flex-shrink-0 w-56 bg-bg-cool rounded-dr border border-gray-border"
           >
             {/* Column header */}
@@ -89,7 +91,8 @@ export default function MarketingKanbanView({
               {stageBuyers.map((buyer) => (
                 <div
                   key={buyer.id}
-                  className="bg-white rounded border border-gray-border p-2 hover:shadow-sm transition-shadow"
+                  tabIndex={0}
+                  className="bg-white rounded border border-gray-border p-2"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-text-dark truncate max-w-[140px]">

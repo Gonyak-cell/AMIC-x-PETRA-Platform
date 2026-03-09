@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
+import { extractApiError } from "@/api/errors";
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
 import {
   useDealSetupFromText,
@@ -29,6 +31,7 @@ import {
   useConfirmDealSetup,
 } from "@/modules/ma/hooks/useDealSetup";
 import { koreanToEnglish } from "@/modules/ma/utils/koreanToEnglish";
+import { formatKRW } from "@/modules/ma/utils/format";
 import type {
   TransactionCreate,
   DealType,
@@ -71,15 +74,6 @@ function previewCode(dealType: DealType, name: string): string {
   if (!suffix) return "";
   const yy = new Date().getFullYear().toString().slice(2);
   return `${dealType}${yy}-${suffix}-??`;
-}
-
-function formatKRW(value: number | null): string {
-  if (value == null) return "-";
-  if (value >= 1_000_000_000_000)
-    return `${(value / 1_000_000_000_000).toFixed(1)}조원`;
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(0)}억원`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(0)}백만원`;
-  return `${value.toLocaleString()}원`;
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────
@@ -153,7 +147,8 @@ function ManualTab() {
     form.deal_type &&
     form.target_company_name.trim() &&
     form.client_name.trim() &&
-    form.lead_advisor_email.trim();
+    form.lead_advisor_email.trim() &&
+    form.lead_advisor_email.includes("@");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,7 +187,7 @@ function ManualTab() {
                 type="text"
                 required
                 className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                placeholder="Edward"
+                placeholder="Edward (한글 입력 시 자동 영문 변환)"
                 value={suffix}
                 onCompositionStart={() => {
                   composingRef.current = true;
@@ -389,7 +384,13 @@ function AITab() {
     if (!leadEmail.trim()) return;
     setupFromText.mutate(
       { description, lead_advisor_email: leadEmail },
-      { onSuccess: (data) => setPreview(data) },
+      {
+        onSuccess: (data) => setPreview(data),
+        onError: (err) =>
+          toast.error(
+            extractApiError(err, "AI 분석에 실패했습니다. 다시 시도해 주세요."),
+          ),
+      },
     );
   }, [description, leadEmail, setupFromText]);
 
@@ -397,11 +398,22 @@ function AITab() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      if (!leadEmail.trim()) {
+        toast.error("리드 어드바이저 이메일을 먼저 입력해 주세요.");
+        return;
+      }
       setupFromExcel.mutate(file, {
         onSuccess: (data) => setPreview(data),
+        onError: (err) =>
+          toast.error(
+            extractApiError(
+              err,
+              "엑셀 분석에 실패했습니다. 파일을 확인해 주세요.",
+            ),
+          ),
       });
     },
-    [setupFromExcel],
+    [setupFromExcel, leadEmail],
   );
 
   const handleConfirm = useCallback(() => {
@@ -416,6 +428,10 @@ function AITab() {
     confirmSetup.mutate(body, {
       onSuccess: (result) =>
         navigate(`/ma/transactions/${result.transaction_id}`),
+      onError: (err) =>
+        toast.error(
+          extractApiError(err, "거래 생성에 실패했습니다. 다시 시도해 주세요."),
+        ),
     });
   }, [preview, leadEmail, confirmSetup, navigate]);
 
@@ -633,7 +649,7 @@ function AITab() {
           >
             <Upload size={32} className="mx-auto mb-3 text-text-muted" />
             <p className="text-sm font-medium text-text-secondary mb-1">
-              딜 리스트 엑셀 파일을 드래그하거나 클릭하여 업로드
+              딜 리스트 엑셀 파일을 클릭하여 업로드
             </p>
             <p className="text-xs text-text-muted">.xlsx, .xls / 최대 10MB</p>
             <input

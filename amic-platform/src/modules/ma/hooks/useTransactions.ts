@@ -367,6 +367,24 @@ export function useUpdateBuyer(txnId: string) {
   });
 }
 
+export function useDeleteBuyer(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (buyerId: string) => {
+      await maApi.delete(`/transactions/${txnId}/buyers/${buyerId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
+      toast.success("매수자 후보가 삭제되었습니다.");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "매수자 삭제에 실패했습니다.");
+    },
+  });
+}
+
 export function useExportBuyerExcel(txnId: string) {
   return useMutation({
     mutationFn: async () => {

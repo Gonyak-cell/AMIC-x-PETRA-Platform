@@ -116,6 +116,8 @@ export default function DartCompanyTypeahead({
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
+          aria-controls="dart-company-listbox"
+          aria-activedescendant={open && highlightIdx >= 0 ? `dart-option-${highlightIdx}` : undefined}
         />
         {corpCode && !disabled && (
           <button
@@ -143,6 +145,7 @@ export default function DartCompanyTypeahead({
         <div
           className="absolute z-50 mt-1 w-full bg-white border border-gray-border rounded-dr shadow-lg max-h-52 overflow-y-auto"
           role="listbox"
+          id="dart-company-listbox"
         >
           {isFetching ? (
             <div className="px-3 py-2 text-xs text-text-muted">검색 중...</div>
@@ -156,6 +159,7 @@ export default function DartCompanyTypeahead({
                 key={s.corp_code}
                 type="button"
                 role="option"
+                id={`dart-option-${idx}`}
                 aria-selected={s.corp_code === corpCode}
                 className={cn(
                   "w-full text-left px-3 py-2 text-xs hover:bg-accent/10 transition-colors",

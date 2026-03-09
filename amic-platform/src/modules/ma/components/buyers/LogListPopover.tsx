@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { Badge } from "@/components/ui";
@@ -17,6 +18,48 @@ interface LogListPopoverProps {
   buyerId: string;
   stage: MarketingStage;
   canWrite: boolean;
+}
+
+function DeleteLogButton({
+  logId,
+  onConfirm,
+}: {
+  logId: string;
+  onConfirm: (id: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <span className="flex items-center gap-1 text-[10px]">
+        <button
+          type="button"
+          onClick={() => { onConfirm(logId); setConfirming(false); }}
+          className="text-danger font-medium hover:underline"
+        >
+          삭제
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(false)}
+          className="text-text-muted hover:underline"
+        >
+          취소
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirming(true)}
+      className="shrink-0 p-0.5 text-text-muted hover:text-danger transition-colors"
+      aria-label="로그 삭제"
+    >
+      <Trash2 className="h-3 w-3" />
+    </button>
+  );
 }
 
 export default function LogListPopover({
@@ -62,14 +105,10 @@ export default function LogListPopover({
                   {log.content || "-"}
                 </span>
                 {canWrite && (
-                  <button
-                    type="button"
-                    onClick={() => deleteLog.mutate(log.id)}
-                    className="shrink-0 p-0.5 text-text-muted hover:text-danger transition-colors"
-                    aria-label="로그 삭제"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  <DeleteLogButton
+                    logId={log.id}
+                    onConfirm={(id) => deleteLog.mutate(id)}
+                  />
                 )}
               </li>
             ))}

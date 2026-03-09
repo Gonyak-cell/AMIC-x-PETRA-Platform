@@ -128,6 +128,7 @@ export default function BuyerSummarySection({
           <h3 className="text-sm font-semibold text-text-dark mb-3">
             DART 재무 요약
           </h3>
+          <div aria-live="polite">
           {dartLoading ? (
             <div className="flex items-center justify-center py-6">
               <Spinner size="sm" />
@@ -165,6 +166,7 @@ export default function BuyerSummarySection({
               </div>
             </div>
           ) : null}
+          </div>
         </section>
       )}
     </div>
@@ -177,18 +179,19 @@ function FinancialMetric({
   format,
 }: {
   label: string;
-  value: number | null;
+  value: string | number | null;
   format: "amount" | "percent";
 }) {
+  const num = value == null ? null : typeof value === "string" ? parseFloat(value) : value;
   return (
     <div className="rounded-dr border border-gray-border p-3">
       <p className="text-xs text-text-muted">{label}</p>
       <p className="text-sm font-semibold mt-1">
-        {value == null
+        {num == null || isNaN(num)
           ? "-"
           : format === "percent"
-            ? `${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`
-            : formatAmountKRW(value)}
+            ? `${num.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`
+            : formatAmountKRW(num)}
       </p>
     </div>
   );

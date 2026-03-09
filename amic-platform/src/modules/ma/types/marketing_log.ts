@@ -42,9 +42,9 @@ export interface DartCompanySuggestion {
 }
 
 export interface DartFinancialSummary {
-  revenue: number | null;
-  operating_profit: number | null;
-  net_income: number | null;
-  debt_ratio: number | null;
+  revenue: string | null;
+  operating_profit: string | null;
+  net_income: string | null;
+  debt_ratio: string | null;
   fiscal_year: string | null;
 }
