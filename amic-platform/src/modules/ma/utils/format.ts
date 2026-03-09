@@ -9,7 +9,7 @@ export function formatKRW(value: string | number | null): string {
     return `${sign}${(abs / 1_000_000_000_000).toFixed(1)}조`;
   if (abs >= 100_000_000)
     return `${sign}${Math.round(abs / 100_000_000).toLocaleString()}억`;
-  return `${sign}${Math.round(abs).toLocaleString()}`;
+  return `${sign}${Math.round(abs).toLocaleString()}원`;
 }
 
 /** 매출액 간이 포맷 (null → "-", year 있으면 연도 접미사 표시, 음수 지원). */

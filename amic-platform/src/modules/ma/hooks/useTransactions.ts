@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
+import { extractApiError } from "@/api/errors";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import type {
   Transaction,
@@ -21,6 +22,7 @@ import type {
 import type {
   BuyerCandidate,
   BuyerCandidateCreate,
+  BuyerCandidateListResponse,
   BuyerCandidateUpdate,
   BuyerPipelineSummary,
 } from "@/modules/ma/types/buyer";
@@ -64,8 +66,8 @@ export function useCreateTransaction() {
       qc.invalidateQueries({ queryKey: ["ma", "transactions"] });
       toast.success("거래가 성공적으로 생성되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "거래 생성 중 오류가 발생했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "거래 생성 중 오류가 발생했습니다."));
     },
   });
 }
@@ -82,8 +84,8 @@ export function useUpdateTransaction(txnId: string) {
       qc.invalidateQueries({ queryKey: ["ma", "transactions", txnId] });
       toast.success("거래가 수정되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "거래 수정 중 오류가 발생했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "거래 수정 중 오류가 발생했습니다."));
     },
   });
 }
@@ -157,8 +159,8 @@ export function useAdvancePhase(txnId: string) {
       });
       toast.success("단계가 전환되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "단계 전환에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "단계 전환에 실패했습니다."));
     },
   });
 }
@@ -223,8 +225,8 @@ export function useChangeStatus(txnId: string) {
       });
       toast.success("상태가 변경되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "상태 변경에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "상태 변경에 실패했습니다."));
     },
   });
 }
@@ -258,8 +260,8 @@ export function useCreateEngagement(txnId: string) {
       });
       toast.success("수임계약이 등록되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "수임계약 등록에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "수임계약 등록에 실패했습니다."));
     },
   });
 }
@@ -289,8 +291,8 @@ export function useAddMember(txnId: string) {
       });
       toast.success("멤버가 추가되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "멤버 추가에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "멤버 추가에 실패했습니다."));
     },
   });
 }
@@ -300,8 +302,10 @@ export function useBuyers(txnId: string) {
   return useQuery<BuyerCandidate[]>({
     queryKey: ["ma", "transactions", txnId, "buyers"],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/buyers`);
-      return data;
+      const { data } = await maApi.get<BuyerCandidateListResponse>(
+        `/transactions/${txnId}/buyers`,
+      );
+      return data.items;
     },
     enabled: !!txnId,
     staleTime: 60_000,
@@ -333,8 +337,8 @@ export function useAddBuyer(txnId: string) {
       });
       toast.success("매수자 후보가 추가되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "매수자 추가에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "매수자 추가에 실패했습니다."));
     },
   });
 }
@@ -361,8 +365,8 @@ export function useUpdateBuyer(txnId: string) {
       });
       toast.success("매수자 정보가 수정되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "매수자 정보 수정에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "매수자 정보 수정에 실패했습니다."));
     },
   });
 }
@@ -379,8 +383,8 @@ export function useDeleteBuyer(txnId: string) {
       });
       toast.success("매수자 후보가 삭제되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "매수자 삭제에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "매수자 삭제에 실패했습니다."));
     },
   });
 }
@@ -403,8 +407,8 @@ export function useExportBuyerExcel(txnId: string) {
       URL.revokeObjectURL(url);
       toast.success("엑셀 파일이 다운로드되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "엑셀 다운로드에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "엑셀 다운로드에 실패했습니다."));
     },
   });
 }
@@ -450,8 +454,8 @@ export function useAddTimelineEvent(txnId: string) {
       });
       toast.success("이벤트가 추가되었습니다.");
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "이벤트 추가에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "이벤트 추가에 실패했습니다."));
     },
   });
 }

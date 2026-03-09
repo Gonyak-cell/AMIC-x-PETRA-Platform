@@ -24,4 +24,6 @@ export interface NdaMarkup {
 export interface NdaMarkupListResponse {
   items: NdaMarkup[];
   total: number;
+  limit: number;
+  offset: number;
 }

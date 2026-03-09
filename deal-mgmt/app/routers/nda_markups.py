@@ -59,7 +59,7 @@ async def list_nda_markups(
     q = q.offset(offset).limit(limit)
     result = await db.execute(q)
     items = [NdaMarkupOut.model_validate(m) for m in result.scalars().all()]
-    return NdaMarkupListResponse(items=items, total=total)
+    return NdaMarkupListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 # ── 상세 조회 ───────────────────────────────────────────────────────
@@ -285,7 +285,18 @@ async def delete_nda_markup(
 # ── Redline 생성 ────────────────────────────────────────────────────
 
 
-@router.post("/{markup_id}/generate-redline")
+@router.post(
+    "/{markup_id}/generate-redline",
+    responses={
+        200: {
+            "description": "Redline DOCX 파일",
+            "headers": {
+                "X-Issues-Count": {"description": "발견된 이슈 수", "schema": {"type": "integer"}},
+                "X-Skipped-Count": {"description": "건너뛴 항목 수", "schema": {"type": "integer"}},
+            },
+        }
+    },
+)
 async def generate_nda_redline(
     txn_id: uuid.UUID,
     nda_id: uuid.UUID,
@@ -349,6 +360,10 @@ async def generate_nda_redline(
         prev_markup = (await db.execute(prev_q)).scalar_one_or_none()
         if prev_markup and prev_markup.file_path and Path(prev_markup.file_path).exists():
             prev_path = Path(prev_markup.file_path)
+            try:
+                prev_path.resolve().relative_to(UPLOAD_DIR.resolve())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다")
             reference_text = await run_in_threadpool(
                 lambda: redline_engine.extract_paragraphs_text(prev_path.read_bytes())
             )

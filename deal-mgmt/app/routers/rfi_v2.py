@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
@@ -30,6 +31,7 @@ from app.schemas.rfi_v2 import (
     RFIItemBatchCreate,
     RFIItemCreateV2,
     RFIItemListOut,
+    RFIItemListResponse,
     RFIItemOut,
     RFIItemUpdateV2,
     RFIReportPayload,
@@ -45,7 +47,7 @@ router = APIRouter(prefix="/transactions/{txn_id}/rfi", tags=["RFI"])
 # ── Item CRUD ─────────────────────────────────────────────
 
 
-@router.get("/items", response_model=list[RFIItemListOut])
+@router.get("/items", response_model=RFIItemListResponse)
 async def list_items(
     txn_id: uuid.UUID,
     category: str | None = Query(None),
@@ -56,10 +58,28 @@ async def list_items(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-) -> list[RFIItemListOut]:
+) -> RFIItemListResponse:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     is_advisor = get_rfi_author_role(claims) == RFIAuthorRole.ADVISOR
+
+    # 총 건수 조회
+    from app.models.rfi_v2 import RFIItemV2 as RFIItemModel
+
+    count_base = select(func.count(RFIItemModel.id)).where(
+        RFIItemModel.transaction_id == txn_id,
+        RFIItemModel.is_deleted.is_(False),
+    )
+    if category:
+        count_base = count_base.where(RFIItemModel.category == category)
+    if item_status:
+        count_base = count_base.where(RFIItemModel.current_status == item_status)
+    if priority:
+        count_base = count_base.where(RFIItemModel.priority == priority)
+    if search:
+        escaped = search.replace("%", r"\%").replace("_", r"\_")
+        count_base = count_base.where(RFIItemModel.question_text.ilike(f"%{escaped}%", escape="\\"))
+    total = (await db.execute(count_base)).scalar() or 0
 
     items = await rfi_v2_service.list_items(
         db,
@@ -78,7 +98,7 @@ async def list_items(
         out.thread_count = len(item.threads) if hasattr(item, "threads") and item.threads else 0
         out.attachment_count = len(item.attachments) if hasattr(item, "attachments") and item.attachments else 0
         result.append(out)
-    return result
+    return RFIItemListResponse(items=result, total=total, limit=limit, offset=offset)
 
 
 @router.get("/items/{item_id}", response_model=RFIItemOut)

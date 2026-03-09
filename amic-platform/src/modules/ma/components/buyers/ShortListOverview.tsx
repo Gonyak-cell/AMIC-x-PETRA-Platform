@@ -75,7 +75,7 @@ function ExpandedContent({
   const [showLogModal, setShowLogModal] = useState(false);
   const [logForm, setLogForm] = useState<MarketingLogCreate>({
     stage: "IDENTIFIED",
-    log_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(),
+    log_date: new Date().toISOString().slice(0, 10),
     content: "",
   });
 

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
+from app.core.exceptions import ServiceUnavailableError
 from app.models.contract_clause import ContractClause
 from app.models.contract_template import ContractTemplate
 from app.models.enums import (
@@ -167,7 +168,7 @@ async def _call_llm_json(
         raise ValueError("max_retries는 0 이상이어야 합니다.")
     llm = _get_llm_client()
     if not llm.is_available:
-        raise RuntimeError("사용 가능한 LLM 프로바이더가 없습니다.")
+        raise ServiceUnavailableError("LLM", "사용 가능한 LLM 프로바이더가 없습니다.")
 
     cost_before = llm.total_cost_usd
 

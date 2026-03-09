@@ -300,5 +300,8 @@ export function useSuggestVdrCategory(txnId: string) {
       }>(`/transactions/${txnId}/vdr/suggest-category`, { filename });
       return data;
     },
+    onError: () => {
+      // AI 카테고리 추천 실패는 조용히 무시 (선택적 기능)
+    },
   });
 }

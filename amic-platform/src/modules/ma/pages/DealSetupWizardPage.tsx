@@ -148,7 +148,7 @@ function ManualTab() {
     form.target_company_name.trim() &&
     form.client_name.trim() &&
     form.lead_advisor_email.trim() &&
-    form.lead_advisor_email.includes("@");
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.lead_advisor_email.trim());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -381,7 +381,7 @@ function AITab() {
   const isAnalyzing = setupFromText.isPending || setupFromExcel.isPending;
 
   const handleAnalyze = useCallback(() => {
-    if (!leadEmail.trim()) return;
+    if (!leadEmail.trim() || !description.trim()) return;
     setupFromText.mutate(
       { description, lead_advisor_email: leadEmail },
       {

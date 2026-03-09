@@ -19,6 +19,7 @@ from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerTier, Buyer
 from app.schemas.buyer import (
     BiddingSummary,
     BuyerCandidateCreate,
+    BuyerCandidateListResponse,
     BuyerCandidateOut,
     BuyerCandidateUpdate,
     BuyerPipelineSummary,
@@ -68,7 +69,7 @@ _BUYER_STATUS_TRANSITIONS: dict[BuyerCandidateStatus, set[BuyerCandidateStatus]]
 }
 
 
-@router.get("", response_model=list[BuyerCandidateOut])
+@router.get("", response_model=BuyerCandidateListResponse)
 async def list_buyers(
     txn_id: uuid.UUID,
     buyer_status: BuyerCandidateStatus | None = Query(None, alias="status"),
@@ -79,21 +80,26 @@ async def list_buyers(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-) -> list[BuyerCandidateOut]:
+) -> BuyerCandidateListResponse:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
+    base = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
     if buyer_status:
-        q = q.where(BuyerCandidate.status == buyer_status)
+        base = base.where(BuyerCandidate.status == buyer_status)
     if buyer_type:
-        q = q.where(BuyerCandidate.buyer_type == buyer_type)
+        base = base.where(BuyerCandidate.buyer_type == buyer_type)
     if tier:
-        q = q.where(BuyerCandidate.tier == tier)
+        base = base.where(BuyerCandidate.tier == tier)
     if is_short_listed is not None:
-        q = q.where(BuyerCandidate.is_short_listed == is_short_listed)
-    q = q.order_by(BuyerCandidate.created_at.desc()).limit(limit).offset(offset)
+        base = base.where(BuyerCandidate.is_short_listed == is_short_listed)
+
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    q = base.order_by(BuyerCandidate.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(q)
-    return [BuyerCandidateOut.model_validate(b) for b in result.scalars().all()]
+    items = [BuyerCandidateOut.model_validate(b) for b in result.scalars().all()]
+    return BuyerCandidateListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/summary", response_model=BuyerPipelineSummary)

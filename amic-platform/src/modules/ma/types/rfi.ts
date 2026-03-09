@@ -98,6 +98,13 @@ export interface RFIItemListOut {
   attachment_count: number;
 }
 
+export interface RFIItemListResponse {
+  items: RFIItemListOut[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // ── Create / Update ─────────────────────────────────────
 
 export interface RFIItemCreate {

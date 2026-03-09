@@ -8,10 +8,13 @@ export function useFocusTrap(
   open: boolean,
   onClose: () => void,
 ) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab" && dialogRef.current) {
@@ -29,7 +32,7 @@ export function useFocusTrap(
         }
       }
     },
-    [onClose, dialogRef],
+    [dialogRef],
   );
 
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
+from app.models.enums import TransactionPhase, TransactionSide, TransactionStatus
 from app.schemas.transaction import (
     TransactionCreate,
     TransactionListResponse,
@@ -23,9 +24,9 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 @router.get("", response_model=TransactionListResponse)
 async def list_transactions(
     search: str | None = Query(None, description="이름/코드네임/대상/클라이언트 검색"),
-    side: str | None = Query(None, description="SELL, BUY, DUAL"),
-    phase: str | None = Query(None, description="7단계 필터"),
-    status: str | None = Query(None, description="DRAFT, ACTIVE, ON_HOLD, COMPLETED, TERMINATED"),
+    side: TransactionSide | None = Query(None, description="SELL, BUY, DUAL"),
+    phase: TransactionPhase | None = Query(None, description="7단계 필터"),
+    status: TransactionStatus | None = Query(None, description="DRAFT, ACTIVE, ON_HOLD, COMPLETED, TERMINATED"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),

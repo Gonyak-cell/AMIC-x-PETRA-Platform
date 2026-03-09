@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.exceptions import ServiceUnavailableError
 from app.models.enums import TranscriptionJobStatus
 from app.models.transcription_job import TranscriptionJob
 
@@ -101,8 +102,9 @@ async def _run_stt(audio_file_path: str) -> str:
     clova_client_secret = getattr(settings, "CLOVA_CLIENT_SECRET", "") or ""
 
     if not clova_client_id or not clova_client_secret:
-        raise RuntimeError(
-            "Clova Speech API 설정이 없습니다. .env에 CLOVA_CLIENT_ID와 CLOVA_CLIENT_SECRET을 설정해 주세요."
+        raise ServiceUnavailableError(
+            "ClovaSpeech",
+            "Clova Speech API 설정이 없습니다. .env에 CLOVA_CLIENT_ID와 CLOVA_CLIENT_SECRET을 설정해 주세요.",
         )
 
     headers = {

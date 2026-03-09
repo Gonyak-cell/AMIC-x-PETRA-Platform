@@ -45,3 +45,5 @@ class NdaMarkupOut(BaseModel):
 class NdaMarkupListResponse(BaseModel):
     items: list[NdaMarkupOut]
     total: int
+    limit: int
+    offset: int

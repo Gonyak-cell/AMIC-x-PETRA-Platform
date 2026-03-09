@@ -80,10 +80,17 @@ export function DataTable<T extends object>({
     const rows = tbodyRef.current.querySelectorAll("tr");
     if (!rows.length) return;
 
+    const useStagger = rows.length <= 50;
     gsap.fromTo(
       Array.from(rows),
       { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, stagger: 0.03, duration: 0.35, ease: "power2.out" },
+      {
+        opacity: 1,
+        y: 0,
+        stagger: useStagger ? 0.03 : 0,
+        duration: useStagger ? 0.35 : 0.2,
+        ease: "power2.out",
+      },
     );
   }, [data]);
 

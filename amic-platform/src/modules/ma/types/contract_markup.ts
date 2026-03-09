@@ -8,7 +8,7 @@ export interface ContractMarkup {
   version_number: number;
   source_party: string | null;
   markup_type: string | null;
-  file_path: string | null;
+  has_file: boolean;
   file_name: string | null;
   file_size_bytes: number | null;
   changes_summary: string | null;
@@ -21,4 +21,6 @@ export interface ContractMarkup {
 export interface ContractMarkupListResponse {
   items: ContractMarkup[];
   total: number;
+  limit: number;
+  offset: number;
 }

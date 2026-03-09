@@ -121,6 +121,13 @@ class BuyerPipelineSummary(BaseModel):
         return str(v) if v is not None else None
 
 
+class BuyerCandidateListResponse(BaseModel):
+    items: list[BuyerCandidateOut]
+    total: int
+    limit: int
+    offset: int
+
+
 class BiddingSummary(BaseModel):
     total_bidders: int
     bid_submitted: int

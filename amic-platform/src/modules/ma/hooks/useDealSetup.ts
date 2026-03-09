@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   DealSetupRequest,
@@ -15,7 +16,9 @@ export function useDealSetupFromText() {
       const { data } = await maApi.post("/transactions/ai-setup", body);
       return data;
     },
-
+    onError: (err) => {
+      toast.error(extractApiError(err, "AI 분석에 실패했습니다."));
+    },
   });
 }
 
@@ -32,7 +35,9 @@ export function useDealSetupFromExcel() {
       );
       return data;
     },
-
+    onError: (err) => {
+      toast.error(extractApiError(err, "엑셀 분석에 실패했습니다."));
+    },
   });
 }
 
@@ -50,6 +55,8 @@ export function useConfirmDealSetup() {
         `거래가 생성되었습니다 (DD ${result.dd_checklist_count}건, 타임라인 ${result.timeline_count}건)`,
       );
     },
-
+    onError: (err) => {
+      toast.error(extractApiError(err, "거래 생성에 실패했습니다."));
+    },
   });
 }

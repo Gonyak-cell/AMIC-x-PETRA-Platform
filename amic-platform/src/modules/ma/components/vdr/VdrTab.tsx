@@ -87,24 +87,29 @@ export default function VdrTab({ txnId }: Props) {
   const createFolder = useCreateVdrFolder(txnId);
   const deleteFolder = useDeleteVdrFolder(txnId);
 
-  // 기존 미초기화 거래 자동 처리 (최대 3회 재시도)
+  // 기존 미초기화 거래 자동 처리 (최대 3회 재시도, sessionStorage 기반)
   const autoInitRef = useRef(false);
-  const retryCountRef = useRef(0);
   useEffect(() => {
+    const storageKey = `vdr-init-retry-${txnId}`;
+    const retryCount = parseInt(
+      sessionStorage.getItem(storageKey) ?? "0",
+      10,
+    );
     if (
       summary &&
       !summary.initialized &&
       !autoInitRef.current &&
-      retryCountRef.current < 3
+      retryCount < 3
     ) {
       autoInitRef.current = true;
-      const attempt = retryCountRef.current;
-      retryCountRef.current += 1;
-      const delay = attempt > 0 ? Math.min(1000 * 2 ** attempt, 8000) : 0;
+      sessionStorage.setItem(storageKey, String(retryCount + 1));
+      const delay =
+        retryCount > 0 ? Math.min(1000 * 2 ** retryCount, 8000) : 0;
       const timer = window.setTimeout(() => {
         maApi
           .post(`/transactions/${txnId}/vdr/init`, {})
           .then(() => {
+            sessionStorage.removeItem(storageKey);
             qc.invalidateQueries({
               queryKey: ["ma", "transactions", txnId, "vdr"],
             });
@@ -112,7 +117,7 @@ export default function VdrTab({ txnId }: Props) {
           .catch((err: unknown) => {
             if (import.meta.env.DEV) console.error("[VDR init]", err);
             autoInitRef.current = false;
-            if (retryCountRef.current >= 3) {
+            if (retryCount + 1 >= 3) {
               toast.error(
                 "VDR 초기화에 실패했습니다. 새로고침 후 다시 시도해 주세요.",
               );

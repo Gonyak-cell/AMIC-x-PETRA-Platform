@@ -99,6 +99,13 @@ export interface BuyerPipelineSummary {
   avg_loi_value: string | null;
 }
 
+export interface BuyerCandidateListResponse {
+  items: BuyerCandidate[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface BiddingSummary {
   total_bidders: number;
   bid_submitted: number;

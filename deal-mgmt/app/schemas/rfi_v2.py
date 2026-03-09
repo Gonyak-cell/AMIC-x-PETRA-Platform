@@ -134,6 +134,13 @@ class RFIItemListOut(BaseModel):
     attachment_count: int = 0
 
 
+class RFIItemListResponse(BaseModel):
+    items: list[RFIItemListOut]
+    total: int
+    limit: int
+    offset: int
+
+
 # ── Dashboard ─────────────────────────────────────────────
 
 

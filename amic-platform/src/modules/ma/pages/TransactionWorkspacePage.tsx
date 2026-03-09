@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import {
   useParams,
   useNavigate,
@@ -52,25 +52,23 @@ import { Badge, Button, Card, PageHero, Spinner, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
 
-// ── Tab components ──────────────────────────────────────
-import {
-  BuyersTab,
-  ContractsTab,
-  RisksTab,
-  ComplianceTab,
-  ClosingTab,
-  NdasTab,
-  BidsTab,
-  DDChecklistTab,
-  PMITab,
-  EarnoutTab,
-  MarketingMaterialsTab,
-  ModelsTab,
-  NotesApprovalsTab,
-  TimelineTab,
-  QualityTab,
-  EngagementTab,
-} from "@/modules/ma/tabs";
+// ── Tab components (lazy-loaded) ────────────────────────
+const BuyersTab = lazy(() => import("@/modules/ma/tabs/BuyersTab"));
+const ContractsTab = lazy(() => import("@/modules/ma/tabs/ContractsTab"));
+const RisksTab = lazy(() => import("@/modules/ma/tabs/RisksTab"));
+const ComplianceTab = lazy(() => import("@/modules/ma/tabs/ComplianceTab"));
+const ClosingTab = lazy(() => import("@/modules/ma/tabs/ClosingTab"));
+const NdasTab = lazy(() => import("@/modules/ma/tabs/NdasTab"));
+const BidsTab = lazy(() => import("@/modules/ma/tabs/BidsTab"));
+const DDChecklistTab = lazy(() => import("@/modules/ma/tabs/DDChecklistTab"));
+const PMITab = lazy(() => import("@/modules/ma/tabs/PMITab"));
+const EarnoutTab = lazy(() => import("@/modules/ma/tabs/EarnoutTab"));
+const MarketingMaterialsTab = lazy(() => import("@/modules/ma/tabs/MarketingMaterialsTab"));
+const ModelsTab = lazy(() => import("@/modules/ma/tabs/ModelsTab"));
+const NotesApprovalsTab = lazy(() => import("@/modules/ma/tabs/NotesApprovalsTab"));
+const TimelineTab = lazy(() => import("@/modules/ma/tabs/TimelineTab"));
+const QualityTab = lazy(() => import("@/modules/ma/tabs/QualityTab"));
+const EngagementTab = lazy(() => import("@/modules/ma/tabs/EngagementTab"));
 
 // ── 상수/유틸 ──────────────────────────────────────────
 const VALID_PHASES = PHASE_CONFIG.map((p) => p.phase);
@@ -184,6 +182,7 @@ export default function TransactionWorkspacePage() {
     }
     return map;
   }, [milestoneAttachments]);
+  // 항상 fetch: 탭 바 배지 카운트에 필요 (탭 내부에서는 자체 fetch)
   const { data: engagements } = useEngagements(id);
   const { data: buyers } = useBuyers(id);
   const { data: timeline } = useTimeline(id);
@@ -518,7 +517,8 @@ export default function TransactionWorkspacePage() {
         />
       )}
 
-      {/* ── Tab Components ──────────────────────────────── */}
+      {/* ── Tab Components (lazy-loaded with Suspense) ── */}
+      <Suspense fallback={<Spinner size="lg" />}>
       {safeActiveTab === "engagement" && (
         <EngagementTab txnId={id} canWrite={canWrite()} />
       )}
@@ -581,6 +581,7 @@ export default function TransactionWorkspacePage() {
       {safeActiveTab === "notes-approvals" && (
         <NotesApprovalsTab txnId={id} canWrite={canWrite()} />
       )}
+      </Suspense>
     </div>
   );
 }

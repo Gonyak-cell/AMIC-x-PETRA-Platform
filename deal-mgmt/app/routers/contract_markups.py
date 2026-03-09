@@ -51,7 +51,7 @@ async def list_markups(
     q = q.offset(offset).limit(limit)
     result = await db.execute(q)
     items = [ContractMarkupOut.model_validate(m) for m in result.scalars().all()]
-    return ContractMarkupListResponse(items=items, total=total)
+    return ContractMarkupListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/{markup_id}", response_model=ContractMarkupOut)
@@ -242,9 +242,13 @@ async def delete_markup(
     await _get_contract_or_404(db, txn_id, contract_id)
     markup = await _get_markup_or_404(db, contract_id, markup_id)
 
-    # 파일 삭제
+    # 파일 삭제 (경로 탐색 방어)
     if markup.file_path:
         file_path = Path(markup.file_path)
+        try:
+            file_path.resolve().relative_to(UPLOAD_DIR.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="잘못된 파일 경로입니다")
         if file_path.exists():
             file_path.unlink()
 

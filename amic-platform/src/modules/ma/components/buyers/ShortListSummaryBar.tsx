@@ -24,18 +24,17 @@ export default function ShortListSummaryBar({
   const tier1Count = buyers.filter((b) => b.tier === "TIER_1").length;
 
   const avgPct = useMemo(() => {
+    if (buyers.length === 0) return 0;
     let total = 0;
-    let count = 0;
     for (const b of buyers) {
       const stages = stageMap.get(b.id);
-      if (!stages) continue;
+      if (!stages) continue; // 0% 기여 (total에 더하지 않음)
       const done = MARKETING_STAGES.filter(
         (s: MarketingStage) => stages[s],
       ).length;
       total += (done / MARKETING_STAGES.length) * 100;
-      count += 1;
     }
-    return count > 0 ? Math.round(total / count) : 0;
+    return Math.round(total / buyers.length);
   }, [buyers, stageMap]);
 
   const cards = [

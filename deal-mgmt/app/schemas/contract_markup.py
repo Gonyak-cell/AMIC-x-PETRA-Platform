@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,7 +19,6 @@ class ContractMarkupOut(BaseModel):
     version_number: int
     source_party: str | None = None
     markup_type: str | None = None
-    file_path: str | None = None
     file_name: str | None = None
     file_size_bytes: int | None = None
     changes_summary: str | None = None
@@ -26,6 +26,15 @@ class ContractMarkupOut(BaseModel):
     created_by_email: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    has_file: bool = False
+
+    @classmethod
+    def model_validate(cls, obj: Any, **kwargs: Any) -> ContractMarkupOut:  # type: ignore[override]
+        instance = super().model_validate(obj, **kwargs)
+        if hasattr(obj, "file_path"):
+            instance.has_file = bool(obj.file_path)
+        return instance
 
 
 class ContractMarkupCreate(BaseModel):
@@ -42,3 +51,5 @@ class ContractMarkupCreate(BaseModel):
 class ContractMarkupListResponse(BaseModel):
     items: list[ContractMarkupOut]
     total: int
+    limit: int
+    offset: int

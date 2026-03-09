@@ -30,6 +30,7 @@ from app.schemas.vdr import (
     DirectUploadFileResult,
     FailedFileInfo,
     SuggestCategoryRequest,
+    SuggestCategoryResponse,
     VdrAutoUploadResult,
     VdrDocumentOut,
     VdrDocumentUpdate,
@@ -487,13 +488,13 @@ def _build_tree(
 # ── 파일명 기반 폴더 카테고리 추천 ──────────────────────────
 
 
-@router.post("/suggest-category")
+@router.post("/suggest-category", response_model=SuggestCategoryResponse)
 async def suggest_folder_category(
     txn_id: uuid.UUID,
     body: SuggestCategoryRequest,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
-) -> dict:
+) -> SuggestCategoryResponse:
     """파일명을 분석하여 적합한 VDR 폴더 카테고리를 추천한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
 
@@ -501,14 +502,14 @@ async def suggest_folder_category(
 
     category = suggest_category(body.filename)
     if category is None:
-        return {"category": None, "folder_name": None}
+        return SuggestCategoryResponse(category=None, folder_name=None)
 
     folder = await vdr_service.resolve_folder_by_category(db, txn_id, category)
 
-    return {
-        "category": category.value,
-        "folder_name": folder.name if folder else None,
-    }
+    return SuggestCategoryResponse(
+        category=category.value,
+        folder_name=folder.name if folder else None,
+    )
 
 
 # ── 자동 라우팅 업로드 ────────────────────────────────────────

@@ -138,6 +138,13 @@ class SuggestCategoryRequest(BaseModel):
     filename: str = Field(..., min_length=1, max_length=500)
 
 
+class SuggestCategoryResponse(BaseModel):
+    """파일명 기반 카테고리 추천 응답."""
+
+    category: str | None = None
+    folder_name: str | None = None
+
+
 class FailedFileInfo(BaseModel):
     """Direct Upload 실패 파일 정보."""
 
