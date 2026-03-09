@@ -1,6 +1,7 @@
 // ── 딜 셋업 AI 에이전트 타입 ─────────────────────────────
 
 import type { DealType, TransactionSide, DealStructure } from "./transaction";
+import type { BuyerTier } from "./buyer";
 
 export type DDWorkstream =
   | "FDD_FINANCIAL_STATEMENTS"
@@ -30,8 +31,6 @@ export type BuyerType =
   | "FAMILY_OFFICE"
   | "INDIVIDUAL"
   | "OTHER";
-
-export type BuyerTier = "TIER_1" | "TIER_2" | "TIER_3" | null;
 
 // ── 요청 ──────────────────────────────────────────────────
 
@@ -73,7 +72,7 @@ export interface DealSetupTimelineItem {
 export interface DealSetupBuyerItem {
   company_name: string;
   buyer_type: BuyerType | null;
-  tier: BuyerTier;
+  tier: BuyerTier | null;
   notes: string | null;
 }
 
