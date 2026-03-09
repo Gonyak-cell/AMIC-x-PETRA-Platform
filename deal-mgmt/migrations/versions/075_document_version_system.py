@@ -30,7 +30,7 @@ def upgrade() -> None:
         sa.Column("doc_name", sa.String(500), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("current_revision_number", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("is_archived", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("is_archived", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column(
             "contract_id",
             sa.Uuid(),
@@ -75,8 +75,8 @@ def upgrade() -> None:
             sa.ForeignKey("document_revisions.id", ondelete="SET NULL"),
             nullable=True,
         ),
-        sa.Column("is_current", sa.Boolean(), nullable=False, server_default=sa.text("1")),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("is_current", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("source_entity_type", sa.String(50), nullable=True),
         sa.Column("source_entity_id", sa.String(100), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -100,8 +100,8 @@ def upgrade() -> None:
         sa.Column("sequence_order", sa.Integer(), nullable=False),
         sa.Column("content_text", sa.Text(), nullable=True),
         sa.Column("content_hash", sa.String(64), nullable=True),
-        sa.Column("is_new", sa.Boolean(), nullable=False, server_default=sa.text("0")),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("is_new", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_document_blocks_revision_id", "document_blocks", ["revision_id"])

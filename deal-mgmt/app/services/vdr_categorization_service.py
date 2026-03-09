@@ -71,6 +71,12 @@ _FOLDER_RULES: list[FolderRule] = [
             "주주총회",
             "AoA",
             "BOD",
+            # 영문 보강
+            "bylaws",
+            "shareholder",
+            "incorporation",
+            "registry",
+            "charter",
         ],
         preferred_extensions={".pdf", ".docx"},
         preferred_mimes={
@@ -109,6 +115,15 @@ _FOLDER_RULES: list[FolderRule] = [
             "결산",
             "FS",
             "Trial Balance",
+            # 영문 보강
+            "balance sheet",
+            "income statement",
+            "cash flow",
+            "EBITDA",
+            "revenue",
+            "ledger",
+            "receivable",
+            "payable",
         ],
         preferred_extensions={".xlsx", ".csv", ".xls"},
         preferred_mimes={
@@ -141,6 +156,12 @@ _FOLDER_RULES: list[FolderRule] = [
             "지방세",
             "NTS",
             "홈택스",
+            # 영문 보강
+            "VAT",
+            "withholding",
+            "tax return",
+            "CIT",
+            "deduction",
         ],
         preferred_extensions={".xlsx", ".pdf", ".hwp"},
         preferred_mimes={
@@ -176,6 +197,12 @@ _FOLDER_RULES: list[FolderRule] = [
             "징계",
             "퇴직금",
             "4대보험",
+            # 영문 보강
+            "headcount",
+            "compensation",
+            "benefit",
+            "pension",
+            "labor",
         ],
         preferred_extensions={".xlsx", ".pdf", ".docx"},
         preferred_mimes={
@@ -207,6 +234,11 @@ _FOLDER_RULES: list[FolderRule] = [
             "건축물대장",
             "고정자산",
             "설비명세",
+            # 영문 보강
+            "appraisal",
+            "valuation",
+            "facility",
+            "zoning",
         ],
         preferred_extensions={".pdf", ".docx", ".dwg", ".dxf"},
         preferred_mimes={
@@ -236,6 +268,11 @@ _FOLDER_RULES: list[FolderRule] = [
             "발명",
             "특허증",
             "출원",
+            # 영문 보강
+            "copyright",
+            "license agreement",
+            "trade secret",
+            "royalty",
         ],
         preferred_extensions={".pdf", ".docx"},
         preferred_mimes={"application/pdf"},
@@ -260,6 +297,12 @@ _FOLDER_RULES: list[FolderRule] = [
             "정보보안",
             "개인정보보호",
             "데이터베이스",
+            # 영문 보강
+            "architecture",
+            "infrastructure",
+            "network",
+            "database",
+            "SaaS",
         ],
         preferred_extensions={".pdf", ".docx", ".zip", ".tar", ".gz", ".sql", ".json"},
         preferred_mimes={
@@ -293,6 +336,11 @@ _FOLDER_RULES: list[FolderRule] = [
             "대기",
             "유해물질",
             "ESG",
+            # 영문 보강
+            "waste",
+            "emission",
+            "contamination",
+            "EIA",
         ],
         preferred_extensions={".pdf", ".shp", ".kml"},
         preferred_mimes={
@@ -317,6 +365,9 @@ _FOLDER_RULES: list[FolderRule] = [
             "산재보험",
             "화재보험",
             "임원배상",
+            # 영문 보강
+            "coverage",
+            "underwriting",
         ],
         preferred_extensions={".pdf", ".docx"},
         preferred_mimes={"application/pdf"},
@@ -344,6 +395,10 @@ _FOLDER_RULES: list[FolderRule] = [
             "주요고객",
             "공급망",
             "Business Plan",
+            # 영문 보강
+            "pipeline",
+            "CRM",
+            "pricing",
         ],
         preferred_extensions={".pptx", ".key", ".pdf"},
         preferred_mimes={
@@ -377,6 +432,15 @@ _FOLDER_RULES: list[FolderRule] = [
             # 추가
             "판결문",
             "인허가",
+            # 영문 보강
+            "LOI",
+            "JVA",
+            "term sheet",
+            "escrow",
+            "warranty",
+            "indemnity",
+            "litigation",
+            "arbitration",
         ],
         preferred_extensions={".pdf", ".docx", ".eml", ".msg"},
         preferred_mimes={
@@ -406,6 +470,12 @@ _FOLDER_RULES: list[FolderRule] = [
             "industry",
             "research",
             "benchmark",
+            # 영문 보강
+            "competitor",
+            "SWOT",
+            "TAM",
+            "SAM",
+            "outlook",
         ],
         preferred_extensions={".pdf", ".pptx", ".xlsx"},
         preferred_mimes={
