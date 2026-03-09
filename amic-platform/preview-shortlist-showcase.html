@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short List Showcase — Grid / Kanban / Timeline</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', system-ui, -apple-system, sans-serif; background: #f4f5f7; color: #1a1a2e; }
+
+  /* ── Layout ── */
+  .page { display: flex; height: 100vh; }
+  .sidebar { width: 280px; background: #fff; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.2s ease; overflow: hidden; position: relative; }
+  .sidebar.collapsed { width: 48px; }
+  .sidebar.collapsed .sidebar-header h2,
+  .sidebar.collapsed .sidebar-stats,
+  .sidebar.collapsed .master-list { opacity: 0; pointer-events: none; }
+  .main { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+/* ── Sidebar Toggle ── */
+  .sidebar-toggle { position: absolute; top: 16px; right: -14px; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: background 0.15s; color: #6b7280; }
+  .sidebar-toggle:hover { background: #f9fafb; color: #1a1a2e; }
+  .sidebar-toggle svg { transition: transform 0.2s ease; }
+  .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+
+  /* ── Sidebar Header ── */
+  .sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid #e5e7eb; }
+  .sidebar-header h2 { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+  .sidebar-stats { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .sidebar-stats .rate { color: #16a34a; font-weight: 600; }
+
+  /* ── Master List ── */
+  .master-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .master-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all .4s ease; border: none; background: none; width: 100%; text-align: left; }
+  .master-item:hover { background: #f9fafb; }
+  .master-item.selected { background: rgba(22,163,74,0.05); border-left: 3px solid #16a34a; }
+  .master-info { flex: 1; min-width: 0; }
+  .master-name { font-size: 13px; font-weight: 600; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .master-contact { font-size: 11px; color: #6b7280; }
+  .master-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  /* ── Stage Dots (compact tracker) ── */
+  .stage-dots { display: flex; gap: 3px; align-items: center; }
+  .stage-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .stage-dot.done { background: #16a34a; }
+  .stage-dot.empty { background: #e5e7eb; }
+  .stage-count { font-size: 10px; color: #6b7280; margin-left: 2px; }
+
+  /* ── Interest indicator ── */
+  .interest { display: flex; gap: 1px; }
+  .interest .bar { width: 3px; border-radius: 1px; }
+  .interest .bar.h1 { height: 6px; }
+  .interest .bar.h2 { height: 9px; }
+  .interest .bar.h3 { height: 12px; }
+  .interest .bar.active { background: #16a34a; }
+  .interest .bar.inactive { background: #e5e7eb; }
+
+  /* ── Tier badges ── */
+  .tier { font-size: 10px; padding: 1px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+  .tier-1 { background: #dcfce7; color: #15803d; }
+  .tier-2 { background: #dbeafe; color: #1d4ed8; }
+  .tier-3 { background: #fef3c7; color: #b45309; }
+  .tier-na { background: #f3f4f6; color: #6b7280; font-style: italic; }
+
+  /* ── Buyer type badge ── */
+  .buyer-type { font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 500; background: #f3f4f6; color: #6b7280; }
+
+  /* ── Stage badge ── */
+  .stage-badge { font-size: 10px; padding: 1px 8px; border-radius: 10px; background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+
+  /* ── Drop badge ── */
+  .drop-badge { font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 700; background: #fef2f2; color: #dc2626; margin-left: 4px; }
+
+  /* ── Drop state ── */
+  .is-dropped { opacity: 0.55; filter: grayscale(100%); }
+  tr.is-dropped, .kanban-card.is-dropped, .master-item.is-dropped { background-color: #f9fafb; }
+  .is-dropped:hover { opacity: 0.7; }
+
+  /* ── Drop toggle button ── */
+  .drop-btn { padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid; cursor: pointer; transition: all .15s; }
+  .drop-btn.active-state { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .drop-btn.active-state:hover { background: #fee2e2; }
+  .drop-btn.dropped-state { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+  .drop-btn.dropped-state:hover { background: #dcfce7; }
+
+  /* ── Kanban divider ── */
+  .kanban-divider { border: none; border-top: 1px dashed #d1d5db; margin: 4px 0; }
+
+  /* ── Main Header ── */
+  .main-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .main-header h1 { font-size: 18px; font-weight: 700; }
+  .view-toggle { display: flex; gap: 4px; background: #f3f4f6; padding: 3px; border-radius: 8px; }
+  .view-btn { padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; background: transparent; color: #6b7280; transition: all .15s; }
+  .view-btn.active { background: #16a34a; color: #fff; box-shadow: 0 1px 3px rgba(22,163,74,0.3); }
+  .view-btn:hover:not(.active) { color: #374151; }
+
+  /* ── Summary bar ── */
+  .summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .summary-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 16px; min-width: 100px; }
+  .summary-card .label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
+  .summary-card .value { font-size: 20px; font-weight: 700; color: #1a1a2e; margin-top: 2px; }
+  .summary-card .value.green { color: #16a34a; }
+  .summary-card .value.red { color: #dc2626; }
+
+  /* ── Section ── */
+  .section-label { font-size: 11px; font-weight: 700; color: #16a34a; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 12px; padding: 4px 10px; background: #dcfce7; border-radius: 4px; display: inline-block; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ════════ GRID VIEW ════════ */
+  .grid-table { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; border-collapse: collapse; font-size: 13px; background: #fff; }
+  .grid-table thead { background: #f8f9fa; }
+  .grid-table th { padding: 10px 12px; font-weight: 600; color: #1a1a2e; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+  .grid-table th.stage-col { text-align: center; font-size: 11px; color: #6b7280; font-weight: 500; border-left: 1px solid #e5e7eb; min-width: 80px; }
+  .grid-table td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
+  .grid-table td.stage-cell { text-align: center; border-left: 1px solid #e5e7eb; position: relative; }
+  .grid-table tr:last-child td { border-bottom: none; }
+  .grid-table tr { transition: all .4s ease; }
+  .grid-table tr:hover { background: #fafafa; }
+  .buyer-name { font-weight: 600; font-size: 12px; color: #1a1a2e; }
+  .buyer-contact-sm { font-size: 11px; color: #6b7280; }
+
+  /* Grid cell states */
+  .cell-done { display: inline-flex; flex-direction: column; align-items: center; }
+  .cell-done .check { width: 20px; height: 20px; border-radius: 50%; background: #16a34a; display: flex; align-items: center; justify-content: center; }
+  .cell-done .check svg { width: 12px; height: 12px; color: #fff; }
+  .cell-done .date { font-size: 10px; color: #16a34a; font-weight: 500; margin-top: 2px; }
+  .cell-empty { width: 20px; height: 20px; border-radius: 50%; background: #f3f4f6; border: 1px dashed #d1d5db; margin: 0 auto; cursor: pointer; }
+  .cell-empty:hover { border-color: #16a34a; background: #f0fdf4; }
+  .arrow-btn { padding: 4px; color: #9ca3af; cursor: pointer; border: none; background: none; }
+  .arrow-btn:hover { color: #16a34a; }
+
+  /* ════════ KANBAN VIEW ════════ */
+  .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .kanban-col { flex-shrink: 0; width: 200px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; }
+  .kanban-header { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; background: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+  .kanban-header .col-name { font-size: 12px; font-weight: 600; color: #374151; }
+  .kanban-count { font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .kanban-body { padding: 8px; flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+  .kanban-card { background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; padding: 10px 12px; transition: all .4s ease; cursor: pointer; }
+  .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #d1d5db; }
+  .kanban-card .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .kanban-card .card-name { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .kanban-card .card-contact { font-size: 10px; color: #6b7280; margin-bottom: 4px; }
+  .kanban-card .card-meta { display: flex; align-items: center; gap: 6px; }
+  .kanban-card .next-stage { margin-top: 8px; padding-top: 8px; border-top: 1px solid #f3f4f6; }
+  .kanban-card .next-label { font-size: 9px; color: #9ca3af; margin-bottom: 3px; }
+  .kanban-card .next-input { display: flex; gap: 4px; }
+  .kanban-card .next-input input { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 3px 6px; font-size: 10px; color: #374151; }
+  .kanban-card .next-input input::placeholder { color: #d1d5db; }
+  .kanban-empty { font-size: 11px; color: #9ca3af; text-align: center; padding: 30px 0; font-style: italic; }
+
+  /* ════════ VERTICAL TIMELINE VIEW ════════ */
+  .timeline { display: flex; flex-direction: column; gap: 16px; }
+  .timeline-card { border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; padding: 20px; transition: box-shadow .15s; }
+  .timeline-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .timeline-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .timeline-header-left { display: flex; align-items: center; gap: 8px; }
+  .timeline-header .name { font-weight: 600; font-size: 14px; color: #1a1a2e; }
+
+  /* Vertical timeline */
+  .v-timeline { position: relative; padding-left: 28px; margin: 4px 0 0 12px; }
+  .v-timeline::before { content: ''; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; background: #e5e7eb; }
+  .v-timeline-item { position: relative; padding-bottom: 16px; }
+  .v-timeline-item:last-child { padding-bottom: 0; }
+  .v-timeline-dot { position: absolute; left: -23px; top: 3px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #16a34a; background: #fff; z-index: 1; }
+  .v-timeline-dot.done { background: #16a34a; }
+  .v-timeline-dot.log { border-color: #6366f1; background: #6366f1; }
+  .v-timeline-dot.ioi { border-color: #f59e0b; background: #f59e0b; }
+  .v-timeline-dot.pending { border-color: #d1d5db; background: #fff; }
+  .v-timeline-content { font-size: 12px; color: #374151; line-height: 1.5; }
+  .v-timeline-date { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
+  .v-timeline-label { font-weight: 600; }
+  .v-timeline-label.stage { color: #16a34a; }
+  .v-timeline-label.log { color: #6366f1; }
+  .v-timeline-label.ioi { color: #f59e0b; }
+  .v-timeline-pending { opacity: 0.5; }
+  .v-timeline-pending .v-timeline-content { color: #9ca3af; font-style: italic; }
+
+  /* Log form */
+  .log-form { display: flex; gap: 6px; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+  .log-form input[type="date"] { border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #374151; font-family: inherit; }
+  .log-form input[type="text"] { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #374151; font-family: inherit; }
+  .log-form input::placeholder { color: #d1d5db; }
+  .log-form button { padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #16a34a; background: #16a34a; color: #fff; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .log-form button:hover { background: #15803d; }
+
+  /* ── Full Stage Tracker (non-compact) ── */
+  .stage-tracker-full { display: flex; align-items: flex-start; gap: 0; }
+  .tracker-node { display: flex; flex-direction: column; align-items: center; }
+  .tracker-circle { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .tracker-circle.done { background: #16a34a; color: #fff; }
+  .tracker-circle.pending { background: #fff; border: 1.5px solid #d1d5db; color: #9ca3af; }
+  .tracker-label { font-size: 9px; color: #6b7280; margin-top: 3px; text-align: center; max-width: 56px; line-height: 1.2; }
+  .tracker-date { font-size: 8px; color: #16a34a; font-weight: 600; }
+  .tracker-line { width: 24px; height: 2px; margin-top: 13px; }
+  .tracker-line.done { background: #16a34a; }
+  .tracker-line.pending { background: #e5e7eb; }
+
+  /* ── Detail Panel ── */
+  .detail-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 20px; }
+  .detail-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .detail-panel .detail-sub { font-size: 11px; color: #6b7280; margin-bottom: 16px; }
+  .detail-section { margin-bottom: 16px; }
+  .detail-section h4 { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .detail-item .dt { font-size: 10px; color: #9ca3af; }
+  .detail-item .dd { font-size: 12px; color: #1a1a2e; font-weight: 500; }
+
+  /* ── SVGs ── */
+
+  /* ── Log delete button ── */
+  .log-delete-btn { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1; margin-left: 4px; }
+  .log-delete-btn:hover { color: #dc2626; }
+
+  .log-form .input-error { border-color: #dc2626; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .sidebar { width: 220px; }
+    .main { padding: 16px 20px; }
+    .kanban-col { width: 180px; }
+  }
+  @media (max-width: 768px) {
+    .page { flex-direction: column; height: auto; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e5e7eb; max-height: 200px; }
+    .main { padding: 12px 16px; }
+    .kanban { flex-direction: column; }
+    .kanban-col { width: 100%; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .summary-bar { gap: 8px; }
+    .summary-card { min-width: 80px; padding: 8px 12px; }
+    .summary-card .value { font-size: 16px; }
+  }
+
+  .check-svg { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- ═══════ SIDEBAR: Master List ═══════ -->
+  <div class="sidebar" role="navigation" aria-label="매수자 목록">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="사이드바 접기/펼치기" title="사이드바 접기/펼치기">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="sidebar-header">
+      <h2>Short List</h2>
+      <p class="sidebar-stats" id="sidebarStats"></p>
+    </div>
+    <div class="master-list" id="masterList" role="listbox" aria-label="매수자 선택"></div>
+  </div>
+
+  <!-- ═══════ MAIN CONTENT ═══════ -->
+  <div class="main">
+    <div class="main-header">
+      <h1>마케팅 활동 추적</h1>
+      <div class="view-toggle" role="tablist" aria-label="뷰 전환">
+        <button class="view-btn active" role="tab" aria-selected="true" aria-controls="grid" onclick="switchView('grid', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          그리드
+        </button>
+        <button class="view-btn" role="tab" aria-selected="false" aria-controls="kanban" onclick="switchView('kanban', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px" aria-hidden="true"><rect x="4" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="12" rx="1"/><rect x="16" y="3" width="4" height="15" rx="1"/></svg>
+          칸반
+        </button>
+        <button class="view-btn" role="tab" aria-selected="false" aria-controls="timeline" onclick="switchView('timeline', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></svg>
+          타임라인
+        </button>
+      </div>
+    </div>
+
+    <div class="summary-bar" id="summaryBar" aria-live="polite"></div>
+
+    <!-- ══════════ GRID VIEW ══════════ -->
+    <div id="grid" class="view active" role="tabpanel" aria-label="그리드 뷰">
+      <div class="section-label">Grid View — 매수자 × 마케팅 단계</div>
+      <table class="grid-table" id="gridTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px">매수자</th>
+            <th class="stage-col">발굴</th>
+            <th class="stage-col">메일전송</th>
+            <th class="stage-col">전화</th>
+            <th class="stage-col">자문사 미팅</th>
+            <th class="stage-col">NDA 체결</th>
+            <th class="stage-col">대상회사 미팅</th>
+            <th style="width:36px; border-left:1px solid #e5e7eb"></th>
+          </tr>
+        </thead>
+        <tbody id="gridBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ══════════ KANBAN VIEW ══════════ -->
+    <div id="kanban" class="view" role="tabpanel" aria-label="칸반 뷰">
+      <div class="section-label">Kanban View — 단계별 컬럼</div>
+      <div class="kanban" id="kanbanBoard"></div>
+    </div>
+
+    <!-- ══════════ TIMELINE VIEW ══════════ -->
+    <div id="timeline" class="view" role="tabpanel" aria-label="타임라인 뷰">
+      <div class="section-label">Timeline View — 수직 연대기</div>
+      <div class="timeline" id="timelineList"></div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div class="detail-panel" id="detailPanel" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// SIDEBAR TOGGLE
+// ══════════════════════════════════════════
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('collapsed');
+}
+
+// ══════════════════════════════════════════
+// MOCK DATA — 8명의 매수자 + 마케팅 단계
+// ══════════════════════════════════════════
+
+const STAGES = ['IDENTIFIED','EMAIL_SENT','PHONE_CALL','ADVISOR_MEETING','NDA_SIGNED','TARGET_MEETING'];
+const STAGE_LABELS = {
+  IDENTIFIED:'발굴', EMAIL_SENT:'메일전송', PHONE_CALL:'전화',
+  ADVISOR_MEETING:'자문사 미팅', NDA_SIGNED:'NDA 체결', TARGET_MEETING:'대상회사 미팅'
+};
+const STAGE_SHORT = {
+  IDENTIFIED:'발굴', EMAIL_SENT:'메일', PHONE_CALL:'전화',
+  ADVISOR_MEETING:'FA', NDA_SIGNED:'NDA', TARGET_MEETING:'대상'
+};
+
+const BUYERS = [
+  {
+    id:'b1', company_name:'삼성물산', contact_name:'김철수 상무', contact_email:'cskim@samsung.com',
+    contact_phone:'010-1234-5678', buyer_type:'STRATEGIC', tier:'TIER_1', deal_role:'SOLE_BUYER',
+    ioi_value:'3,200억', ioi_date:'2026-03-05', loi_value:null, notes:'인프라 사업부 시너지 검토 중',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-15', EMAIL_SENT:'2026-02-17', PHONE_CALL:'2026-02-20', ADVISOR_MEETING:'2026-02-25', NDA_SIGNED:'2026-03-01', TARGET_MEETING:'2026-03-07' }
+  },
+  {
+    id:'b2', company_name:'SK스퀘어', contact_name:'이영희 이사', contact_email:'yhlee@sksquare.com',
+    contact_phone:'010-2345-6789', buyer_type:'STRATEGIC', tier:'TIER_1', deal_role:'CONSORTIUM_LEAD',
+    ioi_value:'2,800억', ioi_date:'2026-03-03', loi_value:null, notes:'데이터센터 투자 관점',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-16', EMAIL_SENT:'2026-02-18', PHONE_CALL:'2026-02-21', ADVISOR_MEETING:'2026-02-27', NDA_SIGNED:'2026-03-03', TARGET_MEETING:null }
+  },
+  {
+    id:'b3', company_name:'한화투자증권', contact_name:'박지민 팀장', contact_email:'jmpark@hanwha.com',
+    contact_phone:'010-3456-7890', buyer_type:'FINANCIAL_SPONSOR', tier:'TIER_1', deal_role:'SOLE_BUYER',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'PE 펀드 LP 확보 진행 중',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-18', EMAIL_SENT:'2026-02-20', PHONE_CALL:'2026-02-24', ADVISOR_MEETING:'2026-03-01', NDA_SIGNED:'2026-03-05', TARGET_MEETING:null }
+  },
+  {
+    id:'b4', company_name:'미래에셋자산운용', contact_name:'정수민 부장', contact_email:'smjung@miraeasset.com',
+    contact_phone:'010-4567-8901', buyer_type:'FINANCIAL_SPONSOR', tier:'TIER_2', deal_role:'CO_INVESTOR',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'대체투자 부문 검토',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-20', EMAIL_SENT:'2026-02-22', PHONE_CALL:'2026-02-26', ADVISOR_MEETING:'2026-03-04', NDA_SIGNED:null, TARGET_MEETING:null }
+  },
+  {
+    id:'b5', company_name:'KKR Asia', contact_name:'David Kim VP', contact_email:'david.kim@kkr.com',
+    contact_phone:null, buyer_type:'FINANCIAL_SPONSOR', tier:'TIER_2', deal_role:'CONSORTIUM_LEAD',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'아시아 인프라 펀드',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-22', EMAIL_SENT:'2026-02-25', PHONE_CALL:'2026-03-01', ADVISOR_MEETING:null, NDA_SIGNED:null, TARGET_MEETING:null }
+  },
+  {
+    id:'b6', company_name:'맥쿼리자산운용', contact_name:'Sarah Lee Director', contact_email:'sarah.lee@macquarie.com',
+    contact_phone:null, buyer_type:'FINANCIAL_SPONSOR', tier:'TIER_2', deal_role:'SOLE_BUYER',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'인프라 펀드, AUM 40조',
+    status:'ACTIVE', custom_logs:[],
+    stages: { IDENTIFIED:'2026-02-24', EMAIL_SENT:'2026-02-28', PHONE_CALL:null, ADVISOR_MEETING:null, NDA_SIGNED:null, TARGET_MEETING:null }
+  },
+  {
+    id:'b7', company_name:'현대건설', contact_name:'최동욱 차장', contact_email:'dwchoi@hdec.co.kr',
+    contact_phone:'010-5678-9012', buyer_type:'STRATEGIC', tier:'TIER_3', deal_role:'SOLE_BUYER',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'건설 시너지 초기 검토',
+    status:'DROPPED', custom_logs:[],
+    stages: { IDENTIFIED:'2026-03-01', EMAIL_SENT:'2026-03-04', PHONE_CALL:null, ADVISOR_MEETING:null, NDA_SIGNED:null, TARGET_MEETING:null }
+  },
+  {
+    id:'b8', company_name:'IMM인베스트먼트', contact_name:'송하은 심사역', contact_email:'hesong@imm.co.kr',
+    contact_phone:'010-6789-0123', buyer_type:'FINANCIAL_SPONSOR', tier:'TIER_3', deal_role:'CO_INVESTOR',
+    ioi_value:null, ioi_date:null, loi_value:null, notes:'Growth 펀드, mid-cap 선호',
+    status:'DROPPED', custom_logs:[],
+    stages: { IDENTIFIED:'2026-03-02', EMAIL_SENT:null, PHONE_CALL:null, ADVISOR_MEETING:null, NDA_SIGNED:null, TARGET_MEETING:null }
+  },
+];
+
+const TIER_CLASS = { TIER_1:'tier-1', TIER_2:'tier-2', TIER_3:'tier-3' };
+const TIER_LABEL = { TIER_1:'Tier 1', TIER_2:'Tier 2', TIER_3:'Tier 3' };
+const BUYER_TYPE_LABEL = { STRATEGIC:'전략적', FINANCIAL_SPONSOR:'재무적', FAMILY_OFFICE:'패밀리오피스' };
+const DEAL_ROLE_LABEL = { SOLE_BUYER:'단독 매수', CONSORTIUM_LEAD:'컨소시엄 리드', CO_INVESTOR:'공동투자', FINANCING_PROVIDER:'파이낸싱' };
+
+function completedCount(buyer) {
+  return STAGES.filter(s => buyer.stages[s]).length;
+}
+function latestStageIdx(buyer) {
+  for (let i = STAGES.length - 1; i >= 0; i--) {
+    if (buyer.stages[STAGES[i]]) return i;
+  }
+  return -1;
+}
+function formatDate(d) { return d ? d.slice(5) : ''; }
+function createTierBadge(tier) {
+  var span = document.createElement('span');
+  span.className = 'tier ' + (tier ? TIER_CLASS[tier] : 'tier-na');
+  span.textContent = tier ? TIER_LABEL[tier] : '미분류';
+  return span;
+}
+function createInterestBars(tier) {
+  var level = tier === 'TIER_1' ? 3 : tier === 'TIER_2' ? 2 : 1;
+  var wrap = document.createElement('div');
+  wrap.className = 'interest';
+  for (var i = 1; i <= 3; i++) {
+    var bar = document.createElement('div');
+    bar.className = 'bar h' + i + ' ' + (level >= i ? 'active' : 'inactive');
+    wrap.appendChild(bar);
+  }
+  return wrap;
+}
+function createStageDots(buyer) {
+  var cc = completedCount(buyer);
+  var wrap = document.createElement('div');
+  wrap.className = 'stage-dots';
+  STAGES.forEach(function(s) {
+    var dot = document.createElement('div');
+    dot.className = 'stage-dot ' + (buyer.stages[s] ? 'done' : 'empty');
+    dot.title = STAGE_LABELS[s] + ': ' + (buyer.stages[s] || '미완료');
+    wrap.appendChild(dot);
+  });
+  var countSpan = document.createElement('span');
+  countSpan.className = 'stage-count';
+  countSpan.textContent = cc + '/6';
+  wrap.appendChild(countSpan);
+  return wrap;
+}
+function checkSvg(size) {
+  var style = size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '';
+  return '<svg viewBox="0 0 24 24" class="check-svg"' + style + '><polyline points="20 6 9 17 4 12"/></svg>';
+}
+// [m-03] 공통 헬퍼
+function appendDropBadge(parent) {
+  var badge = document.createElement('span');
+  badge.className = 'drop-badge';
+  badge.textContent = 'Drop';
+  parent.appendChild(badge);
+}
+
+var ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+var ARROW_SVG_SM = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+
+function createArrowBtn(buyerId, small) {
+  var btn = document.createElement('button');
+  btn.className = 'arrow-btn';
+  btn.setAttribute('aria-label', '상세 보기');
+  btn.onclick = function(e) { e.stopPropagation(); selectBuyer(buyerId); };
+  btn.innerHTML = small ? ARROW_SVG_SM : ARROW_SVG;
+  return btn;
+}
+
+let selectedBuyerId = null;
+
+// ── Sort: 1순위 DROPPED→하단, 2순위 완료 단계 수 내림차순 ──
+function getSorted() {
+  return BUYERS.slice().sort(function(a, b) {
+    const aD = a.status === 'DROPPED' ? 1 : 0;
+    const bD = b.status === 'DROPPED' ? 1 : 0;
+    if (aD !== bD) return aD - bD;
+    return completedCount(b) - completedCount(a);
+  });
+}
+
+// [M-01] kanban next stage date
+function setNextStageDate(buyerId, nextStage, dateValue) {
+  if (!dateValue) return;
+  var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+  if (!buyer) return;
+  buyer.stages[nextStage] = dateValue;
+  renderAll();
+}
+
+// ── Drop 토글 ──
+function toggleDropStatus(buyerId) {
+  const buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+  if (!buyer) return;
+  buyer.status = buyer.status === 'DROPPED' ? 'ACTIVE' : 'DROPPED';
+  renderAll();
+}
+
+// ── 수동 로그 추가 ──
+function addCustomLog(buyerId) {
+  try {
+    var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+    if (!buyer) return;
+    var dateInput = document.getElementById('log-date-' + buyerId);
+    var contentInput = document.getElementById('log-content-' + buyerId);
+    if (!dateInput || !contentInput) return;
+    var date = dateInput.value, content = contentInput.value.trim();
+    if (!date || !content) return;
+    var minDate = '2020-01-01';
+    var today = new Date();
+    var maxDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+    if (date < minDate || date > maxDate) {
+      dateInput.classList.add('input-error');
+      setTimeout(function() { dateInput.classList.remove('input-error'); }, 2000);
+      return;
+    }
+    buyer.custom_logs.push({ date: date, content: content });
+    dateInput.value = new Date().toISOString().slice(0, 10);
+    contentInput.value = '';
+    renderTimeline();
+  } catch (e) { console.error('addCustomLog error:', e); }
+}
+
+// [L-04] 로그 삭제
+function deleteCustomLog(buyerId, logIndex) {
+  var buyer = BUYERS.find(function(b) { return b.id === buyerId; });
+  if (!buyer || logIndex < 0 || logIndex >= buyer.custom_logs.length) return;
+  buyer.custom_logs.splice(logIndex, 1);
+  renderTimeline();
+}
+
+// ══════════════════════════════════════
+// RENDER: Summary Bar
+// ══════════════════════════════════════
+function renderSummary() {
+  const active = BUYERS.filter(function(b) { return b.status !== 'DROPPED'; });
+  const dropped = BUYERS.filter(function(b) { return b.status === 'DROPPED'; });
+  const ndaCount = active.filter(function(b) { return b.stages.NDA_SIGNED; }).length;
+  const meetingCount = active.filter(function(b) { return b.stages.TARGET_MEETING; }).length;
+  const tier1Count = active.filter(function(b) { return b.tier === 'TIER_1'; }).length;
+  const avgPct = active.length > 0
+    ? Math.round(active.reduce(function(sum, b) { return sum + (completedCount(b) / STAGES.length) * 100; }, 0) / active.length)
+    : 0;
+
+  const bar = document.getElementById('summaryBar');
+  bar.textContent = '';
+  const data = [
+    { label: 'Active 후보', value: active.length, cls: '' },
+    { label: 'Drop', value: dropped.length, cls: 'red' },
+    { label: 'NDA 체결', value: ndaCount, cls: 'green' },
+    { label: '대상미팅 완료', value: meetingCount, cls: 'green' },
+    { label: 'Tier 1', value: tier1Count, cls: '' },
+    { label: '평균 진행률', value: avgPct + '%', cls: 'green' },
+  ];
+  data.forEach(function(d) {
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = d.label;
+    const val = document.createElement('div');
+    val.className = 'value' + (d.cls ? ' ' + d.cls : '');
+    val.textContent = d.value;
+    card.appendChild(lbl);
+    card.appendChild(val);
+    bar.appendChild(card);
+  });
+
+  const stats = document.getElementById('sidebarStats');
+  stats.textContent = '';
+  const strong = document.createElement('strong');
+  strong.textContent = BUYERS.length;
+  stats.appendChild(strong);
+  stats.appendChild(document.createTextNode('개 후보 (Active ' + active.length + ' / Drop ' + dropped.length + ') '));
+  const rate = document.createElement('span');
+  rate.className = 'rate';
+  rate.style.marginLeft = '8px';
+  rate.textContent = '숏리스트 전환율 ' + (BUYERS.length > 0 ? Math.round(active.length / BUYERS.length * 100) : 0) + '%';
+  stats.appendChild(rate);
+}
+
+// ══════════════════════════════════════
+// RENDER: Master List (Sidebar)
+// ══════════════════════════════════════
+function renderMasterList(sorted) {
+  if (!sorted) sorted = getSorted();
+  const el = document.getElementById('masterList');
+  el.textContent = '';
+  sorted.forEach(function(b) {
+    const btn = document.createElement('button');
+    btn.className = 'master-item' + (selectedBuyerId === b.id ? ' selected' : '') + (b.status === 'DROPPED' ? ' is-dropped' : '');
+    btn.setAttribute('role', 'option');
+    btn.onclick = function() { selectBuyer(b.id); };
+
+    const info = document.createElement('div');
+    info.className = 'master-info';
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'master-name';
+    nameDiv.textContent = b.company_name;
+    if (b.status === 'DROPPED') {
+      appendDropBadge(nameDiv);
+    }
+    info.appendChild(nameDiv);
+    if (b.contact_name) {
+      const contact = document.createElement('div');
+      contact.className = 'master-contact';
+      contact.textContent = b.contact_name;
+      info.appendChild(contact);
+    }
+    btn.appendChild(info);
+
+    // Right side — use innerHTML for complex nested structures (static data only)
+    var right = document.createElement('div');
+    right.className = 'master-right';
+    right.appendChild(createTierBadge(b.tier));
+    right.appendChild(createInterestBars(b.tier));
+    right.appendChild(createStageDots(b));
+    btn.appendChild(right);
+
+    el.appendChild(btn);
+  });
+}
+
+// ══════════════════════════════════════
+// RENDER: Grid View
+// ══════════════════════════════════════
+function renderGrid(sorted) {
+  if (!sorted) sorted = getSorted();
+  const el = document.getElementById('gridBody');
+  el.textContent = '';
+  sorted.forEach(function(b) {
+    const isDropped = b.status === 'DROPPED';
+    const tr = document.createElement('tr');
+    if (isDropped) tr.className = 'is-dropped';
+    tr.style.cursor = 'pointer';
+    tr.onclick = function() { selectBuyer(b.id); };
+
+    // Buyer name cell
+    const tdName = document.createElement('td');
+    tdName.style.borderRight = '1px solid #e5e7eb';
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.gap = '6px';
+    const nameWrap = document.createElement('div');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'buyer-name';
+    nameSpan.textContent = b.company_name;
+    if (isDropped) {
+      appendDropBadge(nameSpan);
+    }
+    nameWrap.appendChild(nameSpan);
+    if (b.contact_name) {
+      nameWrap.appendChild(document.createElement('br'));
+      const contactSpan = document.createElement('span');
+      contactSpan.className = 'buyer-contact-sm';
+      contactSpan.textContent = b.contact_name;
+      nameWrap.appendChild(contactSpan);
+    }
+    wrap.appendChild(nameWrap);
+    wrap.appendChild(createTierBadge(b.tier));
+    tdName.appendChild(wrap);
+    tr.appendChild(tdName);
+
+    // Stage cells
+    STAGES.forEach(function(s) {
+      const td = document.createElement('td');
+      td.className = 'stage-cell';
+      if (b.stages[s]) {
+        const done = document.createElement('div');
+        done.className = 'cell-done';
+        const chk = document.createElement('div');
+        chk.className = 'check';
+        chk.innerHTML = checkSvg();
+        done.appendChild(chk);
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'date';
+        dateDiv.textContent = formatDate(b.stages[s]);
+        done.appendChild(dateDiv);
+        td.appendChild(done);
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'cell-empty';
+        empty.title = '클릭하여 로그 추가';
+        td.appendChild(empty);
+      }
+      tr.appendChild(td);
+    });
+
+    var tdArrow = document.createElement('td');
+    tdArrow.style.textAlign = 'center';
+    tdArrow.style.borderLeft = '1px solid #e5e7eb';
+    tdArrow.appendChild(createArrowBtn(b.id, false));
+    tr.appendChild(tdArrow);
+
+    el.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════
+// RENDER: Kanban View
+// ══════════════════════════════════════
+function renderKanban() {
+  const columns = {};
+  STAGES.forEach(function(s) { columns[s] = []; });
+  BUYERS.forEach(function(b) {
+    const idx = latestStageIdx(b);
+    const stage = idx >= 0 ? STAGES[idx] : 'IDENTIFIED';
+    columns[stage].push(b);
+  });
+
+  const el = document.getElementById('kanbanBoard');
+  el.textContent = '';
+
+  STAGES.forEach(function(stage, si) {
+    const buyers = columns[stage];
+    const activeBuyers = buyers.filter(function(b) { return b.status !== 'DROPPED'; });
+    const droppedBuyers = buyers.filter(function(b) { return b.status === 'DROPPED'; });
+    const nextStage = si < STAGES.length - 1 ? STAGES[si + 1] : null;
+
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'kanban-header';
+    const colName = document.createElement('span');
+    colName.className = 'col-name';
+    colName.textContent = STAGE_LABELS[stage];
+    header.appendChild(colName);
+    const count = document.createElement('span');
+    count.className = 'kanban-count';
+    count.textContent = activeBuyers.length;
+    if (droppedBuyers.length > 0) {
+      const droppedCount = document.createElement('span');
+      droppedCount.style.color = '#dc2626';
+      droppedCount.style.marginLeft = '2px';
+      droppedCount.textContent = '+' + droppedBuyers.length;
+      count.appendChild(droppedCount);
+    }
+    header.appendChild(count);
+    col.appendChild(header);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'kanban-body';
+
+    function createCard(b, showNext) {
+      const isDropped = b.status === 'DROPPED';
+      const card = document.createElement('div');
+      card.className = 'kanban-card' + (isDropped ? ' is-dropped' : '');
+      card.onclick = function() { selectBuyer(b.id); };
+
+      const top = document.createElement('div');
+      top.className = 'card-top';
+      const cardName = document.createElement('span');
+      cardName.className = 'card-name';
+      cardName.textContent = b.company_name;
+      if (isDropped) {
+        appendDropBadge(cardName);
+      }
+      top.appendChild(cardName);
+      top.appendChild(createArrowBtn(b.id, true));
+      card.appendChild(top);
+
+      if (b.contact_name) {
+        const contact = document.createElement('div');
+        contact.className = 'card-contact';
+        contact.textContent = b.contact_name;
+        card.appendChild(contact);
+      }
+
+      var meta = document.createElement('div');
+      meta.className = 'card-meta';
+      meta.appendChild(createTierBadge(b.tier));
+      meta.appendChild(createInterestBars(b.tier));
+      card.appendChild(meta);
+
+      if (showNext && nextStage) {
+        const ns = document.createElement('div');
+        ns.className = 'next-stage';
+        const nl = document.createElement('div');
+        nl.className = 'next-label';
+        nl.textContent = '→ 다음: ' + STAGE_LABELS[nextStage];
+        ns.appendChild(nl);
+        const ni = document.createElement('div');
+        ni.className = 'next-input';
+        const inp = document.createElement('input');
+        inp.type = 'date';
+        inp.placeholder = '날짜 입력';
+        inp.setAttribute('aria-label', STAGE_LABELS[nextStage] + ' 날짜 입력');
+        inp.onclick = function(e) { e.stopPropagation(); };
+        (function(bid, nst) {
+          inp.onchange = function() { setNextStageDate(bid, nst, this.value); };
+        })(b.id, nextStage);
+        ni.appendChild(inp);
+        ns.appendChild(ni);
+        card.appendChild(ns);
+      }
+
+      return card;
+    }
+
+    if (buyers.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'kanban-empty';
+      empty.textContent = '없음';
+      body.appendChild(empty);
+    } else {
+      activeBuyers.forEach(function(b) { body.appendChild(createCard(b, true)); });
+      if (activeBuyers.length > 0 && droppedBuyers.length > 0) {
+        const divider = document.createElement('hr');
+        divider.className = 'kanban-divider';
+        body.appendChild(divider);
+      }
+      droppedBuyers.forEach(function(b) { body.appendChild(createCard(b, false)); });
+    }
+
+    col.appendChild(body);
+    el.appendChild(col);
+  });
+}
+
+// ══════════════════════════════════════
+// RENDER: Timeline View (수직형 타임라인)
+// ══════════════════════════════════════
+function renderTimeline() {
+  const activeBuyers = BUYERS.filter(function(b) { return b.status !== 'DROPPED'; });
+  const sorted = activeBuyers.slice().sort(function(a, b) { return completedCount(b) - completedCount(a); });
+  const el = document.getElementById('timelineList');
+  el.textContent = '';
+
+  if (sorted.length === 0) {
+    const empty = document.createElement('p');
+    empty.style.textAlign = 'center';
+    empty.style.color = '#9ca3af';
+    empty.style.padding = '40px 0';
+    empty.style.fontStyle = 'italic';
+    empty.textContent = 'Active 매수자가 없습니다.';
+    el.appendChild(empty);
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  sorted.forEach(function(b) {
+    const currentIdx = latestStageIdx(b);
+    const pct = Math.round(((currentIdx + 1) / STAGES.length) * 100);
+
+    // 이벤트 수집
+    const events = [];
+    STAGES.forEach(function(s) {
+      if (b.stages[s]) events.push({ date: b.stages[s], label: STAGE_LABELS[s], type: 'stage' });
+    });
+    if (b.ioi_date) events.push({ date: b.ioi_date, label: 'IOI 제출 (' + (b.ioi_value || '') + ')', type: 'ioi' });
+    b.custom_logs.forEach(function(log, li) {
+      events.push({ date: log.date, label: log.content, type: 'log', logIndex: li });
+    });
+    events.sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+    const pendingStages = STAGES.filter(function(s) { return !b.stages[s]; });
+
+    // Card
+    const card = document.createElement('div');
+    card.className = 'timeline-card';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'timeline-header';
+    header.style.cursor = 'pointer';
+    header.onclick = function() { selectBuyer(b.id); };
+    const headerLeft = document.createElement('div');
+    headerLeft.className = 'timeline-header-left';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = b.company_name;
+    headerLeft.appendChild(name);
+    headerLeft.appendChild(createTierBadge(b.tier));
+    if (currentIdx >= 0) {
+      const stageBadge = document.createElement('span');
+      stageBadge.className = 'stage-badge';
+      stageBadge.textContent = STAGE_LABELS[STAGES[currentIdx]];
+      headerLeft.appendChild(stageBadge);
+    }
+    const pctSpan = document.createElement('span');
+    pctSpan.style.fontSize = '11px';
+    pctSpan.style.color = '#6b7280';
+    pctSpan.style.marginLeft = '4px';
+    pctSpan.textContent = pct + '%';
+    headerLeft.appendChild(pctSpan);
+    header.appendChild(headerLeft);
+
+    header.appendChild(createArrowBtn(b.id, false));
+    card.appendChild(header);
+
+    // Vertical timeline
+    const tl = document.createElement('div');
+    tl.className = 'v-timeline';
+
+    events.forEach(function(ev) {
+      const item = document.createElement('div');
+      item.className = 'v-timeline-item';
+      const dot = document.createElement('div');
+      dot.className = 'v-timeline-dot ' + (ev.type === 'stage' ? 'done' : ev.type === 'log' ? 'log' : 'ioi');
+      item.appendChild(dot);
+      const content = document.createElement('div');
+      content.className = 'v-timeline-content';
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'v-timeline-date';
+      dateSpan.textContent = ev.date;
+      content.appendChild(dateSpan);
+      var labelSpan = document.createElement('span');
+      labelSpan.className = 'v-timeline-label ' + ev.type;
+      labelSpan.textContent = ev.label;
+      content.appendChild(labelSpan);
+      if (ev.type === 'log' && ev.logIndex !== undefined) {
+        var delBtn = document.createElement('button');
+        delBtn.className = 'log-delete-btn';
+        delBtn.textContent = '×';
+        delBtn.title = '로그 삭제';
+        delBtn.setAttribute('aria-label', '로그 삭제');
+        (function(bid, li) {
+          delBtn.onclick = function(e) { e.stopPropagation(); deleteCustomLog(bid, li); };
+        })(b.id, ev.logIndex);
+        content.appendChild(delBtn);
+      }
+      item.appendChild(content);
+      tl.appendChild(item);
+    });
+
+    pendingStages.forEach(function(s) {
+      const item = document.createElement('div');
+      item.className = 'v-timeline-item v-timeline-pending';
+      const dot = document.createElement('div');
+      dot.className = 'v-timeline-dot pending';
+      item.appendChild(dot);
+      const content = document.createElement('div');
+      content.className = 'v-timeline-content';
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'v-timeline-date';
+      dateSpan.textContent = '—';
+      content.appendChild(dateSpan);
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'v-timeline-label';
+      labelSpan.style.color = '#9ca3af';
+      labelSpan.textContent = STAGE_LABELS[s] + ' (예정)';
+      content.appendChild(labelSpan);
+      item.appendChild(content);
+      tl.appendChild(item);
+    });
+
+    card.appendChild(tl);
+
+    // Log form
+    const form = document.createElement('div');
+    form.className = 'log-form';
+    const dateInp = document.createElement('input');
+    dateInp.type = 'date';
+    dateInp.id = 'log-date-' + b.id;
+    dateInp.setAttribute('aria-label', '활동 날짜');
+    dateInp.value = today;
+    form.appendChild(dateInp);
+    const textInp = document.createElement('input');
+    textInp.type = 'text';
+    textInp.id = 'log-content-' + b.id;
+    textInp.setAttribute('aria-label', '활동 내용');
+    textInp.placeholder = '활동 내용 입력...';
+    form.appendChild(textInp);
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '추가';
+    addBtn.onclick = function(e) { e.stopPropagation(); addCustomLog(b.id); };
+    form.appendChild(addBtn);
+    card.appendChild(form);
+
+    el.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════
+// RENDER: Detail Panel
+// ══════════════════════════════════════
+function renderDetail(buyer) {
+  const panel = document.getElementById('detailPanel');
+  if (!buyer) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  panel.textContent = '';
+
+  const isDropped = buyer.status === 'DROPPED';
+
+  // Top row
+  const topRow = document.createElement('div');
+  topRow.style.display = 'flex';
+  topRow.style.justifyContent = 'space-between';
+  topRow.style.alignItems = 'start';
+
+  const leftDiv = document.createElement('div');
+  const h3 = document.createElement('h3');
+  h3.textContent = buyer.company_name + ' ';
+  if (isDropped) {
+    appendDropBadge(h3);
+  }
+  leftDiv.appendChild(h3);
+  const sub = document.createElement('p');
+  sub.className = 'detail-sub';
+  sub.textContent = (BUYER_TYPE_LABEL[buyer.buyer_type] || buyer.buyer_type) + ' · ' + (DEAL_ROLE_LABEL[buyer.deal_role] || '');
+  leftDiv.appendChild(sub);
+  topRow.appendChild(leftDiv);
+
+  const rightDiv = document.createElement('div');
+  rightDiv.style.display = 'flex';
+  rightDiv.style.gap = '8px';
+  rightDiv.style.alignItems = 'center';
+  // Drop/복구 버튼
+  const dropBtn = document.createElement('button');
+  dropBtn.className = 'drop-btn ' + (isDropped ? 'dropped-state' : 'active-state');
+  dropBtn.textContent = isDropped ? '↩ 복구' : '✕ Drop 처리';
+  dropBtn.onclick = function() { toggleDropStatus(buyer.id); };
+  rightDiv.appendChild(dropBtn);
+  rightDiv.appendChild(createTierBadge(buyer.tier));
+  topRow.appendChild(rightDiv);
+  panel.appendChild(topRow);
+
+  // Stage tracker
+  const trackerRow = document.createElement('div');
+  trackerRow.style.display = 'flex';
+  trackerRow.style.alignItems = 'center';
+  trackerRow.style.gap = '4px';
+  trackerRow.style.marginBottom = '20px';
+  trackerRow.style.overflowX = 'auto';
+  trackerRow.style.padding = '8px 0';
+
+  STAGES.forEach(function(s, i) {
+    const done = !!buyer.stages[s];
+    if (i > 0) {
+      const line = document.createElement('div');
+      line.className = 'tracker-line ' + (done ? 'done' : 'pending');
+      trackerRow.appendChild(line);
+    }
+    const node = document.createElement('div');
+    node.className = 'tracker-node';
+    const circle = document.createElement('div');
+    circle.className = 'tracker-circle ' + (done ? 'done' : 'pending');
+    if (done) {
+      circle.innerHTML = checkSvg(14);
+    } else {
+      circle.textContent = i + 1;
+    }
+    node.appendChild(circle);
+    const label = document.createElement('span');
+    label.className = 'tracker-label';
+    label.textContent = STAGE_LABELS[s];
+    node.appendChild(label);
+    if (buyer.stages[s]) {
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'tracker-date';
+      dateSpan.textContent = formatDate(buyer.stages[s]);
+      node.appendChild(dateSpan);
+    }
+    trackerRow.appendChild(node);
+  });
+  panel.appendChild(trackerRow);
+
+  // Info grid
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = '1fr 1fr';
+  grid.style.gap = '16px';
+
+  function createSection(title, items) {
+    const sec = document.createElement('div');
+    sec.className = 'detail-section';
+    const h4 = document.createElement('h4');
+    h4.textContent = title;
+    sec.appendChild(h4);
+    const dg = document.createElement('div');
+    dg.className = 'detail-grid';
+    items.forEach(function(item) {
+      const di = document.createElement('div');
+      di.className = 'detail-item';
+      const dt = document.createElement('div');
+      dt.className = 'dt';
+      dt.textContent = item.label;
+      di.appendChild(dt);
+      const dd = document.createElement('div');
+      dd.className = 'dd';
+      dd.textContent = item.value || '—';
+      di.appendChild(dd);
+      dg.appendChild(di);
+    });
+    sec.appendChild(dg);
+    return sec;
+  }
+
+  grid.appendChild(createSection('연락처', [
+    { label: '담당자', value: buyer.contact_name },
+    { label: '이메일', value: buyer.contact_email },
+    { label: '전화', value: buyer.contact_phone },
+    { label: '역할', value: DEAL_ROLE_LABEL[buyer.deal_role] }
+  ]));
+  grid.appendChild(createSection('거래 정보', [
+    { label: 'IOI 금액', value: buyer.ioi_value },
+    { label: 'IOI 일자', value: buyer.ioi_date },
+    { label: 'LOI 금액', value: buyer.loi_value },
+    { label: '비고', value: buyer.notes }
+  ]));
+  panel.appendChild(grid);
+}
+
+function selectBuyer(id) {
+  selectedBuyerId = selectedBuyerId === id ? null : id;
+  renderMasterList();
+  const buyer = BUYERS.find(function(b) { return b.id === id; });
+  renderDetail(selectedBuyerId ? buyer : null);
+}
+
+var currentView = 'grid';
+
+function switchView(id, btn) {
+  currentView = id;
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.view-btn').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (currentView === 'grid') renderGrid();
+  else if (currentView === 'kanban') renderKanban();
+  else if (currentView === 'timeline') renderTimeline();
+}
+
+function renderAll() {
+  var sorted = getSorted();
+  renderSummary();
+  renderMasterList(sorted);
+  renderCurrentView();
+  if (selectedBuyerId) {
+    var buyer = BUYERS.find(function(b) { return b.id === selectedBuyerId; });
+    renderDetail(buyer || null);
+  }
+}
+
+// Initial render
+renderAll();
+</script>
+
+</body>
+</html>
