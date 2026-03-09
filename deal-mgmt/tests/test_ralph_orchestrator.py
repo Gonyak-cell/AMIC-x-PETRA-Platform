@@ -89,7 +89,7 @@ class DummyGeneratorWithIssues(DummyGenerator):
             {
                 "item_id": f"{section_id}_ITEM_0",
                 "name": "문제 항목",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "status": "ISSUE",
                 "issue_level": "HIGH",
                 "description": "중요한 이슈가 발견되었습니다.",
@@ -103,7 +103,7 @@ class DummyGeneratorWithIssues(DummyGenerator):
             {
                 "item_id": f"{section_id}_ITEM_1",
                 "name": "정상 항목",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "status": "OK",
                 "description": "특이사항 없음",
                 "confidence": 0.95,

@@ -13,9 +13,10 @@ pytestmark = pytest.mark.anyio
 
 
 class TestVdrInit:
-    async def test_init_vdr_creates_default_folders(self, client: AsyncClient, transaction_id: str):
-        resp = await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
-        assert resp.status_code == 201
+    async def test_vdr_auto_initialized_on_transaction_creation(self, client: AsyncClient, transaction_id: str):
+        """거래 생성 시 VDR 기본 폴더가 자동 생성된다."""
+        resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+        assert resp.status_code == 200
         folders = resp.json()
         assert len(folders) == 12
         # 필수 폴더 4개 확인
@@ -29,7 +30,7 @@ class TestVdrInit:
         assert "TAX" in categories
 
     async def test_init_vdr_duplicate_returns_400(self, client: AsyncClient, transaction_id: str):
-        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+        """이미 자동 초기화된 거래에 init 호출 시 400 반환."""
         resp = await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
         assert resp.status_code == 400
 
@@ -207,17 +208,16 @@ class TestVdrDocuments:
 
 
 class TestVdrSummary:
-    async def test_vdr_summary_not_initialized(self, client: AsyncClient, transaction_id: str):
+    async def test_vdr_summary_auto_initialized(self, client: AsyncClient, transaction_id: str):
+        """거래 생성 시 VDR이 자동 초기화되어 있다."""
         resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["initialized"] is False
-        assert data["total_folders"] == 0
+        assert data["initialized"] is True
+        assert data["total_folders"] == 12
 
-    async def test_vdr_summary_after_init_and_upload(self, client: AsyncClient, transaction_id: str):
-        await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
-
-        # 첫 번째 폴더에 파일 업로드
+    async def test_vdr_summary_after_upload(self, client: AsyncClient, transaction_id: str):
+        # 첫 번째 폴더에 파일 업로드 (VDR은 거래 생성 시 자동 초기화됨)
         folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
         folder_id = folders_resp.json()[0]["id"]
         await client.post(
@@ -246,7 +246,7 @@ class TestVdrIsolation:
             "/api/v1/transactions",
             json={
                 "name": "VDR Isolation Test",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "target_company_name": "격리 테스트",
                 "client_name": "테스트",
                 "side": "BUY",
@@ -255,10 +255,10 @@ class TestVdrIsolation:
         )
         txn2_id = txn2_resp.json()["id"]
 
-        # 두 번째 거래의 VDR은 비어있어야 함
+        # 두 번째 거래의 VDR도 자동 초기화 (기본 폴더만 존재)
         resp = await client.get(f"/api/v1/transactions/{txn2_id}/vdr/folders")
         assert resp.status_code == 200
-        assert len(resp.json()) == 0
+        assert len(resp.json()) == 12
 
 
 # ── Edge Cases ──────────────────────────────────────────────
@@ -401,13 +401,13 @@ class TestVdrOverview:
         txn_ids = [item["transaction_id"] for item in items]
         assert transaction_id in txn_ids
 
-    async def test_overview_shows_uninitialized(self, client: AsyncClient, transaction_id: str):
-        """VDR 미초기화 거래는 vdr_initialized=false."""
+    async def test_overview_shows_auto_initialized(self, client: AsyncClient, transaction_id: str):
+        """거래 생성 시 VDR이 자동 초기화되어 있다."""
         resp = await client.get("/api/v1/vdr/overview")
         items = resp.json()
         item = next(i for i in items if i["transaction_id"] == transaction_id)
-        assert item["vdr_initialized"] is False
-        assert item["total_folders"] == 0
+        assert item["vdr_initialized"] is True
+        assert item["total_folders"] == 12
         assert item["total_documents"] == 0
         assert item["total_size_bytes"] == 0
 
@@ -504,15 +504,13 @@ class TestVdrAutoUpload:
         assert data2["final_name"] != filename
         assert "계약서_" in data2["final_name"]
 
-    async def test_auto_upload_vdr_not_initialized_returns_400(self, client: AsyncClient, transaction_id: str):
-        """VDR 미초기화 시 400 Bad Request."""
-        # VDR init 없이 바로 auto-upload
+    async def test_auto_upload_succeeds_with_auto_initialized_vdr(self, client: AsyncClient, transaction_id: str):
+        """거래 생성 시 VDR이 자동 초기화되므로 auto-upload가 즉시 성공한다."""
         resp = await client.post(
             f"/api/v1/transactions/{transaction_id}/vdr/documents/auto-upload",
             files={"file": ("test.pdf", io.BytesIO(b"content"), "application/pdf")},
         )
-        assert resp.status_code == 400
-        assert "초기화" in resp.json()["detail"]
+        assert resp.status_code == 201
 
     async def test_auto_upload_hwp_routes_to_tax(self, client: AsyncClient, transaction_id: str):
         """.hwp + 납세 키워드 → TAX 폴더."""

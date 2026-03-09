@@ -64,7 +64,7 @@ ADMIN_CLAIMS = JWTClaims(
 
 SAMPLE_TXN = {
     "name": "프로젝트 클라이언트",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",

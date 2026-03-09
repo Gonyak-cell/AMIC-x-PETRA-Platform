@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
@@ -12,7 +12,6 @@ import type {
   InvestmentType,
 } from "@/modules/ma/types/transaction";
 import {
-  TRANSACTION_SIDE_OPTIONS,
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
@@ -22,11 +21,9 @@ import {
 import { Button, Card, Input, Select, PageHero } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
-const SIDE_OPTIONS = TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "");
-
 const INITIAL: TransactionCreate = {
   name: "Project ",
-  deal_type: "MA",
+  deal_type: "SE",
   side: "SELL",
   target_company_name: "",
   client_name: "",
@@ -38,7 +35,7 @@ function getSuffix(name: string): string {
   return name.startsWith("Project ") ? name.slice("Project ".length) : name;
 }
 
-/** 코드명 미리보기: MA26-EDW-?? */
+/** 코드명 미리보기: SE26-EDW-?? */
 function previewCode(dealType: DealType, name: string): string {
   const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
   if (!suffix) return "";
@@ -52,6 +49,7 @@ export default function CreateTransactionPage() {
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL);
   const [showOptional, setShowOptional] = useState(false);
+  const composingRef = useRef(false);
 
   if (isClient) return <Navigate to="/ma/transactions" replace />;
 
@@ -59,6 +57,14 @@ export default function CreateTransactionPage() {
     key: K,
     val: TransactionCreate[K],
   ) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  const applyProjectName = (raw: string) => {
+    const converted = koreanToEnglish(raw);
+    const clean = converted.replace(/[^A-Za-z\s]/g, "");
+    const capitalized =
+      clean.length > 0 ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
+    set("name", `Project ${capitalized}`);
+  };
 
   const suffix = getSuffix(form.name);
   const canSubmit =
@@ -133,15 +139,16 @@ export default function CreateTransactionPage() {
                     className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                     placeholder="Edward"
                     value={suffix}
+                    onCompositionStart={() => {
+                      composingRef.current = true;
+                    }}
+                    onCompositionEnd={(e) => {
+                      composingRef.current = false;
+                      applyProjectName(e.currentTarget.value);
+                    }}
                     onChange={(e) => {
-                      const converted = koreanToEnglish(e.target.value);
-                      const clean = converted.replace(/[^A-Za-z\s]/g, "");
-                      // 첫 글자 대문자 강제
-                      const capitalized =
-                        clean.length > 0
-                          ? clean.charAt(0).toUpperCase() + clean.slice(1)
-                          : clean;
-                      set("name", `Project ${capitalized}`);
+                      if (composingRef.current) return;
+                      applyProjectName(e.target.value);
                     }}
                   />
                 </div>
@@ -155,15 +162,6 @@ export default function CreateTransactionPage() {
                   </p>
                 )}
               </div>
-
-              <Select
-                label="자문 유형"
-                options={SIDE_OPTIONS}
-                value={form.side}
-                onChange={(e) =>
-                  set("side", e.target.value as TransactionCreate["side"])
-                }
-              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input

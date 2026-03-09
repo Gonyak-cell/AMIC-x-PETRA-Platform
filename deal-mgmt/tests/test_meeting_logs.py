@@ -25,7 +25,7 @@ async def _create_meeting(client: AsyncClient, txn_id: str, **overrides) -> dict
             {"name": "김어드바이저", "email": "kim@example.com", "role": "SELLER_ADVISOR"},
             {
                 "name": "이매수인",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "email": "lee@buyer.com",
                 "organization": "A사",
                 "role": "COUNTERPARTY",

@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "법률문서 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",

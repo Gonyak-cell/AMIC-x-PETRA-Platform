@@ -9,7 +9,6 @@ import {
 } from "@/modules/ma/hooks/useTransactions";
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
-  TRANSACTION_SIDE_OPTIONS,
   TRANSACTION_STATUS_OPTIONS,
   TRANSACTION_STATUS_VARIANT,
   PHASE_CONFIG,
@@ -35,12 +34,6 @@ import EditTransactionModal from "@/modules/ma/components/EditTransactionModal";
 const PHASE_LABELS: Record<string, string> = Object.fromEntries(
   PHASE_CONFIG.map((p) => [p.phase, p.label]),
 );
-
-const SIDE_LABEL: Record<string, string> = {
-  SELL: "Sell",
-  BUY: "Buy",
-  DUAL: "Dual",
-};
 
 function formatKrwCompact(val: string | number | null): string {
   if (val == null) return "-";
@@ -75,7 +68,6 @@ export default function TransactionListPage() {
   const navigate = useNavigate();
   const { canWrite, isClient } = useAuth();
   const [search, setSearch] = useState("");
-  const [sideFilter, setSideFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [editTarget, setEditTarget] = useState<Transaction | null>(null);
@@ -86,7 +78,6 @@ export default function TransactionListPage() {
 
   const { data, isLoading } = useTransactions({
     search: search || undefined,
-    side: (sideFilter as Transaction["side"]) || undefined,
     status: (statusFilter as Transaction["status"]) || undefined,
     limit: pageSize,
     offset: (page - 1) * pageSize,
@@ -131,17 +122,6 @@ export default function TransactionListPage() {
             {row.target_company_name}
           </span>
         </div>
-      ),
-    },
-    {
-      key: "side",
-      header: "유형",
-      width: "80px",
-      align: "center",
-      render: (row) => (
-        <Badge variant={row.side === "SELL" ? "info" : "neutral"} pill>
-          {SIDE_LABEL[row.side] ?? row.side}
-        </Badge>
       ),
     },
     {
@@ -255,17 +235,6 @@ export default function TransactionListPage() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="w-40">
-            <Select
-              label="유형"
-              options={TRANSACTION_SIDE_OPTIONS}
-              value={sideFilter}
-              onChange={(e) => {
-                setSideFilter(e.target.value);
                 setPage(1);
               }}
             />

@@ -106,7 +106,7 @@ class TestAuthGuard:
             "/api/v1/transactions",
             json={
                 "name": "Test",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "side": "SELL",
                 "target_company_name": "Target",
                 "client_name": "Client",

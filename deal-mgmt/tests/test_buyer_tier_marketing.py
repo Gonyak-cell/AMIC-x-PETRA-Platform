@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "프로젝트 에코",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "에코기업",
     "client_name": "의뢰기업",

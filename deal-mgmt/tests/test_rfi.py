@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "RFI 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "RFI대상기업",
     "client_name": "의뢰기업",

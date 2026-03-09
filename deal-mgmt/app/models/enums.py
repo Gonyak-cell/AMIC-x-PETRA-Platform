@@ -4,10 +4,11 @@ import enum
 class DealType(enum.StrEnum):
     """거래 유형 — 코드명 접두사 기준."""
 
-    MA = "MA"  # M&A (인수합병)
-    PE = "PE"  # Private Equity
-    RE = "RE"  # Real Estate
-    IB = "IB"  # Investment Banking
+    SE = "SE"  # 매각 자문 (Sell-side advisory)
+    BU = "BU"  # 인수 (Buy-side)
+    ISSUE = "ISSUE"  # 신주유치 (New share issuance)
+    HYB = "HYB"  # 매각+신주유치 (Hybrid)
+    GEN = "GEN"  # 기타자문 (General advisory)
 
 
 class TransactionSide(enum.StrEnum):

@@ -4,7 +4,7 @@ import pytest
 
 SAMPLE_TXN = {
     "name": "컴플라이언스 테스트",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "컴플기업",
     "client_name": "의뢰기업",

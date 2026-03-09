@@ -2,18 +2,11 @@ import type { SelectOption } from "@/components/ui";
 
 // ── Deal Type ─────────────────────────────────────────
 export const DEAL_TYPE_OPTIONS: SelectOption[] = [
-  { value: "MA", label: "MA — M&A (인수합병)" },
-  { value: "PE", label: "PE — Private Equity" },
-  { value: "RE", label: "RE — Real Estate" },
-  { value: "IB", label: "IB — Investment Banking" },
-];
-
-// ── Transaction Side ──────────────────────────────────
-export const TRANSACTION_SIDE_OPTIONS: SelectOption[] = [
-  { value: "", label: "전체" },
-  { value: "SELL", label: "매도 (Sell-side)" },
-  { value: "BUY", label: "매수 (Buy-side)" },
-  { value: "DUAL", label: "듀얼 (Dual)" },
+  { value: "SE", label: "SE — 매각 자문" },
+  { value: "BU", label: "BU — 인수" },
+  { value: "ISSUE", label: "ISSUE — 신주유치" },
+  { value: "HYB", label: "HYB — 매각+신주유치" },
+  { value: "GEN", label: "GEN — 기타자문" },
 ];
 
 // ── Transaction Status ────────────────────────────────

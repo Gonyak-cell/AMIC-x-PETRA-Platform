@@ -17,7 +17,7 @@ class Transaction(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     code_name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    deal_type: Mapped[DealType] = mapped_column(Enum(DealType), nullable=False, default=DealType.MA)
+    deal_type: Mapped[DealType] = mapped_column(Enum(DealType), nullable=False, default=DealType.SE)
     side: Mapped[TransactionSide] = mapped_column(Enum(TransactionSide), nullable=False)
     phase: Mapped[TransactionPhase] = mapped_column(
         Enum(TransactionPhase), nullable=False, default=TransactionPhase.ENGAGEMENT

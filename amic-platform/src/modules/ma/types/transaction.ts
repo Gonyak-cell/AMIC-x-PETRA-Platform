@@ -1,4 +1,4 @@
-export type DealType = "MA" | "PE" | "RE" | "IB";
+export type DealType = "SE" | "BU" | "ISSUE" | "HYB" | "GEN";
 
 export type TransactionSide = "SELL" | "BUY" | "DUAL";
 

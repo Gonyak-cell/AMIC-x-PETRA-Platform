@@ -110,7 +110,7 @@ class TestJsonSafe:
             "date": date(2026, 6, 15),
             "nested": {"ids": [uuid.uuid4(), uuid.uuid4()]},
             "name": "한글 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "empty": None,
         }
         result = _json_safe(data)
@@ -138,7 +138,7 @@ class TestSanitizeForJson:
             "id": uuid.uuid4(),
             "status": _SampleEnum.ALPHA,
             "name": "테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "count": 3,
             "active": True,
             "notes": None,

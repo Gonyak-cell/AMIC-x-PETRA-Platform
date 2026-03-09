@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "LDD 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "BUY",
     "target_company_name": "주식회사 대상기업",
     "client_name": "주식회사 의뢰기업",
@@ -17,7 +17,7 @@ SAMPLE_SECTIONS = [
             {
                 "item_id": "CORP-01",
                 "name": "설립/등기/정관 검토",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "status": "OK",
                 "issue_level": None,
                 "risk_color": "",
@@ -30,7 +30,7 @@ SAMPLE_SECTIONS = [
             {
                 "item_id": "CORP-02",
                 "name": "이사회 의사록 검토",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "status": "ISSUE",
                 "issue_level": "HIGH",
                 "risk_color": "AMBER",
@@ -49,7 +49,7 @@ SAMPLE_SECTIONS = [
             {
                 "item_id": "TAX-01",
                 "name": "최근 3년 세무신고 적정성",
-                "deal_type": "MA",
+                "deal_type": "SE",
                 "status": "ISSUE",
                 "issue_level": "CRITICAL",
                 "risk_color": "RED",

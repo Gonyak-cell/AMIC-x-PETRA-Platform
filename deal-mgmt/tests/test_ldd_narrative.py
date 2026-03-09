@@ -248,7 +248,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "CORP-01",
             "name": "설립/등기/정관 검토",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "ISSUE",
             "issue_level": "CRITICAL",
             "description": "정관상 이사회 결의 요건 미충족 가능성",
@@ -279,7 +279,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "CORP-02",
             "name": "이사회 의사록 검토",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "OK",
             "issue_level": None,
         }
@@ -303,7 +303,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "CORP-03",
             "name": "주주명부 적정성",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "PENDING",
         }
 
@@ -326,7 +326,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "LABOR-01",
             "name": "근로계약 및 취업규칙",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "ISSUE",
             "issue_level": "MEDIUM",
         }
@@ -353,7 +353,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "CORP-01",
             "name": "설립/등기/정관 검토",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "ISSUE",
             "issue_level": "HIGH",
         }
@@ -453,7 +453,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "COST-01",
             "name": "비용 추적 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "OK",
             "issue_level": None,
         }
@@ -479,7 +479,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "COST-02",
             "name": "비용 추정 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "OK",
             "issue_level": None,
         }
@@ -507,7 +507,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "COST-03",
             "name": "비용 누적 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "ISSUE",
             "issue_level": "MEDIUM",  # 4블록
         }
@@ -538,7 +538,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "FAIL-01",
             "name": "블록 실패 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "ISSUE",
             "issue_level": "LOW",  # 4블록
         }
@@ -634,7 +634,7 @@ class TestNarrativeGenerator:
         item = {
             "item_id": "LEARN-01",
             "name": "학습 패턴 테스트",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "status": "OK",
         }
 

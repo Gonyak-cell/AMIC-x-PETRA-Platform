@@ -77,7 +77,7 @@ async def test_analyze_permits_universal_threshold(client: AsyncClient):
         "/api/v1/transactions",
         json={
             "name": "소규모 거래",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "side": "SELL",
             "target_company_name": "소규모 기업",
             "client_name": "고객",

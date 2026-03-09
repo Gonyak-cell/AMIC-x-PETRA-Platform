@@ -5,14 +5,12 @@ import { useUpdateTransaction } from "@/modules/ma/hooks/useTransactions";
 import type {
   Transaction,
   TransactionUpdate,
-  TransactionSide,
   DealType,
   DealStructure,
   InvestmentType,
   Currency,
 } from "@/modules/ma/types/transaction";
 import {
-  TRANSACTION_SIDE_OPTIONS,
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
@@ -20,8 +18,6 @@ import {
 } from "@/modules/ma/constants";
 
 import { Button, Input, Modal, Select } from "@/components/ui";
-
-const SIDE_OPTIONS = TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "");
 
 interface Props {
   open: boolean;
@@ -75,7 +71,6 @@ export default function EditTransactionModal({
     const patch: TransactionUpdate = {};
     if (form.deal_type !== transaction.deal_type)
       patch.deal_type = form.deal_type;
-    if (form.side !== transaction.side) patch.side = form.side;
     if (form.target_company_name !== transaction.target_company_name)
       patch.target_company_name = form.target_company_name;
     if (form.client_name !== transaction.client_name)
@@ -144,20 +139,12 @@ export default function EditTransactionModal({
             Required
           </legend>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="딜 타입"
-              options={DEAL_TYPE_OPTIONS}
-              value={form.deal_type ?? "MA"}
-              onChange={(e) => set("deal_type", e.target.value as DealType)}
-            />
-            <Select
-              label="자문 유형"
-              options={SIDE_OPTIONS}
-              value={form.side ?? "SELL"}
-              onChange={(e) => set("side", e.target.value as TransactionSide)}
-            />
-          </div>
+          <Select
+            label="딜 타입"
+            options={DEAL_TYPE_OPTIONS}
+            value={form.deal_type ?? "SE"}
+            onChange={(e) => set("deal_type", e.target.value as DealType)}
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input

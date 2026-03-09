@@ -40,7 +40,6 @@ import type {
   DealSetupConfirm,
 } from "@/modules/ma/types/dealSetup";
 import {
-  TRANSACTION_SIDE_OPTIONS,
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
@@ -49,8 +48,6 @@ import {
 
 // ── 상수 ──────────────────────────────────────────────────
 
-const SIDE_OPTIONS = TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "");
-
 const TAB_ITEMS = [
   { id: "manual", label: "수동 입력", icon: PenLine },
   { id: "ai", label: "AI 자동 설계", icon: Sparkles },
@@ -58,7 +55,7 @@ const TAB_ITEMS = [
 
 const INITIAL_MANUAL: TransactionCreate = {
   name: "Project ",
-  deal_type: "MA",
+  deal_type: "SE",
   side: "SELL",
   target_company_name: "",
   client_name: "",
@@ -135,11 +132,20 @@ function ManualTab() {
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL_MANUAL);
   const [showOptional, setShowOptional] = useState(false);
+  const composingRef = useRef(false);
 
   const set = <K extends keyof TransactionCreate>(
     key: K,
     val: TransactionCreate[K],
   ) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  const applyProjectName = (raw: string) => {
+    const converted = koreanToEnglish(raw);
+    const clean = converted.replace(/[^A-Za-z\s]/g, "");
+    const capitalized =
+      clean.length > 0 ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
+    set("name", `Project ${capitalized}`);
+  };
 
   const suffix = getSuffix(form.name);
   const canSubmit =
@@ -188,14 +194,16 @@ function ManualTab() {
                 className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                 placeholder="Edward"
                 value={suffix}
+                onCompositionStart={() => {
+                  composingRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                  composingRef.current = false;
+                  applyProjectName(e.currentTarget.value);
+                }}
                 onChange={(e) => {
-                  const converted = koreanToEnglish(e.target.value);
-                  const clean = converted.replace(/[^A-Za-z\s]/g, "");
-                  const capitalized =
-                    clean.length > 0
-                      ? clean.charAt(0).toUpperCase() + clean.slice(1)
-                      : clean;
-                  set("name", `Project ${capitalized}`);
+                  if (composingRef.current) return;
+                  applyProjectName(e.target.value);
                 }}
               />
             </div>
@@ -208,15 +216,6 @@ function ManualTab() {
               </p>
             )}
           </div>
-
-          <Select
-            label="자문 유형"
-            options={SIDE_OPTIONS}
-            value={form.side}
-            onChange={(e) =>
-              set("side", e.target.value as TransactionCreate["side"])
-            }
-          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -450,9 +449,7 @@ function AITab() {
             </div>
             <div>
               <span className="text-text-muted">딜 타입</span>
-              <p className="font-medium">
-                {txn.deal_type} / {txn.side}
-              </p>
+              <p className="font-medium">{txn.deal_type}</p>
             </div>
             <div>
               <span className="text-text-muted">대상 기업</span>

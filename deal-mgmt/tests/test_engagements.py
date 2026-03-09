@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "프로젝트 감마",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "감마기업",
     "client_name": "의뢰기업",
@@ -19,7 +19,7 @@ SAMPLE_ENGAGEMENT = {
 
 SAMPLE_MEMBER = {
     "name": "김변호사",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "email": "kim@lawfirm.co.kr",
     "organization": "김앤장 법률사무소",
     "role": "LEGAL_COUNSEL",

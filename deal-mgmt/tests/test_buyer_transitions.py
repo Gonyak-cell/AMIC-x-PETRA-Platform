@@ -7,7 +7,7 @@ import uuid
 
 SAMPLE_TXN = {
     "name": "전이 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "기업",
     "client_name": "고객",

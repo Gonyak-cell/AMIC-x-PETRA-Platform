@@ -28,7 +28,7 @@ async def _create_txn(
     """deal_value(억원)를 지정하여 Transaction을 생성하고 ID를 반환한다."""
     payload: dict = {
         "name": "FI v2 매핑 테스트",
-        "deal_type": "MA",
+        "deal_type": "SE",
         "target_company_name": "V2테스트타깃",
         "client_name": "V2테스트고객",
         "side": "SELL",

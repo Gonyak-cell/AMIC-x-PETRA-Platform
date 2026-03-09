@@ -4,7 +4,7 @@ import pytest
 
 SAMPLE_TXN = {
     "name": "DD 체크리스트 테스트",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "DD기업",
     "client_name": "의뢰기업",

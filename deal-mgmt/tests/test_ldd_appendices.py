@@ -140,7 +140,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "LIT-01",
                     "name": "진행중 소송 현황",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "ISSUE",
                     "issue_level": "HIGH",
                     "description": "특허 침해 소송 진행중",
@@ -152,7 +152,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "LIT-02",
                     "name": "종결 소송",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "OK",
                     "description": "노동 소송 종결",
                 },
@@ -161,7 +161,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "IP-01",
                     "name": "특허 현황",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "OK",
                     "ip_type": "특허",
                     "registration_number": "10-1234567",
@@ -173,7 +173,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "CON-01",
                     "name": "주요 공급계약",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "ISSUE",
                     "issue_level": "MEDIUM",
                     "contract_name": "원재료 공급계약",
@@ -187,7 +187,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "GOV-01",
                     "name": "이사회 구성",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "OK",
                 },
             ],
@@ -195,7 +195,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "PER-01",
                     "name": "영업허가",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "ISSUE",
                     "issue_level": "LOW",
                     "permit_name": "식품제조업 허가",
@@ -205,7 +205,7 @@ class TestAppendixGenerator:
                 {
                     "item_id": "PER-02",
                     "name": "NA 항목",
-                    "deal_type": "MA",
+                    "deal_type": "SE",
                     "status": "NA",
                 },
             ],
@@ -295,7 +295,7 @@ class TestAppendixGenerator:
                     {
                         "item_id": "X",
                         "name": "test",
-                        "deal_type": "MA",
+                        "deal_type": "SE",
                         "status": "ISSUE",
                         "description": long_desc,
                     }

@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "리스크 테스트",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "리스크기업",
     "client_name": "의뢰기업",

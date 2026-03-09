@@ -4,15 +4,15 @@ import re
 
 SAMPLE_TXN = {
     "name": "Project Alpha",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",
     "lead_advisor_email": "advisor@example.com",
 }
 
-# 코드명 자동 생성 패턴: MA26-ALP-01 형식
-CODE_NAME_PATTERN = re.compile(r"^(MA|PE|RE|IB)\d{2}-[A-Z]{1,3}-\d{2}$")
+# 코드명 자동 생성 패턴: SE26-ALP-01 형식
+CODE_NAME_PATTERN = re.compile(r"^(SE|BU|ISSUE|HYB|GEN)\d{2}-[A-Z]{1,3}-\d{2}$")
 
 
 # ── Create ─────────────────────────────────────────────────
@@ -21,7 +21,7 @@ async def test_create_transaction(client):
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == "Project Alpha"
-    assert data["deal_type"] == "MA"
+    assert data["deal_type"] == "SE"
     assert data["side"] == "SELL"
     assert data["phase"] == "ENGAGEMENT"
     assert data["status"] == "DRAFT"

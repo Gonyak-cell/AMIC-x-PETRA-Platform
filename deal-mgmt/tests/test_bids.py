@@ -2,7 +2,7 @@
 
 SAMPLE_TXN = {
     "name": "입찰 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "입찰기업",
     "client_name": "의뢰기업",

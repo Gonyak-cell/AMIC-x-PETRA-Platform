@@ -21,7 +21,6 @@ import { cn } from "@/lib/cn";
 
 import { useUpdateTransaction } from "@/modules/ma/hooks/useTransactions";
 import type {
-  TransactionSide,
   Currency,
   DealStructure,
   InvestmentType,
@@ -33,7 +32,6 @@ import type {
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
   PHASE_CONFIG,
-  TRANSACTION_SIDE_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
   CURRENCY_OPTIONS,
@@ -163,17 +161,6 @@ export default function TransactionOverviewTab({
                   if (v && v !== txn.client_name)
                     updateTxn.mutate({ client_name: v });
                 }}
-                disabled={!canWrite()}
-              />
-            </dd>
-            <dt className="text-text-muted">유형</dt>
-            <dd>
-              <InlineSelect
-                options={TRANSACTION_SIDE_OPTIONS.filter((o) => o.value !== "")}
-                value={txn.side}
-                onChange={(v) =>
-                  updateTxn.mutate({ side: v as TransactionSide })
-                }
                 disabled={!canWrite()}
               />
             </dd>

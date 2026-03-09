@@ -4,7 +4,7 @@ import pytest
 
 SAMPLE_TXN = {
     "name": "마케팅자료 테스트 거래",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "테스트 대상기업",
     "client_name": "테스트 의뢰기업",
@@ -67,7 +67,7 @@ async def _other_txn(client):
         json={
             **SAMPLE_TXN,
             "name": "격리 테스트 거래",
-            "deal_type": "MA",
+            "deal_type": "SE",
             "lead_advisor_email": "test@example.com",
         },
     )

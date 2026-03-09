@@ -3,7 +3,7 @@
 # 전제 조건을 모두 충족하는 거래 데이터
 FULL_TXN = {
     "name": "워크플로우 테스트",
-    "deal_type": "MA",
+    "deal_type": "SE",
     "side": "SELL",
     "target_company_name": "대상기업",
     "client_name": "의뢰기업",

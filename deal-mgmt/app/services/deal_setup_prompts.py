@@ -17,7 +17,8 @@ DEAL_SETUP_SYSTEM = """\
 
 ## 유효 Enum 값
 
-deal_type: "MA" | "PE" | "RE" | "IB"
+deal_type: "SE" | "BU" | "ISSUE" | "HYB" | "GEN"
+  - SE: 매각 자문, BU: 인수, ISSUE: 신주유치, HYB: 매각+신주유치, GEN: 기타자문
 side: "SELL" | "BUY" | "DUAL"
 deal_structure: "SHARE_ACQUISITION" | "ASSET_ACQUISITION" | "MERGER" | \
 "CORPORATE_SPLIT" | "MBO" | "OTHER" | null
