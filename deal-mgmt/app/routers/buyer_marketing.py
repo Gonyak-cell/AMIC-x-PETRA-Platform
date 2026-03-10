@@ -16,11 +16,12 @@ from sqlalchemy.orm import aliased
 
 from app.core.database import get_db
 from app.core.dependencies import get_kiis_client
+from app.core.rate_limiter import dart_rate_limiter, export_rate_limiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
-from app.models.enums import AuditAction, BuyerCandidateStatus, MarketingStage
+from app.models.enums import AuditAction, MarketingStage
 from app.schemas.marketing_log import (
     BuyerStageSummary,
     DartFinancialSummaryOut,
@@ -30,6 +31,7 @@ from app.schemas.marketing_log import (
 )
 from app.services import audit_service, transaction_service
 from app.services.buyer_export_service import build_buyer_excel
+from app.services.buyer_status_service import auto_advance_buyer_status, check_status_after_delete, get_advance_target
 from app.services.platform_settings_service import get_or_create_settings
 from app.services.protocols import KIISClientProtocol
 
@@ -50,86 +52,6 @@ async def _get_buyer(db: AsyncSession, txn_id: uuid.UUID, buyer_id: uuid.UUID) -
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="매수자 후보를 찾을 수 없습니다")
     return buyer
-
-
-# ── 마케팅 스테이지 → buyer.status 자동 승격 ──────────────────
-_S = BuyerCandidateStatus
-
-# 마케팅 스테이지 → 목표 buyer status 매핑
-_MARKETING_STATUS_ADVANCE: dict[MarketingStage, BuyerCandidateStatus] = {
-    MarketingStage.EMAIL_SENT: _S.CONTACTED,
-    MarketingStage.NDA_SIGNED: _S.NDA_SIGNED,
-    MarketingStage.CIM_SENT: _S.CIM_SENT,
-    MarketingStage.DD_STARTED: _S.DD_GRANTED,
-}
-
-# 선형 승격 경로 (중간 상태를 순차적으로 통과)
-_ADVANCE_PATH: dict[BuyerCandidateStatus, BuyerCandidateStatus] = {
-    _S.IDENTIFIED: _S.CONTACTED,
-    _S.CONTACTED: _S.NDA_SIGNED,
-    _S.NDA_SENT: _S.NDA_SIGNED,
-    _S.NDA_SIGNED: _S.CIM_SENT,
-    _S.CIM_SENT: _S.INTEREST_CONFIRMED,
-    _S.INTEREST_CONFIRMED: _S.IOI_RECEIVED,
-    _S.IOI_RECEIVED: _S.IOI_ACCEPTED,
-    _S.IOI_ACCEPTED: _S.DD_GRANTED,
-}
-
-# 순서 판정용 ordinal (터미널 상태 제외)
-_STATUS_ORDER: dict[BuyerCandidateStatus, int] = {
-    _S.IDENTIFIED: 0,
-    _S.CONTACTED: 1,
-    _S.NDA_SENT: 2,
-    _S.NDA_SIGNED: 3,
-    _S.CIM_SENT: 4,
-    _S.INTEREST_CONFIRMED: 5,
-    _S.IOI_RECEIVED: 6,
-    _S.IOI_ACCEPTED: 7,
-    _S.DD_GRANTED: 8,
-    _S.DD_IN_PROGRESS: 9,
-    _S.LOI_RECEIVED: 10,
-    _S.LOI_ACCEPTED: 11,
-    _S.SELECTED: 12,
-    _S.BID_SUBMITTED: 13,
-}
-
-_TERMINAL_STATUSES: set[BuyerCandidateStatus] = {
-    _S.REJECTED,
-    _S.BID_DROPPED,
-    _S.BID_NOT_SUBMITTED,
-}
-
-
-async def _auto_advance_buyer_status(
-    db: AsyncSession,
-    buyer: BuyerCandidate,
-    target: BuyerCandidateStatus,
-    actor_email: str,
-) -> None:
-    """buyer.status를 target까지 순차 승격. 이미 같거나 높으면 무시."""
-    cur_ord = _STATUS_ORDER.get(buyer.status)
-    tgt_ord = _STATUS_ORDER.get(target)
-    if cur_ord is None or tgt_ord is None or cur_ord >= tgt_ord:
-        return
-
-    if buyer.status in _TERMINAL_STATUSES:
-        return
-
-    while _STATUS_ORDER.get(buyer.status, 99) < tgt_ord:
-        next_status = _ADVANCE_PATH.get(buyer.status)
-        if next_status is None:
-            break
-        old = buyer.status
-        buyer.status = next_status
-        await audit_service.record(
-            db,
-            entity_type="BuyerCandidate",
-            entity_id=buyer.id,
-            action=AuditAction.UPDATE,
-            actor_email=actor_email,
-            old_value={"status": old.value},
-            new_value={"status": next_status.value},
-        )
 
 
 # ── 마케팅 로그 CRUD ──────────────────────────────────────
@@ -193,9 +115,9 @@ async def create_marketing_log(
         new_value=body.model_dump(mode="json"),
     )
     # 마케팅 스테이지에 대응하는 buyer.status 자동 승격
-    advance_target = _MARKETING_STATUS_ADVANCE.get(body.stage)
+    advance_target = get_advance_target(body.stage)
     if advance_target is not None:
-        await _auto_advance_buyer_status(db, buyer, advance_target, claims.email)
+        await auto_advance_buyer_status(db, buyer, advance_target, claims.email)
     await db.commit()
     await db.refresh(log)
     return MarketingLogOut.model_validate(log)
@@ -225,7 +147,12 @@ async def update_marketing_log(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="마케팅 로그를 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
-    old_value = {k: getattr(log, k) for k in update_data}
+    # NOTE: old_value의 Enum 필드는 audit_service._sanitize_for_json()이 자동 변환하지만,
+    # 명시적 .value 변환을 추가하여 방어적 직렬화 보장
+    old_value = {}
+    for k in update_data:
+        v = getattr(log, k)
+        old_value[k] = v.value if hasattr(v, "value") and not isinstance(v, str) else v
     for k, v in update_data.items():
         setattr(log, k, v)
 
@@ -264,6 +191,8 @@ async def delete_marketing_log(
     log = (await db.execute(q)).scalar_one_or_none()
     if log is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="마케팅 로그를 찾을 수 없습니다")
+    # 삭제되는 스테이지 정보를 먼저 캡처 (삭제 후에는 접근 불가)
+    deleted_stage = log.stage
     await audit_service.record(
         db,
         entity_type="BuyerMarketingLog",
@@ -271,11 +200,13 @@ async def delete_marketing_log(
         action=AuditAction.DELETE,
         actor_email=claims.email,
         old_value={
-            "stage": log.stage,
+            "stage": deleted_stage.value if hasattr(deleted_stage, "value") else str(deleted_stage),
             "log_date": log.log_date,
             "content": log.content,
         },
     )
+    # 자동 승격 트리거 스테이지 삭제 시 감사 경고 기록
+    await check_status_after_delete(db, buyer_id, deleted_stage, claims.email)
     await db.delete(log)
     await db.commit()
 
@@ -293,7 +224,7 @@ async def marketing_stage_summary(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ) -> BuyerStageSummary:
-    """매수자별 6단계 마케팅 완료 현황 — 각 단계별 최신 일자."""
+    """매수자별 8단계 마케팅 완료 현황 — 각 단계별 최신 일자."""
     await check_client_deal_access(db, txn_id, claims)
     await _get_buyer(db, txn_id, buyer_id)
 
@@ -386,6 +317,7 @@ async def dart_company_search(
     """DART 기업 typeahead 검색 — KIIS 서비스 경유."""
     await check_client_deal_access(db, txn_id, claims)
     await transaction_service.get_transaction(db, txn_id)
+    dart_rate_limiter.check(claims.email)
 
     try:
         results = await kiis.search_company(q)
@@ -435,6 +367,7 @@ async def export_buyers_excel(
 ) -> StreamingResponse:
     """Long-List 전체를 Excel로 내보내기 (19열: 역할/컨소시엄/마케팅 포함)."""
     await check_client_deal_access(db, txn_id, claims)
+    export_rate_limiter.check(claims.email)
     txn = await transaction_service.get_transaction(db, txn_id)
 
     q = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id).order_by(BuyerCandidate.created_at)

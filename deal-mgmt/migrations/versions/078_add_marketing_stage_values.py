@@ -23,5 +23,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # PostgreSQL enum에서 값 제거는 불가 — 값이 남아도 무해
-    pass
+    # PostgreSQL enum에서 값 제거는 불가.
+    # CIM_SENT / DD_STARTED를 참조하는 행이 있으면 데이터 무결성 문제 발생하므로
+    # 의도적으로 롤백을 차단한다.
+    raise RuntimeError(
+        "078 downgrade 불가: MarketingStage enum 값(CIM_SENT, DD_STARTED)은 "
+        "PostgreSQL에서 제거할 수 없습니다. 수동 데이터 정리 후 스키마를 조정하세요."
+    )

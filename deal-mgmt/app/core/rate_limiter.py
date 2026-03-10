@@ -76,3 +76,5 @@ class InMemoryRateLimiter:
 fi_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
 si_rate_limiter = InMemoryRateLimiter(max_calls=5, window_seconds=60.0)
 qa_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
+dart_rate_limiter = InMemoryRateLimiter(max_calls=10, window_seconds=60.0)
+export_rate_limiter = InMemoryRateLimiter(max_calls=5, window_seconds=60.0)

@@ -1,4 +1,4 @@
-"""마케팅 활동 로그 스키마 — Short-List 6단계 추적."""
+"""마케팅 활동 로그 스키마 — Short-List 8단계 추적."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class MarketingLogUpdate(BaseModel):
 
 
 class BuyerStageSummary(BaseModel):
-    """매수자별 6단계 마케팅 완료 현황."""
+    """매수자별 8단계 마케팅 완료 현황."""
 
     buyer_id: uuid.UUID
     stages: dict[str, str | None]  # stage -> latest log_date (null if not started)
