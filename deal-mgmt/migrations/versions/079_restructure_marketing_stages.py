@@ -101,11 +101,12 @@ def upgrade() -> None:
         op.execute("COMMIT")
 
         # 2) 데이터 마이그레이션: 구 값 → 신 값
+        #    asyncpg는 bind param을 VARCHAR로 전송하므로 enum 캐스팅 필수
         for old_val, new_val in _UPGRADE_MAP.items():
             op.execute(
-                sa.text("UPDATE buyer_marketing_logs SET stage = :new WHERE stage = :old").bindparams(
-                    new=new_val, old=old_val
-                )
+                sa.text(
+                    "UPDATE buyer_marketing_logs SET stage = :new::marketingstage WHERE stage = :old::marketingstage"
+                ).bindparams(new=new_val, old=old_val)
             )
 
         # 3) 구 enum 값 제거 — 타입 교체 방식
@@ -150,9 +151,9 @@ def downgrade() -> None:
         # 2) 데이터 롤백: 신 값 → 구 값
         for new_val, old_val in _DOWNGRADE_MAP.items():
             op.execute(
-                sa.text("UPDATE buyer_marketing_logs SET stage = :old WHERE stage = :new").bindparams(
-                    old=old_val, new=new_val
-                )
+                sa.text(
+                    "UPDATE buyer_marketing_logs SET stage = :old::marketingstage WHERE stage = :new::marketingstage"
+                ).bindparams(old=old_val, new=new_val)
             )
 
         # 3) 신규 enum 값 제거 — 타입 교체 방식
