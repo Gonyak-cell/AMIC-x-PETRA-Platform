@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { MARKETING_STAGES, countCompletedStages } from "@/modules/ma/constants";
+import { countCompletedStages, effectiveStageCount } from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type {
   BuyerStageSummary,
@@ -24,11 +24,14 @@ export default function ShortListSummaryBar({
   activeFilter,
   onFilterChange,
 }: ShortListSummaryBarProps) {
-  const dropCount = buyers.filter((b) => b.status === "BID_DROPPED").length;
-  const activeCount = buyers.length - dropCount;
-  const ndaCount = overviewData.filter((s) => s.stages.NDA_SIGNED).length;
-  const loiCount = overviewData.filter((s) => s.stages.LOI_RECEIVED).length;
-  const tier1Count = buyers.filter((b) => b.tier === "TIER_1").length;
+  const { dropCount, activeCount, ndaCount, loiCount, tier1Count } = useMemo(() => {
+    const buyerIds = new Set(buyers.map((b) => b.id));
+    const drop = buyers.filter((b) => b.status === "BID_DROPPED").length;
+    const nda = overviewData.filter((s) => buyerIds.has(s.buyer_id) && s.stages.NDA_SIGNED).length;
+    const loi = overviewData.filter((s) => buyerIds.has(s.buyer_id) && s.stages.LOI_RECEIVED).length;
+    const t1 = buyers.filter((b) => b.tier === "TIER_1").length;
+    return { dropCount: drop, activeCount: buyers.length - drop, ndaCount: nda, loiCount: loi, tier1Count: t1 };
+  }, [buyers, overviewData]);
 
   const avgPct = useMemo(() => {
     if (buyers.length === 0) return 0;
@@ -39,7 +42,8 @@ export default function ShortListSummaryBar({
       if (!stages) continue;
       counted++;
       const done = countCompletedStages(stages);
-      total += (done / MARKETING_STAGES.length) * 100;
+      const eff = effectiveStageCount(stages);
+      if (eff > 0) total += (done / eff) * 100;
     }
     return counted > 0 ? Math.round(total / counted) : 0;
   }, [buyers, stageMap]);
@@ -74,7 +78,7 @@ export default function ShortListSummaryBar({
       label: "LOI 접수",
       value: loiCount,
       color: "text-solid-green",
-      filter: "target_meeting",
+      filter: "loi",
     },
     {
       label: "Tier 1",
