@@ -1,4 +1,4 @@
-import { HardDrive, Files, FolderTree, Sparkles, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { maApi } from "@/api/maClient";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { KpiCard } from "@/components/ui/KpiCard";
+
 import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
 import {
   useVdrSummary,
@@ -33,14 +33,6 @@ import VdrFolderTree from "./VdrFolderTree";
 
 interface Props {
   txnId: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 /** flat tree에서 id로 폴더를 재귀 검색 */
@@ -91,10 +83,7 @@ export default function VdrTab({ txnId }: Props) {
   const autoInitRef = useRef(false);
   useEffect(() => {
     const storageKey = `vdr-init-retry-${txnId}`;
-    const retryCount = parseInt(
-      sessionStorage.getItem(storageKey) ?? "0",
-      10,
-    );
+    const retryCount = parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
     if (
       summary &&
       !summary.initialized &&
@@ -103,8 +92,7 @@ export default function VdrTab({ txnId }: Props) {
     ) {
       autoInitRef.current = true;
       sessionStorage.setItem(storageKey, String(retryCount + 1));
-      const delay =
-        retryCount > 0 ? Math.min(1000 * 2 ** retryCount, 8000) : 0;
+      const delay = retryCount > 0 ? Math.min(1000 * 2 ** retryCount, 8000) : 0;
       const timer = window.setTimeout(() => {
         maApi
           .post(`/transactions/${txnId}/vdr/init`, {})
@@ -208,36 +196,14 @@ export default function VdrTab({ txnId }: Props) {
   // ── 초기화 완료 상태 ──────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* KPI 요약 + 빠른 업로드 버튼 */}
+      {/* 빠른 업로드 버튼 */}
       {summary && (
-        <div className="flex items-start gap-4">
-          <div className="grid grid-cols-4 gap-4 flex-1">
-            <KpiCard
-              label="폴더"
-              value={String(summary.total_folders)}
-              icon={FolderTree}
-            />
-            <KpiCard
-              label="문서"
-              value={String(summary.total_documents)}
-              icon={Files}
-            />
-            <KpiCard
-              label="총 용량"
-              value={formatBytes(summary.total_size_bytes)}
-              icon={HardDrive}
-            />
-            <KpiCard
-              label="AI 분석"
-              value={String(extractionCount)}
-              icon={Sparkles}
-            />
-          </div>
+        <div className="flex justify-end">
           <Button
             variant="accent"
             size="sm"
             onClick={() => setShowDirectUpload(!showDirectUpload)}
-            className="mt-1 flex items-center gap-1.5 whitespace-nowrap"
+            className="flex items-center gap-1.5 whitespace-nowrap"
           >
             <Upload className="h-4 w-4" />
             빠른 업로드
@@ -260,7 +226,11 @@ export default function VdrTab({ txnId }: Props) {
           className="grid grid-cols-[280px_1fr] gap-4 items-start overflow-hidden"
           style={{ maxHeight: topHeight }}
         >
-          <Card padding="none" className="overflow-hidden" style={{ maxHeight: topHeight }}>
+          <Card
+            padding="none"
+            className="overflow-hidden"
+            style={{ maxHeight: topHeight }}
+          >
             <VdrFolderTree
               folders={folders}
               selectedFolderId={selectedFolderId}
@@ -275,7 +245,11 @@ export default function VdrTab({ txnId }: Props) {
             />
           </Card>
 
-          <Card padding="none" className="overflow-hidden" style={{ maxHeight: topHeight }}>
+          <Card
+            padding="none"
+            className="overflow-hidden"
+            style={{ maxHeight: topHeight }}
+          >
             <VdrDocumentList
               txnId={txnId}
               folder={selectedFolder}
