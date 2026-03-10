@@ -241,7 +241,7 @@ export default function VdrDocumentList({
             불러오는 중...
           </div>
         ) : documents.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-slate-400">
+          <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 py-8 text-xs text-slate-400">
             {isAllFilesMode ? (
               <>
                 <Files className="h-10 w-10 text-slate-200" />
@@ -255,8 +255,8 @@ export default function VdrDocumentList({
               </>
             ) : (
               <>
-                <Upload className="h-8 w-8 text-slate-300" />
-                <p>파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요</p>
+                <Upload className="h-5 w-5 text-slate-300" />
+                <p>파일을 드래그하거나 업로드 버튼을 클릭하세요</p>
               </>
             )}
           </div>

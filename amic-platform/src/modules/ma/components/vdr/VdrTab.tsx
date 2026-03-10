@@ -138,7 +138,7 @@ export default function VdrTab({ txnId }: Props) {
     useState<DirectUploadBatchResult | null>(null);
 
   // ── 리사이즈 상태 ─────────────────────────────────────
-  const [topHeight, setTopHeight] = useState(400);
+  const [topHeight, setTopHeight] = useState(520);
   const isDragging = useRef(false);
 
   const handleMouseDown = useCallback(
@@ -257,10 +257,10 @@ export default function VdrTab({ txnId }: Props) {
       <div className="flex flex-col">
         {/* 상단: 폴더 트리 + 문서 목록 */}
         <div
-          className="grid grid-cols-[280px_1fr] gap-4 items-start"
+          className="grid grid-cols-[280px_1fr] gap-4 items-start overflow-hidden"
           style={{ maxHeight: topHeight }}
         >
-          <Card padding="none" className="overflow-hidden">
+          <Card padding="none" className="overflow-hidden" style={{ maxHeight: topHeight }}>
             <VdrFolderTree
               folders={folders}
               selectedFolderId={selectedFolderId}
