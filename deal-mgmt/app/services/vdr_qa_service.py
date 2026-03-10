@@ -356,7 +356,7 @@ async def _ensure_file_uris(
         tmp_path = tmp_dir / doc.stored_name
 
         try:
-            await blob_client.download_blob_to_file(doc.stored_name, tmp_path)
+            await blob_client.download_blob_to_file(doc.file_path, tmp_path)
             ref = await upload_vdr_document(tmp_path, doc.original_name, api_key=api_key)
             await save_file_uri(db, doc.id, ref)
             await db.flush()

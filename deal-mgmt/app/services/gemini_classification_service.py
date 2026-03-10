@@ -117,7 +117,7 @@ async def classify_with_file_api(
     tmp_path = tmp_dir / f"{document_id}_{doc.stored_name}"
 
     try:
-        await blob_client.download_blob_to_file(doc.stored_name, tmp_path)
+        await blob_client.download_blob_to_file(doc.file_path, tmp_path)
     except Exception:
         logger.exception("Blob 다운로드 실패: doc=%s", document_id)
         return None
