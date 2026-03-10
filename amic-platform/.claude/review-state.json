@@ -1,0 +1,26 @@
+{
+  "current_round": 1,
+  "last_run": "2026-03-10T23:13:00+09:00",
+  "history": [
+    {
+      "round": "R4/R5",
+      "round_name": "프로덕션 복원력 + 운영 & 코드 건강성 보완",
+      "timestamp": "2026-03-10T23:13:00+09:00",
+      "issues_found": 0,
+      "issues_by_priority": {"P0": 0, "P1": 0, "P2": 0, "P3": 0},
+      "files_reviewed": 8,
+      "hypotheses_tested": 14,
+      "hypotheses_rejected": 14
+    },
+    {
+      "round": "R1-R6",
+      "round_name": "13개 관점 통합",
+      "timestamp": "2026-03-10T22:49:00+09:00",
+      "issues_found": 12,
+      "issues_by_priority": {"P0": 0, "P1": 2, "P2": 4, "P3": 6},
+      "files_reviewed": 7,
+      "hypotheses_tested": 24,
+      "hypotheses_rejected": 12
+    }
+  ]
+}
