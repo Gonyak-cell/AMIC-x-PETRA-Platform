@@ -257,10 +257,10 @@ export default function VdrTab({ txnId }: Props) {
       <div className="flex flex-col">
         {/* 상단: 폴더 트리 + 문서 목록 */}
         <div
-          className="grid grid-cols-[280px_1fr] gap-4"
-          style={{ height: topHeight }}
+          className="grid grid-cols-[280px_1fr] gap-4 items-start"
+          style={{ maxHeight: topHeight }}
         >
-          <Card padding="none" className="h-full overflow-hidden">
+          <Card padding="none" className="overflow-hidden">
             <VdrFolderTree
               folders={folders}
               selectedFolderId={selectedFolderId}
@@ -275,7 +275,7 @@ export default function VdrTab({ txnId }: Props) {
             />
           </Card>
 
-          <Card padding="none" className="h-full overflow-hidden">
+          <Card padding="none" className="overflow-hidden" style={{ maxHeight: topHeight }}>
             <VdrDocumentList
               txnId={txnId}
               folder={selectedFolder}
