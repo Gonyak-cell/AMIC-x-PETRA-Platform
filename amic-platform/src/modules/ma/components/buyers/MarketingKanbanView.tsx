@@ -103,7 +103,6 @@ export default function MarketingKanbanView({
                     return aD - bD;
                   })
                   .map((buyer, _idx, arr) => {
-                    // 구분선: 첫 Drop 카드 직전에 삽입
                     const isFirstDrop =
                       buyer.status === "BID_DROPPED" &&
                       (_idx === 0 || arr[_idx - 1].status !== "BID_DROPPED") &&
@@ -114,55 +113,54 @@ export default function MarketingKanbanView({
                         {isFirstDrop && (
                           <hr className="border-t border-dashed border-gray-300 my-1" />
                         )}
-                  <div
-                    key={buyer.id}
-                    className={`rounded border border-gray-border p-2 transition-all ${
-                      buyer.status === "BID_DROPPED"
-                        ? "bg-gray-50 grayscale opacity-[0.55] hover:opacity-70"
-                        : "bg-white hover:border-accent/30 hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-text-dark truncate max-w-[140px]">
-                        {buyer.company_name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onSelectBuyer(buyer.id)}
-                        className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-accent transition-colors"
-                        aria-label={`${buyer.company_name} 상세 보기`}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                    {buyer.contact_name && (
-                      <p className="text-[10px] text-gray-500 mb-1 truncate">
-                        {buyer.contact_name}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
-                        {buyer.tier && <InterestIndicator tier={buyer.tier} />}
+                        <div
+                          className={`rounded border border-gray-border p-2 transition-all ${
+                            buyer.status === "BID_DROPPED"
+                              ? "bg-gray-50 grayscale opacity-[0.55] hover:opacity-70"
+                              : "bg-white hover:border-accent/30 hover:shadow-sm"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-text-dark truncate max-w-[140px]">
+                              {buyer.company_name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onSelectBuyer(buyer.id)}
+                              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-accent transition-colors"
+                              aria-label={`${buyer.company_name} 상세 보기`}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {buyer.contact_name && (
+                            <p className="text-[10px] text-gray-500 mb-1 truncate">
+                              {buyer.contact_name}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
+                              {buyer.tier && <InterestIndicator tier={buyer.tier} />}
+                            </div>
+                            {stageMap.get(buyer.id)?.[stage] && (
+                              <span className="text-[10px] text-gray-500">
+                                {stageMap.get(buyer.id)?.[stage]}
+                              </span>
+                            )}
+                          </div>
+                          {canWrite && nextStage && (
+                            <div className="mt-1.5 pt-1.5 border-t border-gray-border">
+                              <InlineLogInput
+                                txnId={txnId}
+                                buyerId={buyer.id}
+                                defaultStage={nextStage}
+                                compact
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {stageMap.get(buyer.id)?.[stage] && (
-                        <span className="text-[10px] text-gray-500">
-                          {stageMap.get(buyer.id)?.[stage]}
-                        </span>
-                      )}
-                    </div>
-                    {canWrite && nextStage && (
-                      <div className="mt-1.5 pt-1.5 border-t border-gray-border">
-                        <InlineLogInput
-                          txnId={txnId}
-                          buyerId={buyer.id}
-                          defaultStage={nextStage}
-                          compact
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
                     );
                   })}
                 {stageBuyers.length === 0 && (

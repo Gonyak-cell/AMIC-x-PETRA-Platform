@@ -39,7 +39,7 @@ import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import type { KpiFilter } from "@/modules/ma/components/buyers/ShortListOverview";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
-import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
+import FunnelNav from "@/modules/ma/components/buyers/FunnelNav";
 import ShortListSummaryBar from "@/modules/ma/components/buyers/ShortListSummaryBar";
 import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
 import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
@@ -69,7 +69,6 @@ import {
   EmptyState,
   InlineSelect,
   Spinner,
-  Tabs,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 
@@ -316,36 +315,45 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   return (
     <>
       <div className="space-y-4">
-        {/* Funnel KPI Bar */}
-        <FunnelKPIBar buyers={allBuyers} />
+        {/* Funnel Navigation (탭 + 퍼널 통합) */}
+        <FunnelNav
+          buyers={allBuyers}
+          activeStep={buyerSubTab}
+          onStepChange={setBuyerSubTab}
+        />
 
-        <div className="flex items-center justify-between">
-          <Tabs
-            tabs={[
-              {
-                id: "long-list",
-                label: "Long List",
-                badge: allBuyers.length || undefined,
-              },
-              {
-                id: "short-list",
-                label: "Short List",
-                badge: shortListBuyers.length || undefined,
-              },
-            ]}
-            activeTab={buyerSubTab}
-            onTabChange={(tab) =>
-              setBuyerSubTab(tab as "long-list" | "short-list")
-            }
-            variant="pill"
-            size="sm"
-          />
-          <div className="flex items-center gap-2">
+        {/* 인라인 KPI 바 + 액션 버튼 */}
+        <div className="flex items-center justify-between gap-3">
+          {!isBuyersLoading && buyerSubTab === "short-list" && (
+            <ShortListSummaryBar
+              buyers={shortListBuyers}
+              overviewData={overviewMerged}
+              stageMap={stageMap}
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+            />
+          )}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             {!isBuyersLoading && buyerSubTab === "short-list" && (
-              <ShortListViewToggle
-                viewMode={shortListViewMode}
-                onViewModeChange={setShortListViewMode}
-              />
+              <>
+                <ShortListViewToggle
+                  viewMode={shortListViewMode}
+                  onViewModeChange={setShortListViewMode}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMasterListOpen(!masterListOpen)}
+                  className="p-1.5 rounded-lg text-gray-500 hover:text-text-dark hover:bg-gray-100 transition-colors"
+                  aria-expanded={masterListOpen}
+                  aria-label="마스터 리스트 토글"
+                >
+                  {masterListOpen ? (
+                    <PanelLeftClose className="h-4 w-4" />
+                  ) : (
+                    <PanelLeftOpen className="h-4 w-4" />
+                  )}
+                </button>
+              </>
             )}
             {!isBuyersLoading && buyerSubTab === "long-list" && (
               <Button
@@ -492,14 +500,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
         {buyerSubTab === "short-list" && (
           <>
-            <ShortListSummaryBar
-              buyers={shortListBuyers}
-              overviewData={overviewMerged}
-              stageMap={stageMap}
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-            />
-
             <div className="flex gap-4">
               {shortListBuyers.length > 0 && (
                 <div
@@ -520,24 +520,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setMasterListOpen(!masterListOpen)}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-text-dark hover:bg-gray-100 transition-colors"
-                    aria-expanded={masterListOpen}
-                    aria-label="마스터 리스트 토글"
-                  >
-                    {masterListOpen ? (
-                      <PanelLeftClose className="h-5 w-5" />
-                    ) : (
-                      <PanelLeftOpen className="h-5 w-5" />
-                    )}
-                  </button>
-                  <span className="text-xs text-text-muted">
-                    {masterListOpen ? "접기" : "펼치기"}
-                  </span>
-                </div>
                 {shortListViewMode === "grid" && (
                   <MarketingGridView
                     buyers={shortListBuyers}

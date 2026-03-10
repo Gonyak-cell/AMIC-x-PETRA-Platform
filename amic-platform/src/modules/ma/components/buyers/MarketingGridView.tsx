@@ -105,7 +105,10 @@ export default function MarketingGridView({
                   )}
                 >
                   <td
-                    className="px-3 py-1.5 border-r border-gray-border sticky left-0 z-[1] bg-white group-hover:bg-accent/5 cursor-pointer"
+                    className={cn(
+                      "px-3 py-1.5 border-r border-gray-border sticky left-0 z-[1] cursor-pointer",
+                      isDropped ? "bg-gray-50" : "bg-white group-hover:bg-accent/5",
+                    )}
                     tabIndex={0}
                     role="button"
                     onClick={() => onSelectBuyer(buyer.id)}

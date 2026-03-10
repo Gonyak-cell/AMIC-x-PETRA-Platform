@@ -52,7 +52,6 @@ export default function ShortListSummaryBar({
     color: string;
     filter: KpiFilter;
     icon?: "drop";
-    progressPct?: number;
   }[] = [
     {
       label: "Active 후보",
@@ -86,16 +85,15 @@ export default function ShortListSummaryBar({
       filter: "tier1",
     },
     {
-      label: "평균 진행률",
+      label: "진행률",
       value: `${avgPct}%`,
       color: "text-accent",
       filter: "all",
-      progressPct: avgPct,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       {cards.map((card) => {
         const isActive = activeFilter === card.filter && card.filter !== "all";
         return (
@@ -106,27 +104,17 @@ export default function ShortListSummaryBar({
             aria-label={`${card.label}: ${card.value}`}
             onClick={() => onFilterChange(isActive ? "all" : card.filter)}
             className={cn(
-              "rounded-dr border px-3 py-2.5 text-center transition-all cursor-pointer",
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer",
               isActive
-                ? "border-accent bg-accent/5 ring-1 ring-accent/30"
-                : "border-gray-300 bg-white hover:border-gray-400 hover:shadow-sm",
+                ? "bg-accent/10 text-accent border border-accent/30 font-medium"
+                : "bg-gray-100 text-text-body border border-transparent hover:bg-gray-200",
             )}
           >
-            <p className={`text-2xl font-bold leading-tight ${card.color}`}>
-              {card.icon === "drop" && dropCount > 0 && (
-                <AlertTriangle className="inline-block w-4 h-4 mr-1 -mt-0.5" />
-              )}
-              {card.value}
-            </p>
-            {card.progressPct != null && (
-              <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200" role="progressbar" aria-valuenow={card.progressPct} aria-valuemin={0} aria-valuemax={100}>
-                <div
-                  className="h-full rounded-full bg-accent transition-all duration-500"
-                  style={{ width: `${Math.min(card.progressPct, 100)}%` }}
-                />
-              </div>
+            {card.icon === "drop" && dropCount > 0 && (
+              <AlertTriangle className="w-3 h-3 text-negative flex-shrink-0" />
             )}
-            <p className="mt-1 text-xs text-gray-500">{card.label}</p>
+            <span className="font-medium">{card.label}</span>
+            <span className="font-bold tabular-nums">{card.value}</span>
           </button>
         );
       })}
