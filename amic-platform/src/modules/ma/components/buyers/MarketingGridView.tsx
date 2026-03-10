@@ -2,15 +2,65 @@ import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui";
-import BuyerTierBadge from "./BuyerTierBadge";
 import MarketingGridCell from "./MarketingGridCell";
 import {
   MARKETING_STAGES,
   MARKETING_STAGE_LABELS,
   countCompletedStages,
+  latestCompletedStageIndex,
 } from "@/modules/ma/constants";
-import type { BuyerCandidate } from "@/modules/ma/types/buyer";
+import type { BuyerCandidate, BuyerTier } from "@/modules/ma/types/buyer";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
+
+/* ── Compact Tier Badge (Grid 전용) ─────────────── */
+const TIER_SHORT: Partial<Record<BuyerTier, string>> = {
+  TIER_1: "T1",
+  TIER_2: "T2",
+  TIER_3: "T3",
+  // NOT_TARGET: Grid에서는 Tier 뱃지를 표시하지 않음 (의도적 생략)
+};
+const TIER_COLOR: Partial<Record<BuyerTier, string>> = {
+  TIER_1: "bg-accent-light text-amic-400",
+  TIER_2: "bg-amic-50 text-amic-400",
+  TIER_3: "bg-amic-100 text-amic-500",
+};
+
+/* ── Circular SVG Progress ──────────────────────── */
+const CIRCLE_R = 11;
+const CIRCLE_C = 2 * Math.PI * CIRCLE_R;
+
+function CircularProgress({ pct, label }: { pct: number; label: string }) {
+  const offset = CIRCLE_C - (pct / 100) * CIRCLE_C;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <svg width="28" height="28" viewBox="0 0 28 28" className="block">
+        <circle
+          cx="14"
+          cy="14"
+          r={CIRCLE_R}
+          fill="none"
+          className="stroke-gray-200"
+          strokeWidth="3"
+        />
+        <circle
+          cx="14"
+          cy="14"
+          r={CIRCLE_R}
+          fill="none"
+          className="stroke-green-500 transition-all duration-500"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={CIRCLE_C}
+          strokeDashoffset={offset}
+          transform="rotate(-90 14 14)"
+        />
+      </svg>
+      <span className="text-[10px] text-gray-500 whitespace-nowrap">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 interface MarketingGridViewProps {
   buyers: BuyerCandidate[];
@@ -55,33 +105,34 @@ export default function MarketingGridView({
         Grid View — 매수자 × 마케팅 단계
       </p>
       <div
-        className="overflow-x-auto border border-gray-border rounded-dr"
+        className="overflow-x-auto rounded-lg"
         tabIndex={0}
         role="region"
         aria-label="바이어 그리드 스크롤"
       >
         <table
-          className="w-full text-sm"
+          className="w-full text-sm border-separate"
+          style={{ borderSpacing: "0 6px" }}
           aria-label="매수자별 마케팅 단계 현황"
           data-testid="marketing-grid"
         >
           <thead>
-            <tr className="bg-green-500 border-b-2 border-green-600">
-              <th className="text-left px-3 py-2 font-medium text-white whitespace-nowrap w-[140px] max-w-[140px] sticky left-0 z-10 bg-green-500">
+            <tr className="bg-green-500">
+              <th className="text-left px-3 py-2.5 font-medium text-white whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 z-10 bg-green-500 rounded-l-lg">
                 매수자
               </th>
               {MARKETING_STAGES.map((s) => (
                 <th
                   key={s}
-                  className="px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50"
+                  className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap"
                 >
                   {MARKETING_STAGE_LABELS[s]}
                 </th>
               ))}
-              <th className="px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50 min-w-[60px]">
+              <th className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap min-w-[60px]">
                 진행률
               </th>
-              <th className="w-10 border-l border-gray-border">
+              <th className="w-10 rounded-r-lg">
                 <span className="sr-only">상세</span>
               </th>
             </tr>
@@ -94,25 +145,32 @@ export default function MarketingGridView({
               const progressPct = Math.round(
                 (completedCount / MARKETING_STAGES.length) * 100,
               );
+              const hasProgress = completedCount > 0;
+              // 마지막 완료 단계 다음 = "다음 단계" CTA 표시 위치
+              // 중간 단계가 비어 있어도 마지막 완료 이후만 표시 (의도적)
+              const nextIdx = stages
+                ? latestCompletedStageIndex(stages) + 1
+                : 0; // stages 없으면 첫 단계(IDENTIFIED)가 다음
               return (
                 <tr
                   key={buyer.id}
                   className={cn(
-                    "border-b border-dashed border-gray-200 last:border-b-0 group",
+                    "group transition-shadow",
                     isDropped
-                      ? "bg-gray-50 grayscale opacity-[0.55] hover:opacity-70"
-                      : "hover:bg-accent/5",
+                      ? "grayscale opacity-[0.55] hover:opacity-70"
+                      : hasProgress
+                        ? "bg-white shadow-sm hover:shadow-md"
+                        : "bg-white/60 hover:bg-white",
                   )}
                 >
                   <td
                     className={cn(
-                      "px-3 py-1.5 border-r border-gray-border sticky left-0 z-[1] cursor-pointer",
-                      isDropped
-                        ? "bg-gray-50"
-                        : "bg-white group-hover:bg-accent/5",
+                      "px-3 py-2 sticky left-0 z-[1] cursor-pointer rounded-l-lg",
+                      isDropped ? "bg-gray-50" : "bg-white",
                     )}
                     tabIndex={0}
                     role="button"
+                    aria-label={`${buyer.company_name} 상세 보기`}
                     onClick={() => onSelectBuyer(buyer.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -121,11 +179,23 @@ export default function MarketingGridView({
                       }
                     }}
                   >
-                    <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-2">
+                      {/* Compact Tier Badge */}
+                      {buyer.tier && TIER_SHORT[buyer.tier] && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold flex-shrink-0",
+                            TIER_COLOR[buyer.tier] ??
+                              "bg-gray-200 text-gray-600",
+                          )}
+                        >
+                          {TIER_SHORT[buyer.tier]}
+                        </span>
+                      )}
                       <div className="min-w-0">
                         <span
                           className={cn(
-                            "font-medium text-xs truncate block max-w-[80px]",
+                            "font-medium text-xs truncate block max-w-[140px]",
                             isDropped
                               ? "text-gray-500 line-through"
                               : "text-text-dark",
@@ -134,15 +204,14 @@ export default function MarketingGridView({
                           {buyer.company_name}
                         </span>
                         {buyer.contact_name && (
-                          <span className="text-[10px] text-gray-500 truncate block max-w-[80px]">
+                          <span className="text-[10px] text-gray-500 truncate block max-w-[140px]">
                             {buyer.contact_name}
                           </span>
                         )}
                       </div>
-                      {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
                     </div>
                   </td>
-                  {MARKETING_STAGES.map((stage) => (
+                  {MARKETING_STAGES.map((stage, idx) => (
                     <MarketingGridCell
                       key={stage}
                       txnId={txnId}
@@ -151,26 +220,24 @@ export default function MarketingGridView({
                       dateValue={stages?.[stage] ?? null}
                       canWrite={canWrite}
                       buyerName={buyer.company_name}
+                      isNext={
+                        !isDropped &&
+                        idx === nextIdx &&
+                        nextIdx < MARKETING_STAGES.length
+                      }
                     />
                   ))}
-                  <td className="px-2 py-1.5 border-l border-gray-border">
-                    <div className="flex items-center gap-1">
-                      <div className="h-1.5 flex-1 max-w-[40px] rounded-full bg-gray-200">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                        {completedCount}/{MARKETING_STAGES.length}
-                      </span>
-                    </div>
+                  <td className="px-2 py-2">
+                    <CircularProgress
+                      pct={progressPct}
+                      label={`${completedCount}/${MARKETING_STAGES.length}`}
+                    />
                   </td>
-                  <td className="text-center border-l border-gray-border">
+                  <td className="text-center rounded-r-lg">
                     <button
                       type="button"
                       onClick={() => onSelectBuyer(buyer.id)}
-                      className="p-1 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-accent transition-colors"
+                      className="p-1 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-accent transition-colors"
                       aria-label={`${buyer.company_name} 상세`}
                     >
                       <ChevronRight className="h-4 w-4" />
