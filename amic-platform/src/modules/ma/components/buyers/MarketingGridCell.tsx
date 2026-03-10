@@ -44,12 +44,19 @@ export default function MarketingGridCell({
       role="button"
       aria-label={buyerName ? `${buyerName} ${stage} 활동 기록` : undefined}
       onClick={handleClick}
-      onKeyDown={(e) => { if (e.key === "Escape" && showInput) { setShowInput(false); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && showInput) {
+          setShowInput(false);
+        } else if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       className={cn(
-        "px-2 py-1.5 text-center text-xs cursor-pointer transition-colors border-r border-gray-border",
+        "px-3 py-2 text-center text-xs cursor-pointer transition-colors border-r border-gray-border",
         isEmpty
-          ? "text-text-muted hover:bg-accent/5"
-          : "text-text-dark hover:bg-accent/10",
+          ? "text-text-muted hover:bg-accent/10"
+          : "text-text-dark hover:bg-accent/15",
       )}
     >
       {showInput && isEmpty ? (
@@ -61,7 +68,7 @@ export default function MarketingGridCell({
           onComplete={() => setShowInput(false)}
         />
       ) : isEmpty ? (
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-300 hover:border-accent">
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-400 hover:border-accent">
           <span className="sr-only">미완료</span>
         </span>
       ) : (
@@ -69,7 +76,9 @@ export default function MarketingGridCell({
           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent text-white">
             <Check className="h-3 w-3" />
           </span>
-          <span className="text-[9px] text-accent font-medium">{shortDate}</span>
+          <span className="text-[10px] text-accent font-semibold">
+            {shortDate}
+          </span>
         </span>
       )}
 

@@ -3,47 +3,52 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InlineLogInput from "./InlineLogInput";
-import { MARKETING_STAGES, MARKETING_STAGE_LABELS, buildStageMap } from "@/modules/ma/constants";
+import {
+  MARKETING_STAGES,
+  MARKETING_STAGE_LABELS,
+  latestCompletedStageIndex,
+} from "@/modules/ma/constants";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
-import type {
-  BuyerStageSummary,
-  MarketingStage,
-} from "@/modules/ma/types/marketing_log";
+import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 
 interface MarketingTimelineViewProps {
   buyers: BuyerCandidate[];
-  overviewData: BuyerStageSummary[];
+  stageMap: Map<string, Partial<Record<MarketingStage, string | null>>>;
   onSelectBuyer: (buyerId: string) => void;
   canWrite: boolean;
   txnId: string;
 }
 
-function latestStageIndex(
-  stages: Partial<Record<MarketingStage, string | null>>,
-): number {
-  for (let i = MARKETING_STAGES.length - 1; i >= 0; i--) {
-    if (stages[MARKETING_STAGES[i]]) return i;
-  }
-  return -1;
+/** 두 날짜(YYYY-MM-DD) 사이 일수 차이 */
+function daysBetween(a: string, b: string): number | null {
+  const da = new Date(a);
+  const db = new Date(b);
+  if (isNaN(da.getTime()) || isNaN(db.getTime())) return null;
+  return Math.round((db.getTime() - da.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+const MILESTONE_STAGES = new Set<MarketingStage>([
+  "NDA_SIGNED",
+  "TARGET_MEETING",
+]);
 
 export default function MarketingTimelineView({
   buyers,
-  overviewData,
+  stageMap,
   onSelectBuyer,
   canWrite,
   txnId,
 }: MarketingTimelineViewProps) {
-  const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
-
   const sorted = useMemo(
     () =>
       [...buyers].sort((a, b) => {
-        const aIdx = latestStageIndex(
-          stageMap.get(a.id) ?? ({} as Partial<Record<MarketingStage, string | null>>),
+        const aIdx = latestCompletedStageIndex(
+          stageMap.get(a.id) ??
+            ({} as Partial<Record<MarketingStage, string | null>>),
         );
-        const bIdx = latestStageIndex(
-          stageMap.get(b.id) ?? ({} as Partial<Record<MarketingStage, string | null>>),
+        const bIdx = latestCompletedStageIndex(
+          stageMap.get(b.id) ??
+            ({} as Partial<Record<MarketingStage, string | null>>),
         );
         return bIdx - aIdx;
       }),
@@ -64,10 +69,14 @@ export default function MarketingTimelineView({
       <p className="text-xs font-medium text-accent mb-2">
         TIMELINE VIEW — 수직 연대기
       </p>
-      <div className="space-y-4">
+      <p className="sr-only">
+        각 매수 후보자별 마케팅 단계 진행 현황을 시간순으로 표시합니다. 단계:
+        후보 발굴, 이메일 발송, 전화 접촉, 자문사 미팅, NDA 체결, 대상 미팅.
+      </p>
+      <div className="space-y-4" data-testid="marketing-timeline">
         {sorted.map((buyer) => {
           const stages = stageMap.get(buyer.id);
-          const currentIdx = stages ? latestStageIndex(stages) : -1;
+          const currentIdx = stages ? latestCompletedStageIndex(stages) : -1;
           const pct =
             currentIdx >= 0
               ? Math.round(((currentIdx + 1) / MARKETING_STAGES.length) * 100)
@@ -114,7 +123,7 @@ export default function MarketingTimelineView({
                 <button
                   type="button"
                   onClick={() => onSelectBuyer(buyer.id)}
-                  className="p-1 text-text-muted hover:text-accent transition-colors"
+                  className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-accent transition-colors"
                   aria-label={`${buyer.company_name} 상세 보기`}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -124,41 +133,52 @@ export default function MarketingTimelineView({
               {/* Vertical timeline */}
               <div className="px-4 py-3">
                 {completedStages.length === 0 ? (
-                  <p className="text-xs text-text-muted py-2">
+                  <p className="text-xs text-gray-500 py-2">
                     아직 진행된 단계가 없습니다.
                   </p>
                 ) : (
                   <div className="relative ml-1.5">
                     {completedStages.map((item, idx) => {
-                      const isNDA = item.stage === "NDA_SIGNED";
+                      const isMilestone = MILESTONE_STAGES.has(item.stage);
                       const isLast = idx === completedStages.length - 1;
-                      
+                      const prevDate =
+                        idx > 0 ? completedStages[idx - 1].date : null;
+                      const elapsed = prevDate
+                        ? daysBetween(prevDate, item.date)
+                        : null;
 
                       return (
-                        <div key={item.stage} className="flex items-start gap-3 relative">
+                        <div
+                          key={item.stage}
+                          className="flex items-start gap-3 relative"
+                        >
                           {/* Vertical line + dot */}
                           <div className="flex flex-col items-center">
                             <div
-                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 ${
-                                isNDA ? "bg-accent ring-2 ring-accent/30" : "bg-accent"
+                              className={`rounded-full flex-shrink-0 mt-1 ${
+                                isMilestone
+                                  ? "w-3.5 h-3.5 bg-accent ring-2 ring-accent/30"
+                                  : "w-2.5 h-2.5 bg-accent"
                               }`}
                             />
                             {!isLast && (
-                              <div className="w-px flex-1 min-h-[20px] bg-gray-200" />
+                              <div className="w-px flex-1 min-h-[20px] bg-gray-200 relative">
+                                {elapsed != null && elapsed > 0 && (
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-500 whitespace-nowrap">
+                                    {elapsed}일
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                           {/* Date + stage label */}
                           <div className="pb-3">
-                            <span className="text-sm text-text-muted">
+                            <span className="text-sm text-gray-500">
                               {item.date}
                             </span>
-                            <span
-                              className={`text-sm font-semibold ml-2 ${
-                                "text-text-dark"
-                              }`}
-                            >
+                            <span className="text-sm font-semibold ml-2 text-text-dark">
                               {MARKETING_STAGE_LABELS[item.stage]}
-                                                          </span>
+                            </span>
                           </div>
                         </div>
                       );

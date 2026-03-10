@@ -90,6 +90,24 @@ export function buildStageMap(
   return new Map(overviewData.map((s) => [s.buyer_id, s.stages]));
 }
 
+/** 가장 최근 완료된 마케팅 단계 인덱스 (-1 = 없음) */
+export function latestCompletedStageIndex(
+  stages: Partial<Record<MarketingStage, string | null>>,
+): number {
+  for (let i = MARKETING_STAGES.length - 1; i >= 0; i--) {
+    if (stages[MARKETING_STAGES[i]]) return i;
+  }
+  return -1;
+}
+
+/** 완료된 마케팅 단계 수 */
+export function countCompletedStages(
+  stages: Partial<Record<MarketingStage, string | null>> | undefined,
+): number {
+  if (\!stages) return 0;
+  return MARKETING_STAGES.filter((s) => stages[s]).length;
+}
+
 // ── Buyer Type ────────────────────────────────────────
 export const BUYER_TYPE_OPTIONS: SelectOption[] = [
   { value: "", label: "전체" },

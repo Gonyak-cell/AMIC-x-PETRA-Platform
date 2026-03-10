@@ -259,6 +259,22 @@
   border-bottom-color: rgba(255, 255, 255, 0.45) !important;
 }
 
+/* ── Short List 뷰 전환 fade-in ── */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-fade-in {
+  animation: fadeSlideIn 200ms ease-out;
+}
+
 /* ── Accessibility: Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,
