@@ -105,8 +105,10 @@ def upgrade() -> None:
         for old_val, new_val in _UPGRADE_MAP.items():
             op.execute(
                 sa.text(
-                    "UPDATE buyer_marketing_logs SET stage = :new::marketingstage WHERE stage = :old::marketingstage"
-                ).bindparams(new=new_val, old=old_val)
+                    "UPDATE buyer_marketing_logs"
+                    " SET stage = CAST(:new_val AS marketingstage)"
+                    " WHERE stage = CAST(:old_val AS marketingstage)"
+                ).bindparams(new_val=new_val, old_val=old_val)
             )
 
         # 3) 구 enum 값 제거 — 타입 교체 방식
@@ -152,8 +154,10 @@ def downgrade() -> None:
         for new_val, old_val in _DOWNGRADE_MAP.items():
             op.execute(
                 sa.text(
-                    "UPDATE buyer_marketing_logs SET stage = :old::marketingstage WHERE stage = :new::marketingstage"
-                ).bindparams(old=old_val, new=new_val)
+                    "UPDATE buyer_marketing_logs"
+                    " SET stage = CAST(:old_val AS marketingstage)"
+                    " WHERE stage = CAST(:new_val AS marketingstage)"
+                ).bindparams(old_val=old_val, new_val=new_val)
             )
 
         # 3) 신규 enum 값 제거 — 타입 교체 방식
