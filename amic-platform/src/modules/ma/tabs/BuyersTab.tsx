@@ -126,7 +126,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const [shortListViewMode, setShortListViewMode] =
     useState<ShortListViewMode>("grid");
   const [activeFilter, setActiveFilter] = useState<KpiFilter>("all");
-  const [masterListOpen, setMasterListOpen] = useState(true);
+  const [masterListOpen, setMasterListOpen] = useState(false);
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -590,6 +590,14 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               stageSummary={selectedStageSummary}
               onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
+              onToggleDrop={(buyerId, isCurrentlyDropped) =>
+                updateBuyer.mutate({
+                  buyerId,
+                  body: {
+                    status: isCurrentlyDropped ? 'IDENTIFIED' : 'BID_DROPPED',
+                  },
+                })
+              }
             />
           </>
         )}

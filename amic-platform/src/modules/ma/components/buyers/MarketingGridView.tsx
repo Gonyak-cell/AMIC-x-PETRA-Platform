@@ -100,7 +100,7 @@ export default function MarketingGridView({
                   className={cn(
                     "border-b border-gray-300 last:border-b-0 group",
                     isDropped
-                      ? "bg-gray-100"
+                      ? "bg-gray-50 grayscale opacity-[0.55] hover:opacity-70"
                       : "hover:bg-accent/5",
                   )}
                 >

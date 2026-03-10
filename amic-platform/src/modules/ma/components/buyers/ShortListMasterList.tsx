@@ -134,7 +134,7 @@ export default function ShortListMasterList({
                       isSelected
                         ? "bg-accent/10 border-l-[3px] border-accent shadow-sm"
                         : "hover:bg-gray-50",
-                      isDropped && "opacity-60 cursor-default",
+                      isDropped && "opacity-[0.55] grayscale cursor-default hover:opacity-70",
                     )}
                   >
                     <div className="flex items-center gap-2">

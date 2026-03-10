@@ -68,7 +68,10 @@ export default function MarketingGridCell({
           onComplete={() => setShowInput(false)}
         />
       ) : isEmpty ? (
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-400 hover:border-accent">
+        <span
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-400 hover:border-accent hover:bg-green-50 transition-colors"
+          title={canWrite ? "클릭하여 로그 추가" : undefined}
+        >
           <span className="sr-only">미완료</span>
         </span>
       ) : (

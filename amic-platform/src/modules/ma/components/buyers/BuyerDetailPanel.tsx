@@ -16,6 +16,7 @@ interface BuyerDetailPanelProps {
   stageSummary: BuyerStageSummary | undefined;
   onClose: () => void;
   canWrite: boolean;
+  onToggleDrop?: (buyerId: string, isCurrentlyDropped: boolean) => void;
 }
 
 const TABS: TabItem[] = [
@@ -37,6 +38,7 @@ export default function BuyerDetailPanel({
   stageSummary,
   onClose,
   canWrite,
+  onToggleDrop,
 }: BuyerDetailPanelProps) {
   const [activeTab, setActiveTab] = useState("summary");
   const contentRef = useRef<HTMLDivElement>(null);
@@ -47,6 +49,7 @@ export default function BuyerDetailPanel({
   }, [buyer?.id]);
 
   const isOpen = !!buyer;
+  const isDropped = buyer?.status === "BID_DROPPED";
 
   return (
     <SlidePanel
@@ -58,6 +61,23 @@ export default function BuyerDetailPanel({
     >
       {buyer && (
         <div ref={contentRef} className="flex flex-col h-full overflow-y-auto">
+          {/* Drop 토글 버튼 */}
+          {canWrite && onToggleDrop && (
+            <div className="px-1 pt-2 pb-1">
+              <button
+                type="button"
+                onClick={() => onToggleDrop(buyer.id, isDropped)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  isDropped
+                    ? "bg-green-50 text-green-700 hover:bg-green-100"
+                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                }`}
+              >
+                {isDropped ? "↩ 복구" : "✕ Drop 처리"}
+              </button>
+            </div>
+          )}
+
           <Tabs
             tabs={TABS}
             activeTab={activeTab}

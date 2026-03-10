@@ -55,13 +55,13 @@ export default function ShortListSummaryBar({
     progressPct?: number;
   }[] = [
     {
-      label: "ACTIVE 후보",
+      label: "Active 후보",
       value: activeCount,
       color: "text-text-dark",
       filter: "active",
     },
     {
-      label: "DROP",
+      label: "Drop",
       value: dropCount,
       color: "text-negative",
       filter: "drop",
@@ -80,7 +80,7 @@ export default function ShortListSummaryBar({
       filter: "target_meeting",
     },
     {
-      label: "TIER 1",
+      label: "Tier 1",
       value: tier1Count,
       color: "text-amic-500",
       filter: "tier1",

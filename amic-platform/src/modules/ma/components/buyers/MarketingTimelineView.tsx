@@ -91,6 +91,12 @@ export default function MarketingTimelineView({
             }
           }
 
+          // 미완료 단계 수집
+          const completedSet = new Set(completedStages.map((c) => c.stage));
+          const pendingStages = MARKETING_STAGES.filter(
+            (s) => !completedSet.has(s),
+          );
+
           // 다음 단계 결정
           const nextStage =
             currentIdx < MARKETING_STAGES.length - 1
@@ -140,7 +146,9 @@ export default function MarketingTimelineView({
                   <div className="relative ml-1.5">
                     {completedStages.map((item, idx) => {
                       const isMilestone = MILESTONE_STAGES.has(item.stage);
-                      const isLast = idx === completedStages.length - 1;
+                      const isLast =
+                        idx === completedStages.length - 1 &&
+                        pendingStages.length === 0;
                       const prevDate =
                         idx > 0 ? completedStages[idx - 1].date : null;
                       const elapsed = prevDate
@@ -158,7 +166,9 @@ export default function MarketingTimelineView({
                               className={`rounded-full flex-shrink-0 mt-1 ${
                                 isMilestone
                                   ? "w-3.5 h-3.5 bg-accent ring-2 ring-accent/30"
-                                  : "w-2.5 h-2.5 bg-accent"
+                                  : item.stage === "IOI_RECEIVED" || item.stage === "LOI_RECEIVED"
+                                    ? "w-2.5 h-2.5 bg-amber-500"
+                                    : "w-2.5 h-2.5 bg-accent"
                               }`}
                             />
                             {!isLast && (
@@ -178,6 +188,28 @@ export default function MarketingTimelineView({
                             </span>
                             <span className="text-sm font-semibold ml-2 text-text-dark">
                               {MARKETING_STAGE_LABELS[item.stage]}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* 미완료(pending) 단계 */}
+                    {pendingStages.map((stage, idx) => {
+                      const isLast = idx === pendingStages.length - 1;
+                      return (
+                        <div
+                          key={stage}
+                          className="flex items-start gap-3 relative opacity-50"
+                        >
+                          <div className="flex flex-col items-center">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 border border-gray-300 bg-white" />
+                            {!isLast && (
+                              <div className="w-px flex-1 min-h-[20px] bg-gray-200" />
+                            )}
+                          </div>
+                          <div className="pb-3">
+                            <span className="text-sm italic text-gray-400">
+                              {MARKETING_STAGE_LABELS[stage]}
                             </span>
                           </div>
                         </div>
