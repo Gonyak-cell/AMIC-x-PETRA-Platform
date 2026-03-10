@@ -407,7 +407,7 @@ class TestCascadeAuditTrail:
         )
         await http_client.post(
             f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-            json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+            json={"stage": "TEASER_SENT", "log_date": "2026-03-05"},
         )
 
         # 컨소시엄 매핑 1건 생성 (buyer가 lead)

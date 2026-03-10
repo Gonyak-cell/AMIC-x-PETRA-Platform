@@ -28,42 +28,39 @@ _S = BuyerCandidateStatus
 class TestGetAdvanceTarget:
     """get_advance_target: 마케팅 스테이지 → 목표 buyer status 매핑."""
 
-    def test_email_sent_maps_to_contacted(self) -> None:
-        assert get_advance_target(MarketingStage.EMAIL_SENT) == _S.CONTACTED
+    def test_teaser_sent_maps_to_contacted(self) -> None:
+        assert get_advance_target(MarketingStage.TEASER_SENT) == _S.CONTACTED
 
-    def test_phone_call_maps_to_contacted(self) -> None:
-        assert get_advance_target(MarketingStage.PHONE_CALL) == _S.CONTACTED
+    def test_im_distributed_maps_to_cim_sent(self) -> None:
+        assert get_advance_target(MarketingStage.IM_DISTRIBUTED) == _S.CIM_SENT
 
-    def test_advisor_meeting_maps_to_contacted(self) -> None:
-        assert get_advance_target(MarketingStage.ADVISOR_MEETING) == _S.CONTACTED
+    def test_loi_received_maps_to_loi_received(self) -> None:
+        assert get_advance_target(MarketingStage.LOI_RECEIVED) == _S.LOI_RECEIVED
 
     def test_nda_signed_maps_to_nda_signed(self) -> None:
         assert get_advance_target(MarketingStage.NDA_SIGNED) == _S.NDA_SIGNED
 
-    def test_cim_sent_maps_to_cim_sent(self) -> None:
-        assert get_advance_target(MarketingStage.CIM_SENT) == _S.CIM_SENT
-
-    def test_dd_started_maps_to_dd_granted(self) -> None:
-        assert get_advance_target(MarketingStage.DD_STARTED) == _S.DD_GRANTED
+    def test_dd_in_progress_maps_to_dd_in_progress(self) -> None:
+        assert get_advance_target(MarketingStage.DD_IN_PROGRESS) == _S.DD_IN_PROGRESS
 
     def test_identified_has_no_mapping(self) -> None:
         assert get_advance_target(MarketingStage.IDENTIFIED) is None
 
-    def test_target_meeting_has_no_mapping(self) -> None:
-        assert get_advance_target(MarketingStage.TARGET_MEETING) is None
+    def test_mgmt_presentation_has_no_mapping(self) -> None:
+        assert get_advance_target(MarketingStage.MGMT_PRESENTATION) is None
 
 
 class TestHasAdvanceMapping:
     """has_advance_mapping: 매핑 존재 여부."""
 
-    def test_email_sent_has_mapping(self) -> None:
-        assert has_advance_mapping(MarketingStage.EMAIL_SENT) is True
+    def test_teaser_sent_has_mapping(self) -> None:
+        assert has_advance_mapping(MarketingStage.TEASER_SENT) is True
 
     def test_identified_has_no_mapping(self) -> None:
         assert has_advance_mapping(MarketingStage.IDENTIFIED) is False
 
-    def test_target_meeting_has_no_mapping(self) -> None:
-        assert has_advance_mapping(MarketingStage.TARGET_MEETING) is False
+    def test_mgmt_presentation_has_no_mapping(self) -> None:
+        assert has_advance_mapping(MarketingStage.MGMT_PRESENTATION) is False
 
 
 class TestDataStructureIntegrity:
