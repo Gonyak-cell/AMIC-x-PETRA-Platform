@@ -279,6 +279,40 @@ async def test_marketing_stage_summary_empty(client):
 # ── Short-List Marketing Overview ─────────────────────────
 
 
+async def test_create_all_marketing_stages(client):
+    """8개 전체 마케팅 단계를 생성하고 stage summary에서 확인."""
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    all_stages = [
+        ("IDENTIFIED", "2026-03-01"),
+        ("TEASER_SENT", "2026-03-05"),
+        ("NDA_SIGNED", "2026-03-10"),
+        ("IM_DISTRIBUTED", "2026-03-15"),
+        ("QNA_COMPLETED", "2026-03-20"),
+        ("MGMT_PRESENTATION", "2026-03-22"),
+        ("LOI_RECEIVED", "2026-03-25"),
+        ("DD_IN_PROGRESS", "2026-03-28"),
+    ]
+
+    for stage, date in all_stages:
+        resp = await client.post(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
+            json={"stage": stage, "log_date": date},
+        )
+        assert resp.status_code == 201, f"Failed to create {stage}: {resp.text}"
+        assert resp.json()["stage"] == stage
+
+    # stage summary에서 전체 확인
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-stage-summary",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    for stage, date in all_stages:
+        assert data["stages"][stage] == date, f"{stage} expected {date}, got {data['stages'][stage]}"
+
+
 async def test_short_list_overview(client):
     txn_id = await _create_txn(client)
     b1 = await _add_buyer(client, txn_id, company_name="A사")

@@ -37,6 +37,11 @@ ADVANCE_PATH: dict[BuyerCandidateStatus, BuyerCandidateStatus] = {
     _S.INTEREST_CONFIRMED: _S.IOI_RECEIVED,
     _S.IOI_RECEIVED: _S.IOI_ACCEPTED,
     _S.IOI_ACCEPTED: _S.DD_GRANTED,
+    _S.DD_GRANTED: _S.DD_IN_PROGRESS,
+    _S.DD_IN_PROGRESS: _S.LOI_RECEIVED,
+    _S.LOI_RECEIVED: _S.LOI_ACCEPTED,
+    _S.LOI_ACCEPTED: _S.SELECTED,
+    _S.SELECTED: _S.BID_SUBMITTED,
 }
 
 # 순서 판정용 ordinal (터미널 상태 제외)

@@ -18,7 +18,7 @@ export type KpiFilter =
   | "active"
   | "drop"
   | "nda"
-  | "target_meeting"
+  | "loi"
   | "tier1";
 
 interface ShortListOverviewProps {
@@ -55,7 +55,7 @@ export default function ShortListOverview({
       );
       return shortListBuyers.filter((b) => ndaIds.has(b.id));
     }
-    if (activeFilter === "target_meeting") {
+    if (activeFilter === "loi") {
       const mtgIds = new Set(
         overviewData
           .filter((s) => s.stages.LOI_RECEIVED)

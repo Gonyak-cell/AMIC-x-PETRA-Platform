@@ -62,11 +62,13 @@ _ROLE_LABELS: dict[str, str] = {
 
 _STAGE_LABELS: dict[str, str] = {
     "IDENTIFIED": "발굴",
-    "EMAIL_SENT": "이메일 발송",
-    "PHONE_CALL": "전화 접촉",
-    "ADVISOR_MEETING": "어드바이저 미팅",
+    "TEASER_SENT": "Teaser 배포",
     "NDA_SIGNED": "NDA 체결",
-    "TARGET_MEETING": "대상회사 미팅",
+    "IM_DISTRIBUTED": "IM 배포",
+    "QNA_COMPLETED": "Q&A",
+    "MGMT_PRESENTATION": "MP",
+    "LOI_RECEIVED": "LOI 접수",
+    "DD_IN_PROGRESS": "DD 진행",
 }
 
 _HEADERS = [

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { SlidePanel, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui/Tabs";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
-import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
+import type { BuyerStageSummary, MarketingStage } from "@/modules/ma/types/marketing_log";
 import {
   BUYER_TYPE_OPTIONS,
   MARKETING_STAGES,
@@ -14,6 +14,7 @@ import MaterialTracker from "./MaterialTracker";
 import BuyerFeedbackSection from "./BuyerFeedbackSection";
 import InlineLogInput from "./InlineLogInput";
 import { CommentThread } from "@/components/collaboration/CommentThread";
+/** 다음 기본 마케팅 단계 결정 */function nextDefaultStage(  stages: Partial<Record<MarketingStage, string | null>> | undefined,): MarketingStage {  if (!stages) return MARKETING_STAGES[0];  const idx = latestCompletedStageIndex(stages);  return MARKETING_STAGES[Math.min(idx + 1, MARKETING_STAGES.length - 1)];}
 
 interface BuyerDetailPanelProps {
   txnId: string;
@@ -110,17 +111,7 @@ export default function BuyerDetailPanel({
                     <InlineLogInput
                       txnId={txnId}
                       buyerId={buyer.id}
-                      defaultStage={
-                        stageSummary?.stages
-                          ? MARKETING_STAGES[
-                              Math.min(
-                                latestCompletedStageIndex(stageSummary.stages) +
-                                  1,
-                                MARKETING_STAGES.length - 1,
-                              )
-                            ]
-                          : MARKETING_STAGES[0]
-                      }
+                      defaultStage={nextDefaultStage(stageSummary?.stages)}
                     />
                   </div>
                 )}

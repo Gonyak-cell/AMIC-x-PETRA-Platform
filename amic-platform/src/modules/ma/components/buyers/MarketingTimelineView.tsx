@@ -10,7 +10,9 @@ import {
   MARKETING_STAGE_LABELS,
   MILESTONE_STAGES,
   SKIPPABLE_STAGES,
+  countCompletedStages,
   latestCompletedStageIndex,
+  effectiveStageCount,
 } from "@/modules/ma/constants";
 import { useMeetingLogs } from "@/modules/ma/hooks/useMeetingLogs";
 import { buildTimelineItems } from "@/modules/ma/utils/timelineItems";
@@ -34,7 +36,7 @@ export default function MarketingTimelineView({
   txnId,
 }: MarketingTimelineViewProps) {
   /* 트랜잭션 전체 MARKETING 미팅을 1회 fetch (N+1 방지) */
-  const { data: meetingData, isError: meetingError } = useMeetingLogs(txnId, {
+  const { data: meetingData, isError: meetingError, isPending: meetingPending } = useMeetingLogs(txnId, {
     meetingPhase: "MARKETING",
   });
 
@@ -54,16 +56,18 @@ export default function MarketingTimelineView({
     return map;
   }, [meetingData?.items]);
 
+  const EMPTY_STAGES: Partial<Record<MarketingStage, string | null>> = {};
+
   const sorted = useMemo(
     () =>
       [...buyers].sort((a, b) => {
         const aIdx = latestCompletedStageIndex(
           stageMap.get(a.id) ??
-            ({} as Partial<Record<MarketingStage, string | null>>),
+            EMPTY_STAGES,
         );
         const bIdx = latestCompletedStageIndex(
           stageMap.get(b.id) ??
-            ({} as Partial<Record<MarketingStage, string | null>>),
+            EMPTY_STAGES,
         );
         return bIdx - aIdx;
       }),
@@ -93,13 +97,20 @@ export default function MarketingTimelineView({
           미팅 데이터를 불러오지 못했습니다.
         </p>
       )}
+      {meetingPending && (
+        <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-1.5 mb-2 animate-pulse">
+          미팅 데이터를 불러오는 중...
+        </p>
+      )}
       <div className="space-y-4" data-testid="marketing-timeline">
         {sorted.map((buyer) => {
           const stages = stageMap.get(buyer.id);
           const currentIdx = stages ? latestCompletedStageIndex(stages) : -1;
+          const completed = countCompletedStages(stages);
+          const effective = effectiveStageCount(stages);
           const pct =
-            currentIdx >= 0
-              ? Math.round(((currentIdx + 1) / MARKETING_STAGES.length) * 100)
+            completed > 0 && effective > 0
+              ? Math.round((completed / effective) * 100)
               : 0;
 
           // 완료된 단계만 수집
@@ -196,6 +207,7 @@ export default function MarketingTimelineView({
                         return (
                           <div
                             key={`stage-${item.stage}`}
+                            role="listitem"
                             className="flex items-start gap-3 relative"
                           >
                             <div className="flex flex-col items-center">
@@ -232,6 +244,7 @@ export default function MarketingTimelineView({
                       return (
                         <div
                           key={`meeting-${item.log.id}`}
+                          role="listitem"
                           className="flex items-start gap-3 relative"
                         >
                           <div className="flex flex-col items-center">
@@ -249,7 +262,7 @@ export default function MarketingTimelineView({
 
                     {/* 미팅 추가 버튼 (완료 단계가 있을 때만) */}
                     {canWrite && completedStages.length > 0 && (
-                      <div className="flex items-start gap-3 relative">
+                      <div role="listitem" className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
                           <div className="w-px min-h-[8px]" />
                         </div>
@@ -266,7 +279,8 @@ export default function MarketingTimelineView({
                       return (
                         <div
                           key={stage}
-                          className="flex items-start gap-3 relative opacity-50"
+                          role="listitem"
+                          className="flex items-start gap-3 relative"
                         >
                           <div className="flex flex-col items-center">
                             <div
@@ -281,11 +295,11 @@ export default function MarketingTimelineView({
                             )}
                           </div>
                           <div className="pb-3 flex items-center gap-1.5">
-                            <span className="text-sm italic text-gray-400">
+                            <span className="text-sm italic text-gray-500">
                               {MARKETING_STAGE_LABELS[stage]}
                             </span>
                             {isSkippable && (
-                              <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1 py-0.5">
+                              <span className="text-[9px] text-gray-600 bg-gray-100 rounded px-1 py-0.5">
                                 선택
                               </span>
                             )}

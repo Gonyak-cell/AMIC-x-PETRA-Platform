@@ -35,7 +35,7 @@ function CircularProgress({ pct, label }: { pct: number; label: string }) {
   const offset = CIRCLE_C - (pct / 100) * CIRCLE_C;
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <svg width="28" height="28" viewBox="0 0 28 28" className="block">
+      <svg width="28" height="28" viewBox="0 0 28 28" className="block" role="img" aria-label={label}>
         <circle
           cx="14"
           cy="14"
@@ -119,8 +119,8 @@ export default function MarketingGridView({
           data-testid="marketing-grid"
         >
           <thead>
-            <tr className="bg-green-500">
-              <th className="text-left px-3 py-2.5 font-medium text-white whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 z-10 bg-green-500 rounded-l-lg">
+            <tr className="bg-green-700">
+              <th className="text-left px-3 py-2.5 font-medium text-white whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 z-10 bg-green-700 rounded-l-lg">
                 매수자
               </th>
               {MARKETING_STAGES.map((s) => (

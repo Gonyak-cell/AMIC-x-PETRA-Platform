@@ -86,12 +86,12 @@ const MarketingGridCell = memo(function MarketingGridCell({
           className={`inline-block ${
             SKIPPABLE_STAGES.has(stage)
               ? "text-[10px] text-gray-400"
-              : "w-1.5 h-1.5 rounded-full bg-gray-300"
+              : "w-4 h-4 rounded-full border border-gray-300"
           }`}
           title={canWrite ? "클릭하여 로그 추가" : undefined}
         >
           {SKIPPABLE_STAGES.has(stage) ? (
-            <span className="text-gray-400">&mdash;</span>
+            <><span className="text-gray-400" aria-hidden="true">&mdash;</span><span className="sr-only">생략 가능</span></>
           ) : (
             <span className="sr-only">미완료</span>
           )}
