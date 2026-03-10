@@ -325,35 +325,35 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
         {/* 인라인 KPI 바 + 액션 버튼 */}
         <div className="flex items-center justify-between gap-3">
           {!isBuyersLoading && buyerSubTab === "short-list" && (
-            <ShortListSummaryBar
-              buyers={shortListBuyers}
-              overviewData={overviewMerged}
-              stageMap={stageMap}
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMasterListOpen(!masterListOpen)}
+                className="p-1.5 rounded-lg text-gray-500 hover:text-text-dark hover:bg-gray-100 transition-colors"
+                aria-expanded={masterListOpen}
+                aria-label="마스터 리스트 토글"
+              >
+                {masterListOpen ? (
+                  <PanelLeftClose className="h-4 w-4" />
+                ) : (
+                  <PanelLeftOpen className="h-4 w-4" />
+                )}
+              </button>
+              <ShortListSummaryBar
+                buyers={shortListBuyers}
+                overviewData={overviewMerged}
+                stageMap={stageMap}
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+              />
+            </div>
           )}
           <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             {!isBuyersLoading && buyerSubTab === "short-list" && (
-              <>
-                <ShortListViewToggle
-                  viewMode={shortListViewMode}
-                  onViewModeChange={setShortListViewMode}
-                />
-                <button
-                  type="button"
-                  onClick={() => setMasterListOpen(!masterListOpen)}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-text-dark hover:bg-gray-100 transition-colors"
-                  aria-expanded={masterListOpen}
-                  aria-label="마스터 리스트 토글"
-                >
-                  {masterListOpen ? (
-                    <PanelLeftClose className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftOpen className="h-4 w-4" />
-                  )}
-                </button>
-              </>
+              <ShortListViewToggle
+                viewMode={shortListViewMode}
+                onViewModeChange={setShortListViewMode}
+              />
             )}
             {!isBuyersLoading && buyerSubTab === "long-list" && (
               <Button
