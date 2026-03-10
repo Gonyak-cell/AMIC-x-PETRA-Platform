@@ -6,7 +6,14 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { Users, Download, Building2, Sparkles } from "lucide-react";
+import {
+  Users,
+  Download,
+  Building2,
+  Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import {
   useBuyers,
   useUpdateBuyer,
@@ -119,6 +126,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const [shortListViewMode, setShortListViewMode] =
     useState<ShortListViewMode>("grid");
   const [activeFilter, setActiveFilter] = useState<KpiFilter>("all");
+  const [masterListOpen, setMasterListOpen] = useState(true);
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -494,7 +502,13 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
 
             <div className="flex gap-4">
               {shortListBuyers.length > 0 && (
-                <div className="w-[280px] flex-shrink-0">
+                <div
+                  className={
+                    masterListOpen
+                      ? "w-[280px] flex-shrink-0 transition-all duration-200"
+                      : "w-0 overflow-hidden flex-shrink-0 transition-all duration-200"
+                  }
+                >
                   <ShortListMasterList
                     buyers={shortListBuyers}
                     stageMap={stageMap}
@@ -506,6 +520,24 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               )}
 
               <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setMasterListOpen(!masterListOpen)}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-text-dark hover:bg-gray-100 transition-colors"
+                    aria-expanded={masterListOpen}
+                    aria-label="마스터 리스트 토글"
+                  >
+                    {masterListOpen ? (
+                      <PanelLeftClose className="h-5 w-5" />
+                    ) : (
+                      <PanelLeftOpen className="h-5 w-5" />
+                    )}
+                  </button>
+                  <h3 className="text-sm font-medium text-text-muted">
+                    마케팅 활동 추적
+                  </h3>
+                </div>
                 {shortListViewMode === "grid" && (
                   <MarketingGridView
                     buyers={shortListBuyers}

@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
+import { useSidebarCollapsed } from "./Sidebar";
 
 export interface SidebarNavItemProps {
   to: string;
@@ -25,6 +26,7 @@ export function SidebarNavItem({
   onClick,
 }: SidebarNavItemProps) {
   const iconRef = useRef<SVGSVGElement>(null);
+  const collapsed = useSidebarCollapsed();
 
   const handleMouseEnter = useCallback(() => {
     if (iconRef.current) {
@@ -45,13 +47,17 @@ export function SidebarNavItem({
   if (disabled || comingSoon) {
     return (
       <span
-        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg min-h-[44px] cursor-not-allowed"
+        className={cn(
+          "flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg min-h-[44px] cursor-not-allowed",
+          collapsed && "justify-center px-2",
+        )}
         style={{ color: "var(--sidebar-text)", opacity: 0.4 }}
         aria-disabled="true"
+        title={collapsed ? label : undefined}
       >
         <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-        <span>{label}</span>
-        {comingSoon && (
+        {!collapsed && <span>{label}</span>}
+        {!collapsed && comingSoon && (
           <span
             className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
             style={{
@@ -73,11 +79,13 @@ export function SidebarNavItem({
       end={end}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
+      title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors",
           "min-h-[44px]",
           isActive ? "sidebar-accent-bar-right" : "sidebar-hover",
+          collapsed && "justify-center px-2",
         )
       }
       style={({ isActive }) => ({
@@ -92,7 +100,9 @@ export function SidebarNavItem({
             className="h-5 w-5 flex-shrink-0"
             aria-hidden="true"
           />
-          <span aria-current={isActive ? "page" : undefined}>{label}</span>
+          {!collapsed && (
+            <span aria-current={isActive ? "page" : undefined}>{label}</span>
+          )}
         </>
       )}
     </NavLink>
@@ -133,6 +143,7 @@ export function SidebarSection({
   const [isOpen, setIsOpen] = useState(() =>
     getInitialOpen(storageKey, defaultOpen),
   );
+  const collapsed = useSidebarCollapsed();
 
   const sectionId = `sidebar-section-${title.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -149,39 +160,43 @@ export function SidebarSection({
   };
 
   return (
-    <div className={cn("mt-6", className)}>
-      {collapsible ? (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={isOpen}
-          aria-controls={sectionId}
-          className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors cursor-pointer"
-          style={{ color: "var(--sidebar-text-muted)" }}
-        >
-          <span>{title}</span>
-          <ChevronDown
-            className={cn(
-              "h-3.5 w-3.5 transition-transform duration-200",
-              !isOpen && "-rotate-90",
-            )}
-            aria-hidden="true"
-          />
-        </button>
-      ) : (
-        <h3
-          id={sectionId}
-          className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
-          style={{ color: "var(--sidebar-text-muted)" }}
-        >
-          {title}
-        </h3>
+    <div className={cn("mt-6", collapsed && "mt-2", className)}>
+      {!collapsed && (
+        <>
+          {collapsible ? (
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={isOpen}
+              aria-controls={sectionId}
+              className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors cursor-pointer"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              <span>{title}</span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform duration-200",
+                  !isOpen && "-rotate-90",
+                )}
+                aria-hidden="true"
+              />
+            </button>
+          ) : (
+            <h3
+              id={sectionId}
+              className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              {title}
+            </h3>
+          )}
+        </>
       )}
       <div
         id={collapsible ? sectionId : undefined}
         className={cn(
           "overflow-hidden transition-all duration-200 ease-in-out",
-          collapsible && !isOpen
+          !collapsed && collapsible && !isOpen
             ? "max-h-0 opacity-0"
             : "max-h-[1000px] opacity-100",
         )}
@@ -216,6 +231,7 @@ export function SidebarPhaseItem({
   onClick,
 }: SidebarPhaseItemProps) {
   const iconRef = useRef<SVGSVGElement>(null);
+  const collapsed = useSidebarCollapsed();
 
   const handleMouseEnter = useCallback(() => {
     if (status === "future") return;
@@ -238,12 +254,16 @@ export function SidebarPhaseItem({
   if (status === "future") {
     return (
       <span
-        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] cursor-not-allowed"
+        className={cn(
+          "flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] cursor-not-allowed",
+          collapsed && "justify-center px-2",
+        )}
         style={{ color: "var(--sidebar-text)", opacity: 0.4 }}
         aria-disabled="true"
+        title={collapsed ? label : undefined}
       >
         <Icon className="h-[18px] w-[18px] flex-shrink-0" aria-hidden="true" />
-        <span>{label}</span>
+        {!collapsed && <span>{label}</span>}
       </span>
     );
   }
@@ -255,7 +275,11 @@ export function SidebarPhaseItem({
         to={to}
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
-        className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] transition-colors"
+        title={collapsed ? label : undefined}
+        className={cn(
+          "flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] transition-colors",
+          collapsed && "justify-center px-2",
+        )}
         style={{ color: "var(--sidebar-accent)", opacity: 0.8 }}
       >
         <CheckCircle2
@@ -263,7 +287,7 @@ export function SidebarPhaseItem({
           className="h-[18px] w-[18px] flex-shrink-0"
           aria-hidden="true"
         />
-        <span>{label}</span>
+        {!collapsed && <span>{label}</span>}
       </NavLink>
     );
   }
@@ -274,7 +298,11 @@ export function SidebarPhaseItem({
       to={to}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
-      className="flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] sidebar-accent-bar-right transition-colors"
+      title={collapsed ? label : undefined}
+      className={cn(
+        "flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg min-h-[40px] sidebar-accent-bar-right transition-colors",
+        collapsed && "justify-center px-2",
+      )}
       style={{
         backgroundColor: "var(--sidebar-active-bg)",
         color: "var(--sidebar-text)",
@@ -288,7 +316,7 @@ export function SidebarPhaseItem({
           style={{ backgroundColor: "var(--sidebar-accent)" }}
         />
       </span>
-      <span className="font-semibold">{label}</span>
+      {!collapsed && <span className="font-semibold">{label}</span>}
     </NavLink>
   );
 }

@@ -41,8 +41,11 @@ import {
   Shield,
   Calculator,
   FileStack,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { createContext, useContext } from "react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
@@ -58,6 +61,16 @@ import { SidebarFavorites } from "@/components/SidebarFavorites";
 import { HealthIndicator } from "@/components/layout/HealthIndicator";
 import { getMemberPhoto } from "@/lib/member-photos";
 import amicPetraLogoUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple.svg";
+
+// ── Sidebar Collapsed Context ──
+
+interface SidebarContextValue {
+  collapsed: boolean;
+}
+const SidebarContext = createContext<SidebarContextValue>({ collapsed: false });
+export function useSidebarCollapsed() {
+  return useContext(SidebarContext).collapsed;
+}
 
 // ── FDD Navigation ──
 
@@ -179,9 +192,16 @@ const DOCS_CHECKLIST_NAV = [
 export interface SidebarProps {
   className?: string;
   onNavItemClick?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ className, onNavItemClick }: SidebarProps) {
+export function Sidebar({
+  className,
+  onNavItemClick,
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { dealId } = useParams<{ dealId: string }>();
@@ -212,554 +232,593 @@ export function Sidebar({ className, onNavItemClick }: SidebarProps) {
   );
 
   return (
-    <aside
-      className={cn("w-64 h-full flex flex-col shadow-sidebar", className)}
-      style={{
-        background:
-          "linear-gradient(to bottom, var(--sidebar-bg-start), var(--sidebar-bg-mid), var(--sidebar-bg-end))",
-        backdropFilter: "var(--sidebar-backdrop)",
-        WebkitBackdropFilter: "var(--sidebar-backdrop)",
-      }}
-      role="navigation"
-      aria-label="Main navigation"
-    >
-      {/* Logo */}
-      <div
-        className="relative px-4 pt-5 pb-4"
-        style={{ backgroundColor: "var(--sidebar-logo-bg)" }}
-      >
-        <img
-          src={amicPetraLogoUrl}
-          alt="AMIC x PETRABRIDGE PARTNERS"
-          className="h-10 w-auto mx-auto"
-        />
-      </div>
-      {/* Gradient Divider */}
-      <div
-        className="h-px"
+    <SidebarContext.Provider value={{ collapsed }}>
+      <aside
+        className={cn(
+          "h-full flex flex-col shadow-sidebar transition-all duration-200",
+          collapsed ? "w-16" : "w-64",
+          className,
+        )}
         style={{
           background:
-            "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+            "linear-gradient(to bottom, var(--sidebar-bg-start), var(--sidebar-bg-mid), var(--sidebar-bg-end))",
+          backdropFilter: "var(--sidebar-backdrop)",
+          WebkitBackdropFilter: "var(--sidebar-backdrop)",
         }}
-      />
-
-      {/* Home Link + Portal Nav (hidden for CLIENT) */}
-      {!isClient && (
-        <div className="px-3 pt-3 pb-1 space-y-1">
-          <SidebarNavItem
-            to="/"
-            label="Home"
-            icon={Home}
-            end
-            onClick={onNavItemClick}
-          />
-          <SidebarNavItem
-            to="/calendar"
-            label="Calendar"
-            icon={Calendar}
-            onClick={onNavItemClick}
-          />
-          <SidebarNavItem
-            to="/exports"
-            label="Exports"
-            icon={Download}
-            onClick={onNavItemClick}
-          />
-          <SidebarNavItem
-            to="/team"
-            label="Team"
-            icon={Users}
-            onClick={onNavItemClick}
-          />
-        </div>
-      )}
-
-      {/* Module separator (hidden for CLIENT) */}
-      {!isClient && (
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {/* Logo */}
         <div
-          className="h-px mx-3"
+          className="relative px-4 pt-5 pb-4"
+          style={{ backgroundColor: "var(--sidebar-logo-bg)" }}
+        >
+          {collapsed ? (
+            <div className="w-8 h-8 mx-auto bg-accent/25 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs">AP</span>
+            </div>
+          ) : (
+            <img
+              src={amicPetraLogoUrl}
+              alt="AMIC x PETRABRIDGE PARTNERS"
+              className="h-10 w-auto mx-auto"
+            />
+          )}
+        </div>
+        {/* Gradient Divider */}
+        <div
+          className="h-px"
           style={{
             background:
               "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
           }}
         />
-      )}
 
-      {/* Module Navigation — all modules rendered, each with collapsible group */}
-      <div className="flex-1 py-2 px-3">
-        {/* MODULES label */}
+        {/* Home Link + Portal Nav (hidden for CLIENT) */}
         {!isClient && (
-          <h3
-            className="px-4 mb-2 mt-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
-            style={{ color: "var(--sidebar-text-muted)" }}
-          >
-            Modules
-          </h3>
+          <div className="px-3 pt-3 pb-1 space-y-1">
+            <SidebarNavItem
+              to="/"
+              label="Home"
+              icon={Home}
+              end
+              onClick={onNavItemClick}
+            />
+            <SidebarNavItem
+              to="/calendar"
+              label="Calendar"
+              icon={Calendar}
+              onClick={onNavItemClick}
+            />
+            <SidebarNavItem
+              to="/exports"
+              label="Exports"
+              icon={Download}
+              onClick={onNavItemClick}
+            />
+            <SidebarNavItem
+              to="/team"
+              label="Team"
+              icon={Users}
+              onClick={onNavItemClick}
+            />
+          </div>
         )}
 
-        {/* ── M&A Deals ── */}
-        {(!isClient || isMa) && (
-          <SidebarModuleGroup
-            id="ma"
-            label="M&A Deals"
-            icon={Handshake}
-            basePath="/ma/transactions"
-            isActive={isMa}
-            storageKey="module-ma"
-            defaultOpen={isMa}
-            onNavItemClick={onNavItemClick}
-          >
-            <nav className="space-y-1" aria-label="M&A navigation">
-              {MA_PIPELINE_NAV.filter(
-                (item) => !isClient || item.to !== "/ma/transactions/new",
-              ).map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end={(item as { end?: boolean }).end}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </nav>
+        {/* Module separator (hidden for CLIENT) */}
+        {!isClient && (
+          <div
+            className="h-px mx-3"
+            style={{
+              background:
+                "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+            }}
+          />
+        )}
 
-            {!isClient && (
-              <>
-                <SidebarSection
-                  title="Workspace"
-                  collapsible
-                  defaultOpen
-                  storageKey="ma-workspace"
-                  className="mt-3"
-                >
+        {/* Module Navigation — all modules rendered, each with collapsible group */}
+        <div className="flex-1 py-2 px-3">
+          {/* MODULES label */}
+          {!isClient && !collapsed && (
+            <h3
+              className="px-4 mb-2 mt-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              Modules
+            </h3>
+          )}
+
+          {/* ── M&A Deals ── */}
+          {(!isClient || isMa) && (
+            <SidebarModuleGroup
+              id="ma"
+              label="M&A Deals"
+              icon={Handshake}
+              basePath="/ma/transactions"
+              isActive={isMa}
+              storageKey="module-ma"
+              defaultOpen={isMa}
+              onNavItemClick={onNavItemClick}
+            >
+              <nav className="space-y-1" aria-label="M&A navigation">
+                {MA_PIPELINE_NAV.filter(
+                  (item) => !isClient || item.to !== "/ma/transactions/new",
+                ).map((item) => (
                   <SidebarNavItem
-                    to={isInMaWorkspace ? `/ma/transactions/${maTxnId}/` : "#"}
-                    label="Overview"
-                    icon={Eye}
-                    end
-                    disabled={!isInMaWorkspace}
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end={(item as { end?: boolean }).end}
                     onClick={onNavItemClick}
                   />
-                </SidebarSection>
+                ))}
+              </nav>
 
-                <SidebarSection
-                  title="Workflow"
-                  collapsible
-                  defaultOpen
-                  storageKey="ma-workflow"
-                  className="mt-3"
-                >
-                  {MA_WORKFLOW_NAV.map((item) => {
-                    const itemIdx = PHASE_CONFIG.findIndex(
-                      (p) => p.phase === item.phase,
-                    );
-                    const status: "done" | "current" | "future" =
-                      !isInMaWorkspace || currentPhaseIdx < 0
-                        ? "future"
-                        : itemIdx < currentPhaseIdx
-                          ? "done"
-                          : itemIdx === currentPhaseIdx
-                            ? "current"
-                            : "future";
+              {!isClient && (
+                <>
+                  <SidebarSection
+                    title="Workspace"
+                    collapsible
+                    defaultOpen
+                    storageKey="ma-workspace"
+                    className="mt-3"
+                  >
+                    <SidebarNavItem
+                      to={
+                        isInMaWorkspace ? `/ma/transactions/${maTxnId}/` : "#"
+                      }
+                      label="Overview"
+                      icon={Eye}
+                      end
+                      disabled={!isInMaWorkspace}
+                      onClick={onNavItemClick}
+                    />
+                  </SidebarSection>
 
-                    return (
-                      <SidebarPhaseItem
-                        key={item.phase}
+                  <SidebarSection
+                    title="Workflow"
+                    collapsible
+                    defaultOpen
+                    storageKey="ma-workflow"
+                    className="mt-3"
+                  >
+                    {MA_WORKFLOW_NAV.map((item) => {
+                      const itemIdx = PHASE_CONFIG.findIndex(
+                        (p) => p.phase === item.phase,
+                      );
+                      const status: "done" | "current" | "future" =
+                        !isInMaWorkspace || currentPhaseIdx < 0
+                          ? "future"
+                          : itemIdx < currentPhaseIdx
+                            ? "done"
+                            : itemIdx === currentPhaseIdx
+                              ? "current"
+                              : "future";
+
+                      return (
+                        <SidebarPhaseItem
+                          key={item.phase}
+                          to={
+                            isInMaWorkspace
+                              ? `/ma/transactions/${maTxnId}/${item.to}?viewPhase=${item.phase}`
+                              : "#"
+                          }
+                          label={item.label}
+                          icon={item.icon}
+                          status={!isInMaWorkspace ? "future" : status}
+                          onClick={onNavItemClick}
+                        />
+                      );
+                    })}
+                  </SidebarSection>
+
+                  <SidebarSection
+                    title="Tools"
+                    collapsible
+                    defaultOpen
+                    storageKey="ma-tools"
+                    className="mt-3"
+                  >
+                    {MA_TOOLS_NAV.map((item) => (
+                      <SidebarNavItem
+                        key={item.to}
                         to={
                           isInMaWorkspace
-                            ? `/ma/transactions/${maTxnId}/${item.to}?viewPhase=${item.phase}`
+                            ? `/ma/transactions/${maTxnId}/${item.to}`
                             : "#"
                         }
                         label={item.label}
                         icon={item.icon}
-                        status={!isInMaWorkspace ? "future" : status}
+                        disabled={!isInMaWorkspace}
                         onClick={onNavItemClick}
                       />
-                    );
-                  })}
-                </SidebarSection>
-
-                <SidebarSection
-                  title="Tools"
-                  collapsible
-                  defaultOpen
-                  storageKey="ma-tools"
-                  className="mt-3"
-                >
-                  {MA_TOOLS_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={
-                        isInMaWorkspace
-                          ? `/ma/transactions/${maTxnId}/${item.to}`
-                          : "#"
-                      }
-                      label={item.label}
-                      icon={item.icon}
-                      disabled={!isInMaWorkspace}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-              </>
-            )}
-          </SidebarModuleGroup>
-        )}
-
-        {/* ── VDR ── */}
-        {!isClient && (
-          <SidebarModuleGroup
-            id="vdr"
-            label="VDR"
-            icon={FolderLock}
-            basePath="/vdr"
-            isActive={isVdr}
-            storageKey="module-vdr"
-            defaultOpen={isVdr}
-            onNavItemClick={onNavItemClick}
-          >
-            <nav className="space-y-1" aria-label="VDR navigation">
-              {VDR_NAV.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </nav>
-          </SidebarModuleGroup>
-        )}
-
-        {/* ── Deal Doc Studio ── */}
-        {!isClient && (
-          <SidebarModuleGroup
-            id="docs"
-            label="Deal Doc Studio"
-            icon={FileStack}
-            basePath="/docs"
-            isActive={isDocs}
-            storageKey="module-docs"
-            defaultOpen={isDocs}
-            onNavItemClick={onNavItemClick}
-          >
-            <nav
-              className="space-y-1"
-              aria-label="Deal Document Studio navigation"
-            >
-              {DOCS_HOME_NAV.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </nav>
-
-            <SidebarSection
-              title="Marketing"
-              collapsible
-              defaultOpen
-              storageKey="docs-marketing"
-              className="mt-3"
-            >
-              {DOCS_MARKETING_NAV.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end={item.end}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-
-            <SidebarSection
-              title="Legal"
-              collapsible
-              defaultOpen
-              storageKey="docs-legal"
-              className="mt-3"
-            >
-              {DOCS_LEGAL_NAV.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end={item.end}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-
-            <SidebarSection
-              title="Due Diligence"
-              collapsible
-              defaultOpen
-              storageKey="docs-dd"
-              className="mt-3"
-            >
-              {DOCS_DD_NAV.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end={item.end}
-                  comingSoon={item.comingSoon}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-
-            {isFdd && isInDealWorkspace && (
-              <>
-                <SidebarSection title="FDD Workflow" className="mt-3">
-                  {FDD_WORKFLOW_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      end={item.end}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection
-                  title="Setup"
-                  collapsible
-                  defaultOpen
-                  storageKey="fdd-setup"
-                  className="mt-3"
-                >
-                  {FDD_SETUP_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection
-                  title="Analysis"
-                  collapsible
-                  defaultOpen
-                  storageKey="fdd-analysis"
-                  className="mt-3"
-                >
-                  {FDD_ANALYSIS_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-                <SidebarSection
-                  title="Report"
-                  collapsible
-                  defaultOpen
-                  storageKey="fdd-report"
-                  className="mt-3"
-                >
-                  {FDD_REPORT_NAV.map((item) => (
-                    <SidebarNavItem
-                      key={item.to}
-                      to={`/fdd/deals/${dealId}/${item.to}`}
-                      label={item.label}
-                      icon={item.icon}
-                      onClick={onNavItemClick}
-                    />
-                  ))}
-                </SidebarSection>
-              </>
-            )}
-
-            <SidebarSection
-              title="Checklist & Timeline"
-              collapsible
-              defaultOpen
-              storageKey="docs-checklist"
-              className="mt-3"
-            >
-              {DOCS_CHECKLIST_NAV.map((item, idx) => (
-                <SidebarNavItem
-                  key={`${item.to}-${idx}`}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  end={item.end}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-          </SidebarModuleGroup>
-        )}
-
-        {/* ── KIIS ── */}
-        {!isClient && (
-          <SidebarModuleGroup
-            id="kiis"
-            label="KIIS"
-            icon={BarChart3}
-            basePath="/kiis"
-            isActive={isKiis}
-            storageKey="module-kiis"
-            defaultOpen={isKiis}
-            onNavItemClick={onNavItemClick}
-          >
-            <SidebarSection
-              title="Research"
-              collapsible
-              defaultOpen
-              storageKey="kiis-research"
-              className="mt-3"
-            >
-              {KIIS_RESEARCH.map((item) => (
-                <SidebarNavItem
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={item.icon}
-                  onClick={onNavItemClick}
-                />
-              ))}
-            </SidebarSection>
-          </SidebarModuleGroup>
-        )}
-
-        {/* Favorites & Recent (hidden for CLIENT) */}
-        {!isClient && <SidebarFavorites onNavItemClick={onNavItemClick} />}
-
-        {/* Admin Navigation (hidden for CLIENT) */}
-        {!isClient &&
-          (isAdmin ||
-            hasPermission("user:manage") ||
-            hasPermission("audit:view")) && (
-            <>
-              <div
-                className="h-px mx-1 my-2"
-                style={{
-                  background:
-                    "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
-                }}
-              />
-              <SidebarSection title="Admin">
-                {hasPermission("user:manage") && (
-                  <SidebarNavItem
-                    to="/admin/users"
-                    label="Users"
-                    icon={Users}
-                    onClick={onNavItemClick}
-                  />
-                )}
-                {hasPermission("audit:view") && (
-                  <SidebarNavItem
-                    to="/admin/activity"
-                    label="Activity Log"
-                    icon={ClipboardList}
-                    onClick={onNavItemClick}
-                  />
-                )}
-                {hasPermission("audit:view") && (
-                  <SidebarNavItem
-                    to="/analytics"
-                    label="Analytics"
-                    icon={BarChart2}
-                    onClick={onNavItemClick}
-                  />
-                )}
-                {hasPermission("user:manage") && (
-                  <SidebarNavItem
-                    to="/admin/settings"
-                    label="Settings"
-                    icon={Settings}
-                    onClick={onNavItemClick}
-                  />
-                )}
-              </SidebarSection>
-            </>
+                    ))}
+                  </SidebarSection>
+                </>
+              )}
+            </SidebarModuleGroup>
           )}
 
-        {/* Help */}
-        <div className="mt-2">
-          <SidebarNavItem
-            to="/help"
-            label="Help"
-            icon={HelpCircle}
-            onClick={onNavItemClick}
-          />
-        </div>
-      </div>
+          {/* ── VDR ── */}
+          {!isClient && (
+            <SidebarModuleGroup
+              id="vdr"
+              label="VDR"
+              icon={FolderLock}
+              basePath="/vdr"
+              isActive={isVdr}
+              storageKey="module-vdr"
+              defaultOpen={isVdr}
+              onNavItemClick={onNavItemClick}
+            >
+              <nav className="space-y-1" aria-label="VDR navigation">
+                {VDR_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </nav>
+            </SidebarModuleGroup>
+          )}
 
-      {/* Health Status (admin only, hidden for CLIENT) */}
-      {!isClient && <HealthIndicator />}
+          {/* ── Deal Doc Studio ── */}
+          {!isClient && (
+            <SidebarModuleGroup
+              id="docs"
+              label="Deal Doc Studio"
+              icon={FileStack}
+              basePath="/docs"
+              isActive={isDocs}
+              storageKey="module-docs"
+              defaultOpen={isDocs}
+              onNavItemClick={onNavItemClick}
+            >
+              <nav
+                className="space-y-1"
+                aria-label="Deal Document Studio navigation"
+              >
+                {DOCS_HOME_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </nav>
 
-      {/* User Info + Logout */}
-      {user && (
-        <div
-          className="border-t px-4 py-4"
-          style={{ borderColor: "var(--sidebar-divider)" }}
-        >
-          <button
-            onClick={() => {
-              navigate("/settings/profile");
-              onNavItemClick?.();
-            }}
-            className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
-            aria-label="Open profile settings"
-          >
-            {(() => {
-              const photoUrl = getMemberPhoto(user.display_name ?? "");
-              return photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={user.display_name ?? ""}
-                  className="w-10 h-10 rounded-full object-cover ring-1 ring-accent/30 bg-amic-700"
+              <SidebarSection
+                title="Marketing"
+                collapsible
+                defaultOpen
+                storageKey="docs-marketing"
+                className="mt-3"
+              >
+                {DOCS_MARKETING_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end={item.end}
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </SidebarSection>
+
+              <SidebarSection
+                title="Legal"
+                collapsible
+                defaultOpen
+                storageKey="docs-legal"
+                className="mt-3"
+              >
+                {DOCS_LEGAL_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end={item.end}
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </SidebarSection>
+
+              <SidebarSection
+                title="Due Diligence"
+                collapsible
+                defaultOpen
+                storageKey="docs-dd"
+                className="mt-3"
+              >
+                {DOCS_DD_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end={item.end}
+                    comingSoon={item.comingSoon}
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </SidebarSection>
+
+              {isFdd && isInDealWorkspace && (
+                <>
+                  <SidebarSection title="FDD Workflow" className="mt-3">
+                    {FDD_WORKFLOW_NAV.map((item) => (
+                      <SidebarNavItem
+                        key={item.to}
+                        to={`/fdd/deals/${dealId}/${item.to}`}
+                        label={item.label}
+                        icon={item.icon}
+                        end={item.end}
+                        onClick={onNavItemClick}
+                      />
+                    ))}
+                  </SidebarSection>
+                  <SidebarSection
+                    title="Setup"
+                    collapsible
+                    defaultOpen
+                    storageKey="fdd-setup"
+                    className="mt-3"
+                  >
+                    {FDD_SETUP_NAV.map((item) => (
+                      <SidebarNavItem
+                        key={item.to}
+                        to={`/fdd/deals/${dealId}/${item.to}`}
+                        label={item.label}
+                        icon={item.icon}
+                        onClick={onNavItemClick}
+                      />
+                    ))}
+                  </SidebarSection>
+                  <SidebarSection
+                    title="Analysis"
+                    collapsible
+                    defaultOpen
+                    storageKey="fdd-analysis"
+                    className="mt-3"
+                  >
+                    {FDD_ANALYSIS_NAV.map((item) => (
+                      <SidebarNavItem
+                        key={item.to}
+                        to={`/fdd/deals/${dealId}/${item.to}`}
+                        label={item.label}
+                        icon={item.icon}
+                        onClick={onNavItemClick}
+                      />
+                    ))}
+                  </SidebarSection>
+                  <SidebarSection
+                    title="Report"
+                    collapsible
+                    defaultOpen
+                    storageKey="fdd-report"
+                    className="mt-3"
+                  >
+                    {FDD_REPORT_NAV.map((item) => (
+                      <SidebarNavItem
+                        key={item.to}
+                        to={`/fdd/deals/${dealId}/${item.to}`}
+                        label={item.label}
+                        icon={item.icon}
+                        onClick={onNavItemClick}
+                      />
+                    ))}
+                  </SidebarSection>
+                </>
+              )}
+
+              <SidebarSection
+                title="Checklist & Timeline"
+                collapsible
+                defaultOpen
+                storageKey="docs-checklist"
+                className="mt-3"
+              >
+                {DOCS_CHECKLIST_NAV.map((item, idx) => (
+                  <SidebarNavItem
+                    key={`${item.to}-${idx}`}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    end={item.end}
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </SidebarSection>
+            </SidebarModuleGroup>
+          )}
+
+          {/* ── KIIS ── */}
+          {!isClient && (
+            <SidebarModuleGroup
+              id="kiis"
+              label="KIIS"
+              icon={BarChart3}
+              basePath="/kiis"
+              isActive={isKiis}
+              storageKey="module-kiis"
+              defaultOpen={isKiis}
+              onNavItemClick={onNavItemClick}
+            >
+              <SidebarSection
+                title="Research"
+                collapsible
+                defaultOpen
+                storageKey="kiis-research"
+                className="mt-3"
+              >
+                {KIIS_RESEARCH.map((item) => (
+                  <SidebarNavItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={item.icon}
+                    onClick={onNavItemClick}
+                  />
+                ))}
+              </SidebarSection>
+            </SidebarModuleGroup>
+          )}
+
+          {/* Favorites & Recent (hidden for CLIENT) */}
+          {!isClient && <SidebarFavorites onNavItemClick={onNavItemClick} />}
+
+          {/* Admin Navigation (hidden for CLIENT) */}
+          {!isClient &&
+            (isAdmin ||
+              hasPermission("user:manage") ||
+              hasPermission("audit:view")) && (
+              <>
+                <div
+                  className="h-px mx-1 my-2"
+                  style={{
+                    background:
+                      "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+                  }}
                 />
-              ) : (
-                <div className="w-10 h-10 bg-accent/25 rounded-full flex items-center justify-center ring-1 ring-accent/30">
-                  <span className="text-white font-medium text-sm">
-                    {user.display_name?.charAt(0).toUpperCase() || "U"}
-                  </span>
-                </div>
-              );
-            })()}
-            <div className="flex-1 min-w-0 text-left">
-              <div className="text-white text-sm font-medium truncate">
-                {user.display_name}
-              </div>
-              <Badge variant="neutral" className="mt-0.5 text-xs">
-                {user.role}
-              </Badge>
-            </div>
-          </button>
-          <button
-            onClick={async () => {
-              await logout();
-              navigate("/login", { replace: true });
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
-            style={{ color: "var(--sidebar-text-muted)" }}
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </button>
+                <SidebarSection title="Admin">
+                  {hasPermission("user:manage") && (
+                    <SidebarNavItem
+                      to="/admin/users"
+                      label="Users"
+                      icon={Users}
+                      onClick={onNavItemClick}
+                    />
+                  )}
+                  {hasPermission("audit:view") && (
+                    <SidebarNavItem
+                      to="/admin/activity"
+                      label="Activity Log"
+                      icon={ClipboardList}
+                      onClick={onNavItemClick}
+                    />
+                  )}
+                  {hasPermission("audit:view") && (
+                    <SidebarNavItem
+                      to="/analytics"
+                      label="Analytics"
+                      icon={BarChart2}
+                      onClick={onNavItemClick}
+                    />
+                  )}
+                  {hasPermission("user:manage") && (
+                    <SidebarNavItem
+                      to="/admin/settings"
+                      label="Settings"
+                      icon={Settings}
+                      onClick={onNavItemClick}
+                    />
+                  )}
+                </SidebarSection>
+              </>
+            )}
+
+          {/* Help */}
+          <div className="mt-2">
+            <SidebarNavItem
+              to="/help"
+              label="Help"
+              icon={HelpCircle}
+              onClick={onNavItemClick}
+            />
+          </div>
         </div>
-      )}
-    </aside>
+
+        {/* Health Status (admin only, hidden for CLIENT) */}
+        {!isClient && !collapsed && <HealthIndicator />}
+
+        {/* Collapse Toggle */}
+        {onToggleCollapse && (
+          <div className="px-3 py-2">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
+              style={{ color: "var(--sidebar-text-muted)" }}
+              aria-expanded={!collapsed}
+              aria-label="사이드바 접기/펼치기"
+            >
+              {collapsed ? (
+                <ChevronsRight className="h-4 w-4" />
+              ) : (
+                <>
+                  <ChevronsLeft className="h-4 w-4" />
+                  <span>접기</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* User Info + Logout */}
+        {user && (
+          <div
+            className="border-t px-4 py-4"
+            style={{ borderColor: "var(--sidebar-divider)" }}
+          >
+            <button
+              onClick={() => {
+                navigate("/settings/profile");
+                onNavItemClick?.();
+              }}
+              className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
+              aria-label="Open profile settings"
+            >
+              {(() => {
+                const photoUrl = getMemberPhoto(user.display_name ?? "");
+                return photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt={user.display_name ?? ""}
+                    className="w-10 h-10 rounded-full object-cover ring-1 ring-accent/30 bg-amic-700"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-accent/25 rounded-full flex items-center justify-center ring-1 ring-accent/30">
+                    <span className="text-white font-medium text-sm">
+                      {user.display_name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                  </div>
+                );
+              })()}
+              {!collapsed && (
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-white text-sm font-medium truncate">
+                    {user.display_name}
+                  </div>
+                  <Badge variant="neutral" className="mt-0.5 text-xs">
+                    {user.role}
+                  </Badge>
+                </div>
+              )}
+            </button>
+            <button
+              onClick={async () => {
+                await logout();
+                navigate("/login", { replace: true });
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              <LogOut className="h-4 w-4" />
+              {!collapsed && <span>Logout</span>}
+            </button>
+          </div>
+        )}
+      </aside>
+    </SidebarContext.Provider>
   );
 }

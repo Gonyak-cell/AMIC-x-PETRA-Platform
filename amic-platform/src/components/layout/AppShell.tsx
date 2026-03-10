@@ -23,6 +23,8 @@ export interface AppShellContextValue {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
+  desktopCollapsed: boolean;
+  setDesktopCollapsed: (collapsed: boolean) => void;
 }
 
 const AppShellContext = createContext<AppShellContextValue | null>(null);
@@ -41,6 +43,13 @@ export default function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar-desktop-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
 
   // Sidebar theme — applies CSS variables to :root on mount & change
   useSidebarAppearance();
@@ -85,6 +94,18 @@ export default function AppShell({ children }: AppShellProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Persist desktop collapsed state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "sidebar-desktop-collapsed",
+        String(desktopCollapsed),
+      );
+    } catch {
+      // localStorage unavailable
+    }
+  }, [desktopCollapsed]);
+
   // Lock body scroll when mobile sidebar is open
   useEffect(() => {
     if (isMobile && sidebarOpen) {
@@ -98,7 +119,15 @@ export default function AppShell({ children }: AppShellProps) {
   }, [isMobile, sidebarOpen]);
 
   return (
-    <AppShellContext.Provider value={{ sidebarOpen, setSidebarOpen, isMobile }}>
+    <AppShellContext.Provider
+      value={{
+        sidebarOpen,
+        setSidebarOpen,
+        isMobile,
+        desktopCollapsed,
+        setDesktopCollapsed,
+      }}
+    >
       {/* Skip Navigation */}
       <a
         href="#main-content"
@@ -111,8 +140,16 @@ export default function AppShell({ children }: AppShellProps) {
 
       <div className="flex min-h-screen overflow-x-hidden">
         {/* Desktop Sidebar */}
-        <div className="sticky top-0 h-fit hidden md:block">
-          <Sidebar />
+        <div
+          className={cn(
+            "sticky top-0 h-fit hidden md:block transition-all duration-200",
+            desktopCollapsed ? "w-16" : "w-64",
+          )}
+        >
+          <Sidebar
+            collapsed={desktopCollapsed}
+            onToggleCollapse={() => setDesktopCollapsed(!desktopCollapsed)}
+          />
         </div>
 
         {/* Mobile Sidebar (Drawer) */}
