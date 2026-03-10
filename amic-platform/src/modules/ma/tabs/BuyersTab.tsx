@@ -26,8 +26,10 @@ import {
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
   isShortListed,
+  buildStageMap,
 } from "@/modules/ma/constants";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
+import type { KpiFilter } from "@/modules/ma/components/buyers/ShortListOverview";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import FunnelKPIBar from "@/modules/ma/components/buyers/FunnelKPIBar";
@@ -116,6 +118,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
   const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
   const [shortListViewMode, setShortListViewMode] =
     useState<ShortListViewMode>("grid");
+  const [activeFilter, setActiveFilter] = useState<KpiFilter>("all");
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -263,6 +266,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     ],
     [shortListOverview, realShortList.length, devMockOverview],
   );
+
+  const stageMap = useMemo(() => buildStageMap(overviewMerged), [overviewMerged]);
 
   // Client-side filtering for Long List
   const deferredSearch = useDeferredValue(longListFilters.search);
@@ -482,6 +487,9 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
             <ShortListSummaryBar
               buyers={shortListBuyers}
               overviewData={overviewMerged}
+              stageMap={stageMap}
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
             />
 
             <div className="flex gap-4">
@@ -489,7 +497,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 <div className="w-[280px] flex-shrink-0">
                   <ShortListMasterList
                     buyers={shortListBuyers}
-                    overviewData={overviewMerged}
+                    stageMap={stageMap}
                     selectedBuyerId={selectedBuyerId}
                     onSelectBuyer={setSelectedBuyerId}
                     totalBuyerCount={allBuyers.length}
@@ -501,7 +509,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 {shortListViewMode === "grid" && (
                   <MarketingGridView
                     buyers={shortListBuyers}
-                    overviewData={overviewMerged}
+                    stageMap={stageMap}
                     onSelectBuyer={setSelectedBuyerId}
                     canWrite={canWrite}
                     txnId={txnId}
@@ -517,7 +525,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                   >
                     <MarketingKanbanView
                       buyers={shortListBuyers}
-                      overviewData={overviewMerged}
+                      stageMap={stageMap}
                       onSelectBuyer={setSelectedBuyerId}
                       canWrite={canWrite}
                       txnId={txnId}
@@ -534,7 +542,7 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                   >
                     <MarketingTimelineView
                       buyers={shortListBuyers}
-                      overviewData={overviewMerged}
+                      stageMap={stageMap}
                       onSelectBuyer={setSelectedBuyerId}
                       canWrite={canWrite}
                       txnId={txnId}
