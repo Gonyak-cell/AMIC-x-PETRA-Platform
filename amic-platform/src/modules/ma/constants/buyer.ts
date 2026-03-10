@@ -104,7 +104,7 @@ export function latestCompletedStageIndex(
 export function countCompletedStages(
   stages: Partial<Record<MarketingStage, string | null>> | undefined,
 ): number {
-  if (\!stages) return 0;
+  if (!stages) return 0;
   return MARKETING_STAGES.filter((s) => stages[s]).length;
 }
 
