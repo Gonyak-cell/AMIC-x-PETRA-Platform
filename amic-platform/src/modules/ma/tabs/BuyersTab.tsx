@@ -591,12 +591,23 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
               onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
               onToggleDrop={(buyerId, isCurrentlyDropped) =>
-                updateBuyer.mutate({
-                  buyerId,
-                  body: {
-                    status: isCurrentlyDropped ? 'IDENTIFIED' : 'BID_DROPPED',
+                updateBuyer.mutate(
+                  {
+                    buyerId,
+                    body: {
+                      // Drop 복구 시 IDENTIFIED로 초기화 — Short List 멤버십은 tier/flag 기반이므로 유지됨
+                      status: isCurrentlyDropped ? 'IDENTIFIED' : 'BID_DROPPED',
+                    },
                   },
-                })
+                  {
+                    onSuccess: () => {
+                      toast.success(isCurrentlyDropped ? '복구되었습니다' : 'Drop 되었습니다');
+                    },
+                    onError: () => {
+                      toast.error('상태 변경에 실패했습니다');
+                    },
+                  },
+                )
               }
             />
           </>

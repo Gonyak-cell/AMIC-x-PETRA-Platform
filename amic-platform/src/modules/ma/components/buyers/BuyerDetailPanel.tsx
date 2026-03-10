@@ -73,7 +73,7 @@ export default function BuyerDetailPanel({
                     : "bg-red-50 text-red-600 hover:bg-red-100"
                 }`}
               >
-                {isDropped ? "↩ 복구" : "✕ Drop 처리"}
+                {isDropped ? "↩ 복구" : "✕ Drop"}
               </button>
             </div>
           )}
