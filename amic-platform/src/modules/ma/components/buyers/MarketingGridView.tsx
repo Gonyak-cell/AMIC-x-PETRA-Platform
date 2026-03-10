@@ -67,7 +67,7 @@ export default function MarketingGridView({
         >
           <thead>
             <tr className="bg-green-500 border-b-2 border-green-600">
-              <th className="text-left px-3 py-2 font-medium text-white whitespace-nowrap min-w-[160px] sticky left-0 z-10 bg-green-500">
+              <th className="text-left px-3 py-2 font-medium text-white whitespace-nowrap w-[140px] max-w-[140px] sticky left-0 z-10 bg-green-500">
                 매수자
               </th>
               {MARKETING_STAGES.map((s) => (
@@ -107,23 +107,25 @@ export default function MarketingGridView({
                   <td
                     className={cn(
                       "px-3 py-1.5 border-r border-gray-border sticky left-0 z-[1] cursor-pointer",
-                      isDropped ? "bg-gray-50" : "bg-white group-hover:bg-accent/5",
+                      isDropped
+                        ? "bg-gray-50"
+                        : "bg-white group-hover:bg-accent/5",
                     )}
                     tabIndex={0}
                     role="button"
                     onClick={() => onSelectBuyer(buyer.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         onSelectBuyer(buyer.id);
                       }
                     }}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between gap-1">
                       <div className="min-w-0">
                         <span
                           className={cn(
-                            "font-medium text-xs truncate block max-w-[120px]",
+                            "font-medium text-xs truncate block max-w-[80px]",
                             isDropped
                               ? "text-gray-500 line-through"
                               : "text-text-dark",
@@ -132,7 +134,7 @@ export default function MarketingGridView({
                           {buyer.company_name}
                         </span>
                         {buyer.contact_name && (
-                          <span className="text-[10px] text-gray-500 truncate block max-w-[120px]">
+                          <span className="text-[10px] text-gray-500 truncate block max-w-[80px]">
                             {buyer.contact_name}
                           </span>
                         )}
