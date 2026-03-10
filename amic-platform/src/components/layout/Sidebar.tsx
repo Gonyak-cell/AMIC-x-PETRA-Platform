@@ -45,8 +45,8 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { createContext, useContext } from "react";
 import { cn } from "@/lib/cn";
+import { SidebarContext } from "./SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
@@ -61,16 +61,6 @@ import { SidebarFavorites } from "@/components/SidebarFavorites";
 import { HealthIndicator } from "@/components/layout/HealthIndicator";
 import { getMemberPhoto } from "@/lib/member-photos";
 import amicPetraLogoUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple.svg";
-
-// ── Sidebar Collapsed Context ──
-
-interface SidebarContextValue {
-  collapsed: boolean;
-}
-const SidebarContext = createContext<SidebarContextValue>({ collapsed: false });
-export function useSidebarCollapsed() {
-  return useContext(SidebarContext).collapsed;
-}
 
 // ── FDD Navigation ──
 

@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
-import { useSidebarCollapsed } from "./Sidebar";
+import { useSidebarCollapsed } from "./SidebarContext";
 
 export interface SidebarModuleGroupProps {
   id: string;
