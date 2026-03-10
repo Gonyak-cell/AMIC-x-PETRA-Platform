@@ -78,6 +78,14 @@ export default function ShortListOverview({
 
   const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
 
+  const viewProps = useMemo(() => ({
+    buyers: filteredBuyers,
+    stageMap,
+    onSelectBuyer: setSelectedBuyerId,
+    canWrite,
+    txnId,
+  }), [filteredBuyers, stageMap, canWrite, txnId]);
+
   if (!shortListBuyers.length) {
     return (
       <EmptyState
@@ -87,14 +95,6 @@ export default function ShortListOverview({
       />
     );
   }
-
-  const viewProps = useMemo(() => ({
-    buyers: filteredBuyers,
-    stageMap,
-    onSelectBuyer: setSelectedBuyerId,
-    canWrite,
-    txnId,
-  }), [filteredBuyers, stageMap, canWrite, txnId]);
 
   return (
     <div className="flex gap-4">
