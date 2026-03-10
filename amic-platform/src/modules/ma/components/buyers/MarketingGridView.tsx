@@ -6,7 +6,9 @@ import MarketingGridCell from "./MarketingGridCell";
 import {
   MARKETING_STAGES,
   MARKETING_STAGE_LABELS,
+  SKIPPABLE_STAGES,
   countCompletedStages,
+  effectiveStageCount,
   latestCompletedStageIndex,
 } from "@/modules/ma/constants";
 import type { BuyerCandidate, BuyerTier } from "@/modules/ma/types/buyer";
@@ -127,6 +129,11 @@ export default function MarketingGridView({
                   className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap"
                 >
                   {MARKETING_STAGE_LABELS[s]}
+                  {SKIPPABLE_STAGES.has(s) && (
+                    <span className="block text-[9px] font-normal text-white/60">
+                      선택
+                    </span>
+                  )}
                 </th>
               ))}
               <th className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap min-w-[60px]">
@@ -142,9 +149,11 @@ export default function MarketingGridView({
               const stages = stageMap.get(buyer.id);
               const isDropped = buyer.status === "BID_DROPPED";
               const completedCount = countCompletedStages(stages);
-              const progressPct = Math.round(
-                (completedCount / MARKETING_STAGES.length) * 100,
-              );
+              const effectiveTotal = effectiveStageCount(stages);
+              const progressPct =
+                effectiveTotal > 0
+                  ? Math.round((completedCount / effectiveTotal) * 100)
+                  : 0;
               const hasProgress = completedCount > 0;
               // 마지막 완료 단계 다음 = "다음 단계" CTA 표시 위치
               // 중간 단계가 비어 있어도 마지막 완료 이후만 표시 (의도적)
@@ -230,7 +239,7 @@ export default function MarketingGridView({
                   <td className="px-2 py-2">
                     <CircularProgress
                       pct={progressPct}
-                      label={`${completedCount}/${MARKETING_STAGES.length}`}
+                      label={`${completedCount}/${effectiveTotal}`}
                     />
                   </td>
                   <td className="text-center rounded-r-lg">

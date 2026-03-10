@@ -122,13 +122,13 @@ class MarketingStage(enum.StrEnum):
     """Short-List 마케팅 활동 8단계."""
 
     IDENTIFIED = "IDENTIFIED"  # 식별
-    EMAIL_SENT = "EMAIL_SENT"  # 메일전송
-    PHONE_CALL = "PHONE_CALL"  # 전화
-    ADVISOR_MEETING = "ADVISOR_MEETING"  # 자문사 미팅
+    TEASER_SENT = "TEASER_SENT"  # Teaser 배포
     NDA_SIGNED = "NDA_SIGNED"  # NDA 체결
-    TARGET_MEETING = "TARGET_MEETING"  # 대상회사 미팅
-    CIM_SENT = "CIM_SENT"  # IM 발송
-    DD_STARTED = "DD_STARTED"  # DD 진행
+    IM_DISTRIBUTED = "IM_DISTRIBUTED"  # IM 배포
+    QNA_COMPLETED = "QNA_COMPLETED"  # Q&A
+    MGMT_PRESENTATION = "MGMT_PRESENTATION"  # MP (생략 가능)
+    LOI_RECEIVED = "LOI_RECEIVED"  # LOI 접수
+    DD_IN_PROGRESS = "DD_IN_PROGRESS"  # DD 진행
 
 
 # ── Phase 2: NDA ───────────────────────────────────────

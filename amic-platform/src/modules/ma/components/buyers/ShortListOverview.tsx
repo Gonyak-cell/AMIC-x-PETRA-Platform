@@ -58,7 +58,7 @@ export default function ShortListOverview({
     if (activeFilter === "target_meeting") {
       const mtgIds = new Set(
         overviewData
-          .filter((s) => s.stages.TARGET_MEETING)
+          .filter((s) => s.stages.LOI_RECEIVED)
           .map((s) => s.buyer_id),
       );
       return shortListBuyers.filter((b) => mtgIds.has(b.id));
@@ -78,13 +78,16 @@ export default function ShortListOverview({
 
   const stageMap = useMemo(() => buildStageMap(overviewData), [overviewData]);
 
-  const viewProps = useMemo(() => ({
-    buyers: filteredBuyers,
-    stageMap,
-    onSelectBuyer: setSelectedBuyerId,
-    canWrite,
-    txnId,
-  }), [filteredBuyers, stageMap, canWrite, txnId]);
+  const viewProps = useMemo(
+    () => ({
+      buyers: filteredBuyers,
+      stageMap,
+      onSelectBuyer: setSelectedBuyerId,
+      canWrite,
+      txnId,
+    }),
+    [filteredBuyers, stageMap, canWrite, txnId],
+  );
 
   if (!shortListBuyers.length) {
     return (

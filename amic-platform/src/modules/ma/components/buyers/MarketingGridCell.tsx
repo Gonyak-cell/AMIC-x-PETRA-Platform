@@ -1,6 +1,7 @@
 import { memo, useRef, useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { SKIPPABLE_STAGES } from "@/modules/ma/constants";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 import InlineLogInput from "./InlineLogInput";
 import LogListPopover from "./LogListPopover";
@@ -82,10 +83,18 @@ const MarketingGridCell = memo(function MarketingGridCell({
         </span>
       ) : isEmpty ? (
         <span
-          className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300"
+          className={`inline-block ${
+            SKIPPABLE_STAGES.has(stage)
+              ? "text-[10px] text-gray-400"
+              : "w-1.5 h-1.5 rounded-full bg-gray-300"
+          }`}
           title={canWrite ? "클릭하여 로그 추가" : undefined}
         >
-          <span className="sr-only">미완료</span>
+          {SKIPPABLE_STAGES.has(stage) ? (
+            <span className="text-gray-400">&mdash;</span>
+          ) : (
+            <span className="sr-only">미완료</span>
+          )}
         </span>
       ) : (
         <span className="inline-flex flex-col items-center gap-0.5">

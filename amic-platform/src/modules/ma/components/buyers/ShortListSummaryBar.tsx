@@ -27,9 +27,7 @@ export default function ShortListSummaryBar({
   const dropCount = buyers.filter((b) => b.status === "BID_DROPPED").length;
   const activeCount = buyers.length - dropCount;
   const ndaCount = overviewData.filter((s) => s.stages.NDA_SIGNED).length;
-  const targetMeetingCount = overviewData.filter(
-    (s) => s.stages.TARGET_MEETING,
-  ).length;
+  const loiCount = overviewData.filter((s) => s.stages.LOI_RECEIVED).length;
   const tier1Count = buyers.filter((b) => b.tier === "TIER_1").length;
 
   const avgPct = useMemo(() => {
@@ -73,8 +71,8 @@ export default function ShortListSummaryBar({
       filter: "nda",
     },
     {
-      label: "대상미팅 완료",
-      value: targetMeetingCount,
+      label: "LOI 접수",
+      value: loiCount,
       color: "text-solid-green",
       filter: "target_meeting",
     },

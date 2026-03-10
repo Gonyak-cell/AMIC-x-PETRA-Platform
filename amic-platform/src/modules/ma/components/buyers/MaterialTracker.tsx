@@ -31,8 +31,8 @@ export default function MaterialTracker({
   const items: CheckItem[] = [
     {
       label: "Teaser 발송",
-      done: stages?.EMAIL_SENT != null,
-      date: stages?.EMAIL_SENT ?? null,
+      done: stages?.TEASER_SENT != null,
+      date: stages?.TEASER_SENT ?? null,
     },
     {
       label: "NDA 체결",
@@ -40,14 +40,14 @@ export default function MaterialTracker({
       date: stages?.NDA_SIGNED ?? null,
     },
     {
-      label: "CIM/IM 발송",
-      done: stages?.ADVISOR_MEETING != null,
-      date: stages?.ADVISOR_MEETING ?? null,
+      label: "IM 배포",
+      done: stages?.IM_DISTRIBUTED != null,
+      date: stages?.IM_DISTRIBUTED ?? null,
     },
     {
-      label: "대상회사 미팅",
-      done: stages?.TARGET_MEETING != null,
-      date: stages?.TARGET_MEETING ?? null,
+      label: "LOI 접수",
+      done: stages?.LOI_RECEIVED != null,
+      date: stages?.LOI_RECEIVED ?? null,
     },
     {
       label: "VDR 접근",

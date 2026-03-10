@@ -149,7 +149,7 @@ async def test_list_marketing_logs(client):
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-05"},
     )
 
     resp = await client.get(
@@ -169,16 +169,16 @@ async def test_list_marketing_logs_filter_stage(client):
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-05"},
     )
 
     resp = await client.get(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-        params={"stage": "EMAIL_SENT"},
+        params={"stage": "TEASER_SENT"},
     )
     assert resp.status_code == 200
     assert len(resp.json()) == 1
-    assert resp.json()[0]["stage"] == "EMAIL_SENT"
+    assert resp.json()[0]["stage"] == "TEASER_SENT"
 
 
 async def test_update_marketing_log(client):
@@ -193,11 +193,11 @@ async def test_update_marketing_log(client):
 
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs/{log_id}",
-        json={"content": "수정된 내용", "stage": "PHONE_CALL"},
+        json={"content": "수정된 내용", "stage": "TEASER_SENT"},
     )
     assert resp.status_code == 200
     assert resp.json()["content"] == "수정된 내용"
-    assert resp.json()["stage"] == "PHONE_CALL"
+    assert resp.json()["stage"] == "TEASER_SENT"
 
 
 async def test_delete_marketing_log(client):
@@ -240,11 +240,11 @@ async def test_marketing_stage_summary(client):
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-05"},
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-10"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-10"},
     )
 
     resp = await client.get(
@@ -255,10 +255,10 @@ async def test_marketing_stage_summary(client):
     assert data["buyer_id"] == buyer["id"]
     # IDENTIFIED → latest=2026-03-01
     assert data["stages"]["IDENTIFIED"] == "2026-03-01"
-    # EMAIL_SENT → latest=2026-03-10 (최신 날짜)
-    assert data["stages"]["EMAIL_SENT"] == "2026-03-10"
+    # TEASER_SENT → latest=2026-03-10 (최신 날짜)
+    assert data["stages"]["TEASER_SENT"] == "2026-03-10"
     # 미완료 단계는 None
-    assert data["stages"]["PHONE_CALL"] is None
+    assert data["stages"]["QNA_COMPLETED"] is None
     assert data["stages"]["NDA_SIGNED"] is None
 
 
@@ -339,18 +339,18 @@ async def test_short_list_overview_with_marketing_data(client):
         json={"tier": "TIER_2", "is_short_listed": True},
     )
 
-    # b1에 마케팅 로그 2건 — IDENTIFIED(03-01), EMAIL_SENT(03-05, 03-10)
+    # b1에 마케팅 로그 2건 — IDENTIFIED(03-01), TEASER_SENT(03-05, 03-10)
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
         json={"stage": "IDENTIFIED", "log_date": "2026-03-01"},
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-05"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-05"},
     )
     await client.post(
         f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}/marketing-logs",
-        json={"stage": "EMAIL_SENT", "log_date": "2026-03-10"},
+        json={"stage": "TEASER_SENT", "log_date": "2026-03-10"},
     )
 
     # b2에 마케팅 로그 1건 — IDENTIFIED(03-02)
@@ -369,14 +369,14 @@ async def test_short_list_overview_with_marketing_data(client):
     # buyer_id별 stages 매핑
     by_buyer = {item["buyer_id"]: item["stages"] for item in data}
 
-    # b1: IDENTIFIED=03-01, EMAIL_SENT=03-10 (최신), 나머지 None
+    # b1: IDENTIFIED=03-01, TEASER_SENT=03-10 (최신), 나머지 None
     assert by_buyer[b1["id"]]["IDENTIFIED"] == "2026-03-01"
-    assert by_buyer[b1["id"]]["EMAIL_SENT"] == "2026-03-10"
-    assert by_buyer[b1["id"]]["PHONE_CALL"] is None
+    assert by_buyer[b1["id"]]["TEASER_SENT"] == "2026-03-10"
+    assert by_buyer[b1["id"]]["IM_DISTRIBUTED"] is None
 
     # b2: IDENTIFIED=03-02, 나머지 None
     assert by_buyer[b2["id"]]["IDENTIFIED"] == "2026-03-02"
-    assert by_buyer[b2["id"]]["EMAIL_SENT"] is None
+    assert by_buyer[b2["id"]]["TEASER_SENT"] is None
 
 
 # ── Excel Export ──────────────────────────────────────────

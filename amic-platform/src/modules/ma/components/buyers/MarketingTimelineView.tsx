@@ -8,6 +8,8 @@ import InlineMeetingForm from "./InlineMeetingForm";
 import {
   MARKETING_STAGES,
   MARKETING_STAGE_LABELS,
+  MILESTONE_STAGES,
+  SKIPPABLE_STAGES,
   latestCompletedStageIndex,
 } from "@/modules/ma/constants";
 import { useMeetingLogs } from "@/modules/ma/hooks/useMeetingLogs";
@@ -23,13 +25,6 @@ interface MarketingTimelineViewProps {
   canWrite: boolean;
   txnId: string;
 }
-
-const MILESTONE_STAGES = new Set<MarketingStage>([
-  "NDA_SIGNED",
-  "TARGET_MEETING",
-  "CIM_SENT",
-  "DD_STARTED",
-]);
 
 export default function MarketingTimelineView({
   buyers,
@@ -91,7 +86,7 @@ export default function MarketingTimelineView({
       </p>
       <p className="sr-only">
         각 매수 후보자별 마케팅 단계 진행 현황을 시간순으로 표시합니다. 단계:
-        후보 발굴, 이메일 발송, 전화 접촉, 자문사 미팅, NDA 체결, 대상 미팅.
+        식별, Teaser, NDA, IM, Q&amp;A, MP, LOI, DD.
       </p>
       {meetingError && (
         <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-1.5 mb-2">
@@ -179,13 +174,16 @@ export default function MarketingTimelineView({
 
               {/* Vertical timeline */}
               <div className="px-4 py-3">
-                {completedStages.length === 0 &&
-                buyerMeetings.length === 0 ? (
+                {completedStages.length === 0 && buyerMeetings.length === 0 ? (
                   <p className="text-xs text-gray-500 py-2">
                     아직 진행된 단계가 없습니다.
                   </p>
                 ) : (
-                  <div className="relative ml-1.5" aria-label="마케팅 진행 타임라인" role="list">
+                  <div
+                    className="relative ml-1.5"
+                    aria-label="마케팅 진행 타임라인"
+                    role="list"
+                  >
                     {/* 완료 단계 + 미팅 통합 렌더링 */}
                     {timelineItems.map((item, idx) => {
                       const isLastItem =
@@ -256,10 +254,7 @@ export default function MarketingTimelineView({
                           <div className="w-px min-h-[8px]" />
                         </div>
                         <div className="pb-2 flex-1 min-w-0">
-                          <InlineMeetingForm
-                            txnId={txnId}
-                            buyerId={buyer.id}
-                          />
+                          <InlineMeetingForm txnId={txnId} buyerId={buyer.id} />
                         </div>
                       </div>
                     )}
@@ -267,21 +262,33 @@ export default function MarketingTimelineView({
                     {/* 미완료(pending) 단계 */}
                     {pendingStages.map((stage, idx) => {
                       const isLast = idx === pendingStages.length - 1;
+                      const isSkippable = SKIPPABLE_STAGES.has(stage);
                       return (
                         <div
                           key={stage}
                           className="flex items-start gap-3 relative opacity-50"
                         >
                           <div className="flex flex-col items-center">
-                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 border border-gray-300 bg-white" />
+                            <div
+                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 bg-white ${
+                                isSkippable
+                                  ? "border-2 border-dashed border-gray-300"
+                                  : "border border-gray-300"
+                              }`}
+                            />
                             {!isLast && (
                               <div className="w-px flex-1 min-h-[20px] bg-gray-200" />
                             )}
                           </div>
-                          <div className="pb-3">
+                          <div className="pb-3 flex items-center gap-1.5">
                             <span className="text-sm italic text-gray-400">
                               {MARKETING_STAGE_LABELS[stage]}
                             </span>
+                            {isSkippable && (
+                              <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1 py-0.5">
+                                선택
+                              </span>
+                            )}
                           </div>
                         </div>
                       );

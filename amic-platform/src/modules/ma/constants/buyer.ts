@@ -58,27 +58,41 @@ export function isShortListed(b: BuyerCandidate): boolean {
 // ── Marketing Stage ─────────────────────────────────
 export const MARKETING_STAGES: MarketingStage[] = [
   "IDENTIFIED",
-  "EMAIL_SENT",
-  "PHONE_CALL",
-  "ADVISOR_MEETING",
+  "TEASER_SENT",
   "NDA_SIGNED",
-  "TARGET_MEETING",
-  "CIM_SENT",
-  "DD_STARTED",
+  "IM_DISTRIBUTED",
+  "QNA_COMPLETED",
+  "MGMT_PRESENTATION",
+  "LOI_RECEIVED",
+  "DD_IN_PROGRESS",
 ];
 
 export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
   IDENTIFIED: "식별",
-  EMAIL_SENT: "메일전송",
-  PHONE_CALL: "전화",
-  ADVISOR_MEETING: "자문사 미팅",
-  NDA_SIGNED: "NDA 체결",
-  TARGET_MEETING: "대상회사 미팅",
-  CIM_SENT: "IM 발송",
-  DD_STARTED: "DD 진행",
+  TEASER_SENT: "Teaser",
+  NDA_SIGNED: "NDA",
+  IM_DISTRIBUTED: "IM",
+  QNA_COMPLETED: "Q&A",
+  MGMT_PRESENTATION: "MP",
+  LOI_RECEIVED: "LOI",
+  DD_IN_PROGRESS: "DD",
 };
 
-export const MARKETING_STAGE_OPTIONS: SelectOption[] = MARKETING_STAGES.map(  (s) => ({ value: s, label: MARKETING_STAGE_LABELS[s] }),);
+/** MP(Management Presentation)는 생략 가능한 단계 */
+export const SKIPPABLE_STAGES: ReadonlySet<MarketingStage> = new Set([
+  "MGMT_PRESENTATION",
+]);
+
+/** Milestone 단계 (강조 표시) */
+export const MILESTONE_STAGES: ReadonlySet<MarketingStage> = new Set([
+  "NDA_SIGNED",
+  "LOI_RECEIVED",
+  "DD_IN_PROGRESS",
+]);
+
+export const MARKETING_STAGE_OPTIONS: SelectOption[] = MARKETING_STAGES.map(
+  (s) => ({ value: s, label: MARKETING_STAGE_LABELS[s] }),
+);
 
 // ── Stage Map Utility ──────────────────────────────
 export function buildStageMap(
@@ -97,12 +111,21 @@ export function latestCompletedStageIndex(
   return -1;
 }
 
-/** 완료된 마케팅 단계 수 */
+/** 완료된 마케팅 단계 수 (생략 가능 단계는 미완료 시 분모에서 제외) */
 export function countCompletedStages(
   stages: Partial<Record<MarketingStage, string | null>> | undefined,
 ): number {
   if (!stages) return 0;
   return MARKETING_STAGES.filter((s) => stages[s]).length;
+}
+
+/** 유효 단계 수 (생략 가능 단계는 완료되지 않았으면 제외) */
+export function effectiveStageCount(
+  stages: Partial<Record<MarketingStage, string | null>> | undefined,
+): number {
+  if (!stages) return MARKETING_STAGES.length;
+  return MARKETING_STAGES.filter((s) => !SKIPPABLE_STAGES.has(s) || stages[s])
+    .length;
 }
 
 // ── Buyer Type ────────────────────────────────────────

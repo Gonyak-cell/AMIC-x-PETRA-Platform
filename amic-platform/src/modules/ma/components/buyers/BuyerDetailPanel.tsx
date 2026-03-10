@@ -3,11 +3,16 @@ import { SlidePanel, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui/Tabs";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
-import { BUYER_TYPE_OPTIONS } from "@/modules/ma/constants";
+import {
+  BUYER_TYPE_OPTIONS,
+  MARKETING_STAGES,
+  latestCompletedStageIndex,
+} from "@/modules/ma/constants";
 import BuyerSummarySection from "./BuyerSummarySection";
 import BuyerMeetingTimeline from "./BuyerMeetingTimeline";
 import MaterialTracker from "./MaterialTracker";
 import BuyerFeedbackSection from "./BuyerFeedbackSection";
+import InlineLogInput from "./InlineLogInput";
 import { CommentThread } from "@/components/collaboration/CommentThread";
 
 interface BuyerDetailPanelProps {
@@ -95,7 +100,32 @@ export default function BuyerDetailPanel({
               />
             )}
             {activeTab === "meetings" && (
-              <BuyerMeetingTimeline txnId={txnId} buyerId={buyer.id} />
+              <div className="space-y-4">
+                {/* 마케팅 로그 빠른 추가 폼 */}
+                {canWrite && (
+                  <div className="px-1">
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                      마케팅 로그 추가
+                    </p>
+                    <InlineLogInput
+                      txnId={txnId}
+                      buyerId={buyer.id}
+                      defaultStage={
+                        stageSummary?.stages
+                          ? MARKETING_STAGES[
+                              Math.min(
+                                latestCompletedStageIndex(stageSummary.stages) +
+                                  1,
+                                MARKETING_STAGES.length - 1,
+                              )
+                            ]
+                          : MARKETING_STAGES[0]
+                      }
+                    />
+                  </div>
+                )}
+                <BuyerMeetingTimeline txnId={txnId} buyerId={buyer.id} />
+              </div>
             )}
             {activeTab === "materials" && (
               <MaterialTracker

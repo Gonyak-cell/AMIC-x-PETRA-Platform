@@ -1,12 +1,12 @@
 export type MarketingStage =
   | "IDENTIFIED"
-  | "EMAIL_SENT"
-  | "PHONE_CALL"
-  | "ADVISOR_MEETING"
+  | "TEASER_SENT"
   | "NDA_SIGNED"
-  | "TARGET_MEETING"
-  | "CIM_SENT"
-  | "DD_STARTED";
+  | "IM_DISTRIBUTED"
+  | "QNA_COMPLETED"
+  | "MGMT_PRESENTATION"
+  | "LOI_RECEIVED"
+  | "DD_IN_PROGRESS";
 
 export interface MarketingLog {
   id: string;

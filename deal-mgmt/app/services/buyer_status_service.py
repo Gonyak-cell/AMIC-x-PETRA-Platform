@@ -16,14 +16,12 @@ logger = logging.getLogger(__name__)
 _S = BuyerCandidateStatus
 
 # 마케팅 스테이지 → 목표 buyer status 매핑
-# PHONE_CALL / ADVISOR_MEETING도 최소한 CONTACTED 상태를 의미하므로 매핑
 MARKETING_STATUS_ADVANCE: dict[MarketingStage, BuyerCandidateStatus] = {
-    MarketingStage.EMAIL_SENT: _S.CONTACTED,
-    MarketingStage.PHONE_CALL: _S.CONTACTED,
-    MarketingStage.ADVISOR_MEETING: _S.CONTACTED,
+    MarketingStage.TEASER_SENT: _S.CONTACTED,
     MarketingStage.NDA_SIGNED: _S.NDA_SIGNED,
-    MarketingStage.CIM_SENT: _S.CIM_SENT,
-    MarketingStage.DD_STARTED: _S.DD_GRANTED,
+    MarketingStage.IM_DISTRIBUTED: _S.CIM_SENT,
+    MarketingStage.LOI_RECEIVED: _S.LOI_RECEIVED,
+    MarketingStage.DD_IN_PROGRESS: _S.DD_IN_PROGRESS,
 }
 
 # 선형 승격 경로 (중간 상태를 순차적으로 통과)
