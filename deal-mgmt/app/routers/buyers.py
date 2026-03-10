@@ -65,7 +65,7 @@ _BUYER_STATUS_TRANSITIONS: dict[BuyerCandidateStatus, set[BuyerCandidateStatus]]
     _S.REJECTED: set(),
     _S.BID_SUBMITTED: {_S.SELECTED, _S.BID_DROPPED, _S.REJECTED},
     _S.BID_NOT_SUBMITTED: {_S.BID_SUBMITTED, _S.BID_DROPPED, _S.REJECTED},
-    _S.BID_DROPPED: set(),
+    _S.BID_DROPPED: {_S.IDENTIFIED},
 }
 
 
