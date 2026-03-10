@@ -20,6 +20,7 @@ import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 import type { MeetingLog } from "@/modules/ma/types/meeting_log";
 
+const EMPTY_STAGES: Partial<Record<MarketingStage, string | null>> = {};
 interface MarketingTimelineViewProps {
   buyers: BuyerCandidate[];
   stageMap: Map<string, Partial<Record<MarketingStage, string | null>>>;
@@ -56,7 +57,6 @@ export default function MarketingTimelineView({
     return map;
   }, [meetingData?.items]);
 
-  const EMPTY_STAGES: Partial<Record<MarketingStage, string | null>> = {};
 
   const sorted = useMemo(
     () =>
