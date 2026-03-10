@@ -78,12 +78,12 @@ export default function MarketingKanbanView({
               className="min-w-52 flex-1 max-w-72 bg-bg-cool rounded-dr border border-gray-border"
             >
               {/* Column header */}
-              <div className="px-3 py-2 border-b border-gray-border bg-white rounded-t-dr">
+              <div className="px-3 py-2 border-b border-green-400/50 bg-green-500 rounded-t-dr">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-text-dark">
+                  <span className="text-xs font-medium text-white">
                     {MARKETING_STAGE_LABELS[stage]}
                   </span>
-                  <span className="text-[10px] text-gray-500 bg-bg-cool px-1.5 py-0.5 rounded-full">
+                  <span className="text-[10px] text-white/80 bg-green-600/50 px-1.5 py-0.5 rounded-full">
                     {stageBuyers.filter((b) => b.status !== "BID_DROPPED").length}
                     {stageBuyers.some((b) => b.status === "BID_DROPPED") && (
                       <span className="text-red-500 ml-0.5">

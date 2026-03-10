@@ -166,9 +166,7 @@ export default function MarketingTimelineView({
                               className={`rounded-full flex-shrink-0 mt-1 ${
                                 isMilestone
                                   ? "w-3.5 h-3.5 bg-accent ring-2 ring-accent/30"
-                                  : item.stage === "IOI_RECEIVED" || item.stage === "LOI_RECEIVED"
-                                    ? "w-2.5 h-2.5 bg-amber-500"
-                                    : "w-2.5 h-2.5 bg-accent"
+                                  : "w-2.5 h-2.5 bg-accent"
                               }`}
                             />
                             {!isLast && (

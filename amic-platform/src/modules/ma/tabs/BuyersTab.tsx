@@ -534,9 +534,9 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                       <PanelLeftOpen className="h-5 w-5" />
                     )}
                   </button>
-                  <h3 className="text-sm font-medium text-text-muted">
-                    마케팅 활동 추적
-                  </h3>
+                  <span className="text-xs text-text-muted">
+                    {masterListOpen ? "접기" : "펼치기"}
+                  </span>
                 </div>
                 {shortListViewMode === "grid" && (
                   <MarketingGridView

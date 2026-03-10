@@ -66,19 +66,19 @@ export default function MarketingGridView({
           data-testid="marketing-grid"
         >
           <thead>
-            <tr className="bg-bg-cool border-b-2 border-gray-300">
-              <th className="text-left px-3 py-2 font-medium text-text-dark whitespace-nowrap min-w-[160px] sticky left-0 z-10 bg-bg-cool">
+            <tr className="bg-green-500 border-b-2 border-green-600">
+              <th className="text-left px-3 py-2 font-medium text-white whitespace-nowrap min-w-[160px] sticky left-0 z-10 bg-green-500">
                 매수자
               </th>
               {MARKETING_STAGES.map((s) => (
                 <th
                   key={s}
-                  className="px-2 py-2 font-medium text-gray-600 text-center text-xs whitespace-nowrap border-l border-gray-border"
+                  className="px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50"
                 >
                   {MARKETING_STAGE_LABELS[s]}
                 </th>
               ))}
-              <th className="px-2 py-2 font-medium text-gray-600 text-center text-xs whitespace-nowrap border-l border-gray-border min-w-[60px]">
+              <th className="px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50 min-w-[60px]">
                 진행률
               </th>
               <th className="w-10 border-l border-gray-border">
@@ -98,7 +98,7 @@ export default function MarketingGridView({
                 <tr
                   key={buyer.id}
                   className={cn(
-                    "border-b border-gray-300 last:border-b-0 group",
+                    "border-b border-dashed border-gray-200 last:border-b-0 group",
                     isDropped
                       ? "bg-gray-50 grayscale opacity-[0.55] hover:opacity-70"
                       : "hover:bg-accent/5",
