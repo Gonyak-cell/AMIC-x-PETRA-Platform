@@ -1,4 +1,16 @@
+import { Video, Phone, Mail, Users, MessageCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { SelectOption } from "@/components/ui";
+import type { MeetingChannel } from "@/modules/ma/types/meeting_log";
+import type { MeetingStatus } from "@/modules/ma/types/meeting_log";
+
+// -- Meeting Status Label --
+export const MEETING_STATUS_LABEL: Record<MeetingStatus, string> = {
+  COMPLETED: "완료",
+  SCHEDULED: "예정",
+  CANCELLED: "취소",
+  POSTPONED: "연기",
+};
 
 // ── Meeting Channel (미팅 채널) ────────────────────────
 export const MEETING_CHANNEL_OPTIONS: SelectOption[] = [
@@ -69,3 +81,13 @@ export const ATTENDEE_ROLE_OPTIONS: SelectOption[] = [
   { value: "OBSERVER", label: "옵저버" },
   { value: "OTHER", label: "기타" },
 ];
+
+// ── Channel Icon Component Map ──────────────────────────
+
+export const CHANNEL_ICON_COMPONENT: Record<MeetingChannel, LucideIcon> = {
+  VIDEO: Video,
+  PHONE: Phone,
+  EMAIL: Mail,
+  IN_PERSON: Users,
+  HYBRID: MessageCircle,
+};

@@ -78,16 +78,7 @@ export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
   DD_STARTED: "DD 진행",
 };
 
-export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
-  { value: "IDENTIFIED", label: "식별" },
-  { value: "EMAIL_SENT", label: "메일전송" },
-  { value: "PHONE_CALL", label: "전화" },
-  { value: "ADVISOR_MEETING", label: "자문사 미팅" },
-  { value: "NDA_SIGNED", label: "NDA 체결" },
-  { value: "TARGET_MEETING", label: "대상회사 미팅" },
-  { value: "CIM_SENT", label: "IM 발송" },
-  { value: "DD_STARTED", label: "DD 진행" },
-];
+export const MARKETING_STAGE_OPTIONS: SelectOption[] = MARKETING_STAGES.map(  (s) => ({ value: s, label: MARKETING_STAGE_LABELS[s] }),);
 
 // ── Stage Map Utility ──────────────────────────────
 export function buildStageMap(
@@ -131,7 +122,7 @@ export const BUYER_STATUS_OPTIONS: SelectOption[] = [
   { value: "CONTACTED", label: "접촉" },
   { value: "NDA_SENT", label: "NDA 발송" },
   { value: "NDA_SIGNED", label: "NDA 체결" },
-  { value: "CIM_SENT", label: "CIM 발송" },
+  { value: "CIM_SENT", label: "IM 발송" },
   { value: "INTEREST_CONFIRMED", label: "관심 확인" },
   { value: "IOI_RECEIVED", label: "IOI 접수" },
   { value: "IOI_ACCEPTED", label: "IOI 수락" },

@@ -1,47 +1,22 @@
-import {
-  Calendar,
-  Video,
-  Phone,
-  Mail,
-  Users,
-  MessageCircle,
-} from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Badge, EmptyState, Spinner } from "@/components/ui";
+import {
+  MEETING_STATUS_VARIANT,
+} from "@/modules/ma/constants";
+import {
+  MEETING_STATUS_LABEL,
+  CHANNEL_ICON_COMPONENT,
+} from "@/modules/ma/constants/meeting";
 import { useMeetingLogs } from "@/modules/ma/hooks/useMeetingLogs";
-import type {
-  MeetingChannel,
-  MeetingStatus,
-} from "@/modules/ma/types/meeting_log";
 
 interface BuyerMeetingTimelineProps {
   txnId: string;
   buyerId: string;
 }
 
-const CHANNEL_ICON: Record<MeetingChannel, React.ReactNode> = {
-  VIDEO: <Video className="h-4 w-4" />,
-  PHONE: <Phone className="h-4 w-4" />,
-  EMAIL: <Mail className="h-4 w-4" />,
-  IN_PERSON: <Users className="h-4 w-4" />,
-  HYBRID: <MessageCircle className="h-4 w-4" />,
-};
 
-const STATUS_VARIANT: Record<
-  MeetingStatus,
-  "success" | "info" | "error" | "warning"
-> = {
-  COMPLETED: "success",
-  SCHEDULED: "info",
-  CANCELLED: "error",
-  POSTPONED: "warning",
-};
 
-const STATUS_LABEL: Record<MeetingStatus, string> = {
-  COMPLETED: "완료",
-  SCHEDULED: "예정",
-  CANCELLED: "취소",
-  POSTPONED: "연기",
-};
+
 
 export default function BuyerMeetingTimeline({
   txnId,
@@ -83,12 +58,17 @@ export default function BuyerMeetingTimeline({
           {/* 우측: 카드 */}
           <div className="mb-4 flex-1 rounded-lg border bg-white p-3">
             <div className="flex items-center gap-2">
-              <span className="text-text-muted">
-                {CHANNEL_ICON[log.channel]}
-              </span>
+              {(() => {
+                const ChannelIcon = CHANNEL_ICON_COMPONENT[log.channel];
+                return (
+                  <span className="text-text-muted">
+                    <ChannelIcon className="h-4 w-4" />
+                  </span>
+                );
+              })()}
               <span className="font-medium text-sm">{log.title}</span>
-              <Badge variant={STATUS_VARIANT[log.status]}>
-                {STATUS_LABEL[log.status]}
+              <Badge variant={MEETING_STATUS_VARIANT[log.status]}>
+                {MEETING_STATUS_LABEL[log.status]}
               </Badge>
             </div>
             {log.summary && (
