@@ -20,7 +20,7 @@ from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claim
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
-from app.models.enums import AuditAction, MarketingStage
+from app.models.enums import AuditAction, BuyerCandidateStatus, MarketingStage
 from app.schemas.marketing_log import (
     BuyerStageSummary,
     DartFinancialSummaryOut,
@@ -50,6 +50,86 @@ async def _get_buyer(db: AsyncSession, txn_id: uuid.UUID, buyer_id: uuid.UUID) -
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="매수자 후보를 찾을 수 없습니다")
     return buyer
+
+
+# ── 마케팅 스테이지 → buyer.status 자동 승격 ──────────────────
+_S = BuyerCandidateStatus
+
+# 마케팅 스테이지 → 목표 buyer status 매핑
+_MARKETING_STATUS_ADVANCE: dict[MarketingStage, BuyerCandidateStatus] = {
+    MarketingStage.EMAIL_SENT: _S.CONTACTED,
+    MarketingStage.NDA_SIGNED: _S.NDA_SIGNED,
+    MarketingStage.CIM_SENT: _S.CIM_SENT,
+    MarketingStage.DD_STARTED: _S.DD_GRANTED,
+}
+
+# 선형 승격 경로 (중간 상태를 순차적으로 통과)
+_ADVANCE_PATH: dict[BuyerCandidateStatus, BuyerCandidateStatus] = {
+    _S.IDENTIFIED: _S.CONTACTED,
+    _S.CONTACTED: _S.NDA_SIGNED,
+    _S.NDA_SENT: _S.NDA_SIGNED,
+    _S.NDA_SIGNED: _S.CIM_SENT,
+    _S.CIM_SENT: _S.INTEREST_CONFIRMED,
+    _S.INTEREST_CONFIRMED: _S.IOI_RECEIVED,
+    _S.IOI_RECEIVED: _S.IOI_ACCEPTED,
+    _S.IOI_ACCEPTED: _S.DD_GRANTED,
+}
+
+# 순서 판정용 ordinal (터미널 상태 제외)
+_STATUS_ORDER: dict[BuyerCandidateStatus, int] = {
+    _S.IDENTIFIED: 0,
+    _S.CONTACTED: 1,
+    _S.NDA_SENT: 2,
+    _S.NDA_SIGNED: 3,
+    _S.CIM_SENT: 4,
+    _S.INTEREST_CONFIRMED: 5,
+    _S.IOI_RECEIVED: 6,
+    _S.IOI_ACCEPTED: 7,
+    _S.DD_GRANTED: 8,
+    _S.DD_IN_PROGRESS: 9,
+    _S.LOI_RECEIVED: 10,
+    _S.LOI_ACCEPTED: 11,
+    _S.SELECTED: 12,
+    _S.BID_SUBMITTED: 13,
+}
+
+_TERMINAL_STATUSES: set[BuyerCandidateStatus] = {
+    _S.REJECTED,
+    _S.BID_DROPPED,
+    _S.BID_NOT_SUBMITTED,
+}
+
+
+async def _auto_advance_buyer_status(
+    db: AsyncSession,
+    buyer: BuyerCandidate,
+    target: BuyerCandidateStatus,
+    actor_email: str,
+) -> None:
+    """buyer.status를 target까지 순차 승격. 이미 같거나 높으면 무시."""
+    cur_ord = _STATUS_ORDER.get(buyer.status)
+    tgt_ord = _STATUS_ORDER.get(target)
+    if cur_ord is None or tgt_ord is None or cur_ord >= tgt_ord:
+        return
+
+    if buyer.status in _TERMINAL_STATUSES:
+        return
+
+    while _STATUS_ORDER.get(buyer.status, 99) < tgt_ord:
+        next_status = _ADVANCE_PATH.get(buyer.status)
+        if next_status is None:
+            break
+        old = buyer.status
+        buyer.status = next_status
+        await audit_service.record(
+            db,
+            entity_type="BuyerCandidate",
+            entity_id=buyer.id,
+            action=AuditAction.UPDATE,
+            actor_email=actor_email,
+            old_value={"status": old.value},
+            new_value={"status": next_status.value},
+        )
 
 
 # ── 마케팅 로그 CRUD ──────────────────────────────────────
@@ -93,7 +173,7 @@ async def create_marketing_log(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> MarketingLogOut:
     await check_client_deal_access(db, txn_id, claims)
-    await _get_buyer(db, txn_id, buyer_id)
+    buyer = await _get_buyer(db, txn_id, buyer_id)
     log = BuyerMarketingLog(
         buyer_id=buyer_id,
         transaction_id=txn_id,
@@ -112,6 +192,10 @@ async def create_marketing_log(
         actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
+    # 마케팅 스테이지에 대응하는 buyer.status 자동 승격
+    advance_target = _MARKETING_STATUS_ADVANCE.get(body.stage)
+    if advance_target is not None:
+        await _auto_advance_buyer_status(db, buyer, advance_target, claims.email)
     await db.commit()
     await db.refresh(log)
     return MarketingLogOut.model_validate(log)

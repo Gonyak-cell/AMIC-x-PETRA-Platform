@@ -63,6 +63,8 @@ export const MARKETING_STAGES: MarketingStage[] = [
   "ADVISOR_MEETING",
   "NDA_SIGNED",
   "TARGET_MEETING",
+  "CIM_SENT",
+  "DD_STARTED",
 ];
 
 export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
@@ -72,6 +74,8 @@ export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
   ADVISOR_MEETING: "자문사 미팅",
   NDA_SIGNED: "NDA 체결",
   TARGET_MEETING: "대상회사 미팅",
+  CIM_SENT: "IM 발송",
+  DD_STARTED: "DD 진행",
 };
 
 export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
@@ -81,6 +85,8 @@ export const MARKETING_STAGE_OPTIONS: SelectOption[] = [
   { value: "ADVISOR_MEETING", label: "자문사 미팅" },
   { value: "NDA_SIGNED", label: "NDA 체결" },
   { value: "TARGET_MEETING", label: "대상회사 미팅" },
+  { value: "CIM_SENT", label: "IM 발송" },
+  { value: "DD_STARTED", label: "DD 진행" },
 ];
 
 // ── Stage Map Utility ──────────────────────────────

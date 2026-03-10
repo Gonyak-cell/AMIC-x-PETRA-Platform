@@ -4,7 +4,9 @@ export type MarketingStage =
   | "PHONE_CALL"
   | "ADVISOR_MEETING"
   | "NDA_SIGNED"
-  | "TARGET_MEETING";
+  | "TARGET_MEETING"
+  | "CIM_SENT"
+  | "DD_STARTED";
 
 export interface MarketingLog {
   id: string;

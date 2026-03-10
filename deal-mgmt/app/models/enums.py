@@ -119,7 +119,7 @@ class ConsortiumStatus(enum.StrEnum):
 
 
 class MarketingStage(enum.StrEnum):
-    """Short-List 마케팅 활동 6단계."""
+    """Short-List 마케팅 활동 8단계."""
 
     IDENTIFIED = "IDENTIFIED"  # 식별
     EMAIL_SENT = "EMAIL_SENT"  # 메일전송
@@ -127,6 +127,8 @@ class MarketingStage(enum.StrEnum):
     ADVISOR_MEETING = "ADVISOR_MEETING"  # 자문사 미팅
     NDA_SIGNED = "NDA_SIGNED"  # NDA 체결
     TARGET_MEETING = "TARGET_MEETING"  # 대상회사 미팅
+    CIM_SENT = "CIM_SENT"  # IM 발송
+    DD_STARTED = "DD_STARTED"  # DD 진행
 
 
 # ── Phase 2: NDA ───────────────────────────────────────

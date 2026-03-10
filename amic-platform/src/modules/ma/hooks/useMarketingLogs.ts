@@ -64,6 +64,9 @@ export function useCreateMarketingLog(txnId: string, buyerId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
       toast.success("마케팅 로그가 생성되었습니다.");
     },
     onError: (err) => {
@@ -103,6 +106,9 @@ export function useUpdateMarketingLog(txnId: string, buyerId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
       });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
       toast.success("마케팅 로그가 수정되었습니다.");
     },
     onError: (err) => {
@@ -133,6 +139,9 @@ export function useDeleteMarketingLog(txnId: string, buyerId: string) {
       });
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
       });
       toast.success("마케팅 로그가 삭제되었습니다.");
     },
