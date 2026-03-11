@@ -13,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
-from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
 from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerTier, BuyerType
+from app.models.meeting_log import MeetingLog
 from app.schemas.buyer import (
     BiddingSummary,
     BuyerCandidateCreate,
@@ -309,9 +309,7 @@ async def remove_buyer(
 
     # CASCADE 삭제 대상 카운트 (감사 추적)
     log_count = (
-        await db.execute(
-            select(func.count()).select_from(BuyerMarketingLog).where(BuyerMarketingLog.buyer_id == buyer_id)
-        )
+        await db.execute(select(func.count()).select_from(MeetingLog).where(MeetingLog.buyer_id == buyer_id))
     ).scalar_one()
     consortium_count = (
         await db.execute(
