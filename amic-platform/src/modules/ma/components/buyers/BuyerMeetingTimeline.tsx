@@ -63,7 +63,7 @@ export default function BuyerMeetingTimeline({
                   </span>
                 );
               })()}
-              <span className="font-medium text-sm">{log.title}</span>
+              <span className="font-medium text-sm">{log.marketing_stage ? MARKETING_STAGE_LABELS[log.marketing_stage] : log.title}</span>
               <Badge variant={MEETING_STATUS_VARIANT[log.status]}>
                 {MEETING_STATUS_LABEL[log.status]}
               </Badge>
