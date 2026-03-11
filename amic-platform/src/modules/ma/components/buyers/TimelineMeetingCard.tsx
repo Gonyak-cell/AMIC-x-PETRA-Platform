@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui";
 import {
   MEETING_STATUS_VARIANT,
+  MARKETING_STAGE_LABELS,
 } from "@/modules/ma/constants";
 import {
   MEETING_STATUS_LABEL,
@@ -12,19 +13,22 @@ interface TimelineMeetingCardProps {
   log: MeetingLog;
 }
 
-
-
-
-
 export default function TimelineMeetingCard({ log }: TimelineMeetingCardProps) {
   const ChannelIcon = CHANNEL_ICON_COMPONENT[log.channel];
 
   return (
-    <div className="ml-2 rounded border border-gray-200 bg-gray-50 px-3 py-2" role="listitem">
+    <div
+      className="ml-2 rounded border border-gray-200 bg-gray-50 px-3 py-2"
+      role="listitem"
+    >
       <div className="flex items-center gap-2">
-        <span className="text-gray-400"><ChannelIcon className="h-3.5 w-3.5" /></span>
+        <span className="text-gray-400">
+          <ChannelIcon className="h-3.5 w-3.5" />
+        </span>
         <span className="text-xs font-medium text-text-dark truncate">
-          {log.title}
+          {log.marketing_stage
+            ? MARKETING_STAGE_LABELS[log.marketing_stage]
+            : log.title}
         </span>
         <Badge
           variant={MEETING_STATUS_VARIANT[log.status]}
