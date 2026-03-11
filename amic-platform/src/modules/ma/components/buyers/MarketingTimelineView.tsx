@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { EmptyState, Badge } from "@/components/ui";
@@ -6,6 +6,7 @@ import BuyerTierBadge from "./BuyerTierBadge";
 import InlineLogInput from "./InlineLogInput";
 import TimelineMeetingCard from "./TimelineMeetingCard";
 import InlineMeetingForm from "./InlineMeetingForm";
+import MeetingLogForm from "@/modules/ma/components/meetings/MeetingLogForm";
 import {
   MARKETING_STAGES,
   MARKETING_STAGE_LABELS,
@@ -18,11 +19,12 @@ import {
 import {
   useMeetingLogs,
   useDeleteMeetingLog,
+  useUpdateMeetingLog,
 } from "@/modules/ma/hooks/useMeetingLogs";
 import { buildTimelineItems } from "@/modules/ma/utils/timelineItems";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
-import type { MeetingLog } from "@/modules/ma/types/meeting_log";
+import type { MeetingLog, MeetingLogUpdate } from "@/modules/ma/types/meeting_log";
 
 const EMPTY_STAGES: Partial<Record<MarketingStage, string | null>> = {};
 interface MarketingTimelineViewProps {
@@ -41,6 +43,8 @@ export default function MarketingTimelineView({
   txnId,
 }: MarketingTimelineViewProps) {
   const deleteMeeting = useDeleteMeetingLog(txnId);
+  const updateMeeting = useUpdateMeetingLog(txnId);
+  const [editingLog, setEditingLog] = useState<MeetingLog | null>(null);
 
   /* 트랜잭션 전체 MARKETING 미팅을 1회 fetch (N+1 방지) */
   const {
@@ -264,6 +268,7 @@ export default function MarketingTimelineView({
                             <TimelineMeetingCard
                               log={item.log}
                               onDelete={(logId) => deleteMeeting.mutate(logId)}
+                              onEdit={(log) => setEditingLog(log)}
                               canWrite={canWrite}
                             />
                           </div>
@@ -345,6 +350,24 @@ export default function MarketingTimelineView({
           );
         })}
       </div>
+
+      {canWrite && (
+        <MeetingLogForm
+          open={editingLog !== null}
+          onClose={() => setEditingLog(null)}
+          meetingPhase="MARKETING"
+          existing={editingLog}
+          onSubmit={(body) => {
+            if (editingLog) {
+              updateMeeting.mutate(
+                { logId: editingLog.id, body: body as MeetingLogUpdate },
+                { onSuccess: () => setEditingLog(null) },
+              );
+            }
+          }}
+          isLoading={updateMeeting.isPending}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { Badge } from "@/components/ui";
 import {
   MEETING_STATUS_VARIANT,
@@ -15,12 +15,14 @@ import type { MeetingLog } from "@/modules/ma/types/meeting_log";
 interface TimelineMeetingCardProps {
   log: MeetingLog;
   onDelete?: (logId: string) => void;
+  onEdit?: (log: MeetingLog) => void;
   canWrite?: boolean;
 }
 
 export default function TimelineMeetingCard({
   log,
   onDelete,
+  onEdit,
   canWrite,
 }: TimelineMeetingCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -74,6 +76,19 @@ export default function TimelineMeetingCard({
           <ChevronUp className="h-3 w-3 text-gray-400 shrink-0" />
         ) : (
           <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
+        )}
+        {canWrite && onEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(log);
+            }}
+            className="p-1 text-gray-500 hover:text-primary-600 transition-colors shrink-0"
+            aria-label="미팅 로그 수정"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
         )}
         {canWrite && onDelete && (
           <button
