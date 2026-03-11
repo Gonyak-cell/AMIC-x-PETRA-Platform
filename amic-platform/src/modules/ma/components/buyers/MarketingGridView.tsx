@@ -35,7 +35,14 @@ function CircularProgress({ pct, label }: { pct: number; label: string }) {
   const offset = CIRCLE_C - (pct / 100) * CIRCLE_C;
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <svg width="28" height="28" viewBox="0 0 28 28" className="block" role="img" aria-label={label}>
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 28 28"
+        className="block"
+        role="img"
+        aria-label={label}
+      >
         <circle
           cx="14"
           cy="14"
@@ -126,14 +133,18 @@ export default function MarketingGridView({
               {MARKETING_STAGES.map((s) => (
                 <th
                   key={s}
-                  className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap"
+                  className={cn(
+                    "px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap",
+                    SKIPPABLE_STAGES.has(s) &&
+                      "border-b-2 border-dashed border-white/40",
+                  )}
+                  title={
+                    SKIPPABLE_STAGES.has(s)
+                      ? "생략 가능한 단계입니다"
+                      : undefined
+                  }
                 >
                   {MARKETING_STAGE_LABELS[s]}
-                  {SKIPPABLE_STAGES.has(s) && (
-                    <span className="block text-[9px] font-normal text-white/60">
-                      선택
-                    </span>
-                  )}
                 </th>
               ))}
               <th className="px-2 py-2.5 font-medium text-white/90 text-center text-xs whitespace-nowrap min-w-[60px]">

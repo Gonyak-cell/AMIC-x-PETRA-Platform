@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InlineLogInput from "./InlineLogInput";
@@ -37,7 +38,11 @@ export default function MarketingTimelineView({
   txnId,
 }: MarketingTimelineViewProps) {
   /* 트랜잭션 전체 MARKETING 미팅을 1회 fetch (N+1 방지) */
-  const { data: meetingData, isError: meetingError, isPending: meetingPending } = useMeetingLogs(txnId, {
+  const {
+    data: meetingData,
+    isError: meetingError,
+    isPending: meetingPending,
+  } = useMeetingLogs(txnId, {
     meetingPhase: "MARKETING",
   });
 
@@ -57,17 +62,14 @@ export default function MarketingTimelineView({
     return map;
   }, [meetingData?.items]);
 
-
   const sorted = useMemo(
     () =>
       [...buyers].sort((a, b) => {
         const aIdx = latestCompletedStageIndex(
-          stageMap.get(a.id) ??
-            EMPTY_STAGES,
+          stageMap.get(a.id) ?? EMPTY_STAGES,
         );
         const bIdx = latestCompletedStageIndex(
-          stageMap.get(b.id) ??
-            EMPTY_STAGES,
+          stageMap.get(b.id) ?? EMPTY_STAGES,
         );
         return bIdx - aIdx;
       }),
@@ -262,7 +264,10 @@ export default function MarketingTimelineView({
 
                     {/* 미팅 추가 버튼 (완료 단계가 있을 때만) */}
                     {canWrite && completedStages.length > 0 && (
-                      <div role="listitem" className="flex items-start gap-3 relative">
+                      <div
+                        role="listitem"
+                        className="flex items-start gap-3 relative"
+                      >
                         <div className="flex flex-col items-center">
                           <div className="w-px min-h-[8px]" />
                         </div>
@@ -295,14 +300,20 @@ export default function MarketingTimelineView({
                             )}
                           </div>
                           <div className="pb-3 flex items-center gap-1.5">
-                            <span className="text-sm italic text-gray-500">
+                            <span
+                              className={cn(
+                                "text-sm italic text-gray-500",
+                                isSkippable &&
+                                  "border-b border-dashed border-gray-400",
+                              )}
+                              title={
+                                isSkippable
+                                  ? "생략 가능한 단계입니다"
+                                  : undefined
+                              }
+                            >
                               {MARKETING_STAGE_LABELS[stage]}
                             </span>
-                            {isSkippable && (
-                              <span className="text-[9px] text-gray-600 bg-gray-100 rounded px-1 py-0.5">
-                                선택
-                              </span>
-                            )}
                           </div>
                         </div>
                       );
