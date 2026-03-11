@@ -18,7 +18,11 @@ const KEY = (txnId: string) => ["ma", "transactions", txnId, "meeting-logs"];
 
 export function useMeetingLogs(
   txnId: string,
-  opts?: { meetingPhase?: MeetingPhase; status?: MeetingStatus; buyerId?: string },
+  opts?: {
+    meetingPhase?: MeetingPhase;
+    status?: MeetingStatus;
+    buyerId?: string;
+  },
 ) {
   return useQuery<MeetingLogListResponse>({
     queryKey: [...KEY(txnId), opts],
@@ -27,7 +31,9 @@ export function useMeetingLogs(
       if (opts?.meetingPhase) params.meeting_phase = opts.meetingPhase;
       if (opts?.status) params.status = opts.status;
       if (opts?.buyerId) params.buyer_id = opts.buyerId;
-      const { data } = await maApi.get(`/transactions/${txnId}/meeting-logs`, { params });
+      const { data } = await maApi.get(`/transactions/${txnId}/meeting-logs`, {
+        params,
+      });
       return data;
     },
     enabled: !!txnId,
@@ -38,20 +44,28 @@ export function useMeetingLog(txnId: string, logId: string) {
   return useQuery<MeetingLogDetail>({
     queryKey: [...KEY(txnId), logId],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/meeting-logs/${logId}`);
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/meeting-logs/${logId}`,
+      );
       return data;
     },
     enabled: !!txnId && !!logId,
   });
 }
 
-export function useMeetingLogSummary(txnId: string, meetingPhase?: MeetingPhase) {
+export function useMeetingLogSummary(
+  txnId: string,
+  meetingPhase?: MeetingPhase,
+) {
   return useQuery<MeetingLogSummary>({
     queryKey: [...KEY(txnId), "summary", meetingPhase],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (meetingPhase) params.meeting_phase = meetingPhase;
-      const { data } = await maApi.get(`/transactions/${txnId}/meeting-logs/summary`, { params });
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/meeting-logs/summary`,
+        { params },
+      );
       return data;
     },
     enabled: !!txnId,
@@ -62,11 +76,21 @@ export function useCreateMeetingLog(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: MeetingLogCreate) => {
-      const { data } = await maApi.post(`/transactions/${txnId}/meeting-logs`, body);
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/meeting-logs`,
+        body,
+      );
       return data as MeetingLog;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(txnId) });
+      // 마케팅 로그 통합: marketing-log 관련 쿼리도 갱신
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
       toast.success("미팅 로그가 생성되었습니다.");
     },
     onError: () => {
@@ -78,8 +102,17 @@ export function useCreateMeetingLog(txnId: string) {
 export function useUpdateMeetingLog(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ logId, body }: { logId: string; body: MeetingLogUpdate }) => {
-      const { data } = await maApi.patch(`/transactions/${txnId}/meeting-logs/${logId}`, body);
+    mutationFn: async ({
+      logId,
+      body,
+    }: {
+      logId: string;
+      body: MeetingLogUpdate;
+    }) => {
+      const { data } = await maApi.patch(
+        `/transactions/${txnId}/meeting-logs/${logId}`,
+        body,
+      );
       return data as MeetingLog;
     },
     onSuccess: () => {

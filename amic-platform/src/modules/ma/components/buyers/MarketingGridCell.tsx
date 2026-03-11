@@ -70,6 +70,7 @@ const MarketingGridCell = memo(function MarketingGridCell({
           defaultStage={stage}
           compact
           onComplete={() => setShowInput(false)}
+          onCancel={() => setShowInput(false)}
         />
       ) : isEmpty && isNext ? (
         <span

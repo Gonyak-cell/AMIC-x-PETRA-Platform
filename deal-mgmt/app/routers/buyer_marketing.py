@@ -1,4 +1,8 @@
-"""매수자 마케팅 활동 로그 + DART 연동 + Excel 내보내기 라우터."""
+"""매수자 마케팅 활동 로그 + DART 연동 + Excel 내보내기 라우터.
+
+내부적으로 meeting_logs 테이블을 사용 (080 마이그레이션 이후 통합).
+기존 marketing-log API 응답 형식(MarketingLogOut)은 호환 유지.
+"""
 
 from __future__ import annotations
 
@@ -19,9 +23,9 @@ from app.core.dependencies import get_kiis_client
 from app.core.rate_limiter import dart_rate_limiter, export_rate_limiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.buyer_candidate import BuyerCandidate
-from app.models.buyer_marketing_log import BuyerMarketingLog
 from app.models.consortium_mapping import ConsortiumMapping
-from app.models.enums import AuditAction, MarketingStage
+from app.models.enums import AuditAction, MarketingStage, MeetingChannel, MeetingPhase, MeetingStatus
+from app.models.meeting_log import MeetingLog
 from app.schemas.marketing_log import (
     BuyerStageSummary,
     DartFinancialSummaryOut,
@@ -39,6 +43,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}", tags=["Buyer Marketing"])
 
+# 마케팅 단계 라벨 (title 자동 생성용)
+_STAGE_LABELS: dict[MarketingStage, str] = {
+    MarketingStage.IDENTIFIED: "매수자 식별",
+    MarketingStage.TEASER_SENT: "Teaser 배포",
+    MarketingStage.NDA_SIGNED: "NDA 체결",
+    MarketingStage.IM_DISTRIBUTED: "IM 배포",
+    MarketingStage.QNA_COMPLETED: "Q&A 완료",
+    MarketingStage.MGMT_PRESENTATION: "경영진 프레젠테이션",
+    MarketingStage.LOI_RECEIVED: "LOI 접수",
+    MarketingStage.DD_IN_PROGRESS: "DD 진행",
+}
+
+# MarketingLogUpdate 필드 → MeetingLog 필드 매핑
+_FIELD_MAP: dict[str, str] = {
+    "stage": "marketing_stage",
+    "log_date": "meeting_date",
+    "content": "summary",
+}
+
 
 # ── 헬퍼 ────────────────────────────────────────────────
 
@@ -54,12 +77,33 @@ async def _get_buyer(db: AsyncSession, txn_id: uuid.UUID, buyer_id: uuid.UUID) -
     return buyer
 
 
-# ── 마케팅 로그 CRUD ──────────────────────────────────────
+def _to_marketing_out(log: MeetingLog) -> MarketingLogOut:
+    """MeetingLog → MarketingLogOut 호환 변환."""
+    return MarketingLogOut.model_validate(
+        {
+            "id": log.id,
+            "buyer_id": log.buyer_id,
+            "transaction_id": log.transaction_id,
+            "stage": log.marketing_stage,
+            "log_date": log.meeting_date,
+            "content": log.summary,
+            "created_by_email": log.created_by_email,
+            "created_at": log.created_at,
+            "updated_at": log.updated_at,
+        }
+    )
+
+
+# ── 마케팅 로그 CRUD (meeting_logs 테이블 호환 레이어) ────
+# ⚠️ DEPRECATED: 이 호환 레이어는 080 마이그레이션 이후 meeting-logs API로 대체됨.
+#    기존 FE 컴포넌트(LogListPopover 등) 호환을 위해 유지하며,
+#    신규 FE 코드는 /transactions/{txn_id}/meeting-logs API를 직접 사용해야 함.
 
 
 @router.get(
     "/buyers/{buyer_id}/marketing-logs",
     response_model=list[MarketingLogOut],
+    deprecated=True,
 )
 async def list_marketing_logs(
     txn_id: uuid.UUID,
@@ -71,21 +115,23 @@ async def list_marketing_logs(
     await check_client_deal_access(db, txn_id, claims)
     await _get_buyer(db, txn_id, buyer_id)
 
-    q = select(BuyerMarketingLog).where(
-        BuyerMarketingLog.buyer_id == buyer_id,
-        BuyerMarketingLog.transaction_id == txn_id,
+    q = select(MeetingLog).where(
+        MeetingLog.buyer_id == buyer_id,
+        MeetingLog.transaction_id == txn_id,
+        MeetingLog.meeting_phase == MeetingPhase.MARKETING,
     )
     if stage:
-        q = q.where(BuyerMarketingLog.stage == stage)
-    q = q.order_by(BuyerMarketingLog.log_date.desc(), BuyerMarketingLog.created_at.desc())
+        q = q.where(MeetingLog.marketing_stage == stage)
+    q = q.order_by(MeetingLog.meeting_date.desc(), MeetingLog.created_at.desc())
     result = await db.execute(q)
-    return [MarketingLogOut.model_validate(r) for r in result.scalars().all()]
+    return [_to_marketing_out(r) for r in result.scalars().all()]
 
 
 @router.post(
     "/buyers/{buyer_id}/marketing-logs",
     response_model=MarketingLogOut,
     status_code=201,
+    deprecated=True,
 )
 async def create_marketing_log(
     txn_id: uuid.UUID,
@@ -96,36 +142,49 @@ async def create_marketing_log(
 ) -> MarketingLogOut:
     await check_client_deal_access(db, txn_id, claims)
     buyer = await _get_buyer(db, txn_id, buyer_id)
-    log = BuyerMarketingLog(
+
+    label = _STAGE_LABELS.get(body.stage, body.stage.value)
+    title = f"{label} — {body.content[:50]}" if body.content else label
+
+    log = MeetingLog(
         buyer_id=buyer_id,
         transaction_id=txn_id,
-        stage=body.stage,
-        log_date=body.log_date,
-        content=body.content,
+        meeting_phase=MeetingPhase.MARKETING,
+        title=title[:300],
+        meeting_date=body.log_date,
+        channel=MeetingChannel.EMAIL,
+        status=MeetingStatus.COMPLETED,
+        summary=body.content,
+        marketing_stage=body.stage,
+        attendee_count=0,
         created_by_email=claims.email,
     )
     db.add(log)
     await db.flush()
     await audit_service.record(
         db,
-        entity_type="BuyerMarketingLog",
+        entity_type="MeetingLog",
         entity_id=log.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
-    # 마케팅 스테이지에 대응하는 buyer.status 자동 승격
+    # 마케팅 스테이지에 대응하는 buyer.status 자동 승격 (실패 격리)
     advance_target = get_advance_target(body.stage)
     if advance_target is not None:
-        await auto_advance_buyer_status(db, buyer, advance_target, claims.email)
+        try:
+            await auto_advance_buyer_status(db, buyer, advance_target, claims.email)
+        except Exception:
+            logger.warning("auto_advance failed for buyer %s", buyer_id, exc_info=True)
     await db.commit()
     await db.refresh(log)
-    return MarketingLogOut.model_validate(log)
+    return _to_marketing_out(log)
 
 
 @router.patch(
     "/buyers/{buyer_id}/marketing-logs/{log_id}",
     response_model=MarketingLogOut,
+    deprecated=True,
 )
 async def update_marketing_log(
     txn_id: uuid.UUID,
@@ -137,42 +196,62 @@ async def update_marketing_log(
 ) -> MarketingLogOut:
     await check_client_deal_access(db, txn_id, claims)
     await transaction_service.get_transaction(db, txn_id)
-    q = select(BuyerMarketingLog).where(
-        BuyerMarketingLog.id == log_id,
-        BuyerMarketingLog.buyer_id == buyer_id,
-        BuyerMarketingLog.transaction_id == txn_id,
+    q = select(MeetingLog).where(
+        MeetingLog.id == log_id,
+        MeetingLog.buyer_id == buyer_id,
+        MeetingLog.transaction_id == txn_id,
+        MeetingLog.meeting_phase == MeetingPhase.MARKETING,
     )
     log = (await db.execute(q)).scalar_one_or_none()
     if log is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="마케팅 로그를 찾을 수 없습니다")
 
     update_data = body.model_dump(exclude_unset=True)
-    # NOTE: old_value의 Enum 필드는 audit_service._sanitize_for_json()이 자동 변환하지만,
-    # 명시적 .value 변환을 추가하여 방어적 직렬화 보장
-    old_value = {}
+    old_value: dict[str, object] = {}
     for k in update_data:
-        v = getattr(log, k)
+        ml_field = _FIELD_MAP.get(k, k)
+        v = getattr(log, ml_field)
         old_value[k] = v.value if hasattr(v, "value") and not isinstance(v, str) else v
     for k, v in update_data.items():
-        setattr(log, k, v)
+        ml_field = _FIELD_MAP.get(k, k)
+        setattr(log, ml_field, v)
+
+    # title 자동 재생성
+    if "stage" in update_data or "content" in update_data:
+        stage = log.marketing_stage
+        content = log.summary
+        label = _STAGE_LABELS.get(stage, stage.value) if stage else ""
+        log.title = (f"{label} — {content[:50]}" if content else label)[:300]
 
     await audit_service.record(
         db,
-        entity_type="BuyerMarketingLog",
+        entity_type="MeetingLog",
         entity_id=log.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
         old_value=old_value,
         new_value=update_data,
     )
+
+    # 마케팅 스테이지 변경 시 buyer status 자동 승격
+    if "stage" in update_data and log.marketing_stage:
+        buyer = await _get_buyer(db, txn_id, buyer_id)
+        advance_target = get_advance_target(log.marketing_stage)
+        if advance_target is not None:
+            try:
+                await auto_advance_buyer_status(db, buyer, advance_target, claims.email)
+            except Exception:
+                logger.warning("auto_advance failed for buyer %s", buyer_id, exc_info=True)
+
     await db.commit()
     await db.refresh(log)
-    return MarketingLogOut.model_validate(log)
+    return _to_marketing_out(log)
 
 
 @router.delete(
     "/buyers/{buyer_id}/marketing-logs/{log_id}",
     status_code=204,
+    deprecated=True,
 )
 async def delete_marketing_log(
     txn_id: uuid.UUID,
@@ -183,30 +262,32 @@ async def delete_marketing_log(
 ) -> None:
     await check_client_deal_access(db, txn_id, claims)
     await transaction_service.get_transaction(db, txn_id)
-    q = select(BuyerMarketingLog).where(
-        BuyerMarketingLog.id == log_id,
-        BuyerMarketingLog.buyer_id == buyer_id,
-        BuyerMarketingLog.transaction_id == txn_id,
+    q = select(MeetingLog).where(
+        MeetingLog.id == log_id,
+        MeetingLog.buyer_id == buyer_id,
+        MeetingLog.transaction_id == txn_id,
+        MeetingLog.meeting_phase == MeetingPhase.MARKETING,
     )
     log = (await db.execute(q)).scalar_one_or_none()
     if log is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="마케팅 로그를 찾을 수 없습니다")
-    # 삭제되는 스테이지 정보를 먼저 캡처 (삭제 후에는 접근 불가)
-    deleted_stage = log.stage
+    # 삭제되는 스테이지 정보를 먼저 캡처
+    deleted_stage = log.marketing_stage
     await audit_service.record(
         db,
-        entity_type="BuyerMarketingLog",
+        entity_type="MeetingLog",
         entity_id=log.id,
         action=AuditAction.DELETE,
         actor_email=claims.email,
         old_value={
             "stage": deleted_stage.value if hasattr(deleted_stage, "value") else str(deleted_stage),
-            "log_date": log.log_date,
-            "content": log.content,
+            "log_date": log.meeting_date,
+            "content": log.summary,
         },
     )
     # 자동 승격 트리거 스테이지 삭제 시 감사 경고 기록
-    await check_status_after_delete(db, buyer_id, deleted_stage, claims.email)
+    if deleted_stage:
+        await check_status_after_delete(db, buyer_id, deleted_stage, claims.email)
     await db.delete(log)
     await db.commit()
 
@@ -229,18 +310,22 @@ async def marketing_stage_summary(
     await _get_buyer(db, txn_id, buyer_id)
 
     q = (
-        select(BuyerMarketingLog.stage, func.max(BuyerMarketingLog.log_date).label("latest"))
+        select(MeetingLog.marketing_stage, func.max(MeetingLog.meeting_date).label("latest"))
         .where(
-            BuyerMarketingLog.buyer_id == buyer_id,
-            BuyerMarketingLog.transaction_id == txn_id,
+            MeetingLog.buyer_id == buyer_id,
+            MeetingLog.transaction_id == txn_id,
+            MeetingLog.meeting_phase == MeetingPhase.MARKETING,
+            MeetingLog.marketing_stage.is_not(None),
         )
-        .group_by(BuyerMarketingLog.stage)
+        .group_by(MeetingLog.marketing_stage)
     )
     result = await db.execute(q)
 
     stage_map: dict[str, str | None] = {s.value: None for s in MarketingStage}
     for row in result.all():
-        stage_key = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
+        stage_key = (
+            row.marketing_stage.value if isinstance(row.marketing_stage, MarketingStage) else str(row.marketing_stage)
+        )
         stage_map[stage_key] = row.latest
 
     return BuyerStageSummary(buyer_id=buyer_id, stages=stage_map)
@@ -273,19 +358,21 @@ async def short_list_marketing_overview(
     if not buyer_ids:
         return []
 
-    # 서브쿼리로 IN 절 최적화 (파라미터 리스트 대신 DB가 직접 실행)
+    # 서브쿼리로 IN 절 최적화
     short_list_subq = buyers_q.scalar_subquery()
     logs_q = (
         select(
-            BuyerMarketingLog.buyer_id,
-            BuyerMarketingLog.stage,
-            func.max(BuyerMarketingLog.log_date).label("latest"),
+            MeetingLog.buyer_id,
+            MeetingLog.marketing_stage,
+            func.max(MeetingLog.meeting_date).label("latest"),
         )
         .where(
-            BuyerMarketingLog.transaction_id == txn_id,
-            BuyerMarketingLog.buyer_id.in_(short_list_subq),
+            MeetingLog.transaction_id == txn_id,
+            MeetingLog.buyer_id.in_(short_list_subq),
+            MeetingLog.meeting_phase == MeetingPhase.MARKETING,
+            MeetingLog.marketing_stage.is_not(None),
         )
-        .group_by(BuyerMarketingLog.buyer_id, BuyerMarketingLog.stage)
+        .group_by(MeetingLog.buyer_id, MeetingLog.marketing_stage)
     )
     logs_result = await db.execute(logs_q)
 
@@ -296,7 +383,9 @@ async def short_list_marketing_overview(
 
     for row in logs_result.all():
         bid = row.buyer_id
-        stage_val = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
+        stage_val = (
+            row.marketing_stage.value if isinstance(row.marketing_stage, MarketingStage) else str(row.marketing_stage)
+        )
         if bid in buyer_stages:
             buyer_stages[bid][stage_val] = row.latest
 
@@ -374,22 +463,28 @@ async def export_buyers_excel(
     result = await db.execute(q)
     buyers = list(result.scalars().all())
 
-    # 마케팅 최신 stage/log_date 집계
+    # 마케팅 최신 stage/meeting_date 집계 (meeting_logs 기반)
     mkt_q = (
         select(
-            BuyerMarketingLog.buyer_id,
-            BuyerMarketingLog.stage,
-            func.max(BuyerMarketingLog.log_date).label("latest_date"),
+            MeetingLog.buyer_id,
+            MeetingLog.marketing_stage,
+            func.max(MeetingLog.meeting_date).label("latest_date"),
         )
-        .where(BuyerMarketingLog.transaction_id == txn_id)
-        .group_by(BuyerMarketingLog.buyer_id, BuyerMarketingLog.stage)
+        .where(
+            MeetingLog.transaction_id == txn_id,
+            MeetingLog.meeting_phase == MeetingPhase.MARKETING,
+            MeetingLog.marketing_stage.is_not(None),
+        )
+        .group_by(MeetingLog.buyer_id, MeetingLog.marketing_stage)
     )
     mkt_result = await db.execute(mkt_q)
     # buyer_id → (latest_stage, latest_date) — 전체 중 최신 1개
     marketing_latest: dict[uuid.UUID, tuple[str | None, str | None]] = {}
     for row in mkt_result.all():
         bid = row.buyer_id
-        stage_val = row.stage.value if isinstance(row.stage, MarketingStage) else str(row.stage)
+        stage_val = (
+            row.marketing_stage.value if isinstance(row.marketing_stage, MarketingStage) else str(row.marketing_stage)
+        )
         date_val = row.latest_date
         existing = marketing_latest.get(bid)
         if existing is None or (date_val and (existing[1] is None or date_val > existing[1])):

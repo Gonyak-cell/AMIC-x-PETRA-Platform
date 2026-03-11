@@ -2,18 +2,26 @@
 
 import uuid
 
+import sqlalchemy as sa
 from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import ConditionMatchLevel, MeetingChannel, MeetingPhase, MeetingStatus
+from app.models.enums import (
+    ConditionMatchLevel,
+    MarketingStage,
+    MeetingChannel,
+    MeetingPhase,
+    MeetingStatus,
+)
 
 
 class MeetingLog(Base, TimestampMixin):
     """마케팅/협상 미팅 로그."""
 
     __tablename__ = "meeting_logs"
+    __table_args__ = (sa.Index("ix_meeting_logs_txn_phase", "transaction_id", "meeting_phase"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(
@@ -57,6 +65,13 @@ class MeetingLog(Base, TimestampMixin):
         Uuid,
         ForeignKey("buyer_candidates.id"),
         nullable=True,
+    )
+
+    # 마케팅 전용: 마케팅 단계 연결 (통합 로그)
+    marketing_stage: Mapped[MarketingStage | None] = mapped_column(
+        Enum(MarketingStage),
+        nullable=True,
+        index=True,
     )
 
     # 마케팅 전용: 조건 평가

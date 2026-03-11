@@ -195,3 +195,120 @@ async def test_condition_match(client: AsyncClient, transaction_id: str):
     )
     assert data["condition_match"] == "PARTIAL_MATCH"
     assert "가격 조건" in data["condition_notes"]
+
+
+# ── 마케팅 단계 통합 테스트 (R10-01~03) ─────────────────
+
+
+async def test_cross_deal_buyer_rejected(
+    client: AsyncClient,
+    transaction_id: str,
+    another_transaction: dict,
+):
+    """R10-01: Deal A의 매수자로 Deal B에 미팅 로그 생성 시 400 반환."""
+    # Deal A에 매수자 생성
+    buyer_resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/buyers",
+        json={"company_name": "테스트 매수자", "buyer_type": "STRATEGIC"},
+    )
+    assert buyer_resp.status_code == 201
+    buyer_id = buyer_resp.json()["id"]
+
+    # Deal B에서 Deal A 매수자로 미팅 로그 생성 시도 → 400
+    other_txn_id = another_transaction["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{other_txn_id}/meeting-logs",
+        json={
+            "meeting_phase": "MARKETING",
+            "title": "크로스 딜 시도",
+            "meeting_date": "2026-03-01",
+            "buyer_id": buyer_id,
+            "marketing_stage": "TEASER_SENT",
+        },
+    )
+    assert resp.status_code == 400
+    assert "매수자" in resp.json()["detail"]
+
+
+async def test_create_with_marketing_stage_advances_buyer(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    """R10-02: marketing_stage 포함 미팅 로그 생성 시 auto_advance 호출 확인."""
+    # 매수자 생성
+    buyer_resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/buyers",
+        json={"company_name": "승격 테스트 매수자", "buyer_type": "STRATEGIC"},
+    )
+    assert buyer_resp.status_code == 201
+    buyer_id = buyer_resp.json()["id"]
+
+    # marketing_stage=NDA_SIGNED 미팅 로그 생성 → buyer status 자동 승격
+    data = await _create_meeting(
+        client,
+        transaction_id,
+        buyer_id=buyer_id,
+        marketing_stage="NDA_SIGNED",
+    )
+    assert data["marketing_stage"] == "NDA_SIGNED"
+    assert data["buyer_id"] == buyer_id
+
+
+async def test_list_meetings_filter_marketing_stage(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    """R10-03: marketing_stage 쿼리 파라미터 필터링."""
+    # 매수자 생성
+    buyer_resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/buyers",
+        json={"company_name": "필터 테스트 매수자", "buyer_type": "FINANCIAL_SPONSOR"},
+    )
+    buyer_id = buyer_resp.json()["id"]
+
+    await _create_meeting(
+        client,
+        transaction_id,
+        title="Teaser 발송",
+        buyer_id=buyer_id,
+        marketing_stage="TEASER_SENT",
+    )
+    await _create_meeting(
+        client,
+        transaction_id,
+        title="NDA 체결",
+        buyer_id=buyer_id,
+        marketing_stage="NDA_SIGNED",
+    )
+    await _create_meeting(
+        client,
+        transaction_id,
+        title="협상 미팅",
+        meeting_phase="NEGOTIATION",
+    )
+
+    # marketing_stage=TEASER_SENT 필터
+    resp = await client.get(
+        f"/api/v1/transactions/{transaction_id}/meeting-logs?marketing_stage=TEASER_SENT",
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["items"][0]["marketing_stage"] == "TEASER_SENT"
+
+
+async def test_marketing_stage_invalid_for_non_marketing_phase(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    """R13-03 검증: NEGOTIATION phase에 marketing_stage 지정 시 422."""
+    resp = await client.post(
+        f"/api/v1/transactions/{transaction_id}/meeting-logs",
+        json={
+            "meeting_phase": "NEGOTIATION",
+            "title": "교차 검증 실패 케이스",
+            "meeting_date": "2026-03-01",
+            "marketing_stage": "NDA_SIGNED",
+        },
+    )
+    assert resp.status_code == 422

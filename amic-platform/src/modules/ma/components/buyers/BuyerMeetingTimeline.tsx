@@ -2,6 +2,7 @@ import { Calendar } from "lucide-react";
 import { Badge, EmptyState, Spinner } from "@/components/ui";
 import {
   MEETING_STATUS_VARIANT,
+  MARKETING_STAGE_LABELS,
 } from "@/modules/ma/constants";
 import {
   MEETING_STATUS_LABEL,
@@ -13,10 +14,6 @@ interface BuyerMeetingTimelineProps {
   txnId: string;
   buyerId: string;
 }
-
-
-
-
 
 export default function BuyerMeetingTimeline({
   txnId,
@@ -70,6 +67,11 @@ export default function BuyerMeetingTimeline({
               <Badge variant={MEETING_STATUS_VARIANT[log.status]}>
                 {MEETING_STATUS_LABEL[log.status]}
               </Badge>
+              {log.marketing_stage && (
+                <Badge variant="info">
+                  {MARKETING_STAGE_LABELS[log.marketing_stage]}
+                </Badge>
+              )}
             </div>
             {log.summary && (
               <p className="mt-1.5 text-sm text-text-muted line-clamp-2">

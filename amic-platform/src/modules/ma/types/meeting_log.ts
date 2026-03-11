@@ -1,8 +1,19 @@
 // 미팅 로그 타입 — 마케팅/협상 공용
 
+import type { MarketingStage } from "./marketing_log";
+
 export type MeetingPhase = "MARKETING" | "NEGOTIATION";
-export type MeetingChannel = "IN_PERSON" | "EMAIL" | "PHONE" | "VIDEO" | "HYBRID";
-export type MeetingStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "POSTPONED";
+export type MeetingChannel =
+  | "IN_PERSON"
+  | "EMAIL"
+  | "PHONE"
+  | "VIDEO"
+  | "HYBRID";
+export type MeetingStatus =
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "POSTPONED";
 export type AttendeeRole =
   | "SELLER_ADVISOR"
   | "BUYER_ADVISOR"
@@ -11,9 +22,22 @@ export type AttendeeRole =
   | "COUNTERPARTY"
   | "OBSERVER"
   | "OTHER";
-export type BuyerReaction = "VERY_POSITIVE" | "POSITIVE" | "NEUTRAL" | "NEGATIVE" | "VERY_NEGATIVE";
-export type ConditionMatchLevel = "FULL_MATCH" | "PARTIAL_MATCH" | "MISMATCH" | "NOT_ASSESSED";
-export type ActionItemStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type BuyerReaction =
+  | "VERY_POSITIVE"
+  | "POSITIVE"
+  | "NEUTRAL"
+  | "NEGATIVE"
+  | "VERY_NEGATIVE";
+export type ConditionMatchLevel =
+  | "FULL_MATCH"
+  | "PARTIAL_MATCH"
+  | "MISMATCH"
+  | "NOT_ASSESSED";
+export type ActionItemStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
 
 // ── 참석자 ────────────────────────────────────────────────
 export interface MeetingAttendee {
@@ -76,9 +100,12 @@ export interface MeetingLog {
   status: MeetingStatus;
   minutes: string | null;
   summary: string | null;
-  provided_materials: { name: string; description?: string; url?: string }[] | null;
+  provided_materials:
+    | { name: string; description?: string; url?: string }[]
+    | null;
   attachments: { name: string; url: string; size: number }[] | null;
   buyer_id: string | null;
+  marketing_stage: MarketingStage | null;
   condition_match: ConditionMatchLevel | null;
   condition_notes: string | null;
   contract_id: string | null;
@@ -106,6 +133,7 @@ export interface MeetingLogCreate {
   provided_materials?: { name: string; description?: string }[];
   attachments?: { name: string; url: string; size: number }[];
   buyer_id?: string;
+  marketing_stage?: MarketingStage;
   condition_match?: ConditionMatchLevel;
   condition_notes?: string;
   contract_id?: string;
@@ -123,6 +151,7 @@ export interface MeetingLogUpdate {
   summary?: string;
   provided_materials?: { name: string; description?: string }[];
   buyer_id?: string;
+  marketing_stage?: MarketingStage;
   condition_match?: ConditionMatchLevel;
   condition_notes?: string;
   contract_id?: string;

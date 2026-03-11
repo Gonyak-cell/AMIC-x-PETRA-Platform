@@ -78,6 +78,21 @@ export const MARKETING_STAGE_LABELS: Record<MarketingStage, string> = {
   DD_IN_PROGRESS: "DD",
 };
 
+/**
+ * 자동 제목 생성용 전체 라벨 — BE _STAGE_LABELS와 동일.
+ * UI 표시용 MARKETING_STAGE_LABELS(축약형)와 구분하여 사용.
+ */
+export const MARKETING_STAGE_TITLE_LABELS: Record<MarketingStage, string> = {
+  IDENTIFIED: "매수자 식별",
+  TEASER_SENT: "Teaser 배포",
+  NDA_SIGNED: "NDA 체결",
+  IM_DISTRIBUTED: "IM 배포",
+  QNA_COMPLETED: "Q&A 완료",
+  MGMT_PRESENTATION: "경영진 프레젠테이션",
+  LOI_RECEIVED: "LOI 접수",
+  DD_IN_PROGRESS: "DD 진행",
+};
+
 /** MP(Management Presentation)는 생략 가능한 단계 */
 export const SKIPPABLE_STAGES: ReadonlySet<MarketingStage> = new Set([
   "MGMT_PRESENTATION",

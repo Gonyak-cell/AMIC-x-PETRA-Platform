@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Trash2 } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { Badge } from "@/components/ui";
@@ -73,6 +73,20 @@ export default function LogListPopover({
 }: LogListPopoverProps) {
   const { data: logs } = useMarketingLogs(txnId, buyerId, { stage });
   const deleteLog = useDeleteMarketingLog(txnId, buyerId);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const handleListKeyDown = useCallback((e: React.KeyboardEvent<HTMLUListElement>) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = listRef.current?.querySelectorAll<HTMLLIElement>("[role=option]");
+    if (!items || items.length === 0) return;
+    const current = document.activeElement as HTMLElement;
+    const idx = current?.dataset?.index ? Number(current.dataset.index) : -1;
+    const next = e.key === "ArrowDown"
+      ? Math.min(idx + 1, items.length - 1)
+      : Math.max(idx - 1, 0);
+    items[next]?.focus();
+  }, []);
 
   return (
     <Popover
@@ -92,11 +106,21 @@ export default function LogListPopover({
         </div>
 
         {logs && logs.length > 0 ? (
-          <ul className="space-y-1.5 max-h-48 overflow-y-auto">
-            {logs.map((log) => (
+          <ul
+            ref={listRef}
+            role="listbox"
+            aria-label={`${MARKETING_STAGE_LABELS[stage]} 로그 목록`}
+            tabIndex={0}
+            onKeyDown={handleListKeyDown}
+            className="space-y-1.5 max-h-48 overflow-y-auto focus:outline-none"
+          >
+            {logs.map((log, idx) => (
               <li
                 key={log.id}
-                className="flex items-start gap-2 text-xs p-1.5 rounded bg-bg-cool"
+                role="option"
+                tabIndex={-1}
+                data-index={idx}
+                className="flex items-start gap-2 text-xs p-1.5 rounded bg-bg-cool focus:ring-2 focus:ring-accent/40 focus:outline-none"
               >
                 <span className="shrink-0 text-text-muted w-16">
                   {log.log_date}

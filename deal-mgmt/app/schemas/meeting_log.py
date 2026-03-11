@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import (
     AttendeeRole,
     BuyerReaction,
     ConditionMatchLevel,
+    MarketingStage,
     MeetingChannel,
     MeetingPhase,
     MeetingStatus,
@@ -75,6 +77,7 @@ class MeetingLogOut(BaseModel):
     provided_materials: list[ProvidedMaterial] | None = None
     attachments: list[dict] | None = None
     buyer_id: uuid.UUID | None = None
+    marketing_stage: MarketingStage | None = None
     condition_match: ConditionMatchLevel | None = None
     condition_notes: str | None = None
     contract_id: uuid.UUID | None = None
@@ -92,28 +95,39 @@ class MeetingLogDetail(MeetingLogOut):
 
 
 class MeetingLogCreate(BaseModel):
-    meeting_phase: MeetingPhase
-    title: str = Field(..., min_length=1, max_length=300)
-    meeting_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
-    meeting_time: str | None = Field(None, pattern=r"^\d{2}:\d{2}$")
-    location: str | None = None
+    meeting_phase: MeetingPhase = Field(description="미팅 유형 (MARKETING / NEGOTIATION 등)")
+    title: str = Field(..., min_length=1, max_length=300, description="미팅 제목")
+    meeting_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="미팅 일자 (YYYY-MM-DD)")
+    meeting_time: str | None = Field(None, pattern=r"^\d{2}:\d{2}$", description="미팅 시간 (HH:MM)")
+    location: str | None = Field(None, description="미팅 장소")
     channel: MeetingChannel = MeetingChannel.IN_PERSON
     status: MeetingStatus = MeetingStatus.COMPLETED
-    minutes: str | None = None
-    summary: str | None = None
+    minutes: str | None = Field(None, description="회의록")
+    summary: str | None = Field(None, description="요약")
     provided_materials: list[ProvidedMaterial] | None = None
     attachments: list[dict] | None = None
-    buyer_id: uuid.UUID | None = None
+    buyer_id: uuid.UUID | None = Field(None, description="매수자 ID (마케팅 미팅 시 필수)")
+    marketing_stage: MarketingStage | None = Field(
+        None, description="마케팅 단계 — meeting_phase=MARKETING일 때만 유효"
+    )
     condition_match: ConditionMatchLevel | None = None
     condition_notes: str | None = None
     contract_id: uuid.UUID | None = None
     # 참석자 인라인 생성
     attendees: list[MeetingAttendeeCreate] | None = None
 
+    @model_validator(mode="after")
+    def validate_marketing_stage_phase(self) -> Self:
+        """marketing_stage는 meeting_phase=MARKETING일 때만 허용."""
+        if self.marketing_stage is not None and self.meeting_phase != MeetingPhase.MARKETING:
+            msg = "marketing_stage는 meeting_phase가 MARKETING일 때만 지정할 수 있습니다"
+            raise ValueError(msg)
+        return self
+
 
 class MeetingLogUpdate(BaseModel):
-    title: str | None = Field(None, min_length=1, max_length=300)
-    meeting_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    title: str | None = Field(None, min_length=1, max_length=300, description="미팅 제목")
+    meeting_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="미팅 일자")
     meeting_time: str | None = None
     location: str | None = None
     channel: MeetingChannel | None = None
@@ -123,6 +137,9 @@ class MeetingLogUpdate(BaseModel):
     provided_materials: list[ProvidedMaterial] | None = None
     attachments: list[dict] | None = None
     buyer_id: uuid.UUID | None = None
+    marketing_stage: MarketingStage | None = Field(
+        None, description="마케팅 단계 — meeting_phase=MARKETING일 때만 유효"
+    )
     condition_match: ConditionMatchLevel | None = None
     condition_notes: str | None = None
     contract_id: uuid.UUID | None = None

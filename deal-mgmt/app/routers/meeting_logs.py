@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import AuditAction, MeetingChannel, MeetingPhase, MeetingStatus
+from app.models.buyer_candidate import BuyerCandidate
+from app.models.enums import AuditAction, MarketingStage, MeetingChannel, MeetingPhase, MeetingStatus
 from app.models.meeting_action_item import MeetingActionItem
 from app.models.meeting_attendee import MeetingAttendee
 from app.models.meeting_log import MeetingLog
@@ -31,7 +33,9 @@ from app.schemas.meeting_log import (
     MeetingLogSummary,
     MeetingLogUpdate,
 )
-from app.services import audit_service, transaction_service
+from app.services import audit_service, buyer_status_service, transaction_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/meeting-logs", tags=["Meeting Logs"])
 
@@ -46,6 +50,7 @@ async def list_meeting_logs(
     status_filter: MeetingStatus | None = Query(None, alias="status"),
     channel: MeetingChannel | None = None,
     buyer_id: uuid.UUID | None = None,
+    marketing_stage: MarketingStage | None = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -69,6 +74,9 @@ async def list_meeting_logs(
     if buyer_id:
         q = q.where(MeetingLog.buyer_id == buyer_id)
         count_q = count_q.where(MeetingLog.buyer_id == buyer_id)
+    if marketing_stage:
+        q = q.where(MeetingLog.marketing_stage == marketing_stage)
+        count_q = count_q.where(MeetingLog.marketing_stage == marketing_stage)
 
     total = (await db.execute(count_q)).scalar() or 0
     q = q.order_by(MeetingLog.meeting_date.desc(), MeetingLog.created_at.desc())
@@ -88,19 +96,30 @@ async def meeting_log_summary(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    q = select(MeetingLog).where(MeetingLog.transaction_id == txn_id)
-    if meeting_phase:
-        q = q.where(MeetingLog.meeting_phase == meeting_phase)
-    result = await db.execute(q)
-    logs = result.scalars().all()
+    base = MeetingLog.transaction_id == txn_id
+    phase_filter = MeetingLog.meeting_phase == meeting_phase if meeting_phase else None
 
-    by_status: dict[str, int] = {}
-    by_channel: dict[str, int] = {}
-    for log in logs:
-        by_status[log.status.value] = by_status.get(log.status.value, 0) + 1
-        by_channel[log.channel.value] = by_channel.get(log.channel.value, 0) + 1
+    # 총 건수
+    count_q = select(func.count(MeetingLog.id)).where(base)
+    if phase_filter is not None:
+        count_q = count_q.where(phase_filter)
+    total: int = (await db.execute(count_q)).scalar() or 0
 
-    return MeetingLogSummary(total=len(logs), by_status=by_status, by_channel=by_channel)
+    # status별 GROUP BY
+    status_q = select(MeetingLog.status, func.count(MeetingLog.id).label("cnt")).where(base).group_by(MeetingLog.status)
+    if phase_filter is not None:
+        status_q = status_q.where(phase_filter)
+    by_status: dict[str, int] = {row.status.value: row.cnt for row in (await db.execute(status_q)).all()}
+
+    # channel별 GROUP BY
+    channel_q = (
+        select(MeetingLog.channel, func.count(MeetingLog.id).label("cnt")).where(base).group_by(MeetingLog.channel)
+    )
+    if phase_filter is not None:
+        channel_q = channel_q.where(phase_filter)
+    by_channel: dict[str, int] = {row.channel.value: row.cnt for row in (await db.execute(channel_q)).all()}
+
+    return MeetingLogSummary(total=total, by_status=by_status, by_channel=by_channel)
 
 
 @router.get("/{log_id}", response_model=MeetingLogDetail)
@@ -137,6 +156,19 @@ async def create_meeting_log(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+
+    # buyer_id가 지정된 경우 같은 거래 소속인지 검증
+    if body.buyer_id is not None:
+        buyer_q = select(BuyerCandidate).where(
+            BuyerCandidate.id == body.buyer_id,
+            BuyerCandidate.transaction_id == txn_id,
+        )
+        if not (await db.execute(buyer_q)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="해당 거래에 속하지 않는 매수자입니다",
+            )
 
     attendees_data = body.attendees or []
     log_data = body.model_dump(exclude={"attendees"})
@@ -158,6 +190,25 @@ async def create_meeting_log(
         actor_email=claims.email,
         new_value={"title": body.title, "phase": body.meeting_phase},
     )
+
+    # 마케팅 단계 자동 승격: marketing_stage가 있고 buyer_id가 있으면 buyer status 승격
+    # 실패 시 미팅 로그 자체는 유지 (부가 효과 격리)
+    if body.marketing_stage and body.buyer_id:
+        target = buyer_status_service.get_advance_target(body.marketing_stage)
+        if target:
+            buyer_q = select(BuyerCandidate).where(BuyerCandidate.id == body.buyer_id)
+            buyer = (await db.execute(buyer_q)).scalar_one_or_none()
+            if buyer:
+                try:
+                    await buyer_status_service.auto_advance_buyer_status(
+                        db,
+                        buyer,
+                        target,
+                        claims.email,
+                    )
+                except Exception:
+                    logger.warning("auto_advance failed for buyer %s", body.buyer_id, exc_info=True)
+
     await db.commit()
     await db.refresh(log)
     return MeetingLogOut.model_validate(log)
@@ -171,8 +222,22 @@ async def update_meeting_log(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     log = await _get_log_or_404(db, txn_id, log_id)
     update_data = body.model_dump(exclude_unset=True)
+
+    # P2: buyer_id 변경 시 같은 거래 소속 검증
+    if "buyer_id" in update_data and update_data["buyer_id"] is not None:
+        buyer_q = select(BuyerCandidate).where(
+            BuyerCandidate.id == update_data["buyer_id"],
+            BuyerCandidate.transaction_id == txn_id,
+        )
+        if not (await db.execute(buyer_q)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="해당 거래에 속하지 않는 매수자입니다",
+            )
+
     old_value = {k: getattr(log, k) for k in update_data}
     for k, v in update_data.items():
         setattr(log, k, v)
@@ -185,6 +250,24 @@ async def update_meeting_log(
         old_value=old_value,
         new_value=update_data,
     )
+
+    # marketing_stage 변경 시 buyer status 자동 승격 (실패 격리)
+    if "marketing_stage" in update_data and log.marketing_stage and log.buyer_id:
+        target = buyer_status_service.get_advance_target(log.marketing_stage)
+        if target:
+            buyer_q = select(BuyerCandidate).where(BuyerCandidate.id == log.buyer_id)
+            buyer = (await db.execute(buyer_q)).scalar_one_or_none()
+            if buyer:
+                try:
+                    await buyer_status_service.auto_advance_buyer_status(
+                        db,
+                        buyer,
+                        target,
+                        claims.email,
+                    )
+                except Exception:
+                    logger.warning("auto_advance failed for buyer %s", log.buyer_id, exc_info=True)
+
     await db.commit()
     await db.refresh(log)
     return MeetingLogOut.model_validate(log)
@@ -197,6 +280,7 @@ async def delete_meeting_log(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     log = await _get_log_or_404(db, txn_id, log_id)
     await audit_service.record(
         db,
@@ -205,6 +289,16 @@ async def delete_meeting_log(
         action=AuditAction.DELETE,
         actor_email=claims.email,
     )
+
+    # 마케팅 로그 삭제 시 buyer status 검토 경고 감사 로그
+    if log.marketing_stage and log.buyer_id:
+        await buyer_status_service.check_status_after_delete(
+            db,
+            log.buyer_id,
+            log.marketing_stage,
+            claims.email,
+        )
+
     await db.delete(log)
     await db.commit()
 

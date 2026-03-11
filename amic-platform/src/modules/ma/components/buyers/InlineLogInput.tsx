@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui";
-import { useCreateMarketingLog } from "@/modules/ma/hooks/useMarketingLogs";
-import { MARKETING_STAGE_OPTIONS } from "@/modules/ma/constants";
+import { useCreateMeetingLog } from "@/modules/ma/hooks/useMeetingLogs";
+import {
+  MARKETING_STAGE_OPTIONS,
+  MARKETING_STAGE_TITLE_LABELS,
+} from "@/modules/ma/constants";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 
 interface InlineLogInputProps {
@@ -40,15 +43,26 @@ export default function InlineLogInput({
   const [logDate, setLogDate] = useState(todayStr());
   const [content, setContent] = useState("");
 
-  const createLog = useCreateMarketingLog(txnId, buyerId);
+  const createLog = useCreateMeetingLog(txnId);
 
   const handleSubmit = () => {
     if (!logDate) return;
+    const resolvedStage = defaultStage ?? stage;
+    const stageLabel = MARKETING_STAGE_TITLE_LABELS[resolvedStage];
+    const autoTitle = content
+      ? `${stageLabel} — ${content.slice(0, 50)}`
+      : stageLabel;
+
     createLog.mutate(
       {
-        stage: defaultStage ?? stage,
-        log_date: logDate,
-        content: content || undefined,
+        meeting_phase: "MARKETING",
+        title: autoTitle,
+        meeting_date: logDate,
+        channel: "EMAIL",
+        status: "COMPLETED",
+        summary: content || undefined,
+        buyer_id: buyerId,
+        marketing_stage: resolvedStage,
       },
       {
         onSuccess: () => {
@@ -62,7 +76,12 @@ export default function InlineLogInput({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1" onKeyDown={(e) => { if (e.key === "Escape") onCancel?.(); }}>
+      <div
+        className="flex items-center gap-1"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCancel?.();
+        }}
+      >
         <input
           type="date"
           value={logDate}
@@ -85,7 +104,12 @@ export default function InlineLogInput({
   }
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-bg-cool rounded border border-gray-border" onKeyDown={(e) => { if (e.key === "Escape") onCancel?.(); }}>
+    <div
+      className="flex items-center gap-2 p-2 bg-bg-cool rounded border border-gray-border"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onCancel?.();
+      }}
+    >
       {!defaultStage && (
         <select
           value={stage}

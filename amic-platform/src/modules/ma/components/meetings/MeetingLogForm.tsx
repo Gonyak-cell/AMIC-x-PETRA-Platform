@@ -3,6 +3,7 @@ import { Button, Input, Select, Modal } from "@/components/ui";
 import {
   MEETING_CHANNEL_OPTIONS,
   MEETING_STATUS_OPTIONS,
+  MARKETING_STAGE_OPTIONS,
 } from "@/modules/ma/constants";
 import type {
   MeetingPhase,
@@ -10,6 +11,7 @@ import type {
   MeetingLogUpdate,
   MeetingLog,
 } from "@/modules/ma/types/meeting_log";
+import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 
 interface MeetingLogFormProps {
   open: boolean;
@@ -32,10 +34,17 @@ export default function MeetingLogForm({
   const [meetingDate, setMeetingDate] = useState(existing?.meeting_date ?? "");
   const [meetingTime, setMeetingTime] = useState(existing?.meeting_time ?? "");
   const [location, setLocation] = useState(existing?.location ?? "");
-  const [channel, setChannel] = useState<string>(existing?.channel ?? "IN_PERSON");
+  const [channel, setChannel] = useState<string>(
+    existing?.channel ?? "IN_PERSON",
+  );
   const [status, setStatus] = useState<string>(existing?.status ?? "SCHEDULED");
   const [minutes, setMinutes] = useState(existing?.minutes ?? "");
   const [summary, setSummary] = useState(existing?.summary ?? "");
+  const [marketingStage, setMarketingStage] = useState<MarketingStage | "">(
+    existing?.marketing_stage ?? "",
+  );
+
+  const isMarketing = meetingPhase === "MARKETING";
 
   // existing prop 변경 시 폼 상태 동기화
   useEffect(() => {
@@ -47,6 +56,7 @@ export default function MeetingLogForm({
     setStatus(existing?.status ?? "SCHEDULED");
     setMinutes(existing?.minutes ?? "");
     setSummary(existing?.summary ?? "");
+    setMarketingStage(existing?.marketing_stage ?? "");
   }, [existing]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,6 +73,7 @@ export default function MeetingLogForm({
         status: status as MeetingLogUpdate["status"],
         minutes: minutes.trim() || undefined,
         summary: summary.trim() || undefined,
+        marketing_stage: marketingStage ? (marketingStage as MarketingStage) : undefined,
       };
       onSubmit(body);
     } else {
@@ -76,6 +87,7 @@ export default function MeetingLogForm({
         status: status as MeetingLogCreate["status"],
         minutes: minutes.trim() || undefined,
         summary: summary.trim() || undefined,
+        marketing_stage: marketingStage ? (marketingStage as MarketingStage) : undefined,
       };
       onSubmit(body);
     }
@@ -131,8 +143,23 @@ export default function MeetingLogForm({
             options={MEETING_STATUS_OPTIONS}
           />
         </div>
+        {isMarketing && (
+          <Select
+            label="마케팅 단계"
+            value={marketingStage}
+            onChange={(e) =>
+              setMarketingStage(e.target.value as MarketingStage)
+            }
+            options={[
+              { value: "", label: "선택 안 함" },
+              ...MARKETING_STAGE_OPTIONS,
+            ]}
+          />
+        )}
         <div>
-          <label className="block text-sm font-medium text-text-dark mb-1">요약</label>
+          <label className="block text-sm font-medium text-text-dark mb-1">
+            요약
+          </label>
           <textarea
             className="w-full rounded-lg border border-gray-border bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             rows={2}
@@ -142,7 +169,9 @@ export default function MeetingLogForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-dark mb-1">회의록</label>
+          <label className="block text-sm font-medium text-text-dark mb-1">
+            회의록
+          </label>
           <textarea
             className="w-full rounded-lg border border-gray-border bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             rows={5}
@@ -152,8 +181,13 @@ export default function MeetingLogForm({
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>취소</Button>
-          <Button type="submit" disabled={isLoading || !title.trim() || !meetingDate}>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            취소
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading || !title.trim() || !meetingDate}
+          >
             {existing ? "수정" : "생성"}
           </Button>
         </div>
