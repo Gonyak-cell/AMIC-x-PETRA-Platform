@@ -126,7 +126,6 @@ function ManualTab() {
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL_MANUAL);
   const [showOptional, setShowOptional] = useState(false);
-  const composingRef = useRef(false);
 
   const set = <K extends keyof TransactionCreate>(
     key: K,
@@ -189,15 +188,7 @@ function ManualTab() {
                 className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                 placeholder="Edward (한글 입력 시 자동 영문 변환)"
                 value={suffix}
-                onCompositionStart={() => {
-                  composingRef.current = true;
-                }}
-                onCompositionEnd={(e) => {
-                  composingRef.current = false;
-                  applyProjectName(e.currentTarget.value);
-                }}
                 onChange={(e) => {
-                  if (composingRef.current) return;
                   applyProjectName(e.target.value);
                 }}
               />

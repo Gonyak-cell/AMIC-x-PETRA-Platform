@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
@@ -49,7 +49,6 @@ export default function CreateTransactionPage() {
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL);
   const [showOptional, setShowOptional] = useState(false);
-  const composingRef = useRef(false);
 
   if (isClient) return <Navigate to="/ma/transactions" replace />;
 
@@ -139,15 +138,7 @@ export default function CreateTransactionPage() {
                     className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                     placeholder="Edward"
                     value={suffix}
-                    onCompositionStart={() => {
-                      composingRef.current = true;
-                    }}
-                    onCompositionEnd={(e) => {
-                      composingRef.current = false;
-                      applyProjectName(e.currentTarget.value);
-                    }}
                     onChange={(e) => {
-                      if (composingRef.current) return;
                       applyProjectName(e.target.value);
                     }}
                   />
