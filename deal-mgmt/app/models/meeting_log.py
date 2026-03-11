@@ -14,6 +14,7 @@ from app.models.enums import (
     MeetingChannel,
     MeetingPhase,
     MeetingStatus,
+    MeetingType,
 )
 
 
@@ -43,6 +44,11 @@ class MeetingLog(Base, TimestampMixin):
         Enum(MeetingChannel),
         nullable=False,
         default=MeetingChannel.IN_PERSON,
+    )
+    meeting_type: Mapped[MeetingType | None] = mapped_column(
+        Enum(MeetingType),
+        nullable=True,
+        default=None,
     )
     status: Mapped[MeetingStatus] = mapped_column(
         Enum(MeetingStatus),

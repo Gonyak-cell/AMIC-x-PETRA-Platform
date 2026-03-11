@@ -780,9 +780,6 @@ async def ask_vdr_question(
     Gemini File API의 1M 토큰 컨텍스트를 활용하여
     VDR 전체(또는 지정) 문서를 기반으로 답변을 생성한다.
     """
-    from app.core.config import settings
-    from app.core.rate_limiter import qa_rate_limiter
-
     qa_rate_limiter.check(claims.user_id)
 
     if not settings.VDR_QA_ENABLED:
@@ -869,15 +866,16 @@ async def stream_vdr_question(
             max_tokens=settings.VDR_QA_MAX_TOKENS,
         )
 
-    # prepare에서 QAResult가 반환되면 early exit (거부/에러)
+    # prepare에서 QAResult가 반환되면 early exit (거부/에러 또는 정보성 안내)
     if isinstance(ctx_or_result, QAResult):
+        sse_event = "error" if ctx_or_result.is_error else "info"
 
-        async def _error_stream() -> AsyncGenerator[str, None]:
-            yield f"event: error\ndata: {json.dumps({'message': ctx_or_result.answer, 'conversation_id': ctx_or_result.conversation_id}, ensure_ascii=False)}\n\n"
+        async def _early_stream() -> AsyncGenerator[str, None]:
+            yield f"event: {sse_event}\ndata: {json.dumps({'message': ctx_or_result.answer, 'conversation_id': ctx_or_result.conversation_id}, ensure_ascii=False)}\n\n"
             yield "event: done\ndata: {}\n\n"
 
         return StreamingResponse(
-            _error_stream(),
+            _early_stream(),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff"},
         )

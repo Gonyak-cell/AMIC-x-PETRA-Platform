@@ -98,8 +98,16 @@ async def ai_setup_confirm(
     claims: JWTClaims = Depends(require_write_access()),
 ) -> DealSetupResult:
     """미리보기 확인 → DB에 벌크 저장."""
+    from sqlalchemy.exc import IntegrityError
+
     try:
         return await deal_setup_service.confirm_deal_setup(db, body, actor_email=claims.email or "unknown")
+    except IntegrityError as exc:
+        logger.warning("거래 확정 중 코드명 충돌: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="코드명이 중복되었습니다. 다시 시도해 주세요.",
+        ) from exc
     except Exception as exc:
         logger.exception("거래 확정 중 오류")
         raise HTTPException(

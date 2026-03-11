@@ -93,11 +93,21 @@ def get_phase_completion(txn: Transaction) -> PhaseCompletionStatus:
     all_met = all(p.satisfied for p in prerequisites) if prerequisites else True
     can_advance = all_met and next_phase is not None and txn.status == TransactionStatus.ACTIVE
 
+    blocking_reasons: list[str] = []
+    if not can_advance:
+        if not all_met:
+            pass  # prerequisites 리스트에서 미충족 항목 확인 가능
+        elif next_phase is None:
+            blocking_reasons.append("마지막 단계입니다")
+        elif txn.status != TransactionStatus.ACTIVE:
+            blocking_reasons.append(f"거래 상태가 {txn.status.value}입니다 (ACTIVE 필요)")
+
     return PhaseCompletionStatus(
         current_phase=txn.phase,
         prerequisites=prerequisites,
         all_met=all_met,
         can_advance=can_advance,
+        blocking_reasons=blocking_reasons,
         next_phase=next_phase,
         previous_phase=prev_phase,
     )

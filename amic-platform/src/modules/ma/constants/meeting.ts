@@ -1,7 +1,10 @@
 import { Video, Phone, Mail, Users, MessageCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { SelectOption } from "@/components/ui";
-import type { MeetingChannel } from "@/modules/ma/types/meeting_log";
+import type {
+  MeetingChannel,
+  MeetingType,
+} from "@/modules/ma/types/meeting_log";
 import type { MeetingStatus } from "@/modules/ma/types/meeting_log";
 
 // -- Meeting Status Label --
@@ -81,6 +84,25 @@ export const ATTENDEE_ROLE_OPTIONS: SelectOption[] = [
   { value: "OBSERVER", label: "옵저버" },
   { value: "OTHER", label: "기타" },
 ];
+
+// ── Meeting Type (유형) ──────────────────────────────────
+export const MEETING_TYPE_OPTIONS: SelectOption[] = [
+  { value: "MEETING", label: "미팅" },
+  { value: "MEAL", label: "식사" },
+  { value: "TEA_TIME", label: "티타임" },
+  { value: "CALL", label: "통화" },
+  { value: "SITE_VISIT", label: "현장 방문" },
+  { value: "OTHER", label: "기타" },
+];
+
+export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
+  MEETING: "미팅",
+  MEAL: "식사",
+  TEA_TIME: "티타임",
+  CALL: "통화",
+  SITE_VISIT: "현장 방문",
+  OTHER: "기타",
+};
 
 // ── Channel Icon Component Map ──────────────────────────
 

@@ -425,6 +425,42 @@ async def regenerate_financial_model(
     return fm
 
 
+async def reset_stuck_model(
+    db: AsyncSession,
+    fm_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+    *,
+    actor_email: str = "",
+) -> FinancialModel:
+    """GENERATING/FINALIZING 상태에서 멈춘 재무모델을 PENDING_REVIEW로 리셋한다."""
+    fm = await get_financial_model(db, fm_id, transaction_id)
+
+    if fm.status not in _BUSY_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"리셋 불가: 현재 상태가 {fm.status.value}입니다 (GENERATING 또는 FINALIZING만 리셋 가능)",
+        )
+
+    old_status = fm.status.value
+    fm.status = FinancialModelStatus.PENDING_REVIEW
+    fm.error_message = "관리자에 의해 수동 리셋됨"
+
+    from app.models.enums import AuditAction
+    from app.services import audit_service
+
+    await audit_service.record(
+        db,
+        entity_type="FinancialModel",
+        entity_id=fm.id,
+        action=AuditAction.UPDATE,
+        actor_email=actor_email,
+        new_value={"action": "manual_reset", "old_status": old_status, "new_status": "PENDING_REVIEW"},
+    )
+    await db.commit()
+    await db.refresh(fm)
+    return fm
+
+
 # ── Background Tasks ─────────────────────────────────────────────────────
 
 

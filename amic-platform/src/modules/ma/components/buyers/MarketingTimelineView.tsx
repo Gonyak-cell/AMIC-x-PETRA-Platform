@@ -15,7 +15,10 @@ import {
   latestCompletedStageIndex,
   effectiveStageCount,
 } from "@/modules/ma/constants";
-import { useMeetingLogs } from "@/modules/ma/hooks/useMeetingLogs";
+import {
+  useMeetingLogs,
+  useDeleteMeetingLog,
+} from "@/modules/ma/hooks/useMeetingLogs";
 import { buildTimelineItems } from "@/modules/ma/utils/timelineItems";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
@@ -37,6 +40,8 @@ export default function MarketingTimelineView({
   canWrite,
   txnId,
 }: MarketingTimelineViewProps) {
+  const deleteMeeting = useDeleteMeetingLog(txnId);
+
   /* 트랜잭션 전체 MARKETING 미팅을 1회 fetch (N+1 방지) */
   const {
     data: meetingData,
@@ -256,7 +261,11 @@ export default function MarketingTimelineView({
                             )}
                           </div>
                           <div className="pb-2 flex-1 min-w-0">
-                            <TimelineMeetingCard log={item.log} />
+                            <TimelineMeetingCard
+                              log={item.log}
+                              onDelete={(logId) => deleteMeeting.mutate(logId)}
+                              canWrite={canWrite}
+                            />
                           </div>
                         </div>
                       );

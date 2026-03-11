@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button, Input, Select, Modal } from "@/components/ui";
 import {
   MEETING_CHANNEL_OPTIONS,
   MEETING_STATUS_OPTIONS,
   MARKETING_STAGE_OPTIONS,
 } from "@/modules/ma/constants";
+import { MEETING_TYPE_OPTIONS } from "@/modules/ma/constants/meeting";
 import type {
   MeetingPhase,
+  MeetingType,
   MeetingLogCreate,
   MeetingLogUpdate,
   MeetingLog,
+  MeetingAttendeeCreate,
 } from "@/modules/ma/types/meeting_log";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
 
@@ -37,12 +41,18 @@ export default function MeetingLogForm({
   const [channel, setChannel] = useState<string>(
     existing?.channel ?? "IN_PERSON",
   );
+  const [meetingType, setMeetingType] = useState<string>(
+    existing?.meeting_type ?? "MEETING",
+  );
   const [status, setStatus] = useState<string>(existing?.status ?? "SCHEDULED");
   const [minutes, setMinutes] = useState(existing?.minutes ?? "");
   const [summary, setSummary] = useState(existing?.summary ?? "");
   const [marketingStage, setMarketingStage] = useState<MarketingStage | "">(
     existing?.marketing_stage ?? "",
   );
+  const [attendees, setAttendees] = useState<
+    { name: string; organization: string; role: string }[]
+  >([]);
 
   const isMarketing = meetingPhase === "MARKETING";
 
@@ -53,15 +63,43 @@ export default function MeetingLogForm({
     setMeetingTime(existing?.meeting_time ?? "");
     setLocation(existing?.location ?? "");
     setChannel(existing?.channel ?? "IN_PERSON");
+    setMeetingType(existing?.meeting_type ?? "MEETING");
     setStatus(existing?.status ?? "SCHEDULED");
     setMinutes(existing?.minutes ?? "");
     setSummary(existing?.summary ?? "");
     setMarketingStage(existing?.marketing_stage ?? "");
+    setAttendees([]);
   }, [existing]);
+
+  const addAttendee = () => {
+    setAttendees((prev) => [...prev, { name: "", organization: "", role: "" }]);
+  };
+
+  const removeAttendee = (idx: number) => {
+    setAttendees((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateAttendee = (
+    idx: number,
+    field: "name" | "organization" | "role",
+    value: string,
+  ) => {
+    setAttendees((prev) =>
+      prev.map((a, i) => (i === idx ? { ...a, [field]: value } : a)),
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !meetingDate) return;
+
+    const validAttendees: MeetingAttendeeCreate[] = attendees
+      .filter((a) => a.name.trim())
+      .map((a) => ({
+        name: a.name.trim(),
+        organization: a.organization.trim() || undefined,
+        role: undefined,
+      }));
 
     if (existing) {
       const body: MeetingLogUpdate = {
@@ -70,10 +108,13 @@ export default function MeetingLogForm({
         meeting_time: meetingTime || undefined,
         location: location.trim() || undefined,
         channel: channel as MeetingLogUpdate["channel"],
+        meeting_type: meetingType as MeetingType,
         status: status as MeetingLogUpdate["status"],
         minutes: minutes.trim() || undefined,
         summary: summary.trim() || undefined,
-        marketing_stage: marketingStage ? (marketingStage as MarketingStage) : undefined,
+        marketing_stage: marketingStage
+          ? (marketingStage as MarketingStage)
+          : undefined,
       };
       onSubmit(body);
     } else {
@@ -84,10 +125,14 @@ export default function MeetingLogForm({
         meeting_time: meetingTime || undefined,
         location: location.trim() || undefined,
         channel: channel as MeetingLogCreate["channel"],
+        meeting_type: meetingType as MeetingType,
         status: status as MeetingLogCreate["status"],
         minutes: minutes.trim() || undefined,
         summary: summary.trim() || undefined,
-        marketing_stage: marketingStage ? (marketingStage as MarketingStage) : undefined,
+        marketing_stage: marketingStage
+          ? (marketingStage as MarketingStage)
+          : undefined,
+        attendees: validAttendees.length > 0 ? validAttendees : undefined,
       };
       onSubmit(body);
     }
@@ -129,12 +174,18 @@ export default function MeetingLogForm({
           onChange={(e) => setLocation(e.target.value)}
           placeholder="미팅 장소"
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Select
             label="채널"
             value={channel}
             onChange={(e) => setChannel(e.target.value)}
             options={MEETING_CHANNEL_OPTIONS}
+          />
+          <Select
+            label="유형"
+            value={meetingType}
+            onChange={(e) => setMeetingType(e.target.value)}
+            options={MEETING_TYPE_OPTIONS}
           />
           <Select
             label="상태"
@@ -157,10 +208,14 @@ export default function MeetingLogForm({
           />
         )}
         <div>
-          <label className="block text-sm font-medium text-text-dark mb-1">
+          <label
+            htmlFor="meeting-summary"
+            className="block text-sm font-medium text-text-dark mb-1"
+          >
             요약
           </label>
           <textarea
+            id="meeting-summary"
             className="w-full rounded-lg border border-gray-border bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             rows={2}
             value={summary}
@@ -169,10 +224,14 @@ export default function MeetingLogForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-dark mb-1">
+          <label
+            htmlFor="meeting-minutes"
+            className="block text-sm font-medium text-text-dark mb-1"
+          >
             회의록
           </label>
           <textarea
+            id="meeting-minutes"
             className="w-full rounded-lg border border-gray-border bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             rows={5}
             value={minutes}
@@ -180,6 +239,67 @@ export default function MeetingLogForm({
             placeholder="회의록 내용"
           />
         </div>
+
+        {/* 참석자 동적 폼 (신규 생성 시에만) */}
+        {!existing && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-text-dark">
+                참석자
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={addAttendee}
+                className="text-xs"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                참석자 추가
+              </Button>
+            </div>
+            {attendees.length === 0 && (
+              <p className="text-xs text-gray-400">
+                참석자가 없습니다. 위 버튼으로 추가하세요.
+              </p>
+            )}
+            <div className="space-y-2">
+              {attendees.map((att, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={att.name}
+                    onChange={(e) =>
+                      updateAttendee(idx, "name", e.target.value)
+                    }
+                    placeholder="이름"
+                    aria-label={`참석자 ${idx + 1} 이름`}
+                    className="h-8 flex-1 min-w-0 px-2 text-sm border border-gray-border rounded bg-white focus:ring-1 focus:ring-primary-500"
+                  />
+                  <input
+                    type="text"
+                    value={att.organization}
+                    onChange={(e) =>
+                      updateAttendee(idx, "organization", e.target.value)
+                    }
+                    placeholder="소속"
+                    aria-label={`참석자 ${idx + 1} 소속`}
+                    className="h-8 flex-1 min-w-0 px-2 text-sm border border-gray-border rounded bg-white focus:ring-1 focus:ring-primary-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAttendee(idx)}
+                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    aria-label={`참석자 ${idx + 1}${att.name ? ` ${att.name}` : ""} 삭제`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
             취소

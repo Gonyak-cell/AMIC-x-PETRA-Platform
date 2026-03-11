@@ -31,10 +31,10 @@ async def generate_nda_redline(
     nda_type: str = "MUTUAL",
     party_side: str = "SELL",
     owner_user_id: str = "",
-) -> tuple[io.BytesIO, float | None, str | None, int, int]:
+) -> tuple[io.BytesIO, float | None, str | None, int, int, list[str]]:
     """NDA Redline 생성: 현재 NDA .docx + 참조 텍스트 비교 → Tracked Changes .docx.
 
-    반환: (docx_bytesio, llm_cost_usd, model_used, issues_count, skipped_count)
+    반환: (docx_bytesio, llm_cost_usd, model_used, issues_count, skipped_count, skipped_reasons)
     """
     logger.info(
         "NDA Redline 서비스 진입: owner=%s, nda_type=%s, party_side=%s, file_size=%d",
@@ -76,6 +76,7 @@ async def generate_nda_redline(
     # 6. issue_id 정규화 + Pydantic 검증
     valid_issues: list[dict[str, Any]] = []
     skipped_count = 0
+    skipped_reasons: list[str] = []
     for i, item in enumerate(issues_list):
         try:
             if isinstance(item, dict) and "issue_id" in item:
@@ -87,7 +88,9 @@ async def generate_nda_redline(
             valid_issues.append(validated.model_dump())
         except (ValueError, TypeError) as exc:
             issue_id = item.get("issue_id", "N/A") if isinstance(item, dict) else "N/A"
-            logger.warning("NDA Redline 이슈 검증 실패 (항목 %d): issue=%s, error=%s", i, issue_id, exc)
+            reason = f"항목 {i} (issue={issue_id}): {exc}"
+            logger.warning("NDA Redline 이슈 검증 실패: %s", reason)
+            skipped_reasons.append(reason)
             skipped_count += 1
 
     if not valid_issues:
@@ -104,4 +107,4 @@ async def generate_nda_redline(
         len(valid_issues),
     )
 
-    return result_docx, cost, model_name, len(valid_issues), skipped_count
+    return result_docx, cost, model_name, len(valid_issues), skipped_count, skipped_reasons

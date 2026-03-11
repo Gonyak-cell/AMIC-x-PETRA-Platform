@@ -79,6 +79,18 @@ async def regenerate_model(
     return await fm_svc.regenerate_financial_model(db, fm_id, txn_id)
 
 
+@router.post("/{fm_id}/reset", response_model=FinancialModelOut)
+async def reset_model(
+    txn_id: UUID,
+    fm_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """GENERATING/FINALIZING 상태에서 멈춘 재무모델을 수동 리셋한다."""
+    await check_client_deal_access(db, txn_id, claims)
+    return await fm_svc.reset_stuck_model(db, fm_id, txn_id, actor_email=claims.email or "")
+
+
 @router.delete("/{fm_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_model(
     txn_id: UUID,

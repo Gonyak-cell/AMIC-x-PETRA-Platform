@@ -373,7 +373,14 @@ async def generate_nda_redline(
 
     # Redline 생성 (LLM 호출 포함)
     try:
-        result_docx, cost, model_name, issues_count, skipped_count = await nda_analysis_service.generate_nda_redline(
+        (
+            result_docx,
+            cost,
+            model_name,
+            issues_count,
+            skipped_count,
+            _skipped_reasons,
+        ) = await nda_analysis_service.generate_nda_redline(
             current_bytes,
             reference_text,
             nda_type=nda.nda_type.value if hasattr(nda.nda_type, "value") else str(nda.nda_type),

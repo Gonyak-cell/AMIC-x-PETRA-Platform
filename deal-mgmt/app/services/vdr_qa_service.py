@@ -126,6 +126,7 @@ class QAResult:
     sources: list[QASource] = field(default_factory=list)
     conversation_id: str = ""
     cost_usd: float = 0.0
+    is_error: bool = True
 
 
 @dataclass
@@ -423,6 +424,7 @@ async def prepare_qa_context(
         return QAResult(
             answer=_GREETING_RESPONSE,
             conversation_id=conv_id_for_greeting,
+            is_error=False,
         )
 
     # 1. 문서 조회

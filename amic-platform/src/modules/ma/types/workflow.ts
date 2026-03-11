@@ -19,6 +19,7 @@ export interface PhaseCompletionStatus {
   prerequisites: PhasePrerequisite[];
   all_met: boolean;
   can_advance: boolean;
+  blocking_reasons: string[];
   next_phase: TransactionPhase | null;
   previous_phase: TransactionPhase | null;
 }

@@ -67,7 +67,11 @@ export function useVdrQA(txnId: string) {
       // 사용자 메시지 추가
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: question, timestamp: new Date().toISOString() },
+        {
+          role: "user",
+          content: question,
+          timestamp: new Date().toISOString(),
+        },
       ]);
 
       // 빈 assistant 메시지 추가 (스트리밍 대상)
@@ -137,6 +141,8 @@ export function useVdrQA(txnId: string) {
         if (response.status === 401) {
           const refreshed = await refreshAuth();
           if (refreshed) {
+            // refreshAuth 대기 중 abort된 경우 불필요한 재시도 방지
+            if (controller.signal.aborted) return;
             // 재시도 시 Authorization 헤더 갱신 (쿠키 기반이므로 헤더는 보조적)
             const freshAuthHeader =
               maApi.defaults.headers.common?.["Authorization"] ??
@@ -144,7 +150,10 @@ export function useVdrQA(txnId: string) {
             if (typeof freshAuthHeader === "string") {
               fetchHeaders["Authorization"] = freshAuthHeader;
             }
-            response = await fetch(sseUrl, { ...fetchOpts, headers: fetchHeaders });
+            response = await fetch(sseUrl, {
+              ...fetchOpts,
+              headers: fetchHeaders,
+            });
           } else {
             emitForceLogout();
             throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요.");
@@ -222,6 +231,21 @@ export function useVdrQA(txnId: string) {
                 }
                 return updated;
               });
+            } else if (event === "info") {
+              // 정보성 안내 (인사 등) — 에러가 아니므로 회색 스타일 적용
+              const parsed = safeParse<VdrQAErrorEvent>(data);
+              if (!parsed) continue;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === "assistant") {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    content: parsed.message,
+                  };
+                }
+                return updated;
+              });
             } else if (event === "done") {
               receivedDone = true;
             }
@@ -250,6 +274,7 @@ export function useVdrQA(txnId: string) {
         }
       } catch (err) {
         if (rafId !== null) cancelAnimationFrame(rafId);
+        flushTokens(); // 에러 시에도 수신된 부분 토큰 UI 반영
         if ((err as Error).name === "AbortError") {
           // 빈 assistant 메시지 정리
           setMessages((prev) => {
@@ -271,7 +296,8 @@ export function useVdrQA(txnId: string) {
           if (last?.role === "assistant" && !last.content) {
             updated[updated.length - 1] = {
               ...last,
-              content: "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+              content:
+                "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
               isError: true,
             };
           }

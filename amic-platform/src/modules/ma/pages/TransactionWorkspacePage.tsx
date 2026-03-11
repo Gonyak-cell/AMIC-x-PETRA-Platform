@@ -63,15 +63,50 @@ const BidsTab = lazy(() => import("@/modules/ma/tabs/BidsTab"));
 const DDChecklistTab = lazy(() => import("@/modules/ma/tabs/DDChecklistTab"));
 const PMITab = lazy(() => import("@/modules/ma/tabs/PMITab"));
 const EarnoutTab = lazy(() => import("@/modules/ma/tabs/EarnoutTab"));
-const MarketingMaterialsTab = lazy(() => import("@/modules/ma/tabs/MarketingMaterialsTab"));
+const MarketingMaterialsTab = lazy(
+  () => import("@/modules/ma/tabs/MarketingMaterialsTab"),
+);
 const ModelsTab = lazy(() => import("@/modules/ma/tabs/ModelsTab"));
-const NotesApprovalsTab = lazy(() => import("@/modules/ma/tabs/NotesApprovalsTab"));
+const NotesApprovalsTab = lazy(
+  () => import("@/modules/ma/tabs/NotesApprovalsTab"),
+);
 const TimelineTab = lazy(() => import("@/modules/ma/tabs/TimelineTab"));
 const QualityTab = lazy(() => import("@/modules/ma/tabs/QualityTab"));
 const EngagementTab = lazy(() => import("@/modules/ma/tabs/EngagementTab"));
 
 // ── 상수/유틸 ──────────────────────────────────────────
 const VALID_PHASES = PHASE_CONFIG.map((p) => p.phase);
+
+const VALID_TABS = [
+  "engagement",
+  "buyers",
+  "timeline",
+  "marketing-materials",
+  "models",
+  "ndas",
+  "vdr",
+  "bids",
+  "dd-checklist",
+  "contracts",
+  "closing",
+  "pmi",
+  "earnout",
+  "risks",
+  "compliance",
+  "notes-approvals",
+  "marketing-logs",
+  "negotiation-logs",
+  "rfi",
+  "ai-quality",
+];
+
+const SIDEBAR_ONLY_TABS = [
+  "risks",
+  "compliance",
+  "notes-approvals",
+  "timeline",
+  "ai-quality",
+];
 
 // ── 메인 컴포넌트 ──────────────────────────────────────
 export default function TransactionWorkspacePage() {
@@ -81,27 +116,6 @@ export default function TransactionWorkspacePage() {
   const id = txnId ?? "";
 
   // URL 기반 탭 결정
-  const VALID_TABS = [
-    "engagement",
-    "buyers",
-    "timeline",
-    "marketing-materials",
-    "models",
-    "ndas",
-    "vdr",
-    "bids",
-    "dd-checklist",
-    "contracts",
-    "closing",
-    "pmi",
-    "earnout",
-    "risks",
-    "compliance",
-    "notes-approvals",
-    "marketing-logs",
-    "negotiation-logs",
-    "rfi",
-  ];
   const activeTab = VALID_TABS.includes(splat ?? "") ? splat! : "overview";
 
   // 파이프라인에서 클릭한 단계 (URL search param 기반, 리마운트 안전)
@@ -284,14 +298,6 @@ export default function TransactionWorkspacePage() {
     ? [{ id: "overview", label: "대시보드" }]
     : allTabs.filter((t) => visibleTabIds.includes(t.id));
 
-  // 사이드바 Tools에서만 접근하는 탭 (파이프라인 탭 바에는 미표시)
-  const SIDEBAR_ONLY_TABS = [
-    "risks",
-    "compliance",
-    "notes-approvals",
-    "timeline",
-  ];
-
   // activeTab이 현재 보이는 탭에 없으면 PHASE_TAB_MAP 폴백
   const safeActiveTab =
     activeTab === "overview" ||
@@ -373,6 +379,13 @@ export default function TransactionWorkspacePage() {
                     단계로
                   </Button>
                 )}
+                {phaseStatus &&
+                  !phaseStatus.can_advance &&
+                  phaseStatus.blocking_reasons?.length > 0 && (
+                    <span className="text-xs text-white/60 px-2">
+                      {phaseStatus.blocking_reasons.join(" · ")}
+                    </span>
+                  )}
                 {phaseStatus?.can_advance && phaseStatus.next_phase && (
                   <Button
                     icon={ArrowRight}
@@ -519,68 +532,72 @@ export default function TransactionWorkspacePage() {
 
       {/* ── Tab Components (lazy-loaded with Suspense) ── */}
       <Suspense fallback={<Spinner size="lg" />}>
-      {safeActiveTab === "engagement" && (
-        <EngagementTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "buyers" && (
-        <BuyersTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
-      {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
-      {safeActiveTab === "ndas" && <NdasTab txnId={id} canWrite={canWrite()} />}
-      {safeActiveTab === "bids" && <BidsTab txnId={id} canWrite={canWrite()} />}
-      {safeActiveTab === "dd-checklist" && (
-        <DDChecklistTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "contracts" && (
-        <ContractsTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "closing" && (
-        <ClosingTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "pmi" && <PMITab txnId={id} canWrite={canWrite()} />}
-      {safeActiveTab === "earnout" && (
-        <EarnoutTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "risks" && (
-        <RisksTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "compliance" && (
-        <ComplianceTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "marketing-materials" && (
-        <MarketingMaterialsTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "models" && (
-        <ModelsTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "ai-quality" && (
-        <QualityTab txnId={id} canWrite={canWrite()} />
-      )}
-      {safeActiveTab === "timeline" && <TimelineTab txnId={id} />}
-      {safeActiveTab === "marketing-logs" && (
-        <MeetingLogsTab
-          txnId={id}
-          meetingPhase="MARKETING"
-          buyerId={buyerIdParam}
-          buyerName={
-            buyerIdParam
-              ? buyers?.find((b) => b.id === buyerIdParam)?.company_name
-              : undefined
-          }
-          onClearBuyerFilter={() => {
-            const next = new URLSearchParams(searchParams);
-            next.delete("buyerId");
-            setSearchParams(next, { replace: true });
-          }}
-        />
-      )}
-      {safeActiveTab === "negotiation-logs" && (
-        <MeetingLogsTab txnId={id} meetingPhase="NEGOTIATION" />
-      )}
-      {safeActiveTab === "notes-approvals" && (
-        <NotesApprovalsTab txnId={id} canWrite={canWrite()} />
-      )}
+        {safeActiveTab === "engagement" && (
+          <EngagementTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "buyers" && (
+          <BuyersTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
+        {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
+        {safeActiveTab === "ndas" && (
+          <NdasTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "bids" && (
+          <BidsTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "dd-checklist" && (
+          <DDChecklistTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "contracts" && (
+          <ContractsTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "closing" && (
+          <ClosingTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "pmi" && <PMITab txnId={id} canWrite={canWrite()} />}
+        {safeActiveTab === "earnout" && (
+          <EarnoutTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "risks" && (
+          <RisksTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "compliance" && (
+          <ComplianceTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "marketing-materials" && (
+          <MarketingMaterialsTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "models" && (
+          <ModelsTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "ai-quality" && (
+          <QualityTab txnId={id} canWrite={canWrite()} />
+        )}
+        {safeActiveTab === "timeline" && <TimelineTab txnId={id} />}
+        {safeActiveTab === "marketing-logs" && (
+          <MeetingLogsTab
+            txnId={id}
+            meetingPhase="MARKETING"
+            buyerId={buyerIdParam}
+            buyerName={
+              buyerIdParam
+                ? buyers?.find((b) => b.id === buyerIdParam)?.company_name
+                : undefined
+            }
+            onClearBuyerFilter={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("buyerId");
+              setSearchParams(next, { replace: true });
+            }}
+          />
+        )}
+        {safeActiveTab === "negotiation-logs" && (
+          <MeetingLogsTab txnId={id} meetingPhase="NEGOTIATION" />
+        )}
+        {safeActiveTab === "notes-approvals" && (
+          <NotesApprovalsTab txnId={id} canWrite={canWrite()} />
+        )}
       </Suspense>
     </div>
   );

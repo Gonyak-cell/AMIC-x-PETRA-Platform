@@ -16,6 +16,7 @@ class PhaseCompletionStatus(BaseModel):
     prerequisites: list[PhasePrerequisite]
     all_met: bool
     can_advance: bool
+    blocking_reasons: list[str] = []
     next_phase: TransactionPhase | None = None
     previous_phase: TransactionPhase | None = None
 

@@ -403,6 +403,7 @@ async def list_action_items(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    await check_client_deal_access(db, txn_id, claims)
     await _get_log_or_404(db, txn_id, log_id)
     q = select(MeetingActionItem).where(MeetingActionItem.meeting_id == log_id).order_by(MeetingActionItem.created_at)
     result = await db.execute(q)

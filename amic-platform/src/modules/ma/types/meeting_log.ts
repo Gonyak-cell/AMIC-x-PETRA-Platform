@@ -9,6 +9,13 @@ export type MeetingChannel =
   | "PHONE"
   | "VIDEO"
   | "HYBRID";
+export type MeetingType =
+  | "MEETING"
+  | "MEAL"
+  | "TEA_TIME"
+  | "CALL"
+  | "SITE_VISIT"
+  | "OTHER";
 export type MeetingStatus =
   | "SCHEDULED"
   | "COMPLETED"
@@ -97,6 +104,7 @@ export interface MeetingLog {
   meeting_time: string | null;
   location: string | null;
   channel: MeetingChannel;
+  meeting_type: MeetingType | null;
   status: MeetingStatus;
   minutes: string | null;
   summary: string | null;
@@ -127,6 +135,7 @@ export interface MeetingLogCreate {
   meeting_time?: string;
   location?: string;
   channel?: MeetingChannel;
+  meeting_type?: MeetingType;
   status?: MeetingStatus;
   minutes?: string;
   summary?: string;
@@ -146,6 +155,7 @@ export interface MeetingLogUpdate {
   meeting_time?: string;
   location?: string;
   channel?: MeetingChannel;
+  meeting_type?: MeetingType;
   status?: MeetingStatus;
   minutes?: string;
   summary?: string;

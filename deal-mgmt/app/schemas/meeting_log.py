@@ -16,6 +16,7 @@ from app.models.enums import (
     MeetingChannel,
     MeetingPhase,
     MeetingStatus,
+    MeetingType,
 )
 
 
@@ -71,6 +72,7 @@ class MeetingLogOut(BaseModel):
     meeting_time: str | None = None
     location: str | None = None
     channel: MeetingChannel
+    meeting_type: MeetingType | None = None
     status: MeetingStatus
     minutes: str | None = None
     summary: str | None = None
@@ -99,11 +101,12 @@ class MeetingLogCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=300, description="미팅 제목")
     meeting_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="미팅 일자 (YYYY-MM-DD)")
     meeting_time: str | None = Field(None, pattern=r"^\d{2}:\d{2}$", description="미팅 시간 (HH:MM)")
-    location: str | None = Field(None, description="미팅 장소")
+    location: str | None = Field(None, max_length=500, description="미팅 장소")
     channel: MeetingChannel = MeetingChannel.IN_PERSON
+    meeting_type: MeetingType | None = None
     status: MeetingStatus = MeetingStatus.COMPLETED
-    minutes: str | None = Field(None, description="회의록")
-    summary: str | None = Field(None, description="요약")
+    minutes: str | None = Field(None, max_length=50000, description="회의록")
+    summary: str | None = Field(None, max_length=5000, description="요약")
     provided_materials: list[ProvidedMaterial] | None = None
     attachments: list[dict] | None = None
     buyer_id: uuid.UUID | None = Field(None, description="매수자 ID (마케팅 미팅 시 필수)")
@@ -129,11 +132,12 @@ class MeetingLogUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=300, description="미팅 제목")
     meeting_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="미팅 일자")
     meeting_time: str | None = None
-    location: str | None = None
+    location: str | None = Field(None, max_length=500)
     channel: MeetingChannel | None = None
+    meeting_type: MeetingType | None = None
     status: MeetingStatus | None = None
-    minutes: str | None = None
-    summary: str | None = None
+    minutes: str | None = Field(None, max_length=50000)
+    summary: str | None = Field(None, max_length=5000)
     provided_materials: list[ProvidedMaterial] | None = None
     attachments: list[dict] | None = None
     buyer_id: uuid.UUID | None = None

@@ -538,6 +538,17 @@ class MeetingChannel(enum.StrEnum):
     HYBRID = "HYBRID"
 
 
+class MeetingType(enum.StrEnum):
+    """유형 — 미팅/식사/티타임 등."""
+
+    MEETING = "MEETING"
+    MEAL = "MEAL"
+    TEA_TIME = "TEA_TIME"
+    CALL = "CALL"
+    SITE_VISIT = "SITE_VISIT"
+    OTHER = "OTHER"
+
+
 class MeetingStatus(enum.StrEnum):
     SCHEDULED = "SCHEDULED"
     COMPLETED = "COMPLETED"

@@ -116,34 +116,47 @@ async def confirm_deal_setup(
     actor_email: str,
 ) -> DealSetupResult:
     """미리보기 확인 → DB에 Transaction + DD Checklist + Timeline + Buyers 벌크 저장."""
+    from sqlalchemy.exc import IntegrityError
+
     from app.models.enums import AuditAction
 
     txn_data = preview.transaction
     year = datetime.now().year
     code_name = await _generate_code_name(db, txn_data.deal_type, txn_data.name, year)
 
-    # 1. Transaction 생성
-    txn = Transaction(
-        code_name=code_name,
-        name=txn_data.name,
-        deal_type=txn_data.deal_type,
-        side=txn_data.side,
-        target_company_name=txn_data.target_company_name,
-        client_name=txn_data.client_name,
-        estimated_deal_value=(
-            Decimal(str(txn_data.estimated_deal_value)) if txn_data.estimated_deal_value is not None else None
-        ),
-        currency=txn_data.currency,
-        deal_structure=txn_data.deal_structure,
-        industry=txn_data.industry,
-        target_close_date=txn_data.target_close_date,
-        notes=txn_data.notes,
-        lead_advisor_email=preview.lead_advisor_email,
-        phase=TransactionPhase.ENGAGEMENT,
-        status=TransactionStatus.DRAFT,
-    )
+    # 1. Transaction 생성 (코드명 충돌 시 1회 재시도)
+    def _build_txn(cn: str) -> Transaction:
+        return Transaction(
+            code_name=cn,
+            name=txn_data.name,
+            deal_type=txn_data.deal_type,
+            side=txn_data.side,
+            target_company_name=txn_data.target_company_name,
+            client_name=txn_data.client_name,
+            estimated_deal_value=(
+                Decimal(str(txn_data.estimated_deal_value)) if txn_data.estimated_deal_value is not None else None
+            ),
+            currency=txn_data.currency,
+            deal_structure=txn_data.deal_structure,
+            industry=txn_data.industry,
+            target_close_date=txn_data.target_close_date,
+            notes=txn_data.notes,
+            lead_advisor_email=preview.lead_advisor_email,
+            phase=TransactionPhase.ENGAGEMENT,
+            status=TransactionStatus.DRAFT,
+        )
+
+    txn = _build_txn(code_name)
     db.add(txn)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        # 동시 생성으로 인한 UniqueConstraint 충돌 — seq+1로 1회 재시도
+        await db.rollback()
+        code_name = await _generate_code_name(db, txn_data.deal_type, txn_data.name, year)
+        txn = _build_txn(code_name)
+        db.add(txn)
+        await db.flush()
 
     await audit_service.record(
         db,

@@ -25,6 +25,16 @@ _TYPE_MAP: dict[MarketingDocType, str] = {
 }
 
 
+def _validate_prerequisites(body: MarketingMaterialCreate) -> list[str]:
+    """Celery 태스크 진입 전 필수 요소를 검증하여 누락 사유를 반환한다."""
+    errors: list[str] = []
+    if not body.title or not body.title.strip():
+        errors.append("title이 비어 있습니다")
+    if body.doc_type not in _TYPE_MAP:
+        errors.append(f"지원하지 않는 doc_type입니다: {body.doc_type.value}")
+    return errors
+
+
 # ── CRUD ─────────────────────────────────────────────────────────
 
 
@@ -64,6 +74,16 @@ async def create_marketing_material(
     created_by_email: str | None = None,
 ) -> MarketingMaterial:
     """마케팅 자료 레코드를 생성하고 PPTX 생성을 비동기로 트리거한다."""
+    from fastapi import HTTPException
+    from fastapi import status as http_status
+
+    errors = _validate_prerequisites(body)
+    if errors:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"validation_errors": errors},
+        )
+
     mat = MarketingMaterial(
         transaction_id=transaction_id,
         doc_type=body.doc_type,
@@ -111,7 +131,7 @@ async def _generate_pptx(
         output_path = out_dir / f"{memo_type}_{mat_id}.pptx"
 
         # 동기 함수를 스레드풀에서 실행 (python-pptx는 동기 IO)
-        result = await asyncio.get_event_loop().run_in_executor(
+        result = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: generate_memo(
                 memo_type=memo_type,
@@ -151,6 +171,16 @@ async def create_marketing_material_with_ralph(
     created_by_email: str | None = None,
 ) -> MarketingMaterial:
     """Ralph Loop 품질 강화 모드로 마케팅 자료를 생성한다."""
+    from fastapi import HTTPException
+    from fastapi import status as http_status
+
+    errors = _validate_prerequisites(body)
+    if errors:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"validation_errors": errors},
+        )
+
     from app.ralph.convergence import ConvergenceConfig
     from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
     from app.ralph.generators.pptx_generator import RalphMemoGenerator
@@ -234,7 +264,7 @@ async def generate_marketing_material(
     await db.commit()
 
     try:
-        result = await asyncio.get_event_loop().run_in_executor(
+        result = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: generate_memo(
                 memo_type=memo_type,
