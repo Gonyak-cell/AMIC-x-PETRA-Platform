@@ -63,7 +63,7 @@ class MeetingLog(Base, TimestampMixin):
     # 마케팅 전용: 매수인 연결
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
-        ForeignKey("buyer_candidates.id"),
+        ForeignKey("buyer_candidates.id", ondelete="SET NULL"),
         nullable=True,
     )
 
