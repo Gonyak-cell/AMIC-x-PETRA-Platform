@@ -10,8 +10,12 @@ import logging
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.core.config import settings
+
+if TYPE_CHECKING:
+    from fastapi import UploadFile
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +121,57 @@ class BlobStorageClient:
         blob_client = self._container_client.get_blob_client(blob_name)
         await blob_client.upload_blob(
             data,
+            overwrite=True,
+            content_settings=ContentSettings(content_type=content_type),
+        )
+        return blob_name
+
+    async def upload_blob_stream(
+        self,
+        blob_name: str,
+        file_obj: UploadFile,
+        content_type: str,
+        file_size: int,
+        chunk_size: int = 1 * 1024 * 1024,
+    ) -> str:
+        """UploadFile에서 청크 단위로 스트리밍 업로드한다. 메모리: O(chunk_size).
+
+        Args:
+            blob_name: blob 경로 (transaction_id/folder_id/stored_name).
+            file_obj: Starlette UploadFile (seek(0) 상태여야 함).
+            content_type: MIME 타입.
+            file_size: 사전 계산된 파일 크기 (바이트).
+            chunk_size: 읽기 청크 크기 (기본 1MB).
+
+        Returns:
+            업로드된 blob_name.
+        """
+        if self._is_local:
+            path = (_LOCAL_STORAGE_DIR / blob_name).resolve()
+            if not str(path).startswith(str(_LOCAL_STORAGE_DIR.resolve())):
+                raise ValueError(f"경로 순회 시도 감지: {blob_name}")
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            def _write_chunked() -> None:
+                with open(path, "wb") as f:
+                    # file_obj.file은 SpooledTemporaryFile — 동기 read 사용
+                    while True:
+                        chunk = file_obj.file.read(chunk_size)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+
+            await asyncio.to_thread(_write_chunked)
+            return blob_name
+
+        # Azure 모드: 전체 읽어서 업로드 (SDK 호환성 보장)
+        # NOTE: azure-storage-blob >= 12.20 에서 AsyncIterator 지원 시 스트리밍 전환 가능
+        from azure.storage.blob import ContentSettings
+
+        content = await file_obj.read()
+        blob_client_obj = self._container_client.get_blob_client(blob_name)
+        await blob_client_obj.upload_blob(
+            content,
             overwrite=True,
             content_settings=ContentSettings(content_type=content_type),
         )

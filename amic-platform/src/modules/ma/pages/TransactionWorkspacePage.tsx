@@ -167,7 +167,7 @@ export default function TransactionWorkspacePage() {
   const { data: summary } = useWorkspaceSummary(id);
 
   // 매수자 목록 — marketing-logs 탭 buyer name lookup용
-  const { data: buyers } = useBuyers(id);
+  const { data: buyers } = useBuyers(id, !!buyerIdParam);
 
   // Legal docs (overview 서비스 연동에서 MOU 상태 확인용)
   const { data: legalDocs } = useLegalDocuments(

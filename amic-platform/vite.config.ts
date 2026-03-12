@@ -6,7 +6,7 @@ import path from "path";
 export default defineConfig({
   build: {
     sourcemap: true,
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -14,6 +14,16 @@ export default defineConfig({
           "query-vendor": ["@tanstack/react-query"],
           "chart-vendor": ["recharts"],
           "excalidraw-vendor": ["@excalidraw/excalidraw"],
+          "tiptap-vendor": [
+            "@tiptap/react",
+            "@tiptap/starter-kit",
+            "@tiptap/pm",
+            "@tiptap/extension-table",
+            "@tiptap/extension-table-cell",
+            "@tiptap/extension-table-header",
+            "@tiptap/extension-table-row",
+            "@tiptap/extension-placeholder",
+          ],
         },
       },
     },

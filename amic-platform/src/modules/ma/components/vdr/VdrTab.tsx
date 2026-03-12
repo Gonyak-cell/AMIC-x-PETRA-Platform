@@ -173,7 +173,7 @@ export default function VdrTab({ txnId }: Props) {
 
   const uploadDoc = useUploadVdrDocument(txnId, selectedFolderId ?? "");
   const deleteDoc = useDeleteVdrDocument(txnId);
-  const { data: extractionData } = useExtractions(txnId);
+  const { data: extractionData } = useExtractions(txnId, subTab === "documents");
   const extractionCount = extractionData?.total ?? 0;
 
   const handleDirectUploadComplete = useCallback(

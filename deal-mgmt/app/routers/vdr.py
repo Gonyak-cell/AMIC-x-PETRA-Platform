@@ -113,16 +113,11 @@ _ALLOWED_EXTENSIONS = frozenset(_EXTENSION_MIME_MAP.keys())
 _upload_limiter = InMemoryRateLimiter(max_calls=20, window_seconds=60.0)
 
 
-async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
-    """업로드 파일의 확장자·MIME·크기를 검증하고 콘텐츠를 읽는다.
-
-    검증 순서:
-      1) 확장자 화이트리스트 (`_ALLOWED_EXTENSIONS`)
-      2) MIME 검증: 확장자별 매핑 우선, 없으면 전역 화이트리스트 폴백
-      3) 파일 크기 (`_MAX_FILE_SIZE`)
+def _validate_upload_metadata(file: UploadFile) -> tuple[str, str, str]:
+    """업로드 파일의 확장자·MIME·Content-Length 헤더를 검증한다 (파일 내용 읽지 않음).
 
     Returns:
-        (filename, ext, content_type, content)
+        (filename, ext, content_type)
     """
     # 경로 탐색 방지: 파일명에서 디렉토리 구성 요소 제거
     raw_name = file.filename or "untitled"
@@ -158,7 +153,21 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
             detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
         )
 
-    # 4) 파일 크기 실측 검증 (Content-Length 조작 방어)
+    return filename, ext, content_type
+
+
+async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
+    """업로드 파일의 확장자·MIME·크기를 검증하고 콘텐츠를 읽는다.
+
+    단일 파일 업로드 엔드포인트 하위호환용.
+    배치 업로드는 _validate_upload_metadata + _stream_hash_and_size 조합을 사용한다.
+
+    Returns:
+        (filename, ext, content_type, content)
+    """
+    filename, ext, content_type = _validate_upload_metadata(file)
+
+    # 파일 크기 실측 검증 (Content-Length 조작 방어)
     content = await file.read()
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(

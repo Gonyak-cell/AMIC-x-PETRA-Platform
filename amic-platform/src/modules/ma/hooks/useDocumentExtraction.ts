@@ -20,14 +20,14 @@ const extractionDetailQK = (txnId: string, id: string) =>
 // ── Read 훅 ────────────────────────────────────────────────
 
 /** 추출 작업 목록 — 진행중 상태가 있으면 3초 폴링 */
-export function useExtractions(txnId: string) {
+export function useExtractions(txnId: string, active = true) {
   return useQuery<ExtractionListResponse>({
     queryKey: extractionQK(txnId),
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/extractions`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
       const hasInProgress = items.some((e) =>

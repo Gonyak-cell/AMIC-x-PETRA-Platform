@@ -81,6 +81,14 @@ export const mockPhaseStatus: PhaseCompletionStatus = {
 // ── Handlers ─────────────────────────────────────────────
 
 export const maHandlers = [
+  // Health
+  http.get("*/api/ma/health", () => {
+    return HttpResponse.json({ status: "ok" });
+  }),
+  http.get("*/api/ma/transactions", () => {
+    return HttpResponse.json({ items: [mockTransaction], total: 1 });
+  }),
+
   // Transaction CRUD
   http.get("*/api/ma/transactions/:txnId", ({ params }) => {
     if (params.txnId === mockTransaction.id) {
@@ -240,6 +248,11 @@ export const maHandlers = [
   // VDR access logs
   http.get("*/api/ma/transactions/:txnId/vdr/access-logs", () => {
     return HttpResponse.json([]);
+  }),
+
+  // Document extractions
+  http.get("*/api/ma/transactions/:txnId/extractions", () => {
+    return HttpResponse.json({ items: [], total: 0 });
   }),
 
   // Auto-advance notification

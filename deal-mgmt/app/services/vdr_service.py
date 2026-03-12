@@ -6,9 +6,13 @@ import hashlib
 import logging
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from fastapi import UploadFile
 
 from app.core.blob_storage import blob_client
 from app.core.exceptions import DocumentNotFoundError
@@ -18,6 +22,9 @@ from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import VdrDocumentUpdate, VdrFolderCreate, VdrFolderUpdate
 
 logger = logging.getLogger(__name__)
+
+# 스트리밍 읽기 청크 크기: 1 MB
+_CHUNK_SIZE = 1 * 1024 * 1024
 
 # M&A 실사 VDR 기본 폴더 (12개)
 _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
@@ -297,6 +304,99 @@ async def upload_document(
         stored_name=stored_name,
         file_path=blob_name,
         file_size_bytes=len(file_content),
+        mime_type=mime_type,
+        sha256_hash=sha256_hex,
+        uploaded_by_email=uploaded_by_email,
+        description=description,
+    )
+    db.add(doc)
+    if auto_commit:
+        try:
+            await db.commit()
+            await db.refresh(doc)
+        except Exception:
+            await db.rollback()
+            try:
+                await blob_client.delete_blob(blob_name)
+            except Exception as cleanup_err:
+                logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
+            raise
+    else:
+        await db.flush()
+    return doc
+
+
+async def stream_hash_and_size(
+    file: UploadFile,
+    max_file_size: int,
+) -> tuple[str, int]:
+    """청크 단위로 SHA256 해시와 파일 크기를 계산한다.
+
+    메모리 사용량: O(_CHUNK_SIZE) ≈ 1MB.
+    완료 후 file.seek(0)으로 포인터를 리셋하여 후속 blob 업로드에 재사용 가능하다.
+
+    Args:
+        file: Starlette UploadFile (내부적으로 SpooledTemporaryFile 사용).
+        max_file_size: 최대 허용 파일 크기 (바이트). 초과 시 HTTPException 413.
+
+    Returns:
+        (sha256_hex, total_bytes)
+    """
+    from fastapi import HTTPException, status
+
+    hasher = hashlib.sha256()
+    total = 0
+    while True:
+        chunk = await file.read(_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_file_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=f"파일 크기가 최대 허용량({max_file_size // 1024 // 1024}MB)을 초과합니다.",
+            )
+        hasher.update(chunk)
+    await file.seek(0)
+    return hasher.hexdigest(), total
+
+
+async def upload_document_stream(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    original_name: str,
+    file: UploadFile,
+    file_size: int,
+    sha256_hex: str,
+    mime_type: str,
+    uploaded_by_email: str | None = None,
+    description: str | None = None,
+    *,
+    _folder_verified: bool = False,
+    auto_commit: bool = True,
+) -> VdrDocument:
+    """스트리밍 방식으로 파일을 업로드한다. 해시와 크기는 사전 계산됨.
+
+    stream_hash_and_size()로 해시/크기를 미리 계산한 후,
+    blob_storage의 스트리밍 업로드를 통해 메모리 사용량을 O(1MB)로 유지한다.
+    """
+    if not _folder_verified:
+        await get_folder(db, transaction_id, folder_id)
+
+    ext = Path(original_name).suffix.lower()
+    stored_name = f"{uuid.uuid4()}{ext}"
+    blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
+
+    await blob_client.upload_blob_stream(blob_name, file, mime_type, file_size)
+
+    doc = VdrDocument(
+        transaction_id=transaction_id,
+        folder_id=folder_id,
+        original_name=original_name,
+        stored_name=stored_name,
+        file_path=blob_name,
+        file_size_bytes=file_size,
         mime_type=mime_type,
         sha256_hash=sha256_hex,
         uploaded_by_email=uploaded_by_email,

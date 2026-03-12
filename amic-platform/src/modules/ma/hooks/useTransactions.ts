@@ -315,7 +315,7 @@ export function useAddMember(txnId: string) {
 }
 
 // ── Buyers ─────────────────────────────────────────────
-export function useBuyers(txnId: string) {
+export function useBuyers(txnId: string, active = true) {
   return useQuery<BuyerCandidate[]>({
     queryKey: ["ma", "transactions", txnId, "buyers"],
     queryFn: async () => {
@@ -324,7 +324,7 @@ export function useBuyers(txnId: string) {
       );
       return data.items;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     staleTime: 60_000,
   });
 }
