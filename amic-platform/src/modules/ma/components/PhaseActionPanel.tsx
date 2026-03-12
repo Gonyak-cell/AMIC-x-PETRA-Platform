@@ -1,4 +1,4 @@
-import { CheckCircle, Circle } from "lucide-react";
+import { CheckCircle, Circle, Info } from "lucide-react";
 import { usePhaseCompletion } from "@/modules/ma/hooks/useTransactions";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import { Spinner } from "@/components/ui";
@@ -27,8 +27,6 @@ export default function PhaseActionPanel({ txnId }: PhaseActionPanelProps) {
   const totalCount = items.length;
   const pct = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 100;
 
-  if (totalCount === 0) return null;
-
   return (
     <div className="rounded-xl border border-gray-border bg-white p-4">
       <div className="flex items-center gap-2 mb-2">
@@ -40,42 +38,66 @@ export default function PhaseActionPanel({ txnId }: PhaseActionPanelProps) {
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
+      {/* Gate summary */}
+      {phaseStatus.gate_summary && (
+        <div className="flex items-start gap-1.5 mb-3 rounded-lg bg-bg-cool px-3 py-2">
+          <Info size={12} className="text-text-secondary shrink-0 mt-0.5" />
           <span className="text-xs text-text-secondary">
-            필수 조건 {metCount}/{totalCount}
+            {phaseStatus.gate_summary}
           </span>
-          <span className="text-xs font-medium text-text-dark">{pct}%</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-bg-cool overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent transition-all duration-500"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
+      )}
 
-      <ul className="space-y-1">
-        {items.map((req) => (
-          <li key={req.field} className="flex items-center gap-2 text-xs">
-            {req.satisfied ? (
-              <CheckCircle size={12} className="text-accent shrink-0" />
-            ) : (
-              <Circle size={12} className="text-negative shrink-0" />
-            )}
-            <span
-              className={
-                req.satisfied
-                  ? "text-text-secondary line-through"
-                  : "text-text-dark font-medium"
-              }
-            >
-              {req.label}
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-text-secondary">
+              필수 조건 {metCount}/{totalCount}
             </span>
-          </li>
-        ))}
-      </ul>
+            <span className="text-xs font-medium text-text-dark">{pct}%</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-bg-cool overflow-hidden">
+            <div
+              className="h-full rounded-full bg-accent transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {totalCount > 0 ? (
+        <ul className="space-y-1">
+          {items.map((req) => (
+            <li key={req.field} className="flex items-center gap-2 text-xs">
+              {req.satisfied ? (
+                <CheckCircle size={12} className="text-accent shrink-0" />
+              ) : (
+                <Circle size={12} className="text-negative shrink-0" />
+              )}
+              <span
+                className={
+                  req.satisfied
+                    ? "text-text-secondary line-through"
+                    : "text-text-dark font-medium"
+                }
+              >
+                {req.label}
+              </span>
+              {req.current_value && (
+                <span className="text-text-secondary ml-auto">
+                  {req.current_value}
+                  {req.target_value ? ` / ${req.target_value}` : ""}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-text-secondary">
+          다음 단계 전환 조건이 없습니다.
+        </p>
+      )}
     </div>
   );
 }

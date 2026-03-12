@@ -9,6 +9,8 @@ class PhasePrerequisite(BaseModel):
     field: str
     label: str
     satisfied: bool
+    current_value: str | None = None
+    target_value: str | None = None
 
 
 class PhaseCompletionStatus(BaseModel):
@@ -19,6 +21,7 @@ class PhaseCompletionStatus(BaseModel):
     blocking_reasons: list[str] = []
     next_phase: TransactionPhase | None = None
     previous_phase: TransactionPhase | None = None
+    gate_summary: str | None = None
 
 
 class PhaseTransitionRequest(BaseModel):

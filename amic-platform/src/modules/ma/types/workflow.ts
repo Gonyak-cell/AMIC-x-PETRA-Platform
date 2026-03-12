@@ -12,6 +12,8 @@ export interface PhasePrerequisite {
   field: string;
   label: string;
   satisfied: boolean;
+  current_value?: string | null;
+  target_value?: string | null;
 }
 
 export interface PhaseCompletionStatus {
@@ -22,6 +24,7 @@ export interface PhaseCompletionStatus {
   blocking_reasons: string[];
   next_phase: TransactionPhase | null;
   previous_phase: TransactionPhase | null;
+  gate_summary?: string | null;
 }
 
 export interface WorkflowTransition {

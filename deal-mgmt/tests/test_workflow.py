@@ -188,6 +188,47 @@ async def test_rollback_phase(client):
 
 
 # ── Multi-phase Advance ───────────────────────────────────
+async def _seed_gate_data_for_phase(client, txn_id: str, target_phase: str) -> None:
+    """target_phase 진입에 필요한 최소 시드 데이터를 생성한다."""
+    if target_phase == "BIDDING":
+        # Short List buyer + NDA
+        resp = await client.post(
+            f"/api/v1/transactions/{txn_id}/buyers",
+            json={"company_name": "시드 매수자", "buyer_type": "STRATEGIC", "tier": "TIER_1"},
+        )
+        buyer_id = resp.json()["id"]
+        # IDENTIFIED → CONTACTED → NDA_SIGNED (전이 규칙 준수)
+        await client.patch(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+            json={"status": "CONTACTED"},
+        )
+        await client.patch(
+            f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+            json={"status": "NDA_SIGNED"},
+        )
+    elif target_phase == "MAIN_DUE_DILIGENCE":
+        # 유효 입찰 1건
+        resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers")
+        buyer_id = resp.json()["items"][0]["id"]
+        await client.post(
+            f"/api/v1/transactions/{txn_id}/bids",
+            json={"buyer_candidate_id": buyer_id, "bid_type": "IOI", "amount": 5000000000},
+        )
+    elif target_phase == "CLOSING":
+        # SPA 계약 1건 + Closing 체크리스트 전체 COMPLETED
+        await client.post(
+            f"/api/v1/transactions/{txn_id}/contracts",
+            json={"contract_type": "SPA", "title": "SPA"},
+        )
+        resp = await client.get(f"/api/v1/transactions/{txn_id}/closing")
+        for item in resp.json():
+            if item["status"] != "COMPLETED":
+                await client.patch(
+                    f"/api/v1/transactions/{txn_id}/closing/{item['id']}",
+                    json={"status": "COMPLETED"},
+                )
+
+
 async def test_advance_through_multiple_phases(client):
     txn_id = await _create_active_txn(client)
 
@@ -201,11 +242,12 @@ async def test_advance_through_multiple_phases(client):
         "POST_CLOSING",
     ]
     for phase in phases:
+        await _seed_gate_data_for_phase(client, txn_id, phase)
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/workflow/advance",
             json={"to_phase": phase},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Advance to {phase} failed: {resp.text}"
         assert resp.json()["phase"] == phase
 
 

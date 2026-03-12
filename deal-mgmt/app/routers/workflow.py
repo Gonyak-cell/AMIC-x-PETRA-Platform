@@ -30,7 +30,7 @@ async def get_phase_status(
     """현재 단계의 완료 조건 및 전환 가능 여부를 확인한다."""
     txn = await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    return get_phase_completion(txn)
+    return await get_phase_completion(db, txn)
 
 
 @router.post("/advance", response_model=TransactionOut)

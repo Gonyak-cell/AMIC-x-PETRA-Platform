@@ -84,6 +84,9 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
 // ── 단계별 표시 탭 (전 단계 공통 + 단계별) ────────────
 export const ALWAYS_VISIBLE_TABS = ["overview"] as const;
 
+/** MARKETING 이후 단계에 공통으로 표시되는 탭 (risks/compliance → phase gate evidence) */
+const CROSS_PHASE_TABS = ["risks", "compliance", "notes-approvals"] as const;
+
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
   ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi", "vdr"],
   PREPARATION: [
@@ -93,12 +96,30 @@ export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
     "ndas",
     "vdr",
   ],
-  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
-  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr"],
+  MARKETING: [
+    ...ALWAYS_VISIBLE_TABS,
+    "buyers",
+    "marketing-logs",
+    "vdr",
+    ...CROSS_PHASE_TABS,
+  ],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr", ...CROSS_PHASE_TABS],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"], // deprecated -- 호환성 유지
-  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
-  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
-  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
+  MAIN_DUE_DILIGENCE: [
+    ...ALWAYS_VISIBLE_TABS,
+    "dd-checklist",
+    "rfi",
+    "vdr",
+    ...CROSS_PHASE_TABS,
+  ],
+  NEGOTIATION: [
+    ...ALWAYS_VISIBLE_TABS,
+    "contracts",
+    "negotiation-logs",
+    "vdr",
+    ...CROSS_PHASE_TABS,
+  ],
+  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr", ...CROSS_PHASE_TABS],
   POST_CLOSING: [...ALWAYS_VISIBLE_TABS, "pmi", "earnout", "vdr"],
 };
 
