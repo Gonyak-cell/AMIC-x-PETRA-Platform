@@ -17,7 +17,6 @@ from app.services.vdr_qa_service import (
     QASource,
     _build_history_contents,
     _format_sse,
-    _get_model,
     _sanitize_answer,
     _save_conversation,
     _validate_question,
@@ -194,45 +193,46 @@ class TestSaveConversation:
                 del _conversation_store[k]
 
 
-# ── _get_model 캐싱 테스트 ────────────────────────────────
+# ── _get_client 캐싱 테스트 ────────────────────────────────
 
 
-class TestGetModel:
-    """Gemini 모델 인스턴스 캐싱 검증."""
-
-    @pytest.mark.asyncio
-    @patch("app.services.vdr_qa_service.genai")
-    async def test_caches_model_instance(self, mock_genai: object) -> None:
-        """같은 api_key + model_name → 동일 인스턴스 반환 (S-12: async 수정)."""
-        from app.services.vdr_qa_service import _model_cache
-
-        # cleanup cache first
-        _model_cache.clear()
-
-        m1 = await _get_model("test-key", "gemini-2.0-flash")
-        m2 = await _get_model("test-key", "gemini-2.0-flash")
-        assert m1 is m2
-
-        # cleanup
-        _model_cache.clear()
+class TestGetClient:
+    """Google GenAI Client 인스턴스 캐싱 검증."""
 
     @pytest.mark.asyncio
-    @patch("app.services.vdr_qa_service.genai")
-    async def test_different_keys_different_models(self, mock_genai: object) -> None:
-        """다른 api_key → 다른 모델 인스턴스."""
+    @patch("app.services.vdr_qa_service._get_client_sync")
+    async def test_caches_client_instance(self, mock_get_sync: object) -> None:
+        """같은 api_key → 동일 Client 인스턴스 반환."""
         from unittest.mock import MagicMock
 
-        from app.services.vdr_qa_service import _model_cache
+        from app.services.vdr_qa_service import _client_cache, _get_client
 
-        # 매 호출마다 다른 MagicMock 인스턴스 반환
-        mock_genai.GenerativeModel = MagicMock(side_effect=lambda *a, **kw: MagicMock())
-        _model_cache.clear()
+        _client_cache.clear()
+        sentinel = MagicMock()
+        mock_get_sync.return_value = sentinel
 
-        m1 = await _get_model("key-a", "gemini-2.0-flash")
-        m2 = await _get_model("key-b", "gemini-2.0-flash")
-        assert m1 is not m2
+        c1 = await _get_client("test-key")
+        c2 = await _get_client("test-key")
+        assert c1 is c2
 
-        _model_cache.clear()
+        _client_cache.clear()
+
+    @pytest.mark.asyncio
+    @patch("app.services.vdr_qa_service._get_client_sync")
+    async def test_different_keys_different_clients(self, mock_get_sync: object) -> None:
+        """다른 api_key → 다른 Client 인스턴스."""
+        from unittest.mock import MagicMock
+
+        from app.services.vdr_qa_service import _client_cache, _get_client
+
+        mock_get_sync.side_effect = lambda key: MagicMock(name=f"client-{key}")
+        _client_cache.clear()
+
+        c1 = await _get_client("key-a")
+        c2 = await _get_client("key-b")
+        assert c1 is not c2
+
+        _client_cache.clear()
 
 
 # ── QASource 테스트 ───────────────────────────────────────

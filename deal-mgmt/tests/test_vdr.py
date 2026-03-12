@@ -438,6 +438,51 @@ class TestVdrOverview:
 # ── Auto Upload ───────────────────────────────────────────────
 
 
+class TestClassificationStatus:
+    """classification-status 엔드포인트 회귀 테스트."""
+
+    async def test_classification_status_returns_200(self, client: AsyncClient, transaction_id: str):
+        """존재하는 문서 ID로 classification-status 조회 시 200."""
+        folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+        folder_id = folders_resp.json()[0]["id"]
+
+        upload_resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/folders/{folder_id}/documents",
+            files={"file": ("cls.pdf", io.BytesIO(b"content"), "application/pdf")},
+        )
+        doc_id = upload_resp.json()["id"]
+
+        resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/classification-status",
+            params={"doc_ids": [doc_id]},
+        )
+        assert resp.status_code == 200
+        items = resp.json()
+        assert len(items) == 1
+        assert items[0]["document_id"] == doc_id
+        assert "classification_status" in items[0]
+
+    async def test_classification_status_empty_for_unknown_doc(self, client: AsyncClient, transaction_id: str):
+        """존재하지 않는 문서 ID → 빈 리스트 반환."""
+        fake_doc_id = str(uuid.uuid4())
+        resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/classification-status",
+            params={"doc_ids": [fake_doc_id]},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    async def test_classification_status_exceeds_limit_returns_400(self, client: AsyncClient, transaction_id: str):
+        """doc_ids 개수 초과 시 400."""
+        too_many = [str(uuid.uuid4()) for _ in range(51)]
+        resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/classification-status",
+            params={"doc_ids": too_many},
+        )
+        assert resp.status_code == 400
+        assert "최대" in resp.json()["detail"]
+
+
 class TestVdrAutoUpload:
     async def test_auto_upload_financial_xlsx_routes_to_financial(self, client: AsyncClient, transaction_id: str):
         """재무제표.xlsx → FINANCIAL 폴더 자동 라우팅."""

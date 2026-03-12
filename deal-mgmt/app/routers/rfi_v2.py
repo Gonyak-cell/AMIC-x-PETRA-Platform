@@ -320,7 +320,7 @@ async def upload_attachments(
         content = await f.read()
         if len(content) > _MAX_FILE_SIZE_BYTES:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 detail=f"파일 크기가 제한(50MB)을 초과합니다: {f.filename}",
             )
         file_contents.append((f.filename or "unknown", content))

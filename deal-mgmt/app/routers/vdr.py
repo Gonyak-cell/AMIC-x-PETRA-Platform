@@ -164,7 +164,7 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
     # 3) 파일 크기 사전검증 (Content-Length 헤더 기반, OOM 방어)
     if file.size is not None and file.size > _MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
         )
 
@@ -172,7 +172,7 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
     content = await file.read()
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"파일 크기가 최대 허용량({_MAX_FILE_SIZE // 1024 // 1024}MB)을 초과합니다.",
         )
 
@@ -366,6 +366,70 @@ async def upload_document(
         return VdrDocumentOut.model_validate(doc)
     except DocumentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ── 2차 심사 상태 조회 (must precede /documents/{doc_id}) ──────
+
+
+@router.get(
+    "/documents/classification-status",
+    response_model=list[ClassificationStatusOut],
+)
+async def get_classification_status(
+    txn_id: uuid.UUID,
+    doc_ids: list[uuid.UUID] = Query(...),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """2차 심사 대기 중인 문서들의 분류 상태를 조회한다 (FE 폴링용)."""
+    if len(doc_ids) > _MAX_CLASSIFICATION_POLL_DOCS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"한 번에 최대 {_MAX_CLASSIFICATION_POLL_DOCS}개 문서까지 조회할 수 있습니다.",
+        )
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    stmt = select(VdrDocument).where(
+        VdrDocument.transaction_id == txn_id,
+        VdrDocument.id.in_(doc_ids),
+    )
+    result = await db.execute(stmt)
+    docs = list(result.scalars().all())
+
+    # 재분류된 문서의 폴더 정보를 한 번에 조회 (N+1 방지)
+    classified_folder_ids = {
+        doc.folder_id
+        for doc in docs
+        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id
+    }
+    folder_map: dict[uuid.UUID, VdrFolder] = {}
+    if classified_folder_ids:
+        folder_stmt = select(VdrFolder).where(VdrFolder.id.in_(classified_folder_ids))
+        folder_result = await db.execute(folder_stmt)
+        for folder in folder_result.scalars().all():
+            folder_map[folder.id] = folder
+
+    items: list[ClassificationStatusOut] = []
+    for doc in docs:
+        folder_out: VdrFolderOut | None = None
+        folder_category = None
+        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id:
+            folder = folder_map.get(doc.folder_id)
+            if folder:
+                folder_out = VdrFolderOut.model_validate(folder)
+                folder_category = folder.category
+
+        items.append(
+            ClassificationStatusOut(
+                document_id=doc.id,
+                classification_status=doc.classification_status or VdrClassificationStatus.MANUAL,
+                routed_folder=folder_out,
+                routed_category=folder_category,
+                manual_review_needed=doc.manual_review_needed,
+            )
+        )
+
+    return items
 
 
 @router.get("/documents/{doc_id}", response_model=VdrDocumentOut)
@@ -699,70 +763,6 @@ async def direct_upload(
         total_uploaded=len(results),
         failed_files=failed_files,
     )
-
-
-# ── 2차 심사 상태 조회 ────────────────────────────────────────
-
-
-@router.get(
-    "/documents/classification-status",
-    response_model=list[ClassificationStatusOut],
-)
-async def get_classification_status(
-    txn_id: uuid.UUID,
-    doc_ids: list[uuid.UUID] = Query(...),
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
-):
-    """2차 심사 대기 중인 문서들의 분류 상태를 조회한다 (FE 폴링용)."""
-    if len(doc_ids) > _MAX_CLASSIFICATION_POLL_DOCS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"한 번에 최대 {_MAX_CLASSIFICATION_POLL_DOCS}개 문서까지 조회할 수 있습니다.",
-        )
-    await _get_and_authorize_txn(db, txn_id, claims)
-
-    stmt = select(VdrDocument).where(
-        VdrDocument.transaction_id == txn_id,
-        VdrDocument.id.in_(doc_ids),
-    )
-    result = await db.execute(stmt)
-    docs = list(result.scalars().all())
-
-    # 재분류된 문서의 폴더 정보를 한 번에 조회 (N+1 방지)
-    classified_folder_ids = {
-        doc.folder_id
-        for doc in docs
-        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id
-    }
-    folder_map: dict[uuid.UUID, VdrFolder] = {}
-    if classified_folder_ids:
-        folder_stmt = select(VdrFolder).where(VdrFolder.id.in_(classified_folder_ids))
-        folder_result = await db.execute(folder_stmt)
-        for folder in folder_result.scalars().all():
-            folder_map[folder.id] = folder
-
-    items: list[ClassificationStatusOut] = []
-    for doc in docs:
-        folder_out: VdrFolderOut | None = None
-        folder_category = None
-        if doc.classification_status == VdrClassificationStatus.CLASSIFIED and doc.folder_id:
-            folder = folder_map.get(doc.folder_id)
-            if folder:
-                folder_out = VdrFolderOut.model_validate(folder)
-                folder_category = folder.category
-
-        items.append(
-            ClassificationStatusOut(
-                document_id=doc.id,
-                classification_status=doc.classification_status or VdrClassificationStatus.MANUAL,
-                routed_folder=folder_out,
-                routed_category=folder_category,
-                manual_review_needed=doc.manual_review_needed,
-            )
-        )
-
-    return items
 
 
 # ── Q&A ───────────────────────────────────────────────────

@@ -166,7 +166,7 @@ async def upload_attachment(
     # 조기 크기 검사 — Starlette UploadFile.size 활용 (P-01)
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="파일 크기가 50MB를 초과합니다",
         )
 
@@ -215,7 +215,7 @@ async def upload_attachment(
     if size_exceeded:
         await asyncio.to_thread(dest_path.unlink, missing_ok=True)
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="파일 크기가 50MB를 초과합니다",
         )
 

@@ -191,7 +191,7 @@ class _GoogleAdapter(_LLMAdapter):
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
         self._api_key = api_key
         self._model = model
-        self._configured = False
+        self._client: object | None = None
 
     @property
     def provider_name(self) -> str:
@@ -202,31 +202,36 @@ class _GoogleAdapter(_LLMAdapter):
         if not self._api_key:
             return False
         try:
-            import google.generativeai
+            from google import genai as _google_genai
 
             return True
         except ImportError:
             return False
 
+    def _get_client(self) -> object:
+        if self._client is None:
+            from google import genai as google_genai
+
+            self._client = google_genai.Client(api_key=self._api_key)
+        return self._client
+
     async def generate(
         self, system: str, user: str, *, model: str | None = None, max_tokens: int = 4096
     ) -> tuple[str, str, int, int]:
-        import google.generativeai as genai
+        from google.genai import types
 
-        if not self._configured:
-            genai.configure(api_key=self._api_key)
-            self._configured = True
-
+        client = self._get_client()
         model_id = model or self._model
 
         def _sync_call() -> tuple[str, int, int]:
-            gm = genai.GenerativeModel(
-                model_name=model_id,
-                system_instruction=system,
-            )
-            response = gm.generate_content(
-                user,
-                generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=max_tokens),
+            response = client.models.generate_content(
+                model=model_id,
+                contents=user,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=0.3,
+                    max_output_tokens=max_tokens,
+                ),
             )
             text = response.text or ""
             # Gemini usage 추출

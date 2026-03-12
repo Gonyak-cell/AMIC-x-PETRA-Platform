@@ -117,7 +117,7 @@ async def create_nda_markup(
         )
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="파일 크기가 50MB를 초과합니다",
         )
 
@@ -323,6 +323,13 @@ async def generate_nda_redline(
     # party_side 검증
     if party_side not in ("SELL", "BUY"):
         raise HTTPException(status_code=400, detail="party_side는 SELL 또는 BUY여야 합니다")
+
+    # DOCX 파일만 redline 생성 가능
+    if not current_markup.file_path.lower().endswith(".docx"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Redline은 .docx 파일에서만 생성할 수 있습니다. 해당 버전을 DOCX 형식으로 다시 업로드해 주세요.",
+        )
 
     # 현재 버전 파일 읽기 (async) — 경로 탐색 방어 포함
     current_file_path = Path(current_markup.file_path)

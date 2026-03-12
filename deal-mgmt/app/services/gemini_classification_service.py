@@ -124,18 +124,20 @@ async def classify_with_file_api(
 
     try:
         # 3. Gemini File API 업로드 + 분류 호출
-        import google.generativeai as genai
+        from google import genai as google_genai
 
-        genai.configure(api_key=api_key)
+        client = google_genai.Client(api_key=api_key)
 
         def _sync_classify() -> str:
-            uploaded = genai.upload_file(
-                path=str(tmp_path),
-                display_name=doc.original_name or "untitled",
+            uploaded = client.files.upload(
+                file=str(tmp_path),
+                config={"display_name": doc.original_name or "untitled"},
             )
-            model = genai.GenerativeModel(settings.GEMINI_CLASSIFICATION_MODEL)
             prompt = _CLASSIFICATION_PROMPT.format(categories=_build_category_list())
-            response = model.generate_content([uploaded, prompt])
+            response = client.models.generate_content(
+                model=settings.GEMINI_CLASSIFICATION_MODEL,
+                contents=[uploaded, prompt],
+            )
             return response.text
 
         raw = await asyncio.wait_for(

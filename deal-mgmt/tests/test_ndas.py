@@ -162,3 +162,34 @@ async def test_nda_summary(client):
     assert data["total"] == 2
     assert data["signed_count"] == 1
     assert data["pending_count"] == 1
+
+
+# ── Redline .docx Guard ───────────────────────────────────
+
+
+async def test_redline_non_docx_returns_400(client, async_session):
+    """PDF 파일로 redline 요청 시 400 반환 (.docx 가드)."""
+
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    nda_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    nda_id = nda_resp.json()["id"]
+
+    # 마크업 업로드 (.pdf 파일)
+    markup_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups",
+        data={"version_label": "v1", "version_date": "2026-03-01"},
+        files={"file": ("nda_v1.pdf", b"fake-pdf-content", "application/pdf")},
+    )
+    assert markup_resp.status_code == 201
+    markup_id = markup_resp.json()["id"]
+
+    # redline 요청 → .docx 아니므로 400
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups/{markup_id}/generate-redline",
+        data={"party_side": "SELL"},
+    )
+    assert resp.status_code == 400
+    assert "docx" in resp.json()["detail"].lower() or "DOCX" in resp.json()["detail"]

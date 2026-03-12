@@ -29,7 +29,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import google.generativeai as genai
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -171,18 +170,32 @@ VDR(Virtual Data Room)에 업로드된 문서들을 기반으로 사용자의 �
 """
 
 
-# ── 단순 인사 감지 (문서 업로드 스킵) ────────────────────
+# ── 캐주얼 질문 감지 (문서 업로드 스킵) ────────────────────
 
-_GREETING_PATTERN = re.compile(
-    r"^(안녕|안녕하세요|하이|헬로|hello|hi|hey|반가워|좋은\s*(아침|오후|저녁)|감사합니다|고마워)[.!?~]*$",
+_CASUAL_PATTERN = re.compile(
+    r"^("
+    # 인사
+    r"안녕|안녕하세요|하이|헬로|hello|hi|hey|반가워"
+    r"|좋은\s*(아침|오후|저녁)|감사합니다|고마워"
+    # 정체성 질문
+    r"|너는?\s*누구|넌\s*누구|당신은?\s*누구|who\s*are\s*you"
+    r"|뭐\s*할\s*수\s*있|뭘\s*도와|무엇을?\s*할\s*수"
+    # 잡담
+    r"|뭐해|심심|ㅋ+|ㅎ+|ㅠ+|ㅜ+"
+    r"|잘\s*지내|오랜만|수고"
+    r"|bye|goodbye|잘\s*가|나\s*간다"
+    r"|테스트|test"
+    r")[.!?~ㅋㅎㅠㅜ]*$",
     re.IGNORECASE,
 )
-_GREETING_RESPONSE = "안녕하세요! VDR 문서에 대해 궁금한 점이 있으시면 질문해 주세요."
+_CASUAL_RESPONSE = (
+    "안녕하세요! 저는 VDR 문서 기반 AI 어시스턴트입니다. VDR에 업로드된 문서에 대해 궁금한 점을 질문해 주세요."
+)
 
 
-def _is_greeting(question: str) -> bool:
-    """문서 참조가 불필요한 단순 인사인지 판별한다."""
-    return bool(_GREETING_PATTERN.match(question.strip()))
+def _is_casual_chat(question: str) -> bool:
+    """문서 참조가 불필요한 인사/잡담/정체성 질문인지 판별한다."""
+    return bool(_CASUAL_PATTERN.match(question.strip()))
 
 
 def _validate_question(
@@ -216,31 +229,30 @@ def _build_history_contents(history: list[dict[str, str]]) -> list[dict[str, Any
 
 
 async def _build_gemini_contents(
+    client: Any,
     file_refs: list[tuple[str, str]],
     history: list[dict[str, str]],
     question: str,
 ) -> list[Any]:
     """파일 참조 + 히스토리 + 질문을 Gemini contents 형식으로 조립한다."""
-    contents: list[Any] = await _resolve_file_refs(file_refs)
+    contents: list[Any] = await _resolve_file_refs(client, file_refs)
     contents.extend(_build_history_contents(history))
     contents.append(question)
     return contents
 
 
 async def _resolve_file_refs(
+    client: Any,
     file_refs: list[tuple[str, str]],
 ) -> list[Any]:
-    """Gemini File URI를 실제 파일 참조 객체로 변환한다 (이벤트 루프 블로킹 방지).
-
-    genai.configure()는 _get_model()에서 이미 호출되므로 여기서는 생략한다.
-    """
+    """Gemini File URI를 실제 파일 참조 객체로 변환한다 (이벤트 루프 블로킹 방지)."""
 
     sem = asyncio.Semaphore(5)
 
     async def _resolve_one(uri: str) -> Any:
         async with sem:
             if "files/" in uri:
-                return await asyncio.to_thread(genai.get_file, uri.split("/")[-1])
+                return await asyncio.to_thread(client.files.get, name=uri.split("/")[-1])
             return uri
 
     tasks = [_resolve_one(uri) for uri, _name in file_refs]
@@ -259,11 +271,11 @@ def _format_sse(event: str, data: dict[str, object]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-# ── 모델 캐시 ─────────────────────────────────────────────
+# ── Client 캐시 ──────────────────────────────────────────
 
-_MAX_MODEL_CACHE = 8
-_model_cache: OrderedDict[str, genai.GenerativeModel] = OrderedDict()
-_model_cache_lock = asyncio.Lock()
+_MAX_CLIENT_CACHE = 8
+_client_cache: OrderedDict[str, Any] = OrderedDict()
+_client_cache_lock = asyncio.Lock()
 
 
 def _api_key_hash(api_key: str) -> str:
@@ -271,34 +283,29 @@ def _api_key_hash(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()[:16]
 
 
-def _get_model_sync(api_key: str, model_name: str) -> genai.GenerativeModel:
-    """Gemini 모델 인스턴스를 캐시하여 재사용한다 (genai.configure 호출 최소화).
+def _get_client_sync(api_key: str) -> Any:
+    """Google GenAI Client 인스턴스를 캐시하여 재사용한다.
 
-    NOTE: 이 함수는 _model_cache_lock 내에서 호출해야 한다.
+    NOTE: 이 함수는 _client_cache_lock 내에서 호출해야 한다.
     """
-    cache_key = f"{_api_key_hash(api_key)}:{model_name}"
-    cached = _model_cache.get(cache_key)
+    from google import genai as google_genai
+
+    cache_key = _api_key_hash(api_key)
+    cached = _client_cache.get(cache_key)
     if cached is not None:
-        _model_cache.move_to_end(cache_key)
+        _client_cache.move_to_end(cache_key)
         return cached
-    # TODO(S-05): genai.configure()는 글로벌 상태를 변경한다.
-    # 다른 모듈이 다른 API 키로 genai를 사용하면 경쟁 조건 발생 가능.
-    # 장기적으로 google.genai.Client 인스턴스 방식으로 전환 권장.
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=model_name,
-        system_instruction=_QA_SYSTEM_PROMPT,
-    )
-    _model_cache[cache_key] = model
-    while len(_model_cache) > _MAX_MODEL_CACHE:
-        _model_cache.popitem(last=False)
-    return model
+    client = google_genai.Client(api_key=api_key)
+    _client_cache[cache_key] = client
+    while len(_client_cache) > _MAX_CLIENT_CACHE:
+        _client_cache.popitem(last=False)
+    return client
 
 
-async def _get_model(api_key: str, model_name: str) -> genai.GenerativeModel:
-    """genai.configure + 모델 생성을 원자적으로 실행한다 (F-04: 경쟁 조건 방지)."""
-    async with _model_cache_lock:
-        return _get_model_sync(api_key, model_name)
+async def _get_client(api_key: str) -> Any:
+    """Client 인스턴스를 thread-safe하게 얻는다."""
+    async with _client_cache_lock:
+        return _get_client_sync(api_key)
 
 
 # ── DB 작업 함수 ──────────────────────────────────────────
@@ -418,12 +425,11 @@ async def prepare_qa_context(
         rejection.conversation_id = conv_id
         return rejection
 
-    # 0-1. 단순 인사 fast-path (문서 업로드 불필요)
-    if _is_greeting(question):
-        conv_id_for_greeting = conversation_id or str(uuid.uuid4())
+    # 0-1. 캐주얼 질문 fast-path (문서 업로드 불필요)
+    if _is_casual_chat(question):
         return QAResult(
-            answer=_GREETING_RESPONSE,
-            conversation_id=conv_id_for_greeting,
+            answer=_CASUAL_RESPONSE,
+            conversation_id=conv_id,
             is_error=False,
         )
 
@@ -443,9 +449,14 @@ async def prepare_qa_context(
         max_tokens=max_tokens,
     )
     if not file_refs:
+        logger.warning(
+            "Gemini 파일 업로드 전체 실패 — 문서 기반 응답 불가: txn=%s",
+            transaction_id,
+        )
         return QAResult(
-            answer="문서를 Gemini에 업로드하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            answer="문서 파일을 불러올 수 없어 답변할 수 없습니다. 문서 상태를 확인한 뒤 다시 시도해 주세요.",
             conversation_id=conv_id,
+            is_error=True,
         )
 
     # 3. 대화 히스토리
@@ -498,21 +509,25 @@ async def ask_question(
         return ctx
 
     # Gemini 호출
-    model = await _get_model(ctx.api_key, ctx.model_name)
+    from google.genai import types as genai_types
+
+    client = await _get_client(ctx.api_key)
 
     # 파일 참조 + 히스토리 + 질문 조립
-    contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
+    contents = await _build_gemini_contents(client, ctx.file_refs, ctx.history, question)
 
     start_time = time.monotonic()
     try:
         response = await asyncio.wait_for(
             asyncio.to_thread(
-                model.generate_content,
-                contents,
-                generation_config={
-                    "temperature": 0.2,
-                    "max_output_tokens": _MAX_OUTPUT_TOKENS,
-                },
+                client.models.generate_content,
+                model=ctx.model_name,
+                contents=contents,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=_QA_SYSTEM_PROMPT,
+                    temperature=0.2,
+                    max_output_tokens=_MAX_OUTPUT_TOKENS,
+                ),
             ),
             timeout=_TIMEOUT_SECONDS,
         )
@@ -598,10 +613,12 @@ async def ask_question_stream(
     Yields:
         SSE 형식 문자열 (event: token/sources/done/error).
     """
-    model = await _get_model(ctx.api_key, ctx.model_name)
+    from google.genai import types as genai_types
+
+    client = await _get_client(ctx.api_key)
 
     # 파일 참조 + 히스토리 + 질문 조립
-    contents = await _build_gemini_contents(ctx.file_refs, ctx.history, question)
+    contents = await _build_gemini_contents(client, ctx.file_refs, ctx.history, question)
 
     chunks: list[str] = []
     cost = 0.0
@@ -612,13 +629,14 @@ async def ask_question_stream(
 
     try:
         response = await asyncio.wait_for(
-            model.generate_content_async(
-                contents,
-                generation_config={
-                    "temperature": 0.2,
-                    "max_output_tokens": _MAX_OUTPUT_TOKENS,
-                },
-                stream=True,
+            client.aio.models.generate_content_stream(
+                model=ctx.model_name,
+                contents=contents,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=_QA_SYSTEM_PROMPT,
+                    temperature=0.2,
+                    max_output_tokens=_MAX_OUTPUT_TOKENS,
+                ),
             ),
             timeout=_TIMEOUT_SECONDS,
         )

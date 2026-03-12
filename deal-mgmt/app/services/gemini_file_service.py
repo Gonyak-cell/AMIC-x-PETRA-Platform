@@ -56,7 +56,7 @@ async def upload_vdr_document(
     Raises:
         FileUploadError: 파일 크기 초과, 업로드 실패 등.
     """
-    import google.generativeai as genai
+    from google import genai as google_genai
 
     path = Path(file_path)
     if not path.exists():
@@ -66,12 +66,12 @@ async def upload_vdr_document(
     if file_size > _MAX_FILE_SIZE_BYTES:
         raise FileUploadError(f"파일 크기 초과: {file_size / 1024 / 1024:.1f}MB > 50MB 제한")
 
-    genai.configure(api_key=api_key)
+    client = google_genai.Client(api_key=api_key)
 
     def _sync_upload() -> GeminiFileRef:
-        uploaded = genai.upload_file(
-            path=str(path),
-            display_name=display_name,
+        uploaded = client.files.upload(
+            file=str(path),
+            config={"display_name": display_name},
         )
         return GeminiFileRef(
             uri=uploaded.uri,

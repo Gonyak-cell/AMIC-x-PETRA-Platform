@@ -95,9 +95,7 @@ async def create_markup(
             contract_id,
         )
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="파일 크기가 50MB를 초과합니다"
-        )
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="파일 크기가 50MB를 초과합니다")
 
     # 확장자 검증
     safe_filename = file.filename or "markup"
