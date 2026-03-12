@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
@@ -176,7 +176,9 @@ describe("useDownloadDocument", () => {
     expect(window.URL.createObjectURL).toHaveBeenCalled();
 
     // revokeObjectURL is called inside setTimeout(200)
-    vi.advanceTimersByTime(200);
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
     expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
 
     vi.useRealTimers();

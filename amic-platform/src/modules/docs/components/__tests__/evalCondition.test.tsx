@@ -7,7 +7,7 @@
  * 지원 패턴: ==, !=, >, >=, <, <=, and, or, not, 문자열/불리언/숫자
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import DynamicVariableForm from "../DynamicVariableForm";
 import type { TemplateVariable } from "@/modules/docs/types/contract_generation";
@@ -223,6 +223,8 @@ describe("evalCondition (via DynamicVariableForm)", () => {
   });
 
   it("인식 불가 패턴은 숨김 처리된다", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const vars = [
       makeVar({
         variable_key: "hidden_field",
@@ -238,5 +240,10 @@ describe("evalCondition (via DynamicVariableForm)", () => {
       />,
     );
     expect(screen.queryByLabelText("숨겨질 필드")).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("인식할 수 없는 조건식"),
+    );
+
+    warnSpy.mockRestore();
   });
 });
