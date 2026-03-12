@@ -10,6 +10,9 @@ import type {
   MeetingLogUpdate,
   MeetingLogListResponse,
   MeetingLogSummary,
+  MeetingAttendee,
+  MeetingAttendeeCreate,
+  MeetingAttendeeUpdate,
   MeetingActionItem,
   MeetingActionItemCreate,
 } from "@/modules/ma/types/meeting_log";
@@ -203,6 +206,75 @@ export function useDeleteActionItem(txnId: string, logId: string) {
     },
     onError: () => {
       toast.error("액션아이템 삭제에 실패했습니다.");
+    },
+  });
+}
+
+// ── Attendees ──────────────────────────────────────
+
+export function useAddAttendee(txnId: string, logId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: MeetingAttendeeCreate) => {
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/meeting-logs/${logId}/attendees`,
+        body,
+      );
+      return data as MeetingAttendee;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...KEY(txnId), logId] });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      });
+      toast.success("참석자가 추가되었습니다.");
+    },
+    onError: () => {
+      toast.error("참석자 추가에 실패했습니다.");
+    },
+  });
+}
+
+export function useUpdateAttendee(txnId: string, logId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      attendeeId,
+      body,
+    }: {
+      attendeeId: string;
+      body: MeetingAttendeeUpdate;
+    }) => {
+      const { data } = await maApi.patch(
+        `/transactions/${txnId}/meeting-logs/${logId}/attendees/${attendeeId}`,
+        body,
+      );
+      return data as MeetingAttendee;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...KEY(txnId), logId] });
+      toast.success("참석자 정보가 수정되었습니다.");
+    },
+    onError: () => {
+      toast.error("참석자 수정에 실패했습니다.");
+    },
+  });
+}
+
+export function useDeleteAttendee(txnId: string, logId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (attendeeId: string) => {
+      await maApi.delete(
+        `/transactions/${txnId}/meeting-logs/${logId}/attendees/${attendeeId}`,
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...KEY(txnId), logId] });
+      toast.success("참석자가 삭제되었습니다.");
+    },
+    onError: () => {
+      toast.error("참석자 삭제에 실패했습니다.");
     },
   });
 }

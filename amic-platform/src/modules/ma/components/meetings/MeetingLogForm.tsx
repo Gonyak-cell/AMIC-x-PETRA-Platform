@@ -7,6 +7,12 @@ import {
   MARKETING_STAGE_OPTIONS,
 } from "@/modules/ma/constants";
 import { MEETING_TYPE_OPTIONS } from "@/modules/ma/constants/meeting";
+import {
+  useMeetingLog,
+  useAddAttendee,
+  useUpdateAttendee,
+  useDeleteAttendee,
+} from "@/modules/ma/hooks/useMeetingLogs";
 import type {
   MeetingPhase,
   MeetingType,
@@ -16,6 +22,7 @@ import type {
   MeetingAttendeeCreate,
 } from "@/modules/ma/types/meeting_log";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
+import AttendeeList from "./AttendeeList";
 
 interface MeetingLogFormProps {
   open: boolean;
@@ -24,6 +31,7 @@ interface MeetingLogFormProps {
   existing?: MeetingLog | null;
   onSubmit: (body: MeetingLogCreate | MeetingLogUpdate) => void;
   isLoading?: boolean;
+  txnId?: string;
 }
 
 export default function MeetingLogForm({
@@ -33,6 +41,7 @@ export default function MeetingLogForm({
   existing,
   onSubmit,
   isLoading,
+  txnId,
 }: MeetingLogFormProps) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [meetingDate, setMeetingDate] = useState(existing?.meeting_date ?? "");
@@ -55,6 +64,14 @@ export default function MeetingLogForm({
   >([]);
 
   const isMarketing = meetingPhase === "MARKETING";
+  const isEditMode = !!existing;
+  const logId = existing?.id ?? "";
+
+  // 수정 모드: 기존 참석자 로딩
+  const { data: logDetail } = useMeetingLog(txnId ?? "", logId);
+  const addAttendee = useAddAttendee(txnId ?? "", logId);
+  const updateAttendee = useUpdateAttendee(txnId ?? "", logId);
+  const deleteAttendee = useDeleteAttendee(txnId ?? "", logId);
 
   // existing prop 변경 시 폼 상태 동기화
   useEffect(() => {
@@ -71,15 +88,15 @@ export default function MeetingLogForm({
     setAttendees([]);
   }, [existing]);
 
-  const addAttendee = () => {
+  const addLocalAttendee = () => {
     setAttendees((prev) => [...prev, { name: "", organization: "", role: "" }]);
   };
 
-  const removeAttendee = (idx: number) => {
+  const removeLocalAttendee = (idx: number) => {
     setAttendees((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const updateAttendee = (
+  const updateLocalAttendee = (
     idx: number,
     field: "name" | "organization" | "role",
     value: string,
@@ -240,8 +257,21 @@ export default function MeetingLogForm({
           />
         </div>
 
-        {/* 참석자 동적 폼 (신규 생성 시에만) */}
-        {!existing && (
+        {/* 참석자 섹션 */}
+        {isEditMode && txnId && logDetail ? (
+          /* 수정 모드: API 연동 AttendeeList */
+          <AttendeeList
+            attendees={logDetail.attendees ?? []}
+            meetingPhase={meetingPhase}
+            canWrite
+            onAdd={(body) => addAttendee.mutate(body)}
+            onUpdate={(attId, body) =>
+              updateAttendee.mutate({ attendeeId: attId, body })
+            }
+            onDelete={(attId) => deleteAttendee.mutate(attId)}
+          />
+        ) : (
+          /* 생성 모드: 인라인 참석자 폼 */
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-text-dark">
@@ -251,7 +281,7 @@ export default function MeetingLogForm({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={addAttendee}
+                onClick={addLocalAttendee}
                 className="text-xs"
               >
                 <Plus className="h-3 w-3 mr-1" />
@@ -270,7 +300,7 @@ export default function MeetingLogForm({
                     type="text"
                     value={att.name}
                     onChange={(e) =>
-                      updateAttendee(idx, "name", e.target.value)
+                      updateLocalAttendee(idx, "name", e.target.value)
                     }
                     placeholder="이름"
                     aria-label={`참석자 ${idx + 1} 이름`}
@@ -280,7 +310,7 @@ export default function MeetingLogForm({
                     type="text"
                     value={att.organization}
                     onChange={(e) =>
-                      updateAttendee(idx, "organization", e.target.value)
+                      updateLocalAttendee(idx, "organization", e.target.value)
                     }
                     placeholder="소속"
                     aria-label={`참석자 ${idx + 1} 소속`}
@@ -288,7 +318,7 @@ export default function MeetingLogForm({
                   />
                   <button
                     type="button"
-                    onClick={() => removeAttendee(idx)}
+                    onClick={() => removeLocalAttendee(idx)}
                     className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                     aria-label={`참석자 ${idx + 1}${att.name ? ` ${att.name}` : ""} 삭제`}
                   >

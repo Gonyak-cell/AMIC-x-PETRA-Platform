@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import VdrClassificationStatus, VdrDocumentStatus, VdrFolderCategory
+from app.models.enums import VdrAccessAction, VdrClassificationStatus, VdrDocumentStatus, VdrFolderCategory
 
 # ── 폴더 스키마 ───────────────────────────────────────────
 
@@ -213,3 +213,42 @@ class VdrQAResponse(BaseModel):
     sources: list[VdrQASourceOut]
     conversation_id: str
     cost_usd: float | None = None
+
+
+# ── 접근 로그 스키마 ──────────────────────────────────────
+
+
+class VdrAccessLogOut(BaseModel):
+    """VDR 접근 로그 응답."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    transaction_id: uuid.UUID
+    document_id: uuid.UUID | None
+    folder_id: uuid.UUID | None
+    user_email: str
+    user_id: str
+    action: VdrAccessAction
+    ip_address: str | None
+    user_agent: str | None
+    buyer_id: uuid.UUID | None
+    created_at: datetime
+
+
+class VdrAccessLogListResponse(BaseModel):
+    """접근 로그 페이지네이션 응답."""
+
+    items: list[VdrAccessLogOut]
+    total: int
+
+
+class BuyerActivitySummary(BaseModel):
+    """매수자별 VDR 활동 요약."""
+
+    buyer_id: uuid.UUID
+    buyer_name: str
+    unique_documents_accessed: int
+    total_views: int
+    total_downloads: int
+    last_access_at: datetime | None

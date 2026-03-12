@@ -470,6 +470,14 @@ class LDDSectionType(enum.StrEnum):
 
 
 # ── Audit ─────────────────────────────────────────────
+class VdrAccessAction(enum.StrEnum):
+    """VDR 접근 추적 액션 유형."""
+
+    VIEW = "VIEW"
+    DOWNLOAD = "DOWNLOAD"
+    UPLOAD = "UPLOAD"
+
+
 class AuditAction(enum.StrEnum):
     CREATE = "CREATE"
     READ = "READ"

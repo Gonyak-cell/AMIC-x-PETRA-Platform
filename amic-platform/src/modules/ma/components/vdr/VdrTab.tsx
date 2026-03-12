@@ -28,6 +28,7 @@ import ExtractionList from "../extraction/ExtractionList";
 import VdrQAPanel from "../VdrQAPanel";
 import DirectUploadResultModal from "./DirectUploadResultModal";
 import DirectUploadZone from "./DirectUploadZone";
+import { VdrAccessDashboard } from "./VdrAccessDashboard";
 import VdrDocumentList from "./VdrDocumentList";
 import VdrFolderTree from "./VdrFolderTree";
 
@@ -120,6 +121,7 @@ export default function VdrTab({ txnId }: Props) {
     }
   }, [summary, txnId, qc]);
 
+  const [subTab, setSubTab] = useState<"documents" | "access">("documents");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showDirectUpload, setShowDirectUpload] = useState(false);
   const [directUploadResult, setDirectUploadResult] =
@@ -196,9 +198,35 @@ export default function VdrTab({ txnId }: Props) {
   // ── 초기화 완료 상태 ──────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* 빠른 업로드 버튼 */}
-      {summary && (
-        <div className="flex justify-end">
+      {/* 서브탭: 문서 관리 / 접근 현황 */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
+          <button
+            type="button"
+            onClick={() => setSubTab("documents")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              subTab === "documents"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            문서 관리
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubTab("access")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              subTab === "access"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            접근 현황
+          </button>
+        </div>
+
+        {/* 빠른 업로드 버튼 */}
+        {summary && subTab === "documents" && (
           <Button
             variant="accent"
             size="sm"
@@ -208,101 +236,109 @@ export default function VdrTab({ txnId }: Props) {
             <Upload className="h-4 w-4" />
             빠른 업로드
           </Button>
-        </div>
-      )}
-
-      {/* 빠른 업로드 영역 (토글) */}
-      {showDirectUpload && (
-        <DirectUploadZone
-          txnId={txnId}
-          onUploadComplete={handleDirectUploadComplete}
-        />
-      )}
-
-      {/* 2-column 레이아웃 + 하단 Q&A */}
-      <div className="flex flex-col">
-        {/* 상단: 폴더 트리 + 문서 목록 */}
-        <div
-          className="grid grid-cols-[280px_1fr] gap-4 items-start overflow-hidden"
-          style={{ maxHeight: topHeight }}
-        >
-          <Card
-            padding="none"
-            className="overflow-hidden"
-            style={{ maxHeight: topHeight }}
-          >
-            <VdrFolderTree
-              folders={folders}
-              selectedFolderId={selectedFolderId}
-              onSelectFolder={setSelectedFolderId}
-              onCreateFolder={(name, parentId) =>
-                createFolder.mutate({ name, parent_id: parentId })
-              }
-              onDeleteFolder={(id) => {
-                if (selectedFolderId === id) setSelectedFolderId(null);
-                deleteFolder.mutate(id);
-              }}
-            />
-          </Card>
-
-          <Card
-            padding="none"
-            className="overflow-hidden"
-            style={{ maxHeight: topHeight }}
-          >
-            <VdrDocumentList
-              txnId={txnId}
-              folder={selectedFolder}
-              documents={selectedFolder ? documents : allDocuments}
-              extractions={extractionData?.items ?? []}
-              isLoading={selectedFolder ? docsLoading : allDocsLoading}
-              isUploading={uploadDoc.isPending}
-              onUpload={(file) => uploadDoc.mutate(file)}
-              onDelete={(docId) => deleteDoc.mutate(docId)}
-              folderMap={selectedFolder ? undefined : folderMap}
-              onNavigateToFolder={(category) => {
-                const target = findFolderByCategory(folders, category);
-                if (target) setSelectedFolderId(target.id);
-              }}
-            />
-          </Card>
-        </div>
-
-        {/* 드래그 리사이즈 핸들 */}
-        <div
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="패널 크기 조절"
-          tabIndex={0}
-          className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-2 rounded focus:outline-none focus:ring-2 focus:ring-accent/50"
-          onMouseDown={handleMouseDown}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setTopHeight((h) => Math.max(200, h - 40));
-            } else if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setTopHeight((h) => Math.min(800, h + 40));
-            }
-          }}
-        >
-          <div className="w-12 h-1 rounded-full bg-border group-hover:bg-accent/40 transition-colors" />
-        </div>
-
-        {/* 하단: Q&A 패널 */}
-        <div className="min-h-[300px]">
-          <VdrQAPanel txnId={txnId} />
-        </div>
+        )}
       </div>
 
-      {/* AI 분석 결과 */}
-      {extractionCount > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-slate-700 mb-2">
-            AI 문서 분석 결과
-          </h3>
-          <ExtractionList txnId={txnId} />
-        </div>
+      {/* 접근 현황 탭 */}
+      {subTab === "access" && <VdrAccessDashboard txnId={txnId} />}
+
+      {/* 문서 관리 탭 컨텐츠 */}
+      {subTab === "documents" && (
+        <>
+          {/* 빠른 업로드 영역 (토글) */}
+          {showDirectUpload && (
+            <DirectUploadZone
+              txnId={txnId}
+              onUploadComplete={handleDirectUploadComplete}
+            />
+          )}
+
+          {/* 2-column 레이아웃 + 하단 Q&A */}
+          <div className="flex flex-col">
+            {/* 상단: 폴더 트리 + 문서 목록 */}
+            <div
+              className="grid grid-cols-[280px_1fr] gap-4 items-start overflow-hidden"
+              style={{ maxHeight: topHeight }}
+            >
+              <Card
+                padding="none"
+                className="overflow-hidden"
+                style={{ maxHeight: topHeight }}
+              >
+                <VdrFolderTree
+                  folders={folders}
+                  selectedFolderId={selectedFolderId}
+                  onSelectFolder={setSelectedFolderId}
+                  onCreateFolder={(name, parentId) =>
+                    createFolder.mutate({ name, parent_id: parentId })
+                  }
+                  onDeleteFolder={(id) => {
+                    if (selectedFolderId === id) setSelectedFolderId(null);
+                    deleteFolder.mutate(id);
+                  }}
+                />
+              </Card>
+
+              <Card
+                padding="none"
+                className="overflow-hidden"
+                style={{ maxHeight: topHeight }}
+              >
+                <VdrDocumentList
+                  txnId={txnId}
+                  folder={selectedFolder}
+                  documents={selectedFolder ? documents : allDocuments}
+                  extractions={extractionData?.items ?? []}
+                  isLoading={selectedFolder ? docsLoading : allDocsLoading}
+                  isUploading={uploadDoc.isPending}
+                  onUpload={(file) => uploadDoc.mutate(file)}
+                  onDelete={(docId) => deleteDoc.mutate(docId)}
+                  folderMap={selectedFolder ? undefined : folderMap}
+                  onNavigateToFolder={(category) => {
+                    const target = findFolderByCategory(folders, category);
+                    if (target) setSelectedFolderId(target.id);
+                  }}
+                />
+              </Card>
+            </div>
+
+            {/* 드래그 리사이즈 핸들 */}
+            <div
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="패널 크기 조절"
+              tabIndex={0}
+              className="h-2 flex items-center justify-center cursor-row-resize group hover:bg-accent/10 my-2 rounded focus:outline-none focus:ring-2 focus:ring-accent/50"
+              onMouseDown={handleMouseDown}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setTopHeight((h) => Math.max(200, h - 40));
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setTopHeight((h) => Math.min(800, h + 40));
+                }
+              }}
+            >
+              <div className="w-12 h-1 rounded-full bg-border group-hover:bg-accent/40 transition-colors" />
+            </div>
+
+            {/* 하단: Q&A 패널 */}
+            <div className="min-h-[300px]">
+              <VdrQAPanel txnId={txnId} />
+            </div>
+          </div>
+
+          {/* AI 분석 결과 */}
+          {extractionCount > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-2">
+                AI 문서 분석 결과
+              </h3>
+              <ExtractionList txnId={txnId} />
+            </div>
+          )}
+        </>
       )}
 
       {/* Direct Upload 결과 모달 */}

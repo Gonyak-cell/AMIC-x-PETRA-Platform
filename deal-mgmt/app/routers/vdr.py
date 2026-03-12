@@ -20,17 +20,20 @@ from app.core.database import async_session_factory, get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.rate_limiter import InMemoryRateLimiter, qa_rate_limiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import VdrClassificationStatus, VdrDocumentStatus
+from app.models.enums import VdrAccessAction, VdrClassificationStatus, VdrDocumentStatus
 from app.models.transaction import Transaction
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import (
+    BuyerActivitySummary,
     ClassificationStatusOut,
     DirectUploadBatchResult,
     DirectUploadFileResult,
     FailedFileInfo,
     SuggestCategoryRequest,
     SuggestCategoryResponse,
+    VdrAccessLogListResponse,
+    VdrAccessLogOut,
     VdrAutoUploadResult,
     VdrDocumentOut,
     VdrDocumentUpdate,
@@ -44,7 +47,7 @@ from app.schemas.vdr import (
     VdrQASourceOut,
     VdrSummaryOut,
 )
-from app.services import transaction_service, vdr_service
+from app.services import transaction_service, vdr_access_service, vdr_service
 from app.services.vdr_classification_service import run_secondary_classification as _run_secondary_classification
 from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
 
@@ -432,6 +435,49 @@ async def get_classification_status(
     return items
 
 
+# ── 접근 추적 ────────────────────────────────────────────────
+
+
+@router.get("/access-logs", response_model=VdrAccessLogListResponse)
+async def get_access_logs(
+    txn_id: uuid.UUID,
+    buyer_id: uuid.UUID | None = Query(None),
+    document_id: uuid.UUID | None = Query(None),
+    action: VdrAccessAction | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> VdrAccessLogListResponse:
+    """VDR 전체 접근 로그 조회 (필터 가능)."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    logs, total = await vdr_access_service.get_access_logs(
+        db,
+        txn_id,
+        buyer_id=buyer_id,
+        document_id=document_id,
+        action=action,
+        skip=skip,
+        limit=limit,
+    )
+    return VdrAccessLogListResponse(
+        items=[VdrAccessLogOut.model_validate(log) for log in logs],
+        total=total,
+    )
+
+
+@router.get("/access-summary", response_model=list[BuyerActivitySummary])
+async def get_access_summary(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> list[BuyerActivitySummary]:
+    """매수자별 VDR 활동 요약."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    summaries = await vdr_access_service.get_buyer_activity_summary(db, txn_id)
+    return [BuyerActivitySummary(**s) for s in summaries]
+
+
 @router.get("/documents/{doc_id}", response_model=VdrDocumentOut)
 async def get_document(
     txn_id: uuid.UUID,
@@ -452,6 +498,7 @@ async def get_document(
 async def download_document(
     txn_id: uuid.UUID,
     doc_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
@@ -472,6 +519,17 @@ async def download_document(
             detail="이 문서는 삭제 또는 아카이브되었습니다.",
         )
 
+    # VDR 접근 기록 (BackgroundTasks로 비동기 처리)
+    background_tasks.add_task(
+        vdr_access_service.record_access_background,
+        transaction_id=txn_id,
+        document_id=doc_id,
+        folder_id=doc.folder_id,
+        user_email=claims.email or "",
+        user_id=claims.user_id,
+        action=VdrAccessAction.DOWNLOAD,
+    )
+
     if blob_client.is_local_mode:
         try:
             content = await blob_client.download_blob(doc.file_path)
@@ -488,6 +546,30 @@ async def download_document(
 
     sas_url = blob_client.generate_sas_url(doc.file_path, expiry_minutes=15)
     return RedirectResponse(url=sas_url, status_code=307)
+
+
+@router.get("/documents/{doc_id}/access-logs", response_model=VdrAccessLogListResponse)
+async def get_document_access_logs(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> VdrAccessLogListResponse:
+    """특정 문서의 접근 이력 조회."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    logs, total = await vdr_access_service.get_document_access_logs(
+        db,
+        txn_id,
+        doc_id,
+        skip=skip,
+        limit=limit,
+    )
+    return VdrAccessLogListResponse(
+        items=[VdrAccessLogOut.model_validate(log) for log in logs],
+        total=total,
+    )
 
 
 @router.put("/documents/{doc_id}", response_model=VdrDocumentOut)

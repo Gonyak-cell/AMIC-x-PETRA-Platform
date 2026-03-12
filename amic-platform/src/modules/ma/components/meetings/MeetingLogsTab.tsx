@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Plus, X, Mic } from "lucide-react";
-import { Button, Card, EmptyState, Spinner, KpiCard, Select, Badge } from "@/components/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  Spinner,
+  KpiCard,
+  Select,
+  Badge,
+} from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useMeetingLogs,
@@ -21,7 +29,12 @@ import {
   useAIClauseSuggestion,
 } from "@/modules/ma/hooks/useNegotiationIssues";
 import { MEETING_STATUS_OPTIONS } from "@/modules/ma/constants";
-import type { MeetingPhase, MeetingLogCreate, MeetingLogUpdate, MeetingStatus } from "@/modules/ma/types/meeting_log";
+import type {
+  MeetingPhase,
+  MeetingLogCreate,
+  MeetingLogUpdate,
+  MeetingStatus,
+} from "@/modules/ma/types/meeting_log";
 import MeetingLogCard from "./MeetingLogCard";
 import MeetingLogForm from "./MeetingLogForm";
 import AttendeeList from "./AttendeeList";
@@ -38,7 +51,13 @@ interface MeetingLogsTabProps {
   onClearBuyerFilter?: () => void;
 }
 
-export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName, onClearBuyerFilter }: MeetingLogsTabProps) {
+export default function MeetingLogsTab({
+  txnId,
+  meetingPhase,
+  buyerId,
+  buyerName,
+  onClearBuyerFilter,
+}: MeetingLogsTabProps) {
   const { canWrite } = useAuth();
   const [statusFilter, setStatusFilter] = useState<MeetingStatus | "">("");
   const [showForm, setShowForm] = useState(false);
@@ -46,7 +65,11 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
   // 미팅 로그 데이터
-  const { data: logs, isLoading, isError } = useMeetingLogs(txnId, {
+  const {
+    data: logs,
+    isLoading,
+    isError,
+  } = useMeetingLogs(txnId, {
     meetingPhase,
     status: statusFilter || undefined,
     buyerId,
@@ -84,15 +107,27 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
 
   const handleUpdate = (body: MeetingLogCreate | MeetingLogUpdate) => {
     if (!selectedLogId) return;
-    updateLog.mutate({ logId: selectedLogId, body: body as MeetingLogUpdate }, {
-      onSuccess: () => setShowForm(false),
-    });
+    updateLog.mutate(
+      { logId: selectedLogId, body: body as MeetingLogUpdate },
+      {
+        onSuccess: () => setShowForm(false),
+      },
+    );
   };
 
   if (isLoading) return <Spinner size="lg" />;
-  if (isError) return <EmptyState title="데이터를 불러올 수 없습니다" description="네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." />;
+  if (isError)
+    return (
+      <EmptyState
+        title="데이터를 불러올 수 없습니다"
+        description="네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+      />
+    );
 
-  const statusOptions = [{ value: "", label: "전체" }, ...MEETING_STATUS_OPTIONS];
+  const statusOptions = [
+    { value: "", label: "전체" },
+    ...MEETING_STATUS_OPTIONS,
+  ];
   const phaseLabel = meetingPhase === "MARKETING" ? "마케팅" : "협상";
 
   return (
@@ -113,7 +148,10 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
           />
           <KpiCard
             label="취소/연기"
-            value={String((summary.by_status?.CANCELLED ?? 0) + (summary.by_status?.POSTPONED ?? 0))}
+            value={String(
+              (summary.by_status?.CANCELLED ?? 0) +
+                (summary.by_status?.POSTPONED ?? 0),
+            )}
             variant="bad"
           />
         </div>
@@ -124,13 +162,20 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
         <div className="flex items-center gap-2">
           <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as MeetingStatus | "")}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as MeetingStatus | "")
+            }
             options={statusOptions}
             className="w-36"
           />
           {buyerId && (
-            <Badge variant="info" className="flex items-center gap-1 pl-2 pr-1 py-1">
-              <span className="text-xs">{buyerName || "매수자"} 필터 적용 중</span>
+            <Badge
+              variant="info"
+              className="flex items-center gap-1 pl-2 pr-1 py-1"
+            >
+              <span className="text-xs">
+                {buyerName || "매수자"} 필터 적용 중
+              </span>
               {onClearBuyerFilter && (
                 <button
                   onClick={onClearBuyerFilter}
@@ -145,10 +190,20 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
         </div>
         {canWrite() && (
           <div className="flex gap-2">
-            <Button variant="ghost" icon={Mic} onClick={() => setShowTranscription(true)}>
+            <Button
+              variant="ghost"
+              icon={Mic}
+              onClick={() => setShowTranscription(true)}
+            >
               녹음 변환
             </Button>
-            <Button icon={Plus} onClick={() => { setSelectedLogId(null); setShowForm(true); }}>
+            <Button
+              icon={Plus}
+              onClick={() => {
+                setSelectedLogId(null);
+                setShowForm(true);
+              }}
+            >
               로그 추가
             </Button>
           </div>
@@ -159,7 +214,9 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
       {selectedLogId && selectedLog && !isDetailLoading && (
         <Card className="p-5 space-y-5 border-primary-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-heading font-semibold">{selectedLog.title}</h3>
+            <h3 className="text-base font-heading font-semibold">
+              {selectedLog.title}
+            </h3>
             <div className="flex gap-2">
               {canWrite() && (
                 <>
@@ -183,7 +240,11 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
                   </Button>
                 </>
               )}
-              <Button size="sm" variant="ghost" onClick={() => setSelectedLogId(null)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedLogId(null)}
+              >
                 닫기
               </Button>
             </div>
@@ -192,7 +253,9 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
           {/* 회의록 */}
           {selectedLog.minutes && (
             <div>
-              <h4 className="text-sm font-semibold text-text-dark mb-1">회의록</h4>
+              <h4 className="text-sm font-semibold text-text-dark mb-1">
+                회의록
+              </h4>
               <div className="rounded-lg bg-gray-50 border border-gray-border p-3 text-sm whitespace-pre-wrap">
                 {selectedLog.minutes}
               </div>
@@ -211,10 +274,8 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
           <AttendeeList
             attendees={selectedLog.attendees}
             meetingPhase={meetingPhase}
-            canWrite={canWrite()}
-            onAdd={() => {
-              /* 참석자 추가는 별도 엔드포인트로 구현 예정 */
-            }}
+            canWrite={false}
+            onAdd={() => {}}
             onDelete={() => {}}
           />
 
@@ -228,26 +289,32 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
           />
 
           {/* 제공 자료 */}
-          {selectedLog.provided_materials && selectedLog.provided_materials.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-text-dark mb-1">제공 자료</h4>
-              <ul className="space-y-1">
-                {selectedLog.provided_materials.map((m, i) => (
-                  <li key={i} className="text-xs text-text-secondary flex items-center gap-1">
-                    <span className="font-medium">{m.name}</span>
-                    {m.description && <span>— {m.description}</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {selectedLog.provided_materials &&
+            selectedLog.provided_materials.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-dark mb-1">
+                  제공 자료
+                </h4>
+                <ul className="space-y-1">
+                  {selectedLog.provided_materials.map((m, i) => (
+                    <li
+                      key={i}
+                      className="text-xs text-text-secondary flex items-center gap-1"
+                    >
+                      <span className="font-medium">{m.name}</span>
+                      {m.description && <span>— {m.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </Card>
       )}
 
       {/* 미팅 목록 */}
       {!selectedLogId && (
         <>
-          {(!logs?.items || logs.items.length === 0) ? (
+          {!logs?.items || logs.items.length === 0 ? (
             <EmptyState
               title={`${phaseLabel} 미팅 로그가 없습니다`}
               description="미팅을 추가하여 기록을 시작하세요."
@@ -296,6 +363,7 @@ export default function MeetingLogsTab({ txnId, meetingPhase, buyerId, buyerName
         existing={selectedLogId ? (selectedLog ?? null) : null}
         onSubmit={selectedLogId ? handleUpdate : handleCreate}
         isLoading={createLog.isPending || updateLog.isPending}
+        txnId={txnId}
       />
     </div>
   );

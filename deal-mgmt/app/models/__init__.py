@@ -100,6 +100,7 @@ from app.models.enums import (
     TranscriptionJobStatus,
     UploadSource,
     ValuationMethod,
+    VdrAccessAction,
     VdrClassificationStatus,
     VdrDocumentStatus,
     VdrFolderCategory,
@@ -140,6 +141,7 @@ from app.models.transaction import Transaction
 from app.models.transcription_job import TranscriptionJob
 from app.models.vc_company import VcCompany
 from app.models.vc_industry_coefficient import VcIndustryCoefficient
+from app.models.vdr_access_log import VdrAccessLog
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.models.vdr_text_cache import VdrTextCache
@@ -286,6 +288,8 @@ __all__ = [
     "ValuationMethod",
     "VcCompany",
     "VcIndustryCoefficient",
+    "VdrAccessAction",
+    "VdrAccessLog",
     "VdrClassificationStatus",
     "VdrDocument",
     "VdrDocumentStatus",

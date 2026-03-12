@@ -155,7 +155,6 @@ export interface VdrQAErrorEvent {
   conversation_id?: string;
 }
 
-
 // ── VDR 요약 ─────────────────────────────────────────────
 
 export interface VdrSummary {
@@ -199,6 +198,37 @@ export const MIME_TYPE_LABELS: Record<string, string> = {
 
 /** 2차 심사 상태 폴링 간격 (ms) */
 export const CLASSIFICATION_POLL_INTERVAL_MS = 5000;
+
+// ── VDR 접근 추적 ────────────────────────────────────────
+export type VdrAccessAction = "VIEW" | "DOWNLOAD" | "UPLOAD";
+
+export interface VdrAccessLog {
+  id: string;
+  transaction_id: string;
+  document_id: string | null;
+  folder_id: string | null;
+  user_email: string;
+  user_id: string;
+  action: VdrAccessAction;
+  ip_address: string | null;
+  user_agent: string | null;
+  buyer_id: string | null;
+  created_at: string;
+}
+
+export interface VdrAccessLogListResponse {
+  items: VdrAccessLog[];
+  total: number;
+}
+
+export interface BuyerActivitySummary {
+  buyer_id: string;
+  buyer_name: string;
+  unique_documents_accessed: number;
+  total_views: number;
+  total_downloads: number;
+  last_access_at: string | null;
+}
 
 /** VDR 파일 업로드 제약 조건 — 백엔드와 동기화 필수 */
 export const VDR_CONSTRAINTS = {

@@ -24,7 +24,10 @@ import {
 import { buildTimelineItems } from "@/modules/ma/utils/timelineItems";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { MarketingStage } from "@/modules/ma/types/marketing_log";
-import type { MeetingLog, MeetingLogUpdate } from "@/modules/ma/types/meeting_log";
+import type {
+  MeetingLog,
+  MeetingLogUpdate,
+} from "@/modules/ma/types/meeting_log";
 
 const EMPTY_STAGES: Partial<Record<MarketingStage, string | null>> = {};
 interface MarketingTimelineViewProps {
@@ -366,6 +369,7 @@ export default function MarketingTimelineView({
             }
           }}
           isLoading={updateMeeting.isPending}
+          txnId={txnId}
         />
       )}
     </div>

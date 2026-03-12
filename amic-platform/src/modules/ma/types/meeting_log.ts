@@ -69,6 +69,15 @@ export interface MeetingAttendeeCreate {
   comments?: string;
 }
 
+export interface MeetingAttendeeUpdate {
+  name?: string;
+  email?: string;
+  organization?: string;
+  role?: AttendeeRole;
+  reaction?: BuyerReaction;
+  comments?: string;
+}
+
 // ── 액션아이템 ────────────────────────────────────────────
 export interface MeetingActionItem {
   id: string;
