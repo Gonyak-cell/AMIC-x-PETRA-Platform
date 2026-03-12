@@ -28,7 +28,10 @@ import {
   useDeleteNegotiationIssue,
   useAIClauseSuggestion,
 } from "@/modules/ma/hooks/useNegotiationIssues";
-import { MEETING_STATUS_OPTIONS } from "@/modules/ma/constants";
+import {
+  MEETING_STATUS_OPTIONS,
+  MARKETING_STAGE_TITLE_LABELS,
+} from "@/modules/ma/constants";
 import type {
   MeetingPhase,
   MeetingLogCreate,
@@ -215,7 +218,7 @@ export default function MeetingLogsTab({
         <Card className="p-5 space-y-5 border-primary-200">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-heading font-semibold">
-              {selectedLog.title}
+              {selectedLog.marketing_stage ? MARKETING_STAGE_TITLE_LABELS[selectedLog.marketing_stage] : selectedLog.title}
             </h3>
             <div className="flex gap-2">
               {canWrite() && (

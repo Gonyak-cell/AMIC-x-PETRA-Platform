@@ -4,6 +4,7 @@ import {
   MEETING_CHANNEL_OPTIONS,
   MEETING_STATUS_OPTIONS,
   MEETING_STATUS_VARIANT,
+  MARKETING_STAGE_TITLE_LABELS,
 } from "@/modules/ma/constants";
 import type { MeetingLog } from "@/modules/ma/types/meeting_log";
 
@@ -32,7 +33,7 @@ export default function MeetingLogCard({
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-heading font-semibold text-text-dark truncate">
-            {meeting.title}
+            {meeting.marketing_stage ? MARKETING_STAGE_TITLE_LABELS[meeting.marketing_stage] : meeting.title}
           </h4>
           <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-text-secondary">
             <span className="flex items-center gap-1">
