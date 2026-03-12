@@ -1,15 +1,16 @@
-import { FileText, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { FileText, Send, Trash2 } from "lucide-react";
 import {
   useMarketingMaterials,
   useCreateMarketingMaterial,
   useDeleteMarketingMaterial,
-  useUpdateDistribution,
   getDownloadUrl,
 } from "@/modules/ma/hooks/useMarketingMaterials";
 import type { MarketingMaterial } from "@/modules/ma/types/marketing_material";
 import { MARKETING_STATUS_LABELS } from "@/modules/ma/types/marketing_material";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import DistributionModal from "@/modules/ma/components/DistributionModal";
 
 import { Badge, Button, Card, DataTable, EmptyState } from "@/components/ui";
 
@@ -26,7 +27,8 @@ export default function MarketingMaterialsTab({
   const { data: marketingMaterials } = useMarketingMaterials(txnId);
   const createMarketingMaterial = useCreateMarketingMaterial(txnId);
   const deleteMarketingMaterial = useDeleteMarketingMaterial(txnId);
-  useUpdateDistribution(txnId);
+
+  const [distTarget, setDistTarget] = useState<MarketingMaterial | null>(null);
 
   return (
     <div className="space-y-4">
@@ -34,53 +36,55 @@ export default function MarketingMaterialsTab({
         title="마케팅 자료"
         headerBar
         actions={
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                createMarketingMaterial.mutate({
-                  doc_type: "TM",
-                  title: `${txn?.code_name ?? "Project"} — Teaser Memo`,
-                  project_code: txn?.code_name ?? undefined,
-                })
-              }
-            >
-              + Teaser (TM)
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                createMarketingMaterial.mutate({
-                  doc_type: "DM",
-                  title: `${txn?.code_name ?? "Project"} — Discussion Memo`,
-                  project_code: txn?.code_name ?? undefined,
-                })
-              }
-            >
-              + Discussion (DM)
-            </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                createMarketingMaterial.mutate({
-                  doc_type: "IM",
-                  title: `${txn?.code_name ?? "Project"} — Information Memo`,
-                  project_code: txn?.code_name ?? undefined,
-                })
-              }
-            >
-              + Information (IM)
-            </Button>
-          </div>
+          canWrite ? (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  createMarketingMaterial.mutate({
+                    doc_type: "TM",
+                    title: `${txn?.code_name ?? "Project"} — Teaser Memo`,
+                    project_code: txn?.code_name ?? undefined,
+                  })
+                }
+              >
+                + Teaser (TM)
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  createMarketingMaterial.mutate({
+                    doc_type: "DM",
+                    title: `${txn?.code_name ?? "Project"} — Discussion Memo`,
+                    project_code: txn?.code_name ?? undefined,
+                  })
+                }
+              >
+                + Discussion (DM)
+              </Button>
+              <Button
+                size="sm"
+                onClick={() =>
+                  createMarketingMaterial.mutate({
+                    doc_type: "IM",
+                    title: `${txn?.code_name ?? "Project"} — Information Memo`,
+                    project_code: txn?.code_name ?? undefined,
+                  })
+                }
+              >
+                + Information (IM)
+              </Button>
+            </div>
+          ) : undefined
         }
       >
         {!marketingMaterials?.length ? (
           <EmptyState
             icon={FileText}
             title="마케팅 자료 없음"
-            description="TM, DM, IM 자료를 생성하여 매수자에게 배포하세요."
+            description="TM, DM, IM 자료를 생성하고 관리하세요."
           />
         ) : (
           <DataTable<MarketingMaterial>
@@ -146,15 +150,30 @@ export default function MarketingMaterialsTab({
                 render: (row) => (
                   <div className="flex gap-2">
                     {row.status === "READY" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          window.open(getDownloadUrl(txnId, row.id), "_blank")
-                        }
-                      >
-                        다운로드
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            window.open(
+                              getDownloadUrl(txnId, row.id),
+                              "_blank",
+                            )
+                          }
+                        >
+                          다운로드
+                        </Button>
+                        {canWrite && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDistTarget(row)}
+                          >
+                            <Send size={14} className="mr-1" />
+                            배포
+                          </Button>
+                        )}
+                      </>
                     )}
                     {canWrite && (
                       <Button
@@ -187,6 +206,15 @@ export default function MarketingMaterialsTab({
           embedded
         />
       </Card>
+
+      {distTarget && (
+        <DistributionModal
+          open={!!distTarget}
+          onClose={() => setDistTarget(null)}
+          material={distTarget}
+          txnId={txnId}
+        />
+      )}
     </div>
   );
 }

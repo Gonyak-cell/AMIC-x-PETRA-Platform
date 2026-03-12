@@ -482,6 +482,7 @@ async def get_access_summary(
 async def get_document(
     txn_id: uuid.UUID,
     doc_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
@@ -489,6 +490,16 @@ async def get_document(
     await _get_and_authorize_txn(db, txn_id, claims)
     try:
         doc = await vdr_service.get_document(db, txn_id, doc_id)
+        # VIEW 접근 기록 (BackgroundTasks로 비동기 처리)
+        background_tasks.add_task(
+            vdr_access_service.record_access_background,
+            transaction_id=txn_id,
+            document_id=doc_id,
+            folder_id=doc.folder_id,
+            user_email=claims.email or "",
+            user_id=claims.user_id,
+            action=VdrAccessAction.VIEW,
+        )
         return VdrDocumentOut.model_validate(doc)
     except DocumentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

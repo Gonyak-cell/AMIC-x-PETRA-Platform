@@ -145,6 +145,11 @@ async def setup_database():
 
     _upload_limiter.clear()
 
+    # BackgroundTasks용 async_session_factory를 테스트 DB로 교체
+    import app.core.database as _db_module
+
+    _db_module.async_session_factory = _test_session_factory
+
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
