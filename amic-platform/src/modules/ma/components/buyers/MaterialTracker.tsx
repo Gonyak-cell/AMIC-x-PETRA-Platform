@@ -49,11 +49,6 @@ export default function MaterialTracker({
       done: stages?.LOI_RECEIVED != null,
       date: stages?.LOI_RECEIVED ?? null,
     },
-    {
-      label: "VDR 접근",
-      done: false,
-      date: null,
-    },
   ];
 
   const recentLogs = (logs ?? []).slice(0, 3);

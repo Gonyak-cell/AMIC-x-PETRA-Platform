@@ -50,6 +50,8 @@ async def test_phase_status_fields(client):
     data = resp.json()
     assert "all_met" in data
     assert "can_advance" in data
+    assert "pending_acknowledgements" in data
+    assert isinstance(data["pending_acknowledgements"], list)
     for prereq in data["prerequisites"]:
         assert "field" in prereq
         assert "label" in prereq
@@ -243,9 +245,15 @@ async def test_advance_through_multiple_phases(client):
     ]
     for phase in phases:
         await _seed_gate_data_for_phase(client, txn_id, phase)
+        body: dict = {"to_phase": phase}
+        # 빈 체크리스트 acknowledgement
+        if phase == "NEGOTIATION":
+            body["acknowledgements"] = {"dd_completion": True}
+        elif phase == "CLOSING":
+            body["acknowledgements"] = {"closing_checklist": True}
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/workflow/advance",
-            json={"to_phase": phase},
+            json=body,
         )
         assert resp.status_code == 200, f"Advance to {phase} failed: {resp.text}"
         assert resp.json()["phase"] == phase

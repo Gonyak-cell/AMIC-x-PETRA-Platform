@@ -7,6 +7,8 @@ const FundListPage = lazy(() => import("./pages/FundListPage"));
 const FundDetailPage = lazy(() => import("./pages/FundDetailPage"));
 const ReitListPage = lazy(() => import("./pages/ReitListPage"));
 const ReitDetailPage = lazy(() => import("./pages/ReitDetailPage"));
+const CompanyListPage = lazy(() => import("./pages/CompanyListPage"));
+const CompanyDetailPage = lazy(() => import("./pages/CompanyDetailPage"));
 
 export default function KiisRoutes() {
   return (
@@ -18,6 +20,8 @@ export default function KiisRoutes() {
         <Route path="funds/:fundCode" element={<FundDetailPage />} />
         <Route path="reits" element={<ReitListPage />} />
         <Route path="reits/:reitsCode" element={<ReitDetailPage />} />
+        <Route path="companies" element={<CompanyListPage />} />
+        <Route path="companies/:corpCode" element={<CompanyDetailPage />} />
         <Route path="*" element={<Navigate to="/kiis/gp" replace />} />
       </Routes>
     </Suspense>

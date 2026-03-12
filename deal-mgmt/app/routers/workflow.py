@@ -42,7 +42,14 @@ async def advance_transaction_phase(
 ):
     """다음/이전 단계로 전환한다."""
     txn = await transaction_service.get_transaction(db, txn_id)
-    updated = await advance_phase(db, txn, body.to_phase, actor_email=claims.email, notes=body.notes)
+    updated = await advance_phase(
+        db,
+        txn,
+        body.to_phase,
+        actor_email=claims.email,
+        notes=body.notes,
+        acknowledgements=body.acknowledgements,
+    )
     return TransactionOut.model_validate(updated)
 
 

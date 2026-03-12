@@ -1,14 +1,30 @@
-import { CheckCircle, Circle, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle, Circle, Info } from "lucide-react";
 import { usePhaseCompletion } from "@/modules/ma/hooks/useTransactions";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import { Spinner } from "@/components/ui";
 
 interface PhaseActionPanelProps {
   txnId: string;
+  onAcknowledgementsChange?: (acks: Record<string, boolean>) => void;
 }
 
-export default function PhaseActionPanel({ txnId }: PhaseActionPanelProps) {
+export default function PhaseActionPanel({
+  txnId,
+  onAcknowledgementsChange,
+}: PhaseActionPanelProps) {
   const { data: phaseStatus, isLoading } = usePhaseCompletion(txnId);
+  const [acks, setAcks] = useState<Record<string, boolean>>({});
+
+  // acknowledgement 항목이 바뀌면 상위에 알림
+  useEffect(() => {
+    onAcknowledgementsChange?.(acks);
+  }, [acks, onAcknowledgementsChange]);
+
+  // phase가 바뀌면 acks 초기화
+  useEffect(() => {
+    setAcks({});
+  }, [phaseStatus?.current_phase]);
 
   if (isLoading || !phaseStatus) {
     return (
@@ -26,6 +42,10 @@ export default function PhaseActionPanel({ txnId }: PhaseActionPanelProps) {
   const metCount = items.filter((p) => p.satisfied).length;
   const totalCount = items.length;
   const pct = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 100;
+
+  const handleAck = (field: string, checked: boolean) => {
+    setAcks((prev) => ({ ...prev, [field]: checked }));
+  };
 
   return (
     <div className="rounded-xl border border-gray-border bg-white p-4">
@@ -70,25 +90,53 @@ export default function PhaseActionPanel({ txnId }: PhaseActionPanelProps) {
         <ul className="space-y-1">
           {items.map((req) => (
             <li key={req.field} className="flex items-center gap-2 text-xs">
-              {req.satisfied ? (
-                <CheckCircle size={12} className="text-accent shrink-0" />
+              {req.requires_acknowledgement ? (
+                <label className="flex items-center gap-2 cursor-pointer w-full">
+                  <input
+                    type="checkbox"
+                    checked={!!acks[req.field]}
+                    onChange={(e) => handleAck(req.field, e.target.checked)}
+                    className="h-3 w-3 rounded border-warning text-warning accent-warning"
+                  />
+                  <AlertTriangle
+                    size={12}
+                    className="text-warning shrink-0"
+                  />
+                  <span className="text-text-dark font-medium">
+                    {req.label}
+                  </span>
+                  {req.current_value && (
+                    <span className="text-warning ml-auto">
+                      {req.current_value}
+                    </span>
+                  )}
+                </label>
               ) : (
-                <Circle size={12} className="text-negative shrink-0" />
-              )}
-              <span
-                className={
-                  req.satisfied
-                    ? "text-text-secondary line-through"
-                    : "text-text-dark font-medium"
-                }
-              >
-                {req.label}
-              </span>
-              {req.current_value && (
-                <span className="text-text-secondary ml-auto">
-                  {req.current_value}
-                  {req.target_value ? ` / ${req.target_value}` : ""}
-                </span>
+                <>
+                  {req.satisfied ? (
+                    <CheckCircle
+                      size={12}
+                      className="text-accent shrink-0"
+                    />
+                  ) : (
+                    <Circle size={12} className="text-negative shrink-0" />
+                  )}
+                  <span
+                    className={
+                      req.satisfied
+                        ? "text-text-secondary line-through"
+                        : "text-text-dark font-medium"
+                    }
+                  >
+                    {req.label}
+                  </span>
+                  {req.current_value && (
+                    <span className="text-text-secondary ml-auto">
+                      {req.current_value}
+                      {req.target_value ? ` / ${req.target_value}` : ""}
+                    </span>
+                  )}
+                </>
               )}
             </li>
           ))}

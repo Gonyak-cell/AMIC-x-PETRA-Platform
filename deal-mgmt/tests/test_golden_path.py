@@ -39,11 +39,19 @@ async def _assert_phase(client: AsyncClient, txn_id: str, expected: str) -> None
     assert resp.json()["current_phase"] == expected
 
 
-async def _advance(client: AsyncClient, txn_id: str, to_phase: str) -> dict:
+async def _advance(
+    client: AsyncClient,
+    txn_id: str,
+    to_phase: str,
+    acknowledgements: dict[str, bool] | None = None,
+) -> dict:
     """단계 전환 후 응답 반환."""
+    body: dict = {"to_phase": to_phase}
+    if acknowledgements:
+        body["acknowledgements"] = acknowledgements
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/workflow/advance",
-        json={"to_phase": to_phase},
+        json=body,
     )
     return {"status_code": resp.status_code, "body": resp.json()}
 
@@ -161,11 +169,17 @@ async def test_golden_path_full_lifecycle(client: AsyncClient):
     # ── Step 5: MAIN_DUE_DILIGENCE → NEGOTIATION ─────────
     # (게이트: DD 완료율 80% 이상. 항목 0개 = non-blocking)
 
-    # 5a. 항목 0개 → non-blocking → 바로 통과 가능
+    # 5a. 항목 0개 → satisfied=True이나 acknowledgement 필요
     status = await _get_phase_status(client, txn_id)
     dd_prereq = next(p for p in status["prerequisites"] if p["field"] == "dd_completion")
-    assert dd_prereq["satisfied"] is True  # 항목 없음 = 통과
+    assert dd_prereq["satisfied"] is True  # 항목 없음 = 조건 자체는 충족
+    assert dd_prereq["requires_acknowledgement"] is True  # 확인 필요
     assert "항목 없음" in dd_prereq["current_value"]
+    assert "dd_completion" in status["pending_acknowledgements"]
+
+    # ack 없이 advance → 422
+    result = await _advance(client, txn_id, "NEGOTIATION")
+    assert result["status_code"] == 422
 
     # 5b. DD 항목 추가 → 미완료 상태 → 차단되는지 확인
     resp = await client.post(
@@ -328,8 +342,8 @@ async def test_critical_risk_blocks_closing(client: AsyncClient):
     )
     await _advance(client, txn_id, "MAIN_DUE_DILIGENCE")
 
-    # NEGOTIATION 진입 (DD 0건 = non-blocking)
-    await _advance(client, txn_id, "NEGOTIATION")
+    # NEGOTIATION 진입 (DD 0건 = acknowledgement 필요)
+    await _advance(client, txn_id, "NEGOTIATION", acknowledgements={"dd_completion": True})
 
     # CLOSING 시드: 계약 + 체크리스트
     await client.post(

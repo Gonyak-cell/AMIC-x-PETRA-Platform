@@ -11,6 +11,7 @@ class PhasePrerequisite(BaseModel):
     satisfied: bool
     current_value: str | None = None
     target_value: str | None = None
+    requires_acknowledgement: bool = False
 
 
 class PhaseCompletionStatus(BaseModel):
@@ -22,11 +23,13 @@ class PhaseCompletionStatus(BaseModel):
     next_phase: TransactionPhase | None = None
     previous_phase: TransactionPhase | None = None
     gate_summary: str | None = None
+    pending_acknowledgements: list[str] = []
 
 
 class PhaseTransitionRequest(BaseModel):
     to_phase: TransactionPhase
     notes: str | None = None
+    acknowledgements: dict[str, bool] = {}
 
 
 class PhaseTransitionResponse(BaseModel):

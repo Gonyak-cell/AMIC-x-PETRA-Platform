@@ -85,9 +85,7 @@ export default function NdaVersionPanel({
         {canWrite && (
           <UploadForm
             markupsCount={markups.length}
-            onUpload={(fd, onSuccess) =>
-              createMarkup.mutate(fd, { onSuccess })
-            }
+            onUpload={(fd, onSuccess) => createMarkup.mutate(fd, { onSuccess })}
             isUploading={createMarkup.isPending}
           />
         )}
@@ -300,17 +298,19 @@ function VersionTimeline({
                       <Download className="h-4 w-4" />
                     </a>
                   )}
-                  {canWrite && m.version_number > 1 && (
-                    <button
-                      type="button"
-                      className="text-accent hover:text-accent/80 disabled:opacity-50"
-                      aria-label={`${m.version_label} Redline 생성`}
-                      onClick={() => onGenerateRedline(m.id)}
-                      disabled={isGenerating}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                    </button>
-                  )}
+                  {canWrite &&
+                    m.version_number > 1 &&
+                    m.file_name?.toLowerCase().endsWith(".docx") && (
+                      <button
+                        type="button"
+                        className="text-accent hover:text-accent/80 disabled:opacity-50"
+                        aria-label={`${m.version_label} Redline 생성`}
+                        onClick={() => onGenerateRedline(m.id)}
+                        disabled={isGenerating}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </button>
+                    )}
                   {canWrite && (
                     <button
                       type="button"

@@ -50,9 +50,15 @@ async def _advance_to(client: AsyncClient, txn_id: str, target_phase: str) -> No
         next_phase = phase_order[i + 1]
         # 게이트 시드 데이터 추가
         await _seed_gate_data(client, txn_id, next_phase)
+        body: dict = {"to_phase": next_phase}
+        # 빈 체크리스트 acknowledgement (DD 0건, Closing 0건 대응)
+        if next_phase == "NEGOTIATION":
+            body["acknowledgements"] = {"dd_completion": True}
+        elif next_phase == "CLOSING":
+            body["acknowledgements"] = {"closing_checklist": True}
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/workflow/advance",
-            json={"to_phase": next_phase},
+            json=body,
         )
         assert resp.status_code == 200, f"Advance to {next_phase} failed: {resp.text}"
 
@@ -244,14 +250,32 @@ class TestDDGate:
 class TestNegotiationGate:
     """DD → NEGOTIATION 게이트 검증 (DD 항목 0개 = non-blocking)."""
 
-    async def test_negotiation_passes_without_dd_items(self, client: AsyncClient):
-        """DD 체크리스트 0건이면 non-blocking으로 통과."""
+    async def test_negotiation_requires_ack_for_empty_dd(self, client: AsyncClient):
+        """DD 체크리스트 0건: acknowledgement 없이 advance → 422."""
+        txn_id = await _create_active_txn(client)
+        await _advance_to(client, txn_id, "MAIN_DUE_DILIGENCE")
+
+        # phase-status에서 pending_acknowledgements 확인
+        status_resp = await client.get(
+            f"/api/v1/transactions/{txn_id}/workflow/phase-status",
+        )
+        assert status_resp.status_code == 200
+        assert "dd_completion" in status_resp.json()["pending_acknowledgements"]
+
+        resp = await client.post(
+            f"/api/v1/transactions/{txn_id}/workflow/advance",
+            json={"to_phase": "NEGOTIATION"},
+        )
+        assert resp.status_code == 422
+
+    async def test_negotiation_passes_with_ack_for_empty_dd(self, client: AsyncClient):
+        """DD 체크리스트 0건: acknowledgement 포함 시 통과."""
         txn_id = await _create_active_txn(client)
         await _advance_to(client, txn_id, "MAIN_DUE_DILIGENCE")
 
         resp = await client.post(
             f"/api/v1/transactions/{txn_id}/workflow/advance",
-            json={"to_phase": "NEGOTIATION"},
+            json={"to_phase": "NEGOTIATION", "acknowledgements": {"dd_completion": True}},
         )
         assert resp.status_code == 200
         assert resp.json()["phase"] == "NEGOTIATION"

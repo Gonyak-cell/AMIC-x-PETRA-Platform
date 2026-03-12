@@ -188,7 +188,8 @@ async def _validate_dd_threshold(db: AsyncSession, txn: Transaction) -> list[Pha
                 field="dd_completion",
                 label="DD 체크리스트 완료",
                 satisfied=True,
-                current_value="항목 없음 (해당 없음)",
+                current_value="항목 없음 — 확인 필요",
+                requires_acknowledgement=True,
             )
         ]
 
@@ -277,7 +278,8 @@ async def _validate_closing_checklist(db: AsyncSession, txn: Transaction) -> lis
                 field="closing_checklist",
                 label="Closing 체크리스트",
                 satisfied=True,
-                current_value="항목 없음 (해당 없음)",
+                current_value="항목 없음 — 확인 필요",
+                requires_acknowledgement=True,
             )
         ]
 
@@ -364,6 +366,8 @@ async def get_phase_completion(db: AsyncSession, txn: Transaction) -> PhaseCompl
 
     gate_summary = _PHASE_GATE_SUMMARIES.get(next_phase) if next_phase else None
 
+    pending_acks = [p.field for p in prerequisites if p.requires_acknowledgement and p.satisfied]
+
     return PhaseCompletionStatus(
         current_phase=txn.phase,
         prerequisites=prerequisites,
@@ -373,6 +377,7 @@ async def get_phase_completion(db: AsyncSession, txn: Transaction) -> PhaseCompl
         next_phase=next_phase,
         previous_phase=prev_phase,
         gate_summary=gate_summary,
+        pending_acknowledgements=pending_acks,
     )
 
 
@@ -383,6 +388,7 @@ async def advance_phase(
     to_phase: TransactionPhase,
     actor_email: str | None = None,
     notes: str | None = None,
+    acknowledgements: dict[str, bool] | None = None,
 ) -> Transaction:
     """단계를 전환한다. 1단계만 앞/뒤로 이동 가능."""
     if txn.status != TransactionStatus.ACTIVE:
@@ -408,6 +414,14 @@ async def advance_phase(
             unmet = [p.label for p in completion.prerequisites if not p.satisfied]
             raise WorkflowError(f"다음 단계로 진행하려면 필수 조건을 충족해야 합니다: {', '.join(unmet)}")
 
+        # Acknowledgement 검증: requires_acknowledgement=True인 항목은 명시적 확인 필요
+        ack = acknowledgements or {}
+        unacked = [
+            p.label for p in completion.prerequisites if p.requires_acknowledgement and not ack.get(p.field, False)
+        ]
+        if unacked:
+            raise WorkflowError(f"다음 항목에 대한 확인이 필요합니다: {', '.join(unacked)}")
+
     from_phase = txn.phase
     txn.phase = to_phase
 
@@ -430,7 +444,7 @@ async def advance_phase(
         action=AuditAction.PHASE_TRANSITION,
         actor_email=actor_email,
         old_value={"phase": from_phase},
-        new_value={"phase": to_phase},
+        new_value={"phase": to_phase, "acknowledgements": acknowledgements or None},
         notes=notes,
     )
     await db.commit()

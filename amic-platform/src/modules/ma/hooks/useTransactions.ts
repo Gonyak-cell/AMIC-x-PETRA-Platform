@@ -142,7 +142,11 @@ export function usePhaseCompletion(txnId: string) {
 export function useAdvancePhase(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { to_phase: string; notes?: string }) => {
+    mutationFn: async (body: {
+      to_phase: string;
+      notes?: string;
+      acknowledgements?: Record<string, boolean>;
+    }) => {
       const { data } = await maApi.post(
         `/transactions/${txnId}/workflow/advance`,
         body,
@@ -191,16 +195,29 @@ export function useAutoAdvanceNotification(txnId: string) {
         PHASE_CONFIG.find((p) => p.phase === phaseStatus.next_phase)?.label ??
         phaseStatus.next_phase;
 
-      toast.success(`모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`, {
-        action: {
-          label: "진행하기",
-          onClick: () =>
-            advanceRef.current.mutate({
-              to_phase: phaseStatus.next_phase!,
-            }),
-        },
-        duration: 10000,
-      });
+      const hasPendingAcks =
+        (phaseStatus.pending_acknowledgements ?? []).length > 0;
+
+      if (hasPendingAcks) {
+        toast.info(
+          `조건 충족! 확인 항목을 체크한 후 ${nextLabel} 단계로 진행하세요`,
+          { duration: 5000 },
+        );
+      } else {
+        toast.success(
+          `모든 조건 충족! ${nextLabel} 단계로 진행할 수 있습니다`,
+          {
+            action: {
+              label: "진행하기",
+              onClick: () =>
+                advanceRef.current.mutate({
+                  to_phase: phaseStatus.next_phase!,
+                }),
+            },
+            duration: 10000,
+          },
+        );
+      }
     }
 
     prevCanAdvance.current = phaseStatus.can_advance;

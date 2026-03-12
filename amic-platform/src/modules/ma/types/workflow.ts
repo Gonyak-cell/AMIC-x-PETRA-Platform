@@ -14,6 +14,7 @@ export interface PhasePrerequisite {
   satisfied: boolean;
   current_value?: string | null;
   target_value?: string | null;
+  requires_acknowledgement?: boolean;
 }
 
 export interface PhaseCompletionStatus {
@@ -25,6 +26,7 @@ export interface PhaseCompletionStatus {
   next_phase: TransactionPhase | null;
   previous_phase: TransactionPhase | null;
   gate_summary?: string | null;
+  pending_acknowledgements: string[];
 }
 
 export interface WorkflowTransition {

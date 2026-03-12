@@ -145,6 +145,10 @@ export default function TransactionWorkspacePage() {
   const [activeMilestone, setActiveMilestone] =
     useState<UploadableMilestone | null>(null);
 
+  // Phase gate acknowledgement 상태 (빈 체크리스트 확인용)
+  const [acknowledgements, setAcknowledgements] = useState<
+    Record<string, boolean>
+  >({});
   // 데이터 로드 — Phase 1
   const { data: txn, isLoading } = useTransaction(id);
   const { data: phaseStatus } = usePhaseCompletion(id);
@@ -388,7 +392,7 @@ export default function TransactionWorkspacePage() {
                     icon={ArrowRight}
                     onClick={() =>
                       advancePhase.mutate(
-                        { to_phase: phaseStatus.next_phase! },
+                        { to_phase: phaseStatus.next_phase!, acknowledgements },
                         {
                           onSuccess: (updatedTxn) => {
                             const phase = updatedTxn.phase as TransactionPhase;
@@ -403,6 +407,12 @@ export default function TransactionWorkspacePage() {
                       )
                     }
                     loading={advancePhase.isPending}
+                    disabled={
+                      (phaseStatus.pending_acknowledgements?.length ?? 0) > 0 &&
+                      !phaseStatus.pending_acknowledgements.every(
+                        (f) => acknowledgements[f],
+                      )
+                    }
                   >
                     {PHASE_CONFIG.find(
                       (p) => p.phase === phaseStatus.next_phase,
@@ -504,7 +514,10 @@ export default function TransactionWorkspacePage() {
       </Card>
 
       {/* Phase Action Panel */}
-      <PhaseActionPanel txnId={id} />
+      <PhaseActionPanel
+        txnId={id}
+        onAcknowledgementsChange={setAcknowledgements}
+      />
 
       {/* 탭 */}
       <Tabs
