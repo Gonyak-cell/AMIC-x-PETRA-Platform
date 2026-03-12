@@ -17,7 +17,6 @@ export default defineConfig({
           "tiptap-vendor": [
             "@tiptap/react",
             "@tiptap/starter-kit",
-            "@tiptap/pm",
             "@tiptap/extension-table",
             "@tiptap/extension-table-cell",
             "@tiptap/extension-table-header",
