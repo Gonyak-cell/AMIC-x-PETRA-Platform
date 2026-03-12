@@ -163,24 +163,21 @@ export default function TransactionWorkspacePage() {
     prevPhaseRef.current = txn.phase;
   }, [txn?.phase, id, navigate]);
 
-  // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트
+  // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트 (1회만)
   const initialRedirectDone = useRef(false);
   useEffect(() => {
     if (!txn?.phase) return;
     if (initialRedirectDone.current) return;
-    if (splat) {
-      initialRedirectDone.current = true;
-      return;
-    }
-    if (viewedPhase) return;
+    initialRedirectDone.current = true;
+    // URL에 이미 탭이 있거나 다른 단계를 보는 중이면 리다이렉트 안 함
+    if (splat || viewedPhase) return;
     const phase = txn.phase as TransactionPhase;
     const defaultTab = PHASE_TAB_MAP[phase];
     if (defaultTab && defaultTab !== "overview") {
-      initialRedirectDone.current = true;
       navigate(`/ma/transactions/${id}/${defaultTab}`, { replace: true });
     }
-    initialRedirectDone.current = true;
-  }, [txn?.phase, id, navigate, splat, viewedPhase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txn?.phase, id, navigate]);
 
   // 마일스톤 문서 존재 여부 조회
   const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");
