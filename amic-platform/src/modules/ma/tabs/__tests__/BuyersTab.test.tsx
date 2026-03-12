@@ -4,7 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
-import { mockTransaction } from "@/test/mocks/ma-handlers";
 import {
   AuthContext,
   type AuthContextValue,
