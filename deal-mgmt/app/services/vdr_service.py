@@ -361,64 +361,6 @@ async def stream_hash_and_size(
     return hasher.hexdigest(), total
 
 
-async def upload_document_stream(
-    db: AsyncSession,
-    transaction_id: uuid.UUID,
-    folder_id: uuid.UUID,
-    original_name: str,
-    file: UploadFile,
-    file_size: int,
-    sha256_hex: str,
-    mime_type: str,
-    uploaded_by_email: str | None = None,
-    description: str | None = None,
-    *,
-    _folder_verified: bool = False,
-    auto_commit: bool = True,
-) -> VdrDocument:
-    """스트리밍 방식으로 파일을 업로드한다. 해시와 크기는 사전 계산됨.
-
-    stream_hash_and_size()로 해시/크기를 미리 계산한 후,
-    blob_storage의 스트리밍 업로드를 통해 메모리 사용량을 O(1MB)로 유지한다.
-    """
-    if not _folder_verified:
-        await get_folder(db, transaction_id, folder_id)
-
-    ext = Path(original_name).suffix.lower()
-    stored_name = f"{uuid.uuid4()}{ext}"
-    blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
-
-    await blob_client.upload_blob_stream(blob_name, file, mime_type, file_size)
-
-    doc = VdrDocument(
-        transaction_id=transaction_id,
-        folder_id=folder_id,
-        original_name=original_name,
-        stored_name=stored_name,
-        file_path=blob_name,
-        file_size_bytes=file_size,
-        mime_type=mime_type,
-        sha256_hash=sha256_hex,
-        uploaded_by_email=uploaded_by_email,
-        description=description,
-    )
-    db.add(doc)
-    if auto_commit:
-        try:
-            await db.commit()
-            await db.refresh(doc)
-        except Exception:
-            await db.rollback()
-            try:
-                await blob_client.delete_blob(blob_name)
-            except Exception as cleanup_err:
-                logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
-            raise
-    else:
-        await db.flush()
-    return doc
-
-
 async def update_document(
     db: AsyncSession,
     transaction_id: uuid.UUID,

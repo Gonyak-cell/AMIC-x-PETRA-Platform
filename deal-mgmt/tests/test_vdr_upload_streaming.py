@@ -199,16 +199,28 @@ class TestValidateUploadMetadata:
 # ── direct_upload 통합 테스트 ─────────────────────────────────
 
 
+@pytest.fixture
+async def vdr_txn_id(client, transaction_id):
+    """VDR 폴더가 존재하는 트랜잭션 ID — direct_upload에 필요.
+
+    거래 생성 시 VDR 기본 폴더가 자동 초기화되므로 폴더 존재만 확인한다.
+    """
+    resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+    assert resp.status_code == 200
+    assert len(resp.json()) > 0, "VDR 폴더가 자동 초기화되지 않았습니다"
+    return transaction_id
+
+
 class TestDirectUploadIntegration:
     """direct_upload API 엔드포인트 통합 테스트."""
 
-    async def test_single_file_upload(self, client, transaction_id):
+    async def test_single_file_upload(self, client, vdr_txn_id):
         """단일 파일 업로드가 정상 동작한다."""
         content = b"PDF content for single file test"
         files = [("files", ("test_doc.pdf", io.BytesIO(content), "application/pdf"))]
 
         resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/documents/direct-upload",
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/documents/direct-upload",
             files=files,
         )
         assert resp.status_code == 201
@@ -217,7 +229,7 @@ class TestDirectUploadIntegration:
         assert len(data["results"]) == 1
         assert data["results"][0]["document"]["original_name"] == "test_doc.pdf"
 
-    async def test_multiple_files_upload(self, client, transaction_id):
+    async def test_multiple_files_upload(self, client, vdr_txn_id):
         """다중 파일 동시 업로드가 정상 동작한다."""
         files = []
         for i in range(3):
@@ -225,7 +237,7 @@ class TestDirectUploadIntegration:
             files.append(("files", (f"doc_{i}.pdf", io.BytesIO(content), "application/pdf")))
 
         resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/documents/direct-upload",
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/documents/direct-upload",
             files=files,
         )
         assert resp.status_code == 201
@@ -233,7 +245,7 @@ class TestDirectUploadIntegration:
         assert data["total_uploaded"] == 3
         assert len(data["results"]) == 3
 
-    async def test_invalid_file_in_batch(self, client, transaction_id):
+    async def test_invalid_file_in_batch(self, client, vdr_txn_id):
         """배치 내 잘못된 파일이 있어도 유효한 파일은 업로드된다."""
         files = [
             ("files", ("valid.pdf", io.BytesIO(b"valid pdf"), "application/pdf")),
@@ -241,16 +253,19 @@ class TestDirectUploadIntegration:
         ]
 
         resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/documents/direct-upload",
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/documents/direct-upload",
             files=files,
         )
-        # Phase A에서 개별 파일 검증 실패 → failed_files에 추가, 유효 파일만 업로드
-        assert resp.status_code in (201, 400, 422)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["total_uploaded"] == 1
+        assert len(data["failed_files"]) == 1
+        assert data["failed_files"][0]["filename"] == "invalid.exe"
 
-    async def test_backward_compat_single_upload(self, client, transaction_id):
+    async def test_backward_compat_single_upload(self, client, vdr_txn_id):
         """기존 단일 파일 업로드 엔드포인트가 여전히 동작한다."""
         # 폴더 목록 조회
-        folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+        folders_resp = await client.get(f"/api/v1/transactions/{vdr_txn_id}/vdr/folders")
         assert folders_resp.status_code == 200
         folders = folders_resp.json()
         assert len(folders) > 0
@@ -260,7 +275,7 @@ class TestDirectUploadIntegration:
         files = {"file": ("compat_test.pdf", io.BytesIO(content), "application/pdf")}
 
         resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/folders/{folder_id}/documents",
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/folders/{folder_id}/documents",
             files=files,
         )
         assert resp.status_code == 201

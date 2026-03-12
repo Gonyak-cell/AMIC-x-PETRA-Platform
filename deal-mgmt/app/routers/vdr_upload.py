@@ -163,11 +163,11 @@ async def direct_upload(
     from app.services.vdr_categorization_service import auto_route, score_document
 
     # ── Phase A: 메타데이터 검증 + 스트리밍 해시/크기 + 분류 (병렬) ──
-    sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+    _hash_sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
     failed_files: list[FailedFileInfo] = []
 
     async def _prepare_one(file: UploadFile) -> _PreparedFile | None:
-        async with sem:
+        async with _hash_sem:
             try:
                 filename, ext, content_type = _validate_upload_metadata(file)
                 sha256_hex, file_size = await vdr_service.stream_hash_and_size(
@@ -322,9 +322,11 @@ async def direct_upload(
                 )
             )
 
-    # blob 병렬 업로드 (Semaphore로 동시성 제한)
+    # blob 병렬 업로드 (별도 Semaphore로 동시성 제한)
+    _blob_sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+
     async def _upload_blob(task: _BlobTask) -> tuple[_BlobTask, Exception | None]:
-        async with sem:
+        async with _blob_sem:
             try:
                 await blob_client.upload_blob_stream(
                     task.blob_name,
