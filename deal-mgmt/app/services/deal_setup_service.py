@@ -213,6 +213,18 @@ async def confirm_deal_setup(
         )
         buyer_count += 1
 
+    # 5. 표준 Closing 체크리스트 자동 생성 (수동 생성과 동일)
+    from app.models.closing_checklist import ClosingChecklist
+    from app.services.transaction_service import _STANDARD_CLOSING_ITEMS
+
+    for item_data in _STANDARD_CLOSING_ITEMS:
+        db.add(ClosingChecklist(transaction_id=txn.id, **item_data))
+
+    # 6. VDR 기본 폴더 자동 생성 (12개)
+    from app.services.vdr_service import create_default_folders
+
+    create_default_folders(db, txn.id)
+
     await db.commit()
     await db.refresh(txn)
 

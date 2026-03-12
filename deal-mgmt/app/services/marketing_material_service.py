@@ -230,8 +230,8 @@ async def create_marketing_material_with_ralph(
             mat.file_name = p.name
             mat.file_size_bytes = p.stat().st_size
         else:
-            mat.status = MarketingDocStatus.READY
-            mat.error_message = "Ralph Loop 완료 — LLM 미연결 시 기본 템플릿"
+            mat.status = MarketingDocStatus.FAILED
+            mat.error_message = "Ralph Loop 완료 — 최종 산출물 파일이 생성되지 않았습니다"
 
     except Exception as exc:
         mat.status = MarketingDocStatus.FAILED
@@ -294,6 +294,12 @@ async def update_distribution(
 ) -> MarketingMaterial:
     """배포 대상 목록 갱신."""
     mat = await get_marketing_material(db, transaction_id, mat_id)
+
+    if mat.status != MarketingDocStatus.READY or not mat.file_path:
+        raise DocumentNotFoundError("배포하려면 READY 상태이고 파일이 존재해야 합니다")
+
+    if not Path(mat.file_path).exists():
+        raise DocumentNotFoundError("파일이 서버에 존재하지 않습니다. 자료를 다시 생성해 주세요.")
 
     mat.distributed_to = body.distributed_to
     mat.distributed_at = body.distributed_at or datetime.now(UTC).isoformat()

@@ -23,23 +23,31 @@ async def _generate_code_name(
     project_name: str,
     year: int,
 ) -> str:
-    """코드명 자동 생성.
+    """코드명 자동 생성 — 삭제된 행 포함 MAX 시퀀스 기반.
 
     형식: {TYPE}{YY}-{ABB}-{NN}
     예시: SE26-EDW-01 (2026년 첫 번째 매각 자문 딜, Project Edward)
     """
+    import re
+
     abbr = project_name.removeprefix("Project ").strip()[:3].upper()
     year_suffix = str(year)[2:]
+    prefix = f"{deal_type.value}{year_suffix}-{abbr}-"
 
     result = await db.execute(
-        select(func.count(Transaction.id)).where(
-            Transaction.deal_type == deal_type,
-            func.extract("year", Transaction.created_at) == year,
-            Transaction.is_deleted.is_(False),
+        select(Transaction.code_name).where(
+            Transaction.code_name.like(f"{prefix}%"),
         )
     )
-    seq = (result.scalar_one() or 0) + 1
-    return f"{deal_type.value}{year_suffix}-{abbr}-{seq:02d}"
+    existing = [row[0] for row in result.all()]
+
+    max_seq = 0
+    for name in existing:
+        m = re.search(r"-(\d+)$", name)
+        if m:
+            max_seq = max(max_seq, int(m.group(1)))
+
+    return f"{prefix}{max_seq + 1:02d}"
 
 
 # M&A Closing에서 공통으로 요구되는 표준 체크리스트 항목

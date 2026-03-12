@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -68,7 +68,15 @@ async def create_transaction(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    txn = await transaction_service.create_transaction(db, body, actor_email=claims.email)
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        txn = await transaction_service.create_transaction(db, body, actor_email=claims.email)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="코드명 생성 중 충돌이 발생했습니다. 다시 시도해 주세요.",
+        )
     return TransactionOut.model_validate(txn)
 
 

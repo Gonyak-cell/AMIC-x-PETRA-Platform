@@ -178,14 +178,34 @@ async def test_list_marketing_materials(client, _txn):
 
 
 @pytest.mark.asyncio
-async def test_update_distribution(client, _txn):
-    """배포 대상 목록 업데이트."""
+async def test_update_distribution(client, _txn, async_session):
+    """배포 대상 목록 업데이트 — READY 상태 + 파일 존재 시에만 허용."""
+    from app.models.enums import MarketingDocStatus
+    from app.models.marketing_material import MarketingMaterial
+
     txn_id = _txn["id"]
     create_resp = await client.post(
         f"/api/v1/transactions/{txn_id}/marketing-materials",
         json=TM_BODY,
     )
     mat_id = create_resp.json()["id"]
+
+    # GENERATING → READY + 실제 임시 파일 생성 (배포 사전조건 충족)
+    import tempfile
+    import uuid
+
+    from sqlalchemy import select
+
+    with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as tmp:
+        tmp.write(b"fake-pptx-content")
+
+    result = await async_session.execute(select(MarketingMaterial).where(MarketingMaterial.id == uuid.UUID(mat_id)))
+    mat = result.scalar_one()
+    mat.status = MarketingDocStatus.READY
+    mat.file_path = tmp.name
+    mat.file_name = "test_memo.pptx"
+    mat.file_size_bytes = 1024
+    await async_session.commit()
 
     dist_body = {
         "distributed_to": ["A투자사", "B펀드", "c@example.com"],
@@ -199,6 +219,27 @@ async def test_update_distribution(client, _txn):
     data = resp.json()
     assert set(data["distributed_to"]) == set(dist_body["distributed_to"])
     assert data["distributed_at"] == dist_body["distributed_at"]
+
+
+@pytest.mark.asyncio
+async def test_update_distribution_not_ready(client, _txn):
+    """READY 아닌 상태에서 배포 시도 → 404."""
+    txn_id = _txn["id"]
+    create_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials",
+        json=TM_BODY,
+    )
+    mat_id = create_resp.json()["id"]
+
+    dist_body = {
+        "distributed_to": ["A투자사"],
+        "distributed_at": "2026-03-01T09:00:00+09:00",
+    }
+    resp = await client.put(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/{mat_id}/distribute",
+        json=dist_body,
+    )
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
