@@ -16,7 +16,7 @@ from app.schemas.workflow import (
     StatusChangeRequest,
 )
 from app.services import transaction_service
-from app.services.workflow_engine import advance_phase, change_status, get_phase_completion
+from app.services.workflow import advance_phase, change_status, get_phase_completion
 
 router = APIRouter(prefix="/transactions/{txn_id}/workflow", tags=["Workflow"])
 

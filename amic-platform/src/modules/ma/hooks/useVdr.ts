@@ -209,13 +209,9 @@ export function useDeleteVdrDocument(txnId: string) {
       await maApi.delete(`/transactions/${txnId}/vdr/documents/${docId}`);
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "vdr"],
-      });
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId],
-        exact: true,
-      });
+      qc.invalidateQueries({ queryKey: folderQK(txnId) });
+      qc.invalidateQueries({ queryKey: summaryQK(txnId) });
+      qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("문서가 삭제되었습니다.");
     },
     onError: (err) => {
@@ -259,7 +255,7 @@ export function useClassificationStatus(txnId: string, docIds: string[]) {
       txnId,
       "vdr",
       "classification-status",
-      docIds,
+      [...docIds].sort(),
     ],
     queryFn: async () => {
       const params = new URLSearchParams();

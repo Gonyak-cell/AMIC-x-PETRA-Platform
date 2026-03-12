@@ -146,6 +146,16 @@ export default function PhaseActionPanel({
           다음 단계 전환 조건이 없습니다.
         </p>
       )}
+
+      {/* Acknowledgement 미완료 경고 */}
+      {phaseStatus.requires_user_acknowledgement && (
+        <div className="flex items-start gap-1.5 mt-3 rounded-lg bg-warning/5 border border-warning/20 px-3 py-2">
+          <AlertTriangle size={12} className="text-warning shrink-0 mt-0.5" />
+          <span className="text-xs text-warning">
+            단계 전환을 위해 확인이 필요한 항목이 있습니다. 위 체크박스를 선택해 주세요.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

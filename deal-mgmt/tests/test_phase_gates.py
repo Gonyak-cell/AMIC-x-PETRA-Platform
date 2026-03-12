@@ -447,3 +447,41 @@ class TestSchemaExtensions:
         data = resp.json()
         # ENGAGEMENT → PREPARATION: gate validator 없음
         assert data["gate_summary"] is None
+
+    async def test_requires_user_acknowledgement_true_when_acks_pending(self, client: AsyncClient):
+        """DD 0건 + ack 미제출 → requires_user_acknowledgement=True."""
+        txn_id = await _create_active_txn(client)
+        await _advance_to(client, txn_id, "MAIN_DUE_DILIGENCE")
+
+        resp = await client.get(
+            f"/api/v1/transactions/{txn_id}/workflow/phase-status",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # DD 0건이면 dd_completion ack 필요
+        assert data["requires_user_acknowledgement"] is True
+        assert len(data["pending_acknowledgements"]) > 0
+
+    async def test_requires_user_acknowledgement_false_when_no_acks(self, client: AsyncClient):
+        """MARKETING 단계 (ack 불필요) → requires_user_acknowledgement=False."""
+        txn_id = await _create_active_txn(client)
+        await _advance_to(client, txn_id, "MARKETING")
+
+        resp = await client.get(
+            f"/api/v1/transactions/{txn_id}/workflow/phase-status",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["requires_user_acknowledgement"] is False
+        assert len(data["pending_acknowledgements"]) == 0
+
+    async def test_requires_user_acknowledgement_false_for_early_phase(self, client: AsyncClient):
+        """ENGAGEMENT 단계 (gate 없음) → requires_user_acknowledgement=False."""
+        txn_id = await _create_active_txn(client)
+
+        resp = await client.get(
+            f"/api/v1/transactions/{txn_id}/workflow/phase-status",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["requires_user_acknowledgement"] is False

@@ -24,6 +24,7 @@ class PhaseCompletionStatus(BaseModel):
     previous_phase: TransactionPhase | None = None
     gate_summary: str | None = None
     pending_acknowledgements: list[str] = []
+    requires_user_acknowledgement: bool = False
 
 
 class PhaseTransitionRequest(BaseModel):

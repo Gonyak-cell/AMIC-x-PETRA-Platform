@@ -6,7 +6,6 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, ArrowRight, Play, Pause, Trash2 } from "lucide-react";
 import {
   useTransaction,
   useDeleteTransaction,
@@ -14,20 +13,10 @@ import {
   useAdvancePhase,
   useAutoAdvanceNotification,
   useChangeStatus,
-  useEngagements,
   useBuyers,
-  useTimeline,
 } from "@/modules/ma/hooks/useTransactions";
 import type { TransactionPhase } from "@/modules/ma/types/transaction";
-import { useNdas } from "@/modules/ma/hooks/useNdas";
-import { useBids } from "@/modules/ma/hooks/useBids";
-import { useDDChecklist } from "@/modules/ma/hooks/useDDChecklist";
-import { useContracts } from "@/modules/ma/hooks/useContracts";
-import { useClosingChecklist } from "@/modules/ma/hooks/useClosing";
-import { usePMITasks } from "@/modules/ma/hooks/usePMI";
-import { useEarnoutMilestones } from "@/modules/ma/hooks/useEarnout";
-import { useMarketingMaterials } from "@/modules/ma/hooks/useMarketingMaterials";
-import { useFinancialModels } from "@/modules/ma/hooks/useFinancialModels";
+import { useWorkspaceSummary } from "@/modules/ma/hooks/useWorkspaceSummary";
 import { useLegalDocuments } from "@/modules/docs/hooks/useLegalDocuments";
 import PipelineFlow from "@/modules/ma/components/PipelineFlow";
 import PhaseActionPanel from "@/modules/ma/components/PhaseActionPanel";
@@ -38,18 +27,26 @@ import {
   PHASE_MILESTONES,
   PHASE_TAB_MAP,
   type UploadableMilestone,
-  PHASE_VISIBLE_TABS,
   TRANSACTION_STATUS_VARIANT,
 } from "@/modules/ma/constants";
 
-import ClientPortalDashboard from "@/modules/ma/components/ClientPortalDashboard";
-import MeetingLogsTab from "@/modules/ma/components/meetings/MeetingLogsTab";
-import VdrTab from "@/modules/ma/components/vdr/VdrTab";
-import RFIPanel from "@/modules/ma/components/rfi/RFIPanel";
-import TransactionOverviewTab from "@/modules/ma/components/overview/TransactionOverviewTab";
+import HeroActions from "@/modules/ma/pages/workspace/HeroActions";
+import {
+  VALID_TABS,
+  useWorkspaceTabs,
+} from "@/modules/ma/pages/workspace/useWorkspaceTabs";
 
-import { Badge, Button, Card, PageHero, Spinner, Tabs } from "@/components/ui";
-import type { TabItem } from "@/components/ui";
+import ClientPortalDashboard from "@/modules/ma/components/ClientPortalDashboard";
+const MeetingLogsTab = lazy(
+  () => import("@/modules/ma/components/meetings/MeetingLogsTab"),
+);
+const VdrTab = lazy(() => import("@/modules/ma/components/vdr/VdrTab"));
+const RFIPanel = lazy(() => import("@/modules/ma/components/rfi/RFIPanel"));
+const TransactionOverviewTab = lazy(
+  () => import("@/modules/ma/components/overview/TransactionOverviewTab"),
+);
+
+import { Badge, Card, PageHero, Spinner, Tabs } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
 
 // ── Tab components (lazy-loaded) ────────────────────────
@@ -74,39 +71,8 @@ const TimelineTab = lazy(() => import("@/modules/ma/tabs/TimelineTab"));
 const QualityTab = lazy(() => import("@/modules/ma/tabs/QualityTab"));
 const EngagementTab = lazy(() => import("@/modules/ma/tabs/EngagementTab"));
 
-// ── 상수/유틸 ──────────────────────────────────────────
+// ── 상수 ──────────────────────────────────────────
 const VALID_PHASES = PHASE_CONFIG.map((p) => p.phase);
-
-const VALID_TABS = [
-  "engagement",
-  "buyers",
-  "timeline",
-  "marketing-materials",
-  "models",
-  "ndas",
-  "vdr",
-  "bids",
-  "dd-checklist",
-  "contracts",
-  "closing",
-  "pmi",
-  "earnout",
-  "risks",
-  "compliance",
-  "notes-approvals",
-  "marketing-logs",
-  "negotiation-logs",
-  "rfi",
-  "ai-quality",
-];
-
-const SIDEBAR_ONLY_TABS = [
-  "risks",
-  "compliance",
-  "notes-approvals",
-  "timeline",
-  "ai-quality",
-];
 
 // ── 메인 컴포넌트 ──────────────────────────────────────
 export default function TransactionWorkspacePage() {
@@ -197,49 +163,11 @@ export default function TransactionWorkspacePage() {
     }
     return map;
   }, [milestoneAttachments]);
-  // 항상 fetch: 탭 바 배지 카운트에 필요 (탭 내부에서는 자체 fetch)
-  const { data: engagements } = useEngagements(id);
-  const { data: buyers } = useBuyers(id);
-  const { data: timeline } = useTimeline(id);
+  // 워크스페이스 요약 — 탭 배지 카운트용 (단일 쿼리)
+  const { data: summary } = useWorkspaceSummary(id);
 
-  // 탭별 데이터 (배지 카운트 표시용만 — 탭 내부에서 자체 fetch)
-  const { data: ndas } = useNdas(id, undefined, activeTab === "ndas");
-  const { data: bids } = useBids(
-    id,
-    undefined,
-    undefined,
-    activeTab === "bids",
-  );
-  const { data: ddItems } = useDDChecklist(
-    id,
-    undefined,
-    undefined,
-    activeTab === "dd-checklist",
-  );
-  const { data: contracts } = useContracts(id, activeTab === "contracts");
-  const { data: closingItems } = useClosingChecklist(
-    id,
-    undefined,
-    activeTab === "closing",
-  );
-  const { data: pmiTasks } = usePMITasks(
-    id,
-    undefined,
-    undefined,
-    activeTab === "pmi",
-  );
-  const { data: earnoutMilestones } = useEarnoutMilestones(
-    id,
-    activeTab === "earnout",
-  );
-  const { data: marketingMaterials } = useMarketingMaterials(
-    id,
-    activeTab === "marketing-materials",
-  );
-  const { data: financialModels } = useFinancialModels(
-    id,
-    activeTab === "models",
-  );
+  // 매수자 목록 — marketing-logs 탭 buyer name lookup용
+  const { data: buyers } = useBuyers(id);
 
   // Legal docs (overview 서비스 연동에서 MOU 상태 확인용)
   const { data: legalDocs } = useLegalDocuments(
@@ -264,50 +192,13 @@ export default function TransactionWorkspacePage() {
     }
   };
 
-  const allTabs: TabItem[] = [
-    { id: "overview", label: "Overview" },
-    { id: "engagement", label: "수임", badge: engagements?.length },
-    { id: "buyers", label: "매수자", badge: buyers?.length },
-    { id: "timeline", label: "타임라인", badge: timeline?.total },
-    {
-      id: "marketing-materials",
-      label: "마케팅 자료",
-      badge: marketingMaterials?.length,
-    },
-    { id: "models", label: "재무모델", badge: financialModels?.length },
-    { id: "ndas", label: "NDA", badge: ndas?.length },
-    { id: "bids", label: "입찰", badge: bids?.length },
-    { id: "dd-checklist", label: "DD/Checklist", badge: ddItems?.length },
-    { id: "contracts", label: "계약/SPA", badge: contracts?.length },
-    { id: "closing", label: "Closing", badge: closingItems?.length },
-    { id: "pmi", label: "PMI", badge: pmiTasks?.length },
-    { id: "earnout", label: "어닝아웃", badge: earnoutMilestones?.length },
-    { id: "marketing-logs", label: "마케팅 로그" },
-    { id: "negotiation-logs", label: "협상 로그" },
-    { id: "vdr", label: "VDR" },
-    { id: "rfi", label: "RFI" },
-  ];
-
-  // 탭 필터링: viewedPhase가 있으면 해당 단계 탭, 없으면 현재 단계 탭
-  const effectivePhase = (viewedPhase ?? txn?.phase) as
-    | TransactionPhase
-    | undefined;
-  const visibleTabIds = effectivePhase
-    ? PHASE_VISIBLE_TABS[effectivePhase]
-    : allTabs.map((t) => t.id);
-  const tabs = isClient
-    ? [{ id: "overview", label: "대시보드" }]
-    : allTabs.filter((t) => visibleTabIds.includes(t.id));
-
-  // activeTab이 현재 보이는 탭에 없으면 PHASE_TAB_MAP 폴백
-  const safeActiveTab =
-    activeTab === "overview" ||
-    visibleTabIds.includes(activeTab) ||
-    SIDEBAR_ONLY_TABS.includes(activeTab)
-      ? activeTab
-      : viewedPhase
-        ? (PHASE_TAB_MAP[viewedPhase] ?? "overview")
-        : "overview";
+  const { tabs, safeActiveTab } = useWorkspaceTabs({
+    summary,
+    txnPhase: txn?.phase,
+    viewedPhase,
+    activeTab,
+    isClient: isClient ?? false,
+  });
 
   if (!txnId) return <Navigate to="/ma/transactions" replace />;
   if (isLoading) return <Spinner size="lg" />;
@@ -331,131 +222,17 @@ export default function TransactionWorkspacePage() {
         backgroundOpacity={0.18}
         compact
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ghost"
-              icon={ArrowLeft}
-              onClick={() => navigate("/ma/transactions")}
-              className="!text-white/80 hover:!text-white hover:!bg-white/10"
-            >
-              목록
-            </Button>
-            {canWrite() && txn.status === "DRAFT" && (
-              <Button
-                icon={Play}
-                onClick={() => changeStatus.mutate({ to_status: "ACTIVE" })}
-                loading={changeStatus.isPending}
-              >
-                시작
-              </Button>
-            )}
-            {canWrite() && txn.status === "ACTIVE" && (
-              <>
-                {phaseStatus?.previous_phase && (
-                  <Button
-                    variant="ghost"
-                    icon={ArrowLeft}
-                    onClick={() =>
-                      advancePhase.mutate(
-                        { to_phase: phaseStatus.previous_phase! },
-                        {
-                          onSuccess: (updatedTxn) => {
-                            const phase = updatedTxn.phase as TransactionPhase;
-                            const defaultTab = PHASE_TAB_MAP[phase];
-                            const tabPath =
-                              defaultTab === "overview" ? "" : `/${defaultTab}`;
-                            navigate(`/ma/transactions/${id}${tabPath}`, {
-                              replace: true,
-                            });
-                          },
-                        },
-                      )
-                    }
-                    loading={advancePhase.isPending}
-                    className="!text-white/80 hover:!text-white hover:!bg-white/10"
-                  >
-                    {PHASE_CONFIG.find(
-                      (p) => p.phase === phaseStatus.previous_phase,
-                    )?.label ?? "이전"}{" "}
-                    단계로
-                  </Button>
-                )}
-                {phaseStatus &&
-                  !phaseStatus.can_advance &&
-                  phaseStatus.blocking_reasons?.length > 0 && (
-                    <span className="text-xs text-white/60 px-2">
-                      {phaseStatus.blocking_reasons.join(" · ")}
-                    </span>
-                  )}
-                {phaseStatus?.can_advance && phaseStatus.next_phase && (
-                  <Button
-                    icon={ArrowRight}
-                    onClick={() =>
-                      advancePhase.mutate(
-                        { to_phase: phaseStatus.next_phase!, acknowledgements },
-                        {
-                          onSuccess: (updatedTxn) => {
-                            const phase = updatedTxn.phase as TransactionPhase;
-                            const defaultTab = PHASE_TAB_MAP[phase];
-                            const tabPath =
-                              defaultTab === "overview" ? "" : `/${defaultTab}`;
-                            navigate(`/ma/transactions/${id}${tabPath}`, {
-                              replace: true,
-                            });
-                          },
-                        },
-                      )
-                    }
-                    loading={advancePhase.isPending}
-                    disabled={
-                      (phaseStatus.pending_acknowledgements?.length ?? 0) > 0 &&
-                      !phaseStatus.pending_acknowledgements.every(
-                        (f) => acknowledgements[f],
-                      )
-                    }
-                  >
-                    {PHASE_CONFIG.find(
-                      (p) => p.phase === phaseStatus.next_phase,
-                    )?.label ?? "다음"}{" "}
-                    단계로
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  icon={Pause}
-                  onClick={() => changeStatus.mutate({ to_status: "ON_HOLD" })}
-                  className="!text-white/80 hover:!text-white hover:!bg-white/10"
-                >
-                  보류
-                </Button>
-              </>
-            )}
-            {canWrite() && txn.status === "ON_HOLD" && (
-              <Button
-                icon={Play}
-                onClick={() => changeStatus.mutate({ to_status: "ACTIVE" })}
-              >
-                재개
-              </Button>
-            )}
-            {canWrite() && !isClient && (
-              <Button
-                variant="ghost"
-                icon={Trash2}
-                onClick={() => {
-                  if (confirm("이 거래를 삭제하시겠습니까?")) {
-                    deleteTxn.mutate(id, {
-                      onSuccess: () => navigate("/ma/transactions"),
-                    });
-                  }
-                }}
-                loading={deleteTxn.isPending}
-                className="!text-white/60 hover:!text-negative hover:!bg-white/10"
-              >
-                삭제
-              </Button>
-            )}
-          </div>
+          <HeroActions
+            txnId={id}
+            txn={txn}
+            canWrite={canWrite()}
+            isClient={isClient ?? false}
+            phaseStatus={phaseStatus}
+            acknowledgements={acknowledgements}
+            advancePhase={advancePhase}
+            changeStatus={changeStatus}
+            deleteTxn={deleteTxn}
+          />
         }
       />
 
@@ -532,12 +309,14 @@ export default function TransactionWorkspacePage() {
         <ClientPortalDashboard txnId={id} />
       )}
       {safeActiveTab === "overview" && !isClient && (
-        <TransactionOverviewTab
+        <Suspense fallback={<Spinner size="lg" />}>
+          <TransactionOverviewTab
           txnId={id}
           txn={txn}
           legalDocs={legalDocs}
           onTabChange={handleTabChange}
-        />
+          />
+        </Suspense>
       )}
 
       {/* ── Tab Components (lazy-loaded with Suspense) ── */}

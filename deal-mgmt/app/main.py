@@ -193,8 +193,10 @@ from app.routers import (
     transactions,
     transcription,
     vdr,
+    vdr_access,
     vdr_internal,
     vdr_overview,
+    vdr_upload,
     workflow,
 )
 
@@ -228,6 +230,10 @@ app.include_router(financial_models.router, prefix="/api/v1")
 app.include_router(ldd_reports.router, prefix="/api/v1")
 app.include_router(ldd_reports._default_sections_router, prefix="/api/v1")
 app.include_router(ralph.router, prefix="/api/v1")
+# vdr_upload, vdr_access를 vdr보다 먼저 등록 — /documents/classification-status,
+# /access-logs 등 고정 경로가 vdr의 /documents/{doc_id} 와일드카드보다 먼저 매칭되어야 함
+app.include_router(vdr_upload.router, prefix="/api/v1")
+app.include_router(vdr_access.router, prefix="/api/v1")
 app.include_router(vdr.router, prefix="/api/v1")
 app.include_router(vdr_overview.router, prefix="/api/v1")
 app.include_router(deal_clients.router, prefix="/api/v1")

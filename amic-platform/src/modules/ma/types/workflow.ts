@@ -27,6 +27,7 @@ export interface PhaseCompletionStatus {
   previous_phase: TransactionPhase | null;
   gate_summary?: string | null;
   pending_acknowledgements: string[];
+  requires_user_acknowledgement: boolean;
 }
 
 export interface WorkflowTransition {

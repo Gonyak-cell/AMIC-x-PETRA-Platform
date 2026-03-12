@@ -253,6 +253,28 @@ jobs:
           cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Bundle size report
+        run: |
+          echo '## Bundle Size Report'
+          echo '| File | Size |'
+          echo '|------|------|'
+          du -b dist/assets/*.js | sort -rn | head -15 | while read size file; do
+            hr=$(numfmt --to=iec-i --suffix=B "$size")
+            name=$(basename "$file")
+            if [ "$size" -gt 512000 ]; then
+              echo "| :warning: $name | **$hr** |"
+            else
+              echo "| $name | $hr |"
+            fi
+          done
+          echo ''
+          total=$(du -sb dist/ | cut -f1)
+          echo "Total dist: $(numfmt --to=iec-i --suffix=B "$total")"
+          # Warn if any JS chunk exceeds 500KB
+          oversized=$(du -b dist/assets/*.js | awk '$1 > 512000 {print $2}')
+          if [ -n "$oversized" ]; then
+            echo '::warning::Chunks exceeding 500KB detected — consider code-splitting'
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: dist

@@ -16,9 +16,22 @@ from app.schemas.transaction import (
     TransactionOut,
     TransactionUpdate,
 )
-from app.services import transaction_service
+from app.schemas.workspace_summary import WorkspaceSummary
+from app.services import transaction_service, workspace_summary_service
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
+
+
+@router.get("/{txn_id}/workspace-summary", response_model=WorkspaceSummary)
+async def get_workspace_summary(
+    txn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> WorkspaceSummary:
+    """워크스페이스 탭 배지 카운트 — 단일 쿼리로 13개 엔티티 집계."""
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+    return await workspace_summary_service.get_workspace_summary(db, txn_id)
 
 
 @router.get("", response_model=TransactionListResponse)
