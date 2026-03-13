@@ -12,6 +12,8 @@ import {
   Clock,
   BarChart3,
   Upload,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import {
   useDocument,
@@ -28,7 +30,9 @@ import {
   SECTION_LABEL_MAP,
   IN_PROGRESS_STATUSES,
   DATA_SOURCE_BADGE,
+  IM_QUALITY_STATUS_LABELS,
 } from "@/modules/im/types/document";
+import type { QualityStatus } from "@/modules/im/types/document";
 import { RALPH_ACTIVE_STATUSES } from "@/modules/im/types/ralph";
 import type { IMRalphSession } from "@/modules/im/types/ralph";
 import { formatBytes } from "@/lib/format";
@@ -174,7 +178,10 @@ export default function DocumentDetailPage() {
       />
 
       <div className="flex items-center gap-3">
-        <DocumentStatusBadge status={doc.status} />
+        <DocumentStatusBadge
+          status={doc.status}
+          qualityStatus={doc.quality_status}
+        />
         {isInProgress && (
           <span className="text-xs text-text-secondary animate-pulse">
             Auto-refreshing...
@@ -296,6 +303,11 @@ export default function DocumentDetailPage() {
                   Completed: {new Date(doc.completed_at).toLocaleString()}
                 </p>
               )}
+              {doc.quality_status === "FAIL" && (
+                <p className="text-xs text-negative mt-1">
+                  품질 검증 미통과 — 다운로드가 제한됩니다.
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               {doc.pptx_path && (
@@ -304,18 +316,22 @@ export default function DocumentDetailPage() {
                   icon={Download}
                   onClick={() => handleDownload("pptx")}
                   loading={downloadingFormat === "pptx"}
-                  disabled={downloadingFormat !== null}
+                  disabled={
+                    downloadingFormat !== null || doc.quality_status === "FAIL"
+                  }
                 >
                   PPTX
                 </Button>
               )}
-              {doc.pdf_path && (
+              {doc.supported_formats?.includes("pdf") && doc.pdf_path && (
                 <Button
                   variant="accent"
                   icon={Download}
                   onClick={() => handleDownload("pdf")}
                   loading={downloadingFormat === "pdf"}
-                  disabled={downloadingFormat !== null}
+                  disabled={
+                    downloadingFormat !== null || doc.quality_status === "FAIL"
+                  }
                 >
                   PDF
                 </Button>
@@ -325,19 +341,101 @@ export default function DocumentDetailPage() {
         </Card>
       )}
 
+      {/* Quality Gate Results */}
+      {doc.status === "COMPLETED" && doc.quality_status && (
+        <Card title="품질 검증" headerBar>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <ShieldCheck className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-text-secondary">품질 점수</span>
+                {doc.quality_score != null && (
+                  <span
+                    className={`text-lg font-bold ${
+                      doc.quality_score >= 3.5
+                        ? "text-accent"
+                        : doc.quality_score >= 2.5
+                          ? "text-caution"
+                          : "text-negative"
+                    }`}
+                  >
+                    {doc.quality_score.toFixed(1)}/5.0
+                  </span>
+                )}
+                <span className="text-sm text-text-secondary">
+                  {IM_QUALITY_STATUS_LABELS[
+                    doc.quality_status as QualityStatus
+                  ] ?? doc.quality_status}
+                </span>
+              </div>
+            </div>
+            {doc.quality_issues && doc.quality_issues.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>검출 이슈 ({doc.quality_issues.length}건)</span>
+                </div>
+                <ul className="space-y-1 text-xs text-text-secondary pl-5 list-disc">
+                  {doc.quality_issues.slice(0, 10).map((issue, i) => (
+                    <li key={i}>{issue}</li>
+                  ))}
+                  {doc.quality_issues.length > 10 && (
+                    <li className="text-text-muted">
+                      외 {doc.quality_issues.length - 10}건
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Generation Metrics */}
       {doc.status === "COMPLETED" && doc.stage_details && (
         <Card title="Generation Metrics" headerBar>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            {doc.stage_details.generation_ms != null && (
+            {(doc.stage_details.render_ms ?? doc.stage_details.generation_ms) !=
+              null && (
               <div className="flex items-start gap-2">
                 <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="text-text-secondary block">소요 시간</span>
+                  <span className="text-text-secondary block">렌더링</span>
                   <span className="text-text-dark font-medium">
-                    {doc.stage_details.generation_ms >= 1000
-                      ? `${(doc.stage_details.generation_ms / 1000).toFixed(1)}s`
-                      : `${doc.stage_details.generation_ms}ms`}
+                    {(() => {
+                      const ms =
+                        doc.stage_details!.render_ms ??
+                        doc.stage_details!.generation_ms;
+                      return ms >= 1000
+                        ? `${(ms / 1000).toFixed(1)}s`
+                        : `${ms}ms`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
+            {doc.stage_details.gate_ms != null && (
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-text-secondary block">품질 게이트</span>
+                  <span className="text-text-dark font-medium">
+                    {doc.stage_details.gate_ms >= 1000
+                      ? `${(doc.stage_details.gate_ms / 1000).toFixed(1)}s`
+                      : `${doc.stage_details.gate_ms}ms`}
+                  </span>
+                </div>
+              </div>
+            )}
+            {doc.stage_details.total_ms != null && (
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-text-secondary block">전체 소요</span>
+                  <span className="text-text-dark font-medium">
+                    {doc.stage_details.total_ms >= 1000
+                      ? `${(doc.stage_details.total_ms / 1000).toFixed(1)}s`
+                      : `${doc.stage_details.total_ms}ms`}
                   </span>
                 </div>
               </div>

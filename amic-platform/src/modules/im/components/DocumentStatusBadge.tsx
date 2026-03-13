@@ -1,5 +1,12 @@
 import { Badge, type BadgeVariant } from "@/components/ui";
-import type { DocumentStatus } from "@/modules/im/types/document";
+import type {
+  DocumentStatus,
+  QualityStatus,
+} from "@/modules/im/types/document";
+import {
+  IM_QUALITY_STATUS_LABELS,
+  IM_QUALITY_STATUS_VARIANT,
+} from "@/modules/im/types/document";
 
 const STATUS_LABEL: Record<DocumentStatus, string> = {
   AWAITING_UPLOAD: "업로드 대기",
@@ -25,16 +32,30 @@ const STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
 
 interface DocumentStatusBadgeProps {
   status: DocumentStatus;
+  qualityStatus?: QualityStatus | null;
   className?: string;
 }
 
 export function DocumentStatusBadge({
   status,
+  qualityStatus,
   className,
 }: DocumentStatusBadgeProps) {
   return (
-    <Badge variant={STATUS_VARIANT[status] ?? "neutral"} className={className}>
-      {STATUS_LABEL[status] ?? status}
-    </Badge>
+    <span className={`inline-flex items-center gap-1.5 ${className ?? ""}`}>
+      <Badge variant={STATUS_VARIANT[status] ?? "neutral"}>
+        {STATUS_LABEL[status] ?? status}
+      </Badge>
+      {qualityStatus && (
+        <Badge
+          variant={
+            (IM_QUALITY_STATUS_VARIANT[qualityStatus] as BadgeVariant) ??
+            "neutral"
+          }
+        >
+          {IM_QUALITY_STATUS_LABELS[qualityStatus] ?? qualityStatus}
+        </Badge>
+      )}
+    </span>
   );
 }

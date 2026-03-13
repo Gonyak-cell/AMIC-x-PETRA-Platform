@@ -1,9 +1,18 @@
 import type { IndustryId } from "@/types/industry";
 
-export type IMStyle = "TITAN" | "COVENANT" | "FULL" | "TEASER" | "DM" | "CUSTOM";
+export type IMStyle =
+  | "TITAN"
+  | "COVENANT"
+  | "FULL"
+  | "TEASER"
+  | "DM"
+  | "CUSTOM";
 export type DataSource = "DART" | "MANUAL" | "EXCEL" | "VDR";
 
-export const DATA_SOURCE_BADGE: Record<DataSource, { label: string; cls: string }> = {
+export const DATA_SOURCE_BADGE: Record<
+  DataSource,
+  { label: string; cls: string }
+> = {
   DART: { label: "DART", cls: "bg-blue-100 text-blue-700" },
   MANUAL: { label: "Manual", cls: "bg-gray-100 text-gray-600" },
   EXCEL: { label: "Excel", cls: "bg-emerald-100 text-emerald-700" },
@@ -115,6 +124,26 @@ export const SECTION_LABEL_MAP: Record<SectionId, string> = {
   dm_summary: "Summary & Recommendations",
 };
 
+export type QualityStatus =
+  | "PASS"
+  | "CONDITIONAL"
+  | "FAIL"
+  | "LEGACY_UNVERIFIED";
+
+export const IM_QUALITY_STATUS_LABELS: Record<QualityStatus, string> = {
+  PASS: "통과",
+  CONDITIONAL: "조건부",
+  FAIL: "미통과",
+  LEGACY_UNVERIFIED: "미검증",
+};
+
+export const IM_QUALITY_STATUS_VARIANT: Record<QualityStatus, string> = {
+  PASS: "success",
+  CONDITIONAL: "warning",
+  FAIL: "error",
+  LEGACY_UNVERIFIED: "neutral",
+};
+
 export interface Document {
   id: string;
   owner_id: string;
@@ -135,6 +164,12 @@ export interface Document {
   updated_at: string;
   completed_at: string | null;
   stage_details: Record<string, number> | null;
+  quality_score: number | null;
+  quality_status: QualityStatus | null;
+  quality_issues: string[] | null;
+  slide_count: number | null;
+  generation_profile: string | null;
+  supported_formats: string[] | null;
 }
 
 export interface DocumentCreate {
@@ -166,7 +201,14 @@ export const IN_PROGRESS_STATUSES: DocumentStatus[] = [
   "RENDERING",
 ];
 
-const IM_STYLES = ["TITAN", "COVENANT", "FULL", "TEASER", "DM", "CUSTOM"] as const;
+const IM_STYLES = [
+  "TITAN",
+  "COVENANT",
+  "FULL",
+  "TEASER",
+  "DM",
+  "CUSTOM",
+] as const;
 
 export function isIMStyle(value: string): value is IMStyle {
   return (IM_STYLES as readonly string[]).includes(value);

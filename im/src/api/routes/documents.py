@@ -167,6 +167,17 @@ async def download_document(
 ) -> FileResponse:
     """생성 완료된 PPTX 또는 PDF 파일을 다운로드한다."""
     service = DocumentService(session)
+
+    # PDF 형식 요청 시 supported_formats 확인
+    if format == "pdf":
+        document = await service.get_document(document_id, current_user)
+        supported = document.supported_formats or []
+        if "pdf" not in supported:
+            raise ValidationError(
+                field="format",
+                reason="PDF 형식은 현재 미지원입니다",
+            )
+
     file_path = await service.get_download_path(document_id, format, current_user)
 
     if format == "pptx":
