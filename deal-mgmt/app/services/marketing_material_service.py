@@ -17,6 +17,58 @@ from app.schemas.marketing_material import DistributionUpdate, MarketingMaterial
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum"
 
+
+async def _run_quality_gate(
+    mat: MarketingMaterial,
+    output_path: Path,
+    memo_type: str,
+    generation_ms: int | None = None,
+) -> None:
+    """품질 게이트를 실행하고 mat 필드를 갱신한다."""
+    try:
+        from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
+
+        gate = PPTXProgrammaticGate()
+        gate_result = await gate.evaluate(
+            str(output_path),
+            prd_section={"memo_type": memo_type.upper()},
+        )
+
+        mat.quality_score = gate_result.weighted_score
+        mat.quality_issues = [str(i) for i in gate_result.issues]
+
+        # slide_count: PPTX 직접 파싱
+        try:
+            from pptx import Presentation as _Prs
+
+            _prs = _Prs(str(output_path))
+            mat.slide_count = len(_prs.slides)
+        except Exception:
+            mat.slide_count = None
+
+        if gate_result.critical_flags:
+            mat.status = MarketingDocStatus.FAILED
+            mat.quality_status = "FAIL"
+            mat.error_message = f"품질 게이트 미통과: {gate_result.critical_flags}"
+        else:
+            mat.status = MarketingDocStatus.READY
+            mat.quality_status = "PASS" if gate_result.weighted_score >= 3.5 else "CONDITIONAL"
+    except Exception as gate_exc:
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning("품질 게이트 실행 실패 (mat=%s): %s", mat.id, gate_exc)
+        mat.status = MarketingDocStatus.READY
+        mat.quality_status = "SKIPPED"
+
+    # 성능 메트릭을 parameters에 병합
+    if generation_ms is not None:
+        metrics = {"generation_ms": generation_ms}
+        if mat.parameters:
+            mat.parameters = {**mat.parameters, "_metrics": metrics}
+        else:
+            mat.parameters = {"_metrics": metrics}
+
+
 # ── doc_type → memo_generator 유형 매핑 ─────────────────────────
 _TYPE_MAP: dict[MarketingDocType, str] = {
     MarketingDocType.TM: "tm",
@@ -119,6 +171,8 @@ async def _generate_pptx(
 
     요청 컨텍스트와 독립된 새 DB 세션을 사용한다.
     """
+    import time as _time
+
     from app.pptx.memo_generator import generate_memo
 
     try:
@@ -131,6 +185,7 @@ async def _generate_pptx(
         output_path = out_dir / f"{memo_type}_{mat_id}.pptx"
 
         # 동기 함수를 스레드풀에서 실행 (python-pptx는 동기 IO)
+        _t0 = _time.monotonic()
         result = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: generate_memo(
@@ -140,6 +195,7 @@ async def _generate_pptx(
                 content=body.parameters,
             ),
         )
+        _generation_ms = int((_time.monotonic() - _t0) * 1000)
 
         # 독립적인 새 세션으로 DB 업데이트
         async with session_factory() as db:
@@ -147,10 +203,12 @@ async def _generate_pptx(
             r = await db.execute(q)
             mat = r.scalar_one_or_none()
             if mat:
-                mat.status = MarketingDocStatus.READY
                 mat.file_path = result.output_path
                 mat.file_name = result.file_name
                 mat.file_size_bytes = result.file_size_bytes
+
+                await _run_quality_gate(mat, output_path, memo_type, _generation_ms)
+
                 await db.commit()
 
     except Exception as exc:
@@ -225,10 +283,10 @@ async def create_marketing_material_with_ralph(
 
         if loop_result.final_artifact and Path(loop_result.final_artifact).exists():
             p = Path(loop_result.final_artifact)
-            mat.status = MarketingDocStatus.READY
             mat.file_path = str(p)
             mat.file_name = p.name
             mat.file_size_bytes = p.stat().st_size
+            await _run_quality_gate(mat, p, memo_type)
         else:
             mat.status = MarketingDocStatus.FAILED
             mat.error_message = "Ralph Loop 완료 — 최종 산출물 파일이 생성되지 않았습니다"
@@ -261,6 +319,10 @@ async def generate_marketing_material(
 
     mat.status = MarketingDocStatus.GENERATING
     mat.error_message = None
+    mat.quality_score = None
+    mat.quality_status = None
+    mat.quality_issues = None
+    mat.slide_count = None
     await db.commit()
 
     try:
@@ -273,10 +335,10 @@ async def generate_marketing_material(
                 content=mat.parameters,
             ),
         )
-        mat.status = MarketingDocStatus.READY
         mat.file_path = result.output_path
         mat.file_name = result.file_name
         mat.file_size_bytes = result.file_size_bytes
+        await _run_quality_gate(mat, output_path, memo_type)
     except Exception as exc:
         mat.status = MarketingDocStatus.FAILED
         mat.error_message = str(exc)
@@ -297,6 +359,16 @@ async def update_distribution(
 
     if mat.status != MarketingDocStatus.READY or not mat.file_path:
         raise DocumentNotFoundError("배포하려면 READY 상태이고 파일이 존재해야 합니다")
+
+    if mat.quality_status != "PASS":
+        _msg_map = {
+            "FAIL": "품질 게이트 미통과 자료는 배포할 수 없습니다. 자료를 재생성해 주세요.",
+            "CONDITIONAL": "조건부 통과 자료는 배포할 수 없습니다. 재검토 후 재생성해 주세요.",
+            "SKIPPED": "품질 검증이 실행되지 않은 자료입니다. 자료를 재생성해 주세요.",
+        }
+        raise DocumentNotFoundError(
+            _msg_map.get(mat.quality_status or "", "품질 검증을 통과한 자료만 배포할 수 있습니다.")
+        )
 
     if not Path(mat.file_path).exists():
         raise DocumentNotFoundError("파일이 서버에 존재하지 않습니다. 자료를 다시 생성해 주세요.")

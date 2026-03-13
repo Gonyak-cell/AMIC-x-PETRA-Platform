@@ -7,7 +7,11 @@ import {
   getDownloadUrl,
 } from "@/modules/ma/hooks/useMarketingMaterials";
 import type { MarketingMaterial } from "@/modules/ma/types/marketing_material";
-import { MARKETING_STATUS_LABELS } from "@/modules/ma/types/marketing_material";
+import {
+  MARKETING_STATUS_LABELS,
+  QUALITY_STATUS_LABELS,
+  QUALITY_STATUS_VARIANT,
+} from "@/modules/ma/types/marketing_material";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import DistributionModal from "@/modules/ma/components/DistributionModal";
@@ -129,6 +133,39 @@ export default function MarketingMaterialsTab({
                 ),
               },
               {
+                key: "quality_status",
+                label: "품질",
+                render: (row) =>
+                  row.quality_status ? (
+                    <Badge
+                      variant={
+                        (QUALITY_STATUS_VARIANT[row.quality_status] ??
+                          "neutral") as
+                          | "success"
+                          | "warning"
+                          | "error"
+                          | "neutral"
+                      }
+                      pill
+                    >
+                      {QUALITY_STATUS_LABELS[row.quality_status] ??
+                        row.quality_status}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-text-secondary">--</span>
+                  ),
+              },
+              {
+                key: "slide_count",
+                label: "슬라이드",
+                render: (row) =>
+                  row.slide_count != null ? (
+                    <span className="text-xs">{row.slide_count}장</span>
+                  ) : (
+                    <span className="text-xs text-text-secondary">--</span>
+                  ),
+              },
+              {
                 key: "distributed_to",
                 label: "배포",
                 render: (row) =>
@@ -168,6 +205,16 @@ export default function MarketingMaterialsTab({
                             size="sm"
                             variant="ghost"
                             onClick={() => setDistTarget(row)}
+                            disabled={row.quality_status !== "PASS"}
+                            title={
+                              row.quality_status === "FAIL"
+                                ? "품질 게이트 미통과 — 재생성 필요"
+                                : row.quality_status === "CONDITIONAL"
+                                  ? "조건부 통과 — 재검토 필요"
+                                  : row.quality_status === "SKIPPED"
+                                    ? "품질 검증 미실행 — 재생성 필요"
+                                    : undefined
+                            }
                           >
                             <Send size={14} className="mr-1" />
                             배포

@@ -205,6 +205,7 @@ async def test_update_distribution(client, _txn, async_session):
     mat.file_path = tmp.name
     mat.file_name = "test_memo.pptx"
     mat.file_size_bytes = 1024
+    mat.quality_status = "PASS"
     await async_session.commit()
 
     dist_body = {

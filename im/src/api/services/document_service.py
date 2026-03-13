@@ -99,14 +99,20 @@ class DocumentService:
             raise
 
         try:
-            task = generate_im_task.delay(
-                str(document.id),
-                create_data.corp_code,
-                document.generation_config,
-                create_data.data_source,
-            )
-            document.celery_task_id = task.id
-            await self.db.commit()
+            if create_data.data_source == "EXCEL":
+                # EXCEL 소스: 업로드 대기 상태로 전환, Celery 디스패치 건너뜀
+                document.status = DocumentStatus.AWAITING_UPLOAD.value
+                document.celery_task_id = None
+                await self.db.commit()
+            else:
+                task = generate_im_task.delay(
+                    str(document.id),
+                    create_data.corp_code,
+                    document.generation_config,
+                    create_data.data_source,
+                )
+                document.celery_task_id = task.id
+                await self.db.commit()
         except Exception:
             await self.db.rollback()
             raise
@@ -257,9 +263,14 @@ class DocumentService:
                 f"문서가 아직 생성 완료되지 않았습니다 (status={document.status})",
             )
 
-        file_path_str = document.pptx_path if format == "pptx" else document.pdf_path
+        if format == "pdf":
+            raise NotFoundError(
+                "File",
+                "PDF 출력은 현재 지원하지 않습니다 (Phase 2 예정)",
+            )
+        file_path_str = document.pptx_path
         if not file_path_str:
-            raise NotFoundError("File", f"{format.upper()} 파일이 생성되지 않았습니다")
+            raise NotFoundError("File", "PPTX 파일이 생성되지 않았습니다")
 
         file_path = Path(file_path_str)
         if not file_path.exists():

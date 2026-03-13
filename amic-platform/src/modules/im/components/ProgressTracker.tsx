@@ -17,6 +17,7 @@ const STAGES: Stage[] = [
 ];
 
 const STATUS_ORDER: Record<DocumentStatus, number> = {
+  AWAITING_UPLOAD: -2,
   PENDING: 0,
   COLLECTING: 1,
   ANALYZING: 2,
