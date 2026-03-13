@@ -1,6 +1,6 @@
 """Celery 태스크 진행률 추적 유틸리티 (T-I11).
 
-> 마지막 수정: 2026-02-13
+> 마지막 수정: 2026-03-13 17:21:37
 
 Celery 태스크 상태 및 DB Document 진행률을 동기적으로 갱신한다.
 """
@@ -90,6 +90,13 @@ def sync_finalize_document(
     *,
     pptx_path: str | None = None,
     pdf_path: str | None = None,
+    stage_details: dict[str, Any] | None = None,
+    quality_score: float | None = None,
+    quality_status: str | None = None,
+    quality_issues: list[str] | None = None,
+    slide_count: int | None = None,
+    generation_profile: str | None = None,
+    supported_formats: list[str] | None = None,
 ) -> None:
     """파이프라인 완료 시 Document를 COMPLETED로 갱신한다.
 
@@ -97,15 +104,36 @@ def sync_finalize_document(
         document_id: 문서 UUID 문자열.
         pptx_path: 생성된 PPTX 파일 경로.
         pdf_path: 생성된 PDF 파일 경로.
+        stage_details: 생성 성능/품질 메트릭 (render_ms, gate_ms 등).
+        quality_score: 품질 게이트 가중 합산 점수 (0.0~5.0).
+        quality_status: 품질 판정 (PASS/CONDITIONAL/FAIL/LEGACY_UNVERIFIED).
+        quality_issues: 품질 게이트에서 발견된 이슈 목록.
+        slide_count: 생성된 PPTX 슬라이드 수.
+        generation_profile: 생성 프로파일 (fast/balanced/quality).
+        supported_formats: 지원 형식 목록 (["pptx"]).
     """
-    _sync_update_document(
-        document_id,
-        status="COMPLETED",
-        progress_pct=100,
-        pptx_path=pptx_path,
-        pdf_path=pdf_path,
-        completed_at=datetime.now(timezone.utc),
-    )
+    kwargs: dict[str, Any] = {
+        "status": "COMPLETED",
+        "progress_pct": 100,
+        "pptx_path": pptx_path,
+        "pdf_path": pdf_path,
+        "completed_at": datetime.now(timezone.utc),
+    }
+    if stage_details is not None:
+        kwargs["stage_details"] = stage_details
+    if quality_score is not None:
+        kwargs["quality_score"] = quality_score
+    if quality_status is not None:
+        kwargs["quality_status"] = quality_status
+    if quality_issues is not None:
+        kwargs["quality_issues"] = quality_issues
+    if slide_count is not None:
+        kwargs["slide_count"] = slide_count
+    if generation_profile is not None:
+        kwargs["generation_profile"] = generation_profile
+    if supported_formats is not None:
+        kwargs["supported_formats"] = supported_formats
+    _sync_update_document(document_id, **kwargs)
 
 
 def sync_fail_document(document_id: str, error: str = "") -> None:

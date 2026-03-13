@@ -63,6 +63,16 @@ async def lifespan(app: FastAPI):
     # Stale extraction 정리 — 서버 재시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 레코드 복구
     await _cleanup_stale_extractions()
 
+    # 마케팅 자료 템플릿 사전 검증 (서버 시작 차단 안 함)
+    try:
+        from app.pptx.memo_generator import validate_template
+
+        template_warnings = validate_template()
+        for w in template_warnings:
+            logger.warning("Template preflight: %s", w)
+    except Exception:
+        logger.exception("Template preflight 검증 실패 (서버 시작에 영향 없음)")
+
     # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("Deal Management application started")
     yield

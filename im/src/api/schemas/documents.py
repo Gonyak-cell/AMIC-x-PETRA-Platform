@@ -130,6 +130,13 @@ class DocumentResponse(BaseModel):
     pptx_path: str | None
     pdf_path: str | None
     file_size_bytes: int | None
+    stage_details: dict | None = None
+    quality_score: float | None = None
+    quality_status: str | None = None
+    quality_issues: list | None = None
+    slide_count: int | None = None
+    generation_profile: str | None = None
+    supported_formats: list[str] | None = None
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None

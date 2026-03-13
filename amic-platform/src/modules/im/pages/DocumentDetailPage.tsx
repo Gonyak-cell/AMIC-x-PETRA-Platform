@@ -9,10 +9,14 @@ import {
   Building2,
   ClipboardCheck,
   Sparkles,
+  Clock,
+  BarChart3,
+  Upload,
 } from "lucide-react";
 import {
   useDocument,
   useCreateDocument,
+  useUploadFinancials,
   useDownloadDocument,
 } from "@/modules/im/hooks/useDocuments";
 import { useIMRalphSessions } from "@/modules/im/hooks/useIMRalphLoop";
@@ -49,6 +53,8 @@ export default function DocumentDetailPage() {
   );
   const downloadDocument = useDownloadDocument();
   const createDocument = useCreateDocument();
+  const uploadFinancials = useUploadFinancials();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [downloadingFormat, setDownloadingFormat] = useState<
     "pptx" | "pdf" | null
   >(null);
@@ -136,6 +142,14 @@ export default function DocumentDetailPage() {
     }
   };
 
+  const handleRetryUpload = async (file: File) => {
+    try {
+      await uploadFinancials.mutateAsync({ documentId: doc.id, file });
+      toast.success("재무데이터 업로드 성공 — 생성이 시작됩니다");
+    } catch {
+      toast.error("재무데이터 업로드에 실패했습니다");
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Breadcrumbs */}
@@ -306,6 +320,95 @@ export default function DocumentDetailPage() {
                   PDF
                 </Button>
               )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Generation Metrics */}
+      {doc.status === "COMPLETED" && doc.stage_details && (
+        <Card title="Generation Metrics" headerBar>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            {doc.stage_details.generation_ms != null && (
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-text-secondary block">소요 시간</span>
+                  <span className="text-text-dark font-medium">
+                    {doc.stage_details.generation_ms >= 1000
+                      ? `${(doc.stage_details.generation_ms / 1000).toFixed(1)}s`
+                      : `${doc.stage_details.generation_ms}ms`}
+                  </span>
+                </div>
+              </div>
+            )}
+            {doc.stage_details.slide_count != null && (
+              <div className="flex items-start gap-2">
+                <BarChart3 className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-text-secondary block">슬라이드</span>
+                  <span className="text-text-dark font-medium">
+                    {doc.stage_details.slide_count}장
+                  </span>
+                </div>
+              </div>
+            )}
+            {doc.stage_details.file_size_bytes != null && (
+              <div>
+                <span className="text-text-secondary block">파일 크기</span>
+                <span className="text-text-dark font-medium">
+                  {formatBytes(doc.stage_details.file_size_bytes)}
+                </span>
+              </div>
+            )}
+            {doc.stage_details.sections_rendered != null && (
+              <div>
+                <span className="text-text-secondary block">렌더링 섹션</span>
+                <span className="text-text-dark font-medium">
+                  {doc.stage_details.sections_rendered}
+                  {doc.stage_details.sections_failed > 0 && (
+                    <span className="text-negative ml-1">
+                      ({doc.stage_details.sections_failed} 실패)
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Awaiting Upload (Excel 재업로드) */}
+      {doc.status === "AWAITING_UPLOAD" && (
+        <Card title="재무데이터 업로드" headerBar>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-caution font-medium">
+                재무데이터 업로드가 필요합니다.
+              </p>
+              <p className="text-xs text-text-secondary mt-1">
+                Excel 파일을 업로드하면 IM 생성이 자동으로 시작됩니다.
+              </p>
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleRetryUpload(file);
+                }}
+              />
+              <Button
+                variant="primary"
+                icon={Upload}
+                onClick={() => fileInputRef.current?.click()}
+                loading={uploadFinancials.isPending}
+              >
+                Excel 업로드
+              </Button>
             </div>
           </div>
         </Card>

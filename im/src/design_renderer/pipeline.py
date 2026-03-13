@@ -62,11 +62,13 @@ class SectionResult:
 
 @dataclass
 class PipelineResult:
-    """E2E 파이프라인 실행 결과 (PPTX 전용)."""
+    """E2E 파이프라인 실행 결과."""
 
     success: bool = True
     pptx_path: Path | None = None
+    pdf_path: Path | None = None
     total_pptx_slides: int = 0
+    total_pdf_pages: int = 0
     section_results: list[SectionResult] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -121,12 +123,14 @@ class IMPipeline:
         data: IMDocumentData,
         *,
         pptx_path: str | Path | None = None,
+        pdf_path: str | Path | None = None,
     ) -> PipelineResult:
-        """PPTX 생성.
+        """PPTX (및 향후 PDF) 생성.
 
         Args:
             data: IM 문서 입력 데이터.
             pptx_path: PPTX 저장 경로. None이면 저장 없이 결과만 반환.
+            pdf_path: PDF 저장 경로. 현재 미지원 (향후 구현 예정).
 
         Returns:
             파이프라인 실행 결과.
@@ -274,6 +278,11 @@ class IMPipeline:
             logger.info(f"PPTX 저장 완료: {out}")
 
         result.total_pptx_slides = len(prs.slides)
+
+        # 6-1. PDF 변환 (향후 구현 예정)
+        # TODO: pdf_path가 주어지면 PPTX → PDF 변환 수행
+        if pdf_path:
+            logger.info("PDF 변환은 아직 미지원: pdf_path=%s (무시)", pdf_path)
 
         # 7. 결과 집계
         if result.failed_sections:

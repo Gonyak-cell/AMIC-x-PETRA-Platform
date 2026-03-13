@@ -104,6 +104,34 @@ async def upload_financial_data(
     document.generation_config = config
     await session.commit()
 
+    # AWAITING_UPLOAD 상태이면 Celery 태스크 디스패치
+    from src.api.db.models.document import DocumentStatus
+    from src.api.exceptions import ConflictError
+
+    if document.status == DocumentStatus.AWAITING_UPLOAD.value:
+        from src.api.tasks.generate_im import generate_im_task
+
+        task = generate_im_task.delay(
+            str(document.id),
+            document.corp_code,
+            document.generation_config,
+            document.data_source,
+        )
+        document.status = DocumentStatus.PENDING.value
+        document.celery_task_id = task.id
+        await session.commit()
+    elif document.status in (
+        DocumentStatus.PENDING.value,
+        DocumentStatus.COLLECTING.value,
+        DocumentStatus.ANALYZING.value,
+        DocumentStatus.GENERATING.value,
+        DocumentStatus.RENDERING.value,
+    ):
+        raise ConflictError(
+            "Document",
+            f"이미 진행 중인 문서입니다 (status={document.status})",
+        )
+
     return {"status": "uploaded", "filename": file.filename, "size": len(content)}
 
 

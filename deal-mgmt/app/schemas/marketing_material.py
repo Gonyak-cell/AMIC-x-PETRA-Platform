@@ -43,6 +43,10 @@ class MarketingMaterialOut(BaseModel):
     file_path: str | None
     file_name: str | None
     file_size_bytes: int | None
+    quality_score: float | None = None
+    quality_status: str | None = None
+    quality_issues: list | None = None
+    slide_count: int | None = None
     distributed_to: list | None
     distributed_at: str | None
     created_by_email: str | None

@@ -69,6 +69,8 @@ export interface FinancialModel {
   file_size_bytes: number | null;
   ralph_session_id: string | null;
   ralph_score: number | null;
+  quality_status: string | null;
+  quality_report: Record<string, unknown> | null;
   created_by_email: string | null;
   created_at: string;
   updated_at: string;
@@ -206,20 +208,13 @@ export const FM_CATEGORY_GROUPS: Record<string, FMChecklistCategory[]> = {
     "DEPRECIATION_AMORT",
     "CAPEX_FORECAST",
   ],
-  "Working Capital & Cash Flow": [
-    "NWC_ASSUMPTIONS",
-    "FCF_DERIVATION",
-  ],
+  "Working Capital & Cash Flow": ["NWC_ASSUMPTIONS", "FCF_DERIVATION"],
   "Capital Structure & WACC": [
     "FM_DEBT_SCHEDULE",
     "WACC_COMPONENTS",
     "TAX_RATE",
   ],
-  "Valuation": [
-    "DCF_PARAMETERS",
-    "TRADING_MULTIPLES",
-    "TRANSACTION_MULTIPLES",
-  ],
+  Valuation: ["DCF_PARAMETERS", "TRADING_MULTIPLES", "TRANSACTION_MULTIPLES"],
   "Scenarios & Sensitivity": [
     "BASE_SCENARIO",
     "UPSIDE_SCENARIO",
@@ -255,3 +250,19 @@ export const FM_IN_PROGRESS_STATUSES: FinancialModelStatus[] = [
   "GENERATING",
   "FINALIZING",
 ];
+
+/** 품질 상태 Tailwind 색상 */
+export const FM_QUALITY_STATUS_COLORS: Record<string, string> = {
+  PASS: "bg-green-100 text-green-700",
+  CONDITIONAL: "bg-yellow-100 text-yellow-700",
+  FAIL: "bg-red-100 text-red-700",
+  SKIPPED: "bg-gray-100 text-gray-500",
+};
+
+/** 품질 상태 한국어 라벨 */
+export const FM_QUALITY_STATUS_LABELS: Record<string, string> = {
+  PASS: "통과",
+  CONDITIONAL: "조건부",
+  FAIL: "미통과",
+  SKIPPED: "미검증",
+};

@@ -1,4 +1,8 @@
-"""PPTX Programmatic Gate — python-pptx 기반 메모랜덤 프로그래밍 검증."""
+"""PPTX Programmatic Gate — python-pptx 기반 IM 문서 프로그래밍 검증.
+
+deal-mgmt/app/ralph/gates/pptx_gate.py에서 복제.
+import 경로를 IM 모듈용으로 조정하고 동일한 5차원 검증을 수행한다.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,8 @@ import re
 import time
 from typing import Any
 
-from app.ralph.gates.base import DimensionScore, GateResult, QualityGate
-from app.ralph.korean_finance_dict import parse_korean_number
+from src.quality_gate.base import DimensionScore, GateResult, QualityGate
+from src.quality_gate.utils import parse_korean_number
 
 
 class PPTXProgrammaticGate(QualityGate):
@@ -26,7 +30,15 @@ class PPTXProgrammaticGate(QualityGate):
     COLOR_DARK_GREEN = "0F3A32"
     COLOR_LIGHT_GREEN = "26C260"
     COLOR_DARK_GRAY = "3D3D3D"
-    ALLOWED_COLORS = {COLOR_DARK_GREEN, COLOR_LIGHT_GREEN, COLOR_DARK_GRAY, "000000", "FFFFFF", "666666", "999999"}
+    ALLOWED_COLORS = {
+        COLOR_DARK_GREEN,
+        COLOR_LIGHT_GREEN,
+        COLOR_DARK_GRAY,
+        "000000",
+        "FFFFFF",
+        "666666",
+        "999999",
+    }
 
     REQUIRED_SLIDES = {
         "TM": ["Cover", "Disclaimer", "Table of Contents"],
@@ -114,7 +126,9 @@ class PPTXProgrammaticGate(QualityGate):
 
     # ── 검증 레이어 ──────────────────────────────────────────────────────────
 
-    def _check_structure(self, prs: Any, memo_type: str, prd: dict) -> tuple[float, list[str]]:
+    def _check_structure(
+        self, prs: Any, memo_type: str, prd: dict
+    ) -> tuple[float, list[str]]:
         """슬라이드 구조 검증."""
         issues: list[str] = []
         slide_count = len(prs.slides)
@@ -125,7 +139,7 @@ class PPTXProgrammaticGate(QualityGate):
             issues.append(f"슬라이드 수 부족: {slide_count}장 (최소 {min_slides}장)")
 
         # 필수 슬라이드 존재 확인
-        slide_titles = []
+        slide_titles: list[str] = []
         for slide in prs.slides:
             if slide.shapes.title:
                 slide_titles.append(slide.shapes.title.text.strip())
@@ -160,12 +174,17 @@ class PPTXProgrammaticGate(QualityGate):
                     matches = re.findall(pattern, text, re.IGNORECASE)
                     if matches:
                         placeholder_count += len(matches)
-                        issues.append(f"CRITICAL: 슬라이드 {slide_idx} — 플레이스홀더 '{matches[0]}'")
+                        issues.append(
+                            f"CRITICAL: 슬라이드 {slide_idx} — "
+                            f"플레이스홀더 '{matches[0]}'"
+                        )
 
         score = 5.0 if placeholder_count == 0 else max(1.0, 5.0 - placeholder_count)
         return score, issues
 
-    def _check_table_totals(self, prs: Any, source_data: dict | None) -> tuple[float, list[str]]:
+    def _check_table_totals(
+        self, prs: Any, source_data: dict | None
+    ) -> tuple[float, list[str]]:
         """재무 테이블 합계행 정합성."""
         issues: list[str] = []
         table_count = 0
@@ -184,9 +203,14 @@ class PPTXProgrammaticGate(QualityGate):
                     continue  # 너무 작은 테이블은 합계 검증 불필요
 
                 # 마지막 행을 합계행으로 간주
-                last_row_text = [table.cell(rows - 1, c).text.strip() for c in range(cols)]
+                last_row_text = [
+                    table.cell(rows - 1, c).text.strip() for c in range(cols)
+                ]
                 # "합계", "Total", "소계" 패턴 확인
-                if not any(kw in last_row_text[0].lower() for kw in ["합계", "total", "소계", "계"]):
+                if not any(
+                    kw in last_row_text[0].lower()
+                    for kw in ["합계", "total", "소계", "계"]
+                ):
                     continue
 
                 # 데이터 열에 대해 합계 검증
@@ -207,8 +231,9 @@ class PPTXProgrammaticGate(QualityGate):
                     if parseable and abs(total_val - item_sum) > 0.01:
                         error_count += 1
                         issues.append(
-                            f"슬라이드 {slide_idx} 테이블: 열 {c + 1} 합계={total_val}, "
-                            f"항목합={item_sum} (차이: {abs(total_val - item_sum):.2f})"
+                            f"슬라이드 {slide_idx} 테이블: 열 {c + 1} "
+                            f"합계={total_val}, 항목합={item_sum} "
+                            f"(차이: {abs(total_val - item_sum):.2f})"
                         )
 
         if table_count == 0:
@@ -234,7 +259,9 @@ class PPTXProgrammaticGate(QualityGate):
                     for series in plot.series:
                         values = list(series.values)
                         if not values or all(v is None for v in values):
-                            issues.append(f"슬라이드 {slide_idx}: 차트 시리즈에 데이터 없음")
+                            issues.append(
+                                f"슬라이드 {slide_idx}: 차트 시리즈에 데이터 없음"
+                            )
 
                 # 차트 제목 확인
                 if not chart.has_title:
@@ -262,7 +289,10 @@ class PPTXProgrammaticGate(QualityGate):
                         if run.font.name and run.font.name not in self.ALLOWED_FONTS:
                             font_violations += 1
                             if font_violations <= 3:
-                                issues.append(f"슬라이드 {slide_idx}: 비허용 폰트 '{run.font.name}'")
+                                issues.append(
+                                    f"슬라이드 {slide_idx}: "
+                                    f"비허용 폰트 '{run.font.name}'"
+                                )
 
                         # 색상 확인 (테마 색상 _SchemeColor는 .rgb 없음)
                         try:
@@ -274,7 +304,9 @@ class PPTXProgrammaticGate(QualityGate):
                             if rgb not in self.ALLOWED_COLORS:
                                 color_violations += 1
                                 if color_violations <= 3:
-                                    issues.append(f"슬라이드 {slide_idx}: 비허용 색상 #{rgb}")
+                                    issues.append(
+                                        f"슬라이드 {slide_idx}: 비허용 색상 #{rgb}"
+                                    )
 
         total_violations = font_violations + color_violations
         score = max(1.0, 5.0 - total_violations * 0.3)

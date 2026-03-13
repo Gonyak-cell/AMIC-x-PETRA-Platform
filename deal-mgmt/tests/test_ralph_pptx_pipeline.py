@@ -9,7 +9,7 @@ import os
 
 import pytest
 
-from app.pptx.memo_generator import TEMPLATE_PATH, generate_memo
+from app.pptx.memo_generator import TEMPLATE_PATH, generate_memo, validate_template
 from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
 from app.ralph.generators.pptx_generator import RalphMemoGenerator
 
@@ -17,18 +17,10 @@ from app.ralph.generators.pptx_generator import RalphMemoGenerator
 
 
 def _check_template_layouts() -> bool:
-    """템플릿이 존재하고 필수 레이아웃(COVER, MAIN, FOREST)을 포함하는지 확인."""
-    if not TEMPLATE_PATH.exists():
-        return False
+    """템플릿이 존재하고 validate_template()으로 레이아웃 유효성을 확인."""
     try:
-        from pptx import Presentation
-
-        prs = Presentation(str(TEMPLATE_PATH))
-        layout_names: set[str] = set()
-        for master in prs.slide_masters:
-            for layout in master.slide_layouts:
-                layout_names.add(layout.name)
-        return {"COVER", "MAIN", "FOREST"}.issubset(layout_names)
+        warnings = validate_template()
+        return len(warnings) == 0
     except Exception:
         return False
 

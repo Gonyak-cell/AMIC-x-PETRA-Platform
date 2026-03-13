@@ -1,6 +1,6 @@
 """Document ORM 모델 (T-I04).
 
-> 마지막 수정: 2026-02-17 22:55:00
+> 마지막 수정: 2026-03-13 16:16:00
 
 IM 문서 생성 작업 상태 및 결과를 저장한다.
 """
@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     BigInteger,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
 class DocumentStatus(str, enum.Enum):
     """문서 생성 상태."""
 
+    AWAITING_UPLOAD = "AWAITING_UPLOAD"
     PENDING = "PENDING"
     COLLECTING = "COLLECTING"
     ANALYZING = "ANALYZING"
@@ -123,6 +125,32 @@ class Document(Base):
     )
     file_size_bytes: Mapped[int | None] = mapped_column(
         BigInteger,
+        nullable=True,
+    )
+
+    # 품질 게이트 결과
+    quality_score: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+    quality_status: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+    quality_issues: Mapped[list[Any] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=True,
+    )
+    slide_count: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    generation_profile: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+    supported_formats: Mapped[list[str] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
     )
 

@@ -53,9 +53,16 @@ def _mock_document(owner_id: uuid.UUID, **kwargs) -> MagicMock:
     doc.pdf_path = kwargs.get("pdf_path", "/tmp/test.pdf")
     doc.file_size_bytes = 1024
     doc.generation_config = kwargs.get("generation_config", {})
+    doc.stage_details = kwargs.get("stage_details")
     doc.created_at = now
     doc.updated_at = now
     doc.completed_at = now
+    doc.quality_score = kwargs.get("quality_score")
+    doc.quality_status = kwargs.get("quality_status")
+    doc.quality_issues = kwargs.get("quality_issues")
+    doc.slide_count = kwargs.get("slide_count")
+    doc.generation_profile = kwargs.get("generation_profile")
+    doc.supported_formats = kwargs.get("supported_formats")
     return doc
 
 

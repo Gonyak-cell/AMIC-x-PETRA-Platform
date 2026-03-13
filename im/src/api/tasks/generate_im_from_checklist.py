@@ -1,6 +1,6 @@
 """체크리스트 기반 IM 생성 Celery 태스크.
 
-> 마지막 수정: 2026-02-25 21:00:00
+> 마지막 수정: 2026-03-13 17:21:37
 
 사용자가 확정한 체크리스트를 기반으로 IM 문서(PPTX)를 생성한다.
 
@@ -16,7 +16,6 @@ from __future__ import annotations
 import logging
 import uuid as uuid_mod
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from src.api.tasks.base_task import PipelineTask
@@ -174,17 +173,15 @@ def generate_im_from_checklist_task(
         # ------------------------------------------------------------------
         # Step 4: PPTX 생성
         # ------------------------------------------------------------------
-        from src.api.config import get_config
+        from src.api.tasks.output_utils import (
+            compute_im_output_dir,
+            compute_im_pptx_path,
+        )
         from src.design_renderer.pipeline import IMPipeline
 
-        api_config = get_config()
-        output_dir = Path(api_config.output_dir) / document_id
+        output_dir = compute_im_output_dir(document_id)
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        pptx_filename = (
-            f"IM_{im_data.company_name_kr or 'document'}_{document_id[:8]}.pptx"
-        )
-        pptx_path = output_dir / pptx_filename
+        pptx_path = compute_im_pptx_path(document_id)
 
         pipeline = IMPipeline()
         pipeline_result = pipeline.generate(im_data, pptx_path=str(pptx_path))
@@ -201,25 +198,46 @@ def generate_im_from_checklist_task(
         pptx_path_str = str(pptx_path) if pptx_path.exists() else None
 
         # ------------------------------------------------------------------
+        # Step 4.5: 품질 게이트 실행
+        # ------------------------------------------------------------------
+        from src.api.tasks.generate_im import _run_im_quality_gate
+
+        quality_kwargs = _run_im_quality_gate(pptx_path_str, document_id)
+        gate_metrics = quality_kwargs.pop("_gate_metrics", {})
+
+        # ------------------------------------------------------------------
         # Step 5: DB 업데이트 (Document + Checklist)
         # ------------------------------------------------------------------
+        render_ms = int(pipeline_result.elapsed_seconds * 1000)
+        gate_ms = gate_metrics.get("gate_ms", 0)
+        stage_details: dict[str, Any] = {
+            "render_ms": render_ms,
+            "generation_ms": render_ms,  # FE 하위 호환
+            "pipeline_slides": pipeline_result.total_pptx_slides,
+            "pipeline_errors": len(pipeline_result.errors),
+            "pipeline_warnings": len(pipeline_result.warnings),
+            "narrative_sections": len(im_data.narratives),
+            "sections_rendered": len(pipeline_result.successful_sections),
+            "sections_failed": len(pipeline_result.failed_sections),
+        }
+        stage_details.update(gate_metrics)
+        stage_details["total_ms"] = render_ms + gate_ms
+
+        doc_values: dict[str, Any] = {
+            "pptx_path": pptx_path_str,
+            "status": "COMPLETED",
+            "progress_pct": 100,
+            "completed_at": datetime.now(timezone.utc),
+            "stage_details": stage_details,
+            **quality_kwargs,
+        }
+
         with Session(engine) as session:
             # Document 업데이트
             session.execute(
                 update(Document)
                 .where(Document.id == uuid_mod.UUID(document_id))
-                .values(
-                    pptx_path=pptx_path_str,
-                    status="COMPLETED",
-                    progress_pct=100,
-                    completed_at=datetime.now(timezone.utc),
-                    stage_details={
-                        "pipeline_slides": pipeline_result.total_pptx_slides,
-                        "pipeline_errors": len(pipeline_result.errors),
-                        "pipeline_warnings": len(pipeline_result.warnings),
-                        "narrative_sections": len(im_data.narratives),
-                    },
-                )
+                .values(**doc_values)
             )
 
             # Checklist 상태 → COMPLETED

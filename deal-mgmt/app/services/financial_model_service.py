@@ -663,13 +663,45 @@ async def run_finalize_and_generate(
                 )
                 output_path = str(builder.save(path))
 
-            # FM 상태 업데이트
-            fm.status = FinancialModelStatus.READY
+            # 품질 게이트 실행 (Finalize 단계)
+            try:
+                from app.ralph.gates.excel_gate import ExcelProgrammaticGate as _EGate
+
+                _gate = _EGate()
+                _gate_result = await _gate.evaluate(
+                    output_path,
+                    prd_section={"model_type": fm.model_type},
+                )
+
+                fm.quality_report = {
+                    "dimensions": [
+                        {"name": d.name, "label": d.label, "score": d.score, "weight": d.weight}
+                        for d in _gate_result.dimensions
+                    ],
+                    "issues": _gate_result.issues,
+                    "critical_flags": _gate_result.critical_flags,
+                    "weighted_score": _gate_result.weighted_score,
+                }
+
+                if _gate_result.critical_flags:
+                    fm.status = FinancialModelStatus.PENDING_REVIEW
+                    fm.quality_status = "FAIL"
+                    fm.error_message = f"품질 게이트 미통과: {_gate_result.critical_flags}"
+                else:
+                    fm.status = FinancialModelStatus.READY
+                    fm.quality_status = "PASS" if _gate_result.weighted_score >= 3.5 else "CONDITIONAL"
+                    fm.error_message = None
+            except Exception as _gate_exc:
+                logger.warning("FM %s 품질 게이트 실행 실패: %s", fm_id, _gate_exc)
+                fm.status = FinancialModelStatus.READY
+                fm.quality_status = "SKIPPED"
+                fm.error_message = None
+
+            # FM 파일 정보 업데이트
             fm.file_path = output_path
             fm.file_name = file_name
             fm.file_size_bytes = Path(output_path).stat().st_size
             fm.ralph_score = result.final_score
-            fm.error_message = None
             await db.commit()
 
             logger.info(

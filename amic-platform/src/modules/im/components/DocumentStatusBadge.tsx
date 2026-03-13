@@ -2,6 +2,7 @@ import { Badge, type BadgeVariant } from "@/components/ui";
 import type { DocumentStatus } from "@/modules/im/types/document";
 
 const STATUS_LABEL: Record<DocumentStatus, string> = {
+  AWAITING_UPLOAD: "업로드 대기",
   PENDING: "Pending",
   COLLECTING: "Collecting",
   ANALYZING: "Analyzing",
@@ -12,6 +13,7 @@ const STATUS_LABEL: Record<DocumentStatus, string> = {
 };
 
 const STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
+  AWAITING_UPLOAD: "warning",
   PENDING: "neutral",
   COLLECTING: "info",
   ANALYZING: "info",

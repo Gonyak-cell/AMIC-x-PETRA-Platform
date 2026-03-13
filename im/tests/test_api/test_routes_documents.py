@@ -55,6 +55,13 @@ def _make_document(owner_id: uuid.UUID, **kwargs) -> MagicMock:
     doc.created_at = now
     doc.updated_at = now
     doc.completed_at = kwargs.get("completed_at")
+    doc.stage_details = kwargs.get("stage_details")
+    doc.quality_score = kwargs.get("quality_score")
+    doc.quality_status = kwargs.get("quality_status")
+    doc.quality_issues = kwargs.get("quality_issues")
+    doc.slide_count = kwargs.get("slide_count")
+    doc.generation_profile = kwargs.get("generation_profile")
+    doc.supported_formats = kwargs.get("supported_formats")
     return doc
 
 

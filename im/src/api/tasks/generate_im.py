@@ -1,6 +1,6 @@
 """IM 문서 생성 마스터 태스크 (T-I12).
 
-> 마지막 수정: 2026-02-17 22:55:00
+> 마지막 수정: 2026-03-13 17:21:37
 
 Celery Chord 패턴으로 5단계 파이프라인을 오케스트레이션한다.
 Stage 1: 데이터 수집 (group) → merge  |  수동 입력  |  Excel 로드
@@ -468,13 +468,36 @@ def render_document_task(
     update_progress(self, document_id, "RENDERING", 80)
 
     try:
-        data = dict_to_im_data(im_data_dict)
-        # Design Renderer 호출
+        from src.api.tasks.output_utils import (
+            compute_im_output_dir,
+            compute_im_pptx_path,
+        )
         from src.design_renderer.pipeline import IMPipeline
 
-        pipeline_result = IMPipeline().generate(data)
-        im_data_dict["pptx_path"] = getattr(pipeline_result, "pptx_path", None)
-        im_data_dict["pdf_path"] = getattr(pipeline_result, "pdf_path", None)
+        # 출력 경로 계산 및 디렉토리 생성
+        output_dir = compute_im_output_dir(document_id)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        pptx_output = compute_im_pptx_path(document_id)
+
+        data = dict_to_im_data(im_data_dict)
+        pipeline_result = IMPipeline().generate(data, pptx_path=pptx_output)
+
+        im_data_dict["pptx_path"] = (
+            str(pipeline_result.pptx_path) if pipeline_result.pptx_path else None
+        )
+        im_data_dict["pdf_path"] = None  # PDF 미지원
+
+        # 파이프라인 메트릭을 finalize_document_task에 전달
+        render_ms = int(pipeline_result.elapsed_seconds * 1000)
+        im_data_dict["pipeline_metrics"] = {
+            "render_ms": render_ms,
+            "generation_ms": render_ms,  # FE 하위 호환
+            "slide_count": pipeline_result.total_pptx_slides,
+            "warning_count": len(pipeline_result.warnings),
+            "error_count": len(pipeline_result.errors),
+            "sections_rendered": len(pipeline_result.successful_sections),
+            "sections_failed": len(pipeline_result.failed_sections),
+        }
 
     except Exception as exc:
         logger.error("문서 렌더링 실패: %s", exc)
@@ -482,6 +505,72 @@ def render_document_task(
 
     update_progress(self, document_id, "RENDERING", 95)
     return im_data_dict
+
+
+def _run_im_quality_gate(pptx_path: str | None, document_id: str) -> dict[str, Any]:
+    """IM 품질 게이트를 실행하고 DB 갱신용 kwargs를 반환한다.
+
+    PPTXProgrammaticGate 5차원 검증을 수행하고, 결과에 따라
+    quality_score, quality_status, quality_issues 등을 dict로 반환한다.
+    게이트 예외 시 fail-closed(FAIL) 처리한다.
+
+    Args:
+        pptx_path: 생성된 PPTX 파일 경로.
+        document_id: 문서 UUID 문자열 (로깅용).
+
+    Returns:
+        DB 갱신용 kwargs dict.
+    """
+    import time as _time
+
+    result: dict[str, Any] = {
+        "generation_profile": "quality",
+        "supported_formats": ["pptx"],
+    }
+    if not pptx_path:
+        result["quality_status"] = "FAIL"
+        result["quality_issues"] = ["PPTX 파일 경로 없음"]
+        return result
+
+    try:
+        from src.quality_gate.pptx_gate import PPTXProgrammaticGate
+
+        gate_start = _time.perf_counter_ns()
+        gate = PPTXProgrammaticGate()
+        gate_result = asyncio.run(
+            gate.evaluate(pptx_path, prd_section={"memo_type": "IM"})
+        )
+        gate_ms = int((_time.perf_counter_ns() - gate_start) / 1_000_000)
+
+        result["quality_score"] = gate_result.weighted_score
+        result["quality_issues"] = [str(i) for i in gate_result.issues]
+        result["_gate_metrics"] = {"gate_ms": gate_ms}
+
+        # slide_count — render_document_task에서 이미 pipeline_metrics에 포함되어
+        # 있으므로 여기서는 fallback으로만 사용
+        try:
+            from pptx import Presentation
+
+            result["slide_count"] = len(Presentation(pptx_path).slides)
+        except Exception:
+            pass
+
+        if gate_result.critical_flags:
+            result["quality_status"] = "FAIL"
+        else:
+            result["quality_status"] = (
+                "PASS" if gate_result.weighted_score >= 3.5 else "CONDITIONAL"
+            )
+    except Exception as exc:
+        logger.warning(
+            "IM 품질 게이트 실패 (fail-closed): document=%s — %s",
+            document_id,
+            exc,
+        )
+        result["quality_status"] = "FAIL"
+        result["quality_issues"] = [f"품질 게이트 실행 실패: {exc}"]
+
+    return result
 
 
 @celery_app.task(
@@ -505,14 +594,43 @@ def finalize_document_task(
     Returns:
         최종 결과 dict.
     """
+    from pathlib import Path as _Path
+
     from src.api.tasks.progress import sync_finalize_document
 
     pptx_path = im_data_dict.get("pptx_path")
     pdf_path = im_data_dict.get("pdf_path")
 
+    # 성능/품질 메트릭 수집
+    stage_details: dict[str, Any] = {}
+    if pptx_path:
+        try:
+            stage_details["file_size_bytes"] = _Path(pptx_path).stat().st_size
+        except OSError:
+            pass
+    # render_document_task에서 전달된 파이프라인 메트릭
+    if "pipeline_metrics" in im_data_dict:
+        stage_details.update(im_data_dict["pipeline_metrics"])
+
+    # 품질 게이트 실행
+    quality_kwargs = _run_im_quality_gate(pptx_path, document_id)
+
+    # stage_details에 gate_ms + total_ms 추가
+    gate_metrics = quality_kwargs.pop("_gate_metrics", {})
+    stage_details.update(gate_metrics)
+    render_ms = stage_details.get("render_ms", 0)
+    gate_ms = gate_metrics.get("gate_ms", 0)
+    stage_details["total_ms"] = render_ms + gate_ms
+
     # Celery 상태 + DB 동시 갱신
     update_progress(self, document_id, "COMPLETED", 100)
-    sync_finalize_document(document_id, pptx_path=pptx_path, pdf_path=pdf_path)
+    sync_finalize_document(
+        document_id,
+        pptx_path=pptx_path,
+        pdf_path=pdf_path,
+        stage_details=stage_details or None,
+        **quality_kwargs,
+    )
 
     # Ralph Loop Pass 1 (Draft) — PPTX 디자인 품질 개선
     if pptx_path:

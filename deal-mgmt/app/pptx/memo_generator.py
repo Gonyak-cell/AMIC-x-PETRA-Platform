@@ -93,12 +93,39 @@ class GenerationResult:
 # ── 헬퍼 함수 ──────────────────────────────────────────────────
 
 
+LAYOUT_ALIASES: dict[str, list[str]] = {
+    "COVER": ["COVER", "BLANK", "BLANK_PGNO"],
+    "MAIN": ["MAIN", "MAIN_w/Andersen"],
+    "FOREST": ["FOREST"],
+}
+
+
 def get_layout(prs, layout_name):
-    for master in prs.slide_masters:
-        for layout in master.slide_layouts:
-            if layout.name == layout_name:
-                return layout
-    raise ValueError(f"레이아웃 '{layout_name}'을 찾을 수 없습니다.")
+    """레이아웃을 별칭 순서대로 탐색한다."""
+    candidates = LAYOUT_ALIASES.get(layout_name, [layout_name])
+    for candidate in candidates:
+        for master in prs.slide_masters:
+            for layout in master.slide_layouts:
+                if layout.name == candidate:
+                    return layout
+    raise ValueError(f"레이아웃 '{layout_name}'을 찾을 수 없습니다 (후보: {candidates}).")
+
+
+def validate_template() -> list[str]:
+    """템플릿 파일 존재 + 필수 레이아웃 해석 가능 여부를 검증한다."""
+    from pptx import Presentation
+
+    warnings: list[str] = []
+    if not TEMPLATE_PATH.exists():
+        warnings.append(f"템플릿 파일 누락: {TEMPLATE_PATH}")
+        return warnings
+    prs = Presentation(str(TEMPLATE_PATH))
+    for alias_name in LAYOUT_ALIASES:
+        try:
+            get_layout(prs, alias_name)
+        except ValueError as e:
+            warnings.append(str(e))
+    return warnings
 
 
 def add_logo(slide):

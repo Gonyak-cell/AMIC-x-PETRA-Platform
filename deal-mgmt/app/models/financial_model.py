@@ -61,6 +61,10 @@ class FinancialModel(Base, TimestampMixin):
     )
     ralph_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # ── 품질 게이트 결과 ─────────────────────────────────────
+    quality_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    quality_report: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+
     # ── 생성자 ─────────────────────────────────────────────────
     created_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 

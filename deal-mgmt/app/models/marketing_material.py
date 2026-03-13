@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Enum, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,6 +41,12 @@ class MarketingMaterial(Base, TimestampMixin):
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     file_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # ── 품질 검증 결과 ───────────────────────────────────────
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quality_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    quality_issues: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    slide_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # ── 배포 추적 ──────────────────────────────────────────────
     distributed_to: Mapped[list | None] = mapped_column(

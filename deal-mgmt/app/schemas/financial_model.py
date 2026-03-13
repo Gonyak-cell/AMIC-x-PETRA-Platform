@@ -44,6 +44,8 @@ class FinancialModelOut(BaseModel):
     file_size_bytes: int | None
     ralph_session_id: UUID | None
     ralph_score: float | None
+    quality_status: str | None = None
+    quality_report: dict | None = None
     created_by_email: str | None
     created_at: datetime
     updated_at: datetime

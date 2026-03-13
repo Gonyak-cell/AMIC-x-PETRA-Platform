@@ -13,6 +13,8 @@ import {
   FM_MODEL_TYPE_LABELS,
   FM_STATUS_LABELS,
   FM_STATUS_COLORS,
+  FM_QUALITY_STATUS_COLORS,
+  FM_QUALITY_STATUS_LABELS,
 } from "@/modules/ma/types/financial_model";
 import FMChecklistReview from "@/modules/ma/components/fm/FMChecklistReview";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
@@ -161,6 +163,25 @@ export default function ModelsTab({ txnId, canWrite }: ModelsTabProps) {
                     row.ralph_score != null ? (
                       <span className="text-xs font-medium">
                         {row.ralph_score.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-secondary">--</span>
+                    ),
+                },
+                {
+                  key: "quality_status",
+                  header: "품질",
+                  render: (row) =>
+                    row.quality_status ? (
+                      <span
+                        className={cn(
+                          "inline-flex px-2 py-0.5 text-xs font-semibold rounded-full",
+                          FM_QUALITY_STATUS_COLORS[row.quality_status] ??
+                            "bg-gray-100 text-gray-500",
+                        )}
+                      >
+                        {FM_QUALITY_STATUS_LABELS[row.quality_status] ??
+                          row.quality_status}
                       </span>
                     ) : (
                       <span className="text-xs text-text-secondary">--</span>

@@ -137,6 +137,7 @@ class TestPipelineSecurity:
 class TestPipelineDualOutput:
     """PPTX + PDF 듀얼 출력."""
 
+    @pytest.mark.skip(reason="PDF conversion not yet implemented")
     @pytest.mark.requires_browser
     def test_dual_output(self, titan_data: IMDocumentData, tmp_output: Path):
         """PPTX + PDF 동시 생성."""

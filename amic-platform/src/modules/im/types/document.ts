@@ -14,6 +14,7 @@ export const DATA_SOURCE_BADGE: Record<DataSource, { label: string; cls: string 
 export type { IndustryId };
 
 export type DocumentStatus =
+  | "AWAITING_UPLOAD"
   | "PENDING"
   | "COLLECTING"
   | "ANALYZING"
@@ -133,6 +134,7 @@ export interface Document {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  stage_details: Record<string, number> | null;
 }
 
 export interface DocumentCreate {
@@ -156,6 +158,7 @@ export interface DocumentListParams {
 
 /** Statuses indicating the document is still being processed. */
 export const IN_PROGRESS_STATUSES: DocumentStatus[] = [
+  "AWAITING_UPLOAD",
   "PENDING",
   "COLLECTING",
   "ANALYZING",
