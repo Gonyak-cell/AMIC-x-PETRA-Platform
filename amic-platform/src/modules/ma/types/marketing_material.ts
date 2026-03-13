@@ -1,6 +1,6 @@
 export type MarketingDocType = "TM" | "DM" | "IM";
 
-export type MarketingDocStatus = "DRAFT" | "GENERATING" | "READY" | "FAILED";
+export type MarketingDocStatus = "DRAFT" | "GENERATING" | "READY" | "CONDITIONAL_READY" | "FAILED";
 
 export interface MarketingMaterial {
   id: string;
@@ -18,6 +18,8 @@ export interface MarketingMaterial {
   quality_status: string | null;
   quality_issues: string[] | null;
   slide_count: number | null;
+  pipeline_metrics: Record<string, number> | null;
+  distribution_eligible?: boolean;
   distributed_to: string[] | null;
   distributed_at: string | null;
   created_by_email: string | null;
@@ -49,6 +51,7 @@ export const MARKETING_STATUS_LABELS: Record<MarketingDocStatus, string> = {
   DRAFT: "초안",
   GENERATING: "생성 중",
   READY: "완료",
+  CONDITIONAL_READY: "조건부 완료",
   FAILED: "실패",
 };
 

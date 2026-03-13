@@ -100,7 +100,7 @@ def sync_finalize_document(
 ) -> None:
     """파이프라인 완료 시 Document 상태를 갱신한다.
 
-    품질 게이트 FAIL 시 QUALITY_FAILED, 그 외 COMPLETED로 설정한다.
+    품질 게이트 결과에 따라 COMPLETED/QUALITY_CONDITIONAL/QUALITY_FAILED로 설정한다.
 
     Args:
         document_id: 문서 UUID 문자열.
@@ -114,7 +114,12 @@ def sync_finalize_document(
         generation_profile: 생성 프로파일 (fast/balanced/quality).
         supported_formats: 지원 형식 목록 (["pptx"]).
     """
-    final_status = "QUALITY_FAILED" if quality_status == "FAIL" else "COMPLETED"
+    if quality_status == "FAIL":
+        final_status = "QUALITY_FAILED"
+    elif quality_status == "CONDITIONAL":
+        final_status = "QUALITY_CONDITIONAL"
+    else:
+        final_status = "COMPLETED"
     kwargs: dict[str, Any] = {
         "status": final_status,
         "progress_pct": 100,
@@ -142,7 +147,7 @@ def sync_finalize_document(
 def sync_fail_document(document_id: str, error: str = "") -> None:
     """파이프라인 실패 시 Document를 FAILED로 갱신한다 (멱등).
 
-    이미 COMPLETED 또는 FAILED 상태인 문서는 건너뛴다.
+    이미 완료 상태(COMPLETED/QUALITY_CONDITIONAL/QUALITY_FAILED/FAILED)인 문서는 건너뛴다.
     여러 에러 콜백이 동시에 호출될 수 있으므로 멱등성을 보장한다.
 
     Args:
@@ -163,7 +168,9 @@ def sync_fail_document(document_id: str, error: str = "") -> None:
                 update(Document)
                 .where(
                     Document.id == document_id,
-                    Document.status.notin_(["COMPLETED", "QUALITY_FAILED", "FAILED"]),
+                    Document.status.notin_(
+                        ["COMPLETED", "QUALITY_CONDITIONAL", "QUALITY_FAILED", "FAILED"]
+                    ),
                 )
                 .values(
                     status="FAILED",

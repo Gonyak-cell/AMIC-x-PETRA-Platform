@@ -378,6 +378,60 @@ jobs:
           npm ci
           npm audit --audit-level=high || true
 
+  # ─── Visual Diff Tests (soft fail) ─────────────────────────────────
+  visual-diff:
+    name: Visual Diff
+    needs: detect-changes
+    if: >-
+      needs.detect-changes.outputs.deal-mgmt == 'true' ||
+      needs.detect-changes.outputs.im == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      FORCE_VISUAL_DIFF: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice poppler-utils
+      - name: Install deal-mgmt + visual diff deps
+        if: needs.detect-changes.outputs.deal-mgmt == 'true'
+        working-directory: deal-mgmt
+        run: |
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install scikit-image pdf2image Pillow
+      - name: Run deal-mgmt visual diff
+        if: needs.detect-changes.outputs.deal-mgmt == 'true'
+        working-directory: deal-mgmt
+        run: pytest tests/visual_diff/ -v --tb=short -o "addopts="
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          JWT_SECRET: test-jwt-secret-key
+      - name: Install IM + visual diff deps
+        if: needs.detect-changes.outputs.im == 'true'
+        working-directory: im
+        run: |
+          pip install -r requirements.txt 2>/dev/null || true
+          pip install scikit-image pdf2image Pillow
+      - name: Run IM visual diff
+        if: needs.detect-changes.outputs.im == 'true'
+        working-directory: im
+        run: pytest tests/visual_diff/ -v --tb=short -o "addopts="
+        env:
+          PYTHONPATH: ${{ github.workspace }}/im
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-diff-results
+          path: |
+            deal-mgmt/tests/visual_diff/output/
+            im/tests/visual_diff/output/
+          retention-days: 14
+
   # ─── Quality Gate (the ONLY required status check) ─────────────────
   ci-gate:
     name: CI Gate
@@ -391,6 +445,7 @@ jobs:
       - unit-test
       - build
       - e2e-test
+      - visual-diff
       - secrets-scan
       - security-sast
       - dependency-scan
@@ -400,7 +455,7 @@ jobs:
         with:
           allowed-skips: >-
             backend-deal-mgmt, backend-kiis, backend-fdd, backend-im,
-            quality, unit-test, build, e2e-test,
+            quality, unit-test, build, e2e-test, visual-diff,
             security-sast, dependency-scan
-          allowed-failures: e2e-test
+          allowed-failures: e2e-test, visual-diff
           jobs: ${{ toJSON(needs) }}

@@ -32,9 +32,9 @@ class TestDocumentStatus:
     """DocumentStatus enum 테스트."""
 
     def test_all_statuses_defined(self) -> None:
-        """8개 상태가 정의되어 있다."""
+        """10개 상태가 정의되어 있다."""
         statuses = list(DocumentStatus)
-        assert len(statuses) == 8
+        assert len(statuses) == 10
 
     def test_status_values(self) -> None:
         """각 상태 값이 올바르다."""

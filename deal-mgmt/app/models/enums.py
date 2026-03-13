@@ -410,7 +410,8 @@ class MarketingDocType(enum.StrEnum):
 class MarketingDocStatus(enum.StrEnum):
     DRAFT = "DRAFT"  # 파라미터 저장 완료, 생성 전
     GENERATING = "GENERATING"  # PPTX 렌더링 중
-    READY = "READY"  # 다운로드 가능
+    READY = "READY"  # 다운로드 가능, 배포 가능
+    CONDITIONAL_READY = "CONDITIONAL_READY"  # 다운로드 가능, 배포 불가 (품질 조건부)
     FAILED = "FAILED"  # 생성 실패
 
 

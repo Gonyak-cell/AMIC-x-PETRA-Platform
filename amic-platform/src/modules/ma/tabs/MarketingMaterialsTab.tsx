@@ -120,11 +120,13 @@ export default function MarketingMaterialsTab({
                     variant={
                       row.status === "READY"
                         ? "success"
-                        : row.status === "GENERATING"
+                        : row.status === "CONDITIONAL_READY"
                           ? "warning"
-                          : row.status === "FAILED"
-                            ? "error"
-                            : "neutral"
+                          : row.status === "GENERATING"
+                            ? "warning"
+                            : row.status === "FAILED"
+                              ? "error"
+                              : "neutral"
                     }
                     pill
                   >
@@ -166,6 +168,24 @@ export default function MarketingMaterialsTab({
                   ),
               },
               {
+                key: "pipeline_metrics",
+                label: "소요 시간",
+                render: (row) => {
+                  const total = row.pipeline_metrics?.total_ms;
+                  if (total == null)
+                    return (
+                      <span className="text-xs text-text-secondary">--</span>
+                    );
+                  return (
+                    <span className="text-xs">
+                      {total >= 1000
+                        ? `${(total / 1000).toFixed(1)}s`
+                        : `${total}ms`}
+                    </span>
+                  );
+                },
+              },
+              {
                 key: "distributed_to",
                 label: "배포",
                 render: (row) =>
@@ -186,16 +206,13 @@ export default function MarketingMaterialsTab({
                 label: "작업",
                 render: (row) => (
                   <div className="flex gap-2">
-                    {row.status === "READY" && (
+                    {(row.status === "READY" || row.status === "CONDITIONAL_READY") && (
                       <>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            window.open(
-                              getDownloadUrl(txnId, row.id),
-                              "_blank",
-                            )
+                            window.open(getDownloadUrl(txnId, row.id), "_blank")
                           }
                         >
                           다운로드
@@ -205,15 +222,11 @@ export default function MarketingMaterialsTab({
                             size="sm"
                             variant="ghost"
                             onClick={() => setDistTarget(row)}
-                            disabled={row.quality_status !== "PASS"}
+                            disabled={row.distribution_eligible !== true}
                             title={
-                              row.quality_status === "FAIL"
-                                ? "품질 게이트 미통과 — 재생성 필요"
-                                : row.quality_status === "CONDITIONAL"
-                                  ? "조건부 통과 — 재검토 필요"
-                                  : row.quality_status === "SKIPPED"
-                                    ? "품질 검증 미실행 — 재생성 필요"
-                                    : undefined
+                              row.distribution_eligible !== true
+                                ? "품질 검증 통과(PASS) 자료만 배포할 수 있습니다"
+                                : undefined
                             }
                           >
                             <Send size={14} className="mr-1" />

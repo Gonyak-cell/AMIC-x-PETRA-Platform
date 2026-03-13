@@ -223,11 +223,13 @@ def generate_im_from_checklist_task(
         stage_details.update(gate_metrics)
         stage_details["total_ms"] = render_ms + gate_ms
 
-        checklist_final_status = (
-            "QUALITY_FAILED"
-            if quality_kwargs.get("quality_status") == "FAIL"
-            else "COMPLETED"
-        )
+        _qs = quality_kwargs.get("quality_status")
+        if _qs == "FAIL":
+            checklist_final_status = "QUALITY_FAILED"
+        elif _qs == "CONDITIONAL":
+            checklist_final_status = "QUALITY_CONDITIONAL"
+        else:
+            checklist_final_status = "COMPLETED"
         doc_values: dict[str, Any] = {
             "pptx_path": pptx_path_str,
             "status": checklist_final_status,
@@ -282,7 +284,7 @@ def generate_im_from_checklist_task(
         return {
             "document_id": document_id,
             "checklist_id": checklist_id,
-            "status": "COMPLETED",
+            "status": checklist_final_status,
             "pptx_path": pptx_path_str,
             "total_slides": pipeline_result.total_pptx_slides,
             "errors": pipeline_result.errors,

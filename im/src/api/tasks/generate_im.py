@@ -623,11 +623,13 @@ def finalize_document_task(
     stage_details["total_ms"] = render_ms + gate_ms
 
     # Celery 상태 + DB 동시 갱신
-    final_status = (
-        "QUALITY_FAILED"
-        if quality_kwargs.get("quality_status") == "FAIL"
-        else "COMPLETED"
-    )
+    _qs = quality_kwargs.get("quality_status")
+    if _qs == "FAIL":
+        final_status = "QUALITY_FAILED"
+    elif _qs == "CONDITIONAL":
+        final_status = "QUALITY_CONDITIONAL"
+    else:
+        final_status = "COMPLETED"
     update_progress(self, document_id, final_status, 100)
     sync_finalize_document(
         document_id,
@@ -653,7 +655,7 @@ def finalize_document_task(
 
     return {
         "document_id": document_id,
-        "status": "COMPLETED",
+        "status": final_status,
         "pptx_path": pptx_path,
         "pdf_path": pdf_path,
     }

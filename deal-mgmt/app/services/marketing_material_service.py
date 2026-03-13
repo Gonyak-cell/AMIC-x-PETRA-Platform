@@ -23,8 +23,20 @@ async def _run_quality_gate(
     output_path: Path,
     memo_type: str,
     generation_ms: int | None = None,
+    *,
+    template_load_ms: int = 0,
+    render_ms: int = 0,
+    persist_ms: int = 0,
 ) -> None:
-    """품질 게이트를 실행하고 mat 필드를 갱신한다."""
+    """품질 게이트를 실행하고 mat 필드를 갱신한다.
+
+    게이트 예외 시 fail-closed(FAILED + FAIL) 처리한다.
+    """
+    import time as _time
+
+    _gate_t0 = _time.monotonic()
+    _gate_ms: int = 0
+
     try:
         from app.ralph.gates.pptx_gate import PPTXProgrammaticGate
 
@@ -33,6 +45,7 @@ async def _run_quality_gate(
             str(output_path),
             prd_section={"memo_type": memo_type.upper()},
         )
+        _gate_ms = int((_time.monotonic() - _gate_t0) * 1000)
 
         mat.quality_score = gate_result.weighted_score
         mat.quality_issues = [str(i) for i in gate_result.issues]
@@ -51,22 +64,37 @@ async def _run_quality_gate(
             mat.quality_status = "FAIL"
             mat.error_message = f"품질 게이트 미통과: {gate_result.critical_flags}"
         else:
-            mat.status = MarketingDocStatus.READY
-            mat.quality_status = "PASS" if gate_result.weighted_score >= 3.5 else "CONDITIONAL"
+            if gate_result.weighted_score >= 3.5:
+                mat.status = MarketingDocStatus.READY
+                mat.quality_status = "PASS"
+            else:
+                mat.status = MarketingDocStatus.CONDITIONAL_READY
+                mat.quality_status = "CONDITIONAL"
     except Exception as gate_exc:
         import logging as _logging
 
+        _gate_ms = int((_time.monotonic() - _gate_t0) * 1000)
         _logging.getLogger(__name__).warning("품질 게이트 실행 실패 (mat=%s): %s", mat.id, gate_exc)
-        mat.status = MarketingDocStatus.READY
-        mat.quality_status = "SKIPPED"
+        mat.status = MarketingDocStatus.FAILED
+        mat.quality_status = "FAIL"
+        mat.error_message = "품질 게이트 실행 중 내부 오류가 발생했습니다"
 
     # 성능 메트릭을 parameters에 병합
+    metrics: dict[str, int] = {
+        "template_load_ms": template_load_ms,
+        "render_ms": render_ms,
+        "gate_ms": _gate_ms,
+        "persist_ms": persist_ms,
+    }
     if generation_ms is not None:
-        metrics = {"generation_ms": generation_ms}
-        if mat.parameters:
-            mat.parameters = {**mat.parameters, "_metrics": metrics}
-        else:
-            mat.parameters = {"_metrics": metrics}
+        metrics["generation_ms"] = generation_ms
+        metrics["total_ms"] = generation_ms + _gate_ms
+    if mat.slide_count is not None:
+        metrics["slide_count"] = mat.slide_count
+    if mat.parameters:
+        mat.parameters = {**mat.parameters, "_metrics": metrics}
+    else:
+        mat.parameters = {"_metrics": metrics}
 
 
 # ── doc_type → memo_generator 유형 매핑 ─────────────────────────
@@ -184,6 +212,35 @@ async def _generate_pptx(
 
         output_path = out_dir / f"{memo_type}_{mat_id}.pptx"
 
+        # Gate A: Template Preflight — 렌더링 전 템플릿 무결성 검증
+        from app.pptx.memo_generator import TEMPLATE_PATH
+        from app.pptx.template_spec import get_spec
+
+        spec = get_spec(memo_type.upper())
+        if spec:
+            from app.ralph.gates.template_preflight import TemplatePreflight
+
+            preflight = TemplatePreflight()
+            preflight_result = await preflight.evaluate(
+                str(TEMPLATE_PATH),
+                prd_section={"memo_type": memo_type.upper()},
+                source_data={"template_spec": spec},
+            )
+            if not preflight_result.passed:
+                async with session_factory() as db:
+                    q = select(MarketingMaterial).where(
+                        MarketingMaterial.id == mat_id,
+                    )
+                    r = await db.execute(q)
+                    mat = r.scalar_one_or_none()
+                    if mat:
+                        mat.status = MarketingDocStatus.FAILED
+                        mat.quality_status = "FAIL"
+                        mat.quality_issues = preflight_result.issues
+                        mat.error_message = f"템플릿 프리플라이트 실패: {preflight_result.issues}"
+                        await db.commit()
+                return
+
         # 동기 함수를 스레드풀에서 실행 (python-pptx는 동기 IO)
         _t0 = _time.monotonic()
         result = await asyncio.get_running_loop().run_in_executor(
@@ -207,7 +264,15 @@ async def _generate_pptx(
                 mat.file_name = result.file_name
                 mat.file_size_bytes = result.file_size_bytes
 
-                await _run_quality_gate(mat, output_path, memo_type, _generation_ms)
+                await _run_quality_gate(
+                    mat,
+                    output_path,
+                    memo_type,
+                    _generation_ms,
+                    template_load_ms=result.template_load_ms,
+                    render_ms=result.render_ms,
+                    persist_ms=result.persist_ms,
+                )
 
                 await db.commit()
 
@@ -217,8 +282,11 @@ async def _generate_pptx(
             r = await db.execute(q)
             mat = r.scalar_one_or_none()
             if mat:
+                import logging as _log
+
+                _log.getLogger(__name__).error("PPTX 생성 실패 (mat=%s): %s", mat_id, exc)
                 mat.status = MarketingDocStatus.FAILED
-                mat.error_message = str(exc)
+                mat.error_message = "PPTX 생성 중 내부 오류가 발생했습니다"
                 await db.commit()
 
 
@@ -338,10 +406,20 @@ async def generate_marketing_material(
         mat.file_path = result.output_path
         mat.file_name = result.file_name
         mat.file_size_bytes = result.file_size_bytes
-        await _run_quality_gate(mat, output_path, memo_type)
+        await _run_quality_gate(
+            mat,
+            output_path,
+            memo_type,
+            template_load_ms=result.template_load_ms,
+            render_ms=result.render_ms,
+            persist_ms=result.persist_ms,
+        )
     except Exception as exc:
+        import logging as _log
+
+        _log.getLogger(__name__).error("재생성 실패 (mat=%s): %s", mat.id, exc)
         mat.status = MarketingDocStatus.FAILED
-        mat.error_message = str(exc)
+        mat.error_message = "PPTX 재생성 중 내부 오류가 발생했습니다"
 
     await db.commit()
     await db.refresh(mat)

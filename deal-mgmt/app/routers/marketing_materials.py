@@ -165,7 +165,7 @@ async def download_marketing_material(
     except DocumentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-    if mat.status != MarketingDocStatus.READY or not mat.file_path:
+    if mat.status not in (MarketingDocStatus.READY, MarketingDocStatus.CONDITIONAL_READY) or not mat.file_path:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"파일이 아직 준비되지 않았습니다. 현재 상태: {mat.status}",
