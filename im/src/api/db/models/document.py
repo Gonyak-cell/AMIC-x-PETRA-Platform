@@ -46,6 +46,7 @@ class DocumentStatus(str, enum.Enum):
     GENERATING = "GENERATING"
     RENDERING = "RENDERING"
     COMPLETED = "COMPLETED"
+    QUALITY_FAILED = "QUALITY_FAILED"
     FAILED = "FAILED"
 
 

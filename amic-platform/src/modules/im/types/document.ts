@@ -30,6 +30,7 @@ export type DocumentStatus =
   | "GENERATING"
   | "RENDERING"
   | "COMPLETED"
+  | "QUALITY_FAILED"
   | "FAILED";
 
 /** Valid backend section IDs (matches im_document.py SECTION_IDS + INDUSTRY_SECTION_IDS). */

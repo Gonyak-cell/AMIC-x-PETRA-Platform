@@ -286,7 +286,7 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Download Section (Completed) */}
-      {doc.status === "COMPLETED" && (
+      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && (
         <Card title="Download" headerBar>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
@@ -303,9 +303,9 @@ export default function DocumentDetailPage() {
                   Completed: {new Date(doc.completed_at).toLocaleString()}
                 </p>
               )}
-              {doc.quality_status === "FAIL" && (
+              {doc.status === "QUALITY_FAILED" && (
                 <p className="text-xs text-negative mt-1">
-                  품질 검증 미통과 — 다운로드가 제한됩니다.
+                  품질 검증 미통과 문서입니다. 다운로드는 가능합니다.
                 </p>
               )}
             </div>
@@ -317,7 +317,7 @@ export default function DocumentDetailPage() {
                   onClick={() => handleDownload("pptx")}
                   loading={downloadingFormat === "pptx"}
                   disabled={
-                    downloadingFormat !== null || doc.quality_status === "FAIL"
+                    downloadingFormat !== null
                   }
                 >
                   PPTX
@@ -330,7 +330,7 @@ export default function DocumentDetailPage() {
                   onClick={() => handleDownload("pdf")}
                   loading={downloadingFormat === "pdf"}
                   disabled={
-                    downloadingFormat !== null || doc.quality_status === "FAIL"
+                    downloadingFormat !== null
                   }
                 >
                   PDF
@@ -342,7 +342,7 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Quality Gate Results */}
-      {doc.status === "COMPLETED" && doc.quality_status && (
+      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && doc.quality_status && (
         <Card title="품질 검증" headerBar>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -392,7 +392,7 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Generation Metrics */}
-      {doc.status === "COMPLETED" && doc.stage_details && (
+      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && doc.stage_details && (
         <Card title="Generation Metrics" headerBar>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             {(doc.stage_details.render_ms ?? doc.stage_details.generation_ms) !=
@@ -553,7 +553,7 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Diagrams (Excalidraw) */}
-      {doc.status === "COMPLETED" && (
+      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && (
         <DiagramsCard
           documentId={doc.id}
           diagrams={diagrams ?? []}

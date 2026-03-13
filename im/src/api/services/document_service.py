@@ -257,7 +257,10 @@ class DocumentService:
         """
         document = await self.get_document(document_id, current_user)
 
-        if document.status != DocumentStatus.COMPLETED.value:
+        if document.status not in (
+            DocumentStatus.COMPLETED.value,
+            DocumentStatus.QUALITY_FAILED.value,
+        ):
             raise NotFoundError(
                 "File",
                 f"문서가 아직 생성 완료되지 않았습니다 (status={document.status})",

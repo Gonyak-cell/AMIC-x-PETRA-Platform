@@ -98,7 +98,9 @@ def sync_finalize_document(
     generation_profile: str | None = None,
     supported_formats: list[str] | None = None,
 ) -> None:
-    """파이프라인 완료 시 Document를 COMPLETED로 갱신한다.
+    """파이프라인 완료 시 Document 상태를 갱신한다.
+
+    품질 게이트 FAIL 시 QUALITY_FAILED, 그 외 COMPLETED로 설정한다.
 
     Args:
         document_id: 문서 UUID 문자열.
@@ -112,8 +114,9 @@ def sync_finalize_document(
         generation_profile: 생성 프로파일 (fast/balanced/quality).
         supported_formats: 지원 형식 목록 (["pptx"]).
     """
+    final_status = "QUALITY_FAILED" if quality_status == "FAIL" else "COMPLETED"
     kwargs: dict[str, Any] = {
-        "status": "COMPLETED",
+        "status": final_status,
         "progress_pct": 100,
         "pptx_path": pptx_path,
         "pdf_path": pdf_path,
@@ -160,7 +163,7 @@ def sync_fail_document(document_id: str, error: str = "") -> None:
                 update(Document)
                 .where(
                     Document.id == document_id,
-                    Document.status.notin_(["COMPLETED", "FAILED"]),
+                    Document.status.notin_(["COMPLETED", "QUALITY_FAILED", "FAILED"]),
                 )
                 .values(
                     status="FAILED",

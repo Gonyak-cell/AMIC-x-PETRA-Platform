@@ -223,9 +223,14 @@ def generate_im_from_checklist_task(
         stage_details.update(gate_metrics)
         stage_details["total_ms"] = render_ms + gate_ms
 
+        checklist_final_status = (
+            "QUALITY_FAILED"
+            if quality_kwargs.get("quality_status") == "FAIL"
+            else "COMPLETED"
+        )
         doc_values: dict[str, Any] = {
             "pptx_path": pptx_path_str,
-            "status": "COMPLETED",
+            "status": checklist_final_status,
             "progress_pct": 100,
             "completed_at": datetime.now(timezone.utc),
             "stage_details": stage_details,
@@ -249,7 +254,7 @@ def generate_im_from_checklist_task(
 
             session.commit()
 
-        update_progress(self, document_id, "COMPLETED", 100)
+        update_progress(self, document_id, checklist_final_status, 100)
 
         # Ralph Loop Pass 2 (Final) — 체크리스트 기반 최종 품질 보증
         if pptx_path_str:

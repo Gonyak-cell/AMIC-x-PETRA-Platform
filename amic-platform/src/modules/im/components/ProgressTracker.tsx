@@ -24,6 +24,7 @@ const STATUS_ORDER: Record<DocumentStatus, number> = {
   GENERATING: 3,
   RENDERING: 4,
   COMPLETED: 5,
+  QUALITY_FAILED: 5,
   FAILED: -1,
 };
 

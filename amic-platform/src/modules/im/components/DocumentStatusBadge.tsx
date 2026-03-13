@@ -16,6 +16,7 @@ const STATUS_LABEL: Record<DocumentStatus, string> = {
   GENERATING: "Generating",
   RENDERING: "Rendering",
   COMPLETED: "Completed",
+  QUALITY_FAILED: "품질 미통과",
   FAILED: "Failed",
 };
 
@@ -27,6 +28,7 @@ const STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
   GENERATING: "warning",
   RENDERING: "warning",
   COMPLETED: "success",
+  QUALITY_FAILED: "error",
   FAILED: "error",
 };
 

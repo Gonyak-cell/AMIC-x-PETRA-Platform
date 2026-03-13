@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, CheckCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
+import { FileText, Plus, CheckCircle, Loader2, AlertTriangle, ShieldAlert, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
 import { useDocuments } from "@/modules/im/hooks/useDocuments";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import {
@@ -107,6 +107,7 @@ export default function DocumentListPage() {
       IN_PROGRESS_STATUSES.includes(d.status),
     ).length,
     completed: items.filter((d) => d.status === "COMPLETED").length,
+    qualityFailed: items.filter((d) => d.status === "QUALITY_FAILED").length,
     failed: items.filter((d) => d.status === "FAILED").length,
   }), [data?.total, items]);
 
@@ -140,23 +141,24 @@ export default function DocumentListPage() {
       />
 
       {/* KPI Cards */}
-      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard label="Total" value={String(kpis.total)} icon={FileText} />
         <KpiCard label="In Progress" value={String(kpis.inProgress)} icon={Loader2} variant="caution" />
         <KpiCard label="Completed" value={String(kpis.completed)} icon={CheckCircle} variant="positive" />
+        <KpiCard label="Quality Failed" value={String(kpis.qualityFailed)} icon={ShieldAlert} variant="warning" />
         <KpiCard label="Failed" value={String(kpis.failed)} icon={AlertTriangle} variant="negative" />
       </div>
 
       {/* Status Filters */}
       <div className="flex gap-2">
-        {(["ALL", "IN_PROGRESS", "COMPLETED", "FAILED"] as const).map((s) => (
+        {(["ALL", "IN_PROGRESS", "COMPLETED", "QUALITY_FAILED", "FAILED"] as const).map((s) => (
           <Button
             key={s}
             variant={statusFilter === s ? "accent" : "ghost"}
             size="sm"
             onClick={() => { setStatusFilter(s); setPage(0); }}
           >
-            {s === "ALL" ? "All" : s === "IN_PROGRESS" ? "In Progress" : s.charAt(0) + s.slice(1).toLowerCase()}
+            {s === "ALL" ? "All" : s === "IN_PROGRESS" ? "In Progress" : s === "QUALITY_FAILED" ? "품질 미통과" : s.charAt(0) + s.slice(1).toLowerCase()}
           </Button>
         ))}
       </div>
