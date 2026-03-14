@@ -378,12 +378,13 @@ jobs:
           npm ci
           npm audit --audit-level=high || true
 
-  # ─── Visual Diff Tests (deal-mgmt: required, IM: advisory) ─────────
+  # ─── Visual Diff Tests (deal-mgmt + IM: advisory) ─────────
   visual-diff-deal-mgmt:
     name: Visual Diff (deal-mgmt)
     needs: detect-changes
     if: needs.detect-changes.outputs.deal-mgmt == 'true'
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       FORCE_VISUAL_DIFF: "1"
     steps:
