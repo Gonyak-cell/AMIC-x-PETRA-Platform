@@ -1,0 +1,83 @@
+name: Update Golden Baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module to regenerate baselines for"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - deal-mgmt
+          - im
+
+permissions:
+  contents: read
+
+jobs:
+  update-golden:
+    name: Regenerate Visual Diff Baselines
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice poppler-utils
+
+      # --- deal-mgmt ---------------------------------------------------
+      - name: Install deal-mgmt dependencies
+        if: ${{ inputs.module == 'deal-mgmt' || inputs.module == 'all' }}
+        working-directory: deal-mgmt
+        run: |
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install scikit-image pdf2image Pillow
+
+      - name: Generate deal-mgmt approved baselines
+        if: ${{ inputs.module == 'deal-mgmt' || inputs.module == 'all' }}
+        working-directory: deal-mgmt
+        run: python scripts/generate_approved.py
+
+      # --- im ----------------------------------------------------------
+      - name: Install im dependencies
+        if: ${{ inputs.module == 'im' || inputs.module == 'all' }}
+        working-directory: im
+        run: |
+          pip install -r requirements.txt 2>/dev/null || true
+          pip install scikit-image pdf2image Pillow
+
+      - name: Generate im approved baselines
+        if: ${{ inputs.module == 'im' || inputs.module == 'all' }}
+        working-directory: im
+        run: python scripts/generate_approved.py
+
+      # --- Upload artifacts --------------------------------------------
+      - name: Upload deal-mgmt approved PNGs
+        if: ${{ inputs.module == 'deal-mgmt' || inputs.module == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deal-mgmt-approved-baselines
+          path: deal-mgmt/tests/fixtures/golden_samples/*/approved/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload im approved PNGs
+        if: ${{ inputs.module == 'im' || inputs.module == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: im-approved-baselines
+          path: im/tests/fixtures/golden_samples/*/approved/
+          if-no-files-found: warn
+          retention-days: 14
