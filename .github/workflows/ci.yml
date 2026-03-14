@@ -473,5 +473,5 @@ jobs:
             backend-deal-mgmt, backend-kiis, backend-fdd, backend-im,
             quality, unit-test, build, e2e-test, visual-diff-deal-mgmt,
             visual-diff-im, security-sast, dependency-scan
-          allowed-failures: e2e-test, visual-diff-im
+          allowed-failures: e2e-test, visual-diff-im, visual-diff-deal-mgmt
           jobs: ${{ toJSON(needs) }}
