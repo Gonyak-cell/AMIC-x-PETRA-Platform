@@ -27,10 +27,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install system dependencies
         run: |
@@ -48,7 +48,7 @@ jobs:
       - name: Generate deal-mgmt approved baselines
         if: ${{ inputs.module == 'deal-mgmt' || inputs.module == 'all' }}
         working-directory: deal-mgmt
-        run: python scripts/generate_approved.py
+        run: python scripts/generate_approved.py --force
 
       # --- im ----------------------------------------------------------
       - name: Install im dependencies
@@ -61,7 +61,7 @@ jobs:
       - name: Generate im approved baselines
         if: ${{ inputs.module == 'im' || inputs.module == 'all' }}
         working-directory: im
-        run: python scripts/generate_approved.py
+        run: python scripts/generate_approved.py --force
 
       # --- Upload artifacts --------------------------------------------
       - name: Upload deal-mgmt approved PNGs
@@ -70,7 +70,7 @@ jobs:
         with:
           name: deal-mgmt-approved-baselines
           path: deal-mgmt/tests/fixtures/golden_samples/*/approved/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload im approved PNGs
@@ -79,5 +79,5 @@ jobs:
         with:
           name: im-approved-baselines
           path: im/tests/fixtures/golden_samples/*/approved/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14

@@ -117,8 +117,8 @@ def generate_variant(variant: str, force: bool) -> None:
         png_paths = pptx_to_pngs(str(pptx_path), str(png_tmp_dir), dpi=150)
 
         if not png_paths:
-            print("  경고: PNG 변환 결과가 없습니다. LibreOffice/pdf2image 확인 필요.", file=sys.stderr)
-            return
+            print("  오류: PNG 변환 결과가 없습니다. LibreOffice/pdf2image 확인 필요.", file=sys.stderr)
+            sys.exit(1)
 
         print(f"  PNG 변환 완료: {len(png_paths)}개")
 
