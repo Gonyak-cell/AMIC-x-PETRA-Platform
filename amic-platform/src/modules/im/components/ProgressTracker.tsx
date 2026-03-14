@@ -24,6 +24,7 @@ const STATUS_ORDER: Record<DocumentStatus, number> = {
   GENERATING: 3,
   RENDERING: 4,
   COMPLETED: 5,
+  QUALITY_CONDITIONAL: 5,
   QUALITY_FAILED: 5,
   FAILED: -1,
 };
@@ -32,7 +33,8 @@ const STATUS_ORDER: Record<DocumentStatus, number> = {
 const PROGRESS_STAGE_MAP = [0, 20, 40, 55, 80, 100];
 
 function getFailedStageIndex(progressPct: number): number {
-  const pct = Number.isFinite(progressPct) && progressPct >= 0 ? progressPct : 0;
+  const pct =
+    Number.isFinite(progressPct) && progressPct >= 0 ? progressPct : 0;
   for (let i = PROGRESS_STAGE_MAP.length - 1; i >= 0; i--) {
     if (pct >= PROGRESS_STAGE_MAP[i]) return i;
   }
@@ -44,11 +46,11 @@ interface ProgressTrackerProps {
   progressPct: number;
 }
 
-export function ProgressTracker({
-  status,
-  progressPct,
-}: ProgressTrackerProps) {
-  const safePct = Number.isFinite(progressPct) && progressPct >= 0 ? Math.min(progressPct, 100) : 0;
+export function ProgressTracker({ status, progressPct }: ProgressTrackerProps) {
+  const safePct =
+    Number.isFinite(progressPct) && progressPct >= 0
+      ? Math.min(progressPct, 100)
+      : 0;
   const currentIndex = STATUS_ORDER[status];
   const isFailed = status === "FAILED";
   const failedAtIndex = isFailed ? getFailedStageIndex(safePct) : -1;
@@ -107,8 +109,12 @@ export function ProgressTracker({
                     "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0",
                     isCompleted && "bg-amic text-white",
                     isCurrent && "bg-amic/20 text-amic ring-2 ring-amic",
-                    isFailedStage && "bg-negative/20 text-negative ring-2 ring-negative",
-                    !isCompleted && !isCurrent && !isFailedStage && "bg-gray-100 text-text-secondary",
+                    isFailedStage &&
+                      "bg-negative/20 text-negative ring-2 ring-negative",
+                    !isCompleted &&
+                      !isCurrent &&
+                      !isFailedStage &&
+                      "bg-gray-100 text-text-secondary",
                   )}
                 >
                   {isCompleted ? (
