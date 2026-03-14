@@ -30,6 +30,7 @@ export type DocumentStatus =
   | "GENERATING"
   | "RENDERING"
   | "COMPLETED"
+  | "QUALITY_CONDITIONAL"
   | "QUALITY_FAILED"
   | "FAILED";
 

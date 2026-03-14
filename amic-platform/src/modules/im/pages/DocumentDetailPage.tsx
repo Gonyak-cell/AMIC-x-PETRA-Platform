@@ -286,7 +286,9 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Download Section (Completed) */}
-      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && (
+      {(doc.status === "COMPLETED" ||
+        doc.status === "QUALITY_CONDITIONAL" ||
+        doc.status === "QUALITY_FAILED") && (
         <Card title="Download" headerBar>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
@@ -303,6 +305,11 @@ export default function DocumentDetailPage() {
                   Completed: {new Date(doc.completed_at).toLocaleString()}
                 </p>
               )}
+              {doc.status === "QUALITY_CONDITIONAL" && (
+                <p className="text-xs text-caution mt-1">
+                  품질 조건부 통과 문서입니다. 일부 항목을 확인해 주세요.
+                </p>
+              )}
               {doc.status === "QUALITY_FAILED" && (
                 <p className="text-xs text-negative mt-1">
                   품질 검증 미통과 문서입니다. 다운로드는 가능합니다.
@@ -316,9 +323,7 @@ export default function DocumentDetailPage() {
                   icon={Download}
                   onClick={() => handleDownload("pptx")}
                   loading={downloadingFormat === "pptx"}
-                  disabled={
-                    downloadingFormat !== null
-                  }
+                  disabled={downloadingFormat !== null}
                 >
                   PPTX
                 </Button>
@@ -329,9 +334,7 @@ export default function DocumentDetailPage() {
                   icon={Download}
                   onClick={() => handleDownload("pdf")}
                   loading={downloadingFormat === "pdf"}
-                  disabled={
-                    downloadingFormat !== null
-                  }
+                  disabled={downloadingFormat !== null}
                 >
                   PDF
                 </Button>
@@ -342,139 +345,147 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Quality Gate Results */}
-      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && doc.quality_status && (
-        <Card title="품질 검증" headerBar>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <ShieldCheck className="h-5 w-5 text-text-secondary flex-shrink-0" />
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-text-secondary">품질 점수</span>
-                {doc.quality_score != null && (
-                  <span
-                    className={`text-lg font-bold ${
-                      doc.quality_score >= 3.5
-                        ? "text-accent"
-                        : doc.quality_score >= 2.5
-                          ? "text-caution"
-                          : "text-negative"
-                    }`}
-                  >
-                    {doc.quality_score.toFixed(1)}/5.0
-                  </span>
-                )}
-                <span className="text-sm text-text-secondary">
-                  {IM_QUALITY_STATUS_LABELS[
-                    doc.quality_status as QualityStatus
-                  ] ?? doc.quality_status}
-                </span>
-              </div>
-            </div>
-            {doc.quality_issues && doc.quality_issues.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>검출 이슈 ({doc.quality_issues.length}건)</span>
-                </div>
-                <ul className="space-y-1 text-xs text-text-secondary pl-5 list-disc">
-                  {doc.quality_issues.slice(0, 10).map((issue, i) => (
-                    <li key={i}>{issue}</li>
-                  ))}
-                  {doc.quality_issues.length > 10 && (
-                    <li className="text-text-muted">
-                      외 {doc.quality_issues.length - 10}건
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Generation Metrics */}
-      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && doc.stage_details && (
-        <Card title="Generation Metrics" headerBar>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            {(doc.stage_details.render_ms ?? doc.stage_details.generation_ms) !=
-              null && (
-              <div className="flex items-start gap-2">
-                <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <span className="text-text-secondary block">렌더링</span>
-                  <span className="text-text-dark font-medium">
-                    {(() => {
-                      const ms =
-                        doc.stage_details!.render_ms ??
-                        doc.stage_details!.generation_ms;
-                      return ms >= 1000
-                        ? `${(ms / 1000).toFixed(1)}s`
-                        : `${ms}ms`;
-                    })()}
-                  </span>
-                </div>
-              </div>
-            )}
-            {doc.stage_details.gate_ms != null && (
-              <div className="flex items-start gap-2">
-                <ShieldCheck className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <span className="text-text-secondary block">품질 게이트</span>
-                  <span className="text-text-dark font-medium">
-                    {doc.stage_details.gate_ms >= 1000
-                      ? `${(doc.stage_details.gate_ms / 1000).toFixed(1)}s`
-                      : `${doc.stage_details.gate_ms}ms`}
-                  </span>
-                </div>
-              </div>
-            )}
-            {doc.stage_details.total_ms != null && (
-              <div className="flex items-start gap-2">
-                <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <span className="text-text-secondary block">전체 소요</span>
-                  <span className="text-text-dark font-medium">
-                    {doc.stage_details.total_ms >= 1000
-                      ? `${(doc.stage_details.total_ms / 1000).toFixed(1)}s`
-                      : `${doc.stage_details.total_ms}ms`}
-                  </span>
-                </div>
-              </div>
-            )}
-            {doc.stage_details.slide_count != null && (
-              <div className="flex items-start gap-2">
-                <BarChart3 className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <span className="text-text-secondary block">슬라이드</span>
-                  <span className="text-text-dark font-medium">
-                    {doc.stage_details.slide_count}장
-                  </span>
-                </div>
-              </div>
-            )}
-            {doc.stage_details.file_size_bytes != null && (
-              <div>
-                <span className="text-text-secondary block">파일 크기</span>
-                <span className="text-text-dark font-medium">
-                  {formatBytes(doc.stage_details.file_size_bytes)}
-                </span>
-              </div>
-            )}
-            {doc.stage_details.sections_rendered != null && (
-              <div>
-                <span className="text-text-secondary block">렌더링 섹션</span>
-                <span className="text-text-dark font-medium">
-                  {doc.stage_details.sections_rendered}
-                  {doc.stage_details.sections_failed > 0 && (
-                    <span className="text-negative ml-1">
-                      ({doc.stage_details.sections_failed} 실패)
+      {(doc.status === "COMPLETED" ||
+        doc.status === "QUALITY_CONDITIONAL" ||
+        doc.status === "QUALITY_FAILED") &&
+        doc.quality_status && (
+          <Card title="품질 검증" headerBar>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <ShieldCheck className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-text-secondary">품질 점수</span>
+                  {doc.quality_score != null && (
+                    <span
+                      className={`text-lg font-bold ${
+                        doc.quality_score >= 3.5
+                          ? "text-accent"
+                          : doc.quality_score >= 2.5
+                            ? "text-caution"
+                            : "text-negative"
+                      }`}
+                    >
+                      {doc.quality_score.toFixed(1)}/5.0
                     </span>
                   )}
-                </span>
+                  <span className="text-sm text-text-secondary">
+                    {IM_QUALITY_STATUS_LABELS[
+                      doc.quality_status as QualityStatus
+                    ] ?? doc.quality_status}
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
-        </Card>
-      )}
+              {doc.quality_issues && doc.quality_issues.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>검출 이슈 ({doc.quality_issues.length}건)</span>
+                  </div>
+                  <ul className="space-y-1 text-xs text-text-secondary pl-5 list-disc">
+                    {doc.quality_issues.slice(0, 10).map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                    {doc.quality_issues.length > 10 && (
+                      <li className="text-text-muted">
+                        외 {doc.quality_issues.length - 10}건
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+      {/* Generation Metrics */}
+      {(doc.status === "COMPLETED" ||
+        doc.status === "QUALITY_CONDITIONAL" ||
+        doc.status === "QUALITY_FAILED") &&
+        doc.stage_details && (
+          <Card title="Generation Metrics" headerBar>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              {(doc.stage_details.render_ms ??
+                doc.stage_details.generation_ms) != null && (
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-text-secondary block">렌더링</span>
+                    <span className="text-text-dark font-medium">
+                      {(() => {
+                        const ms =
+                          doc.stage_details!.render_ms ??
+                          doc.stage_details!.generation_ms;
+                        return ms >= 1000
+                          ? `${(ms / 1000).toFixed(1)}s`
+                          : `${ms}ms`;
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {doc.stage_details.gate_ms != null && (
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-text-secondary block">
+                      품질 게이트
+                    </span>
+                    <span className="text-text-dark font-medium">
+                      {doc.stage_details.gate_ms >= 1000
+                        ? `${(doc.stage_details.gate_ms / 1000).toFixed(1)}s`
+                        : `${doc.stage_details.gate_ms}ms`}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {doc.stage_details.total_ms != null && (
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-text-secondary block">전체 소요</span>
+                    <span className="text-text-dark font-medium">
+                      {doc.stage_details.total_ms >= 1000
+                        ? `${(doc.stage_details.total_ms / 1000).toFixed(1)}s`
+                        : `${doc.stage_details.total_ms}ms`}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {doc.stage_details.slide_count != null && (
+                <div className="flex items-start gap-2">
+                  <BarChart3 className="h-4 w-4 text-text-secondary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-text-secondary block">슬라이드</span>
+                    <span className="text-text-dark font-medium">
+                      {doc.stage_details.slide_count}장
+                    </span>
+                  </div>
+                </div>
+              )}
+              {doc.stage_details.file_size_bytes != null && (
+                <div>
+                  <span className="text-text-secondary block">파일 크기</span>
+                  <span className="text-text-dark font-medium">
+                    {formatBytes(doc.stage_details.file_size_bytes)}
+                  </span>
+                </div>
+              )}
+              {doc.stage_details.sections_rendered != null && (
+                <div>
+                  <span className="text-text-secondary block">렌더링 섹션</span>
+                  <span className="text-text-dark font-medium">
+                    {doc.stage_details.sections_rendered}
+                    {doc.stage_details.sections_failed > 0 && (
+                      <span className="text-negative ml-1">
+                        ({doc.stage_details.sections_failed} 실패)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
       {/* Awaiting Upload (Excel 재업로드) */}
       {doc.status === "AWAITING_UPLOAD" && (
@@ -553,7 +564,9 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Diagrams (Excalidraw) */}
-      {(doc.status === "COMPLETED" || doc.status === "QUALITY_FAILED") && (
+      {(doc.status === "COMPLETED" ||
+        doc.status === "QUALITY_CONDITIONAL" ||
+        doc.status === "QUALITY_FAILED") && (
         <DiagramsCard
           documentId={doc.id}
           diagrams={diagrams ?? []}
