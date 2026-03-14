@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "total_slides": 8,
+  "slides": [
+    {
+      "index": 0,
+      "shape_count": 5,
+      "text_content": [
+        "PROJECT GOLDEN",
+        "Discussion Memo",
+        "March 2026",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 70
+    },
+    {
+      "index": 1,
+      "shape_count": 2,
+      "text_content": [
+        "DISCLAIMER",
+        "본 자료는 내부 논의 목적으로만 작성되었습니다.",
+        "March 2026",
+        "주식회사 페트라브릿지파트너스"
+      ],
+      "shape_types": [
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 61
+    },
+    {
+      "index": 2,
+      "shape_count": 4,
+      "text_content": [
+        "TABLE OF CONTENTS",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "table",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": true,
+      "text_length": 48
+    },
+    {
+      "index": 3,
+      "shape_count": 4,
+      "text_content": [
+        "Deal Overview",
+        "골든기업 지분 55% 매각을 위한 Discussion Memo입니다."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 51
+    },
+    {
+      "index": 4,
+      "shape_count": 4,
+      "text_content": [
+        "Market Analysis",
+        "국내 B2B SaaS 시장 규모 및 성장성 분석입니다.",
+        "•  시장 규모: 2.1조원 (2025E) → 3.2조원 (2028E)",
+        "•  CAGR: 18% (2025-2028E)",
+        "•  성장 동인: 디지털 전환 가속, 구독 경제 확대"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 138
+    },
+    {
+      "index": 5,
+      "shape_count": 4,
+      "text_content": [
+        "Transaction Structure",
+        "거래 구조 개요"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 29
+    },
+    {
+      "index": 6,
+      "shape_count": 4,
+      "text_content": [
+        "Financial Analysis",
+        "EV/EBITDA 8~10x 적용 시 기업가치 5,760~7,200억원 추정."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 61
+    },
+    {
+      "index": 7,
+      "shape_count": 3,
+      "text_content": [
+        "Thank You",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 40
+    }
+  ],
+  "total_shape_count": 30,
+  "total_text_length": 498
+}

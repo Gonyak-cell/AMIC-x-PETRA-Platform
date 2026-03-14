@@ -1,0 +1,74 @@
+{
+  "memo_type": "tm",
+  "project_code": "GOLDEN_TM",
+  "content": {
+    "project_name": "PROJECT GOLDEN",
+    "memo_type": "Teaser Memo",
+    "date": "March 2026",
+    "disclaimer": "본 자료(이하 \"Teaser Memo\")는 정보 제공 목적으로만 작성되었으며, 투자 권유를 구성하지 않습니다.",
+    "slides": [
+      {
+        "layout": "MAIN",
+        "title": "Executive Summary",
+        "body": [
+          {"type": "text", "content": "골든기업은 국내 B2B SaaS 시장의 선도기업으로, 최근 3개년 매출 CAGR 25%를 달성하였습니다."},
+          {"type": "bullet", "items": [
+            "매출액: 500억원 (2025E)",
+            "EBITDA: 125억원 (2025E)",
+            "EBITDA 마진율: 25.0%"
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Investment Highlights",
+        "body": [
+          {"type": "section_header", "content": "핵심 투자 매력"},
+          {"type": "bullet", "items": [
+            "매출 CAGR 25% — SaaS 반복 매출 기반의 안정적 성장",
+            "EBITDA 마진율 25% — 플랫폼 비즈니스의 높은 수익성",
+            "시장 점유율 15% — 국내 B2B SaaS 1위 사업자"
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Company Overview",
+        "body": [
+          {"type": "text", "content": "골든기업은 2010년 설립된 클라우드 기반 B2B SaaS 기업입니다."},
+          {"type": "table", "headers": ["구분", "내용"], "rows": [
+            ["설립연도", "2010년"],
+            ["본사 소재지", "서울특별시 강남구"],
+            ["임직원 수", "350명"],
+            ["주요 제품", "클라우드 ERP, AI 분석 플랫폼"]
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Financial Overview",
+        "body": [
+          {"type": "table", "headers": ["구분", "2023", "2024", "2025E"], "rows": [
+            ["매출액", "320억원", "400억원", "500억원"],
+            ["영업이익", "48억원", "68억원", "95억원"],
+            ["EBITDA", "72억원", "96억원", "125억원"],
+            ["순이익", "35억원", "50억원", "70억원"]
+          ]},
+          {"type": "text", "content": "매출은 SaaS 구독 기반으로 안정적 반복 매출이 전체의 82%를 차지합니다."}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Market Analysis",
+        "body": [
+          {"type": "text", "content": "국내 B2B SaaS 시장은 연평균 18% 성장하며, 2028년까지 3.2조원 규모에 도달할 전망입니다."},
+          {"type": "bullet", "items": [
+            "TAM: 3.2조원 (2028E)",
+            "SAM: 1.5조원",
+            "SOM: 2,250억원 (점유율 15%)"
+          ]}
+        ]
+      }
+    ]
+  }
+}

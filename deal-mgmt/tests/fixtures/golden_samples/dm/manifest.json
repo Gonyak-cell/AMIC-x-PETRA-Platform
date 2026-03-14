@@ -1,0 +1,46 @@
+{
+  "template_id": "dm-default-v1",
+  "doc_type": "DM",
+  "variant": "default",
+  "expected_min_slides": 7,
+  "expected_max_slides": 14,
+  "slides": [
+    {
+      "index": 0,
+      "purpose": "cover",
+      "layout_name": "COVER",
+      "key_shapes": ["logo_placeholder", "project_title"],
+      "expected_fonts": ["SUIT Medium"],
+      "expected_colors": ["0F3A32", "FFFFFF"]
+    },
+    {
+      "index": 1,
+      "purpose": "disclaimer",
+      "layout_name": "MAIN",
+      "key_shapes": ["disclaimer_text"],
+      "expected_fonts": ["SUIT Medium"],
+      "expected_colors": ["3D3D3D"]
+    },
+    {
+      "index": 2,
+      "purpose": "toc",
+      "layout_name": "FOREST",
+      "key_shapes": [],
+      "expected_fonts": ["SUIT Medium"],
+      "expected_colors": ["0F3A32", "FFFFFF"]
+    }
+  ],
+  "required_elements": {
+    "has_cover": true,
+    "has_disclaimer": true,
+    "has_toc": true,
+    "has_tables": true,
+    "has_deal_structure": true
+  },
+  "brand_tokens": {
+    "color_primary": "#0F3A32",
+    "color_accent": "#1C8F57",
+    "font_heading": "SUIT Medium",
+    "font_body": "SUIT Medium"
+  }
+}

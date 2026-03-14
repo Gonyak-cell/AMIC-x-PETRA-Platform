@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "total_slides": 9,
+  "slides": [
+    {
+      "index": 0,
+      "shape_count": 5,
+      "text_content": [
+        "PROJECT GOLDEN",
+        "Teaser Memo",
+        "March 2026",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 66
+    },
+    {
+      "index": 1,
+      "shape_count": 2,
+      "text_content": [
+        "DISCLAIMER",
+        "본 자료(이하 \"Teaser Memo\")는 정보 제공 목적으로만 작성되었으며, 투자 권유를 구성하지 않습니다.",
+        "March 2026",
+        "주식회사 페트라브릿지파트너스"
+      ],
+      "shape_types": [
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 96
+    },
+    {
+      "index": 2,
+      "shape_count": 4,
+      "text_content": [
+        "TABLE OF CONTENTS",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "table",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": true,
+      "text_length": 48
+    },
+    {
+      "index": 3,
+      "shape_count": 4,
+      "text_content": [
+        "Executive Summary",
+        "골든기업은 국내 B2B SaaS 시장의 선도기업으로, 최근 3개년 매출 CAGR 25%를 달성하였습니다.",
+        "•  매출액: 500억원 (2025E)",
+        "•  EBITDA: 125억원 (2025E)",
+        "•  EBITDA 마진율: 25.0%"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 140
+    },
+    {
+      "index": 4,
+      "shape_count": 4,
+      "text_content": [
+        "Investment Highlights",
+        "핵심 투자 매력",
+        "•  매출 CAGR 25% — SaaS 반복 매출 기반의 안정적 성장",
+        "•  EBITDA 마진율 25% — 플랫폼 비즈니스의 높은 수익성",
+        "•  시장 점유율 15% — 국내 B2B SaaS 1위 사업자"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 137
+    },
+    {
+      "index": 5,
+      "shape_count": 4,
+      "text_content": [
+        "Company Overview",
+        "골든기업은 2010년 설립된 클라우드 기반 B2B SaaS 기업입니다."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 55
+    },
+    {
+      "index": 6,
+      "shape_count": 4,
+      "text_content": [
+        "Financial Overview",
+        "매출은 SaaS 구독 기반으로 안정적 반복 매출이 전체의 82%를 차지합니다."
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table",
+        "text_box"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 61
+    },
+    {
+      "index": 7,
+      "shape_count": 4,
+      "text_content": [
+        "Market Analysis",
+        "국내 B2B SaaS 시장은 연평균 18% 성장하며, 2028년까지 3.2조원 규모에 도달할 전망입니다.",
+        "•  TAM: 3.2조원 (2028E)",
+        "•  SAM: 1.5조원",
+        "•  SOM: 2,250억원 (점유율 15%)"
+      ],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 132
+    },
+    {
+      "index": 8,
+      "shape_count": 3,
+      "text_content": [
+        "Thank You",
+        "Strictly Private & Confidential"
+      ],
+      "shape_types": [
+        "picture",
+        "text_box",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": true,
+      "text_length": 40
+    }
+  ],
+  "total_shape_count": 34,
+  "total_text_length": 775
+}

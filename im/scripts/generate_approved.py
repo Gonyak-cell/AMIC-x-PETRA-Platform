@@ -353,13 +353,12 @@ _FIXTURE_BUILDERS: dict[str, object] = {
 
 def check_libreoffice() -> None:
     """LibreOffice 설치 여부를 확인한다. 없으면 에러 메시지 출력 후 exit(1)."""
-    if shutil.which("libreoffice") is None:
-        print(
-            "오류: LibreOffice를 찾을 수 없습니다.\n"
-            "  설치 방법 (Ubuntu): sudo apt-get install -y libreoffice-impress\n"
-            "  설치 방법 (macOS):  brew install --cask libreoffice",
-            file=sys.stderr,
-        )
+    from tests.visual_diff.diff_utils import _find_libreoffice
+
+    try:
+        _find_libreoffice()
+    except FileNotFoundError as exc:
+        print(f"오류: {exc}", file=sys.stderr)
         sys.exit(1)
 
 

@@ -1,0 +1,63 @@
+{
+  "memo_type": "dm",
+  "project_code": "GOLDEN_DM",
+  "content": {
+    "project_name": "PROJECT GOLDEN",
+    "memo_type": "Discussion Memo",
+    "date": "March 2026",
+    "disclaimer": "본 자료는 내부 논의 목적으로만 작성되었습니다.",
+    "slides": [
+      {
+        "layout": "MAIN",
+        "title": "Deal Overview",
+        "body": [
+          {"type": "text", "content": "골든기업 지분 55% 매각을 위한 Discussion Memo입니다."},
+          {"type": "table", "headers": ["구분", "내용"], "rows": [
+            ["대상회사", "골든기업"],
+            ["매각 지분", "55.0%"],
+            ["거래 형태", "경쟁입찰"],
+            ["예상 밸류에이션", "4,000~6,000억원 (EV/EBITDA 기준)"]
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Market Analysis",
+        "body": [
+          {"type": "text", "content": "국내 B2B SaaS 시장 규모 및 성장성 분석입니다."},
+          {"type": "bullet", "items": [
+            "시장 규모: 2.1조원 (2025E) → 3.2조원 (2028E)",
+            "CAGR: 18% (2025-2028E)",
+            "성장 동인: 디지털 전환 가속, 구독 경제 확대"
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Transaction Structure",
+        "body": [
+          {"type": "section_header", "content": "거래 구조 개요"},
+          {"type": "table", "headers": ["단계", "일정", "비고"], "rows": [
+            ["예비입찰", "2026년 4월", "NDA 체결 후 참여"],
+            ["실사 (DD)", "2026년 5월", "재무/법률/기술 실사"],
+            ["본입찰", "2026년 6월", "최종 가격 제출"],
+            ["SPA 체결", "2026년 7월", "주식매매계약 체결"]
+          ]}
+        ]
+      },
+      {
+        "layout": "MAIN",
+        "title": "Financial Analysis",
+        "body": [
+          {"type": "table", "headers": ["구분", "2023", "2024", "2025E"], "rows": [
+            ["매출액", "320억원", "400억원", "500억원"],
+            ["EBITDA", "72억원", "96억원", "125억원"],
+            ["순이익", "35억원", "50억원", "70억원"],
+            ["FCF", "28억원", "42억원", "58억원"]
+          ]},
+          {"type": "text", "content": "EV/EBITDA 8~10x 적용 시 기업가치 5,760~7,200억원 추정."}
+        ]
+      }
+    ]
+  }
+}
