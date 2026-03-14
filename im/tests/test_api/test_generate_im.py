@@ -205,8 +205,13 @@ class TestFinalizeDocumentTask:
 
     @patch("src.api.tasks.progress._sync_update_document")
     @patch("src.api.tasks.generate_im.update_progress")
+    @patch(
+        "src.api.tasks.generate_im._run_im_quality_gate",
+        return_value={"quality_status": "PASS"},
+    )
     def test_returns_completed_status(
         self,
+        _mock_gate: MagicMock,
         mock_progress: MagicMock,
         _mock_sync: MagicMock,
     ) -> None:
