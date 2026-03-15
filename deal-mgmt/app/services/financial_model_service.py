@@ -693,9 +693,9 @@ async def run_finalize_and_generate(
                     fm.error_message = None
             except Exception as _gate_exc:
                 logger.warning("FM %s 품질 게이트 실행 실패: %s", fm_id, _gate_exc)
-                fm.status = FinancialModelStatus.READY
-                fm.quality_status = "SKIPPED"
-                fm.error_message = None
+                fm.status = FinancialModelStatus.FAILED
+                fm.quality_status = "FAIL"
+                fm.error_message = f"품질 게이트 실행 실패: {_gate_exc}"
 
             # FM 파일 정보 업데이트
             fm.file_path = output_path

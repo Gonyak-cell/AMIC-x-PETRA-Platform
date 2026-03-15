@@ -1,7 +1,7 @@
 {
   "version": 1,
   "preset": "COVENANT",
-  "total_slides": 20,
+  "total_slides": 24,
   "slides": [
     {
       "index": 0,
@@ -94,11 +94,53 @@
       "index": 4,
       "shape_count": 4,
       "text_content": [
-        "투자 하이라이트...",
-        "• 1. 전략적 파트너십을 통한 시너지",
-        "• 2. 디지털 전환 선도"
+        "딜 하이라이트",
+        "• 딜 타입: M&A",
+        "• 매각주체: 테스트PE",
+        "• 매각 지분율: 51.0%",
+        "• 거래 배경: 전략적 포트폴리오 재구성을 위한 지분 매각"
       ],
       "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 78
+    },
+    {
+      "index": 5,
+      "shape_count": 4,
+      "text_content": [
+        "Key Takeaways",
+        "• 1. 전략적 파트너십을 통한 시너지. 국내외 파트너 네트워크를 활용한 사업 확장",
+        "• 2. 디지털 전환 선도. 클라우드 및 AI 기반 서비스 전환 가속",
+        "• 3. 안정적 수익 구조. 반복 매출 비중 70% 이상으로 예측 가능한 현금흐름"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 142
+    },
+    {
+      "index": 6,
+      "shape_count": 5,
+      "text_content": [
+        "투자 하이라이트...",
+        "Key Investment Highlights (3)",
+        "• 1. 전략적 파트너십을 통한 시너지.",
+        "• 2. 디지털 전환 선도.",
+        "• 3. 안정적 수익 구조."
+      ],
+      "shape_types": [
+        "auto_shape",
         "placeholder",
         "placeholder",
         "text_box",
@@ -106,10 +148,61 @@
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 46
+      "text_length": 92
     },
     {
-      "index": 5,
+      "index": 7,
+      "shape_count": 4,
+      "text_content": [
+        "#1  전략적 파트너십을 통한 시너지.",
+        "국내외 파트너 네트워크를 활용한 사업 확장"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 44
+    },
+    {
+      "index": 8,
+      "shape_count": 4,
+      "text_content": [
+        "#2  디지털 전환 선도.",
+        "클라우드 및 AI 기반 서비스 전환 가속"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 36
+    },
+    {
+      "index": 9,
+      "shape_count": 4,
+      "text_content": [
+        "#3  안정적 수익 구조.",
+        "반복 매출 비중 70% 이상으로 예측 가능한 현금흐름"
+      ],
+      "shape_types": [
+        "auto_shape",
+        "placeholder",
+        "placeholder",
+        "text_box"
+      ],
+      "has_table": false,
+      "has_picture": false,
+      "text_length": 43
+    },
+    {
+      "index": 10,
       "shape_count": 3,
       "text_content": [
         "가치 창출 전략은..."
@@ -124,7 +217,7 @@
       "text_length": 12
     },
     {
-      "index": 6,
+      "index": 11,
       "shape_count": 5,
       "text_content": [
         "회사 개요...",
@@ -144,7 +237,7 @@
       "text_length": 34
     },
     {
-      "index": 7,
+      "index": 12,
       "shape_count": 4,
       "text_content": [
         "회사 연혁",
@@ -161,24 +254,7 @@
       "text_length": 13
     },
     {
-      "index": 8,
-      "shape_count": 4,
-      "text_content": [
-        "주요 제품/서비스",
-        "1. 클라우드 인프라"
-      ],
-      "shape_types": [
-        "auto_shape",
-        "placeholder",
-        "placeholder",
-        "text_box"
-      ],
-      "has_table": false,
-      "has_picture": false,
-      "text_length": 20
-    },
-    {
-      "index": 9,
+      "index": 13,
       "shape_count": 6,
       "text_content": [
         "500,000억원",
@@ -203,7 +279,7 @@
       "text_length": 45
     },
     {
-      "index": 10,
+      "index": 14,
       "shape_count": 3,
       "text_content": [
         "시장 개요..."
@@ -218,7 +294,7 @@
       "text_length": 8
     },
     {
-      "index": 11,
+      "index": 15,
       "shape_count": 10,
       "text_content": [
         "150,000",
@@ -254,7 +330,7 @@
       "text_length": 119
     },
     {
-      "index": 12,
+      "index": 16,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -267,7 +343,7 @@
       "text_length": 0
     },
     {
-      "index": 13,
+      "index": 17,
       "shape_count": 4,
       "text_content": [
         "연도별 매출 및 YoY 성장률",
@@ -285,7 +361,7 @@
       "text_length": 78
     },
     {
-      "index": 14,
+      "index": 18,
       "shape_count": 4,
       "text_content": [
         "연도별 수익성 지표 추이"
@@ -301,7 +377,7 @@
       "text_length": 13
     },
     {
-      "index": 15,
+      "index": 19,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -314,7 +390,7 @@
       "text_length": 0
     },
     {
-      "index": 16,
+      "index": 20,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -327,7 +403,7 @@
       "text_length": 0
     },
     {
-      "index": 17,
+      "index": 21,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -340,7 +416,7 @@
       "text_length": 0
     },
     {
-      "index": 18,
+      "index": 22,
       "shape_count": 11,
       "text_content": [
         "주요 재무 비율",
@@ -379,7 +455,7 @@
       "text_length": 108
     },
     {
-      "index": 19,
+      "index": 23,
       "shape_count": 6,
       "text_content": [
         "Contact",
@@ -400,16 +476,16 @@
       "text_length": 31
     }
   ],
-  "total_shape_count": 97,
-  "total_text_length": 818,
+  "total_shape_count": 114,
+  "total_text_length": 1187,
   "section_slide_counts": {
     "cover": 1,
     "disclaimer": 1,
     "toc_divider": 0,
-    "executive_summary": 2,
-    "investment_highlights": 1,
+    "executive_summary": 4,
+    "investment_highlights": 4,
     "value_creation": 1,
-    "company_overview": 3,
+    "company_overview": 2,
     "market_overview": 2,
     "financial_analysis": 8,
     "contact": 1

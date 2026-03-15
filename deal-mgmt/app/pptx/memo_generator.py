@@ -88,6 +88,9 @@ class GenerationResult:
     slide_count: int
     memo_type: str
     project_code: str
+    template_load_ms: int = 0
+    render_ms: int = 0
+    persist_ms: int = 0
 
 
 # ── 헬퍼 함수 ──────────────────────────────────────────────────
@@ -1066,6 +1069,8 @@ def generate_memo(
         ValueError: 잘못된 memo_type
         Exception: python-pptx 생성 오류
     """
+    import time as _time
+
     from pptx import Presentation
 
     template = str(TEMPLATE_PATH)
@@ -1076,16 +1081,26 @@ def generate_memo(
     if memo_type not in valid_types:
         raise ValueError(f"잘못된 memo_type: {memo_type}. 허용값: {valid_types}")
 
+    # 템플릿 로딩 시간 측정
+    _t0 = _time.monotonic()
     prs = Presentation(template)
+    _template_load_ms = int((_time.monotonic() - _t0) * 1000)
 
     if content is None:
         content = _default_content(memo_type, project_code)
 
+    # 콘텐츠 렌더링 시간 측정
+    _t1 = _time.monotonic()
     generate_from_json(prs, content)
+    _render_ms = int((_time.monotonic() - _t1) * 1000)
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    # 파일 저장 시간 측정
+    _t2 = _time.monotonic()
     prs.save(str(out))
+    _persist_ms = int((_time.monotonic() - _t2) * 1000)
 
     file_size = out.stat().st_size
     slide_count = len(prs.slides)
@@ -1097,6 +1112,9 @@ def generate_memo(
         slide_count=slide_count,
         memo_type=memo_type,
         project_code=project_code,
+        template_load_ms=_template_load_ms,
+        render_ms=_render_ms,
+        persist_ms=_persist_ms,
     )
 
 

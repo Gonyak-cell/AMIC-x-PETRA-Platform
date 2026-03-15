@@ -1,7 +1,7 @@
 {
   "version": 1,
   "preset": "FULL",
-  "total_slides": 42,
+  "total_slides": 43,
   "slides": [
     {
       "index": 0,
@@ -124,6 +124,7 @@
         "• 매각 지분율: 60.0%",
         "• 밸류에이션 범위: 500,000 ~ 700,000억원",
         "• 밸류에이션 방법론: EV/EBITDA",
+        "• EV/EBITDA (2024): 10.0x",
         "• 거래 배경: 전략적 포트폴리오 재구성",
         "• 예비입찰: 2026-03",
         "• 본입찰: 2026-05"
@@ -136,7 +137,7 @@
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 150
+      "text_length": 175
     },
     {
       "index": 6,
@@ -722,21 +723,46 @@
     },
     {
       "index": 36,
-      "shape_count": 3,
+      "shape_count": 7,
       "text_content": [
+        "10.0x",
+        "EV/EBITDA (2024)",
+        "18.0x",
+        "P/E (2024)",
+        "3.0x",
+        "EV/Revenue (2024)",
+        "2.5x",
+        "MOIC (Base)",
         "밸류에이션 요약: EV/EBITDA 10.0x 기준..."
       ],
       "shape_types": [
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
+        "auto_shape",
         "placeholder",
         "placeholder",
         "text_box"
       ],
       "has_table": false,
       "has_picture": false,
-      "text_length": 31
+      "text_length": 103
     },
     {
       "index": 37,
+      "shape_count": 3,
+      "text_content": [],
+      "shape_types": [
+        "placeholder",
+        "placeholder",
+        "table"
+      ],
+      "has_table": true,
+      "has_picture": false,
+      "text_length": 0
+    },
+    {
+      "index": 38,
       "shape_count": 4,
       "text_content": [
         "이대표 (CEO)",
@@ -759,7 +785,7 @@
       "text_length": 70
     },
     {
-      "index": 38,
+      "index": 39,
       "shape_count": 3,
       "text_content": [],
       "shape_types": [
@@ -772,7 +798,7 @@
       "text_length": 0
     },
     {
-      "index": 39,
+      "index": 40,
       "shape_count": 6,
       "text_content": [
         "M&A",
@@ -799,7 +825,7 @@
       "text_length": 118
     },
     {
-      "index": 40,
+      "index": 41,
       "shape_count": 4,
       "text_content": [
         "출처 및 참고자료",
@@ -817,7 +843,7 @@
       "text_length": 78
     },
     {
-      "index": 41,
+      "index": 42,
       "shape_count": 6,
       "text_content": [
         "Contact",
@@ -838,8 +864,8 @@
       "text_length": 57
     }
   ],
-  "total_shape_count": 199,
-  "total_text_length": 1997,
+  "total_shape_count": 206,
+  "total_text_length": 2094,
   "section_slide_counts": {
     "cover": 1,
     "disclaimer": 1,
@@ -854,7 +880,7 @@
     "value_creation": 1,
     "growth_strategy": 4,
     "financial_analysis": 7,
-    "valuation": 1,
+    "valuation": 2,
     "management_team": 1,
     "shareholder_structure": 1,
     "transaction_structure": 1,

@@ -178,6 +178,21 @@ async def _validate_upload(file: UploadFile) -> tuple[str, str, str, bytes]:
     return filename, ext, content_type, content
 
 
+async def _validate_upload_streaming(
+    file: UploadFile,
+) -> tuple[str, str, str, str, int]:
+    """스트리밍 검증: 메타데이터 + 청크 단위 해시/크기 계산. O(1MB) 메모리.
+
+    완료 후 file은 seek(0) 상태 — 후속 blob 업로드에 바로 사용 가능.
+
+    Returns:
+        (filename, ext, content_type, sha256_hex, file_size)
+    """
+    filename, ext, content_type = _validate_upload_metadata(file)
+    sha256_hex, file_size = await vdr_service.stream_hash_and_size(file, _MAX_FILE_SIZE)
+    return filename, ext, content_type, sha256_hex, file_size
+
+
 async def _get_and_authorize_txn(
     db: AsyncSession,
     txn_id: uuid.UUID,
@@ -350,15 +365,17 @@ async def upload_document(
     """VDR에 파일을 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
     _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
-    filename, _ext, content_type, content = await _validate_upload(file)
+    filename, _ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(file)
 
     try:
-        doc = await vdr_service.upload_document(
+        doc = await vdr_service.upload_document_stream(
             db=db,
             transaction_id=txn_id,
             folder_id=folder_id,
             original_name=filename,
-            file_content=content,
+            file_obj=file,
+            file_size=file_size,
+            sha256_hex=sha256_hex,
             mime_type=content_type,
             uploaded_by_email=claims.email,
         )

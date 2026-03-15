@@ -1,6 +1,6 @@
 """Documents 라우트 테스트 (T-I16).
 
-> 마지막 수정: 2026-02-10 23:45:00
+> 마지막 수정: 2026-03-13 22:38:00
 
 POST/GET /api/v1/documents 엔드포인트 검증.
 """
@@ -221,15 +221,41 @@ class TestDownloadDocument:
         self, route_client: AsyncClient, test_user: MagicMock
     ) -> None:
         """미완성 문서 다운로드 시 404."""
-        with patch(
-            "src.api.routes.documents.DocumentService.get_download_path",
-            new_callable=AsyncMock,
-            side_effect=NotFoundError("File", "문서가 아직 생성 완료되지 않았습니다"),
+        mock_doc = _make_document(owner_id=test_user.id, status="PENDING")
+        with (
+            patch(
+                "src.api.routes.documents.DocumentService.get_document",
+                new_callable=AsyncMock,
+                return_value=mock_doc,
+            ),
+            patch(
+                "src.api.routes.documents.DocumentService.get_download_path",
+                new_callable=AsyncMock,
+                side_effect=NotFoundError(
+                    "File", "문서가 아직 생성 완료되지 않았습니다"
+                ),
+            ),
         ):
             response = await route_client.get(
                 f"/api/v1/documents/{uuid.uuid4()}/download?format=pptx"
             )
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_download_quality_failed_blocked(
+        self, route_client: AsyncClient, test_user: MagicMock
+    ) -> None:
+        """QUALITY_FAILED 문서 다운로드 차단 (422)."""
+        mock_doc = _make_document(owner_id=test_user.id, status="QUALITY_FAILED")
+        with patch(
+            "src.api.routes.documents.DocumentService.get_document",
+            new_callable=AsyncMock,
+            return_value=mock_doc,
+        ):
+            response = await route_client.get(
+                f"/api/v1/documents/{uuid.uuid4()}/download?format=pptx"
+            )
+        assert response.status_code == 422
 
 
 # ---------------------------------------------------------------------------

@@ -49,12 +49,25 @@ export function useVdrSummary(txnId: string) {
 
 // ── 폴더 ────────────────────────────────────────────────
 
+/** 서버의 중첩 트리 응답을 parent_id 참조 기반 평탄 배열로 변환 */
+function flattenVdrFolders(tree: VdrFolder[]): VdrFolder[] {
+  const result: VdrFolder[] = [];
+  function walk(nodes: VdrFolder[]) {
+    for (const node of nodes) {
+      result.push(node);
+      if (node.children.length > 0) walk(node.children);
+    }
+  }
+  walk(tree);
+  return result;
+}
+
 export function useVdrFolders(txnId: string) {
   return useQuery<VdrFolder[]>({
     queryKey: folderQK(txnId),
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/vdr/folders`);
-      return data;
+      return flattenVdrFolders(data);
     },
     enabled: !!txnId,
   });
@@ -138,18 +151,6 @@ export function useVdrDocuments(txnId: string, folderId: string | null) {
   });
 }
 
-/** 거래의 전체 문서 목록 조회 (폴더 무관). */
-export function useVdrAllDocuments(txnId: string, enabled: boolean = true) {
-  return useQuery<VdrDocument[]>({
-    queryKey: allDocQK(txnId),
-    queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/vdr/documents`);
-      return data;
-    },
-    enabled: !!txnId && enabled,
-  });
-}
-
 export function useUploadVdrDocument(txnId: string, folderId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -192,6 +193,8 @@ export function useUpdateVdrDocument(txnId: string) {
       return data as VdrDocument;
     },
     onSuccess: () => {
+      // folderQK is a prefix of docQK → React Query prefix-matching
+      // implicitly invalidates all docQK(txnId, *) queries as well.
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("문서가 수정되었습니다.");
@@ -205,13 +208,13 @@ export function useUpdateVdrDocument(txnId: string) {
 export function useDeleteVdrDocument(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (docId: string) => {
+    mutationFn: async ({ docId }: { docId: string; folderId: string }) => {
       await maApi.delete(`/transactions/${txnId}/vdr/documents/${docId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, { folderId }) => {
+      qc.invalidateQueries({ queryKey: docQK(txnId, folderId) });
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
-      qc.invalidateQueries({ queryKey: allDocQK(txnId) });
       toast.success("문서가 삭제되었습니다.");
     },
     onError: (err) => {

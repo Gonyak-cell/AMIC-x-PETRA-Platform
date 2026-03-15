@@ -23,8 +23,8 @@ from app.routers.vdr import (
     _MAX_FILE_SIZE,
     _get_and_authorize_txn,
     _upload_limiter,
-    _validate_upload,
     _validate_upload_metadata,
+    _validate_upload_streaming,
 )
 from app.schemas.vdr import (
     ClassificationStatusOut,
@@ -106,14 +106,16 @@ async def auto_upload_document(
     """파일을 분석하여 적합한 VDR 폴더에 자동으로 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
     _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
-    filename, _ext, content_type, content = await _validate_upload(file)
+    filename, _ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(file)
 
     try:
-        doc, folder, routed_category = await vdr_service.auto_upload_document(
+        doc, folder, routed_category = await vdr_service.auto_upload_document_stream(
             db=db,
             transaction_id=txn_id,
             original_name=filename,
-            file_content=content,
+            file_obj=file,
+            file_size=file_size,
+            sha256_hex=sha256_hex,
             mime_type=content_type,
             uploaded_by_email=claims.email,
         )
@@ -197,11 +199,10 @@ async def direct_upload(
     prepared_results = await asyncio.gather(*[_prepare_one(f) for f in files])
     prepared = [p for p in prepared_results if p is not None]
 
-    # ── Phase B: DB 레코드 생성 (순차) + blob 업로드 (병렬) + 일괄 커밋 ──
+    # ── Phase B: 2-pass — 배치 쿼리 → DB 레코드 생성 → blob 업로드 ──
     results: list[DirectUploadFileResult] = []
     pending_doc_ids: list[uuid.UUID] = []
 
-    # blob 업로드에 필요한 정보를 수집
     @dataclass
     class _BlobTask:
         file: UploadFile
@@ -212,115 +213,89 @@ async def direct_upload(
 
     blob_tasks: list[_BlobTask] = []
 
+    # ── Pass 1: 폴더 배치 조회 + 폴백 1회 조회 ──
+    needed_categories = {p.routed_category for p in prepared if p.routed_category is not None}
+    folder_cache = await vdr_service.resolve_folders_by_categories(db, txn_id, needed_categories)
+    fallback_folder = await vdr_service.resolve_fallback_folder(db, txn_id)
+
+    # 폴더 결정 + 중복 체크 데이터 수집
+    dup_checks: list[tuple[uuid.UUID, str]] = []
+    folder_assignments: list[tuple[VdrFolder, bool]] = []  # (folder, is_fallback)
+
     for p in prepared:
         if p.routed_category is not None:
-            # 1차 통과: 카테고리 매칭된 폴더에 라우팅
-            folder = await vdr_service.resolve_folder_by_category(db, txn_id, p.routed_category)
+            folder = folder_cache.get(p.routed_category) or fallback_folder
             if folder is None:
-                folder = await vdr_service.resolve_fallback_folder(db, txn_id)
-            if folder is None:
-                failed_files.append(
-                    FailedFileInfo(
-                        filename=p.filename,
-                        reason="VDR이 초기화되지 않았습니다.",
-                    )
-                )
+                failed_files.append(FailedFileInfo(filename=p.filename, reason="VDR이 초기화되지 않았습니다."))
+                folder_assignments.append((None, False))  # type: ignore[arg-type]
                 continue
-
-            has_dup = await vdr_service.check_duplicate_filename(db, txn_id, folder.id, p.filename)
-            final_name = vdr_service.resolve_unique_filename(p.filename, has_dup)
-
-            stored_name = f"{uuid.uuid4()}{p.ext}"
-            blob_name = f"{txn_id}/{folder.id}/{stored_name}"
-
-            doc = VdrDocument(
-                transaction_id=txn_id,
-                folder_id=folder.id,
-                original_name=final_name,
-                stored_name=stored_name,
-                file_path=blob_name,
-                file_size_bytes=p.file_size,
-                mime_type=p.content_type,
-                sha256_hash=p.sha256_hex,
-                uploaded_by_email=claims.email,
-            )
-            doc.classification_status = VdrClassificationStatus.DIRECT
-            doc.classification_score = p.top_score
-            db.add(doc)
-            await db.flush()
-
-            blob_tasks.append(
-                _BlobTask(
-                    file=p.file,
-                    blob_name=blob_name,
-                    content_type=p.content_type,
-                    file_size=p.file_size,
-                    doc=doc,
-                )
-            )
-
-            results.append(
-                DirectUploadFileResult(
-                    document=VdrDocumentOut.model_validate(doc),
-                    routed_folder=VdrFolderOut.model_validate(folder),
-                    routed_category=p.routed_category,
-                    classification_status=VdrClassificationStatus.DIRECT,
-                    score=p.top_score,
-                    was_fallback=False,
-                )
-            )
+            folder_assignments.append((folder, False))
+            dup_checks.append((folder.id, p.filename))
         else:
-            # 폴백: 분류 미달 → 2차 심사 대기
-            fallback = await vdr_service.resolve_fallback_folder(db, txn_id)
-            if fallback is None:
+            if fallback_folder is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="VDR이 초기화되지 않았습니다. 먼저 폴더 구조를 초기화해 주세요.",
                 )
+            folder_assignments.append((fallback_folder, True))
+            dup_checks.append((fallback_folder.id, p.filename))
 
-            has_dup = await vdr_service.check_duplicate_filename(db, txn_id, fallback.id, p.filename)
-            final_name = vdr_service.resolve_unique_filename(p.filename, has_dup)
+    # 배치 중복 체크 (단일 쿼리)
+    dup_set = await vdr_service.check_duplicate_filenames_batch(db, txn_id, dup_checks)
 
-            stored_name = f"{uuid.uuid4()}{p.ext}"
-            blob_name = f"{txn_id}/{fallback.id}/{stored_name}"
+    # ── Pass 2: DB 레코드 생성 + blob 태스크 수집 ──
+    for p, (folder, is_fallback) in zip(prepared, folder_assignments, strict=True):
+        if folder is None:
+            continue  # Pass 1에서 실패 처리됨
 
-            doc = VdrDocument(
-                transaction_id=txn_id,
-                folder_id=fallback.id,
-                original_name=final_name,
-                stored_name=stored_name,
-                file_path=blob_name,
-                file_size_bytes=p.file_size,
-                mime_type=p.content_type,
-                sha256_hash=p.sha256_hex,
-                uploaded_by_email=claims.email,
-            )
+        has_dup = (folder.id, p.filename) in dup_set
+        final_name = vdr_service.resolve_unique_filename(p.filename, has_dup)
+
+        stored_name = f"{uuid.uuid4()}{p.ext}"
+        blob_name = f"{txn_id}/{folder.id}/{stored_name}"
+
+        doc = VdrDocument(
+            transaction_id=txn_id,
+            folder_id=folder.id,
+            original_name=final_name,
+            stored_name=stored_name,
+            file_path=blob_name,
+            file_size_bytes=p.file_size,
+            mime_type=p.content_type,
+            sha256_hash=p.sha256_hex,
+            uploaded_by_email=claims.email,
+        )
+        if is_fallback:
             doc.classification_status = VdrClassificationStatus.PENDING_REVIEW
-            doc.classification_score = p.top_score
-            db.add(doc)
-            await db.flush()
+        else:
+            doc.classification_status = VdrClassificationStatus.DIRECT
+        doc.classification_score = p.top_score
+        db.add(doc)
+        await db.flush()
 
-            blob_tasks.append(
-                _BlobTask(
-                    file=p.file,
-                    blob_name=blob_name,
-                    content_type=p.content_type,
-                    file_size=p.file_size,
-                    doc=doc,
-                )
+        blob_tasks.append(
+            _BlobTask(
+                file=p.file,
+                blob_name=blob_name,
+                content_type=p.content_type,
+                file_size=p.file_size,
+                doc=doc,
             )
+        )
+
+        if is_fallback:
             pending_doc_ids.append(doc.id)
 
-            results.append(
-                DirectUploadFileResult(
-                    document=VdrDocumentOut.model_validate(doc),
-                    routed_folder=VdrFolderOut.model_validate(fallback),
-                    routed_category=None,
-                    classification_status=VdrClassificationStatus.PENDING_REVIEW,
-                    score=p.top_score,
-                    was_fallback=True,
-                )
+        results.append(
+            DirectUploadFileResult(
+                document=VdrDocumentOut.model_validate(doc),
+                routed_folder=VdrFolderOut.model_validate(folder),
+                routed_category=None if is_fallback else p.routed_category,
+                classification_status=doc.classification_status,
+                score=p.top_score,
+                was_fallback=is_fallback,
             )
+        )
 
     # blob 병렬 업로드 (별도 Semaphore로 동시성 제한)
     _blob_sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)

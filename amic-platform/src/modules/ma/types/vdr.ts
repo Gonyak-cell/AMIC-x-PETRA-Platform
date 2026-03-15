@@ -15,6 +15,11 @@ export type VdrFolderCategory =
   | "MARKET_RESEARCH"
   | "CUSTOM";
 
+/**
+ * 서버는 중첩 트리(children 배열)로 응답하지만,
+ * useVdrFolders 훅이 flattenVdrFolders로 평탄화하여 parent_id 참조 배열로 변환한다.
+ * UI 컴포넌트는 평탄 배열을 받아 childrenByParentId Map으로 인덱싱해 사용한다.
+ */
 export interface VdrFolder {
   id: string;
   transaction_id: string;
@@ -106,53 +111,6 @@ export interface ClassificationStatusItem {
   routed_folder: VdrFolder | null;
   routed_category: VdrFolderCategory | null;
   manual_review_needed: boolean;
-}
-
-// ── Q&A ─────────────────────────────────────────────────
-
-export interface VdrQARequest {
-  question: string;
-  document_ids?: string[];
-  conversation_id?: string;
-}
-
-export interface VdrQASource {
-  document_id: string;
-  document_name: string;
-  relevance?: "high" | "medium" | "low" | "referenced";
-}
-
-export interface VdrQAResponse {
-  answer: string;
-  sources: VdrQASource[];
-  conversation_id: string;
-  cost_usd: number | null;
-}
-
-export interface VdrQAMessage {
-  role: "user" | "assistant";
-  content: string;
-  sources?: VdrQASource[];
-  isError?: boolean;
-  isIncomplete?: boolean;
-  timestamp: string;
-}
-
-// ── SSE 스트리밍 이벤트 ──────────────────────────────────
-
-export interface VdrQATokenEvent {
-  text: string;
-}
-
-export interface VdrQASourcesEvent {
-  sources: VdrQASource[];
-  conversation_id: string;
-  final_content?: string;
-}
-
-export interface VdrQAErrorEvent {
-  message: string;
-  conversation_id?: string;
 }
 
 // ── VDR 요약 ─────────────────────────────────────────────

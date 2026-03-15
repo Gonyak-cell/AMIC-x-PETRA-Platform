@@ -577,3 +577,107 @@ class TestGoldenSnapshots:
                 + "\n".join(f"  - {m}" for m in missing)
                 + "\n--update-golden 옵션으로 생성하세요."
             )
+
+
+# ── 매니페스트 검증 ──────────────────────────────────────────────────────
+
+
+_MANIFEST_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "golden_samples"
+
+
+def _load_manifest(variant: str) -> dict[str, Any] | None:
+    """golden_samples/{variant}/manifest.json 로드."""
+    manifest_path = _MANIFEST_DIR / variant / "manifest.json"
+    if not manifest_path.exists():
+        return None
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+
+def _validate_against_manifest(
+    snapshot: dict[str, Any],
+    manifest: dict[str, Any],
+) -> list[str]:
+    """스냅샷을 매니페스트 기대값과 비교 → 차이 목록."""
+    issues: list[str] = []
+
+    slide_count = snapshot["total_slides"]
+    min_slides = manifest.get("expected_min_slides", 0)
+    max_slides = manifest.get("expected_max_slides", 100)
+
+    if slide_count < min_slides:
+        issues.append(f"슬라이드 수 부족: {slide_count} < 최소 {min_slides}")
+    if slide_count > max_slides:
+        issues.append(f"슬라이드 수 초과: {slide_count} > 최대 {max_slides}")
+
+    required = manifest.get("required_elements", {})
+    if required.get("has_tables"):
+        has_any_table = any(s.get("has_table") for s in snapshot["slides"])
+        if not has_any_table:
+            issues.append("매니페스트 요구: 테이블이 1개 이상 필요하지만 없음")
+
+    if required.get("has_contact"):
+        # 마지막 슬라이드에 Contact 텍스트가 있어야 함
+        last_slide = snapshot["slides"][-1] if snapshot["slides"] else {}
+        texts = last_slide.get("text_content", [])
+        has_contact = any("contact" in t.lower() for t in texts)
+        if not has_contact:
+            issues.append("매니페스트 요구: 마지막 슬라이드에 Contact 정보 없음")
+
+    # section_slide_counts 비교 (매니페스트에 정의된 경우)
+    manifest_counts = manifest.get("section_slide_counts", {})
+    snapshot_counts = snapshot.get("section_slide_counts", {})
+    if manifest_counts and snapshot_counts:
+        for section_id, expected in manifest_counts.items():
+            actual = snapshot_counts.get(section_id)
+            if actual is not None and actual != expected:
+                issues.append(
+                    f"섹션 '{section_id}' 슬라이드 수: {actual} vs 매니페스트 {expected}"
+                )
+
+    return issues
+
+
+@pytest.mark.golden
+class TestManifestCompliance:
+    """매니페스트 기대값 충족 검증."""
+
+    @pytest.mark.parametrize(
+        "preset,variant,data_fixture",
+        [
+            ("TITAN", "tm_default", "titan_data"),
+            ("COVENANT", "dm_default", "covenant_data"),
+            ("FULL", "im_full", "full_data"),
+        ],
+    )
+    def test_manifest_compliance(
+        self,
+        preset: str,
+        variant: str,
+        data_fixture: str,
+        tmp_output: Path,
+        request: pytest.FixtureRequest,
+    ):
+        """프리셋별 생성 결과가 매니페스트 기대값을 충족하는지."""
+        manifest = _load_manifest(variant)
+        if manifest is None:
+            pytest.skip(f"매니페스트 없음: {variant}/manifest.json")
+
+        data = request.getfixturevalue(data_fixture)
+        snapshot, _ = _generate_and_snapshot(data, preset, tmp_output)
+
+        issues = _validate_against_manifest(snapshot, manifest)
+        assert not issues, f"매니페스트 위반 ({variant}):\n" + "\n".join(
+            f"  - {i}" for i in issues
+        )
+
+    def test_manifest_files_exist(self):
+        """3개 variant의 매니페스트 파일이 모두 존재."""
+        missing: list[str] = []
+        for variant in ("tm_default", "dm_default", "im_full"):
+            manifest_path = _MANIFEST_DIR / variant / "manifest.json"
+            if not manifest_path.exists():
+                missing.append(str(manifest_path))
+
+        assert not missing, f"매니페스트 {len(missing)}개 없음:\n" + "\n".join(
+            f"  - {m}" for m in missing
+        )

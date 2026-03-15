@@ -4,6 +4,7 @@
 - JWT 인증 모킹
 - get_db 의존성 오버라이드
 - Celery 태스크 mock (Redis 불필요)
+- --update-golden CLI 옵션
 """
 
 import os
@@ -59,6 +60,25 @@ if "celery" not in sys.modules:
 from collections.abc import AsyncGenerator
 
 import pytest
+
+# ── --update-golden CLI 옵션 ──────────────────────────────────────
+
+
+def pytest_addoption(parser):
+    """커스텀 pytest CLI 옵션 등록."""
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="골든 파일을 현재 출력으로 업데이트 (비교 대신 덮어쓰기)",
+    )
+
+
+def pytest_configure(config):
+    """마커 등록."""
+    config.addinivalue_line("markers", "golden: 골든 파일 스냅샷 테스트")
+
+
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 

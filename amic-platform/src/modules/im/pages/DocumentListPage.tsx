@@ -1,6 +1,16 @@
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, CheckCircle, Loader2, AlertTriangle, ShieldAlert, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
+import {
+  FileText,
+  Plus,
+  CheckCircle,
+  Loader2,
+  AlertTriangle,
+  ShieldAlert,
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
+} from "lucide-react";
 import { useDocuments } from "@/modules/im/hooks/useDocuments";
 import { DocumentStatusBadge } from "@/modules/im/components/DocumentStatusBadge";
 import {
@@ -43,7 +53,9 @@ const columns: Column<Document>[] = [
     render: (row) => {
       const b = DATA_SOURCE_BADGE[row.data_source] ?? DATA_SOURCE_BADGE.MANUAL;
       return (
-        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}>
+        <span
+          className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${b.cls}`}
+        >
           {b.label}
         </span>
       );
@@ -88,7 +100,10 @@ export default function DocumentListPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const kpiRef = useRef<HTMLDivElement>(null);
   useScrollReveal(kpiRef, { stagger: 0.06, y: 20 });
-  const { data, isLoading, isError } = useDocuments({ offset: page * PAGE_SIZE, limit: PAGE_SIZE });
+  const { data, isLoading, isError } = useDocuments({
+    offset: page * PAGE_SIZE,
+    limit: PAGE_SIZE,
+  });
 
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -98,18 +113,26 @@ export default function DocumentListPage() {
     if (statusFilter === "ALL") return items;
     if (statusFilter === "IN_PROGRESS")
       return items.filter((d) => IN_PROGRESS_STATUSES.includes(d.status));
+    if (statusFilter === "COMPLETED")
+      return items.filter(
+        (d) => d.status === "COMPLETED" || d.status === "QUALITY_CONDITIONAL",
+      );
     return items.filter((d) => d.status === statusFilter);
   }, [items, statusFilter]);
 
-  const kpis = useMemo(() => ({
-    total: data?.total ?? 0,
-    inProgress: items.filter((d) =>
-      IN_PROGRESS_STATUSES.includes(d.status),
-    ).length,
-    completed: items.filter((d) => d.status === "COMPLETED").length,
-    qualityFailed: items.filter((d) => d.status === "QUALITY_FAILED").length,
-    failed: items.filter((d) => d.status === "FAILED").length,
-  }), [data?.total, items]);
+  const kpis = useMemo(
+    () => ({
+      total: data?.total ?? 0,
+      inProgress: items.filter((d) => IN_PROGRESS_STATUSES.includes(d.status))
+        .length,
+      completed: items.filter(
+        (d) => d.status === "COMPLETED" || d.status === "QUALITY_CONDITIONAL",
+      ).length,
+      qualityFailed: items.filter((d) => d.status === "QUALITY_FAILED").length,
+      failed: items.filter((d) => d.status === "FAILED").length,
+    }),
+    [data?.total, items],
+  );
 
   return (
     <div className="space-y-6">
@@ -141,24 +164,64 @@ export default function DocumentListPage() {
       />
 
       {/* KPI Cards */}
-      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div
+        ref={kpiRef}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
+      >
         <KpiCard label="Total" value={String(kpis.total)} icon={FileText} />
-        <KpiCard label="In Progress" value={String(kpis.inProgress)} icon={Loader2} variant="caution" />
-        <KpiCard label="Completed" value={String(kpis.completed)} icon={CheckCircle} variant="positive" />
-        <KpiCard label="Quality Failed" value={String(kpis.qualityFailed)} icon={ShieldAlert} variant="warning" />
-        <KpiCard label="Failed" value={String(kpis.failed)} icon={AlertTriangle} variant="negative" />
+        <KpiCard
+          label="In Progress"
+          value={String(kpis.inProgress)}
+          icon={Loader2}
+          variant="caution"
+        />
+        <KpiCard
+          label="Completed"
+          value={String(kpis.completed)}
+          icon={CheckCircle}
+          variant="positive"
+        />
+        <KpiCard
+          label="Quality Failed"
+          value={String(kpis.qualityFailed)}
+          icon={ShieldAlert}
+          variant="warning"
+        />
+        <KpiCard
+          label="Failed"
+          value={String(kpis.failed)}
+          icon={AlertTriangle}
+          variant="negative"
+        />
       </div>
 
       {/* Status Filters */}
       <div className="flex gap-2">
-        {(["ALL", "IN_PROGRESS", "COMPLETED", "QUALITY_FAILED", "FAILED"] as const).map((s) => (
+        {(
+          [
+            "ALL",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "QUALITY_FAILED",
+            "FAILED",
+          ] as const
+        ).map((s) => (
           <Button
             key={s}
             variant={statusFilter === s ? "accent" : "ghost"}
             size="sm"
-            onClick={() => { setStatusFilter(s); setPage(0); }}
+            onClick={() => {
+              setStatusFilter(s);
+              setPage(0);
+            }}
           >
-            {s === "ALL" ? "All" : s === "IN_PROGRESS" ? "In Progress" : s === "QUALITY_FAILED" ? "품질 미통과" : s.charAt(0) + s.slice(1).toLowerCase()}
+            {s === "ALL"
+              ? "All"
+              : s === "IN_PROGRESS"
+                ? "In Progress"
+                : s === "QUALITY_FAILED"
+                  ? "품질 미통과"
+                  : s.charAt(0) + s.slice(1).toLowerCase()}
           </Button>
         ))}
       </div>
@@ -174,12 +237,20 @@ export default function DocumentListPage() {
         ) : !isLoading && filteredItems.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title={statusFilter === "ALL" ? "No IM projects yet" : "No matching projects"}
-            description={statusFilter === "ALL"
-              ? "Create your first Investment Memorandum to get started."
-              : "No projects match the selected status filter."}
+            title={
+              statusFilter === "ALL"
+                ? "No IM projects yet"
+                : "No matching projects"
+            }
+            description={
+              statusFilter === "ALL"
+                ? "Create your first Investment Memorandum to get started."
+                : "No projects match the selected status filter."
+            }
             actionLabel={statusFilter === "ALL" ? "Create IM" : undefined}
-            onAction={statusFilter === "ALL" ? () => navigate("/im/new") : undefined}
+            onAction={
+              statusFilter === "ALL" ? () => navigate("/im/new") : undefined
+            }
           />
         ) : (
           <>

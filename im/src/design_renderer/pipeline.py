@@ -73,6 +73,8 @@ class PipelineResult:
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     elapsed_seconds: float = 0.0
+    template_load_ms: int = 0
+    persist_ms: int = 0
     manifest: GenerationManifest | None = None
 
     @property
@@ -166,7 +168,9 @@ class IMPipeline:
 
         # 3. PPTX 인프라 초기화
         manager = TemplateManager(tokens=self._tokens)
+        _tpl_t0 = time.monotonic()
         prs = manager.new_presentation()
+        result.template_load_ms = int((time.monotonic() - _tpl_t0) * 1000)
         factory = SlideFactory(manager, prs=prs, tokens=self._tokens)
 
         # 4. 섹션별 PPTX 렌더링 (매니페스트 + 폴백 슬라이드)
@@ -273,7 +277,9 @@ class IMPipeline:
         if pptx_path:
             out = Path(pptx_path)
             out.parent.mkdir(parents=True, exist_ok=True)
+            _persist_t0 = time.monotonic()
             prs.save(str(out))
+            result.persist_ms = int((time.monotonic() - _persist_t0) * 1000)
             result.pptx_path = out
             logger.info(f"PPTX 저장 완료: {out}")
 
@@ -310,6 +316,9 @@ class IMPipeline:
     ) -> PipelineResult:
         """PPTX 생성 (편의 메서드).
 
+        Gate A(Template Preflight)를 실행한 후 generate()를 호출한다.
+        preflight 실패 시 즉시 PipelineResult(success=False)를 반환한다.
+
         Args:
             data: IM 문서 입력 데이터.
             output_path: PPTX 저장 경로.
@@ -317,6 +326,71 @@ class IMPipeline:
         Returns:
             파이프라인 실행 결과.
         """
+        # Gate A: Template Preflight — 렌더링 전 템플릿 무결성 검증
+        if self._template_path:
+            try:
+                from src.template_engine.template_spec import get_spec
+
+                spec = get_spec(data.im_style.value.upper())
+                if spec:
+                    import asyncio
+
+                    from src.quality_gate.template_preflight import (
+                        TemplatePreflight,
+                    )
+
+                    preflight = TemplatePreflight()
+
+                    # 동기 컨텍스트에서 async evaluate 호출
+                    try:
+                        loop = asyncio.get_running_loop()
+                    except RuntimeError:
+                        loop = None
+
+                    if loop and loop.is_running():
+                        # 이미 이벤트 루프 실행 중 — 새 스레드에서 실행
+                        import concurrent.futures
+
+                        with concurrent.futures.ThreadPoolExecutor() as pool:
+                            preflight_result = pool.submit(
+                                lambda: asyncio.run(
+                                    preflight.evaluate(
+                                        str(self._template_path),
+                                        prd_section={
+                                            "im_style": data.im_style.value,
+                                        },
+                                        source_data={"template_spec": spec},
+                                    )
+                                )
+                            ).result()
+                    else:
+                        preflight_result = asyncio.run(
+                            preflight.evaluate(
+                                str(self._template_path),
+                                prd_section={
+                                    "im_style": data.im_style.value,
+                                },
+                                source_data={"template_spec": spec},
+                            )
+                        )
+
+                    if not preflight_result.passed:
+                        logger.error(
+                            "Gate A 프리플라이트 실패: %s",
+                            preflight_result.issues,
+                        )
+                        return PipelineResult(
+                            success=False,
+                            errors=[
+                                f"템플릿 프리플라이트 실패: {preflight_result.issues}",
+                            ],
+                        )
+            except Exception as preflight_exc:
+                logger.warning(
+                    "Gate A 프리플라이트 실행 중 예외 (계속 진행): %s",
+                    preflight_exc,
+                )
+
         return self.generate(data, pptx_path=output_path)
 
     def _apply_pptx_security(self, prs: Any) -> None:

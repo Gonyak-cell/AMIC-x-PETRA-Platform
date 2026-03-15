@@ -1,6 +1,6 @@
 """Document 관련 엔드포인트 (T-I16).
 
-> 마지막 수정: 2026-02-17 22:55:00
+> 마지막 수정: 2026-03-13 22:38:00
 
 POST /api/v1/documents — IM 문서 생성 시작
 POST /api/v1/documents/{id}/upload-financials — 재무데이터 Excel 업로드
@@ -164,13 +164,20 @@ async def download_document(
     format: str = Query(default="pptx", pattern="^(pptx|pdf)$"),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-) -> FileResponse:
+) -> Response:
     """생성 완료된 PPTX 또는 PDF 파일을 다운로드한다."""
     service = DocumentService(session)
+    document = await service.get_document(document_id, current_user)
+
+    # 품질 게이트 차단: QUALITY_FAILED 상태 다운로드 불가
+    if document.status == "QUALITY_FAILED":
+        raise ValidationError(
+            field="quality_status",
+            reason="품질 게이트 미통과(FAIL) 문서는 다운로드할 수 없습니다. 재생성이 필요합니다.",
+        )
 
     # PDF 형식 요청 시 supported_formats 확인
     if format == "pdf":
-        document = await service.get_document(document_id, current_user)
         supported = document.supported_formats or []
         if "pdf" not in supported:
             raise ValidationError(
@@ -187,11 +194,17 @@ async def download_document(
     else:
         media_type = "application/pdf"
 
-    return FileResponse(
+    response = FileResponse(
         path=str(file_path),
         media_type=media_type,
         filename=f"IM_{document_id}.{format}",
     )
+
+    # 조건부 통과: 경고 헤더 추가 (TM/DM과 동일 정책)
+    if document.quality_status == "CONDITIONAL":
+        response.headers["X-Quality-Warning"] = "CONDITIONAL"
+
+    return response
 
 
 @router.delete(

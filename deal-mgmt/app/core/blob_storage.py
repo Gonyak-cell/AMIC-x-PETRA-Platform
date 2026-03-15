@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -164,15 +165,21 @@ class BlobStorageClient:
             await asyncio.to_thread(_write_chunked)
             return blob_name
 
-        # Azure 모드: 전체 읽어서 업로드 (SDK 호환성 보장)
-        # NOTE: azure-storage-blob >= 12.20 에서 AsyncIterator 지원 시 스트리밍 전환 가능
+        # Azure 모드: AsyncIterator 스트리밍 업로드 (azure-storage-blob >= 12.20)
         from azure.storage.blob import ContentSettings
 
-        content = await file_obj.read()
+        async def _chunk_iter() -> AsyncIterator[bytes]:
+            while True:
+                chunk = await file_obj.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+
         blob_client_obj = self._container_client.get_blob_client(blob_name)
         await blob_client_obj.upload_blob(
-            content,
+            _chunk_iter(),
             overwrite=True,
+            length=file_size,
             content_settings=ContentSettings(content_type=content_type),
         )
         return blob_name

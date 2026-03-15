@@ -326,6 +326,71 @@ async def upload_document(
     return doc
 
 
+async def upload_document_stream(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    folder_id: uuid.UUID,
+    original_name: str,
+    file_obj: UploadFile,
+    file_size: int,
+    sha256_hex: str,
+    mime_type: str,
+    uploaded_by_email: str | None = None,
+    description: str | None = None,
+    *,
+    _folder_verified: bool = False,
+    auto_commit: bool = True,
+) -> VdrDocument:
+    """UploadFile을 스트리밍으로 Azure Blob에 저장하고 메타데이터를 DB에 기록한다.
+
+    upload_document()의 스트리밍 변형. SHA256과 file_size는 사전 계산된 값을 사용하여
+    중복 해시 계산과 메모리 전체 로드를 제거한다. 메모리: O(1MB).
+
+    Args:
+        file_obj: Starlette UploadFile (seek(0) 상태여야 함).
+        file_size: stream_hash_and_size()로 사전 계산된 파일 크기.
+        sha256_hex: stream_hash_and_size()로 사전 계산된 SHA256 해시.
+        _folder_verified: True이면 폴더 존재 확인을 건너뛴다.
+        auto_commit: False이면 db.commit()을 건너뛴다.
+    """
+    if not _folder_verified:
+        await get_folder(db, transaction_id, folder_id)
+
+    ext = Path(original_name).suffix.lower()
+    stored_name = f"{uuid.uuid4()}{ext}"
+
+    blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
+    await blob_client.upload_blob_stream(blob_name, file_obj, mime_type, file_size)
+
+    doc = VdrDocument(
+        transaction_id=transaction_id,
+        folder_id=folder_id,
+        original_name=original_name,
+        stored_name=stored_name,
+        file_path=blob_name,
+        file_size_bytes=file_size,
+        mime_type=mime_type,
+        sha256_hash=sha256_hex,
+        uploaded_by_email=uploaded_by_email,
+        description=description,
+    )
+    db.add(doc)
+    if auto_commit:
+        try:
+            await db.commit()
+            await db.refresh(doc)
+        except Exception:
+            await db.rollback()
+            try:
+                await blob_client.delete_blob(blob_name)
+            except Exception as cleanup_err:
+                logger.warning("고아 blob 삭제 실패: %s (error=%s)", blob_name, cleanup_err)
+            raise
+    else:
+        await db.flush()
+    return doc
+
+
 async def stream_hash_and_size(
     file: UploadFile,
     max_file_size: int,
@@ -632,6 +697,54 @@ async def check_duplicate_filename(
     return (count or 0) > 0
 
 
+async def resolve_folders_by_categories(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    categories: set[VdrFolderCategory],
+) -> dict[VdrFolderCategory, VdrFolder]:
+    """여러 카테고리의 최상위 폴더를 단일 IN 쿼리로 조회한다."""
+    if not categories:
+        return {}
+    q = select(VdrFolder).where(
+        VdrFolder.transaction_id == transaction_id,
+        VdrFolder.category.in_(categories),
+        VdrFolder.parent_id.is_(None),
+    )
+    result = await db.execute(q)
+    return {folder.category: folder for folder in result.scalars().all()}
+
+
+async def check_duplicate_filenames_batch(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    checks: list[tuple[uuid.UUID, str]],
+) -> set[tuple[uuid.UUID, str]]:
+    """여러 (folder_id, filename) 쌍의 중복 여부를 단일 쿼리로 확인한다.
+
+    Returns:
+        중복이 존재하는 (folder_id, original_name) 쌍의 set.
+    """
+    if not checks:
+        return set()
+
+    from sqlalchemy import and_, or_
+
+    conditions = [
+        and_(
+            VdrDocument.folder_id == fid,
+            VdrDocument.original_name == name,
+        )
+        for fid, name in checks
+    ]
+    q = select(VdrDocument.folder_id, VdrDocument.original_name).where(
+        VdrDocument.transaction_id == transaction_id,
+        VdrDocument.status == VdrDocumentStatus.ACTIVE,
+        or_(*conditions),
+    )
+    result = await db.execute(q)
+    return {(row.folder_id, row.original_name) for row in result.all()}
+
+
 async def auto_upload_document(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -679,4 +792,59 @@ async def auto_upload_document(
     )
 
     # routed_category=None 이면 폴백 사용, 라우터에서 VdrAutoUploadResult 조립 시 참조
+    return doc, folder, routed_category
+
+
+async def auto_upload_document_stream(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    original_name: str,
+    file_obj: UploadFile,
+    file_size: int,
+    sha256_hex: str,
+    mime_type: str,
+    uploaded_by_email: str | None = None,
+    description: str | None = None,
+) -> tuple[VdrDocument, VdrFolder, VdrFolderCategory | None]:
+    """파일을 스트리밍으로 분석하여 자동으로 폴더를 선택해 업로드한다.
+
+    auto_upload_document()의 스트리밍 변형. 메모리: O(1MB).
+
+    Returns:
+        (업로드된 문서, 라우팅된 폴더, 라우팅 카테고리 또는 폴백 시 None)
+    """
+    from app.services.vdr_categorization_service import auto_route
+
+    ext = Path(original_name).suffix.lower()
+    routed_category = auto_route(original_name, ext, mime_type, file_size)
+
+    folder: VdrFolder | None = None
+
+    if routed_category is not None:
+        folder = await resolve_folder_by_category(db, transaction_id, routed_category)
+
+    if folder is None:
+        folder = await resolve_fallback_folder(db, transaction_id)
+        routed_category = None
+
+    if folder is None:
+        raise ValueError("VDR이 초기화되지 않았습니다. 먼저 폴더 구조를 초기화해 주세요.")
+
+    has_dup = await check_duplicate_filename(db, transaction_id, folder.id, original_name)
+    final_name = resolve_unique_filename(original_name, has_dup)
+
+    doc = await upload_document_stream(
+        db,
+        transaction_id=transaction_id,
+        folder_id=folder.id,
+        original_name=final_name,
+        file_obj=file_obj,
+        file_size=file_size,
+        sha256_hex=sha256_hex,
+        mime_type=mime_type,
+        uploaded_by_email=uploaded_by_email,
+        description=description,
+        _folder_verified=True,
+    )
+
     return doc, folder, routed_category

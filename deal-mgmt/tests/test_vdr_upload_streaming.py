@@ -263,7 +263,7 @@ class TestDirectUploadIntegration:
         assert data["failed_files"][0]["filename"] == "invalid.exe"
 
     async def test_backward_compat_single_upload(self, client, vdr_txn_id):
-        """기존 단일 파일 업로드 엔드포인트가 여전히 동작한다."""
+        """기존 단일 파일 업로드 엔드포인트가 스트리밍으로 전환 후에도 동작한다."""
         # 폴더 목록 조회
         folders_resp = await client.get(f"/api/v1/transactions/{vdr_txn_id}/vdr/folders")
         assert folders_resp.status_code == 200
@@ -281,3 +281,142 @@ class TestDirectUploadIntegration:
         assert resp.status_code == 201
         data = resp.json()
         assert data["original_name"] == "compat_test.pdf"
+
+    async def test_auto_upload_streaming(self, client, vdr_txn_id):
+        """자동 업로드 엔드포인트가 스트리밍으로 동작한다."""
+        content = b"Auto upload streaming test PDF content"
+        files = {"file": ("financial_report_2024.pdf", io.BytesIO(content), "application/pdf")}
+
+        resp = await client.post(
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/documents/auto-upload",
+            files=files,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["document"]["file_size_bytes"] == len(content)
+        assert data["routed_folder"] is not None
+
+    async def test_single_upload_hash_matches(self, client, vdr_txn_id):
+        """단일 업로드 스트리밍에서 SHA256 해시가 정확하다."""
+        content = b"Hash verification test PDF content"
+        expected_hash = hashlib.sha256(content).hexdigest()
+
+        folders_resp = await client.get(f"/api/v1/transactions/{vdr_txn_id}/vdr/folders")
+        folder_id = folders_resp.json()[0]["id"]
+
+        files = {"file": ("hash_test.pdf", io.BytesIO(content), "application/pdf")}
+        resp = await client.post(
+            f"/api/v1/transactions/{vdr_txn_id}/vdr/folders/{folder_id}/documents",
+            files=files,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["sha256_hash"] == expected_hash
+
+
+# ── _validate_upload_streaming 유닛 테스트 ─────────────────────
+
+
+class TestValidateUploadStreaming:
+    """스트리밍 검증 함수 테스트."""
+
+    async def test_returns_hash_and_size(self):
+        """스트리밍 검증이 해시와 크기를 올바르게 반환한다."""
+        from app.routers.vdr import _validate_upload_streaming
+
+        content = os.urandom(512 * 1024)  # 512KB
+        expected_hash = hashlib.sha256(content).hexdigest()
+        upload_file = _make_upload_file(content, filename="report.pdf")
+
+        filename, ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(upload_file)
+
+        assert filename == "report.pdf"
+        assert ext == ".pdf"
+        assert content_type == "application/pdf"
+        assert sha256_hex == expected_hash
+        assert file_size == len(content)
+
+    async def test_file_reusable_after_validation(self):
+        """검증 후 UploadFile이 seek(0) 상태로 재사용 가능하다."""
+        from app.routers.vdr import _validate_upload_streaming
+
+        content = b"reusable after streaming validation"
+        upload_file = _make_upload_file(content, filename="reuse.pdf")
+
+        await _validate_upload_streaming(upload_file)
+
+        # seek(0) 후이므로 다시 읽으면 전체 내용이 나와야 함
+        re_read = await upload_file.read()
+        assert re_read == content
+
+
+# ── 배치 DB 쿼리 함수 테스트 ───────────────────────────────────
+
+
+class TestBatchDbQueries:
+    """resolve_folders_by_categories / check_duplicate_filenames_batch 테스트."""
+
+    async def test_resolve_folders_by_categories(self, client, vdr_txn_id):
+        """배치 폴더 조회가 여러 카테고리를 단일 쿼리로 반환한다."""
+        import uuid as uuid_mod
+
+        from app.core.database import async_session_factory
+        from app.models.enums import VdrFolderCategory
+        from app.services.vdr_service import resolve_folders_by_categories
+
+        categories = {VdrFolderCategory.CORPORATE, VdrFolderCategory.FINANCIAL, VdrFolderCategory.LEGAL}
+        txn_uuid = uuid_mod.UUID(str(vdr_txn_id))
+
+        async with async_session_factory() as db:
+            result = await resolve_folders_by_categories(db, txn_uuid, categories)
+
+        assert isinstance(result, dict)
+        # 기본 폴더 12개 중 이 3개는 존재해야 함
+        assert VdrFolderCategory.CORPORATE in result
+        assert VdrFolderCategory.FINANCIAL in result
+        assert VdrFolderCategory.LEGAL in result
+
+    async def test_resolve_folders_empty_categories(self, client, vdr_txn_id):
+        """빈 카테고리 집합이면 빈 딕셔너리를 반환한다."""
+        import uuid as uuid_mod
+
+        from app.core.database import async_session_factory
+        from app.services.vdr_service import resolve_folders_by_categories
+
+        txn_uuid = uuid_mod.UUID(str(vdr_txn_id))
+
+        async with async_session_factory() as db:
+            result = await resolve_folders_by_categories(db, txn_uuid, set())
+
+        assert result == {}
+
+    async def test_check_duplicate_filenames_batch(self, client, vdr_txn_id):
+        """배치 중복 체크가 정확한 결과를 반환한다."""
+        import uuid as uuid_mod
+
+        from app.core.database import async_session_factory
+        from app.services.vdr_service import check_duplicate_filenames_batch
+
+        # 존재하지 않는 folder_id로 테스트 — 중복 없어야 함
+        fake_folder_id = uuid_mod.uuid4()
+        txn_uuid = uuid_mod.UUID(str(vdr_txn_id))
+        checks = [(fake_folder_id, "nonexistent.pdf")]
+
+        async with async_session_factory() as db:
+            result = await check_duplicate_filenames_batch(db, txn_uuid, checks)
+
+        assert len(result) == 0
+
+    async def test_check_duplicate_filenames_batch_empty(self, client, vdr_txn_id):
+        """빈 체크 리스트이면 빈 집합을 반환한다."""
+        import uuid as uuid_mod
+
+        from app.core.database import async_session_factory
+        from app.services.vdr_service import check_duplicate_filenames_batch
+
+        txn_uuid = uuid_mod.UUID(str(vdr_txn_id))
+
+        async with async_session_factory() as db:
+            result = await check_duplicate_filenames_batch(db, txn_uuid, [])
+
+        assert result == set()

@@ -20,4 +20,5 @@ markers = [
     "requires_browser: Playwright 브라우저 필요",
     "requires_plotly: Plotly + Kaleido 필요",
     "requires_weasyprint: WeasyPrint + cairo/pango 필요",
+    "deterministic: 동일 입력 2회 렌더 SSIM 검증 — 템플릿 파일 + FORCE_VISUAL_DIFF 필요, slow에 포함",
 ]

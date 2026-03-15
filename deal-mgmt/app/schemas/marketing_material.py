@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.models.enums import MarketingDocStatus, MarketingDocType
 
@@ -47,10 +47,26 @@ class MarketingMaterialOut(BaseModel):
     quality_status: str | None = None
     quality_issues: list | None = None
     slide_count: int | None = None
+    template_fingerprint: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def pipeline_metrics(self) -> dict[str, int] | None:
+        """parameters._metrics에서 성능 메트릭 추출."""
+        if self.parameters and isinstance(self.parameters.get("_metrics"), dict):
+            return self.parameters["_metrics"]
+        return None
+
     distributed_to: list | None
     distributed_at: str | None
     created_by_email: str | None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def distribution_eligible(self) -> bool:
+        """PASS 상태만 배포 가능."""
+        return self.quality_status == "PASS"
 
     model_config = {"from_attributes": True}
