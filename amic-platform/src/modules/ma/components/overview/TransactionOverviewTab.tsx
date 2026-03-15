@@ -22,6 +22,7 @@ import { cn } from "@/lib/cn";
 import { useUpdateTransaction } from "@/modules/ma/hooks/useTransactions";
 import type {
   Currency,
+  DealType,
   DealStructure,
   InvestmentType,
   SaleProcess,
@@ -32,6 +33,7 @@ import type {
 import type { Transaction } from "@/modules/ma/types/transaction";
 import {
   PHASE_CONFIG,
+  DEAL_TYPE_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
   CURRENCY_OPTIONS,
@@ -165,6 +167,19 @@ export default function TransactionOverviewTab({
               />
             </dd>
             <dt className="text-text-muted">딜 구조</dt>
+            <dd>
+              <InlineSelect
+                options={DEAL_TYPE_OPTIONS}
+                value={txn.deal_type}
+                onChange={(v) =>
+                  updateTxn.mutate({
+                    deal_type: (v || "SE") as DealType,
+                  })
+                }
+                disabled={!canWrite()}
+              />
+            </dd>
+            <dt className="text-text-muted">세부 거래 구조</dt>
             <dd>
               <InlineSelect
                 options={DEAL_STRUCTURE_OPTIONS}

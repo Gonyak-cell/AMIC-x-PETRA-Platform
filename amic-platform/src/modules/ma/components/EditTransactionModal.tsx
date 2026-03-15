@@ -140,7 +140,7 @@ export default function EditTransactionModal({
           </legend>
 
           <Select
-            label="딜 타입"
+            label="딜 구조"
             options={DEAL_TYPE_OPTIONS}
             value={form.deal_type ?? "SE"}
             onChange={(e) => set("deal_type", e.target.value as DealType)}
@@ -204,7 +204,7 @@ export default function EditTransactionModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
-                label="딜 구조"
+                label="세부 거래 구조"
                 options={DEAL_STRUCTURE_OPTIONS}
                 value={form.deal_structure ?? ""}
                 onChange={(e) =>

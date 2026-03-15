@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,19 @@ from app.models.enums import AuditAction, ClosingCategory, DealType, Transaction
 from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 from app.services import audit_service
+
+
+def _get_code_prefix(deal_type: DealType) -> str:
+    if deal_type == DealType.ISSUE:
+        return "ISU"
+    return deal_type.value
+
+
+def _get_code_prefix_candidates(deal_type: DealType) -> list[str]:
+    primary = _get_code_prefix(deal_type)
+    if deal_type == DealType.ISSUE:
+        return [primary, DealType.ISSUE.value]
+    return [primary]
 
 
 async def _generate_code_name(
@@ -32,11 +45,15 @@ async def _generate_code_name(
 
     abbr = project_name.removeprefix("Project ").strip()[:3].upper()
     year_suffix = str(year)[2:]
-    prefix = f"{deal_type.value}{year_suffix}-{abbr}-"
+    prefix = f"{_get_code_prefix(deal_type)}{year_suffix}-{abbr}-"
+    prefix_candidates = [
+        f"{candidate}{year_suffix}-{abbr}-"
+        for candidate in _get_code_prefix_candidates(deal_type)
+    ]
 
     result = await db.execute(
         select(Transaction.code_name).where(
-            Transaction.code_name.like(f"{prefix}%"),
+            or_(*[Transaction.code_name.like(f"{candidate}%") for candidate in prefix_candidates]),
         )
     )
     existing = [row[0] for row in result.all()]

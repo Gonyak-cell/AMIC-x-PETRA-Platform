@@ -1,13 +1,39 @@
 import type { SelectOption } from "@/components/ui";
+import type { DealType } from "@/modules/ma/types/transaction";
 
 // ── Deal Type ─────────────────────────────────────────
 export const DEAL_TYPE_OPTIONS: SelectOption[] = [
-  { value: "SE", label: "SE — 매각 자문" },
-  { value: "BU", label: "BU — 인수" },
-  { value: "ISSUE", label: "ISSUE — 신주유치" },
-  { value: "HYB", label: "HYB — 매각+신주유치" },
-  { value: "GEN", label: "GEN — 기타자문" },
+  { value: "SE", label: "매각자문" },
+  { value: "BU", label: "인수자문" },
+  { value: "ISSUE", label: "신주 유치" },
+  { value: "HYB", label: "매각+신주유치" },
+  { value: "GEN", label: "기타 자문" },
 ];
+
+export const DEAL_TYPE_LABELS: Record<DealType, string> = {
+  SE: "매각자문",
+  BU: "인수자문",
+  ISSUE: "신주 유치",
+  HYB: "매각+신주유치",
+  GEN: "기타 자문",
+};
+
+export const DEAL_TYPE_CODE_PREFIX: Record<DealType, string> = {
+  SE: "SE",
+  BU: "BU",
+  ISSUE: "ISU",
+  HYB: "HYB",
+  GEN: "GEN",
+};
+
+export function getDealTypeLabel(dealType: DealType | null | undefined): string {
+  if (!dealType) return "-";
+  return DEAL_TYPE_LABELS[dealType];
+}
+
+export function getDealTypeCodePrefix(dealType: DealType): string {
+  return DEAL_TYPE_CODE_PREFIX[dealType];
+}
 
 // ── Transaction Status ────────────────────────────────
 export const TRANSACTION_STATUS_OPTIONS: SelectOption[] = [

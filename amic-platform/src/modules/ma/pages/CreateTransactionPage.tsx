@@ -16,6 +16,7 @@ import {
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
   DEAL_TYPE_OPTIONS,
+  getDealTypeCodePrefix,
 } from "@/modules/ma/constants";
 
 import { Button, Card, Input, Select, PageHero } from "@/components/ui";
@@ -40,7 +41,7 @@ function previewCode(dealType: DealType, name: string): string {
   const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
   if (!suffix) return "";
   const yy = new Date().getFullYear().toString().slice(2);
-  return `${dealType}${yy}-${suffix}-??`;
+  return `${getDealTypeCodePrefix(dealType)}${yy}-${suffix}-??`;
 }
 
 export default function CreateTransactionPage() {
@@ -117,7 +118,7 @@ export default function CreateTransactionPage() {
 
               {/* 딜 타입 */}
               <Select
-                label="딜 타입"
+                label="딜 구조"
                 options={DEAL_TYPE_OPTIONS}
                 value={form.deal_type}
                 onChange={(e) => set("deal_type", e.target.value as DealType)}
@@ -212,7 +213,7 @@ export default function CreateTransactionPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
-                    label="딜 구조"
+                    label="세부 거래 구조"
                     options={DEAL_STRUCTURE_OPTIONS}
                     value={form.deal_structure ?? ""}
                     onChange={(e) =>

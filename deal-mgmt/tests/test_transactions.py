@@ -12,7 +12,7 @@ SAMPLE_TXN = {
 }
 
 # 코드명 자동 생성 패턴: SE26-ALP-01 형식
-CODE_NAME_PATTERN = re.compile(r"^(SE|BU|ISSUE|HYB|GEN)\d{2}-[A-Z]{1,3}-\d{2}$")
+CODE_NAME_PATTERN = re.compile(r"^(SE|BU|ISU|HYB|GEN)\d{2}-[A-Z]{1,3}-\d{2}$")
 
 
 # ── Create ─────────────────────────────────────────────────
@@ -44,6 +44,15 @@ async def test_create_two_transactions_sequential_code(client):
 
 
 # ── Read ───────────────────────────────────────────────────
+async def test_create_issue_transaction_uses_isu_prefix(client):
+    txn = {**SAMPLE_TXN, "name": "Project Growth", "deal_type": "ISSUE"}
+    resp = await client.post("/api/v1/transactions", json=txn)
+
+    assert resp.status_code == 201
+    assert resp.json()["deal_type"] == "ISSUE"
+    assert resp.json()["code_name"].startswith("ISU")
+
+
 async def test_get_transaction(client):
     create_resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
     txn_id = create_resp.json()["id"]

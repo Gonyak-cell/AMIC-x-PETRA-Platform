@@ -47,6 +47,8 @@ import {
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
   DEAL_TYPE_OPTIONS,
+  getDealTypeCodePrefix,
+  getDealTypeLabel,
 } from "@/modules/ma/constants";
 
 // ── 상수 ──────────────────────────────────────────────────
@@ -73,7 +75,7 @@ function previewCode(dealType: DealType, name: string): string {
   const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
   if (!suffix) return "";
   const yy = new Date().getFullYear().toString().slice(2);
-  return `${dealType}${yy}-${suffix}-??`;
+  return `${getDealTypeCodePrefix(dealType)}${yy}-${suffix}-??`;
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────
@@ -168,7 +170,7 @@ function ManualTab() {
           </legend>
 
           <Select
-            label="딜 타입"
+            label="딜 구조"
             options={DEAL_TYPE_OPTIONS}
             value={form.deal_type}
             onChange={(e) => set("deal_type", e.target.value as DealType)}
@@ -258,7 +260,7 @@ function ManualTab() {
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
-                label="딜 구조"
+                label="세부 거래 구조"
                 options={DEAL_STRUCTURE_OPTIONS}
                 value={form.deal_structure ?? ""}
                 onChange={(e) =>
@@ -455,8 +457,8 @@ function AITab() {
               <p className="font-medium">{txn.name}</p>
             </div>
             <div>
-              <span className="text-text-muted">딜 타입</span>
-              <p className="font-medium">{txn.deal_type}</p>
+              <span className="text-text-muted">딜 구조</span>
+              <p className="font-medium">{getDealTypeLabel(txn.deal_type)}</p>
             </div>
             <div>
               <span className="text-text-muted">대상 기업</span>
@@ -473,7 +475,7 @@ function AITab() {
               </p>
             </div>
             <div>
-              <span className="text-text-muted">딜 구조</span>
+              <span className="text-text-muted">세부 거래 구조</span>
               <p className="font-medium">{txn.deal_structure ?? "-"}</p>
             </div>
             {txn.industry && (
