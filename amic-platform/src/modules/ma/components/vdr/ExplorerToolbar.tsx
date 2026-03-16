@@ -1,4 +1,11 @@
-import { ChevronRight, FolderPlus, Home, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  FolderPlus,
+  Home,
+  LayoutGrid,
+  List,
+  Upload,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 
@@ -7,6 +14,8 @@ interface Breadcrumb {
   name: string;
 }
 
+export type ViewMode = "grid" | "list";
+
 interface ExplorerToolbarProps {
   breadcrumbs: Breadcrumb[];
   onNavigate: (folderId: string | null) => void;
@@ -14,6 +23,8 @@ interface ExplorerToolbarProps {
   currentFolderId: string | null;
   isUploading: boolean;
   onUploadClick: () => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
 export default function ExplorerToolbar({
@@ -23,6 +34,8 @@ export default function ExplorerToolbar({
   currentFolderId,
   isUploading,
   onUploadClick,
+  viewMode = "grid",
+  onViewModeChange,
 }: ExplorerToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-2">
@@ -61,6 +74,36 @@ export default function ExplorerToolbar({
           </span>
         ))}
       </nav>
+
+      {/* View Toggle */}
+      {onViewModeChange && (
+        <div className="flex items-center rounded-md border border-slate-200 flex-shrink-0">
+          <button
+            type="button"
+            className={`rounded-l-md p-1 transition-colors ${
+              viewMode === "grid"
+                ? "bg-slate-200 text-slate-700"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+            title="그리드 보기"
+            onClick={() => onViewModeChange("grid")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className={`rounded-r-md p-1 transition-colors ${
+              viewMode === "list"
+                ? "bg-slate-200 text-slate-700"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+            title="목록 보기"
+            onClick={() => onViewModeChange("list")}
+          >
+            <List className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 flex-shrink-0">

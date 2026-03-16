@@ -28,8 +28,11 @@ import type {
 } from "@/modules/ma/types/document_extraction";
 import { formatFileSize } from "@/modules/ma/utils/format";
 import ExplorerToolbar from "./ExplorerToolbar";
+import type { ViewMode } from "./ExplorerToolbar";
 import FileCard from "./FileCard";
 import FolderCard from "./FolderCard";
+import VdrFileListPanel from "./VdrFileListPanel";
+import VdrFolderTreePanel from "./VdrFolderTreePanel";
 import { buildBreadcrumbs, buildFolderIndex } from "./vdrTree";
 
 interface VdrExplorerProps {
@@ -68,6 +71,7 @@ export default function VdrExplorer({
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const suggestCategory = useSuggestVdrCategory(txnId);
@@ -179,6 +183,8 @@ export default function VdrExplorer({
         currentFolderId={currentFolderId}
         isUploading={isUploading}
         onUploadClick={() => fileInputRef.current?.click()}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* 숨긴 파일 입력 */}
@@ -224,19 +230,49 @@ export default function VdrExplorer({
         </div>
       )}
 
-      {/* 그리드 영역 */}
-      <div
-        className="flex-1 overflow-y-auto"
-        onDragOver={currentFolderId ? (e) => e.preventDefault() : undefined}
-        onDrop={currentFolderId ? handleDrop : undefined}
-      >
-        {currentFolderId === null ? (
-          /* 루트: 폴더 그리드 */
-          rootFolders.length === 0 ? (
+      {viewMode === "grid" ? (
+        /* ─── 기존 그리드 뷰 ─── */
+        <div
+          className="flex-1 overflow-y-auto"
+          onDragOver={currentFolderId ? (e) => e.preventDefault() : undefined}
+          onDrop={currentFolderId ? handleDrop : undefined}
+        >
+          {currentFolderId === null ? (
+            rootFolders.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                <FolderPlus className="h-10 w-10 text-slate-200" />
+                <p className="text-sm font-medium">
+                  폴더를 생성하여 문서를 정리하세요
+                </p>
+              </div>
+            ) : (
+              <div
+                className="grid gap-3 p-4"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                }}
+              >
+                {rootFolders.map((folder) => (
+                  <FolderCard
+                    key={folder.id}
+                    folder={folder}
+                    onOpen={setCurrentFolderId}
+                    onDelete={
+                      !folder.is_required ? handleDeleteFolder : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )
+          ) : docsLoading ? (
+            <div className="flex h-32 items-center justify-center text-sm text-slate-400">
+              불러오는 중...
+            </div>
+          ) : currentSubFolders.length === 0 && documents.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
-              <FolderPlus className="h-10 w-10 text-slate-200" />
-              <p className="text-sm font-medium">
-                폴더를 생성하여 문서를 정리하세요
+              <Upload className="h-8 w-8 text-slate-200" />
+              <p className="text-sm">
+                파일을 드래그하거나 업로드 버튼을 클릭하세요
               </p>
             </div>
           ) : (
@@ -246,7 +282,7 @@ export default function VdrExplorer({
                 gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
               }}
             >
-              {rootFolders.map((folder) => (
+              {currentSubFolders.map((folder) => (
                 <FolderCard
                   key={folder.id}
                   folder={folder}
@@ -256,53 +292,55 @@ export default function VdrExplorer({
                   }
                 />
               ))}
+              {documents.map((doc) => (
+                <FileCard
+                  key={doc.id}
+                  document={doc}
+                  extraction={extractionByDocId.get(doc.id)}
+                  onDelete={(docId) =>
+                    deleteDoc.mutate({ docId, folderId: currentFolderId! })
+                  }
+                  onStartExtraction={(docId) => setPendingDocId(docId)}
+                  onRetryExtraction={(extractionId) =>
+                    retryExtraction.mutate(extractionId)
+                  }
+                  downloadUrl={getVdrDownloadUrl(txnId, doc.id)}
+                />
+              ))}
             </div>
-          )
-        ) : /* 폴더 내부: 하위 폴더 + 파일 그리드 */
-        docsLoading ? (
-          <div className="flex h-32 items-center justify-center text-sm text-slate-400">
-            불러오는 중...
-          </div>
-        ) : currentSubFolders.length === 0 && documents.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
-            <Upload className="h-8 w-8 text-slate-200" />
-            <p className="text-sm">
-              파일을 드래그하거나 업로드 버튼을 클릭하세요
-            </p>
-          </div>
-        ) : (
-          <div
-            className="grid gap-3 p-4"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-            }}
-          >
-            {currentSubFolders.map((folder) => (
-              <FolderCard
-                key={folder.id}
-                folder={folder}
-                onOpen={setCurrentFolderId}
-                onDelete={!folder.is_required ? handleDeleteFolder : undefined}
-              />
-            ))}
-            {documents.map((doc) => (
-              <FileCard
-                key={doc.id}
-                document={doc}
-                extraction={extractionByDocId.get(doc.id)}
-                onDelete={(docId) =>
-                  deleteDoc.mutate({ docId, folderId: currentFolderId! })
-                }
-                onStartExtraction={(docId) => setPendingDocId(docId)}
-                onRetryExtraction={(extractionId) =>
-                  retryExtraction.mutate(extractionId)
-                }
-                downloadUrl={getVdrDownloadUrl(txnId, doc.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        /* ─── 신규 탐색기 뷰 ─── */
+        <div className="flex flex-1 min-h-0">
+          <VdrFolderTreePanel
+            childrenByParentId={childrenByParentId}
+            folderById={folderById}
+            currentFolderId={currentFolderId}
+            onNavigate={setCurrentFolderId}
+          />
+          <VdrFileListPanel
+            currentFolderId={currentFolderId}
+            subFolders={
+              currentFolderId !== null ? currentSubFolders : rootFolders
+            }
+            documents={currentFolderId !== null ? documents : []}
+            docsLoading={docsLoading}
+            onNavigate={setCurrentFolderId}
+            onDeleteFolder={handleDeleteFolder}
+            onDeleteDoc={(docId) =>
+              deleteDoc.mutate({ docId, folderId: currentFolderId! })
+            }
+            onStartExtraction={(docId) => setPendingDocId(docId)}
+            onRetryExtraction={(extractionId) =>
+              retryExtraction.mutate(extractionId)
+            }
+            extractionByDocId={extractionByDocId}
+            txnId={txnId}
+            onDrop={handleDrop}
+          />
+        </div>
+      )}
 
       {/* AI 분석 카테고리 선택 모달 */}
       <Modal

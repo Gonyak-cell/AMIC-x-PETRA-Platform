@@ -380,6 +380,98 @@ describe("VdrTab", () => {
     expect(screen.getByText("재무자료")).toBeInTheDocument();
   });
 
+  it("목록 보기 토글 시 탐색기 뷰(트리+파일 리스트)가 렌더된다", async () => {
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/vdr/summary", () => {
+        return HttpResponse.json(initializedSummary);
+      }),
+      http.get("*/api/ma/transactions/:txnId/vdr/folders", () => {
+        return HttpResponse.json(mockFolders);
+      }),
+    );
+    renderTab();
+
+    // 초기 grid 뷰에서 폴더 카드 표시 확인
+    await waitFor(() => {
+      expect(screen.getByText("재무자료")).toBeInTheDocument();
+    });
+
+    // "목록 보기" 토글 클릭
+    fireEvent.click(screen.getByTitle("목록 보기"));
+
+    // list 뷰에서 폴더 행이 표시되는지 확인 (role="row")
+    await waitFor(() => {
+      expect(screen.getByRole("row")).toBeInTheDocument();
+    });
+    // 트리+리스트 양쪽에 폴더 이름이 표시되는지 확인
+    expect(screen.getAllByText("재무자료").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("list 뷰에서 폴더 단일 클릭으로 하위 탐색된다", async () => {
+    const foldersWithChild = [
+      {
+        id: "folder-1",
+        transaction_id: "txn-1",
+        name: "재무자료",
+        category: "FINANCIAL",
+        parent_id: null,
+        children: [
+          {
+            id: "folder-2",
+            transaction_id: "txn-1",
+            name: "감사보고서",
+            category: "FINANCIAL",
+            parent_id: "folder-1",
+            children: [],
+            document_count: 0,
+            is_required: false,
+            order_index: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        document_count: 1,
+        is_required: false,
+        order_index: 0,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/vdr/summary", () => {
+        return HttpResponse.json(initializedSummary);
+      }),
+      http.get("*/api/ma/transactions/:txnId/vdr/folders", () => {
+        return HttpResponse.json(foldersWithChild);
+      }),
+      http.get(
+        "*/api/ma/transactions/:txnId/vdr/folders/:folderId/documents",
+        () => HttpResponse.json([]),
+      ),
+    );
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByText("재무자료")).toBeInTheDocument();
+    });
+
+    // list 뷰로 전환
+    fireEvent.click(screen.getByTitle("목록 보기"));
+
+    // list 뷰에서 폴더 행 렌더 확인
+    await waitFor(() => {
+      expect(screen.getByRole("row")).toBeInTheDocument();
+    });
+
+    // 단일 클릭으로 폴더 행 진입 (grid와 동일한 UX)
+    fireEvent.click(screen.getByRole("row"));
+
+    // 하위 폴더 "감사보고서" 표시 확인
+    await waitFor(() => {
+      expect(screen.getByText("감사보고서")).toBeInTheDocument();
+    });
+  });
+
   it("미초기화 상태에서 vdr/init을 호출한다", async () => {
     let initCalled = false;
     server.use(

@@ -26,7 +26,6 @@ import {
   Download,
   HelpCircle,
   Handshake,
-  Search,
   Scale,
   BookOpen,
   SearchCheck,
@@ -35,9 +34,6 @@ import {
   CalendarClock,
   ListChecks,
   FolderLock,
-  Megaphone,
-  Archive,
-  CheckCircle2,
   Shield,
   Calculator,
   FileStack,
@@ -48,13 +44,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SidebarContext } from "./SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useTransaction } from "@/modules/ma/hooks/useTransactions";
-import { PHASE_CONFIG } from "@/modules/ma/constants";
-import {
-  SidebarNavItem,
-  SidebarPhaseItem,
-  SidebarSection,
-} from "./SidebarNavItem";
+import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { SidebarModuleGroup } from "./SidebarModuleGroup";
 import { Badge } from "@/components/ui";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
@@ -97,27 +87,6 @@ const MA_PIPELINE_NAV = [
   { to: "/ma/transactions", label: "Pipeline", icon: Handshake, end: true },
   { to: "/ma/transactions/new", label: "New Transaction", icon: PlusCircle },
 ];
-
-const MA_WORKFLOW_NAV = [
-  { phase: "ENGAGEMENT", to: "engagement", label: "① 수임", icon: Handshake },
-  {
-    phase: "PREPARATION",
-    to: "marketing-materials",
-    label: "② 준비",
-    icon: ClipboardList,
-  },
-  { phase: "MARKETING", to: "buyers", label: "③ 마케팅", icon: Megaphone },
-  { phase: "BIDDING", to: "bids", label: "④ 입찰", icon: Search },
-  {
-    phase: "MAIN_DUE_DILIGENCE",
-    to: "dd-checklist",
-    label: "⑤ 본실사",
-    icon: Search,
-  },
-  { phase: "NEGOTIATION", to: "contracts", label: "⑥ 협상", icon: Scale },
-  { phase: "CLOSING", to: "closing", label: "⑦ Closing", icon: CheckCircle2 },
-  { phase: "POST_CLOSING", to: "pmi", label: "⑧ Post-Close", icon: Archive },
-] as const;
 
 const MA_TOOLS_NAV = [
   { to: "vdr", label: "VDR", icon: FolderLock },
@@ -213,13 +182,6 @@ export function Sidebar({
   const maTxnMatch = location.pathname.match(/^\/ma\/transactions\/([^/]+)/);
   const maTxnId = maTxnMatch?.[1];
   const isInMaWorkspace = isMa && !!maTxnId && maTxnId !== "new";
-
-  // MA 현재 거래의 phase 정보 (React Query 캐시 공유)
-  const { data: maTxn } = useTransaction(isInMaWorkspace ? maTxnId! : "");
-  const currentPhase = maTxn?.phase;
-  const currentPhaseIdx = PHASE_CONFIG.findIndex(
-    (p) => p.phase === currentPhase,
-  );
 
   return (
     <SidebarContext.Provider value={{ collapsed }}>
@@ -370,62 +332,6 @@ export function Sidebar({
 
               {!isClient && (
                 <>
-                  <SidebarSection
-                    title="Workspace"
-                    collapsible
-                    defaultOpen
-                    storageKey="ma-workspace"
-                    className="mt-3"
-                  >
-                    <SidebarNavItem
-                      to={
-                        isInMaWorkspace ? `/ma/transactions/${maTxnId}/` : "#"
-                      }
-                      label="Overview"
-                      icon={Eye}
-                      end
-                      disabled={!isInMaWorkspace}
-                      onClick={onNavItemClick}
-                    />
-                  </SidebarSection>
-
-                  <SidebarSection
-                    title="Workflow"
-                    collapsible
-                    defaultOpen
-                    storageKey="ma-workflow"
-                    className="mt-3"
-                  >
-                    {MA_WORKFLOW_NAV.map((item) => {
-                      const itemIdx = PHASE_CONFIG.findIndex(
-                        (p) => p.phase === item.phase,
-                      );
-                      const status: "done" | "current" | "future" =
-                        !isInMaWorkspace || currentPhaseIdx < 0
-                          ? "future"
-                          : itemIdx < currentPhaseIdx
-                            ? "done"
-                            : itemIdx === currentPhaseIdx
-                              ? "current"
-                              : "future";
-
-                      return (
-                        <SidebarPhaseItem
-                          key={item.phase}
-                          to={
-                            isInMaWorkspace
-                              ? `/ma/transactions/${maTxnId}/${item.to}?viewPhase=${item.phase}`
-                              : "#"
-                          }
-                          label={item.label}
-                          icon={item.icon}
-                          status={!isInMaWorkspace ? "future" : status}
-                          onClick={onNavItemClick}
-                        />
-                      );
-                    })}
-                  </SidebarSection>
-
                   <SidebarSection
                     title="Tools"
                     collapsible
@@ -753,7 +659,6 @@ export function Sidebar({
 
         {/* Health Status (admin only, hidden for CLIENT) */}
         {!isClient && !collapsed && <HealthIndicator />}
-
 
         {/* User Info + Logout */}
         {user && (
