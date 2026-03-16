@@ -1,8 +1,4 @@
-import {
-  renderWithProviders,
-  screen,
-  waitFor,
-} from "@/test/test-utils";
+import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { mockUser } from "@/test/mocks/data";
 import DashboardPage from "../DashboardPage";
 
@@ -13,7 +9,9 @@ describe("DashboardPage", () => {
     });
 
     expect(
-      screen.getByText(`Welcome, ${mockUser.display_name} ${mockUser.title} 님`),
+      screen.getByText(
+        `Welcome, ${mockUser.display_name} ${mockUser.title} 님`,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -61,5 +59,14 @@ describe("DashboardPage", () => {
     });
 
     expect(screen.getByText("Welcome, User 님")).toBeInTheDocument();
+  });
+
+  it("renders right rail with project updates and calendar widgets", async () => {
+    renderWithProviders(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("최근 프로젝트 진행상황")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Calendar")).toBeInTheDocument();
   });
 });

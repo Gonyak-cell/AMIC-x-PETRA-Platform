@@ -20,6 +20,7 @@ export interface CalendarEvent {
 }
 
 export interface CalendarFilter {
+  /** 0-based month (0 = January, 11 = December). Matches `Date.getMonth()`. */
   month: number;
   year: number;
 }

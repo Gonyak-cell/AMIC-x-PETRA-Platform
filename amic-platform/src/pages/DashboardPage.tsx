@@ -11,12 +11,17 @@ import {
 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { usePortalKpis, useModuleHealth, useAggregatedHealth } from "@/hooks/useDashboard";
+import {
+  usePortalKpis,
+  useModuleHealth,
+  useAggregatedHealth,
+} from "@/hooks/useDashboard";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { KpiCard, Card, KpiCardSkeleton, PageHero } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import forestCoverUrl from "@/assets/images/forest-cover.jpg";
-
+import RecentProjectUpdatesWidget from "@/components/dashboard/RecentProjectUpdatesWidget";
+import DashboardCalendarWidget from "@/components/dashboard/DashboardCalendarWidget";
 
 /* ── Module Card config (AMIC palette) ── */
 const MODULE_CARDS = [
@@ -140,141 +145,163 @@ export default function DashboardPage() {
         </div>
       </PageHero>
 
-      {/* Quick Actions (hover-glow-green) */}
-      <div>
-        <h2 className="label-uppercase mb-3">Quick Actions</h2>
-        <div ref={quickActionsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {QUICK_ACTIONS.map((action) => (
+      {/* ── 2-column body: main + right rail ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+        {/* ── Left: Main content ── */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div>
+            <h2 className="label-uppercase mb-3">Quick Actions</h2>
             <div
-              key={action.to}
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer group"
-              onClick={() => navigate(action.to)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") navigate(action.to);
-              }}
+              ref={quickActionsRef}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
             >
-              <Card className="hover-glow-green">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <action.icon className="w-5 h-5 text-accent" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-text-dark group-hover:text-accent transition-colors flex items-center gap-1">
-                      {action.label}
-                      <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <p className="text-xs text-text-secondary mt-0.5">
-                      {action.description}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Module Status */}
-      <div>
-        <h2 className="label-uppercase mb-3">Module Status</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {aggregatedHealth ? (
-            aggregatedHealth.map((mod) => {
-              const statusColor = mod.overallHealthy
-                ? "bg-positive"
-                : mod.services.some((s) => s.healthy)
-                  ? "bg-caution"
-                  : "bg-negative";
-              const statusText = mod.overallHealthy
-                ? "Connected"
-                : mod.services.some((s) => s.healthy)
-                  ? "Degraded"
-                  : "Unreachable";
-              const iconBg = STATUS_ICON_STYLES[mod.id]?.bg ?? "bg-gray-100";
-              const iconColor = STATUS_ICON_STYLES[mod.id]?.color ?? "text-gray-600";
-              const IconComp = STATUS_ICON_STYLES[mod.id]?.icon ?? Search;
-
-              return (
-                <Card key={mod.id} padding="sm">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                        iconBg,
-                      )}
-                    >
-                      <IconComp className={cn("w-4 h-4", iconColor)} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-text-dark truncate">
-                        {mod.label}
+              {QUICK_ACTIONS.map((action) => (
+                <div
+                  key={action.to}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer group"
+                  onClick={() => navigate(action.to)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") navigate(action.to);
+                  }}
+                >
+                  <Card className="hover-glow-green">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <action.icon className="w-5 h-5 text-accent" />
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span
-                          className={cn("h-2 w-2 rounded-full shrink-0", statusColor)}
-                          aria-label={statusText}
-                        />
-                        <span className="text-xs text-text-secondary">
-                          {statusText}
-                          <span className="text-text-muted ml-1">
-                            ({mod.healthySummary})
-                          </span>
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-text-dark group-hover:text-accent transition-colors flex items-center gap-1">
+                          {action.label}
+                          <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          {action.description}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              );
-            })
-          ) : (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} padding="sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-                    <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
-                  </div>
+                  </Card>
                 </div>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Modules (Gradient Background Cards) */}
-      <div>
-        <h2 className="label-uppercase mb-3">Modules</h2>
-        <div ref={modulesRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {MODULE_CARDS.map((mod) => (
-            <div
-              key={mod.id}
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer"
-              onClick={() => navigate(mod.to)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") navigate(mod.to);
-              }}
-            >
-              <Card className={cn("hover-glow", mod.bg)}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                    <mod.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white">{mod.label}</div>
-                    <p className="text-xs text-white/70">{mod.subtitle}</p>
-                  </div>
-                </div>
-              </Card>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
+          {/* Module Status */}
+          <div>
+            <h2 className="label-uppercase mb-3">Module Status</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {aggregatedHealth
+                ? aggregatedHealth.map((mod) => {
+                    const statusColor = mod.overallHealthy
+                      ? "bg-positive"
+                      : mod.services.some((s) => s.healthy)
+                        ? "bg-caution"
+                        : "bg-negative";
+                    const statusText = mod.overallHealthy
+                      ? "Connected"
+                      : mod.services.some((s) => s.healthy)
+                        ? "Degraded"
+                        : "Unreachable";
+                    const iconBg =
+                      STATUS_ICON_STYLES[mod.id]?.bg ?? "bg-gray-100";
+                    const iconColor =
+                      STATUS_ICON_STYLES[mod.id]?.color ?? "text-gray-600";
+                    const IconComp = STATUS_ICON_STYLES[mod.id]?.icon ?? Search;
+
+                    return (
+                      <Card key={mod.id} padding="sm">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                              iconBg,
+                            )}
+                          >
+                            <IconComp className={cn("w-4 h-4", iconColor)} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-text-dark truncate">
+                              {mod.label}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span
+                                className={cn(
+                                  "h-2 w-2 rounded-full shrink-0",
+                                  statusColor,
+                                )}
+                                aria-label={statusText}
+                              />
+                              <span className="text-xs text-text-secondary">
+                                {statusText}
+                                <span className="text-text-muted ml-1">
+                                  ({mod.healthySummary})
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })
+                : Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i} padding="sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
+                        <div className="space-y-1.5 flex-1">
+                          <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                          <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+            </div>
+          </div>
+
+          {/* Modules */}
+          <div>
+            <h2 className="label-uppercase mb-3">Modules</h2>
+            <div
+              ref={modulesRef}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+            >
+              {MODULE_CARDS.map((mod) => (
+                <div
+                  key={mod.id}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer"
+                  onClick={() => navigate(mod.to)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") navigate(mod.to);
+                  }}
+                >
+                  <Card className={cn("hover-glow", mod.bg)}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                        <mod.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">
+                          {mod.label}
+                        </div>
+                        <p className="text-xs text-white/70">{mod.subtitle}</p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right rail: Activity + Calendar ── */}
+        <aside className="space-y-6">
+          <RecentProjectUpdatesWidget />
+          <DashboardCalendarWidget />
+        </aside>
+      </div>
     </div>
   );
 }

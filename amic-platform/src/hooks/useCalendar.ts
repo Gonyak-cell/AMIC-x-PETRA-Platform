@@ -4,7 +4,11 @@ import { maApi } from "@/api/maClient";
 import { toArray, safeStr } from "@/api/safe-parse";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import type { Transaction } from "@/modules/ma/types/transaction";
-import type { CalendarEvent, GanttItem, CalendarFilter } from "@/types/calendar";
+import type {
+  CalendarEvent,
+  GanttItem,
+  CalendarFilter,
+} from "@/types/calendar";
 
 export interface CalendarErrors {
   ma: boolean;
@@ -20,6 +24,10 @@ for (const p of PHASE_CONFIG) {
   PHASE_LABEL[p.phase] = p.label;
 }
 
+/**
+ * MA 거래 기반 캘린더 이벤트를 가져온다.
+ * @param _filter - 현재 필터링 미적용 (reserved). month는 0-based (Date.getMonth() 기준).
+ */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useCalendarEvents(_filter: CalendarFilter) {
   const txnQuery = useQuery({
