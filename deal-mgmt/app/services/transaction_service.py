@@ -175,10 +175,12 @@ async def list_transactions(
     limit: int = 20,
     offset: int = 0,
     client_email: str | None = None,
+    assigned_to_email: str | None = None,
 ) -> tuple[list[Transaction], int]:
     """거래 목록 조회 (필터/검색/페이지네이션).
 
     client_email이 주어지면 해당 이메일이 배정된 딜만 반환한다 (CLIENT 역할용).
+    assigned_to_email이 주어지면 lead_advisor 또는 deal_captain이 해당 이메일인 딜만 반환한다.
     """
     from app.models.deal_client import DealClient
 
@@ -186,6 +188,15 @@ async def list_transactions(
 
     if client_email is not None:
         base = base.where(Transaction.id.in_(select(DealClient.transaction_id).where(DealClient.email == client_email)))
+
+    if assigned_to_email is not None:
+        email_lower = func.lower(assigned_to_email)
+        base = base.where(
+            or_(
+                func.lower(Transaction.lead_advisor_email) == email_lower,
+                func.lower(Transaction.deal_captain_email) == email_lower,
+            )
+        )
 
     if search:
         pattern = f"%{search}%"

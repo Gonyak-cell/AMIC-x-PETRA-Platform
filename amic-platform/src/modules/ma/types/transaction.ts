@@ -150,6 +150,7 @@ export interface TransactionListParams {
   side?: TransactionSide;
   phase?: TransactionPhase;
   status?: TransactionStatus;
+  assigned_to_me?: boolean;
   limit?: number;
   offset?: number;
 }

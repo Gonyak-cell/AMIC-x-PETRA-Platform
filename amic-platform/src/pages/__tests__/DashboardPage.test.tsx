@@ -31,20 +31,10 @@ describe("DashboardPage", () => {
     expect(screen.getByText("KIIS")).toBeInTheDocument();
   });
 
-  it("shows KPI labels after loading", async () => {
+  it("shows MY PROJECTS section", async () => {
     renderWithProviders(<DashboardPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Active M&A Deals")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Watchlist Alerts")).toBeInTheDocument();
-  });
-
-  it("shows Module Status section", async () => {
-    renderWithProviders(<DashboardPage />);
-
-    expect(screen.getByText("Module Status")).toBeInTheDocument();
+    expect(screen.getByText("MY PROJECTS")).toBeInTheDocument();
   });
 
   it("shows Modules section header", async () => {
@@ -61,12 +51,20 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Welcome, User 님")).toBeInTheDocument();
   });
 
-  it("renders right rail with project updates and calendar widgets", async () => {
+  it("renders right rail with calendar widget only", async () => {
     renderWithProviders(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("최근 프로젝트 진행상황")).toBeInTheDocument();
+      expect(screen.getByText("Calendar")).toBeInTheDocument();
     });
-    expect(screen.getByText("Calendar")).toBeInTheDocument();
+  });
+
+  it("does NOT render removed sections (Module Status, Project Status)", async () => {
+    renderWithProviders(<DashboardPage />);
+
+    // Module Status was replaced by MY PROJECTS
+    expect(screen.queryByText("Module Status")).not.toBeInTheDocument();
+    // Project Status widget was removed from right rail
+    expect(screen.queryByText("Project Status")).not.toBeInTheDocument();
   });
 });

@@ -140,3 +140,61 @@ async def test_delete_transaction(client):
     # 목록에서도 제외
     resp = await client.get("/api/v1/transactions")
     assert resp.json()["total"] == 0
+
+
+# ── assigned_to_me 필터 ──────────────────────────────────
+async def test_assigned_to_me_filters_by_lead_advisor(client):
+    """assigned_to_me=true는 lead_advisor_email이 현재 사용자인 거래만 반환한다."""
+    # 기본 JWT mock email = test@example.com
+    mine = {**SAMPLE_TXN, "name": "My Deal", "lead_advisor_email": "test@example.com"}
+    other = {**SAMPLE_TXN, "name": "Other Deal", "lead_advisor_email": "other@example.com"}
+    await client.post("/api/v1/transactions", json=mine)
+    await client.post("/api/v1/transactions", json=other)
+
+    resp = await client.get("/api/v1/transactions", params={"assigned_to_me": True})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["name"] == "My Deal"
+
+
+async def test_assigned_to_me_includes_deal_captain(client):
+    """assigned_to_me=true는 deal_captain_email이 현재 사용자인 거래도 포함한다."""
+    captain_deal = {
+        **SAMPLE_TXN,
+        "name": "Captain Deal",
+        "lead_advisor_email": "other@example.com",
+        "deal_captain_email": "test@example.com",
+    }
+    await client.post("/api/v1/transactions", json=captain_deal)
+
+    resp = await client.get("/api/v1/transactions", params={"assigned_to_me": True})
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+    assert resp.json()["items"][0]["name"] == "Captain Deal"
+
+
+async def test_assigned_to_me_case_insensitive(client):
+    """assigned_to_me 필터는 대소문자를 구분하지 않는다."""
+    upper_deal = {
+        **SAMPLE_TXN,
+        "name": "Upper Deal",
+        "lead_advisor_email": "TEST@EXAMPLE.COM",
+    }
+    await client.post("/api/v1/transactions", json=upper_deal)
+
+    resp = await client.get("/api/v1/transactions", params={"assigned_to_me": True})
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+
+
+async def test_assigned_to_me_false_returns_all(client):
+    """assigned_to_me=false(기본값)는 모든 거래를 반환한다."""
+    mine = {**SAMPLE_TXN, "name": "My Deal", "lead_advisor_email": "test@example.com"}
+    other = {**SAMPLE_TXN, "name": "Other Deal", "lead_advisor_email": "other@example.com"}
+    await client.post("/api/v1/transactions", json=mine)
+    await client.post("/api/v1/transactions", json=other)
+
+    resp = await client.get("/api/v1/transactions")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2

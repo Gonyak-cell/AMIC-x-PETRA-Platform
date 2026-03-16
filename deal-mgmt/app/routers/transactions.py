@@ -40,12 +40,14 @@ async def list_transactions(
     side: TransactionSide | None = Query(None, description="SELL, BUY, DUAL"),
     phase: TransactionPhase | None = Query(None, description="7단계 필터"),
     status: TransactionStatus | None = Query(None, description="DRAFT, ACTIVE, ON_HOLD, COMPLETED, TERMINATED"),
+    assigned_to_me: bool = Query(False, description="내 담당 거래만 (lead_advisor 또는 deal_captain)"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     client_email = claims.email if claims.role == "CLIENT" else None
+    assigned_to_email = claims.email if assigned_to_me else None
     items, total = await transaction_service.list_transactions(
         db,
         search=search,
@@ -55,6 +57,7 @@ async def list_transactions(
         limit=limit,
         offset=offset,
         client_email=client_email,
+        assigned_to_email=assigned_to_email,
     )
     return TransactionListResponse(
         items=[TransactionOut.model_validate(t) for t in items],

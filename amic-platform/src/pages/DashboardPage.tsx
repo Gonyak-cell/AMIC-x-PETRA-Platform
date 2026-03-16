@@ -1,8 +1,6 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
 import {
-  Bell,
   FileText,
   Search,
   ArrowRight,
@@ -11,16 +9,11 @@ import {
 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  usePortalKpis,
-  useModuleHealth,
-  useAggregatedHealth,
-} from "@/hooks/useDashboard";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { KpiCard, Card, KpiCardSkeleton, PageHero } from "@/components/ui";
+import { Card, PageHero } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import forestCoverUrl from "@/assets/images/forest-cover.jpg";
-import RecentProjectUpdatesWidget from "@/components/dashboard/RecentProjectUpdatesWidget";
+import MyProjectsSection from "@/components/dashboard/MyProjectsSection";
 import DashboardCalendarWidget from "@/components/dashboard/DashboardCalendarWidget";
 
 /* ── Module Card config (AMIC palette) ── */
@@ -51,16 +44,6 @@ const MODULE_CARDS = [
   },
 ] as const;
 
-/* ── Module Status icon/color per aggregated module ── */
-const STATUS_ICON_STYLES: Record<
-  string,
-  { icon: LucideIcon; bg: string; color: string }
-> = {
-  ma: { icon: Handshake, bg: "bg-amic-100", color: "text-amic-600" },
-  docs: { icon: FileStack, bg: "bg-amic-50", color: "text-[#1C8F57]" },
-  kiis: { icon: Search, bg: "bg-[#E8F8ED]", color: "text-accent" },
-};
-
 const QUICK_ACTIONS = [
   {
     label: "New Transaction",
@@ -85,9 +68,6 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isClient } = useAuth();
-  const { data: health } = useModuleHealth();
-  const { data: aggregatedHealth } = useAggregatedHealth();
-  const { kpis, errors, loading } = usePortalKpis(health);
 
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const modulesRef = useRef<HTMLDivElement>(null);
@@ -113,37 +93,8 @@ export default function DashboardPage() {
         subtitle={today}
         backgroundImage={forestCoverUrl}
         backgroundOpacity={0.4}
-      >
-        {/* Glass Card KPIs — each card renders independently */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-          {loading.ma ? (
-            <KpiCardSkeleton />
-          ) : (
-            <KpiCard
-              label="Active M&A Deals"
-              value={errors.ma ? "—" : String(kpis.activeMaDeals)}
-              icon={Handshake}
-              variant={errors.ma ? "negative" : "positive"}
-              hoverLift
-              generous
-              className="glass-card"
-            />
-          )}
-          {loading.kiis ? (
-            <KpiCardSkeleton />
-          ) : (
-            <KpiCard
-              label="Watchlist Alerts"
-              value={errors.kiis ? "—" : String(kpis.watchlistAlerts)}
-              icon={Bell}
-              variant={errors.kiis ? "negative" : "default"}
-              hoverLift
-              generous
-              className="glass-card"
-            />
-          )}
-        </div>
-      </PageHero>
+        compact
+      />
 
       {/* ── 2-column body: main + right rail ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
@@ -188,76 +139,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Module Status */}
-          <div>
-            <h2 className="label-uppercase mb-3">Module Status</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {aggregatedHealth
-                ? aggregatedHealth.map((mod) => {
-                    const statusColor = mod.overallHealthy
-                      ? "bg-positive"
-                      : mod.services.some((s) => s.healthy)
-                        ? "bg-caution"
-                        : "bg-negative";
-                    const statusText = mod.overallHealthy
-                      ? "Connected"
-                      : mod.services.some((s) => s.healthy)
-                        ? "Degraded"
-                        : "Unreachable";
-                    const iconBg =
-                      STATUS_ICON_STYLES[mod.id]?.bg ?? "bg-gray-100";
-                    const iconColor =
-                      STATUS_ICON_STYLES[mod.id]?.color ?? "text-gray-600";
-                    const IconComp = STATUS_ICON_STYLES[mod.id]?.icon ?? Search;
-
-                    return (
-                      <Card key={mod.id} padding="sm">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                              iconBg,
-                            )}
-                          >
-                            <IconComp className={cn("w-4 h-4", iconColor)} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-text-dark truncate">
-                              {mod.label}
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span
-                                className={cn(
-                                  "h-2 w-2 rounded-full shrink-0",
-                                  statusColor,
-                                )}
-                                aria-label={statusText}
-                              />
-                              <span className="text-xs text-text-secondary">
-                                {statusText}
-                                <span className="text-text-muted ml-1">
-                                  ({mod.healthySummary})
-                                </span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })
-                : Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i} padding="sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
-                        <div className="space-y-1.5 flex-1">
-                          <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-                          <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-            </div>
-          </div>
+          {/* MY PROJECTS */}
+          <MyProjectsSection />
 
           {/* Modules */}
           <div>
@@ -298,7 +181,6 @@ export default function DashboardPage() {
 
         {/* ── Right rail: Activity + Calendar ── */}
         <aside className="space-y-6">
-          <RecentProjectUpdatesWidget />
           <DashboardCalendarWidget />
         </aside>
       </div>
