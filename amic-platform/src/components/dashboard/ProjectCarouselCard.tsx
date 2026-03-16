@@ -71,10 +71,10 @@ export default function ProjectCarouselCard({
         {/* Middle: project identity */}
         <div className="mb-4">
           <div className="font-bold text-white text-xl leading-tight truncate">
-            {txn.code_name}
+            {txn.name}
           </div>
           <p className="text-sm text-white/60 truncate mt-1">
-            {txn.target_company_name || txn.name}
+            {txn.target_company_name}
           </p>
         </div>
 
