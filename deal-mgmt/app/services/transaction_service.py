@@ -180,9 +180,10 @@ async def list_transactions(
     """거래 목록 조회 (필터/검색/페이지네이션).
 
     client_email이 주어지면 해당 이메일이 배정된 딜만 반환한다 (CLIENT 역할용).
-    assigned_to_email이 주어지면 lead_advisor 또는 deal_captain이 해당 이메일인 딜만 반환한다.
+    assigned_to_email이 주어지면 lead_advisor, deal_captain, 또는 working_group 멤버인 딜만 반환한다.
     """
     from app.models.deal_client import DealClient
+    from app.models.working_group import WorkingGroupMember
 
     base = select(Transaction).where(Transaction.is_deleted.is_(False))
 
@@ -191,10 +192,15 @@ async def list_transactions(
 
     if assigned_to_email is not None:
         email_lower = func.lower(assigned_to_email)
+        wg_subq = select(WorkingGroupMember.transaction_id).where(
+            func.lower(WorkingGroupMember.email) == email_lower,
+            WorkingGroupMember.is_active.is_(True),
+        )
         base = base.where(
             or_(
                 func.lower(Transaction.lead_advisor_email) == email_lower,
                 func.lower(Transaction.deal_captain_email) == email_lower,
+                Transaction.id.in_(wg_subq),
             )
         )
 

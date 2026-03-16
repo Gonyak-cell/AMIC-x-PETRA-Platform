@@ -1,4 +1,4 @@
-/** 대시보드 MY PROJECTS 전용 훅 — 서버 assigned_to_me 필터 사용 */
+/** 대시보드 MY PROJECTS 전용 훅 — ADMIN은 전체, 나머지는 assigned_to_me 필터 */
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,13 +18,16 @@ const EXCLUDED_STATUSES = new Set<TransactionStatus>([
 export function useMyProjects() {
   const { user } = useAuth();
   const enabled = !!user?.email;
+  const isAdmin = user?.role === "ADMIN";
+
+  const params = isAdmin
+    ? { limit: 100 }
+    : { assigned_to_me: true, limit: 100 };
 
   const { data, isLoading, isError } = useQuery<TransactionListResponse>({
-    queryKey: ["ma", "transactions", { assigned_to_me: true, limit: 100 }],
+    queryKey: ["ma", "transactions", "my-projects", params],
     queryFn: async () => {
-      const { data: resp } = await maApi.get("/transactions", {
-        params: { assigned_to_me: true, limit: 100 },
-      });
+      const { data: resp } = await maApi.get("/transactions", { params });
       return resp;
     },
     staleTime: 30_000,

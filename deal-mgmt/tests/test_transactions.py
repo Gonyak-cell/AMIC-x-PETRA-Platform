@@ -198,3 +198,34 @@ async def test_assigned_to_me_false_returns_all(client):
     resp = await client.get("/api/v1/transactions")
     assert resp.status_code == 200
     assert resp.json()["total"] == 2
+
+
+async def test_assigned_to_me_includes_working_group_member(client):
+    """assigned_to_me=true는 working group 멤버인 거래도 포함한다."""
+    # 다른 사람이 lead인 거래 생성
+    wg_deal = {
+        **SAMPLE_TXN,
+        "name": "WG Deal",
+        "lead_advisor_email": "other@example.com",
+    }
+    resp = await client.post("/api/v1/transactions", json=wg_deal)
+    assert resp.status_code == 201
+    txn_id = resp.json()["id"]
+
+    # 현재 사용자(test@example.com)를 working group에 추가
+    wg_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/members",
+        json={
+            "name": "Test User",
+            "email": "test@example.com",
+            "role": "LEAD_ADVISOR",
+            "organization": "AMIC",
+        },
+    )
+    assert wg_resp.status_code == 201
+
+    # assigned_to_me=true로 조회 시 WG 멤버로서 포함되어야 함
+    resp = await client.get("/api/v1/transactions", params={"assigned_to_me": True})
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+    assert resp.json()["items"][0]["name"] == "WG Deal"

@@ -100,6 +100,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
         {/* ── Left: Main content ── */}
         <div className="space-y-6">
+          {/* MY PROJECTS */}
+          <MyProjectsSection />
+
           {/* Quick Actions */}
           <div>
             <h2 className="label-uppercase mb-3">Quick Actions</h2>
@@ -138,9 +141,6 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-
-          {/* MY PROJECTS */}
-          <MyProjectsSection />
 
           {/* Modules */}
           <div>

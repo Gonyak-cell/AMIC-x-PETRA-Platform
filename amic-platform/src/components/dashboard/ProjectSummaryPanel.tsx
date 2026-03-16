@@ -1,6 +1,6 @@
-/** MY PROJECTS — 프로젝트 요약 패널 */
+/** MY PROJECTS — 프로젝트 요약 패널 (외부 컨테이너 안에서 사용) */
 
-import { Card, Badge } from "@/components/ui";
+import { Badge } from "@/components/ui";
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import { DEAL_TYPE_LABELS } from "@/modules/ma/constants/transaction";
 import { TRANSACTION_STATUS_VARIANT } from "@/modules/ma/constants/status-variants";
@@ -50,7 +50,7 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex justify-between items-center py-1.5">
+    <div className="flex justify-between items-center py-2">
       <dt className="text-xs text-text-secondary">{label}</dt>
       <dd className="text-sm font-medium text-text-dark text-right">
         {children}
@@ -67,15 +67,8 @@ export default function ProjectSummaryPanel({
   const statusVariant = TRANSACTION_STATUS_VARIANT[txn.status] ?? "neutral";
 
   return (
-    <Card
-      padding="md"
-      className="sm:w-[260px] shrink-0 rounded-2xl"
-      style={{
-        boxShadow:
-          "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",
-      }}
-    >
-      <dl className="divide-y divide-border">
+    <div className="p-5">
+      <dl className="divide-y divide-gray-100">
         <Row label="Deal Type">
           {DEAL_TYPE_LABELS[txn.deal_type] ?? txn.deal_type}
         </Row>
@@ -89,6 +82,6 @@ export default function ProjectSummaryPanel({
         <Row label="My Role">{getMyRole(txn, userEmail)}</Row>
         <Row label="Last Updated">{timeAgo(txn.updated_at)}</Row>
       </dl>
-    </Card>
+    </div>
   );
 }
