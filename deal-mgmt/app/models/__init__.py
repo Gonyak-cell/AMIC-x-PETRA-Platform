@@ -5,6 +5,7 @@ from app.models.base import Base, TimestampMixin
 from app.models.bid import Bid
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.buyer_marketing_log import BuyerMarketingLog
+from app.models.cf_news_article import CFNewsArticle
 from app.models.closing_checklist import ClosingChecklist
 from app.models.compliance_item import ComplianceItem
 from app.models.consortium_mapping import ConsortiumMapping
@@ -168,6 +169,7 @@ __all__ = [
     "BuyerReaction",
     "BuyerTier",
     "BuyerType",
+    "CFNewsArticle",
     "ClosingCategory",
     "ClosingChecklist",
     "ClosingConditionStatus",

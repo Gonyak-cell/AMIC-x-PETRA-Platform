@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     GEMINI_CLASSIFICATION_MODEL: str = "gemini-2.0-flash"
     GEMINI_FILE_TTL_HOURS: int = 47  # 48h API 제한보다 1h 여유
 
+    # Cloudflare Browser Rendering — /crawl API (Phase B 뉴스 확장)
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+    CLOUDFLARE_API_TOKEN: str = ""
+    CF_CRAWL_ENABLED: bool = False  # Phase B 활성화 플래그
+    CF_CRAWL_REQUEST_DELAY: float = 3.0  # 소스 간 요청 간격(초)
+    CF_CRAWL_MAX_PAGES: int = 5  # 소스당 최대 크롤링 페이지
+
     # LDD Multi-LLM Pipeline
     LDD_MULTI_LLM_ENABLED: bool = False  # 멀티 LLM 파이프라인 활성화
     LDD_STAGE3_DUAL_RISK: bool = True  # 듀얼 리스크 분석

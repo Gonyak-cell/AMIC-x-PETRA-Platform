@@ -60,6 +60,11 @@ async def lifespan(app: FastAPI):
 
     await blob_client.init()
 
+    # Redis 초기화 (뉴스 피드 캐싱 등)
+    from app.core.redis import init_redis
+
+    await init_redis()
+
     # Stale extraction 정리 — 서버 재시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 레코드 복구
     await _cleanup_stale_extractions()
 
@@ -78,6 +83,12 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     await blob_client.close()
+
+    # Redis 종료
+    from app.core.redis import close_redis
+
+    await close_redis()
+
     from app.core.dependencies import close_all_clients
 
     await close_all_clients()
@@ -189,6 +200,7 @@ from app.routers import (
     nda_markups,
     ndas,
     negotiation_issues,
+    news_feed,
     notes,
     pef_registry,
     permits,
@@ -267,6 +279,7 @@ app.include_router(admin_settings.router, prefix="/api/v1")
 app.include_router(pef_registry.router, prefix="/api/v1")
 app.include_router(spa_analysis.router, prefix="/api/v1")
 app.include_router(deal_setup.router, prefix="/api/v1")
+app.include_router(news_feed.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

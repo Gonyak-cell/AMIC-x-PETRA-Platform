@@ -41,6 +41,10 @@ celery_app.conf.beat_schedule = {
         "task": "deal_mgmt.cleanup_orphan_blobs",
         "schedule": crontab(hour=3, minute=0),
     },
+    "collect-cf-news-hourly": {
+        "task": "deal_mgmt.news.collect_cf_sources",
+        "schedule": crontab(minute=0),  # 매시 정각
+    },
 }
 
 celery_app.autodiscover_tasks(["app.tasks"])
