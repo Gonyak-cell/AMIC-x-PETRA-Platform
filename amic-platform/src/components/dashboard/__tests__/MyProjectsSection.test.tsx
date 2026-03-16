@@ -36,7 +36,6 @@ function makeTxn(
 const now = new Date().toISOString();
 const ago1h = new Date(Date.now() - 3600000).toISOString();
 const ago2h = new Date(Date.now() - 7200000).toISOString();
-const ago3h = new Date(Date.now() - 10800000).toISOString();
 
 /** 서버 assigned_to_me=true 응답 시뮬레이션 — 담당 거래만 포함 (Zeta 미포함) */
 const mockItems = [
