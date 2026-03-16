@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * VDR 파일/문서 공유 유틸리티
  *
