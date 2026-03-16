@@ -277,4 +277,21 @@ export const maHandlers = [
   http.get("*/api/ma/transactions/:txnId/legal-documents", () => {
     return HttpResponse.json([]);
   }),
+
+  // Risks — useRisks expects { items: RiskItem[], total: number }
+  http.get("*/api/ma/transactions/:txnId/risks", () => {
+    return HttpResponse.json({ items: [], total: 0 });
+  }),
+
+  // Risk summary — useRiskSummary expects RiskSummary
+  http.get("*/api/ma/transactions/:txnId/risks/summary", () => {
+    return HttpResponse.json({
+      total: 0,
+      by_category: [],
+      by_status: {},
+      matrix: [],
+      avg_risk_score: 0,
+      unmitigated_critical: 0,
+    });
+  }),
 ];

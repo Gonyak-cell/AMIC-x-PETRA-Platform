@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, X, Mic } from "lucide-react";
 import {
   Button,
@@ -62,10 +63,24 @@ export default function MeetingLogsTab({
   onClearBuyerFilter,
 }: MeetingLogsTabProps) {
   const { canWrite } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<MeetingStatus | "">("");
   const [showForm, setShowForm] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+
+  // ?compose=1 감지 → 폼 자동 오픈 (1회)
+  useEffect(() => {
+    if (searchParams.get("compose") === "1") {
+      setSelectedLogId(null);
+      setShowForm(true);
+      // 쿼리 제거 (재방문 시 중복 오픈 방지)
+      const next = new URLSearchParams(searchParams);
+      next.delete("compose");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 미팅 로그 데이터
   const {
@@ -218,7 +233,9 @@ export default function MeetingLogsTab({
         <Card className="p-5 space-y-5 border-primary-200">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-heading font-semibold">
-              {selectedLog.marketing_stage ? MARKETING_STAGE_TITLE_LABELS[selectedLog.marketing_stage] : selectedLog.title}
+              {selectedLog.marketing_stage
+                ? MARKETING_STAGE_TITLE_LABELS[selectedLog.marketing_stage]
+                : selectedLog.title}
             </h3>
             <div className="flex gap-2">
               {canWrite() && (
@@ -367,6 +384,9 @@ export default function MeetingLogsTab({
         onSubmit={selectedLogId ? handleUpdate : handleCreate}
         isLoading={createLog.isPending || updateLog.isPending}
         txnId={txnId}
+        buyerId={buyerId}
+        buyerName={buyerName}
+        lockBuyer={!!buyerId}
       />
     </div>
   );

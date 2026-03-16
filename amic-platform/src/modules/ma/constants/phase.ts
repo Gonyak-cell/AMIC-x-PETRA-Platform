@@ -81,11 +81,67 @@ export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
   POST_CLOSING: "pmi",
 };
 
-// ── 단계별 표시 탭 (전 단계 공통 + 단계별) ────────────
+// ── 단계별 표시 탭 (primary only — rail tools 제외) ────
 export const ALWAYS_VISIBLE_TABS = ["overview"] as const;
 
-/** MARKETING 이후 단계에 공통으로 표시되는 탭 (risks/compliance → phase gate evidence) */
-const CROSS_PHASE_TABS = ["risks", "compliance", "notes-approvals"] as const;
+/** 우측 SecondaryRail로 이동된 cross-phase 도구 ID */
+export const RAIL_TOOL_IDS = [
+  "risks",
+  "compliance",
+  "notes-approvals",
+  "timeline",
+  "ai-quality",
+] as const;
+
+export type RailToolId = (typeof RAIL_TOOL_IDS)[number];
+
+/**
+ * Phase별 SecondaryRail 노출 규칙.
+ * 빈 배열 = 전 phase 노출.
+ */
+export const RAIL_TOOL_PHASE_RULES: Record<
+  RailToolId,
+  readonly TransactionPhase[]
+> = {
+  timeline: [], // 전 phase
+  "ai-quality": [
+    "PREPARATION",
+    "MARKETING",
+    "BIDDING",
+    "MAIN_DUE_DILIGENCE",
+    "NEGOTIATION",
+  ],
+  risks: [
+    "MARKETING",
+    "BIDDING",
+    "MAIN_DUE_DILIGENCE",
+    "NEGOTIATION",
+    "CLOSING",
+  ],
+  compliance: [
+    "MARKETING",
+    "BIDDING",
+    "MAIN_DUE_DILIGENCE",
+    "NEGOTIATION",
+    "CLOSING",
+  ],
+  "notes-approvals": [
+    "MARKETING",
+    "BIDDING",
+    "MAIN_DUE_DILIGENCE",
+    "NEGOTIATION",
+    "CLOSING",
+  ],
+};
+
+/** phase에서 해당 rail tool이 노출되어야 하는지 확인 */
+export function isRailToolVisible(
+  toolId: RailToolId,
+  phase: TransactionPhase,
+): boolean {
+  const allowedPhases = RAIL_TOOL_PHASE_RULES[toolId];
+  return allowedPhases.length === 0 || allowedPhases.includes(phase);
+}
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
   ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi", "vdr"],
@@ -96,30 +152,12 @@ export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
     "ndas",
     "vdr",
   ],
-  MARKETING: [
-    ...ALWAYS_VISIBLE_TABS,
-    "buyers",
-    "marketing-logs",
-    "vdr",
-    ...CROSS_PHASE_TABS,
-  ],
-  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr", ...CROSS_PHASE_TABS],
+  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr"],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"], // deprecated -- 호환성 유지
-  MAIN_DUE_DILIGENCE: [
-    ...ALWAYS_VISIBLE_TABS,
-    "dd-checklist",
-    "rfi",
-    "vdr",
-    ...CROSS_PHASE_TABS,
-  ],
-  NEGOTIATION: [
-    ...ALWAYS_VISIBLE_TABS,
-    "contracts",
-    "negotiation-logs",
-    "vdr",
-    ...CROSS_PHASE_TABS,
-  ],
-  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr", ...CROSS_PHASE_TABS],
+  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
+  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
+  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
   POST_CLOSING: [...ALWAYS_VISIBLE_TABS, "pmi", "earnout", "vdr"],
 };
 

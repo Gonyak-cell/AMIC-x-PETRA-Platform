@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
-from collections.abc import AsyncGenerator
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
-from fastapi.responses import RedirectResponse, Response, StreamingResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
-from app.core.config import settings
-from app.core.database import async_session_factory, get_db
+from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
-from app.core.rate_limiter import InMemoryRateLimiter, qa_rate_limiter
+from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import VdrAccessAction, VdrDocumentStatus
 from app.models.transaction import Transaction
@@ -30,13 +27,9 @@ from app.schemas.vdr import (
     VdrFolderTreeOut,
     VdrFolderUpdate,
     VdrInitRequest,
-    VdrQARequest,
-    VdrQAResponse,
-    VdrQASourceOut,
     VdrSummaryOut,
 )
 from app.services import transaction_service, vdr_access_service, vdr_service
-from app.services.vdr_qa_service import QAResult, ask_question_stream, prepare_qa_context
 
 logger = logging.getLogger(__name__)
 
@@ -525,132 +518,3 @@ def _build_tree(
             roots.append(node)
 
     return roots
-
-
-# ── Q&A ───────────────────────────────────────────────────
-
-
-@router.post("/qa", response_model=VdrQAResponse, summary="VDR 문서 기반 Q&A")
-async def ask_vdr_question(
-    txn_id: uuid.UUID,
-    body: VdrQARequest,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
-) -> VdrQAResponse:
-    """VDR 문서들을 참조하여 자연어 질문에 답변한다.
-
-    Gemini File API의 1M 토큰 컨텍스트를 활용하여
-    VDR 전체(또는 지정) 문서를 기반으로 답변을 생성한다.
-    """
-    qa_rate_limiter.check(claims.user_id)
-
-    if not settings.VDR_QA_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="VDR Q&A 기능이 비활성화되어 있습니다.",
-        )
-
-    if not settings.GOOGLE_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google API 키가 설정되지 않았습니다.",
-        )
-
-    await _get_and_authorize_txn(db, txn_id, claims)
-
-    from app.services.vdr_qa_service import ask_question
-
-    result = await ask_question(
-        db=db,
-        transaction_id=txn_id,
-        question=body.question,
-        document_ids=body.document_ids,
-        conversation_id=body.conversation_id,
-        user_sub=claims.user_id,
-        api_key=settings.GOOGLE_API_KEY,
-        max_documents=settings.VDR_QA_MAX_DOCUMENTS,
-        max_tokens=settings.VDR_QA_MAX_TOKENS,
-    )
-
-    return VdrQAResponse(
-        answer=result.answer,
-        sources=[
-            VdrQASourceOut(
-                document_id=s.document_id,
-                document_name=s.document_name,
-                relevance=s.relevance,
-            )
-            for s in result.sources
-        ],
-        conversation_id=result.conversation_id,
-        cost_usd=result.cost_usd if claims.role == "ADMIN" else None,
-    )
-
-
-@router.post("/qa/stream", summary="VDR 문서 기반 Q&A (SSE 스트리밍)")
-async def stream_vdr_question(
-    txn_id: uuid.UUID,
-    body: VdrQARequest,
-    claims: JWTClaims = Depends(get_jwt_claims),
-) -> StreamingResponse:
-    """VDR 문서들을 참조하여 자연어 질문에 SSE 스트리밍으로 답변한다.
-
-    DB 세션을 수동으로 생성하여 prepare_qa_context() 완료 후 즉시 반환한다.
-    스트리밍 generator는 DB 세션에 의존하지 않는다.
-    """
-    qa_rate_limiter.check(claims.user_id)
-
-    if not settings.VDR_QA_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="VDR Q&A 기능이 비활성화되어 있습니다.",
-        )
-
-    if not settings.GOOGLE_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google API 키가 설정되지 않았습니다.",
-        )
-
-    # DB 세션을 수동으로 생성하여 prepare 단계에서만 사용 후 즉시 반환
-    async with async_session_factory() as db:
-        await _get_and_authorize_txn(db, txn_id, claims)
-
-        ctx_or_result = await prepare_qa_context(
-            db=db,
-            transaction_id=txn_id,
-            question=body.question,
-            document_ids=body.document_ids,
-            conversation_id=body.conversation_id,
-            user_sub=claims.user_id,
-            api_key=settings.GOOGLE_API_KEY,
-            max_documents=settings.VDR_QA_MAX_DOCUMENTS,
-            max_tokens=settings.VDR_QA_MAX_TOKENS,
-        )
-
-    # prepare에서 QAResult가 반환되면 early exit (거부/에러 또는 정보성 안내)
-    if isinstance(ctx_or_result, QAResult):
-        sse_event = "error" if ctx_or_result.is_error else "info"
-
-        async def _early_stream() -> AsyncGenerator[str, None]:
-            yield f"event: {sse_event}\ndata: {json.dumps({'message': ctx_or_result.answer, 'conversation_id': ctx_or_result.conversation_id}, ensure_ascii=False)}\n\n"
-            yield "event: done\ndata: {}\n\n"
-
-        return StreamingResponse(
-            _early_stream(),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff"},
-        )
-
-    # DB 세션이 이미 반환된 상태에서 스트리밍 시작
-    stream = ask_question_stream(ctx_or_result, body.question)
-
-    return StreamingResponse(
-        stream,
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "X-Content-Type-Options": "nosniff",
-        },
-    )

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Sparkles } from "lucide-react";
+import { FileText, Trash2, Sparkles } from "lucide-react";
 import {
   useContracts,
   useContractSummary,
@@ -34,7 +34,7 @@ import {
   KpiCard,
   Modal,
   Select,
-  Tabs,
+  SlidePanel,
 } from "@/components/ui";
 import type { Column } from "@/components/ui";
 
@@ -50,10 +50,7 @@ export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
   const updateContract = useUpdateContract(txnId);
   const deleteContract = useDeleteContract(txnId);
   const analyzeContract = useAnalyzeContract(txnId);
-  const [contractSubTab, setContractSubTab] = useState<
-    "negotiation-workspace" | "contracts" | "legal-docs"
-  >("negotiation-workspace");
-
+  const [showLegalDocs, setShowLegalDocs] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
   const [contractForm, setContractForm] = useState<ContractCreate>({
     title: "",
@@ -61,209 +58,201 @@ export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* 서브탭: 계약 / 법률 문서 */}
-      <Tabs
-        tabs={[
-          { id: "negotiation-workspace", label: "협상 워크스페이스" },
-          { id: "contracts", label: "계약 목록" },
-          { id: "legal-docs", label: "법률 문서" },
-        ]}
-        activeTab={contractSubTab}
-        onTabChange={(tab) =>
-          setContractSubTab(
-            tab as "negotiation-workspace" | "contracts" | "legal-docs",
-          )
+      {/* 협상 워크스페이스 */}
+      <ContractNegotiationWorkspace txnId={txnId} />
+
+      {/* 계약 요약 KPI */}
+      {contractSummary && contractSummary.total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KpiCard label="전체 계약" value={String(contractSummary.total)} />
+          <KpiCard
+            label="서명 대기"
+            value={String(contractSummary.pending_signatures)}
+            variant={
+              contractSummary.pending_signatures > 0 ? "caution" : "default"
+            }
+          />
+          <KpiCard
+            label="체결 완료"
+            value={String(contractSummary.fully_executed)}
+            variant="positive"
+          />
+          <KpiCard
+            label="유형별"
+            value={String(Object.keys(contractSummary.by_type).length)}
+          />
+        </div>
+      )}
+
+      {/* 계약 목록 */}
+      <Card
+        title="계약서 목록"
+        headerBar
+        padding="none"
+        actions={
+          <Button
+            icon={FileText}
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowLegalDocs(true)}
+          >
+            법률 문서
+          </Button>
         }
-        variant="pill"
-        size="sm"
-      />
+      >
+        {!contracts?.length ? (
+          <EmptyState
+            icon={Sparkles}
+            title="계약서 없음"
+            description="SPA, SHA 등 계약서를 등록하세요."
+            actionLabel={canWrite ? "계약서 추가" : undefined}
+            onAction={canWrite ? () => setShowContractModal(true) : undefined}
+          />
+        ) : (
+          <DataTable
+            columns={
+              [
+                { key: "title", header: "제목" },
+                {
+                  key: "contract_type",
+                  header: "유형",
+                  render: (r) => (
+                    <Badge variant="neutral">
+                      {CONTRACT_TYPE_OPTIONS.find(
+                        (o) => o.value === r.contract_type,
+                      )?.label ?? r.contract_type}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "status",
+                  header: "상태",
+                  render: (r) => (
+                    <InlineSelect
+                      options={CONTRACT_STATUS_OPTIONS}
+                      value={r.status}
+                      onChange={(v) =>
+                        updateContract.mutate({
+                          contractId: r.id,
+                          body: { status: v as ContractStatus },
+                        })
+                      }
+                      disabled={!canWrite}
+                    />
+                  ),
+                },
+                {
+                  key: "counterparty_name",
+                  header: "상대방",
+                  render: (r) => r.counterparty_name ?? "-",
+                },
+                {
+                  key: "current_version",
+                  header: "버전",
+                  align: "right",
+                  render: (r) => `v${r.current_version}`,
+                },
+                {
+                  key: "seller_signature",
+                  header: "매도측 서명",
+                  render: (r) => (
+                    <InlineSelect
+                      options={SIGNATURE_STATUS_OPTIONS}
+                      value={r.seller_signature}
+                      onChange={(v) =>
+                        updateContract.mutate({
+                          contractId: r.id,
+                          body: { seller_signature: v as SigStatus },
+                        })
+                      }
+                      disabled={!canWrite}
+                    />
+                  ),
+                },
+                {
+                  key: "buyer_signature",
+                  header: "매수측 서명",
+                  render: (r) => (
+                    <InlineSelect
+                      options={SIGNATURE_STATUS_OPTIONS}
+                      value={r.buyer_signature}
+                      onChange={(v) =>
+                        updateContract.mutate({
+                          contractId: r.id,
+                          body: { buyer_signature: v as SigStatus },
+                        })
+                      }
+                      disabled={!canWrite}
+                    />
+                  ),
+                },
+                {
+                  key: "effective_date",
+                  header: "효력일",
+                  render: (r) => (
+                    <input
+                      key={`${r.id}-eff-${r.effective_date}`}
+                      type="date"
+                      className={`${INLINE_INPUT_CLS} w-32`}
+                      defaultValue={r.effective_date ?? ""}
+                      onChange={(e) =>
+                        updateContract.mutate({
+                          contractId: r.id,
+                          body: {
+                            effective_date: e.target.value || undefined,
+                          },
+                        })
+                      }
+                      disabled={!canWrite}
+                    />
+                  ),
+                },
+                {
+                  key: "ai_actions",
+                  header: "",
+                  width: "70px",
+                  render: (r) =>
+                    canWrite ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="text-text-muted hover:text-accent p-1 rounded transition-colors"
+                          title="AI 분석"
+                          onClick={() => analyzeContract.mutate(r.id)}
+                        >
+                          <Sparkles size={14} />
+                        </button>
+                        <button
+                          className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                          title="삭제"
+                          onClick={() => {
+                            if (confirm("이 계약서를 삭제하시겠습니까?")) {
+                              deleteContract.mutate(r.id);
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ) : null,
+                },
+              ] as Column<(typeof contracts)[number]>[]
+            }
+            data={contracts}
+            keyField="id"
+          />
+        )}
+        <FileUploadZone txnId={txnId} entityType="CONTRACT" embedded />
+      </Card>
 
-      {/* 협상 워크스페이스 서브탭 */}
-      {contractSubTab === "negotiation-workspace" && (
-        <ContractNegotiationWorkspace txnId={txnId} />
-      )}
-
-      {/* 법률 문서 서브탭 */}
-      {contractSubTab === "legal-docs" && <LegalDocumentsTab txnId={txnId} />}
-
-      {/* 계약 서브탭 */}
-      {contractSubTab === "contracts" && (
-        <>
-          {/* 계약 요약 KPI */}
-          {contractSummary && contractSummary.total > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard
-                label="전체 계약"
-                value={String(contractSummary.total)}
-              />
-              <KpiCard
-                label="서명 대기"
-                value={String(contractSummary.pending_signatures)}
-                variant={
-                  contractSummary.pending_signatures > 0 ? "caution" : "default"
-                }
-              />
-              <KpiCard
-                label="체결 완료"
-                value={String(contractSummary.fully_executed)}
-                variant="positive"
-              />
-              <KpiCard
-                label="유형별"
-                value={String(Object.keys(contractSummary.by_type).length)}
-              />
-            </div>
-          )}
-
-          {/* 계약 목록 */}
-          <Card title="계약서 목록" headerBar padding="none">
-            {!contracts?.length ? (
-              <EmptyState
-                icon={Sparkles}
-                title="계약서 없음"
-                description="SPA, SHA 등 계약서를 등록하세요."
-                actionLabel={canWrite ? "계약서 추가" : undefined}
-                onAction={
-                  canWrite ? () => setShowContractModal(true) : undefined
-                }
-              />
-            ) : (
-              <DataTable
-                columns={
-                  [
-                    { key: "title", header: "제목" },
-                    {
-                      key: "contract_type",
-                      header: "유형",
-                      render: (r) => (
-                        <Badge variant="neutral">
-                          {CONTRACT_TYPE_OPTIONS.find(
-                            (o) => o.value === r.contract_type,
-                          )?.label ?? r.contract_type}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      key: "status",
-                      header: "상태",
-                      render: (r) => (
-                        <InlineSelect
-                          options={CONTRACT_STATUS_OPTIONS}
-                          value={r.status}
-                          onChange={(v) =>
-                            updateContract.mutate({
-                              contractId: r.id,
-                              body: { status: v as ContractStatus },
-                            })
-                          }
-                          disabled={!canWrite}
-                        />
-                      ),
-                    },
-                    {
-                      key: "counterparty_name",
-                      header: "상대방",
-                      render: (r) => r.counterparty_name ?? "-",
-                    },
-                    {
-                      key: "current_version",
-                      header: "버전",
-                      align: "right",
-                      render: (r) => `v${r.current_version}`,
-                    },
-                    {
-                      key: "seller_signature",
-                      header: "매도측 서명",
-                      render: (r) => (
-                        <InlineSelect
-                          options={SIGNATURE_STATUS_OPTIONS}
-                          value={r.seller_signature}
-                          onChange={(v) =>
-                            updateContract.mutate({
-                              contractId: r.id,
-                              body: { seller_signature: v as SigStatus },
-                            })
-                          }
-                          disabled={!canWrite}
-                        />
-                      ),
-                    },
-                    {
-                      key: "buyer_signature",
-                      header: "매수측 서명",
-                      render: (r) => (
-                        <InlineSelect
-                          options={SIGNATURE_STATUS_OPTIONS}
-                          value={r.buyer_signature}
-                          onChange={(v) =>
-                            updateContract.mutate({
-                              contractId: r.id,
-                              body: { buyer_signature: v as SigStatus },
-                            })
-                          }
-                          disabled={!canWrite}
-                        />
-                      ),
-                    },
-                    {
-                      key: "effective_date",
-                      header: "효력일",
-                      render: (r) => (
-                        <input
-                          key={`${r.id}-eff-${r.effective_date}`}
-                          type="date"
-                          className={`${INLINE_INPUT_CLS} w-32`}
-                          defaultValue={r.effective_date ?? ""}
-                          onChange={(e) =>
-                            updateContract.mutate({
-                              contractId: r.id,
-                              body: {
-                                effective_date: e.target.value || undefined,
-                              },
-                            })
-                          }
-                          disabled={!canWrite}
-                        />
-                      ),
-                    },
-                    {
-                      key: "ai_actions",
-                      header: "",
-                      width: "70px",
-                      render: (r) =>
-                        canWrite ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              className="text-text-muted hover:text-accent p-1 rounded transition-colors"
-                              title="AI 분석"
-                              onClick={() => analyzeContract.mutate(r.id)}
-                            >
-                              <Sparkles size={14} />
-                            </button>
-                            <button
-                              className="text-text-muted hover:text-negative p-1 rounded transition-colors"
-                              title="삭제"
-                              onClick={() => {
-                                if (confirm("이 계약서를 삭제하시겠습니까?")) {
-                                  deleteContract.mutate(r.id);
-                                }
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ) : null,
-                    },
-                  ] as Column<(typeof contracts)[number]>[]
-                }
-                data={contracts}
-                keyField="id"
-              />
-            )}
-            <FileUploadZone txnId={txnId} entityType="CONTRACT" embedded />
-          </Card>
-        </>
-      )}
+      {/* 법률 문서 SlidePanel */}
+      <SlidePanel
+        open={showLegalDocs}
+        onClose={() => setShowLegalDocs(false)}
+        title="법률 문서"
+        width="lg"
+      >
+        <LegalDocumentsTab txnId={txnId} />
+      </SlidePanel>
 
       {/* 계약서 추가 모달 */}
       <Modal

@@ -32,6 +32,11 @@ interface MeetingLogFormProps {
   onSubmit: (body: MeetingLogCreate | MeetingLogUpdate) => void;
   isLoading?: boolean;
   txnId?: string;
+  /** buyer 컨텍스트 — BuyersTab에서 빠른 활동 추가 시 pre-fill */
+  buyerId?: string;
+  buyerName?: string;
+  /** true면 buyer 선택 필드를 disabled로 표시 */
+  lockBuyer?: boolean;
 }
 
 export default function MeetingLogForm({
@@ -42,6 +47,9 @@ export default function MeetingLogForm({
   onSubmit,
   isLoading,
   txnId,
+  buyerId,
+  buyerName,
+  lockBuyer,
 }: MeetingLogFormProps) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [meetingDate, setMeetingDate] = useState(existing?.meeting_date ?? "");
@@ -149,6 +157,7 @@ export default function MeetingLogForm({
         marketing_stage: marketingStage
           ? (marketingStage as MarketingStage)
           : undefined,
+        buyer_id: buyerId || undefined,
         attendees: validAttendees.length > 0 ? validAttendees : undefined,
       };
       onSubmit(body);
@@ -163,6 +172,13 @@ export default function MeetingLogForm({
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* buyer 컨텍스트 표시 (lockBuyer 모드) */}
+        {lockBuyer && buyerName && (
+          <div className="rounded-lg bg-bg-cool px-3 py-2 text-xs text-text-secondary">
+            매수자:{" "}
+            <span className="font-medium text-text-dark">{buyerName}</span>
+          </div>
+        )}
         <Input
           label="제목"
           value={title}

@@ -3,7 +3,6 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
 import InterestIndicator from "./InterestIndicator";
-import InlineLogInput from "./InlineLogInput";
 import {
   MARKETING_STAGES,
   MARKETING_STAGE_LABELS,
@@ -16,16 +15,12 @@ interface MarketingKanbanViewProps {
   buyers: BuyerCandidate[];
   stageMap: Map<string, Partial<Record<MarketingStage, string | null>>>;
   onSelectBuyer: (buyerId: string) => void;
-  canWrite: boolean;
-  txnId: string;
 }
 
 export default function MarketingKanbanView({
   buyers,
   stageMap,
   onSelectBuyer,
-  canWrite,
-  txnId,
 }: MarketingKanbanViewProps) {
   const columns = useMemo(() => {
     const cols = new Map<MarketingStage, BuyerCandidate[]>();
@@ -64,11 +59,6 @@ export default function MarketingKanbanView({
       >
         {MARKETING_STAGES.map((stage) => {
           const stageBuyers = columns.get(stage) ?? [];
-          const nextStageIdx = MARKETING_STAGES.indexOf(stage) + 1;
-          const nextStage =
-            nextStageIdx < MARKETING_STAGES.length
-              ? MARKETING_STAGES[nextStageIdx]
-              : null;
 
           return (
             <div
@@ -84,10 +74,17 @@ export default function MarketingKanbanView({
                     {MARKETING_STAGE_LABELS[stage]}
                   </span>
                   <span className="text-[10px] text-white/80 bg-green-600/50 px-1.5 py-0.5 rounded-full">
-                    {stageBuyers.filter((b) => b.status !== "BID_DROPPED").length}
+                    {
+                      stageBuyers.filter((b) => b.status !== "BID_DROPPED")
+                        .length
+                    }
                     {stageBuyers.some((b) => b.status === "BID_DROPPED") && (
                       <span className="text-red-500 ml-0.5">
-                        +{stageBuyers.filter((b) => b.status === "BID_DROPPED").length}
+                        +
+                        {
+                          stageBuyers.filter((b) => b.status === "BID_DROPPED")
+                            .length
+                        }
                       </span>
                     )}
                   </span>
@@ -140,8 +137,12 @@ export default function MarketingKanbanView({
                           )}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              {buyer.tier && <BuyerTierBadge tier={buyer.tier} />}
-                              {buyer.tier && <InterestIndicator tier={buyer.tier} />}
+                              {buyer.tier && (
+                                <BuyerTierBadge tier={buyer.tier} />
+                              )}
+                              {buyer.tier && (
+                                <InterestIndicator tier={buyer.tier} />
+                              )}
                             </div>
                             {stageMap.get(buyer.id)?.[stage] && (
                               <span className="text-[10px] text-gray-500">
@@ -149,16 +150,6 @@ export default function MarketingKanbanView({
                               </span>
                             )}
                           </div>
-                          {canWrite && nextStage && (
-                            <div className="mt-1.5 pt-1.5 border-t border-gray-border">
-                              <InlineLogInput
-                                txnId={txnId}
-                                buyerId={buyer.id}
-                                defaultStage={nextStage}
-                                compact
-                              />
-                            </div>
-                          )}
                         </div>
                       </div>
                     );

@@ -20,7 +20,7 @@ import {
   useExportBuyerExcel,
   useTransaction,
 } from "@/modules/ma/hooks/useTransactions";
-import { useShortListOverview } from "@/modules/ma/hooks/useMarketingLogs";
+import { useShortListOverview } from "@/modules/ma/hooks/useBuyerMarketing";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
@@ -274,7 +274,10 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     [shortListOverview, realShortList.length, devMockOverview],
   );
 
-  const stageMap = useMemo(() => buildStageMap(overviewMerged), [overviewMerged]);
+  const stageMap = useMemo(
+    () => buildStageMap(overviewMerged),
+    [overviewMerged],
+  );
 
   // Client-side filtering for Long List
   const deferredSearch = useDeferredValue(longListFilters.search);
@@ -525,8 +528,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                     buyers={shortListBuyers}
                     stageMap={stageMap}
                     onSelectBuyer={setSelectedBuyerId}
-                    canWrite={canWrite}
-                    txnId={txnId}
                   />
                 )}
                 {shortListViewMode === "kanban" && (
@@ -541,8 +542,6 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                       buyers={shortListBuyers}
                       stageMap={stageMap}
                       onSelectBuyer={setSelectedBuyerId}
-                      canWrite={canWrite}
-                      txnId={txnId}
                     />
                   </Suspense>
                 )}
@@ -578,15 +577,19 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                     buyerId,
                     body: {
                       // Drop 복구 시 IDENTIFIED로 초기화 — Short List 멤버십은 tier/flag 기반이므로 유지됨
-                      status: isCurrentlyDropped ? 'IDENTIFIED' : 'BID_DROPPED',
+                      status: isCurrentlyDropped ? "IDENTIFIED" : "BID_DROPPED",
                     },
                   },
                   {
                     onSuccess: () => {
-                      toast.success(isCurrentlyDropped ? '복구되었습니다' : 'Drop 되었습니다');
+                      toast.success(
+                        isCurrentlyDropped
+                          ? "복구되었습니다"
+                          : "Drop 되었습니다",
+                      );
                     },
                     onError: () => {
-                      toast.error('상태 변경에 실패했습니다');
+                      toast.error("상태 변경에 실패했습니다");
                     },
                   },
                 )

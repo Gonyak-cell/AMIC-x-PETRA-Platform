@@ -94,10 +94,10 @@ def _to_marketing_out(log: MeetingLog) -> MarketingLogOut:
     )
 
 
-# ── 마케팅 로그 CRUD (meeting_logs 테이블 호환 레이어) ────
-# ⚠️ DEPRECATED: 이 호환 레이어는 080 마이그레이션 이후 meeting-logs API로 대체됨.
-#    기존 FE 컴포넌트(LogListPopover 등) 호환을 위해 유지하며,
-#    신규 FE 코드는 /transactions/{txn_id}/meeting-logs API를 직접 사용해야 함.
+# ── 마케팅 로그 읽기 (meeting_logs 테이블 호환 레이어) ────
+# ⚠️ DEPRECATED: 080 마이그레이션 이후 meeting-logs API로 대체됨.
+#    MaterialTracker 등 buyer별 마케팅 히스토리 읽기 전용으로만 유지.
+#    모든 활동 기록 CRUD는 /transactions/{txn_id}/meeting-logs API 사용.
 
 
 @router.get(

@@ -3,7 +3,6 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { EmptyState, Badge } from "@/components/ui";
 import BuyerTierBadge from "./BuyerTierBadge";
-import InlineLogInput from "./InlineLogInput";
 import TimelineMeetingCard from "./TimelineMeetingCard";
 import InlineMeetingForm from "./InlineMeetingForm";
 import MeetingLogForm from "@/modules/ma/components/meetings/MeetingLogForm";
@@ -141,12 +140,6 @@ export default function MarketingTimelineView({
           const pendingStages = MARKETING_STAGES.filter(
             (s) => !completedSet.has(s),
           );
-
-          // 다음 단계 결정
-          const nextStage =
-            currentIdx < MARKETING_STAGES.length - 1
-              ? MARKETING_STAGES[currentIdx + 1]
-              : null;
 
           // 이 매수자의 미팅 로그
           const buyerMeetings = meetingsByBuyer.get(buyer.id) ?? [];
@@ -338,17 +331,6 @@ export default function MarketingTimelineView({
                   </div>
                 )}
               </div>
-
-              {/* Inline log input */}
-              {canWrite && nextStage && (
-                <div className="px-4 pb-3">
-                  <InlineLogInput
-                    txnId={txnId}
-                    buyerId={buyer.id}
-                    defaultStage={nextStage}
-                  />
-                </div>
-              )}
             </div>
           );
         })}

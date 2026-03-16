@@ -75,9 +75,6 @@ class Settings(BaseSettings):
     GEMINI_VDR_CLASSIFICATION_ENABLED: bool = False  # A1: Gemini 기반 VDR 분류
     GEMINI_CLASSIFICATION_MODEL: str = "gemini-2.0-flash"
     GEMINI_FILE_TTL_HOURS: int = 47  # 48h API 제한보다 1h 여유
-    VDR_QA_ENABLED: bool = False  # C1: VDR 자연어 Q&A
-    VDR_QA_MAX_DOCUMENTS: int = 50  # Q&A 세션당 최대 문서 수
-    VDR_QA_MAX_TOKENS: int = 800_000  # 1M 컨텍스트 중 80% 안전 마진
 
     # LDD Multi-LLM Pipeline
     LDD_MULTI_LLM_ENABLED: bool = False  # 멀티 LLM 파이프라인 활성화

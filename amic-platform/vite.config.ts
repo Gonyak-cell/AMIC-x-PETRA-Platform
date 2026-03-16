@@ -51,8 +51,9 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://52.231.69.38",
+        target: "https://52.231.69.38",
         changeOrigin: true,
+        secure: false,
       },
     },
   },

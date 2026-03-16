@@ -2,29 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { SlidePanel, Tabs } from "@/components/ui";
 import type { TabItem } from "@/components/ui/Tabs";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
-import type {
-  BuyerStageSummary,
-  MarketingStage,
-} from "@/modules/ma/types/marketing_log";
-import {
-  BUYER_TYPE_OPTIONS,
-  MARKETING_STAGES,
-  latestCompletedStageIndex,
-} from "@/modules/ma/constants";
+import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
+import { BUYER_TYPE_OPTIONS } from "@/modules/ma/constants";
 import BuyerSummarySection from "./BuyerSummarySection";
 import BuyerMeetingTimeline from "./BuyerMeetingTimeline";
 import BuyerVdrAccessCard from "./BuyerVdrAccessCard";
 import MaterialTracker from "./MaterialTracker";
 import BuyerFeedbackSection from "./BuyerFeedbackSection";
-import InlineLogInput from "./InlineLogInput";
+import { useNavigate } from "react-router-dom";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui";
 import { CommentThread } from "@/components/collaboration/CommentThread";
-/** 다음 기본 마케팅 단계 결정 */ function nextDefaultStage(
-  stages: Partial<Record<MarketingStage, string | null>> | undefined,
-): MarketingStage {
-  if (!stages) return MARKETING_STAGES[0];
-  const idx = latestCompletedStageIndex(stages);
-  return MARKETING_STAGES[Math.min(idx + 1, MARKETING_STAGES.length - 1)];
-}
 
 interface BuyerDetailPanelProps {
   txnId: string;
@@ -56,6 +44,7 @@ export default function BuyerDetailPanel({
   canWrite,
   onToggleDrop,
 }: BuyerDetailPanelProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("summary");
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -112,18 +101,21 @@ export default function BuyerDetailPanel({
             )}
             {activeTab === "meetings" && (
               <div className="space-y-4">
-                {/* 마케팅 로그 빠른 추가 폼 */}
+                {/* 빠른 활동 추가 — marketing-logs 탭으로 이동 */}
                 {canWrite && (
-                  <div className="px-1">
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">
-                      마케팅 로그 추가
-                    </p>
-                    <InlineLogInput
-                      txnId={txnId}
-                      buyerId={buyer.id}
-                      defaultStage={nextDefaultStage(stageSummary?.stages)}
-                    />
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={PlusCircle}
+                    onClick={() =>
+                      navigate(
+                        `/ma/transactions/${txnId}/marketing-logs?buyerId=${buyer.id}&compose=1`,
+                      )
+                    }
+                    className="w-full justify-start text-xs"
+                  >
+                    활동 로그 추가
+                  </Button>
                 )}
                 <BuyerMeetingTimeline txnId={txnId} buyerId={buyer.id} />
               </div>

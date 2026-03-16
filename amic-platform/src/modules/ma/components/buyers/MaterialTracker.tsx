@@ -2,7 +2,7 @@ import { CheckCircle, Circle } from "lucide-react";
 import { Spinner } from "@/components/ui";
 import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
 import { MARKETING_STAGE_LABELS } from "@/modules/ma/constants";
-import { useMarketingLogs } from "@/modules/ma/hooks/useMarketingLogs";
+import { useBuyerMarketingHistory } from "@/modules/ma/hooks/useBuyerMarketing";
 
 interface MaterialTrackerProps {
   txnId: string;
@@ -21,7 +21,7 @@ export default function MaterialTracker({
   buyerId,
   stageSummary,
 }: MaterialTrackerProps) {
-  const { data: logs, isLoading: logsLoading } = useMarketingLogs(
+  const { data: logs, isLoading: logsLoading } = useBuyerMarketingHistory(
     txnId,
     buyerId,
   );

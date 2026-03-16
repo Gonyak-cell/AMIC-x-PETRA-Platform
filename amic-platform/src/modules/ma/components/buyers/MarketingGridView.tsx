@@ -75,16 +75,12 @@ interface MarketingGridViewProps {
   buyers: BuyerCandidate[];
   stageMap: Map<string, Partial<Record<MarketingStage, string | null>>>;
   onSelectBuyer: (buyerId: string) => void;
-  canWrite: boolean;
-  txnId: string;
 }
 
 export default function MarketingGridView({
   buyers,
   stageMap,
   onSelectBuyer,
-  canWrite,
-  txnId,
 }: MarketingGridViewProps) {
   // 완료 단계 수 기준 내림차순 정렬
   const sorted = useMemo(
@@ -234,11 +230,8 @@ export default function MarketingGridView({
                   {MARKETING_STAGES.map((stage, idx) => (
                     <MarketingGridCell
                       key={stage}
-                      txnId={txnId}
-                      buyerId={buyer.id}
                       stage={stage}
                       dateValue={stages?.[stage] ?? null}
-                      canWrite={canWrite}
                       buyerName={buyer.company_name}
                       isNext={
                         !isDropped &&

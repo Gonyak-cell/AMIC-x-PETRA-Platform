@@ -73,8 +73,8 @@ describe("TransactionWorkspacePage", () => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // status Badge: ACTIVE
-    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    // status Badge: ACTIVE (pipeline flow에서도 나타날 수 있으므로 복수 매칭 허용)
+    expect(screen.getAllByText("ACTIVE").length).toBeGreaterThanOrEqual(1);
   });
 
   // 3. 거래 미발견 시 에러 메시지
@@ -100,10 +100,10 @@ describe("TransactionWorkspacePage", () => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // MARKETING 단계 visible tabs: overview, buyers, marketing-logs, vdr, risks, compliance, notes-approvals
+    // MARKETING 단계 visible tabs: overview, buyers, marketing-logs, vdr
     expect(screen.getByText("매수자")).toBeInTheDocument();
     expect(screen.getByText("VDR")).toBeInTheDocument();
-    expect(screen.getByText("마케팅 로그")).toBeInTheDocument();
+    expect(screen.getByText("활동 로그")).toBeInTheDocument();
 
     // MARKETING 단계에서 보이지 않아야 하는 탭 (role=tab으로 범위 한정)
     // Note: "입찰" 등은 파이프라인 시각화에서도 나타나므로 탭 영역으로 한정
@@ -176,6 +176,70 @@ describe("TransactionWorkspacePage", () => {
       // 이전 단계/다음 단계 버튼 모두 '단계로' 포함 — 복수 매칭 허용
       const advanceBtns = screen.getAllByRole("button", { name: /단계로/ });
       expect(advanceBtns.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // 9. Rail URL 접근 시 primary content는 baseTab 유지 + panel title 표시
+  it("/risks?baseTab=buyers 접근 시 buyers tab이 primary이고 리스크 panel이 열린다", async () => {
+    renderPage("/ma/transactions/txn-1/risks?baseTab=buyers");
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    // primary tab bar에서 매수자 탭이 활성
+    const tabs = screen.getAllByRole("tab");
+    const activeTab = tabs.find(
+      (t) => t.getAttribute("aria-selected") === "true",
+    );
+    expect(activeTab?.textContent).toContain("매수자");
+
+    // SlidePanel이 열리고 "리스크" 제목이 표시됨
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+    expect(screen.getByText("리스크")).toBeInTheDocument();
+
+    // RisksTab 콘텐츠가 실제 마운트됨 (빈 상태 확인)
+    await waitFor(() => {
+      expect(screen.getByText("리스크 없음")).toBeInTheDocument();
+    });
+  });
+
+  // 10. baseTab 없이 rail URL 접근 시 phase 기본 탭이 primary + panel 열림
+  it("/risks (baseTab 없음) 접근 시 phase 기본 탭이 primary이고 panel이 열린다", async () => {
+    renderPage("/ma/transactions/txn-1/risks");
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    // MARKETING phase 기본 탭 = buyers
+    const tabs = screen.getAllByRole("tab");
+    const activeTab = tabs.find(
+      (t) => t.getAttribute("aria-selected") === "true",
+    );
+    expect(activeTab?.textContent).toContain("매수자");
+
+    // SlidePanel dialog가 열림
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+  });
+
+  // 11. rail URL에 buyerId/viewPhase가 포함되어도 보존됨 (query context 보존)
+  it("rail URL의 buyerId/viewPhase query가 보존된다", async () => {
+    renderPage(
+      "/ma/transactions/txn-1/risks?baseTab=marketing-logs&buyerId=b1&viewPhase=MARKETING",
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    // SlidePanel이 열림
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
   });
 });
