@@ -39,14 +39,14 @@ class TestAPIConfig:
             assert config.debug is False
 
     def test_database_url_default(self) -> None:
-        """DB URL 기본값이 올바른지 확인."""
-        config = APIConfig()
+        """DB URL 기본값이 올바른지 확인 (.env 무시)."""
+        config = APIConfig(_env_file=None)
         assert "postgresql+asyncpg" in config.database_url
         assert "5434" in config.database_url
 
     def test_redis_url_default(self) -> None:
-        """Redis URL 기본값이 올바른지 확인."""
-        config = APIConfig()
+        """Redis URL 기본값이 올바른지 확인 (.env 무시)."""
+        config = APIConfig(_env_file=None)
         assert config.redis_url.startswith("redis://")
         assert "6380" in config.redis_url
 
