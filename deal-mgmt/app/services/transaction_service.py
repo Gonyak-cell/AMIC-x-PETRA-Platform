@@ -46,10 +46,7 @@ async def _generate_code_name(
     abbr = project_name.removeprefix("Project ").strip()[:3].upper()
     year_suffix = str(year)[2:]
     prefix = f"{_get_code_prefix(deal_type)}{year_suffix}-{abbr}-"
-    prefix_candidates = [
-        f"{candidate}{year_suffix}-{abbr}-"
-        for candidate in _get_code_prefix_candidates(deal_type)
-    ]
+    prefix_candidates = [f"{candidate}{year_suffix}-{abbr}-" for candidate in _get_code_prefix_candidates(deal_type)]
 
     result = await db.execute(
         select(Transaction.code_name).where(
