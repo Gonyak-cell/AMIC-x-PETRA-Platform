@@ -53,7 +53,7 @@ export function useCalendarEvents(_filter: CalendarFilter) {
     if (!txnQuery.data) return items;
 
     for (const txn of txnQuery.data) {
-      const label = txn.code_name || txn.target_company_name || txn.name;
+      const label = txn.name || txn.target_company_name;
 
       const phaseLbl = PHASE_LABEL[txn.phase] ?? txn.phase;
       const phaseOrd = PHASE_ORDER[txn.phase] ?? 1;
@@ -112,7 +112,7 @@ export function useCalendarEvents(_filter: CalendarFilter) {
     const today = new Date().toISOString().slice(0, 10);
 
     for (const txn of txnQuery.data) {
-      const label = txn.code_name || txn.target_company_name || txn.name;
+      const label = txn.name || txn.target_company_name;
       const startDate = safeStr(txn.created_at).slice(0, 10);
       const endDate = txn.target_close_date ?? today;
       const order = PHASE_ORDER[txn.phase] ?? 1;
