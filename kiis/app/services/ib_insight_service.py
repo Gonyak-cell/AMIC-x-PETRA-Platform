@@ -180,6 +180,8 @@ class IBInsightService:
                 if similarity > best_score:
                     # corp_code → company_id 변환 (캐시 우선)
                     corp_code = result["match"]["corp_code"]
+                    if not corp_code:
+                        continue
                     company_id = self._corp_code_cache.get(corp_code)
                     if company_id is None:
                         stmt = select(Company.id).where(Company.corp_code == corp_code)
