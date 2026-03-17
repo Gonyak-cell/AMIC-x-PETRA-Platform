@@ -1,7 +1,12 @@
 """M&A 뉴스 멀티라벨 섹션 분류기
 
-kiwipiepy 없이 규칙 기반으로 기사를 ma / governance / fund 3개 섹션으로 분류한다.
-동의어 치환 → 키워드 점수 → 동시출현 보너스/드롭 → 임계값 판정.
+kiwipiepy 형태소 분석 기반으로 기사를 ma / governance / fund 3개 섹션으로 분류한다.
+동의어 치환 → 형태소 추출 → 키워드 점수 → 동시출현 보너스/드롭 → 임계값 판정.
+
+법률/실무 용어(자본시장법 기반):
+- M&A: 주식매매계약, 포괄적 교환, 경영권 양수도, 분할합병, 공개매수
+- 거버넌스: 주주행동주의, 다중대표소송, 위임장 대결, 집중투표제
+- 펀드: 사모펀드, 무한책임사원, 유한책임사원, 바이아웃, 블라인드펀드
 
 사용법:
     classifier = MASectionClassifier()
@@ -23,6 +28,23 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _RULES_PATH = Path(__file__).resolve().parent.parent / "data" / "ma_section_rules.json"
+
+# kiwipiepy lazy init (서버 시작 시 1회만 로드)
+_kiwi_instance = None
+
+
+def _get_kiwi():
+    """kiwipiepy Kiwi 인스턴스를 lazy-init한다."""
+    global _kiwi_instance
+    if _kiwi_instance is None:
+        try:
+            from kiwipiepy import Kiwi
+
+            _kiwi_instance = Kiwi()
+            logger.info("kiwipiepy 형태소 분석기 초기화 완료")
+        except ImportError:
+            logger.warning("kiwipiepy 미설치 — 형태소 분석 없이 exact match로 폴백")
+    return _kiwi_instance
 
 
 @dataclass(frozen=True)
@@ -54,8 +76,25 @@ def _normalize(text: str) -> str:
     return _MULTI_SPACE.sub(" ", text).strip()
 
 
+def _extract_nouns(text: str) -> list[str]:
+    """kiwipiepy로 명사(NNG, NNP, NNB)를 추출한다.
+
+    kiwipiepy 미설치 시 공백 분리 폴백.
+    """
+    kiwi = _get_kiwi()
+    if kiwi is None:
+        return text.split()
+    tokens = kiwi.tokenize(text)
+    # 명사류(NNG 일반명사, NNP 고유명사, NNB 의존명사) + 외국어(SL) 추출
+    nouns: list[str] = []
+    for token in tokens:
+        if token.tag in ("NNG", "NNP", "NNB", "SL", "SH"):
+            nouns.append(token.form)
+    return nouns
+
+
 class MASectionClassifier:
-    """규칙 기반 멀티라벨 섹션 분류기."""
+    """규칙 기반 멀티라벨 섹션 분류기 (kiwipiepy 형태소 분석 통합)."""
 
     def __init__(self, rules: dict | None = None) -> None:
         self.rules = rules or _RULES
@@ -68,14 +107,21 @@ class MASectionClassifier:
         self.sections: dict[str, dict] = self.rules.get("sections", {})
         self.version: str = self.rules.get("version", "unknown")
 
+        # 긴 변형어 우선 치환을 위한 정렬된 (variant, canonical) 쌍
+        self._synonym_pairs: list[tuple[str, str]] = []
+        for canonical, variants in self.synonyms.items():
+            for variant in variants:
+                self._synonym_pairs.append((variant, canonical))
+        # 긴 패턴 우선 (SPA보다 "주식양수도계약"이 먼저)
+        self._synonym_pairs.sort(key=lambda x: len(x[0]), reverse=True)
+
     # ── 동의어 치환 ──────────────────────────────────
 
     def _apply_synonyms(self, text: str) -> str:
         """일반 동의어 치환 (긴 패턴 우선)."""
-        for canonical, variants in self.synonyms.items():
-            for variant in variants:
-                if variant in text:
-                    text = text.replace(variant, canonical)
+        for variant, canonical in self._synonym_pairs:
+            if variant in text:
+                text = text.replace(variant, canonical)
         return text
 
     def _apply_context_synonyms(self, text: str, full_text: str) -> str:
@@ -102,7 +148,11 @@ class MASectionClassifier:
     def _score_keywords(
         self, text: str, core_keywords: list[str], support_keywords: list[str], cfg: dict
     ) -> tuple[float, list[str], list[str]]:
-        """텍스트에서 키워드 매칭 점수를 계산한다."""
+        """텍스트에서 키워드 매칭 점수를 계산한다.
+
+        동의어 치환 후 exact phrase 매칭 방식.
+        복합 키워드("주식매매계약", "이사회 결의 무효")도 substring 매칭으로 검출.
+        """
         core_score = cfg.get("core_score", 5)
         support_score = cfg.get("support_score", 2)
         score = 0.0
@@ -128,7 +178,6 @@ class MASectionClassifier:
             anchor = rule.get("anchor", "")
             contexts = rule.get("context", [])
             rule_bonus = rule.get("bonus", 0)
-            # 앵커 위치 찾기
             anchor_positions = [i for i, w in enumerate(words) if anchor in w]
             if not anchor_positions:
                 continue
@@ -138,7 +187,7 @@ class MASectionClassifier:
                 window_text = " ".join(words[window_start:window_end])
                 if any(ctx in window_text for ctx in contexts):
                     bonus += rule_bonus
-                    break  # 같은 규칙 중복 적용 방지
+                    break
         return bonus
 
     def _check_drop(self, text: str, rules: list[dict]) -> bool:
@@ -149,7 +198,6 @@ class MASectionClassifier:
             contexts = rule.get("context", [])
             if anchor not in text:
                 continue
-            # context가 비어있으면 anchor 존재만으로 드롭
             if not contexts:
                 return True
             anchor_positions = [i for i, w in enumerate(words) if anchor in w]
@@ -162,7 +210,7 @@ class MASectionClassifier:
         return False
 
     def _check_global_drop(self, body: str, cfg: dict) -> bool:
-        """글로벌 펀드 드롭: body에 특정 키워드가 있으면 해당 섹션 0점."""
+        """글로벌 드롭: body에 특정 키워드 출현 시 해당 섹션 0점."""
         global_drop = cfg.get("global_drop")
         if not global_drop:
             return False
@@ -174,9 +222,16 @@ class MASectionClassifier:
     def classify(self, title: str, body: str | None = None) -> ClassifyResult:
         """기사를 3개 섹션으로 멀티라벨 분류한다.
 
+        파이프라인:
+        1. 동의어 치환 (SPA → 주식매매계약, PEF → 사모펀드 등)
+        2. 키워드 점수 계산 (제목 3배, 본문 1배)
+        3. 동시출현 보너스 (국민연금+스튜어드십 → 거버넌스 +3)
+        4. 드롭 규칙 (국민연금+단순투자 → 거버넌스 0점)
+        5. 임계값 판정 (≥10점 → 해당 섹션 태그)
+
         Args:
             title: 기사 제목
-            body: 기사 본문 (없으면 lead_text 사용, 없으면 빈 문자열)
+            body: 기사 본문 또는 lead_text (없으면 빈 문자열)
 
         Returns:
             ClassifyResult
@@ -187,7 +242,7 @@ class MASectionClassifier:
 
         scores: dict[str, float] = {}
         detail: dict[str, dict] = {}
-        fallback = not body  # body 없으면 fallback
+        fallback = not body
 
         for section_key, cfg in self.sections.items():
             core_kw = cfg.get("core_keywords", [])
@@ -204,7 +259,7 @@ class MASectionClassifier:
             cooc_bonus = self._check_cooccurrence(combined, cfg.get("cooccurrence_bonus", []))
             raw_score += cooc_bonus
 
-            # 드롭 규칙
+            # 드롭 규칙 (local → global 순서)
             dropped = self._check_drop(combined, cfg.get("drop_rules", []))
             if not dropped:
                 dropped = self._check_global_drop(body_p or title_p, cfg)
@@ -226,7 +281,7 @@ class MASectionClassifier:
         labels = [k for k, v in scores.items() if v >= self.threshold]
 
         # primary 결정: 최고점 → 제목 히트 수 → ma > governance > fund
-        priority_order = list(self.sections.keys())  # ma, governance, fund
+        priority_order = list(self.sections.keys())
         primary: str | None = None
         if labels:
 
