@@ -5,6 +5,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input } from "@/components/ui";
 import { LogIn } from "lucide-react";
+import { APP_VERSION } from "@/lib/app-version";
 import brochureCover from "@/assets/images/brochure-cover.png";
 import forestCover from "@/assets/images/forest-cover.jpg";
 import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg";
@@ -131,7 +132,7 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-8 text-center text-footnote text-white/40 lg:text-text-muted">
-              AMIC x PETRA Platform v1.0
+              AMIC x PETRA Platform v{APP_VERSION}
             </p>
           </div>
         </div>

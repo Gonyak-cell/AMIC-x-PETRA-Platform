@@ -47,6 +47,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { SidebarModuleGroup } from "./SidebarModuleGroup";
 import { Badge } from "@/components/ui";
+import { APP_VERSION } from "@/lib/app-version";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
 import { HealthIndicator } from "@/components/layout/HealthIndicator";
 import { getMemberPhoto } from "@/lib/member-photos";
@@ -712,6 +713,12 @@ export function Sidebar({
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>Logout</span>}
             </button>
+            <div
+              className="mt-2 text-center text-[10px] opacity-40"
+              style={{ color: "var(--sidebar-text-muted)" }}
+            >
+              v{APP_VERSION}
+            </div>
           </div>
         )}
       </aside>

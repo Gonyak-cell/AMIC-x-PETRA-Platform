@@ -1,4 +1,8 @@
 import type { ReleaseNote } from "@/types/help";
+import { APP_VERSION } from "@/lib/app-version";
+
+/** 현재 앱 버전 — package.json에서 빌드 시 주입 */
+export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
@@ -249,13 +253,11 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       },
       {
         type: "feature",
-        description:
-          "Added Calendar/Timeline view with Gantt and monthly grid",
+        description: "Added Calendar/Timeline view with Gantt and monthly grid",
       },
       {
         type: "feature",
-        description:
-          "Added Playwright E2E testing infrastructure",
+        description: "Added Playwright E2E testing infrastructure",
       },
     ],
   },
@@ -280,8 +282,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       },
       {
         type: "feature",
-        description:
-          "Added global search (Ctrl+K) with cross-module results",
+        description: "Added global search (Ctrl+K) with cross-module results",
       },
       {
         type: "feature",
@@ -308,8 +309,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       },
       {
         type: "feature",
-        description:
-          "Added admin user management with role-based permissions",
+        description: "Added admin user management with role-based permissions",
       },
       {
         type: "feature",
