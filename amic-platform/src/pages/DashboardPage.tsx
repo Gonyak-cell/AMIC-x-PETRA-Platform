@@ -15,6 +15,7 @@ import { cn } from "@/lib/cn";
 import forestCoverUrl from "@/assets/images/forest-cover.jpg";
 import MyProjectsSection from "@/components/dashboard/MyProjectsSection";
 import DashboardCalendarWidget from "@/components/dashboard/DashboardCalendarWidget";
+import NewsFeedSection from "@/components/dashboard/NewsFeedSection";
 
 /* ── Module Card config (AMIC palette) ── */
 const MODULE_CARDS = [
@@ -71,9 +72,11 @@ export default function DashboardPage() {
 
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const modulesRef = useRef<HTMLDivElement>(null);
+  const newsFeedRef = useRef<HTMLDivElement>(null);
 
   useScrollReveal(quickActionsRef, { stagger: 0.06 });
   useScrollReveal(modulesRef, { stagger: 0.08 });
+  useScrollReveal(newsFeedRef);
 
   // CLIENT 역할은 MA Pipeline으로 리다이렉트
   if (isClient) return <Navigate to="/ma/transactions" replace />;
@@ -176,6 +179,11 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* M&A News Feed */}
+          <div ref={newsFeedRef}>
+            <NewsFeedSection />
           </div>
         </div>
 

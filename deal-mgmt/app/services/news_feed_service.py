@@ -265,41 +265,58 @@ async def fetch_merged_news_feed(
         else:
             want_kiis, want_cf = False, True
 
-    kiis_items: list[NewsFeedItem] = []
-    cf_items: list[NewsFeedItem] = []
-    error: str | None = None
-
-    if want_kiis:
-        kiis_items, _, kiis_error = await _fetch_from_kiis(
+    # ── 단일 소스 모드 → 해당 소스의 pagination을 그대로 위임 ──
+    if want_kiis and not want_cf:
+        items, total, err = await _fetch_from_kiis(
             source=source if source and source in _KIIS_SOURCES else None,
             category=category,
             page=page,
             size=size,
             jwt_token=jwt_token,
         )
-        error = kiis_error
+        return NewsFeedResponse(items=items, total=total, cached=False, error=err)
 
-    if want_cf:
-        cf_items, _ = await _fetch_from_cf_db(
+    if want_cf and not want_kiis:
+        items, total = await _fetch_from_cf_db(
             source=source if source and source not in _KIIS_SOURCES else None,
             category=category,
-            page=1,
+            page=page,
             size=size,
         )
+        return NewsFeedResponse(items=items, total=total, cached=False, error=None)
+
+    if not want_kiis and not want_cf:
+        return NewsFeedResponse(items=[], total=0, cached=False, error=None)
+
+    # ── 병합 모드 → 충분한 후보를 가져와 merge-sort 후 page slice ──
+    fetch_size = page * size
+
+    kiis_items, kiis_total, kiis_error = await _fetch_from_kiis(
+        source=None,
+        category=category,
+        page=1,
+        size=fetch_size,
+        jwt_token=jwt_token,
+    )
+
+    cf_items, cf_total = await _fetch_from_cf_db(
+        source=None,
+        category=category,
+        page=1,
+        size=fetch_size,
+    )
 
     # 병합 + published_at 기준 정렬
     merged = kiis_items + cf_items
-    merged.sort(
-        key=lambda x: x.published_at or "",
-        reverse=True,
-    )
+    merged.sort(key=lambda x: x.published_at or "", reverse=True)
 
-    # size 제한
-    merged = merged[:size]
+    # 현재 페이지 슬라이스
+    start = (page - 1) * size
+    page_items = merged[start : start + size]
 
     return NewsFeedResponse(
-        items=merged,
-        total=len(merged),
+        items=page_items,
+        total=kiis_total + cf_total,
         cached=False,
-        error=error,
+        error=kiis_error,
     )

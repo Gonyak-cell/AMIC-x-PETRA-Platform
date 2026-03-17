@@ -78,6 +78,37 @@ export const mockPhaseStatus: PhaseCompletionStatus = {
   requires_user_acknowledgement: true,
 };
 
+export const mockNewsFeedItems = [
+  {
+    id: "kiis-1",
+    title: "삼성전자 M&A 딜 진행 소식",
+    lead_text: "삼성전자가 반도체 소재 기업 인수를 추진 중이다.",
+    canonical_url: "https://dealsite.co.kr/articles/1",
+    source: "dealsite",
+    source_display: "딜사이트",
+    source_type: "kiis" as const,
+    published_at: "2026-03-16T09:00:00Z",
+    category: "deal_progress",
+    category_display: "딜 진행",
+    is_paywalled: false,
+    markdown_available: false,
+  },
+  {
+    id: "kiis-2",
+    title: "사모펀드 GP 평판 리포트",
+    lead_text: null,
+    canonical_url: "https://investchosun.com/articles/2",
+    source: "investchosun",
+    source_display: "인베스트조선",
+    source_type: "kiis" as const,
+    published_at: "2026-03-16T08:30:00Z",
+    category: "reputation",
+    category_display: "GP 평판",
+    is_paywalled: true,
+    markdown_available: false,
+  },
+];
+
 // ── Handlers ─────────────────────────────────────────────
 
 export const maHandlers = [
@@ -292,6 +323,19 @@ export const maHandlers = [
       matrix: [],
       avg_risk_score: 0,
       unmitigated_critical: 0,
+    });
+  }),
+
+  // News Feed — useNewsFeed expects NewsFeedResponse
+  http.get("*/api/ma/news-feed/latest", ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const size = Number(url.searchParams.get("size") ?? "10");
+    return HttpResponse.json({
+      items: mockNewsFeedItems.slice((page - 1) * size, page * size),
+      total: mockNewsFeedItems.length,
+      cached: false,
+      error: null,
     });
   }),
 ];
