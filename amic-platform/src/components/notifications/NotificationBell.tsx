@@ -31,7 +31,7 @@ export function NotificationBell() {
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           "relative p-2 rounded-lg transition-colors",
-          "text-text-secondary hover:text-text-dark hover:bg-gray-100",
+          "text-accent hover:text-accent/80 hover:bg-accent/10",
         )}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
         aria-expanded={open}
