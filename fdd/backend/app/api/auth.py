@@ -249,3 +249,60 @@ def delete_user_endpoint(
         )
     delete_user(db, user_id, actor_email=current_user.email)
     return Response(status_code=204)
+
+
+# ──────────────────────────────────────────────
+# CLIENT 초대 엔드포인트
+# ──────────────────────────────────────────────
+from app.schemas.invite import (
+    InviteAcceptRequest,
+    InviteAcceptResponse,
+    InviteCreateRequest,
+    InviteCreateResponse,
+    InviteTokenInfo,
+    InviteVerifyRequest,
+)
+from app.services.invite_service import (
+    accept_invite,
+    create_invite,
+    verify_invite_token,
+)
+
+
+@router.post("/invite", response_model=InviteCreateResponse, status_code=201)
+def create_invitation(
+    body: InviteCreateRequest,
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+) -> InviteCreateResponse:
+    """CLIENT 초대 생성 (Admin 전용)."""
+    result = create_invite(
+        db,
+        email=body.email,
+        display_name=body.display_name,
+        title=body.title,
+        transaction_ids=body.transaction_ids,
+        transaction_names=body.transaction_names,
+        actor_email=current_user.email,
+    )
+    return InviteCreateResponse(**result)
+
+
+@router.post("/invite/verify", response_model=InviteTokenInfo)
+def verify_invitation(
+    body: InviteVerifyRequest,
+    db: Session = Depends(get_db),
+) -> InviteTokenInfo:
+    """초대 토큰 검증 (인증 불필요 — POST body로 토큰 전달, 로그 노출 방지)."""
+    result = verify_invite_token(db, body.token)
+    return InviteTokenInfo(**result)
+
+
+@router.post("/invite/accept", response_model=InviteAcceptResponse)
+def accept_invitation(
+    body: InviteAcceptRequest,
+    db: Session = Depends(get_db),
+) -> InviteAcceptResponse:
+    """초대 수락 + 비밀번호 설정 (인증 불필요)."""
+    result = accept_invite(db, body.token, body.password)
+    return InviteAcceptResponse(**result)
