@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -51,7 +51,7 @@ async def assign_deal_client(
     existing = await db.execute(
         select(DealClient.id).where(
             DealClient.transaction_id == txn_id,
-            DealClient.email == body.email,
+            func.lower(DealClient.email) == func.lower(body.email),
         )
     )
     if existing.scalar_one_or_none() is not None:
@@ -134,7 +134,7 @@ async def get_deals_by_client_email(
     result = await db.execute(
         select(DealClient, Transaction.name, Transaction.code_name)
         .join(Transaction, DealClient.transaction_id == Transaction.id)
-        .where(DealClient.email == email)
+        .where(func.lower(DealClient.email) == func.lower(email))
         .order_by(DealClient.created_at.desc())
     )
     return [
