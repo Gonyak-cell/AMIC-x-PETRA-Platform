@@ -23,7 +23,7 @@ AllSourceFilter = Literal[
     "investchosun",
     "dealsite",
     "ibtomato",
-    "bloter",
+    "bizwatch",
     "hankyung_ib",
     "mk_ib",
     "chosunbiz_ma",
@@ -35,11 +35,9 @@ SourceTypeFilter = Literal["kiis", "cloudflare", "all"]
 
 # 카테고리 유효값
 CategoryFilter = Literal[
-    "deal_progress",
-    "sourcing_history",
-    "investment_style",
-    "reputation",
-    "personnel_evaluation",
+    "ma",
+    "governance",
+    "fund",
 ]
 
 

@@ -17,11 +17,9 @@ import { useNewsFeed, type NewsFeedItem } from "./useNewsFeed";
 
 const CATEGORIES = [
   { value: "", label: "전체" },
-  { value: "deal_progress", label: "딜 진행" },
-  { value: "sourcing_history", label: "소싱 내역" },
-  { value: "investment_style", label: "투자 성향" },
-  { value: "reputation", label: "GP 평판" },
-  { value: "personnel_evaluation", label: "운용인력" },
+  { value: "ma", label: "M&A" },
+  { value: "governance", label: "거버넌스" },
+  { value: "fund", label: "펀드" },
 ] as const;
 
 const SOURCES = [
@@ -29,7 +27,7 @@ const SOURCES = [
   { value: "dealsite", label: "딜사이트", group: "kiis" },
   { value: "investchosun", label: "인베스트조선", group: "kiis" },
   { value: "ibtomato", label: "IB토마토", group: "kiis" },
-  { value: "bloter", label: "블로터", group: "kiis" },
+  { value: "bizwatch", label: "비즈워치", group: "kiis" },
 ] as const;
 
 const PAGE_SIZE = 8;

@@ -12,7 +12,7 @@ SOURCE_DISPLAY: dict[str, str] = {
     "investchosun": "인베스트조선",
     "dealsite": "딜사이트",
     "ibtomato": "IB토마토",
-    "bloter": "블로터",
+    "bizwatch": "비즈워치",
     # Cloudflare 소스 (Phase B 추가 예정)
     "hankyung_ib": "한경IB",
     "mk_ib": "매경IB",
@@ -21,14 +21,12 @@ SOURCE_DISPLAY: dict[str, str] = {
 }
 
 CATEGORY_DISPLAY: dict[str, str] = {
-    "deal_progress": "딜 진행",
-    "sourcing_history": "소싱 내역",
-    "investment_style": "투자 성향",
-    "reputation": "GP 평판",
-    "personnel_evaluation": "운용인력",
+    "ma": "M&A",
+    "governance": "거버넌스",
+    "fund": "펀드",
 }
 
-KIIS_SOURCES = {"investchosun", "dealsite", "ibtomato", "bloter"}
+KIIS_SOURCES = {"investchosun", "dealsite", "ibtomato", "bizwatch"}
 CF_SOURCES = {"hankyung_ib", "mk_ib", "chosunbiz_ma", "thebell"}
 
 SourceType = Literal["kiis", "cloudflare"]

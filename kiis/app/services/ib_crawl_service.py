@@ -302,45 +302,53 @@ class IBTomatoAdapter(IBSourceAdapter):
 # ─────────── 블로터 ───────────
 
 
-class BloterAdapter(IBSourceAdapter):
-    """블로터 어댑터 (bloter.net) — RSS 활용"""
+class BizwatchAdapter(IBSourceAdapter):
+    """비즈워치 어댑터 (news.bizwatch.co.kr) — 거버넌스 섹션 HTML 스크래핑"""
 
-    source_name = "bloter"
-    base_url = "https://www.bloter.net"
-    rss_url = "https://www.bloter.net/feed/"
-    content_selectors = [".entry-content", ".article-body", "article .content", "article"]
-    author_selectors = ".author-name, .byline, .writer"
+    source_name = "bizwatch"
+    base_url = "https://news.bizwatch.co.kr"
+    list_url = "https://news.bizwatch.co.kr/category/governance"
+    content_selectors = [".article_content", ".article_body", ".view_cont", "article"]
+    author_selectors = ".byline, .reporter, .writer"
 
     async def fetch_article_list(self, max_pages: int = 3) -> list[dict]:
         articles: list[dict] = []
+        seen_urls: set[str] = set()
         try:
-            resp = await self.client.get(self.rss_url)
-            feed = feedparser.parse(resp.text)
-            for entry in feed.entries[: max_pages * 20]:
-                try:
-                    article_url = entry.get("link", "")
-                    if not article_url:
-                        continue
-                    title = clean_html(entry.get("title", ""))
-                    published_at = _parse_rss_date(entry)
-                    content = ""
-                    if entry.get("content"):
-                        content = clean_html(entry.content[0].get("value", ""))
-                    elif entry.get("summary"):
-                        content = clean_html(entry.get("summary", ""))
-                    articles.append(
-                        {
-                            "title": title,
-                            "url": article_url,
-                            "published_at": published_at,
-                            "lead_text": content[:MAX_LEAD_TEXT_LENGTH] if content else None,
-                        }
-                    )
-                except Exception:
-                    logger.debug("블로터 RSS entry 파싱 스킵: %s", entry.get("link", "unknown"))
+            resp = await self.client.get(self.list_url)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for dt_tag in soup.select("dt.title a"):
+                href = dt_tag.get("href", "")
+                if not href:
                     continue
+                # //news.bizwatch.co.kr/... → https://news.bizwatch.co.kr/...
+                if href.startswith("//"):
+                    href = f"https:{href}"
+                elif not href.startswith("http"):
+                    href = f"{self.base_url}{href}"
+                if href in seen_urls:
+                    continue
+                seen_urls.add(href)
+                title = dt_tag.get_text(strip=True)
+                if not title:
+                    continue
+                # 같은 <dl> 내 dd.body에서 lead_text 추출
+                dl = dt_tag.find_parent("dl")
+                lead_text = None
+                if dl:
+                    body_tag = dl.select_one("dd.body a")
+                    if body_tag:
+                        lead_text = clean_html(body_tag.get_text(strip=True))
+                articles.append(
+                    {
+                        "title": clean_html(title),
+                        "url": href,
+                        "lead_text": lead_text[:MAX_LEAD_TEXT_LENGTH] if lead_text else None,
+                        "category": "governance",
+                    }
+                )
         except Exception:
-            logger.warning("블로터 RSS 수집 실패", exc_info=True)
+            logger.warning("비즈워치 목록 수집 실패", exc_info=True)
         return articles
 
 
@@ -363,7 +371,7 @@ class IBCrawlService:
             InvestChosunAdapter(self.client),
             DealsiteAdapter(self.client),
             IBTomatoAdapter(self.client),
-            # BloterAdapter — bloter.net 사이트 폐쇄 (2026-03 기준 404)
+            BizwatchAdapter(self.client),
         ]
 
     async def collect_all(
