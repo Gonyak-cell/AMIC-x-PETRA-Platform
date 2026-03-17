@@ -19,8 +19,17 @@ class IBArticleItem(BaseModel):
     canonical_url: str
     source: str
     published_at: datetime | None = None
-    category: str | None = None
+
+    # 3섹션 분류 (뉴스피드 소비자용)
+    category: str | None = None  # section_primary 매핑
     category_display: str = "미분류"
+    labels: list[str] = Field(default_factory=list)
+    scores: dict[str, float] = Field(default_factory=dict)
+
+    # 레거시 IB 인사이트 분류
+    insight_category: str | None = None
+    insight_domain: str | None = None
+
     sentiment_score: float | None = None
     is_paywalled: bool = False
 

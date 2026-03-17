@@ -18,7 +18,6 @@ from app.models.ib_article import (
     IB_CRAWL_LOCK_KEY,
     IB_CRAWL_LOCK_TTL,
     IBArticle,
-    get_category_display,
 )
 from app.schemas.ib_insight import (
     IBArticleItem,
@@ -30,7 +29,7 @@ from app.services.ib_crawl_service import IBCrawlService
 from app.services.ib_insight_service import IBInsightService
 
 # source 파라미터 유효 값 타입
-IBSourceFilter = Literal["investchosun", "dealsite", "ibtomato", "bloter"]
+IBSourceFilter = Literal["investchosun", "dealsite", "ibtomato", "bizwatch", "kmnanews"]
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +112,8 @@ async def get_gp_ib_insights(
 )
 async def list_ib_articles(
     source: IBSourceFilter | None = Query(None, description="매체 필터"),
-    category: str | None = Query(None, description="카테고리 필터"),
+    category: str | None = Query(None, description="섹션 필터 (ma, governance, fund)"),
+    insight_category: str | None = Query(None, description="레거시 IB 인사이트 카테고리 필터"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -122,7 +122,11 @@ async def list_ib_articles(
     if source:
         filters.append(IBArticle.source == source)
     if category:
-        filters.append(IBArticle.category == category)
+        # 3섹션 필터 → section_primary
+        filters.append(IBArticle.section_primary == category)
+    if insight_category:
+        # 레거시 5분류 필터 → category (기존 IB 인사이트)
+        filters.append(IBArticle.category == insight_category)
 
     where_clause = and_(*filters) if filters else True
 
@@ -142,6 +146,8 @@ async def list_ib_articles(
     result = await db.execute(stmt)
     articles = list(result.scalars().all())
 
+    section_display = {"ma": "M&A", "governance": "거버넌스", "fund": "펀드"}
+
     items = [
         IBArticleItem(
             id=a.id,
@@ -150,8 +156,16 @@ async def list_ib_articles(
             canonical_url=a.canonical_url,
             source=a.source,
             published_at=a.published_at,
-            category=a.category,
-            category_display=get_category_display(a.category),
+            category=a.section_primary,
+            category_display=section_display.get(a.section_primary, "미분류") if a.section_primary else "미분류",
+            labels=json.loads(a.section_labels_json) if a.section_labels_json else [],
+            scores={
+                k: v.get("final_score", 0) for k, v in json.loads(a.section_scores_json).get("sections", {}).items()
+            }
+            if a.section_scores_json
+            else {},
+            insight_category=a.category,
+            insight_domain=a.domain,
             sentiment_score=a.sentiment_score,
             is_paywalled=a.is_paywalled,
         )

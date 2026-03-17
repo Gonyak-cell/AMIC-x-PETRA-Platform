@@ -112,3 +112,16 @@ class IBArticle(TimestampMixin, Base):
     match_confidence: Mapped[float | None] = mapped_column(Float, comment="GP 매칭 신뢰도 (0.0 ~ 1.0)")
 
     company: Mapped["Company | None"] = relationship(back_populates="ib_articles")  # noqa: F821
+
+    # 3섹션 멀티라벨 분류 (ma / governance / fund)
+    section_primary: Mapped[str | None] = mapped_column(
+        String(20), index=True, comment="대표 섹션 (ma, governance, fund)"
+    )
+    section_labels_json: Mapped[str | None] = mapped_column(Text, comment='통과 라벨 JSON (예: ["ma", "governance"])')
+    section_scores_json: Mapped[str | None] = mapped_column(Text, comment="섹션별 점수 + 근거 JSON")
+    section_classified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="섹션 분류 실행 시각"
+    )
+    section_version: Mapped[str | None] = mapped_column(
+        String(20), comment="분류 규칙 버전 (ma_section_rules.json version)"
+    )

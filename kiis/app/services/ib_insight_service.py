@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.models.ib_article import CATEGORY_DOMAIN_MAP, MAX_GP_MATCH_TOKENS, IBArticle, get_category_display
+from app.services.ma_section_classifier import MASectionClassifier
 from app.services.nlp_service import NLPService
 from app.utils.entity_resolver import EntityResolver
 
@@ -73,6 +74,7 @@ class IBInsightService:
     def __init__(self) -> None:
         self.nlp = NLPService()
         self.resolver = EntityResolver()
+        self.section_classifier = MASectionClassifier()
         # corp_code → company_id 캐시 (배치 처리 시 N+1 쿼리 방지)
         self._corp_code_cache: dict[str, int] = {}
 
@@ -88,23 +90,26 @@ class IBInsightService:
         return await self._classify_article(db, article)
 
     async def _classify_article(self, db: AsyncSession, article: IBArticle) -> bool:
-        """단일 IBArticle 객체에 대해 NLP 분류 + GP 매칭을 수행한다."""
+        """단일 IBArticle 객체에 대해 NLP 분류 + GP 매칭 + 섹션 분류를 수행한다."""
         text = f"{article.title} {article.lead_text or ''}"
 
-        # 1. 카테고리 분류 (Rule-based)
+        # 1. 레거시 카테고리 분류 (Rule-based)
         category, domain, _confidence = classify_article_rule_based(article.title, article.lead_text)
         article.category = category
         article.domain = domain
 
-        # 2. 감성 분석 (기존 NLPService 재사용)
+        # 2. 3섹션 멀티라벨 분류
+        self._apply_section_classification(article)
+
+        # 3. 감성 분석 (기존 NLPService 재사용)
         sentiment = await asyncio.to_thread(self.nlp.analyze_sentiment, text)
         article.sentiment_score = sentiment["score"]
 
-        # 3. 키워드 추출
+        # 4. 키워드 추출
         keywords = await self.nlp.extract_keywords_async(text, top_n=5)
         article.keywords = json.dumps([kw["keyword"] for kw in keywords], ensure_ascii=False) if keywords else None
 
-        # 4. GP 엔터티 매칭
+        # 5. GP 엔터티 매칭
         company_id, confidence = await self._match_gp(db, text)
         if company_id:
             article.company_id = company_id
@@ -112,6 +117,15 @@ class IBInsightService:
 
         await db.flush()
         return True
+
+    def _apply_section_classification(self, article: IBArticle) -> None:
+        """3섹션 멀티라벨 분류를 적용하여 section_* 컬럼을 채운다."""
+        result = self.section_classifier.classify(article.title, article.lead_text)
+        article.section_primary = result.primary
+        article.section_labels_json = json.dumps(result.labels, ensure_ascii=False) if result.labels else None
+        article.section_scores_json = json.dumps(result.detail, ensure_ascii=False, default=str)
+        article.section_classified_at = datetime.now(UTC)
+        article.section_version = self.section_classifier.version
 
     async def classify_unprocessed(self, db: AsyncSession, batch_size: int = 50) -> int:
         """미분류 기사를 모두 소진할 때까지 배치 처리한다.
@@ -151,6 +165,35 @@ class IBInsightService:
 
         logger.info("IB 미분류 기사 처리 완료: %d건", total_processed)
         return total_processed
+
+    async def backfill_sections(self, db: AsyncSession, batch_size: int = 100) -> int:
+        """section_primary가 NULL인 기사에 3섹션 분류를 백필한다.
+
+        본문 없이 lead_text fallback으로 분류한다.
+
+        Returns:
+            처리된 기사 수
+        """
+        total = 0
+        while True:
+            stmt = (
+                select(IBArticle)
+                .where(IBArticle.section_primary.is_(None))
+                .order_by(IBArticle.created_at.desc())
+                .limit(batch_size)
+            )
+            result = await db.execute(stmt)
+            articles = list(result.scalars().all())
+            if not articles:
+                break
+            for article in articles:
+                self._apply_section_classification(article)
+            await db.commit()
+            total += len(articles)
+            if len(articles) < batch_size:
+                break
+        logger.info("섹션 백필 완료: %d건", total)
+        return total
 
     async def _match_gp(self, db: AsyncSession, text: str) -> tuple[int | None, float | None]:
         """텍스트에서 GP 엔터티를 매칭한다.
