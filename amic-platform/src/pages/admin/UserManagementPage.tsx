@@ -335,10 +335,17 @@ export default function UserManagementPage() {
       setShowCreateModal(false);
 
       if (inviteResult && !inviteResult.invite_sent) {
-        const reason = inviteResult.invite_error || "알 수 없는 오류";
-        alert(
-          `계정이 생성되고 거래가 배정되었지만, 초대 이메일 발송에 실패했습니다.\n사유: ${reason}\n\n사용자 목록에서 "초대 재발송"을 이용해 주세요.`,
-        );
+        const reason = inviteResult.invite_error || "";
+        const isAlreadyActive = reason.includes("활성화");
+        if (isAlreadyActive) {
+          alert(
+            "이미 활성화된 CLIENT 계정입니다. 거래 배정만 추가되었습니다.\n별도의 초대 발송은 필요하지 않습니다.",
+          );
+        } else {
+          alert(
+            `계정이 생성되고 거래가 배정되었지만, 초대 이메일 발송에 실패했습니다.\n사유: ${reason || "알 수 없는 오류"}\n\n사용자 목록에서 "초대 재발송"을 이용해 주세요.`,
+          );
+        }
       }
     } else {
       createUser.mutate(createForm, {
