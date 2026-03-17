@@ -15,12 +15,12 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders quick action cards", async () => {
+  it("does NOT render quick action cards (moved to DesktopHeader)", async () => {
     renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByText("New Transaction")).toBeInTheDocument();
-    expect(screen.getByText("New Document")).toBeInTheDocument();
-    expect(screen.getByText("Search Company")).toBeInTheDocument();
+    // Quick Actions는 DesktopHeader로 이동됨
+    expect(screen.queryByText("New Transaction")).not.toBeInTheDocument();
+    expect(screen.queryByText("New Document")).not.toBeInTheDocument();
   });
 
   it("renders module navigation cards", async () => {
