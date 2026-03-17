@@ -28,6 +28,15 @@ _CACHE_TTL = 600  # 10분
 _KIIS_TIMEOUT = 10.0  # seconds
 
 
+def _format_kiis_http_error(status_code: int) -> str:
+    """Map KIIS upstream HTTP errors to user-facing messages."""
+    if status_code in {401, 402, 403}:
+        return "KIIS 뉴스 소스 인증 또는 이용 권한을 확인할 수 없습니다."
+    if status_code >= 500:
+        return "KIIS 뉴스 소스를 일시적으로 불러오지 못했습니다."
+    return "KIIS 뉴스 소스를 불러오지 못했습니다."
+
+
 async def fetch_news_feed(
     *,
     source: str | None = None,
@@ -143,7 +152,7 @@ async def _fetch_from_kiis(
             data = resp.json()
     except httpx.HTTPStatusError as exc:
         logger.warning("KIIS IB 기사 API HTTP 에러: %s %s", exc.response.status_code, exc.response.text[:200])
-        return [], 0, f"KIIS API 에러: {exc.response.status_code}"
+        return [], 0, _format_kiis_http_error(exc.response.status_code)
     except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
         logger.warning("KIIS IB 기사 API 연결 실패: %s", exc)
         return [], 0, f"KIIS 연결 실패: {type(exc).__name__}"
@@ -314,9 +323,13 @@ async def fetch_merged_news_feed(
     start = (page - 1) * size
     page_items = merged[start : start + size]
 
+    merged_error = kiis_error
+    if kiis_error and page_items:
+        merged_error = "일부 뉴스 소스를 불러오지 못해 사용 가능한 기사만 표시 중입니다."
+
     return NewsFeedResponse(
         items=page_items,
         total=kiis_total + cf_total,
         cached=False,
-        error=kiis_error,
+        error=merged_error,
     )

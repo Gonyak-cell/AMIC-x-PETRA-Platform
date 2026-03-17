@@ -126,6 +126,29 @@ async def test_kiis_failure_returns_error(client, mock_kiis_failure) -> None:
 # ── 3. 쿼리 파라미터 전달 확인 ──────
 
 
+async def test_kiis_402_returns_friendly_error(client, mock_redis_none) -> None:
+    """KIIS 402는 raw status code 대신 사용자 친화 메시지로 변환한다."""
+    mock_client = AsyncMock()
+    mock_client.get.return_value = _make_httpx_response(
+        data={"detail": "Payment Required"},
+        status_code=402,
+    )
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        patch("app.routers.news_feed.settings") as mock_settings,
+    ):
+        mock_settings.CF_CRAWL_ENABLED = False
+        resp = await client.get("/api/v1/news-feed/latest")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["error"] == "KIIS 뉴스 소스 인증 또는 이용 권한을 확인할 수 없습니다."
+
+
 async def test_query_params_forwarded(client, mock_kiis_success) -> None:
     """source, category, page, size 파라미터가 KIIS API로 전달된다."""
     resp = await client.get(
@@ -200,6 +223,46 @@ async def test_stale_cache_fallback() -> None:
 
 
 # ── 5. CF_CRAWL_ENABLED=True 시 fetch_merged_news_feed 호출 ──────
+
+
+async def test_merged_feed_returns_partial_warning_when_cf_has_items() -> None:
+    """merged 모드에서 KIIS 실패 + CF 성공이면 부분 성공 경고를 반환한다."""
+    from app.schemas.news_feed import NewsFeedItem
+    from app.services.news_feed_service import fetch_merged_news_feed
+
+    cf_item = NewsFeedItem(
+        id="cf-1",
+        title="CF 기사 1",
+        lead_text=None,
+        canonical_url="https://example.com/cf-1",
+        source="thebell",
+        source_display="더벨",
+        source_type="cloudflare",
+        published_at="2026-03-16T10:00:00Z",
+        category="deal_progress",
+        category_display="딜 진행",
+        is_paywalled=False,
+        markdown_available=True,
+    )
+
+    with (
+        patch("app.services.news_feed_service.settings") as mock_settings,
+        patch(
+            "app.services.news_feed_service._fetch_from_kiis",
+            AsyncMock(return_value=([], 0, "KIIS 뉴스 소스 인증 또는 이용 권한을 확인할 수 없습니다.")),
+        ),
+        patch(
+            "app.services.news_feed_service._fetch_from_cf_db",
+            AsyncMock(return_value=([cf_item], 1)),
+        ),
+    ):
+        mock_settings.CF_CRAWL_ENABLED = True
+        result = await fetch_merged_news_feed(page=1, size=10)
+
+    assert result.total == 1
+    assert len(result.items) == 1
+    assert result.items[0].id == "cf-1"
+    assert result.error == "일부 뉴스 소스를 불러오지 못해 사용 가능한 기사만 표시 중입니다."
 
 
 async def test_cf_enabled_uses_merged_path(client, mock_kiis_success) -> None:

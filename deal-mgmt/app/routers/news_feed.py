@@ -65,6 +65,10 @@ async def get_latest_news(
     jwt_token: str | None = None
     if auth_header.lower().startswith("bearer "):
         jwt_token = auth_header[7:]
+    else:
+        # 쿠키 기반 인증 폴백 — 프론트엔드가 Authorization 헤더 없이
+        # httpOnly 쿠키로만 인증하므로, 쿠키에서 JWT를 추출하여 KIIS로 포워딩
+        jwt_token = request.cookies.get("access_token")
 
     # CF 활성화 시 병합 API, 비활성화 시 KIIS 전용
     if settings.CF_CRAWL_ENABLED:
