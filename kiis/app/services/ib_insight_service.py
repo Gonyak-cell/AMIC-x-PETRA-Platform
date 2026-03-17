@@ -14,7 +14,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
-from app.models.ib_article import CATEGORY_DOMAIN_MAP, MAX_GP_MATCH_TOKENS, IBArticle, get_category_display
+from app.models.ib_article import CATEGORY_DOMAIN_MAP, MAX_GP_MATCH_TOKENS, IBArticle
 from app.services.ma_section_classifier import MASectionClassifier
 from app.services.nlp_service import NLPService
 from app.utils.entity_resolver import EntityResolver
@@ -89,8 +89,12 @@ class IBInsightService:
             return False
         return await self._classify_article(db, article)
 
-    async def _classify_article(self, db: AsyncSession, article: IBArticle) -> bool:
-        """단일 IBArticle 객체에 대해 NLP 분류 + GP 매칭 + 섹션 분류를 수행한다."""
+    async def _classify_article(self, db: AsyncSession, article: IBArticle, *, body: str | None = None) -> bool:
+        """단일 IBArticle 객체에 대해 NLP 분류 + GP 매칭 + 섹션 분류를 수행한다.
+
+        Args:
+            body: 기사 본문 평문 (분류에만 사용, DB 미저장). 없으면 lead_text 폴백.
+        """
         text = f"{article.title} {article.lead_text or ''}"
 
         # 1. 레거시 카테고리 분류 (Rule-based)
@@ -98,8 +102,8 @@ class IBInsightService:
         article.category = category
         article.domain = domain
 
-        # 2. 3섹션 멀티라벨 분류
-        self._apply_section_classification(article)
+        # 2. 3섹션 멀티라벨 분류 (본문 있으면 사용, 없으면 lead_text 폴백)
+        self._apply_section_classification(article, body=body)
 
         # 3. 감성 분석 (기존 NLPService 재사용)
         sentiment = await asyncio.to_thread(self.nlp.analyze_sentiment, text)
@@ -118,9 +122,14 @@ class IBInsightService:
         await db.flush()
         return True
 
-    def _apply_section_classification(self, article: IBArticle) -> None:
-        """3섹션 멀티라벨 분류를 적용하여 section_* 컬럼을 채운다."""
-        result = self.section_classifier.classify(article.title, article.lead_text)
+    def _apply_section_classification(self, article: IBArticle, *, body: str | None = None) -> None:
+        """3섹션 멀티라벨 분류를 적용하여 section_* 컬럼을 채운다.
+
+        Args:
+            body: 기사 본문 평문. 있으면 본문 사용, 없으면 lead_text 폴백.
+        """
+        classify_body = body or article.lead_text
+        result = self.section_classifier.classify(article.title, classify_body)
         article.section_primary = result.primary
         article.section_labels_json = json.dumps(result.labels, ensure_ascii=False) if result.labels else None
         article.section_scores_json = json.dumps(result.detail, ensure_ascii=False, default=str)
@@ -304,7 +313,13 @@ class IBInsightService:
 
     @staticmethod
     def _article_to_dict(article: IBArticle) -> dict:
-        """IBArticle을 API 응답용 dict로 변환한다."""
+        """IBArticle을 API 응답용 dict로 변환한다.
+
+        GP 인사이트용이므로 레거시 category/domain을 insight_category/insight_domain으로 내린다.
+        """
+        import json as _json
+
+        section_display = {"ma": "M&A", "governance": "거버넌스", "fund": "펀드"}
         return {
             "id": article.id,
             "title": article.title,
@@ -312,8 +327,14 @@ class IBInsightService:
             "canonical_url": article.canonical_url,
             "source": article.source,
             "published_at": article.published_at,
-            "category": article.category,
-            "category_display": get_category_display(article.category),
+            "category": article.section_primary,
+            "category_display": section_display.get(article.section_primary, "미분류")
+            if article.section_primary
+            else "미분류",
+            "labels": _json.loads(article.section_labels_json) if article.section_labels_json else [],
+            "scores": {},
+            "insight_category": article.category,
+            "insight_domain": article.domain,
             "sentiment_score": article.sentiment_score,
             "is_paywalled": article.is_paywalled,
         }

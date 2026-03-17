@@ -44,8 +44,16 @@ async def run_ib_collect() -> dict:
             # 2. 미분류 기사 NLP 처리 + GP 매칭 (classify_unprocessed 내부에서 commit)
             classified = await insight_svc.classify_unprocessed(db)
 
+            # 3. 섹션 미분류 기사 백필 (수집 시 분류 안 된 기존 기사 보정)
+            section_backfilled = await insight_svc.backfill_sections(db)
+
         total_new = sum(r.get("new", 0) for r in results.values())
-        logger.info("IB 자동 수집 완료: 신규 %d건, 분류 %d건", total_new, classified)
+        logger.info(
+            "IB 자동 수집 완료: 신규 %d건, 분류 %d건, 섹션 백필 %d건",
+            total_new,
+            classified,
+            section_backfilled,
+        )
         return {"collected": results, "classified": classified}
     except Exception:
         logger.exception("IB 자동 수집 중 예외 발생")

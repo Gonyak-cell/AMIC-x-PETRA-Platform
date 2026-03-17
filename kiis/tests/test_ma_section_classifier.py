@@ -134,6 +134,19 @@ class TestWeighting:
         # body: 핵심3개 * 5점 * 1배 = 15 → threshold 10 통과
         assert "ma" in result.labels
 
+    def test_frequency_accumulation(self, classifier: MASectionClassifier) -> None:
+        """동일 키워드 반복 출현 시 빈도만큼 점수 누적."""
+        # 공개매수 2회 → 5*2*3 = 30 (title), 공개매수 1회 → 5*1*3 = 15 (title)
+        r2 = classifier.classify("공개매수 후 공개매수", "")
+        r1 = classifier.classify("공개매수", "")
+        assert r2.scores["ma"] == r1.scores["ma"] * 2
+
+    def test_frequency_body_accumulation(self, classifier: MASectionClassifier) -> None:
+        """본문에서 핵심어 2회 출현 → 5*2 = 10점으로 임계값 통과."""
+        result = classifier.classify("최신 뉴스", "공개매수 관련 공개매수 진행")
+        # body: 5*2*1 = 10 → threshold 10 통과
+        assert "ma" in result.labels
+
 
 # ─── Step 4: 동시출현 보너스 ─────────────────────────
 

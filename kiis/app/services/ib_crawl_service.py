@@ -29,6 +29,35 @@ from app.utils.http_client import AsyncHTTPClient
 
 logger = logging.getLogger(__name__)
 
+# 섹션 분류기 lazy init (모듈 레벨 싱글턴)
+_section_classifier = None
+
+
+def _get_section_classifier():
+    """MASectionClassifier 싱글턴을 반환한다 (순환 import 방지를 위해 lazy)."""
+    global _section_classifier
+    if _section_classifier is None:
+        from app.services.ma_section_classifier import MASectionClassifier
+
+        _section_classifier = MASectionClassifier()
+    return _section_classifier
+
+
+def _apply_section_inline(article: IBArticle, body_text: str | None = None) -> None:
+    """수집 시점에 3섹션 분류를 즉시 적용한다 (본문 → lead_text 폴백)."""
+    import json
+    from datetime import UTC, datetime
+
+    clf = _get_section_classifier()
+    classify_body = body_text or article.lead_text
+    result = clf.classify(article.title, classify_body)
+    article.section_primary = result.primary
+    article.section_labels_json = json.dumps(result.labels, ensure_ascii=False) if result.labels else None
+    article.section_scores_json = json.dumps(result.detail, ensure_ascii=False, default=str)
+    article.section_classified_at = datetime.now(UTC)
+    article.section_version = clf.version
+
+
 # HTML 태그 제거 정규식
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 MULTI_SPACE_RE = re.compile(r"\s+")
@@ -133,8 +162,9 @@ class IBSourceAdapter(ABC):
         ...
 
     async def fetch_article_detail(self, url: str) -> dict | None:
-        """기사 상세 페이지에서 lead_text, author를 추출한다.
+        """기사 상세 페이지에서 lead_text, author, body_text를 추출한다.
 
+        body_text: 기사 본문 전체 평문 (분류에만 사용, DB 미저장).
         공통 로직을 제공한다. 서브클래스는 content_selectors, author_selectors로 커스터마이즈.
         """
         try:
@@ -143,12 +173,19 @@ class IBSourceAdapter(ABC):
             soup = BeautifulSoup(html, "lxml")
             is_paywalled = self.detect_paywall(html, soup=soup)
 
+            body_text = ""
             if is_paywalled:
                 lead_text = _extract_og_description(soup)
             else:
                 lead_text = _extract_lead_paragraph(soup, self.content_selectors)
                 if not lead_text:
                     lead_text = _extract_og_description(soup)
+                # 본문 전체 평문 추출 (분류용, 저장 안 함)
+                for selector in self.content_selectors:
+                    container = soup.select_one(selector)
+                    if container:
+                        body_text = clean_html(container.get_text(" ", strip=True))
+                        break
 
             author_tag = soup.select_one(self.author_selectors)
             author = clean_html(author_tag.get_text(strip=True)) if author_tag else None
@@ -157,6 +194,7 @@ class IBSourceAdapter(ABC):
                 "lead_text": lead_text[:MAX_LEAD_TEXT_LENGTH] if lead_text else None,
                 "author": author,
                 "is_paywalled": is_paywalled,
+                "body_text": body_text or None,
             }
         except Exception:
             logger.warning("%s 상세 수집 실패: %s", self.source_name, url, exc_info=True)
@@ -485,17 +523,23 @@ class IBCrawlService:
             if article["url_hash"] in existing:
                 continue
 
-            # 상세 페이지에서 lead_text 보강 (RSS에서 이미 있으면 스킵 가능)
+            # 상세 페이지에서 lead_text + body_text 보강
             if not article.get("lead_text"):
                 detail = await adapter.fetch_article_detail(article["url"])
                 if detail:
                     article["lead_text"] = detail.get("lead_text")
                     article["author"] = detail.get("author")
                     article["is_paywalled"] = detail.get("is_paywalled", False)
+                    article["_body_text"] = detail.get("body_text")  # 분류용 임시
                 await asyncio.sleep(settings.IB_CRAWL_REQUEST_DELAY)
             else:
                 article.setdefault("is_paywalled", False)
                 article.setdefault("author", None)
+                # lead_text가 이미 있어도 본문 추출 시도 (분류 정확도 향상)
+                detail = await adapter.fetch_article_detail(article["url"])
+                if detail:
+                    article["_body_text"] = detail.get("body_text")
+                await asyncio.sleep(settings.IB_CRAWL_REQUEST_DELAY)
 
             # IB_PAYWALL_SKIP=True이면 paywall 기사 완전 스킵
             if settings.IB_PAYWALL_SKIP and article.get("is_paywalled"):
@@ -511,6 +555,10 @@ class IBCrawlService:
                 url_hash=article["url_hash"],
                 is_paywalled=article.get("is_paywalled", False),
             )
+            # 3섹션 분류 즉시 적용 (본문 있으면 본문 사용, 없으면 lead_text 폴백)
+            body_text = article.get("_body_text")
+            _apply_section_inline(ib_article, body_text)
+
             db.add(ib_article)
             try:
                 await db.flush()
