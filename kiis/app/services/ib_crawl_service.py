@@ -227,6 +227,14 @@ class InvestChosunAdapter(IBSourceAdapter):
                     article_url = entry.get("link", "")
                     if not article_url:
                         continue
+                    # RSS <category>가 "무료"인 기사만 수집 (유료 기사 제외)
+                    rss_category = ""
+                    if entry.get("tags"):
+                        rss_category = entry.tags[0].get("term", "")
+                    elif entry.get("category"):
+                        rss_category = entry.get("category", "")
+                    if rss_category and rss_category != "무료":
+                        continue
                     title = clean_html(entry.get("title", ""))
                     published_at = _parse_rss_date(entry)
                     summary = clean_html(entry.get("summary", entry.get("description", "")))

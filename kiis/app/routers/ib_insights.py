@@ -128,6 +128,10 @@ async def list_ib_articles(
         # 레거시 5분류 필터 → category (기존 IB 인사이트)
         filters.append(IBArticle.category == insight_category)
 
+    # 미분류(section_primary=NULL) 기사는 뉴스피드에서 제외
+    if not insight_category:
+        filters.append(IBArticle.section_primary.is_not(None))
+
     where_clause = and_(*filters) if filters else True
 
     # Total count
