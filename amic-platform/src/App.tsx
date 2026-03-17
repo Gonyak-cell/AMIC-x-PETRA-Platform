@@ -34,6 +34,9 @@ const ExportsRoutes = React.lazy(() => import("@/pages/exports/ExportsRoutes"));
 const DocsRoutes = React.lazy(() => import("@/modules/docs/DocsRoutes"));
 const VdrRoutes = React.lazy(() => import("@/modules/vdr/VdrRoutes"));
 const TeamPage = React.lazy(() => import("@/pages/team/TeamPage"));
+const InviteAcceptPage = React.lazy(
+  () => import("@/pages/invite/InviteAcceptPage"),
+);
 
 function ModuleFallback() {
   return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -43,6 +46,14 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/invite/accept"
+        element={
+          <Suspense fallback={<ModuleFallback />}>
+            <InviteAcceptPage />
+          </Suspense>
+        }
+      />
       <Route
         element={
           <ProtectedRoute>
