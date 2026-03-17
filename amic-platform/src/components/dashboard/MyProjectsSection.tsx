@@ -24,7 +24,7 @@ export default function MyProjectsSection() {
   const len = projects.length;
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <h2 className="label-uppercase mb-3">MY PROJECTS</h2>
 
       {/* Loading */}
@@ -64,7 +64,7 @@ export default function MyProjectsSection() {
       {/* ── Active carousel — Figma "Cards" widget layout ── */}
       {!isLoading && !isError && active && (
         <div
-          className="bg-white rounded-2xl overflow-hidden"
+          className="bg-white rounded-2xl overflow-hidden flex-1 flex flex-col"
           style={{
             boxShadow:
               "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",

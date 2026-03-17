@@ -1,12 +1,6 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FileText,
-  Search,
-  ArrowRight,
-  Handshake,
-  FileStack,
-} from "lucide-react";
+import { FileText, Search, Handshake, FileStack } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -50,19 +44,16 @@ const QUICK_ACTIONS = [
     label: "New Transaction",
     to: "/ma/transactions/new",
     icon: Handshake,
-    description: "Start a new M&A transaction",
   },
   {
     label: "New Document",
     to: "/docs/new",
     icon: FileText,
-    description: "Generate FDD, IM, or TM document",
   },
   {
     label: "Search Company",
     to: "/kiis/companies",
     icon: Search,
-    description: "Look up company information",
   },
 ];
 
@@ -70,11 +61,9 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isClient } = useAuth();
 
-  const quickActionsRef = useRef<HTMLDivElement>(null);
   const modulesRef = useRef<HTMLDivElement>(null);
   const newsFeedRef = useRef<HTMLDivElement>(null);
 
-  useScrollReveal(quickActionsRef, { stagger: 0.06 });
   useScrollReveal(modulesRef, { stagger: 0.08 });
   useScrollReveal(newsFeedRef);
 
@@ -90,107 +79,77 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Dark Hero Section with Forest Cover */}
+      {/* Dark Hero Section with Forest Cover + Quick Action Icons */}
       <PageHero
         title={`Welcome, ${user?.display_name ?? "User"}${user?.title ? ` ${user.title.split("/")[0].trim()}` : ""} 님`}
         subtitle={today}
         backgroundImage={forestCoverUrl}
         backgroundOpacity={0.4}
         compact
+        actions={
+          <div className="flex items-center gap-2">
+            {QUICK_ACTIONS.map((action) => (
+              <button
+                key={action.to}
+                onClick={() => navigate(action.to)}
+                className="group relative flex items-center justify-center w-10 h-10 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-sm transition-colors"
+                title={action.label}
+              >
+                <action.icon className="w-5 h-5 text-white" />
+                {/* Tooltip */}
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-white bg-black/70 rounded px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                  {action.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        }
       />
 
-      {/* ── 2-column body: main + right rail ── */}
+      {/* ── Row 1: My Projects + Calendar — 하단선 동기화 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
-        {/* ── Left: Main content ── */}
-        <div className="space-y-6">
-          {/* MY PROJECTS */}
-          <MyProjectsSection />
+        <MyProjectsSection />
+        <DashboardCalendarWidget />
+      </div>
 
-          {/* Quick Actions */}
-          <div>
-            <h2 className="label-uppercase mb-3">Quick Actions</h2>
-            <div
-              ref={quickActionsRef}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-            >
-              {QUICK_ACTIONS.map((action) => (
-                <div
-                  key={action.to}
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer group"
-                  onClick={() => navigate(action.to)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") navigate(action.to);
-                  }}
-                >
-                  <Card className="hover-glow-green">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <action.icon className="w-5 h-5 text-accent" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-text-dark group-hover:text-accent transition-colors flex items-center gap-1">
-                          {action.label}
-                          <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <p className="text-xs text-text-secondary mt-0.5">
-                          {action.description}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Modules */}
-          <div>
-            <h2 className="label-uppercase mb-3">Modules</h2>
-            <div
-              ref={modulesRef}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-            >
-              {MODULE_CARDS.map((mod) => (
-                <div
-                  key={mod.id}
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer"
-                  onClick={() => navigate(mod.to)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") navigate(mod.to);
-                  }}
-                >
-                  <Card className={cn("hover-glow", mod.bg)}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                        <mod.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">
-                          {mod.label}
-                        </div>
-                        <p className="text-xs text-white/70">{mod.subtitle}</p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* M&A News Feed */}
-          <div ref={newsFeedRef}>
-            <NewsFeedSection />
-          </div>
+      {/* ── Row 2: News Feed + Modules ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+        <div ref={newsFeedRef}>
+          <NewsFeedSection />
         </div>
 
-        {/* ── Right rail: Activity + Calendar ── */}
-        <aside className="space-y-6">
-          <DashboardCalendarWidget />
-        </aside>
+        {/* Modules */}
+        <div>
+          <h2 className="label-uppercase mb-3">Modules</h2>
+          <div ref={modulesRef} className="flex flex-col gap-3">
+            {MODULE_CARDS.map((mod) => (
+              <div
+                key={mod.id}
+                role="button"
+                tabIndex={0}
+                className="cursor-pointer"
+                onClick={() => navigate(mod.to)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") navigate(mod.to);
+                }}
+              >
+                <Card className={cn("hover-glow", mod.bg)}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                      <mod.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white text-sm">
+                        {mod.label}
+                      </div>
+                      <p className="text-xs text-white/70">{mod.subtitle}</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -91,7 +91,7 @@ export default function DashboardCalendarWidget() {
   }
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       {/* ── Header: label + "전체 보기" ── */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="label-uppercase">Calendar</h2>
@@ -106,7 +106,7 @@ export default function DashboardCalendarWidget() {
 
       {/* ── Card container (same shadow as MY PROJECTS) ── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
+        className="bg-white rounded-2xl overflow-hidden flex-1 flex flex-col"
         style={{ boxShadow: cardShadow }}
       >
         {/* Mini calendar section */}
@@ -149,7 +149,7 @@ export default function DashboardCalendarWidget() {
         </div>
 
         {/* Upcoming events section (separated by border) */}
-        <div className="border-t border-gray-100 px-5 py-4">
+        <div className="border-t border-gray-100 px-5 py-4 flex-1 flex flex-col">
           <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <CalendarClock className="w-3.5 h-3.5" />
             다가오는 일정

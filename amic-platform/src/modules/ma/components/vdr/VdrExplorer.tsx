@@ -71,7 +71,7 @@ export default function VdrExplorer({
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const suggestCategory = useSuggestVdrCategory(txnId);
@@ -321,9 +321,7 @@ export default function VdrExplorer({
           />
           <VdrFileListPanel
             currentFolderId={currentFolderId}
-            subFolders={
-              currentFolderId !== null ? currentSubFolders : rootFolders
-            }
+            subFolders={[]}
             documents={currentFolderId !== null ? documents : []}
             docsLoading={docsLoading}
             onNavigate={setCurrentFolderId}

@@ -173,16 +173,7 @@ export default function VdrFileListPanel({
           </div>
         ) : (
           <div className="py-0.5">
-            {/* 폴더 (항상 파일보다 위) */}
-            {sortedFolders.map((folder) => (
-              <FileListRow
-                key={folder.id}
-                type="folder"
-                folder={folder}
-                onNavigate={(id) => onNavigate(id)}
-                onDelete={!folder.is_required ? onDeleteFolder : undefined}
-              />
-            ))}
+            {/* 폴더는 좌측 트리에서만 탐색 — 우측 패널은 파일만 표시 */}
             {/* 파일 */}
             {sortedDocs.map((doc) => (
               <FileListRow

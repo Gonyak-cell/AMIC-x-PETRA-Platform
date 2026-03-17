@@ -87,6 +87,9 @@ const RAIL_PANEL_TITLES: Record<RailToolId, string> = {
   "ai-quality": "AI 품질",
 };
 
+// 초기 리다이렉트 이력 — 컴포넌트 리마운트에도 유지 (세션 내 txn당 1회)
+const _redirectedTxnIds = new Set<string>();
+
 // ── 메인 컴포넌트 ──────────────────────────────────────
 export default function TransactionWorkspacePage() {
   const { txnId, "*": splat } = useParams<{ txnId: string; "*": string }>();
@@ -144,12 +147,11 @@ export default function TransactionWorkspacePage() {
     prevPhaseRef.current = txn.phase;
   }, [txn?.phase, id, navigate]);
 
-  // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트 (1회만)
-  const initialRedirectDone = useRef(false);
+  // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트 (세션 내 txn당 1회)
   useEffect(() => {
     if (!txn?.phase) return;
-    if (initialRedirectDone.current) return;
-    initialRedirectDone.current = true;
+    if (_redirectedTxnIds.has(id)) return;
+    _redirectedTxnIds.add(id);
     // URL에 이미 탭이 있거나 다른 단계를 보는 중이면 리다이렉트 안 함
     if (splat || viewedPhase) return;
     const phase = txn.phase as TransactionPhase;
