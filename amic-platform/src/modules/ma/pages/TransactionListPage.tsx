@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, Pencil, Briefcase, TrendingUp, DollarSign } from "lucide-react";
@@ -83,7 +83,17 @@ export default function TransactionListPage() {
     offset: (page - 1) * pageSize,
   });
 
-  // KPI 통계 (DB 집계 기반)
+  // CLIENT auto-redirect: single assigned deal → auto-enter
+  const [autoRedirected, setAutoRedirected] = useState(false);
+  useEffect(() => {
+    if (!isClient || !data?.items || autoRedirected || isLoading) return;
+    if (data.items.length === 1 && data.total === 1) {
+      setAutoRedirected(true);
+      navigate(`/ma/transactions/${data.items[0].id}`, { replace: true });
+    }
+  }, [isClient, data, autoRedirected, isLoading, navigate]);
+
+  // KPI 통계 (DB 집계 기반 — CLIENT는 403 방지를 위해 비활성화)
   const { data: stats } = useMaStats();
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
@@ -184,6 +194,17 @@ export default function TransactionListPage() {
       : []),
   ];
 
+  if (isClient && !isLoading && data?.total === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <EmptyState
+          title="배정된 거래가 없습니다"
+          description="담당자에게 문의해 주세요."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHero
@@ -206,24 +227,26 @@ export default function TransactionListPage() {
         }
       />
 
-      {/* KPI 카드 */}
-      <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
-          label="전체 거래"
-          value={String(kpis.total)}
-          icon={Briefcase}
-        />
-        <KpiCard
-          label="진행 중"
-          value={String(kpis.active)}
-          icon={TrendingUp}
-        />
-        <KpiCard
-          label="예상 총액"
-          value={formatKrwCompact(kpis.totalValue || null)}
-          icon={DollarSign}
-        />
-      </div>
+      {/* KPI 카드 — CLIENT는 stats API 403 방지를 위해 숨김 */}
+      {!isClient && (
+        <div ref={kpiRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <KpiCard
+            label="전체 거래"
+            value={String(kpis.total)}
+            icon={Briefcase}
+          />
+          <KpiCard
+            label="진행 중"
+            value={String(kpis.active)}
+            icon={TrendingUp}
+          />
+          <KpiCard
+            label="예상 총액"
+            value={formatKrwCompact(kpis.totalValue || null)}
+            icon={DollarSign}
+          />
+        </div>
+      )}
 
       {/* 필터 바 */}
       <Card padding="md">

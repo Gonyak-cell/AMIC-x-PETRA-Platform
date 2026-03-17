@@ -152,6 +152,8 @@ export default function TransactionWorkspacePage() {
     if (!txn?.phase) return;
     if (_redirectedTxnIds.has(id)) return;
     _redirectedTxnIds.add(id);
+    // CLIENT는 항상 Overview에 머무름 (온보딩 실행을 위해)
+    if (isClient) return;
     // URL에 이미 탭이 있거나 다른 단계를 보는 중이면 리다이렉트 안 함
     if (splat || viewedPhase) return;
     const phase = txn.phase as TransactionPhase;
@@ -160,7 +162,7 @@ export default function TransactionWorkspacePage() {
       navigate(`/ma/transactions/${id}/${defaultTab}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txn?.phase, id, navigate]);
+  }, [txn?.phase, id, navigate, isClient]);
 
   // 마일스톤 문서 존재 여부 조회
   const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");
