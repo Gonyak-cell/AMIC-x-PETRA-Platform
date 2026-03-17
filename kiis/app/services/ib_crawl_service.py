@@ -276,6 +276,8 @@ class IBTomatoAdapter(IBSourceAdapter):
                     # &amp; → & 변환
                     href = href.replace("&amp;", "&")
                     if not href.startswith("http"):
+                        if not href.startswith("/"):
+                            href = f"/{href}"
                         href = f"{self.base_url}{href}"
                     if href in seen_urls:
                         continue
