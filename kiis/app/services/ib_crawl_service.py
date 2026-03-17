@@ -171,33 +171,40 @@ class IBSourceAdapter(ABC):
 
 
 class InvestChosunAdapter(IBSourceAdapter):
-    """인베스트조선 어댑터 (investchosun.com)"""
+    """인베스트조선 어댑터 (investchosun.com) — RSS 활용"""
 
     source_name = "investchosun"
     base_url = "https://www.investchosun.com"
+    rss_url = "https://www.investchosun.com/rss/rss.xml"
     content_selectors = [".article-body", "#article-body", ".news-content", "article"]
     author_selectors = ".byline, .reporter, .article-info .name"
 
     async def fetch_article_list(self, max_pages: int = 3) -> list[dict]:
         articles: list[dict] = []
-        for page in range(1, max_pages + 1):
-            try:
-                url = f"{self.base_url}/news/articleList.html?page={page}&sc_section_code=S1N34"
-                resp = await self.client.get(url)
-                soup = BeautifulSoup(resp.text, "lxml")
-                for item in soup.select("ul.type2 li, .article-list li, .list-block a"):
-                    link_tag = item.find("a") if item.name != "a" else item
-                    if not link_tag or not link_tag.get("href"):
+        try:
+            resp = await self.client.get(self.rss_url)
+            feed = feedparser.parse(resp.text)
+            for entry in feed.entries[: max_pages * 20]:
+                try:
+                    article_url = entry.get("link", "")
+                    if not article_url:
                         continue
-                    href = link_tag["href"]
-                    if not href.startswith("http"):
-                        href = f"{self.base_url}{href}"
-                    title = link_tag.get_text(strip=True)
-                    if title and href:
-                        articles.append({"title": clean_html(title), "url": href})
-            except Exception:
-                logger.warning("인베스트조선 목록 수집 실패 (page=%d)", page, exc_info=True)
-            await asyncio.sleep(settings.IB_CRAWL_REQUEST_DELAY)
+                    title = clean_html(entry.get("title", ""))
+                    published_at = _parse_rss_date(entry)
+                    summary = clean_html(entry.get("summary", entry.get("description", "")))
+                    articles.append(
+                        {
+                            "title": title,
+                            "url": article_url,
+                            "published_at": published_at,
+                            "lead_text": summary[:MAX_LEAD_TEXT_LENGTH] if summary else None,
+                        }
+                    )
+                except Exception:
+                    logger.debug("인베스트조선 RSS entry 파싱 스킵: %s", entry.get("link", "unknown"))
+                    continue
+        except Exception:
+            logger.warning("인베스트조선 RSS 수집 실패", exc_info=True)
         return articles
 
     def detect_paywall(self, html: str, *, soup: BeautifulSoup | None = None) -> bool:
@@ -213,39 +220,30 @@ class InvestChosunAdapter(IBSourceAdapter):
 
 
 class DealsiteAdapter(IBSourceAdapter):
-    """딜사이트 어댑터 (dealsite.co.kr) — RSS 활용"""
+    """딜사이트 어댑터 (dealsite.co.kr) — 메인페이지 HTML 스크래핑"""
 
     source_name = "dealsite"
     base_url = "https://dealsite.co.kr"
-    rss_url = "https://dealsite.co.kr/rss"
     content_selectors = [".article-body", ".article-content", "#article-body", "article"]
 
     async def fetch_article_list(self, max_pages: int = 3) -> list[dict]:
         articles: list[dict] = []
+        seen_urls: set[str] = set()
         try:
-            resp = await self.client.get(self.rss_url)
-            feed = feedparser.parse(resp.text)
-            for entry in feed.entries[: max_pages * 20]:
-                try:
-                    article_url = entry.get("link", "")
-                    if not article_url:
-                        continue
-                    title = clean_html(entry.get("title", ""))
-                    published_at = _parse_rss_date(entry)
-                    summary = clean_html(entry.get("summary", ""))
-                    articles.append(
-                        {
-                            "title": title,
-                            "url": article_url,
-                            "published_at": published_at,
-                            "lead_text": summary[:MAX_LEAD_TEXT_LENGTH] if summary else None,
-                        }
-                    )
-                except Exception:
-                    logger.debug("딜사이트 RSS entry 파싱 스킵: %s", entry.get("link", "unknown"))
+            resp = await self.client.get(self.base_url)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for link_tag in soup.select("a[href^='/articles/'][title]"):
+                href = link_tag.get("href", "")
+                title = link_tag.get("title", "").strip()
+                if not href or not title:
                     continue
+                full_url = f"{self.base_url}{href}"
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                articles.append({"title": clean_html(title), "url": full_url})
         except Exception:
-            logger.warning("딜사이트 RSS 수집 실패", exc_info=True)
+            logger.warning("딜사이트 목록 수집 실패", exc_info=True)
         return articles
 
 
@@ -253,30 +251,48 @@ class DealsiteAdapter(IBSourceAdapter):
 
 
 class IBTomatoAdapter(IBSourceAdapter):
-    """IB토마토 어댑터 (ibtomato.com)"""
+    """IB토마토 어댑터 (ibtomato.com) — ASP.NET 구조 HTML 스크래핑"""
 
     source_name = "ibtomato"
     base_url = "https://www.ibtomato.com"
-    content_selectors = [".article-body", "#article-body", ".article-content", "article"]
+    # IB금융 카테고리 (cate=1100, subCate=1101=투자은행, 1102=PE·M&A)
+    list_urls = [
+        "https://www.ibtomato.com/CateSub.aspx?cate=1100&subCate=1101&type=1",
+        "https://www.ibtomato.com/CateSub.aspx?cate=1100&subCate=1102&type=1",
+    ]
+    content_selectors = [".article-body", "#article-body", ".article-content", ".viewBox", "article"]
 
     async def fetch_article_list(self, max_pages: int = 3) -> list[dict]:
         articles: list[dict] = []
-        for page in range(1, max_pages + 1):
+        seen_urls: set[str] = set()
+        for list_url in self.list_urls:
             try:
-                url = f"{self.base_url}/news/articleList.html?page={page}&sc_section_code=S1N1"
-                resp = await self.client.get(url)
+                resp = await self.client.get(list_url)
                 soup = BeautifulSoup(resp.text, "lxml")
-                for item in soup.select(".article-list li a, .list-titles a, .type2 a, ul.type li a"):
-                    href = item.get("href", "")
+                for link_tag in soup.select("a[href*='View.aspx?no=']"):
+                    href = link_tag.get("href", "")
                     if not href:
                         continue
+                    # &amp; → & 변환
+                    href = href.replace("&amp;", "&")
                     if not href.startswith("http"):
                         href = f"{self.base_url}{href}"
-                    title = item.get_text(strip=True)
-                    if title and href:
+                    if href in seen_urls:
+                        continue
+                    seen_urls.add(href)
+                    # 제목 추출: .s_tit6 span 내부 또는 직접 텍스트
+                    title_el = link_tag.select_one(".s_tit6 span, .s_tit6")
+                    if title_el:
+                        # 카테고리 태그(.l_con) 제거 후 텍스트 추출
+                        for cat_tag in title_el.select(".l_con"):
+                            cat_tag.decompose()
+                        title = title_el.get_text(strip=True)
+                    else:
+                        title = link_tag.get_text(strip=True)
+                    if title:
                         articles.append({"title": clean_html(title), "url": href})
             except Exception:
-                logger.warning("IB토마토 목록 수집 실패 (page=%d)", page, exc_info=True)
+                logger.warning("IB토마토 목록 수집 실패: %s", list_url, exc_info=True)
             await asyncio.sleep(settings.IB_CRAWL_REQUEST_DELAY)
         return articles
 
@@ -345,7 +361,7 @@ class IBCrawlService:
             InvestChosunAdapter(self.client),
             DealsiteAdapter(self.client),
             IBTomatoAdapter(self.client),
-            BloterAdapter(self.client),
+            # BloterAdapter — bloter.net 사이트 폐쇄 (2026-03 기준 404)
         ]
 
     async def collect_all(
