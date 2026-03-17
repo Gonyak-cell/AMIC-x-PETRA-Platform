@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Users,
   ShieldCheck,
@@ -10,6 +11,7 @@ import {
   Trash2,
   Briefcase,
   Info,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -25,6 +27,8 @@ import {
 } from "@/hooks/useClientDeals";
 import type { ClientDealAssignment } from "@/hooks/useClientDeals";
 import { useTransactions } from "@/modules/ma/hooks/useTransactions";
+import { useCreateInvite } from "@/hooks/useInvite";
+import { maApi } from "@/api/maClient";
 import type { AdminUser, UserCreate, UserUpdate } from "@/types/admin";
 import type { UserRole } from "@/types/auth";
 import { ROLE_PERMISSIONS } from "@/types/auth";
@@ -204,12 +208,18 @@ export default function UserManagementPage() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const createInvite = useCreateInvite();
+  const queryClient = useQueryClient();
+  const { data: txnList } = useTransactions({ limit: 100 });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
   const [createForm, setCreateForm] = useState<UserCreate>(INITIAL_CREATE_FORM);
   const [editForm, setEditForm] = useState<UserUpdate>({});
+  const [selectedTxnIds, setSelectedTxnIds] = useState<string[]>([]);
+  const [clientOrg, setClientOrg] = useState("");
+  const [selectedTxnId, setSelectedTxnId] = useState("");
 
   // KPI calculations (must be before early return to satisfy hooks rules)
   const kpis = useMemo(() => {
@@ -236,14 +246,69 @@ export default function UserManagementPage() {
     );
   }
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    createUser.mutate(createForm, {
-      onSuccess: () => {
-        setCreateForm(INITIAL_CREATE_FORM);
-        setShowCreateModal(false);
-      },
-    });
+
+    if (createForm.role === "CLIENT") {
+      // 1. 거래 배정 먼저 (deal-mgmt)
+      const assignResults: { txnId: string; ok: boolean; reason?: string }[] =
+        [];
+      for (const txnId of selectedTxnIds) {
+        try {
+          await maApi.post(`/transactions/${txnId}/clients`, {
+            email: createForm.email,
+            display_name: createForm.display_name,
+            organization: clientOrg || undefined,
+          });
+          assignResults.push({ txnId, ok: true });
+        } catch (err: unknown) {
+          const status = (err as { response?: { status?: number } })?.response
+            ?.status;
+          assignResults.push({
+            txnId,
+            ok: false,
+            reason: status === 409 ? "이미 배정됨" : "배정 실패",
+          });
+        }
+      }
+
+      const assignedOk = assignResults.filter((r) => r.ok).length;
+      if (
+        selectedTxnIds.length > 0 &&
+        assignedOk === 0 &&
+        assignResults.every((r) => r.reason !== "이미 배정됨")
+      ) {
+        alert("거래 배정에 실패했습니다.");
+        return;
+      }
+
+      // 2. 초대 생성 (FDD) — 거래 배정 성공 후
+      const txnNames = selectedTxnIds.map(
+        (id) => txnList?.items?.find((t) => t.id === id)?.name ?? "",
+      );
+      await createInvite.mutateAsync({
+        email: createForm.email,
+        display_name: createForm.display_name,
+        title: createForm.title,
+        transaction_ids: selectedTxnIds,
+        transaction_names: txnNames,
+      });
+
+      // 3. 완료 처리
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      setCreateForm(INITIAL_CREATE_FORM);
+      setSelectedTxnIds([]);
+      setClientOrg("");
+      setSelectedTxnId("");
+      setShowCreateModal(false);
+    } else {
+      createUser.mutate(createForm, {
+        onSuccess: () => {
+          setCreateForm(INITIAL_CREATE_FORM);
+          setShowCreateModal(false);
+        },
+      });
+    }
   };
 
   const handleEdit = (e: React.FormEvent) => {
@@ -314,11 +379,16 @@ export default function UserManagementPage() {
       header: "Status",
       align: "center",
       width: "100px",
-      render: (row) => (
-        <Badge variant={row.is_active ? "success" : "error"}>
-          {row.is_active ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      render: (row) => {
+        if (row.role === "CLIENT" && !row.is_active) {
+          return <Badge variant="warning">대기 중</Badge>;
+        }
+        return (
+          <Badge variant={row.is_active ? "success" : "error"}>
+            {row.is_active ? "Active" : "Inactive"}
+          </Badge>
+        );
+      },
     },
     {
       key: "created_at",
@@ -495,9 +565,9 @@ export default function UserManagementPage() {
             <Button
               variant="accent"
               onClick={handleCreate}
-              loading={createUser.isPending}
+              loading={createUser.isPending || createInvite.isPending}
             >
-              Create User
+              {createForm.role === "CLIENT" ? "초대 발송" : "Create User"}
             </Button>
           </>
         }
@@ -530,45 +600,134 @@ export default function UserManagementPage() {
             }
             placeholder="e.g., Associate, VP, Director"
           />
-          <Input
-            label="Password"
-            type="password"
-            required
-            minLength={8}
-            value={createForm.password}
-            onChange={(e) =>
-              setCreateForm({ ...createForm, password: e.target.value })
-            }
-            placeholder="Minimum 8 characters"
-          />
+          {createForm.role !== "CLIENT" && (
+            <Input
+              label="Password"
+              type="password"
+              required
+              minLength={8}
+              value={createForm.password}
+              onChange={(e) =>
+                setCreateForm({ ...createForm, password: e.target.value })
+              }
+              placeholder="Minimum 8 characters"
+            />
+          )}
           <Select
             label="Role"
             options={ROLE_OPTIONS}
             value={createForm.role}
-            onChange={(e) =>
+            onChange={(e) => {
               setCreateForm({
                 ...createForm,
                 role: e.target.value as UserRole,
-              })
-            }
+              });
+              // CLIENT 전환 시 상태 초기화
+              if (e.target.value !== "CLIENT") {
+                setSelectedTxnIds([]);
+                setClientOrg("");
+                setSelectedTxnId("");
+              }
+            }}
           />
           {createForm.role === "CLIENT" && (
-            <div className="flex gap-2 rounded border border-amic-200 bg-amic-50 p-3 text-sm text-text-body">
-              <Info size={16} className="shrink-0 mt-0.5 text-amic" />
-              <div>
-                <p className="font-medium text-amic mb-1">
-                  Client (External) Account
-                </p>
-                <p>
-                  Client users can only view deals they are explicitly assigned
-                  to. After creating this user, assign them to specific deals in{" "}
-                  <strong>
-                    M&A &rarr; Transaction Workspace &rarr; Client Access
-                  </strong>
-                  .
-                </p>
+            <>
+              <Input
+                label="소속 기관 (선택)"
+                value={clientOrg}
+                onChange={(e) => setClientOrg(e.target.value)}
+                placeholder="e.g., ABC 자산운용"
+              />
+
+              {/* 거래 선택 */}
+              <div className="space-y-2">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Select
+                      label="거래 배정"
+                      options={[
+                        { value: "", label: "거래를 선택하세요..." },
+                        ...(txnList?.items ?? [])
+                          .filter((t) => !selectedTxnIds.includes(t.id))
+                          .map((t) => ({
+                            value: t.id,
+                            label: `${t.name} (${t.code_name})`,
+                          })),
+                      ]}
+                      value={selectedTxnId}
+                      onChange={(e) => setSelectedTxnId(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    icon={Plus}
+                    onClick={() => {
+                      if (
+                        selectedTxnId &&
+                        !selectedTxnIds.includes(selectedTxnId)
+                      ) {
+                        setSelectedTxnIds([...selectedTxnIds, selectedTxnId]);
+                        setSelectedTxnId("");
+                      }
+                    }}
+                    disabled={!selectedTxnId}
+                  >
+                    추가
+                  </Button>
+                </div>
+
+                {selectedTxnIds.length > 0 && (
+                  <div className="rounded border border-amic-200 bg-amic-50/50 divide-y divide-amic-100">
+                    {selectedTxnIds.map((id) => {
+                      const txn = txnList?.items?.find((t) => t.id === id);
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center justify-between px-3 py-2 text-sm"
+                        >
+                          <div>
+                            <span className="font-medium text-text-dark">
+                              {txn?.name ?? id}
+                            </span>
+                            {txn?.code_name && (
+                              <span className="ml-2 text-xs text-text-secondary">
+                                ({txn.code_name})
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-red-500 hover:bg-red-50 transition-colors"
+                            onClick={() =>
+                              setSelectedTxnIds(
+                                selectedTxnIds.filter((tid) => tid !== id),
+                              )
+                            }
+                            aria-label={`${txn?.name ?? id} 제거`}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
+
+              <div className="flex gap-2 rounded border border-amic-200 bg-amic-50 p-3 text-sm text-text-body">
+                <Info size={16} className="shrink-0 mt-0.5 text-amic" />
+                <div>
+                  <p className="font-medium text-amic mb-1">
+                    Client (External) 초대
+                  </p>
+                  <p>
+                    초대 이메일이 발송됩니다. 클라이언트는 이메일 링크를 통해
+                    비밀번호를 설정하고 배정된 딜을 열람할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+            </>
           )}
         </form>
       </Modal>
