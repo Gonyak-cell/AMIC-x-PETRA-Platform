@@ -352,6 +352,59 @@ class BizwatchAdapter(IBSourceAdapter):
         return articles
 
 
+# ─────────── 한국M&A신문 ───────────
+
+
+class KmnaAdapter(IBSourceAdapter):
+    """한국M&A경제신문 어댑터 (kmnanews.com) — HTML 스크래핑"""
+
+    source_name = "kmnanews"
+    base_url = "https://www.kmnanews.com"
+    list_url = "https://www.kmnanews.com/news/articleList.html?sc_section_code=S1N1&view_type=sm"
+    content_selectors = [".article-body", "#article-view-content-div", ".view-content", "article"]
+    author_selectors = ".byline, .reporter"
+
+    async def fetch_article_list(self, max_pages: int = 3) -> list[dict]:
+        articles: list[dict] = []
+        seen_urls: set[str] = set()
+        for page in range(1, max_pages + 1):
+            try:
+                url = f"{self.list_url}&page={page}"
+                resp = await self.client.get(url)
+                soup = BeautifulSoup(resp.text, "lxml")
+                for item in soup.select(".list-titles a"):
+                    href = item.get("href", "")
+                    if not href or "articleView" not in href:
+                        continue
+                    if not href.startswith("http"):
+                        href = f"{self.base_url}{href}"
+                    if href in seen_urls:
+                        continue
+                    seen_urls.add(href)
+                    title = item.get_text(strip=True)
+                    if not title:
+                        continue
+                    # 같은 부모에서 lead_text 추출
+                    parent = item.find_parent("div", class_="list-block") or item.find_parent("li")
+                    lead_text = None
+                    if parent:
+                        summary = parent.select_one(".list-summary a")
+                        if summary:
+                            lead_text = clean_html(summary.get_text(strip=True))
+                    articles.append(
+                        {
+                            "title": clean_html(title),
+                            "url": href,
+                            "lead_text": lead_text[:MAX_LEAD_TEXT_LENGTH] if lead_text else None,
+                            "category": "ma",
+                        }
+                    )
+            except Exception:
+                logger.warning("한국M&A신문 목록 수집 실패 (page=%d)", page, exc_info=True)
+            await asyncio.sleep(settings.IB_CRAWL_REQUEST_DELAY)
+        return articles
+
+
 # ─────────── 통합 크롤링 서비스 ───────────
 
 
@@ -372,6 +425,7 @@ class IBCrawlService:
             DealsiteAdapter(self.client),
             IBTomatoAdapter(self.client),
             BizwatchAdapter(self.client),
+            KmnaAdapter(self.client),
         ]
 
     async def collect_all(

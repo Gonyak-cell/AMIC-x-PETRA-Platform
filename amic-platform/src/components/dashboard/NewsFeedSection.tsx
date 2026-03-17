@@ -28,6 +28,7 @@ const SOURCES = [
   { value: "investchosun", label: "인베스트조선", group: "kiis" },
   { value: "ibtomato", label: "IB토마토", group: "kiis" },
   { value: "bizwatch", label: "비즈워치", group: "kiis" },
+  { value: "kmnanews", label: "한국M&A신문", group: "kiis" },
 ] as const;
 
 const PAGE_SIZE = 8;

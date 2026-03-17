@@ -24,6 +24,7 @@ AllSourceFilter = Literal[
     "dealsite",
     "ibtomato",
     "bizwatch",
+    "kmnanews",
     "hankyung_ib",
     "mk_ib",
     "chosunbiz_ma",
