@@ -36,22 +36,6 @@ interface VdrFileListPanelProps {
 
 // ── 정렬 로직 ────────────────────────────────────────────
 
-function sortFolders(folders: VdrFolder[], sort: SortState): VdrFolder[] {
-  const sorted = [...folders];
-  const dir = sort.direction === "asc" ? 1 : -1;
-  sorted.sort((a, b) => {
-    switch (sort.column) {
-      case "name":
-        return dir * a.name.localeCompare(b.name, "ko");
-      case "modified":
-        return dir * a.updated_at.localeCompare(b.updated_at);
-      default:
-        return 0;
-    }
-  });
-  return sorted;
-}
-
 function sortDocuments(docs: VdrDocument[], sort: SortState): VdrDocument[] {
   const sorted = [...docs];
   const dir = sort.direction === "asc" ? 1 : -1;
@@ -91,11 +75,11 @@ const COLUMNS: { key: SortColumn; label: string; className: string }[] = [
 
 export default function VdrFileListPanel({
   currentFolderId,
-  subFolders,
+  subFolders: _subFolders,
   documents,
   docsLoading,
-  onNavigate,
-  onDeleteFolder,
+  onNavigate: _onNavigate,
+  onDeleteFolder: _onDeleteFolder,
   onDeleteDoc,
   onStartExtraction,
   onRetryExtraction,
@@ -103,15 +87,16 @@ export default function VdrFileListPanel({
   txnId,
   onDrop,
 }: VdrFileListPanelProps) {
+  // 폴더는 좌측 트리에서만 탐색 — 우측 패널은 파일만 표시
+  void _subFolders;
+  void _onNavigate;
+  void _onDeleteFolder;
+
   const [sort, setSort] = useState<SortState>({
     column: "name",
     direction: "asc",
   });
 
-  const sortedFolders = useMemo(
-    () => sortFolders(subFolders, sort),
-    [subFolders, sort],
-  );
   const sortedDocs = useMemo(
     () => sortDocuments(documents, sort),
     [documents, sort],
@@ -125,7 +110,7 @@ export default function VdrFileListPanel({
     );
   };
 
-  const isEmpty = subFolders.length === 0 && documents.length === 0;
+  const isEmpty = documents.length === 0;
 
   return (
     <div
