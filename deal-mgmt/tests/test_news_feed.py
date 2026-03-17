@@ -153,7 +153,7 @@ async def test_query_params_forwarded(client, mock_kiis_success) -> None:
     """source, category, page, size 파라미터가 KIIS API로 전달된다."""
     resp = await client.get(
         "/api/v1/news-feed/latest",
-        params={"source": "dealsite", "category": "deal_progress", "page": 2, "size": 5},
+        params={"source": "dealsite", "category": "ma", "page": 2, "size": 5},
     )
     assert resp.status_code == 200
 
@@ -161,7 +161,7 @@ async def test_query_params_forwarded(client, mock_kiis_success) -> None:
     call_args = mock_kiis_success.get.call_args
     params = call_args.kwargs.get("params", {})
     assert params["source"] == "dealsite"
-    assert params["category"] == "deal_progress"
+    assert params["category"] == "ma"
     assert params["page"] == 2
     assert params["size"] == 5
 
