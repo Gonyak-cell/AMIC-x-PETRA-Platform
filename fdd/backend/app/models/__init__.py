@@ -26,6 +26,7 @@ from app.models.fdd_checklist import (  # noqa: F401
     FddChecklist,
     FddChecklistItem,
 )
+from app.models.invite_token import InviteStatus, InviteToken  # noqa: F401
 from app.models.issue import (  # noqa: F401
     Issue,
     IssueCategory,

@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # Email / SMTP (CLIENT 초대)
+    smtp_server: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@amic.kr"
+    smtp_use_tls: bool = True
+    invite_token_expire_hours: int = 72
+    frontend_url: str = "http://localhost:5173"
+
     # Production settings
     cors_origins: str = "http://localhost:5173"
     log_level: str = "INFO"

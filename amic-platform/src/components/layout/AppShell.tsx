@@ -138,7 +138,7 @@ export default function AppShell({ children }: AppShellProps) {
         Skip to main content
       </a>
 
-      <div className="flex min-h-screen overflow-x-hidden">
+      <div className="flex min-h-screen overflow-x-hidden scrollbar-hide">
         {/* Desktop Sidebar */}
         <div
           className={cn(

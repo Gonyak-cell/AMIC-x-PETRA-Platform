@@ -148,10 +148,10 @@ class MASectionClassifier:
     def _score_keywords(
         self, text: str, core_keywords: list[str], support_keywords: list[str], cfg: dict
     ) -> tuple[float, list[str], list[str]]:
-        """텍스트에서 키워드 매칭 점수를 계산한다.
+        """텍스트에서 키워드 출현 빈도 × 배점으로 점수를 계산한다.
 
-        동의어 치환 후 exact phrase 매칭 방식.
-        복합 키워드("주식매매계약", "이사회 결의 무효")도 substring 매칭으로 검출.
+        동일 키워드가 여러 번 출현하면 그만큼 점수가 누적된다.
+        예: 핵심어 2회 출현 → 5×2 = 10점.
         """
         core_score = cfg.get("core_score", 5)
         support_score = cfg.get("support_score", 2)
@@ -159,12 +159,14 @@ class MASectionClassifier:
         core_hits: list[str] = []
         support_hits: list[str] = []
         for kw in core_keywords:
-            if kw in text:
-                score += core_score
+            count = text.count(kw)
+            if count > 0:
+                score += core_score * count
                 core_hits.append(kw)
         for kw in support_keywords:
-            if kw in text:
-                score += support_score
+            count = text.count(kw)
+            if count > 0:
+                score += support_score * count
                 support_hits.append(kw)
         return score, core_hits, support_hits
 
