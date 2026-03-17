@@ -261,3 +261,55 @@ def accept_invite(db: Session, token: str, password: str) -> dict:
     logger.info("Invite accepted", extra={"ctx": {"email": user.email}})
 
     return {"message": "초대 수락 완료. 로그인하세요.", "email": user.email}
+
+
+def resend_invite(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    transaction_names: list[str] | None = None,
+    actor_email: str,
+) -> dict:
+    """기존 CLIENT 사용자에게 초대를 재발송한다."""
+    user: User | None = db.get(User, user_id)
+    if user is None or user.role != UserRole.CLIENT:
+        raise AuthenticationError(
+            ErrorCode.AUTH_TOKEN_INVALID,
+            "CLIENT user not found",
+        )
+    if user.is_active:
+        raise AuthenticationError(
+            ErrorCode.AUTH_INVALID_CREDENTIALS,
+            "User has already accepted the invitation",
+        )
+
+    raw_token = _issue_invite_token(db, user.id)
+
+    db.add(
+        AuditLog(
+            entity_type="user",
+            entity_id=user.id,
+            action=AuditAction.UPDATE,
+            actor=actor_email,
+            user_id=user.id,
+            new_value={"action": "invite_resent"},
+        )
+    )
+    db.commit()
+
+    invite_url = f"{settings.frontend_url}/invite/accept?token={raw_token}"
+    try:
+        send_invite_email(
+            to_email=user.email,
+            display_name=user.display_name,
+            invite_url=invite_url,
+            transaction_names=transaction_names or [],
+        )
+        return {"invite_sent": True, "invite_error": None}
+    except Exception as exc:
+        invite_error = str(exc)
+        logger.warning(
+            "Failed to send resend invite email",
+            extra={"ctx": {"to": user.email, "error": invite_error}},
+        )
+        return {"invite_sent": False, "invite_error": invite_error}

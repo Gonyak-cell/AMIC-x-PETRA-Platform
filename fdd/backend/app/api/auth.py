@@ -306,3 +306,15 @@ def accept_invitation(
     """초대 수락 + 비밀번호 설정 (인증 불필요)."""
     result = accept_invite(db, body.token, body.password)
     return InviteAcceptResponse(**result)
+
+
+@router.post("/invite/{user_id}/resend")
+def resend_invitation(
+    user_id: uuid.UUID,
+    current_user: CurrentUser = require_permission(Permission.USER_MANAGE),
+    db: Session = Depends(get_db),
+):
+    """CLIENT 초대를 재발송한다 (Admin 전용)."""
+    from app.services.invite_service import resend_invite
+
+    return resend_invite(db, user_id, actor_email=current_user.email)
