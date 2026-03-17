@@ -167,9 +167,10 @@ class IBInsightService:
         return total_processed
 
     async def backfill_sections(self, db: AsyncSession, batch_size: int = 100) -> int:
-        """section_primary가 NULL인 기사에 3섹션 분류를 백필한다.
+        """section_classified_at이 NULL인 기사에 3섹션 분류를 백필한다.
 
         본문 없이 lead_text fallback으로 분류한다.
+        임계값 미달 기사도 classified_at이 찍히므로 무한 루프 방지.
 
         Returns:
             처리된 기사 수
@@ -178,7 +179,7 @@ class IBInsightService:
         while True:
             stmt = (
                 select(IBArticle)
-                .where(IBArticle.section_primary.is_(None))
+                .where(IBArticle.section_classified_at.is_(None))
                 .order_by(IBArticle.created_at.desc())
                 .limit(batch_size)
             )
