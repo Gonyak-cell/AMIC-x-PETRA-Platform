@@ -11,7 +11,11 @@ export default function InviteAcceptPage() {
   const navigate = useNavigate();
   const token = searchParams.get("token");
 
-  const { data: tokenInfo, isLoading: isVerifying } = useVerifyInvite(token);
+  const {
+    data: tokenInfo,
+    isLoading: isVerifying,
+    isError: isVerifyError,
+  } = useVerifyInvite(token);
   const acceptMutation = useAcceptInvite();
 
   const [password, setPassword] = useState("");
@@ -61,25 +65,37 @@ export default function InviteAcceptPage() {
           </div>
         )}
 
-        {/* ── 토큰 에러 상태 ── */}
-        {token && !isVerifying && tokenInfo && !tokenInfo.valid && (
+        {/* ── 네트워크/서버 에러 ── */}
+        {token && !isVerifying && isVerifyError && (
           <ErrorCard
-            title={
-              tokenInfo.already_used
-                ? "Invitation Already Used"
-                : tokenInfo.expired
-                  ? "Invitation Expired"
-                  : "Invalid Invitation"
-            }
-            message={
-              tokenInfo.already_used
-                ? "This invitation link has already been used. Please sign in or contact your administrator."
-                : tokenInfo.expired
-                  ? "This invitation link has expired. Please contact your administrator for a new link."
-                  : "This invitation link is invalid. Please contact your administrator."
-            }
+            title="연결 오류"
+            message="초대 링크를 확인할 수 없습니다. 네트워크 연결을 확인하고 다시 시도해 주세요."
           />
         )}
+
+        {/* ── 토큰 에러 상태 ── */}
+        {token &&
+          !isVerifying &&
+          !isVerifyError &&
+          tokenInfo &&
+          !tokenInfo.valid && (
+            <ErrorCard
+              title={
+                tokenInfo.already_used
+                  ? "Invitation Already Used"
+                  : tokenInfo.expired
+                    ? "Invitation Expired"
+                    : "Invalid Invitation"
+              }
+              message={
+                tokenInfo.already_used
+                  ? "This invitation link has already been used. Please sign in or contact your administrator."
+                  : tokenInfo.expired
+                    ? "This invitation link has expired. Please contact your administrator for a new link."
+                    : "This invitation link is invalid. Please contact your administrator."
+              }
+            />
+          )}
 
         {/* ── 성공 ── */}
         {success && (

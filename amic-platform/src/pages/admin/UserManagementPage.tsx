@@ -250,6 +250,12 @@ export default function UserManagementPage() {
     e.preventDefault();
 
     if (createForm.role === "CLIENT") {
+      // 0. 프론트 검증 — 거래 1개 이상 선택 필수
+      if (selectedTxnIds.length === 0) {
+        alert("최소 1개의 거래를 선택해 주세요.");
+        return;
+      }
+
       // 1. 거래 배정 먼저 (deal-mgmt)
       const assignResults: { txnId: string; ok: boolean; reason?: string }[] =
         [];
@@ -286,8 +292,9 @@ export default function UserManagementPage() {
       const txnNames = selectedTxnIds.map(
         (id) => txnList?.items?.find((t) => t.id === id)?.name ?? "",
       );
+      let inviteResult;
       try {
-        await createInvite.mutateAsync({
+        inviteResult = await createInvite.mutateAsync({
           email: createForm.email,
           display_name: createForm.display_name,
           title: createForm.title,
@@ -296,9 +303,8 @@ export default function UserManagementPage() {
         });
       } catch {
         // 초대 생성 실패 시 이미 생성된 거래 배정 롤백
-        for (const r of assignResults.filter((r) => r.ok)) {
+        for (const r of assignResults.filter((ar) => ar.ok)) {
           try {
-            // 배정된 client를 찾아서 삭제 — by-email 조회 후 delete
             const { data: clients } = await maApi.get(
               `/transactions/${r.txnId}/clients`,
             );
@@ -311,7 +317,7 @@ export default function UserManagementPage() {
               );
             }
           } catch {
-            // 롤백 실패는 무시 — 관리자가 수동 정리 가능
+            // 롤백 실패는 무시
           }
         }
         alert(
@@ -320,13 +326,20 @@ export default function UserManagementPage() {
         return;
       }
 
-      // 3. 완료 처리
+      // 3. 초대 결과 확인 — invite_sent=false 처리
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       setCreateForm(INITIAL_CREATE_FORM);
       setSelectedTxnIds([]);
       setClientOrg("");
       setSelectedTxnId("");
       setShowCreateModal(false);
+
+      if (inviteResult && !inviteResult.invite_sent) {
+        const reason = inviteResult.invite_error || "알 수 없는 오류";
+        alert(
+          `계정이 생성되고 거래가 배정되었지만, 초대 이메일 발송에 실패했습니다.\n사유: ${reason}\n\n사용자 목록에서 "초대 재발송"을 이용해 주세요.`,
+        );
+      }
     } else {
       createUser.mutate(createForm, {
         onSuccess: () => {
