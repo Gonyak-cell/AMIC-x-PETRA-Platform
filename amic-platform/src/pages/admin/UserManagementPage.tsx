@@ -88,7 +88,7 @@ function ClientDealAssignments({
   displayName: string;
 }) {
   const { data: deals, isLoading } = useClientDeals(email);
-  const { data: txnList } = useTransactions({ limit: 100 });
+  const { data: txnList } = useTransactions({ limit: 500 });
   const assignDeal = useAdminAssignDeal(email);
   const unassignDeal = useAdminUnassignDeal(email);
   const [selectedTxnId, setSelectedTxnId] = useState("");
@@ -210,7 +210,7 @@ export default function UserManagementPage() {
   const deleteUser = useDeleteUser();
   const createInvite = useCreateInvite();
   const queryClient = useQueryClient();
-  const { data: txnList } = useTransactions({ limit: 100 });
+  const { data: txnList } = useTransactions({ limit: 500 });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -286,13 +286,39 @@ export default function UserManagementPage() {
       const txnNames = selectedTxnIds.map(
         (id) => txnList?.items?.find((t) => t.id === id)?.name ?? "",
       );
-      await createInvite.mutateAsync({
-        email: createForm.email,
-        display_name: createForm.display_name,
-        title: createForm.title,
-        transaction_ids: selectedTxnIds,
-        transaction_names: txnNames,
-      });
+      try {
+        await createInvite.mutateAsync({
+          email: createForm.email,
+          display_name: createForm.display_name,
+          title: createForm.title,
+          transaction_ids: selectedTxnIds,
+          transaction_names: txnNames,
+        });
+      } catch {
+        // 초대 생성 실패 시 이미 생성된 거래 배정 롤백
+        for (const r of assignResults.filter((r) => r.ok)) {
+          try {
+            // 배정된 client를 찾아서 삭제 — by-email 조회 후 delete
+            const { data: clients } = await maApi.get(
+              `/transactions/${r.txnId}/clients`,
+            );
+            const match = (clients as { id: string; email: string }[]).find(
+              (c) => c.email.toLowerCase() === createForm.email.toLowerCase(),
+            );
+            if (match) {
+              await maApi.delete(
+                `/transactions/${r.txnId}/clients/${match.id}`,
+              );
+            }
+          } catch {
+            // 롤백 실패는 무시 — 관리자가 수동 정리 가능
+          }
+        }
+        alert(
+          "초대 생성에 실패했습니다. 거래 배정이 롤백되었습니다. 다시 시도해 주세요.",
+        );
+        return;
+      }
 
       // 3. 완료 처리
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
