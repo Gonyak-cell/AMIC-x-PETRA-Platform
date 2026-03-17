@@ -1,6 +1,6 @@
 """add section classification columns to ib_articles
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 7b50aff0fddc
 Revises: f7a1b2c3d4e5
 Create Date: 2026-03-18
 """
@@ -8,7 +8,7 @@ Create Date: 2026-03-18
 import sqlalchemy as sa
 from alembic import op
 
-revision = "a1b2c3d4e5f6"
+revision = "7b50aff0fddc"
 down_revision = "b8c9d0e1f2a3"
 branch_labels = None
 depends_on = None
