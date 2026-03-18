@@ -37,7 +37,7 @@ const now = new Date().toISOString();
 const ago1h = new Date(Date.now() - 3600000).toISOString();
 const ago2h = new Date(Date.now() - 7200000).toISOString();
 
-/** 서버 assigned_to_me=true 응답 시뮬레이션 — 담당 거래만 포함 (Zeta 미포함) */
+/** 서버 assigned_to_me=true 응답 시뮬레이션 — 담당 거래만 포함 */
 const mockItems = [
   makeTxn("t1", "Alpha", "ACTIVE", "MARKETING", EMAIL, null, now),
   makeTxn("t2", "Beta", "COMPLETED", "CLOSING", EMAIL, null, now),
@@ -59,11 +59,6 @@ function useMockTransactions() {
   );
 }
 
-/** 캐러셀 애니메이션(200ms + 20ms) 완료까지 대기하는 헬퍼 */
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 describe("MyProjectsSection", () => {
   it("excludes COMPLETED/TERMINATED from server-filtered results", async () => {
     useMockTransactions();
@@ -75,13 +70,11 @@ describe("MyProjectsSection", () => {
       expect(screen.getByText("Alpha")).toBeInTheDocument();
     });
 
-    // Server returns only assigned transactions (assigned_to_me=true)
-    // Frontend further excludes COMPLETED (Beta) and TERMINATED (Epsilon)
     expect(screen.queryByText("Beta")).not.toBeInTheDocument();
     expect(screen.queryByText("Epsilon")).not.toBeInTheDocument();
   });
 
-  it("wraps around when navigating past first/last project", async () => {
+  it("navigates between projects with peek carousel", async () => {
     useMockTransactions();
     renderWithProviders(<MyProjectsSection />, {
       authContext: { user: mockUser },
@@ -91,33 +84,32 @@ describe("MyProjectsSection", () => {
       expect(screen.getByText("Alpha")).toBeInTheDocument();
     });
 
-    // Counter shows 1 / 3 (Alpha, Gamma, Delta)
+    // Counter shows 1 / 3
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
 
-    // Click prev on first item → wraps to last (Delta)
-    fireEvent.click(screen.getByLabelText("Previous project"));
-    await waitFor(() => expect(screen.getByText("Delta")).toBeInTheDocument(), {
-      timeout: 2000,
-    });
+    // All cards are rendered (peek style — prev/next visible as edges)
+    expect(screen.getByText("Gamma")).toBeInTheDocument();
+    expect(screen.getByText("Delta")).toBeInTheDocument();
+
+    // Prev button disabled on first item
+    expect(screen.getByLabelText("Previous project")).toBeDisabled();
+
+    // Click next → Gamma
+    fireEvent.click(screen.getByLabelText("Next project"));
+    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+
+    // Now prev is enabled
+    expect(screen.getByLabelText("Previous project")).not.toBeDisabled();
+
+    // Click next → Delta (last)
+    fireEvent.click(screen.getByLabelText("Next project"));
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
 
-    // Wait for animation to fully complete before next click
-    await sleep(300);
+    // Next button disabled on last item
+    expect(screen.getByLabelText("Next project")).toBeDisabled();
 
-    // Click next on last item → wraps to first (Alpha)
-    fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => expect(screen.getByText("Alpha")).toBeInTheDocument(), {
-      timeout: 2000,
-    });
-    expect(screen.getByText("1 / 3")).toBeInTheDocument();
-
-    await sleep(300);
-
-    // Click next → goes to second (Gamma)
-    fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => expect(screen.getByText("Gamma")).toBeInTheDocument(), {
-      timeout: 2000,
-    });
+    // Click prev → back to Gamma
+    fireEvent.click(screen.getByLabelText("Previous project"));
     expect(screen.getByText("2 / 3")).toBeInTheDocument();
   });
 
@@ -166,7 +158,7 @@ describe("MyProjectsSection", () => {
     });
   });
 
-  it("disables both nav buttons when only one project", async () => {
+  it("hides nav buttons when only one project", async () => {
     server.use(
       http.get("*/api/ma/transactions", () =>
         HttpResponse.json({
@@ -188,7 +180,6 @@ describe("MyProjectsSection", () => {
       expect(screen.getByText("Solo")).toBeInTheDocument();
     });
 
-    // With 1 item, nav buttons should not render (no "1 / 1")
     expect(screen.queryByText("1 / 1")).not.toBeInTheDocument();
   });
 
@@ -205,18 +196,16 @@ describe("MyProjectsSection", () => {
 
     // Navigate to Gamma (captain only)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => expect(screen.getByText("Gamma")).toBeInTheDocument(), {
-      timeout: 2000,
+    await waitFor(() => {
+      expect(screen.getByText("Deal Captain")).toBeInTheDocument();
     });
-    expect(screen.getByText("Deal Captain")).toBeInTheDocument();
-
-    await sleep(300);
 
     // Navigate to Delta (both lead and captain)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => expect(screen.getByText("Delta")).toBeInTheDocument(), {
-      timeout: 2000,
+    await waitFor(() => {
+      expect(
+        screen.getByText("Lead Advisor / Deal Captain"),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByText("Lead Advisor / Deal Captain")).toBeInTheDocument();
   });
 });

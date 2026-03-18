@@ -1,6 +1,6 @@
-/** 홈 대시보드 — MY PROJECTS 캐러셀 섹션 (Figma Cards 위젯 구조) */
+/** 홈 대시보드 — MY PROJECTS 캐러셀 섹션 (피크 방식) */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FolderKanban, Inbox } from "lucide-react";
 import { Card } from "@/components/ui";
@@ -8,16 +8,16 @@ import { useMyProjects } from "./useMyProjects";
 import ProjectCarouselCard from "./ProjectCarouselCard";
 import ProjectSummaryPanel from "./ProjectSummaryPanel";
 
+const PEEK_WIDTH = 40; // 피크 영역 너비 (px)
+const CARD_GAP = 12; // 카드 간격 (px)
+
 export default function MyProjectsSection() {
   const navigate = useNavigate();
   const { projects, isLoading, isError, email } = useMyProjects();
 
   const [activeIndex, setActiveIndex] = useState(0);
-  // phase: null(정지) → "exit"(퇴장) → "enter"(등장) → null
-  const [phase, setPhase] = useState<"exit" | "enter" | null>(null);
-  const [slideDir, setSlideDir] = useState<"left" | "right">("left");
-  const [isAnimating, setIsAnimating] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   useEffect(() => {
     if (projects.length > 0 && activeIndex >= projects.length) {
@@ -25,34 +25,42 @@ export default function MyProjectsSection() {
     }
   }, [projects.length, activeIndex]);
 
+  // 뷰포트 너비 측정
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setViewportWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    setViewportWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
   const active = projects[activeIndex];
   const len = projects.length;
 
-  const slideTo = useCallback(
-    (direction: "left" | "right") => {
-      if (isAnimating || len <= 1) return;
-      setIsAnimating(true);
-      setSlideDir(direction);
-      setPhase("exit");
-
-      // Phase 1: 현재 카드 퇴장 (200ms)
-      setTimeout(() => {
-        // 인덱스 변경
-        setActiveIndex((i) =>
-          direction === "left" ? (i + 1) % len : (i - 1 + len) % len,
-        );
-        // Phase 2: 새 카드를 반대쪽에 즉시 배치 (트랜지션 없이)
-        setPhase("enter");
-
-        // Phase 3: 새 카드 슬라이드 인 (20ms 후 트랜지션 시작)
-        setTimeout(() => {
-          setPhase(null);
-          setIsAnimating(false);
-        }, 20);
-      }, 200);
-    },
-    [isAnimating, len],
+  // 카드 너비 = 뷰포트 - 양쪽 피크 공간
+  const hasPrev = activeIndex > 0;
+  const hasNext = activeIndex < len - 1;
+  const leftPeek = hasPrev ? PEEK_WIDTH : 0;
+  const rightPeek = hasNext ? PEEK_WIDTH : 0;
+  const cardWidth = Math.max(
+    viewportWidth - leftPeek - rightPeek - CARD_GAP * 2,
+    100,
   );
+
+  // 트랙 translateX 계산
+  const translateX = -(activeIndex * (cardWidth + CARD_GAP)) + leftPeek;
+
+  const goPrev = () => {
+    if (activeIndex > 0) setActiveIndex((i) => i - 1);
+  };
+  const goNext = () => {
+    if (activeIndex < len - 1) setActiveIndex((i) => i + 1);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -92,7 +100,7 @@ export default function MyProjectsSection() {
         </Card>
       )}
 
-      {/* ── Active carousel — Figma "Cards" widget layout ── */}
+      {/* ── Peek carousel ── */}
       {!isLoading && !isError && active && (
         <div
           className="bg-white rounded-2xl overflow-hidden flex-1 flex flex-col"
@@ -102,50 +110,52 @@ export default function MyProjectsSection() {
           }}
         >
           <div className="flex flex-col sm:flex-row">
-            {/* Left: arrow + card + arrow */}
-            <div className="flex-1 p-5 flex items-center gap-3">
+            {/* Left: carousel viewport */}
+            <div className="flex-1 p-5 flex items-center gap-2">
               {/* Prev arrow */}
               {len > 1 && (
                 <button
                   type="button"
                   aria-label="Previous project"
                   className="shrink-0 text-accent hover:text-accent/70 transition-colors disabled:opacity-30"
-                  onClick={() => slideTo("right")}
-                  disabled={isAnimating}
+                  onClick={goPrev}
+                  disabled={!hasPrev}
                 >
                   <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               )}
 
-              {/* Card — slide animation (exit → enter → idle) */}
-              <div
-                ref={cardRef}
-                className="flex-1 min-w-0 overflow-hidden"
-                style={{
-                  transform:
-                    phase === "exit"
-                      ? // 퇴장: 진행 방향으로 밀려남
-                        slideDir === "left"
-                        ? "translateX(-110%)"
-                        : "translateX(110%)"
-                      : phase === "enter"
-                        ? // 등장 대기: 반대쪽에 즉시 배치 (트랜지션 없이)
-                          slideDir === "left"
-                          ? "translateX(110%)"
-                          : "translateX(-110%)"
-                        : // 정지: 제자리
-                          "translateX(0)",
-                  opacity: phase === "enter" ? 0 : phase === "exit" ? 0 : 1,
-                  transition:
-                    phase === "enter"
-                      ? "none"
-                      : "transform 200ms ease-out, opacity 200ms ease-out",
-                }}
-              >
-                <ProjectCarouselCard
-                  transaction={active}
-                  onClick={() => navigate(`/ma/transactions/${active.id}`)}
-                />
+              {/* Carousel viewport */}
+              <div ref={viewportRef} className="flex-1 min-w-0 overflow-hidden">
+                <div
+                  className="flex transition-transform duration-300 ease-out"
+                  style={{
+                    transform: `translateX(${translateX}px)`,
+                    gap: `${CARD_GAP}px`,
+                  }}
+                >
+                  {projects.map((txn, idx) => (
+                    <div
+                      key={txn.id}
+                      className="shrink-0 transition-all duration-300"
+                      style={{
+                        width: `${cardWidth}px`,
+                        opacity: idx === activeIndex ? 1 : 0.4,
+                        transform:
+                          idx === activeIndex ? "scale(1)" : "scale(0.95)",
+                      }}
+                    >
+                      <ProjectCarouselCard
+                        transaction={txn}
+                        onClick={() =>
+                          idx === activeIndex
+                            ? navigate(`/ma/transactions/${txn.id}`)
+                            : setActiveIndex(idx)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Next arrow */}
@@ -154,8 +164,8 @@ export default function MyProjectsSection() {
                   type="button"
                   aria-label="Next project"
                   className="shrink-0 text-accent hover:text-accent/70 transition-colors disabled:opacity-30"
-                  onClick={() => slideTo("left")}
-                  disabled={isAnimating}
+                  onClick={goNext}
+                  disabled={!hasNext}
                 >
                   <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                 </button>
