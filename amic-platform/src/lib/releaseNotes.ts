@@ -6,6 +6,65 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.12.0",
+    date: "2026-03-18",
+    highlights: [
+      "M&A Industry News 멀티라벨 분류 파이프라인",
+      "뉴스 소스 5개 확장 (비즈워치, 한국M&A신문 추가)",
+      "프로젝트 카드 캐러셀 슬라이드 애니메이션",
+    ],
+    changes: [
+      {
+        type: "feature",
+        description:
+          "자본시장법 기반 멀티라벨 뉴스 분류기 도입 (M&A / 거버넌스 / 펀드 3섹션, 빈도×가중치 스코어링)",
+      },
+      {
+        type: "feature",
+        description:
+          "뉴스 소스 확장: 비즈워치(거버넌스), 한국M&A신문 추가, 블로터(폐쇄) 제거",
+      },
+      {
+        type: "feature",
+        description:
+          "대시보드 프로젝트 카드 캐러셀에 좌/우 슬라이드 애니메이션 추가",
+      },
+      {
+        type: "improvement",
+        description:
+          "인베스트조선 유료기사 자동 제외 (RSS category='무료' 필터링)",
+      },
+      {
+        type: "improvement",
+        description: "뉴스피드에서 미분류 기사 자동 숨김 처리",
+      },
+    ],
+  },
+  {
+    version: "0.11.0",
+    date: "2026-03-10",
+    highlights: [
+      "Quick Actions를 데스크톱 헤더로 이동",
+      "VDR 탐색 UX 개선",
+      "앱 버전 자동 연동 체계 도입",
+    ],
+    changes: [
+      {
+        type: "feature",
+        description: "Quick Actions를 DesktopHeader로 이동하여 접근성 향상",
+      },
+      {
+        type: "feature",
+        description: "VDR 파일 탐색 UX 개선 — 대시보드 직행 탐색 흐름 추가",
+      },
+      {
+        type: "improvement",
+        description:
+          "앱 버전 자동 연동 — VERSION 파일 → package.json → 빌드 → UI 자동 반영",
+      },
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-02-25",
     highlights: [
