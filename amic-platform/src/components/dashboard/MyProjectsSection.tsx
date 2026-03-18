@@ -1,6 +1,6 @@
 /** 홈 대시보드 — MY PROJECTS 캐러셀 섹션 (Figma Cards 위젯 구조) */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FolderKanban, Inbox } from "lucide-react";
 import { Card } from "@/components/ui";
@@ -13,6 +13,9 @@ export default function MyProjectsSection() {
   const { projects, isLoading, isError, email } = useMyProjects();
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (projects.length > 0 && activeIndex >= projects.length) {
@@ -22,6 +25,24 @@ export default function MyProjectsSection() {
 
   const active = projects[activeIndex];
   const len = projects.length;
+
+  const slideTo = useCallback(
+    (direction: "left" | "right") => {
+      if (isAnimating || len <= 1) return;
+      setIsAnimating(true);
+      setSlideDir(direction);
+
+      // 슬라이드 아웃 후 인덱스 변경 → 슬라이드 인
+      setTimeout(() => {
+        setActiveIndex((i) =>
+          direction === "left" ? (i + 1) % len : (i - 1 + len) % len,
+        );
+        setSlideDir(null);
+        setIsAnimating(false);
+      }, 250);
+    },
+    [isAnimating, len],
+  );
 
   return (
     <div className="h-full flex flex-col">
@@ -78,15 +99,29 @@ export default function MyProjectsSection() {
                 <button
                   type="button"
                   aria-label="Previous project"
-                  className="shrink-0 text-accent hover:text-accent/70 transition-colors"
-                  onClick={() => setActiveIndex((i) => (i - 1 + len) % len)}
+                  className="shrink-0 text-accent hover:text-accent/70 transition-colors disabled:opacity-30"
+                  onClick={() => slideTo("right")}
+                  disabled={isAnimating}
                 >
                   <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               )}
 
-              {/* Card */}
-              <div className="flex-1 min-w-0">
+              {/* Card — slide animation */}
+              <div
+                ref={cardRef}
+                className="flex-1 min-w-0 transition-all duration-250 ease-out"
+                style={{
+                  transform:
+                    slideDir === "left"
+                      ? "translateX(-110%)"
+                      : slideDir === "right"
+                        ? "translateX(110%)"
+                        : "translateX(0)",
+                  opacity: slideDir ? 0 : 1,
+                  transitionDuration: "250ms",
+                }}
+              >
                 <ProjectCarouselCard
                   transaction={active}
                   onClick={() => navigate(`/ma/transactions/${active.id}`)}
@@ -98,8 +133,9 @@ export default function MyProjectsSection() {
                 <button
                   type="button"
                   aria-label="Next project"
-                  className="shrink-0 text-accent hover:text-accent/70 transition-colors"
-                  onClick={() => setActiveIndex((i) => (i + 1) % len)}
+                  className="shrink-0 text-accent hover:text-accent/70 transition-colors disabled:opacity-30"
+                  onClick={() => slideTo("left")}
+                  disabled={isAnimating}
                 >
                   <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                 </button>
