@@ -1,7 +1,7 @@
 /** MY PROJECTS — 캐러셀 프로젝트 카드 (Figma 카드형 위젯 기반) */
 
-import { Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui";
+
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import { TRANSACTION_STATUS_VARIANT } from "@/modules/ma/constants/status-variants";
 import { TRANSACTION_STATUS_OPTIONS } from "@/modules/ma/constants/transaction";
@@ -34,35 +34,47 @@ export default function ProjectCarouselCard({
     <button
       type="button"
       onClick={onClick}
-      className="relative w-full overflow-hidden rounded-2xl cursor-pointer transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] text-left"
+      className="relative w-full overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] text-left bg-[#0F6B3E]"
       style={{
-        background: "linear-gradient(180deg, #1C8F57 0%, #27A96A 100%)",
         boxShadow:
-          "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",
+          "0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Decorative overlay — from Figma card pattern */}
+      {/* Glassmorphism overlay */}
       <div
-        className="absolute -right-8 -bottom-8 w-48 h-48 rounded-full pointer-events-none"
-        style={{ background: "rgba(255,255,255,0.08)" }}
+        className="absolute inset-0 rounded-2xl border border-white/30 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.08) 100%)",
+          backdropFilter: "blur(20px) saturate(1.6)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.6)",
+          boxShadow:
+            "inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06)",
+        }}
       />
+      {/* Glass top highlight */}
       <div
-        className="absolute -right-4 -bottom-16 w-32 h-32 rounded-full pointer-events-none"
-        style={{ background: "rgba(255,255,255,0.06)" }}
+        className="absolute left-0 top-0 w-full pointer-events-none z-10"
+        style={{
+          height: "2px",
+          background:
+            "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.6) 50%, transparent 95%)",
+        }}
+      />
+      {/* Glass left edge */}
+      <div
+        className="absolute left-0 top-0 h-full pointer-events-none z-10"
+        style={{
+          width: "1px",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%)",
+        }}
       />
 
       {/* Content */}
       <div className="relative z-10 p-6">
-        {/* Top: brand + badge */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
-              AMIC Deal
-            </span>
-          </div>
+        {/* Top: badge only */}
+        <div className="flex items-center justify-end mb-6">
           <Badge variant={statusVariant} className="text-[10px]">
             {statusLabel}
           </Badge>
