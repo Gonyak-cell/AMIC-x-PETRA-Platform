@@ -181,7 +181,9 @@ class LDDTemplateSlotFillEngine:
         )
         target_company = getattr(report, "target_company", None) or "대상회사"
         confidence = item.get("confidence", 0.0) or 0.0
-        confidence_text = f"AI 신뢰도는 약 {float(confidence) * 100:.0f}% 수준으로 평가되었습니다." if confidence else ""
+        confidence_text = (
+            f"AI 신뢰도는 약 {float(confidence) * 100:.0f}% 수준으로 평가되었습니다." if confidence else ""
+        )
 
         evidence_sentence = (
             self._ensure_sentence(
@@ -203,7 +205,9 @@ class LDDTemplateSlotFillEngine:
                 "title": getattr(report, "title", ""),
                 "target_company": target_company,
                 "report_type": str(getattr(report, "report_type", "")),
-                "report_type_label": _REPORT_TYPE_LABELS.get(getattr(report, "report_type", None), str(getattr(report, "report_type", ""))),
+                "report_type_label": _REPORT_TYPE_LABELS.get(
+                    getattr(report, "report_type", None), str(getattr(report, "report_type", ""))
+                ),
                 "template_type": getattr(report, "template_type", "") or "",
                 "deal_type": getattr(report, "deal_type", "") or "",
                 "dd_period": getattr(report, "dd_period", "") or "",
@@ -236,7 +240,9 @@ class LDDTemplateSlotFillEngine:
                 "finding_summary": finding_summary,
                 "impact_summary": impact_summary,
                 "recommendation_summary": recommendation_summary,
-                "status_sentence": self._build_status_sentence(target_company, item.get("name", ""), status, issue_level, finding_summary),
+                "status_sentence": self._build_status_sentence(
+                    target_company, item.get("name", ""), status, issue_level, finding_summary
+                ),
                 "analysis_sentence": self._build_analysis_sentence(status, issue_level),
                 "impact_sentence": self._build_impact_sentence(impact_summary),
                 "recommendation_sentence": self._build_recommendation_sentence(recommendation_summary),

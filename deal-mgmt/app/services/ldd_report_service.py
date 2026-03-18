@@ -231,7 +231,9 @@ async def _build_render_narrative_sections(
     try:
         from app.ralph.generators.ldd.slot_fill import LDDTemplateSlotFillEngine
 
-        template_dir = Path(settings.LDD_TEMPLATE_SLOTFILL_DIR) if settings.LDD_TEMPLATE_SLOTFILL_DIR else SLOTFILL_TEMPLATE_DIR
+        template_dir = (
+            Path(settings.LDD_TEMPLATE_SLOTFILL_DIR) if settings.LDD_TEMPLATE_SLOTFILL_DIR else SLOTFILL_TEMPLATE_DIR
+        )
         engine = LDDTemplateSlotFillEngine(
             template_dir,
             llm_call=llm_call,
