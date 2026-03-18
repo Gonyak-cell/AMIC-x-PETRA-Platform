@@ -6,6 +6,19 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.1",
+    date: "2026-03-18",
+    highlights: ["마이 프로젝트 컨테이너 글래스모피즘 + 카드 CSS 그라디언트 적용", "프로젝트 캐러셀 카드 글래스모피즘 적용", "캐러셀을 피크(peek) 방식으로 전환"],
+    changes: [
+    { type: "feature", description: "마이 프로젝트 컨테이너 글래스모피즘 + 카드 CSS 그라디언트 적용" },
+    { type: "feature", description: "프로젝트 캐러셀 카드 글래스모피즘 적용" },
+    { type: "feature", description: "캐러셀을 피크(peek) 방식으로 전환" },
+    { type: "fix", description: "캐러셀 테스트 real timer + waitFor(timeout:2000)로 전환" },
+    { type: "fix", description: "캐러셀 테스트 fake timer로 전환 + rAF→setTimeout 변경" },
+    { type: "fix", description: "캐러셀 슬라이드 방향 수정 — 3단계 애니메이션" },
+    ],
+  },
+  {
     version: "0.15.0",
     date: "2026-03-18",
     highlights: ["프로젝트 캐러셀 카드 글래스모피즘 적용", "캐러셀을 피크(peek) 방식으로 전환"],

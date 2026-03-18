@@ -41,7 +41,7 @@ async def list_transactions(
     phase: TransactionPhase | None = Query(None, description="7단계 필터"),
     status: TransactionStatus | None = Query(None, description="DRAFT, ACTIVE, ON_HOLD, COMPLETED, TERMINATED"),
     assigned_to_me: bool = Query(False, description="내 담당 거래만 (lead_advisor 또는 deal_captain)"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
