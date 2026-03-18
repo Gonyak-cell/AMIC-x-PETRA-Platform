@@ -7,6 +7,7 @@ import {
   Suspense,
   type ReactNode,
 } from "react";
+import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { MobileMenuButton } from "./MobileMenuButton";
@@ -142,14 +143,33 @@ export default function AppShell({ children }: AppShellProps) {
         {/* Desktop Sidebar */}
         <div
           className={cn(
-            "sticky top-0 h-fit hidden md:block transition-all duration-200",
+            "sticky top-0 h-fit hidden md:block transition-all duration-200 group/sidebar-edge relative",
             desktopCollapsed ? "w-16" : "w-64",
           )}
         >
-          <Sidebar
-            collapsed={desktopCollapsed}
-            onToggleCollapse={() => setDesktopCollapsed(!desktopCollapsed)}
-          />
+          <Sidebar collapsed={desktopCollapsed} />
+          {/* Edge collapse toggle — 경계선 원형 버튼 */}
+          <button
+            type="button"
+            onClick={() => setDesktopCollapsed(!desktopCollapsed)}
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 -right-3.5 z-50",
+              "w-7 h-7 rounded-full",
+              "bg-white border border-border-default shadow-md",
+              "flex items-center justify-center",
+              "text-text-secondary hover:text-accent hover:border-accent",
+              "opacity-0 group-hover/sidebar-edge:opacity-100",
+              "transition-all duration-200 cursor-pointer",
+            )}
+            aria-label="사이드바 접기/펼치기"
+            aria-expanded={!desktopCollapsed}
+          >
+            {desktopCollapsed ? (
+              <ChevronsRight className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronsLeft className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
 
         {/* Mobile Sidebar (Drawer) */}

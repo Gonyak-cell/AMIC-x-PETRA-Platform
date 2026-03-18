@@ -37,8 +37,6 @@ import {
   Shield,
   Calculator,
   FileStack,
-  ChevronsLeft,
-  ChevronsRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -153,14 +151,12 @@ export interface SidebarProps {
   className?: string;
   onNavItemClick?: () => void;
   collapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 export function Sidebar({
   className,
   onNavItemClick,
   collapsed = false,
-  onToggleCollapse,
 }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -226,29 +222,6 @@ export function Sidebar({
               "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
           }}
         />
-
-        {/* Collapse Toggle */}
-        {onToggleCollapse && (
-          <div className="px-3 py-2">
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer sidebar-hover"
-              style={{ color: "var(--sidebar-text-muted)" }}
-              aria-expanded={!collapsed}
-              aria-label="사이드바 접기/펼치기"
-            >
-              {collapsed ? (
-                <ChevronsRight className="h-4 w-4" />
-              ) : (
-                <>
-                  <ChevronsLeft className="h-4 w-4" />
-                  <span>접기</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
 
         {/* Home Link + Portal Nav (hidden for CLIENT) */}
         {!isClient && (
