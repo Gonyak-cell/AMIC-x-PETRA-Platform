@@ -72,17 +72,17 @@ export default function DashboardCalendarWidget() {
           className="bg-white rounded-2xl overflow-hidden"
           style={{ boxShadow: cardShadow }}
         >
-          <div className="p-5 space-y-3 animate-pulse">
+          <div className="px-5 pt-5 pb-4 space-y-3 animate-pulse">
             <div className="h-4 w-24 bg-gray-100 rounded" />
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: 35 }).map((_, i) => (
-                <div key={i} className="h-7 w-7 rounded bg-gray-50" />
+                <div key={i} className="h-6 w-7 rounded bg-gray-50" />
               ))}
             </div>
           </div>
-          <div className="border-t border-gray-100 px-5 py-4 animate-pulse space-y-2">
+          <div className="border-t border-gray-100 px-5 py-2.5 animate-pulse space-y-1.5">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-10 bg-gray-50 rounded" />
+              <div key={i} className="h-8 bg-gray-50 rounded" />
             ))}
           </div>
         </div>
@@ -110,8 +110,8 @@ export default function DashboardCalendarWidget() {
         style={{ boxShadow: cardShadow }}
       >
         {/* Mini calendar section */}
-        <div className="p-5">
-          <p className="text-sm font-medium text-text-dark mb-2">
+        <div className="px-5 pt-5 pb-4">
+          <p className="text-sm font-medium text-text-dark mb-1.5">
             {monthLabel}
           </p>
 
@@ -119,7 +119,7 @@ export default function DashboardCalendarWidget() {
             {DAY_LABELS.map((d) => (
               <div
                 key={d}
-                className="text-[10px] text-text-muted font-medium py-1"
+                className="text-[10px] text-text-muted font-medium py-0.5"
               >
                 {d}
               </div>
@@ -131,7 +131,7 @@ export default function DashboardCalendarWidget() {
                 <div
                   key={idx}
                   className={cn(
-                    "relative flex items-center justify-center h-7 text-xs rounded-md",
+                    "relative flex items-center justify-center h-6 text-xs rounded-md",
                     day === null && "invisible",
                     isToday && "bg-accent text-white font-semibold",
                     !isToday && hasEvent && "font-medium text-accent",
@@ -149,22 +149,22 @@ export default function DashboardCalendarWidget() {
         </div>
 
         {/* Upcoming events section (separated by border) */}
-        <div className="border-t border-gray-100 px-5 py-4 flex-1 flex flex-col">
-          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <div className="border-t border-gray-100 px-5 py-2.5 flex-1 flex flex-col">
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
             <CalendarClock className="w-3.5 h-3.5" />
             다가오는 일정
           </h4>
           {upcoming.length === 0 ? (
-            <div className="flex flex-col items-center py-4 text-text-muted">
+            <div className="flex flex-col items-center py-2.5 text-text-muted">
               <CalendarDays className="w-6 h-6 mb-1 opacity-40" />
               <p className="text-xs">예정된 일정이 없습니다</p>
             </div>
           ) : (
-            <ul className="space-y-1.5 max-h-[200px] overflow-y-auto">
+            <ul className="space-y-0.5 max-h-[148px] overflow-y-auto">
               {upcoming.map((ev) => (
                 <li key={ev.id}>
                   <button
-                    className="w-full text-left px-2.5 py-2 rounded-md hover:bg-bg-cool transition-colors group"
+                    className="w-full text-left px-2.5 py-1 rounded-md hover:bg-bg-cool transition-colors group"
                     onClick={() => navigate(ev.entityPath)}
                   >
                     <div className="flex items-center gap-2">

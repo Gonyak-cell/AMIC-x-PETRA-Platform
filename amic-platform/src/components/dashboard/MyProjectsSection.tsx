@@ -179,7 +179,7 @@ export default function MyProjectsSection() {
             <div className="hidden sm:block w-px bg-gray-200 self-stretch" />
 
             {/* Right: summary panel */}
-            <div className="sm:w-[320px] shrink-0">
+            <div className="sm:w-[296px] shrink-0">
               <ProjectSummaryPanel transaction={active} userEmail={email!} />
             </div>
           </div>

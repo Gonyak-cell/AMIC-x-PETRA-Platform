@@ -84,10 +84,8 @@ export default function DashboardPage() {
   const { user, isClient } = useAuth();
 
   const modulesRef = useRef<HTMLDivElement>(null);
-  const newsFeedRef = useRef<HTMLDivElement>(null);
 
   useScrollReveal(modulesRef, { stagger: 0.08 });
-  useScrollReveal(newsFeedRef);
 
   // CLIENT 역할은 MA Pipeline으로 리다이렉트
   if (isClient) return <Navigate to="/ma/transactions" replace />;
@@ -115,53 +113,43 @@ export default function DashboardPage() {
         {/* ── Left column: My Projects → News Feed ── */}
         <div className="space-y-6">
           <MyProjectsSection />
-          <div ref={newsFeedRef}>
-            <NewsFeedSection />
-          </div>
+          <NewsFeedSection />
         </div>
 
         {/* ── Right column: Calendar → Quick Actions → Modules ── */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <DashboardCalendarWidget />
 
           {/* Quick Actions */}
           <div>
-            <h2 className="label-uppercase mb-3">Quick Actions</h2>
-            <div
-              className="bg-white rounded-2xl p-4"
-              style={{
-                boxShadow:
-                  "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {QUICK_ACTIONS.map((action) => (
-                  <button
-                    key={action.id}
-                    onClick={() => navigate(action.to)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-bg-cool transition-colors text-left"
+            <h2 className="label-uppercase mb-1">Quick Actions</h2>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              {QUICK_ACTIONS.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => navigate(action.to)}
+                  className="flex items-center gap-2.5 px-0.5 py-1 rounded-xl hover:bg-white/50 transition-colors text-left"
+                >
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                      action.bg,
+                    )}
                   >
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                        action.bg,
-                      )}
-                    >
-                      <action.icon className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-text-dark">
-                      {action.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-text-dark">
+                    {action.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Modules — flex-1로 남은 공간 채워 하단선 정렬 */}
           <div className="flex-1 flex flex-col">
-            <h2 className="label-uppercase mb-3">Modules</h2>
-            <div ref={modulesRef} className="flex flex-col gap-3 flex-1">
+            <h2 className="label-uppercase mb-1">Modules</h2>
+            <div ref={modulesRef} className="flex flex-col gap-1 flex-1">
               {MODULE_CARDS.map((mod) => (
                 <div
                   key={mod.id}
@@ -173,10 +161,10 @@ export default function DashboardPage() {
                     if (e.key === "Enter" || e.key === " ") navigate(mod.to);
                   }}
                 >
-                  <Card className={cn("hover-glow", mod.bg)}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                        <mod.icon className="w-5 h-5 text-white" />
+                  <Card padding="none" className={cn("hover-glow", mod.bg)}>
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                        <mod.icon className="w-[18px] h-[18px] text-white" />
                       </div>
                       <div>
                         <div className="font-semibold text-white text-sm">
