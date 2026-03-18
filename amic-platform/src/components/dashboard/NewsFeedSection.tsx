@@ -31,7 +31,7 @@ const SOURCES = [
   { value: "kmnanews", label: "한국M&A신문", group: "kiis" },
 ] as const;
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 5;
 
 /* ── 상대 시간 포맷터 ──────────────────────────── */
 
