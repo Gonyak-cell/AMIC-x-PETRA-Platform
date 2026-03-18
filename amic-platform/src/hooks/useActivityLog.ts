@@ -62,7 +62,10 @@ type BackendSource = "fdd" | "kiis" | "im" | "ma";
 
 /* ── 헬퍼 ─────────────────────────────────────────────── */
 
-function resolveModule(source: BackendSource, raw: RawAuditLogItem): ActivityModule {
+function resolveModule(
+  source: BackendSource,
+  raw: RawAuditLogItem,
+): ActivityModule {
   if (source !== "ma") return source;
   const type = raw.entity_type.toLowerCase();
   return MA_ENTITY_TO_MODULE[type] ?? "ma";
@@ -75,7 +78,10 @@ function buildDescription(raw: RawAuditLogItem): string {
   return `${verb} ${entity}`;
 }
 
-function transformItem(source: BackendSource, raw: RawAuditLogItem): ActivityLogItem {
+function transformItem(
+  source: BackendSource,
+  raw: RawAuditLogItem,
+): ActivityLogItem {
   return {
     id: raw.id,
     user_id: raw.user_id ?? "",
@@ -132,7 +138,10 @@ async function fetchAuditLogs(
 ): Promise<{ items: ActivityLogItem[]; total: number }> {
   try {
     const client = API_MAP[source];
-    const { data } = await client.get<RawAuditLogListResponse>(AUDIT_PATH[source], { params });
+    const { data } = await client.get<RawAuditLogListResponse>(
+      AUDIT_PATH[source],
+      { params },
+    );
     const items = toArray<RawAuditLogItem>(data?.items).map((raw) =>
       transformItem(source, raw),
     );
@@ -154,7 +163,9 @@ export function useActivityLog(filters: ActivityLogFilter = {}) {
       // 모듈 필터에 따라 조회 대상 백엔드 결정
       let sources: BackendSource[];
       if (filters.module) {
-        sources = MODULE_TO_SOURCE[filters.module] ?? (["fdd", "kiis", "im", "ma"] as BackendSource[]);
+        sources =
+          MODULE_TO_SOURCE[filters.module] ??
+          (["fdd", "kiis", "im", "ma"] as BackendSource[]);
       } else {
         sources = ["fdd", "kiis", "im", "ma"];
       }
@@ -167,7 +178,8 @@ export function useActivityLog(filters: ActivityLogFilter = {}) {
       // 병합 + 정렬
       const allItems = results.flatMap((r) => r.items);
       allItems.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
 
       // 모듈 세부 필터 (docs/vdr는 ma 백엔드에서 오지만 entity_type으로 분리)
@@ -190,54 +202,42 @@ export function useActivityLog(filters: ActivityLogFilter = {}) {
 
 export function useActivityExport() {
   return async (filters: ActivityLogFilter) => {
-    const params: Record<string, unknown> = {};
-    if (filters.date_from) params.start_date = filters.date_from;
-    if (filters.date_to) params.end_date = filters.date_to;
-    if (filters.user_id) params.user_id = filters.user_id;
-    if (filters.action) params.action = filters.action.toUpperCase();
-
-    // FDD 백엔드 export를 기본으로 사용 (가장 성숙한 구현)
-    try {
-      const { data } = await api.get("/audit-logs/export", {
-        params,
-        responseType: "blob",
-      });
-
-      const blob = new Blob([data], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `activity-log-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // 폴백: 프론트엔드에서 CSV 생성
-      const { params: fetchParams } = buildBackendParams({ ...filters, size: 10000 });
-      const results = await Promise.all(
-        (["fdd", "kiis", "im", "ma"] as BackendSource[]).map((src) =>
-          fetchAuditLogs(src, fetchParams),
-        ),
+    // 4개 백엔드 병렬 조회 → 클라이언트 CSV 생성 (모든 모듈 데이터 포함)
+    const { params } = buildBackendParams({ ...filters, size: 10000 });
+    const results = await Promise.all(
+      (["fdd", "kiis", "im", "ma"] as BackendSource[]).map((src) =>
+        fetchAuditLogs(src, params),
+      ),
+    );
+    const allItems = results
+      .flatMap((r) => r.items)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
-      const allItems = results
-        .flatMap((r) => r.items)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      const header = "Timestamp,User,Module,Action,Entity Type,Description\n";
-      const rows = allItems
-        .map((i) =>
-          [i.created_at, i.user_name, i.module, i.action, i.entity_type, i.description]
-            .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
-            .join(","),
-        )
-        .join("\n");
+    const header = "Timestamp,User,Module,Action,Entity Type,Description\n";
+    const rows = allItems
+      .map((i) =>
+        [
+          i.created_at,
+          i.user_name,
+          i.module,
+          i.action,
+          i.entity_type,
+          i.description,
+        ]
+          .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+          .join(","),
+      )
+      .join("\n");
 
-      const blob = new Blob([header + rows], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `activity-log-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 }
