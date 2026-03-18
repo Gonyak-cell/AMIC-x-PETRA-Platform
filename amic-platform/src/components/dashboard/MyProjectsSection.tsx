@@ -28,16 +28,19 @@ export default function MyProjectsSection() {
   // 뷰포트 너비 측정
   useEffect(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el || projects.length === 0) return;
+    setViewportWidth(el.clientWidth);
+
+    if (typeof ResizeObserver === "undefined") return;
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setViewportWidth(entry.contentRect.width);
       }
     });
     observer.observe(el);
-    setViewportWidth(el.clientWidth);
     return () => observer.disconnect();
-  }, []);
+  }, [projects.length]);
 
   const active = projects[activeIndex];
   const len = projects.length;
@@ -63,7 +66,7 @@ export default function MyProjectsSection() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col">
       <h2 className="label-uppercase mb-3">MY PROJECTS</h2>
 
       {/* Loading */}
@@ -103,15 +106,15 @@ export default function MyProjectsSection() {
       {/* ── Peek carousel ── */}
       {!isLoading && !isError && active && (
         <div
-          className="bg-white rounded-2xl overflow-hidden flex-1 flex flex-col"
+          className="bg-white rounded-2xl overflow-hidden flex flex-col"
           style={{
             boxShadow:
               "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",
           }}
         >
-          <div className="flex flex-col sm:flex-row">
+          <div className="flex flex-col sm:flex-row min-w-0">
             {/* Left: carousel viewport */}
-            <div className="flex-1 p-5 flex items-center gap-2">
+            <div className="flex-1 min-w-0 p-5 flex items-center gap-2">
               {/* Prev arrow */}
               {len > 1 && (
                 <button
