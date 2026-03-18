@@ -74,9 +74,9 @@ export default function DashboardCalendarWidget() {
         >
           <div className="px-5 pt-5 pb-4 space-y-3 animate-pulse">
             <div className="h-4 w-24 bg-gray-100 rounded" />
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-x-1 gap-y-1.5">
               {Array.from({ length: 35 }).map((_, i) => (
-                <div key={i} className="h-6 w-7 rounded bg-gray-50" />
+                <div key={i} className="h-9 w-8 rounded-lg bg-gray-50" />
               ))}
             </div>
           </div>
@@ -110,16 +110,16 @@ export default function DashboardCalendarWidget() {
         style={{ boxShadow: cardShadow }}
       >
         {/* Mini calendar section */}
-        <div className="px-5 pt-5 pb-4">
-          <p className="text-sm font-medium text-text-dark mb-1.5">
+        <div className="px-5 pt-5 pb-5">
+          <p className="mb-2 text-base font-semibold text-text-dark">
             {monthLabel}
           </p>
 
-          <div className="grid grid-cols-7 gap-0.5 text-center">
+          <div className="grid grid-cols-7 gap-x-0.5 gap-y-1 text-center">
             {DAY_LABELS.map((d) => (
               <div
                 key={d}
-                className="text-[10px] text-text-muted font-medium py-0.5"
+                className="py-1 text-[11px] font-medium text-text-muted"
               >
                 {d}
               </div>
@@ -131,7 +131,7 @@ export default function DashboardCalendarWidget() {
                 <div
                   key={idx}
                   className={cn(
-                    "relative flex items-center justify-center h-6 text-xs rounded-md",
+                    "relative flex items-center justify-center h-9 text-sm rounded-lg",
                     day === null && "invisible",
                     isToday && "bg-accent text-white font-semibold",
                     !isToday && hasEvent && "font-medium text-accent",
@@ -140,7 +140,7 @@ export default function DashboardCalendarWidget() {
                 >
                   {day}
                   {hasEvent && !isToday && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
+                    <span className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-accent" />
                   )}
                 </div>
               );
@@ -150,7 +150,7 @@ export default function DashboardCalendarWidget() {
 
         {/* Upcoming events section (separated by border) */}
         <div className="border-t border-gray-100 px-5 py-2.5 flex-1 flex flex-col">
-          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
+          <h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-text-muted">
             <CalendarClock className="w-3.5 h-3.5" />
             다가오는 일정
           </h4>
@@ -160,18 +160,18 @@ export default function DashboardCalendarWidget() {
               <p className="text-xs">예정된 일정이 없습니다</p>
             </div>
           ) : (
-            <ul className="space-y-0.5 max-h-[148px] overflow-y-auto">
+            <ul className="max-h-[148px] space-y-0.5 overflow-y-auto">
               {upcoming.map((ev) => (
                 <li key={ev.id}>
                   <button
-                    className="w-full text-left px-2.5 py-1 rounded-md hover:bg-bg-cool transition-colors group"
+                    className="w-full rounded-md px-2.5 py-1 text-left transition-colors group hover:bg-bg-cool"
                     onClick={() => navigate(ev.entityPath)}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-text-muted font-mono shrink-0 w-[72px]">
+                      <span className="w-[72px] shrink-0 font-mono text-[11px] text-text-muted">
                         {ev.date}
                       </span>
-                      <span className="text-xs text-text-dark truncate group-hover:text-accent transition-colors">
+                      <span className="truncate text-xs text-text-dark transition-colors group-hover:text-accent">
                         {ev.title}
                       </span>
                     </div>
