@@ -1,5 +1,5 @@
 import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
-import { act, fireEvent } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
 import { mockUser } from "@/test/mocks/data";
@@ -59,6 +59,11 @@ function useMockTransactions() {
   );
 }
 
+/** 캐러셀 애니메이션(200ms + 20ms) 완료까지 대기하는 헬퍼 */
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 describe("MyProjectsSection", () => {
   it("excludes COMPLETED/TERMINATED from server-filtered results", async () => {
     useMockTransactions();
@@ -77,7 +82,6 @@ describe("MyProjectsSection", () => {
   });
 
   it("wraps around when navigating past first/last project", async () => {
-    vi.useFakeTimers();
     useMockTransactions();
     renderWithProviders(<MyProjectsSection />, {
       authContext: { user: mockUser },
@@ -92,29 +96,29 @@ describe("MyProjectsSection", () => {
 
     // Click prev on first item → wraps to last (Delta)
     fireEvent.click(screen.getByLabelText("Previous project"));
-    await act(async () => {
-      vi.advanceTimersByTime(300);
+    await waitFor(() => expect(screen.getByText("Delta")).toBeInTheDocument(), {
+      timeout: 2000,
     });
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
-    expect(screen.getByText("Delta")).toBeInTheDocument();
+
+    // Wait for animation to fully complete before next click
+    await sleep(300);
 
     // Click next on last item → wraps to first (Alpha)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await act(async () => {
-      vi.advanceTimersByTime(300);
+    await waitFor(() => expect(screen.getByText("Alpha")).toBeInTheDocument(), {
+      timeout: 2000,
     });
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
-    expect(screen.getByText("Alpha")).toBeInTheDocument();
+
+    await sleep(300);
 
     // Click next → goes to second (Gamma)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await act(async () => {
-      vi.advanceTimersByTime(300);
+    await waitFor(() => expect(screen.getByText("Gamma")).toBeInTheDocument(), {
+      timeout: 2000,
     });
     expect(screen.getByText("2 / 3")).toBeInTheDocument();
-    expect(screen.getByText("Gamma")).toBeInTheDocument();
-
-    vi.useRealTimers();
   });
 
   it("shows empty state when no assigned projects", async () => {
@@ -189,7 +193,6 @@ describe("MyProjectsSection", () => {
   });
 
   it("shows correct My Role in summary panel", async () => {
-    vi.useFakeTimers();
     useMockTransactions();
     renderWithProviders(<MyProjectsSection />, {
       authContext: { user: mockUser },
@@ -202,20 +205,18 @@ describe("MyProjectsSection", () => {
 
     // Navigate to Gamma (captain only)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await act(async () => {
-      vi.advanceTimersByTime(300);
+    await waitFor(() => expect(screen.getByText("Gamma")).toBeInTheDocument(), {
+      timeout: 2000,
     });
-    expect(screen.getByText("Gamma")).toBeInTheDocument();
     expect(screen.getByText("Deal Captain")).toBeInTheDocument();
+
+    await sleep(300);
 
     // Navigate to Delta (both lead and captain)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await act(async () => {
-      vi.advanceTimersByTime(300);
+    await waitFor(() => expect(screen.getByText("Delta")).toBeInTheDocument(), {
+      timeout: 2000,
     });
-    expect(screen.getByText("Delta")).toBeInTheDocument();
     expect(screen.getByText("Lead Advisor / Deal Captain")).toBeInTheDocument();
-
-    vi.useRealTimers();
   });
 });
