@@ -6,6 +6,14 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.13.0",
+    date: "2026-03-18",
+    highlights: ["버전 업데이트 시 릴리즈 노트 자동 생성"],
+    changes: [
+    { type: "feature", description: "버전 업데이트 시 릴리즈 노트 자동 생성" },
+    ],
+  },
+  {
     version: "0.12.0",
     date: "2026-03-18",
     highlights: [
