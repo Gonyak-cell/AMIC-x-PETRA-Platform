@@ -89,19 +89,25 @@ describe("MyProjectsSection", () => {
     // Counter shows 1 / 3 (Alpha, Gamma, Delta)
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
 
-    // Click prev on first item → wraps to last (Delta)
+    // Click prev on first item → wraps to last (Delta) — 250ms slide animation
     fireEvent.click(screen.getByLabelText("Previous project"));
-    expect(screen.getByText("3 / 3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("3 / 3")).toBeInTheDocument();
+    });
     expect(screen.getByText("Delta")).toBeInTheDocument();
 
     // Click next on last item → wraps to first (Alpha)
     fireEvent.click(screen.getByLabelText("Next project"));
-    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    });
     expect(screen.getByText("Alpha")).toBeInTheDocument();
 
     // Click next → goes to second (Gamma)
     fireEvent.click(screen.getByLabelText("Next project"));
-    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("2 / 3")).toBeInTheDocument();
+    });
     expect(screen.getByText("Gamma")).toBeInTheDocument();
   });
 
@@ -187,18 +193,18 @@ describe("MyProjectsSection", () => {
       expect(screen.getByText("Lead Advisor")).toBeInTheDocument();
     });
 
-    // Navigate to Gamma (captain only)
+    // Navigate to Gamma (captain only) — 250ms slide animation
     fireEvent.click(screen.getByLabelText("Next project"));
     await waitFor(() => {
-      expect(screen.getByText("Deal Captain")).toBeInTheDocument();
+      expect(screen.getByText("Gamma")).toBeInTheDocument();
     });
+    expect(screen.getByText("Deal Captain")).toBeInTheDocument();
 
     // Navigate to Delta (both lead and captain)
     fireEvent.click(screen.getByLabelText("Next project"));
     await waitFor(() => {
-      expect(
-        screen.getByText("Lead Advisor / Deal Captain"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Delta")).toBeInTheDocument();
     });
+    expect(screen.getByText("Lead Advisor / Deal Captain")).toBeInTheDocument();
   });
 });
