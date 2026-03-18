@@ -1,4 +1,4 @@
-"""LDD 섹션별 AI 분석기 — 52개 DDRL 항목 자동 분석."""
+"""LDD 섹션별 AI 분석기 — 53개 DDRL 항목 자동 분석."""
 
 from __future__ import annotations
 

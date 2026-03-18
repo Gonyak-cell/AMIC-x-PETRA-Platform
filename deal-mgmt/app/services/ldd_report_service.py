@@ -37,6 +37,7 @@ from app.schemas.ldd_report import (
 logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templates" / "ldd"
+SLOTFILL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templates" / "ldd_slotfill"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_VERSION = "1.0"
@@ -165,6 +166,88 @@ def _merge_ai_results(
     return sections
 
 
+def _check_ralph_result(loop_result: object) -> tuple[bool, str]:
+    """Ralph Loop 결과에서 실패/critical 신호를 감지한다.
+
+    Returns:
+        (ok, reason): ok=True면 정상, False면 실패.
+    """
+    status = getattr(loop_result, "status", None)
+    if status is not None and str(status) == "FAILED":
+        errors = getattr(loop_result, "errors", []) or []
+        msg = "; ".join(errors[:3]) if errors else "Ralph Loop 실행 실패"
+        return False, msg
+
+    critical = getattr(loop_result, "critical_flags", []) or []
+    if critical:
+        return False, f"Critical 플래그 {len(critical)}건: {'; '.join(critical[:3])}"
+
+    return True, ""
+
+
+def _check_qa_gate(
+    qa_result: dict | None,
+    score: float | None,
+    min_score: int,
+    block_on_critical: bool,
+) -> tuple[bool, str]:
+    """QA 게이트 — READY 전환 허용 여부 판단.
+
+    NOTE: 점수 척도가 경로마다 다름.
+    - 멀티 LLM (draft_score): Stage 7 QA overall_score (1-5)
+    - 단일 Ralph (draft_score/final_score): 오케스트레이터 게이트 평균 (0-1)
+    향후 통일 필요. 현재는 qa_result=None이면 자동 패스로 안전하게 처리.
+    """
+    if qa_result is None or score is None:
+        return True, ""  # QA 미실행 시 자동 패스
+
+    if score < min_score:
+        return False, f"QA 점수 {score:.1f}점이 최소 기준 {min_score}점 미만입니다."
+
+    if block_on_critical:
+        issues = qa_result.get("issues") or []
+        critical = [i for i in issues if i.get("severity") == "critical"]
+        if critical:
+            return False, f"QA에서 Critical 이슈 {len(critical)}건이 발견되었습니다."
+
+    return True, ""
+
+
+async def _build_render_narrative_sections(
+    report: LDDReport,
+    *,
+    llm_call=None,
+) -> dict[str, list[dict]] | None:
+    """렌더링 시 사용할 slot-fill narrative를 조립한다.
+
+    설정상 활성화되어 있으면 sections JSON을 부동문자 bank 기반 block으로 재조합한다.
+    실패 시 기존 narrative_sections로 안전하게 폴백한다.
+    """
+    from app.core.config import settings
+
+    if not settings.LDD_TEMPLATE_SLOTFILL_ENABLED or not report.sections:
+        return report.narrative_sections
+
+    try:
+        from app.ralph.generators.ldd.slot_fill import LDDTemplateSlotFillEngine
+
+        template_dir = Path(settings.LDD_TEMPLATE_SLOTFILL_DIR) if settings.LDD_TEMPLATE_SLOTFILL_DIR else SLOTFILL_TEMPLATE_DIR
+        engine = LDDTemplateSlotFillEngine(
+            template_dir,
+            llm_call=llm_call,
+            use_llm_slots=settings.LDD_TEMPLATE_SLOTFILL_USE_LLM,
+        )
+        rendered = await engine.build_narrative_sections(
+            report,
+            industry=report.deal_type or report.template_type or "",
+            raw_narrative_sections=report.narrative_sections or {},
+        )
+        return rendered or report.narrative_sections
+    except Exception as exc:
+        logger.warning("LDD template slot-fill narrative 조립 실패 — 기존 narrative 폴백: %s", exc)
+        return report.narrative_sections
+
+
 def _compute_risk_colors(sections: list[dict]) -> list[dict]:
     """각 항목의 risk_color를 이슈레벨 기반으로 자동 계산한다."""
     _level_to_color = {
@@ -186,7 +269,11 @@ def _compute_risk_colors(sections: list[dict]) -> list[dict]:
 # ── docxtpl 렌더링 컨텍스트 빌드 ─────────────────────────────────────────────
 
 
-def _build_context(report: LDDReport) -> dict:
+def _build_context(
+    report: LDDReport,
+    *,
+    narrative_override: dict[str, list[dict]] | None = None,
+) -> dict:
     """docxtpl에 전달할 컨텍스트 딕셔너리를 생성한다."""
     sections = report.sections or []
 
@@ -243,7 +330,7 @@ def _build_context(report: LDDReport) -> dict:
     }
 
     # 서술(narrative) 데이터가 있으면 narrative_items 컨텍스트 추가
-    narrative = report.narrative_sections
+    narrative = narrative_override if narrative_override is not None else report.narrative_sections
     if narrative:
         ctx["narrative_items"] = _build_narrative_items(sections, narrative)
 
@@ -395,15 +482,14 @@ async def create_ldd_report(
         sections=sections_data,
         template_version=TEMPLATE_VERSION,
         created_by_email=created_by_email,
-        status=LDDReportStatus.DRAFT,
+        status=LDDReportStatus.REVIEW,
+        review_started_at=datetime.now(UTC),
         **counts,
     )
     db.add(report)
     await db.commit()
     await db.refresh(report)
 
-    # 즉시 렌더링
-    report = await generate_ldd_report(db, report)
     return report
 
 
@@ -470,7 +556,8 @@ async def generate_ldd_report(
         return await _generate_law_firm_report(db, report)
 
     # ── 기존 docxtpl 경로 ──
-    has_narrative = bool(report.narrative_sections)
+    render_narrative = await _build_render_narrative_sections(report)
+    has_narrative = bool(render_narrative)
     prefix = "ldd_narrative_" if has_narrative else "ldd_"
     template_name = f"{prefix}{report.report_type.lower()}_template.docx"
     template_path = TEMPLATE_DIR / template_name
@@ -487,7 +574,7 @@ async def generate_ldd_report(
 
     report_id = report.id
     report_type = report.report_type
-    context = _build_context(report)
+    context = _build_context(report, narrative_override=render_narrative)
 
     def _render() -> tuple[str, str, int]:
         """동기 렌더링 — 별도 스레드에서 실행."""
@@ -541,6 +628,7 @@ async def _generate_law_firm_report(
     await db.commit()
 
     try:
+        render_narrative = await _build_render_narrative_sections(report)
 
         def _render_law_firm() -> tuple[str, str, int]:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -563,12 +651,24 @@ async def _generate_law_firm_report(
             section_results = _sections_to_dict(report.sections or [])
             chapters = mapper.map_sections(
                 section_results,
-                report.narrative_sections,
+                render_narrative,
             )
 
             # 3단 서술 변환 (law_firm_sections 우선, 없으면 6블록에서 변환)
             narratives: dict[str, list] = {}
-            if report.law_firm_sections:
+            if render_narrative:
+                for ch in chapters:
+                    narr_list = []
+                    for ddrl_sec in ch.ddrl_sections:
+                        if ddrl_sec in render_narrative:
+                            narr_list.extend(
+                                adapter.convert_chapter(
+                                    render_narrative[ddrl_sec],
+                                    ch.number,
+                                )
+                            )
+                    narratives[ch.number] = [n.to_dict() if hasattr(n, "to_dict") else n for n in narr_list]
+            elif report.law_firm_sections:
                 # 이미 3단 구조로 생성된 경우
                 narratives = report.law_firm_sections
             elif report.narrative_sections:
@@ -668,20 +768,28 @@ async def create_ldd_report_auto(
     _validate_source_dir(body.source_dir)
     file_list = scan_directory(body.source_dir)
     if not file_list:
-        # 자료 없으면 빈 보고서로 생성
-        return await create_ldd_report(
-            db,
-            transaction_id,
-            LDDReportCreate(
-                title=body.title,
-                report_type=body.report_type,
-                target_company=body.target_company,
-                dd_period=body.dd_period,
-                law_firm=body.law_firm,
-                prepared_by=body.prepared_by,
-            ),
-            created_by_email,
+        # 자료 없으면 FAILED 상태로 생성 (빈 보고서 차단)
+        sections_data, _template_type = _resolve_sections("")
+        counts = _compute_counts(sections_data)
+        report = LDDReport(
+            transaction_id=transaction_id,
+            report_type=body.report_type,
+            title=body.title,
+            target_company=body.target_company,
+            dd_period=body.dd_period,
+            law_firm=body.law_firm,
+            prepared_by=body.prepared_by,
+            sections=sections_data,
+            template_version=TEMPLATE_VERSION,
+            created_by_email=created_by_email,
+            status=LDDReportStatus.FAILED,
+            error_message="실사자료 폴더에 분석 가능한 파일이 없습니다.",
+            **counts,
         )
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
+        return report
 
     # 2. 파일 파싱 + DDRL 섹션 매핑
     from app.ralph.parsers.base import ParsedFile
@@ -706,7 +814,7 @@ async def create_ldd_report_auto(
         logging.getLogger(__name__).warning("학습 패턴 조회 실패 (무시): %s", exc)
 
     analyzer = LDDSectionAnalyzer(llm_call=llm_call, learned_patterns=learned_patterns)
-    generator = LDDDocumentGenerator(analyzer, DEFAULT_LDD_SECTIONS)
+    generator = LDDDocumentGenerator(analyzer, copy.deepcopy(DEFAULT_LDD_SECTIONS))
     generator.set_source_map(source_map)
 
     # 4. 품질 게이트 조립
@@ -721,7 +829,7 @@ async def create_ldd_report_auto(
         max_iterations_per_section=body.max_iterations,
         max_cost_usd=body.max_cost_usd,
     )
-    prd = load_prd(body.report_type if body.report_type in ("ldd_full", "ldd_redflag") else "ldd_full")
+    prd = load_prd(f"ldd_{body.report_type.lower()}")
     orchestrator = RalphLoopOrchestrator(
         generator=generator,
         gates=gates,
@@ -731,8 +839,33 @@ async def create_ldd_report_auto(
 
     loop_result = await orchestrator.run(source_data={"source_dir": body.source_dir})
 
-    # 5. 결과를 LDD 섹션 형식으로 변환
-    sections_data = list(DEFAULT_LDD_SECTIONS)
+    # 5-a. Ralph 실패/critical 신호 차단
+    ralph_ok, ralph_reason = _check_ralph_result(loop_result)
+    if not ralph_ok:
+        sections_data = copy.deepcopy(DEFAULT_LDD_SECTIONS)
+        counts = _compute_counts(sections_data)
+        report = LDDReport(
+            transaction_id=transaction_id,
+            report_type=body.report_type,
+            title=body.title,
+            target_company=body.target_company,
+            dd_period=body.dd_period,
+            law_firm=body.law_firm,
+            prepared_by=body.prepared_by,
+            sections=sections_data,
+            template_version=TEMPLATE_VERSION,
+            created_by_email=created_by_email,
+            status=LDDReportStatus.FAILED,
+            error_message=ralph_reason,
+            **counts,
+        )
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
+        return report
+
+    # 5-b. 결과를 LDD 섹션 형식으로 변환
+    sections_data = copy.deepcopy(DEFAULT_LDD_SECTIONS)
     if loop_result.final_artifact:
         try:
             report_data = json.loads(loop_result.final_artifact)
@@ -744,7 +877,16 @@ async def create_ldd_report_auto(
     sections_data = _compute_risk_colors(sections_data)
     counts = _compute_counts(sections_data)
 
-    # 6. DB 저장
+    # 6. all-PENDING 검증 — AI 분석이 유효한 결과를 산출하지 못한 경우
+    all_pending = counts["issue_count"] == 0 and counts["ok_count"] == 0 and counts["na_count"] == 0
+    if all_pending:
+        report_status = LDDReportStatus.FAILED
+        error_msg: str | None = "AI 분석이 완료되었으나 유효한 결과를 산출하지 못했습니다."
+    else:
+        report_status = LDDReportStatus.DRAFT
+        error_msg = None
+
+    # 7. DB 저장
     report = LDDReport(
         transaction_id=transaction_id,
         report_type=body.report_type,
@@ -756,15 +898,17 @@ async def create_ldd_report_auto(
         sections=sections_data,
         template_version=TEMPLATE_VERSION,
         created_by_email=created_by_email,
-        status=LDDReportStatus.DRAFT,
+        status=report_status,
+        error_message=error_msg,
         **counts,
     )
     db.add(report)
     await db.commit()
     await db.refresh(report)
 
-    # 7. DOCX 렌더링
-    report = await generate_ldd_report(db, report)
+    # 8. DOCX 렌더링 (FAILED 상태면 건너뜀)
+    if report.status != LDDReportStatus.FAILED:
+        report = await generate_ldd_report(db, report)
     return report
 
 
@@ -883,9 +1027,9 @@ async def create_ldd_report_from_vdr(
         )
 
         if not source_files:
-            report.status = LDDReportStatus.REVIEW
+            report.status = LDDReportStatus.FAILED
+            report.error_message = "VDR에 분석 가능한 문서가 없습니다. 문서 업로드 후 재시도하세요."
             report.analysis_completed_at = datetime.now(UTC)
-            report.review_started_at = datetime.now(UTC)
             await db.commit()
             await db.refresh(report)
             return report
@@ -983,6 +1127,17 @@ async def create_ldd_report_from_vdr(
             vdr_doc_names = list(vdr_name_to_id.keys())
             pipeline_result = await pipeline.run(vdr_document_names=vdr_doc_names)
 
+            # 파이프라인 실패 체크 — sections이 비어 있으면 실패로 간주
+            if not pipeline_result.sections:
+                ralph_session.status = RalphSessionStatus.FAILED.value
+                ralph_session.error_message = "멀티 LLM 파이프라인이 분석 결과를 산출하지 못했습니다."
+                report.status = LDDReportStatus.FAILED
+                report.error_message = "AI 분석이 유효한 결과를 산출하지 못했습니다."
+                report.analysis_completed_at = datetime.now(UTC)
+                await db.commit()
+                await db.refresh(report)
+                return report
+
             # RalphSession 결과 업데이트
             ralph_session.status = RalphSessionStatus.COMPLETED.value
             ralph_session.total_cost_usd = pipeline_result.cost_usd
@@ -1028,6 +1183,13 @@ async def create_ldd_report_from_vdr(
             report.qa_result = pipeline_result.qa_result
             report.pipeline_stages = pipeline_result.stages
             report.draft_score = pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
+
+            # 초안 QA 경고 — 점수가 기준 미달이면 리뷰 시 주의 메시지
+            if report.draft_score is not None and report.draft_score < settings.LDD_MIN_DRAFT_SCORE:
+                report.error_message = (
+                    f"AI 초안 품질 점수가 {report.draft_score:.1f}점입니다 "
+                    f"(최소 기준: {settings.LDD_MIN_DRAFT_SCORE}점). 리뷰 시 주의가 필요합니다."
+                )
 
             # ── 법무법인 스타일 후처리 ──
             if is_law_firm and pipeline_result.narrative_sections:
@@ -1115,7 +1277,19 @@ async def create_ldd_report_from_vdr(
 
             loop_result = await orchestrator.run(source_data={"transaction_id": str(transaction_id)})
 
-            # 5c. RalphSession 결과 업데이트
+            # 5c-i. Ralph 실패/critical 신호 차단
+            ralph_ok, ralph_reason = _check_ralph_result(loop_result)
+            if not ralph_ok:
+                ralph_session.status = RalphSessionStatus.FAILED.value
+                ralph_session.error_message = ralph_reason
+                report.status = LDDReportStatus.FAILED
+                report.error_message = ralph_reason
+                report.analysis_completed_at = datetime.now(UTC)
+                await db.commit()
+                await db.refresh(report)
+                return report
+
+            # 5c-ii. RalphSession 결과 업데이트
             ralph_session.status = loop_result.status.value
             ralph_session.progress = loop_result.progress
             ralph_session.total_iterations = loop_result.total_iterations
@@ -1283,7 +1457,7 @@ async def finalize_ldd_report(
             max_iterations_per_section=min(body.max_iterations, 3),
             max_cost_usd=min(body.max_cost_usd, 10.0),
         )
-        prd = load_prd("ldd_full")
+        prd = load_prd(f"ldd_{report.report_type.lower()}")
 
         orchestrator = RalphLoopOrchestrator(
             generator=generator,
@@ -1314,7 +1488,19 @@ async def finalize_ldd_report(
 
         loop_result = await orchestrator.run(source_data={"transaction_id": str(transaction_id)})
 
-        # 5c. RalphSession 결과 업데이트
+        # 5c-i. Ralph Loop #2 실패/critical 신호 차단
+        ralph_ok, ralph_reason = _check_ralph_result(loop_result)
+        if not ralph_ok:
+            ralph_session.status = RalphSessionStatus.FAILED.value
+            ralph_session.error_message = ralph_reason
+            report.status = LDDReportStatus.FAILED
+            report.error_message = f"Ralph Loop #2 실패: {ralph_reason}"
+            report.finalize_completed_at = datetime.now(UTC)
+            await db.commit()
+            await db.refresh(report)
+            return report
+
+        # 5c-ii. RalphSession 결과 업데이트
         ralph_session.status = loop_result.status.value
         ralph_session.progress = loop_result.progress
         ralph_session.total_iterations = loop_result.total_iterations
@@ -1349,7 +1535,22 @@ async def finalize_ldd_report(
         report.final_score = loop_result.final_score
         report.finalize_completed_at = datetime.now(UTC)
 
-        # 7. DOCX 렌더링
+        # 7. QA 게이트 — 최종 점수가 기준 미달이면 REVIEW로 되돌림
+        gate_passed, gate_reason = _check_qa_gate(
+            report.qa_result,
+            report.final_score,
+            settings.LDD_MIN_FINAL_SCORE,
+            settings.LDD_QA_CRITICAL_BLOCKS_READY,
+        )
+        if not gate_passed:
+            report.status = LDDReportStatus.REVIEW
+            report.error_message = f"QA 게이트 미통과: {gate_reason}"
+            report.review_started_at = datetime.now(UTC)
+            await db.commit()
+            await db.refresh(report)
+            return report
+
+        # 8. DOCX 렌더링
         report = await generate_ldd_report(db, report)
         return report
 

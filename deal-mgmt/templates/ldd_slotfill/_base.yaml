@@ -1,0 +1,7 @@
+blocks:
+  - name: scope_notice
+    text: "본 문안은 현재까지 제출된 자료 및 확인된 사실관계 범위 내에서 작성되었습니다."
+  - name: evidence_notice
+    text: "근거자료 표시는 제출자료 기준 식별 가능한 범위 내에서만 기재하였습니다."
+  - name: review_notice
+    text: "아래 의견은 거래계약 반영, 선행조건 설정 및 후속 실사 범위 확정에 활용될 수 있습니다."

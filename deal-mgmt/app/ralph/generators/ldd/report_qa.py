@@ -50,7 +50,7 @@ QA_SYSTEM = """\
 6가지 검증 항목:
 1. CITATION_ACCURACY: 인용된 조항 번호 ↔ 원본 문서 일치
 2. RISK_RECOMMENDATION_ALIGNMENT: 리스크 등급 ↔ 권고사항 논리 일관성
-3. COMPLETENESS: 52개 DDRL 항목 중 누락/미분석 항목
+3. COMPLETENESS: 53개 DDRL 항목 중 누락/미분석 항목
 4. LEGAL_TERMINOLOGY: 법률 용어 정확성
 5. CROSS_REFERENCE: 섹션 간 교차 참조 일관성
 6. DEAL_IMPACT_CONSISTENCY: 이슈 심각도 ↔ deal_impact 일관성

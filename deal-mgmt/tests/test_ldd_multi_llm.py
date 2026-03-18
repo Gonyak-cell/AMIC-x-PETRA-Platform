@@ -502,7 +502,7 @@ class TestGuardrails:
     def test_valid_item_ids(self):
         """유효한 item_id 목록 확인."""
         assert len(VALID_ITEM_IDS) == 53  # 52 + IT-04 = 53... 실제 확인
-        # 실제 52개 검증
+        # 실제 53개 검증
         assert "CORP-01" in VALID_ITEM_IDS
         assert "IT-04" in VALID_ITEM_IDS
         assert "INVALID-99" not in VALID_ITEM_IDS

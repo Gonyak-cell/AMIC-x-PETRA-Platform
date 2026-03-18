@@ -1,5 +1,5 @@
 /**
- * LDD 체크리스트 리뷰 패널 — 52개 항목 승인/반려 + 진행률 표시.
+ * LDD 체크리스트 리뷰 패널 — 53개 항목 승인/반려 + 진행률 표시.
  */
 import { useState, useCallback } from "react";
 import { Button, Card } from "@/components/ui";
@@ -16,6 +16,7 @@ import {
 interface LDDReviewPanelProps {
   txnId: string;
   reportId: string;
+  onFinalized?: () => void;
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -32,7 +33,11 @@ const LEVEL_COLOR: Record<string, string> = {
   LOW: "text-green-600",
 };
 
-export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps) {
+export default function LDDReviewPanel({
+  txnId,
+  reportId,
+  onFinalized,
+}: LDDReviewPanelProps) {
   const { data: report, isLoading } = useLDDReport(txnId, reportId);
   const { data: progress } = useReviewProgress(txnId, reportId);
   const reviewItem = useReviewLDDItem(txnId, reportId);
@@ -40,7 +45,9 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
   const finalize = useFinalizeLDD(txnId, reportId);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>(
+    {},
+  );
 
   const handleApprove = useCallback(
     (item: LDDItem) => {
@@ -50,7 +57,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
         user_comment: commentInputs[item.item_id] || "",
       });
     },
-    [reviewItem, commentInputs]
+    [reviewItem, commentInputs],
   );
 
   const handleReject = useCallback(
@@ -61,7 +68,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
         user_comment: commentInputs[item.item_id] || "",
       });
     },
-    [reviewItem, commentInputs]
+    [reviewItem, commentInputs],
   );
 
   const handleApproveAll = useCallback(() => {
@@ -73,7 +80,7 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
           item_id: i.item_id,
           user_approved: true,
           user_comment: "",
-        }))
+        })),
     );
     if (items.length > 0) {
       bulkReview.mutate(items);
@@ -81,8 +88,14 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
   }, [report, bulkReview]);
 
   const handleFinalize = useCallback(() => {
-    finalize.mutate({});
-  }, [finalize]);
+    finalize.mutate({}, {
+      onSuccess: (nextReport) => {
+        if (nextReport.status === "READY") {
+          onFinalized?.();
+        }
+      },
+    });
+  }, [finalize, onFinalized]);
 
   if (isLoading || !report) {
     return <div className="p-6 text-neutral-500">보고서를 불러오는 중...</div>;
@@ -93,13 +106,23 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
 
   return (
     <div className="space-y-6">
+      {/* QA 게이트 거부 사유 표시 */}
+      {isReviewState && report.error_message && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm text-amber-700">{report.error_message}</p>
+        </div>
+      )}
+
       {/* 진행률 바 */}
       {progress && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-neutral-700">리뷰 진행률</span>
+            <span className="text-sm font-medium text-neutral-700">
+              리뷰 진행률
+            </span>
             <span className="text-sm text-neutral-500">
-              {progress.approved + progress.rejected} / {progress.total} ({progress.progress_pct}%)
+              {progress.approved + progress.rejected} / {progress.total} (
+              {progress.progress_pct}%)
             </span>
           </div>
           <div className="w-full bg-neutral-200 rounded-full h-2">
@@ -127,7 +150,9 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
             onClick={handleFinalize}
             disabled={finalize.isPending}
           >
-            {finalize.isPending ? "최종 보고서 생성 중..." : "최종 보고서 생성 (Finalize)"}
+            {finalize.isPending
+              ? "최종 보고서 생성 중..."
+              : "최종 보고서 생성 (Finalize)"}
           </Button>
         </div>
       )}
@@ -154,8 +179,12 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
       {/* 섹션별 체크리스트 */}
       {sections.map((section: LDDSection) => {
         const isExpanded = expandedSection === section.section_type;
-        const sectionIssues = section.items.filter((i) => i.status === "ISSUE").length;
-        const sectionReviewed = section.items.filter((i) => i.user_approved !== null).length;
+        const sectionIssues = section.items.filter(
+          (i) => i.status === "ISSUE",
+        ).length;
+        const sectionReviewed = section.items.filter(
+          (i) => i.user_approved !== null,
+        ).length;
 
         return (
           <Card key={section.section_type} className="overflow-hidden">
@@ -184,7 +213,8 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
             {isExpanded && (
               <div className="border-t divide-y">
                 {section.items.map((item: LDDItem) => {
-                  const badge = STATUS_BADGE[item.status] || STATUS_BADGE.PENDING;
+                  const badge =
+                    STATUS_BADGE[item.status] || STATUS_BADGE.PENDING;
 
                   return (
                     <div key={item.item_id} className="p-4 space-y-2">
@@ -194,7 +224,9 @@ export default function LDDReviewPanel({ txnId, reportId }: LDDReviewPanelProps)
                             <code className="text-xs text-neutral-400">
                               {item.item_id}
                             </code>
-                            <span className="text-sm font-medium">{item.name}</span>
+                            <span className="text-sm font-medium">
+                              {item.name}
+                            </span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded ${badge.className}`}
                             >

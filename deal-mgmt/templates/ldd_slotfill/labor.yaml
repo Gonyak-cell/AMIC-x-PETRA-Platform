@@ -1,0 +1,34 @@
+section_id: labor
+version: "1.0"
+source_reference: "AMIC curated LDD boilerplate v1"
+slots:
+  target_company: { level: L2, source: report.target_company, default: "대상회사" }
+  item_name: { level: L2, source: item.name }
+  status_sentence: { level: L2, source: derived.status_sentence }
+  analysis_sentence: { level: L2, source: derived.analysis_sentence }
+  impact_sentence: { level: L2, source: derived.impact_sentence }
+  recommendation_sentence: { level: L2, source: derived.recommendation_sentence }
+  evidence_sentence: { level: L2, source: derived.evidence_sentence }
+  rfi_sentence: { level: L2, source: derived.rfi_sentence }
+  user_review_sentence: { level: L2, source: derived.user_review_sentence, default: "" }
+  confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
+body: |
+  [[FACTS]]
+  {{@scope_notice}}
+  당사는 {{ target_company }}의 인사 및 노무 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
+
+  [[ANALYSIS]]
+  본 항목에서는 근로조건 적법성, 집단적 노사관계, 임금 및 퇴직급여 충당, 핵심 인력 유지 및 잠재 노무분쟁 가능성을 함께 검토합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
+
+  [[DEAL_IMPACT]]
+  노무 이슈는 고용승계, 핵심 인력 유지, 우발채무 및 통합 이후 조직 안정성에 영향을 줄 수 있습니다. {{ user_review_sentence }}
+
+  [[RECOMMENDATION]]
+  현 단계 권고사항은 다음과 같습니다. {{ recommendation_sentence }} {{ rfi_sentence }}
+conditional_blocks:
+  - condition: issue_level == 'CRITICAL'
+    insert_after: impact_sentence
+    text: "특히 집단분쟁 또는 대규모 미지급 금전채무가 확인되는 경우 별도 가격조정 또는 보상구조 검토가 필요할 수 있습니다."
+  - condition: status == 'PENDING'
+    insert_after: analysis_sentence
+    text: "취업규칙, 근로계약, 단체협약 및 급여/퇴직충당 자료의 추가 확보가 필요할 수 있습니다."

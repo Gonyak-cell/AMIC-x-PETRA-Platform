@@ -221,6 +221,9 @@ export function useReviewLDDItem(txnId: string, reportId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId],
+      });
+      qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId],
       });
       qc.invalidateQueries({
@@ -245,11 +248,15 @@ export function useBulkReviewLDD(txnId: string, reportId: string) {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId],
+      });
+      qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId],
       });
       qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId, "review-progress"],
       });
+      qc.invalidateQueries({ queryKey: ["docs", "ldd-reports"] });
       toast.success(`${data.applied}개 항목 리뷰가 저장되었습니다.`);
     },
     onError: () => {
@@ -270,11 +277,25 @@ export function useFinalizeLDD(txnId: string, reportId: string) {
       );
       return data as LDDReport;
     },
-    onSuccess: () => {
+    onSuccess: (report: LDDReport) => {
       qc.invalidateQueries({
         queryKey: ["ma", "ldd-reports", txnId, reportId],
       });
-      toast.success("최종 보고서 생성이 시작되었습니다.");
+      // 리스트 쿼리도 무효화하여 상태 동기화
+      qc.invalidateQueries({
+        queryKey: ["ma", "ldd-reports", txnId],
+        exact: true,
+      });
+      qc.invalidateQueries({ queryKey: ["docs", "ldd-reports"] });
+      if (report.status === "REVIEW") {
+        toast.error(
+          report.error_message ?? "QA 게이트 미통과로 리뷰가 필요합니다.",
+        );
+      } else if (report.status === "FAILED") {
+        toast.error(report.error_message ?? "최종 보고서 생성에 실패했습니다.");
+      } else {
+        toast.success("최종 보고서 생성이 완료되었습니다.");
+      }
     },
     onError: () => {
       toast.error("최종 보고서 생성에 실패했습니다.");

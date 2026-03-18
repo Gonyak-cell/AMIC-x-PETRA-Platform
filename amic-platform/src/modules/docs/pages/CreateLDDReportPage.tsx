@@ -23,7 +23,10 @@ import {
   useDefaultLDDSections,
   getLDDReportDownloadUrl,
 } from "@/modules/docs/hooks/useLDDReports";
-import type { LDDReportType, LDDSection } from "@/modules/docs/types/ldd_report";
+import type {
+  LDDReportType,
+  LDDSection,
+} from "@/modules/docs/types/ldd_report";
 import { LDD_REPORT_TYPE_LABELS } from "@/modules/docs/types/ldd_report";
 import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import heroImg from "@/assets/images/heroes/hero-arch-white-round.jpg";
@@ -33,9 +36,16 @@ import heroImg from "@/assets/images/heroes/hero-arch-white-round.jpg";
 function StepIndicator({ step }: { step: number }) {
   const steps = ["기본 정보", "체크리스트 작성", "확인 및 생성"];
   return (
-    <ol className="flex items-center gap-2 list-none p-0 m-0" aria-label="LDD 보고서 생성 단계">
+    <ol
+      className="flex items-center gap-2 list-none p-0 m-0"
+      aria-label="LDD 보고서 생성 단계"
+    >
       {steps.map((label, i) => (
-        <li key={i} className="flex items-center gap-2" aria-current={i === step ? "step" : undefined}>
+        <li
+          key={i}
+          className="flex items-center gap-2"
+          aria-current={i === step ? "step" : undefined}
+        >
           <div className="flex items-center gap-1.5">
             <div
               className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
@@ -50,14 +60,18 @@ function StepIndicator({ step }: { step: number }) {
             </div>
             <span
               className={`hidden text-xs sm:inline ${
-                i === step ? "font-medium text-text-primary" : "text-text-tertiary"
+                i === step
+                  ? "font-medium text-text-primary"
+                  : "text-text-tertiary"
               }`}
             >
               {label}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <div className={`h-px w-8 ${i < step ? "bg-accent-primary" : "bg-border"}`} />
+            <div
+              className={`h-px w-8 ${i < step ? "bg-accent-primary" : "bg-border"}`}
+            />
           )}
         </li>
       ))}
@@ -70,51 +84,56 @@ function StepIndicator({ step }: { step: number }) {
 type Mode = "select" | "manual" | "ai";
 
 export default function CreateLDDReportPage() {
-  const navigate      = useNavigate();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const txnId      = searchParams.get("txn_id") ?? "";
-  const typeParam  = (searchParams.get("type") as LDDReportType | null) ?? "FULL";
+  const txnId = searchParams.get("txn_id") ?? "";
+  const typeParam =
+    (searchParams.get("type") as LDDReportType | null) ?? "FULL";
 
-  const [mode, setMode]             = useState<Mode>("select");
-  const [step, setStep]             = useState<0 | 1 | 2>(0);
+  const [mode, setMode] = useState<Mode>("select");
+  const [step, setStep] = useState<0 | 1 | 2>(0);
   const [reportType, setReportType] = useState<LDDReportType>(typeParam);
-  const [title, setTitle]           = useState("");
+  const [title, setTitle] = useState("");
   const [targetCompany, setTargetCompany] = useState("");
-  const [ddPeriod, setDdPeriod]     = useState("");
-  const [lawFirm, setLawFirm]       = useState("");
+  const [ddPeriod, setDdPeriod] = useState("");
+  const [lawFirm, setLawFirm] = useState("");
   const [preparedBy, setPreparedBy] = useState("");
-  const [sections, setSections]     = useState<LDDSection[]>([]);
+  const [sections, setSections] = useState<LDDSection[]>([]);
 
   // AI 모드 상태
-  const [sourceDir, setSourceDir]   = useState("");
-  const [aiStep, setAiStep]         = useState<"input" | "running" | "done">("input");
+  const [sourceDir, setSourceDir] = useState("");
+  const [aiStep, setAiStep] = useState<"input" | "running" | "done">("input");
 
   // 생성 결과
-  const [createdId,     setCreatedId]     = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [createdStatus, setCreatedStatus] = useState<string | null>(null);
-  const [createdError,  setCreatedError]  = useState<string | null>(null);
+  const [createdError, setCreatedError] = useState<string | null>(null);
 
   // 기존 데이터 로드
   const { data: txn } = useTransaction(txnId);
-  const { data: defaultSections, isLoading: isLoadingSections } = useDefaultLDDSections();
+  const { data: defaultSections, isLoading: isLoadingSections } =
+    useDefaultLDDSections();
 
   // 자동 채우기
   useEffect(() => {
     if (!txn) return;
-    if (txn.target_company_name && !targetCompany) setTargetCompany(txn.target_company_name);
+    if (txn.target_company_name && !targetCompany)
+      setTargetCompany(txn.target_company_name);
     if (txn.name && !title) {
       const typeLabel = LDD_REPORT_TYPE_LABELS[reportType];
-      setTitle(`[${typeLabel}] ${txn.target_company_name ?? txn.name} 법률실사보고서`);
+      setTitle(
+        `[${typeLabel}] ${txn.target_company_name ?? txn.name} 법률실사보고서`,
+      );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txn]);
 
   useEffect(() => {
     if (defaultSections && sections.length === 0) {
       setSections(defaultSections);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultSections]);
 
   const createMut = useCreateLDDReport(txnId);
@@ -147,17 +166,20 @@ export default function CreateLDDReportPage() {
     if (!txnId) return;
     try {
       const report = await createMut.mutateAsync({
-        title:          title.trim(),
-        report_type:    reportType,
+        title: title.trim(),
+        report_type: reportType,
         target_company: targetCompany.trim() || undefined,
-        dd_period:      ddPeriod.trim() || undefined,
-        law_firm:       lawFirm.trim() || undefined,
-        prepared_by:    preparedBy.trim() || undefined,
-        sections:       sections.length > 0 ? sections : undefined,
+        dd_period: ddPeriod.trim() || undefined,
+        law_firm: lawFirm.trim() || undefined,
+        prepared_by: preparedBy.trim() || undefined,
+        sections: sections.length > 0 ? sections : undefined,
       });
       setCreatedId(report.id);
       setCreatedStatus(report.status);
       if (report.error_message) setCreatedError(report.error_message);
+      if (report.status === "REVIEW") {
+        navigate(`/ma/transactions/${txnId}?tab=ldd&review_report_id=${report.id}`);
+      }
     } catch {
       // 에러는 useMutation onError에서 toast 처리
     }
@@ -176,7 +198,9 @@ export default function CreateLDDReportPage() {
     setAiStep("running");
     try {
       const report = await createAutoMut.mutateAsync({
-        title: title.trim() || `[AI 자동 분석] ${targetCompany || "대상회사"} 법률실사보고서`,
+        title:
+          title.trim() ||
+          `[AI 자동 분석] ${targetCompany || "대상회사"} 법률실사보고서`,
         report_type: reportType,
         source_dir: sourceDir.trim(),
         target_company: targetCompany.trim() || undefined,
@@ -198,12 +222,15 @@ export default function CreateLDDReportPage() {
   // 이슈 카운트 계산 (미리보기용)
   const issueCount = sections.reduce(
     (acc, sec) => acc + sec.items.filter((i) => i.status === "ISSUE").length,
-    0
+    0,
   );
   const criticalCount = sections.reduce(
     (acc, sec) =>
-      acc + sec.items.filter((i) => i.status === "ISSUE" && i.issue_level === "CRITICAL").length,
-    0
+      acc +
+      sec.items.filter(
+        (i) => i.status === "ISSUE" && i.issue_level === "CRITICAL",
+      ).length,
+    0,
   );
 
   return (
@@ -225,9 +252,12 @@ export default function CreateLDDReportPage() {
       {mode === "select" && (
         <div className="space-y-5">
           <div className="rounded-xl border border-border bg-white p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-text-primary">작성 방법 선택</h2>
+            <h2 className="text-sm font-semibold text-text-primary">
+              작성 방법 선택
+            </h2>
             <p className="text-xs text-text-secondary">
-              DDRL 체크리스트를 직접 작성하거나, 실사자료를 AI가 자동 분석하여 보고서를 생성할 수 있습니다.
+              DDRL 체크리스트를 직접 작성하거나, 실사자료를 AI가 자동 분석하여
+              보고서를 생성할 수 있습니다.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <button
@@ -239,7 +269,9 @@ export default function CreateLDDReportPage() {
                   <PenTool className="h-6 w-6 text-text-secondary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-text-primary">수동 작성</p>
+                  <p className="text-sm font-semibold text-text-primary">
+                    수동 작성
+                  </p>
                   <p className="text-xs text-text-tertiary mt-1">
                     DDRL 체크리스트를 항목별로 직접 검토하고 이슈를 기재합니다
                   </p>
@@ -254,9 +286,11 @@ export default function CreateLDDReportPage() {
                   <Brain className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-text-primary">AI 자동 분석</p>
+                  <p className="text-sm font-semibold text-text-primary">
+                    AI 자동 분석
+                  </p>
                   <p className="text-xs text-text-tertiary mt-1">
-                    실사자료 폴더를 지정하면 AI가 52개 항목을 자동 분석합니다
+                    실사자료 폴더를 지정하면 AI가 53개 항목을 자동 분석합니다
                   </p>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
@@ -288,7 +322,9 @@ export default function CreateLDDReportPage() {
 
                 {/* 보고서 유형 */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-secondary">보고서 유형</label>
+                  <label className="text-xs font-medium text-text-secondary">
+                    보고서 유형
+                  </label>
                   <div className="flex gap-3">
                     {(["FULL", "REDFLAG"] as LDDReportType[]).map((type) => (
                       <button
@@ -324,14 +360,17 @@ export default function CreateLDDReportPage() {
                     </div>
                   </div>
                   <p className="text-[11px] text-text-tertiary">
-                    Excel, PDF, DOCX, HWP 파일이 포함된 실사자료 폴더 경로를 입력하세요
+                    Excel, PDF, DOCX, HWP 파일이 포함된 실사자료 폴더 경로를
+                    입력하세요
                   </p>
                 </div>
 
                 {/* 기본 정보 (축약) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-text-secondary">대상회사</label>
+                    <label className="text-xs font-medium text-text-secondary">
+                      대상회사
+                    </label>
                     <input
                       value={targetCompany}
                       onChange={(e) => setTargetCompany(e.target.value)}
@@ -340,7 +379,9 @@ export default function CreateLDDReportPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-text-secondary">법무법인</label>
+                    <label className="text-xs font-medium text-text-secondary">
+                      법무법인
+                    </label>
                     <input
                       value={lawFirm}
                       onChange={(e) => setLawFirm(e.target.value)}
@@ -352,14 +393,20 @@ export default function CreateLDDReportPage() {
               </div>
 
               <div className="flex justify-between">
-                <Button variant="ghost" icon={ArrowLeft} onClick={() => setMode("select")}>
+                <Button
+                  variant="ghost"
+                  icon={ArrowLeft}
+                  onClick={() => setMode("select")}
+                >
                   돌아가기
                 </Button>
                 <Button
                   icon={Brain}
                   onClick={handleAiGenerate}
                   loading={createAutoMut.isPending}
-                  disabled={!sourceDir.trim() || !txnId || createAutoMut.isPending}
+                  disabled={
+                    !sourceDir.trim() || !txnId || createAutoMut.isPending
+                  }
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   {createAutoMut.isPending ? "분석 중..." : "AI 자동 분석 시작"}
@@ -373,15 +420,15 @@ export default function CreateLDDReportPage() {
               <div className="flex flex-col items-center gap-3 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Ralph Loop AI 분석 진행 중...</p>
+                  <p className="text-sm font-medium text-text-primary">
+                    Ralph Loop AI 분석 진행 중...
+                  </p>
                   <p className="text-xs text-text-tertiary mt-1">
-                    실사자료를 파싱하고 52개 DDRL 항목을 자동 분석합니다
+                    실사자료를 파싱하고 53개 DDRL 항목을 자동 분석합니다
                   </p>
                 </div>
               </div>
-              {createdId && (
-                <RalphLoopProgress sessionId={createdId} />
-              )}
+              {createdId && <RalphLoopProgress sessionId={createdId} />}
             </div>
           )}
 
@@ -391,8 +438,12 @@ export default function CreateLDDReportPage() {
                 <CheckCircle className="h-8 w-8 text-emerald-600" />
               </div>
               <div>
-                <p className="text-base font-semibold text-text-primary">AI 자동 분석 완료</p>
-                <p className="text-sm text-text-secondary">Ralph Loop이 실사자료를 분석하여 LDD 보고서를 생성했습니다</p>
+                <p className="text-base font-semibold text-text-primary">
+                  AI 자동 분석 완료
+                </p>
+                <p className="text-sm text-text-secondary">
+                  Ralph Loop이 실사자료를 분석하여 LDD 보고서를 생성했습니다
+                </p>
               </div>
               <div className="flex gap-3">
                 <a
@@ -416,10 +467,22 @@ export default function CreateLDDReportPage() {
                 <AlertCircle className="h-8 w-8 text-negative" />
               </div>
               <div>
-                <p className="text-base font-semibold text-text-primary">AI 분석 실패</p>
-                {createdError && <p className="text-sm text-text-secondary max-w-md">{createdError}</p>}
+                <p className="text-base font-semibold text-text-primary">
+                  AI 분석 실패
+                </p>
+                {createdError && (
+                  <p className="text-sm text-text-secondary max-w-md">
+                    {createdError}
+                  </p>
+                )}
               </div>
-              <Button icon={ArrowLeft} onClick={() => { setAiStep("input"); setCreatedId(null); }}>
+              <Button
+                icon={ArrowLeft}
+                onClick={() => {
+                  setAiStep("input");
+                  setCreatedId(null);
+                }}
+              >
                 다시 시도
               </Button>
             </div>
@@ -438,7 +501,9 @@ export default function CreateLDDReportPage() {
       {mode === "manual" && step === 0 && (
         <div className="space-y-5">
           <div className="rounded-xl border border-border bg-white p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-text-primary">보고서 기본 정보</h2>
+            <h2 className="text-sm font-semibold text-text-primary">
+              보고서 기본 정보
+            </h2>
 
             {/* 보고서 유형 */}
             <div className="space-y-1.5">
@@ -460,7 +525,9 @@ export default function CreateLDDReportPage() {
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      {type === "REDFLAG" && <ShieldAlert className="h-4 w-4" />}
+                      {type === "REDFLAG" && (
+                        <ShieldAlert className="h-4 w-4" />
+                      )}
                       <span>{LDD_REPORT_TYPE_LABELS[type]}</span>
                     </div>
                     <p className="mt-1 text-xs font-normal text-text-tertiary">
@@ -489,7 +556,9 @@ export default function CreateLDDReportPage() {
             <div className="grid grid-cols-2 gap-4">
               {/* 대상회사 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">대상회사</label>
+                <label className="text-xs font-medium text-text-secondary">
+                  대상회사
+                </label>
                 <input
                   value={targetCompany}
                   onChange={(e) => setTargetCompany(e.target.value)}
@@ -500,7 +569,9 @@ export default function CreateLDDReportPage() {
 
               {/* 실사기간 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">실사기간</label>
+                <label className="text-xs font-medium text-text-secondary">
+                  실사기간
+                </label>
                 <input
                   value={ddPeriod}
                   onChange={(e) => setDdPeriod(e.target.value)}
@@ -511,7 +582,9 @@ export default function CreateLDDReportPage() {
 
               {/* 법무법인 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">법무법인</label>
+                <label className="text-xs font-medium text-text-secondary">
+                  법무법인
+                </label>
                 <input
                   value={lawFirm}
                   onChange={(e) => setLawFirm(e.target.value)}
@@ -522,7 +595,9 @@ export default function CreateLDDReportPage() {
 
               {/* 담당변호사 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">담당변호사</label>
+                <label className="text-xs font-medium text-text-secondary">
+                  담당변호사
+                </label>
                 <input
                   value={preparedBy}
                   onChange={(e) => setPreparedBy(e.target.value)}
@@ -536,7 +611,10 @@ export default function CreateLDDReportPage() {
           {!txnId && (
             <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>거래(Transaction)가 선택되지 않았습니다. 보고서를 저장하려면 거래가 필요합니다.</span>
+              <span>
+                거래(Transaction)가 선택되지 않았습니다. 보고서를 저장하려면
+                거래가 필요합니다.
+              </span>
             </div>
           )}
 
@@ -568,7 +646,8 @@ export default function CreateLDDReportPage() {
                     DDRL 체크리스트 ({sections.length}개 섹션)
                   </h2>
                   <p className="text-xs text-text-secondary">
-                    각 항목의 검토 결과를 입력하세요. ISSUE 선택 시 이슈 등급과 발견사항을 필수 기재하세요.
+                    각 항목의 검토 결과를 입력하세요. ISSUE 선택 시 이슈 등급과
+                    발견사항을 필수 기재하세요.
                   </p>
                 </div>
                 {issueCount > 0 && (
@@ -591,7 +670,11 @@ export default function CreateLDDReportPage() {
                 <Button variant="ghost" icon={ArrowLeft} onClick={handleBack}>
                   기본 정보 수정
                 </Button>
-                <Button icon={ArrowRight} iconPosition="right" onClick={handleToConfirm}>
+                <Button
+                  icon={ArrowRight}
+                  iconPosition="right"
+                  onClick={handleToConfirm}
+                >
                   확인 및 생성
                 </Button>
               </div>
@@ -607,7 +690,9 @@ export default function CreateLDDReportPage() {
           {!createdId && (
             <>
               <div className="rounded-xl border border-border bg-white p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-text-primary">생성 정보 확인</h3>
+                <h3 className="text-sm font-semibold text-text-primary">
+                  생성 정보 확인
+                </h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-xs text-text-tertiary">보고서 유형</p>
@@ -622,13 +707,17 @@ export default function CreateLDDReportPage() {
                   {targetCompany && (
                     <div>
                       <p className="text-xs text-text-tertiary">대상회사</p>
-                      <p className="font-medium text-text-primary">{targetCompany}</p>
+                      <p className="font-medium text-text-primary">
+                        {targetCompany}
+                      </p>
                     </div>
                   )}
                   {ddPeriod && (
                     <div>
                       <p className="text-xs text-text-tertiary">실사기간</p>
-                      <p className="font-medium text-text-primary">{ddPeriod}</p>
+                      <p className="font-medium text-text-primary">
+                        {ddPeriod}
+                      </p>
                     </div>
                   )}
                   {lawFirm && (
@@ -640,30 +729,55 @@ export default function CreateLDDReportPage() {
                   {preparedBy && (
                     <div>
                       <p className="text-xs text-text-tertiary">담당변호사</p>
-                      <p className="font-medium text-text-primary">{preparedBy}</p>
+                      <p className="font-medium text-text-primary">
+                        {preparedBy}
+                      </p>
                     </div>
                   )}
                 </div>
 
                 {/* 체크리스트 요약 */}
                 <div className="border-t border-border pt-3">
-                  <p className="text-xs text-text-tertiary mb-2">체크리스트 요약</p>
+                  <p className="text-xs text-text-tertiary mb-2">
+                    체크리스트 요약
+                  </p>
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { label: "전체", value: sections.reduce((a, s) => a + s.items.length, 0), color: "text-text-primary" },
-                      { label: "이슈", value: issueCount, color: "text-negative" },
+                      {
+                        label: "전체",
+                        value: sections.reduce((a, s) => a + s.items.length, 0),
+                        color: "text-text-primary",
+                      },
+                      {
+                        label: "이슈",
+                        value: issueCount,
+                        color: "text-negative",
+                      },
                       {
                         label: "미검토",
-                        value: sections.reduce((a, s) => a + s.items.filter((i) => i.status === "PENDING").length, 0),
+                        value: sections.reduce(
+                          (a, s) =>
+                            a +
+                            s.items.filter((i) => i.status === "PENDING")
+                              .length,
+                          0,
+                        ),
                         color: "text-yellow-600",
                       },
                       {
                         label: "이상없음",
-                        value: sections.reduce((a, s) => a + s.items.filter((i) => i.status === "OK").length, 0),
+                        value: sections.reduce(
+                          (a, s) =>
+                            a + s.items.filter((i) => i.status === "OK").length,
+                          0,
+                        ),
                         color: "text-positive",
                       },
                     ].map(({ label, value, color }) => (
-                      <div key={label} className="rounded-lg border border-border p-2.5 text-center">
+                      <div
+                        key={label}
+                        className="rounded-lg border border-border p-2.5 text-center"
+                      >
                         <p className={`text-lg font-bold ${color}`}>{value}</p>
                         <p className="text-xs text-text-tertiary">{label}</p>
                       </div>
@@ -692,7 +806,9 @@ export default function CreateLDDReportPage() {
           {createMut.isPending && (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <Loader2 className="h-10 w-10 animate-spin text-accent-primary" />
-              <p className="text-sm font-medium text-text-primary">LDD 보고서를 생성하고 있습니다...</p>
+              <p className="text-sm font-medium text-text-primary">
+                LDD 보고서를 생성하고 있습니다...
+              </p>
               <p className="text-xs text-text-tertiary">잠시 기다려 주세요</p>
             </div>
           )}
@@ -704,7 +820,9 @@ export default function CreateLDDReportPage() {
                 <CheckCircle className="h-8 w-8 text-emerald-600" />
               </div>
               <div>
-                <p className="text-base font-semibold text-text-primary">LDD 보고서 생성 완료</p>
+                <p className="text-base font-semibold text-text-primary">
+                  LDD 보고서 생성 완료
+                </p>
                 <p className="text-sm text-text-secondary">{title}</p>
                 {issueCount > 0 && (
                   <p className="text-xs text-text-tertiary mt-1">
@@ -735,9 +853,13 @@ export default function CreateLDDReportPage() {
                 <AlertCircle className="h-8 w-8 text-negative" />
               </div>
               <div>
-                <p className="text-base font-semibold text-text-primary">보고서 생성 실패</p>
+                <p className="text-base font-semibold text-text-primary">
+                  보고서 생성 실패
+                </p>
                 {createdError && (
-                  <p className="text-sm text-text-secondary max-w-md">{createdError}</p>
+                  <p className="text-sm text-text-secondary max-w-md">
+                    {createdError}
+                  </p>
                 )}
               </div>
               <div className="flex gap-3">

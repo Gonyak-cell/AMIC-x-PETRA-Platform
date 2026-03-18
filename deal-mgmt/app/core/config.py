@@ -92,6 +92,14 @@ class Settings(BaseSettings):
     LDD_STAGE7_QA: bool = True  # 최종 QA
     LDD_RISK_GAP_AUTO_RESOLVE: int = 1  # gap≤N 자동 해결
     LDD_MAX_COST_USD: float = 15.0  # 세션 비용 한도
+    LDD_TEMPLATE_SLOTFILL_ENABLED: bool = True  # 부동문자 bank + slot-fill 렌더링 활성화
+    LDD_TEMPLATE_SLOTFILL_USE_LLM: bool = False  # L3 슬롯에 한해 LLM 보조 사용
+    LDD_TEMPLATE_SLOTFILL_DIR: str = ""  # 비어 있으면 templates/ldd_slotfill 사용
+
+    # LDD QA Gate
+    LDD_MIN_DRAFT_SCORE: int = 3  # 초안 최소 품질 (1-5), REVIEW 시 경고
+    LDD_MIN_FINAL_SCORE: int = 3  # 최종 최소 품질 (1-5), READY 차단
+    LDD_QA_CRITICAL_BLOCKS_READY: bool = True  # critical 이슈 시 READY 차단
 
 
 settings = Settings()

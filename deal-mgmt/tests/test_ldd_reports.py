@@ -114,7 +114,7 @@ async def test_create_full_ldd_report_with_default_sections(client):
     assert data["title"] == "프로젝트 테스트 법률실사보고서"
     assert data["target_company"] == "주식회사 대상기업"
     assert data["transaction_id"] == txn_id
-    assert data["status"] in ("READY", "FAILED", "GENERATING")  # 렌더링 결과
+    assert data["status"] == "REVIEW"
     assert data["id"] is not None
     # 기본 섹션 적용 확인
     assert data["total_items"] > 0
@@ -133,6 +133,7 @@ async def test_create_redflag_ldd_report(client):
     assert resp.status_code == 201
     data = resp.json()
     assert data["report_type"] == "REDFLAG"
+    assert data["status"] == "REVIEW"
 
 
 async def test_create_ldd_report_with_custom_sections(client):

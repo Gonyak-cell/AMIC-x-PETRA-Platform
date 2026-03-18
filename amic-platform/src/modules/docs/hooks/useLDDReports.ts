@@ -74,7 +74,9 @@ export function useCreateLDDReport(txnId: string) {
     },
     onSuccess: (report) => {
       qc.invalidateQueries({ queryKey: ["ma", "ldd-reports", txnId] });
-      if (report.status === "READY") {
+      if (report.status === "REVIEW") {
+        toast.success("LDD 초안이 생성되었습니다. 리뷰를 진행해주세요.");
+      } else if (report.status === "READY") {
         toast.success("LDD 보고서가 생성되었습니다.");
       } else if (report.status === "FAILED") {
         toast.error(`보고서 생성에 실패했습니다: ${report.error_message ?? "알 수 없는 오류"}`);

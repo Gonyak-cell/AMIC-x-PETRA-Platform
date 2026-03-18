@@ -211,7 +211,7 @@ class LDDGuardrails:
         sections: list[dict[str, Any]],
         result: GuardrailResult,
     ) -> None:
-        """item_id가 52개 DDRL 항목에 존재하는지 검증."""
+        """item_id가 53개 DDRL 항목에 존재하는지 검증."""
         found_ids: set[str] = set()
         rule = "ITEM_ID_VALIDITY"
 
