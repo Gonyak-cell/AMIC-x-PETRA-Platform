@@ -202,12 +202,14 @@ async def test_compute_counts_with_review_sections(client):
 
 
 async def test_review_item_requires_review_status(client, async_session):
-    """REVIEW 상태가 아닌 보고서에 리뷰 시도 시 409를 반환해야 한다."""
+    """REVIEW 상태가 아닌 보고서에 리뷰 시도 시 422를 반환해야 한다."""
     txn_id = await _create_txn(client)
     report = await _create_review_report(client, txn_id)
     report_id = report["id"]
-    # 보고서는 READY 상태 (docxtpl 렌더링 후)
     first_item_id = report["sections"][0]["items"][0]["item_id"]
+
+    # 보고서를 DRAFT 상태로 전환하여 비-REVIEW 상태 재현
+    await _set_report_status(async_session, report_id, "DRAFT")
 
     resp = await client.put(
         f"/api/v1/transactions/{txn_id}/ldd-reports/{report_id}/items/{first_item_id}/review",
