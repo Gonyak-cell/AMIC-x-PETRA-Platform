@@ -106,10 +106,13 @@ export default function MyProjectsSection() {
       {/* ── Peek carousel ── */}
       {!isLoading && !isError && active && (
         <div
-          className="bg-white rounded-2xl overflow-hidden flex flex-col"
+          className="rounded-2xl overflow-hidden flex flex-col border border-white/40"
           style={{
+            background: "rgba(255,255,255,0.72)",
+            backdropFilter: "blur(24px) saturate(1.4)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.4)",
             boxShadow:
-              "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04)",
+              "0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.15)",
           }}
         >
           <div className="flex flex-col sm:flex-row min-w-0">
@@ -176,7 +179,7 @@ export default function MyProjectsSection() {
             </div>
 
             {/* Vertical divider */}
-            <div className="hidden sm:block w-px bg-gray-200 self-stretch" />
+            <div className="hidden sm:block w-px bg-gray-200/50 self-stretch" />
 
             {/* Right: summary panel */}
             <div className="sm:w-[296px] shrink-0">
@@ -186,9 +189,9 @@ export default function MyProjectsSection() {
 
           {/* Bottom: counter bar */}
           {len > 1 && (
-            <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-4">
+            <div className="border-t border-white/30 px-5 py-3 flex items-center gap-4">
               {/* Progress bar */}
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-black/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent rounded-full transition-all duration-300"
                   style={{ width: `${((activeIndex + 1) / len) * 100}%` }}

@@ -1,7 +1,6 @@
 /** MY PROJECTS — 캐러셀 프로젝트 카드 (Figma 카드형 위젯 기반) */
 
 import { Badge } from "@/components/ui";
-
 import { PHASE_CONFIG } from "@/modules/ma/constants";
 import { TRANSACTION_STATUS_VARIANT } from "@/modules/ma/constants/status-variants";
 import { TRANSACTION_STATUS_OPTIONS } from "@/modules/ma/constants/transaction";
@@ -34,8 +33,10 @@ export default function ProjectCarouselCard({
     <button
       type="button"
       onClick={onClick}
-      className="relative w-full overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] text-left bg-[#0F6B3E]"
+      className="relative w-full overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] text-left"
       style={{
+        background:
+          "radial-gradient(ellipse at 75% 50%, rgba(26,140,82,0.6) 0%, transparent 60%), radial-gradient(ellipse at 20% 70%, rgba(15,107,62,0.4) 0%, transparent 50%), radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.3) 0%, transparent 35%), linear-gradient(150deg, #0d5a33 0%, #128850 35%, #1a8c52 65%, #0F6B3E 100%)",
         boxShadow:
           "0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08)",
       }}
@@ -45,9 +46,7 @@ export default function ProjectCarouselCard({
         className="absolute inset-0 rounded-2xl border border-white/30 pointer-events-none"
         style={{
           background:
-            "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.08) 100%)",
-          backdropFilter: "blur(20px) saturate(1.6)",
-          WebkitBackdropFilter: "blur(20px) saturate(1.6)",
+            "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%)",
           boxShadow:
             "inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06)",
         }}

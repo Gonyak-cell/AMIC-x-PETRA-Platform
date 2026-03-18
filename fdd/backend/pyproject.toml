@@ -1,6 +1,6 @@
 [project]
 name = "auto-fdd-backend"
-version = "0.14.0"
+version = "0.15.0"
 description = "Financial Due Diligence Automation Backend"
 requires-python = ">=3.12"
 dependencies = [
