@@ -41,7 +41,6 @@ interface UseWorkspaceTabsOptions {
   activeTab: string;
   /** rail tool URL 접근 시 primary content로 표시할 탭 (?baseTab= query) */
   baseTab?: string;
-  isClient: boolean;
 }
 
 export function useWorkspaceTabs({
@@ -50,7 +49,6 @@ export function useWorkspaceTabs({
   viewedPhase,
   activeTab,
   baseTab,
-  isClient,
 }: UseWorkspaceTabsOptions) {
   // primary tab bar에는 rail tools 미포함
   const allTabs: TabItem[] = useMemo(
@@ -95,9 +93,7 @@ export function useWorkspaceTabs({
     ? PHASE_VISIBLE_TABS[effectivePhase]
     : allTabs.map((t) => t.id);
 
-  const tabs = isClient
-    ? [{ id: "overview", label: "대시보드" }]
-    : allTabs.filter((t) => visibleTabIds.includes(t.id));
+  const tabs = allTabs.filter((t) => visibleTabIds.includes(t.id));
 
   // rail tool URL 접근 시 baseTab 또는 phase 기본 탭을 primary content로 사용
   const isRailTool = (RAIL_TOOL_IDS as readonly string[]).includes(activeTab);

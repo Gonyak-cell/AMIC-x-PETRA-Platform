@@ -11,6 +11,7 @@ import EngagementDocUpload from "./EngagementDocUpload";
 
 interface Props {
   txn: Transaction;
+  canWrite?: boolean;
 }
 
 // ── 유틸 ──────────────────────────────────────────────────
@@ -57,6 +58,7 @@ interface SectionHeaderProps {
   docName: string;
   uploadOpen: boolean;
   onUploadToggle: () => void;
+  canWrite?: boolean;
 }
 
 function SectionHeader({
@@ -65,6 +67,7 @@ function SectionHeader({
   docName,
   uploadOpen,
   onUploadToggle,
+  canWrite = true,
 }: SectionHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-3">
@@ -76,7 +79,7 @@ function SectionHeader({
           <CheckCircle2 className="h-3.5 w-3.5" />
           업로드 완료
         </span>
-      ) : (
+      ) : canWrite ? (
         <button
           type="button"
           onClick={onUploadToggle}
@@ -85,7 +88,7 @@ function SectionHeader({
           <UploadCloud className="h-3 w-3" />
           {uploadOpen ? "닫기" : `${docName}를 업로드하세요`}
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -307,7 +310,7 @@ function BizRegInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 
-export default function CompanyInfoCard({ txn }: Props) {
+export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
   const ci = txn.corporate_info as unknown as CorporateDocsExtractedData | null;
   const [showRegistryUpload, setShowRegistryUpload] = useState(false);
   const [showBizRegUpload, setShowBizRegUpload] = useState(false);
@@ -332,6 +335,7 @@ export default function CompanyInfoCard({ txn }: Props) {
             docName="법인등기부"
             uploadOpen={showRegistryUpload}
             onUploadToggle={() => setShowRegistryUpload((v) => !v)}
+            canWrite={canWrite}
           />
           {hasRegistry && ci ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-0">
@@ -355,7 +359,8 @@ export default function CompanyInfoCard({ txn }: Props) {
               </div>
             </div>
           ) : (
-            showRegistryUpload && (
+            showRegistryUpload &&
+            canWrite && (
               <div className="mt-3">
                 <EngagementDocUpload
                   txnId={txn.id}
@@ -377,13 +382,15 @@ export default function CompanyInfoCard({ txn }: Props) {
             docName="사업자등록증"
             uploadOpen={showBizRegUpload}
             onUploadToggle={() => setShowBizRegUpload((v) => !v)}
+            canWrite={canWrite}
           />
           {hasBizReg && ci ? (
             <div className="mt-3">
               <BizRegInfoSection ci={ci} />
             </div>
           ) : (
-            showBizRegUpload && (
+            showBizRegUpload &&
+            canWrite && (
               <div className="mt-3">
                 <EngagementDocUpload
                   txnId={txn.id}

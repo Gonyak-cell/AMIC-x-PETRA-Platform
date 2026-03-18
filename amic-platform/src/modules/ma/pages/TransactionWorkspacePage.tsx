@@ -34,7 +34,12 @@ import SecondaryRail from "@/modules/ma/components/SecondaryRail";
 import { RAIL_TOOL_IDS, type RailToolId } from "@/modules/ma/constants";
 import { buildRailClosePath } from "@/modules/ma/pages/workspace/railRouteHelpers";
 
-import ClientPortalDashboard from "@/modules/ma/components/ClientPortalDashboard";
+import {
+  useOnboarding,
+  OnboardingOverlay,
+  CLIENT_OVERVIEW_STEPS,
+} from "@/components/onboarding";
+import { HelpCircle } from "lucide-react";
 const MeetingLogsTab = lazy(
   () => import("@/modules/ma/components/meetings/MeetingLogsTab"),
 );
@@ -94,8 +99,11 @@ const _redirectedTxnIds = new Set<string>();
 export default function TransactionWorkspacePage() {
   const { txnId, "*": splat } = useParams<{ txnId: string; "*": string }>();
   const navigate = useNavigate();
-  const { canWrite, isClient } = useAuth();
+  const { user, canWrite, isClient } = useAuth();
   const id = txnId ?? "";
+
+  // CLIENT 온보딩 (Overview 탭에서만 활성화)
+  const onboarding = useOnboarding(user?.id ?? "", id, CLIENT_OVERVIEW_STEPS);
 
   // URL 기반 탭 결정
   const activeTab = VALID_TABS.includes(splat ?? "") ? splat! : "overview";
@@ -152,8 +160,7 @@ export default function TransactionWorkspacePage() {
     if (!txn?.phase) return;
     if (_redirectedTxnIds.has(id)) return;
     _redirectedTxnIds.add(id);
-    // CLIENT는 항상 Overview에 머무름 (온보딩 실행을 위해)
-    if (isClient) return;
+    // CLIENT는 첫 접속 시 Overview에 머무르되, 이후 phase 기본 탭으로 이동 가능
     // URL에 이미 탭이 있거나 다른 단계를 보는 중이면 리다이렉트 안 함
     if (splat || viewedPhase) return;
     const phase = txn.phase as TransactionPhase;
@@ -206,7 +213,6 @@ export default function TransactionWorkspacePage() {
     viewedPhase,
     activeTab,
     baseTab,
-    isClient: isClient ?? false,
   });
 
   const activeRailTool = isRailTool
@@ -239,7 +245,7 @@ export default function TransactionWorkspacePage() {
       />
 
       {/* Pipeline Flow */}
-      <Card padding="md">
+      <Card padding="md" data-onboarding="pipeline-flow">
         <div className="flex items-center gap-3 mb-3">
           <Badge variant={TRANSACTION_STATUS_VARIANT[txn.status]}>
             {txn.status}
@@ -303,18 +309,32 @@ export default function TransactionWorkspacePage() {
       {/* 탭 + SecondaryRail (flex-row) */}
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0 space-y-6">
-          <Tabs
-            tabs={tabs}
-            activeTab={safeActiveTab}
-            onTabChange={handleTabChange}
-            variant="underline"
-          />
+          <div
+            className="flex items-center gap-2"
+            data-onboarding="workspace-tabs"
+          >
+            <div className="flex-1 min-w-0">
+              <Tabs
+                tabs={tabs}
+                activeTab={safeActiveTab}
+                onTabChange={handleTabChange}
+                variant="underline"
+              />
+            </div>
+            {isClient && (
+              <button
+                type="button"
+                onClick={onboarding.restart}
+                className="shrink-0 p-1.5 rounded-md text-text-muted hover:text-text-default hover:bg-surface-secondary transition-colors"
+                title="가이드 다시보기"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* ── Overview 탭 ─────────────────────────────── */}
-          {safeActiveTab === "overview" && isClient && (
-            <ClientPortalDashboard txnId={id} />
-          )}
-          {safeActiveTab === "overview" && !isClient && (
+          {safeActiveTab === "overview" && (
             <Suspense fallback={<Spinner size="lg" />}>
               <TransactionOverviewTab
                 txnId={id}
@@ -385,15 +405,13 @@ export default function TransactionWorkspacePage() {
           </Suspense>
         </div>
 
-        {/* SecondaryRail — cross-phase tools 아이콘 바 (클라이언트 제외) */}
-        {!isClient && (
-          <SecondaryRail
-            txnId={id}
-            txnPhase={txn.phase as TransactionPhase}
-            activeRailTool={activeRailTool}
-            baseTab={safeActiveTab}
-          />
-        )}
+        {/* SecondaryRail — cross-phase tools 아이콘 바 */}
+        <SecondaryRail
+          txnId={id}
+          txnPhase={txn.phase as TransactionPhase}
+          activeRailTool={activeRailTool}
+          baseTab={safeActiveTab}
+        />
       </div>
 
       {/* Rail Tool SlidePanel */}
@@ -423,6 +441,18 @@ export default function TransactionWorkspacePage() {
           )}
         </Suspense>
       </SlidePanel>
+
+      {/* CLIENT 온보딩 오버레이 */}
+      {isClient && onboarding.isActive && onboarding.step && (
+        <OnboardingOverlay
+          step={onboarding.step}
+          currentIndex={onboarding.currentStep}
+          totalSteps={onboarding.totalSteps}
+          onNext={onboarding.next}
+          onPrev={onboarding.prev}
+          onSkip={onboarding.skip}
+        />
+      )}
     </div>
   );
 }

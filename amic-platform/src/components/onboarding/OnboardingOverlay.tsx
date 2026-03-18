@@ -79,11 +79,16 @@ export function OnboardingOverlay({
       </div>
       {/* Tooltip */}
       <div
-        className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 p-4 animate-in fade-in-0 zoom-in-95 duration-200"
-        style={tooltipStyle}
+        className="fixed z-[9999] rounded-xl border-2 border-accent p-4 animate-in fade-in-0 zoom-in-95 duration-200"
+        style={{
+          ...tooltipStyle,
+          background: "linear-gradient(145deg, #ffffff 0%, #f8faf8 100%)",
+          boxShadow:
+            "0 20px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06), 0 0px 20px rgba(38,194,96,0.15)",
+        }}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-gray-400 font-medium">
+          <span className="text-xs text-accent font-medium">
             {currentIndex + 1} / {totalSteps}
           </span>
           <div className="flex items-center gap-2">
@@ -119,7 +124,7 @@ export function OnboardingOverlay({
           </button>
           <button
             onClick={onNext}
-            className="text-sm px-4 py-1.5 rounded-md bg-sky-500 text-white hover:bg-sky-600 font-medium"
+            className="text-sm px-4 py-1.5 rounded-md bg-accent text-white hover:bg-accent-hover font-medium"
           >
             {isLast ? "완료" : "다음"}
           </button>

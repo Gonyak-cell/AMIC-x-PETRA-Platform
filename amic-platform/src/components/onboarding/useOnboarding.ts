@@ -17,14 +17,25 @@ export function useOnboarding(
   const [activeSteps, setActiveSteps] = useState<OnboardingStep[]>([]);
 
   // Filter steps to only those with existing DOM targets
+  // Retry multiple times to wait for lazy-loaded components
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let attempt = 0;
+    const maxAttempts = 6;
+    const interval = 500;
+
+    const tryFilter = () => {
       const filtered = steps.filter(
         (s) => document.querySelector(s.targetSelector) !== null,
       );
       setActiveSteps(filtered);
-    }, 500);
-    return () => clearTimeout(timer);
+      attempt++;
+      if (filtered.length < steps.length && attempt < maxAttempts) {
+        timerId = setTimeout(tryFilter, interval);
+      }
+    };
+
+    let timerId = setTimeout(tryFilter, interval);
+    return () => clearTimeout(timerId);
   }, [steps]);
 
   // Check completion state
