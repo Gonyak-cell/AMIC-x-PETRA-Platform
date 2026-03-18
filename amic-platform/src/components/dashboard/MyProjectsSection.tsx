@@ -13,7 +13,9 @@ export default function MyProjectsSection() {
   const { projects, isLoading, isError, email } = useMyProjects();
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  // phase: null(정지) → "exit"(퇴장) → "enter"(등장) → null
+  const [phase, setPhase] = useState<"exit" | "enter" | null>(null);
+  const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [isAnimating, setIsAnimating] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -31,15 +33,25 @@ export default function MyProjectsSection() {
       if (isAnimating || len <= 1) return;
       setIsAnimating(true);
       setSlideDir(direction);
+      setPhase("exit");
 
-      // 슬라이드 아웃 후 인덱스 변경 → 슬라이드 인
+      // Phase 1: 현재 카드 퇴장 (250ms)
       setTimeout(() => {
+        // 인덱스 변경
         setActiveIndex((i) =>
           direction === "left" ? (i + 1) % len : (i - 1 + len) % len,
         );
-        setSlideDir(null);
-        setIsAnimating(false);
-      }, 250);
+        // Phase 2: 새 카드를 반대쪽에 즉시 배치 (트랜지션 없이)
+        setPhase("enter");
+
+        // Phase 3: 새 카드 슬라이드 인 (다음 프레임에서 트랜지션 시작)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setPhase(null);
+            setIsAnimating(false);
+          });
+        });
+      }, 200);
     },
     [isAnimating, len],
   );
@@ -107,19 +119,29 @@ export default function MyProjectsSection() {
                 </button>
               )}
 
-              {/* Card — slide animation */}
+              {/* Card — slide animation (exit → enter → idle) */}
               <div
                 ref={cardRef}
-                className="flex-1 min-w-0 transition-all duration-250 ease-out"
+                className="flex-1 min-w-0 overflow-hidden"
                 style={{
                   transform:
-                    slideDir === "left"
-                      ? "translateX(-110%)"
-                      : slideDir === "right"
-                        ? "translateX(110%)"
-                        : "translateX(0)",
-                  opacity: slideDir ? 0 : 1,
-                  transitionDuration: "250ms",
+                    phase === "exit"
+                      ? // 퇴장: 진행 방향으로 밀려남
+                        slideDir === "left"
+                        ? "translateX(-110%)"
+                        : "translateX(110%)"
+                      : phase === "enter"
+                        ? // 등장 대기: 반대쪽에 즉시 배치 (트랜지션 없이)
+                          slideDir === "left"
+                          ? "translateX(110%)"
+                          : "translateX(-110%)"
+                        : // 정지: 제자리
+                          "translateX(0)",
+                  opacity: phase === "enter" ? 0 : phase === "exit" ? 0 : 1,
+                  transition:
+                    phase === "enter"
+                      ? "none"
+                      : "transform 200ms ease-out, opacity 200ms ease-out",
                 }}
               >
                 <ProjectCarouselCard
