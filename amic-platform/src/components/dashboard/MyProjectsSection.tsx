@@ -35,7 +35,7 @@ export default function MyProjectsSection() {
       setSlideDir(direction);
       setPhase("exit");
 
-      // Phase 1: 현재 카드 퇴장 (250ms)
+      // Phase 1: 현재 카드 퇴장 (200ms)
       setTimeout(() => {
         // 인덱스 변경
         setActiveIndex((i) =>
@@ -44,13 +44,11 @@ export default function MyProjectsSection() {
         // Phase 2: 새 카드를 반대쪽에 즉시 배치 (트랜지션 없이)
         setPhase("enter");
 
-        // Phase 3: 새 카드 슬라이드 인 (다음 프레임에서 트랜지션 시작)
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setPhase(null);
-            setIsAnimating(false);
-          });
-        });
+        // Phase 3: 새 카드 슬라이드 인 (20ms 후 트랜지션 시작)
+        setTimeout(() => {
+          setPhase(null);
+          setIsAnimating(false);
+        }, 20);
       }, 200);
     },
     [isAnimating, len],

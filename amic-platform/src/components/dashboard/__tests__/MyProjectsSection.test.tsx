@@ -1,5 +1,5 @@
 import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
-import { fireEvent } from "@testing-library/react";
+import { act, fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
 import { mockUser } from "@/test/mocks/data";
@@ -77,6 +77,7 @@ describe("MyProjectsSection", () => {
   });
 
   it("wraps around when navigating past first/last project", async () => {
+    vi.useFakeTimers();
     useMockTransactions();
     renderWithProviders(<MyProjectsSection />, {
       authContext: { user: mockUser },
@@ -89,26 +90,31 @@ describe("MyProjectsSection", () => {
     // Counter shows 1 / 3 (Alpha, Gamma, Delta)
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
 
-    // Click prev on first item → wraps to last (Delta) — 250ms slide animation
+    // Click prev on first item → wraps to last (Delta)
     fireEvent.click(screen.getByLabelText("Previous project"));
-    await waitFor(() => {
-      expect(screen.getByText("3 / 3")).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
     expect(screen.getByText("Delta")).toBeInTheDocument();
 
     // Click next on last item → wraps to first (Alpha)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => {
-      expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
     expect(screen.getByText("Alpha")).toBeInTheDocument();
 
     // Click next → goes to second (Gamma)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => {
-      expect(screen.getByText("2 / 3")).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
+    expect(screen.getByText("2 / 3")).toBeInTheDocument();
     expect(screen.getByText("Gamma")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 
   it("shows empty state when no assigned projects", async () => {
@@ -183,6 +189,7 @@ describe("MyProjectsSection", () => {
   });
 
   it("shows correct My Role in summary panel", async () => {
+    vi.useFakeTimers();
     useMockTransactions();
     renderWithProviders(<MyProjectsSection />, {
       authContext: { user: mockUser },
@@ -193,18 +200,22 @@ describe("MyProjectsSection", () => {
       expect(screen.getByText("Lead Advisor")).toBeInTheDocument();
     });
 
-    // Navigate to Gamma (captain only) — 250ms slide animation
+    // Navigate to Gamma (captain only)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => {
-      expect(screen.getByText("Gamma")).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
+    expect(screen.getByText("Gamma")).toBeInTheDocument();
     expect(screen.getByText("Deal Captain")).toBeInTheDocument();
 
     // Navigate to Delta (both lead and captain)
     fireEvent.click(screen.getByLabelText("Next project"));
-    await waitFor(() => {
-      expect(screen.getByText("Delta")).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
+    expect(screen.getByText("Delta")).toBeInTheDocument();
     expect(screen.getByText("Lead Advisor / Deal Captain")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });
