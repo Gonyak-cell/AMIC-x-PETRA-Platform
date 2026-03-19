@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사업목적 2열 — 열 우선 순서 + 동적 텍스트</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-6" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+<div class="mx-auto max-w-5xl space-y-6">
+  <h1 class="text-xl font-bold text-slate-800">사업목적 — 열 우선 순서 + 1줄 표시 프리뷰</h1>
+
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-3">
+      <h3 class="text-base font-semibold text-slate-800">회사 정보</h3>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-semibold text-slate-500 uppercase">법인등기부</h4>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-0">
+          <!-- 좌측 -->
+          <div class="space-y-4 md:space-y-0 md:row-span-3" style="display:grid; grid-template-rows:subgrid;">
+            <dl class="grid gap-x-4 gap-y-2.5" style="grid-template-columns: 140px 1fr;">
+              <dt class="text-slate-500 text-sm">상호</dt><dd class="text-sm">(주)에이믹파트너스</dd>
+              <dt class="text-slate-500 text-sm">대표이사</dt><dd class="text-sm">김영태</dd>
+              <dt class="text-slate-500 text-sm">설립일</dt><dd class="text-sm">2020-05-15</dd>
+              <dt class="text-slate-500 text-sm">법인등록번호</dt><dd class="text-sm font-mono text-xs">110111-7654321</dd>
+              <dt class="text-slate-500 text-sm">본점 소재지</dt><dd class="text-sm">서울특별시 강남구 테헤란로 123, 15층</dd>
+            </dl>
+            <div class="hidden md:block border-t border-slate-200 my-6"></div>
+            <div class="border-t border-slate-200 pt-4 md:border-t-0 md:pt-0">
+              <h4 class="text-xs font-semibold text-slate-500 uppercase mb-3">자본 및 주식</h4>
+              <dl class="grid gap-x-4 gap-y-2.5" style="grid-template-columns: 140px 1fr;">
+                <dt class="text-slate-500 text-sm">자본금</dt><dd class="text-sm font-mono">50억 원</dd>
+                <dt class="text-slate-500 text-sm">발행주식총수</dt><dd class="text-sm font-mono">1,000,000주</dd>
+                <dt class="text-slate-500 text-sm">1주 금액</dt><dd class="text-sm font-mono">5,000원</dd>
+                <dt class="text-slate-500 text-sm">보통주</dt><dd class="text-sm font-mono">900,000주</dd>
+                <dt class="text-slate-500 text-sm">종류주</dt><dd class="text-sm font-mono">100,000주</dd>
+              </dl>
+            </div>
+          </div>
+
+          <!-- 우측 -->
+          <div class="space-y-4 md:space-y-0 md:row-span-3" style="display:grid; grid-template-rows:subgrid;">
+            <div class="border-t border-slate-200 pt-4 md:border-t-0 md:pt-0">
+              <h4 class="text-xs font-semibold text-slate-500 uppercase mb-3">임원 정보</h4>
+              <dl class="grid gap-x-4 gap-y-1.5" style="grid-template-columns: 140px 1fr;">
+                <dt class="flex items-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600">대표이사</span></dt>
+                <dd class="flex items-baseline gap-2 text-sm"><span class="font-medium">김영태</span><span class="text-slate-400 text-xs">1975.03.15</span></dd>
+                <dt class="flex items-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600">사내이사</span></dt>
+                <dd class="flex items-baseline gap-2 text-sm"><span class="font-medium">서정원</span><span class="text-slate-400 text-xs">1980.07.22</span></dd>
+                <dt class="flex items-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600">사외이사</span></dt>
+                <dd class="flex items-baseline gap-2 text-sm"><span class="font-medium">이현주</span><span class="text-slate-400 text-xs">1968.11.08</span></dd>
+                <dt class="flex items-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600">감사</span></dt>
+                <dd class="flex items-baseline gap-2 text-sm"><span class="font-medium">박보경</span><span class="text-slate-400 text-xs">1972.05.30</span></dd>
+              </dl>
+            </div>
+            <div class="hidden md:block border-t border-slate-200 my-6"></div>
+
+            <!-- ★ 사업목적 — 열 우선 2열 + text-xs + truncate -->
+            <div class="border-t border-slate-200 pt-4 md:border-t-0 md:pt-0">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase">
+                  사업목적 <span class="ml-1 text-slate-400 font-normal">(15건)</span>
+                </h4>
+                <button id="toggleBtn" onclick="togglePurposes()" class="text-xs text-blue-500 hover:text-blue-400 transition-colors">+5건 더보기</button>
+              </div>
+              <div id="purposeContainer" class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                <!-- 좌측 열: 1~5 -->
+                <ul class="space-y-1">
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="1. 소프트웨어 개발 및 판매업">&middot; 1. 소프트웨어 개발 및 판매업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="2. 정보통신업">&middot; 2. 정보통신업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="3. 인공지능(AI) 솔루션 개발 및 서비스업">&middot; 3. 인공지능(AI) 솔루션 개발 및 서비스업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="4. 데이터 분석 및 컨설팅업">&middot; 4. 데이터 분석 및 컨설팅업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="5. 클라우드 컴퓨팅 서비스업">&middot; 5. 클라우드 컴퓨팅 서비스업</li>
+                </ul>
+                <!-- 우측 열: 6~10 -->
+                <ul class="space-y-1">
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="6. 전자상거래업">&middot; 6. 전자상거래업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="7. 부동산 임대업">&middot; 7. 부동산 임대업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="8. 투자 자문업">&middot; 8. 투자 자문업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="9. 경영 컨설팅업">&middot; 9. 경영 컨설팅업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="10. 교육 서비스업">&middot; 10. 교육 서비스업</li>
+                </ul>
+              </div>
+              <!-- 확장 시 추가 항목 -->
+              <div id="purposeExtra" class="hidden mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                <ul class="space-y-1">
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="11. 연구개발업">&middot; 11. 연구개발업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="12. 광고 및 마케팅업">&middot; 12. 광고 및 마케팅업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="13. 무역업">&middot; 13. 무역업</li>
+                </ul>
+                <ul class="space-y-1">
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="14. 특허 및 지식재산권 관리업">&middot; 14. 특허 및 지식재산권 관리업</li>
+                  <li class="text-xs text-slate-600 leading-relaxed truncate" title="15. 위 각호에 부대되는 일체의 사업">&middot; 15. 위 각호에 부대되는 일체의 사업</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+    &#x2728; <strong>변경사항:</strong> (1) 열 우선 순서 — 1~5 좌측, 6~10 우측 (2) <code>text-xs</code> + <code>truncate</code>로 모든 항목 1줄 표시
+  </div>
+</div>
+
+<script>
+let expanded = false;
+function togglePurposes() {
+  expanded = !expanded;
+  const extra = document.getElementById('purposeExtra');
+  const btn = document.getElementById('toggleBtn');
+  if (expanded) {
+    extra.classList.remove('hidden');
+    extra.style.display = 'grid';
+    btn.textContent = '접기';
+  } else {
+    extra.classList.add('hidden');
+    extra.style.display = 'none';
+    btn.textContent = '+5건 더보기';
+  }
+}
+</script>
+</body>
+</html>

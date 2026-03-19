@@ -33,7 +33,13 @@ class LDDTemplateRenderer:
             text = self._resolve_base_refs(text, base_blocks)
 
         if template.conditional_blocks:
-            text = self._apply_conditional_blocks(text, template.conditional_blocks, industry, data)
+            text = self._apply_conditional_blocks(
+                text,
+                template.conditional_blocks,
+                industry,
+                data,
+                base_blocks=base_blocks,
+            )
 
         text = self._resolve_l2_slots(text, template, data)
         text = self._resolve_l3_slots(text, template, llm_slots)
@@ -103,15 +109,20 @@ class LDDTemplateRenderer:
         blocks: list[ConditionalBlock],
         industry: str,
         data: dict[str, Any],
+        *,
+        base_blocks: BaseBlocks | None = None,
     ) -> str:
         for block in blocks:
             if self._evaluate_condition(block.condition, industry, data):
+                block_text = block.text
+                if base_blocks:
+                    block_text = self._resolve_base_refs(block_text, base_blocks)
                 insert_pattern = re.compile(r"\{\{\s*" + re.escape(block.insert_after) + r"\s*\}\}")
                 match = insert_pattern.search(text)
                 if match:
-                    text = insert_pattern.sub(match.group(0) + " " + block.text, text, count=1)
+                    text = insert_pattern.sub(match.group(0) + " " + block_text, text, count=1)
                 else:
-                    text += "\n\n" + block.text
+                    text += "\n\n" + block_text
         return text
 
     def _evaluate_condition(self, condition: str, industry: str, data: dict[str, Any]) -> bool:

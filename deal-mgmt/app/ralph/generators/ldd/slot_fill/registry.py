@@ -75,6 +75,8 @@ class TemplateRegistry:
         merged_slots = dict(base.slots)
         merged_slots.update(override.slots)
         merged_cbs = list(base.conditional_blocks) + list(override.conditional_blocks)
+        merged_preamble = dict(base.section_preamble)
+        merged_preamble.update(override.section_preamble)
         return SectionTemplate(
             section_id=base.section_id,
             version=override.version or base.version,
@@ -83,4 +85,5 @@ class TemplateRegistry:
             body=override.body or base.body,
             conditional_blocks=merged_cbs,
             includes=override.includes or base.includes,
+            section_preamble=merged_preamble,
         )

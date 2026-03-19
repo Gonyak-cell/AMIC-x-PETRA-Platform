@@ -9,6 +9,8 @@ import pytest
 from app.models.enums import LDDIssueLevel, LDDItemStatus, LDDReportType
 from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
 from app.ralph.generators.ldd.slot_fill import LDDTemplateSlotFillEngine, TemplateRegistry
+from app.ralph.generators.ldd.slot_fill.loader import BaseBlocks, ConditionalBlock, SectionTemplate
+from app.ralph.generators.ldd.slot_fill.renderer import LDDTemplateRenderer
 from app.schemas.ldd_report import DEFAULT_LDD_SECTIONS
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "ldd_slotfill"
@@ -72,6 +74,30 @@ def test_slotfill_registry_loads_all_default_sections():
     assert registry.base_blocks.get("scope_notice")
 
 
+def test_renderer_resolves_base_refs_inside_conditional_blocks():
+    renderer = LDDTemplateRenderer()
+    template = SectionTemplate(
+        section_id="contracts",
+        body="[[ANALYSIS]] 본문입니다.",
+        conditional_blocks=[
+            ConditionalBlock(
+                condition="status == 'PENDING'",
+                insert_after="analysis_sentence",
+                text="{{@source_gap_notice}} 추가 자료 확보가 필요합니다.",
+            )
+        ],
+    )
+
+    rendered = renderer.render(
+        template,
+        {"status": "PENDING"},
+        base_blocks=BaseBlocks(blocks={"source_gap_notice": "자료 공백이 있는 영역은 잠정 판단으로 유지합니다."}),
+    )
+
+    assert "{{@" not in rendered
+    assert "자료 공백이 있는 영역은 잠정 판단으로 유지합니다." in rendered
+
+
 @pytest.mark.asyncio
 async def test_slotfill_engine_builds_blocks_for_all_sections():
     report = _make_report()
@@ -86,6 +112,29 @@ async def test_slotfill_engine_builds_blocks_for_all_sections():
             assert item["blocks"]
             assert all("{{" not in block["content"] for block in item["blocks"])
             assert {block["block_type"] for block in item["blocks"]} >= {"FACTS", "ANALYSIS", "RECOMMENDATION"}
+
+
+@pytest.mark.asyncio
+async def test_slotfill_engine_compacts_section_preamble_after_first_item():
+    report = _make_report()
+    engine = LDDTemplateSlotFillEngine(TEMPLATE_DIR)
+
+    result = await engine.build_narrative_sections(report)
+
+    governance_items = result["GOVERNANCE"]
+    first_facts = next(block["content"] for block in governance_items[0]["blocks"] if block["block_type"] == "FACTS")
+    second_facts = next(block["content"] for block in governance_items[1]["blocks"] if block["block_type"] == "FACTS")
+    first_analysis = next(
+        block["content"] for block in governance_items[0]["blocks"] if block["block_type"] == "ANALYSIS"
+    )
+    second_analysis = next(
+        block["content"] for block in governance_items[1]["blocks"] if block["block_type"] == "ANALYSIS"
+    )
+
+    assert first_facts.startswith("본 문안은 현재까지")
+    assert second_facts.startswith("당사는 테스트주식회사의")
+    assert first_analysis.startswith("본 항목에서는 설립")
+    assert second_analysis.startswith("확인된 사항은")
 
 
 @pytest.mark.asyncio

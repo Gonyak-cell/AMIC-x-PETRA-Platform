@@ -122,6 +122,9 @@ class LDDTemplateSlotFillEngine:
                     }
                 )
 
+            if rendered_items and template.section_preamble:
+                rendered_items = self._compact_section_preamble(rendered_items, template.section_preamble)
+
             if rendered_items:
                 result[section_type] = rendered_items
 
@@ -388,3 +391,50 @@ class LDDTemplateSlotFillEngine:
                 }
             )
         return blocks
+
+    @classmethod
+    def _compact_section_preamble(
+        cls,
+        rendered_items: list[dict[str, Any]],
+        section_preamble: dict[str, int],
+    ) -> list[dict[str, Any]]:
+        if len(rendered_items) <= 1:
+            return rendered_items
+
+        compacted = [rendered_items[0]]
+        for item in rendered_items[1:]:
+            next_item = dict(item)
+            next_blocks: list[dict[str, Any]] = []
+            for block in item.get("blocks", []):
+                next_block = dict(block)
+                trim_count = section_preamble.get(str(block.get("block_type", "")), 0)
+                if trim_count > 0:
+                    trimmed = cls._trim_leading_sentences(str(block.get("content", "")), trim_count)
+                    if trimmed:
+                        next_block["content"] = trimmed
+                        next_block["word_count"] = len(trimmed)
+                    else:
+                        continue
+                next_blocks.append(next_block)
+            next_item["blocks"] = next_blocks
+            compacted.append(next_item)
+        return compacted
+
+    @staticmethod
+    def _trim_leading_sentences(text: str, sentence_count: int) -> str:
+        clean = (text or "").strip()
+        if not clean or sentence_count <= 0:
+            return clean
+
+        remaining = clean
+        trimmed_any = False
+        for _ in range(sentence_count):
+            match = re.search(r"[.!?](?:\s+|$)", remaining)
+            if not match:
+                break
+            remaining = remaining[match.end() :].lstrip()
+            trimmed_any = True
+
+        if not trimmed_any:
+            return clean
+        return remaining

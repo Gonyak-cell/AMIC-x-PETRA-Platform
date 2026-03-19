@@ -1,6 +1,16 @@
 section_id: real_estate
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - real_estate_phrase_02
+    - real_estate_phrase_12
+    - real_estate_phrase_13
+section_preamble:
+  FACTS: 1
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -28,7 +38,7 @@ body: |
 conditional_blocks:
   - condition: issue_level == 'CRITICAL'
     insert_after: impact_sentence
-    text: "특히 핵심 부동산의 권리하자 또는 중대한 환경오염 징후는 거래 구조 재검토 사유가 될 수 있습니다."
+    text: "특히 핵심 부동산의 소유권·사용권 하자, 선순위 담보권 또는 중대한 환경오염 징후는 거래 구조 재검토 사유가 될 수 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "등기부, 임대차계약, 감정평가, 토양오염 조사자료 등 추가 자료 확인이 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 등기부, 임대차계약, 감정평가, 토양오염 조사자료 및 사용제한 관련 자료 확인이 필요할 수 있습니다."

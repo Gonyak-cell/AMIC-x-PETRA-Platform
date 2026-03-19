@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>프로젝트 카드 — 텍스처 배경 프리뷰</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  /* Glass container */
+  .glass-container {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow:
+      0px 16px 24px rgba(0,0,0,0.06),
+      0px 2px 6px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.6),
+      inset 0 -1px 0 rgba(255,255,255,0.15);
+  }
+
+  /* Card with texture */
+  .card-texture {
+    background-image: url('./amic-platform/src/assets/images/green-texture.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Card with flat color (before) */
+  .card-flat {
+    background: #0F6B3E;
+    box-shadow: 0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Glass overlay on card */
+  .card-glass-overlay {
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .card-glass-overlay-old {
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.08) 100%);
+    backdrop-filter: blur(20px) saturate(1.6);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .card-highlight {
+    background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.6) 50%, transparent 95%);
+  }
+  .card-left-edge {
+    background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%);
+  }
+</style>
+</head>
+<body class="min-h-screen" style="background: linear-gradient(160deg, #eef2f3 0%, #dfe6e9 40%, #c4d4cc 100%);">
+
+  <div class="max-w-5xl mx-auto p-8">
+    <h1 class="text-xl font-bold text-gray-800 mb-2">프로젝트 카드 — 텍스처 배경 적용 프리뷰</h1>
+    <p class="text-sm text-gray-500 mb-8">green-texture.jpg를 카드 배경으로 사용 + 글래스 컨테이너</p>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!--       MAIN: Glass container + Texture card -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="glass-container">
+      <div class="flex flex-col sm:flex-row min-w-0">
+        <!-- Left: carousel -->
+        <div class="flex-1 min-w-0 p-5 flex items-center gap-3">
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <!-- Texture card -->
+          <div class="flex-1 min-w-0">
+            <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-texture" style="height:190px">
+              <div class="absolute inset-0 rounded-2xl card-glass-overlay pointer-events-none"></div>
+              <div class="absolute left-0 top-0 w-full h-[2px] card-highlight pointer-events-none z-10"></div>
+              <div class="absolute left-0 top-0 h-full w-px card-left-edge pointer-events-none z-10"></div>
+              <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+                <div>
+                  <div class="flex items-center justify-end mb-4">
+                    <span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span>
+                  </div>
+                  <div class="font-bold text-xl leading-tight">Project Alpha</div>
+                  <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+                </div>
+                <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+                  <span class="text-xs text-white/50">Phase</span>
+                  <span class="text-sm font-medium text-white">마케팅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <div class="hidden sm:block w-px self-stretch bg-gray-200/50"></div>
+
+        <!-- Right: summary -->
+        <div class="sm:w-[280px] shrink-0 p-5 space-y-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Summary</h4>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">진행 딜</span><span class="text-sm font-semibold text-gray-800">12건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">이번 주 미팅</span><span class="text-sm font-semibold text-gray-800">3건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">마감 예정</span><span class="text-sm font-semibold text-gray-800">2건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">신규 관심</span><span class="text-sm font-semibold text-gray-800">7건</span></div>
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)">
+          <div class="h-full bg-[#0F6B3E] rounded-full" style="width:33%"></div>
+        </div>
+        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">1 / 3</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!--         SIDE-BY-SIDE: Before vs After      -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Before: flat color -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">Before (단색 bg-[#0F6B3E])</h3>
+        <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-flat" style="height:190px">
+          <div class="absolute inset-0 rounded-2xl card-glass-overlay-old pointer-events-none"></div>
+          <div class="absolute left-0 top-0 w-full h-[2px] card-highlight pointer-events-none z-10"></div>
+          <div class="absolute left-0 top-0 h-full w-px card-left-edge pointer-events-none z-10"></div>
+          <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+            <div>
+              <div class="flex items-center justify-end mb-4">
+                <span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span>
+              </div>
+              <div class="font-bold text-xl leading-tight">Project Beta</div>
+              <p class="text-sm text-white/60 mt-1">한국투자증권</p>
+            </div>
+            <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+              <span class="text-xs text-white/50">Phase</span>
+              <span class="text-sm font-medium text-white">실사</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- After: texture image -->
+      <div>
+        <h3 class="text-sm font-semibold text-[#0F6B3E] mb-3 uppercase tracking-wider">After (green-texture.jpg)</h3>
+        <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-texture" style="height:190px">
+          <div class="absolute inset-0 rounded-2xl card-glass-overlay pointer-events-none"></div>
+          <div class="absolute left-0 top-0 w-full h-[2px] card-highlight pointer-events-none z-10"></div>
+          <div class="absolute left-0 top-0 h-full w-px card-left-edge pointer-events-none z-10"></div>
+          <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+            <div>
+              <div class="flex items-center justify-end mb-4">
+                <span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">클로징</span>
+              </div>
+              <div class="font-bold text-xl leading-tight">Project Gamma</div>
+              <p class="text-sm text-white/60 mt-1">삼성물산 주식회사</p>
+            </div>
+            <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+              <span class="text-xs text-white/50">Phase</span>
+              <span class="text-sm font-medium text-white">클로징</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change summary -->
+    <div class="mt-8 glass-container p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">변경 요약</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-400 text-xs uppercase">
+            <th class="pb-2">항목</th><th class="pb-2">Before</th><th class="pb-2">After</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-600">
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">카드 배경</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">bg-[#0F6B3E] (단색)</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">green-texture.jpg (이미지)</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">글래스 오버레이</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">blur(20px) + 투명도 0.15</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">blur 제거 + 투명도 0.12 (텍스처 유지)</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">컨테이너</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">bg-white (불투명)</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">글래스모피즘 (blur + 반투명)</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

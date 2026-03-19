@@ -1,6 +1,17 @@
 section_id: data_it
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_01
+    - data_it_phrase_03
+    - data_it_phrase_06
+    - data_it_phrase_11
+section_preamble:
+  FACTS: 2
+  ANALYSIS: 2
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -14,11 +25,11 @@ slots:
   confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
 body: |
   [[FACTS]]
-  {{@scope_notice}}
+  {{@scope_notice}} {{@jurisdiction_scope_notice}}
   당사는 {{ target_company }}의 개인정보 및 IT 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
-  본 항목에서는 개인정보 처리 적법성, 정보보안 통제, 시스템 운영 연속성, 라이선스 준수 및 클라우드/외주 구조를 함께 검토합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
+  본 항목에서는 개인정보 처리 적법성, 정보보안 통제, 시스템 운영 연속성, 라이선스 준수 및 클라우드/외주 구조를 함께 검토합니다. 개인정보 처리방침, 동의서, 위수탁 계약, 접근통제 및 침해대응 기록의 정합성도 함께 점검합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
 
   [[DEAL_IMPACT]]
   데이터 및 IT 이슈는 규제제재, 서비스 연속성, 보안사고 노출, 고객신뢰 및 종결 후 시스템 통합 계획에 영향을 줄 수 있습니다. {{ user_review_sentence }}
@@ -28,7 +39,7 @@ body: |
 conditional_blocks:
   - condition: issue_level == 'CRITICAL'
     insert_after: impact_sentence
-    text: "특히 중대한 개인정보 침해 또는 핵심 시스템 연속성 문제는 거래 이후 즉시 대응계획 수립이 필요할 수 있습니다."
+    text: "특히 개인정보 유출, 동의 구조 미비, 위탁약정 누락 또는 핵심 시스템 연속성 문제는 과태료, 손해배상 및 서비스 신뢰 저하로 이어질 수 있으므로 거래 이후 즉시 대응계획 수립이 필요할 수 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "개인정보 처리방침, 보안정책, 침해사고 이력, 라이선스 계약 및 위탁계약 자료 확보가 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 개인정보 처리방침, 동의서, 위탁약정, 침해사고 이력, 보안조직 및 라이선스 계약 자료 확보가 필요할 수 있습니다."

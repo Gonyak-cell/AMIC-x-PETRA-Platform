@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ui-friend": {
+      "command": "node",
+      "args": ["C:\\Users\\서지원\\.claude\\mcp-servers\\UI-Friend-MCP\\index.mjs"]
+    }
+  }
+}

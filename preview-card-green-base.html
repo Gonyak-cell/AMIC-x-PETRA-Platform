@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카드 밝기 — #0F6B3E 기준</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  .glass-container {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0px 16px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .card-base {
+    background-image: url('./amic-platform/src/assets/images/green-texture.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08);
+  }
+
+  /* #0F6B3E = rgb(15, 107, 62) */
+  .card-glass {
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .highlight { background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.6) 50%, transparent 95%); }
+  .left-edge { background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%); }
+  .selected-ring { outline: 3px solid #0F6B3E; outline-offset: 4px; }
+</style>
+</head>
+<body class="min-h-screen" style="background: linear-gradient(160deg, #eef2f3 0%, #dfe6e9 40%, #c4d4cc 100%);">
+
+<div class="max-w-6xl mx-auto p-8">
+  <h1 class="text-xl font-bold text-gray-800 mb-1">카드 밝기 — <code class="text-[#0F6B3E]">#0F6B3E</code> 기준 오버레이</h1>
+  <p class="text-sm text-gray-500 mb-8">텍스처 위에 #0F6B3E 밝은 변형 오버레이를 적용합니다</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+
+    <!-- 0: 원본 -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">원본</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:210px" onclick="select(this)">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">오버레이 없음</p>
+    </div>
+
+    <!-- A: #0F6B3E 20% -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#0F6B3E] uppercase tracking-wider text-center">A</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:210px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(15,107,62,0.30) 0%, rgba(15,107,62,0.20) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.10) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">#0F6B3E 30% + white 16%</p>
+    </div>
+
+    <!-- B: #0F6B3E 40% -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#0F6B3E] uppercase tracking-wider text-center">B</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:210px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(15,107,62,0.45) 0%, rgba(15,107,62,0.30) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0.12) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">#0F6B3E 45% + white 20%</p>
+    </div>
+
+    <!-- C: #0F6B3E 55% -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#0F6B3E] uppercase tracking-wider text-center">C</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:210px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(15,107,62,0.55) 0%, rgba(15,107,62,0.40) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.10) 40%, rgba(255,255,255,0.16) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">#0F6B3E 55% + white 24%</p>
+    </div>
+
+    <!-- D: #0F6B3E 65% -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#0F6B3E] uppercase tracking-wider text-center">D</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:210px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(15,107,62,0.65) 0%, rgba(15,107,62,0.50) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0.20) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">#0F6B3E 65% + white 28%</p>
+    </div>
+  </div>
+
+  <!-- Full-size preview -->
+  <div class="mt-10">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">옵션 B 전체 프리뷰 (글래스 컨테이너 조합)</h2>
+    <div class="glass-container">
+      <div class="flex flex-col sm:flex-row min-w-0">
+        <div class="flex-1 min-w-0 p-5 flex items-center gap-3">
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="flex-1 min-w-0">
+            <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:190px">
+              <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(15,107,62,0.45) 0%, rgba(15,107,62,0.30) 100%);"></div>
+              <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+                   style="background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0.12) 100%);"></div>
+              <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+              <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+              <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+                <div>
+                  <div class="flex items-center justify-end mb-4"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+                  <div class="font-bold text-xl leading-tight">Project Alpha</div>
+                  <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+                </div>
+                <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+                  <span class="text-xs text-white/50">Phase</span>
+                  <span class="text-sm font-medium text-white">마케팅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="hidden sm:block w-px self-stretch bg-gray-200/50"></div>
+        <div class="sm:w-[280px] shrink-0 p-5 space-y-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Summary</h4>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">진행 딜</span><span class="text-sm font-semibold text-gray-800">12건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">이번 주 미팅</span><span class="text-sm font-semibold text-gray-800">3건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">마감 예정</span><span class="text-sm font-semibold text-gray-800">2건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">신규 관심</span><span class="text-sm font-semibold text-gray-800">7건</span></div>
+        </div>
+      </div>
+      <div class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)"><div class="h-full bg-[#0F6B3E] rounded-full" style="width:33%"></div></div>
+        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">1 / 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function select(el) {
+    document.querySelectorAll('.card-base').forEach(c => c.classList.remove('selected-ring'));
+    el.classList.add('selected-ring');
+  }
+</script>
+</body>
+</html>

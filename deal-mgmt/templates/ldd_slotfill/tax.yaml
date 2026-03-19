@@ -1,6 +1,15 @@
 section_id: tax
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_07
+    - base_phrase_09
+section_preamble:
+  FACTS: 2
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -14,7 +23,7 @@ slots:
   confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
 body: |
   [[FACTS]]
-  {{@scope_notice}}
+  {{@scope_notice}} {{@jurisdiction_scope_notice}}
   당사는 {{ target_company }}의 조세 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
@@ -31,4 +40,4 @@ conditional_blocks:
     text: "필요 시 별도 세무 DD 연계, 특별보상 조항 및 에스크로 구조를 검토할 필요가 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "신고서, 세무조사 통지, 질의회신 및 특례 적용 근거자료의 추가 확보가 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 신고서, 세무조사 통지, 질의회신 및 특례 적용 근거자료의 추가 확보가 필요할 수 있습니다."

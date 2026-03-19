@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카드 밝기 옵션 비교</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  .glass-container {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0px 16px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .card-base {
+    background-image: url('./amic-platform/src/assets/images/green-texture.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08);
+  }
+
+  .card-glass {
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .highlight { background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.6) 50%, transparent 95%); }
+  .left-edge { background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%); }
+
+  .selected-ring { outline: 3px solid #0F6B3E; outline-offset: 4px; }
+</style>
+</head>
+<body class="min-h-screen" style="background: linear-gradient(160deg, #eef2f3 0%, #dfe6e9 40%, #c4d4cc 100%);">
+
+<div class="max-w-6xl mx-auto p-8">
+  <h1 class="text-xl font-bold text-gray-800 mb-1">카드 밝기 옵션 비교</h1>
+  <p class="text-sm text-gray-500 mb-8">green-texture.jpg 위에 밝은 그린 오버레이를 얹어 밝기를 조절합니다. 원하는 옵션을 클릭하세요.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="optionGrid">
+
+    <!-- Option 0: 현재 (원본 텍스처) -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">현재 (원본)</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:200px" onclick="select(this)">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium text-white">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">오버레이 없음</p>
+    </div>
+
+    <!-- Option A: 살짝 밝게 -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#1C8F57] uppercase tracking-wider">A. 살짝 밝게</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:200px" onclick="select(this)">
+        <!-- Bright green overlay -->
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(28,143,87,0.25) 0%, rgba(38,194,96,0.15) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.10) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium text-white">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">green 25% + white 18%</p>
+    </div>
+
+    <!-- Option B: 중간 밝기 -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#26C260] uppercase tracking-wider">B. 중간 밝기</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:200px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(28,143,87,0.35) 0%, rgba(38,194,96,0.25) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.14) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium text-white">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">green 35% + white 22%</p>
+    </div>
+
+    <!-- Option C: 많이 밝게 -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#6BCF8B] uppercase tracking-wider">C. 많이 밝게</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:200px" onclick="select(this)">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(28,143,87,0.45) 0%, rgba(38,194,96,0.35) 100%);"></div>
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0.18) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium text-white">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">green 45% + white 28%</p>
+    </div>
+  </div>
+
+  <!-- Full-size preview of selected -->
+  <div class="mt-10">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">글래스 컨테이너 + 선택 옵션 전체 프리뷰</h2>
+
+    <!-- Option A full preview (default) -->
+    <div class="glass-container">
+      <div class="flex flex-col sm:flex-row min-w-0">
+        <div class="flex-1 min-w-0 p-5 flex items-center gap-3">
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="flex-1 min-w-0">
+            <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer card-base" style="height:190px">
+              <!-- Option B overlay as default full preview -->
+              <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(28,143,87,0.35) 0%, rgba(38,194,96,0.25) 100%);"></div>
+              <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none"
+                   style="background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.14) 100%);"></div>
+              <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+              <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+              <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+                <div>
+                  <div class="flex items-center justify-end mb-4"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+                  <div class="font-bold text-xl leading-tight">Project Alpha</div>
+                  <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+                </div>
+                <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+                  <span class="text-xs text-white/50">Phase</span>
+                  <span class="text-sm font-medium text-white">마케팅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="hidden sm:block w-px self-stretch bg-gray-200/50"></div>
+        <div class="sm:w-[280px] shrink-0 p-5 space-y-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Summary</h4>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">진행 딜</span><span class="text-sm font-semibold text-gray-800">12건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">이번 주 미팅</span><span class="text-sm font-semibold text-gray-800">3건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">마감 예정</span><span class="text-sm font-semibold text-gray-800">2건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">신규 관심</span><span class="text-sm font-semibold text-gray-800">7건</span></div>
+        </div>
+      </div>
+      <div class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)"><div class="h-full bg-[#0F6B3E] rounded-full" style="width:33%"></div></div>
+        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">1 / 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function select(el) {
+    document.querySelectorAll('#optionGrid .rounded-2xl.card-base').forEach(c => c.classList.remove('selected-ring'));
+    el.classList.add('selected-ring');
+  }
+</script>
+</body>
+</html>

@@ -1,6 +1,16 @@
 section_id: permits
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_01
+    - permits_phrase_01
+    - permits_phrase_10
+section_preamble:
+  FACTS: 2
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -14,7 +24,7 @@ slots:
   confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
 body: |
   [[FACTS]]
-  {{@scope_notice}}
+  {{@scope_notice}} {{@jurisdiction_scope_notice}}
   당사는 {{ target_company }}의 인허가 및 규제 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
@@ -28,7 +38,7 @@ body: |
 conditional_blocks:
   - condition: issue_level in ('CRITICAL', 'HIGH')
     insert_after: impact_sentence
-    text: "필요 시 종결 전 승계 가능 여부를 확인하고, 재취득 또는 사전 신고 절차를 선행조건으로 검토할 필요가 있습니다."
+    text: "필요 시 종결 전 승계 가능 여부를 확인하고, 재취득 또는 사전 신고 절차를 선행조건으로 검토할 필요가 있습니다. 미취득 또는 미신고 상태가 확인되는 경우 형사처벌 또는 행정처분 가능성도 함께 검토해야 합니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "허가증, 갱신 이력, 규제기관 질의회신, CoC 관련 유권해석 자료 확보가 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 허가증, 갱신 이력, 규제기관 질의회신, CoC 관련 유권해석 및 미취득 인허가 검토자료 확보가 필요할 수 있습니다."

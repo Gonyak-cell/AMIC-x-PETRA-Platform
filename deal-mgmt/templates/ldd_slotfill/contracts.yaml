@@ -1,6 +1,16 @@
 section_id: contracts
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_01
+    - base_phrase_07
+    - contracts_phrase_09
+section_preamble:
+  FACTS: 2
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -14,7 +24,7 @@ slots:
   confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
 body: |
   [[FACTS]]
-  {{@scope_notice}}
+  {{@scope_notice}} {{@jurisdiction_scope_notice}}
   당사는 {{ target_company }}의 주요 계약 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
@@ -28,7 +38,7 @@ body: |
 conditional_blocks:
   - condition: issue_level == 'CRITICAL'
     insert_after: impact_sentence
-    text: "특히 핵심 계약의 해지 또는 동의 미확보 가능성은 거래 성사 가능성 자체에 영향을 줄 수 있습니다."
+    text: "특히 핵심 계약의 해지 또는 동의 미확보 가능성은 거래 성사 가능성 자체에 영향을 줄 수 있으므로, Change of Control 조항, 사전 동의권 및 waiver 확보 여부를 우선 확인할 필요가 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "주요 계약 원본 및 변경합의서 확보 여부를 추가 확인할 필요가 있습니다."
+    text: "{{@source_gap_notice}} 주요 계약 원본, 변경합의서 및 Change of Control 조항 해석자료 확보 여부를 추가 확인할 필요가 있습니다."

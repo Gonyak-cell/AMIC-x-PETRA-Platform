@@ -1,7 +1,22 @@
+calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  selection_rule: "Promoted manually screened v8 shortlist phrases into runtime-safe base blocks"
+  promoted_candidates:
+    common:
+      - base_phrase_01
+      - base_phrase_07
+      - base_phrase_09
+      - base_phrase_11
 blocks:
   - name: scope_notice
-    text: "본 문안은 현재까지 제출된 자료 및 확인된 사실관계 범위 내에서 작성되었습니다."
+    text: "본 문안은 현재까지 회사가 제출한 자료, 답변 및 필요한 범위의 공개 등기·공시자료를 기준으로 작성되었으며, 별도 현장실사나 제3자 조회 없이 검토한 결과입니다."
+  - name: jurisdiction_scope_notice
+    text: "대한민국 이외 국가의 법령·규제 및 해외 규제기관 조치 준수 여부는 본 검토 범위에서 제외하였습니다."
   - name: evidence_notice
-    text: "근거자료 표시는 제출자료 기준 식별 가능한 범위 내에서만 기재하였습니다."
+    text: "회사가 제출한 자료의 진정성·정확성은 독자적으로 검증하지 않았고, 근거자료 표시는 식별 가능한 범위 내에서만 기재하였습니다."
+  - name: source_gap_notice
+    text: "회사 미제공 자료 또는 정보 공백이 있는 영역은 조사·검토가 이루어지지 않았을 수 있으므로 잠정 판단으로 유지할 필요가 있습니다."
+  - name: materiality_focus_notice
+    text: "본 문안은 본건 거래와 관련하여 중요하다고 판단되는 쟁점을 중심으로 정리하였습니다."
   - name: review_notice
-    text: "아래 의견은 거래계약 반영, 선행조건 설정 및 후속 실사 범위 확정에 활용될 수 있습니다."
+    text: "본 검토는 대한민국 법령 기준의 법률 실사 결과이며, 거래계약 반영, 선행조건 설정, 추가 RFI 및 후속 시정조치 범위 조정에 활용될 수 있습니다."

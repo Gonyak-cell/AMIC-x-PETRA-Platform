@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카드 — 밝은 #0F6B3E CSS 그라디언트</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  .glass-container {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0px 16px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .card-shadow {
+    box-shadow: 0px 16px 32px rgba(0,0,0,0.15), 0px 4px 8px rgba(0,0,0,0.08);
+  }
+  .card-glass {
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .highlight { background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.6) 50%, transparent 95%); }
+  .left-edge { background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%); }
+
+  /* 이전 버전 (어두움) */
+  .card-prev {
+    background:
+      radial-gradient(ellipse at 70% 60%, rgba(15,107,62,0.9) 0%, transparent 70%),
+      radial-gradient(ellipse at 30% 80%, rgba(15,107,62,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.95) 0%, transparent 60%),
+      linear-gradient(160deg, #020a06 0%, #0a3d24 30%, #0F6B3E 70%, #0d5a33 100%);
+  }
+
+  /* A: 밝게 + 어두운 부분 축소 */
+  .card-a {
+    background:
+      radial-gradient(ellipse at 75% 55%, rgba(20,130,75,0.7) 0%, transparent 65%),
+      radial-gradient(ellipse at 25% 75%, rgba(15,107,62,0.5) 0%, transparent 55%),
+      radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.5) 0%, transparent 40%),
+      linear-gradient(160deg, #0a4a2c 0%, #0F6B3E 40%, #1a8c52 80%, #0F6B3E 100%);
+  }
+
+  /* B: 더 밝게 + 어두운 부분 최소화 */
+  .card-b {
+    background:
+      radial-gradient(ellipse at 75% 50%, rgba(26,140,82,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 20% 70%, rgba(15,107,62,0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.3) 0%, transparent 35%),
+      linear-gradient(150deg, #0d5a33 0%, #128850 35%, #1a8c52 65%, #0F6B3E 100%);
+  }
+
+  /* C: 가장 밝게 + 어두운 부분 거의 없음 */
+  .card-c {
+    background:
+      radial-gradient(ellipse at 70% 45%, rgba(32,160,90,0.5) 0%, transparent 55%),
+      radial-gradient(ellipse at 25% 65%, rgba(20,130,75,0.35) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.15) 0%, transparent 30%),
+      linear-gradient(150deg, #0F6B3E 0%, #1a9c5c 35%, #22a866 65%, #14885a 100%);
+  }
+</style>
+</head>
+<body class="min-h-screen" style="background: linear-gradient(160deg, #eef2f3 0%, #dfe6e9 40%, #c4d4cc 100%);">
+
+<div class="max-w-6xl mx-auto p-8">
+  <h1 class="text-xl font-bold text-gray-800 mb-1">밝은 #0F6B3E 그라디언트 옵션</h1>
+  <p class="text-sm text-gray-500 mb-8">어두운 부분을 줄이고 전체적으로 밝게 조정한 버전들입니다</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+    <!-- 이전 -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">이전 (어두움)</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl card-prev card-shadow" style="height:210px">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none" style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">dark 95%, vignette 60%</p>
+    </div>
+
+    <!-- A -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#0F6B3E] uppercase tracking-wider text-center">A. 밝게</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl card-a card-shadow" style="height:210px">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none" style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">dark 50%, vignette 40%</p>
+    </div>
+
+    <!-- B -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#1a8c52] uppercase tracking-wider text-center">B. 더 밝게</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl card-b card-shadow" style="height:210px">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none" style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">dark 30%, vignette 35%</p>
+    </div>
+
+    <!-- C -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold text-[#22a866] uppercase tracking-wider text-center">C. 가장 밝게</h3>
+      <div class="relative w-full overflow-hidden rounded-2xl card-c card-shadow" style="height:210px">
+        <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none" style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+        <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+        <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+        <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+          <div>
+            <div class="flex items-center justify-end mb-3"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+            <div class="font-bold text-lg leading-tight">Project Alpha</div>
+            <p class="text-sm text-white/60 mt-1">대한산업</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+            <span class="text-xs text-white/50">Phase</span>
+            <span class="text-sm font-medium">마케팅</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[11px] text-gray-400 text-center">dark 15%, vignette 30%</p>
+    </div>
+  </div>
+
+  <!-- Full preview with option B -->
+  <div class="mt-10">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">옵션 B 전체 프리뷰</h2>
+    <div class="glass-container">
+      <div class="flex flex-col sm:flex-row min-w-0">
+        <div class="flex-1 min-w-0 p-5 flex items-center gap-3">
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="flex-1 min-w-0">
+            <div class="relative w-full overflow-hidden rounded-2xl card-b card-shadow" style="height:190px">
+              <div class="absolute inset-0 rounded-2xl card-glass pointer-events-none" style="background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.06) 100%);"></div>
+              <div class="absolute left-0 top-0 w-full h-[2px] highlight pointer-events-none z-10"></div>
+              <div class="absolute left-0 top-0 h-full w-px left-edge pointer-events-none z-10"></div>
+              <div class="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+                <div>
+                  <div class="flex items-center justify-end mb-4"><span class="text-[10px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">진행 중</span></div>
+                  <div class="font-bold text-xl leading-tight">Project Alpha</div>
+                  <p class="text-sm text-white/60 mt-1">대한산업 주식회사</p>
+                </div>
+                <div class="flex items-center gap-2 pt-3 border-t border-white/10">
+                  <span class="text-xs text-white/50">Phase</span>
+                  <span class="text-sm font-medium text-white">마케팅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="hidden sm:block w-px self-stretch bg-gray-200/50"></div>
+        <div class="sm:w-[280px] shrink-0 p-5 space-y-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Summary</h4>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">진행 딜</span><span class="text-sm font-semibold text-gray-800">12건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">이번 주 미팅</span><span class="text-sm font-semibold text-gray-800">3건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">마감 예정</span><span class="text-sm font-semibold text-gray-800">2건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">신규 관심</span><span class="text-sm font-semibold text-gray-800">7건</span></div>
+        </div>
+      </div>
+      <div class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)"><div class="h-full bg-[#0F6B3E] rounded-full" style="width:33%"></div></div>
+        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">1 / 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

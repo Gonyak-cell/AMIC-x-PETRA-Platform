@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Projects — 글래스모피즘 프리뷰</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  /* ── Glass container styles ── */
+  .container-before {
+    background: #ffffff;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0px 16px 24px rgba(0,0,0,0.06), 0px 2px 6px rgba(0,0,0,0.04), 0px 0px 1px rgba(0,0,0,0.04);
+  }
+  .container-after {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.40);
+    box-shadow:
+      0px 16px 24px rgba(0,0,0,0.06),
+      0px 2px 6px rgba(0,0,0,0.04),
+      0px 0px 1px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.6),
+      inset 0 -1px 0 rgba(255,255,255,0.15);
+  }
+
+  /* ── Card glassmorphism (already in production) ── */
+  .card-base { background: #0F6B3E; }
+  .card-glass {
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.08) 100%);
+    backdrop-filter: blur(20px) saturate(1.6);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.06);
+  }
+  .card-highlight {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%);
+  }
+
+  /* ── Toggle button ── */
+  .toggle-on  { background: #0F6B3E; color: #fff; box-shadow: 0 4px 14px rgba(15,107,62,0.3); }
+  .toggle-off { background: #e5e7eb; color: #6b7280; }
+
+  /* ── Transition ── */
+  .main-container { transition: all 0.4s ease; }
+
+  /* ── Decorative circles behind container ── */
+  .deco-circle {
+    position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.35; pointer-events: none;
+  }
+</style>
+</head>
+<body class="min-h-screen" style="background: linear-gradient(160deg, #eef2f3 0%, #dfe6e9 40%, #c4d4cc 100%);">
+
+  <!-- Decorative blobs so glass blur is visible -->
+  <div class="deco-circle" style="width:300px;height:300px;background:#0F6B3E;top:80px;left:-60px;"></div>
+  <div class="deco-circle" style="width:250px;height:250px;background:#26C260;top:200px;right:40px;"></div>
+  <div class="deco-circle" style="width:200px;height:200px;background:#1C8F57;bottom:100px;left:30%;"></div>
+
+  <div class="relative max-w-5xl mx-auto p-8">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6">
+      <h1 class="text-xl font-bold text-gray-800">My Projects — 글래스모피즘 프리뷰</h1>
+      <button id="toggleBtn" onclick="toggleGlass()" class="px-4 py-1.5 rounded-full text-sm font-semibold transition-all toggle-on">
+        ✦ Glass ON
+      </button>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!--       MAIN INTERACTIVE CONTAINER           -->
+    <!-- ══════════════════════════════════════════ -->
+    <div id="mainContainer" class="main-container container-after">
+      <div class="flex flex-col sm:flex-row min-w-0">
+        <!-- Left: carousel area -->
+        <div class="flex-1 min-w-0 p-5 flex items-center gap-3">
+          <!-- Prev -->
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <!-- Card -->
+          <div class="flex-1 min-w-0">
+            <div class="relative w-full overflow-hidden rounded-2xl cursor-pointer" style="height:180px">
+              <div class="absolute inset-0 card-base"></div>
+              <div class="absolute inset-0 card-glass"></div>
+              <div class="absolute top-0 left-4 right-4 h-px card-highlight"></div>
+              <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider opacity-70">매각자문</span>
+                  <h3 class="text-lg font-bold mt-1">Project Alpha</h3>
+                  <span class="text-xs opacity-60">Marketing</span>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span class="opacity-70">진행률</span><span class="font-medium">65%</span></div>
+                  <div class="h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full" style="width:65%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Next -->
+          <button class="shrink-0 text-[#0F6B3E] hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <!-- Vertical divider -->
+        <div class="hidden sm:block w-px self-stretch" id="vDivider" style="background:rgba(156,163,175,0.3)"></div>
+
+        <!-- Right: summary -->
+        <div class="sm:w-[280px] shrink-0 p-5 space-y-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Summary</h4>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">진행 딜</span><span class="text-sm font-semibold text-gray-800">12건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">이번 주 미팅</span><span class="text-sm font-semibold text-gray-800">3건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">마감 예정</span><span class="text-sm font-semibold text-gray-800">2건</span></div>
+          <div class="flex justify-between"><span class="text-sm text-gray-500">신규 관심</span><span class="text-sm font-semibold text-gray-800">7건</span></div>
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div id="bottomBar" class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+        <div id="progressBg" class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)">
+          <div class="h-full bg-[#0F6B3E] rounded-full" style="width:33%"></div>
+        </div>
+        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">1 / 3</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!--         SIDE-BY-SIDE COMPARISON            -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Before -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">Before (현재)</h3>
+        <div class="container-before">
+          <div class="p-5">
+            <div class="relative w-full overflow-hidden rounded-2xl" style="height:160px">
+              <div class="absolute inset-0 card-base"></div>
+              <div class="absolute inset-0 card-glass"></div>
+              <div class="absolute top-0 left-4 right-4 h-px card-highlight"></div>
+              <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider opacity-70">인수자문</span>
+                  <h3 class="text-lg font-bold mt-1">Project Beta</h3>
+                  <span class="text-xs opacity-60">Due Diligence</span>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span class="opacity-70">진행률</span><span class="font-medium">40%</span></div>
+                  <div class="h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full" style="width:40%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="border-t border-gray-100 px-5 py-3 flex items-center gap-4">
+            <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-[#0F6B3E] rounded-full" style="width:50%"></div></div>
+            <span class="text-xs text-gray-500 font-medium">2 / 3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- After -->
+      <div>
+        <h3 class="text-sm font-semibold text-[#0F6B3E] mb-3 uppercase tracking-wider">After (글래스모피즘)</h3>
+        <div class="container-after">
+          <div class="p-5">
+            <div class="relative w-full overflow-hidden rounded-2xl" style="height:160px">
+              <div class="absolute inset-0 card-base"></div>
+              <div class="absolute inset-0 card-glass"></div>
+              <div class="absolute top-0 left-4 right-4 h-px card-highlight"></div>
+              <div class="relative z-10 p-5 h-full flex flex-col justify-between text-white">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider opacity-70">매각자문</span>
+                  <h3 class="text-lg font-bold mt-1">Project Gamma</h3>
+                  <span class="text-xs opacity-60">Closing</span>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span class="opacity-70">진행률</span><span class="font-medium">90%</span></div>
+                  <div class="h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full" style="width:90%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="border-t px-5 py-3 flex items-center gap-4" style="border-color:rgba(255,255,255,0.3)">
+            <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(0,0,0,0.05)"><div class="h-full bg-[#0F6B3E] rounded-full" style="width:100%"></div></div>
+            <span class="text-xs text-gray-500 font-medium">3 / 3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!--            SPEC COMPARISON TABLE           -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="mt-8 rounded-xl p-5 container-after">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">적용 속성 비교</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-400 text-xs uppercase">
+            <th class="pb-2">속성</th><th class="pb-2">Before</th><th class="pb-2">After</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-600">
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">배경</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">bg-white (불투명)</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">rgba(255,255,255,0.72)</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">블러</td>
+            <td class="py-2.5 text-gray-400">없음</td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">blur(24px) saturate(1.4)</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">테두리</td>
+            <td class="py-2.5 text-gray-400">없음</td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">border-white/40</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">내부 광택</td>
+            <td class="py-2.5 text-gray-400">없음</td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">inset 0 1px rgba(255,255,255,0.6)</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">하단 구분선</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">border-gray-100</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">border-white/30</code></td>
+          </tr>
+          <tr class="border-t border-gray-200/40">
+            <td class="py-2.5 font-medium">진행바 배경</td>
+            <td class="py-2.5"><code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">bg-gray-100</code></td>
+            <td class="py-2.5"><code class="text-xs bg-[#0F6B3E]/10 px-1.5 py-0.5 rounded text-[#0F6B3E]">bg-black/5</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  let glassOn = true;
+
+  function toggleGlass() {
+    glassOn = !glassOn;
+    const btn = document.getElementById('toggleBtn');
+    const container = document.getElementById('mainContainer');
+    const bottomBar = document.getElementById('bottomBar');
+    const progressBg = document.getElementById('progressBg');
+    const vDivider = document.getElementById('vDivider');
+
+    if (glassOn) {
+      btn.className = 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all toggle-on';
+      btn.textContent = '✦ Glass ON';
+      container.className = 'main-container container-after';
+      bottomBar.style.borderColor = 'rgba(255,255,255,0.3)';
+      progressBg.style.background = 'rgba(0,0,0,0.05)';
+      vDivider.style.background = 'rgba(156,163,175,0.3)';
+    } else {
+      btn.className = 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all toggle-off';
+      btn.textContent = 'Glass OFF';
+      container.className = 'main-container container-before';
+      bottomBar.style.borderColor = '#f3f4f6';
+      progressBg.style.background = '#f3f4f6';
+      vDivider.style.background = '#e5e7eb';
+    }
+  }
+</script>
+</body>
+</html>

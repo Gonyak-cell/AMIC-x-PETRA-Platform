@@ -1,6 +1,17 @@
 section_id: labor
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - labor_phrase_01
+    - labor_phrase_02
+    - labor_phrase_07
+    - labor_phrase_10
+section_preamble:
+  FACTS: 1
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -28,7 +39,7 @@ body: |
 conditional_blocks:
   - condition: issue_level == 'CRITICAL'
     insert_after: impact_sentence
-    text: "특히 집단분쟁 또는 대규모 미지급 금전채무가 확인되는 경우 별도 가격조정 또는 보상구조 검토가 필요할 수 있습니다."
+    text: "특히 미지급 임금·연차수당·퇴직급여 또는 포괄임금제 무효 가능성이 확인되는 경우 별도 가격조정 또는 보상구조 검토가 필요할 수 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "취업규칙, 근로계약, 단체협약 및 급여/퇴직충당 자료의 추가 확보가 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 취업규칙, 근로계약, 단체협약, 급여대장 및 퇴직충당 자료의 추가 확보가 필요할 수 있습니다."

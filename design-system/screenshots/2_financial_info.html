@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기능2 - 기업 재무정보 조회</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background: #F7F8FA; width: 1280px; height: 900px; overflow: hidden; }
+
+  .sidebar { position: fixed; left: 0; top: 0; width: 240px; height: 100%; background: linear-gradient(180deg, #0F3A32 0%, #0A2B24 100%); padding: 24px 16px; z-index: 30; }
+  .logo { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .logo-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 32px; }
+  .nav-section { color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 8px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.7); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 2px; }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left: 2px solid #26C260; }
+
+  .main { margin-left: 240px; }
+
+  .hero { background: radial-gradient(ellipse at 30% 20%, rgba(38,194,96,0.15) 0%, transparent 60%), linear-gradient(135deg, #0A2B24 0%, #0F3A32 50%, #1A5A4C 100%); padding: 24px 40px 20px; }
+  .hero-breadcrumb { color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px; }
+  .hero-title { color: #fff; font-size: 26px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+  .hero-subtitle { color: rgba(255,255,255,0.6); font-size: 13px; }
+  .hero-badge { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+
+  /* KPI */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 40px; margin-top: -16px; position: relative; z-index: 5; }
+  .kpi-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); }
+  .kpi-label { color: #6B7280; font-size: 11px; margin-bottom: 6px; }
+  .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; color: #1A1A1A; }
+  .kpi-change { font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-top: 3px; }
+  .kpi-change.up { color: #26C260; }
+  .kpi-change.down { color: #BC2C1A; }
+
+  /* Content */
+  .content { padding: 20px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); overflow: hidden; }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid #F0F0F0; display: flex; justify-content: space-between; align-items: center; }
+  .card-title { font-size: 14px; font-weight: 700; color: #1A1A1A; }
+  .card-subtitle { font-size: 11px; color: #9CA3AF; }
+  .card-body { padding: 20px; }
+
+  /* Chart placeholder */
+  .chart-area { height: 220px; position: relative; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 16px; height: 180px; padding: 0 10px; }
+  .chart-bar-group { display: flex; gap: 4px; align-items: flex-end; flex: 1; }
+  .chart-bar { width: 24px; border-radius: 4px 4px 0 0; position: relative; }
+  .chart-bar.revenue { background: linear-gradient(180deg, #0F3A32 0%, #1A5A4C 100%); }
+  .chart-bar.profit { background: linear-gradient(180deg, #26C260 0%, #1FAA52 100%); }
+  .chart-bar-label { position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #6B7280; white-space: nowrap; width: 60px; text-align: center; }
+  .chart-legend { display: flex; gap: 16px; margin-top: 36px; padding: 0 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #6B7280; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Financial Table */
+  .fin-table { width: 100%; border-collapse: collapse; }
+  .fin-table th { background: linear-gradient(135deg, #0F3A32, #1A5A4C); color: #fff; font-size: 11px; padding: 10px 12px; text-align: right; font-weight: 600; }
+  .fin-table th:first-child { text-align: left; }
+  .fin-table td { padding: 10px 12px; font-size: 12px; color: #3D3D3D; border-bottom: 1px solid #F0F0F0; text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .fin-table td:first-child { text-align: left; font-family: 'Space Grotesk', sans-serif; font-weight: 500; color: #1A1A1A; }
+  .fin-table tr:nth-child(even) { background: #F7F8FA; }
+  .fin-table .highlight { font-weight: 600; color: #0F3A32; }
+  .positive { color: #26C260; }
+  .negative { color: #BC2C1A; }
+
+  .source-bar { padding: 12px 40px; }
+  .source-note { background: #EFF6FF; border-radius: 8px; padding: 10px 16px; font-size: 11px; color: #2563EB; display: flex; align-items: center; gap: 8px; }
+  .source-note strong { color: #1E40AF; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; padding: 0 40px; margin-top: 4px; }
+  .tab { padding: 10px 20px; font-size: 13px; color: #6B7280; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.active { color: #0F3A32; font-weight: 600; border-bottom-color: #26C260; }
+</style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">AMIC x PETRA</div>
+    <div class="logo-sub">PE Deal Management Platform</div>
+    <div class="nav-section">Modules</div>
+    <div class="nav-item active">Financial Due Diligence</div>
+    <div class="nav-item">GP Research (KIIS)</div>
+    <div class="nav-item">Info Memorandum</div>
+    <div class="nav-item">M&A Workflow</div>
+  </div>
+
+  <div class="main">
+    <div class="hero">
+      <div class="hero-breadcrumb">FDD &gt; 기업 재무정보</div>
+      <div class="hero-title">(주)테크코리아 재무분석 <span class="hero-badge">DART API</span></div>
+      <div class="hero-subtitle">DART 전자공시 API를 통해 자동 수집된 재무제표 데이터</div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">매출액 (2024)</div>
+        <div class="kpi-value">₩ 1,284억</div>
+        <div class="kpi-change up">+18.3% YoY</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">영업이익</div>
+        <div class="kpi-value">₩ 203억</div>
+        <div class="kpi-change up">+24.1% YoY</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">순이익</div>
+        <div class="kpi-value">₩ 167억</div>
+        <div class="kpi-change up">+15.7% YoY</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">부채비율</div>
+        <div class="kpi-value">42.3%</div>
+        <div class="kpi-change down">-3.2%p YoY</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">손익계산서</div>
+      <div class="tab">재무상태표</div>
+      <div class="tab">현금흐름표</div>
+      <div class="tab">주요 비율</div>
+    </div>
+
+    <div class="content">
+      <!-- Chart -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">매출액 · 영업이익 추이</div>
+            <div class="card-subtitle">DART 전자공시 API — 최근 5개년</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-area">
+            <div class="chart-bars">
+              <div class="chart-bar-group">
+                <div class="chart-bar revenue" style="height:100px;"><div class="chart-bar-label">2020</div></div>
+                <div class="chart-bar profit" style="height:40px;"></div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar revenue" style="height:115px;"><div class="chart-bar-label">2021</div></div>
+                <div class="chart-bar profit" style="height:52px;"></div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar revenue" style="height:130px;"><div class="chart-bar-label">2022</div></div>
+                <div class="chart-bar profit" style="height:60px;"></div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar revenue" style="height:150px;"><div class="chart-bar-label">2023</div></div>
+                <div class="chart-bar profit" style="height:72px;"></div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar revenue" style="height:175px;"><div class="chart-bar-label">2024</div></div>
+                <div class="chart-bar profit" style="height:90px;"></div>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#0F3A32;"></div>매출액</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#26C260;"></div>영업이익</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">손익계산서 상세</div>
+            <div class="card-subtitle">단위: 백만원</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding: 0;">
+          <table class="fin-table">
+            <thead>
+              <tr><th>항목</th><th>2022</th><th>2023</th><th>2024</th><th>YoY</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="highlight">매출액</td><td>95,230</td><td>108,540</td><td>128,400</td><td class="positive">+18.3%</td></tr>
+              <tr><td>매출원가</td><td>62,400</td><td>69,820</td><td>81,500</td><td class="negative">+16.7%</td></tr>
+              <tr><td class="highlight">매출총이익</td><td>32,830</td><td>38,720</td><td>46,900</td><td class="positive">+21.1%</td></tr>
+              <tr><td>판매관리비</td><td>19,200</td><td>22,360</td><td>26,600</td><td class="negative">+19.0%</td></tr>
+              <tr><td class="highlight">영업이익</td><td>13,630</td><td>16,360</td><td>20,300</td><td class="positive">+24.1%</td></tr>
+              <tr><td>영업외수익</td><td>1,200</td><td>980</td><td>1,450</td><td class="positive">+48.0%</td></tr>
+              <tr><td>영업외비용</td><td>2,100</td><td>1,890</td><td>2,050</td><td class="negative">+8.5%</td></tr>
+              <tr><td class="highlight">법인세차감전순이익</td><td>12,730</td><td>15,450</td><td>19,700</td><td class="positive">+27.5%</td></tr>
+              <tr><td>법인세비용</td><td>2,800</td><td>3,400</td><td>3,000</td><td class="positive">-11.8%</td></tr>
+              <tr><td class="highlight">당기순이익</td><td>9,930</td><td>12,050</td><td>16,700</td><td class="positive">+38.6%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="source-bar">
+      <div class="source-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <strong>데이터 출처:</strong> DART 전자공시시스템 API (금융감독원) — 최종 수집: 2026-02-28 09:00 KST
+      </div>
+    </div>
+  </div>
+</body>
+</html>

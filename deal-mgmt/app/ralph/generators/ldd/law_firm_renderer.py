@@ -147,6 +147,7 @@ class LawFirmDocxRenderer:
         chapter_idx = 0
         current_chapter: LawFirmChapter | None = None
         item_idx = 0
+        last_rendered_item_idx: int | None = None
 
         body = doc.element.body
         section_counter = 0
@@ -177,6 +178,7 @@ class LawFirmDocxRenderer:
                                     )
                                     chapter_idx += 1
                                     item_idx = 0
+                                    last_rendered_item_idx = None
 
                     # Recommendation 박스: 내용 채우기
                     if len(cells) == 1:
@@ -187,7 +189,7 @@ class LawFirmDocxRenderer:
                                 cells[0],
                                 current_chapter,
                                 narratives,
-                                item_idx,
+                                last_rendered_item_idx if last_rendered_item_idx is not None else item_idx,
                             )
 
             elif tag == "p":
@@ -214,9 +216,14 @@ class LawFirmDocxRenderer:
                                 item_idx,
                             )
                             _set_text_in_xml(element, content)
+                            last_rendered_item_idx = item_idx
                             item_idx += 1
                         elif text == "[소주제명 기재]" or text == "[세부항목명 기재]":
                             _set_text_in_xml(element, item.get("name", ""))
+                    else:
+                        _set_text_in_xml(element, "")
+                elif text.startswith("[") and text.endswith("]"):
+                    _set_text_in_xml(element, "")
 
     def _fill_recommendation_box(
         self,
@@ -227,6 +234,7 @@ class LawFirmDocxRenderer:
     ) -> None:
         """Recommendation 박스에 권고사항을 채움."""
         if not chapter:
+            _set_cell_text(tc_element, "")
             return
 
         narr_list = narratives.get(chapter.number, [])
@@ -239,6 +247,9 @@ class LawFirmDocxRenderer:
             )
             if rec_text:
                 _set_cell_text(tc_element, f"Recommendation: {rec_text}")
+                return
+
+        _set_cell_text(tc_element, "")
 
     def _get_narrative_content(
         self,
@@ -251,11 +262,20 @@ class LawFirmDocxRenderer:
         if item_idx < len(narr_list):
             narr = narr_list[item_idx]
             if isinstance(narr, LawFirmNarrative):
-                parts = [narr.status_section, narr.review_section]
+                parts = [
+                    narr.status_section,
+                    narr.review_section,
+                    f"Recommendation: {narr.recommendation_section}" if narr.recommendation_section else "",
+                ]
             else:
                 parts = [
                     narr.get("status_section", ""),
                     narr.get("review_section", ""),
+                    (
+                        f"Recommendation: {narr.get('recommendation_section', '')}"
+                        if narr.get("recommendation_section", "")
+                        else ""
+                    ),
                 ]
             content = "\n\n".join(p for p in parts if p)
             if content:

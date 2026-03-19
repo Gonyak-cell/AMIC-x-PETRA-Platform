@@ -58,6 +58,7 @@ class SectionTemplate:
     body: str = ""
     conditional_blocks: list[ConditionalBlock] = field(default_factory=list)
     includes: list[str] = field(default_factory=list)
+    section_preamble: dict[str, int] = field(default_factory=dict)
 
     @property
     def l2_slots(self) -> dict[str, SlotDefinition]:
@@ -181,4 +182,9 @@ class TemplateLoader:
             body=raw.get("body", ""),
             conditional_blocks=conditional_blocks,
             includes=raw.get("includes", []),
+            section_preamble={
+                str(k): int(v)
+                for k, v in raw.get("section_preamble", {}).items()
+                if isinstance(k, str) and isinstance(v, (int, float)) and int(v) > 0
+            },
         )

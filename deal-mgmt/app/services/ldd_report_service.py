@@ -14,6 +14,7 @@ import copy
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -41,6 +42,27 @@ SLOTFILL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templat
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_VERSION = "1.0"
+
+
+@dataclass
+class _NarrativeBlockContext:
+    title: str
+    content: str
+
+
+@dataclass
+class _NarrativeItemContext:
+    item_id: str
+    item_name: str
+    status: str
+    issue_level: str
+    blocks: list[_NarrativeBlockContext]
+
+
+@dataclass
+class _NarrativeSectionContext:
+    section_title: str
+    items: list[_NarrativeItemContext]
 
 
 def _resolve_sections(deal_type: str, explicit_sections: list | None = None) -> tuple[list[dict], str]:
@@ -278,6 +300,27 @@ def _build_context(
 ) -> dict:
     """docxtpl에 전달할 컨텍스트 딕셔너리를 생성한다."""
     sections = report.sections or []
+    if report.report_type == LDDReportType.REDFLAG:
+        filtered_sections: list[dict] = []
+        for section in sections:
+            filtered_items = [
+                item
+                for item in section.get("items", [])
+                if item.get("status") == LDDItemStatus.ISSUE
+                and item.get("issue_level") in (
+                    LDDIssueLevel.CRITICAL,
+                    LDDIssueLevel.HIGH,
+                    LDDIssueLevel.MEDIUM,
+                )
+            ]
+            if filtered_items:
+                filtered_sections.append(
+                    {
+                        **section,
+                        "items": filtered_items,
+                    }
+                )
+        sections = filtered_sections
 
     # 전체 이슈 목록 (ISSUE 항목만)
     all_issues = []
@@ -346,7 +389,7 @@ def _build_context(
 def _build_narrative_items(
     sections: list[dict],
     narrative_sections: dict[str, list[dict]],
-) -> list[dict]:
+) -> list[_NarrativeSectionContext]:
     """서술 데이터를 docxtpl 컨텍스트 형식으로 조립한다.
 
     각 섹션별 항목에 narrative blocks를 매칭하여 반환.
@@ -372,7 +415,7 @@ def _build_narrative_items(
             ...
         ]
     """
-    result: list[dict] = []
+    result: list[_NarrativeSectionContext] = []
 
     for section in sections:
         section_type = section.get("section_type", "")
@@ -384,40 +427,48 @@ def _build_narrative_items(
         for nr in narrative_items:
             narrative_by_id[nr.get("item_id", "")] = nr
 
-        items_ctx: list[dict] = []
+        items_ctx: list[_NarrativeItemContext] = []
         for item in section.get("items", []):
             item_id = item.get("item_id", "")
             nr = narrative_by_id.get(item_id)
 
-            blocks = []
+            blocks: list[_NarrativeBlockContext] = []
             if nr and nr.get("blocks"):
                 blocks = [
-                    {"title": b.get("title", ""), "content": b.get("content", "")}
+                    _NarrativeBlockContext(
+                        title=b.get("title", ""),
+                        content=b.get("content", ""),
+                    )
                     for b in nr["blocks"]
                     if b.get("content")
                 ]
 
             # 블록이 없으면 체크리스트 데이터를 단일 블록으로 폴백
             if not blocks and item.get("description"):
-                blocks = [{"title": "검토 결과", "content": item["description"]}]
+                blocks = [
+                    _NarrativeBlockContext(
+                        title="검토 결과",
+                        content=item["description"],
+                    )
+                ]
 
             if blocks:
                 items_ctx.append(
-                    {
-                        "item_id": item_id,
-                        "item_name": item.get("name", ""),
-                        "status": item.get("status", "PENDING"),
-                        "issue_level": item.get("issue_level", ""),
-                        "blocks": blocks,
-                    }
+                    _NarrativeItemContext(
+                        item_id=item_id,
+                        item_name=item.get("name", ""),
+                        status=item.get("status", "PENDING"),
+                        issue_level=item.get("issue_level", ""),
+                        blocks=blocks,
+                    )
                 )
 
         if items_ctx:
             result.append(
-                {
-                    "section_title": section_title,
-                    "items": items_ctx,
-                }
+                _NarrativeSectionContext(
+                    section_title=section_title,
+                    items=items_ctx,
+                )
             )
 
     return result
