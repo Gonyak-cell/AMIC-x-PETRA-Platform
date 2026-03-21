@@ -41,6 +41,24 @@ foreach ($svc in $services) {
     Write-Host ("{0,-10}" -f "${elapsed}ms")
 }
 
+Write-Host ""
+Write-Host "--- OCR Runtime (MA API) ---" -ForegroundColor DarkGray
+try {
+    $maHealth = Invoke-RestMethod -Uri "http://localhost:8003/health" -TimeoutSec 5
+    if ($null -ne $maHealth.ocr) {
+        Write-Host ("enabled={0} available={1} required={2}" -f $maHealth.ocr.enabled, $maHealth.ocr.available, $maHealth.ocr.required)
+        if ($maHealth.ocr.reason) {
+            Write-Host ("reason={0}" -f $maHealth.ocr.reason) -ForegroundColor DarkGray
+        }
+    }
+    else {
+        Write-Host "OCR status not exposed by MA API health response." -ForegroundColor Yellow
+    }
+}
+catch {
+    Write-Host "Unable to query OCR runtime status from MA API health." -ForegroundColor Yellow
+}
+
 # Docker 컨테이너 상태
 Write-Host ""
 Write-Host "--- Docker Container Status ---" -ForegroundColor DarkGray

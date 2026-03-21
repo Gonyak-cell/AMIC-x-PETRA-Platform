@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,8 +30,13 @@ import {
   useDealSetupFromExcel,
   useConfirmDealSetup,
 } from "@/modules/ma/hooks/useDealSetup";
-import { koreanToEnglish } from "@/modules/ma/utils/koreanToEnglish";
 import { formatKRW } from "@/modules/ma/utils/format";
+import {
+  buildProjectName,
+  getProjectSuffix,
+  normalizeProjectSuffix,
+  previewProjectCode,
+} from "@/modules/ma/utils/projectName";
 import type {
   TransactionCreate,
   DealType,
@@ -47,7 +52,6 @@ import {
   DEAL_STRUCTURE_OPTIONS,
   INVESTMENT_TYPE_OPTIONS,
   DEAL_TYPE_OPTIONS,
-  getDealTypeCodePrefix,
   getDealTypeLabel,
 } from "@/modules/ma/constants";
 
@@ -66,17 +70,6 @@ const INITIAL_MANUAL: TransactionCreate = {
   client_name: "",
   lead_advisor_email: "",
 };
-
-function getSuffix(name: string): string {
-  return name.startsWith("Project ") ? name.slice("Project ".length) : name;
-}
-
-function previewCode(dealType: DealType, name: string): string {
-  const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
-  if (!suffix) return "";
-  const yy = new Date().getFullYear().toString().slice(2);
-  return `${getDealTypeCodePrefix(dealType)}${yy}-${suffix}-??`;
-}
 
 // ── 메인 컴포넌트 ────────────────────────────────────────
 
@@ -125,26 +118,46 @@ export default function DealSetupWizardPage() {
 
 function ManualTab() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL_MANUAL);
   const [showOptional, setShowOptional] = useState(false);
+  const [projectNameInput, setProjectNameInput] = useState(() =>
+    getProjectSuffix(INITIAL_MANUAL.name),
+  );
+  const [isProjectNameComposing, setIsProjectNameComposing] = useState(false);
 
   const set = <K extends keyof TransactionCreate>(
     key: K,
     val: TransactionCreate[K],
   ) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  const applyProjectName = (raw: string) => {
-    const converted = koreanToEnglish(raw);
-    const clean = converted.replace(/[^A-Za-z\s]/g, "");
-    const capitalized =
-      clean.length > 0 ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
-    set("name", `Project ${capitalized}`);
+  useEffect(() => {
+    if (!user?.email) return;
+    setForm((prev) =>
+      prev.lead_advisor_email.trim()
+        ? prev
+        : { ...prev, lead_advisor_email: user.email }
+    );
+  }, [user?.email]);
+
+  const syncProjectName = (raw: string) => {
+    const normalized = normalizeProjectSuffix(raw);
+    setProjectNameInput(normalized);
+    set("name", buildProjectName(normalized));
   };
 
-  const suffix = getSuffix(form.name);
+  const handleProjectNameChange = (value: string) => {
+    if (isProjectNameComposing) {
+      setProjectNameInput(value);
+      return;
+    }
+    syncProjectName(value);
+  };
+
+  const normalizedProjectName = normalizeProjectSuffix(projectNameInput);
   const canSubmit =
-    suffix.trim().length > 0 &&
+    normalizedProjectName.length > 0 &&
     form.deal_type &&
     form.target_company_name.trim() &&
     form.client_name.trim() &&
@@ -154,12 +167,25 @@ function ManualTab() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    createTxn.mutate(form, {
+    createTxn.mutate(
+      {
+        ...form,
+        name: buildProjectName(projectNameInput),
+        target_company_name: form.target_company_name.trim(),
+        client_name: form.client_name.trim(),
+        lead_advisor_email: form.lead_advisor_email.trim(),
+        target_corp_code: form.target_corp_code?.trim() || undefined,
+        industry: form.industry?.trim() || undefined,
+        deal_captain_email: form.deal_captain_email?.trim() || undefined,
+        estimated_deal_value: form.estimated_deal_value?.trim() || undefined,
+      },
+      {
       onSuccess: (txn) => navigate(`/ma/transactions/${txn.id}`),
-    });
+      },
+    );
   };
 
-  const preview = previewCode(form.deal_type, form.name);
+  const preview = previewProjectCode(form.deal_type, projectNameInput);
 
   return (
     <Card title="기본 정보" headerBar>
@@ -189,9 +215,13 @@ function ManualTab() {
                 required
                 className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                 placeholder="Edward (한글 입력 시 자동 영문 변환)"
-                value={suffix}
-                onChange={(e) => {
-                  applyProjectName(e.target.value);
+                value={projectNameInput}
+                onChange={(e) => handleProjectNameChange(e.target.value)}
+                onBlur={() => syncProjectName(projectNameInput)}
+                onCompositionStart={() => setIsProjectNameComposing(true)}
+                onCompositionEnd={(e) => {
+                  setIsProjectNameComposing(false);
+                  syncProjectName(e.currentTarget.value);
                 }}
               />
             </div>
@@ -361,6 +391,7 @@ function ManualTab() {
 
 function AITab() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const setupFromText = useDealSetupFromText();
   const setupFromExcel = useDealSetupFromExcel();
   const confirmSetup = useConfirmDealSetup();
@@ -371,12 +402,20 @@ function AITab() {
   const [preview, setPreview] = useState<DealSetupPreview | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!user?.email) return;
+    setLeadEmail((prev) => (prev.trim() ? prev : user.email));
+  }, [user?.email]);
+
   const isAnalyzing = setupFromText.isPending || setupFromExcel.isPending;
 
   const handleAnalyze = useCallback(() => {
     if (!leadEmail.trim() || !description.trim()) return;
     setupFromText.mutate(
-      { description, lead_advisor_email: leadEmail },
+      {
+        description: description.trim(),
+        lead_advisor_email: leadEmail.trim(),
+      },
       {
         onSuccess: (data) => setPreview(data),
         onError: (err) =>
@@ -416,7 +455,7 @@ function AITab() {
       dd_checklist: preview.dd_checklist,
       timeline: preview.timeline,
       buyer_candidates: preview.buyer_candidates,
-      lead_advisor_email: leadEmail,
+      lead_advisor_email: leadEmail.trim(),
     };
     confirmSetup.mutate(body, {
       onSuccess: (result) =>

@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,9 @@ from app.models.transaction import Transaction
 from app.models.vdr_folder import VdrFolder
 from app.schemas.vdr import (
     VdrDocumentOut,
+    VdrRoutingOverrideOut,
+    VdrRoutingOverrideUpsert,
+    VdrRoutingQueueResponse,
     VdrDocumentUpdate,
     VdrFolderCreate,
     VdrFolderOut,
@@ -29,7 +32,7 @@ from app.schemas.vdr import (
     VdrInitRequest,
     VdrSummaryOut,
 )
-from app.services import transaction_service, vdr_access_service, vdr_service
+from app.services import transaction_service, vdr_access_service, vdr_routing_service, vdr_service
 
 logger = logging.getLogger(__name__)
 
@@ -330,6 +333,24 @@ async def list_all_documents(
     return [VdrDocumentOut.model_validate(d) for d in docs]
 
 
+@router.get("/routing-queue", response_model=VdrRoutingQueueResponse)
+async def get_routing_queue(
+    txn_id: uuid.UUID,
+    status_filter: str = Query("open", alias="status"),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    """List documents that need routing review or already have manual overrides."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    if status_filter not in {"open", "reviewed", "all"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid routing status filter.")
+    return await vdr_routing_service.build_routing_queue(
+        db,
+        txn_id,
+        status_filter=status_filter,
+    )
+
+
 @router.get("/folders/{folder_id}/documents", response_model=list[VdrDocumentOut])
 async def list_documents(
     txn_id: uuid.UUID,
@@ -474,6 +495,44 @@ async def update_document(
     try:
         doc = await vdr_service.update_document(db, txn_id, doc_id, body)
         return VdrDocumentOut.model_validate(doc)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.put("/documents/{doc_id}/routing-override", response_model=VdrRoutingOverrideOut)
+async def upsert_document_routing_override(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    body: VdrRoutingOverrideUpsert,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """Persist a human-reviewed workstream override for a VDR document."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        override = await vdr_routing_service.upsert_routing_override(
+            db,
+            txn_id,
+            doc_id,
+            body,
+            reviewed_by_email=claims.email,
+        )
+        return VdrRoutingOverrideOut.model_validate(override)
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/documents/{doc_id}/routing-override", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document_routing_override(
+    txn_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """Remove a manual workstream override and fall back to auto-routing."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+    try:
+        await vdr_routing_service.delete_routing_override(db, txn_id, doc_id)
     except DocumentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

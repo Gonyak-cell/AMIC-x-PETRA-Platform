@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -89,6 +90,78 @@ class VdrDocumentUpdate(BaseModel):
 
     description: str | None = None
     folder_id: uuid.UUID | None = None
+
+
+VdrWorkstream = Literal["LDD", "FDD", "VALUATION", "COMMON"]
+VdrRoutingQueueStatus = Literal["open", "reviewed", "all"]
+
+
+class VdrRoutingOverrideUpsert(BaseModel):
+    """Manual routing decision captured from triage."""
+
+    primary_workstream: VdrWorkstream
+    workstream_tags: list[VdrWorkstream] | None = None
+    override_note: str | None = Field(None, max_length=1000)
+
+
+class VdrRoutingOverrideOut(BaseModel):
+    """Persisted VDR routing override."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    transaction_id: uuid.UUID
+    vdr_document_id: uuid.UUID
+    primary_workstream: VdrWorkstream
+    workstream_tags: list[VdrWorkstream]
+    override_note: str | None
+    reviewed_by_email: str | None
+    reviewed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class VdrRoutingDecisionOut(BaseModel):
+    """Auto-routed or override-routed decision snapshot."""
+
+    primary_workstream: VdrWorkstream
+    workstream_tags: list[VdrWorkstream]
+    confidence: float
+    requires_manual_review: bool
+    reasons: list[str]
+    is_override: bool = False
+    override_note: str | None = None
+    reviewed_by_email: str | None = None
+    reviewed_at: datetime | None = None
+
+
+class VdrRoutingQueueItem(BaseModel):
+    """Document entry shown in the routing triage queue."""
+
+    document: VdrDocumentOut
+    folder_name: str
+    folder_category: str
+    routing_status: Literal["OPEN_REVIEW", "OVERRIDDEN", "AUTO_ROUTED"]
+    auto_route: VdrRoutingDecisionOut
+    effective_route: VdrRoutingDecisionOut
+
+
+class VdrRoutingQueueSummary(BaseModel):
+    """High-level routing triage summary."""
+
+    total_documents: int
+    returned_documents: int
+    open_documents: int
+    reviewed_documents: int
+    auto_routed_documents: int
+    by_effective_workstream: dict[str, int] = Field(default_factory=dict)
+
+
+class VdrRoutingQueueResponse(BaseModel):
+    """Routing triage queue response."""
+
+    summary: VdrRoutingQueueSummary
+    items: list[VdrRoutingQueueItem]
 
 
 class VdrSummaryOut(BaseModel):

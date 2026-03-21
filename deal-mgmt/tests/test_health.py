@@ -7,3 +7,5 @@ async def test_health_check(client):
     data = resp.json()
     assert data["status"] == "ok"
     assert data["service"] == "deal-mgmt"
+    assert "ocr" in data
+    assert "available" in data["ocr"]

@@ -48,6 +48,33 @@ class MockFDDClient:
     async def get_deal_status(self, deal_id: uuid.UUID) -> dict:
         return {"id": str(deal_id), "status": "mock_in_progress"}
 
+    async def get_evidence_export(self, deal_id: uuid.UUID) -> dict:
+        return {
+            "artifact_type": "FDD_REPORT",
+            "external_artifact_ref": f"fdd-{deal_id}",
+            "default_workstream": "FDD",
+            "records": [
+                {
+                    "section_type": "WORKING_CAPITAL",
+                    "item_id": "NWC-01",
+                    "reference_label": "mock_qoe_report.xlsx",
+                    "original_name": "mock_qoe_report.xlsx",
+                    "primary_workstream": "FDD",
+                    "workstream_tags": ["FDD"],
+                    "evidence_kind": "FINANCIAL_SUPPORT",
+                    "directness": "INDIRECT",
+                    "confidence": 0.86,
+                    "relevance_score": 0.86,
+                    "source_page": "Sheet QoE Row 4",
+                    "source_snippet": "Mock NWC adjustment support.",
+                    "evidence_locator": {"sheet": "QoE", "row": 4},
+                    "used_in_draft": False,
+                    "used_in_final": True,
+                    "analysis_phase": "FINAL",
+                }
+            ],
+        }
+
     async def trigger_analysis(self, deal_id: uuid.UUID, analysis_type: str) -> dict:
         return {
             "deal_id": str(deal_id),

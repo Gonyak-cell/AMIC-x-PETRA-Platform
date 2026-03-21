@@ -11,30 +11,42 @@ import type {
   VdrFolder,
   VdrFolderCreate,
   VdrFolderUpdate,
+  VdrRoutingOverride,
+  VdrRoutingOverrideUpsert,
+  VdrRoutingQueueResponse,
+  VdrRoutingQueueStatus,
   VdrSummary,
 } from "@/modules/ma/types/vdr";
 import { CLASSIFICATION_POLL_INTERVAL_MS } from "@/modules/ma/types/vdr";
 
-// ── Query Keys ─────────────────────────────────────────
-
-const folderQK = (txnId: string) =>
-  ["ma", "transactions", txnId, "vdr", "folders"] as const;
+const vdrBaseQK = (txnId: string) => ["ma", "transactions", txnId, "vdr"] as const;
+const folderQK = (txnId: string) => [...vdrBaseQK(txnId), "folders"] as const;
 const docQK = (txnId: string, folderId: string) =>
-  [
-    "ma",
-    "transactions",
-    txnId,
-    "vdr",
-    "folders",
-    folderId,
-    "documents",
-  ] as const;
-const allDocQK = (txnId: string) =>
-  ["ma", "transactions", txnId, "vdr", "all-documents"] as const;
-const summaryQK = (txnId: string) =>
-  ["ma", "transactions", txnId, "vdr", "summary"] as const;
+  [...folderQK(txnId), folderId, "documents"] as const;
+const allDocQK = (txnId: string) => [...vdrBaseQK(txnId), "all-documents"] as const;
+const summaryQK = (txnId: string) => [...vdrBaseQK(txnId), "summary"] as const;
+const routingQueueQK = (txnId: string, status: VdrRoutingQueueStatus) =>
+  [...vdrBaseQK(txnId), "routing-queue", status] as const;
 
-// ── 요약 ────────────────────────────────────────────────
+function invalidateRoutingQueue(qc: ReturnType<typeof useQueryClient>, txnId: string) {
+  qc.invalidateQueries({ queryKey: [...vdrBaseQK(txnId), "routing-queue"] });
+}
+
+function flattenVdrFolders(tree: VdrFolder[]): VdrFolder[] {
+  const result: VdrFolder[] = [];
+
+  function walk(nodes: VdrFolder[]) {
+    for (const node of nodes) {
+      result.push(node);
+      if (node.children.length > 0) {
+        walk(node.children);
+      }
+    }
+  }
+
+  walk(tree);
+  return result;
+}
 
 export function useVdrSummary(txnId: string) {
   return useQuery<VdrSummary>({
@@ -45,21 +57,6 @@ export function useVdrSummary(txnId: string) {
     },
     enabled: !!txnId,
   });
-}
-
-// ── 폴더 ────────────────────────────────────────────────
-
-/** 서버의 중첩 트리 응답을 parent_id 참조 기반 평탄 배열로 변환 */
-function flattenVdrFolders(tree: VdrFolder[]): VdrFolder[] {
-  const result: VdrFolder[] = [];
-  function walk(nodes: VdrFolder[]) {
-    for (const node of nodes) {
-      result.push(node);
-      if (node.children.length > 0) walk(node.children);
-    }
-  }
-  walk(tree);
-  return result;
 }
 
 export function useVdrFolders(txnId: string) {
@@ -77,18 +74,15 @@ export function useCreateVdrFolder(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: VdrFolderCreate) => {
-      const { data } = await maApi.post(
-        `/transactions/${txnId}/vdr/folders`,
-        body,
-      );
+      const { data } = await maApi.post(`/transactions/${txnId}/vdr/folders`, body);
       return data as VdrFolder;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
-      toast.success("폴더가 생성되었습니다.");
+      toast.success("Folder created.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "폴더 생성에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to create folder."));
     },
   });
 }
@@ -111,10 +105,10 @@ export function useUpdateVdrFolder(txnId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
-      toast.success("폴더가 수정되었습니다.");
+      toast.success("Folder updated.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "폴더 수정에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to update folder."));
     },
   });
 }
@@ -128,15 +122,14 @@ export function useDeleteVdrFolder(txnId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
-      toast.success("폴더가 삭제되었습니다.");
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("Folder deleted.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "폴더 삭제에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to delete folder."));
     },
   });
 }
-
-// ── 문서 ────────────────────────────────────────────────
 
 export function useVdrDocuments(txnId: string, folderId: string | null) {
   return useQuery<VdrDocument[]>({
@@ -168,10 +161,11 @@ export function useUploadVdrDocument(txnId: string, folderId: string) {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
-      toast.success("파일이 업로드되었습니다.");
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("File uploaded.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "파일 업로드에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to upload file."));
     },
   });
 }
@@ -193,14 +187,13 @@ export function useUpdateVdrDocument(txnId: string) {
       return data as VdrDocument;
     },
     onSuccess: () => {
-      // folderQK is a prefix of docQK → React Query prefix-matching
-      // implicitly invalidates all docQK(txnId, *) queries as well.
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
-      toast.success("문서가 수정되었습니다.");
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("Document updated.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "문서 수정에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to update document."));
     },
   });
 }
@@ -215,23 +208,82 @@ export function useDeleteVdrDocument(txnId: string) {
       qc.invalidateQueries({ queryKey: docQK(txnId, folderId) });
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
-      toast.success("문서가 삭제되었습니다.");
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("Document deleted.");
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "문서 삭제에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to delete document."));
     },
   });
 }
 
-// ── Direct Upload ────────────────────────────────────────
+export function useVdrRoutingQueue(
+  txnId: string,
+  status: VdrRoutingQueueStatus,
+) {
+  return useQuery<VdrRoutingQueueResponse>({
+    queryKey: routingQueueQK(txnId, status),
+    queryFn: async () => {
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/vdr/routing-queue`,
+        { params: { status } },
+      );
+      return data;
+    },
+    enabled: !!txnId,
+  });
+}
 
-/** 다중 파일 Direct Upload (폴더 미지정, AI 자동 분류) */
+export function useUpsertVdrRoutingOverride(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      docId,
+      body,
+    }: {
+      docId: string;
+      body: VdrRoutingOverrideUpsert;
+    }) => {
+      const { data } = await maApi.put(
+        `/transactions/${txnId}/vdr/documents/${docId}/routing-override`,
+        body,
+      );
+      return data as VdrRoutingOverride;
+    },
+    onSuccess: () => {
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("Routing override saved.");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to save routing override."));
+    },
+  });
+}
+
+export function useDeleteVdrRoutingOverride(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (docId: string) => {
+      await maApi.delete(
+        `/transactions/${txnId}/vdr/documents/${docId}/routing-override`,
+      );
+    },
+    onSuccess: () => {
+      invalidateRoutingQueue(qc, txnId);
+      toast.success("Routing override removed.");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to remove routing override."));
+    },
+  });
+}
+
 export function useDirectUpload(txnId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (files: File[]) => {
       const formData = new FormData();
-      files.forEach((f) => formData.append("files", f));
+      files.forEach((file) => formData.append("files", file));
       const { data } = await maApi.post(
         `/transactions/${txnId}/vdr/documents/direct-upload`,
         formData,
@@ -242,14 +294,14 @@ export function useDirectUpload(txnId: string) {
       qc.invalidateQueries({ queryKey: folderQK(txnId) });
       qc.invalidateQueries({ queryKey: summaryQK(txnId) });
       qc.invalidateQueries({ queryKey: allDocQK(txnId) });
+      invalidateRoutingQueue(qc, txnId);
     },
     onError: (err) => {
-      toast.error(extractApiError(err, "파일 업로드에 실패했습니다."));
+      toast.error(extractApiError(err, "Failed to upload files."));
     },
   });
 }
 
-/** 2차 심사 상태 폴링 */
 export function useClassificationStatus(txnId: string, docIds: string[]) {
   return useQuery<ClassificationStatusItem[]>({
     queryKey: [
@@ -271,7 +323,9 @@ export function useClassificationStatus(txnId: string, docIds: string[]) {
     enabled: docIds.length > 0,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (!data) return CLASSIFICATION_POLL_INTERVAL_MS;
+      if (!data) {
+        return CLASSIFICATION_POLL_INTERVAL_MS;
+      }
       const allResolved = data.every(
         (item) => item.classification_status !== "PENDING_REVIEW",
       );
@@ -279,17 +333,15 @@ export function useClassificationStatus(txnId: string, docIds: string[]) {
     },
     retry: 3,
     meta: {
-      errorMessage: "분류 상태 조회에 실패했습니다.",
+      errorMessage: "Failed to load classification status.",
     },
   });
 }
 
-/** VDR 문서 다운로드 URL */
 export function getVdrDownloadUrl(txnId: string, docId: string): string {
   return `/api/ma/transactions/${txnId}/vdr/documents/${docId}/download`;
 }
 
-/** 파일명 기반 VDR 폴더 카테고리 추천 */
 export function useSuggestVdrCategory(txnId: string) {
   return useMutation({
     mutationFn: async (filename: string) => {
@@ -300,7 +352,7 @@ export function useSuggestVdrCategory(txnId: string) {
       return data;
     },
     onError: () => {
-      // AI 카테고리 추천 실패는 조용히 무시 (선택적 기능)
+      // Optional hint feature. Fail silently.
     },
   });
 }

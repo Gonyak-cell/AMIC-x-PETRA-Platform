@@ -28,7 +28,17 @@ def upgrade() -> None:
     # DDL을 DML보다 먼저 실행하여, DDL 실패 시 DML이 커밋되지 않도록 순서 보장.
     if bind.dialect.name == "postgresql":
         with op.get_context().autocommit_block():
-            op.execute(sa.text("ALTER TYPE attachmententitytype ADD VALUE IF NOT EXISTS 'MILESTONE'"))
+            op.execute(
+                sa.text(
+                    """
+                    DO $$ BEGIN
+                        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attachmententitytype') THEN
+                            ALTER TYPE attachmententitytype ADD VALUE IF NOT EXISTS 'MILESTONE';
+                        END IF;
+                    END $$;
+                    """
+                )
+            )
     # SQLite: VARCHAR이므로 별도 ALTER 불필요
 
     # 2) MOU_SIGNED → MAIN_DUE_DILIGENCE 데이터 마이그레이션

@@ -179,13 +179,30 @@ def rotate_logs(log_path: Path, days: int):
         print(f"로그 로테이션: {archived}건 아카이브 이동")
 
 
-def copy_to_memory(knowledge_path: Path):
+def build_project_slug(project_dir: Path) -> str:
+    raw = str(project_dir.resolve())
+    slug_chars = []
+    for idx, ch in enumerate(raw):
+        if idx == 0 and ch.isalpha():
+            slug_chars.append(ch.lower())
+        elif ch.isascii() and ch.isalnum():
+            slug_chars.append(ch)
+        else:
+            slug_chars.append("-")
+    return "".join(slug_chars)
+
+
+def copy_to_memory(knowledge_path: Path, project_dir: Path):
     """knowledge/bug-patterns.md → memory 폴더에 복사."""
-    memory_dir = Path.home() / ".claude" / "projects" / "c--Users-----OneDrive-Documents-Coding-AMIC-x-PETRA-Platform" / "memory"
-    if memory_dir.exists():
-        dest = memory_dir / "bug-patterns.md"
-        shutil.copy2(knowledge_path, dest)
-        print(f"memory 복사: {dest}")
+    project_root = Path.home() / ".claude" / "projects" / build_project_slug(project_dir)
+    if not project_root.exists():
+        return
+
+    memory_dir = project_root / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    dest = memory_dir / "bug-patterns.md"
+    shutil.copy2(knowledge_path, dest)
+    print(f"memory 복사: {dest}")
 
 
 def main():
@@ -208,7 +225,7 @@ def main():
         md = f"# Bug Pattern Knowledge Base\n> 기간: 최근 {args.days}일 | 에러 0건 | 마지막 분석: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n에러 로그가 아직 없습니다.\n"
         output_path = knowledge_dir / "bug-patterns.md"
         output_path.write_text(md, encoding="utf-8")
-        copy_to_memory(output_path)
+        copy_to_memory(output_path, project_dir)
         return
 
     patterns = cluster_errors(entries)
@@ -222,7 +239,7 @@ def main():
     rotate_logs(log_path, args.days)
 
     # memory 폴더에 복사
-    copy_to_memory(output_path)
+    copy_to_memory(output_path, project_dir)
 
     # 요약 출력
     recurring = [p for p in patterns if p["count"] >= 3]

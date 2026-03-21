@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,9 @@ from app.core.database import get_db
 from app.core.dependencies import get_fdd_client, get_im_client, get_kiis_client
 from app.core.security import JWTClaims, get_jwt_claims, require_write_access
 from app.models.enums import AuditAction
+from app.schemas.evidence import ArtifactEvidenceImportRequest
 from app.services import audit_service, transaction_service
+from app.services.evidence_import_service import import_artifact_evidence_records, resolve_external_artifact_id
 from app.services.protocols import FDDClientProtocol, IMClientProtocol, KIISClientProtocol
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,14 @@ class IntegrationResult(BaseModel):
     error: str | None = None
 
 
+class FDDEvidenceSyncRequest(BaseModel):
+    deal_id: uuid.UUID | None = None
+    artifact_id: uuid.UUID | None = None
+    external_artifact_ref: str | None = None
+    artifact_type: str = "FDD_REPORT"
+    default_workstream: str = "FDD"
+
+
 # ── FDD ──────────────────────────────────────────────────
 
 
@@ -59,6 +69,8 @@ async def link_fdd(
     txn = await transaction_service.get_transaction(db, txn_id)
     try:
         result = await fdd.create_deal(body.target_name, body.industry)
+        if result.get("id"):
+            txn.fdd_deal_id = str(result["id"])
         await audit_service.record(
             db,
             entity_type="Transaction",
@@ -92,6 +104,96 @@ async def fdd_status(
     except Exception as e:
         logger.warning("FDD status query failed for txn %s, deal %s: %s", txn_id, deal_id, e)
         raise HTTPException(status_code=502, detail="FDD 상태 조회에 실패했습니다") from e
+
+
+@router.post("/fdd/evidence-sync", response_model=IntegrationResult)
+async def sync_fdd_evidence(
+    txn_id: uuid.UUID,
+    body: FDDEvidenceSyncRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+    fdd: FDDClientProtocol = Depends(get_fdd_client),
+):
+    """Pull FDD evidence export and import it into common evidence_records."""
+    if claims.role == "CLIENT":
+        raise HTTPException(status_code=403, detail="클라이언트는 이 기능에 접근할 수 없습니다")
+
+    txn = await transaction_service.get_transaction(db, txn_id)
+    raw_deal_id = body.deal_id if body and body.deal_id else txn.fdd_deal_id
+    if not raw_deal_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No linked FDD deal id found for this transaction.",
+        )
+
+    try:
+        deal_id = raw_deal_id if isinstance(raw_deal_id, uuid.UUID) else uuid.UUID(str(raw_deal_id))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid FDD deal id.") from exc
+
+    try:
+        export_payload = await fdd.get_evidence_export(deal_id)
+    except Exception as e:
+        logger.warning("FDD evidence export failed for txn %s, deal %s: %s", txn_id, deal_id, e)
+        raise HTTPException(status_code=502, detail="FDD evidence export fetch failed.") from e
+
+    try:
+        import_body = ArtifactEvidenceImportRequest.model_validate(export_payload)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Invalid FDD evidence export payload: {exc}",
+        ) from exc
+
+    artifact_type = (body.artifact_type if body else import_body.artifact_type).strip().upper()
+    default_workstream = body.default_workstream if body else import_body.default_workstream
+    try:
+        artifact_id = resolve_external_artifact_id(
+            transaction_id=txn.id,
+            artifact_type=artifact_type,
+            artifact_id=body.artifact_id if body else import_body.artifact_id,
+            external_artifact_ref=(
+                body.external_artifact_ref if body and body.external_artifact_ref else import_body.external_artifact_ref
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    records = [record.model_dump(mode="python") for record in import_body.records]
+    imported_count = await import_artifact_evidence_records(
+        db,
+        transaction_id=txn.id,
+        artifact_type=artifact_type,
+        artifact_id=artifact_id,
+        default_workstream=default_workstream,
+        records=records,
+    )
+    await audit_service.record(
+        db,
+        entity_type="Transaction",
+        entity_id=txn.id,
+        action=AuditAction.UPDATE,
+        actor_email=claims.email,
+        new_value={
+            "service": "FDD",
+            "action": "evidence_sync",
+            "deal_id": str(deal_id),
+            "artifact_type": artifact_type,
+            "artifact_id": str(artifact_id),
+            "imported_count": imported_count,
+        },
+    )
+    await db.commit()
+    return IntegrationResult(
+        service="FDD",
+        status="synced",
+        data={
+            "deal_id": str(deal_id),
+            "artifact_type": artifact_type,
+            "artifact_id": str(artifact_id),
+            "imported_count": imported_count,
+        },
+    )
 
 
 # ── IM ───────────────────────────────────────────────────

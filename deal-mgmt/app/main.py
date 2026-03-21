@@ -78,6 +78,15 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Template preflight 검증 실패 (서버 시작에 영향 없음)")
 
+    try:
+        from app.ralph.parsers.pdf_parser import get_pdf_ocr_status
+
+        ocr_status = get_pdf_ocr_status()
+        if ocr_status["enabled"] and not ocr_status["available"]:
+            logger.warning("PDF OCR runtime unavailable: %s", ocr_status["reason"])
+    except Exception:
+        logger.exception("PDF OCR runtime 상태 점검 실패")
+
     # 마이그레이션은 deploy.yml에서 관리 (중복 실행 방지)
     logger.info("Deal Management application started")
     yield
@@ -125,6 +134,7 @@ app = FastAPI(
         {"name": "Marketing Materials", "description": "마케팅 자료 생성 (TM/DM/IM PPTX)"},
         {"name": "Financial Models", "description": "재무모델 생성 (DCF/LBO/COMPS/PROJECTION/FULL Excel)"},
         {"name": "LDD Reports", "description": "법률실사(LDD) 보고서 생성 (DDRL 체크리스트 → .docx)"},
+        {"name": "Evidence", "description": "워크스트림 공통 evidence traceability 조회"},
         {"name": "Meeting Logs", "description": "마케팅/협상 미팅 로그"},
         {"name": "Negotiation Issues", "description": "협상 이견 추적 — 다자 입장 + AI 조항 제안"},
         {"name": "Contract Markups", "description": "계약 마크업 버전 관리 (파일 업로드)"},
@@ -191,6 +201,7 @@ from app.routers import (
     document_versions,
     earnout,
     engagements,
+    evidence,
     financial_models,
     integrations,
     ldd_reports,
@@ -251,6 +262,7 @@ app.include_router(marketing_materials.router, prefix="/api/v1")
 app.include_router(financial_models.router, prefix="/api/v1")
 app.include_router(ldd_reports.router, prefix="/api/v1")
 app.include_router(ldd_reports._default_sections_router, prefix="/api/v1")
+app.include_router(evidence.router, prefix="/api/v1")
 app.include_router(ralph.router, prefix="/api/v1")
 # vdr_upload, vdr_access를 vdr보다 먼저 등록 — /documents/classification-status,
 # /access-logs 등 고정 경로가 vdr의 /documents/{doc_id} 와일드카드보다 먼저 매칭되어야 함
@@ -285,6 +297,16 @@ app.include_router(news_feed.router, prefix="/api/v1")
 @app.get("/health", tags=["Health"])
 async def health_check():
     result = {"status": "ok", "service": "deal-mgmt", "migration_ok": _migration_ok}
+    try:
+        from app.ralph.parsers.pdf_parser import get_pdf_ocr_status
+
+        result["ocr"] = get_pdf_ocr_status()
+        if result["ocr"]["required"] and not result["ocr"]["available"]:
+            result["status"] = "degraded"
+    except Exception as exc:
+        logger.error("Health check OCR status failed: %s", exc)
+        result["ocr"] = {"enabled": False, "available": False, "required": False, "reason": str(exc)}
+
     try:
         from sqlalchemy import text
 

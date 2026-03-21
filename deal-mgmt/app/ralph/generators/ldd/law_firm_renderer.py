@@ -16,6 +16,12 @@ from docx import Document
 
 from app.ralph.generators.ldd.law_firm_mapper import LawFirmChapter
 from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrative
+from app.ralph.generators.ldd.project_green_style import (
+    ProjectGreenToneContext,
+    build_project_green_foreword,
+    choose_project_green_modality,
+    normalize_project_green_text,
+)
 from app.ralph.generators.ldd.law_firm_template import (
     BODY_PLACEHOLDER,
     RECOMMENDATION_FILL,
@@ -96,6 +102,7 @@ class LawFirmDocxRenderer:
 
         # 1. 표지 데이터 채우기
         self._fill_cover(doc, report_data)
+        self._fill_front_matter(doc, report_data)
 
         # 2. 본문 섹션 헤더 + 내용 채우기
         self._fill_body(doc, report_data)
@@ -133,6 +140,42 @@ class LawFirmDocxRenderer:
             elif "[YYYY]" in text and "[MM]" in text and report_date:
                 _set_text_in_xml(element, report_date)
 
+    def _fill_front_matter(self, doc: Document, data: dict[str, Any]) -> None:
+        """Blank template 앞부분의 서문/용례 영역을 채운다."""
+        foreword_values = [
+            "목 차",
+            "서 문",
+            *build_project_green_foreword(
+                target_company=data.get("target_company", ""),
+                report_type_label=data.get("report_type_label", ""),
+                dd_period=data.get("dd_period", ""),
+            ),
+        ]
+        foreword_idx = 0
+        seen_exec_summary = False
+        glossary_filled = False
+
+        for element in doc.element.body:
+            tag = element.tag.split("}")[-1]
+            if tag != "p":
+                continue
+
+            text = _get_text_from_xml(element).strip()
+            if text == "EXECUTIVE SUMMARY":
+                seen_exec_summary = True
+                continue
+
+            if not seen_exec_summary:
+                if text == BODY_PLACEHOLDER and foreword_idx < len(foreword_values):
+                    _set_text_in_xml(element, foreword_values[foreword_idx])
+                    foreword_idx += 1
+                continue
+
+            if not glossary_filled and text == BODY_PLACEHOLDER:
+                _set_text_in_xml(element, "용 례")
+                glossary_filled = True
+                break
+
     # ── 본문 ──────────────────────────────────────────────────────────────
 
     def _fill_body(self, doc: Document, data: dict[str, Any]) -> None:
@@ -148,37 +191,40 @@ class LawFirmDocxRenderer:
         current_chapter: LawFirmChapter | None = None
         item_idx = 0
         last_rendered_item_idx: int | None = None
+        law_firm_header_filled = False
+        seen_glossary_heading = False
+        ready_for_chapters = False
 
         body = doc.element.body
-        section_counter = 0
 
         for element in list(body):
             tag = element.tag.split("}")[-1]
 
             if tag == "tbl":
-                # 섹션 헤더 바: 챕터 제목 채우기
                 rows = element.findall(f"{{{WML_NS}}}tr")
+
+                if seen_glossary_heading and not ready_for_chapters and len(rows) >= 2:
+                    ready_for_chapters = True
+
+                # 섹션 헤더 바: 챕터 제목 채우기
                 if len(rows) == 1:
                     cells = rows[0].findall(f"{{{WML_NS}}}tc")
                     if len(cells) == 3:
                         fill0 = _get_cell_fill_xml(cells[0])
                         if fill0 in SECTION_BAR_FILLS:
-                            section_counter += 1
-                            if section_counter == 1:
-                                # 첫 번째 바: 법무법인 명칭
+                            if not law_firm_header_filled:
                                 if law_firm_name:
                                     _set_cell_text(cells[2], law_firm_name)
-                            else:
-                                # 이후 바: 챕터 제목
-                                if chapter_idx < len(chapters):
-                                    current_chapter = chapters[chapter_idx]
-                                    _set_cell_text(
-                                        cells[2],
-                                        f"{current_chapter.number}. {current_chapter.title}",
-                                    )
-                                    chapter_idx += 1
-                                    item_idx = 0
-                                    last_rendered_item_idx = None
+                                law_firm_header_filled = True
+                            elif ready_for_chapters and chapter_idx < len(chapters):
+                                current_chapter = chapters[chapter_idx]
+                                _set_cell_text(
+                                    cells[2],
+                                    f"{current_chapter.number}. {current_chapter.title}",
+                                )
+                                chapter_idx += 1
+                                item_idx = 0
+                                last_rendered_item_idx = None
 
                     # Recommendation 박스: 내용 채우기
                     if len(cells) == 1:
@@ -195,6 +241,8 @@ class LawFirmDocxRenderer:
             elif tag == "p":
                 text = _get_text_from_xml(element).strip()
                 _numId, _ilvl = _get_num_info_from_xml(element)
+                if text == "용 례":
+                    seen_glossary_heading = True
 
                 # 대목차 플레이스홀더 → 챕터 내 항목명
                 if text in SECTION_PLACEHOLDERS.values() or text == BODY_PLACEHOLDER:
@@ -246,7 +294,7 @@ class LawFirmDocxRenderer:
                 else narr.get("recommendation_section", "")
             )
             if rec_text:
-                _set_cell_text(tc_element, f"Recommendation: {rec_text}")
+                _set_cell_text(tc_element, f"Recommendation: {normalize_project_green_text(rec_text)}")
                 return
 
         _set_cell_text(tc_element, "")
@@ -279,14 +327,24 @@ class LawFirmDocxRenderer:
                 ]
             content = "\n\n".join(p for p in parts if p)
             if content:
-                return content
+                return normalize_project_green_text(content)
 
         # 체크리스트 설명 폴백
         desc = item.get("description", "")
         if desc:
-            return desc
+            modality = choose_project_green_modality(
+                ProjectGreenToneContext(
+                    evidence_count=len(item.get("evidence_refs", []) or []),
+                    confidence=float(item.get("confidence", 0.0) or 0.0),
+                    status=str(item.get("status", "")),
+                    issue_level=str(item.get("issue_level", "") or ""),
+                    rfi_required=bool(item.get("rfi_required")),
+                    evidence_refs=tuple(str(ref) for ref in (item.get("evidence_refs", []) or []) if ref),
+                )
+            )
+            return normalize_project_green_text(desc, modality=modality)
 
-        return item.get("name", "")
+        return normalize_project_green_text(item.get("name", ""))
 
     # ── Executive Summary 표 ─────────────────────────────────────────────
 

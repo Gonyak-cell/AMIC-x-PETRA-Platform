@@ -29,6 +29,7 @@ class VdrTextCache(Base, TimestampMixin):
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)  # pdf, docx, xlsx
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     tables_json: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    chunks_json: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     ddrl_sections: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     text_length: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

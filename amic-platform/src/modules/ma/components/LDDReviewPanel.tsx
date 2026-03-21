@@ -1,14 +1,15 @@
 /**
- * LDD 체크리스트 리뷰 패널 — 53개 항목 승인/반려 + 진행률 표시.
+ * LDD review panel with item approvals plus source-control visibility.
  */
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import {
-  useLDDReport,
-  useReviewProgress,
-  useReviewLDDItem,
   useBulkReviewLDD,
   useFinalizeLDD,
+  useLDDReport,
+  useReviewLDDItem,
+  useReviewProgress,
+  type LDDEvidenceLedgerItem,
   type LDDItem,
   type LDDSection,
 } from "@/modules/ma/hooks/useLDDReports";
@@ -20,10 +21,10 @@ interface LDDReviewPanelProps {
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  OK: { label: "적정", className: "bg-green-100 text-green-800" },
+  OK: { label: "확정", className: "bg-green-100 text-green-800" },
   ISSUE: { label: "이슈", className: "bg-red-100 text-red-800" },
   NA: { label: "해당없음", className: "bg-neutral-100 text-neutral-600" },
-  PENDING: { label: "검토 대기", className: "bg-yellow-100 text-yellow-800" },
+  PENDING: { label: "검토대기", className: "bg-yellow-100 text-yellow-800" },
 };
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -32,6 +33,59 @@ const LEVEL_COLOR: Record<string, string> = {
   MEDIUM: "text-amber-500",
   LOW: "text-green-600",
 };
+
+function EvidenceMeta({ meta }: { meta: LDDEvidenceLedgerItem | undefined }) {
+  const primaryEvidence = meta?.documents?.[0];
+  if (!meta) return null;
+
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex flex-wrap gap-2 text-xs">
+        <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-600">
+          직접 {meta.direct_evidence_count}
+        </span>
+        <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-600">
+          간접 {meta.indirect_evidence_count}
+        </span>
+        <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+          문체 권장: {meta.recommended_modality}
+        </span>
+        {meta.requires_manual_review && (
+          <span className="rounded bg-amber-50 px-2 py-0.5 text-amber-700">
+            수동 검토 필요
+          </span>
+        )}
+        {meta.missing_required_evidence && (
+          <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">
+            필수 근거 부족
+          </span>
+        )}
+        {meta.missing_direct_evidence_for_material_issue && (
+          <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">
+            직접 근거 부족
+          </span>
+        )}
+        {meta.foreign_workstream_refs.length > 0 && (
+          <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">
+            타 workstream 오염 {meta.foreign_workstream_refs.length}
+          </span>
+        )}
+        {meta.unresolved_refs.length > 0 && (
+          <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">
+            미해결 ref {meta.unresolved_refs.length}
+          </span>
+        )}
+      </div>
+      {primaryEvidence?.snippet && (
+        <p className="text-xs text-neutral-500">
+          <strong>근거 추적:</strong>{" "}
+          {primaryEvidence.page_reference ? `${primaryEvidence.page_reference} - ` : ""}
+          {primaryEvidence.snippet}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function LDDReviewPanel({
   txnId,
@@ -45,9 +99,7 @@ export default function LDDReviewPanel({
   const finalize = useFinalizeLDD(txnId, reportId);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>(
-    {},
-  );
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
   const handleApprove = useCallback(
     (item: LDDItem) => {
@@ -73,11 +125,11 @@ export default function LDDReviewPanel({
 
   const handleApproveAll = useCallback(() => {
     if (!report?.sections) return;
-    const items = report.sections.flatMap((s: LDDSection) =>
-      s.items
-        .filter((i: LDDItem) => i.user_approved === null)
-        .map((i: LDDItem) => ({
-          item_id: i.item_id,
+    const items = report.sections.flatMap((section: LDDSection) =>
+      section.items
+        .filter((item: LDDItem) => item.user_approved === null)
+        .map((item: LDDItem) => ({
+          item_id: item.item_id,
           user_approved: true,
           user_comment: "",
         })),
@@ -85,83 +137,97 @@ export default function LDDReviewPanel({
     if (items.length > 0) {
       bulkReview.mutate(items);
     }
-  }, [report, bulkReview]);
+  }, [bulkReview, report]);
 
   const handleFinalize = useCallback(() => {
-    finalize.mutate({}, {
-      onSuccess: (nextReport) => {
-        if (nextReport.status === "READY") {
-          onFinalized?.();
-        }
+    finalize.mutate(
+      {},
+      {
+        onSuccess: (nextReport) => {
+          if (nextReport.status === "READY") {
+            onFinalized?.();
+          }
+        },
       },
-    });
+    );
   }, [finalize, onFinalized]);
 
   if (isLoading || !report) {
-    return <div className="p-6 text-neutral-500">보고서를 불러오는 중...</div>;
+    return <div className="p-6 text-neutral-500">보고서를 불러오는 중입니다.</div>;
   }
 
   const isReviewState = report.status === "REVIEW";
   const sections = report.sections || [];
+  const routingSummary = report.source_routing?.summary;
+  const ledgerSummary = report.evidence_ledger?.summary;
 
   return (
     <div className="space-y-6">
-      {/* QA 게이트 거부 사유 표시 */}
       {isReviewState && report.error_message && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
           <p className="text-sm text-amber-700">{report.error_message}</p>
         </div>
       )}
 
-      {/* 진행률 바 */}
       {progress && (
         <Card className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-neutral-700">
-              리뷰 진행률
-            </span>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-700">리뷰 진행률</span>
             <span className="text-sm text-neutral-500">
-              {progress.approved + progress.rejected} / {progress.total} (
-              {progress.progress_pct}%)
+              {progress.approved + progress.rejected} / {progress.total} ({progress.progress_pct}%)
             </span>
           </div>
-          <div className="w-full bg-neutral-200 rounded-full h-2">
+          <div className="h-2 w-full rounded-full bg-neutral-200">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
+              className="h-2 rounded-full bg-blue-600 transition-all"
               style={{ width: `${progress.progress_pct}%` }}
             />
           </div>
-          <div className="flex gap-4 mt-2 text-xs text-neutral-500">
-            <span className="text-green-600">승인: {progress.approved}</span>
+          <div className="mt-2 flex gap-4 text-xs text-neutral-500">
+            <span className="text-green-600">확인: {progress.approved}</span>
             <span className="text-red-600">반려: {progress.rejected}</span>
             <span>미검토: {progress.pending}</span>
           </div>
         </Card>
       )}
 
-      {/* 액션 버튼 */}
+      {(routingSummary || ledgerSummary) && (
+        <Card className="p-4">
+          <div className="flex flex-wrap gap-3 text-xs text-neutral-600">
+            {routingSummary && (
+              <>
+                <span>LDD 입력 문서: {routingSummary.included_for_ldd ?? 0}</span>
+                <span>제외 문서: {routingSummary.excluded_from_ldd ?? 0}</span>
+                <span>수동검토 필요: {routingSummary.manual_review_documents}</span>
+              </>
+            )}
+            {ledgerSummary && (
+              <>
+                <span>직접 근거: {ledgerSummary.direct_refs}</span>
+                <span>간접 근거: {ledgerSummary.indirect_refs}</span>
+                <span>근거 부족 item: {ledgerSummary.items_missing_evidence}</span>
+                <span>미해결 ref: {ledgerSummary.unresolved_refs}</span>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
+
       {isReviewState && (
         <div className="flex gap-3">
           <Button variant="secondary" size="sm" onClick={handleApproveAll}>
-            미검토 항목 전체 승인
+            미검토 항목 전체 확인
           </Button>
-          <Button
-            size="sm"
-            onClick={handleFinalize}
-            disabled={finalize.isPending}
-          >
-            {finalize.isPending
-              ? "최종 보고서 생성 중..."
-              : "최종 보고서 생성 (Finalize)"}
+          <Button size="sm" onClick={handleFinalize} disabled={finalize.isPending}>
+            {finalize.isPending ? "최종 보고서 생성 중..." : "최종 보고서 생성 (Finalize)"}
           </Button>
         </div>
       )}
 
-      {/* 상태 표시 */}
       {(report.status === "ANALYZING" || report.status === "FINALIZING") && (
-        <Card className="p-4 bg-blue-50 border-blue-200">
+        <Card className="border-blue-200 bg-blue-50 p-4">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
             <span className="text-sm font-medium text-blue-700">
               {report.status === "ANALYZING"
                 ? "AI 분석 진행 중 (Ralph Loop #1)..."
@@ -169,35 +235,28 @@ export default function LDDReviewPanel({
             </span>
           </div>
           {report.draft_score != null && (
-            <span className="text-xs text-blue-500 mt-1 block">
-              초안 품질 점수: {report.draft_score.toFixed(2)}
+            <span className="mt-1 block text-xs text-blue-500">
+              초안 점수: {report.draft_score.toFixed(2)}
             </span>
           )}
         </Card>
       )}
 
-      {/* 섹션별 체크리스트 */}
       {sections.map((section: LDDSection) => {
         const isExpanded = expandedSection === section.section_type;
-        const sectionIssues = section.items.filter(
-          (i) => i.status === "ISSUE",
-        ).length;
-        const sectionReviewed = section.items.filter(
-          (i) => i.user_approved !== null,
-        ).length;
+        const sectionIssues = section.items.filter((item) => item.status === "ISSUE").length;
+        const sectionReviewed = section.items.filter((item) => item.user_approved !== null).length;
 
         return (
           <Card key={section.section_type} className="overflow-hidden">
             <button
-              className="w-full flex items-center justify-between p-4 hover:bg-neutral-50 transition"
-              onClick={() =>
-                setExpandedSection(isExpanded ? null : section.section_type)
-              }
+              className="flex w-full items-center justify-between p-4 transition hover:bg-neutral-50"
+              onClick={() => setExpandedSection(isExpanded ? null : section.section_type)}
             >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold">{section.title}</span>
                 {sectionIssues > 0 && (
-                  <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
                     이슈 {sectionIssues}건
                   </span>
                 )}
@@ -211,47 +270,36 @@ export default function LDDReviewPanel({
             </button>
 
             {isExpanded && (
-              <div className="border-t divide-y">
+              <div className="divide-y border-t">
                 {section.items.map((item: LDDItem) => {
-                  const badge =
-                    STATUS_BADGE[item.status] || STATUS_BADGE.PENDING;
+                  const badge = STATUS_BADGE[item.status] || STATUS_BADGE.PENDING;
+                  const evidenceMeta: LDDEvidenceLedgerItem | undefined =
+                    report.evidence_ledger?.by_item_id?.[item.item_id];
 
                   return (
-                    <div key={item.item_id} className="p-4 space-y-2">
+                    <div key={item.item_id} className="space-y-2 p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <code className="text-xs text-neutral-400">
-                              {item.item_id}
-                            </code>
-                            <span className="text-sm font-medium">
-                              {item.name}
-                            </span>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded ${badge.className}`}
-                            >
+                            <code className="text-xs text-neutral-400">{item.item_id}</code>
+                            <span className="text-sm font-medium">{item.name}</span>
+                            <span className={`rounded px-2 py-0.5 text-xs ${badge.className}`}>
                               {badge.label}
                             </span>
                             {item.issue_level && (
-                              <span
-                                className={`text-xs ${LEVEL_COLOR[item.issue_level] || ""}`}
-                              >
+                              <span className={`text-xs ${LEVEL_COLOR[item.issue_level] || ""}`}>
                                 {item.issue_level}
                               </span>
                             )}
                             {item.confidence > 0 && (
                               <span className="text-xs text-neutral-400">
-                                신뢰도: {(item.confidence * 100).toFixed(0)}%
+                                신뢰도 {(item.confidence * 100).toFixed(0)}%
                               </span>
                             )}
                           </div>
-                          {item.description && (
-                            <p className="text-sm text-neutral-600 mt-1">
-                              {item.description}
-                            </p>
-                          )}
+                          {item.description && <p className="mt-1 text-sm text-neutral-600">{item.description}</p>}
                           {item.deal_impact && (
-                            <p className="text-xs text-neutral-500 mt-1">
+                            <p className="mt-1 text-xs text-neutral-500">
                               <strong>거래 영향:</strong> {item.deal_impact}
                             </p>
                           )}
@@ -261,38 +309,37 @@ export default function LDDReviewPanel({
                             </p>
                           )}
                           {item.evidence_refs.length > 0 && (
-                            <div className="text-xs text-blue-500 mt-1">
+                            <div className="mt-1 text-xs text-blue-500">
                               근거 문서: {item.evidence_refs.join(", ")}
                             </div>
                           )}
+                          <EvidenceMeta meta={evidenceMeta} />
                         </div>
 
-                        {/* 리뷰 상태 */}
-                        <div className="flex items-center gap-1 ml-4 shrink-0">
+                        <div className="ml-4 flex shrink-0 items-center gap-1">
                           {item.user_approved === true && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                              승인됨
+                            <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-700">
+                              확인됨
                             </span>
                           )}
                           {item.user_approved === false && (
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            <span className="rounded bg-red-100 px-2 py-1 text-xs text-red-700">
                               반려됨
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* 리뷰 액션 */}
                       {isReviewState && (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="mt-2 flex items-center gap-2">
                           <input
-                            className="flex-1 text-sm border rounded px-2 py-1"
+                            className="flex-1 rounded border px-2 py-1 text-sm"
                             placeholder="코멘트 (선택)"
                             value={commentInputs[item.item_id] || ""}
-                            onChange={(e) =>
+                            onChange={(event) =>
                               setCommentInputs((prev) => ({
                                 ...prev,
-                                [item.item_id]: e.target.value,
+                                [item.item_id]: event.target.value,
                               }))
                             }
                           />
@@ -302,14 +349,14 @@ export default function LDDReviewPanel({
                             onClick={() => handleApprove(item)}
                             disabled={reviewItem.isPending}
                           >
-                            승인
+                            확인
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleReject(item)}
                             disabled={reviewItem.isPending}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                           >
                             반려
                           </Button>
@@ -317,8 +364,8 @@ export default function LDDReviewPanel({
                       )}
 
                       {item.user_comment && (
-                        <p className="text-xs text-neutral-500 italic mt-1">
-                          리뷰어 코멘트: {item.user_comment}
+                        <p className="mt-1 text-xs italic text-neutral-500">
+                          리뷰 코멘트: {item.user_comment}
                         </p>
                       )}
                     </div>

@@ -1,26 +1,28 @@
-import { useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown } from "lucide-react";
-
+import { useAuth } from "@/hooks/useAuth";
+import { Button, Card, Input, Select, PageHero } from "@/components/ui";
+import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 import { useCreateTransaction } from "@/modules/ma/hooks/useTransactions";
-import { koreanToEnglish } from "@/modules/ma/utils/koreanToEnglish";
+import {
+  buildProjectName,
+  getProjectSuffix,
+  normalizeProjectSuffix,
+  previewProjectCode,
+} from "@/modules/ma/utils/projectName";
 import type {
-  TransactionCreate,
-  DealType,
   DealStructure,
+  DealType,
   InvestmentType,
+  TransactionCreate,
 } from "@/modules/ma/types/transaction";
 import {
   CURRENCY_OPTIONS,
   DEAL_STRUCTURE_OPTIONS,
-  INVESTMENT_TYPE_OPTIONS,
   DEAL_TYPE_OPTIONS,
-  getDealTypeCodePrefix,
+  INVESTMENT_TYPE_OPTIONS,
 } from "@/modules/ma/constants";
-
-import { Button, Card, Input, Select, PageHero } from "@/components/ui";
-import heroImg from "@/assets/images/heroes/hero-arch-blue-wave.jpg";
 
 const INITIAL: TransactionCreate = {
   name: "Project ",
@@ -31,25 +33,25 @@ const INITIAL: TransactionCreate = {
   lead_advisor_email: "",
 };
 
-/** "Project "로 시작하는 이름에서 suffix(뒷부분)를 추출 */
-function getSuffix(name: string): string {
-  return name.startsWith("Project ") ? name.slice("Project ".length) : name;
-}
-
-/** 코드명 미리보기: SE26-EDW-?? */
-function previewCode(dealType: DealType, name: string): string {
-  const suffix = getSuffix(name).trim().slice(0, 3).toUpperCase();
-  if (!suffix) return "";
-  const yy = new Date().getFullYear().toString().slice(2);
-  return `${getDealTypeCodePrefix(dealType)}${yy}-${suffix}-??`;
-}
-
 export default function CreateTransactionPage() {
   const navigate = useNavigate();
-  const { isClient } = useAuth();
+  const { isClient, user } = useAuth();
   const createTxn = useCreateTransaction();
   const [form, setForm] = useState<TransactionCreate>(INITIAL);
   const [showOptional, setShowOptional] = useState(false);
+  const [projectNameInput, setProjectNameInput] = useState(() =>
+    getProjectSuffix(INITIAL.name),
+  );
+  const [isProjectNameComposing, setIsProjectNameComposing] = useState(false);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setForm((prev) =>
+      prev.lead_advisor_email.trim()
+        ? prev
+        : { ...prev, lead_advisor_email: user.email },
+    );
+  }, [user?.email]);
 
   if (isClient) return <Navigate to="/ma/transactions" replace />;
 
@@ -58,37 +60,58 @@ export default function CreateTransactionPage() {
     val: TransactionCreate[K],
   ) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  const applyProjectName = (raw: string) => {
-    const converted = koreanToEnglish(raw);
-    const clean = converted.replace(/[^A-Za-z\s]/g, "");
-    const capitalized =
-      clean.length > 0 ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
-    set("name", `Project ${capitalized}`);
+  const syncProjectName = (raw: string) => {
+    const normalized = normalizeProjectSuffix(raw);
+    setProjectNameInput(normalized);
+    set("name", buildProjectName(normalized));
   };
 
-  const suffix = getSuffix(form.name);
+  const handleProjectNameChange = (value: string) => {
+    if (isProjectNameComposing) {
+      setProjectNameInput(value);
+      return;
+    }
+    syncProjectName(value);
+  };
+
+  const normalizedProjectName = normalizeProjectSuffix(projectNameInput);
+  const email = form.lead_advisor_email.trim();
   const canSubmit =
-    suffix.trim().length > 0 &&
-    form.deal_type &&
-    form.target_company_name.trim() &&
-    form.client_name.trim() &&
-    form.lead_advisor_email.trim();
+    normalizedProjectName.length > 0 &&
+    Boolean(form.deal_type) &&
+    form.target_company_name.trim().length > 0 &&
+    form.client_name.trim().length > 0 &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    createTxn.mutate(form, {
-      onSuccess: (txn) => navigate(`/ma/transactions/${txn.id}`),
-    });
+
+    createTxn.mutate(
+      {
+        ...form,
+        name: buildProjectName(projectNameInput),
+        target_company_name: form.target_company_name.trim(),
+        client_name: form.client_name.trim(),
+        lead_advisor_email: email,
+        target_corp_code: form.target_corp_code?.trim() || undefined,
+        industry: form.industry?.trim() || undefined,
+        deal_captain_email: form.deal_captain_email?.trim() || undefined,
+        estimated_deal_value: form.estimated_deal_value?.trim() || undefined,
+      },
+      {
+        onSuccess: (txn) => navigate(`/ma/transactions/${txn.id}`),
+      },
+    );
   };
 
-  const preview = previewCode(form.deal_type, form.name);
+  const preview = previewProjectCode(form.deal_type, projectNameInput);
 
   return (
     <div className="space-y-6">
       <PageHero
         title="New Transaction"
-        subtitle="새 M&A 거래 생성"
+        subtitle="Create a new M&A transaction"
         backgroundImage={heroImg}
         backgroundOpacity={0.18}
         compact
@@ -101,33 +124,30 @@ export default function CreateTransactionPage() {
           onClick={() => navigate("/ma/transactions")}
           className="mb-4"
         >
-          목록으로
+          Back to list
         </Button>
 
-        <Card title="기본 정보" headerBar>
+        <Card title="Basic Information" headerBar>
           <form
             id="create-txn"
             onSubmit={handleSubmit}
             className="space-y-5 p-1"
           >
-            {/* 필수 필드 */}
             <fieldset className="space-y-4">
               <legend className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                 Required
               </legend>
 
-              {/* 딜 타입 */}
               <Select
-                label="딜 구조"
+                label="Deal Type"
                 options={DEAL_TYPE_OPTIONS}
                 value={form.deal_type}
                 onChange={(e) => set("deal_type", e.target.value as DealType)}
               />
 
-              {/* 프로젝트명: "Project " 고정 접두사 */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  프로젝트명 <span className="text-destructive">*</span>
+                  Project Name<span className="text-destructive">*</span>
                 </label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-border bg-surface-subtle text-sm font-medium text-text-muted select-none">
@@ -138,16 +158,19 @@ export default function CreateTransactionPage() {
                     required
                     className="flex-1 min-w-0 px-3 py-2 rounded-r-md border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                     placeholder="Edward"
-                    value={suffix}
-                    onChange={(e) => {
-                      applyProjectName(e.target.value);
+                    value={projectNameInput}
+                    onChange={(e) => handleProjectNameChange(e.target.value)}
+                    onBlur={() => syncProjectName(projectNameInput)}
+                    onCompositionStart={() => setIsProjectNameComposing(true)}
+                    onCompositionEnd={(e) => {
+                      setIsProjectNameComposing(false);
+                      syncProjectName(e.currentTarget.value);
                     }}
                   />
                 </div>
-                {/* 코드 미리보기 */}
                 {preview && (
                   <p className="mt-1.5 text-xs text-text-muted">
-                    예상 코드:{" "}
+                    Expected code:{" "}
                     <code className="font-mono font-semibold text-accent">
                       {preview}
                     </code>
@@ -157,23 +180,23 @@ export default function CreateTransactionPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
-                  label="대상 기업"
+                  label="Target Company"
                   required
                   value={form.target_company_name}
                   onChange={(e) => set("target_company_name", e.target.value)}
-                  placeholder="인수/매각 대상 기업명"
+                  placeholder="Target company name"
                 />
                 <Input
-                  label="클라이언트"
+                  label="Client"
                   required
                   value={form.client_name}
                   onChange={(e) => set("client_name", e.target.value)}
-                  placeholder="의뢰인 명칭"
+                  placeholder="Client name"
                 />
               </div>
 
               <Input
-                label="리드 어드바이저 이메일"
+                label="Lead Advisor Email"
                 type="email"
                 required
                 value={form.lead_advisor_email}
@@ -182,7 +205,6 @@ export default function CreateTransactionPage() {
               />
             </fieldset>
 
-            {/* 선택 필드 토글 */}
             <button
               type="button"
               aria-expanded={showOptional}
@@ -193,7 +215,7 @@ export default function CreateTransactionPage() {
                 size={16}
                 className={`transition-transform ${showOptional ? "rotate-180" : ""}`}
               />
-              {showOptional ? "옵션 접기" : "추가 정보 입력"}
+              {showOptional ? "Hide optional fields" : "Add more details"}
             </button>
 
             {showOptional && (
@@ -208,33 +230,29 @@ export default function CreateTransactionPage() {
                   onChange={(e) =>
                     set("target_corp_code", e.target.value || undefined)
                   }
-                  placeholder="8자리 기업 코드"
+                  placeholder="8-digit corp code"
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
-                    label="세부 거래 구조"
+                    label="Deal Structure"
                     options={DEAL_STRUCTURE_OPTIONS}
                     value={form.deal_structure ?? ""}
                     onChange={(e) =>
                       set(
                         "deal_structure",
-                        (e.target.value || undefined) as
-                          | DealStructure
-                          | undefined,
+                        (e.target.value || undefined) as DealStructure | undefined,
                       )
                     }
                   />
                   <Select
-                    label="투자 유형"
+                    label="Investment Type"
                     options={INVESTMENT_TYPE_OPTIONS}
                     value={form.investment_type ?? ""}
                     onChange={(e) =>
                       set(
                         "investment_type",
-                        (e.target.value || undefined) as
-                          | InvestmentType
-                          | undefined,
+                        (e.target.value || undefined) as InvestmentType | undefined,
                       )
                     }
                   />
@@ -242,7 +260,7 @@ export default function CreateTransactionPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    label="예상 거래 금액"
+                    label="Estimated Deal Value"
                     type="number"
                     value={
                       form.estimated_deal_value != null
@@ -255,7 +273,7 @@ export default function CreateTransactionPage() {
                     placeholder="0"
                   />
                   <Select
-                    label="통화"
+                    label="Currency"
                     options={CURRENCY_OPTIONS}
                     value={form.currency ?? "KRW"}
                     onChange={(e) =>
@@ -269,15 +287,13 @@ export default function CreateTransactionPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    label="산업"
+                    label="Industry"
                     value={form.industry ?? ""}
-                    onChange={(e) =>
-                      set("industry", e.target.value || undefined)
-                    }
-                    placeholder="산업 분류"
+                    onChange={(e) => set("industry", e.target.value || undefined)}
+                    placeholder="Industry"
                   />
                   <Input
-                    label="목표 종결일"
+                    label="Target Close Date"
                     type="date"
                     value={form.target_close_date ?? ""}
                     onChange={(e) =>
@@ -287,7 +303,7 @@ export default function CreateTransactionPage() {
                 </div>
 
                 <Input
-                  label="딜 캡틴 이메일"
+                  label="Deal Captain Email"
                   type="email"
                   value={form.deal_captain_email ?? ""}
                   onChange={(e) =>
@@ -298,21 +314,20 @@ export default function CreateTransactionPage() {
               </fieldset>
             )}
 
-            {/* 제출 */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button
                 variant="ghost"
                 type="button"
                 onClick={() => navigate("/ma/transactions")}
               >
-                취소
+                Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={!canSubmit}
                 loading={createTxn.isPending}
               >
-                거래 생성
+                Create transaction
               </Button>
             </div>
           </form>
