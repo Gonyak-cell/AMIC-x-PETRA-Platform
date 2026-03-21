@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import logging
-import re
 import uuid
 from pathlib import Path
-from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import (
@@ -23,21 +20,6 @@ from app.models.enums import (
 )
 from app.models.financial_model import FinancialModel, FMChecklist, FMChecklistItem
 from app.schemas.financial_model import FinancialModelCreate
-from app.services.evidence_store_service import (
-    build_document_chunk_lookup,
-    build_platform_evidence_records,
-    delete_platform_evidence_records,
-    replace_platform_evidence_records,
-)
-from app.services.text_extraction_service import TextExtractionService
-from app.services.vdr_routing_service import get_routing_override_map
-from app.services.workstream_router_service import (
-    FDD_WORKSTREAM,
-    VALUATION_WORKSTREAM,
-    build_workstream_routing_summary,
-    is_source_allowed_for_any_workstream,
-    route_vdr_sources,
-)
 
 # 상태 전이 불가 상태 (진행 중인 작업이 있음)
 _BUSY_STATUSES = frozenset({FinancialModelStatus.GENERATING, FinancialModelStatus.FINALIZING})
@@ -293,296 +275,6 @@ FM_FIELD_REGISTRY: list[dict] = [
     },
 ]
 
-_VALUATION_CATEGORIES = frozenset(
-    {
-        FMChecklistCategory.WACC_COMPONENTS,
-        FMChecklistCategory.DCF_PARAMETERS,
-        FMChecklistCategory.TRADING_MULTIPLES,
-        FMChecklistCategory.TRANSACTION_MULTIPLES,
-        FMChecklistCategory.BASE_SCENARIO,
-        FMChecklistCategory.UPSIDE_SCENARIO,
-        FMChecklistCategory.DOWNSIDE_SCENARIO,
-        FMChecklistCategory.SENSITIVITY_MATRIX,
-    }
-)
-
-
-def _get_financial_model_target_workstreams(model_type: FinancialModelType) -> tuple[str, ...]:
-    if model_type in {
-        FinancialModelType.DCF,
-        FinancialModelType.FULL,
-    }:
-        return (FDD_WORKSTREAM, VALUATION_WORKSTREAM)
-    if model_type in {
-        FinancialModelType.COMPS,
-        FinancialModelType.TRANSACTION_COMPS,
-    }:
-        return (VALUATION_WORKSTREAM,)
-    return (FDD_WORKSTREAM,)
-
-
-def _build_financial_model_keywords(item: FMChecklistItem) -> list[str]:
-    raw = " ".join(
-        filter(
-            None,
-            [
-                item.title,
-                item.description,
-                str(item.category.value).replace("_", " "),
-            ],
-        )
-    ).lower()
-    tokens = re.findall(r"[a-z0-9/%.+-]+|[가-힣]{2,}", raw)
-    keywords: list[str] = []
-    for token in tokens:
-        cleaned = token.strip("()[]{}.,:;")
-        if len(cleaned) < 2 or cleaned.isdigit():
-            continue
-        if cleaned not in keywords:
-            keywords.append(cleaned)
-    return keywords[:12]
-
-
-def _iter_financial_model_chunks(routed_source: Any) -> list[dict[str, Any]]:
-    metadata = routed_source.source.parsed.metadata or {}
-    chunks = list(metadata.get("chunks") or [])
-    if chunks:
-        return chunks
-
-    text = (routed_source.source.parsed.text or "").strip()
-    if not text:
-        return []
-    return [{"chunk_id": None, "locator_type": "document", "ordinal": 1, "text": text[:1000]}]
-
-
-def _format_financial_model_source_location(chunk: dict[str, Any]) -> str | None:
-    if chunk.get("page") is not None:
-        return f"Page {chunk['page']}"
-    if chunk.get("sheet") is not None and chunk.get("row") is not None:
-        return f"Sheet {chunk['sheet']} Row {chunk['row']}"
-    if chunk.get("paragraph") is not None:
-        return f"Paragraph {chunk['paragraph']}"
-    if chunk.get("ordinal") is not None:
-        return f"Chunk {chunk['ordinal']}"
-    return None
-
-
-def _extract_candidate_value(text: str, field_type: str | None, unit: str | None) -> str | None:
-    normalized = " ".join(text.split())
-    if not normalized:
-        return None
-
-    if field_type == "percentage":
-        match = re.search(r"(-?\d+(?:[.,]\d+)?)\s*%", normalized)
-        if match:
-            return f"{match.group(1).replace(',', '')}%"
-        return None
-
-    if field_type == "number":
-        if unit == "x":
-            match = re.search(r"(-?\d+(?:[.,]\d+)?)\s*x", normalized, re.IGNORECASE)
-            if match:
-                return f"{match.group(1).replace(',', '')}x"
-        if unit == "일":
-            match = re.search(r"(-?\d+(?:[.,]\d+)?)\s*(?:일|days?)", normalized, re.IGNORECASE)
-            if match:
-                return match.group(1).replace(",", "")
-        match = re.search(r"(-?\d[\d,]*(?:\.\d+)?)", normalized)
-        if match:
-            return match.group(1).replace(",", "")
-        return None
-
-    if field_type == "currency":
-        match = re.search(r"(?:₩|krw|원)?\s*(-?\d[\d,]*(?:\.\d+)?)", normalized, re.IGNORECASE)
-        if match:
-            return match.group(1).replace(",", "")
-        return None
-
-    if field_type == "text":
-        return normalized[:180]
-
-    return None
-
-
-def _select_financial_model_source_match(
-    item: FMChecklistItem,
-    routed_sources: list[Any],
-) -> tuple[Any, dict[str, Any], int] | None:
-    keywords = _build_financial_model_keywords(item)
-    preferred_workstreams = (
-        {VALUATION_WORKSTREAM} if item.category in _VALUATION_CATEGORIES else {FDD_WORKSTREAM}
-    )
-
-    best_match: tuple[Any, dict[str, Any], int] | None = None
-    best_score = 0
-    for routed in routed_sources:
-        document_name = routed.source.original_name.lower()
-        for chunk in _iter_financial_model_chunks(routed):
-            text = str(chunk.get("text", "") or "")
-            if not text and not document_name:
-                continue
-            haystack = f"{document_name}\n{text}".lower()
-            score = sum(4 if len(keyword) >= 4 else 2 for keyword in keywords if keyword in haystack)
-            score += int(routed.confidence * 3)
-            if routed.primary_workstream in preferred_workstreams:
-                score += 4
-            if routed.requires_manual_review:
-                score -= 1
-            if score > best_score:
-                best_score = score
-                best_match = (routed, chunk, score)
-
-    if best_score < 5:
-        return None
-    return best_match
-
-
-def _seed_financial_model_checklist_from_sources(
-    checklist_items: list[FMChecklistItem],
-    routed_sources: list[Any],
-) -> int:
-    seeded_count = 0
-    for item in checklist_items:
-        match = _select_financial_model_source_match(item, routed_sources)
-        if match is None:
-            continue
-
-        routed, chunk, score = match
-        snippet = str(chunk.get("text", "") or "").strip()[:500]
-        if not snippet:
-            continue
-
-        candidate_value = _extract_candidate_value(snippet, item.field_type, item.unit)
-        item.auto_finding = snippet
-        if candidate_value:
-            item.auto_value = candidate_value
-        elif item.field_type == "text":
-            item.auto_value = snippet[:180]
-
-        item.source_vdr_doc_id = routed.source.vdr_document_id
-        item.source_vdr_doc_name = routed.source.original_name
-        item.source_location = _format_financial_model_source_location(chunk)
-        item.confidence = round(min(0.99, max(0.35, routed.confidence * min(1.0, score / 12.0))), 2)
-        metadata = dict(item.extra_metadata or {})
-        metadata.update(
-            {
-                "workstream_tags": list(routed.workstream_tags),
-                "primary_workstream": routed.primary_workstream,
-                "routing_confidence": routed.confidence,
-                "requires_manual_review": routed.requires_manual_review,
-                "routing_reasons": list(routed.reasons),
-                "chunk_id": chunk.get("chunk_id"),
-            }
-        )
-        item.extra_metadata = metadata
-        seeded_count += 1
-
-    return seeded_count
-
-
-def _build_financial_model_source_routing(
-    routed_sources: list[Any],
-    target_workstreams: tuple[str, ...],
-) -> dict[str, Any]:
-    summary = build_workstream_routing_summary(routed_sources)
-    included_ids = {
-        str(routed.source.vdr_document_id)
-        for routed in routed_sources
-        if is_source_allowed_for_any_workstream(routed, target_workstreams)
-    }
-    summary["summary"]["target_workstreams"] = list(target_workstreams)
-    summary["summary"]["included_for_financial_model"] = len(included_ids)
-    summary["summary"]["excluded_from_financial_model"] = len(routed_sources) - len(included_ids)
-    for document in summary["documents"]:
-        document["include_for_financial_model"] = document["document_id"] in included_ids
-    return summary
-
-
-def _build_financial_model_evidence_records(
-    fm: FinancialModel,
-    checklist: FMChecklist,
-) -> list[dict[str, Any]]:
-    analysis_phase = "FINAL" if checklist.status == FMChecklistStatus.FINALIZED else "DRAFT"
-    records: list[dict[str, Any]] = []
-
-    for ordinal, item in enumerate(checklist.items, start=1):
-        if not item.source_vdr_doc_id or not item.source_vdr_doc_name:
-            continue
-
-        metadata = dict(item.extra_metadata or {})
-        item_workstream = VALUATION_WORKSTREAM if item.category in _VALUATION_CATEGORIES else FDD_WORKSTREAM
-        workstream_tags = [str(tag) for tag in (metadata.get("workstream_tags") or [])]
-        primary_workstream = str(metadata.get("primary_workstream") or "") or None
-        chunk_id = str(metadata.get("chunk_id") or "") or None
-        snippet = (item.user_correction or item.auto_finding or item.description or "").strip() or None
-        source_location = item.source_location
-
-        is_foreign_workstream = bool(workstream_tags) and item_workstream not in workstream_tags
-        locator: dict[str, Any] = {}
-        if chunk_id:
-            locator["chunk_id"] = chunk_id
-        if source_location:
-            locator["source_location"] = source_location
-
-        records.append(
-            {
-                "workstream": item_workstream,
-                "section_type": str(item.category.value),
-                "item_id": str(item.id),
-                "vdr_document_id": item.source_vdr_doc_id,
-                "reference_label": item.source_vdr_doc_name,
-                "original_name": item.source_vdr_doc_name,
-                "primary_workstream": primary_workstream,
-                "workstream_tags": workstream_tags,
-                "evidence_kind": "VALUATION_SUPPORT" if item_workstream == VALUATION_WORKSTREAM else "FINANCIAL_SUPPORT",
-                "directness": "INDIRECT",
-                "confidence": float(item.confidence or 0.0),
-                "relevance_score": float(item.confidence or 0.0),
-                "source_page": source_location,
-                "source_snippet": snippet,
-                "evidence_locator": locator or None,
-                "requires_manual_review": bool(metadata.get("requires_manual_review")),
-                "is_foreign_workstream": is_foreign_workstream,
-                "is_unresolved_reference": False,
-                "used_in_draft": analysis_phase == "DRAFT",
-                "used_in_final": analysis_phase == "FINAL",
-                "analysis_phase": analysis_phase,
-                "ordinal": ordinal,
-                "chunk_id": chunk_id,
-            }
-        )
-
-    return records
-
-
-async def _persist_financial_model_evidence_records(
-    db: AsyncSession,
-    fm: FinancialModel,
-    checklist: FMChecklist,
-) -> int:
-    evidence_records = _build_financial_model_evidence_records(fm, checklist)
-    document_ids = [
-        uuid.UUID(str(record["vdr_document_id"]))
-        for record in evidence_records
-        if record.get("vdr_document_id")
-    ]
-    chunk_lookup = await build_document_chunk_lookup(db, vdr_document_ids=document_ids)
-    platform_records = build_platform_evidence_records(
-        transaction_id=fm.transaction_id,
-        artifact_type="FINANCIAL_MODEL",
-        artifact_id=fm.id,
-        workstream=VALUATION_WORKSTREAM if fm.model_type == FinancialModelType.DCF else FDD_WORKSTREAM,
-        source_records=evidence_records,
-        document_chunk_lookup=chunk_lookup,
-    )
-    await replace_platform_evidence_records(
-        db,
-        artifact_type="FINANCIAL_MODEL",
-        artifact_id=fm.id,
-        records=platform_records,
-    )
-    return len(platform_records)
-
 
 # ── CRUD ──────────────────────────────────────────────────────────────────
 
@@ -683,11 +375,6 @@ async def delete_financial_model(
 ) -> None:
     """재무모델을 삭제한다."""
     fm = await get_financial_model(db, fm_id, transaction_id)
-    await delete_platform_evidence_records(
-        db,
-        artifact_type="FINANCIAL_MODEL",
-        artifact_id=fm.id,
-    )
     await db.delete(fm)
     await db.commit()
 
@@ -777,34 +464,6 @@ async def reset_stuck_model(
 # ── Background Tasks ─────────────────────────────────────────────────────
 
 
-async def sync_financial_model_evidence(
-    db: AsyncSession,
-    fm_id: uuid.UUID,
-    transaction_id: uuid.UUID,
-) -> int:
-    await db.flush()
-
-    stmt = (
-        select(FinancialModel)
-        .where(FinancialModel.id == fm_id, FinancialModel.transaction_id == transaction_id)
-        .options(joinedload(FinancialModel.checklist).joinedload(FMChecklist.items))
-    )
-    fm = (await db.execute(stmt)).unique().scalar_one_or_none()
-    if fm is None:
-        raise DocumentNotFoundError(f"FinancialModel {fm_id}")
-
-    if fm.checklist is None:
-        await replace_platform_evidence_records(
-            db,
-            artifact_type="FINANCIAL_MODEL",
-            artifact_id=fm.id,
-            records=[],
-        )
-        return 0
-
-    return await _persist_financial_model_evidence_records(db, fm, fm.checklist)
-
-
 async def _run_vdr_extraction_and_ralph(
     fm_id: uuid.UUID,
     transaction_id: uuid.UUID,
@@ -850,47 +509,6 @@ async def _run_vdr_extraction_and_ralph(
             # 1. 체크리스트에서 auto_value 추출
             svc = FMChecklistService(db)
             checklist = await svc.get_checklist(fm_id)
-            parameters = dict(fm.parameters or {})
-            target_workstreams = _get_financial_model_target_workstreams(fm.model_type)
-
-            selected_doc_ids: list[uuid.UUID] = []
-            for raw_doc_id in vdr_document_ids:
-                try:
-                    selected_doc_ids.append(uuid.UUID(str(raw_doc_id)))
-                except (TypeError, ValueError):
-                    logger.warning("Skipping invalid FM VDR document id: %s", raw_doc_id)
-
-            if selected_doc_ids:
-                source_files = await TextExtractionService().extract_from_vdr_documents(
-                    db,
-                    transaction_id,
-                    document_ids=selected_doc_ids,
-                )
-                if source_files:
-                    routing_overrides = await get_routing_override_map(
-                        db,
-                        transaction_id,
-                        document_ids=selected_doc_ids,
-                    )
-                    routed_sources = route_vdr_sources(source_files, overrides=routing_overrides)
-                    relevant_routed_sources = [
-                        routed
-                        for routed in routed_sources
-                        if is_source_allowed_for_any_workstream(routed, target_workstreams)
-                    ]
-                    parameters["source_routing"] = _build_financial_model_source_routing(
-                        routed_sources,
-                        target_workstreams,
-                    )
-                    parameters["financial_model_workstreams"] = list(target_workstreams)
-                    parameters["seeded_checklist_items"] = _seed_financial_model_checklist_from_sources(
-                        checklist.items,
-                        relevant_routed_sources,
-                    )
-                    fm.parameters = parameters
-            await db.flush()
-            await _persist_financial_model_evidence_records(db, fm, checklist)
-
             checklist_values: dict[str, str] = {}
             for item in checklist.items:
                 if item.auto_value:

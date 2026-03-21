@@ -27,9 +27,6 @@ class FailingFDDClient:
     async def get_deal_status(self, deal_id: uuid.UUID) -> dict:
         raise ConnectionError("FDD 서비스 연결 불가")
 
-    async def get_evidence_export(self, deal_id: uuid.UUID) -> dict:
-        raise ConnectionError("FDD 서비스 연결 불가")
-
     async def trigger_analysis(self, deal_id: uuid.UUID, analysis_type: str) -> dict:
         raise ConnectionError("FDD 서비스 연결 불가")
 
@@ -86,22 +83,6 @@ async def test_fdd_link_returns_linked(client: AsyncClient, transaction_id: str)
     assert data["status"] == "linked"
     assert data["data"] is not None
     assert data["data"]["target_name"] == "테스트 기업"
-
-
-async def test_fdd_evidence_sync_returns_synced(client: AsyncClient, transaction_id: str):
-    link_resp = await client.post(
-        f"/api/v1/transactions/{transaction_id}/integrations/fdd/link",
-        json={"target_name": "테스트 기업"},
-    )
-    assert link_resp.status_code == 200
-
-    sync_resp = await client.post(f"/api/v1/transactions/{transaction_id}/integrations/fdd/evidence-sync")
-    assert sync_resp.status_code == 200
-    data = sync_resp.json()
-    assert data["service"] == "FDD"
-    assert data["status"] == "synced"
-    assert data["data"]["artifact_type"] == "FDD_REPORT"
-    assert data["data"]["imported_count"] == 1
 
 
 async def test_im_link_returns_linked(client: AsyncClient, transaction_id: str):

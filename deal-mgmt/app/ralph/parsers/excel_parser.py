@@ -45,29 +45,17 @@ def _parse_xlsx(file_path: str) -> ParsedFile:
     try:
         all_text: list[str] = []
         tables: list[ParsedTable] = []
-        chunks: list[dict] = []
 
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             all_text.append(f"[시트: {sheet_name}]")
 
             rows_data: list[list[str]] = []
-            for row_index, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            for row in ws.iter_rows(values_only=True):
                 cells = [str(c) if c is not None else "" for c in row]
                 if any(cells):  # 빈 행 건너뜀
                     rows_data.append(cells)
-                    row_text = " | ".join(cells)
-                    all_text.append(row_text)
-                    chunks.append(
-                        {
-                            "chunk_id": f"{sheet_name}-row-{row_index}",
-                            "locator_type": "sheet_row",
-                            "sheet": sheet_name,
-                            "row": row_index,
-                            "ordinal": len(chunks) + 1,
-                            "text": row_text,
-                        }
-                    )
+                    all_text.append(" | ".join(cells))
 
             if rows_data:
                 table = ParsedTable(
@@ -81,7 +69,7 @@ def _parse_xlsx(file_path: str) -> ParsedFile:
             file_type="excel",
             text="\n".join(all_text),
             tables=tables,
-            metadata={"sheet_count": len(wb.sheetnames), "chunks": chunks},
+            metadata={"sheet_count": len(wb.sheetnames)},
         )
     finally:
         wb.close()
@@ -102,7 +90,6 @@ def _parse_xls(file_path: str) -> ParsedFile:
     try:
         all_text: list[str] = []
         tables: list[ParsedTable] = []
-        chunks: list[dict] = []
 
         for sheet_idx in range(wb.nsheets):
             ws = wb.sheet_by_index(sheet_idx)
@@ -113,18 +100,7 @@ def _parse_xls(file_path: str) -> ParsedFile:
                 cells = [str(ws.cell_value(r, c)) for c in range(ws.ncols)]
                 if any(cells):
                     rows_data.append(cells)
-                    row_text = " | ".join(cells)
-                    all_text.append(row_text)
-                    chunks.append(
-                        {
-                            "chunk_id": f"{ws.name}-row-{r + 1}",
-                            "locator_type": "sheet_row",
-                            "sheet": ws.name,
-                            "row": r + 1,
-                            "ordinal": len(chunks) + 1,
-                            "text": row_text,
-                        }
-                    )
+                    all_text.append(" | ".join(cells))
 
             if rows_data:
                 tables.append(
@@ -139,7 +115,7 @@ def _parse_xls(file_path: str) -> ParsedFile:
             file_type="excel",
             text="\n".join(all_text),
             tables=tables,
-            metadata={"sheet_count": wb.nsheets, "chunks": chunks},
+            metadata={"sheet_count": wb.nsheets},
         )
     finally:
         wb.release_resources()

@@ -32,8 +32,6 @@ export default function ModelsTab({ txnId, canWrite }: ModelsTabProps) {
   const createFinancialModel = useCreateFinancialModel(txnId);
   const deleteFinancialModel = useDeleteFinancialModel(txnId);
   const [selectedFMId, setSelectedFMId] = useState<string | null>(null);
-  const selectedModel =
-    financialModels?.find((model) => model.id === selectedFMId) ?? null;
 
   return (
     <div className="space-y-4">
@@ -49,11 +47,7 @@ export default function ModelsTab({ txnId, canWrite }: ModelsTabProps) {
           >
             모델 목록으로
           </Button>
-          <FMChecklistReview
-            txnId={txnId}
-            fmId={selectedFMId}
-            model={selectedModel}
-          />
+          <FMChecklistReview txnId={txnId} fmId={selectedFMId} />
         </div>
       ) : (
         // 모델 목록 뷰

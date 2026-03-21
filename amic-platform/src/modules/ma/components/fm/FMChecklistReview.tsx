@@ -3,22 +3,16 @@ import { CheckCircle, Loader2 } from "lucide-react";
 import { Button, Spinner } from "@/components/ui";
 import FMChecklistSummaryBar from "./FMChecklistSummaryBar";
 import FMChecklistCategorySection from "./FMChecklistCategorySection";
-import FMSourceRoutingCard from "./FMSourceRoutingCard";
 import { useFMChecklist, useUpdateFMChecklistItem, useBulkUpdateFMItems, useFinalizeFMChecklist } from "@/modules/ma/hooks/useFMChecklist";
-import type {
-  FinancialModel,
-  FMChecklistItemStatus,
-  FMChecklistCategory,
-} from "@/modules/ma/types/financial_model";
+import type { FMChecklistItemStatus, FMChecklistCategory } from "@/modules/ma/types/financial_model";
 import { FM_CATEGORY_GROUPS } from "@/modules/ma/types/financial_model";
 
 interface Props {
   txnId: string;
   fmId: string;
-  model?: FinancialModel | null;
 }
 
-export default function FMChecklistReview({ txnId, fmId, model = null }: Props) {
+export default function FMChecklistReview({ txnId, fmId }: Props) {
   const { data: checklist, isLoading, error } = useFMChecklist(txnId, fmId);
   const updateItem = useUpdateFMChecklistItem(txnId, fmId);
   const bulkUpdate = useBulkUpdateFMItems(txnId, fmId);
@@ -61,8 +55,6 @@ export default function FMChecklistReview({ txnId, fmId, model = null }: Props) 
 
   return (
     <div className="space-y-6">
-      <FMSourceRoutingCard model={model} />
-
       {/* Summary Bar */}
       <FMChecklistSummaryBar checklist={checklist} />
 

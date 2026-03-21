@@ -153,11 +153,11 @@ export default function AppShell({ children }: AppShellProps) {
             type="button"
             onClick={() => setDesktopCollapsed(!desktopCollapsed)}
             className={cn(
-              "absolute top-16 -right-3.5 z-50",
+              "absolute top-1/2 -translate-y-1/2 -right-3.5 z-50",
               "w-7 h-7 rounded-full",
               "bg-white border border-border-default shadow-md",
               "flex items-center justify-center",
-              "text-accent hover:border-accent",
+              "text-text-secondary hover:text-accent hover:border-accent",
               "opacity-0 group-hover/sidebar-edge:opacity-100",
               "transition-all duration-200 cursor-pointer",
             )}

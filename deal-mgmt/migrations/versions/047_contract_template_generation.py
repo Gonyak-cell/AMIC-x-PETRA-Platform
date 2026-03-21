@@ -23,15 +23,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column(
             "doc_type",
-            postgresql.ENUM(
-                "SPA",
-                "SHA",
-                "BTA",
-                "SSA",
-                "MOU",
-                name="legaldoctype",
-                create_type=False,
-            ),
+            sa.Enum("SPA", "SHA", "BTA", "SSA", "MOU", name="legaldoctype", create_type=False),
             nullable=False,
         ),
         sa.Column("name", sa.String(300), nullable=False),

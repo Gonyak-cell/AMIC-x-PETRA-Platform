@@ -175,7 +175,6 @@ async def update_checklist_item(
     await fm_svc.get_financial_model(db, fm_id, txn_id)
     svc = FMChecklistService(db)
     item = await svc.update_item(item_id, body, claims.email or "unknown")
-    await fm_svc.sync_financial_model_evidence(db, fm_id, txn_id)
     await db.commit()
     return item
 
@@ -193,7 +192,6 @@ async def bulk_update_checklist_items(
     await fm_svc.get_financial_model(db, fm_id, txn_id)
     svc = FMChecklistService(db)
     items = await svc.bulk_update_items(cl_id, body.items, claims.email or "unknown")
-    await fm_svc.sync_financial_model_evidence(db, fm_id, txn_id)
     await db.commit()
     return items
 
@@ -223,7 +221,6 @@ async def finalize_checklist(
 
     # Finalize + FM 상태 변경을 단일 트랜잭션으로 커밋
     fm.status = FinancialModelStatus.FINALIZING
-    await fm_svc.sync_financial_model_evidence(db, fm_id, txn_id)
     await db.commit()
 
     from app.tasks.fm_tasks import run_finalize_and_generate_task

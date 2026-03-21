@@ -1,7 +1,5 @@
 """Ralph Loop 파서 + 분류기 단위 테스트."""
 
-from unittest.mock import patch
-
 
 class TestParsedFile:
     """ParsedFile 데이터 모델 테스트."""
@@ -93,51 +91,6 @@ class TestFileClassifier:
 
         result = scan_directory("/nonexistent/path/123")
         assert result == []
-
-
-class TestPdfParser:
-    def test_get_pdf_ocr_status_disabled(self, monkeypatch):
-        from app.core.config import settings
-        from app.ralph.parsers import pdf_parser
-
-        original_enabled = settings.OCR_ENABLED
-        try:
-            monkeypatch.setattr(settings, "OCR_ENABLED", False)
-            pdf_parser._cached_pdf_ocr_status.cache_clear()
-            status = pdf_parser.get_pdf_ocr_status()
-            assert status["enabled"] is False
-            assert status["available"] is False
-        finally:
-            monkeypatch.setattr(settings, "OCR_ENABLED", original_enabled)
-            pdf_parser._cached_pdf_ocr_status.cache_clear()
-
-    def test_parse_pdf_uses_ocr_fallback_when_native_text_is_empty(self):
-        from app.ralph.parsers.base import ParsedFile
-        from app.ralph.parsers.pdf_parser import parse_pdf
-
-        with (
-            patch(
-                "app.ralph.parsers.pdf_parser._parse_with_fitz",
-                return_value=ParsedFile(source_path="/tmp/test.pdf", file_type="pdf", text="", metadata={"chunks": []}),
-            ),
-            patch(
-                "app.ralph.parsers.pdf_parser._parse_with_pdfplumber",
-                return_value=ParsedFile(source_path="/tmp/test.pdf", file_type="pdf", text="", metadata={"chunks": []}),
-            ),
-            patch(
-                "app.ralph.parsers.pdf_parser._parse_with_ocr_if_available",
-                return_value=ParsedFile(
-                    source_path="/tmp/test.pdf",
-                    file_type="pdf",
-                    text="[Page 1]\nOCR recovered text",
-                    metadata={"chunks": [{"chunk_id": "page-1"}], "ocr_used": True},
-                ),
-            ),
-        ):
-            result = parse_pdf("/tmp/test.pdf")
-
-        assert "OCR recovered text" in result.text
-        assert result.metadata.get("ocr_used") is True
 
 
 class TestKoreanFinanceDict:

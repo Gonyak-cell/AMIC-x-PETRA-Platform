@@ -483,62 +483,6 @@ class TestClassificationStatus:
         assert "최대" in resp.json()["detail"]
 
 
-class TestVdrRoutingTriage:
-    async def test_routing_queue_and_override_flow(self, client: AsyncClient, transaction_id: str):
-        create_folder_resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/folders",
-            json={"name": "Routing Review", "category": "CUSTOM"},
-        )
-        assert create_folder_resp.status_code == 201
-        folder_id = create_folder_resp.json()["id"]
-
-        upload_resp = await client.post(
-            f"/api/v1/transactions/{transaction_id}/vdr/folders/{folder_id}/documents",
-            files={"file": ("board_pack_notes.txt", io.BytesIO(b"General overview only."), "text/plain")},
-        )
-        assert upload_resp.status_code == 201
-        doc_id = upload_resp.json()["id"]
-
-        queue_resp = await client.get(
-            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
-            params={"status": "open"},
-        )
-        assert queue_resp.status_code == 200
-        open_items = queue_resp.json()["items"]
-        queue_item = next(item for item in open_items if item["document"]["id"] == doc_id)
-        assert queue_item["routing_status"] == "OPEN_REVIEW"
-        assert queue_item["effective_route"]["requires_manual_review"] is True
-
-        override_resp = await client.put(
-            f"/api/v1/transactions/{transaction_id}/vdr/documents/{doc_id}/routing-override",
-            json={
-                "primary_workstream": "LDD",
-                "workstream_tags": ["LDD"],
-                "override_note": "Reviewed and confirmed as legal source.",
-            },
-        )
-        assert override_resp.status_code == 200
-        assert override_resp.json()["primary_workstream"] == "LDD"
-
-        reviewed_resp = await client.get(
-            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
-            params={"status": "reviewed"},
-        )
-        assert reviewed_resp.status_code == 200
-        reviewed_item = next(item for item in reviewed_resp.json()["items"] if item["document"]["id"] == doc_id)
-        assert reviewed_item["routing_status"] == "OVERRIDDEN"
-        assert reviewed_item["effective_route"]["is_override"] is True
-        assert reviewed_item["effective_route"]["primary_workstream"] == "LDD"
-        assert reviewed_item["effective_route"]["override_note"] == "Reviewed and confirmed as legal source."
-
-        reopen_resp = await client.get(
-            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
-            params={"status": "open"},
-        )
-        assert reopen_resp.status_code == 200
-        assert all(item["document"]["id"] != doc_id for item in reopen_resp.json()["items"])
-
-
 class TestVdrAutoUpload:
     async def test_auto_upload_financial_xlsx_routes_to_financial(self, client: AsyncClient, transaction_id: str):
         """재무제표.xlsx → FINANCIAL 폴더 자동 라우팅."""

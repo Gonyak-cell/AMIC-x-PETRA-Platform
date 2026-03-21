@@ -162,8 +162,6 @@ class LDDReportOut(BaseModel):
     appendices: dict | None = None
     qa_result: dict | None = None
     pipeline_stages: list[dict] | None = None
-    source_routing: dict | None = None
-    evidence_ledger: dict | None = None
     created_at: datetime
     updated_at: datetime
 

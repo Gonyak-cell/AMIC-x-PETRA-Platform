@@ -4,8 +4,8 @@ LDD 법률실사보고서 — 원본 기반 양식 템플릿 생성 스크립트
 원본 docx 파일의 스타일/테마/번호매기기/표 서식을 100% 보존하면서
 본문 텍스트만 [플레이스홀더]로 교체하여 재사용 가능한 템플릿을 생성한다.
 
-입력: deal-mgmt/output/Project_Green_Legal_DD_final_251223.docx
-출력: deal-mgmt/output/LDD_Legal_DD_Template.docx
+입력: deal-mgmt/output/Project Green_법률실사보고서_final_251223.docx
+출력: deal-mgmt/output/LDD_법률실사보고서_Template.docx
 
 사용법:
     python deal-mgmt/scripts/create_ldd_clone_template.py
@@ -20,8 +20,8 @@ from docx import Document
 
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
-INPUT_PATH = PROJECT_ROOT / "deal-mgmt" / "output" / "Project_Green_Legal_DD_final_251223.docx"
-OUTPUT_PATH = PROJECT_ROOT / "deal-mgmt" / "output" / "LDD_Legal_DD_Template.docx"
+INPUT_PATH = PROJECT_ROOT / "deal-mgmt" / "output" / "Project Green_법률실사보고서_final_251223.docx"
+OUTPUT_PATH = PROJECT_ROOT / "deal-mgmt" / "output" / "LDD_법률실사보고서_Template.docx"
 
 # ─── 스타일 기반 분류 ──────────────────────────────────────────────────────────
 

@@ -3,7 +3,6 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import pool
-from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
@@ -41,30 +40,12 @@ def do_run_migrations(connection) -> None:
         context.run_migrations()
 
 
-def _build_async_connect_args(url: str) -> dict:
-    parsed = make_url(url)
-    query = dict(parsed.query)
-    if parsed.drivername != "postgresql+asyncpg":
-        return {}
-
-    if any(key in query for key in ("ssl", "sslmode", "sslcert", "sslkey", "sslrootcert")):
-        return {}
-
-    if parsed.host not in {None, "localhost", "127.0.0.1"}:
-        return {}
-
-    # Windows local dev environments sometimes inherit broken SSL defaults.
-    return {"ssl": False}
-
-
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode (async)."""
-    url = config.get_main_option("sqlalchemy.url")
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args=_build_async_connect_args(url),
     )
 
     async with connectable.connect() as connection:

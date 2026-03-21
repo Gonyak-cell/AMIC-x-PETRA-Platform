@@ -13,11 +13,6 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 FDD_BASE_URL = getattr(settings, "FDD_API_URL", "http://fdd-api:8000/api/v1")
-FDD_EVIDENCE_EXPORT_PATH_TEMPLATE = getattr(
-    settings,
-    "FDD_EVIDENCE_EXPORT_PATH_TEMPLATE",
-    "/deals/{deal_id}/evidence-export",
-)
 
 
 class FDDClient:
@@ -58,13 +53,6 @@ class FDDClient:
         """FDD Deal 상태 조회 (QoE/NWC/Debt 분석 진행률)."""
         client = await self._get_client()
         resp = await client.get(f"/deals/{deal_id}/summary")
-        resp.raise_for_status()
-        return resp.json()
-
-    async def get_evidence_export(self, deal_id: uuid.UUID) -> dict:
-        """Fetch normalized evidence export payload from FDD."""
-        client = await self._get_client()
-        resp = await client.get(FDD_EVIDENCE_EXPORT_PATH_TEMPLATE.format(deal_id=deal_id))
         resp.raise_for_status()
         return resp.json()
 

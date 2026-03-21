@@ -221,13 +221,6 @@ async def test_law_firm_ldd_docx_regression_renders_custom_content(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ):
-    from app.ralph.generators.ldd.law_firm_template import LawFirmTemplateGenerator
-
-    def _unexpected_blank_generation(*args, **kwargs):
-        raise AssertionError("direct law_firm_template.docx should be used before fallback blank generation")
-
-    monkeypatch.setattr(LawFirmTemplateGenerator, "generate_blank_template", _unexpected_blank_generation)
-
     sections = [
         LDDSection(
             section_type=LDDSectionType.GOVERNANCE,
@@ -282,9 +275,6 @@ async def test_law_firm_ldd_docx_regression_renders_custom_content(
 
     assert "Regression Holdings" in text
     assert "Regression Law LLC" in text
-    assert "목 차" in text
-    assert "서 문" in text
-    assert "용 례" in text
     assert "Board Composition Review" in text
     assert "Change of Control Approval" in text
     assert "Board minutes for the last two years were not provided." in text
@@ -292,73 +282,3 @@ async def test_law_firm_ldd_docx_regression_renders_custom_content(
     assert "Collect the last two years of board minutes before signing." in text
     assert "Document the waiver as an express closing condition." in text
     assert "[이곳에 텍스트 입력]" not in text
-
-
-async def test_law_firm_ldd_docx_regression_applies_project_green_style(
-    async_session: AsyncSession,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-):
-    sections = [
-        LDDSection(
-            section_type=LDDSectionType.PERMITS,
-            title="2. Permits",
-            items=[
-                LDDItem(
-                    item_id="PERMIT-01",
-                    name="인허가 강한 근거",
-                    status=LDDItemStatus.ISSUE,
-                    issue_level=LDDIssueLevel.HIGH,
-                    description="관할관청의 사전승인이 필요한 것으로 보임.",
-                    deal_impact="거래종결 전 승계절차를 완료할 필요가 있습니다.",
-                    recommendation="거래종결의 선행조건으로 반영해야 합니다.",
-                    rfi_required=False,
-                    evidence_refs=["shareholders_agreement.pdf", "permit_license.pdf"],
-                    confidence=0.91,
-                ),
-                LDDItem(
-                    item_id="PERMIT-02",
-                    name="인허가 중간 근거",
-                    status=LDDItemStatus.ISSUE,
-                    issue_level=LDDIssueLevel.MEDIUM,
-                    description="계약상 사전 동의 절차가 필요한 것으로 판단됨.",
-                    deal_impact="거래종결 전 관련 동의서 확보 여부를 점검할 필요가 있습니다.",
-                    recommendation="동의서 확보 계획을 거래 일정표에 반영해야 합니다.",
-                    rfi_required=False,
-                    evidence_refs=["management_presentation.pdf"],
-                    confidence=0.62,
-                ),
-                LDDItem(
-                    item_id="PERMIT-03",
-                    name="인허가 약한 근거",
-                    status=LDDItemStatus.ISSUE,
-                    issue_level=LDDIssueLevel.HIGH,
-                    description="신고 수리 여부를 추가로 확인할 필요가 있는 것으로 판단됨.",
-                    deal_impact="자료 공백이 해소되기 전까지는 거래 구조에 미치는 영향을 보수적으로 검토할 필요가 있습니다.",
-                    recommendation="추가 자료 확보 전까지는 종결 전제사실을 보수적으로 유지해야 합니다.",
-                    rfi_required=True,
-                    rfi_number="PERMIT-003",
-                    confidence=0.2,
-                ),
-            ],
-        )
-    ]
-
-    _txn, report = await _create_and_render_report(
-        async_session,
-        monkeypatch,
-        tmp_path,
-        report_type=LDDReportType.LAW_FIRM,
-        sections=sections,
-        title="LAW_FIRM style regression",
-    )
-
-    assert report.status == LDDReportStatus.READY
-    assert report.file_path
-
-    text = _extract_docx_text(report.file_path)
-
-    assert "본 보고서는 Regression Holdings 및 관련 거래에 관하여 수행한 법률실사 결과를 정리한 것으로서" in text
-    assert "관할관청의 사전승인이 필요한 것으로 판단됩니다." in text
-    assert "계약상 사전 동의 절차가 필요한 것으로 보입니다." in text
-    assert "신고 수리 여부를 추가로 확인할 필요가 있는 것으로 사료됩니다." in text

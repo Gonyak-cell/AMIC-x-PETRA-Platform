@@ -23,9 +23,8 @@ logger = logging.getLogger(__name__)
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_SPACE_NS = "http://www.w3.org/XML/1998/namespace"
 
-# 섹션 헤더 바 배경색
-# 첨부 blank template는 앞 챕터와 뒤 챕터의 바 색상을 다르게 사용한다.
-SECTION_BAR_FILLS = {"26382A", "385623", "1D2B20"}
+# 섹션 헤더 바 배경색 (짙은 녹색)
+SECTION_BAR_FILLS = {"26382A", "385623"}
 
 # Recommendation 박스 배경색 (연한 녹색)
 RECOMMENDATION_FILL = "E2EFD9"

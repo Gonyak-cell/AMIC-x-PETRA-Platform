@@ -17,8 +17,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.ralph.generators.ldd.project_green_style import normalize_project_green_text
-
 logger = logging.getLogger(__name__)
 
 
@@ -110,11 +108,9 @@ class LawFirmNarrativeAdapter:
             elif section == "recommendation":
                 recommendation_parts.append(content)
 
-        result.status_section = normalize_project_green_text("\n\n".join(status_parts)) if status_parts else ""
-        result.review_section = normalize_project_green_text("\n\n".join(review_parts)) if review_parts else ""
-        result.recommendation_section = (
-            normalize_project_green_text("\n\n".join(recommendation_parts)) if recommendation_parts else ""
-        )
+        result.status_section = "\n\n".join(status_parts) if status_parts else ""
+        result.review_section = "\n\n".join(review_parts) if review_parts else ""
+        result.recommendation_section = "\n\n".join(recommendation_parts) if recommendation_parts else ""
 
         # 6블록 텍스트에서 (D) 라벨 + IRL 항목 추출
         all_text = "\n".join(status_parts + review_parts + recommendation_parts)
@@ -151,9 +147,9 @@ class LawFirmNarrativeAdapter:
             item_id=item_id,
             item_name=item_name,
             chapter_number=chapter_number,
-            status_section=normalize_project_green_text(llm_response.get("status_section", "")),
-            review_section=normalize_project_green_text(llm_response.get("review_section", "")),
-            recommendation_section=normalize_project_green_text(llm_response.get("recommendation_section", "")),
+            status_section=llm_response.get("status_section", ""),
+            review_section=llm_response.get("review_section", ""),
+            recommendation_section=llm_response.get("recommendation_section", ""),
             irl_items=llm_response.get("irl_items", []),
             cited_laws=llm_response.get("cited_laws", []),
             cited_documents=llm_response.get("cited_documents", []),

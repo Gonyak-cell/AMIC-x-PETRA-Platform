@@ -1,7 +1,6 @@
 import logging
 import os
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _logger = logging.getLogger(__name__)
@@ -9,17 +8,6 @@ _logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
-    @field_validator("DEBUG", mode="before")
-    @classmethod
-    def normalize_debug_flag(cls, value: object) -> object:
-        if isinstance(value, str):
-            lowered = value.strip().lower()
-            if lowered in {"release", "prod", "production"}:
-                return False
-            if lowered in {"debug", "development", "dev"}:
-                return True
-        return value
 
     # App
     APP_NAME: str = "Deal Management"
@@ -56,7 +44,6 @@ class Settings(BaseSettings):
 
     # Service URLs (inter-service communication)
     FDD_API_URL: str = "http://localhost:8000/api/v1"
-    FDD_EVIDENCE_EXPORT_PATH_TEMPLATE: str = "/deals/{deal_id}/evidence-export"
     IM_API_URL: str = "http://localhost:8002/api"
     KIIS_API_URL: str = "http://localhost:8001/api/v1"
 
@@ -96,13 +83,6 @@ class Settings(BaseSettings):
     CF_CRAWL_REQUEST_DELAY: float = 3.0  # 소스 간 요청 간격(초)
     CF_CRAWL_MAX_PAGES: int = 5  # 소스당 최대 크롤링 페이지
 
-    # OCR Runtime
-    OCR_ENABLED: bool = True
-    OCR_ENGINE: str = "tesseract"
-    OCR_LANGUAGES: str = "kor+eng"
-    OCR_REQUIRE_FOR_SCANNED_PDF: bool = False
-    TESSERACT_CMD: str = ""
-
     # LDD Multi-LLM Pipeline
     LDD_MULTI_LLM_ENABLED: bool = False  # 멀티 LLM 파이프라인 활성화
     LDD_STAGE3_DUAL_RISK: bool = True  # 듀얼 리스크 분석
@@ -115,7 +95,6 @@ class Settings(BaseSettings):
     LDD_TEMPLATE_SLOTFILL_ENABLED: bool = True  # 부동문자 bank + slot-fill 렌더링 활성화
     LDD_TEMPLATE_SLOTFILL_USE_LLM: bool = False  # L3 슬롯에 한해 LLM 보조 사용
     LDD_TEMPLATE_SLOTFILL_DIR: str = ""  # 비어 있으면 templates/ldd_slotfill 사용
-    LDD_ROUTER_MIN_COMMON_CONFIDENCE: float = 0.55  # COMMON 문서를 LDD에 허용할 최소 라우팅 신뢰도
 
     # LDD QA Gate
     LDD_MIN_DRAFT_SCORE: int = 3  # 초안 최소 품질 (1-5), REVIEW 시 경고
