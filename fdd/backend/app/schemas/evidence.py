@@ -46,37 +46,3 @@ class EvidenceLinkBulkCreate(BaseModel):
     """엔진 함수가 반환하는 EvidenceLink 목록을 한 번에 저장."""
 
     links: list[EvidenceLinkCreate] = Field(..., min_length=1)
-
-
-class EvidenceExportRecord(BaseModel):
-    workstream: str = "FDD"
-    section_type: str | None = None
-    item_id: str | None = None
-    vdr_document_id: uuid.UUID | None = None
-    reference_label: str
-    original_name: str | None = None
-    primary_workstream: str | None = "FDD"
-    workstream_tags: list[str] = Field(default_factory=lambda: ["FDD"])
-    evidence_kind: str | None = None
-    directness: str | None = None
-    confidence: float = 1.0
-    relevance_score: float = 1.0
-    source_page: str | None = None
-    source_snippet: str | None = None
-    evidence_locator: dict[str, Any] | None = None
-    requires_manual_review: bool = False
-    is_foreign_workstream: bool = False
-    is_unresolved_reference: bool = False
-    used_in_draft: bool = True
-    used_in_final: bool = False
-    analysis_phase: str = "DRAFT"
-    ordinal: int = 0
-    chunk_id: str | None = None
-
-
-class EvidenceExportResponse(BaseModel):
-    artifact_type: str = "FDD_REPORT"
-    artifact_id: uuid.UUID | None = None
-    external_artifact_ref: str | None = None
-    default_workstream: str = "FDD"
-    records: list[EvidenceExportRecord] = Field(default_factory=list)

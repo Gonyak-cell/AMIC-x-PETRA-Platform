@@ -107,7 +107,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     description="M&A Deal Management Service — 9단계 거래 워크플로우 관리 시스템",
-    version="0.15.2",
+    version="0.1.0",
     lifespan=lifespan,
     openapi_tags=[
         {"name": "Health", "description": "서비스 상태 확인"},
