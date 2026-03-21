@@ -72,6 +72,7 @@ export default function VdrExplorer({
   const [newFolderName, setNewFolderName] = useState("");
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const suggestCategory = useSuggestVdrCategory(txnId);
@@ -151,6 +152,8 @@ export default function VdrExplorer({
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
       if (!currentFolderId) return;
       for (const file of Array.from(e.dataTransfer.files)) {
         const error = validateFile(file);
@@ -163,6 +166,24 @@ export default function VdrExplorer({
     },
     [currentFolderId, handleUploadFile],
   );
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!currentFolderId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer.types.includes("Files")) {
+        setIsDragOver(true);
+      }
+    },
+    [currentFolderId],
+  );
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
 
   const handleCreateFolder = useCallback(() => {
     const name = newFolderName.trim();
@@ -233,8 +254,11 @@ export default function VdrExplorer({
       {viewMode === "grid" ? (
         /* ─── 기존 그리드 뷰 ─── */
         <div
-          className="flex-1 overflow-y-auto"
-          onDragOver={currentFolderId ? (e) => e.preventDefault() : undefined}
+          className={`flex-1 overflow-y-auto transition-colors ${
+            isDragOver ? "bg-accent/5 ring-2 ring-inset ring-accent/30" : ""
+          }`}
+          onDragOver={currentFolderId ? handleDragOver : undefined}
+          onDragLeave={currentFolderId ? handleDragLeave : undefined}
           onDrop={currentFolderId ? handleDrop : undefined}
         >
           {currentFolderId === null ? (
@@ -336,6 +360,9 @@ export default function VdrExplorer({
             extractionByDocId={extractionByDocId}
             txnId={txnId}
             onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            isDragOver={isDragOver}
           />
         </div>
       )}

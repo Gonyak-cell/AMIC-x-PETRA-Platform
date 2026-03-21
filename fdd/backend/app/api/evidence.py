@@ -6,6 +6,7 @@ EvidenceLink CRUD + 누락 탐지 + Evidence Index 엔드포인트.
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_permission
@@ -13,7 +14,11 @@ from app.auth.rbac import Permission
 from app.database import get_db
 from app.models.deal import Deal
 from app.models.evidence import SourceType
+from app.models.report_version import ReportVersion
+from app.models.upload import UploadFile
 from app.schemas.evidence import (
+    EvidenceExportRecord,
+    EvidenceExportResponse,
     EvidenceLinkBulkCreate,
     EvidenceLinkCreate,
     EvidenceLinkRead,
@@ -228,3 +233,128 @@ def get_coverage(
         raise HTTPException(status_code=404, detail="Deal not found")
 
     return get_evidence_coverage_stats(db, deal_id)
+
+
+def _map_section_type(target_type: str) -> str | None:
+    value = target_type.lower()
+    if value.startswith("qoe"):
+        return "QOE"
+    if value.startswith("nwc"):
+        return "NWC"
+    if "debt" in value:
+        return "DEBT"
+    if "issue" in value or "anomaly" in value:
+        return "ISSUES"
+    if "checklist" in value:
+        return "CHECKLIST"
+    if "revenue" in value:
+        return "REVENUE"
+    return None
+
+
+def _map_evidence_kind(source_type: SourceType) -> str:
+    return {
+        SourceType.FILE: "uploaded_file",
+        SourceType.TB: "trial_balance",
+        SourceType.GL: "general_ledger",
+        SourceType.PDF: "pdf_extract",
+    }.get(source_type, source_type.value.lower())
+
+
+def _map_directness(source_type: SourceType) -> str:
+    if source_type in {SourceType.FILE, SourceType.PDF}:
+        return "DIRECT"
+    return "INDIRECT"
+
+
+def _derive_source_page(source_detail: dict | None) -> str | None:
+    if not source_detail:
+        return None
+    if source_detail.get("page") is not None:
+        return str(source_detail["page"])
+    if source_detail.get("sheet"):
+        row = source_detail.get("row")
+        return f"{source_detail['sheet']}:{row}" if row is not None else str(source_detail["sheet"])
+    if source_detail.get("row") is not None:
+        return f"row:{source_detail['row']}"
+    return None
+
+
+def _derive_reference_label(link, original_name: str | None) -> str:
+    prefix = link.target_type.replace("_", " ").upper()
+    if original_name:
+        return f"{prefix} - {original_name}"
+    return f"{prefix} - {link.source_type.value}:{link.source_id}"
+
+
+@router.get(
+    "/deals/{deal_id}/evidence-export",
+    response_model=EvidenceExportResponse,
+)
+def export_evidence(
+    deal_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Export normalized evidence payload for cross-service consumers such as MA."""
+    deal = db.get(Deal, deal_id)
+    if deal is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    links = list_evidence_links(db, deal_id)
+    upload_ids: list[uuid.UUID] = []
+    for link in links:
+        if link.source_type != SourceType.FILE:
+            continue
+        try:
+            upload_ids.append(uuid.UUID(str(link.source_id)))
+        except (TypeError, ValueError):
+            continue
+
+    upload_name_by_id: dict[str, str] = {}
+    if upload_ids:
+        uploads = db.scalars(select(UploadFile).where(UploadFile.id.in_(upload_ids))).all()
+        upload_name_by_id = {str(upload.id): upload.original_filename for upload in uploads}
+
+    latest_report_id = db.scalar(
+        select(ReportVersion.id)
+        .where(ReportVersion.deal_id == deal_id)
+        .order_by(desc(ReportVersion.created_at))
+        .limit(1)
+    )
+
+    records: list[EvidenceExportRecord] = []
+    for ordinal, link in enumerate(links, start=1):
+        source_detail = link.source_detail if isinstance(link.source_detail, dict) else None
+        original_name = upload_name_by_id.get(str(link.source_id))
+        records.append(
+            EvidenceExportRecord(
+                workstream="FDD",
+                section_type=_map_section_type(link.target_type),
+                item_id=str(link.target_id),
+                reference_label=_derive_reference_label(link, original_name),
+                original_name=original_name,
+                primary_workstream="FDD",
+                workstream_tags=["FDD"],
+                evidence_kind=_map_evidence_kind(link.source_type),
+                directness=_map_directness(link.source_type),
+                confidence=1.0,
+                relevance_score=1.0,
+                source_page=_derive_source_page(source_detail),
+                source_snippet=(source_detail or {}).get("snippet"),
+                evidence_locator=source_detail,
+                used_in_draft=True,
+                used_in_final=latest_report_id is not None,
+                analysis_phase="FINAL" if latest_report_id is not None else "DRAFT",
+                ordinal=ordinal,
+                chunk_id=(source_detail or {}).get("chunk_id"),
+            )
+        )
+
+    return EvidenceExportResponse(
+        artifact_type="FDD_REPORT",
+        artifact_id=latest_report_id,
+        external_artifact_ref=f"fdd-deal-{deal_id}",
+        default_workstream="FDD",
+        records=records,
+    )

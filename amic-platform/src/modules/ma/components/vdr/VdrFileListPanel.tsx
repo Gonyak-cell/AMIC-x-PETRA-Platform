@@ -32,6 +32,9 @@ interface VdrFileListPanelProps {
   extractionByDocId: Map<string, DocumentExtraction>;
   txnId: string;
   onDrop: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  isDragOver: boolean;
 }
 
 // ── 정렬 로직 ────────────────────────────────────────────
@@ -86,6 +89,9 @@ export default function VdrFileListPanel({
   extractionByDocId,
   txnId,
   onDrop,
+  onDragOver,
+  onDragLeave,
+  isDragOver,
 }: VdrFileListPanelProps) {
   // 폴더는 좌측 트리에서만 탐색 — 우측 패널은 파일만 표시
   void _subFolders;
@@ -114,8 +120,11 @@ export default function VdrFileListPanel({
 
   return (
     <div
-      className="flex flex-1 flex-col min-w-0"
-      onDragOver={currentFolderId ? (e) => e.preventDefault() : undefined}
+      className={`flex flex-1 min-w-0 flex-col transition-colors ${
+        isDragOver ? "bg-accent/5 ring-2 ring-inset ring-accent/30" : ""
+      }`}
+      onDragOver={currentFolderId ? onDragOver : undefined}
+      onDragLeave={currentFolderId ? onDragLeave : undefined}
       onDrop={currentFolderId ? onDrop : undefined}
     >
       {/* 컬럼 헤더 */}
