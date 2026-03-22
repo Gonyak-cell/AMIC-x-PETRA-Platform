@@ -172,8 +172,6 @@ function MarketingSection() {
             icon={FileText}
             title="No documents yet"
             description="Create your first marketing document."
-            actionLabel="Create Document"
-            onAction={() => navigate("/docs/new")}
           />
         ) : (
           <>
@@ -210,15 +208,12 @@ function MarketingSection() {
 // ── Legal Section ──
 
 function LegalSection() {
-  const navigate = useNavigate();
   return (
     <Card padding="lg">
       <EmptyState
         icon={ArrowRight}
         title="거래 컨텍스트에서 생성"
         description="법률 문서는 M&A 거래 워크스페이스에서 생성됩니다. 새 문서를 생성하려면 아래 버튼을 클릭하세요."
-        actionLabel="Deal Contracts 생성"
-        onAction={() => navigate("/docs/legal/new")}
       />
     </Card>
   );
@@ -326,15 +321,12 @@ function DDSection() {
 // ── Checklist Section ──
 
 function ChecklistSection() {
-  const navigate = useNavigate();
   return (
     <Card padding="lg">
       <EmptyState
         icon={ArrowRight}
         title="거래 워크스페이스에서 관리"
         description="체크리스트와 타임라인은 M&A 거래 워크스페이스에서 관리됩니다. 거래를 선택하여 체크리스트를 확인하세요."
-        actionLabel="거래 목록 보기"
-        onAction={() => navigate("/ma/transactions")}
       />
     </Card>
   );

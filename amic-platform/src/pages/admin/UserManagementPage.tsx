@@ -541,8 +541,6 @@ export default function UserManagementPage() {
             icon={Users}
             title="No users found"
             description="Create your first user to get started."
-            actionLabel="Create User"
-            onAction={() => setShowCreateModal(true)}
           />
         ) : (
           <DataTable

@@ -239,8 +239,6 @@ export default function DealListPage() {
             icon={Briefcase}
             title="아직 딜이 없습니다"
             description="새 딜을 생성하여 FDD 분석을 시작하세요."
-            actionLabel="딜 생성"
-            onAction={() => setShowModal(true)}
           />
         ) : (
           <DataTable

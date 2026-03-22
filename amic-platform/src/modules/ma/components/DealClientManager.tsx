@@ -96,6 +96,7 @@ export default function DealClientManager({ txnId }: DealClientManagerProps) {
         actions={
           <Button
             icon={UserPlus}
+            size="sm"
             onClick={() => setShowModal(true)}
             variant="ghost"
           >
@@ -108,8 +109,6 @@ export default function DealClientManager({ txnId }: DealClientManagerProps) {
             icon={Building2}
             title="배정된 고객 없음"
             description="이 거래에 접근할 외부 고객을 배정하세요. 배정된 고객은 CLIENT 계정으로 로그인 시 이 거래만 열람할 수 있습니다."
-            actionLabel="고객 배정"
-            onAction={() => setShowModal(true)}
           />
         ) : (
           <DataTable

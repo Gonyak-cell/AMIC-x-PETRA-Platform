@@ -1,13 +1,14 @@
 import { useState, Fragment } from "react";
 import { UploadCloud, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import VdrUploadShortcutCard from "@/modules/ma/components/vdr/VdrUploadShortcutCard";
+import { useOpenVdrUpload } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import type { Transaction } from "@/modules/ma/types/transaction";
 import type {
   CorporateDocsExtractedData,
   CorporateDirector,
 } from "@/modules/ma/types/document_extraction";
 import { sortDirectorsByPosition } from "@/modules/ma/types/document_extraction";
-import EngagementDocUpload from "./EngagementDocUpload";
 
 interface Props {
   txn: Transaction;
@@ -310,14 +311,36 @@ function BizRegInfoSection({ ci }: { ci: CorporateDocsExtractedData }) {
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 
+function MissingDocumentState({
+  docName,
+  canWrite = true,
+}: {
+  docName: string;
+  canWrite?: boolean;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-sm font-medium text-slate-800">{docName} 문서가 아직 없습니다.</p>
+      <p className="mt-1 text-xs text-slate-600">
+        {canWrite
+          ? "VDR에 업로드하면 이 카드가 자동으로 업데이트됩니다."
+          : "업로드가 완료되면 이 카드가 자동으로 업데이트됩니다."}
+      </p>
+    </div>
+  );
+}
+
 export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
   const ci = txn.corporate_info as unknown as CorporateDocsExtractedData | null;
-  const [showRegistryUpload, setShowRegistryUpload] = useState(false);
-  const [showBizRegUpload, setShowBizRegUpload] = useState(false);
+  const openVdrUpload = useOpenVdrUpload(txn.id);
 
   const hasRegistry = !!(ci?.corporate_registration_number || ci?.company_name);
   const hasBizReg = !!ci?.business_registration_number;
   const bothComplete = hasRegistry && hasBizReg;
+  const missingDocNames = [
+    !hasRegistry ? "법인등기부" : null,
+    !hasBizReg ? "사업자등록증" : null,
+  ].filter((value): value is string => value !== null);
 
   return (
     <Card
@@ -327,15 +350,22 @@ export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
       actions={bothComplete ? <BothCompleteActions /> : undefined}
     >
       <div className="space-y-4 p-1">
+        {!bothComplete && canWrite && (
+          <VdrUploadShortcutCard
+            title="필요 문서를 VDR에서 업로드하세요"
+            description={`${missingDocNames.join(", ")}을(를) 업로드하면 회사 정보가 자동으로 채워집니다.`}
+            onOpen={() => openVdrUpload({ returnLabel: "Overview" })}
+          />
+        )}
         {/* ── 법인등기부 섹션 ── */}
         <div>
           <SectionHeader
             title="법인등기부"
             isComplete={hasRegistry}
             docName="법인등기부"
-            uploadOpen={showRegistryUpload}
-            onUploadToggle={() => setShowRegistryUpload((v) => !v)}
-            canWrite={canWrite}
+            uploadOpen={false}
+            onUploadToggle={() => {}}
+            canWrite={false}
           />
           {hasRegistry && ci ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-0">
@@ -359,15 +389,7 @@ export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
               </div>
             </div>
           ) : (
-            showRegistryUpload &&
-            canWrite && (
-              <div className="mt-3">
-                <EngagementDocUpload
-                  txnId={txn.id}
-                  docCategoryHint="REGISTRY_DOCS"
-                />
-              </div>
-            )
+            <MissingDocumentState docName="법인등기부" canWrite={canWrite} />
           )}
         </div>
 
@@ -380,24 +402,16 @@ export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
             title="사업자등록증"
             isComplete={hasBizReg}
             docName="사업자등록증"
-            uploadOpen={showBizRegUpload}
-            onUploadToggle={() => setShowBizRegUpload((v) => !v)}
-            canWrite={canWrite}
+            uploadOpen={false}
+            onUploadToggle={() => {}}
+            canWrite={false}
           />
           {hasBizReg && ci ? (
             <div className="mt-3">
               <BizRegInfoSection ci={ci} />
             </div>
           ) : (
-            showBizRegUpload &&
-            canWrite && (
-              <div className="mt-3">
-                <EngagementDocUpload
-                  txnId={txn.id}
-                  docCategoryHint="BIZ_REG_DOCS"
-                />
-              </div>
-            )
+            <MissingDocumentState docName="사업자등록증" canWrite={canWrite} />
           )}
         </div>
       </div>

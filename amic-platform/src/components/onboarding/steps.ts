@@ -32,14 +32,6 @@ export const CLIENT_OVERVIEW_STEPS: OnboardingStep[] = [
     placement: "bottom",
   },
   {
-    id: "service-integration",
-    targetSelector: "[data-onboarding='service-integration']",
-    title: "서비스 연동 현황",
-    description:
-      "각 단계별 문서 준비 및 서비스 연동 상태를 확인할 수 있습니다.",
-    placement: "top",
-  },
-  {
     id: "workspace-tabs",
     targetSelector: "[data-onboarding='workspace-tabs']",
     title: "업무 영역 탭",

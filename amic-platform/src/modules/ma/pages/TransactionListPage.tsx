@@ -287,10 +287,6 @@ export default function TransactionListPage() {
                 ? "새 거래를 생성하여 M&A 파이프라인을 시작하세요."
                 : "배정된 거래가 없습니다."
             }
-            actionLabel={canWrite() ? "New Transaction" : undefined}
-            onAction={
-              canWrite() ? () => navigate("/ma/transactions/new") : undefined
-            }
           />
         ) : (
           <DataTable

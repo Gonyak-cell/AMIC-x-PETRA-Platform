@@ -34,7 +34,6 @@ import {
   CalendarClock,
   ListChecks,
   FolderLock,
-  Shield,
   Calculator,
   FileStack,
 } from "lucide-react";
@@ -90,9 +89,6 @@ const MA_PIPELINE_NAV = [
 const MA_TOOLS_NAV = [
   { to: "vdr", label: "VDR", icon: FolderLock },
   { to: "timeline", label: "타임라인", icon: Activity },
-  { to: "risks", label: "리스크", icon: AlertTriangle },
-  { to: "compliance", label: "컴플라이언스", icon: Shield },
-  { to: "notes-approvals", label: "노트/승인", icon: FileText },
 ];
 
 // ── VDR Navigation ──
@@ -600,7 +596,7 @@ export function Sidebar({
                       onClick={onNavItemClick}
                     />
                   )}
-                  {hasPermission("audit:view") && (
+                  {user?.role === "ADMIN" && (
                     <SidebarNavItem
                       to="/analytics"
                       label="Analytics"

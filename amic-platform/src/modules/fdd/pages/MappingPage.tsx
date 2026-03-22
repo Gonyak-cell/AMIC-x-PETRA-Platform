@@ -537,8 +537,6 @@ export default function MappingPage() {
             icon={GitMerge}
             title="No Mappings"
             description="Upload a Trial Balance file first, then click 'Auto-Suggest Mappings' to start."
-            actionLabel="Auto-Suggest Mappings"
-            onAction={handleSuggest}
           />
         </Card>
       )}

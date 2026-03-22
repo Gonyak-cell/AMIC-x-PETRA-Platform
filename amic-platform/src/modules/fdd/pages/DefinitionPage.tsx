@@ -426,8 +426,6 @@ export default function DefinitionPage() {
             icon={FileText}
             title="No Definitions"
             description="Create the first definition version to configure FDD analysis parameters."
-            actionLabel="Create Definition"
-            onAction={() => setShowForm(true)}
           />
         </Card>
       ) : (

@@ -447,8 +447,6 @@ export default function IssuesPage() {
             icon={AlertTriangle}
             title="No issues found"
             description="Run anomaly detection to scan for potential issues in the financial data."
-            actionLabel="Run Anomaly Detection"
-            onAction={handleRunDetection}
           />
         )}
 

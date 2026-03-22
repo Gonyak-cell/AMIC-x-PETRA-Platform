@@ -247,10 +247,6 @@ export default function DocumentListPage() {
                 ? "Create your first Investment Memorandum to get started."
                 : "No projects match the selected status filter."
             }
-            actionLabel={statusFilter === "ALL" ? "Create IM" : undefined}
-            onAction={
-              statusFilter === "ALL" ? () => navigate("/im/new") : undefined
-            }
           />
         ) : (
           <>

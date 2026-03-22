@@ -170,8 +170,6 @@ function FDDContent() {
             icon={config.icon}
             title={config.emptyTitle}
             description={config.emptyDesc}
-            actionLabel={config.createLabel}
-            onAction={() => navigate(config.createPath)}
           />
         ) : (
           <DataTable
@@ -191,7 +189,6 @@ function FDDContent() {
 // ── LDD Section ──
 
 function LDDContent() {
-  const navigate = useNavigate();
   const { data: reports, isLoading } = useLDDReportsList();
   const items = useMemo(() => reports ?? [], [reports]);
   const config = DD_CONFIG.ldd;
@@ -218,8 +215,6 @@ function LDDContent() {
             icon={config.icon}
             title={config.emptyTitle}
             description={config.emptyDesc}
-            actionLabel={config.createLabel}
-            onAction={() => navigate(config.createPath)}
           />
         ) : (
           <DataTable

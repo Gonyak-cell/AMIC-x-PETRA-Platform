@@ -490,8 +490,6 @@ export default function NetDebtPage() {
             icon={Landmark}
             title="No Net Debt Calculation"
             description="Enter a Snapshot ID and click 'Calculate Net Debt' to start analyzing."
-            actionLabel="Calculate Net Debt"
-            onAction={() => snapshotId.trim() && handleRun()}
           />
         </Card>
       ) : (

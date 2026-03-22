@@ -438,8 +438,6 @@ export default function QoEPage() {
             icon={Calculator}
             title="No QoE Calculation"
             description="Enter a Snapshot ID and click 'Calculate QoE' to start analyzing."
-            actionLabel="Calculate QoE"
-            onAction={() => snapshotId.trim() && handleRun()}
           />
         </Card>
       ) : (
