@@ -16,12 +16,12 @@ from app.models.enums import FinancialModelStatus, FinancialModelType
 from app.schemas.financial_model import (
     FinancialModelCreate,
     FinancialModelOut,
+    FinancialModelSourceRoutingPreviewOut,
     FMChecklistBulkUpdate,
     FMChecklistFinalizeRequest,
     FMChecklistItemOut,
     FMChecklistItemUpdate,
     FMChecklistOut,
-    FinancialModelSourceRoutingPreviewOut,
 )
 from app.services import financial_model_service as fm_svc
 from app.services.fm_checklist_service import FMChecklistService

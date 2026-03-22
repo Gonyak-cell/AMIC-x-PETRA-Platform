@@ -86,34 +86,6 @@ def create_default_folders(
     return created
 
 
-async def init_vdr_folders(
-    db: AsyncSession,
-    transaction_id: uuid.UUID,
-) -> list[VdrFolder]:
-    """기본 VDR 폴더 구조를 생성한다. 이미 존재하면 예외 발생.
-
-    C-01 fix: SELECT FOR UPDATE로 transaction row를 잠가 TOCTOU 방지.
-    동시 요청이 들어와도 하나만 폴더를 생성하고 나머지는 ValueError를 받는다.
-    """
-    from app.models.transaction import Transaction
-
-    # transaction row를 FOR UPDATE로 잠금 — 동시 초기화 직렬화
-    await db.scalar(select(Transaction.id).where(Transaction.id == transaction_id).with_for_update())
-
-    existing = await db.scalar(
-        select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id)
-    )
-    if existing and existing > 0:
-        raise ValueError("이 거래의 VDR 폴더가 이미 초기화되어 있습니다.")
-
-    created = create_default_folders(db, transaction_id)
-
-    await db.commit()
-    for f in created:
-        await db.refresh(f)
-    return created
-
-
 async def list_folders(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -518,96 +490,6 @@ async def _cleanup_extractions_for_document(
         # extraction 레코드 무효화
         ext.status = "FAILED"
         ext.error_message = "원본 문서 삭제됨"
-
-
-async def get_vdr_summary(
-    db: AsyncSession,
-    transaction_id: uuid.UUID,
-) -> dict:
-    """VDR 요약 통계."""
-    folder_count = (
-        await db.scalar(select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id))
-        or 0
-    )
-
-    doc_stats = await db.execute(
-        select(
-            func.count().label("count"),
-            func.coalesce(func.sum(VdrDocument.file_size_bytes), 0).label("total_size"),
-        ).where(
-            VdrDocument.transaction_id == transaction_id,
-            VdrDocument.status == VdrDocumentStatus.ACTIVE,
-        )
-    )
-    row = doc_stats.one()
-
-    return {
-        "total_folders": folder_count,
-        "total_documents": row.count,
-        "total_size_bytes": row.total_size,
-        "initialized": folder_count > 0,
-    }
-
-
-async def get_all_vdr_overviews(db: AsyncSession) -> list[dict]:
-    """모든 거래의 VDR 현황을 단일 쿼리로 조회한다."""
-    from app.models.transaction import Transaction
-
-    folder_sub = (
-        select(
-            VdrFolder.transaction_id,
-            func.count().label("cnt"),
-        )
-        .group_by(VdrFolder.transaction_id)
-        .subquery()
-    )
-
-    doc_sub = (
-        select(
-            VdrDocument.transaction_id,
-            func.count().label("cnt"),
-            func.coalesce(func.sum(VdrDocument.file_size_bytes), 0).label("total_size"),
-            func.max(VdrDocument.created_at).label("last_upload"),
-        )
-        .where(VdrDocument.status == VdrDocumentStatus.ACTIVE)
-        .group_by(VdrDocument.transaction_id)
-        .subquery()
-    )
-
-    q = (
-        select(
-            Transaction.id,
-            Transaction.name,
-            Transaction.code_name,
-            Transaction.phase,
-            Transaction.status,
-            func.coalesce(folder_sub.c.cnt, 0).label("total_folders"),
-            func.coalesce(doc_sub.c.cnt, 0).label("total_documents"),
-            func.coalesce(doc_sub.c.total_size, 0).label("total_size_bytes"),
-            doc_sub.c.last_upload.label("last_upload_at"),
-        )
-        .outerjoin(folder_sub, folder_sub.c.transaction_id == Transaction.id)
-        .outerjoin(doc_sub, doc_sub.c.transaction_id == Transaction.id)
-        .where(Transaction.is_deleted.is_(False))
-        .order_by(Transaction.updated_at.desc())
-    )
-
-    result = await db.execute(q)
-    return [
-        {
-            "transaction_id": row.id,
-            "transaction_name": row.name,
-            "code_name": row.code_name,
-            "phase": row.phase.value if hasattr(row.phase, "value") else str(row.phase),
-            "status": row.status.value if hasattr(row.status, "value") else str(row.status),
-            "vdr_initialized": row.total_folders > 0,
-            "total_folders": row.total_folders,
-            "total_documents": row.total_documents,
-            "total_size_bytes": row.total_size_bytes,
-            "last_upload_at": row.last_upload_at,
-        }
-        for row in result.all()
-    ]
 
 
 async def get_folder_document_counts(

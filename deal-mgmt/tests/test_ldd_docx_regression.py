@@ -9,7 +9,14 @@ from docx import Document
 from docx.table import Table, _Cell
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import LDDIssueLevel, LDDItemStatus, LDDReportStatus, LDDReportType, LDDSectionType, TransactionSide
+from app.models.enums import (
+    LDDIssueLevel,
+    LDDItemStatus,
+    LDDReportStatus,
+    LDDReportType,
+    LDDSectionType,
+    TransactionSide,
+)
 from app.models.transaction import Transaction
 from app.schemas.ldd_report import LDDItem, LDDReportCreate, LDDSection
 from app.services import ldd_report_service

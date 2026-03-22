@@ -29,7 +29,7 @@ SQLiteTypeCompiler.visit_UUID = lambda self, type_, **kw: "CHAR(36)"
 
 
 async def _bootstrap_database() -> None:
-    import app.main  # noqa: F401
+    import app.main
     from app.core.database import engine
     from app.models import Base
 

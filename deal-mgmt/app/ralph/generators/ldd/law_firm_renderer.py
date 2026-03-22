@@ -16,12 +16,6 @@ from docx import Document
 
 from app.ralph.generators.ldd.law_firm_mapper import LawFirmChapter
 from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrative
-from app.ralph.generators.ldd.project_green_style import (
-    ProjectGreenToneContext,
-    build_project_green_foreword,
-    choose_project_green_modality,
-    normalize_project_green_text,
-)
 from app.ralph.generators.ldd.law_firm_template import (
     BODY_PLACEHOLDER,
     RECOMMENDATION_FILL,
@@ -33,6 +27,12 @@ from app.ralph.generators.ldd.law_firm_template import (
     _get_num_info_from_xml,
     _get_style_id_from_xml,
     _get_text_from_xml,
+)
+from app.ralph.generators.ldd.project_green_style import (
+    ProjectGreenToneContext,
+    build_project_green_foreword,
+    choose_project_green_modality,
+    normalize_project_green_text,
 )
 
 logger = logging.getLogger(__name__)

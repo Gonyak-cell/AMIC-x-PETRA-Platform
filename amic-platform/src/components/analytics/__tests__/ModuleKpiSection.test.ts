@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getModuleErrorMessage } from "../ModuleKpiSection";
+import { getModuleErrorMessage } from "../analyticsKpiErrorMessage";
 
 describe("getModuleErrorMessage", () => {
   it("maps 401 errors to a session access message", () => {

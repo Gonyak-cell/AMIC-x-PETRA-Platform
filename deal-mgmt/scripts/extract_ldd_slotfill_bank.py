@@ -1140,10 +1140,7 @@ def is_reusable_fragment(text: str) -> bool:
     stripped = normalized.strip(" -:;,.")
     if len(stripped) < 30:
         return False
-    if PAGE_NOISE_RE.match(stripped):
-        return False
-
-    return True
+    return not PAGE_NOISE_RE.match(stripped)
 
 
 def is_shortlist_phrase(text: str) -> bool:
@@ -1179,10 +1176,7 @@ def is_shortlist_phrase(text: str) -> bool:
     ):
         return True
 
-    if re.search(r"[A-Za-z0-9]\.$", stripped):
-        return True
-
-    return False
+    return bool(re.search(r"[A-Za-z0-9]\.$", stripped))
 
 
 def extract_reusable_fragments(text: str) -> list[str]:
