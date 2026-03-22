@@ -15,9 +15,7 @@ from app.models.enums import (
     TransactionStatus,
 )
 
-_GARBLED_TEXT_ERROR = (
-    "Text appears garbled. Please verify your input method and retry."
-)
+_GARBLED_TEXT_ERROR = "Text appears garbled. Please verify your input method and retry."
 _QUESTION_RUN_PATTERN = re.compile(r"\?{3,}")
 
 

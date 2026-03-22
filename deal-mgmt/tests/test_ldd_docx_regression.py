@@ -27,12 +27,8 @@ SCOPE_NOTICE = (
     "본 문안은 현재까지 회사가 제출한 자료, 답변 및 필요한 범위의 공개 등기·공시자료를 기준으로 작성되었으며, "
     "별도 현장실사나 제3자 조회 없이 검토한 결과입니다."
 )
-GOVERNANCE_ANALYSIS_PREAMBLE = (
-    "본 항목에서는 설립, 기관결정, 권한 배분, 이해상충 및 지배관계의 적법성과 거래 선행조치 필요 여부를 함께 검토합니다."
-)
-GOVERNANCE_DEAL_IMPACT_PREAMBLE = (
-    "지배구조 및 권한 체계와 관련한 확인 결과는 SPA 진술보장, 선행조건, 사후 시정조치 및 PMI 실행계획에 직접 반영될 수 있습니다."
-)
+GOVERNANCE_ANALYSIS_PREAMBLE = "본 항목에서는 설립, 기관결정, 권한 배분, 이해상충 및 지배관계의 적법성과 거래 선행조치 필요 여부를 함께 검토합니다."
+GOVERNANCE_DEAL_IMPACT_PREAMBLE = "지배구조 및 권한 체계와 관련한 확인 결과는 SPA 진술보장, 선행조건, 사후 시정조치 및 PMI 실행계획에 직접 반영될 수 있습니다."
 
 
 async def _make_txn(db: AsyncSession, *, name: str = "LDD DOCX Regression") -> Transaction:

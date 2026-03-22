@@ -1346,7 +1346,9 @@ def write_candidate_yaml(output_dir: Path, section_id: str, candidates: dict[str
     )
 
 
-def write_phrase_candidates_markdown(output_dir: Path, section_id: str, candidates: dict[str, CandidateAggregate]) -> None:
+def write_phrase_candidates_markdown(
+    output_dir: Path, section_id: str, candidates: dict[str, CandidateAggregate]
+) -> None:
     target_name = "_base_phrase_candidates.md" if section_id == "BASE" else f"{section_id.lower()}_phrase_candidates.md"
     target = output_dir / target_name
     ordered = sorted(
@@ -1429,8 +1431,7 @@ def write_promotion_shortlist(output_dir: Path, aggregations: dict[str, dict[str
             (
                 candidate
                 for candidate in aggregations[section_id].values()
-                if candidate.file_count >= 2
-                and is_shortlist_phrase(candidate.normalized)
+                if candidate.file_count >= 2 and is_shortlist_phrase(candidate.normalized)
             ),
             key=lambda candidate: (candidate.file_count, candidate.hit_count, len(candidate.normalized)),
             reverse=True,
@@ -1609,10 +1610,14 @@ def main() -> int:
         write_candidate_yaml(output_dir, section_id, aggregations[section_id])
         write_phrase_candidates_markdown(output_dir, section_id, phrase_aggregations[section_id])
         write_phrase_candidate_yaml(output_dir, section_id, phrase_aggregations[section_id])
-        phrase_counts[section_id] = sum(1 for candidate in phrase_aggregations[section_id].values() if candidate.file_count >= 2)
+        phrase_counts[section_id] = sum(
+            1 for candidate in phrase_aggregations[section_id].values() if candidate.file_count >= 2
+        )
 
     write_promotion_shortlist(output_dir, phrase_aggregations)
-    write_summary(output_dir, sample_dir, file_stats, section_counts, failures, duplicates, zero_unit_files, phrase_counts)
+    write_summary(
+        output_dir, sample_dir, file_stats, section_counts, failures, duplicates, zero_unit_files, phrase_counts
+    )
     write_manifest(output_dir, file_stats, failures)
 
     print(f"[OK] processed files: {len(file_stats)}")

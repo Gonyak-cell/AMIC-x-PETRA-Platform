@@ -250,9 +250,7 @@ async def import_bid_from_attachment(
                 "bid_type": analysis.bid_type.value,
                 "amount": str(analysis.amount) if analysis.amount is not None else None,
                 "currency": analysis.currency,
-                "valuation_method": analysis.valuation_method.value
-                if analysis.valuation_method is not None
-                else None,
+                "valuation_method": analysis.valuation_method.value if analysis.valuation_method is not None else None,
                 "multiple": str(analysis.multiple) if analysis.multiple is not None else None,
                 "submitted_at": analysis.submitted_at,
                 "valid_until": analysis.valid_until,
@@ -276,7 +274,11 @@ async def import_bid_from_attachment(
                 actor_email=claims.email,
                 old_value=old_value,
                 new_value={
-                    key: value.value if hasattr(value, "value") else str(value) if isinstance(value, uuid.UUID) else value
+                    key: value.value
+                    if hasattr(value, "value")
+                    else str(value)
+                    if isinstance(value, uuid.UUID)
+                    else value
                     for key, value in update_data.items()
                 },
             )

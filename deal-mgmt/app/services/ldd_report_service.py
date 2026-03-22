@@ -335,7 +335,8 @@ def _build_context(
                 item
                 for item in section.get("items", [])
                 if item.get("status") == LDDItemStatus.ISSUE
-                and item.get("issue_level") in (
+                and item.get("issue_level")
+                in (
                     LDDIssueLevel.CRITICAL,
                     LDDIssueLevel.HIGH,
                     LDDIssueLevel.MEDIUM,
@@ -712,7 +713,9 @@ async def generate_ldd_report(
         placeholder_hits = await asyncio.to_thread(_find_docx_placeholder_hits, fpath)
         if placeholder_hits:
             report.status = LDDReportStatus.FAILED
-            report.error_message = f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+            report.error_message = (
+                f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+            )
         else:
             report.status = LDDReportStatus.READY
             report.file_name = fname
@@ -849,7 +852,9 @@ async def _generate_law_firm_report(
         placeholder_hits = await asyncio.to_thread(_find_docx_placeholder_hits, fpath)
         if placeholder_hits:
             report.status = LDDReportStatus.FAILED
-            report.error_message = f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+            report.error_message = (
+                f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+            )
         else:
             report.status = LDDReportStatus.READY
             report.file_name = fname
@@ -1277,13 +1282,17 @@ async def create_ldd_report_from_vdr(
             await db.refresh(report)
             return report
 
-        routed_sources, ldd_source_files, source_routing, parsed_source_map, vdr_name_to_id = (
-            await _prepare_ldd_vdr_inputs(
-                db,
-                transaction_id,
-                source_files,
-                min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
-            )
+        (
+            routed_sources,
+            ldd_source_files,
+            source_routing,
+            parsed_source_map,
+            vdr_name_to_id,
+        ) = await _prepare_ldd_vdr_inputs(
+            db,
+            transaction_id,
+            source_files,
+            min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
         )
         report.source_routing = source_routing
 
@@ -1432,8 +1441,10 @@ async def create_ldd_report_from_vdr(
                 pipeline_result.qa_result,
                 analysis_phase="DRAFT",
             )
-            report.draft_score = merged_qa.get("overall_score") if merged_qa.get("overall_score") is not None else (
-                pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
+            report.draft_score = (
+                merged_qa.get("overall_score")
+                if merged_qa.get("overall_score") is not None
+                else (pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None)
             )
 
             # 초안 QA 경고 — 점수가 기준 미달이면 리뷰 시 주의 메시지
@@ -1672,13 +1683,17 @@ async def finalize_ldd_report(
             extractor = TextExtractionService()
             source_files = await extractor.extract_from_vdr_documents(db, transaction_id)
             if source_files:
-                routed_sources, ldd_source_files, source_routing, parsed_source_map, _vdr_name_to_id = (
-                    await _prepare_ldd_vdr_inputs(
-                        db,
-                        transaction_id,
-                        source_files,
-                        min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
-                    )
+                (
+                    routed_sources,
+                    ldd_source_files,
+                    source_routing,
+                    parsed_source_map,
+                    _vdr_name_to_id,
+                ) = await _prepare_ldd_vdr_inputs(
+                    db,
+                    transaction_id,
+                    source_files,
+                    min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
                 )
                 report.source_routing = source_routing
                 if report.vdr_source and not ldd_source_files:

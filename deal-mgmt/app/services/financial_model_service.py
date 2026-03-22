@@ -343,7 +343,9 @@ def _build_financial_model_evidence_records(
                 "original_name": item.source_vdr_doc_name,
                 "primary_workstream": primary_workstream,
                 "workstream_tags": workstream_tags,
-                "evidence_kind": "VALUATION_SUPPORT" if item_workstream == VALUATION_WORKSTREAM else "FINANCIAL_SUPPORT",
+                "evidence_kind": "VALUATION_SUPPORT"
+                if item_workstream == VALUATION_WORKSTREAM
+                else "FINANCIAL_SUPPORT",
                 "directness": "INDIRECT",
                 "confidence": float(item.confidence or 0.0),
                 "relevance_score": float(item.confidence or 0.0),
@@ -371,9 +373,7 @@ async def _persist_financial_model_evidence_records(
 ) -> int:
     evidence_records = _build_financial_model_evidence_records(fm, checklist)
     document_ids = [
-        uuid.UUID(str(record["vdr_document_id"]))
-        for record in evidence_records
-        if record.get("vdr_document_id")
+        uuid.UUID(str(record["vdr_document_id"])) for record in evidence_records if record.get("vdr_document_id")
     ]
     chunk_lookup = await build_document_chunk_lookup(db, vdr_document_ids=document_ids)
     platform_records = build_platform_evidence_records(
@@ -495,9 +495,7 @@ def _select_financial_model_source_match(
     routed_sources: list[Any],
 ) -> tuple[Any, dict[str, Any], int] | None:
     keywords = _build_financial_model_keywords(item)
-    preferred_workstreams = (
-        {VALUATION_WORKSTREAM} if item.category in _VALUATION_CATEGORIES else {FDD_WORKSTREAM}
-    )
+    preferred_workstreams = {VALUATION_WORKSTREAM} if item.category in _VALUATION_CATEGORIES else {FDD_WORKSTREAM}
 
     best_match: tuple[Any, dict[str, Any], int] | None = None
     best_score = 0

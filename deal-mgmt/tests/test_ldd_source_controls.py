@@ -336,9 +336,18 @@ def test_source_control_qa_blocks_common_only_and_manual_review_inputs() -> None
             },
         },
         sections=[
-            {"section_type": "GOVERNANCE", "items": [{"item_id": "G-1", "status": "ISSUE", "recommendation": "Collect board minutes."}]},
-            {"section_type": "CAPITAL", "items": [{"item_id": "C-1", "status": "ISSUE", "recommendation": "Collect cap table support."}]},
-            {"section_type": "CONTRACTS", "items": [{"item_id": "K-1", "status": "ISSUE", "recommendation": "Collect executed SHA."}]},
+            {
+                "section_type": "GOVERNANCE",
+                "items": [{"item_id": "G-1", "status": "ISSUE", "recommendation": "Collect board minutes."}],
+            },
+            {
+                "section_type": "CAPITAL",
+                "items": [{"item_id": "C-1", "status": "ISSUE", "recommendation": "Collect cap table support."}],
+            },
+            {
+                "section_type": "CONTRACTS",
+                "items": [{"item_id": "K-1", "status": "ISSUE", "recommendation": "Collect executed SHA."}],
+            },
         ],
     )
 
@@ -396,9 +405,36 @@ def test_source_control_qa_blocks_recommendation_summary_mismatch() -> None:
             },
         },
         sections=[
-            {"section_type": "GOVERNANCE", "items": [{"item_id": "G-1", "status": "ISSUE", "recommendation": "Collect the last two years of board minutes before signing."}]},
-            {"section_type": "CAPITAL", "items": [{"item_id": "C-1", "status": "ISSUE", "recommendation": "Update the cap table and option dilution schedule."}]},
-            {"section_type": "CONTRACTS", "items": [{"item_id": "K-1", "status": "ISSUE", "recommendation": "Document the waiver as an express closing condition."}]},
+            {
+                "section_type": "GOVERNANCE",
+                "items": [
+                    {
+                        "item_id": "G-1",
+                        "status": "ISSUE",
+                        "recommendation": "Collect the last two years of board minutes before signing.",
+                    }
+                ],
+            },
+            {
+                "section_type": "CAPITAL",
+                "items": [
+                    {
+                        "item_id": "C-1",
+                        "status": "ISSUE",
+                        "recommendation": "Update the cap table and option dilution schedule.",
+                    }
+                ],
+            },
+            {
+                "section_type": "CONTRACTS",
+                "items": [
+                    {
+                        "item_id": "K-1",
+                        "status": "ISSUE",
+                        "recommendation": "Document the waiver as an express closing condition.",
+                    }
+                ],
+            },
         ],
         qa_result={
             "summary_rows": [

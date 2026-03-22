@@ -12,9 +12,7 @@ class DocumentChunk(Base, TimestampMixin):
     """Normalized chunk rows derived from parsed VDR documents."""
 
     __tablename__ = "document_chunks"
-    __table_args__ = (
-        UniqueConstraint("vdr_document_id", "chunk_id", name="uq_document_chunks_document_chunk"),
-    )
+    __table_args__ = (UniqueConstraint("vdr_document_id", "chunk_id", name="uq_document_chunks_document_chunk"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(

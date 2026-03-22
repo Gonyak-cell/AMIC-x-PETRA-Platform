@@ -217,9 +217,7 @@ class TestVdrDocuments:
         async_session: AsyncSession,
     ):
         folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
-        corporate_folder_id = next(
-            folder["id"] for folder in folders_resp.json() if folder["category"] == "CORPORATE"
-        )
+        corporate_folder_id = next(folder["id"] for folder in folders_resp.json() if folder["category"] == "CORPORATE")
 
         txn_uuid = uuid.UUID(transaction_id)
         await async_session.execute(
@@ -252,9 +250,7 @@ class TestVdrDocuments:
         async_session: AsyncSession,
     ):
         txn_uuid = uuid.UUID(transaction_id)
-        await async_session.execute(
-            delete(VdrFolder).where(VdrFolder.transaction_id == txn_uuid)
-        )
+        await async_session.execute(delete(VdrFolder).where(VdrFolder.transaction_id == txn_uuid))
         await async_session.commit()
 
         resp = await client.post(

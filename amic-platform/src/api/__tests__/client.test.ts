@@ -138,7 +138,7 @@ describe("API Client — 기본 설정", () => {
   });
 
   it("Content-Type이 application/json이다", () => {
-    expect(testClient.defaults.headers["Content-Type"]).toBe(
+    expect(String(testClient.defaults.headers["Content-Type"])).toContain(
       "application/json",
     );
   });

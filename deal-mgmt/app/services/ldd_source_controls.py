@@ -28,6 +28,7 @@ from app.services.workstream_router_service import (
 class RoutedLDDSource(RoutedWorkstreamSource):
     include_for_ldd: bool = False
 
+
 SOURCE_CONTROL_HARD_BLOCK_CODES: frozenset[str] = frozenset(
     {
         "core_section_coverage_gap",
@@ -683,9 +684,7 @@ def _build_routing_input_risks(source_routing: dict[str, Any] | None) -> dict[st
     documents = list((source_routing or {}).get("documents") or [])
     included_documents = [doc for doc in documents if bool(doc.get("include_for_ldd"))]
     manual_review_included = [
-        _summarize_routing_document(doc)
-        for doc in included_documents
-        if bool(doc.get("requires_manual_review"))
+        _summarize_routing_document(doc) for doc in included_documents if bool(doc.get("requires_manual_review"))
     ]
     common_documents = [
         _summarize_routing_document(doc)
@@ -742,7 +741,9 @@ def _build_core_section_coverage(
         for section_type, items in ((evidence_ledger or {}).get("by_section") or {}).items()
         if any(int(item.get("evidence_count", 0) or 0) > 0 for item in items or [])
     )
-    missing_core_sections = [section_type for section_type in _CORE_LDD_SECTION_TYPES if section_type not in present_sections]
+    missing_core_sections = [
+        section_type for section_type in _CORE_LDD_SECTION_TYPES if section_type not in present_sections
+    ]
     uncovered_core_sections = [
         section_type
         for section_type in _CORE_LDD_SECTION_TYPES

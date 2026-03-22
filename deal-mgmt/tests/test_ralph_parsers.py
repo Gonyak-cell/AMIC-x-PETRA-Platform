@@ -52,7 +52,9 @@ class TestPdfParser:
         from app.ralph.parsers import pdf_parser
         from app.ralph.parsers.base import ParsedFile
 
-        empty = ParsedFile(source_path="/tmp/scanned.pdf", file_type="pdf", text="", metadata={"page_count": 1, "chunks": []})
+        empty = ParsedFile(
+            source_path="/tmp/scanned.pdf", file_type="pdf", text="", metadata={"page_count": 1, "chunks": []}
+        )
         ocr = ParsedFile(
             source_path="/tmp/scanned.pdf",
             file_type="pdf",

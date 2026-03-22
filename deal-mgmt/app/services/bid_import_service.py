@@ -86,9 +86,7 @@ _SUBMITTED_AT_HINTS = (
 )
 
 _DATE_RE = re.compile(r"(?<!\d)(20\d{2})[./-](\d{1,2})[./-](\d{1,2})(?!\d)")
-_KRW_UNIT_RE = re.compile(
-    r"(?P<num>\d{1,4}(?:,\d{3})*(?:\.\d+)?)\s*(?P<unit>조원|억원|억|조|만원|만|원)"
-)
+_KRW_UNIT_RE = re.compile(r"(?P<num>\d{1,4}(?:,\d{3})*(?:\.\d+)?)\s*(?P<unit>조원|억원|억|조|만원|만|원)")
 _FX_AMOUNT_RE = re.compile(
     r"(?P<prefix>KRW|USD|US\$|EUR|\$|€)?\s*(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{8,})(?:\s*(?P<suffix>KRW|USD|US\$|EUR|\$|€|원))?",
     re.IGNORECASE,
@@ -242,11 +240,7 @@ def _extract_amount_candidates(text: str) -> list[tuple[Decimal, str]]:
 
 def _extract_amount(text: str) -> tuple[Decimal | None, str]:
     lines = [line.strip() for line in unicodedata.normalize("NFKC", text or "").splitlines() if line.strip()]
-    prioritized_lines = [
-        line
-        for line in lines
-        if any(hint in line.lower() for hint in _AMOUNT_HINTS)
-    ]
+    prioritized_lines = [line for line in lines if any(hint in line.lower() for hint in _AMOUNT_HINTS)]
 
     for bucket in (prioritized_lines, lines):
         if not bucket:
@@ -267,9 +261,7 @@ def _extract_amount(text: str) -> tuple[Decimal | None, str]:
 
 async def _load_buyers(db: AsyncSession, txn_id: uuid.UUID) -> list[BuyerCandidate]:
     result = await db.execute(
-        select(BuyerCandidate)
-        .where(BuyerCandidate.transaction_id == txn_id)
-        .order_by(BuyerCandidate.created_at.desc())
+        select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id).order_by(BuyerCandidate.created_at.desc())
     )
     return list(result.scalars().all())
 
@@ -306,9 +298,7 @@ async def analyze_bid_attachment(
     bid_type: BidType | None = None,
 ) -> BidImportAnalysis:
     parsed = parse_file(attachment.file_path)
-    source_text = "\n".join(
-        part for part in [attachment.file_name, parsed.text or ""] if part
-    )
+    source_text = "\n".join(part for part in [attachment.file_name, parsed.text or ""] if part)
 
     buyers = await _load_buyers(db, txn_id)
     buyer: BuyerCandidate | None = None

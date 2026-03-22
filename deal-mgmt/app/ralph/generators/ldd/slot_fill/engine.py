@@ -267,7 +267,9 @@ class LDDTemplateSlotFillEngine:
                 "impact_summary": impact_summary,
                 "recommendation_summary": recommendation_summary,
                 "status_sentence": normalize_project_green_text(
-                    self._build_status_sentence(target_company, item.get("name", ""), status, issue_level, finding_summary),
+                    self._build_status_sentence(
+                        target_company, item.get("name", ""), status, issue_level, finding_summary
+                    ),
                     modality=modality,
                 ),
                 "analysis_sentence": normalize_project_green_text(

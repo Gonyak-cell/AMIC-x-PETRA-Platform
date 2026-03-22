@@ -209,7 +209,8 @@ def build_workstream_routing_summary(
                 sum(
                     1
                     for routed in routed_sources
-                    if included_for and is_source_allowed_for_workstream(
+                    if included_for
+                    and is_source_allowed_for_workstream(
                         routed,
                         included_for,
                         min_common_confidence=min_common_confidence,
@@ -355,9 +356,9 @@ def _route_single_source(
     top_score = max(scores.values())
     sorted_scores = sorted(scores.items(), key=lambda pair: (-pair[1], pair[0]))
     primary_workstream = sorted_scores[0][0]
-    selected_tags = tuple(
-        workstream for workstream, score in sorted_scores if score >= max(40, top_score - 20)
-    ) or (primary_workstream,)
+    selected_tags = tuple(workstream for workstream, score in sorted_scores if score >= max(40, top_score - 20)) or (
+        primary_workstream,
+    )
     confidence = min(0.98, top_score / 100.0)
 
     return RoutedWorkstreamSource(
