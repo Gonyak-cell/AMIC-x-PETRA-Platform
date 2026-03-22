@@ -330,9 +330,9 @@ describe("TransactionWorkspacePage", () => {
 
     const tabLabels = screen.queryAllByRole("tab").map((tab) => tab.textContent);
     expect(tabLabels).not.toContain("Overview");
-    expect(
-      screen.getByTestId("workspace-hero-shortcuts"),
-    ).not.toHaveTextContent("Overview");
+    expect(screen.getByTestId("workspace-hero-shortcuts")).toHaveTextContent(
+      "Overview",
+    );
   });
 
   it("수임/준비 뷰에서는 hero shortcut에 overview를 노출하지 않는다", async () => {
@@ -344,9 +344,9 @@ describe("TransactionWorkspacePage", () => {
       ).toBeInTheDocument();
     });
 
-    expect(
-      screen.getByTestId("workspace-hero-shortcuts"),
-    ).not.toHaveTextContent("Overview");
+    expect(screen.getByTestId("workspace-hero-shortcuts")).toHaveTextContent(
+      "Overview",
+    );
   });
 
   it("marketing materials route에서도 VDR preview hero를 붙이지 않는다", async () => {

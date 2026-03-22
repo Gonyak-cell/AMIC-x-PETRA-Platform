@@ -222,7 +222,7 @@ export default function TransactionWorkspacePage() {
     }
   };
 
-  const { tabs, safeActiveTab, tabBarActiveTab, visibleTabIds, isRailTool } =
+  const { tabs, safeActiveTab, tabBarActiveTab, isRailTool } =
     useWorkspaceTabs({
       summary,
       txnPhase: txn?.phase,
@@ -291,7 +291,7 @@ export default function TransactionWorkspacePage() {
     PHASE_CONFIG.find((p) => p.phase === phaseForContent)?.label ??
     phaseForContent;
   const isCompletionPhase = phaseForContent === "POST_CLOSING";
-  const showOverviewShortcut = visibleTabIds.includes("overview");
+  const showOverviewShortcut = true;
   const heroPhaseTabId = tabs.find((tab) => tab.id !== "overview")?.id;
   const contentTabs = tabs.filter((tab) => tab.id !== "overview");
   const contentTabActiveId = contentTabs.some(
