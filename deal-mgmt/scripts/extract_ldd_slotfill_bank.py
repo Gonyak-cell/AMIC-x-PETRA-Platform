@@ -400,6 +400,10 @@ NESTED_HEADING_TERMS = (
 )
 
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+CLAUSE_CONNECTOR_RE = re.compile(
+    r"(?<=,)\s+(?=(?:다만|또한|한편|특히|따라서|아울러|나아가|그리고|그러나|즉|참고로|별도로|이 경우|이와 관련하여))"
+)
+LIST_MARKER_SPLIT_RE = re.compile(r"\s+(?=(?:\(?[0-9IVXivx가-힣A-Za-z]{1,4}[).]))")
 DATE_PATTERNS = [
     re.compile(r"\b\d{4}[./-]\s*\d{1,2}[./-]\s*\d{1,2}\b"),
     re.compile(r"\b\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?\b"),
@@ -415,6 +419,7 @@ REF_NO_PATTERN = re.compile(r"제\s*\d+\s*호")
 SHARE_PATTERN = re.compile(r"\d{1,3}(?:,\d{3})*\s*주")
 URL_PATTERN = re.compile(r"https?://\S+")
 EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
+PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}")
 COMPANY_PATTERNS = [
     re.compile(r"(?:주식회사|유한회사|합자회사|합명회사)\s*[A-Za-z0-9가-힣&().·,\-_/ ]{1,40}"),
     re.compile(r"㈜\s*[A-Za-z0-9가-힣&().·,\-_/ ]{1,40}"),
@@ -1054,6 +1059,45 @@ def split_candidate_chunks(text: str, max_chars: int = 700) -> list[str]:
     return chunks or [text]
 
 
+def split_reusable_sentences(text: str) -> list[str]:
+    text = clean_text(text)
+    if not text:
+        return []
+
+    pieces = re.split(r"(?:\n+|(?<=[.!?])\s+|(?<=;)\s+)", text)
+    sentences = [clean_text(piece) for piece in pieces if len(clean_text(piece)) >= 20]
+    return sentences or ([text] if len(text) >= 20 else [])
+
+
+def split_reusable_clauses(text: str) -> list[str]:
+    text = clean_text(text)
+    if len(text) < 60:
+        return []
+
+    queue = [text]
+    splitters = [CLAUSE_CONNECTOR_RE, LIST_MARKER_SPLIT_RE]
+    clauses: list[str] = []
+
+    for splitter in splitters:
+        next_queue: list[str] = []
+        for item in queue:
+            parts = [clean_text(part) for part in splitter.split(item) if clean_text(part)]
+            if len(parts) <= 1:
+                next_queue.append(item)
+                continue
+            next_queue.extend(parts)
+        queue = next_queue
+
+    for item in queue:
+        if item == text:
+            continue
+        if len(item) < 25 or len(item) > 260:
+            continue
+        clauses.append(item)
+
+    return clauses
+
+
 def normalize_pattern(text: str) -> str:
     text = clean_text(text)
     text = URL_PATTERN.sub("{{URL}}", text)
@@ -1070,6 +1114,98 @@ def normalize_pattern(text: str) -> str:
     text = re.sub(r"\b\d{2,}\b", "{{NUMBER}}", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def is_reusable_fragment(text: str) -> bool:
+    if not is_candidate_text(text):
+        return False
+
+    normalized = normalize_pattern(text)
+    if len(normalized) < 30 or len(normalized) > 320:
+        return False
+
+    placeholders = PLACEHOLDER_RE.findall(normalized)
+    if len(placeholders) >= 8:
+        return False
+    if placeholders and (len(placeholders) * 14 > len(normalized)):
+        return False
+
+    alpha_tokens = re.findall(r"[A-Za-z가-힣]{2,}", normalized)
+    if len(alpha_tokens) < 4:
+        return False
+
+    if normalized.count("{{NUMBER}}") >= 4 and len(alpha_tokens) < 6:
+        return False
+
+    stripped = normalized.strip(" -:;,.")
+    if len(stripped) < 30:
+        return False
+    if PAGE_NOISE_RE.match(stripped):
+        return False
+
+    return True
+
+
+def is_shortlist_phrase(text: str) -> bool:
+    text = clean_text(text)
+    if not text:
+        return False
+    if len(text) < 35:
+        return False
+
+    stripped = text.strip()
+    if stripped[-1] in ",(":
+        return False
+    if stripped.endswith(("및", "또는", "관련", "대하여", "관하여", "기준으로", "수준으로", "범위에서")):
+        return False
+
+    if stripped.endswith(
+        (
+            ".",
+            "다",
+            "다.",
+            "니다",
+            "니다.",
+            "습니다",
+            "습니다.",
+            "음",
+            "임",
+            "함",
+            "됨",
+            "필요",
+            "보임",
+            "없음",
+        )
+    ):
+        return True
+
+    if re.search(r"[A-Za-z0-9]\.$", stripped):
+        return True
+
+    return False
+
+
+def extract_reusable_fragments(text: str) -> list[str]:
+    fragments: list[str] = []
+    seen: set[str] = set()
+
+    for sentence in split_reusable_sentences(text):
+        if is_reusable_fragment(sentence):
+            normalized = normalize_pattern(sentence)
+            if normalized not in seen:
+                fragments.append(sentence)
+                seen.add(normalized)
+
+        for clause in split_reusable_clauses(sentence):
+            if not is_reusable_fragment(clause):
+                continue
+            normalized = normalize_pattern(clause)
+            if normalized in seen:
+                continue
+            fragments.append(clause)
+            seen.add(normalized)
+
+    return fragments
 
 
 def build_text_hash(units: list[TextUnit]) -> str:
@@ -1124,6 +1260,27 @@ def collect_candidates(units: list[TextUnit], aggregations: dict[str, dict[str, 
                 bucket = CandidateAggregate(normalized=normalized)
                 aggregations[section_id][normalized] = bucket
             bucket.add(unit, chunk)
+
+
+def collect_phrase_candidates(units: list[TextUnit], aggregations: dict[str, dict[str, CandidateAggregate]]) -> None:
+    for unit in units:
+        if unit.heading_level is not None:
+            continue
+        if not is_candidate_text(unit.text):
+            continue
+
+        section_id = unit.section_id or "BASE"
+        if section_id not in aggregations:
+            section_id = "BASE"
+
+        for fragment in extract_reusable_fragments(unit.text):
+            normalized = normalize_pattern(fragment)
+            for target_section in {section_id, "BASE"}:
+                bucket = aggregations[target_section].get(normalized)
+                if bucket is None:
+                    bucket = CandidateAggregate(normalized=normalized)
+                    aggregations[target_section][normalized] = bucket
+                bucket.add(unit, fragment)
 
 
 def write_candidates_markdown(output_dir: Path, section_id: str, candidates: dict[str, CandidateAggregate]) -> None:
@@ -1195,6 +1352,108 @@ def write_candidate_yaml(output_dir: Path, section_id: str, candidates: dict[str
     )
 
 
+def write_phrase_candidates_markdown(output_dir: Path, section_id: str, candidates: dict[str, CandidateAggregate]) -> None:
+    target_name = "_base_phrase_candidates.md" if section_id == "BASE" else f"{section_id.lower()}_phrase_candidates.md"
+    target = output_dir / target_name
+    ordered = sorted(
+        candidates.values(),
+        key=lambda candidate: (candidate.file_count, candidate.hit_count, len(candidate.normalized)),
+        reverse=True,
+    )
+
+    lines = [f"# {SECTION_LABELS[section_id]} 재사용 문구 후보", ""]
+    if not ordered:
+        lines.append("후보가 없습니다.")
+        target.write_text("\n".join(lines), encoding="utf-8")
+        return
+
+    for index, candidate in enumerate(ordered[:80], start=1):
+        lines.append(f"## {index}. files={candidate.file_count}, hits={candidate.hit_count}")
+        lines.append("")
+        lines.append("정규화 패턴")
+        lines.append("```text")
+        lines.append(candidate.normalized)
+        lines.append("```")
+        lines.append("")
+        if candidate.headings:
+            lines.append("주요 heading")
+            for heading, count in candidate.headings.most_common(3):
+                lines.append(f"- {heading} ({count})")
+            lines.append("")
+        if candidate.examples:
+            lines.append("예시")
+            for example in candidate.examples:
+                lines.append(f"- {example['file']} | {example['heading'] or '-'}")
+                lines.append("```text")
+                lines.append(example["text"])
+                lines.append("```")
+            lines.append("")
+
+    target.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_phrase_candidate_yaml(output_dir: Path, section_id: str, candidates: dict[str, CandidateAggregate]) -> None:
+    ordered = sorted(
+        candidates.values(),
+        key=lambda candidate: (candidate.file_count, candidate.hit_count, len(candidate.normalized)),
+        reverse=True,
+    )
+    payload = {
+        "section_id": section_id,
+        "section_label": SECTION_LABELS[section_id],
+        "generated_at": datetime.now(UTC).isoformat(),
+        "candidate_count": len(ordered),
+        "selection_rule": "Sentence/clause-level reusable phrase mining from heading-aware corpus",
+        "candidates": [
+            {
+                "id": f"{section_id.lower()}_phrase_{index:02d}",
+                "normalized_text": candidate.normalized,
+                "file_count": candidate.file_count,
+                "hit_count": candidate.hit_count,
+                "headings": [heading for heading, _ in candidate.headings.most_common(3)],
+                "examples": candidate.examples,
+            }
+            for index, candidate in enumerate(ordered[:60], start=1)
+        ],
+    }
+    target_name = "_base_phrase_draft.yaml" if section_id == "BASE" else f"{section_id.lower()}_phrase_draft.yaml"
+    (output_dir / target_name).write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
+
+
+def write_promotion_shortlist(output_dir: Path, aggregations: dict[str, dict[str, CandidateAggregate]]) -> None:
+    lines = [
+        "# Promotion Shortlist",
+        "",
+        "file_count >= 2 이고 문장/절 단위로 반복된 재사용 후보를 섹션별로 정리한 목록입니다.",
+        "",
+    ]
+
+    for section_id in SECTION_ORDER:
+        ordered = sorted(
+            (
+                candidate
+                for candidate in aggregations[section_id].values()
+                if candidate.file_count >= 2
+                and is_shortlist_phrase(candidate.normalized)
+            ),
+            key=lambda candidate: (candidate.file_count, candidate.hit_count, len(candidate.normalized)),
+            reverse=True,
+        )
+        lines.append(f"## {section_id} / {SECTION_LABELS[section_id]}")
+        lines.append("")
+        if not ordered:
+            lines.append("- 없음")
+            lines.append("")
+            continue
+        for candidate in ordered[:20]:
+            lines.append(f"- files={candidate.file_count}, hits={candidate.hit_count} :: {candidate.normalized}")
+        lines.append("")
+
+    (output_dir / "promotion_shortlist.md").write_text("\n".join(lines), encoding="utf-8")
+
+
 def write_summary(
     output_dir: Path,
     sample_dir: Path,
@@ -1203,6 +1462,7 @@ def write_summary(
     failures: list[str],
     duplicates: dict[str, list[str]],
     zero_unit_files: list[str],
+    phrase_counts: Counter[str],
 ) -> None:
     lines = [
         "# LDD Sample Analysis Summary",
@@ -1225,6 +1485,12 @@ def write_summary(
     lines.append("")
     for section_id in SECTION_ORDER:
         lines.append(f"- `{section_id}` ({SECTION_LABELS[section_id]}): {section_counts.get(section_id, 0)}")
+    lines.append("")
+
+    lines.append("## Reusable Phrase Candidates")
+    lines.append("")
+    for section_id in SECTION_ORDER:
+        lines.append(f"- `{section_id}` ({SECTION_LABELS[section_id]}): {phrase_counts.get(section_id, 0)}")
     lines.append("")
 
     lines.append("## Files")
@@ -1304,8 +1570,10 @@ def main() -> int:
     )
 
     aggregations: dict[str, dict[str, CandidateAggregate]] = {section_id: {} for section_id in SECTION_ORDER}
+    phrase_aggregations: dict[str, dict[str, CandidateAggregate]] = {section_id: {} for section_id in SECTION_ORDER}
     file_stats: list[FileStats] = []
     section_counts: Counter[str] = Counter()
+    phrase_counts: Counter[str] = Counter()
     failures: list[str] = []
     text_hash_index: defaultdict[str, list[str]] = defaultdict(list)
     zero_unit_files: list[str] = []
@@ -1321,6 +1589,7 @@ def main() -> int:
                     section_counts[unit.section_id] += 1
 
             collect_candidates(units, aggregations)
+            collect_phrase_candidates(units, phrase_aggregations)
             write_extracted_text(output_dir, str(path.relative_to(sample_dir)), units)
 
             stats = FileStats(
@@ -1344,8 +1613,12 @@ def main() -> int:
     for section_id in SECTION_ORDER:
         write_candidates_markdown(output_dir, section_id, aggregations[section_id])
         write_candidate_yaml(output_dir, section_id, aggregations[section_id])
+        write_phrase_candidates_markdown(output_dir, section_id, phrase_aggregations[section_id])
+        write_phrase_candidate_yaml(output_dir, section_id, phrase_aggregations[section_id])
+        phrase_counts[section_id] = sum(1 for candidate in phrase_aggregations[section_id].values() if candidate.file_count >= 2)
 
-    write_summary(output_dir, sample_dir, file_stats, section_counts, failures, duplicates, zero_unit_files)
+    write_promotion_shortlist(output_dir, phrase_aggregations)
+    write_summary(output_dir, sample_dir, file_stats, section_counts, failures, duplicates, zero_unit_files, phrase_counts)
     write_manifest(output_dir, file_stats, failures)
 
     print(f"[OK] processed files: {len(file_stats)}")

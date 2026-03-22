@@ -227,7 +227,6 @@ async def test_law_firm_ldd_docx_regression_renders_custom_content(
         raise AssertionError("direct law_firm_template.docx should be used before fallback blank generation")
 
     monkeypatch.setattr(LawFirmTemplateGenerator, "generate_blank_template", _unexpected_blank_generation)
-
     sections = [
         LDDSection(
             section_type=LDDSectionType.GOVERNANCE,

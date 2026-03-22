@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>매수자 탭 UI 개선 — Before / After 비교</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard Variable', -apple-system, sans-serif; background: #F3F4F6; padding: 20px; color: #1F2937; }
+
+  .toggle-bar { display: flex; justify-content: center; gap: 4px; margin-bottom: 20px; }
+  .toggle-btn { padding: 6px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
+  .toggle-btn.active-before { background: #EF4444; color: #fff; }
+  .toggle-btn.active-after  { background: #22C55E; color: #fff; }
+  .toggle-btn.inactive { background: #E5E7EB; color: #6B7280; }
+
+  .panel { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+  .hidden { display: none !important; }
+
+  /* BEFORE styles */
+  .before-funnel { display: flex; align-items: center; gap: 4px; padding: 16px; justify-content: center; }
+  .bf-line { width: 32px; height: 1px; background: #E5E7EB; }
+  .bf-step { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; }
+  .bf-circle { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .bf-circle-on { background: #22C55E; color: #fff; }
+  .bf-circle-off { background: #F3F4F6; color: #9CA3AF; }
+  .bf-lbl { font-size: 12px; white-space: nowrap; }
+  .bf-lbl-on { color: #1F2937; font-weight: 500; }
+  .bf-lbl-off { color: #9CA3AF; }
+
+  .before-tabs { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 16px; }
+  .bt-tabs { display: flex; gap: 4px; }
+  .pill { padding: 5px 14px; border-radius: 20px; border: none; font-size: 13px; cursor: pointer; }
+  .pill-off { background: #F3F4F6; color: #6B7280; }
+  .pill-on { background: #F0FDF4; color: #16A34A; border: 1.5px solid #22C55E; font-weight: 600; }
+  .pill-badge { background: #E5E7EB; border-radius: 10px; padding: 1px 6px; margin-left: 4px; font-size: 11px; }
+  .pill-on .pill-badge { background: #DCFCE7; }
+
+  .vt { display: inline-flex; border-radius: 6px; border: 1px solid #E5E7EB; background: #F9FAFB; padding: 2px; gap: 2px; }
+  .vt-btn { padding: 4px 8px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; }
+  .vt-on { background: #22C55E; color: #fff; font-weight: 500; }
+  .vt-off { background: transparent; color: #9CA3AF; }
+
+  .before-kpi { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; padding: 0 16px 16px; }
+  .kc { border: 1px solid #D1D5DB; border-radius: 8px; padding: 10px 12px; text-align: center; background: #fff; cursor: pointer; }
+  .kc-num { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .kc-lbl { font-size: 12px; color: #6B7280; margin-top: 4px; }
+  .kc-bar { margin-top: 6px; height: 6px; border-radius: 3px; background: #E5E7EB; overflow: hidden; }
+
+  .before-toggle { display: flex; align-items: center; gap: 8px; padding: 0 16px 12px; }
+  .before-toggle button { padding: 6px; border-radius: 8px; border: none; background: transparent; color: #6B7280; cursor: pointer; font-size: 16px; }
+  .before-toggle span { font-size: 12px; color: #9CA3AF; }
+
+  .grid-label { font-size: 12px; color: #22C55E; font-weight: 500; padding: 0 16px 8px; }
+
+  /* AFTER styles */
+  .fn { display: flex; align-items: stretch; border-bottom: 1px solid #E5E7EB; padding: 0 16px; }
+  .fn-line { width: 20px; height: 1px; background: #E5E7EB; flex-shrink: 0; align-self: center; }
+  .fn button {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 12px 16px; border: none; background: transparent; cursor: pointer;
+    border-bottom: 2.5px solid transparent; margin-bottom: -1px; transition: all .15s;
+  }
+  .fn button.fn-active { border-bottom-color: #22C55E; }
+  .fn button.fn-disabled { opacity: 0.4; cursor: default; }
+  .fn-num { font-size: 20px; font-weight: 700; line-height: 1.2; }
+  .fn-num-a { color: #22C55E; }
+  .fn-num-n { color: #1F2937; }
+  .fn-num-m { color: #9CA3AF; }
+  .fn-lbl { font-size: 12px; white-space: nowrap; }
+  .fn-lbl-a { color: #16A34A; font-weight: 600; }
+  .fn-lbl-n { color: #4B5563; }
+  .fn-lbl-m { color: #9CA3AF; }
+
+  .ib { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid #F3F4F6; }
+  .ik { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .kb {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; border: none; font-size: 12px;
+    cursor: pointer; transition: all .15s; background: #F3F4F6; color: #4B5563;
+  }
+  .kb.kb-on { background: #F0FDF4; color: #16A34A; outline: 1.5px solid #86EFAC; font-weight: 600; }
+  .kb-v { font-weight: 700; }
+
+  .ic { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .pt { padding: 4px; border-radius: 6px; border: none; background: transparent; color: #9CA3AF; cursor: pointer; font-size: 16px; transition: all .15s; }
+  .pt.pt-on { background: #F0FDF4; color: #16A34A; }
+
+  .ac { padding: 16px; }
+  .ms { width: 220px; flex-shrink: 0; border-right: 1px solid #F3F4F6; padding-right: 12px; }
+  .tl { font-size: 11px; font-weight: 600; color: #9CA3AF; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+  .tl:not(:first-child) { margin-top: 12px; }
+  .bi { padding: 6px 8px; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; margin-bottom: 2px; display: flex; justify-content: space-between; }
+  .bi:hover { background: #F0FDF4; }
+  .bi-f { font-size: 11px; color: #9CA3AF; }
+
+  .ll-ctrl { display: flex; align-items: center; justify-content: flex-end; padding: 8px 16px; border-bottom: 1px solid #F3F4F6; }
+  .ex-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; border: none; font-size: 12px; background: transparent; color: #6B7280; cursor: pointer; }
+
+  /* Grid Table */
+  .gt { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .gt th { padding: 8px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+  .gt th.gs { color: #16A34A; }
+  .gt thead tr { background: #F0FDF4; }
+  .gt td { padding: 8px 10px; text-align: center; }
+  .gt td:first-child { text-align: left; font-weight: 500; position: sticky; left: 0; background: #fff; z-index: 1; }
+  .gt th:first-child { position: sticky; left: 0; background: #F0FDF4; z-index: 1; min-width: 120px; }
+  .gt tbody tr { border-bottom: 1px solid #F3F4F6; }
+  .tb { font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
+  .tb1 { background: #DCFCE7; color: #16A34A; }
+  .tb2 { background: #F3F4F6; color: #9CA3AF; }
+  .ck { color: #22C55E; font-weight: 600; }
+  .ds { color: #D1D5DB; }
+  .dt { color: #E5E7EB; }
+  .pc { display: flex; align-items: center; gap: 6px; }
+  .ptr { flex: 1; height: 4px; border-radius: 2px; background: #E5E7EB; overflow: hidden; }
+  .pfl { height: 100%; border-radius: 2px; background: #22C55E; }
+  .ptx { font-size: 11px; color: #6B7280; white-space: nowrap; }
+
+  .ph { font-size: 13px; color: #9CA3AF; text-align: center; padding: 40px; }
+  .anno { font-size: 11px; color: #9CA3AF; text-align: center; padding: 12px; border-top: 1px solid #F3F4F6; background: #FAFAFA; border-radius: 0 0 12px 12px; }
+</style>
+</head>
+<body>
+
+<div class="toggle-bar">
+  <button class="toggle-btn active-before" id="btn-before" onclick="show('before')">Before (현재)</button>
+  <button class="toggle-btn inactive" id="btn-after" onclick="show('after')">After (개선안 C)</button>
+</div>
+
+<!-- BEFORE -->
+<div class="panel" id="panel-before">
+  <div class="before-funnel">
+    <div class="bf-step"><div class="bf-circle bf-circle-on">13</div><span class="bf-lbl bf-lbl-on">Long List</span></div>
+    <div class="bf-line"></div>
+    <div class="bf-step"><div class="bf-circle bf-circle-on">11</div><span class="bf-lbl bf-lbl-on">Short List</span></div>
+    <div class="bf-line"></div>
+    <div class="bf-step"><div class="bf-circle bf-circle-off">0</div><span class="bf-lbl bf-lbl-off">NDA 체결</span></div>
+    <div class="bf-line"></div>
+    <div class="bf-step"><div class="bf-circle bf-circle-off">0</div><span class="bf-lbl bf-lbl-off">IM 발송</span></div>
+    <div class="bf-line"></div>
+    <div class="bf-step"><div class="bf-circle bf-circle-off">0</div><span class="bf-lbl bf-lbl-off">DD 진행</span></div>
+  </div>
+
+  <div class="before-tabs">
+    <div class="bt-tabs">
+      <button class="pill pill-off">Long List <span class="pill-badge">13</span></button>
+      <button class="pill pill-on">Short List <span class="pill-badge">11</span></button>
+    </div>
+    <div class="vt">
+      <button class="vt-btn vt-on">그리드</button>
+      <button class="vt-btn vt-off">칸반</button>
+      <button class="vt-btn vt-off">타임라인</button>
+    </div>
+  </div>
+
+  <div class="before-kpi">
+    <div class="kc"><div class="kc-num" style="color:#1F2937">11</div><div class="kc-lbl">Active 후보</div></div>
+    <div class="kc"><div class="kc-num" style="color:#EF4444">0</div><div class="kc-lbl">Drop</div></div>
+    <div class="kc"><div class="kc-num" style="color:#22C55E">0</div><div class="kc-lbl">NDA 체결</div></div>
+    <div class="kc"><div class="kc-num" style="color:#16A34A">0</div><div class="kc-lbl">대상미팅 완료</div></div>
+    <div class="kc"><div class="kc-num" style="color:#15803D">9</div><div class="kc-lbl">Tier 1</div></div>
+    <div class="kc">
+      <div class="kc-num" style="color:#22C55E">0%</div>
+      <div class="kc-bar"><div style="width:0%;height:100%;border-radius:3px;background:#22C55E"></div></div>
+      <div class="kc-lbl">평균 진행률</div>
+    </div>
+  </div>
+
+  <div class="before-toggle">
+    <button>▶</button>
+    <span>펼치기</span>
+  </div>
+
+  <div class="grid-label">Grid View — 매수자 × 마케팅 단계</div>
+  <div style="padding:0 16px 16px;overflow-x:auto" id="bg"></div>
+
+  <div class="anno">현재 UI — 5단 수직 계층 (퍼널 → 탭 → KPI 카드 → 토글 → 데이터)</div>
+</div>
+
+<!-- AFTER -->
+<div class="panel hidden" id="panel-after">
+  <div class="fn" id="fn">
+    <button class="fn-active" data-step="long-list" onclick="ns('long-list')">
+      <span class="fn-num fn-num-n">13</span><span class="fn-lbl fn-lbl-n">Long List</span>
+    </button>
+    <div class="fn-line"></div>
+    <button data-step="short-list" onclick="ns('short-list')">
+      <span class="fn-num fn-num-n">11</span><span class="fn-lbl fn-lbl-n">Short List</span>
+    </button>
+    <div class="fn-line"></div>
+    <button class="fn-disabled" data-step="nda">
+      <span class="fn-num fn-num-m">0</span><span class="fn-lbl fn-lbl-m">NDA 체결</span>
+    </button>
+    <div class="fn-line"></div>
+    <button class="fn-disabled" data-step="im">
+      <span class="fn-num fn-num-m">0</span><span class="fn-lbl fn-lbl-m">IM 발송</span>
+    </button>
+    <div class="fn-line"></div>
+    <button class="fn-disabled" data-step="dd">
+      <span class="fn-num fn-num-m">0</span><span class="fn-lbl fn-lbl-m">DD 진행</span>
+    </button>
+  </div>
+
+  <div class="ib" id="ibs" style="display:none">
+    <div class="ik">
+      <button class="kb" onclick="tf(this)">Active 후보 <span class="kb-v" style="color:#1F2937">11</span></button>
+      <button class="kb" onclick="tf(this)">Drop <span class="kb-v" style="color:#EF4444">0</span></button>
+      <button class="kb" onclick="tf(this)">NDA 체결 <span class="kb-v" style="color:#22C55E">0</span></button>
+      <button class="kb" onclick="tf(this)">대상미팅 <span class="kb-v" style="color:#16A34A">0</span></button>
+      <button class="kb" onclick="tf(this)">Tier 1 <span class="kb-v" style="color:#15803D">9</span></button>
+      <button class="kb" onclick="tf(this)">진행률 <span class="kb-v" style="color:#22C55E">0%</span></button>
+    </div>
+    <div class="ic">
+      <div class="vt">
+        <button class="vt-btn vt-on">그리드</button>
+        <button class="vt-btn vt-off">칸반</button>
+        <button class="vt-btn vt-off">타임라인</button>
+      </div>
+      <button class="pt" id="ptog" onclick="ts()" title="패널 펼치기">▶</button>
+    </div>
+  </div>
+
+  <div class="ll-ctrl" id="ibl">
+    <button class="ex-btn">⬇ Excel</button>
+  </div>
+
+  <div class="ac">
+    <div id="as" style="display:none">
+      <div style="display:flex;gap:16px">
+        <div class="ms hidden" id="msb">
+          <div class="tl">Tier 1</div>
+          <div class="bi">삼성물산<span class="bi-f">3/6</span></div>
+          <div class="bi">SK텔레콤<span class="bi-f">2/6</span></div>
+          <div class="bi">LG전자<span class="bi-f">2/6</span></div>
+          <div class="bi">CJ제일제당<span class="bi-f">1/6</span></div>
+          <div class="bi">GS리테일<span class="bi-f">0/6</span></div>
+          <div class="bi">한화솔루션<span class="bi-f">0/6</span></div>
+          <div class="bi">KB금융지주<span class="bi-f">0/6</span></div>
+          <div class="bi">두산에너빌<span class="bi-f">0/6</span></div>
+          <div class="tl">Tier 2</div>
+          <div class="bi">현대모비스<span class="bi-f">1/6</span></div>
+          <div class="bi">롯데케미칼<span class="bi-f">1/6</span></div>
+          <div class="bi">신한금융지주<span class="bi-f">0/6</span></div>
+        </div>
+        <div style="flex:1;min-width:0;overflow-x:auto" id="ag"></div>
+      </div>
+    </div>
+    <div id="al"><div class="ph">Long List 테이블 영역 (13건)</div></div>
+  </div>
+
+  <div class="anno">개선안 C — 2단 계층 (퍼널=탭 → 인라인 KPI+뷰 토글 → 데이터)</div>
+</div>
+
+<script>
+var B=[{n:'삼성물산',t:1,p:3},{n:'SK텔레콤',t:1,p:2},{n:'LG전자',t:1,p:2},{n:'현대모비스',t:2,p:1},{n:'CJ제일제당',t:1,p:1},{n:'롯데케미칼',t:2,p:1},{n:'GS리테일',t:1,p:0},{n:'한화솔루션',t:1,p:0},{n:'KB금융지주',t:1,p:0},{n:'신한금융지주',t:2,p:0},{n:'두산에너빌',t:1,p:0}];
+var S=['식별','메일전송','전화','자문사미팅','NDA체결','대상미팅'];
+
+function mg(){
+  var t=document.createElement('table');t.className='gt';
+  var th=document.createElement('thead');
+  var hr=document.createElement('tr');
+  var h0=document.createElement('th');h0.textContent='매수자';hr.appendChild(h0);
+  S.forEach(function(s){var h=document.createElement('th');h.className='gs';h.textContent=s;hr.appendChild(h);});
+  var hp=document.createElement('th');hp.textContent='진행률';hr.appendChild(hp);
+  th.appendChild(hr);t.appendChild(th);
+  var tb=document.createElement('tbody');
+  B.forEach(function(b){
+    var r=document.createElement('tr');
+    var c0=document.createElement('td');
+    c0.textContent=b.n;
+    var sp=document.createElement('span');sp.className='tb '+(b.t===1?'tb1':'tb2');sp.textContent='Tier '+b.t;
+    c0.appendChild(sp);r.appendChild(c0);
+    for(var i=0;i<6;i++){
+      var c=document.createElement('td');
+      var s=document.createElement('span');
+      if(i<b.p){s.className='ck';s.textContent='✓';}
+      else if(i===b.p){s.className='ds';s.textContent='—';}
+      else{s.className='dt';s.textContent='·';}
+      c.appendChild(s);r.appendChild(c);
+    }
+    var cp=document.createElement('td');
+    var d=document.createElement('div');d.className='pc';
+    var tr=document.createElement('div');tr.className='ptr';
+    var fl=document.createElement('div');fl.className='pfl';fl.style.width=Math.round(b.p/6*100)+'%';
+    tr.appendChild(fl);d.appendChild(tr);
+    var tx=document.createElement('span');tx.className='ptx';tx.textContent=b.p+'/6';
+    d.appendChild(tx);cp.appendChild(d);r.appendChild(cp);
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);return t;
+}
+
+document.getElementById('bg').appendChild(mg());
+document.getElementById('ag').appendChild(mg());
+
+function show(w){
+  document.getElementById('panel-before').classList.toggle('hidden',w!=='before');
+  document.getElementById('panel-after').classList.toggle('hidden',w!=='after');
+  document.getElementById('btn-before').className='toggle-btn '+(w==='before'?'active-before':'inactive');
+  document.getElementById('btn-after').className='toggle-btn '+(w==='after'?'active-after':'inactive');
+}
+
+function ns(step){
+  if(step!=='long-list'&&step!=='short-list')return;
+  var btns=document.querySelectorAll('#fn button');
+  btns.forEach(function(btn){
+    var s=btn.getAttribute('data-step');
+    if(s===step){btn.classList.add('fn-active');btn.querySelector('.fn-num').className='fn-num fn-num-a';btn.querySelector('.fn-lbl').className='fn-lbl fn-lbl-a';}
+    else{btn.classList.remove('fn-active');if(!btn.classList.contains('fn-disabled')){btn.querySelector('.fn-num').className='fn-num fn-num-n';btn.querySelector('.fn-lbl').className='fn-lbl fn-lbl-n';}}
+  });
+  document.getElementById('ibs').style.display=step==='short-list'?'flex':'none';
+  document.getElementById('ibl').style.display=step==='long-list'?'flex':'none';
+  document.getElementById('as').style.display=step==='short-list'?'block':'none';
+  document.getElementById('al').style.display=step==='long-list'?'block':'none';
+}
+
+function tf(el){
+  var was=el.classList.contains('kb-on');
+  document.querySelectorAll('.kb').forEach(function(b){b.classList.remove('kb-on');});
+  if(!was)el.classList.add('kb-on');
+}
+
+function ts(){
+  var sb=document.getElementById('msb');
+  var tg=document.getElementById('ptog');
+  var open=sb.classList.contains('hidden');
+  sb.classList.toggle('hidden',!open);
+  tg.classList.toggle('pt-on',open);
+  tg.textContent=open?'◀':'▶';
+  tg.title=open?'패널 접기':'패널 펼치기';
+}
+
+ns('long-list');
+show('before');
+</script>
+</body>
+</html>

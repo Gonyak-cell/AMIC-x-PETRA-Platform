@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기능3 - 주요 공시 모니터링</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background: #F7F8FA; width: 1280px; height: 900px; overflow: hidden; }
+
+  .sidebar { position: fixed; left: 0; top: 0; width: 240px; height: 100%; background: linear-gradient(180deg, #0F3A32 0%, #0A2B24 100%); padding: 24px 16px; z-index: 30; }
+  .logo { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .logo-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 32px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.7); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 2px; }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left: 2px solid #26C260; }
+  .nav-section { color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 8px 8px; }
+
+  .main { margin-left: 240px; }
+
+  .hero { background: radial-gradient(ellipse at 30% 20%, rgba(38,194,96,0.15) 0%, transparent 60%), linear-gradient(135deg, #0A2B24 0%, #0F3A32 50%, #1A5A4C 100%); padding: 24px 40px 20px; }
+  .hero-breadcrumb { color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px; }
+  .hero-title { color: #fff; font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .hero-subtitle { color: rgba(255,255,255,0.6); font-size: 13px; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 24px; padding: 0 40px; margin-top: -12px; position: relative; z-index: 5; }
+  .stat-chip { background: #fff; border-radius: 20px; padding: 8px 18px; box-shadow: 0 2px 8px rgba(15,58,50,0.08); display: flex; align-items: center; gap: 8px; font-size: 12px; color: #3D3D3D; }
+  .stat-chip .num { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #0F3A32; font-size: 16px; }
+  .stat-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Filter & Content */
+  .filter-bar { padding: 16px 40px; display: flex; gap: 8px; align-items: center; }
+  .filter-chip { background: #EDF5F3; color: #0F3A32; border: 1px solid #A8D1C7; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+  .filter-chip.active { background: #0F3A32; color: #fff; border-color: #0F3A32; }
+  .filter-chip.alert { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
+  .filter-chip.alert.active { background: #DC2626; color: #fff; }
+
+  .content { padding: 0 40px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  /* Timeline */
+  .timeline-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); overflow: hidden; }
+  .timeline-header { padding: 16px 20px; border-bottom: 1px solid #F0F0F0; font-size: 14px; font-weight: 700; color: #1A1A1A; display: flex; justify-content: space-between; }
+
+  .timeline-item { display: flex; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #F7F8FA; }
+  .timeline-item:hover { background: rgba(38,194,96,0.03); }
+  .timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .timeline-dot.major { background: #DC2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.2); }
+  .timeline-dot.normal { background: #26C260; }
+  .timeline-dot.info { background: #3B82F6; }
+  .timeline-dot.warn { background: #EF6C00; }
+  .timeline-body { flex: 1; }
+  .timeline-company { font-size: 13px; font-weight: 600; color: #0F3A32; }
+  .timeline-title { font-size: 13px; color: #3D3D3D; margin-top: 2px; }
+  .timeline-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 11px; color: #9CA3AF; }
+  .timeline-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .tag-major { background: #FEF2F2; color: #DC2626; }
+  .tag-holding { background: #EFF6FF; color: #2563EB; }
+  .tag-exec { background: #F5F3FF; color: #7C3AED; }
+  .tag-merger { background: #FEF3C7; color: #B45309; }
+  .tag-financial { background: #F0FDF4; color: #16A34A; }
+
+  /* Sidebar panel */
+  .side-panel { display: flex; flex-direction: column; gap: 16px; }
+  .alert-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); padding: 20px; border-left: 3px solid #DC2626; }
+  .alert-title { font-size: 13px; font-weight: 700; color: #DC2626; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .alert-item { font-size: 12px; color: #3D3D3D; padding: 6px 0; border-bottom: 1px solid #F7F8FA; }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-company { font-weight: 600; color: #0F3A32; }
+
+  .category-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); padding: 20px; }
+  .category-title { font-size: 13px; font-weight: 700; color: #1A1A1A; margin-bottom: 12px; }
+  .category-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F7F8FA; font-size: 12px; }
+  .category-item:last-child { border-bottom: none; }
+  .category-name { color: #3D3D3D; }
+  .category-count { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #0F3A32; }
+  .category-bar { height: 4px; border-radius: 2px; background: #EDF5F3; margin-top: 4px; }
+  .category-bar-fill { height: 100%; border-radius: 2px; background: #26C260; }
+
+  .source-footer { padding: 12px 40px; margin-top: 8px; }
+  .source-note { background: #FEF3C7; border-radius: 8px; padding: 10px 16px; font-size: 11px; color: #92400E; display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">AMIC x PETRA</div>
+    <div class="logo-sub">PE Deal Management Platform</div>
+    <div class="nav-section">Modules</div>
+    <div class="nav-item">Financial Due Diligence</div>
+    <div class="nav-item active">GP Research (KIIS)</div>
+    <div class="nav-item">Info Memorandum</div>
+    <div class="nav-item">M&A Workflow</div>
+  </div>
+
+  <div class="main">
+    <div class="hero">
+      <div class="hero-breadcrumb">KIIS &gt; 공시 모니터링</div>
+      <div class="hero-title">주요 공시 모니터링</div>
+      <div class="hero-subtitle">DART 전자공시 API를 통해 실시간 수집된 투자 관련 시그널</div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-chip"><div class="dot" style="background:#DC2626;"></div>긴급 알림 <span class="num">3</span></div>
+      <div class="stat-chip"><div class="dot" style="background:#26C260;"></div>오늘 수집 <span class="num">127</span></div>
+      <div class="stat-chip"><div class="dot" style="background:#3B82F6;"></div>이번 주 <span class="num">842</span></div>
+      <div class="stat-chip"><div class="dot" style="background:#9CA3AF;"></div>워치리스트 <span class="num">48</span>개 기업</div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-chip active">전체</div>
+      <div class="filter-chip">대량보유</div>
+      <div class="filter-chip">임원변동</div>
+      <div class="filter-chip">합병·분할</div>
+      <div class="filter-chip">재무공시</div>
+      <div class="filter-chip alert">긴급</div>
+    </div>
+
+    <div class="content">
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <span>공시 타임라인</span>
+          <span style="font-size:12px; color:#9CA3AF; font-weight:400;">2026-02-28</span>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot major"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">삼성SDI <span class="timeline-tag tag-major">긴급</span> <span class="timeline-tag tag-holding">대량보유</span></div>
+            <div class="timeline-title">주식등의 대량보유상황보고서 — 지분율 7.2% → 12.8% 변동</div>
+            <div class="timeline-meta"><span>2026-02-28 09:15</span><span>DART 공시번호: 20260228000341</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot major"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">LG에너지솔루션 <span class="timeline-tag tag-major">긴급</span> <span class="timeline-tag tag-merger">합병</span></div>
+            <div class="timeline-title">주요사항보고서(합병결정) — 자회사 흡수합병</div>
+            <div class="timeline-meta"><span>2026-02-28 08:50</span><span>DART 공시번호: 20260228000287</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot warn"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">카카오 <span class="timeline-tag tag-exec">임원변동</span></div>
+            <div class="timeline-title">임원ㆍ주요주주특정증권등소유상황보고서 — CTO 직급 변동</div>
+            <div class="timeline-meta"><span>2026-02-28 08:30</span><span>DART 공시번호: 20260228000215</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot normal"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">크래프톤 <span class="timeline-tag tag-financial">재무</span></div>
+            <div class="timeline-title">사업보고서 (2025.12) — 연결기준 매출 3.2조원, 영업이익 1.1조원</div>
+            <div class="timeline-meta"><span>2026-02-28 08:00</span><span>DART 공시번호: 20260228000142</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot info"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">두산로보틱스 <span class="timeline-tag tag-holding">대량보유</span></div>
+            <div class="timeline-title">주식등의 대량보유상황보고서 — 기관투자자 지분 변동 5.1% → 4.8%</div>
+            <div class="timeline-meta"><span>2026-02-27 17:30</span><span>DART 공시번호: 20260227000891</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot normal"></div>
+          <div class="timeline-body">
+            <div class="timeline-company">하이브 <span class="timeline-tag tag-financial">재무</span></div>
+            <div class="timeline-title">분기보고서 (2025.12) — 매출 5,847억, 전년비 +12.4%</div>
+            <div class="timeline-meta"><span>2026-02-27 16:00</span><span>DART 공시번호: 20260227000756</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-panel">
+        <div class="alert-card">
+          <div class="alert-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            긴급 알림 (워치리스트)
+          </div>
+          <div class="alert-item"><span class="alert-company">삼성SDI</span> — 대량보유 지분 급증 (+5.6%p)</div>
+          <div class="alert-item"><span class="alert-company">LG에너지솔루션</span> — 합병 결정 공시</div>
+          <div class="alert-item"><span class="alert-company">카카오</span> — 핵심 임원 변동</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-title">공시 유형별 통계 (이번 주)</div>
+          <div class="category-item">
+            <span class="category-name">대량보유 변동</span>
+            <span class="category-count">234</span>
+          </div>
+          <div class="category-bar"><div class="category-bar-fill" style="width:75%;"></div></div>
+          <div class="category-item">
+            <span class="category-name">임원·주요주주</span>
+            <span class="category-count">189</span>
+          </div>
+          <div class="category-bar"><div class="category-bar-fill" style="width:60%;"></div></div>
+          <div class="category-item">
+            <span class="category-name">합병·분할</span>
+            <span class="category-count">42</span>
+          </div>
+          <div class="category-bar"><div class="category-bar-fill" style="width:25%;"></div></div>
+          <div class="category-item">
+            <span class="category-name">사업·분기 보고서</span>
+            <span class="category-count">377</span>
+          </div>
+          <div class="category-bar"><div class="category-bar-fill" style="width:90%;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="source-footer">
+      <div class="source-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <strong>데이터 출처:</strong> DART 전자공시시스템 Open API (금융감독원) — 실시간 수집 주기: 30분
+      </div>
+    </div>
+  </div>
+</body>
+</html>

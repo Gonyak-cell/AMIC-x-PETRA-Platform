@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기능5 - 투자심사 보고서 자동 생성</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background: #F7F8FA; width: 1280px; height: 900px; overflow: hidden; }
+
+  .sidebar { position: fixed; left: 0; top: 0; width: 240px; height: 100%; background: linear-gradient(180deg, #0F3A32 0%, #0A2B24 100%); padding: 24px 16px; z-index: 30; }
+  .logo { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .logo-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 32px; }
+  .nav-section { color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 8px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.7); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 2px; }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left: 2px solid #26C260; }
+
+  .main { margin-left: 240px; }
+
+  .hero { background: radial-gradient(ellipse at 30% 20%, rgba(38,194,96,0.15) 0%, transparent 60%), linear-gradient(135deg, #0A2B24 0%, #0F3A32 50%, #1A5A4C 100%); padding: 24px 40px 20px; }
+  .hero-breadcrumb { color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px; }
+  .hero-title { color: #fff; font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .hero-subtitle { color: rgba(255,255,255,0.6); font-size: 13px; }
+
+  /* Progress bar */
+  .progress-section { padding: 20px 40px; }
+  .progress-card { background: #fff; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); display: flex; align-items: center; gap: 24px; }
+  .progress-info { flex: 1; }
+  .progress-title { font-size: 15px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+  .progress-subtitle { font-size: 12px; color: #6B7280; }
+  .progress-bar-container { flex: 2; }
+  .progress-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: #6B7280; margin-bottom: 6px; }
+  .progress-bar-label strong { color: #0F3A32; font-family: 'IBM Plex Mono', monospace; }
+  .progress-bar { height: 8px; background: #EDF5F3; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #0F3A32, #26C260); border-radius: 4px; transition: width 0.3s; }
+  .progress-steps { display: flex; gap: 8px; margin-top: 8px; }
+  .step { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #6B7280; }
+  .step-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .step-dot.done { background: #26C260; }
+  .step-dot.active { background: #EF6C00; }
+  .step-dot.pending { background: #D5E8E3; }
+  .progress-btn { background: #26C260; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+  /* Content */
+  .content { padding: 0 40px; display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+
+  /* Checklist */
+  .checklist-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); overflow: hidden; }
+  .checklist-header { padding: 16px 20px; border-bottom: 1px solid #F0F0F0; font-size: 14px; font-weight: 700; color: #1A1A1A; }
+  .checklist-item { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #F7F8FA; font-size: 12px; cursor: pointer; }
+  .checklist-item:hover { background: rgba(38,194,96,0.03); }
+  .checklist-item.active { background: #EDF5F3; border-left: 3px solid #26C260; }
+  .check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #D5E8E3; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check.done { background: #26C260; border-color: #26C260; color: #fff; font-size: 11px; }
+  .check.active { border-color: #EF6C00; }
+  .section-name { color: #3D3D3D; }
+  .section-name.done { color: #9CA3AF; text-decoration: line-through; }
+  .section-pages { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF; margin-left: auto; }
+  .section-data { font-size: 9px; color: #2563EB; background: #EFF6FF; padding: 1px 6px; border-radius: 3px; margin-left: auto; }
+
+  /* Preview */
+  .preview-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); overflow: hidden; }
+  .preview-header { padding: 16px 20px; border-bottom: 1px solid #F0F0F0; display: flex; justify-content: space-between; align-items: center; }
+  .preview-title { font-size: 14px; font-weight: 700; color: #1A1A1A; }
+  .preview-actions { display: flex; gap: 8px; }
+  .preview-btn { padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #E5E7EB; background: #fff; color: #3D3D3D; }
+  .preview-btn.primary { background: #0F3A32; color: #fff; border-color: #0F3A32; }
+
+  .preview-body { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* Slide preview */
+  .slide { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; aspect-ratio: 16/10; display: flex; flex-direction: column; position: relative; }
+  .slide-label { position: absolute; top: 8px; right: 8px; background: #0F3A32; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; }
+  .slide-header { background: linear-gradient(135deg, #0F3A32, #1A5A4C); color: #fff; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; }
+  .slide-title { font-size: 13px; font-weight: 700; }
+  .slide-sub { font-size: 9px; opacity: 0.7; }
+
+  .slide-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .slide-row { display: flex; gap: 8px; }
+  .slide-metric { flex: 1; background: #F7F8FA; border-radius: 4px; padding: 6px 8px; }
+  .slide-metric-label { font-size: 8px; color: #6B7280; }
+  .slide-metric-value { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0F3A32; }
+  .slide-chart-placeholder { flex: 1; background: #F7F8FA; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .slide-bars { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
+  .slide-bar { width: 12px; border-radius: 2px 2px 0 0; }
+
+  .slide-text { font-size: 9px; color: #6B7280; line-height: 1.5; }
+  .slide-bullet { display: flex; gap: 6px; align-items: flex-start; font-size: 9px; color: #3D3D3D; }
+  .slide-bullet-dot { width: 4px; height: 4px; border-radius: 50%; background: #26C260; margin-top: 4px; flex-shrink: 0; }
+
+  .data-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-weight: 600; }
+  .data-badge.dart { background: #FEF3C7; color: #B45309; }
+  .data-badge.public { background: #EFF6FF; color: #2563EB; }
+
+  .source-bar { padding: 12px 40px; margin-top: 8px; }
+  .source-note { background: #F5F3FF; border-radius: 8px; padding: 10px 16px; font-size: 11px; color: #6B21A8; display: flex; align-items: center; gap: 8px; }
+  .source-note strong { color: #581C87; }
+</style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">AMIC x PETRA</div>
+    <div class="logo-sub">PE Deal Management Platform</div>
+    <div class="nav-section">Modules</div>
+    <div class="nav-item">Financial Due Diligence</div>
+    <div class="nav-item">GP Research (KIIS)</div>
+    <div class="nav-item active">Info Memorandum</div>
+    <div class="nav-item">M&A Workflow</div>
+  </div>
+
+  <div class="main">
+    <div class="hero">
+      <div class="hero-breadcrumb">IM &gt; 보고서 생성</div>
+      <div class="hero-title">투자심사 보고서 자동 생성</div>
+      <div class="hero-subtitle">공공데이터 기반 기업 분석 Information Memorandum 자동 작성</div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-card">
+        <div class="progress-info">
+          <div class="progress-title">(주)테크코리아 IM</div>
+          <div class="progress-subtitle">8개 섹션 · 30~50 페이지</div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-label">
+            <span>생성 진행률</span>
+            <strong>6 / 8 섹션 완료 (75%)</strong>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:75%;"></div></div>
+          <div class="progress-steps">
+            <div class="step"><div class="step-dot done"></div>표지</div>
+            <div class="step"><div class="step-dot done"></div>요약</div>
+            <div class="step"><div class="step-dot done"></div>기업개요</div>
+            <div class="step"><div class="step-dot done"></div>시장분석</div>
+            <div class="step"><div class="step-dot done"></div>재무분석</div>
+            <div class="step"><div class="step-dot done"></div>경영진</div>
+            <div class="step"><div class="step-dot active"></div>투자포인트</div>
+            <div class="step"><div class="step-dot pending"></div>리스크</div>
+          </div>
+        </div>
+        <button class="progress-btn">PPTX 다운로드</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Checklist -->
+      <div class="checklist-card">
+        <div class="checklist-header">섹션 체크리스트</div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">1. 표지</span>
+          <span class="section-pages">1p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">2. 투자 요약</span>
+          <span class="section-pages">2p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">3. 기업 개요</span>
+          <span class="section-data">DART</span>
+          <span class="section-pages">4p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">4. 시장 분석</span>
+          <span class="section-pages">6p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">5. 재무 분석</span>
+          <span class="section-data">DART</span>
+          <span class="section-pages">8p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check done">&#10003;</div>
+          <span class="section-name done">6. 경영진 분석</span>
+          <span class="section-data">DART</span>
+          <span class="section-pages">3p</span>
+        </div>
+        <div class="checklist-item active">
+          <div class="check active"></div>
+          <span class="section-name">7. 투자 포인트</span>
+          <span class="section-pages">4p</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check"></div>
+          <span class="section-name">8. 리스크 요인</span>
+          <span class="section-pages">3p</span>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-card">
+        <div class="preview-header">
+          <div class="preview-title">슬라이드 미리보기</div>
+          <div class="preview-actions">
+            <button class="preview-btn">편집</button>
+            <button class="preview-btn primary">PPTX 내보내기</button>
+          </div>
+        </div>
+        <div class="preview-body">
+          <!-- Slide 1: 재무 분석 -->
+          <div class="slide">
+            <div class="slide-label">5-1. 재무 분석</div>
+            <div class="slide-header">
+              <div class="slide-title">재무 실적 요약</div>
+              <div class="slide-sub">(주)테크코리아 · FY2020~2024 <span class="data-badge dart">DART API</span></div>
+            </div>
+            <div class="slide-content">
+              <div class="slide-row">
+                <div class="slide-metric">
+                  <div class="slide-metric-label">매출액 (2024)</div>
+                  <div class="slide-metric-value">₩ 1,284억</div>
+                </div>
+                <div class="slide-metric">
+                  <div class="slide-metric-label">영업이익</div>
+                  <div class="slide-metric-value">₩ 203억</div>
+                </div>
+                <div class="slide-metric">
+                  <div class="slide-metric-label">영업이익률</div>
+                  <div class="slide-metric-value">15.8%</div>
+                </div>
+              </div>
+              <div class="slide-chart-placeholder">
+                <div class="slide-bars">
+                  <div class="slide-bar" style="height:20px;background:#A8D1C7;"></div>
+                  <div class="slide-bar" style="height:24px;background:#1A5A4C;"></div>
+                  <div class="slide-bar" style="height:28px;background:#1A5A4C;"></div>
+                  <div class="slide-bar" style="height:32px;background:#0F3A32;"></div>
+                  <div class="slide-bar" style="height:38px;background:#0F3A32;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slide 2: 기업 개요 -->
+          <div class="slide">
+            <div class="slide-label">3-1. 기업 개요</div>
+            <div class="slide-header">
+              <div class="slide-title">기업 기본 정보</div>
+              <div class="slide-sub">(주)테크코리아 <span class="data-badge dart">DART API</span> <span class="data-badge public">공공데이터</span></div>
+            </div>
+            <div class="slide-content">
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>설립일: 2015.03.12 | 대표이사: 김민수</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>업종: 소프트웨어 개발 및 공급 (J58, J62)</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>임직원: 342명 (YoY +47명, +15.9%)</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>본사: 서울특별시 강남구 테헤란로 152</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>자본금: ₩ 50억 | 주식수: 10,000,000주</div>
+              <div class="slide-row" style="margin-top:6px;">
+                <div class="slide-metric">
+                  <div class="slide-metric-label">최근 감사의견</div>
+                  <div class="slide-metric-value" style="color:#26C260;font-size:10px;">적정</div>
+                </div>
+                <div class="slide-metric">
+                  <div class="slide-metric-label">신용등급</div>
+                  <div class="slide-metric-value" style="font-size:10px;">A-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slide 3: 시장 분석 -->
+          <div class="slide">
+            <div class="slide-label">4-2. 시장 분석</div>
+            <div class="slide-header">
+              <div class="slide-title">경쟁 환경 분석</div>
+              <div class="slide-sub">국내 B2B SaaS 시장</div>
+            </div>
+            <div class="slide-content">
+              <div class="slide-text">국내 B2B SaaS 시장은 2024년 기준 약 4.2조원 규모로, 연 평균 23.4%의 성장률을 기록하고 있습니다.</div>
+              <div class="slide-row">
+                <div class="slide-metric">
+                  <div class="slide-metric-label">시장 규모</div>
+                  <div class="slide-metric-value">₩ 4.2조</div>
+                </div>
+                <div class="slide-metric">
+                  <div class="slide-metric-label">CAGR</div>
+                  <div class="slide-metric-value">23.4%</div>
+                </div>
+              </div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>디지털 전환 가속화에 따른 수혜 예상</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div>SaaS 전환율 국내 12% → 글로벌 35% 대비 성장 여지</div>
+            </div>
+          </div>
+
+          <!-- Slide 4: 투자 포인트 -->
+          <div class="slide">
+            <div class="slide-label">7-1. 투자 포인트</div>
+            <div class="slide-header">
+              <div class="slide-title">핵심 투자 포인트</div>
+              <div class="slide-sub">(주)테크코리아 투자 매력도 분석</div>
+            </div>
+            <div class="slide-content">
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div><strong style="font-size:9px;">시장 리더십:</strong> B2B SaaS 시장 점유율 1위 (18.4%)</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div><strong style="font-size:9px;">높은 수익성:</strong> 영업이익률 15.8% (동종 평균 8.2%)</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div><strong style="font-size:9px;">매출 성장:</strong> 5년 CAGR 24.1% (DART 재무데이터 기반)</div>
+              <div class="slide-bullet"><div class="slide-bullet-dot"></div><strong style="font-size:9px;">안정적 재무:</strong> 부채비율 42.3%, 순현금 ₩ 320억</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="source-bar">
+      <div class="source-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B21A8" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <strong>자동 생성 데이터 출처:</strong> DART 전자공시 API (재무제표, 기업개요, 감사보고서) · 금융위원회 사모펀드 현황 · KOFIA 펀드정보
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MA Grid View Redesign</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  body { font-family: 'Inter', -apple-system, sans-serif; }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  table.card-rows { border-spacing: 0 6px; border-collapse: separate; }
+  .row-card td { transition: all 0.2s ease; }
+  .row-card:hover td { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .progress-ring { transition: stroke-dasharray 0.5s ease; }
+  .next-cell { animation: pulse-border 2s ease-in-out infinite; }
+  @keyframes pulse-border { 0%,100% { border-color: #86efac; } 50% { border-color: #22c55e; } }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- Toggle Bar -->
+<div class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-3">
+  <div class="flex items-center gap-4 max-w-[1400px] mx-auto">
+    <h1 class="text-base font-bold text-slate-800">MA Grid View 리디자인</h1>
+    <div class="flex bg-slate-100 rounded-lg p-0.5" id="toggle-buttons">
+      <button onclick="toggle('before')" id="btn-before" class="px-5 py-1.5 text-sm font-medium rounded-md transition-all text-slate-500">Before (현재)</button>
+      <button onclick="toggle('after')" id="btn-after" class="px-5 py-1.5 text-sm font-medium rounded-md transition-all bg-emerald-500 text-white shadow-sm">After (개선안)</button>
+    </div>
+    <span id="label" class="text-xs text-emerald-600 font-medium ml-2">✨ 개선안</span>
+  </div>
+</div>
+
+<div class="max-w-[1400px] mx-auto p-6">
+
+<!-- ===== BEFORE VIEW ===== -->
+<div id="view-before" class="hidden fade-in"></div>
+
+<!-- ===== AFTER VIEW ===== -->
+<div id="view-after" class="fade-in"></div>
+
+</div>
+
+<script>
+// -- Data --
+var STAGES_DATA = [
+  {key:'IDENTIFIED',label:'식별'},
+  {key:'EMAIL_SENT',label:'메일전송'},
+  {key:'PHONE_CALL',label:'전화'},
+  {key:'ADVISOR_MEETING',label:'자문사 미팅'},
+  {key:'NDA_SIGNED',label:'NDA 체결'},
+  {key:'TARGET_MEETING',label:'대상회사 미팅'},
+  {key:'CIM_SENT',label:'IM 발송'},
+  {key:'DD_STARTED',label:'DD 진행'}
+];
+
+var BUYERS_DATA = [
+  {name:'세마인베스트먼트',tier:1,s:{IDENTIFIED:'03-10',EMAIL_SENT:'03-10',PHONE_CALL:'03-10',ADVISOR_MEETING:'03-10'}},
+  {name:'베저스인베스트먼트',tier:1,s:{IDENTIFIED:'03-10',EMAIL_SENT:'03-10',PHONE_CALL:'03-10'}},
+  {name:'엘엑스인베스트먼트',tier:1,s:{}},
+  {name:'린드먼아시아투자자문',tier:1,s:{}},
+  {name:'주식회사 동남',tier:1,s:{}},
+  {name:'주식회사 거산',tier:1,s:{}},
+  {name:'주식회사 아이원',tier:1,s:{}},
+  {name:'큐캐피탈파트너스',tier:1,s:{}},
+  {name:'아이엠엠크레딧솔루션',tier:2,s:{}},
+  {name:'은산건업(주)',tier:3,s:{}},
+  {name:'미래에셋자산운용',tier:1,s:{}}
+];
+
+var TIER_STYLES = {
+  1:{bg:'#ecfdf5',text:'#047857'},
+  2:{bg:'#eff6ff',text:'#1d4ed8'},
+  3:{bg:'#fffbeb',text:'#b45309'}
+};
+
+// -- Render functions (DOM-safe, no innerHTML with user input) --
+function ce(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text) el.textContent = text;
+  return el;
+}
+
+function renderBeforeView() {
+  var container = document.getElementById('view-before');
+  container.replaceChildren();
+
+  var label = ce('p','text-xs font-medium text-green-600 mb-2','Grid View — 매수자 × 마케팅 단계');
+  container.appendChild(label);
+
+  var wrap = ce('div','overflow-x-auto border border-gray-300 rounded-lg bg-white');
+  var table = ce('table','w-full text-sm');
+
+  // thead
+  var thead = document.createElement('thead');
+  var headerRow = ce('tr','bg-green-500 border-b-2 border-green-600');
+
+  var th0 = ce('th','text-left px-3 py-2 font-medium text-white whitespace-nowrap sticky left-0 z-10 bg-green-500','매수자');
+  th0.style.width = '140px'; th0.style.maxWidth = '140px';
+  headerRow.appendChild(th0);
+
+  STAGES_DATA.forEach(function(s) {
+    var th = ce('th','px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50', s.label);
+    headerRow.appendChild(th);
+  });
+  var thP = ce('th','px-2 py-2 font-medium text-white/90 text-center text-xs whitespace-nowrap border-l border-green-400/50','진행률');
+  thP.style.minWidth = '60px';
+  headerRow.appendChild(thP);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // tbody
+  var tbody = document.createElement('tbody');
+  BUYERS_DATA.forEach(function(b) {
+    var completed = STAGES_DATA.filter(function(s){return b.s[s.key]}).length;
+    var pct = Math.round((completed/8)*100);
+
+    var tr = ce('tr','border-b border-dashed border-gray-200 hover:bg-green-50/50');
+
+    // Name cell
+    var tdName = ce('td','px-3 py-1.5 border-r border-gray-300 sticky left-0 bg-white');
+    var nameWrap = ce('div','flex items-center justify-between gap-1');
+    var nameSpan = ce('span','font-medium text-xs truncate block text-gray-800', b.name);
+    nameSpan.style.maxWidth = '80px';
+    var tierSpan = ce('span','text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap','Tier '+b.tier);
+    tierSpan.className += b.tier===1?' bg-green-100 text-green-700':b.tier===2?' bg-green-50 text-green-600':' bg-gray-100 text-gray-600';
+    nameWrap.appendChild(nameSpan);
+    nameWrap.appendChild(tierSpan);
+    tdName.appendChild(nameWrap);
+    tr.appendChild(tdName);
+
+    // Stage cells
+    STAGES_DATA.forEach(function(stage) {
+      var td = ce('td','px-3 py-2 text-center text-xs border-r border-gray-200');
+      var val = b.s[stage.key];
+      if (val) {
+        var outer = ce('span','inline-flex flex-col items-center gap-0.5');
+        var circle = ce('span','inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-[10px]','✓');
+        var dateText = ce('span','text-[10px] text-green-600 font-semibold',val);
+        outer.appendChild(circle);
+        outer.appendChild(dateText);
+        td.appendChild(outer);
+      } else {
+        var empty = ce('span','inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-400');
+        td.appendChild(empty);
+      }
+      tr.appendChild(td);
+    });
+
+    // Progress
+    var tdProg = ce('td','px-2 py-1.5 border-l border-gray-300');
+    var progWrap = ce('div','flex items-center gap-1');
+    var barBg = ce('div','h-1.5 flex-1 rounded-full bg-gray-200');
+    barBg.style.maxWidth = '40px';
+    var barFill = ce('div','h-full rounded-full bg-green-500');
+    barFill.style.width = pct+'%';
+    barBg.appendChild(barFill);
+    var progText = ce('span','text-[10px] text-gray-500',completed+'/8');
+    progWrap.appendChild(barBg);
+    progWrap.appendChild(progText);
+    tdProg.appendChild(progWrap);
+    tr.appendChild(tdProg);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  container.appendChild(wrap);
+
+  // Problems panel
+  var panel = ce('div','mt-5 p-4 bg-red-50 border border-red-200 rounded-xl');
+  var pTitle = ce('p','text-sm font-bold text-red-700 mb-3','⚠️ 현재 디자인 문제점');
+  panel.appendChild(pTitle);
+  var grid = ce('div','grid grid-cols-2 gap-3 text-xs text-red-600');
+  ['매수자 이름 80px 절단 → 거의 읽을 수 없음','빈 셀 96개의 점선 원 → 시각적 노이즈 과다','플랫한 녹색 헤더 → 스프레드시트 느낌','진행률 바 6px → 거의 안 보임','진행도와 무관하게 모든 행 동일 스타일','Tier 뱃지 좁은 공간에서 줄바꿈'].forEach(function(t,i){
+    var item = ce('div','flex gap-2');
+    var num = ce('span','text-red-400 font-bold',(i+1)+'.');
+    item.appendChild(num);
+    item.appendChild(document.createTextNode(' '+t));
+    grid.appendChild(item);
+  });
+  panel.appendChild(grid);
+  container.appendChild(panel);
+}
+
+function renderAfterView() {
+  var container = document.getElementById('view-after');
+  container.replaceChildren();
+
+  var wrap = ce('div','overflow-x-auto');
+  var table = ce('table','w-full text-sm card-rows');
+
+  // thead
+  var thead = document.createElement('thead');
+  var headerRow = document.createElement('tr');
+  headerRow.style.cssText = 'background:#22c55e;border-bottom:2px solid #16a34a';
+
+  var th0 = ce('th','text-left px-4 py-2.5 font-semibold text-white whitespace-nowrap sticky left-0 z-10 text-sm','매수자');
+  th0.style.cssText += ';width:230px;min-width:230px;background:#22c55e';
+  headerRow.appendChild(th0);
+
+  STAGES_DATA.forEach(function(s) {
+    var shortLabels = {
+      '자문사 미팅':'자문사 미팅','NDA 체결':'NDA 체결','대상회사 미팅':'대상회사 미팅','IM 발송':'IM 발송','DD 진행':'DD 진행'
+    };
+    var th = ce('th','px-2 py-2.5 font-semibold text-white text-center text-xs whitespace-nowrap', shortLabels[s.label] || s.label);
+    th.style.cssText = 'min-width:76px;border-left:1px solid rgba(255,255,255,0.2)';
+    headerRow.appendChild(th);
+  });
+
+  var thProg = ce('th','px-2 py-2.5 font-semibold text-white text-center text-xs whitespace-nowrap','진행률');
+  thProg.style.cssText = 'min-width:70px;border-left:1px solid rgba(255,255,255,0.2)';
+  headerRow.appendChild(thProg);
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // tbody
+  var tbody = document.createElement('tbody');
+  BUYERS_DATA.forEach(function(b) {
+    var completed = STAGES_DATA.filter(function(s){return b.s[s.key]}).length;
+    var pct = Math.round((completed/8)*100);
+    var tc = TIER_STYLES[b.tier] || TIER_STYLES[3];
+    var hasProgress = completed > 0;
+    var lastIdx = -1;
+    STAGES_DATA.forEach(function(s,i){if(b.s[s.key])lastIdx=i});
+
+    var tr = ce('tr','row-card');
+
+    // Name cell
+    var tdName = ce('td','px-4 py-2.5 sticky left-0 z-[1] rounded-l-xl cursor-pointer');
+    tdName.className += hasProgress
+      ? ' bg-white border border-slate-100'
+      : ' bg-white/60 border border-slate-100/50';
+    tdName.style.boxShadow = hasProgress ? '0 1px 3px rgba(0,0,0,0.06)' : '';
+
+    var nameWrap = ce('div','flex items-center gap-2.5');
+    var tierBadge = ce('div','flex-shrink-0 rounded-lg flex items-center justify-center text-[10px] font-bold','T'+b.tier);
+    tierBadge.style.width = '28px';
+    tierBadge.style.height = '28px';
+    tierBadge.style.background = tc.bg;
+    tierBadge.style.color = tc.text;
+    var nameText = ce('p','text-[13px] font-semibold truncate',b.name);
+    nameText.style.maxWidth = '160px';
+    nameText.className += hasProgress ? ' text-slate-800' : ' text-slate-400';
+    nameWrap.appendChild(tierBadge);
+    nameWrap.appendChild(nameText);
+    tdName.appendChild(nameWrap);
+    tr.appendChild(tdName);
+
+    // Stage cells
+    STAGES_DATA.forEach(function(stage,i) {
+      var td = ce('td','px-1 py-2.5 text-center');
+      td.className += hasProgress
+        ? ' bg-white border-y border-slate-100'
+        : ' bg-white/60 border-y border-slate-100/50';
+      if (hasProgress) td.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+
+      var val = b.s[stage.key];
+      var isNext = !val && hasProgress && i === lastIdx + 1;
+
+      if (val) {
+        var outer = ce('div','flex flex-col items-center gap-0.5');
+        var circle = ce('div','flex items-center justify-center');
+        circle.style.cssText = 'width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#34d399,#16a34a);box-shadow:0 2px 6px rgba(22,163,74,0.3)';
+
+        var svgNS = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(svgNS,'svg');
+        svg.setAttribute('class','w-3 h-3');
+        svg.setAttribute('fill','none');
+        svg.setAttribute('viewBox','0 0 24 24');
+        svg.setAttribute('stroke','white');
+        svg.setAttribute('stroke-width','3');
+        svg.style.width = '12px'; svg.style.height = '12px';
+        var path = document.createElementNS(svgNS,'path');
+        path.setAttribute('stroke-linecap','round');
+        path.setAttribute('stroke-linejoin','round');
+        path.setAttribute('d','M5 13l4 4L19 7');
+        svg.appendChild(path);
+        circle.appendChild(svg);
+
+        var dateSpan = ce('span','text-[10px] font-medium text-emerald-600',val);
+        outer.appendChild(circle);
+        outer.appendChild(dateSpan);
+        td.appendChild(outer);
+      } else if (isNext) {
+        var nextOuter = ce('div','flex flex-col items-center gap-0.5');
+        var nextCircle = ce('div','next-cell flex items-center justify-center cursor-pointer');
+        nextCircle.style.cssText = 'width:24px;height:24px;border-radius:50%;border:2px dashed #86efac;background:#ecfdf5';
+
+        var plusSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        plusSvg.setAttribute('fill','none');
+        plusSvg.setAttribute('viewBox','0 0 24 24');
+        plusSvg.setAttribute('stroke','#4ade80');
+        plusSvg.setAttribute('stroke-width','3');
+        plusSvg.style.width = '10px'; plusSvg.style.height = '10px';
+        var plusPath = document.createElementNS('http://www.w3.org/2000/svg','path');
+        plusPath.setAttribute('stroke-linecap','round');
+        plusPath.setAttribute('stroke-linejoin','round');
+        plusPath.setAttribute('d','M12 4v16m8-8H4');
+        plusSvg.appendChild(plusPath);
+        nextCircle.appendChild(plusSvg);
+
+        var nextLabel = ce('span','text-[9px] text-emerald-400 font-medium','다음');
+        nextOuter.appendChild(nextCircle);
+        nextOuter.appendChild(nextLabel);
+        td.appendChild(nextOuter);
+      } else {
+        var dot = ce('div','mx-auto rounded-full');
+        dot.style.width = hasProgress ? '6px' : '4px';
+        dot.style.height = hasProgress ? '6px' : '4px';
+        dot.style.background = hasProgress ? '#cbd5e1' : '#e2e8f0';
+        td.appendChild(dot);
+      }
+      tr.appendChild(td);
+    });
+
+    // Progress cell
+    var tdProg = ce('td','px-3 py-2.5 rounded-r-xl');
+    tdProg.className += hasProgress
+      ? ' bg-white border border-slate-100'
+      : ' bg-white/60 border border-slate-100/50';
+    if (hasProgress) tdProg.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+
+    var progCenter = ce('div','flex items-center justify-center');
+    var ringWrap = ce('div','relative');
+    ringWrap.style.width = '36px'; ringWrap.style.height = '36px';
+
+    var ringSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    ringSvg.style.cssText = 'width:36px;height:36px;transform:rotate(-90deg)';
+    ringSvg.setAttribute('viewBox','0 0 36 36');
+    var bgCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    bgCircle.setAttribute('cx','18');bgCircle.setAttribute('cy','18');bgCircle.setAttribute('r','14');
+    bgCircle.setAttribute('fill','none');bgCircle.setAttribute('stroke','#e2e8f0');bgCircle.setAttribute('stroke-width','2.5');
+    var fgCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    fgCircle.setAttribute('cx','18');fgCircle.setAttribute('cy','18');fgCircle.setAttribute('r','14');
+    fgCircle.setAttribute('fill','none');
+    fgCircle.setAttribute('stroke',pct>0?'#22c55e':'transparent');
+    fgCircle.setAttribute('stroke-width','2.5');
+    fgCircle.setAttribute('stroke-dasharray',(pct*0.88)+' 100');
+    fgCircle.setAttribute('stroke-linecap','round');
+    fgCircle.setAttribute('class','progress-ring');
+    ringSvg.appendChild(bgCircle);
+    ringSvg.appendChild(fgCircle);
+
+    var ringLabel = ce('div','absolute inset-0 flex items-center justify-center');
+    var ringText = ce('span','text-[9px] font-bold',completed>0?completed+'/8':'—');
+    ringText.className += pct>0?' text-emerald-600':' text-slate-300';
+    ringLabel.appendChild(ringText);
+
+    ringWrap.appendChild(ringSvg);
+    ringWrap.appendChild(ringLabel);
+    progCenter.appendChild(ringWrap);
+    tdProg.appendChild(progCenter);
+    tr.appendChild(tdProg);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  container.appendChild(wrap);
+
+  // Improvements panel
+  var panel = ce('div','mt-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl');
+  var pTitle = ce('p','text-sm font-bold text-emerald-700 mb-3','✅ 개선 사항');
+  panel.appendChild(pTitle);
+  var grid = ce('div','grid grid-cols-2 gap-3 text-xs text-emerald-700');
+  ['매수자 이름 160px + Tier 아이콘 뱃지','빈 셀 = 작은 점 → 노이즈 90% 감소','헤더에 아이콘 + 축약 라벨 → 직관적','원형 진행률 차트 → 임팩트 있는 시각화','진행 있는 행 = 카드 + 호버 그림자','"다음 단계" 셀에 + 아이콘 CTA','완료 셀 = 그라데이션 체크 + 그림자','border-separate → 행 간 시각적 분리'].forEach(function(t){
+    var item = ce('div','flex gap-2');
+    item.textContent = '✅ ' + t;
+    grid.appendChild(item);
+  });
+  panel.appendChild(grid);
+  container.appendChild(panel);
+}
+
+function toggle(view) {
+  var before = document.getElementById('view-before');
+  var after = document.getElementById('view-after');
+  var btnB = document.getElementById('btn-before');
+  var btnA = document.getElementById('btn-after');
+  var label = document.getElementById('label');
+
+  if (view === 'before') {
+    before.className = 'fade-in';
+    after.className = 'hidden';
+    btnB.className = 'px-5 py-1.5 text-sm font-medium rounded-md transition-all bg-red-500 text-white shadow-sm';
+    btnA.className = 'px-5 py-1.5 text-sm font-medium rounded-md transition-all text-slate-500 hover:text-slate-700';
+    label.textContent = '⚠️ 현재 디자인';
+    label.className = 'text-xs text-red-600 font-medium ml-2';
+  } else {
+    after.className = 'fade-in';
+    before.className = 'hidden';
+    btnA.className = 'px-5 py-1.5 text-sm font-medium rounded-md transition-all bg-emerald-500 text-white shadow-sm';
+    btnB.className = 'px-5 py-1.5 text-sm font-medium rounded-md transition-all text-slate-500 hover:text-slate-700';
+    label.textContent = '✨ 개선안';
+    label.className = 'text-xs text-emerald-600 font-medium ml-2';
+  }
+}
+
+// Init
+renderBeforeView();
+renderAfterView();
+</script>
+</body>
+</html>

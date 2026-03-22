@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMIC Platform - 대표 이미지</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background: #F7F8FA; width: 1280px; height: 800px; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar { position: fixed; left: 0; top: 0; width: 240px; height: 100%; background: linear-gradient(180deg, #0F3A32 0%, #0A2B24 100%); padding: 24px 16px; z-index: 30; }
+  .logo { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .logo-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 32px; }
+  .nav-section { color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 8px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.7); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 2px; cursor: pointer; }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left: 2px solid #26C260; }
+  .nav-icon { width: 18px; height: 18px; opacity: 0.7; }
+
+  /* Main Content */
+  .main { margin-left: 240px; height: 100%; }
+
+  /* Hero */
+  .hero { background: radial-gradient(ellipse at 30% 20%, rgba(38,194,96,0.15) 0%, transparent 60%), linear-gradient(135deg, #0A2B24 0%, #0F3A32 50%, #1A5A4C 100%); padding: 32px 40px 28px; }
+  .hero-welcome { color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 4px; }
+  .hero-title { color: #fff; font-size: 32px; font-weight: 800; margin-bottom: 6px; }
+  .hero-subtitle { color: rgba(255,255,255,0.6); font-size: 14px; }
+
+  /* KPI Row */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 0 40px; margin-top: -20px; position: relative; z-index: 5; }
+  .kpi-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); border-left: 3px solid #26C260; }
+  .kpi-label { color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: #1A1A1A; }
+  .kpi-sub { color: #26C260; font-size: 12px; font-family: 'IBM Plex Mono', monospace; margin-top: 4px; }
+  .kpi-sub.negative { color: #BC2C1A; }
+
+  /* Content Grid */
+  .content { padding: 24px 40px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  /* Module Cards */
+  .modules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .module-card { border-radius: 12px; padding: 24px; color: #fff; cursor: pointer; position: relative; overflow: hidden; }
+  .module-card::after { content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: rgba(255,255,255,0.08); border-radius: 0 0 0 80px; }
+  .module-card.fdd { background: linear-gradient(135deg, #0F3A32 0%, #1A5A4C 100%); }
+  .module-card.kiis { background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); }
+  .module-card.im { background: linear-gradient(135deg, #6B21A8 0%, #A855F7 100%); }
+  .module-card.ma { background: linear-gradient(135deg, #B45309 0%, #F59E0B 100%); }
+  .module-name { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 6px; }
+  .module-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .module-stat { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; }
+  .module-stat-label { font-size: 11px; opacity: 0.7; }
+
+  /* Activity Feed */
+  .activity { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(15,58,50,0.08); }
+  .activity-title { font-size: 14px; font-weight: 700; color: #1A1A1A; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .activity-icon.green { background: #E8F8ED; color: #26C260; }
+  .activity-icon.blue { background: #EFF6FF; color: #3B82F6; }
+  .activity-icon.purple { background: #F5F3FF; color: #A855F7; }
+  .activity-icon.amber { background: #FFFBEB; color: #F59E0B; }
+  .activity-text { font-size: 12px; color: #3D3D3D; line-height: 1.5; }
+  .activity-time { font-size: 11px; color: #9CA3AF; }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .badge-green { background: #E8F8ED; color: #16A34A; }
+  .badge-blue { background: #EFF6FF; color: #2563EB; }
+
+  /* Data Source Badge */
+  .data-source { position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 4px; font-size: 9px; color: rgba(255,255,255,0.8); backdrop-filter: blur(4px); }
+</style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">AMIC x PETRA</div>
+    <div class="logo-sub">PE Deal Management Platform</div>
+
+    <div class="nav-section">Main</div>
+    <div class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+
+    <div class="nav-section">Modules</div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Financial Due Diligence
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      GP Research (KIIS)
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Info Memorandum
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+      M&A Workflow
+    </div>
+
+    <div class="nav-section">Data Sources</div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      공공데이터 API
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="hero">
+      <div class="hero-welcome">Welcome back,</div>
+      <div class="hero-title">AMIC x PETRA Platform</div>
+      <div class="hero-subtitle">PE/VC 투자심사 공공데이터 통합 분석 서비스</div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">등록 GP 운용사</div>
+        <div class="kpi-value">2,847</div>
+        <div class="kpi-sub">+127 this month</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">사모펀드 현황</div>
+        <div class="kpi-value">12,459</div>
+        <div class="kpi-sub">금융위 기준</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">DART 공시 수집</div>
+        <div class="kpi-value">34,821</div>
+        <div class="kpi-sub">+2,341 this week</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active Deals</div>
+        <div class="kpi-value">48</div>
+        <div class="kpi-sub">6 closing soon</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="modules">
+        <div class="module-card fdd">
+          <div class="module-name">FDD Module</div>
+          <div class="module-title">Financial Due Diligence</div>
+          <div class="module-stat">18 <span class="module-stat-label">active reviews</span></div>
+          <div class="data-source">DART API</div>
+        </div>
+        <div class="module-card kiis">
+          <div class="module-name">KIIS Module</div>
+          <div class="module-title">GP Research & Analysis</div>
+          <div class="module-stat">2,847 <span class="module-stat-label">GP profiles</span></div>
+          <div class="data-source">금융위 · KOFIA · DART</div>
+        </div>
+        <div class="module-card im">
+          <div class="module-name">IM Module</div>
+          <div class="module-title">Info Memorandum</div>
+          <div class="module-stat">34 <span class="module-stat-label">documents</span></div>
+          <div class="data-source">자동 생성</div>
+        </div>
+        <div class="module-card ma">
+          <div class="module-name">MA Module</div>
+          <div class="module-title">M&A Workflow</div>
+          <div class="module-stat">48 <span class="module-stat-label">transactions</span></div>
+          <div class="data-source">Deal Pipeline</div>
+        </div>
+      </div>
+
+      <div class="activity">
+        <div class="activity-title">
+          <div class="activity-dot" style="background:#26C260"></div>
+          실시간 데이터 수집
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon green">D</div>
+          <div>
+            <div class="activity-text">DART 전자공시 <span class="badge badge-green">수집완료</span></div>
+            <div class="activity-time">삼성SDI — 대량보유 변동 공시</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon blue">K</div>
+          <div>
+            <div class="activity-text">KOFIA 펀드정보 <span class="badge badge-blue">갱신</span></div>
+            <div class="activity-time">2,985건 펀드 수익률 업데이트</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon purple">G</div>
+          <div>
+            <div class="activity-text">GP 프로필 동기화</div>
+            <div class="activity-time">금융위 PEF 현황 127건 갱신</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon amber">M</div>
+          <div>
+            <div class="activity-text">기업 재무제표 수집</div>
+            <div class="activity-time">114,523개 기업 — DART API</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon green">A</div>
+          <div>
+            <div class="activity-text">IM 보고서 자동 생성</div>
+            <div class="activity-time">(주)테크코리아 — 30페이지 완료</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

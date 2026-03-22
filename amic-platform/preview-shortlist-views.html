@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short List 3-View Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', system-ui, -apple-system, sans-serif; background: #f8f9fa; padding: 24px; color: #1a1a2e; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { font-size: 12px; color: #6b7280; margin-bottom: 20px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; background: #e5e7eb; color: #374151; transition: all .15s; }
+  .tab.active { background: #16a34a; color: #fff; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .section-label { font-size: 11px; font-weight: 700; color: #16a34a; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; padding: 4px 10px; background: #dcfce7; border-radius: 4px; display: inline-block; }
+
+  /* Tier badges */
+  .tier { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+  .tier-1 { background: #dcfce7; color: #15803d; }
+  .tier-2 { background: #dbeafe; color: #1d4ed8; }
+  .tier-3 { background: #f3f4f6; color: #6b7280; }
+  .stage-badge { font-size: 10px; padding: 1px 8px; border-radius: 10px; background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+
+  /* ── GRID VIEW ── */
+  .grid-table { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; border-collapse: collapse; font-size: 13px; background: #fff; }
+  .grid-table thead { background: #f8f9fa; }
+  .grid-table th { padding: 8px 10px; font-weight: 600; color: #1a1a2e; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  .grid-table th.stage { text-align: center; font-size: 11px; color: #6b7280; font-weight: 500; border-left: 1px solid #e5e7eb; min-width: 64px; }
+  .grid-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  .grid-table td.stage-cell { text-align: center; border-left: 1px solid #e5e7eb; }
+  .grid-table tr:last-child td { border-bottom: none; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+  .dot.done { background: #16a34a; }
+  .dot.empty { background: #e5e7eb; }
+  .buyer-name { font-weight: 600; font-size: 12px; }
+  .buyer-contact { font-size: 11px; color: #6b7280; }
+
+  /* ── KANBAN VIEW ── */
+  .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .kanban-col { flex-shrink: 0; width: 170px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e5e7eb; }
+  .kanban-header { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; background: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+  .kanban-header span:first-child { font-size: 12px; font-weight: 600; }
+  .kanban-count { font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 1px 7px; border-radius: 10px; }
+  .kanban-body { padding: 8px; min-height: 90px; display: flex; flex-direction: column; gap: 8px; }
+  .kanban-card { background: #fff; border-radius: 6px; border: 1px solid #e5e7eb; padding: 8px; }
+  .kanban-card .name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .kanban-empty { font-size: 10px; color: #9ca3af; text-align: center; padding: 20px 0; }
+
+  /* ── TIMELINE VIEW ── */
+  .timeline { display: flex; flex-direction: column; gap: 12px; }
+  .timeline-card { border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; padding: 12px; }
+  .timeline-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .timeline-header .name { font-weight: 600; font-size: 14px; }
+  .timeline-bar { display: flex; gap: 3px; }
+  .timeline-bar .seg { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .timeline-bar .bar { height: 6px; width: 100%; border-radius: 3px; }
+  .bar-done { background: #16a34a; }
+  .bar-partial { background: rgba(22,163,74,0.3); }
+  .bar-empty { background: #e5e7eb; }
+  .seg-label { font-size: 9px; margin-top: 4px; }
+  .seg-label.done { color: #16a34a; font-weight: 600; }
+  .seg-label.pending { color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Short List &mdash; 3-View Mock Preview</h1>
+  <p class="subtitle">DEV_MOCK_BUYERS 4건 + DEV_MOCK_OVERVIEW 마케팅 단계 데이터</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchView('grid', this)">그리드</button>
+    <button class="tab" onclick="switchView('kanban', this)">칸반</button>
+    <button class="tab" onclick="switchView('timeline', this)">타임라인</button>
+  </div>
+
+  <!-- ====== GRID VIEW ====== -->
+  <div id="grid" class="view active">
+    <div class="section-label">Grid View</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th style="min-width:160px">매수자</th>
+          <th class="stage">발굴</th>
+          <th class="stage">이메일</th>
+          <th class="stage">전화</th>
+          <th class="stage">FA미팅</th>
+          <th class="stage">NDA</th>
+          <th class="stage">대상미팅</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border-right:1px solid #e5e7eb"><span class="buyer-name">삼성물산</span> <span class="tier tier-1">TIER 1</span><br><span class="buyer-contact">김철수</span></td>
+          <td class="stage-cell"><span class="dot done" title="02-20"></span></td>
+          <td class="stage-cell"><span class="dot done" title="02-21"></span></td>
+          <td class="stage-cell"><span class="dot done" title="02-23"></span></td>
+          <td class="stage-cell"><span class="dot done" title="02-28"></span></td>
+          <td class="stage-cell"><span class="dot done" title="03-01"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+        </tr>
+        <tr>
+          <td style="border-right:1px solid #e5e7eb"><span class="buyer-name">SK스퀘어</span> <span class="tier tier-2">TIER 2</span><br><span class="buyer-contact">이영희</span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+        </tr>
+        <tr>
+          <td style="border-right:1px solid #e5e7eb"><span class="buyer-name">한화투자증권</span> <span class="tier tier-1">TIER 1</span><br><span class="buyer-contact">박지민</span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+        </tr>
+        <tr>
+          <td style="border-right:1px solid #e5e7eb"><span class="buyer-name">미래에셋자산운용</span> <span class="tier tier-3">TIER 3</span></td>
+          <td class="stage-cell"><span class="dot done"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+          <td class="stage-cell"><span class="dot empty"></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ====== KANBAN VIEW ====== -->
+  <div id="kanban" class="view">
+    <div class="section-label">Kanban View</div>
+    <div class="kanban">
+      <div class="kanban-col">
+        <div class="kanban-header"><span>발굴</span><span class="kanban-count">1</span></div>
+        <div class="kanban-body">
+          <div class="kanban-card"><div class="name">미래에셋자산운용</div><span class="tier tier-3">TIER 3</span></div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-header"><span>이메일</span><span class="kanban-count">1</span></div>
+        <div class="kanban-body">
+          <div class="kanban-card"><div class="name">한화투자증권</div><span class="tier tier-1">TIER 1</span></div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-header"><span>전화</span><span class="kanban-count">1</span></div>
+        <div class="kanban-body">
+          <div class="kanban-card"><div class="name">SK스퀘어</div><span class="tier tier-2">TIER 2</span></div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-header"><span>FA미팅</span><span class="kanban-count">0</span></div>
+        <div class="kanban-body"><p class="kanban-empty">없음</p></div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-header"><span>NDA</span><span class="kanban-count">1</span></div>
+        <div class="kanban-body">
+          <div class="kanban-card"><div class="name">삼성물산</div><span class="tier tier-1">TIER 1</span></div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-header"><span>대상미팅</span><span class="kanban-count">0</span></div>
+        <div class="kanban-body"><p class="kanban-empty">없음</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TIMELINE VIEW ====== -->
+  <div id="timeline" class="view">
+    <div class="section-label">Timeline View</div>
+    <div class="timeline">
+      <!-- 삼성물산: 5/6 stages -->
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <span class="name">삼성물산</span>
+          <span class="tier tier-1">TIER 1</span>
+          <span class="stage-badge">NDA</span>
+        </div>
+        <div class="timeline-bar">
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-20</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-21</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-23</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-28</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">03-01</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">대상</span></div>
+        </div>
+      </div>
+      <!-- SK스퀘어: 3/6 stages -->
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <span class="name">SK스퀘어</span>
+          <span class="tier tier-2">TIER 2</span>
+          <span class="stage-badge">전화</span>
+        </div>
+        <div class="timeline-bar">
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-22</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-24</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-26</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">FA</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">ND</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">대상</span></div>
+        </div>
+      </div>
+      <!-- 한화투자증권: 2/6 stages -->
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <span class="name">한화투자증권</span>
+          <span class="tier tier-1">TIER 1</span>
+          <span class="stage-badge">이메일</span>
+        </div>
+        <div class="timeline-bar">
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-25</span></div>
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-26</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">전화</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">FA</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">ND</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">대상</span></div>
+        </div>
+      </div>
+      <!-- 미래에셋: 1/6 stages -->
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <span class="name">미래에셋자산운용</span>
+          <span class="tier tier-3">TIER 3</span>
+          <span class="stage-badge">발굴</span>
+        </div>
+        <div class="timeline-bar">
+          <div class="seg"><div class="bar bar-done"></div><span class="seg-label done">02-28</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">이메</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">전화</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">FA</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">ND</span></div>
+          <div class="seg"><div class="bar bar-empty"></div><span class="seg-label pending">대상</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
