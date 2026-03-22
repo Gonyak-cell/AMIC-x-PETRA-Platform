@@ -6,6 +6,7 @@ import {
   lazy,
   Suspense,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   Download,
@@ -59,6 +60,7 @@ const SIMappingPanel = lazy(
   () => import("@/modules/ma/components/si-mapping/SIMappingPanel"),
 );
 import SIDetailPanel from "@/modules/ma/components/si-mapping/SIDetailPanel";
+import WorkspaceHeaderActionButton from "@/modules/ma/pages/workspace/WorkspaceHeaderActionButton";
 import { toast } from "sonner";
 
 import {
@@ -75,9 +77,14 @@ import type { Column } from "@/components/ui";
 interface BuyersTabProps {
   txnId: string;
   canWrite: boolean;
+  headerActionPortalId?: string;
 }
 
-export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
+export default function BuyersTab({
+  txnId,
+  canWrite,
+  headerActionPortalId,
+}: BuyersTabProps) {
   const {
     data: buyers,
     isLoading: isBuyersLoading,
@@ -126,6 +133,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     useState<ShortListViewMode>("grid");
   const [activeFilter, setActiveFilter] = useState<KpiFilter>("all");
   const [masterListOpen, setMasterListOpen] = useState(false);
+  const [headerActionPortalTarget, setHeaderActionPortalTarget] =
+    useState<HTMLElement | null>(null);
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -144,6 +153,17 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     }
     setBuyerDetailSearchName(null);
   }, [searchedSICompany, buyerDetailSearchName, siNameFetched]);
+
+  useEffect(() => {
+    if (!headerActionPortalId || typeof document === "undefined") {
+      setHeaderActionPortalTarget(null);
+      return;
+    }
+
+    setHeaderActionPortalTarget(
+      document.getElementById(headerActionPortalId),
+    );
+  }, [headerActionPortalId]);
 
   const buyerColumns: Column<BuyerCandidate>[] = useMemo(
     () => [
@@ -314,9 +334,22 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
     () => (shortListOverview ?? []).find((s) => s.buyer_id === selectedBuyerId),
     [shortListOverview, selectedBuyerId],
   );
+  const showShortListToolbar = !isBuyersLoading && buyerSubTab === "short-list";
+  const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
 
   return (
     <>
+      {headerActionPortalTarget &&
+        showHeaderExcelAction &&
+        createPortal(
+          <WorkspaceHeaderActionButton
+            icon={Download}
+            label="Excel"
+            onClick={() => exportExcel.mutate()}
+            loading={exportExcel.isPending}
+          />,
+          headerActionPortalTarget,
+        )}
       <div className="space-y-4">
         {/* Funnel Navigation (탭 + 퍼널 통합) */}
         <FunnelNav
@@ -326,8 +359,8 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
         />
 
         {/* 인라인 KPI 바 + 액션 버튼 */}
-        <div className="flex items-center justify-between gap-3">
-          {!isBuyersLoading && buyerSubTab === "short-list" && (
+        {showShortListToolbar && (
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -350,27 +383,14 @@ export default function BuyersTab({ txnId, canWrite }: BuyersTabProps) {
                 onFilterChange={setActiveFilter}
               />
             </div>
-          )}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            {!isBuyersLoading && buyerSubTab === "short-list" && (
+            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
               <ShortListViewToggle
                 viewMode={shortListViewMode}
                 onViewModeChange={setShortListViewMode}
               />
-            )}
-            {!isBuyersLoading && buyerSubTab === "long-list" && (
-              <Button
-                icon={Download}
-                onClick={() => exportExcel.mutate()}
-                variant="ghost"
-                size="sm"
-                loading={exportExcel.isPending}
-              >
-                Excel
-              </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {isBuyersLoading && (
           <div className="flex justify-center py-12">

@@ -18,7 +18,6 @@ import {
   DD_SUB_LABELS,
   DD_STATUS_OPTIONS,
 } from "@/modules/ma/constants";
-import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import DDReportSection from "@/modules/ma/components/DDReportSection";
 
 import {
@@ -271,8 +270,6 @@ export default function DDChecklistTab({
             icon={ClipboardCheck}
             title="체크리스트 없음"
             description="실사 체크리스트 항목을 추가하세요."
-            actionLabel={canWrite ? "항목 추가" : undefined}
-            onAction={canWrite ? () => setShowDDModal(true) : undefined}
           />
         ) : !filteredDDItems?.length ? (
           <div className="p-8 text-center text-text-muted text-sm">
@@ -394,7 +391,6 @@ export default function DDChecklistTab({
             keyField="id"
           />
         )}
-        <FileUploadZone txnId={txnId} entityType="DD_CHECKLIST" embedded />
       </Card>
 
       {/* DD 리포트 SlidePanel */}

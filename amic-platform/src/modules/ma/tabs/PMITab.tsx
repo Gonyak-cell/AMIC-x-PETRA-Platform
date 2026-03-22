@@ -114,7 +114,12 @@ export default function PMITab({ txnId, canWrite }: PMITabProps) {
         headerBar
         actions={
           canWrite ? (
-            <Button size="sm" icon={Plus} onClick={() => setShowPMIModal(true)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={Plus}
+              onClick={() => setShowPMIModal(true)}
+            >
               태스크 추가
             </Button>
           ) : undefined
@@ -238,7 +243,16 @@ export default function PMITab({ txnId, canWrite }: PMITabProps) {
             keyField="id"
           />
         )}
-        <FileUploadZone txnId={txnId} entityType="PMI" embedded />
+        <FileUploadZone
+          txnId={txnId}
+          entityType="PMI"
+          embedded
+          embeddedLabel={pmiTasks?.length ? "PMI 파일" : "PMI 업로드"}
+          uploadLabel="파일 업로드"
+          emptyDescription="PMI 자료를 바로 업로드하세요."
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={Boolean(pmiTasks?.length)}
+        />
       </Card>
 
       {/* PMI 태스크 추가 모달 */}

@@ -60,6 +60,23 @@ class BidUpdate(BaseModel):
     conditions_precedent: dict | None = None
 
 
+class BidImportRequest(BaseModel):
+    attachment_id: uuid.UUID
+    buyer_candidate_id: uuid.UUID | None = None
+    bid_type: BidType | None = None
+
+
+class BidImportResult(BaseModel):
+    bid: BidOut
+    attachment_id: uuid.UUID
+    attachment_file_name: str
+    buyer_name: str
+    created: bool
+    inferred_fields: list[str] = []
+    updated_fields: list[str] = []
+    warnings: list[str] = []
+
+
 class BidComparisonItem(BaseModel):
     """비교 매트릭스 항목 — 매수자 + 최신 Bid."""
 

@@ -1,44 +1,55 @@
 import { useState } from "react";
 import { FileText, Send, Trash2 } from "lucide-react";
+
+import DistributionModal from "@/modules/ma/components/DistributionModal";
+import MMSourceRoutingPreviewPanel from "@/modules/ma/components/marketing/MMSourceRoutingPreviewPanel";
 import {
-  useMarketingMaterials,
   useCreateMarketingMaterial,
   useDeleteMarketingMaterial,
+  useMarketingMaterials,
   getDownloadUrl,
 } from "@/modules/ma/hooks/useMarketingMaterials";
+import { useTransaction } from "@/modules/ma/hooks/useTransactions";
 import type { MarketingMaterial } from "@/modules/ma/types/marketing_material";
 import {
   MARKETING_STATUS_LABELS,
   QUALITY_STATUS_LABELS,
   QUALITY_STATUS_VARIANT,
 } from "@/modules/ma/types/marketing_material";
-import { useTransaction } from "@/modules/ma/hooks/useTransactions";
-import FileUploadZone from "@/modules/ma/components/FileUploadZone";
-import DistributionModal from "@/modules/ma/components/DistributionModal";
-
 import { Badge, Button, Card, DataTable, EmptyState } from "@/components/ui";
 
 interface MarketingMaterialsTabProps {
   txnId: string;
   canWrite: boolean;
+  showSourcePreview?: boolean;
+  surface?: "card" | "flat";
 }
 
 export default function MarketingMaterialsTab({
   txnId,
   canWrite,
+  showSourcePreview = true,
+  surface = "card",
 }: MarketingMaterialsTabProps) {
   const { data: txn } = useTransaction(txnId);
   const { data: marketingMaterials } = useMarketingMaterials(txnId);
   const createMarketingMaterial = useCreateMarketingMaterial(txnId);
   const deleteMarketingMaterial = useDeleteMarketingMaterial(txnId);
-
   const [distTarget, setDistTarget] = useState<MarketingMaterial | null>(null);
+  const isFlatSurface = surface === "flat";
 
   return (
     <div className="space-y-4">
+      {showSourcePreview && <MMSourceRoutingPreviewPanel txnId={txnId} />}
+
       <Card
         title="마케팅 자료"
         headerBar
+        className={
+          isFlatSurface
+            ? "border-0 shadow-none rounded-none bg-transparent"
+            : undefined
+        }
         actions={
           canWrite ? (
             <div className="flex gap-2">
@@ -48,7 +59,7 @@ export default function MarketingMaterialsTab({
                 onClick={() =>
                   createMarketingMaterial.mutate({
                     doc_type: "TM",
-                    title: `${txn?.code_name ?? "Project"} — Teaser Memo`,
+                    title: `${txn?.code_name ?? "Project"} · Teaser Memo`,
                     project_code: txn?.code_name ?? undefined,
                   })
                 }
@@ -61,7 +72,7 @@ export default function MarketingMaterialsTab({
                 onClick={() =>
                   createMarketingMaterial.mutate({
                     doc_type: "DM",
-                    title: `${txn?.code_name ?? "Project"} — Discussion Memo`,
+                    title: `${txn?.code_name ?? "Project"} · Discussion Memo`,
                     project_code: txn?.code_name ?? undefined,
                   })
                 }
@@ -73,7 +84,7 @@ export default function MarketingMaterialsTab({
                 onClick={() =>
                   createMarketingMaterial.mutate({
                     doc_type: "IM",
-                    title: `${txn?.code_name ?? "Project"} — Information Memo`,
+                    title: `${txn?.code_name ?? "Project"} · Information Memo`,
                     project_code: txn?.code_name ?? undefined,
                   })
                 }
@@ -172,10 +183,11 @@ export default function MarketingMaterialsTab({
                 label: "소요 시간",
                 render: (row) => {
                   const total = row.pipeline_metrics?.total_ms;
-                  if (total == null)
+                  if (total == null) {
                     return (
                       <span className="text-xs text-text-secondary">--</span>
                     );
+                  }
                   return (
                     <span className="text-xs">
                       {total >= 1000
@@ -199,14 +211,15 @@ export default function MarketingMaterialsTab({
                 render: (row) =>
                   row.file_size_bytes
                     ? `${Math.round(row.file_size_bytes / 1024)} KB`
-                    : "\u2014",
+                    : "—",
               },
               {
                 key: "id",
                 label: "작업",
                 render: (row) => (
                   <div className="flex gap-2">
-                    {(row.status === "READY" || row.status === "CONDITIONAL_READY") && (
+                    {(row.status === "READY" ||
+                      row.status === "CONDITIONAL_READY") && (
                       <>
                         <Button
                           size="sm"
@@ -225,7 +238,7 @@ export default function MarketingMaterialsTab({
                             disabled={row.distribution_eligible !== true}
                             title={
                               row.distribution_eligible !== true
-                                ? "품질 검증 통과(PASS) 자료만 배포할 수 있습니다"
+                                ? "품질 검증을 통과한 자료만 배포할 수 있습니다."
                                 : undefined
                             }
                           >
@@ -260,11 +273,6 @@ export default function MarketingMaterialsTab({
             keyField="id"
           />
         )}
-        <FileUploadZone
-          txnId={txnId}
-          entityType="MARKETING_MATERIAL"
-          embedded
-        />
       </Card>
 
       {distTarget && (

@@ -13,7 +13,6 @@ import {
 } from "@/modules/ma/hooks/useTransactions";
 import type { TransactionPhase } from "@/modules/ma/types/transaction";
 import { useWorkspaceSummary } from "@/modules/ma/hooks/useWorkspaceSummary";
-import { useLegalDocuments } from "@/modules/docs/hooks/useLegalDocuments";
 import PipelineFlow from "@/modules/ma/components/PipelineFlow";
 import MilestoneUploadPopover from "@/modules/ma/components/MilestoneUploadPopover";
 import { useAttachments } from "@/modules/ma/hooks/useAttachments";
@@ -26,20 +25,24 @@ import {
 } from "@/modules/ma/constants";
 
 import PhaseWorkspaceHeader from "@/modules/ma/pages/workspace/PhaseWorkspaceHeader";
+import WorkspaceHeaderActionButton from "@/modules/ma/pages/workspace/WorkspaceHeaderActionButton";
 import {
   VALID_TABS,
   useWorkspaceTabs,
 } from "@/modules/ma/pages/workspace/useWorkspaceTabs";
-import SecondaryRail from "@/modules/ma/components/SecondaryRail";
+import { useOpenVdrUpload } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import { RAIL_TOOL_IDS, type RailToolId } from "@/modules/ma/constants";
-import { buildRailClosePath } from "@/modules/ma/pages/workspace/railRouteHelpers";
+import {
+  buildRailClosePath,
+  buildRailOpenPath,
+} from "@/modules/ma/pages/workspace/railRouteHelpers";
 
 import {
   useOnboarding,
   OnboardingOverlay,
   CLIENT_OVERVIEW_STEPS,
 } from "@/components/onboarding";
-import { HelpCircle } from "lucide-react";
+import { CalendarDays, HelpCircle } from "lucide-react";
 const MeetingLogsTab = lazy(
   () => import("@/modules/ma/components/meetings/MeetingLogsTab"),
 );
@@ -47,6 +50,9 @@ const VdrTab = lazy(() => import("@/modules/ma/components/vdr/VdrTab"));
 const RFIPanel = lazy(() => import("@/modules/ma/components/rfi/RFIPanel"));
 const TransactionOverviewTab = lazy(
   () => import("@/modules/ma/components/overview/TransactionOverviewTab"),
+);
+const TransactionCompletionOverview = lazy(
+  () => import("@/modules/ma/components/overview/TransactionCompletionOverview"),
 );
 
 import {
@@ -58,38 +64,36 @@ import {
   Tabs,
 } from "@/components/ui";
 import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
+import TimelineTab from "@/modules/ma/tabs/TimelineTab";
 
 // ── Tab components (lazy-loaded) ────────────────────────
 const BuyersTab = lazy(() => import("@/modules/ma/tabs/BuyersTab"));
 const ContractsTab = lazy(() => import("@/modules/ma/tabs/ContractsTab"));
-const RisksTab = lazy(() => import("@/modules/ma/tabs/RisksTab"));
-const ComplianceTab = lazy(() => import("@/modules/ma/tabs/ComplianceTab"));
 const ClosingTab = lazy(() => import("@/modules/ma/tabs/ClosingTab"));
 const NdasTab = lazy(() => import("@/modules/ma/tabs/NdasTab"));
 const BidsTab = lazy(() => import("@/modules/ma/tabs/BidsTab"));
 const DDChecklistTab = lazy(() => import("@/modules/ma/tabs/DDChecklistTab"));
-const PMITab = lazy(() => import("@/modules/ma/tabs/PMITab"));
-const EarnoutTab = lazy(() => import("@/modules/ma/tabs/EarnoutTab"));
 const MarketingMaterialsTab = lazy(
   () => import("@/modules/ma/tabs/MarketingMaterialsTab"),
 );
 const ModelsTab = lazy(() => import("@/modules/ma/tabs/ModelsTab"));
-const NotesApprovalsTab = lazy(
-  () => import("@/modules/ma/tabs/NotesApprovalsTab"),
-);
-const TimelineTab = lazy(() => import("@/modules/ma/tabs/TimelineTab"));
-const QualityTab = lazy(() => import("@/modules/ma/tabs/QualityTab"));
 const EngagementTab = lazy(() => import("@/modules/ma/tabs/EngagementTab"));
+
+const REMOVED_WORKSPACE_TOOLS = [
+  "risks",
+  "compliance",
+  "notes-approvals",
+  "ai-quality",
+] as const;
+const REMOVED_WORKSPACE_TAB_ROUTES = ["pmi", "earnout"] as const;
+
+const WORKSPACE_TAB_HEADER_ACTION_PORTAL_ID = "workspace-tab-header-actions";
 
 // ── 상수 ──────────────────────────────────────────
 const VALID_PHASES = PHASE_CONFIG.map((p) => p.phase);
 
 const RAIL_PANEL_TITLES: Record<RailToolId, string> = {
-  risks: "리스크",
-  compliance: "컴플라이언스",
-  "notes-approvals": "노트/승인",
   timeline: "타임라인",
-  "ai-quality": "AI 품질",
 };
 
 // 초기 리다이렉트 이력 — 컴포넌트 리마운트에도 유지 (세션 내 txn당 1회)
@@ -106,7 +110,15 @@ export default function TransactionWorkspacePage() {
   const onboarding = useOnboarding(user?.id ?? "", id, CLIENT_OVERVIEW_STEPS);
 
   // URL 기반 탭 결정
-  const activeTab = VALID_TABS.includes(splat ?? "") ? splat! : "overview";
+  const activeTab = (VALID_TABS as readonly string[]).includes(splat ?? "")
+    ? splat!
+    : "overview";
+  const isRemovedWorkspaceToolRoute = REMOVED_WORKSPACE_TOOLS.includes(
+    (splat ?? "") as (typeof REMOVED_WORKSPACE_TOOLS)[number],
+  );
+  const isRemovedWorkspaceTabRoute = REMOVED_WORKSPACE_TAB_ROUTES.includes(
+    (splat ?? "") as (typeof REMOVED_WORKSPACE_TAB_ROUTES)[number],
+  );
 
   // 파이프라인에서 클릭한 단계 (URL search param 기반, 리마운트 안전)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -133,6 +145,12 @@ export default function TransactionWorkspacePage() {
       navigate(`/ma/transactions/${id}/contracts${qs}`, { replace: true });
     }
   }, [splat, id, navigate, viewedPhase]);
+
+  useEffect(() => {
+    if (!isRemovedWorkspaceTabRoute) return;
+    const qs = viewedPhase ? `?viewPhase=${viewedPhase}` : "";
+    navigate(`/ma/transactions/${id}${qs}`, { replace: true });
+  }, [id, isRemovedWorkspaceTabRoute, navigate, viewedPhase]);
 
   // 마일스톤 업로드 팝오버 상태
   const [activeMilestone, setActiveMilestone] =
@@ -192,11 +210,6 @@ export default function TransactionWorkspacePage() {
   const { data: buyers } = useBuyers(id, !!buyerIdParam);
 
   // Legal docs (overview 서비스 연동에서 MOU 상태 확인용)
-  const { data: legalDocs } = useLegalDocuments(
-    id,
-    activeTab === "contracts" || activeTab === "overview",
-  );
-
   // URL 기반 탭 전환 (viewPhase search param 유지하여 탭 필터링 보존)
   const handleTabChange = (tab: string) => {
     const qs = viewedPhase ? `?viewPhase=${viewedPhase}` : "";
@@ -207,19 +220,60 @@ export default function TransactionWorkspacePage() {
     }
   };
 
-  const { tabs, safeActiveTab, isRailTool } = useWorkspaceTabs({
-    summary,
-    txnPhase: txn?.phase,
-    viewedPhase,
-    activeTab,
-    baseTab,
-  });
+  const { tabs, safeActiveTab, tabBarActiveTab, isRailTool } = useWorkspaceTabs(
+    {
+      summary,
+      txnPhase: txn?.phase,
+      viewedPhase,
+      activeTab,
+      baseTab,
+    },
+  );
+  const openVdrUpload = useOpenVdrUpload(id);
+  const currentTabLabel =
+    tabs.find((tab) => tab.id === tabBarActiveTab)?.label ?? "Previous Page";
+  const legacyFallbackTab =
+    baseTab && tabs.some((tab) => tab.id === baseTab)
+      ? baseTab
+      : viewedPhase
+        ? (PHASE_TAB_MAP[viewedPhase] ?? "overview")
+        : txn?.phase
+          ? (PHASE_TAB_MAP[txn.phase as TransactionPhase] ?? "overview")
+          : "overview";
 
   const activeRailTool = isRailTool
     ? (RAIL_TOOL_IDS as readonly string[]).includes(activeTab)
       ? (activeTab as RailToolId)
       : null
     : null;
+  const isTimelineOpen = activeRailTool === "timeline";
+
+  const handleTimelineToggle = () => {
+    if (isTimelineOpen) {
+      navigate(buildRailClosePath(id, safeActiveTab, searchParams), {
+        replace: true,
+      });
+      return;
+    }
+
+    navigate(buildRailOpenPath(id, "timeline", safeActiveTab, searchParams), {
+      replace: true,
+    });
+  };
+
+  useEffect(() => {
+    if (!isRemovedWorkspaceToolRoute) return;
+
+    navigate(buildRailClosePath(id, legacyFallbackTab, searchParams), {
+      replace: true,
+    });
+  }, [
+    id,
+    isRemovedWorkspaceToolRoute,
+    legacyFallbackTab,
+    navigate,
+    searchParams,
+  ]);
 
   if (!txnId) return <Navigate to="/ma/transactions" replace />;
   if (isLoading) return <Spinner size="lg" />;
@@ -232,7 +286,8 @@ export default function TransactionWorkspacePage() {
 
   const phaseLabel =
     PHASE_CONFIG.find((p) => p.phase === txn.phase)?.label ?? txn.phase;
-
+  const phaseForContent = viewedPhase ?? (txn.phase as TransactionPhase);
+  const isCompletionPhase = phaseForContent === "POST_CLOSING";
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -241,6 +296,26 @@ export default function TransactionWorkspacePage() {
         subtitle={`${txn.code_name} | ${txn.target_company_name} | ${txn.client_name}`}
         backgroundImage={heroImg}
         backgroundOpacity={0.18}
+        headerAside={
+          <div
+            data-testid="workspace-hero-actions"
+            className="w-full lg:w-auto lg:justify-self-end"
+          >
+            <PhaseWorkspaceHeader
+              txnId={id}
+              txn={txn}
+              canWrite={canWrite()}
+              isClient={isClient ?? false}
+              activeTab={safeActiveTab}
+              surface="hero"
+              onOpenVdrUpload={() =>
+                openVdrUpload({
+                  returnLabel: currentTabLabel,
+                })
+              }
+            />
+          </div>
+        }
         compact
       />
 
@@ -298,147 +373,148 @@ export default function TransactionWorkspacePage() {
         </div>
       </Card>
 
-      {/* Phase Workspace Header — 단계 진행 CTA + 필수 조건 */}
-      <PhaseWorkspaceHeader
-        txnId={id}
-        txn={txn}
-        canWrite={canWrite()}
-        isClient={isClient ?? false}
-      />
-
-      {/* 탭 + SecondaryRail (flex-row) */}
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0 space-y-6">
+      {/* Tabs + Timeline panel trigger */}
+      <div className="min-w-0">
+        <Card padding="none">
           <div
-            className="flex items-center gap-2"
+            className="flex items-center gap-3 px-5 pt-3"
             data-onboarding="workspace-tabs"
           >
             <div className="flex-1 min-w-0">
               <Tabs
                 tabs={tabs}
-                activeTab={safeActiveTab}
+                activeTab={tabBarActiveTab}
                 onTabChange={handleTabChange}
                 variant="underline"
               />
             </div>
-            {isClient && (
-              <button
-                type="button"
-                onClick={onboarding.restart}
-                className="shrink-0 p-1.5 rounded-md text-text-muted hover:text-text-default hover:bg-surface-secondary transition-colors"
-                title="가이드 다시보기"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
-            )}
+            <div
+              className="shrink-0 flex items-center gap-2"
+              data-testid="workspace-tabs-actions"
+            >
+              {isClient && (
+                <button
+                  type="button"
+                  onClick={onboarding.restart}
+                  className="p-1.5 rounded-md text-text-muted hover:text-text-default hover:bg-surface-secondary transition-colors"
+                  title="가이드 다시보기"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              )}
+              <div
+                id={WORKSPACE_TAB_HEADER_ACTION_PORTAL_ID}
+                data-testid="workspace-tab-header-actions-slot"
+                className="flex items-center gap-2"
+              />
+              <WorkspaceHeaderActionButton
+                icon={CalendarDays}
+                label="Timeline"
+                onClick={handleTimelineToggle}
+                aria-pressed={isTimelineOpen}
+                active={isTimelineOpen}
+              />
+            </div>
           </div>
 
-          {/* ── Overview 탭 ─────────────────────────────── */}
-          {safeActiveTab === "overview" && (
+          <div
+            className={
+              safeActiveTab === "marketing-materials" ? undefined : "p-5"
+            }
+          >
+            {/* ── Overview 탭 ─────────────────────────────── */}
+            {safeActiveTab === "overview" && (
+              <Suspense fallback={<Spinner size="lg" />}>
+                {isCompletionPhase ? (
+                  <TransactionCompletionOverview txn={txn} summary={summary} />
+                ) : (
+                  <TransactionOverviewTab txn={txn} />
+                )}
+              </Suspense>
+            )}
+
+            {/* ── Tab Components (lazy-loaded with Suspense) ── */}
             <Suspense fallback={<Spinner size="lg" />}>
-              <TransactionOverviewTab
-                txnId={id}
-                txn={txn}
-                legalDocs={legalDocs}
-                onTabChange={handleTabChange}
-              />
+              {safeActiveTab === "engagement" && (
+                <EngagementTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "buyers" && (
+                <BuyersTab
+                  txnId={id}
+                  canWrite={canWrite()}
+                  headerActionPortalId={WORKSPACE_TAB_HEADER_ACTION_PORTAL_ID}
+                />
+              )}
+              {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
+              {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
+              {safeActiveTab === "ndas" && (
+                <NdasTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "bids" && (
+                <BidsTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "dd-checklist" && (
+                <DDChecklistTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "contracts" && (
+                <ContractsTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "closing" && (
+                <ClosingTab txnId={id} canWrite={canWrite()} />
+              )}
+              {safeActiveTab === "marketing-materials" && (
+                <MarketingMaterialsTab
+                  txnId={id}
+                  canWrite={canWrite()}
+                  showSourcePreview={false}
+                  surface="flat"
+                />
+              )}
+              {safeActiveTab === "models" && (
+                <ModelsTab
+                  txnId={id}
+                  canWrite={canWrite()}
+                  showSourcePreview={false}
+                />
+              )}
+              {safeActiveTab === "marketing-logs" && (
+                <MeetingLogsTab
+                  txnId={id}
+                  meetingPhase="MARKETING"
+                  buyerId={buyerIdParam}
+                  buyerName={
+                    buyerIdParam
+                      ? buyers?.find((b) => b.id === buyerIdParam)?.company_name
+                      : undefined
+                  }
+                  onClearBuyerFilter={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete("buyerId");
+                    setSearchParams(next, { replace: true });
+                  }}
+                />
+              )}
+              {safeActiveTab === "negotiation-logs" && (
+                <MeetingLogsTab txnId={id} meetingPhase="NEGOTIATION" />
+              )}
             </Suspense>
-          )}
-
-          {/* ── Tab Components (lazy-loaded with Suspense) ── */}
-          <Suspense fallback={<Spinner size="lg" />}>
-            {safeActiveTab === "engagement" && (
-              <EngagementTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "buyers" && (
-              <BuyersTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
-            {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
-            {safeActiveTab === "ndas" && (
-              <NdasTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "bids" && (
-              <BidsTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "dd-checklist" && (
-              <DDChecklistTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "contracts" && (
-              <ContractsTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "closing" && (
-              <ClosingTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "pmi" && (
-              <PMITab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "earnout" && (
-              <EarnoutTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "marketing-materials" && (
-              <MarketingMaterialsTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "models" && (
-              <ModelsTab txnId={id} canWrite={canWrite()} />
-            )}
-            {safeActiveTab === "marketing-logs" && (
-              <MeetingLogsTab
-                txnId={id}
-                meetingPhase="MARKETING"
-                buyerId={buyerIdParam}
-                buyerName={
-                  buyerIdParam
-                    ? buyers?.find((b) => b.id === buyerIdParam)?.company_name
-                    : undefined
-                }
-                onClearBuyerFilter={() => {
-                  const next = new URLSearchParams(searchParams);
-                  next.delete("buyerId");
-                  setSearchParams(next, { replace: true });
-                }}
-              />
-            )}
-            {safeActiveTab === "negotiation-logs" && (
-              <MeetingLogsTab txnId={id} meetingPhase="NEGOTIATION" />
-            )}
-          </Suspense>
-        </div>
-
-        {/* SecondaryRail — cross-phase tools 아이콘 바 */}
-        <SecondaryRail
-          txnId={id}
-          txnPhase={txn.phase as TransactionPhase}
-          activeRailTool={activeRailTool}
-          baseTab={safeActiveTab}
-        />
+          </div>
+        </Card>
       </div>
 
       {/* Rail Tool SlidePanel */}
       <SlidePanel
-        open={!!activeRailTool}
+        open={isTimelineOpen}
         onClose={() => {
           navigate(buildRailClosePath(id, safeActiveTab, searchParams), {
             replace: true,
           });
         }}
-        title={activeRailTool ? RAIL_PANEL_TITLES[activeRailTool] : ""}
+        title={isTimelineOpen ? RAIL_PANEL_TITLES.timeline : ""}
         width="xl"
       >
         <Suspense fallback={<Spinner size="lg" />}>
-          {activeRailTool === "risks" && (
-            <RisksTab txnId={id} canWrite={canWrite()} />
-          )}
-          {activeRailTool === "compliance" && (
-            <ComplianceTab txnId={id} canWrite={canWrite()} />
-          )}
-          {activeRailTool === "notes-approvals" && (
-            <NotesApprovalsTab txnId={id} canWrite={canWrite()} />
-          )}
           {activeRailTool === "timeline" && <TimelineTab txnId={id} />}
-          {activeRailTool === "ai-quality" && (
-            <QualityTab txnId={id} canWrite={canWrite()} />
-          )}
         </Suspense>
       </SlidePanel>
 

@@ -70,3 +70,14 @@ export interface BidComparisonItem {
   loi: Bid | null;
   final_offer: Bid | null;
 }
+
+export interface BidImportResult {
+  bid: Bid;
+  attachment_id: string;
+  attachment_file_name: string;
+  buyer_name: string;
+  created: boolean;
+  inferred_fields: string[];
+  updated_fields: string[];
+  warnings: string[];
+}

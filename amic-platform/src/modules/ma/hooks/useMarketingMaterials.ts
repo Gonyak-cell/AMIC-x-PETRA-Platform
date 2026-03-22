@@ -5,6 +5,8 @@ import type {
   MarketingMaterial,
   MarketingMaterialCreate,
   DistributionUpdate,
+  MarketingMaterialSourceRouting,
+  MarketingDocType,
 } from "@/modules/ma/types/marketing_material";
 
 const QK = (txnId: string) => [
@@ -13,6 +15,8 @@ const QK = (txnId: string) => [
   txnId,
   "marketing-materials",
 ];
+const sourceRoutingPreviewQK = (txnId: string, docType: MarketingDocType) =>
+  [...QK(txnId), "source-routing-preview", docType] as const;
 
 export function useMarketingMaterials(txnId: string, active = true) {
   return useQuery<MarketingMaterial[]>({
@@ -30,6 +34,27 @@ export function useMarketingMaterials(txnId: string, active = true) {
       const hasGenerating = items.some((m) => m.status === "GENERATING");
       return hasGenerating ? 5000 : false;
     },
+  });
+}
+
+export function useMarketingMaterialSourceRoutingPreview(
+  txnId: string,
+  docType: MarketingDocType,
+  active = true,
+) {
+  return useQuery<MarketingMaterialSourceRouting>({
+    queryKey: sourceRoutingPreviewQK(txnId, docType),
+    queryFn: async () => {
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/marketing-materials/source-routing-preview`,
+        {
+          params: { doc_type: docType },
+        },
+      );
+      return data;
+    },
+    enabled: !!txnId && active,
+    staleTime: 30_000,
   });
 }
 

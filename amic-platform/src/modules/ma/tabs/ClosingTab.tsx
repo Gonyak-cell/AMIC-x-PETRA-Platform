@@ -117,6 +117,7 @@ export default function ClosingTab({ txnId, canWrite }: ClosingTabProps) {
           canWrite ? (
             <Button
               icon={Plus}
+              size="sm"
               onClick={() => setShowClosingModal(true)}
               variant="ghost"
             >
@@ -130,8 +131,6 @@ export default function ClosingTab({ txnId, canWrite }: ClosingTabProps) {
             icon={Flag}
             title="Closing 항목 없음"
             description="선행조건, 인허가 등 Closing 체크리스트를 추가하세요."
-            actionLabel={canWrite ? "항목 추가" : undefined}
-            onAction={canWrite ? () => setShowClosingModal(true) : undefined}
           />
         ) : !filteredClosingItems?.length ? (
           <div className="p-8 text-center text-text-muted text-sm">
@@ -260,7 +259,16 @@ export default function ClosingTab({ txnId, canWrite }: ClosingTabProps) {
             keyField="id"
           />
         )}
-        <FileUploadZone txnId={txnId} entityType="CLOSING" embedded />
+        <FileUploadZone
+          txnId={txnId}
+          entityType="CLOSING"
+          embedded
+          embeddedLabel={closingItems?.length ? "클로징 파일" : "클로징 업로드"}
+          uploadLabel="파일 업로드"
+          emptyDescription="클로징 자료를 바로 업로드하세요."
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={Boolean(closingItems?.length)}
+        />
       </Card>
 
       {/* Closing 체크리스트 추가 모달 */}

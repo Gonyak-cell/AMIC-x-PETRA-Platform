@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Users } from "lucide-react";
 import {
   useEngagements,
   useCreateEngagement,
@@ -71,10 +71,11 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           canWrite ? (
             <Button
               icon={FileText}
+              size="sm"
               onClick={() => setShowEngModal(true)}
               variant="ghost"
             >
-              추가
+              수임계약 추가
             </Button>
           ) : undefined
         }
@@ -84,8 +85,6 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             icon={FileText}
             title="수임계약 없음"
             description="수임계약을 등록하세요."
-            actionLabel={canWrite ? "수임계약 추가" : undefined}
-            onAction={canWrite ? () => setShowEngModal(true) : undefined}
           />
         ) : (
           <DataTable
@@ -111,12 +110,12 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
       </Card>
 
       {/* Working Group 멤버 */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-heading font-semibold text-text-dark">
-            Working Group
-          </h3>
-          {canWrite && (
+      <Card
+        title="워킹 그룹"
+        headerBar
+        padding="none"
+        actions={
+          canWrite ? (
             <Button
               size="sm"
               variant="ghost"
@@ -125,14 +124,16 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             >
               멤버 추가
             </Button>
-          )}
-        </div>
+          ) : undefined
+        }
+      >
         {members && members.length > 0 ? (
           <DataTable columns={memberColumns} data={members} keyField="id" />
         ) : (
           <EmptyState
+            icon={Users}
             title="등록된 멤버가 없습니다"
-            description="Working Group 멤버를 추가하세요"
+            description="워킹 그룹 멤버를 추가하세요."
           />
         )}
       </Card>

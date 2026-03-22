@@ -1,6 +1,6 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { Routes, Route, MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
@@ -13,7 +13,6 @@ import { mockUser } from "@/test/mocks/data";
 import { createTestQueryClient } from "@/test/test-utils";
 import TransactionWorkspacePage from "../TransactionWorkspacePage";
 
-// ── Auth context fixture ──────────────────────────────
 const defaultAuth: AuthContextValue = {
   user: mockUser,
   isAuthenticated: true,
@@ -21,7 +20,6 @@ const defaultAuth: AuthContextValue = {
   setAuthState: vi.fn(),
 };
 
-// ── Render helper ─────────────────────────────────────
 function renderPage(
   path = "/ma/transactions/txn-1",
   authOverrides: Partial<AuthContextValue> = {},
@@ -45,15 +43,12 @@ function renderPage(
   );
 }
 
-// ── Tests ─────────────────────────────────────────────
 describe("TransactionWorkspacePage", () => {
   beforeEach(() => {
     server.resetHandlers();
   });
 
-  // 1. 로딩 중 Spinner 표시
-  it("로딩 중 Spinner를 표시한다", () => {
-    // transaction 요청을 never-resolving promise로 설정
+  it("loading 동안 spinner를 표시한다", () => {
     server.use(
       http.get("*/api/ma/transactions/:txnId", () => {
         return new Promise(() => {});
@@ -65,7 +60,6 @@ describe("TransactionWorkspacePage", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
-  // 2. 거래명 + status 배지 표시
   it("거래명과 ACTIVE 상태 배지를 표시한다", async () => {
     renderPage();
 
@@ -73,11 +67,24 @@ describe("TransactionWorkspacePage", () => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // status Badge: ACTIVE (pipeline flow에서도 나타날 수 있으므로 복수 매칭 허용)
     expect(screen.getAllByText("ACTIVE").length).toBeGreaterThanOrEqual(1);
   });
 
-  // 3. 거래 미발견 시 에러 메시지
+  it("히어로 우측 내부에 단계 액션 바를 렌더링한다", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    const heroActions = screen.getByTestId("workspace-hero-actions");
+    const heroSection = screen.getByText("테스트 프로젝트").closest("section");
+
+    expect(heroSection).not.toBeNull();
+    expect(heroSection).toContainElement(heroActions);
+    expect(screen.getAllByText("Upload to VDR")).toHaveLength(1);
+  });
+
   it("거래를 찾을 수 없으면 안내 메시지를 표시한다", async () => {
     server.use(
       http.get("*/api/ma/transactions/:txnId", () => {
@@ -92,44 +99,51 @@ describe("TransactionWorkspacePage", () => {
     });
   });
 
-  // 4. MARKETING 단계에서 visible tabs 확인
-  it("MARKETING 단계에서 해당 단계의 탭들을 표시한다", async () => {
+  it("MARKETING 단계에서는 해당 단계 탭만 표시한다", async () => {
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // MARKETING 단계 visible tabs: overview, buyers, marketing-logs, vdr
     expect(screen.getByText("매수자")).toBeInTheDocument();
-    expect(screen.getByText("VDR")).toBeInTheDocument();
-    expect(screen.getByText("활동 로그")).toBeInTheDocument();
+    expect(screen.getByText("마케팅 로그")).toBeInTheDocument();
 
-    // MARKETING 단계에서 보이지 않아야 하는 탭 (role=tab으로 범위 한정)
-    // Note: "입찰" 등은 파이프라인 시각화에서도 나타나므로 탭 영역으로 한정
     const tabList = screen.getAllByRole("tab");
-    const tabLabels = tabList.map((t) => t.textContent);
+    const tabLabels = tabList.map((tab) => tab.textContent);
+    expect(tabLabels).not.toContain("VDR");
     expect(tabLabels).not.toContain("입찰");
     expect(tabLabels).not.toContain("Closing");
     expect(tabLabels).not.toContain("PMI");
   });
 
-  // 5. can_advance=false이면 blocking_reasons 표시
-  it("can_advance=false일 때 blocking_reasons 텍스트를 표시한다", async () => {
+  it("VDR 경로에서도 primary 탭바에 VDR를 노출하지 않는다", async () => {
+    renderPage("/ma/transactions/txn-1/vdr");
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    const tabList = screen.getAllByRole("tab");
+    const tabLabels = tabList.map((tab) => tab.textContent);
+    const activeTab = tabList.find(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+
+    expect(tabLabels).not.toContain("VDR");
+    expect(activeTab?.textContent).toContain("매수자");
+  });
+
+  it("단계별 hurdle UI를 표시하지 않는다", async () => {
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("NDA 체결 또는 자료 배포가 필요합니다"),
-      ).toBeInTheDocument();
-    });
+    expect(screen.queryByText("NDA 체결 또는 자료 배포가 필요합니다")).not.toBeInTheDocument();
   });
 
-  // 6. subtitle에 code_name, target_company_name, client_name 포함
   it("subtitle에 코드명, 대상기업, 클라이언트를 표시한다", async () => {
     renderPage();
 
@@ -140,7 +154,6 @@ describe("TransactionWorkspacePage", () => {
     });
   });
 
-  // 7. 현재 단계 라벨 표시
   it("현재 단계 라벨을 표시한다", async () => {
     renderPage();
 
@@ -148,12 +161,10 @@ describe("TransactionWorkspacePage", () => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // PipelineFlow/Card 영역에 현재 단계 텍스트
     expect(screen.getByText(/현재:/)).toBeInTheDocument();
   });
 
-  // 8. can_advance=true이면 다음 단계 버튼 표시
-  it("can_advance=true일 때 다음 단계 버튼을 표시한다", async () => {
+  it("can_advance=true면 다음 단계 버튼을 표시한다", async () => {
     server.use(
       http.get("*/api/ma/transactions/:txnId/workflow/phase-status", () => {
         return HttpResponse.json({
@@ -173,73 +184,336 @@ describe("TransactionWorkspacePage", () => {
     });
 
     await waitFor(() => {
-      // 이전 단계/다음 단계 버튼 모두 '단계로' 포함 — 복수 매칭 허용
-      const advanceBtns = screen.getAllByRole("button", { name: /단계로/ });
-      expect(advanceBtns.length).toBeGreaterThanOrEqual(1);
+      const advanceButtons = screen.getAllByRole("button", {
+        name: /단계로/,
+      });
+      expect(advanceButtons.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  // 9. Rail URL 접근 시 primary content는 baseTab 유지 + panel title 표시
-  it("/risks?baseTab=buyers 접근 시 buyers tab이 primary이고 리스크 panel이 열린다", async () => {
+  it("/timeline?baseTab=buyers 접근 시 buyers tab이 primary이고 panel이 열린다", async () => {
+    renderPage("/ma/transactions/txn-1/timeline?baseTab=buyers");
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByRole("tab");
+    const activeTab = tabs.find(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    expect(activeTab?.textContent).toContain("매수자");
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+  });
+
+  it("/timeline 접근 시 phase 기본 탭이 primary이고 panel이 열린다", async () => {
+    renderPage("/ma/transactions/txn-1/timeline");
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByRole("tab");
+    const activeTab = tabs.find(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    expect(activeTab?.textContent).toContain("매수자");
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+  });
+
+  it("timeline rail URL의 query context를 보존한다", async () => {
+    renderPage(
+      "/ma/transactions/txn-1/timeline?baseTab=marketing-logs&buyerId=b1&viewPhase=MARKETING",
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+  });
+
+  it("제거된 tool URL은 기존 문맥으로 돌아가고 panel을 열지 않는다", async () => {
     renderPage("/ma/transactions/txn-1/risks?baseTab=buyers");
 
     await waitFor(() => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // primary tab bar에서 매수자 탭이 활성
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
     const tabs = screen.getAllByRole("tab");
     const activeTab = tabs.find(
-      (t) => t.getAttribute("aria-selected") === "true",
+      (tab) => tab.getAttribute("aria-selected") === "true",
     );
     expect(activeTab?.textContent).toContain("매수자");
-
-    // SlidePanel이 열리고 "리스크" 제목이 표시됨
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-    expect(screen.getByText("리스크")).toBeInTheDocument();
-
-    // RisksTab 콘텐츠가 실제 마운트됨 (빈 상태 확인)
-    await waitFor(() => {
-      expect(screen.getByText("리스크 없음")).toBeInTheDocument();
-    });
   });
+  it("preparation phase 기본 진입에서는 VDR preview hero를 붙이지 않는다", async () => {
+    server.use(
+      http.get("*/api/ma/transactions/:txnId", () =>
+        HttpResponse.json({
+          id: "txn-1",
+          code_name: "SE26-TST-01",
+          name: "테스트 프로젝트",
+          deal_type: "SE",
+          side: "SELL",
+          phase: "PREPARATION",
+          status: "ACTIVE",
+          target_company_name: "대상기업",
+          target_corp_code: null,
+          client_name: "클라이언트",
+          estimated_deal_value: "50000000000",
+          currency: "KRW",
+          deal_structure: null,
+          investment_type: null,
+          industry: "general",
+          lead_advisor_email: "jwsuh@amic.kr",
+          deal_captain_email: null,
+          target_close_date: null,
+          sale_process: null,
+          control_transfer: null,
+          target_stake: null,
+          new_share_ratio: null,
+          old_share_ratio: null,
+          valuation_basis: null,
+          cross_border: null,
+          target_buyer_types: null,
+          exclusivity: null,
+          exclusivity_deadline: null,
+          fdd_deal_id: null,
+          im_document_id: null,
+          notes: null,
+          corporate_info: null,
+          financial_summary: null,
+          is_deleted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+      ),
+      http.get("*/api/ma/transactions/:txnId/workflow/phase-status", () =>
+        HttpResponse.json({
+          ...mockPhaseStatus,
+          current_phase: "PREPARATION",
+          next_phase: "MARKETING",
+          previous_phase: "ENGAGEMENT",
+        }),
+      ),
+    );
 
-  // 10. baseTab 없이 rail URL 접근 시 phase 기본 탭이 primary + panel 열림
-  it("/risks (baseTab 없음) 접근 시 phase 기본 탭이 primary이고 panel이 열린다", async () => {
-    renderPage("/ma/transactions/txn-1/risks");
+    renderPage("/ma/transactions/txn-1");
 
     await waitFor(() => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // MARKETING phase 기본 탭 = buyers
+    expect(
+      screen.queryByTestId("workspace-source-preview-hero"),
+    ).not.toBeInTheDocument();
+
     const tabs = screen.getAllByRole("tab");
     const activeTab = tabs.find(
-      (t) => t.getAttribute("aria-selected") === "true",
+      (tab) => tab.getAttribute("aria-selected") === "true",
     );
-    expect(activeTab?.textContent).toContain("매수자");
-
-    // SlidePanel dialog가 열림
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
+    expect(activeTab?.textContent).toContain("Overview");
   });
 
-  // 11. rail URL에 buyerId/viewPhase가 포함되어도 보존됨 (query context 보존)
-  it("rail URL의 buyerId/viewPhase query가 보존된다", async () => {
-    renderPage(
-      "/ma/transactions/txn-1/risks?baseTab=marketing-logs&buyerId=b1&viewPhase=MARKETING",
-    );
+  it("marketing materials route에서도 VDR preview hero를 붙이지 않는다", async () => {
+    renderPage("/ma/transactions/txn-1/marketing-materials?viewPhase=PREPARATION");
 
     await waitFor(() => {
       expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
 
-    // SlidePanel이 열림
+    expect(
+      screen.queryByTestId("workspace-source-preview-hero"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("models route에서도 VDR preview hero를 붙이지 않는다", async () => {
+    renderPage("/ma/transactions/txn-1/models?viewPhase=PREPARATION");
+
     await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("테스트 프로젝트")).toBeInTheDocument();
     });
+
+    expect(
+      screen.queryByTestId("workspace-source-preview-hero"),
+    ).not.toBeInTheDocument();
+  });
+  it("buyers tab에서는 Excel action이 Timeline 왼쪽 헤더에 배치된다", async () => {
+    renderPage("/ma/transactions/txn-1/buyers");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "테스트 프로젝트" }),
+      ).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Long List/i).length).toBeGreaterThanOrEqual(1);
+    });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("workspace-tab-header-actions-slot")).getByRole(
+          "button",
+          { name: "Excel" },
+        ),
+      ).toBeInTheDocument();
+    });
+
+    const actions = within(screen.getByTestId("workspace-tabs-actions"));
+    const orderedButtons = actions.getAllByRole("button");
+    const excelButton = actions.getByRole("button", { name: "Excel" });
+    const timelineButton = actions.getByRole("button", { name: "Timeline" });
+
+    expect(orderedButtons.indexOf(excelButton)).toBeLessThan(
+      orderedButtons.indexOf(timelineButton),
+    );
+  });
+
+  it("closing 단계에서는 다음 버튼이 거래종결 단계로 표시된다", async () => {
+    server.use(
+      http.get("*/api/ma/transactions/:txnId", () =>
+        HttpResponse.json({
+          id: "txn-1",
+          code_name: "SE26-TST-01",
+          name: "Project Next",
+          deal_type: "SE",
+          side: "SELL",
+          phase: "CLOSING",
+          status: "ACTIVE",
+          target_company_name: "NX Games",
+          target_corp_code: null,
+          client_name: "Client Lead",
+          estimated_deal_value: "50000000000",
+          currency: "KRW",
+          deal_structure: null,
+          investment_type: null,
+          industry: "general",
+          lead_advisor_email: "jwsuh@amic.kr",
+          deal_captain_email: null,
+          target_close_date: null,
+          sale_process: null,
+          control_transfer: null,
+          target_stake: null,
+          new_share_ratio: null,
+          old_share_ratio: null,
+          valuation_basis: null,
+          cross_border: null,
+          target_buyer_types: null,
+          exclusivity: null,
+          exclusivity_deadline: null,
+          fdd_deal_id: null,
+          im_document_id: null,
+          notes: null,
+          corporate_info: null,
+          financial_summary: null,
+          is_deleted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-03-22T00:00:00Z",
+        }),
+      ),
+      http.get("*/api/ma/transactions/:txnId/workflow/phase-status", () =>
+        HttpResponse.json({
+          ...mockPhaseStatus,
+          current_phase: "CLOSING",
+          next_phase: "POST_CLOSING",
+          previous_phase: "NEGOTIATION",
+          can_advance: true,
+          all_met: true,
+          blocking_reasons: [],
+          pending_acknowledgements: [],
+          requires_user_acknowledgement: false,
+        }),
+      ),
+    );
+
+    renderPage("/ma/transactions/txn-1/closing");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "거래종결 단계로" }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("거래종결 단계에서는 축하 메시지와 overview만 보여준다", async () => {
+    server.use(
+      http.get("*/api/ma/transactions/:txnId", () =>
+        HttpResponse.json({
+          id: "txn-1",
+          code_name: "SE26-TST-01",
+          name: "Project Next",
+          deal_type: "SE",
+          side: "SELL",
+          phase: "POST_CLOSING",
+          status: "ACTIVE",
+          target_company_name: "NX Games",
+          target_corp_code: null,
+          client_name: "Client Lead",
+          estimated_deal_value: "50000000000",
+          currency: "KRW",
+          deal_structure: null,
+          investment_type: null,
+          industry: "general",
+          lead_advisor_email: "jwsuh@amic.kr",
+          deal_captain_email: null,
+          target_close_date: "2026-03-22",
+          sale_process: null,
+          control_transfer: null,
+          target_stake: null,
+          new_share_ratio: null,
+          old_share_ratio: null,
+          valuation_basis: null,
+          cross_border: null,
+          target_buyer_types: null,
+          exclusivity: null,
+          exclusivity_deadline: null,
+          fdd_deal_id: null,
+          im_document_id: null,
+          notes: null,
+          corporate_info: null,
+          financial_summary: null,
+          is_deleted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-03-22T00:00:00Z",
+        }),
+      ),
+      http.get("*/api/ma/transactions/:txnId/workflow/phase-status", () =>
+        HttpResponse.json({
+          ...mockPhaseStatus,
+          current_phase: "POST_CLOSING",
+          next_phase: null,
+          previous_phase: "CLOSING",
+          can_advance: false,
+          all_met: true,
+          blocking_reasons: [],
+          pending_acknowledgements: [],
+          requires_user_acknowledgement: false,
+        }),
+      ),
+    );
+
+    renderPage("/ma/transactions/txn-1/pmi");
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("클로징까지 정말 고생 많으셨습니다."),
+      ).toBeInTheDocument();
+    });
+
+    const tabLabels = screen.getAllByRole("tab").map((tab) => tab.textContent);
+    expect(tabLabels).toEqual(["Overview"]);
+    expect(screen.queryByText("PMI")).not.toBeInTheDocument();
+    expect(screen.queryByText("어닝아웃")).not.toBeInTheDocument();
   });
 });

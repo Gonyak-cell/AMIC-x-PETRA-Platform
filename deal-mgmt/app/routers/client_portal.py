@@ -43,7 +43,7 @@ PHASE_LABELS: dict[str, str] = {
     "MAIN_DUE_DILIGENCE": "본실사",
     "NEGOTIATION": "협상",
     "CLOSING": "Closing",
-    "POST_CLOSING": "PMI",
+    "POST_CLOSING": "거래종결",
 }
 
 BUYER_STATUS_LABELS: dict[str, str] = {

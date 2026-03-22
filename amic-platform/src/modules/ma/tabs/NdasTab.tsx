@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Shield, FileText } from "lucide-react";
+import { Plus, Trash2, FileText } from "lucide-react";
 import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import {
   useNdas,
@@ -18,7 +18,6 @@ import {
   Button,
   Card,
   DataTable,
-  EmptyState,
   INLINE_INPUT_CLS,
   Input,
   KpiCard,
@@ -82,6 +81,7 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           canWrite ? (
             <Button
               icon={Plus}
+              size="sm"
               onClick={() => setShowNdaModal(true)}
               variant="ghost"
             >
@@ -90,15 +90,7 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           ) : undefined
         }
       >
-        {!ndas?.length ? (
-          <EmptyState
-            icon={Shield}
-            title="NDA 없음"
-            description="매수 후보와의 NDA를 등록하세요."
-            actionLabel={canWrite ? "NDA 추가" : undefined}
-            onAction={canWrite ? () => setShowNdaModal(true) : undefined}
-          />
-        ) : (
+        {ndas?.length ? (
           <DataTable
             columns={[
               {
@@ -237,8 +229,17 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
             data={ndas}
             keyField="id"
           />
-        )}
-        <FileUploadZone txnId={txnId} entityType="NDA" embedded />
+        ) : null}
+        <FileUploadZone
+          txnId={txnId}
+          entityType="NDA"
+          embedded
+          embeddedLabel={ndas?.length ? "NDA 파일" : "NDA 업로드"}
+          uploadLabel="파일 업로드"
+          emptyDescription="매수 후보와의 NDA 파일을 바로 업로드하세요."
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={Boolean(ndas?.length)}
+        />
       </Card>
 
       {/* NDA 추가 모달 */}

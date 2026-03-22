@@ -7,10 +7,10 @@ import {
 describe("buildRailOpenPath", () => {
   it("기존 query를 유지하고 baseTab을 추가한다", () => {
     const params = new URLSearchParams("viewPhase=MARKETING&buyerId=b1");
-    const result = buildRailOpenPath("txn-1", "risks", "buyers", params);
+    const result = buildRailOpenPath("txn-1", "timeline", "buyers", params);
 
     expect(result).toBe(
-      "/ma/transactions/txn-1/risks?viewPhase=MARKETING&buyerId=b1&baseTab=buyers",
+      "/ma/transactions/txn-1/timeline?viewPhase=MARKETING&buyerId=b1&baseTab=buyers",
     );
   });
 
@@ -23,12 +23,7 @@ describe("buildRailOpenPath", () => {
 
   it("이미 baseTab이 있으면 덮어쓴다", () => {
     const params = new URLSearchParams("baseTab=old-tab&viewPhase=MARKETING");
-    const result = buildRailOpenPath(
-      "txn-1",
-      "compliance",
-      "contracts",
-      params,
-    );
+    const result = buildRailOpenPath("txn-1", "timeline", "contracts", params);
 
     expect(result).toContain("baseTab=contracts");
     expect(result).not.toContain("baseTab=old-tab");

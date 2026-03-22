@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.models.enums import (
     DealStructure,
@@ -13,6 +14,25 @@ from app.models.enums import (
     TransactionSide,
     TransactionStatus,
 )
+
+_GARBLED_TEXT_ERROR = (
+    "Text appears garbled. Please verify your input method and retry."
+)
+_QUESTION_RUN_PATTERN = re.compile(r"\?{3,}")
+
+
+def _validate_transaction_text(value: str | None) -> str | None:
+    if value is None:
+        return value
+
+    normalized = value.strip()
+    if not normalized:
+        return value
+
+    if "\ufffd" in normalized or _QUESTION_RUN_PATTERN.search(normalized):
+        raise ValueError(_GARBLED_TEXT_ERROR)
+
+    return value
 
 
 # ── Response ────────────────────────────────────────────
@@ -95,6 +115,11 @@ class TransactionCreate(BaseModel):
     exclusivity_deadline: str | None = Field(None, max_length=10)
     notes: str | None = None
 
+    @field_validator("name", "target_company_name", "client_name")
+    @classmethod
+    def validate_transaction_text(cls, value: str) -> str:
+        return _validate_transaction_text(value) or value
+
 
 # ── Update ──────────────────────────────────────────────
 class TransactionUpdate(BaseModel):
@@ -130,6 +155,11 @@ class TransactionUpdate(BaseModel):
     notes: str | None = None
     fdd_deal_id: str | None = None
     im_document_id: str | None = None
+
+    @field_validator("name", "target_company_name", "client_name")
+    @classmethod
+    def validate_transaction_text(cls, value: str | None) -> str | None:
+        return _validate_transaction_text(value)
 
 
 # ── List ────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Trash2, Sparkles } from "lucide-react";
+import { FileText, Plus, Trash2, Sparkles } from "lucide-react";
 import {
   useContracts,
   useContractSummary,
@@ -18,6 +18,7 @@ import {
   CONTRACT_STATUS_OPTIONS,
   SIGNATURE_STATUS_OPTIONS,
 } from "@/modules/ma/constants";
+import AttachmentUploadActionButton from "@/modules/ma/components/AttachmentUploadActionButton";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import { ContractNegotiationWorkspace } from "@/modules/ma/components/negotiation/ContractNegotiationWorkspace";
 import LegalDocumentsTab from "@/modules/docs/components/LegalDocumentsTab";
@@ -27,7 +28,6 @@ import {
   Button,
   Card,
   DataTable,
-  EmptyState,
   InlineSelect,
   INLINE_INPUT_CLS,
   Input,
@@ -45,6 +45,7 @@ interface ContractsTabProps {
 
 export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
   const { data: contracts } = useContracts(txnId);
+  const contractRows = contracts ?? [];
   const { data: contractSummary } = useContractSummary(txnId);
   const createContract = useCreateContract(txnId);
   const updateContract = useUpdateContract(txnId);
@@ -55,11 +56,14 @@ export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
   const [contractForm, setContractForm] = useState<ContractCreate>({
     title: "",
   });
+  const hasContracts = contractRows.length > 0;
 
   return (
     <div className="space-y-4">
       {/* 협상 워크스페이스 */}
-      <ContractNegotiationWorkspace txnId={txnId} />
+      {hasContracts ? (
+        <ContractNegotiationWorkspace txnId={txnId} canWrite={canWrite} />
+      ) : null}
 
       {/* 계약 요약 KPI */}
       {contractSummary && contractSummary.total > 0 && (
@@ -86,29 +90,42 @@ export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
 
       {/* 계약 목록 */}
       <Card
-        title="계약서 목록"
+        title="계약서 관리"
         headerBar
         padding="none"
         actions={
-          <Button
-            icon={FileText}
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowLegalDocs(true)}
-          >
-            법률 문서
-          </Button>
+          <>
+            {hasContracts && (
+              <Button
+                icon={FileText}
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLegalDocs(true)}
+              >
+                법률 문서
+              </Button>
+            )}
+            {canWrite && (
+              <AttachmentUploadActionButton
+                txnId={txnId}
+                entityType="CONTRACT"
+                label="파일 업로드"
+              />
+            )}
+            {canWrite && (
+              <Button
+                icon={Plus}
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowContractModal(true)}
+              >
+                계약서 추가
+              </Button>
+            )}
+          </>
         }
       >
-        {!contracts?.length ? (
-          <EmptyState
-            icon={Sparkles}
-            title="계약서 없음"
-            description="SPA, SHA 등 계약서를 등록하세요."
-            actionLabel={canWrite ? "계약서 추가" : undefined}
-            onAction={canWrite ? () => setShowContractModal(true) : undefined}
-          />
-        ) : (
+        {hasContracts ? (
           <DataTable
             columns={
               [
@@ -235,13 +252,28 @@ export default function ContractsTab({ txnId, canWrite }: ContractsTabProps) {
                       </div>
                     ) : null,
                 },
-              ] as Column<(typeof contracts)[number]>[]
+              ] as Column<(typeof contractRows)[number]>[]
             }
-            data={contracts}
+            data={contractRows}
             keyField="id"
           />
-        )}
-        <FileUploadZone txnId={txnId} entityType="CONTRACT" embedded />
+        ) : null}
+        <FileUploadZone
+          txnId={txnId}
+          entityType="CONTRACT"
+          embedded
+          embeddedLabel={hasContracts ? "계약서 파일" : ""}
+          uploadLabel="파일 업로드"
+          emptyDescription={
+            hasContracts
+              ? "추가 계약서를 바로 업로드하세요."
+              : "SPA, SHA 등 계약서를 바로 업로드하세요."
+          }
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={hasContracts}
+          readOnly={!canWrite}
+          showUploadAction={false}
+        />
       </Card>
 
       {/* 법률 문서 SlidePanel */}

@@ -6,6 +6,7 @@ export interface PageHeroProps {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  headerAside?: React.ReactNode;
   children?: React.ReactNode;
   compact?: boolean;
   className?: string;
@@ -18,6 +19,7 @@ export function PageHero({
   title,
   subtitle,
   actions,
+  headerAside,
   children,
   compact = false,
   className,
@@ -28,6 +30,7 @@ export function PageHero({
   const containerRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const asideRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const childrenRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +52,15 @@ export function PageHero({
           { y: 20, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.5 },
           "-=0.35",
+        );
+      }
+
+      if (asideRef.current) {
+        tl.fromTo(
+          asideRef.current,
+          { x: 24, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45 },
+          "-=0.28",
         );
       }
 
@@ -97,32 +109,73 @@ export function PageHero({
       )}
       <div className="relative z-10 px-6 md:px-10">
         {/* Title + Actions */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1
-              ref={titleRef}
-              className="text-2xl md:text-hero-title font-heading text-white mb-2"
-              style={{ opacity: 0 }}
-            >
-              {title}
-            </h1>
-            {subtitle && (
-              <p
-                ref={subtitleRef}
-                className="text-hero-subtitle text-white/80"
-                style={{ opacity: 0 }}
-              >
-                {subtitle}
-              </p>
-            )}
-          </div>
-          {actions && (
-            <div
-              ref={actionsRef}
-              className="flex flex-wrap items-center gap-3"
-              style={{ opacity: 0 }}
-            >
-              {actions}
+        <div className="mb-6">
+          {headerAside ? (
+            <>
+              <div className="grid gap-5 lg:grid-cols-[max-content_minmax(0,1fr)] lg:items-start">
+                <h1
+                  ref={titleRef}
+                  className="text-2xl md:text-hero-title font-heading text-white"
+                  style={{ opacity: 0 }}
+                >
+                  {title}
+                </h1>
+                <div
+                  ref={asideRef}
+                  className="min-w-0 lg:pl-1"
+                  style={{ opacity: 0 }}
+                >
+                  {headerAside}
+                  {actions && (
+                    <div
+                      ref={actionsRef}
+                      className="mt-4 flex flex-wrap items-center justify-end gap-3"
+                      style={{ opacity: 0 }}
+                    >
+                      {actions}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {subtitle && (
+                <p
+                  ref={subtitleRef}
+                  className="mt-4 text-hero-subtitle text-white/80"
+                  style={{ opacity: 0 }}
+                >
+                  {subtitle}
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1
+                  ref={titleRef}
+                  className="text-2xl md:text-hero-title font-heading text-white mb-2"
+                  style={{ opacity: 0 }}
+                >
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p
+                    ref={subtitleRef}
+                    className="text-hero-subtitle text-white/80"
+                    style={{ opacity: 0 }}
+                  >
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+              {actions && (
+                <div
+                  ref={actionsRef}
+                  className="flex flex-wrap items-center gap-3"
+                  style={{ opacity: 0 }}
+                >
+                  {actions}
+                </div>
+              )}
             </div>
           )}
         </div>

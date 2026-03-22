@@ -30,6 +30,43 @@ async def test_create_transaction(client):
     assert CODE_NAME_PATTERN.match(data["code_name"]), f"코드명 형식 오류: {data['code_name']}"
 
 
+async def test_create_transaction_preserves_korean_text(client):
+    payload = {
+        **SAMPLE_TXN,
+        "name": "Project Next",
+        "target_company_name": "NX게임즈",
+        "client_name": "최일곤",
+    }
+
+    create_resp = await client.post("/api/v1/transactions", json=payload)
+
+    assert create_resp.status_code == 201
+    created = create_resp.json()
+    assert created["target_company_name"] == "NX게임즈"
+    assert created["client_name"] == "최일곤"
+
+    get_resp = await client.get(f"/api/v1/transactions/{created['id']}")
+    assert get_resp.status_code == 200
+    fetched = get_resp.json()
+    assert fetched["target_company_name"] == "NX게임즈"
+    assert fetched["client_name"] == "최일곤"
+
+
+async def test_create_transaction_rejects_garbled_text(client):
+    payload = {
+        **SAMPLE_TXN,
+        "name": "Project Next",
+        "target_company_name": "NX3???",
+        "client_name": "???",
+    }
+
+    resp = await client.post("/api/v1/transactions", json=payload)
+
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert any("garbled" in error["msg"].lower() for error in detail)
+
+
 async def test_create_two_transactions_sequential_code(client):
     """같은 딜 타입으로 두 건 생성 시 코드명 시퀀스가 순차적으로 증가한다."""
     resp1 = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
@@ -51,6 +88,20 @@ async def test_create_issue_transaction_uses_isu_prefix(client):
     assert resp.status_code == 201
     assert resp.json()["deal_type"] == "ISSUE"
     assert resp.json()["code_name"].startswith("ISU")
+
+
+async def test_create_transaction_survives_vdr_init_failure(client, monkeypatch):
+    async def _fail_vdr_init(*_args, **_kwargs):
+        raise RuntimeError("simulated vdr init failure")
+
+    monkeypatch.setattr("app.services.vdr_service.init_vdr_folders", _fail_vdr_init)
+
+    resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["name"] == "Project Alpha"
+    assert data["id"] is not None
 
 
 async def test_get_transaction(client):
@@ -123,6 +174,34 @@ async def test_update_transaction(client):
     # code_name은 수정 불가 — 기존 값 유지
     original_code = create_resp.json()["code_name"]
     assert resp.json()["code_name"] == original_code
+
+
+async def test_update_transaction_preserves_korean_text(client):
+    create_resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
+    txn_id = create_resp.json()["id"]
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}",
+        json={"target_company_name": "NX게임즈", "client_name": "최일곤"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["target_company_name"] == "NX게임즈"
+    assert resp.json()["client_name"] == "최일곤"
+
+
+async def test_update_transaction_rejects_garbled_text(client):
+    create_resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
+    txn_id = create_resp.json()["id"]
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}",
+        json={"target_company_name": "NX3???"},
+    )
+
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert any("garbled" in error["msg"].lower() for error in detail)
 
 
 # ── Delete (Soft) ──────────────────────────────────────────

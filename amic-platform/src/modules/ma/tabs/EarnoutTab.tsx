@@ -88,6 +88,7 @@ export default function EarnoutTab({ txnId, canWrite }: EarnoutTabProps) {
           canWrite ? (
             <Button
               size="sm"
+              variant="ghost"
               icon={Plus}
               onClick={() => setShowEarnoutModal(true)}
             >
@@ -225,7 +226,18 @@ export default function EarnoutTab({ txnId, canWrite }: EarnoutTabProps) {
             keyField="id"
           />
         )}
-        <FileUploadZone txnId={txnId} entityType="EARNOUT" embedded />
+        <FileUploadZone
+          txnId={txnId}
+          entityType="EARNOUT"
+          embedded
+          embeddedLabel={
+            earnoutMilestones?.length ? "Earnout 파일" : "Earnout 업로드"
+          }
+          uploadLabel="파일 업로드"
+          emptyDescription="Earnout 자료를 바로 업로드하세요."
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={Boolean(earnoutMilestones?.length)}
+        />
       </Card>
 
       {/* 어닝아웃 마일스톤 추가 모달 */}

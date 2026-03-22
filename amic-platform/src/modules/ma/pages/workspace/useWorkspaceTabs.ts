@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import type { TabItem } from "@/components/ui";
 import {
   PHASE_TAB_MAP,
@@ -8,7 +9,6 @@ import {
 import type { TransactionPhase } from "@/modules/ma/types/transaction";
 import type { WorkspaceSummary } from "@/modules/ma/types/workspace";
 
-// ── 상수 ───────────────────────────────────────
 export const VALID_TABS = [
   "engagement",
   "buyers",
@@ -20,26 +20,18 @@ export const VALID_TABS = [
   "dd-checklist",
   "contracts",
   "closing",
-  "pmi",
-  "earnout",
   "marketing-logs",
   "negotiation-logs",
   "rfi",
-  // rail tools — URL 호환성 유지, primary tab bar에는 미표시
-  "risks",
-  "compliance",
-  "notes-approvals",
+  // Keep timeline route valid for deep links, but do not show it in the main tab bar.
   "timeline",
-  "ai-quality",
-];
+] as const;
 
-// ── Hook ───────────────────────────────────────
 interface UseWorkspaceTabsOptions {
   summary: WorkspaceSummary | undefined;
   txnPhase: string | undefined;
   viewedPhase: TransactionPhase | null;
   activeTab: string;
-  /** rail tool URL 접근 시 primary content로 표시할 탭 (?baseTab= query) */
   baseTab?: string;
 }
 
@@ -50,7 +42,6 @@ export function useWorkspaceTabs({
   activeTab,
   baseTab,
 }: UseWorkspaceTabsOptions) {
-  // primary tab bar에는 rail tools 미포함
   const allTabs: TabItem[] = useMemo(
     () => [
       { id: "overview", label: "Overview" },
@@ -75,11 +66,8 @@ export function useWorkspaceTabs({
       },
       { id: "contracts", label: "계약/SPA", badge: summary?.contract_count },
       { id: "closing", label: "Closing", badge: summary?.closing_item_count },
-      { id: "pmi", label: "PMI", badge: summary?.pmi_count },
-      { id: "earnout", label: "어닝아웃", badge: summary?.earnout_count },
-      { id: "marketing-logs", label: "활동 로그" },
-      { id: "negotiation-logs", label: "활동 로그" },
-      { id: "vdr", label: "VDR" },
+      { id: "marketing-logs", label: "마케팅 로그" },
+      { id: "negotiation-logs", label: "협상 로그" },
       { id: "rfi", label: "RFI" },
     ],
     [summary],
@@ -91,23 +79,30 @@ export function useWorkspaceTabs({
 
   const visibleTabIds = effectivePhase
     ? PHASE_VISIBLE_TABS[effectivePhase]
-    : allTabs.map((t) => t.id);
+    : allTabs.map((tab) => tab.id);
 
-  const tabs = allTabs.filter((t) => visibleTabIds.includes(t.id));
-
-  // rail tool URL 접근 시 baseTab 또는 phase 기본 탭을 primary content로 사용
-  const isRailTool = (RAIL_TOOL_IDS as readonly string[]).includes(activeTab);
-  const safeActiveTab = isRailTool
-    ? baseTab && visibleTabIds.includes(baseTab)
+  const tabs = allTabs.filter((tab) => visibleTabIds.includes(tab.id));
+  const isVdrRoute = activeTab === "vdr";
+  const fallbackPrimaryTab =
+    baseTab && visibleTabIds.includes(baseTab)
       ? baseTab
       : effectivePhase
         ? (PHASE_TAB_MAP[effectivePhase] ?? "overview")
-        : "overview"
-    : activeTab === "overview" || visibleTabIds.includes(activeTab)
-      ? activeTab
-      : viewedPhase
-        ? (PHASE_TAB_MAP[viewedPhase] ?? "overview")
         : "overview";
 
-  return { tabs, safeActiveTab, visibleTabIds, isRailTool };
+  const isRailTool = (RAIL_TOOL_IDS as readonly string[]).includes(activeTab);
+  const safeActiveTab = isRailTool
+    ? fallbackPrimaryTab
+    : isVdrRoute
+      ? "vdr"
+      : activeTab === "overview" || visibleTabIds.includes(activeTab)
+        ? activeTab
+        : viewedPhase
+          ? (PHASE_TAB_MAP[viewedPhase] ?? "overview")
+          : "overview";
+
+  const tabBarActiveTab =
+    isRailTool || isVdrRoute ? fallbackPrimaryTab : safeActiveTab;
+
+  return { tabs, safeActiveTab, tabBarActiveTab, visibleTabIds, isRailTool };
 }

@@ -119,7 +119,7 @@ _PHASE_ORDER: list[tuple[TransactionPhase, str]] = [
     (TransactionPhase.MAIN_DUE_DILIGENCE, "본실사"),
     (TransactionPhase.NEGOTIATION, "협상"),
     (TransactionPhase.CLOSING, "Closing"),
-    (TransactionPhase.POST_CLOSING, "Post-Closing"),
+    (TransactionPhase.POST_CLOSING, "거래종결"),
 ]
 
 

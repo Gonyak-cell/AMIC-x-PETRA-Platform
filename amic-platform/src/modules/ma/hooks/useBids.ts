@@ -1,12 +1,31 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   Bid,
-  BidCreate,
-  BidUpdate,
   BidComparisonItem,
+  BidCreate,
+  BidImportResult,
+  BidType,
+  BidUpdate,
 } from "@/modules/ma/types/bid";
+
+function invalidateBidQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  txnId: string,
+) {
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "bids"],
+  });
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "buyers"],
+  });
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "bidding-summary"],
+  });
+}
 
 export function useBids(
   txnId: string,
@@ -18,8 +37,12 @@ export function useBids(
     queryKey: ["ma", "transactions", txnId, "bids", { buyerId, bidType }],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (buyerId) params.buyer_id = buyerId;
-      if (bidType) params.type = bidType;
+      if (buyerId) {
+        params.buyer_id = buyerId;
+      }
+      if (bidType) {
+        params.type = bidType;
+      }
       const { data } = await maApi.get(`/transactions/${txnId}/bids`, {
         params,
       });
@@ -50,13 +73,11 @@ export function useCreateBid(txnId: string) {
       return data as Bid;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "bids"],
-      });
-      toast.success("입찰이 등록되었습니다.");
+      invalidateBidQueries(qc, txnId);
+      toast.success("입찰 정보를 등록했습니다.");
     },
-    onError: () => {
-      toast.error("입찰 등록에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "입찰 등록에 실패했습니다."));
     },
   });
 }
@@ -72,13 +93,11 @@ export function useUpdateBid(txnId: string) {
       return data as Bid;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "bids"],
-      });
-      toast.success("입찰이 수정되었습니다.");
+      invalidateBidQueries(qc, txnId);
+      toast.success("입찰 정보를 수정했습니다.");
     },
-    onError: () => {
-      toast.error("입찰 수정에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "입찰 수정에 실패했습니다."));
     },
   });
 }
@@ -90,13 +109,52 @@ export function useDeleteBid(txnId: string) {
       await maApi.delete(`/transactions/${txnId}/bids/${bidId}`);
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "bids"],
-      });
-      toast.success("입찰이 삭제되었습니다.");
+      invalidateBidQueries(qc, txnId);
+      toast.success("입찰 정보를 삭제했습니다.");
     },
-    onError: () => {
-      toast.error("입찰 삭제에 실패했습니다.");
+    onError: (err) => {
+      toast.error(extractApiError(err, "입찰 삭제에 실패했습니다."));
+    },
+  });
+}
+
+export function useImportBidFromAttachment(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      attachmentId,
+      buyerCandidateId,
+      bidType,
+    }: {
+      attachmentId: string;
+      buyerCandidateId?: string;
+      bidType?: BidType;
+    }) => {
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/bids/import-from-attachment`,
+        {
+          attachment_id: attachmentId,
+          buyer_candidate_id: buyerCandidateId,
+          bid_type: bidType,
+        },
+      );
+      return data as BidImportResult;
+    },
+    onSuccess: (result) => {
+      invalidateBidQueries(qc, txnId);
+      toast.success(
+        result.created
+          ? `${result.buyer_name} ${result.bid.bid_type} 입찰을 자동 등록했습니다.`
+          : `${result.buyer_name} ${result.bid.bid_type} 입찰 정보를 문서 기준으로 보강했습니다.`,
+      );
+      if (result.warnings.length > 0) {
+        toast.info(result.warnings[0]);
+      }
+    },
+    onError: (err) => {
+      toast.error(
+        extractApiError(err, "입찰 문서 자동 기재에 실패했습니다."),
+      );
     },
   });
 }

@@ -1,40 +1,40 @@
-import { useState } from "react";
-import { Plus, Trash2, DollarSign } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+
 import {
-  useBids,
+  BID_STATUS_OPTIONS,
+  BID_TYPE_OPTIONS,
+  BUYER_TYPE_OPTIONS,
+  VALUATION_METHOD_OPTIONS,
+} from "@/modules/ma/constants";
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import {
   useBidComparison,
+  useBids,
   useCreateBid,
-  useUpdateBid,
   useDeleteBid,
+  useImportBidFromAttachment,
+  useUpdateBid,
 } from "@/modules/ma/hooks/useBids";
 import { useBuyers } from "@/modules/ma/hooks/useTransactions";
 import type {
   BidCreate,
-  BidType,
   BidStatus as BidStatusType,
+  BidType,
   ValuationMethod,
 } from "@/modules/ma/types/bid";
-import {
-  BID_TYPE_OPTIONS,
-  BID_STATUS_OPTIONS,
-  VALUATION_METHOD_OPTIONS,
-  BUYER_TYPE_OPTIONS,
-} from "@/modules/ma/constants";
-import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import { formatKRW as formatAmount } from "@/modules/ma/utils/format";
 
 import {
   Badge,
   Button,
   Card,
   DataTable,
-  EmptyState,
   INLINE_INPUT_CLS,
   Input,
   Modal,
   Select,
 } from "@/components/ui";
-
-import { formatKRW as formatAmount } from "@/modules/ma/utils/format";
 
 interface BidsTabProps {
   txnId: string;
@@ -48,16 +48,37 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
   const createBid = useCreateBid(txnId);
   const updateBid = useUpdateBid(txnId);
   const deleteBid = useDeleteBid(txnId);
+  const importBidFromAttachment = useImportBidFromAttachment(txnId);
 
   const [showBidModal, setShowBidModal] = useState(false);
+  const [uploadBuyerId, setUploadBuyerId] = useState("");
+  const [uploadBidType, setUploadBidType] = useState("");
   const [bidForm, setBidForm] = useState<BidCreate>({
     buyer_candidate_id: "",
     bid_type: "IOI" as BidType,
   });
 
+  const buyerOptions = useMemo(
+    () => [
+      { value: "", label: "문서에서 자동 추론" },
+      ...((buyers ?? []).map((buyer) => ({
+        value: buyer.id,
+        label: buyer.company_name,
+      })) || []),
+    ],
+    [buyers],
+  );
+
+  const bidTypeAssistOptions = useMemo(
+    () => [
+      { value: "", label: "문서에서 자동 감지" },
+      ...BID_TYPE_OPTIONS,
+    ],
+    [],
+  );
+
   return (
     <div className="space-y-4">
-      {/* 비교 매트릭스 */}
       {bidComparison && bidComparison.length > 0 && (
         <Card title="입찰 비교 매트릭스" headerBar padding="none">
           <DataTable
@@ -67,10 +88,11 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 key: "buyer_type",
                 header: "유형",
                 minWidth: "100px",
-                render: (r) => (
+                render: (row) => (
                   <Badge variant="neutral">
-                    {BUYER_TYPE_OPTIONS.find((o) => o.value === r.buyer_type)
-                      ?.label ?? r.buyer_type}
+                    {BUYER_TYPE_OPTIONS.find(
+                      (option) => option.value === row.buyer_type,
+                    )?.label ?? row.buyer_type}
                   </Badge>
                 ),
               },
@@ -80,7 +102,7 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 minWidth: "80px",
                 align: "right",
                 mono: true,
-                render: (r) => (r.ioi ? formatAmount(r.ioi.amount) : "-"),
+                render: (row) => (row.ioi ? formatAmount(row.ioi.amount) : "-"),
               },
               {
                 key: "loi",
@@ -88,16 +110,16 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 minWidth: "80px",
                 align: "right",
                 mono: true,
-                render: (r) => (r.loi ? formatAmount(r.loi.amount) : "-"),
+                render: (row) => (row.loi ? formatAmount(row.loi.amount) : "-"),
               },
               {
                 key: "final_offer",
                 header: "최종 제안",
-                minWidth: "80px",
+                minWidth: "100px",
                 align: "right",
                 mono: true,
-                render: (r) =>
-                  r.final_offer ? formatAmount(r.final_offer.amount) : "-",
+                render: (row) =>
+                  row.final_offer ? formatAmount(row.final_offer.amount) : "-",
               },
             ]}
             data={bidComparison}
@@ -106,7 +128,6 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
         </Card>
       )}
 
-      {/* 전체 입찰 목록 */}
       <Card
         title="입찰 이력"
         headerBar
@@ -115,6 +136,7 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
           canWrite ? (
             <Button
               icon={Plus}
+              size="sm"
               onClick={() => setShowBidModal(true)}
               variant="ghost"
             >
@@ -123,36 +145,27 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
           ) : undefined
         }
       >
-        {!bids?.length ? (
-          <EmptyState
-            icon={DollarSign}
-            title="입찰 없음"
-            description="IOI/LOI/최종 제안을 등록하세요."
-            actionLabel={canWrite ? "입찰 추가" : undefined}
-            onAction={canWrite ? () => setShowBidModal(true) : undefined}
-          />
-        ) : (
+        {bids?.length ? (
           <DataTable
             columns={[
               {
                 key: "buyer_candidate_id",
                 header: "매수자",
-                render: (r) => {
+                render: (row) => {
                   const buyer = buyers?.find(
-                    (b) => b.id === r.buyer_candidate_id,
+                    (candidate) => candidate.id === row.buyer_candidate_id,
                   );
-                  return (
-                    buyer?.company_name ?? r.buyer_candidate_id.slice(0, 8)
-                  );
+                  return buyer?.company_name ?? row.buyer_candidate_id.slice(0, 8);
                 },
               },
               {
                 key: "bid_type",
                 header: "유형",
-                render: (r) => (
+                render: (row) => (
                   <Badge variant="info">
-                    {BID_TYPE_OPTIONS.find((o) => o.value === r.bid_type)
-                      ?.label ?? r.bid_type}
+                    {BID_TYPE_OPTIONS.find(
+                      (option) => option.value === row.bid_type,
+                    )?.label ?? row.bid_type}
                   </Badge>
                 ),
               },
@@ -160,21 +173,21 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 key: "amount",
                 header: "금액",
                 align: "right",
-                render: (r) => (
+                render: (row) => (
                   <input
-                    key={`${r.id}-amount-${r.amount}`}
+                    key={`${row.id}-amount-${row.amount}`}
                     type="number"
                     className={`${INLINE_INPUT_CLS} w-28 text-right font-mono`}
-                    defaultValue={r.amount ?? ""}
+                    defaultValue={row.amount ?? ""}
                     placeholder="금액"
-                    onBlur={(e) => {
-                      const v = e.target.value
-                        ? Number(e.target.value)
+                    onBlur={(event) => {
+                      const value = event.target.value
+                        ? Number(event.target.value)
                         : undefined;
-                      if (v !== (r.amount ?? undefined)) {
+                      if (value !== (row.amount ?? undefined)) {
                         updateBid.mutate({
-                          bidId: r.id,
-                          body: { amount: v },
+                          bidId: row.id,
+                          body: { amount: value },
                         });
                       }
                     }}
@@ -184,12 +197,12 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
               },
               {
                 key: "valuation_method",
-                header: "밸류에이션",
-                render: (r) =>
-                  r.valuation_method
+                header: "가치평가 방식",
+                render: (row) =>
+                  row.valuation_method
                     ? (VALUATION_METHOD_OPTIONS.find(
-                        (o) => o.value === r.valuation_method,
-                      )?.label ?? r.valuation_method)
+                        (option) => option.value === row.valuation_method,
+                      )?.label ?? row.valuation_method)
                     : "-",
               },
               {
@@ -197,22 +210,25 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 header: "배수",
                 align: "right",
                 mono: true,
-                render: (r) => (r.multiple != null ? `${r.multiple}x` : "-"),
+                render: (row) =>
+                  row.multiple != null ? `${row.multiple}x` : "-",
               },
               {
                 key: "status",
                 header: "상태",
-                render: (r) => (
+                render: (row) => (
                   <Select
                     options={BID_STATUS_OPTIONS}
-                    value={r.status}
-                    onChange={(e) =>
+                    value={row.status}
+                    onChange={(event) =>
                       updateBid.mutate({
-                        bidId: r.id,
-                        body: { status: e.target.value as BidStatusType },
+                        bidId: row.id,
+                        body: {
+                          status: event.target.value as BidStatusType,
+                        },
                       })
                     }
-                    className="!py-0.5 !px-1.5 !text-xs"
+                    className="!px-1.5 !py-0.5 !text-xs"
                     disabled={!canWrite}
                   />
                 ),
@@ -220,16 +236,18 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
               {
                 key: "submitted_at",
                 header: "제출일",
-                render: (r) => (
+                render: (row) => (
                   <input
-                    key={`${r.id}-submitted-${r.submitted_at}`}
+                    key={`${row.id}-submitted-${row.submitted_at}`}
                     type="date"
                     className={`${INLINE_INPUT_CLS} w-32`}
-                    defaultValue={r.submitted_at ?? ""}
-                    onChange={(e) =>
+                    defaultValue={row.submitted_at ?? ""}
+                    onChange={(event) =>
                       updateBid.mutate({
-                        bidId: r.id,
-                        body: { submitted_at: e.target.value || undefined },
+                        bidId: row.id,
+                        body: {
+                          submitted_at: event.target.value || undefined,
+                        },
                       })
                     }
                     disabled={!canWrite}
@@ -240,14 +258,15 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 key: "actions",
                 header: "",
                 width: "40px",
-                render: (r) =>
+                render: (row) =>
                   canWrite ? (
                     <button
-                      className="text-text-muted hover:text-negative p-1 rounded transition-colors"
+                      type="button"
+                      className="rounded p-1 text-text-muted transition-colors hover:text-negative"
                       title="삭제"
                       onClick={() => {
                         if (confirm("이 입찰을 삭제하시겠습니까?")) {
-                          deleteBid.mutate(r.id);
+                          deleteBid.mutate(row.id);
                         }
                       }}
                     >
@@ -259,19 +278,61 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
             data={bids}
             keyField="id"
           />
+        ) : null}
+
+        {canWrite && (
+          <div className="border-t border-gray-border px-5 pt-4">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,240px)_minmax(0,220px)_1fr] md:items-end">
+              <Select
+                label="매수후보 우선 지정"
+                options={buyerOptions}
+                value={uploadBuyerId}
+                onChange={(event) => setUploadBuyerId(event.target.value)}
+                hint="비워두면 문서와 파일명에서 자동 추론합니다."
+              />
+              <Select
+                label="입찰 유형 우선 지정"
+                options={bidTypeAssistOptions}
+                value={uploadBidType}
+                onChange={(event) => setUploadBidType(event.target.value)}
+                hint="비워두면 IOI, LOI, Final Offer를 자동 감지합니다."
+              />
+              <p className="pb-2 text-sm text-text-secondary">
+                LOI, IOI, Final Offer 문서를 업로드하면 금액, 제출일, 유효기간,
+                밸류에이션 방식을 자동으로 기재합니다.
+              </p>
+            </div>
+          </div>
         )}
-        <FileUploadZone txnId={txnId} entityType="BID" embedded />
+
+        <FileUploadZone
+          txnId={txnId}
+          entityType="BID"
+          embedded
+          readOnly={!canWrite}
+          embeddedLabel={bids?.length ? "입찰 문서" : "입찰 업로드"}
+          uploadLabel="파일 업로드"
+          emptyDescription="입찰 자료를 바로 업로드하세요."
+          emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
+          embeddedSeparator={false}
+          onUploaded={async (attachment) => {
+            await importBidFromAttachment.mutateAsync({
+              attachmentId: attachment.id,
+              buyerCandidateId: uploadBuyerId || undefined,
+              bidType: (uploadBidType || undefined) as BidType | undefined,
+            });
+          }}
+        />
       </Card>
 
-      {/* Bid 추가 모달 */}
       <Modal
         open={showBidModal}
         onClose={() => setShowBidModal(false)}
         title="입찰 등록"
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
+          onSubmit={(event) => {
+            event.preventDefault();
             createBid.mutate(bidForm, {
               onSuccess: () => {
                 setShowBidModal(false);
@@ -283,46 +344,56 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
         >
           <Select
             label="매수자"
-            options={(buyers ?? []).map((b) => ({
-              value: b.id,
-              label: b.company_name,
+            options={(buyers ?? []).map((buyer) => ({
+              value: buyer.id,
+              label: buyer.company_name,
             }))}
             value={bidForm.buyer_candidate_id}
-            onChange={(e) =>
-              setBidForm({ ...bidForm, buyer_candidate_id: e.target.value })
+            onChange={(event) =>
+              setBidForm({
+                ...bidForm,
+                buyer_candidate_id: event.target.value,
+              })
             }
           />
+
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="입찰 유형"
               options={BID_TYPE_OPTIONS}
               value={bidForm.bid_type}
-              onChange={(e) =>
-                setBidForm({ ...bidForm, bid_type: e.target.value as BidType })
+              onChange={(event) =>
+                setBidForm({
+                  ...bidForm,
+                  bid_type: event.target.value as BidType,
+                })
               }
             />
             <Input
               label="금액 (원)"
               type="number"
               value={bidForm.amount ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setBidForm({
                   ...bidForm,
-                  amount: e.target.value ? Number(e.target.value) : undefined,
+                  amount: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
                 })
               }
               placeholder="50000000000"
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="밸류에이션"
+              label="가치평가 방식"
               options={VALUATION_METHOD_OPTIONS}
               value={bidForm.valuation_method ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setBidForm({
                   ...bidForm,
-                  valuation_method: (e.target.value || undefined) as
+                  valuation_method: (event.target.value || undefined) as
                     | ValuationMethod
                     | undefined,
                 })
@@ -333,24 +404,27 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
               type="number"
               step="0.1"
               value={bidForm.multiple ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setBidForm({
                   ...bidForm,
-                  multiple: e.target.value ? Number(e.target.value) : undefined,
+                  multiple: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
                 })
               }
               placeholder="8.5"
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="제출일"
               type="date"
               value={bidForm.submitted_at ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setBidForm({
                   ...bidForm,
-                  submitted_at: e.target.value || undefined,
+                  submitted_at: event.target.value || undefined,
                 })
               }
             />
@@ -358,24 +432,26 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
               label="유효기간"
               type="date"
               value={bidForm.valid_until ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setBidForm({
                   ...bidForm,
-                  valid_until: e.target.value || undefined,
+                  valid_until: event.target.value || undefined,
                 })
               }
             />
           </div>
+
           <Input
             label="조건 / 비고"
             value={bidForm.conditions ?? ""}
-            onChange={(e) =>
+            onChange={(event) =>
               setBidForm({
                 ...bidForm,
-                conditions: e.target.value || undefined,
+                conditions: event.target.value || undefined,
               })
             }
           />
+
           <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="ghost"

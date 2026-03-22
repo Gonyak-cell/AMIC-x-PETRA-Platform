@@ -4,10 +4,14 @@ import { maApi } from "@/api/maClient";
 import type {
   FinancialModel,
   FinancialModelCreate,
+  FinancialModelSourceRouting,
+  FinancialModelType,
 } from "@/modules/ma/types/financial_model";
 import { FM_IN_PROGRESS_STATUSES } from "@/modules/ma/types/financial_model";
 
 const QK = (txnId: string) => ["ma", "transactions", txnId, "financial-models"];
+const sourceRoutingPreviewQK = (txnId: string, modelType: FinancialModelType) =>
+  [...QK(txnId), "source-routing-preview", modelType] as const;
 
 export function useFinancialModels(txnId: string, active = true) {
   return useQuery<FinancialModel[]>({
@@ -27,6 +31,27 @@ export function useFinancialModels(txnId: string, active = true) {
       );
       return hasInProgress ? 5000 : false;
     },
+  });
+}
+
+export function useFinancialModelSourceRoutingPreview(
+  txnId: string,
+  modelType: FinancialModelType,
+  active = true,
+) {
+  return useQuery<FinancialModelSourceRouting>({
+    queryKey: sourceRoutingPreviewQK(txnId, modelType),
+    queryFn: async () => {
+      const { data } = await maApi.get(
+        `/transactions/${txnId}/financial-models/source-routing-preview`,
+        {
+          params: { model_type: modelType },
+        },
+      );
+      return data;
+    },
+    enabled: !!txnId && active,
+    staleTime: 30_000,
   });
 }
 

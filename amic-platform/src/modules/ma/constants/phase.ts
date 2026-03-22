@@ -61,8 +61,8 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
   },
   {
     phase: "POST_CLOSING",
-    label: "Post-Closing",
-    description: "가격조정 정산, PMI 지원, 프로젝트 종결",
+    label: "거래종결",
+    description: "클로징 완료 후 거래 전반 요약과 종결 메시지를 확인",
     icon: "Archive",
     order: 8,
   },
@@ -71,32 +71,26 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
 // ── Phase <-> Tab 매핑 ────────────────────────────────
 export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
   ENGAGEMENT: "overview",
-  PREPARATION: "marketing-materials",
+  PREPARATION: "overview",
   MARKETING: "buyers",
   BIDDING: "bids",
   MOU_SIGNED: "contracts", // deprecated -- 호환성 유지
   MAIN_DUE_DILIGENCE: "dd-checklist",
   NEGOTIATION: "contracts",
   CLOSING: "closing",
-  POST_CLOSING: "pmi",
+  POST_CLOSING: "overview",
 };
 
 // ── 단계별 표시 탭 (primary only — rail tools 제외) ────
 export const ALWAYS_VISIBLE_TABS = ["overview"] as const;
 
-/** 우측 SecondaryRail로 이동된 cross-phase 도구 ID */
-export const RAIL_TOOL_IDS = [
-  "risks",
-  "compliance",
-  "notes-approvals",
-  "timeline",
-  "ai-quality",
-] as const;
+/** 탭 라인 우측에서 여는 cross-phase 패널 도구 ID */
+export const RAIL_TOOL_IDS = ["timeline"] as const;
 
 export type RailToolId = (typeof RAIL_TOOL_IDS)[number];
 
 /**
- * Phase별 SecondaryRail 노출 규칙.
+ * Phase별 패널 도구 노출 규칙.
  * 빈 배열 = 전 phase 노출.
  */
 export const RAIL_TOOL_PHASE_RULES: Record<
@@ -104,34 +98,6 @@ export const RAIL_TOOL_PHASE_RULES: Record<
   readonly TransactionPhase[]
 > = {
   timeline: [], // 전 phase
-  "ai-quality": [
-    "PREPARATION",
-    "MARKETING",
-    "BIDDING",
-    "MAIN_DUE_DILIGENCE",
-    "NEGOTIATION",
-  ],
-  risks: [
-    "MARKETING",
-    "BIDDING",
-    "MAIN_DUE_DILIGENCE",
-    "NEGOTIATION",
-    "CLOSING",
-  ],
-  compliance: [
-    "MARKETING",
-    "BIDDING",
-    "MAIN_DUE_DILIGENCE",
-    "NEGOTIATION",
-    "CLOSING",
-  ],
-  "notes-approvals": [
-    "MARKETING",
-    "BIDDING",
-    "MAIN_DUE_DILIGENCE",
-    "NEGOTIATION",
-    "CLOSING",
-  ],
 };
 
 /** phase에서 해당 rail tool이 노출되어야 하는지 확인 */
@@ -144,21 +110,20 @@ export function isRailToolVisible(
 }
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
-  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi", "vdr"],
+  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi"],
   PREPARATION: [
     ...ALWAYS_VISIBLE_TABS,
     "marketing-materials",
     "models",
     "ndas",
-    "vdr",
   ],
-  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs", "vdr"],
-  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "vdr"],
-  MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts", "vdr"], // deprecated -- 호환성 유지
-  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "vdr"],
-  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs", "vdr"],
-  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "vdr"],
-  POST_CLOSING: [...ALWAYS_VISIBLE_TABS, "pmi", "earnout", "vdr"],
+  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs"],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids"],
+  MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts"], // deprecated -- 호환성 유지
+  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi"],
+  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs"],
+  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing"],
+  POST_CLOSING: [...ALWAYS_VISIBLE_TABS],
 };
 
 // ── 파이프라인 마일스톤 ─────────────────────────────

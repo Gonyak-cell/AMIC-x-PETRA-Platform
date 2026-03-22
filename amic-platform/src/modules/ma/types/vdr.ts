@@ -82,6 +82,63 @@ export interface VdrDocumentUpdate {
   folder_id?: string;
 }
 
+export type VdrWorkstream = "LDD" | "FDD" | "VALUATION" | "COMMON";
+export type VdrRoutingQueueStatus = "open" | "reviewed" | "all";
+
+export interface VdrRoutingOverride {
+  id: string;
+  transaction_id: string;
+  vdr_document_id: string;
+  primary_workstream: VdrWorkstream;
+  workstream_tags: VdrWorkstream[];
+  override_note: string | null;
+  reviewed_by_email: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VdrRoutingOverrideUpsert {
+  primary_workstream: VdrWorkstream;
+  workstream_tags?: VdrWorkstream[];
+  override_note?: string | null;
+}
+
+export interface VdrRoutingDecision {
+  primary_workstream: VdrWorkstream;
+  workstream_tags: VdrWorkstream[];
+  confidence: number;
+  requires_manual_review: boolean;
+  reasons: string[];
+  is_override: boolean;
+  override_note: string | null;
+  reviewed_by_email: string | null;
+  reviewed_at: string | null;
+}
+
+export interface VdrRoutingQueueItem {
+  document: VdrDocument;
+  folder_name: string;
+  folder_category: VdrFolderCategory;
+  routing_status: "OPEN_REVIEW" | "OVERRIDDEN" | "AUTO_ROUTED";
+  auto_route: VdrRoutingDecision;
+  effective_route: VdrRoutingDecision;
+}
+
+export interface VdrRoutingQueueSummary {
+  total_documents: number;
+  returned_documents: number;
+  open_documents: number;
+  reviewed_documents: number;
+  auto_routed_documents: number;
+  by_effective_workstream: Partial<Record<VdrWorkstream, number>>;
+}
+
+export interface VdrRoutingQueueResponse {
+  summary: VdrRoutingQueueSummary;
+  items: VdrRoutingQueueItem[];
+}
+
 // ── Direct Upload ────────────────────────────────────────
 
 export interface DirectUploadFileResult {
@@ -138,6 +195,13 @@ export const VDR_CATEGORY_LABELS: Record<VdrFolderCategory, string> = {
   INSURANCE: "보험",
   MARKET_RESEARCH: "시장자료",
   CUSTOM: "사용자 정의",
+};
+
+export const VDR_WORKSTREAM_LABELS: Record<VdrWorkstream, string> = {
+  LDD: "LDD",
+  FDD: "FDD",
+  VALUATION: "Valuation",
+  COMMON: "Common",
 };
 
 export const MIME_TYPE_LABELS: Record<string, string> = {

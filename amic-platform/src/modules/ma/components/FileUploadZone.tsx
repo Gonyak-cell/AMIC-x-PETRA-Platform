@@ -8,45 +8,43 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
-import type { AttachmentEntityType } from "@/modules/ma/types/attachment";
-import {
-  ATTACHMENT_CONSTRAINTS,
-  ATTACHMENT_MIME_LABELS,
-} from "@/modules/ma/types/attachment";
 import {
   getAttachmentDownloadUrl,
   useAttachments,
   useDeleteAttachment,
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
+import type {
+  Attachment,
+  AttachmentEntityType,
+} from "@/modules/ma/types/attachment";
+import {
+  ATTACHMENT_CONSTRAINTS,
+  ATTACHMENT_MIME_LABELS,
+} from "@/modules/ma/types/attachment";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
+import {
+  openAttachmentFilePicker,
+  uploadAttachmentFiles,
+} from "@/modules/ma/components/attachmentUploadUtils";
 
 interface FileUploadZoneProps {
   txnId: string;
   entityType: AttachmentEntityType;
   entityId?: string;
-  /** 접이식 모드 (기본 닫힘) */
   compact?: boolean;
-  /** Card 내부 임베드 모드 (래퍼 없이 flat 렌더링) */
   embedded?: boolean;
-  /** 읽기 전용 */
   readOnly?: boolean;
-  /** 커스텀 제목 */
   title?: string;
-}
-
-function validateFile(file: File): string | null {
-  if (file.size > ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE) {
-    return `파일 크기(${formatFileSize(file.size)})가 최대 허용량(${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL})을 초과합니다.`;
-  }
-  const ext = "." + (file.name.split(".").pop()?.toLowerCase() ?? "");
-  if (!ATTACHMENT_CONSTRAINTS.ALLOWED_EXTENSIONS.has(ext)) {
-    return `허용되지 않는 파일 형식입니다: ${ext}`;
-  }
-  return null;
+  embeddedLabel?: string;
+  uploadLabel?: string;
+  emptyDescription?: string;
+  emptyHint?: string;
+  embeddedSeparator?: boolean;
+  showUploadAction?: boolean;
+  onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
 }
 
 export default function FileUploadZone({
@@ -56,7 +54,14 @@ export default function FileUploadZone({
   compact = false,
   embedded = false,
   readOnly = false,
-  title = "외부 자료",
+  title = "첨부 자료",
+  embeddedLabel = "첨부 파일",
+  uploadLabel = "업로드",
+  emptyDescription = "파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요.",
+  emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX, PPTX, HWP 등`,
+  embeddedSeparator = true,
+  showUploadAction = true,
+  onUploaded,
 }: FileUploadZoneProps) {
   const [expanded, setExpanded] = useState(!compact);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,52 +73,72 @@ export default function FileUploadZone({
   const items = data?.items ?? [];
 
   const handleUpload = useCallback(
-    (file: File) => {
-      const error = validateFile(file);
-      if (error) {
-        toast.error(error);
-        return;
-      }
-      uploadMutation.mutate({ file, entityType, entityId });
+    async (files: File[]) => {
+      await uploadAttachmentFiles({
+        files,
+        entityType,
+        entityId,
+        uploadMutation,
+        onUploaded,
+      });
     },
-    [uploadMutation, entityType, entityId],
+    [entityId, entityType, onUploaded, uploadMutation],
   );
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      for (const file of Array.from(e.dataTransfer.files)) {
-        handleUpload(file);
-      }
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      void handleUpload(Array.from(event.dataTransfer.files));
     },
     [handleUpload],
   );
 
   const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      for (const file of Array.from(e.target.files ?? [])) {
-        handleUpload(file);
-      }
-      e.target.value = "";
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      void handleUpload(Array.from(event.target.files ?? []));
+      event.target.value = "";
     },
     [handleUpload],
   );
 
-  // ── 파일 목록 (공유) ──────────────────────────────────
+  const hiddenInput = !readOnly && (
+    <input
+      ref={fileInputRef}
+      type="file"
+      className="sr-only"
+      multiple
+      tabIndex={-1}
+      accept={ATTACHMENT_CONSTRAINTS.ACCEPT_EXTENSIONS}
+      onChange={handleFileSelect}
+    />
+  );
+
   const fileList = (
     <>
       {items.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-text-muted"
-          onDragOver={(e) => e.preventDefault()}
+          className={`flex flex-col items-center justify-center gap-2 py-8 text-sm text-text-muted ${
+            readOnly ? "" : "cursor-pointer"
+          }`}
+          onDragOver={(event) => event.preventDefault()}
           onDrop={readOnly ? undefined : handleDrop}
+          onClick={readOnly ? undefined : () => openAttachmentFilePicker(fileInputRef)}
+          onKeyDown={
+            readOnly
+              ? undefined
+              : (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openAttachmentFilePicker(fileInputRef);
+                  }
+                }
+          }
+          role={readOnly ? undefined : "button"}
+          tabIndex={readOnly ? undefined : 0}
         >
           <Upload className="h-8 w-8 text-text-muted" />
-          <p>파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요</p>
-          <p className="text-xs">
-            최대 {ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX,
-            PPTX, HWP 등
-          </p>
+          <p>{emptyDescription}</p>
+          <p className="text-xs">{emptyHint}</p>
         </div>
       ) : (
         <table className="w-full text-sm">
@@ -127,33 +152,33 @@ export default function FileUploadZone({
             </tr>
           </thead>
           <tbody>
-            {items.map((att) => (
+            {items.map((attachment) => (
               <tr
-                key={att.id}
+                key={attachment.id}
                 className="border-b border-gray-border/50 hover:bg-bg-cool/50"
               >
                 <td className="px-5 py-2">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 shrink-0 text-text-muted" />
-                    <span className="truncate" title={att.file_name}>
-                      {att.file_name}
+                    <span className="truncate" title={attachment.file_name}>
+                      {attachment.file_name}
                     </span>
                   </div>
                 </td>
                 <td className="px-5 py-2 text-text-secondary">
-                  {ATTACHMENT_MIME_LABELS[att.mime_type] ??
-                    att.mime_type.split("/")[1]}
+                  {ATTACHMENT_MIME_LABELS[attachment.mime_type] ??
+                    attachment.mime_type.split("/")[1]}
                 </td>
                 <td className="px-5 py-2 text-text-secondary">
-                  {formatFileSize(att.file_size_bytes)}
+                  {formatFileSize(attachment.file_size_bytes)}
                 </td>
                 <td className="px-5 py-2 text-text-secondary">
-                  {formatISODate(att.created_at)}
+                  {formatISODate(attachment.created_at)}
                 </td>
                 <td className="px-5 py-2">
                   <div className="flex items-center gap-1">
                     <a
-                      href={getAttachmentDownloadUrl(txnId, att.id)}
+                      href={getAttachmentDownloadUrl(txnId, attachment.id)}
                       className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
                       title="다운로드"
                     >
@@ -164,7 +189,7 @@ export default function FileUploadZone({
                         type="button"
                         className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
                         title="삭제"
-                        onClick={() => deleteMutation.mutate(att.id)}
+                        onClick={() => deleteMutation.mutate(attachment.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -179,44 +204,34 @@ export default function FileUploadZone({
     </>
   );
 
-  // ── 숨김 파일 input ────────────────────────────────────
-  const hiddenInput = !readOnly && (
-    <input
-      ref={fileInputRef}
-      type="file"
-      className="hidden"
-      multiple
-      accept={ATTACHMENT_CONSTRAINTS.ACCEPT_EXTENSIONS}
-      onChange={handleFileSelect}
-    />
-  );
-
-  // ── embedded 모드: Card 내부에 flat 렌더링 ─────────────
   if (embedded) {
     return (
       <div
-        className="mt-4 border-t border-gray-border pt-4 px-5"
-        onDragOver={(e) => e.preventDefault()}
+        className={`px-5 ${
+          embeddedSeparator ? "mt-4 border-t border-gray-border pt-4" : "py-5"
+        }`}
+        onDragOver={(event) => event.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <span className="text-xs font-medium text-text-secondary">
-            첨부 파일
+            {embeddedLabel}
             {items.length > 0 && (
               <span className="ml-1.5 rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
                 {items.length}
               </span>
             )}
           </span>
-          {!readOnly && (
+          {!readOnly && showUploadAction && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              type="button"
+              onClick={() => openAttachmentFilePicker(fileInputRef)}
               disabled={uploadMutation.isPending}
             >
               <Upload className="mr-1 h-3.5 w-3.5" />
-              업로드
+              {uploadLabel}
             </Button>
           )}
         </div>
@@ -226,12 +241,11 @@ export default function FileUploadZone({
     );
   }
 
-  // ── 접이식 헤더 ──────────────────────────────────────
   const header = (
     <button
       type="button"
       className="flex w-full items-center gap-2 rounded-lg border border-gray-border bg-white px-4 py-2.5 text-left text-sm hover:bg-bg-cool/50"
-      onClick={() => setExpanded((v) => !v)}
+      onClick={() => setExpanded((value) => !value)}
     >
       {expanded ? (
         <ChevronDown className="h-4 w-4 text-text-muted" />
@@ -252,17 +266,15 @@ export default function FileUploadZone({
     return <div className="mt-3">{header}</div>;
   }
 
-  // ── 본문 (compact / 기본 모드) ─────────────────────────
   return (
     <div className="mt-3">
       {compact && header}
 
       <div
         className={`${compact ? "mt-1 " : ""}rounded-lg border border-gray-border bg-white`}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(event) => event.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        {/* 헤더 바 (비접이식 모드) */}
         {!compact && (
           <div className="flex items-center justify-between border-b border-gray-border px-4 py-2.5">
             <div className="flex items-center gap-2">
@@ -276,40 +288,39 @@ export default function FileUploadZone({
                 </span>
               )}
             </div>
-            {!readOnly && (
+            {!readOnly && showUploadAction && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => fileInputRef.current?.click()}
+                type="button"
+                onClick={() => openAttachmentFilePicker(fileInputRef)}
                 disabled={uploadMutation.isPending}
               >
                 <Upload className="mr-1 h-3.5 w-3.5" />
-                업로드
+                {uploadLabel}
               </Button>
             )}
           </div>
         )}
 
-        {/* 업로드 버튼 (접이식 모드) */}
-        {compact && !readOnly && (
+        {compact && !readOnly && showUploadAction && (
           <div className="flex justify-end border-b border-gray-border px-4 py-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              type="button"
+              onClick={() => openAttachmentFilePicker(fileInputRef)}
               disabled={uploadMutation.isPending}
             >
               <Upload className="mr-1 h-3.5 w-3.5" />
-              업로드
+              {uploadLabel}
             </Button>
           </div>
         )}
 
-        {/* 파일 목록 또는 빈 상태 */}
         {fileList}
       </div>
 
-      {/* 숨김 파일 input */}
       {hiddenInput}
     </div>
   );

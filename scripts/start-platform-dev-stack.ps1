@@ -1,0 +1,139 @@
+param(
+    [int]$FrontendPort = 5173,
+    [int]$MaPort = 8003
+)
+
+$ErrorActionPreference = "Stop"
+
+$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$logsDir = Join-Path $workspaceRoot "logs"
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+
+function Get-ListeningProcessId {
+    param([int]$Port)
+
+    $connection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($null -eq $connection) {
+        return $null
+    }
+
+    return $connection.OwningProcess
+}
+
+function Wait-ForHttpOk {
+    param(
+        [string]$Url,
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        try {
+            $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                return
+            }
+        } catch {
+            Start-Sleep -Milliseconds 500
+        }
+    } while ((Get-Date) -lt $deadline)
+
+    throw "Timed out waiting for $Url"
+}
+
+function Test-HttpOk {
+    param([string]$Url)
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
+        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+    } catch {
+        return $false
+    }
+}
+
+function Start-BackgroundProcess {
+    param(
+        [string]$Name,
+        [int]$Port,
+        [string]$FilePath,
+        [string[]]$ArgumentList,
+        [string]$WorkingDirectory,
+        [string]$OutLog,
+        [string]$ErrLog,
+        [string]$HealthUrl
+    )
+
+    $existingPid = Get-ListeningProcessId -Port $Port
+    if ($existingPid) {
+        if (-not (Test-HttpOk -Url $HealthUrl)) {
+            Stop-Process -Id $existingPid -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+        } else {
+            return @{
+                Name = $Name
+                Port = $Port
+                Pid = $existingPid
+                Reused = $true
+            }
+        }
+    }
+
+    $existingPid = Get-ListeningProcessId -Port $Port
+    if ($existingPid) {
+        return @{
+            Name = $Name
+            Port = $Port
+            Pid = $existingPid
+            Reused = $true
+        }
+    }
+
+    $process = Start-Process `
+        -FilePath $FilePath `
+        -ArgumentList $ArgumentList `
+        -WorkingDirectory $WorkingDirectory `
+        -RedirectStandardOutput $OutLog `
+        -RedirectStandardError $ErrLog `
+        -PassThru
+
+    Wait-ForHttpOk -Url $HealthUrl
+
+    $pid = Get-ListeningProcessId -Port $Port
+    if (-not $pid) {
+        $pid = $process.Id
+    }
+
+    return @{
+        Name = $Name
+        Port = $Port
+        Pid = $pid
+        Reused = $false
+    }
+}
+
+$maResult = Start-BackgroundProcess `
+    -Name "deal-mgmt" `
+    -Port $MaPort `
+    -FilePath "cmd.exe" `
+    -ArgumentList @("/c", "set DEAL_MGMT_PORT=$MaPort&& set DEAL_MGMT_RELOAD=false&& set PYTHONUTF8=1&& set PYTHONIOENCODING=utf-8&& python deal-mgmt/scripts/run_dev_server.py") `
+    -WorkingDirectory $workspaceRoot `
+    -OutLog (Join-Path $logsDir "deal-mgmt-dev-$MaPort.out.log") `
+    -ErrLog (Join-Path $logsDir "deal-mgmt-dev-$MaPort.err.log") `
+    -HealthUrl "http://127.0.0.1:$MaPort/health"
+
+$frontendResult = Start-BackgroundProcess `
+    -Name "amic-platform" `
+    -Port $FrontendPort `
+    -FilePath "C:\Program Files\nodejs\npm.cmd" `
+    -ArgumentList @("run", "dev", "--", "--host", "0.0.0.0", "--port", "$FrontendPort") `
+    -WorkingDirectory (Join-Path $workspaceRoot "amic-platform") `
+    -OutLog (Join-Path $logsDir "amic-platform-dev-$FrontendPort.out.log") `
+    -ErrLog (Join-Path $logsDir "amic-platform-dev-$FrontendPort.err.log") `
+    -HealthUrl "http://127.0.0.1:$FrontendPort/"
+
+foreach ($result in @($maResult, $frontendResult)) {
+    $status = if ($result.Reused) { "reused" } else { "started" }
+    Write-Host ("{0} {1} on http://127.0.0.1:{2} (PID {3})" -f $status, $result.Name, $result.Port, $result.Pid)
+}

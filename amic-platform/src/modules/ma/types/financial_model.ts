@@ -54,6 +54,52 @@ export type FMChecklistCategory =
 
 // ── Interfaces ──────────────────────────────────────────────
 
+export interface FinancialModelSourceRoutingDocument {
+  document_id: string;
+  original_name: string;
+  folder_category: string;
+  ddrl_sections: string[];
+  primary_workstream: string;
+  workstream_tags: string[];
+  confidence: number;
+  requires_manual_review: boolean;
+  reasons: string[];
+  is_override?: boolean;
+  override_note?: string | null;
+  reviewed_by_email?: string | null;
+  reviewed_at?: string | null;
+  include_for_financial_model?: boolean;
+}
+
+export interface FinancialModelSourceRouting {
+  version: string;
+  summary: {
+    total_documents: number;
+    included_for_financial_model?: number;
+    excluded_from_financial_model?: number;
+    manual_review_documents: number;
+    overridden_documents?: number;
+    by_primary_workstream: Record<string, number>;
+    target_workstreams?: string[];
+  };
+  documents: FinancialModelSourceRoutingDocument[];
+}
+
+export interface FinancialModelParameters extends Record<string, unknown> {
+  source_routing?: FinancialModelSourceRouting;
+  financial_model_workstreams?: string[];
+  seeded_checklist_items?: number;
+}
+
+export interface FMChecklistSourceMetadata extends Record<string, unknown> {
+  workstream_tags?: string[];
+  primary_workstream?: string;
+  routing_confidence?: number;
+  requires_manual_review?: boolean;
+  routing_reasons?: string[];
+  chunk_id?: string;
+}
+
 export interface FinancialModel {
   id: string;
   transaction_id: string;
@@ -62,7 +108,7 @@ export interface FinancialModel {
   version: number;
   status: FinancialModelStatus;
   error_message: string | null;
-  parameters: Record<string, unknown> | null;
+  parameters: FinancialModelParameters | null;
   vdr_document_ids: string[] | null;
   file_path: string | null;
   file_name: string | null;
@@ -80,7 +126,7 @@ export interface FinancialModelCreate {
   model_type: FinancialModelType;
   title: string;
   vdr_document_ids?: string[];
-  parameters?: Record<string, unknown>;
+  parameters?: FinancialModelParameters;
   enable_ralph_loop?: boolean;
   ralph_max_iterations?: number;
   ralph_max_cost_usd?: number;
@@ -107,7 +153,7 @@ export interface FMChecklistItem {
   source_location: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
-  extra_metadata: Record<string, unknown> | null;
+  extra_metadata: FMChecklistSourceMetadata | null;
   created_at: string;
   updated_at: string;
 }
