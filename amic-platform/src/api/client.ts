@@ -1,47 +1,55 @@
 import axios, { type AxiosInstance } from "axios";
 import { emitForceLogout } from "@/lib/auth-events";
 
-// m6: _retry 커스텀 프로퍼티 타입 선언
 declare module "axios" {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
   }
 }
 
-// M1: Token refresh 엔드포인트 환경변수화
-const REFRESH_URL =
-  import.meta.env.VITE_AUTH_REFRESH_URL || "/api/fdd/auth/refresh";
+const DEV_LOCAL_AUTH_ENABLED =
+  (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
+const FDD_REFRESH_URL =
+  (import.meta.env.VITE_AUTH_REFRESH_URL ?? "").trim() ||
+  "/api/fdd/auth/refresh";
+const MA_REFRESH_URL =
+  (import.meta.env.VITE_MA_AUTH_REFRESH_URL ?? "").trim() ||
+  "/api/ma/auth/refresh";
 
-// ── Shared refresh promise to deduplicate concurrent 401 retries ──
-let refreshPromise: Promise<boolean> | null = null;
+const refreshPromises = new Map<string, Promise<boolean>>();
 
-/**
- * 토큰 갱신을 시도한다. 성공 시 true, 실패 시 false.
- * axios 인터셉터와 native fetch 양쪽에서 호출 가능하도록 독립 함수로 분리.
- * 동시 호출 시 refreshPromise를 공유하여 1회만 실행된다.
- */
-export async function refreshAuth(): Promise<boolean> {
+export async function refreshAuth(refreshUrl: string): Promise<boolean> {
   try {
-    if (!refreshPromise) {
-      refreshPromise = axios
+    if (!refreshPromises.has(refreshUrl)) {
+      const refreshPromise = axios
         .post<{ message: string }>(
-          REFRESH_URL,
+          refreshUrl,
           {},
           { withCredentials: true },
         )
         .then(() => true)
         .finally(() => {
-          refreshPromise = null;
+          refreshPromises.delete(refreshUrl);
         });
+      refreshPromises.set(refreshUrl, refreshPromise);
     }
-    return await refreshPromise;
+    return await refreshPromises.get(refreshUrl)!;
   } catch {
     return false;
   }
 }
 
-function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
-  // Request: FormData 전송 시 Content-Type 제거 (브라우저가 multipart boundary 자동 설정)
+function resolveRefreshUrl(baseURL: string): string {
+  if (DEV_LOCAL_AUTH_ENABLED && baseURL === "/api/ma") {
+    return MA_REFRESH_URL;
+  }
+  return FDD_REFRESH_URL;
+}
+
+function applyAuthInterceptors(
+  instance: AxiosInstance,
+  refreshUrl: string,
+): AxiosInstance {
   instance.interceptors.request.use((config) => {
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
@@ -49,7 +57,6 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
     return config;
   });
 
-  // Response: auto-refresh on 401
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -66,10 +73,14 @@ function applyAuthInterceptors(instance: AxiosInstance): AxiosInstance {
         return Promise.reject(error);
       }
 
+      if (DEV_LOCAL_AUTH_ENABLED && instance.defaults.baseURL === "/api/fdd") {
+        return Promise.reject(error);
+      }
+
       original._retry = true;
 
       try {
-        const refreshed = await refreshAuth();
+        const refreshed = await refreshAuth(refreshUrl);
         if (!refreshed) {
           emitForceLogout();
           return Promise.reject(error);
@@ -89,12 +100,15 @@ export function createApiClient(baseURL: string): AxiosInstance {
   const instance = axios.create({
     baseURL,
     timeout: 30_000,
-    headers: { "Content-Type": "application/json" },
-    withCredentials: true, // 쿠키 전송 활성화
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    withCredentials: true,
   });
-  return applyAuthInterceptors(instance);
+  return applyAuthInterceptors(instance, resolveRefreshUrl(baseURL));
 }
 
-// Default FDD client for backward compatibility
+export const authApi = createApiClient(
+  DEV_LOCAL_AUTH_ENABLED ? "/api/ma" : "/api/fdd",
+);
+
 const api = createApiClient("/api/fdd");
 export default api;

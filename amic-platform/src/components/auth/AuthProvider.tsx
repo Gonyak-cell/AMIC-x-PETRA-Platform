@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import api from "@/api/client";
+import { authApi } from "@/api/client";
 import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 import type { AuthUser, AuthState } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
@@ -53,7 +53,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const fetchMe = () => {
-      api
+      authApi
         .get<AuthUser>("/auth/me", { signal: controller.signal })
         .then(({ data }) => {
           if (cancelled) return;

@@ -181,7 +181,7 @@ const PHASE_LABELS: Record<string, string> = {
   MAIN_DUE_DILIGENCE: "Main DD",
   NEGOTIATION: "Negotiation",
   CLOSING: "Closing",
-  POST_CLOSING: "Post-Closing",
+  POST_CLOSING: "거래종결",
 };
 
 function buildPipelineFunnel(
@@ -197,16 +197,55 @@ function buildPipelineFunnel(
 }
 
 export interface AnalyticsKpiErrors {
-  fdd: boolean;
-  kiis: boolean;
-  im: boolean;
-  ma: boolean;
-  docs: boolean;
+  fdd: AnalyticsKpiErrorState | null;
+  kiis: AnalyticsKpiErrorState | null;
+  im: AnalyticsKpiErrorState | null;
+  ma: AnalyticsKpiErrorState | null;
+  docs: AnalyticsKpiErrorState | null;
 }
 
 function isModuleUp(health: ModuleHealth[] | undefined, mod: string): boolean {
-  if (!health) return true; // health 미로딩 시 쿼리 허용
-  return health.find((m) => m.module === mod)?.healthy !== false;
+  if (!health) return false;
+  return health.find((m) => m.module === mod)?.healthy === true;
+}
+
+export type AnalyticsKpiErrorKind =
+  | "unreachable"
+  | "unauthorized"
+  | "forbidden"
+  | "unavailable";
+
+export interface AnalyticsKpiErrorState {
+  kind: AnalyticsKpiErrorKind;
+  status?: number;
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const response = (error as { response?: { status?: number } }).response;
+  return typeof response?.status === "number" ? response.status : undefined;
+}
+
+function getErrorState(
+  error: unknown,
+  moduleHealthy: boolean,
+): AnalyticsKpiErrorState | null {
+  if (!moduleHealthy) {
+    return { kind: "unreachable" };
+  }
+  if (!error) return null;
+
+  const status = getErrorStatus(error);
+  if (status === 401) {
+    return { kind: "unauthorized", status };
+  }
+  if (status === 403) {
+    return { kind: "forbidden", status };
+  }
+  if (status != null) {
+    return { kind: "unavailable", status };
+  }
+  return { kind: "unreachable" };
 }
 
 export function useAnalyticsKpis(
@@ -292,11 +331,11 @@ export function useAnalyticsKpis(
   const isError = results.some((r) => r.isError);
 
   const errors: AnalyticsKpiErrors = {
-    fdd: dealsQuery.isError || !isModuleUp(health, "fdd"),
-    kiis: kiisQuery.isError || !isModuleUp(health, "kiis"),
-    im: imDocsQuery.isError || !isModuleUp(health, "im"),
-    ma: maQuery.isError || !isModuleUp(health, "ma"),
-    docs: docsCountsQuery.isError || !isModuleUp(health, "ma"),
+    fdd: getErrorState(dealsQuery.error, isModuleUp(health, "fdd")),
+    kiis: getErrorState(kiisQuery.error, isModuleUp(health, "kiis")),
+    im: getErrorState(imDocsQuery.error, isModuleUp(health, "im")),
+    ma: getErrorState(maQuery.error, isModuleUp(health, "ma")),
+    docs: getErrorState(docsCountsQuery.error, isModuleUp(health, "ma")),
   };
 
   const kpis = useMemo<AnalyticsKpis>(() => {

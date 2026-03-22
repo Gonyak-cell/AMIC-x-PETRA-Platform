@@ -12,14 +12,48 @@ import "./index.css";
 
 initSentry();
 
-function handleGlobalError(error: Error) {
-  const message = error.message || "요청 처리 중 오류가 발생했습니다";
-  const axiosErr = error as { config?: { method?: string; url?: string; baseURL?: string } };
+const DEV_LOCAL_AUTH_ENABLED =
+  (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
+
+type ApiErrorShape = Error & {
+  config?: { method?: string; url?: string; baseURL?: string };
+  response?: { status?: number };
+};
+
+function getRequestInfo(error: Error) {
+  const axiosErr = error as ApiErrorShape;
   const url = axiosErr.config?.url;
   const base = axiosErr.config?.baseURL;
   const method = axiosErr.config?.method?.toUpperCase();
+  const status = axiosErr.response?.status;
+  const fullPath = url ? (base ? `${base}${url}` : url) : undefined;
+  return { url, method, status, fullPath };
+}
+
+function shouldSuppressDevModuleQueryError(error: Error) {
+  if (!DEV_LOCAL_AUTH_ENABLED) return false;
+  if (typeof window === "undefined") return false;
+  if (
+    !window.location.pathname.startsWith("/ma") &&
+    !window.location.pathname.startsWith("/analytics")
+  ) {
+    return false;
+  }
+
+  const { method, status, fullPath } = getRequestInfo(error);
+  if (method !== "GET") return false;
+  if (!fullPath) return false;
+  if (![401, 403, 404, 405].includes(status ?? 0)) return false;
+
+  return ["/api/fdd", "/api/kiis", "/api/im"].some((prefix) =>
+    fullPath.startsWith(prefix),
+  );
+}
+
+function handleGlobalError(error: Error) {
+  const message = error.message || "요청 처리 중 오류가 발생했습니다";
+  const { url, method, fullPath } = getRequestInfo(error);
   if (url) {
-    const fullPath = base ? `${base}${url}` : url;
     console.error(`[API Error] ${method} ${fullPath}:`, message);
   }
   toast.error(message);
@@ -27,7 +61,16 @@ function handleGlobalError(error: Error) {
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: handleGlobalError,
+    onError: (error) => {
+      if (shouldSuppressDevModuleQueryError(error)) {
+        const { method, status, fullPath } = getRequestInfo(error);
+        console.warn(
+          `[Suppressed dev query error] ${method} ${fullPath} -> ${status}`,
+        );
+        return;
+      }
+      handleGlobalError(error);
+    },
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {

@@ -10,6 +10,10 @@ import brochureCover from "@/assets/images/brochure-cover.png";
 import forestCover from "@/assets/images/forest-cover.jpg";
 import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg";
 
+const DEV_LOCAL_AUTH_ENABLED =
+  (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
+const POST_LOGIN_PATH = DEV_LOCAL_AUTH_ENABLED ? "/ma/transactions" : "/";
+
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +25,7 @@ export default function LoginPage() {
 
   // Already authenticated — redirect to dashboard
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={POST_LOGIN_PATH} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -30,7 +34,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login({ email, password });
-      navigate("/", { replace: true });
+      navigate(POST_LOGIN_PATH, { replace: true });
     } catch {
       setError("Invalid email or password.");
     } finally {
@@ -87,6 +91,14 @@ export default function LoginPage() {
               <p className="text-white/65 lg:text-text-secondary mt-2">
                 Sign in to continue
               </p>
+              {DEV_LOCAL_AUTH_ENABLED && (
+                <div
+                  className="mt-4 rounded-corporate border border-white/15 bg-white/8 px-4 py-3 text-sm
+                             text-white/80 lg:border-amic-100 lg:bg-amic-50 lg:text-text-dark"
+                >
+                  Development login: <code>ytkim@amic.kr</code> / <code>1111</code>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">

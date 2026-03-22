@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_SENTRY_DSN: string;
   readonly VITE_SENTRY_ENVIRONMENT: string;
   readonly VITE_AUTH_REFRESH_URL: string;
+  readonly VITE_MA_AUTH_REFRESH_URL?: string;
+  readonly VITE_DEV_LOCAL_AUTH?: string;
 }
 
 interface ImportMeta {

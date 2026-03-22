@@ -14,6 +14,12 @@ function InternalOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== "ADMIN") return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
 const KiisRoutes = React.lazy(() => import("@/modules/kiis/KiisRoutes"));
@@ -133,9 +139,11 @@ export default function App() {
           path="analytics/*"
           element={
             <InternalOnlyRoute>
-              <Suspense fallback={<ModuleFallback />}>
-                <AnalyticsRoutes />
-              </Suspense>
+              <AdminOnlyRoute>
+                <Suspense fallback={<ModuleFallback />}>
+                  <AnalyticsRoutes />
+                </Suspense>
+              </AdminOnlyRoute>
             </InternalOnlyRoute>
           }
         />

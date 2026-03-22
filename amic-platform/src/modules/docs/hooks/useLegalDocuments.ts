@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import { extractApiError } from "@/api/errors";
@@ -8,6 +9,8 @@ import type {
 } from "@/modules/docs/types/legal_document";
 
 const BASE = (txnId: string) => `/transactions/${txnId}/legal-documents`;
+const DEV_LOCAL_AUTH_ENABLED =
+  (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
 
 // ── 조회 ──────────────────────────────────────────────────────────────────────
 
@@ -15,8 +18,20 @@ export function useLegalDocuments(txnId: string, active = true) {
   return useQuery<LegalDocument[]>({
     queryKey: ["ma", "legal-documents", txnId],
     queryFn: async () => {
-      const { data } = await maApi.get(BASE(txnId));
-      return data as LegalDocument[];
+      if (DEV_LOCAL_AUTH_ENABLED) {
+        return [];
+      }
+
+      try {
+        const { data } = await maApi.get(BASE(txnId));
+        return data as LegalDocument[];
+      } catch (error: unknown) {
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        if (DEV_LOCAL_AUTH_ENABLED && (status === 401 || status === 403 || status === 404)) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!txnId && active,
     // GENERATING 상태 문서가 있을 때 3초마다 자동 재조회한다

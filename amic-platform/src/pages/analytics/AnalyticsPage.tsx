@@ -12,21 +12,23 @@ import type { AnalyticsTimeRange, AnalyticsModule } from "@/types/analytics";
 import heroImg from "@/assets/images/heroes/hero-arch-diamond.jpg";
 
 export default function AnalyticsPage() {
-  const { hasPermission } = useAuth();
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("30d");
   const [selectedModule, setSelectedModule] = useState<
     AnalyticsModule | "all"
   >("all");
 
-  const { data: health } = useModuleHealth();
+  const { data: health, isLoading: healthLoading } = useModuleHealth();
   const filter = { timeRange, module: selectedModule === "all" ? undefined : selectedModule };
   const { kpis, isLoading: kpisLoading, errors } = useAnalyticsKpis(filter, health);
   const { fddTimeSeries, imTimeSeries, maTimeSeries, isLoading: tsLoading } =
     useAnalyticsTimeSeries(filter, health);
-  const { data: sectorData } = useDealsBySector();
-  const { data: trendData } = useDealTrends();
+  const kiisHealthy =
+    health?.find((module) => module.module === "kiis")?.healthy === true;
+  const { data: sectorData } = useDealsBySector({}, { enabled: kiisHealthy });
+  const { data: trendData } = useDealTrends({}, { enabled: kiisHealthy });
 
-  if (!hasPermission("audit:view")) {
+  if (user?.role !== "ADMIN") {
     return <Navigate to="/" replace />;
   }
 
@@ -52,7 +54,7 @@ export default function AnalyticsPage() {
       {/* KPI Cards */}
       <ModuleKpiSection
         kpis={kpis}
-        isLoading={kpisLoading}
+        isLoading={healthLoading || kpisLoading}
         selectedModule={selectedModule === "all" ? undefined : selectedModule}
         errors={errors}
       />
@@ -68,7 +70,7 @@ export default function AnalyticsPage() {
           pipelineFunnel={kpis.ma.pipelineFunnel}
           sectorData={sectorData}
           trendData={trendData}
-          isLoading={tsLoading}
+          isLoading={healthLoading || tsLoading}
         />
       </div>
     </div>

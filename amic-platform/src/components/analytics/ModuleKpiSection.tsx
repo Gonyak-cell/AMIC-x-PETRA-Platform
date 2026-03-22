@@ -20,13 +20,47 @@ import {
 } from "lucide-react";
 import { KpiCard, KpiCardSkeleton } from "@/components/ui";
 import type { AnalyticsKpis, AnalyticsModule } from "@/types/analytics";
-import type { AnalyticsKpiErrors } from "@/hooks/useAnalytics";
+import type {
+  AnalyticsKpiErrorState,
+  AnalyticsKpiErrors,
+} from "@/hooks/useAnalytics";
 
 interface ModuleKpiSectionProps {
   kpis: AnalyticsKpis;
   isLoading: boolean;
   selectedModule?: AnalyticsModule;
   errors?: AnalyticsKpiErrors;
+}
+
+export function getModuleErrorMessage(
+  moduleLabel: string,
+  error: AnalyticsKpiErrorState | null | undefined,
+): string {
+  switch (error?.kind) {
+    case "unauthorized":
+      return `${moduleLabel} 데이터는 현재 세션에서는 조회할 수 없습니다. 개발 로그인 중이거나 세션 권한이 연결되지 않은 상태일 수 있습니다.`;
+    case "forbidden":
+      return `${moduleLabel} 데이터 조회 권한이 없습니다.`;
+    case "unavailable":
+      return `${moduleLabel} 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.`;
+    case "unreachable":
+    default:
+      return `${moduleLabel} backend is unreachable. Data may be unavailable.`;
+  }
+}
+
+function ModuleErrorBanner({
+  moduleLabel,
+  error,
+}: {
+  moduleLabel: string;
+  error: AnalyticsKpiErrorState | null | undefined;
+}) {
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {getModuleErrorMessage(moduleLabel, error)}
+    </div>
+  );
 }
 
 export function ModuleKpiSection({
@@ -66,9 +100,7 @@ export function ModuleKpiSection({
         <div>
           <h3 className="label-uppercase mb-2">M&A</h3>
           {errors?.ma ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              M&A backend is unreachable. Data may be unavailable.
-            </div>
+            <ModuleErrorBanner moduleLabel="M&A" error={errors.ma} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
@@ -115,9 +147,7 @@ export function ModuleKpiSection({
         <div>
           <h3 className="label-uppercase mb-2">Docs</h3>
           {errors?.docs ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              Docs data is unreachable. Data may be unavailable.
-            </div>
+            <ModuleErrorBanner moduleLabel="Docs" error={errors.docs} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
@@ -160,9 +190,7 @@ export function ModuleKpiSection({
         <div>
           <h3 className="label-uppercase mb-2">FDD</h3>
           {errors?.fdd ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              FDD backend is unreachable. Data may be unavailable.
-            </div>
+            <ModuleErrorBanner moduleLabel="FDD" error={errors.fdd} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
@@ -206,9 +234,7 @@ export function ModuleKpiSection({
         <div>
           <h3 className="label-uppercase mb-2">KIIS</h3>
           {errors?.kiis ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              KIIS backend is unreachable. Data may be unavailable.
-            </div>
+            <ModuleErrorBanner moduleLabel="KIIS" error={errors.kiis} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
@@ -251,9 +277,7 @@ export function ModuleKpiSection({
         <div>
           <h3 className="label-uppercase mb-2">IM</h3>
           {errors?.im ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              IM backend is unreachable. Data may be unavailable.
-            </div>
+            <ModuleErrorBanner moduleLabel="IM" error={errors.im} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard

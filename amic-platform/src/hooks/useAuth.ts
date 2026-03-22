@@ -3,7 +3,7 @@
 import { useContext, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "@/components/auth/AuthContext";
-import api from "@/api/client";
+import { authApi } from "@/api/client";
 import type {
   LoginRequest,
   AuthUser,
@@ -24,14 +24,14 @@ export function useAuth() {
 
   const login = useCallback(
     async (credentials: LoginRequest) => {
-      await api.post<{ message: string }>(
+      await authApi.post<{ message: string }>(
         "/auth/login",
         credentials,
       );
       // 토큰은 쿠키로 자동 설정됨
 
       try {
-        const { data: me } = await api.get<AuthUser>("/auth/me");
+        const { data: me } = await authApi.get<AuthUser>("/auth/me");
         setAuthState({ user: me, isAuthenticated: true, isLoading: false });
       } catch (err) {
         setAuthState({ user: null, isAuthenticated: false, isLoading: false });
@@ -43,7 +43,7 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try {
-      await api.post("/auth/logout");
+      await authApi.post("/auth/logout");
     } finally {
       // 쿠키는 백엔드가 삭제함
       queryClient.clear();
