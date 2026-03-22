@@ -26,6 +26,7 @@ import {
 
 import PhaseWorkspaceHeader from "@/modules/ma/pages/workspace/PhaseWorkspaceHeader";
 import WorkspaceHeaderActionButton from "@/modules/ma/pages/workspace/WorkspaceHeaderActionButton";
+import WorkspaceHeroShortcutRow from "@/modules/ma/pages/workspace/WorkspaceHeroShortcutRow";
 import {
   VALID_TABS,
   useWorkspaceTabs,
@@ -63,6 +64,7 @@ import {
   Spinner,
   Tabs,
 } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
 import TimelineTab from "@/modules/ma/tabs/TimelineTab";
 
@@ -220,15 +222,14 @@ export default function TransactionWorkspacePage() {
     }
   };
 
-  const { tabs, safeActiveTab, tabBarActiveTab, isRailTool } = useWorkspaceTabs(
-    {
+  const { tabs, safeActiveTab, tabBarActiveTab, visibleTabIds, isRailTool } =
+    useWorkspaceTabs({
       summary,
       txnPhase: txn?.phase,
       viewedPhase,
       activeTab,
       baseTab,
-    },
-  );
+    });
   const openVdrUpload = useOpenVdrUpload(id);
   const currentTabLabel =
     tabs.find((tab) => tab.id === tabBarActiveTab)?.label ?? "Previous Page";
@@ -284,10 +285,20 @@ export default function TransactionWorkspacePage() {
       </div>
     );
 
-  const phaseLabel =
-    PHASE_CONFIG.find((p) => p.phase === txn.phase)?.label ?? txn.phase;
+  const canEdit = canWrite();
   const phaseForContent = viewedPhase ?? (txn.phase as TransactionPhase);
+  const phaseLabel =
+    PHASE_CONFIG.find((p) => p.phase === phaseForContent)?.label ??
+    phaseForContent;
   const isCompletionPhase = phaseForContent === "POST_CLOSING";
+  const showOverviewShortcut = visibleTabIds.includes("overview");
+  const heroPhaseTabId = tabs.find((tab) => tab.id !== "overview")?.id;
+  const contentTabs = tabs.filter((tab) => tab.id !== "overview");
+  const contentTabActiveId = contentTabs.some(
+    (tab) => tab.id === tabBarActiveTab,
+  )
+    ? tabBarActiveTab
+    : "";
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -304,11 +315,27 @@ export default function TransactionWorkspacePage() {
             <PhaseWorkspaceHeader
               txnId={id}
               txn={txn}
-              canWrite={canWrite()}
+              canWrite={canEdit}
               isClient={isClient ?? false}
-              activeTab={safeActiveTab}
               surface="hero"
-              onOpenVdrUpload={() =>
+            />
+          </div>
+        }
+        children={
+          <div className="mt-1">
+            <WorkspaceHeroShortcutRow
+              showOverview={showOverviewShortcut}
+              overviewActive={safeActiveTab === "overview"}
+              phaseLabel={phaseLabel}
+              phaseActive={safeActiveTab !== "overview"}
+              onOverviewClick={() => handleTabChange("overview")}
+              onPhaseClick={
+                heroPhaseTabId
+                  ? () => handleTabChange(heroPhaseTabId)
+                  : undefined
+              }
+              showUploadAction={canEdit && !isClient && safeActiveTab !== "vdr"}
+              onUploadClick={() =>
                 openVdrUpload({
                   returnLabel: currentTabLabel,
                 })
@@ -377,17 +404,22 @@ export default function TransactionWorkspacePage() {
       <div className="min-w-0">
         <Card padding="none">
           <div
-            className="flex items-center gap-3 px-5 pt-3"
+            className={cn(
+              "flex items-center gap-3 px-5 pt-3",
+              contentTabs.length === 0 && "justify-end",
+            )}
             data-onboarding="workspace-tabs"
           >
-            <div className="flex-1 min-w-0">
-              <Tabs
-                tabs={tabs}
-                activeTab={tabBarActiveTab}
-                onTabChange={handleTabChange}
-                variant="underline"
-              />
-            </div>
+            {contentTabs.length > 0 && (
+              <div className="flex-1 min-w-0">
+                <Tabs
+                  tabs={contentTabs}
+                  activeTab={contentTabActiveId}
+                  onTabChange={handleTabChange}
+                  variant="underline"
+                />
+              </div>
+            )}
             <div
               className="shrink-0 flex items-center gap-2"
               data-testid="workspace-tabs-actions"
@@ -436,36 +468,36 @@ export default function TransactionWorkspacePage() {
             {/* ── Tab Components (lazy-loaded with Suspense) ── */}
             <Suspense fallback={<Spinner size="lg" />}>
               {safeActiveTab === "engagement" && (
-                <EngagementTab txnId={id} canWrite={canWrite()} />
+                <EngagementTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "buyers" && (
                 <BuyersTab
                   txnId={id}
-                  canWrite={canWrite()}
+                  canWrite={canEdit}
                   headerActionPortalId={WORKSPACE_TAB_HEADER_ACTION_PORTAL_ID}
                 />
               )}
               {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
               {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
               {safeActiveTab === "ndas" && (
-                <NdasTab txnId={id} canWrite={canWrite()} />
+                <NdasTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "bids" && (
-                <BidsTab txnId={id} canWrite={canWrite()} />
+                <BidsTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "dd-checklist" && (
-                <DDChecklistTab txnId={id} canWrite={canWrite()} />
+                <DDChecklistTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "contracts" && (
-                <ContractsTab txnId={id} canWrite={canWrite()} />
+                <ContractsTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "closing" && (
-                <ClosingTab txnId={id} canWrite={canWrite()} />
+                <ClosingTab txnId={id} canWrite={canEdit} />
               )}
               {safeActiveTab === "marketing-materials" && (
                 <MarketingMaterialsTab
                   txnId={id}
-                  canWrite={canWrite()}
+                  canWrite={canEdit}
                   showSourcePreview={false}
                   surface="flat"
                 />
@@ -473,7 +505,7 @@ export default function TransactionWorkspacePage() {
               {safeActiveTab === "models" && (
                 <ModelsTab
                   txnId={id}
-                  canWrite={canWrite()}
+                  canWrite={canEdit}
                   showSourcePreview={false}
                 />
               )}

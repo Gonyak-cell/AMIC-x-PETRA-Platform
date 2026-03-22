@@ -212,25 +212,74 @@ describe("VdrTab", () => {
   it("opens the upload dropzone and return action when entered from another page", async () => {
     installDefaultHandlers();
 
-    renderTab("txn-1", {
+    const { container } = renderTab("txn-1", {
       entryPath: "/ma/transactions/txn-1/vdr",
       entrySearch: "?upload=1",
       entryState: {
         vdrUploadEntry: {
           returnTo: "/ma/transactions/txn-1/buyers",
-          returnLabel: "매수자",
+          returnLabel: "Buyers",
         },
       },
     });
 
     expect(await screen.findByText("Upload to VDR")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Back to 매수자" }),
+      screen.getByRole("button", { name: "Back to Buyers" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
-        name: "파일 드래그 앤 드롭 또는 클릭하여 업로드",
-      }),
-    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(container.querySelector("input[type='file']")).not.toBeNull();
+    });
+  });
+
+  it("keeps the quick upload dropzone open after a drag-and-drop upload completes", async () => {
+    installDefaultHandlers();
+    server.use(
+      http.post("*/api/ma/transactions/:txnId/vdr/uploads", async () =>
+        HttpResponse.json(
+          {
+            results: [],
+            pending_review_count: 0,
+            total_uploaded: 1,
+            failed_files: [],
+          },
+          { status: 201 },
+        ),
+      ),
+    );
+
+    const { container } = renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Quick Upload" })).toBeVisible();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Quick Upload" }));
+
+    const fileInput = await waitFor(() => {
+      const input = container.querySelector("input[type='file']");
+      expect(input).not.toBeNull();
+      return input as HTMLInputElement;
+    });
+    const dropTarget = fileInput.closest("[role='button']");
+    expect(dropTarget).not.toBeNull();
+
+    const file = new File(["hello world"], "teaser.pdf", {
+      type: "application/pdf",
+    });
+
+    fireEvent.dragOver(dropTarget as HTMLElement, {
+      dataTransfer: { files: [file], types: ["Files"] },
+    });
+    fireEvent.drop(dropTarget as HTMLElement, {
+      dataTransfer: { files: [file], types: ["Files"] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector("input[type='file']")).not.toBeNull();
   });
 });

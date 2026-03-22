@@ -70,8 +70,8 @@ export const PHASE_CONFIG: PhaseConfigItem[] = [
 
 // ── Phase <-> Tab 매핑 ────────────────────────────────
 export const PHASE_TAB_MAP: Record<TransactionPhase, string> = {
-  ENGAGEMENT: "overview",
-  PREPARATION: "overview",
+  ENGAGEMENT: "engagement",
+  PREPARATION: "marketing-materials",
   MARKETING: "buyers",
   BIDDING: "bids",
   MOU_SIGNED: "contracts", // deprecated -- 호환성 유지
@@ -110,13 +110,8 @@ export function isRailToolVisible(
 }
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
-  ENGAGEMENT: [...ALWAYS_VISIBLE_TABS, "engagement", "rfi"],
-  PREPARATION: [
-    ...ALWAYS_VISIBLE_TABS,
-    "marketing-materials",
-    "models",
-    "ndas",
-  ],
+  ENGAGEMENT: ["engagement", "rfi"],
+  PREPARATION: ["marketing-materials", "models", "ndas"],
   MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs"],
   BIDDING: [...ALWAYS_VISIBLE_TABS, "bids"],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts"], // deprecated -- 호환성 유지

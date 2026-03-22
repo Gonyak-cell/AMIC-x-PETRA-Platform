@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Pause, Play, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pause, Play, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -20,8 +20,6 @@ interface PhaseWorkspaceHeaderProps {
   txn: { status: string; phase: string; name: string };
   canWrite: boolean;
   isClient: boolean;
-  activeTab: string;
-  onOpenVdrUpload: () => void;
   surface?: "page" | "hero";
 }
 
@@ -30,8 +28,6 @@ export default function PhaseWorkspaceHeader({
   txn,
   canWrite,
   isClient,
-  activeTab,
-  onOpenVdrUpload,
   surface = "page",
 }: PhaseWorkspaceHeaderProps) {
   const navigate = useNavigate();
@@ -43,8 +39,6 @@ export default function PhaseWorkspaceHeader({
 
   const heroGhostButtonClass =
     "text-white/80 hover:text-white hover:bg-white/10 focus:ring-white/25 focus:ring-offset-0";
-  const heroOutlineButtonClass =
-    "border-white/20 bg-white/[0.08] text-white hover:border-white/35 hover:bg-white/[0.14] focus:ring-white/25 focus:ring-offset-0";
   const heroPrimaryButtonClass =
     "bg-accent text-white hover:bg-accent-hover focus:ring-accent focus:ring-offset-0 shadow-none";
 
@@ -89,39 +83,29 @@ export default function PhaseWorkspaceHeader({
           목록
         </Button>
 
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "text-sm font-heading font-semibold",
-              isHero ? "text-white" : "text-text-dark",
-            )}
-          >
-            {currentConfig?.label ?? txn.phase}
-          </span>
-          <Badge
-            variant={TRANSACTION_STATUS_VARIANT[txn.status]}
-            pill
-            className={cn(
-              isHero && "border border-white/15 bg-white/12 text-white",
-            )}
-          >
-            {txn.status}
-          </Badge>
-        </div>
+        {!isHero && (
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "text-sm font-heading font-semibold",
+                isHero ? "text-white" : "text-text-dark",
+              )}
+            >
+              {currentConfig?.label ?? txn.phase}
+            </span>
+            <Badge
+              variant={TRANSACTION_STATUS_VARIANT[txn.status]}
+              pill
+              className={cn(
+                isHero && "border border-white/15 bg-white/12 text-white",
+              )}
+            >
+              {txn.status}
+            </Badge>
+          </div>
+        )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canWrite && activeTab !== "vdr" && (
-            <Button
-              variant="secondary"
-              size={isHero ? "sm" : "md"}
-              icon={Upload}
-              onClick={onOpenVdrUpload}
-              className={cn(isHero && heroOutlineButtonClass)}
-            >
-              Upload to VDR
-            </Button>
-          )}
-
           {canWrite && txn.status === "DRAFT" && (
             <Button
               size={isHero ? "sm" : "md"}

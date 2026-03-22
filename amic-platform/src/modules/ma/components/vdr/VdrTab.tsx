@@ -161,7 +161,6 @@ export default function VdrTab({ txnId }: Props) {
   const handleDirectUploadComplete = useCallback(
     (result: DirectUploadBatchResult) => {
       setDirectUploadResult(result);
-      setShowDirectUpload(false);
       clearUploadQuery();
     },
     [clearUploadQuery],

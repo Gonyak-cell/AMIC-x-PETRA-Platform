@@ -78,11 +78,21 @@ describe("TransactionWorkspacePage", () => {
     });
 
     const heroActions = screen.getByTestId("workspace-hero-actions");
+    const heroShortcuts = screen.getByTestId("workspace-hero-shortcuts");
     const heroSection = screen.getByText("테스트 프로젝트").closest("section");
 
     expect(heroSection).not.toBeNull();
     expect(heroSection).toContainElement(heroActions);
+    expect(heroSection).toContainElement(heroShortcuts);
+    expect(
+      within(heroShortcuts).getByRole("button", { name: "Overview" }),
+    ).toBeInTheDocument();
+    expect(
+      within(heroShortcuts).getByRole("button", { name: "Upload to VDR" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Upload to VDR")).toHaveLength(1);
+    expect(within(heroActions).queryByText("ACTIVE")).not.toBeInTheDocument();
+    expect(within(heroActions).queryByText("마케팅")).not.toBeInTheDocument();
   });
 
   it("거래를 찾을 수 없으면 안내 메시지를 표시한다", async () => {
@@ -318,11 +328,25 @@ describe("TransactionWorkspacePage", () => {
       screen.queryByTestId("workspace-source-preview-hero"),
     ).not.toBeInTheDocument();
 
-    const tabs = screen.getAllByRole("tab");
-    const activeTab = tabs.find(
-      (tab) => tab.getAttribute("aria-selected") === "true",
-    );
-    expect(activeTab?.textContent).toContain("Overview");
+    const tabLabels = screen.queryAllByRole("tab").map((tab) => tab.textContent);
+    expect(tabLabels).not.toContain("Overview");
+    expect(
+      screen.getByTestId("workspace-hero-shortcuts"),
+    ).not.toHaveTextContent("Overview");
+  });
+
+  it("수임/준비 뷰에서는 hero shortcut에 overview를 노출하지 않는다", async () => {
+    renderPage("/ma/transactions/txn-1?viewPhase=ENGAGEMENT");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "테스트 프로젝트" }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByTestId("workspace-hero-shortcuts"),
+    ).not.toHaveTextContent("Overview");
   });
 
   it("marketing materials route에서도 VDR preview hero를 붙이지 않는다", async () => {
@@ -511,8 +535,11 @@ describe("TransactionWorkspacePage", () => {
       ).toBeInTheDocument();
     });
 
-    const tabLabels = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(tabLabels).toEqual(["Overview"]);
+    const tabLabels = screen.queryAllByRole("tab").map((tab) => tab.textContent);
+    expect(tabLabels).toEqual([]);
+    expect(
+      screen.getByTestId("workspace-hero-shortcuts"),
+    ).toHaveTextContent("Overview");
     expect(screen.queryByText("PMI")).not.toBeInTheDocument();
     expect(screen.queryByText("어닝아웃")).not.toBeInTheDocument();
   });
