@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime
 
@@ -15,6 +16,8 @@ from app.models.enums import AuditAction, ClosingCategory, DealType, Transaction
 from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 from app.services import audit_service
+
+logger = logging.getLogger(__name__)
 
 
 def _get_code_prefix(deal_type: DealType) -> str:
@@ -282,12 +285,18 @@ async def create_transaction(
         db.add(ClosingChecklist(transaction_id=txn.id, **item_data))
 
     # VDR 기본 폴더 자동 생성 (12개)
-    from app.services.vdr_service import create_default_folders
-
-    create_default_folders(db, txn.id)
-
     await db.commit()
     await db.refresh(txn)
+
+    # Keep VDR initialization best-effort so transaction creation succeeds
+    # even when downstream VDR setup is temporarily broken.
+    try:
+        from app.services import vdr_service
+
+        await vdr_service.init_vdr_folders(db, txn.id)
+    except Exception:
+        logger.exception("Transaction created without VDR default folders: txn_id=%s", txn.id)
+
     return txn
 
 

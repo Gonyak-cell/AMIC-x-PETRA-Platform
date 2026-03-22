@@ -53,6 +53,41 @@ class FinancialModelOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FinancialModelSourceRoutingDocumentOut(BaseModel):
+    document_id: str
+    original_name: str
+    folder_category: str
+    ddrl_sections: list[str] = Field(default_factory=list)
+    primary_workstream: str
+    workstream_tags: list[str] = Field(default_factory=list)
+    confidence: float
+    requires_manual_review: bool
+    reasons: list[str] = Field(default_factory=list)
+    is_override: bool = False
+    override_note: str | None = None
+    reviewed_by_email: str | None = None
+    reviewed_at: datetime | None = None
+    include_for_financial_model: bool | None = None
+
+
+class FinancialModelSourceRoutingSummaryOut(BaseModel):
+    total_documents: int = 0
+    manual_review_documents: int = 0
+    overridden_documents: int = 0
+    by_primary_workstream: dict[str, int] = Field(default_factory=dict)
+    target_workstreams: list[str] = Field(default_factory=list)
+    included_for_financial_model: int = 0
+    excluded_from_financial_model: int = 0
+
+
+class FinancialModelSourceRoutingPreviewOut(BaseModel):
+    version: str
+    summary: FinancialModelSourceRoutingSummaryOut
+    documents: list[FinancialModelSourceRoutingDocumentOut] = Field(
+        default_factory=list,
+    )
+
+
 # ── FMChecklist ───────────────────────────────────────────────────────────
 
 

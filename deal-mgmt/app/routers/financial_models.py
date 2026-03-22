@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import FinancialModelStatus
+from app.models.enums import FinancialModelStatus, FinancialModelType
 from app.schemas.financial_model import (
     FinancialModelCreate,
     FinancialModelOut,
@@ -21,6 +21,7 @@ from app.schemas.financial_model import (
     FMChecklistItemOut,
     FMChecklistItemUpdate,
     FMChecklistOut,
+    FinancialModelSourceRoutingPreviewOut,
 )
 from app.services import financial_model_service as fm_svc
 from app.services.fm_checklist_service import FMChecklistService
@@ -44,6 +45,17 @@ async def list_models(
 ):
     await check_client_deal_access(db, txn_id, claims)
     return await fm_svc.list_financial_models(db, txn_id)
+
+
+@router.get("/source-routing-preview", response_model=FinancialModelSourceRoutingPreviewOut)
+async def preview_model_source_routing(
+    txn_id: UUID,
+    model_type: FinancialModelType = FinancialModelType.FULL,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    await check_client_deal_access(db, txn_id, claims)
+    return await fm_svc.preview_financial_model_source_routing(db, txn_id, model_type)
 
 
 @router.post("", response_model=FinancialModelOut, status_code=status.HTTP_201_CREATED)

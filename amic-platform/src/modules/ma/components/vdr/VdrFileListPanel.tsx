@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, FolderOpen, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
@@ -32,6 +32,9 @@ interface VdrFileListPanelProps {
   extractionByDocId: Map<string, DocumentExtraction>;
   txnId: string;
   onDrop: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  isDragOver: boolean;
 }
 
 // ── 정렬 로직 ────────────────────────────────────────────
@@ -75,23 +78,21 @@ const COLUMNS: { key: SortColumn; label: string; className: string }[] = [
 
 export default function VdrFileListPanel({
   currentFolderId,
-  subFolders: _subFolders,
+  subFolders,
   documents,
   docsLoading,
-  onNavigate: _onNavigate,
-  onDeleteFolder: _onDeleteFolder,
+  onNavigate,
+  onDeleteFolder,
   onDeleteDoc,
   onStartExtraction,
   onRetryExtraction,
   extractionByDocId,
   txnId,
   onDrop,
+  onDragOver,
+  onDragLeave,
+  isDragOver,
 }: VdrFileListPanelProps) {
-  // 폴더는 좌측 트리에서만 탐색 — 우측 패널은 파일만 표시
-  void _subFolders;
-  void _onNavigate;
-  void _onDeleteFolder;
-
   const [sort, setSort] = useState<SortState>({
     column: "name",
     direction: "asc",
@@ -110,12 +111,16 @@ export default function VdrFileListPanel({
     );
   };
 
-  const isEmpty = documents.length === 0;
+  const hasFolders = subFolders.length > 0;
+  const isEmpty = !hasFolders && documents.length === 0;
 
   return (
     <div
-      className="flex flex-1 flex-col min-w-0"
-      onDragOver={currentFolderId ? (e) => e.preventDefault() : undefined}
+      className={`flex flex-1 min-w-0 flex-col transition-colors ${
+        isDragOver ? "bg-accent/5 ring-2 ring-inset ring-accent/30" : ""
+      }`}
+      onDragOver={currentFolderId ? onDragOver : undefined}
+      onDragLeave={currentFolderId ? onDragLeave : undefined}
       onDrop={currentFolderId ? onDrop : undefined}
     >
       {/* 컬럼 헤더 */}
@@ -148,18 +153,36 @@ export default function VdrFileListPanel({
             불러오는 중...
           </div>
         ) : isEmpty ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
-            <Upload className="h-8 w-8 text-slate-200" />
-            <p className="text-sm">
-              {currentFolderId
-                ? "파일을 드래그하거나 업로드 버튼을 클릭하세요"
-                : "폴더를 선택하세요"}
-            </p>
+          <div className="flex h-full items-center justify-center px-6 py-10">
+            <div className="flex w-full max-w-sm flex-col items-center rounded-2xl border border-slate-200 bg-slate-50/80 px-6 py-7 text-center shadow-sm">
+              {currentFolderId ? (
+                <Upload className="h-7 w-7 text-accent/70" />
+              ) : (
+                <FolderOpen className="h-7 w-7 text-accent/70" />
+              )}
+              <p className="mt-3 text-sm font-semibold text-slate-700">
+                {currentFolderId
+                  ? "이 폴더는 아직 비어 있습니다"
+                  : "둘러볼 폴더를 선택하세요"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {currentFolderId
+                  ? "파일을 드래그하거나 우측 상단 업로드 버튼으로 문서를 추가할 수 있습니다."
+                  : "왼쪽 트리나 아래 목록에서 폴더를 선택하면 문서를 바로 확인할 수 있습니다."}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="py-0.5">
-            {/* 폴더는 좌측 트리에서만 탐색 — 우측 패널은 파일만 표시 */}
-            {/* 파일 */}
+            {subFolders.map((folder) => (
+              <FileListRow
+                key={folder.id}
+                type="folder"
+                folder={folder}
+                onNavigate={onNavigate}
+                onDelete={!folder.is_required ? onDeleteFolder : undefined}
+              />
+            ))}
             {sortedDocs.map((doc) => (
               <FileListRow
                 key={doc.id}

@@ -43,7 +43,7 @@ export default function VdrFolderTreeNode({
         type="button"
         className={`flex w-full items-center gap-1 rounded-md px-1.5 py-1 text-left text-xs transition-colors ${
           isSelected
-            ? "bg-blue-50 font-medium text-blue-700"
+            ? "bg-accent/10 font-medium text-accent"
             : "text-slate-600 hover:bg-slate-50"
         }`}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
@@ -71,7 +71,7 @@ export default function VdrFolderTreeNode({
         )}
 
         <Folder
-          className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-blue-500 fill-blue-100" : "text-amber-400 fill-amber-100"}`}
+          className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "fill-accent/15 text-accent" : "fill-amber-100 text-amber-400"}`}
         />
 
         <span className="min-w-0 truncate">{folder.name}</span>

@@ -1,19 +1,21 @@
 import { Upload } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useQueryClient } from "@tanstack/react-query";
 
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-
 import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
+import { getVdrUploadEntryState } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import {
-  useVdrSummary,
-  useVdrFolders,
   useCreateVdrFolder,
   useDeleteVdrFolder,
+  useVdrFolders,
+  useVdrSummary,
 } from "@/modules/ma/hooks/useVdr";
 import type { DirectUploadBatchResult } from "@/modules/ma/types/vdr";
 
@@ -22,24 +24,73 @@ import DirectUploadResultModal from "./DirectUploadResultModal";
 import DirectUploadZone from "./DirectUploadZone";
 import { VdrAccessDashboard } from "./VdrAccessDashboard";
 import VdrExplorer from "./VdrExplorer";
+import VdrReturnToOriginCard from "./VdrReturnToOriginCard";
+import VdrRoutingTriagePanel from "./VdrRoutingTriagePanel";
 
 interface Props {
   txnId: string;
 }
 
 export default function VdrTab({ txnId }: Props) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const { data: summary, isLoading: summaryLoading } = useVdrSummary(txnId);
   const { data: folders = [], isLoading: foldersLoading } =
     useVdrFolders(txnId);
   const createFolder = useCreateVdrFolder(txnId);
   const deleteFolder = useDeleteVdrFolder(txnId);
+  const uploadEntryRef = useRef<HTMLDivElement | null>(null);
+  const [subTab, setSubTab] = useState<"documents" | "routing" | "access">(
+    "documents",
+  );
+  const [showDirectUpload, setShowDirectUpload] = useState(false);
+  const [directUploadResult, setDirectUploadResult] =
+    useState<DirectUploadBatchResult | null>(null);
 
-  // 기존 미초기화 거래 자동 처리 (최대 3회 재시도, sessionStorage 기반)
   const autoInitRef = useRef(false);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const uploadEntry = getVdrUploadEntryState(location.state);
+  const wantsUploadEntry = searchParams.get("upload") === "1";
+  const canReturnToOrigin = Boolean(uploadEntry?.returnTo);
+
+  const repairVdr = useCallback(
+    async (manual: boolean) => {
+      setIsRepairing(true);
+      setInitError(null);
+      try {
+        await maApi.post(`/transactions/${txnId}/vdr/init`, {});
+        sessionStorage.removeItem(`vdr-init-retry-${txnId}`);
+        autoInitRef.current = false;
+        await qc.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "vdr"],
+        });
+        if (manual) {
+          toast.success("VDR is ready.");
+        }
+      } catch (err: unknown) {
+        autoInitRef.current = false;
+        const message = extractApiError(err, "Failed to initialize VDR.");
+        setInitError(message);
+        if (manual) {
+          toast.error(message);
+        }
+        throw err;
+      } finally {
+        setIsRepairing(false);
+      }
+    },
+    [qc, txnId],
+  );
+
   useEffect(() => {
     const storageKey = `vdr-init-retry-${txnId}`;
-    const retryCount = parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
+    const retryCount = Number.parseInt(
+      sessionStorage.getItem(storageKey) ?? "0",
+      10,
+    );
     if (
       summary &&
       !summary.initialized &&
@@ -50,21 +101,13 @@ export default function VdrTab({ txnId }: Props) {
       sessionStorage.setItem(storageKey, String(retryCount + 1));
       const delay = retryCount > 0 ? Math.min(1000 * 2 ** retryCount, 8000) : 0;
       const timer = window.setTimeout(() => {
-        maApi
-          .post(`/transactions/${txnId}/vdr/init`, {})
-          .then(() => {
-            sessionStorage.removeItem(storageKey);
-            qc.invalidateQueries({
-              queryKey: ["ma", "transactions", txnId, "vdr"],
-            });
-          })
+        repairVdr(false)
           .catch((err: unknown) => {
-            if (import.meta.env.DEV) console.error("[VDR init]", err);
-            autoInitRef.current = false;
+            if (import.meta.env.DEV) {
+              console.error("[VDR init]", err);
+            }
             if (retryCount + 1 >= 3) {
-              toast.error(
-                "VDR 초기화에 실패했습니다. 새로고침 후 다시 시도해 주세요.",
-              );
+              toast.error("VDR setup still needs attention. Use Repair VDR.");
             } else {
               qc.invalidateQueries({
                 queryKey: ["ma", "transactions", txnId, "vdr"],
@@ -74,22 +117,54 @@ export default function VdrTab({ txnId }: Props) {
       }, delay);
       return () => window.clearTimeout(timer);
     }
-  }, [summary, txnId, qc]);
+    return undefined;
+  }, [summary, txnId, qc, repairVdr]);
 
-  const [subTab, setSubTab] = useState<"documents" | "access">("documents");
-  const [showDirectUpload, setShowDirectUpload] = useState(false);
-  const [directUploadResult, setDirectUploadResult] =
-    useState<DirectUploadBatchResult | null>(null);
+  useEffect(() => {
+    if (!summary?.initialized) {
+      setShowDirectUpload(false);
+    }
+  }, [summary?.initialized]);
 
-  const { data: extractionData } = useExtractions(txnId, subTab === "documents");
+  useEffect(() => {
+    if (!wantsUploadEntry) return;
+    setSubTab("documents");
+    if (summary?.initialized) {
+      setShowDirectUpload(true);
+    }
+  }, [summary?.initialized, wantsUploadEntry]);
+
+  useEffect(() => {
+    if (!wantsUploadEntry || !showDirectUpload) return;
+    if (typeof uploadEntryRef.current?.scrollIntoView === "function") {
+      uploadEntryRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [showDirectUpload, wantsUploadEntry]);
+
+  const { data: extractionData } = useExtractions(
+    txnId,
+    subTab === "documents",
+  );
   const extractionCount = extractionData?.total ?? 0;
+  const needsInitialization = Boolean(summary && !summary.initialized);
+
+  const clearUploadQuery = useCallback(() => {
+    if (!searchParams.has("upload")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("upload");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleDirectUploadComplete = useCallback(
     (result: DirectUploadBatchResult) => {
       setDirectUploadResult(result);
       setShowDirectUpload(false);
+      clearUploadQuery();
     },
-    [],
+    [clearUploadQuery],
   );
 
   const handleCreateFolder = useCallback(
@@ -106,76 +181,121 @@ export default function VdrTab({ txnId }: Props) {
     [deleteFolder],
   );
 
-  // ── 로딩 ──────────────────────────────────────────────
+  const handleToggleDirectUpload = useCallback(() => {
+    setShowDirectUpload((current) => {
+      const next = !current;
+      if (!next) {
+        clearUploadQuery();
+      }
+      return next;
+    });
+  }, [clearUploadQuery]);
+
+  const handleReturnToOrigin = useCallback(() => {
+    if (uploadEntry?.returnTo) {
+      navigate(uploadEntry.returnTo);
+      return;
+    }
+    navigate(-1);
+  }, [navigate, uploadEntry]);
+
   if (summaryLoading || foldersLoading) {
     return (
       <Card padding="lg">
         <div className="flex h-64 items-center justify-center text-sm text-slate-400">
-          불러오는 중...
+          Loading VDR...
         </div>
       </Card>
     );
   }
 
-  // ── 초기화 완료 상태 ──────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* 서브탭: 문서 관리 / 접근 현황 */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
-          <button
-            type="button"
-            onClick={() => setSubTab("documents")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              subTab === "documents"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            문서 관리
-          </button>
-          <button
-            type="button"
-            onClick={() => setSubTab("access")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              subTab === "access"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            접근 현황
-          </button>
+          {(
+            [
+              ["documents", "Documents"],
+              ["routing", "Routing"],
+              ["access", "Access"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setSubTab(value)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                subTab === value
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* 빠른 업로드 버튼 */}
-        {summary && subTab === "documents" && (
+        {summary && subTab === "documents" && summary.initialized && (
           <Button
             variant="accent"
             size="sm"
-            onClick={() => setShowDirectUpload(!showDirectUpload)}
+            onClick={handleToggleDirectUpload}
             className="flex items-center gap-1.5 whitespace-nowrap"
           >
             <Upload className="h-4 w-4" />
-            빠른 업로드
+            Quick Upload
           </Button>
         )}
       </div>
 
-      {/* 접근 현황 탭 */}
       {subTab === "access" && <VdrAccessDashboard txnId={txnId} />}
+      {subTab === "routing" && <VdrRoutingTriagePanel txnId={txnId} />}
 
-      {/* 문서 관리 탭 컨텐츠 */}
       {subTab === "documents" && (
         <>
-          {/* 빠른 업로드 영역 (토글) */}
-          {showDirectUpload && (
-            <DirectUploadZone
-              txnId={txnId}
-              onUploadComplete={handleDirectUploadComplete}
+          {canReturnToOrigin && (
+            <VdrReturnToOriginCard
+              returnLabel={uploadEntry?.returnLabel}
+              onReturn={handleReturnToOrigin}
             />
           )}
 
-          {/* 파일 탐색기 */}
+          {needsInitialization && (
+            <Card padding="md" className="border border-amber-200 bg-amber-50">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-900">
+                    VDR setup is incomplete.
+                  </p>
+                  <p className="text-sm text-amber-800">
+                    Default folders are being repaired before uploads resume.
+                    {initError ? ` ${initError}` : ""}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    void repairVdr(true);
+                  }}
+                  disabled={isRepairing}
+                >
+                  {isRepairing ? "Repairing..." : "Repair VDR"}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <div ref={uploadEntryRef}>
+            {summary?.initialized && showDirectUpload && (
+              <DirectUploadZone
+                txnId={txnId}
+                onUploadComplete={handleDirectUploadComplete}
+              />
+            )}
+          </div>
+
           <Card padding="none" className="overflow-hidden">
             <VdrExplorer
               txnId={txnId}
@@ -186,11 +306,10 @@ export default function VdrTab({ txnId }: Props) {
             />
           </Card>
 
-          {/* AI 분석 결과 */}
           {extractionCount > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-slate-700">
-                AI 문서 분석 결과
+                AI Extraction Results
               </h3>
               <ExtractionList txnId={txnId} />
             </div>
@@ -198,7 +317,6 @@ export default function VdrTab({ txnId }: Props) {
         </>
       )}
 
-      {/* Direct Upload 결과 모달 */}
       {directUploadResult && (
         <DirectUploadResultModal
           open={directUploadResult !== null}

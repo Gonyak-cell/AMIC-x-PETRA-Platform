@@ -115,6 +115,7 @@ from app.models.io_transaction import IOTransaction
 from app.models.ksic_classification import KsicClassification
 from app.models.ksic_io_mapping import KsicIoMapping
 from app.models.ldd_report import LDDReport
+from app.models.ldd_evidence_record import LDDEvidenceRecord
 from app.models.ldd_vdr_reference import LddVdrReference
 from app.models.legal_document import LegalDocument
 from app.models.marketing_material import MarketingMaterial
@@ -144,6 +145,7 @@ from app.models.vc_company import VcCompany
 from app.models.vc_industry_coefficient import VcIndustryCoefficient
 from app.models.vdr_access_log import VdrAccessLog
 from app.models.vdr_document import VdrDocument
+from app.models.vdr_document_routing_override import VdrDocumentRoutingOverride
 from app.models.vdr_folder import VdrFolder
 from app.models.vdr_text_cache import VdrTextCache
 from app.models.working_group import WorkingGroupMember
@@ -223,6 +225,7 @@ __all__ = [
     "KsicIoMapping",
     "LDDIssueLevel",
     "LDDItemStatus",
+    "LDDEvidenceRecord",
     "LDDReport",
     "LDDReportStatus",
     "LDDReportType",
@@ -294,6 +297,7 @@ __all__ = [
     "VdrAccessLog",
     "VdrClassificationStatus",
     "VdrDocument",
+    "VdrDocumentRoutingOverride",
     "VdrDocumentStatus",
     "VdrFolder",
     "VdrFolderCategory",

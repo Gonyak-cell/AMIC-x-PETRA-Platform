@@ -1,7 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Check, X, Pencil, AlertTriangle, Flag, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { FMChecklistItem, FMChecklistItemStatus } from "@/modules/ma/types/financial_model";
+import type {
+  FMChecklistItem,
+  FMChecklistItemStatus,
+  FMChecklistSourceMetadata,
+} from "@/modules/ma/types/financial_model";
 import {
   FM_ITEM_STATUS_LABELS,
   FM_ITEM_STATUS_COLORS,
@@ -21,6 +25,28 @@ function confidenceColor(value: number): string {
   if (value >= 0.8) return "bg-positive";
   if (value >= 0.5) return "bg-amber-400";
   return "bg-negative";
+}
+
+function getSourceMetadata(item: FMChecklistItem): FMChecklistSourceMetadata | null {
+  if (!item.extra_metadata || typeof item.extra_metadata !== "object") {
+    return null;
+  }
+  return item.extra_metadata;
+}
+
+function formatWorkstreamName(value: string): string {
+  switch (value) {
+    case "FDD":
+      return "FDD";
+    case "VALUATION":
+      return "Valuation";
+    case "LDD":
+      return "LDD";
+    case "COMMON":
+      return "Common";
+    default:
+      return value;
+  }
 }
 
 export default function FMChecklistItemCard({ item, onUpdate, isUpdating = false }: Props) {
@@ -73,6 +99,13 @@ export default function FMChecklistItemCard({ item, onUpdate, isUpdating = false
   const isReviewed = item.status === "CONFIRMED" || item.status === "CORRECTED";
   const displayValue = item.user_value ?? item.auto_value;
   const unitSuffix = item.unit ? ` ${item.unit}` : "";
+  const sourceMetadata = getSourceMetadata(item);
+  const workstreamTags = Array.isArray(sourceMetadata?.workstream_tags)
+    ? sourceMetadata.workstream_tags
+    : [];
+  const routingReasons = Array.isArray(sourceMetadata?.routing_reasons)
+    ? sourceMetadata.routing_reasons
+    : [];
 
   return (
     <tr
@@ -187,10 +220,47 @@ export default function FMChecklistItemCard({ item, onUpdate, isUpdating = false
       {/* VDR Source */}
       <td className="px-4 py-3 text-xs text-text-secondary">
         {item.source_vdr_doc_name ? (
-          <div>
+          <div className="space-y-1">
             <span className="font-medium">{item.source_vdr_doc_name}</span>
             {item.source_location && (
               <span className="block text-[10px]">{item.source_location}</span>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {sourceMetadata?.primary_workstream && (
+                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                  {formatWorkstreamName(sourceMetadata.primary_workstream)}
+                </span>
+              )}
+              {workstreamTags
+                .filter((tag) => tag !== sourceMetadata?.primary_workstream)
+                .slice(0, 2)
+                .map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700"
+                  >
+                    {formatWorkstreamName(tag)}
+                  </span>
+                ))}
+              {sourceMetadata?.requires_manual_review && (
+                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">
+                  Manual review
+                </span>
+              )}
+            </div>
+            {(sourceMetadata?.routing_confidence != null || routingReasons.length > 0) && (
+              <div className="space-y-0.5">
+                {sourceMetadata?.routing_confidence != null && (
+                  <span className="block text-[10px] text-text-secondary">
+                    Routing {Math.round(sourceMetadata.routing_confidence * 100)}%
+                  </span>
+                )}
+                {routingReasons.length > 0 && (
+                  <span className="block text-[10px] text-text-secondary/80">
+                    {routingReasons.slice(0, 2).join(" · ")}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         ) : (

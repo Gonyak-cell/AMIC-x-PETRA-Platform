@@ -4,7 +4,8 @@ import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { gsap } from "@/lib/gsap";
-import EngagementDocUpload from "@/modules/ma/components/overview/EngagementDocUpload";
+import VdrUploadShortcutCard from "@/modules/ma/components/vdr/VdrUploadShortcutCard";
+import { useOpenVdrUpload } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import {
   useBulkAddVcBuyers,
   useSICompanyByName,
@@ -30,6 +31,7 @@ export default function SIMappingPanel({
   onClose,
   corporateInfo,
 }: SIMappingPanelProps) {
+  const openVdrUpload = useOpenVdrUpload(txnId);
   // 딥다이브 — 기업명 기반 조회 (VC 기업 integer PK → SI 기업 UUID 변환)
   const [deepDiveName, setDeepDiveName] = useState<string | null>(null);
   const siLookup = useSICompanyByName(deepDiveName);
@@ -276,7 +278,12 @@ export default function SIMappingPanel({
                     업데이트됩니다.
                   </p>
                 </div>
-                <EngagementDocUpload txnId={txnId} />
+                <VdrUploadShortcutCard
+                  title="분석에 필요한 문서를 VDR에서 업로드하세요"
+                  description="법인등기부나 사업자등록증을 올리면 회사 정보와 Value Chain 매핑이 자동으로 갱신됩니다."
+                  onOpen={() => openVdrUpload({ returnLabel: "Buyer Mapping" })}
+                  className="border-amber-300 bg-white/80"
+                />
               </div>
             )}
 

@@ -70,3 +70,36 @@ class MarketingMaterialOut(BaseModel):
         return self.quality_status == "PASS"
 
     model_config = {"from_attributes": True}
+
+
+class MarketingMaterialSourceRoutingDocumentOut(BaseModel):
+    document_id: uuid.UUID
+    original_name: str
+    folder_category: str
+    ddrl_sections: list[str] = Field(default_factory=list)
+    primary_workstream: str
+    workstream_tags: list[str] = Field(default_factory=list)
+    confidence: float
+    requires_manual_review: bool
+    reasons: list[str] = Field(default_factory=list)
+    is_override: bool = False
+    override_note: str | None = None
+    reviewed_by_email: str | None = None
+    reviewed_at: str | None = None
+    include_for_marketing_material: bool = False
+
+
+class MarketingMaterialSourceRoutingSummaryOut(BaseModel):
+    total_documents: int
+    included_for_marketing_material: int
+    excluded_from_marketing_material: int
+    manual_review_documents: int
+    overridden_documents: int = 0
+    by_primary_workstream: dict[str, int] = Field(default_factory=dict)
+    target_workstreams: list[str] = Field(default_factory=list)
+
+
+class MarketingMaterialSourceRoutingPreviewOut(BaseModel):
+    version: str
+    summary: MarketingMaterialSourceRoutingSummaryOut
+    documents: list[MarketingMaterialSourceRoutingDocumentOut] = Field(default_factory=list)

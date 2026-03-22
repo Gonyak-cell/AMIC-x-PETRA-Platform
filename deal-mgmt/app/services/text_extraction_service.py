@@ -20,6 +20,7 @@ from app.models.vdr_text_cache import VdrTextCache
 from app.ralph.parsers import parse_file
 from app.ralph.parsers.base import ParsedFile, ParsedTable
 from app.ralph.parsers.file_classifier import classify_file
+from app.services.evidence_store_service import replace_document_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ class TextExtractionService:
         db: AsyncSession,
         transaction_id: uuid.UUID,
         folder_ids: list[uuid.UUID] | None = None,
+        document_ids: list[uuid.UUID] | None = None,
     ) -> list[VdrSourceFile]:
         """VDR 문서를 ParsedFile로 변환한다 (캐시 활용).
 
@@ -66,6 +68,7 @@ class TextExtractionService:
             db: 데이터베이스 세션
             transaction_id: 거래 ID
             folder_ids: 특정 폴더만 추출 (None이면 전체)
+            document_ids: 특정 문서만 추출 (None이면 전체)
 
         Returns:
             VdrSourceFile 리스트 (ParsedFile + VDR 메타데이터)
@@ -81,6 +84,8 @@ class TextExtractionService:
         )
         if folder_ids:
             stmt = stmt.where(VdrDocument.folder_id.in_(folder_ids))
+        if document_ids:
+            stmt = stmt.where(VdrDocument.id.in_(document_ids))
 
         result = await db.execute(stmt)
         rows = result.all()
@@ -120,7 +125,15 @@ class TextExtractionService:
 
         if cache and cache.sha256_hash == doc.sha256_hash and cache.is_valid:
             logger.debug("캐시 히트: %s (hash=%s)", doc.original_name, doc.sha256_hash[:8])
-            return self._cache_to_parsed_file(cache, doc)
+            parsed = self._cache_to_parsed_file(cache, doc)
+            await replace_document_chunks(
+                db,
+                transaction_id=doc.transaction_id,
+                vdr_document_id=doc.id,
+                vdr_text_cache_id=cache.id,
+                chunks=list((parsed.metadata or {}).get("chunks") or []),
+            )
+            return parsed
 
         logger.debug("캐시 미스: %s → 추출 시작", doc.original_name)
         return await self._extract_and_cache(db, doc, existing_cache=cache)
@@ -132,14 +145,17 @@ class TextExtractionService:
             for t in cache.tables_json:
                 tables.append(ParsedTable(headers=t.get("headers", []), rows=t.get("rows", [])))
 
-        return ParsedFile(
+        parsed = ParsedFile(
             source_path=doc.file_path or "",
             file_type=cache.file_type,
             text=cache.extracted_text or "",
             tables=tables,
+            metadata={"chunks": cache.chunks_json or []},
             ddrl_sections=cache.ddrl_sections or [],
             parse_error=cache.parse_error,
         )
+        self._ensure_trace_chunks(parsed)
+        return parsed
 
     async def _extract_and_cache(
         self,
@@ -155,11 +171,13 @@ class TextExtractionService:
 
         # DDRL 섹션 분류
         parsed.ddrl_sections = classify_file(file_path, parsed)
+        self._ensure_trace_chunks(parsed)
 
         # 테이블 직렬화
         tables_data = None
         if parsed.tables:
             tables_data = [{"headers": t.headers, "rows": t.rows} for t in parsed.tables]
+        chunks_data = list((parsed.metadata or {}).get("chunks") or [])
 
         # 파일 타입 추출
         ext = doc.original_name.rsplit(".", 1)[-1].lower() if "." in doc.original_name else "unknown"
@@ -170,6 +188,7 @@ class TextExtractionService:
             existing_cache.file_type = ext
             existing_cache.extracted_text = parsed.text
             existing_cache.tables_json = tables_data
+            existing_cache.chunks_json = chunks_data
             existing_cache.ddrl_sections = parsed.ddrl_sections
             existing_cache.parse_error = parsed.parse_error
             existing_cache.text_length = len(parsed.text)
@@ -182,6 +201,7 @@ class TextExtractionService:
                 file_type=ext,
                 extracted_text=parsed.text,
                 tables_json=tables_data,
+                chunks_json=chunks_data,
                 ddrl_sections=parsed.ddrl_sections,
                 parse_error=parsed.parse_error,
                 text_length=len(parsed.text),
@@ -190,7 +210,82 @@ class TextExtractionService:
             db.add(cache)
 
         await db.flush()
+        cache_record = existing_cache or cache
+        await replace_document_chunks(
+            db,
+            transaction_id=doc.transaction_id,
+            vdr_document_id=doc.id,
+            vdr_text_cache_id=cache_record.id if cache_record else None,
+            chunks=chunks_data,
+        )
         return parsed
+
+    def _ensure_trace_chunks(self, parsed: ParsedFile) -> None:
+        metadata = dict(parsed.metadata or {})
+        existing_chunks = list(metadata.get("chunks") or [])
+        if existing_chunks:
+            metadata["chunks"] = existing_chunks
+            parsed.metadata = metadata
+            return
+
+        text = parsed.text or ""
+        if not text.strip():
+            parsed.metadata = metadata
+            return
+
+        chunks: list[dict] = []
+        if parsed.file_type == "pdf":
+            current_page: int | None = None
+            current_lines: list[str] = []
+            ordinal = 0
+            for raw_line in text.splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                if line.startswith("[") and line.endswith("]"):
+                    if current_lines:
+                        ordinal += 1
+                        chunks.append(
+                            {
+                                "chunk_id": f"page-{current_page or ordinal}",
+                                "locator_type": "page",
+                                "page": current_page,
+                                "ordinal": ordinal,
+                                "text": "\n".join(current_lines),
+                            }
+                        )
+                        current_lines = []
+                    try:
+                        current_page = int(line.split()[-1].rstrip("]"))
+                    except ValueError:
+                        current_page = None
+                    continue
+                current_lines.append(line)
+            if current_lines:
+                ordinal += 1
+                chunks.append(
+                    {
+                        "chunk_id": f"page-{current_page or ordinal}",
+                        "locator_type": "page",
+                        "page": current_page,
+                        "ordinal": ordinal,
+                        "text": "\n".join(current_lines),
+                    }
+                )
+        else:
+            for ordinal, part in enumerate((line.strip() for line in text.splitlines() if line.strip()), start=1):
+                chunks.append(
+                    {
+                        "chunk_id": f"chunk-{ordinal}",
+                        "locator_type": "paragraph",
+                        "paragraph": ordinal,
+                        "ordinal": ordinal,
+                        "text": part,
+                    }
+                )
+
+        metadata["chunks"] = chunks
+        parsed.metadata = metadata
 
 
 def build_source_map(

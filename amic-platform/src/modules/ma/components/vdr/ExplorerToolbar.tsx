@@ -116,11 +116,11 @@ export default function ExplorerToolbar({
           <FolderPlus className="h-3.5 w-3.5" />새 폴더
         </Button>
         <Button
-          variant="secondary"
+          variant="accent"
           size="sm"
           disabled={currentFolderId === null || isUploading}
           onClick={onUploadClick}
-          className="flex items-center gap-1 text-xs"
+          className="flex items-center gap-1 text-xs shadow-glow-green"
         >
           <Upload className="h-3.5 w-3.5" />
           업로드

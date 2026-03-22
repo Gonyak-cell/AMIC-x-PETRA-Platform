@@ -5,11 +5,30 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import get_jwt_claims
+from app.main import app
+from app.models.enums import VdrFolderCategory
+from app.models.vdr_folder import VdrFolder
+from tests.conftest import _override_get_jwt_claims, make_claims
 
 pytestmark = pytest.mark.anyio
 
 
 # ── Init ─────────────────────────────────────────────────────
+
+
+def _set_claims(*, role: str, email: str) -> None:
+    async def _override():
+        return make_claims(role=role, email=email)
+
+    app.dependency_overrides[get_jwt_claims] = _override
+
+
+def _restore_claims() -> None:
+    app.dependency_overrides[get_jwt_claims] = _override_get_jwt_claims
 
 
 class TestVdrInit:
@@ -29,15 +48,59 @@ class TestVdrInit:
         assert "LEGAL" in categories
         assert "TAX" in categories
 
-    async def test_init_vdr_duplicate_returns_400(self, client: AsyncClient, transaction_id: str):
+    async def test_init_vdr_duplicate_is_idempotent(self, client: AsyncClient, transaction_id: str):
         """이미 자동 초기화된 거래에 init 호출 시 400 반환."""
         resp = await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
-        assert resp.status_code == 400
+        assert resp.status_code == 201
+        assert len(resp.json()) == 12
+
+    async def test_init_vdr_repairs_missing_default_folders(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+        async_session: AsyncSession,
+    ):
+        txn_uuid = uuid.UUID(transaction_id)
+        await async_session.execute(
+            delete(VdrFolder).where(
+                VdrFolder.transaction_id == txn_uuid,
+                VdrFolder.parent_id.is_(None),
+                VdrFolder.category == VdrFolderCategory.LEGAL,
+            )
+        )
+        await async_session.commit()
+
+        summary_before = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
+        assert summary_before.status_code == 200
+        assert summary_before.json()["initialized"] is False
+
+        repair_resp = await client.post(f"/api/v1/transactions/{transaction_id}/vdr/init")
+        assert repair_resp.status_code == 201
+        assert len(repair_resp.json()) == 12
+
+        summary_after = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
+        assert summary_after.status_code == 200
+        assert summary_after.json()["initialized"] is True
 
     async def test_init_vdr_invalid_txn_returns_404(self, client: AsyncClient):
         fake_id = str(uuid.uuid4())
         resp = await client.post(f"/api/v1/transactions/{fake_id}/vdr/init")
         assert resp.status_code == 404
+
+    async def test_vdr_summary_and_folders_allow_internal_workspace_user(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+    ):
+        _set_claims(role="ANALYST", email="teammate@amic.kr")
+        try:
+            summary_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
+            folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+        finally:
+            _restore_claims()
+
+        assert summary_resp.status_code == 200
+        assert folders_resp.status_code == 200
 
 
 # ── Folder CRUD ──────────────────────────────────────────────
@@ -146,6 +209,95 @@ class TestVdrDocuments:
             files={"file": ("test.exe", io.BytesIO(b"MZ"), "application/x-msdownload")},
         )
         assert resp.status_code == 400
+
+    async def test_folder_upload_repairs_missing_default_folders(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+        async_session: AsyncSession,
+    ):
+        folders_resp = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/folders")
+        corporate_folder_id = next(
+            folder["id"] for folder in folders_resp.json() if folder["category"] == "CORPORATE"
+        )
+
+        txn_uuid = uuid.UUID(transaction_id)
+        await async_session.execute(
+            delete(VdrFolder).where(
+                VdrFolder.transaction_id == txn_uuid,
+                VdrFolder.parent_id.is_(None),
+                VdrFolder.category == VdrFolderCategory.LEGAL,
+            )
+        )
+        await async_session.commit()
+
+        summary_before = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
+        assert summary_before.status_code == 200
+        assert summary_before.json()["initialized"] is False
+
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/folders/{corporate_folder_id}/documents",
+            files={"file": ("manual-upload.pdf", io.BytesIO(b"%PDF-1.4 content"), "application/pdf")},
+        )
+        assert resp.status_code == 201
+
+        summary_after = await client.get(f"/api/v1/transactions/{transaction_id}/vdr/summary")
+        assert summary_after.status_code == 200
+        assert summary_after.json()["initialized"] is True
+
+    async def test_direct_upload_repairs_missing_folders(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+        async_session: AsyncSession,
+    ):
+        txn_uuid = uuid.UUID(transaction_id)
+        await async_session.execute(
+            delete(VdrFolder).where(VdrFolder.transaction_id == txn_uuid)
+        )
+        await async_session.commit()
+
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/direct-upload",
+            files=[("files", ("legal-memo.pdf", io.BytesIO(b"%PDF-1.4 content"), "application/pdf"))],
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["total_uploaded"] + len(data["failed_files"]) == 1
+        assert all("초기화" not in failed["reason"] for failed in data["failed_files"])
+
+    async def test_unified_upload_route_supports_manual_folder_upload(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+    ):
+        folder_id = await self._init_and_get_folder(client, transaction_id)
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/uploads",
+            data={"folder_id": folder_id},
+            files=[("files", ("manual.pdf", io.BytesIO(b"%PDF-1.4 content"), "application/pdf"))],
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["total_uploaded"] == 1
+        assert data["pending_review_count"] == 0
+        assert data["results"][0]["routed_folder"]["id"] == folder_id
+        assert data["results"][0]["classification_status"] == "DIRECT"
+
+    async def test_unified_upload_route_supports_auto_routing(
+        self,
+        client: AsyncClient,
+        transaction_id: str,
+    ):
+        resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/uploads",
+            files=[("files", ("legal-memo.pdf", io.BytesIO(b"%PDF-1.4 content"), "application/pdf"))],
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["total_uploaded"] == 1
+        assert len(data["results"]) == 1
+        assert data["results"][0]["document"]["original_name"].startswith("legal-memo")
 
     async def test_list_folder_documents(self, client: AsyncClient, transaction_id: str):
         folder_id = await self._init_and_get_folder(client, transaction_id)
@@ -481,6 +633,62 @@ class TestClassificationStatus:
         )
         assert resp.status_code == 400
         assert "최대" in resp.json()["detail"]
+
+
+class TestVdrRoutingTriage:
+    async def test_routing_queue_and_override_flow(self, client: AsyncClient, transaction_id: str):
+        create_folder_resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/folders",
+            json={"name": "Routing Review", "category": "CUSTOM"},
+        )
+        assert create_folder_resp.status_code == 201
+        folder_id = create_folder_resp.json()["id"]
+
+        upload_resp = await client.post(
+            f"/api/v1/transactions/{transaction_id}/vdr/folders/{folder_id}/documents",
+            files={"file": ("board_pack_notes.txt", io.BytesIO(b"General overview only."), "text/plain")},
+        )
+        assert upload_resp.status_code == 201
+        doc_id = upload_resp.json()["id"]
+
+        queue_resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
+            params={"status": "open"},
+        )
+        assert queue_resp.status_code == 200
+        open_items = queue_resp.json()["items"]
+        queue_item = next(item for item in open_items if item["document"]["id"] == doc_id)
+        assert queue_item["routing_status"] == "OPEN_REVIEW"
+        assert queue_item["effective_route"]["requires_manual_review"] is True
+
+        override_resp = await client.put(
+            f"/api/v1/transactions/{transaction_id}/vdr/documents/{doc_id}/routing-override",
+            json={
+                "primary_workstream": "LDD",
+                "workstream_tags": ["LDD"],
+                "override_note": "Reviewed and confirmed as legal source.",
+            },
+        )
+        assert override_resp.status_code == 200
+        assert override_resp.json()["primary_workstream"] == "LDD"
+
+        reviewed_resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
+            params={"status": "reviewed"},
+        )
+        assert reviewed_resp.status_code == 200
+        reviewed_item = next(item for item in reviewed_resp.json()["items"] if item["document"]["id"] == doc_id)
+        assert reviewed_item["routing_status"] == "OVERRIDDEN"
+        assert reviewed_item["effective_route"]["is_override"] is True
+        assert reviewed_item["effective_route"]["primary_workstream"] == "LDD"
+        assert reviewed_item["effective_route"]["override_note"] == "Reviewed and confirmed as legal source."
+
+        reopen_resp = await client.get(
+            f"/api/v1/transactions/{transaction_id}/vdr/routing-queue",
+            params={"status": "open"},
+        )
+        assert reopen_resp.status_code == 200
+        assert all(item["document"]["id"] != doc_id for item in reopen_resp.json()["items"])
 
 
 class TestVdrAutoUpload:

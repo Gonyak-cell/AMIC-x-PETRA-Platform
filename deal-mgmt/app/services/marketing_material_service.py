@@ -14,6 +14,16 @@ from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import MarketingDocStatus, MarketingDocType
 from app.models.marketing_material import MarketingMaterial
 from app.schemas.marketing_material import DistributionUpdate, MarketingMaterialCreate
+from app.services.text_extraction_service import TextExtractionService
+from app.services.vdr_routing_service import get_routing_override_map
+from app.services.workstream_router_service import (
+    COMMON_WORKSTREAM,
+    FDD_WORKSTREAM,
+    VALUATION_WORKSTREAM,
+    build_workstream_routing_summary,
+    is_source_allowed_for_any_workstream,
+    route_vdr_sources,
+)
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum"
 
@@ -104,6 +114,12 @@ _TYPE_MAP: dict[MarketingDocType, str] = {
     MarketingDocType.IM: "im",
 }
 
+_MARKETING_DOC_TARGET_WORKSTREAMS: dict[MarketingDocType, tuple[str, ...]] = {
+    MarketingDocType.TM: (COMMON_WORKSTREAM, VALUATION_WORKSTREAM),
+    MarketingDocType.DM: (COMMON_WORKSTREAM, VALUATION_WORKSTREAM),
+    MarketingDocType.IM: (COMMON_WORKSTREAM, VALUATION_WORKSTREAM, FDD_WORKSTREAM),
+}
+
 
 def _validate_prerequisites(body: MarketingMaterialCreate) -> list[str]:
     """Celery 태스크 진입 전 필수 요소를 검증하여 누락 사유를 반환한다."""
@@ -113,6 +129,54 @@ def _validate_prerequisites(body: MarketingMaterialCreate) -> list[str]:
     if body.doc_type not in _TYPE_MAP:
         errors.append(f"지원하지 않는 doc_type입니다: {body.doc_type.value}")
     return errors
+
+
+def _get_marketing_material_target_workstreams(doc_type: MarketingDocType) -> tuple[str, ...]:
+    return _MARKETING_DOC_TARGET_WORKSTREAMS.get(
+        doc_type,
+        (COMMON_WORKSTREAM, VALUATION_WORKSTREAM),
+    )
+
+
+def _build_marketing_material_source_routing(
+    routed_sources: list,
+    target_workstreams: tuple[str, ...],
+) -> dict:
+    summary = build_workstream_routing_summary(routed_sources)
+    included_ids = {
+        str(routed.source.vdr_document_id)
+        for routed in routed_sources
+        if is_source_allowed_for_any_workstream(routed, target_workstreams)
+    }
+    summary["summary"]["target_workstreams"] = list(target_workstreams)
+    summary["summary"]["included_for_marketing_material"] = len(included_ids)
+    summary["summary"]["excluded_from_marketing_material"] = len(routed_sources) - len(included_ids)
+    for document in summary["documents"]:
+        document["include_for_marketing_material"] = document["document_id"] in included_ids
+    return summary
+
+
+async def preview_marketing_material_source_routing(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    doc_type: MarketingDocType,
+) -> dict:
+    target_workstreams = _get_marketing_material_target_workstreams(doc_type)
+    source_files = await TextExtractionService().extract_from_vdr_documents(
+        db,
+        transaction_id,
+    )
+    if not source_files:
+        return _build_marketing_material_source_routing([], target_workstreams)
+
+    document_ids = [source.vdr_document_id for source in source_files]
+    routing_overrides = await get_routing_override_map(
+        db,
+        transaction_id,
+        document_ids=document_ids,
+    )
+    routed_sources = route_vdr_sources(source_files, overrides=routing_overrides)
+    return _build_marketing_material_source_routing(routed_sources, target_workstreams)
 
 
 # ── CRUD ─────────────────────────────────────────────────────────

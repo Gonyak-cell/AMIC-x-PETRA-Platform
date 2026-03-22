@@ -2,6 +2,10 @@
 
 import pytest
 
+from app.core.security import get_jwt_claims
+from app.main import app
+from tests.conftest import _override_get_jwt_claims, make_claims
+
 SAMPLE_TXN = {
     "name": "마케팅자료 테스트 거래",
     "deal_type": "SE",
@@ -75,11 +79,53 @@ async def _other_txn(client):
     return resp.json()
 
 
+def _set_claims(*, role: str, email: str) -> None:
+    async def _override():
+        return make_claims(role=role, email=email)
+
+    app.dependency_overrides[get_jwt_claims] = _override
+
+
+def _restore_claims() -> None:
+    app.dependency_overrides[get_jwt_claims] = _override_get_jwt_claims
+
+
 @pytest.mark.asyncio
 async def test_list_marketing_materials_empty(client, _txn):
     """빈 마케팅 자료 목록 조회."""
     txn_id = _txn["id"]
     resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_preview_marketing_material_source_routing_empty(client, _txn):
+    """VDR 臾몄꽌媛 ?놁쑝硫?留덉????먮즺 source preview媛 鍮?寃곌낵瑜?諛섑솚?쒕떎."""
+    txn_id = _txn["id"]
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/source-routing-preview",
+        params={"doc_type": "IM"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["summary"]["target_workstreams"] == ["COMMON", "VALUATION", "FDD"]
+    assert data["summary"]["total_documents"] == 0
+    assert data["summary"]["included_for_marketing_material"] == 0
+    assert data["summary"]["excluded_from_marketing_material"] == 0
+    assert data["documents"] == []
+
+
+@pytest.mark.asyncio
+async def test_list_marketing_materials_allows_internal_workspace_user(client, _txn):
+    """리드 어드바이저가 아닌 내부 사용자도 워크스페이스 기준으로 조회 가능해야 한다."""
+    txn_id = _txn["id"]
+    _set_claims(role="ANALYST", email="teammate@amic.kr")
+    try:
+        resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials")
+    finally:
+        _restore_claims()
+
     assert resp.status_code == 200
     assert resp.json() == []
 

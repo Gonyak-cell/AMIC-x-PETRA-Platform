@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,99 +68,119 @@ class _PreparedFile:
     routed_category: VdrFolderCategory | None
 
 
-@router.post("/suggest-category", response_model=SuggestCategoryResponse)
-async def suggest_folder_category(
+async def _prepare_vdr_upload_context(
+    db: AsyncSession,
     txn_id: uuid.UUID,
-    body: SuggestCategoryRequest,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(get_jwt_claims),
-) -> SuggestCategoryResponse:
-    """파일명을 분석하여 적합한 VDR 폴더 카테고리를 추천한다."""
+    claims: JWTClaims,
+) -> None:
     await _get_and_authorize_txn(db, txn_id, claims)
-
-    from app.services.vdr_categorization_service import suggest_category
-
-    category = suggest_category(body.filename)
-    if category is None:
-        return SuggestCategoryResponse(category=None, folder_name=None)
-
-    folder = await vdr_service.resolve_folder_by_category(db, txn_id, category)
-
-    return SuggestCategoryResponse(
-        category=category.value,
-        folder_name=folder.name if folder else None,
-    )
-
-
-@router.post(
-    "/documents/auto-upload",
-    response_model=VdrAutoUploadResult,
-    status_code=status.HTTP_201_CREATED,
-)
-async def auto_upload_document(
-    txn_id: uuid.UUID,
-    file: UploadFile,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
-):
-    """파일을 분석하여 적합한 VDR 폴더에 자동으로 업로드한다."""
-    await _get_and_authorize_txn(db, txn_id, claims)
+    await vdr_service.init_vdr_folders(db, txn_id)
     _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
-    filename, _ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(file)
-
-    try:
-        doc, folder, routed_category = await vdr_service.auto_upload_document_stream(
-            db=db,
-            transaction_id=txn_id,
-            original_name=filename,
-            file_obj=file,
-            file_size=file_size,
-            sha256_hex=sha256_hex,
-            mime_type=content_type,
-            uploaded_by_email=claims.email,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except DocumentNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-    was_fallback = routed_category is None
-    original_name_renamed = doc.original_name != filename
-
-    return VdrAutoUploadResult(
-        document=VdrDocumentOut.model_validate(doc),
-        routed_folder=VdrFolderOut.model_validate(folder),
-        routed_category=routed_category,
-        was_fallback=was_fallback,
-        original_name_renamed=original_name_renamed,
-        final_name=doc.original_name,
-    )
 
 
-@router.post(
-    "/documents/direct-upload",
-    response_model=DirectUploadBatchResult,
-    status_code=status.HTTP_201_CREATED,
-)
-async def direct_upload(
+async def _manual_folder_upload(
     txn_id: uuid.UUID,
+    folder_id: uuid.UUID,
     files: list[UploadFile],
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
-):
-    """다중 파일을 폴더 지정 없이 업로드 — 2-Phase 병렬 파이프라인.
-
-    Phase A (병렬): 메타데이터 검증 → 스트리밍 해시/크기 → 분류
-    Phase B (순차 DB + 병렬 blob): DB 레코드 생성 → blob 스트리밍 업로드 → 일괄 커밋
-    """
+    db: AsyncSession,
+    claims: JWTClaims,
+) -> DirectUploadBatchResult:
     if len(files) > _MAX_DIRECT_UPLOAD_FILES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"한 번에 최대 {_MAX_DIRECT_UPLOAD_FILES}개 파일까지 업로드할 수 있습니다.",
         )
-    await _get_and_authorize_txn(db, txn_id, claims)
-    _upload_limiter.check(f"vdr_upload:{claims.email or claims.user_id}")
+
+    await _prepare_vdr_upload_context(db, txn_id, claims)
+    folder = await vdr_service.get_folder(db, txn_id, folder_id)
+
+    results: list[DirectUploadFileResult] = []
+    failed_files: list[FailedFileInfo] = []
+
+    for file in files:
+        raw_name = Path(file.filename or "untitled").name
+        try:
+            filename, _ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(file)
+            has_dup = await vdr_service.check_duplicate_filename(
+                db,
+                txn_id,
+                folder.id,
+                filename,
+            )
+            final_name = vdr_service.resolve_unique_filename(filename, has_dup)
+            doc = await vdr_service.upload_document_stream(
+                db=db,
+                transaction_id=txn_id,
+                folder_id=folder.id,
+                original_name=final_name,
+                file_obj=file,
+                file_size=file_size,
+                sha256_hex=sha256_hex,
+                mime_type=content_type,
+                uploaded_by_email=claims.email,
+            )
+        except HTTPException as exc:
+            failed_files.append(FailedFileInfo(filename=raw_name, reason=str(exc.detail)))
+            continue
+        except DocumentNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        except Exception as exc:
+            logger.warning(
+                "Manual VDR upload 실패: txn=%s, folder=%s, file=%s — %s",
+                txn_id,
+                folder_id,
+                raw_name,
+                exc,
+            )
+            failed_files.append(
+                FailedFileInfo(
+                    filename=raw_name,
+                    reason=f"파일 저장 실패: {exc}",
+                )
+            )
+            continue
+
+        results.append(
+            DirectUploadFileResult(
+                document=VdrDocumentOut.model_validate(doc),
+                routed_folder=VdrFolderOut.model_validate(folder),
+                routed_category=folder.category,
+                classification_status=VdrClassificationStatus.DIRECT,
+                score=100,
+                was_fallback=False,
+            )
+        )
+
+    logger.info(
+        "Manual VDR upload 완료: txn=%s, folder=%s, user=%s, total=%d, failed=%d",
+        txn_id,
+        folder_id,
+        claims.email,
+        len(results),
+        len(failed_files),
+    )
+
+    return DirectUploadBatchResult(
+        results=results,
+        pending_review_count=0,
+        total_uploaded=len(results),
+        failed_files=failed_files,
+    )
+
+
+async def _auto_route_upload_batch(
+    txn_id: uuid.UUID,
+    files: list[UploadFile],
+    background_tasks: BackgroundTasks,
+    db: AsyncSession,
+    claims: JWTClaims,
+) -> DirectUploadBatchResult:
+    if len(files) > _MAX_DIRECT_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"한 번에 최대 {_MAX_DIRECT_UPLOAD_FILES}개 파일까지 업로드할 수 있습니다.",
+        )
+    await _prepare_vdr_upload_context(db, txn_id, claims)
 
     from app.services.vdr_categorization_service import auto_route, score_document
 
@@ -297,6 +317,8 @@ async def direct_upload(
             )
         )
 
+    await blob_client.ensure_initialized()
+
     # blob 병렬 업로드 (별도 Semaphore로 동시성 제한)
     _blob_sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
 
@@ -352,6 +374,135 @@ async def direct_upload(
         pending_review_count=len(pending_doc_ids),
         total_uploaded=len(results),
         failed_files=failed_files,
+    )
+
+
+@router.post("/suggest-category", response_model=SuggestCategoryResponse)
+async def suggest_folder_category(
+    txn_id: uuid.UUID,
+    body: SuggestCategoryRequest,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> SuggestCategoryResponse:
+    """파일명을 분석하여 적합한 VDR 폴더 카테고리를 추천한다."""
+    await _get_and_authorize_txn(db, txn_id, claims)
+
+    from app.services.vdr_categorization_service import suggest_category
+
+    category = suggest_category(body.filename)
+    if category is None:
+        return SuggestCategoryResponse(category=None, folder_name=None)
+
+    folder = await vdr_service.resolve_folder_by_category(db, txn_id, category)
+
+    return SuggestCategoryResponse(
+        category=category.value,
+        folder_name=folder.name if folder else None,
+    )
+
+
+@router.post(
+    "/documents/auto-upload",
+    response_model=VdrAutoUploadResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def auto_upload_document(
+    txn_id: uuid.UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """파일을 분석하여 적합한 VDR 폴더에 자동으로 업로드한다."""
+    await _prepare_vdr_upload_context(db, txn_id, claims)
+    filename, _ext, content_type, sha256_hex, file_size = await _validate_upload_streaming(file)
+
+    try:
+        doc, folder, routed_category = await vdr_service.auto_upload_document_stream(
+            db=db,
+            transaction_id=txn_id,
+            original_name=filename,
+            file_obj=file,
+            file_size=file_size,
+            sha256_hex=sha256_hex,
+            mime_type=content_type,
+            uploaded_by_email=claims.email,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except DocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    was_fallback = routed_category is None
+    original_name_renamed = doc.original_name != filename
+
+    return VdrAutoUploadResult(
+        document=VdrDocumentOut.model_validate(doc),
+        routed_folder=VdrFolderOut.model_validate(folder),
+        routed_category=routed_category,
+        was_fallback=was_fallback,
+        original_name_renamed=original_name_renamed,
+        final_name=doc.original_name,
+    )
+
+
+@router.post(
+    "/uploads",
+    response_model=DirectUploadBatchResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_documents(
+    txn_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile],
+    folder_id: uuid.UUID | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """VDR 통합 업로드 진입점.
+
+    - folder_id 지정 시: 해당 폴더로 수동 업로드
+    - folder_id 미지정 시: 자동 라우팅 배치 업로드
+    """
+    if folder_id is not None:
+        return await _manual_folder_upload(
+            txn_id=txn_id,
+            folder_id=folder_id,
+            files=files,
+            db=db,
+            claims=claims,
+        )
+    return await _auto_route_upload_batch(
+        txn_id=txn_id,
+        files=files,
+        background_tasks=background_tasks,
+        db=db,
+        claims=claims,
+    )
+
+
+@router.post(
+    "/documents/direct-upload",
+    response_model=DirectUploadBatchResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def direct_upload(
+    txn_id: uuid.UUID,
+    files: list[UploadFile],
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    """다중 파일을 폴더 지정 없이 업로드 — 2-Phase 병렬 파이프라인.
+
+    Phase A (병렬): 메타데이터 검증 → 스트리밍 해시/크기 → 분류
+    Phase B (순차 DB + 병렬 blob): DB 레코드 생성 → blob 스트리밍 업로드 → 일괄 커밋
+    """
+    return await _auto_route_upload_batch(
+        txn_id=txn_id,
+        files=files,
+        background_tasks=background_tasks,
+        db=db,
+        claims=claims,
     )
 
 

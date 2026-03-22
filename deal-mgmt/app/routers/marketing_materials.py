@@ -13,11 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import MarketingDocStatus
+from app.models.enums import MarketingDocStatus, MarketingDocType
 from app.schemas.marketing_material import (
     DistributionUpdate,
     MarketingMaterialCreate,
     MarketingMaterialOut,
+    MarketingMaterialSourceRoutingPreviewOut,
 )
 from app.services import marketing_material_service, transaction_service
 
@@ -35,25 +36,12 @@ async def _get_and_authorize_txn(
     txn_id: uuid.UUID,
     claims: JWTClaims,
 ):
-    """거래 존재 확인 및 접근 권한 검증."""
+    """거래 존재를 확인하고 워크스페이스 기준 접근 권한을 검증한다."""
     try:
         txn = await transaction_service.get_transaction(db, txn_id)
     except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="거래를 찾을 수 없습니다.")
-    # CLIENT 역할: deal_clients 테이블 기반 접근 제어
-    if claims.role == "CLIENT":
-        await check_client_deal_access(db, txn_id, claims)
-        return txn
-    if (
-        claims.role != "ADMIN"
-        and claims.email is not None
-        and txn.lead_advisor_email != claims.email
-        and txn.deal_captain_email != claims.email
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="이 거래에 접근할 권한이 없습니다",
-        )
+    await check_client_deal_access(db, txn_id, claims)
     return txn
 
 
@@ -68,6 +56,21 @@ async def list_marketing_materials(
 ):
     await _get_and_authorize_txn(db, txn_id, claims)
     return await marketing_material_service.list_marketing_materials(db, txn_id)
+
+
+@router.get("/source-routing-preview", response_model=MarketingMaterialSourceRoutingPreviewOut)
+async def preview_marketing_material_source_routing(
+    txn_id: uuid.UUID,
+    doc_type: MarketingDocType = MarketingDocType.IM,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+):
+    await _get_and_authorize_txn(db, txn_id, claims)
+    return await marketing_material_service.preview_marketing_material_source_routing(
+        db,
+        txn_id,
+        doc_type,
+    )
 
 
 # ── 생성 ───────────────────────────────────────────────────────

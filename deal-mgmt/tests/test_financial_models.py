@@ -65,6 +65,23 @@ async def test_list_financial_models_empty(client, _txn):
 
 
 @pytest.mark.asyncio
+async def test_preview_financial_model_source_routing_empty(client, _txn):
+    """VDR 문서가 없으면 재무모델 source preview가 빈 결과를 반환한다."""
+    txn_id = _txn["id"]
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/financial-models/source-routing-preview",
+        params={"model_type": "FULL"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["summary"]["target_workstreams"] == ["FDD", "VALUATION"]
+    assert data["summary"]["total_documents"] == 0
+    assert data["summary"]["included_for_financial_model"] == 0
+    assert data["summary"]["excluded_from_financial_model"] == 0
+    assert data["documents"] == []
+
+
+@pytest.mark.asyncio
 async def test_create_dcf_model(client, _txn):
     """DCF 모델 생성 — PENDING_REVIEW 상태."""
     txn_id = _txn["id"]

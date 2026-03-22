@@ -55,7 +55,7 @@ export default function FileListRow(props: FileListRowProps) {
 function FolderRow({ folder, onNavigate, onDelete }: FolderRowProps) {
   return (
     <div
-      className="group flex h-8 cursor-pointer items-center gap-2 rounded px-2 text-xs transition-colors hover:bg-blue-50"
+      className="group flex h-8 cursor-pointer items-center gap-2 rounded px-2 text-xs transition-colors hover:bg-accent/5"
       onClick={() => onNavigate(folder.id)}
       role="row"
       tabIndex={0}
@@ -119,7 +119,7 @@ function FileRow({
 }: FileRowProps) {
   return (
     <div
-      className="group flex h-8 items-center gap-2 rounded px-2 text-xs transition-colors hover:bg-blue-50"
+      className="group flex h-8 items-center gap-2 rounded px-2 text-xs transition-colors hover:bg-accent/5"
       role="row"
     >
       {/* 이름 */}

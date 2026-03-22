@@ -204,6 +204,15 @@ export const maHandlers = [
     return HttpResponse.json({ items: [], total: 0 });
   }),
 
+  http.get("*/api/ma/transactions/:txnId/timeline/gantt", () => {
+    return HttpResponse.json({
+      phases: [],
+      milestones: [],
+      target_close_date: null,
+      deal_start_date: "2026-01-01",
+    });
+  }),
+
   http.get("*/api/ma/transactions/:txnId/ndas", () => {
     return HttpResponse.json({ items: [], total: 0 });
   }),
@@ -233,12 +242,50 @@ export const maHandlers = [
   }),
 
   http.get("*/api/ma/transactions/:txnId/marketing-materials", () => {
-    return HttpResponse.json({ items: [], total: 0 });
+    return HttpResponse.json([]);
   }),
 
+  http.get(
+    "*/api/ma/transactions/:txnId/marketing-materials/source-routing-preview",
+    () => {
+      return HttpResponse.json({
+        version: "1.1",
+        summary: {
+          total_documents: 0,
+          included_for_marketing_material: 0,
+          excluded_from_marketing_material: 0,
+          manual_review_documents: 0,
+          overridden_documents: 0,
+          by_primary_workstream: {},
+          target_workstreams: ["COMMON", "VALUATION", "FDD"],
+        },
+        documents: [],
+      });
+    },
+  ),
+
   http.get("*/api/ma/transactions/:txnId/financial-models", () => {
-    return HttpResponse.json({ items: [], total: 0 });
+    return HttpResponse.json([]);
   }),
+
+  http.get(
+    "*/api/ma/transactions/:txnId/financial-models/source-routing-preview",
+    () => {
+      return HttpResponse.json({
+        version: "1.1",
+        summary: {
+          total_documents: 0,
+          included_for_financial_model: 0,
+          excluded_from_financial_model: 0,
+          manual_review_documents: 0,
+          overridden_documents: 0,
+          by_primary_workstream: {},
+          target_workstreams: ["FDD", "VALUATION"],
+        },
+        documents: [],
+      });
+    },
+  ),
 
   http.get("*/api/ma/transactions/:txnId/meeting-logs", () => {
     return HttpResponse.json({ items: [], total: 0 });

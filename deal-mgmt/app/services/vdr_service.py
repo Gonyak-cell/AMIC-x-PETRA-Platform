@@ -295,6 +295,7 @@ async def upload_document(
 
     # blob_name = 상대 경로 (Azure Blob key 또는 로컬 상대 경로)
     blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
+    await blob_client.ensure_initialized()
     await blob_client.upload_blob(blob_name, file_content, mime_type)
 
     doc = VdrDocument(
@@ -360,6 +361,7 @@ async def upload_document_stream(
     stored_name = f"{uuid.uuid4()}{ext}"
 
     blob_name = f"{transaction_id}/{folder_id}/{stored_name}"
+    await blob_client.ensure_initialized()
     await blob_client.upload_blob_stream(blob_name, file_obj, mime_type, file_size)
 
     doc = VdrDocument(
@@ -848,3 +850,163 @@ async def auto_upload_document_stream(
     )
 
     return doc, folder, routed_category
+
+
+async def _count_default_root_categories(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> int:
+    default_categories = [category for category, _, _ in _DEFAULT_FOLDERS]
+    return (
+        await db.scalar(
+            select(func.count(func.distinct(VdrFolder.category))).where(
+                VdrFolder.transaction_id == transaction_id,
+                VdrFolder.parent_id.is_(None),
+                VdrFolder.category.in_(default_categories),
+            )
+        )
+        or 0
+    )
+
+
+async def init_vdr_folders(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> list[VdrFolder]:
+    """Create or repair the default VDR root folders for a transaction."""
+    from app.models.transaction import Transaction
+
+    await db.scalar(select(Transaction.id).where(Transaction.id == transaction_id).with_for_update())
+
+    default_categories = [category for category, _, _ in _DEFAULT_FOLDERS]
+    existing_result = await db.execute(
+        select(VdrFolder.category).where(
+            VdrFolder.transaction_id == transaction_id,
+            VdrFolder.parent_id.is_(None),
+            VdrFolder.category.in_(default_categories),
+        )
+    )
+    existing_categories = set(existing_result.scalars().all())
+
+    for idx, (category, name, is_required) in enumerate(_DEFAULT_FOLDERS):
+        if category in existing_categories:
+            continue
+        db.add(
+            VdrFolder(
+                transaction_id=transaction_id,
+                name=name,
+                category=category,
+                order_index=idx,
+                is_required=is_required,
+            )
+        )
+
+    await db.commit()
+    return await list_folders(db, transaction_id)
+
+
+async def get_vdr_summary(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+) -> dict:
+    """VDR summary that treats partial default folder sets as uninitialized."""
+    folder_count = (
+        await db.scalar(select(func.count()).select_from(VdrFolder).where(VdrFolder.transaction_id == transaction_id))
+        or 0
+    )
+    default_root_count = await _count_default_root_categories(db, transaction_id)
+
+    doc_stats = await db.execute(
+        select(
+            func.count().label("count"),
+            func.coalesce(func.sum(VdrDocument.file_size_bytes), 0).label("total_size"),
+        ).where(
+            VdrDocument.transaction_id == transaction_id,
+            VdrDocument.status == VdrDocumentStatus.ACTIVE,
+        )
+    )
+    row = doc_stats.one()
+
+    return {
+        "total_folders": folder_count,
+        "total_documents": row.count,
+        "total_size_bytes": row.total_size,
+        "initialized": default_root_count == len(_DEFAULT_FOLDERS),
+    }
+
+
+async def get_all_vdr_overviews(db: AsyncSession) -> list[dict]:
+    """Return per-transaction VDR overview with repaired initialization status."""
+    from app.models.transaction import Transaction
+
+    default_categories = [category for category, _, _ in _DEFAULT_FOLDERS]
+    folder_sub = (
+        select(
+            VdrFolder.transaction_id,
+            func.count().label("cnt"),
+        )
+        .group_by(VdrFolder.transaction_id)
+        .subquery()
+    )
+
+    default_root_sub = (
+        select(
+            VdrFolder.transaction_id,
+            func.count(func.distinct(VdrFolder.category)).label("default_cnt"),
+        )
+        .where(
+            VdrFolder.parent_id.is_(None),
+            VdrFolder.category.in_(default_categories),
+        )
+        .group_by(VdrFolder.transaction_id)
+        .subquery()
+    )
+
+    doc_sub = (
+        select(
+            VdrDocument.transaction_id,
+            func.count().label("cnt"),
+            func.coalesce(func.sum(VdrDocument.file_size_bytes), 0).label("total_size"),
+            func.max(VdrDocument.created_at).label("last_upload"),
+        )
+        .where(VdrDocument.status == VdrDocumentStatus.ACTIVE)
+        .group_by(VdrDocument.transaction_id)
+        .subquery()
+    )
+
+    q = (
+        select(
+            Transaction.id,
+            Transaction.name,
+            Transaction.code_name,
+            Transaction.phase,
+            Transaction.status,
+            func.coalesce(folder_sub.c.cnt, 0).label("total_folders"),
+            func.coalesce(default_root_sub.c.default_cnt, 0).label("default_root_folders"),
+            func.coalesce(doc_sub.c.cnt, 0).label("total_documents"),
+            func.coalesce(doc_sub.c.total_size, 0).label("total_size_bytes"),
+            doc_sub.c.last_upload.label("last_upload_at"),
+        )
+        .outerjoin(folder_sub, folder_sub.c.transaction_id == Transaction.id)
+        .outerjoin(default_root_sub, default_root_sub.c.transaction_id == Transaction.id)
+        .outerjoin(doc_sub, doc_sub.c.transaction_id == Transaction.id)
+        .where(Transaction.is_deleted.is_(False))
+        .order_by(Transaction.updated_at.desc())
+    )
+
+    result = await db.execute(q)
+    return [
+        {
+            "transaction_id": row.id,
+            "transaction_name": row.name,
+            "code_name": row.code_name,
+            "phase": row.phase.value if hasattr(row.phase, "value") else str(row.phase),
+            "status": row.status.value if hasattr(row.status, "value") else str(row.status),
+            "vdr_initialized": row.default_root_folders == len(_DEFAULT_FOLDERS),
+            "total_folders": row.total_folders,
+            "total_documents": row.total_documents,
+            "total_size_bytes": row.total_size_bytes,
+            "last_upload_at": row.last_upload_at,
+        }
+        for row in result.all()
+    ]
