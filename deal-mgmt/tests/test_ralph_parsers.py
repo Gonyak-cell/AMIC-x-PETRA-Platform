@@ -47,6 +47,33 @@ class TestParseFile:
         assert "지원하지 않는" in (result.parse_error or "")
 
 
+class TestPdfParser:
+    def test_parse_pdf_uses_ocr_fallback_when_native_extractors_return_empty(self, monkeypatch):
+        from app.ralph.parsers import pdf_parser
+        from app.ralph.parsers.base import ParsedFile
+
+        empty = ParsedFile(source_path="/tmp/scanned.pdf", file_type="pdf", text="", metadata={"page_count": 1, "chunks": []})
+        ocr = ParsedFile(
+            source_path="/tmp/scanned.pdf",
+            file_type="pdf",
+            text="[OCR Page 1]\nInvestor consent is required before control transfer.",
+            metadata={
+                "page_count": 1,
+                "chunks": [{"chunk_id": "ocr-page-1", "page": 1, "text": "Investor consent is required."}],
+                "ocr_used": True,
+            },
+        )
+
+        monkeypatch.setattr(pdf_parser, "_parse_with_fitz", lambda _: empty)
+        monkeypatch.setattr(pdf_parser, "_parse_with_pdfplumber", lambda _: empty)
+        monkeypatch.setattr(pdf_parser, "_parse_with_ocr_fallback", lambda _path, base_candidate=None: ocr)
+
+        parsed = pdf_parser.parse_pdf("/tmp/scanned.pdf")
+
+        assert "Investor consent is required" in parsed.text
+        assert parsed.metadata["ocr_used"] is True
+
+
 class TestFileClassifier:
     """파일 분류기 테스트."""
 

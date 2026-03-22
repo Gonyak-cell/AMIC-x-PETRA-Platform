@@ -1,6 +1,6 @@
 [project]
 name = "deal-mgmt"
-version = "0.15.1"
+version = "0.15.2"
 description = "M&A Deal Management Service — 7단계 거래 워크플로우 관리 시스템"
 requires-python = ">=3.11"
 dependencies = [
@@ -23,6 +23,7 @@ dependencies = [
     "openpyxl>=3.1.0",
     "PyMuPDF>=1.23.0",
     "pdfplumber>=0.10.0",
+    "pytesseract>=0.3.10",
     "olefile>=0.47",
     # Ralph Loop — LLM 프로바이더
     "anthropic>=0.40.0",

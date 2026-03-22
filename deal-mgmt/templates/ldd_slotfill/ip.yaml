@@ -1,6 +1,17 @@
 section_id: ip
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_01
+    - ip_phrase_07
+    - ip_phrase_09
+    - ip_phrase_11
+section_preamble:
+  FACTS: 2
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -14,7 +25,7 @@ slots:
   confidence_sentence: { level: L2, source: derived.confidence_sentence, default: "" }
 body: |
   [[FACTS]]
-  {{@scope_notice}}
+  {{@scope_notice}} {{@jurisdiction_scope_notice}}
   당사는 {{ target_company }}의 지식재산권 및 기술 사용 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
@@ -28,7 +39,7 @@ body: |
 conditional_blocks:
   - condition: issue_level in ('CRITICAL', 'HIGH')
     insert_after: impact_sentence
-    text: "핵심 특허·상표·소프트웨어 권리의 귀속 불명확성은 거래 가치평가 및 post-closing 운영에 중대한 영향을 줄 수 있습니다."
+    text: "핵심 특허·상표·소프트웨어 권리의 귀속 불명확성 또는 영업비밀 보호체계 미비는 거래 가치평가 및 post-closing 운영에 중대한 영향을 줄 수 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "등록원부, 양수도계약, 라이선스 계약 및 오픈소스 정책 자료의 추가 확인이 필요할 수 있습니다."
+    text: "{{@source_gap_notice}} 등록원부, 양수도·라이선스 계약, 오픈소스 정책 및 비밀유지·경업금지 약정 자료의 추가 확인이 필요할 수 있습니다."

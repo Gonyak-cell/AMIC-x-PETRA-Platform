@@ -1,6 +1,16 @@
 section_id: governance
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_07
+    - governance_phrase_03
+    - governance_phrase_05
+section_preamble:
+  FACTS: 1
+  ANALYSIS: 2
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -18,7 +28,7 @@ body: |
   당사는 {{ target_company }}의 기업 일반 및 지배구조 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
-  본 항목에서는 설립, 기관결정, 권한 배분, 이해상충 및 지배관계의 적법성과 거래 선행조치 필요 여부를 함께 검토합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
+  본 항목에서는 설립, 기관결정, 권한 배분, 이해상충 및 지배관계의 적법성과 거래 선행조치 필요 여부를 함께 검토합니다. 정관 및 의사록 기준으로 이사회 구성·임기, 주주총회 소집권한 및 의결구조의 정합성도 함께 점검합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
 
   [[DEAL_IMPACT]]
   지배구조 및 권한 체계와 관련한 확인 결과는 SPA 진술보장, 선행조건, 사후 시정조치 및 PMI 실행계획에 직접 반영될 수 있습니다. {{ user_review_sentence }}
@@ -28,7 +38,7 @@ body: |
 conditional_blocks:
   - condition: issue_level == 'CRITICAL'
     insert_after: impact_sentence
-    text: "특히 본 사항은 거래 종결 전 해소 또는 명시적 리스크 배분이 필요한 사안으로 볼 수 있습니다."
+    text: "특히 본 사항은 거래 종결 전 해소 또는 명시적 리스크 배분이 필요한 사안으로 볼 수 있으며, 주주총회·이사회 결의 구조와 임원 보수 승인 체계의 정합성을 우선 재점검할 필요가 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "추가 자료 확인 전까지는 잠정 판단으로 유지하는 것이 타당합니다."
+    text: "{{@source_gap_notice}} 핵심 의사결정 자료 확보 후 판단을 확정할 필요가 있습니다."

@@ -32,6 +32,17 @@ def parse_docx(file_path: str) -> ParsedFile:
 
     # 본문 텍스트
     all_text = [p.text for p in doc.paragraphs if p.text.strip()]
+    chunks = [
+        {
+            "chunk_id": f"paragraph-{index}",
+            "locator_type": "paragraph",
+            "paragraph": index,
+            "ordinal": index,
+            "text": paragraph.text.strip(),
+        }
+        for index, paragraph in enumerate(doc.paragraphs, start=1)
+        if paragraph.text.strip()
+    ]
 
     # 표 추출
     tables: list[ParsedTable] = []
@@ -53,5 +64,9 @@ def parse_docx(file_path: str) -> ParsedFile:
         file_type="docx",
         text="\n".join(all_text),
         tables=tables,
-        metadata={"paragraph_count": len(doc.paragraphs), "table_count": len(doc.tables)},
+        metadata={
+            "paragraph_count": len(doc.paragraphs),
+            "table_count": len(doc.tables),
+            "chunks": chunks,
+        },
     )

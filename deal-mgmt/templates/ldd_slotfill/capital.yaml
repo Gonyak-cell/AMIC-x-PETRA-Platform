@@ -1,6 +1,16 @@
 section_id: capital
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_07
+    - capital_phrase_07
+    - capital_phrase_08
+section_preamble:
+  FACTS: 1
+  ANALYSIS: 2
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -18,7 +28,7 @@ body: |
   당사는 {{ target_company }}의 자본구조 및 주주권 관련 자료 중 {{ item_name }} 항목을 중심으로 검토하였습니다. {{ status_sentence }} {{ evidence_sentence }}
 
   [[ANALYSIS]]
-  본 항목에서는 발행주식, 전환증권, 우선권리, 주주 간 권리배분 및 희석 가능성이 거래 조건에 미치는 영향을 검토합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
+  본 항목에서는 발행주식, 전환증권, 우선권리, 주주 간 권리배분 및 희석 가능성이 거래 조건에 미치는 영향을 검토합니다. 특히 주식매수선택권, 전환권, 신주발행 및 지분표(cap table)상 희석 구조가 적법한 결의와 계약 문서에 부합하는지도 함께 점검합니다. {{ analysis_sentence }} {{ impact_sentence }} {{ confidence_sentence }}
 
   [[DEAL_IMPACT]]
   자본구조 관련 이슈는 매매대상 지분의 범위, 희석 리스크, 선행조건 및 가격조정 메커니즘에 직접 연동될 수 있습니다. {{ user_review_sentence }}
@@ -28,7 +38,7 @@ body: |
 conditional_blocks:
   - condition: issue_level in ('CRITICAL', 'HIGH')
     insert_after: impact_sentence
-    text: "필요 시 cap table 재정비, 권리관계 확인 및 계약상 보호장치 보강을 우선 검토할 필요가 있습니다."
+    text: "필요 시 cap table 재정비, 주식매수선택권·CB/BW·우선주 권리관계 확인 및 계약상 보호장치 보강을 우선 검토할 필요가 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "주식 및 전환증권 관련 기초자료의 완결성 확인이 선행되어야 합니다."
+    text: "{{@source_gap_notice}} 주식 및 전환증권 관련 기초자료, 의사록 및 cap table의 완결성 확인이 선행되어야 합니다."

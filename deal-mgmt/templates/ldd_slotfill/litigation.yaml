@@ -1,6 +1,17 @@
 section_id: litigation
 version: "1.0"
-source_reference: "AMIC curated LDD boilerplate v1"
+source_reference: "AMIC sample-calibrated LDD boilerplate v3"
+sample_calibration:
+  source_run: "ldd_slotfill_bank_from_samples_v8"
+  promoted_candidates:
+    - base_phrase_07
+    - litigation_phrase_02
+    - litigation_phrase_05
+    - litigation_phrase_11
+section_preamble:
+  FACTS: 1
+  ANALYSIS: 1
+  DEAL_IMPACT: 1
 slots:
   target_company: { level: L2, source: report.target_company, default: "대상회사" }
   item_name: { level: L2, source: item.name }
@@ -28,7 +39,7 @@ body: |
 conditional_blocks:
   - condition: issue_level in ('CRITICAL', 'HIGH')
     insert_after: impact_sentence
-    text: "필요 시 특별보상, 에스크로 또는 선행 합의 조건 설정 여부를 우선 검토할 필요가 있습니다."
+    text: "필요 시 잠재 책임액, 진행 경과 및 화해 가능성에 따라 특별보상, 에스크로 또는 선행 합의 조건 설정 여부를 우선 검토할 필요가 있습니다."
   - condition: status == 'PENDING'
     insert_after: analysis_sentence
-    text: "소장, 답변서, 판결문 또는 조사 통지서 등 핵심 사건자료를 추가 확보할 필요가 있습니다."
+    text: "{{@source_gap_notice}} 소장, 답변서, 판결문, 조사 통지서 및 합의서 등 핵심 사건자료를 추가 확보할 필요가 있습니다."

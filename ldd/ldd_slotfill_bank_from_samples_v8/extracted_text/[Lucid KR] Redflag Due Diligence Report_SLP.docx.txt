@@ -1,0 +1,387 @@
+# FILE: [Lucid KR] Redflag Due Diligence Report_SLP.docx
+# GENERATED_AT: 2026-03-21T03:02:14.565677+00:00
+
+[H4] [Letterhead]
+[-] [Letterhead]
+Redflag Legal Due Diligence Report
+
+[-] [Letterhead]
+TO: | Samsung Oak Holdings, Inc.
+
+[-] [Letterhead]
+FROM: | Sang Jin Park, Senior Attorney, SL Partners
+
+[-] [Letterhead]
+DATE: | June 24, 2025
+
+[-] [Letterhead]
+SUBJECT: | Project [Project Code Name]: Final Redflag Legal Due Diligence Report
+
+[H2] CONFIDENTIALITY NOTICE
+[DATA_IT] CONFIDENTIALITY NOTICE
+This report is confidential and intended solely for the information and assistance of Samsung Oak Holdings, Inc. (“Client”) in connection with its possible acquisition of Lucid Microsystems Co., Ltd. (“Lucid KR” or the “Company”). This report may not be relied upon by any other person or for any other purpose. The information and our opinions are provided as of the date of this report, and we assume no obligation to update this report for any events or circumstances occurring after this date. Our review was limited to the documents and information provided to us and is subject to the scope and limitations outlined herein.
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+PREFACE
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+This Report provides a preliminary “redflag” legal due diligence analysis for the Client in connection with the potential acquisition of the Company.
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+The objective of this Report is to identify and summarize material legal risks and potential deal-breakers based on a limited review of documents provided to us. It is not a comprehensive, full-scope investigation but rather a high-level assessment designed to assist the Client in its initial evaluation of the proposed transaction.
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+Our findings are based solely on the information made available to us as of the date of this Report. All readers should refer to the “Scope and Methodology” section for a detailed description of the review’s limitations.
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+For a consolidated overview of the most critical issues identified, readers are directed to the “Executive Summary”. The findings detailed herein are intended to facilitate strategic discussions and to help determine the necessity and focus of any subsequent, more comprehensive due diligence efforts.
+
+[DATA_IT] CONFIDENTIALITY NOTICE
+TABLE OF CONTENTS
+
+[H2] 1. EXECUTIVE SUMMARY
+[H2] 1.1 Overall Assessment
+[H2] 1.2 Key Recommendations
+[H2] 1.3 Summary of High-Risk Red Flags
+[H2] 1.4 Scope and Methodology
+[H2] 2. KEY STRUCTURAL FINDINGS
+[H2] 2.1 Existing Structure
+[H2] 2.2 Post-Transaction Structure
+[H2] 2.3 Legal Analysis of the New Structure
+[H2] 3. DETAILED FINDINGS
+[H2] 3.1 Indebtedness & Financing Agreements
+[H2] 3.2 Regulatory & Government Grants
+[H2] 3.3 Intellectual Property
+[H2] 3.4 Material Contracts & Agreements
+[CONTRACTS] 3.4 Material Contracts & Agreements
+APPENDIX A: LIST OF KEY DOCUMENTS REVIEWED
+
+[CONTRACTS] 3.4 Material Contracts & Agreements
+EXECUTIVE SUMMARY
+
+[CONTRACTS] 3.4 Material Contracts & Agreements
+Overall Assessment
+
+[CONTRACTS] 3.4 Material Contracts & Agreements
+This report presents the key legal due diligence findings concerning Lucid KR, the Korean R&D and operational hub of the Lucid Microsystems group. The transaction contemplates the Client’s investment into the Singaporean parent entity, Lucid Microsystems Pte. Ltd. (“Lucid SG”), and the concurrent restructuring of Lucid KR as a wholly-owned subsidiary of Lucid SG.
+
+[CONTRACTS] 3.4 Material Contracts & Agreements
+Our review concludes that the primary legal risks do not stem from the relationship between Lucid SG and Lucid KR, but from external constraints and obligations that could impede Lucid KR’s operations in Korea or the intended restructuring. These include significant financial covenants, government grant regulations, and third-party intellectual property entanglements. These issues must be resolved or formally waived prior to closing.
+
+[H3] Key Recommendations
+[CONTRACTS] 3.4 Material Contracts & Agreements > Key Recommendations
+[Obtain Lender & Guarantor Consent]: The highest priority action is to secure written consent from Hana Bank and the Korea Credit Guarantee Fund (“KODIT”) for the change of control resulting from the transaction, to prevent a default on the Company’s KRW 1 billion loan.
+
+[CONTRACTS] 3.4 Material Contracts & Agreements > Key Recommendations
+[Clarify TIPS Grant Conditions]: Obtain written confirmation from the TIPS program administrator that making Lucid KR a wholly-owned foreign subsidiary will not trigger penalties or a clawback of the KRW 1.5 billion grant.
+
+[CONTRACTS] 3.4 Material Contracts & Agreements > Key Recommendations
+[Resolve Joint IP with Seoul National University]: Address the joint ownership of IP developed with Seoul National University. The Client must assess the IP’s importance and, if critical, secure exclusive rights or a full assignment from the university before closing.
+
+[CONTRACTS] 3.4 Material Contracts & Agreements > Key Recommendations
+[Finalize All Transaction Agreements]: Ensure all ancillary but critical agreements, including the penalty mechanism (founder’s forced sale at par value) in the Financing Agreement, are finalized and executed concurrently with the main closing.
+
+[CONTRACTS] 3.4 Material Contracts & Agreements > Key Recommendations
+Summary of High-Risk Red Flags
+
+[H2] # | Red Flag Title | Implication | Risk Level
+[DATA_IT] # | Red Flag Title | Implication | Risk Level
+1 | Government Grant (TIPS) Clawback Risk | Lucid KR receiving a KRW 1.5 billion TIPS R&D grant is conditioned on its status as a domestic SME. Becoming a foreign-owned subsidiary may violate these conditions, leading to penalties or repayment obligations. | Medium
+
+[DATA_IT] # | Red Flag Title | Implication | Risk Level
+2 | Breach of Loan Covenants | The Company has a KRW 1 billion loan from Hana Bank, guaranteed by KODIT. The transaction will constitute a change of control, likely triggering default clauses and making the debt immediately due and payable. | Medium
+
+[DATA_IT] # | Red Flag Title | Implication | Risk Level
+3 | Joint Ownership of Key IP with University | IP developed under an R&D contract with Seoul National University is jointly owned, not solely owned by the Company. This encumbers the asset and prevents its free transfer to Lucid SG without the university’s consent and potential royalty payments. | Low
+
+[DATA_IT] # | Red Flag Title | Implication | Risk Level
+4 | Employee Invention Compensation Risk | Employment agreements do not specify separate compensation for IP assignment. Under Korean law, this creates a risk of future claims for compensation from employees who developed key IP, potentially creating liens or disputes over IP ownership. | Low
+
+[H2] Scope and Methodology
+[BASE] Scope and Methodology
+[Scope of Diligence Review] Our review was a preliminary “redflag” review and not a comprehensive, full-scope legal due diligence investigation. The objective was to identify material legal risks and potential deal-breakers based on a limited set of documents provided in the virtual data room (VDR) as of May 28, 2025.
+
+[BASE] Scope and Methodology
+[Jurisdictions Covered] This review was limited to documents governed by the laws of the Republic of Korea. We did not review compliance with laws of other jurisdictions.
+
+[BASE] Scope and Methodology
+[Key Documents Reviewed] Our findings are based on a review of the documents listed in Appendix A. We have relied on the completeness and accuracy of the information provided by the Company and its representatives. No independent verification of the facts has been conducted.
+
+[BASE] Scope and Methodology
+[General Limitations & Disclaimers] This report does not constitute a legal opinion on any specific matter. It does not cover non-legal areas such as financial, accounting, tax, commercial, or operational due diligence.
+
+[BASE] Scope and Methodology
+KEY STRUCTURAL FINDINGS
+
+[BASE] Scope and Methodology
+This section analyzes the fundamental changes to the corporate, governance, and intellectual property structure of Lucid KR as a direct result of the Series A financing and the concurrent corporate restructuring (collectively, the “Transaction”). A key outcome of the Transaction, effectuated through a share exchange, is the consolidation of the group structure whereby Lucid KR will become a wholly-owned subsidiary of Lucid SG. We compare the Company’s structure prior to the Transaction with the confirmed consolidated structure to be implemented upon closing.
+
+[BASE] Scope and Methodology
+Existing Structure
+
+[BASE] Scope and Methodology
+Prior to the Transaction, Lucid KR operated as a standalone Korean corporation with a relatively simple structure:
+
+[BASE] Scope and Methodology
+[Corporate & Capital Structure]: The Company was established as a private stock company (주식회사) under the laws of the Republic of Korea on January 26, 2023. As of December 24, 2024, its capitalization consisted of 120,000 issued shares with a par value of KRW 100 per share. This was the result of a December 28, 2023 shareholder resolution that increased the authorized share capital from 100,000 to 10,000,000 shares and authorized the issuance of 20,000 Convertible Preferred Shares to its first institutional investor, First Gate Private Investment Partnership No. 5 (“First Gate”), for an investment of KRW 500,000,000. The shareholding structure was as follows:
+
+[BASE] Scope and Methodology
+Shareholders | Shares | Ratio
+
+[BASE] Scope and Methodology
+Kisun Lee (Founder) | 99,900 Common Shares | 83.25%
+
+[BASE] Scope and Methodology
+Jungyeon Ko (Employee) | 100 Common Shares | 0.08%
+
+[BASE] Scope and Methodology
+First Gate | 20,000 Convertible Preferred Shares | 16.67%
+
+[BASE] Scope and Methodology
+[Governance]: Corporate governance was centered around the founder, Kisun Lee, who has been the sole internal director (사내이사) and sole representative director (단독대표) since the Company’s inception. Key investor protections, such as consent rights on major corporate actions, tag-along rights, and put options upon default, were held exclusively by First Gate pursuant to its investment agreement. There was no contractual or corporate mechanism in place for another outside investor, such as the Client, to exercise control over the board or key corporate decisions.
+
+[BASE] Scope and Methodology
+[Intellectual Property]: The foundational IP ownership model was already established prior to the Transaction, governed by the Research and Development Services Agreement between Lucid KR and its Singaporean affiliate, Lucid SG. This agreement contractually defines Lucid KR as the “Service Provider” and stipulates that all intellectual property developed by Lucid KR is legally owned by Lucid SG. While this contractual arrangement existed, the ownership and governance of the two entities were not consolidated, and Lucid KR operated as a distinct Korean legal entity.
+
+[BASE] Scope and Methodology
+Post-Transaction Structure
+
+[BASE] Scope and Methodology
+The Transaction fundamentally transforms the group’s structure by contractually and corporately consolidating the entities under Lucid SG, with the Client as a lead investor.
+
+[BASE] Scope and Methodology
+Corporate & Capital Structure: Post-transaction, Lucid KR will become a wholly-owned subsidiary of Lucid SG. This is achieved via a multi-step process governed by the master Financing Agreement:
+
+[BASE] Scope and Methodology
+Dual-Track Investment: The Client will purchase Series A Redeemable Convertible Preferred Stock directly in Lucid SG under a Stock Purchase Agreement. Concurrently, Korean investors like Vision Equity Partners will purchase Redeemable Convertible Preferred Stock (RCPS) in Lucid KR, and existing SAFE notes will convert into RCPS of Lucid KR.
+
+[BASE] Scope and Methodology
+In-Kind Contribution (The “Swap”): All shareholders of Lucid KR (including the founder, First Gate, and new Korean investors) are contractually obligated to contribute their Lucid KR shares to Lucid SG. In exchange, they will receive new shares of Lucid SG (e.g., Series A-1 Preferred Stock). This structure is necessary as a direct “comprehensive share exchange” is not available for a foreign parent under the Korean Commercial Code.
+
+[BASE] Scope and Methodology
+Governance: The new structure institutes a multi-layered governance framework designed to give the Client effective oversight:
+
+[BASE] Scope and Methodology
+Direct Board Right at Lucid SG: The Client, as a holder of Series A Preferred Stock, will have the direct right to appoint a director to the board of the parent company, Lucid SG, as stipulated in Lucid SG’s amended Constitution.
+
+[BASE] Scope and Methodology
+Indirect Board Right at Lucid KR: The Client secures a board seat at Lucid KR through a “back-to-back” contractual arrangement.
+
+[BASE] Scope and Methodology
+the Korean Shareholders’ Agreement (SHA), signed by all Lucid KR shareholders, grants the founder (Kisun Lee) the right to appoint two of the three directors.
+
+[BASE] Scope and Methodology
+the master Financing Agreement imposes a binding contractual obligation on the founder to use one of his two nomination rights to appoint a director designated by the Client. This obligation is enforced by a penalty clause within the Financing Agreement, granting the Client a call option to acquire the founder’s shares at par value upon a breach.
+
+[H2] Intellectual Property
+[IP] Intellectual Property
+The existing IP ownership model is solidified within the new consolidated structure. The R&D Services Agreement contractually affirms that Lucid KR continues its role as the dedicated R&D center, with all resulting IP legally owned by the parent, Lucid SG.
+
+[H3] Legal Analysis of the New Structure
+[IP] Intellectual Property > Legal Analysis of the New Structure
+From the Client’s perspective, the new structure introduces significant advantages over the existing one, but also carries inherent complexity and risks.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Advantages
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Establishes Control and Oversight: The primary advantage is the establishment of robust governance rights where none existed for the Client previously. The new structure provides the Client with board representation at both the top-level holding company (Lucid SG) and the key operational entity (Lucid KR), allowing for direct oversight of its investment and the Company’s strategic direction.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Aligns Economic Interests: By making Lucid KR a wholly-owned subsidiary of Lucid SG via the share swap mechanism detailed in the Financing Agreement, the economic interests of all stakeholders (including founders, new, and existing investors) are consolidated and aligned under a single parent entity. This eliminates potential conflicts that could arise from operating two separate but interconnected companies.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Centralized IP Management: The structure formally centralizes all core IP under Lucid SG, as defined in the R&D Services Agreement. This can streamline future IP licensing, global enforcement against third parties, and strategic partnerships, creating a cleaner structure for a potential future exit.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Risks
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Complexity of Enforcement: The key risk lies in the complexity of the governance structure. The Client’s board seat at Lucid KR is indirect and relies on enforcing a contractual obligation against the founder under the Financing Agreement, rather than a direct right in the Company’s charter. While designed for enforceability with a penalty at par value, this remedy is inherently more cumbersome to execute than a direct appointment right.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Execution Risk: The entire structure is contingent upon the successful and simultaneous execution of multiple, interdependent agreements and corporate actions, including the SG-level Stock Purchase Agreement, multiple KR-level Investment Agreements, the SAFE conversions, the comprehensive Share Swap, and the founder’s share transfer. A failure at any single step could jeopardize the entire transaction.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+External Dependencies: The viability of the new structure is subject to material external approvals, which were not a factor for the simpler existing structure. These include obtaining explicit consents from Hana Bank and KODIT regarding the change of control under the KRW 1 billion loan and receiving confirmation from the TIPS program administrator that the new foreign-owned subsidiary structure does not trigger penalties. These dependencies represent significant closing risks.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+DETAILED FINDINGS
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+This section details the material legal and operational risks identified in connection with Lucid KR. The risk levels herein have been assessed according to the following principles: ‘High’ risk is reserved for findings that could obstruct the transaction itself or result in a significant financial impact. ‘Medium’ risk is assigned to material issues that, while significant, are considered resolvable through specific actions such as obtaining third-party consents or finalizing contractual terms.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Indebtedness & Financing Agreements
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Finding: Existing KRW 1 Billion Loan and Change of Control Risk
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+The Company has an outstanding KRW 1,000,000,000 credit facility, maturing on January 22, 2026, under a “Credit Transaction Agreement” (여신거래약정서) with Hana Bank. This loan is supported by a “Credit Guarantee Agreement” (신용보증약정서) from the Korea Credit Guarantee Fund (KODIT), which guarantees 90% of the principal, amounting to KRW 900,000,000.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Pursuant to Article 14, Paragraph 2 of the Credit Transaction Agreement (CTA), the Company is obligated to consult with the Bank in advance of any event that could reasonably be expected to cause a material change in its business or management.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Implication: Standard loan and guarantee agreements in Korea contain covenants that restrict significant changes in corporate control or major shareholding. The proposed transaction, which will result in Lucid KR becoming a wholly-owned subsidiary of a foreign entity (Lucid SG), will almost certainly trigger these “change of control” provisions. A breach of these covenants could constitute an event of default, allowing the lender to accelerate the debt and demand immediate repayment of the entire outstanding principal and interest.
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Risk Level: Medium
+
+[IP] Intellectual Property > Legal Analysis of the New Structure
+Recommendation: It is a critical condition precedent to closing that the Company obtains explicit, prior written consent for the transaction from both Hana Bank and the Korea Credit Guarantee Fund (KODIT).
+
+[H2] Regulatory & Government Grants
+[H2] Finding: Conditions of Government R&D Grant (TIPS Program)
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+The Company is a beneficiary of the Korean government’s “Deep Tech TIPS (R&D)” program, administered by the Ministry of SMEs and Startups (중소벤처기업부) and the Korea Technology and Information Promotion Agency for SMEs (TIPA, 중소기업기술정보진흥원).
+
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+The specific project (No. RS-2024-00441512) is titled “High-efficiency, high-power-density, high-integration GaN power semiconductor IC technology development” and runs for 36 months from July 2024 to June 2027.
+
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+The total government funding is KRW 1.5 billion, with the Company committed to a matching contribution of KRW 450.1 million in cash and KRW 50.4 million in-kind.
+
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+Implication: The TIPS program is designed to support domestic Small & Medium Enterprises (SMEs). A change in the Company’s status to a foreign-owned subsidiary could violate the program’s eligibility criteria. Per the grant agreement, this could trigger penalties or termination under Articles 8 and 22, potentially leading to the termination of future funding and a demand for repayment (“clawback”) of funds already disbursed.
+
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+Risk Level: Medium
+
+[IP] Finding: Conditions of Government R&D Grant (TIPS Program)
+Recommendation: The Client must require, as a condition to closing, that the Company obtain a definitive written confirmation from the program administrator (TIPA) stating that the change of control will not trigger any penalties or repayment obligations under the TIPS agreement.
+
+[H2] Intellectual Property
+[IP] Intellectual Property
+Finding #1: Joint Ownership of IP with Seoul National University
+
+[IP] Intellectual Property
+Finding: The Company has an R&D contract with the Seoul National University Industry-Academic Cooperation Foundation (서울대학교 산학협력단), led by Professor Shin, Jong-hoon, for the development of a “65W charging circuit,” valued at KRW 50,000,000.
+
+[IP] Intellectual Property
+Article 5 of this contract explicitly stipulates that any intellectual property resulting from this research is jointly owned by the Company and the university. For the Company to use this IP exclusively, it is required to pay royalties.
+
+[IP] Intellectual Property
+Implication: This is a significant encumbrance. The jointly-owned IP cannot be freely used or transferred to Lucid SG as part of the group’s consolidated IP portfolio without the consent of a third party (the university). This directly conflicts with the core IP strategy of the Lucid group.
+
+[IP] Intellectual Property
+Risk Level: Low
+
+[IP] Intellectual Property
+Recommendation: The commercial importance of this jointly-owned IP must be assessed. If it is deemed critical, the Client should require the Company to negotiate a full assignment of the IP from the university prior to closing. Alternatively, a perpetual, royalty-free, worldwide exclusive license with the right to sublicense to Lucid SG must be secured.
+
+[H2] Finding #2: Risk of Employee Invention Claims
+[LITIGATION] Finding #2: Risk of Employee Invention Claims
+Finding: The Company’s standard Employment Agreement (in Article 8, “Intellectual Property Rights”) contains a clause assigning rights to all employee inventions to the Company.
+
+[LITIGATION] Finding #2: Risk of Employee Invention Claims
+However, as advised by Korean counsel, under Korea’s Invention Promotion Act, such an assignment may be challenged if “reasonable compensation,” separate from standard salary, is not provided to the employee for the invention. The reviewed employment and salary agreements do not specify any such separate compensation scheme.
+
+[LITIGATION] Finding #2: Risk of Employee Invention Claims
+Implication: This creates a latent risk that former or current employees could later assert claims for additional compensation or, in a worst-case scenario, challenge the Company’s ownership of key IP. This poses a potential obstacle to the clean transfer and consolidation of IP under Lucid SG.
+
+[LITIGATION] Finding #2: Risk of Employee Invention Claims
+Risk Level: Low
+
+[LITIGATION] Finding #2: Risk of Employee Invention Claims
+Recommendation: The Company should conduct an audit of its key IP assets to identify the inventing employees and assess the potential liability. Implementing a formal Employee Invention Compensation Policy is recommended to mitigate future risks.
+
+[H2] Material Contracts & Agreements
+[CONTRACTS] Material Contracts & Agreements
+Finding: Key Technology Supplier Agreements
+
+[CONTRACTS] Material Contracts & Agreements
+The Company has material contracts with key international suppliers for its operations, including a Purchase Order (PO) with Cadence Design Systems for “Cadence Hosted Design Soln” EDA software (Invoice #93503058) at a cost of USD $135,171.00, and a PO with DBH Korea (PO #229724) for “BCD MPW SHUTTLE” semiconductor fabrication services at a cost of USD $98,000.
+
+[CONTRACTS] Material Contracts & Agreements
+Implication: While operational, these relationships are governed by master agreements (e.g., the PO with Cadence explicitly references a “Cadence Cloud Framework Agreement”) that have not been provided for review. They may contain terms regarding licensing limitations, liability, or termination that could affect the Company’s business.
+
+[CONTRACTS] Material Contracts & Agreements
+Risk Level: Low
+
+[CONTRACTS] Material Contracts & Agreements
+Recommendation: It is advisable to request and review the master service agreements with these key vendors to ensure no onerous terms exist.
+
+[CONTRACTS] Material Contracts & Agreements
+APPENDIX A: LIST OF KEY DOCUMENTS REVIEWED
+
+[CONTRACTS] Material Contracts & Agreements
+This report is based on a review of the documents provided in the virtual data room and subsequent correspondence. The key documents reviewed include, but are not limited to, the following.
+
+[CONTRACTS] Material Contracts & Agreements
+Core Transaction & Financing Agreements
+
+[CONTRACTS] Material Contracts & Agreements
+Lucid Microsystems Financing Agreement
+
+[CONTRACTS] Material Contracts & Agreements
+Lucid Microsystems Pte. Ltd. - Series A Stock Purchase Agreement
+
+[CONTRACTS] Material Contracts & Agreements
+Lucid Microsystems Pte. Ltd. First Gate Share Swap Agreement
+
+[CONTRACTS] Material Contracts & Agreements
+Investment Agreement with VEP Semiconductor Growth Fund #2 G-Fund
+
+[CONTRACTS] Material Contracts & Agreements
+Investment Agreement with First Gate Private Investment Partnership No. 5
+
+[H2] SAFE (Simple Agreement for Future Equity) with Kihun Lee
+[CAPITAL] SAFE (Simple Agreement for Future Equity) with Kihun Lee
+SAFE (Simple Agreement for Future Equity) with Sohee Kim (Signed)
+
+[H2] Corporate Governance & Capitalization (Lucid KR)
+[H2] Certified Copy of Corporate Registry (등기사항전부증명서)
+[H2] Articles of Incorporation (New and Old versions) (정관)
+[H2] Shareholders’ Agreement (주주간계약서)
+[CAPITAL] Shareholders’ Agreement (주주간계약서)
+Shareholders’ List (주주명부) and Detailed Shareholder Ledger (주주명세서)
+
+[H2] Shareholder Written Resolutions (주주서면결의서)
+[CAPITAL] Shareholder Written Resolutions (주주서면결의서)
+Founder (Kisun Lee) Letter of Intent for Gratuitous Share Transfer
+
+[H2] Certificate of Business Registration (사업자등록증명원)
+[H2] Intellectual Property & R&D
+[IP] Intellectual Property & R&D
+Research and Development Services Agreement between Lucid SG and Lucid KR
+
+[IP] Intellectual Property & R&D
+R&D Contract with Seoul National University Industry-Academic Cooperation Foundation (re: 65W charging circuit)
+
+[H2] Standard Employment Agreement Template (근로계약서)
+[LABOR] Standard Employment Agreement Template (근로계약서)
+Indebtedness & Government Grants
+
+[H2] Credit Facility Agreement with Hana Bank (여신거래약정서)
+[DATA_IT] Credit Facility Agreement with Hana Bank (여신거래약정서)
+Credit Guarantee Agreement with Korea Credit Guarantee Fund (KODIT) (신용보증기금 약정서)
+
+[H2] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Key Operational Documents
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Purchase Orders and Invoices with Cadence Design Systems, Inc.
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Purchase Order with DBH Korea Co., Ltd.
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+List of Subscribers to 4 Major Social Insurances (4대보험가입자명부)
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Legal Opinions & Memorandum
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Legal Opinion on the SG-KR Swap (In-Kind Contribution)
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Legal Opinion on the Gratuitous Acquisition of a Major Shareholder’s Equity
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Samsung Oak - Lucid Microsystems Diligence Memo (Client-side diligence summary)
+
+[IP] Deep Tech TIPS R&D Grant Agreement (디딤테크 팁스 협약서)
+Lucid Microsystems Company Structure Presentation

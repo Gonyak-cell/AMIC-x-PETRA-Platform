@@ -131,6 +131,16 @@ class LDDReport(Base, TimestampMixin):
     jurisdiction_analysis: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     qa_result: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     pipeline_stages: Mapped[list | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    source_routing: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=True,
+        comment="VDR source workstream routing summary + per-document trace",
+    )
+    evidence_ledger: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=True,
+        comment="Item-level evidence traceability ledger for LDD outputs",
+    )
 
     # 워크플로우 타임스탬프
     analysis_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

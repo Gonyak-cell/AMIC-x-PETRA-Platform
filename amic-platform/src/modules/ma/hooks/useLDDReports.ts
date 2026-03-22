@@ -48,8 +48,87 @@ export interface LDDReport {
   file_size_bytes: number | null;
   error_message: string | null;
   created_by_email: string | null;
+  source_routing: LDDSourceRouting | null;
+  evidence_ledger: LDDEvidenceLedger | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface LDDSourceRouting {
+  version: string;
+  summary: {
+    total_documents: number;
+    included_for_ldd?: number;
+    excluded_from_ldd?: number;
+    manual_review_documents: number;
+    by_primary_workstream: Record<string, number>;
+  };
+  documents: LDDSourceRoutingDocument[];
+}
+
+export interface LDDSourceRoutingDocument {
+  document_id: string;
+  original_name: string;
+  folder_category: string;
+  ddrl_sections: string[];
+  primary_workstream: string;
+  workstream_tags: string[];
+  confidence: number;
+  include_for_ldd?: boolean;
+  requires_manual_review: boolean;
+  reasons: string[];
+}
+
+export interface LDDEvidenceLedger {
+  version: string;
+  summary: {
+    items_with_evidence: number;
+    items_missing_evidence: number;
+    items_missing_direct_evidence: number;
+    items_with_manual_review_sources: number;
+    direct_refs: number;
+    indirect_refs: number;
+    foreign_workstream_refs: number;
+    unresolved_refs: number;
+  };
+  by_section: Record<string, LDDEvidenceLedgerItem[]>;
+  by_item_id: Record<string, LDDEvidenceLedgerItem>;
+}
+
+export interface LDDEvidenceLedgerItem {
+  item_id: string;
+  item_name: string;
+  section_type: string;
+  status: string | null;
+  issue_level: string | null;
+  confidence: number;
+  evidence_count: number;
+  direct_evidence_count: number;
+  indirect_evidence_count: number;
+  foreign_workstream_refs: string[];
+  unresolved_refs: string[];
+  recommended_modality: string;
+  requires_manual_review: boolean;
+  missing_required_evidence: boolean;
+  missing_direct_evidence_for_material_issue: boolean;
+  documents: LDDEvidenceLedgerDocument[];
+}
+
+export interface LDDEvidenceLedgerDocument {
+  reference: string;
+  document_id: string;
+  original_name: string;
+  folder_category: string;
+  workstream_tags: string[];
+  primary_workstream: string;
+  include_for_ldd: boolean;
+  requires_manual_review: boolean;
+  chunk_id: string | null;
+  page_reference: string | null;
+  snippet: string | null;
+  locator: Record<string, unknown> | null;
+  evidence_kind: string;
+  directness: "DIRECT" | "INDIRECT";
 }
 
 export interface LDDSection {

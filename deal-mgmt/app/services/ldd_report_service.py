@@ -14,14 +14,17 @@ import copy
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DocumentNotFoundError
 from app.models.enums import LDDIssueLevel, LDDItemStatus, LDDReportStatus, LDDReportType
+from app.models.ldd_evidence_record import LDDEvidenceRecord
 from app.models.ldd_report import LDDReport
 from app.models.ldd_vdr_reference import LddVdrReference
 from app.ralph.generators.ldd.templates import TemplateRegistry
@@ -41,6 +44,27 @@ SLOTFILL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "templat
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "ldd"
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_VERSION = "1.0"
+
+
+@dataclass
+class _NarrativeBlockContext:
+    title: str
+    content: str
+
+
+@dataclass
+class _NarrativeItemContext:
+    item_id: str
+    item_name: str
+    status: str
+    issue_level: str
+    blocks: list[_NarrativeBlockContext]
+
+
+@dataclass
+class _NarrativeSectionContext:
+    section_title: str
+    items: list[_NarrativeItemContext]
 
 
 def _resolve_sections(deal_type: str, explicit_sections: list | None = None) -> tuple[list[dict], str]:
@@ -213,6 +237,32 @@ def _check_qa_gate(
     return True, ""
 
 
+def _check_qa_gate_v2(
+    qa_result: dict | None,
+    score: float | None,
+    min_score: int,
+    block_on_critical: bool,
+) -> tuple[bool, str]:
+    """Stricter QA gate with source-control hard blockers."""
+    if qa_result is None or score is None:
+        return True, ""
+
+    if score < min_score:
+        return False, f"QA score {score:.1f} is below the minimum threshold {min_score}."
+
+    issues = qa_result.get("issues") or []
+    hard_block_issues = [issue for issue in issues if issue.get("hard_block")]
+    if hard_block_issues:
+        return False, f"QA hard-block issues found: {len(hard_block_issues)}."
+
+    if block_on_critical:
+        critical = [issue for issue in issues if issue.get("severity") == "critical"]
+        if critical:
+            return False, f"Critical QA issues found: {len(critical)}."
+
+    return True, ""
+
+
 async def _build_render_narrative_sections(
     report: LDDReport,
     *,
@@ -278,6 +328,27 @@ def _build_context(
 ) -> dict:
     """docxtpl에 전달할 컨텍스트 딕셔너리를 생성한다."""
     sections = report.sections or []
+    if report.report_type == LDDReportType.REDFLAG:
+        filtered_sections: list[dict] = []
+        for section in sections:
+            filtered_items = [
+                item
+                for item in section.get("items", [])
+                if item.get("status") == LDDItemStatus.ISSUE
+                and item.get("issue_level") in (
+                    LDDIssueLevel.CRITICAL,
+                    LDDIssueLevel.HIGH,
+                    LDDIssueLevel.MEDIUM,
+                )
+            ]
+            if filtered_items:
+                filtered_sections.append(
+                    {
+                        **section,
+                        "items": filtered_items,
+                    }
+                )
+        sections = filtered_sections
 
     # 전체 이슈 목록 (ISSUE 항목만)
     all_issues = []
@@ -346,7 +417,7 @@ def _build_context(
 def _build_narrative_items(
     sections: list[dict],
     narrative_sections: dict[str, list[dict]],
-) -> list[dict]:
+) -> list[_NarrativeSectionContext]:
     """서술 데이터를 docxtpl 컨텍스트 형식으로 조립한다.
 
     각 섹션별 항목에 narrative blocks를 매칭하여 반환.
@@ -372,7 +443,7 @@ def _build_narrative_items(
             ...
         ]
     """
-    result: list[dict] = []
+    result: list[_NarrativeSectionContext] = []
 
     for section in sections:
         section_type = section.get("section_type", "")
@@ -384,46 +455,88 @@ def _build_narrative_items(
         for nr in narrative_items:
             narrative_by_id[nr.get("item_id", "")] = nr
 
-        items_ctx: list[dict] = []
+        items_ctx: list[_NarrativeItemContext] = []
         for item in section.get("items", []):
             item_id = item.get("item_id", "")
             nr = narrative_by_id.get(item_id)
 
-            blocks = []
+            blocks: list[_NarrativeBlockContext] = []
             if nr and nr.get("blocks"):
                 blocks = [
-                    {"title": b.get("title", ""), "content": b.get("content", "")}
+                    _NarrativeBlockContext(
+                        title=b.get("title", ""),
+                        content=b.get("content", ""),
+                    )
                     for b in nr["blocks"]
                     if b.get("content")
                 ]
 
             # 블록이 없으면 체크리스트 데이터를 단일 블록으로 폴백
             if not blocks and item.get("description"):
-                blocks = [{"title": "검토 결과", "content": item["description"]}]
+                blocks = [
+                    _NarrativeBlockContext(
+                        title="검토 결과",
+                        content=item["description"],
+                    )
+                ]
 
             if blocks:
                 items_ctx.append(
-                    {
-                        "item_id": item_id,
-                        "item_name": item.get("name", ""),
-                        "status": item.get("status", "PENDING"),
-                        "issue_level": item.get("issue_level", ""),
-                        "blocks": blocks,
-                    }
+                    _NarrativeItemContext(
+                        item_id=item_id,
+                        item_name=item.get("name", ""),
+                        status=item.get("status", "PENDING"),
+                        issue_level=item.get("issue_level", ""),
+                        blocks=blocks,
+                    )
                 )
 
         if items_ctx:
             result.append(
-                {
-                    "section_title": section_title,
-                    "items": items_ctx,
-                }
+                _NarrativeSectionContext(
+                    section_title=section_title,
+                    items=items_ctx,
+                )
             )
 
     return result
 
 
 # ── CRUD ─────────────────────────────────────────────────────────────────────
+
+
+def _find_docx_placeholder_hits(docx_path: str) -> list[str]:
+    """Inspect a rendered DOCX for unresolved placeholder markers."""
+    patterns = (
+        "{{",
+        "}}",
+        "[이곳에 텍스트 입력]",
+        "[부문명 기재]",
+        "[작성자 기재]",
+        "[검토범위 기재]",
+        "[프로젝트 코드명]",
+    )
+    try:
+        from docx import Document
+
+        document = Document(docx_path)
+    except Exception:
+        return []
+
+    hits: list[str] = []
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        if text and any(pattern in text for pattern in patterns):
+            hits.append(text[:160])
+
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text = cell.text.strip()
+                if text and any(pattern in text for pattern in patterns):
+                    hits.append(text[:160])
+
+    return hits[:10]
 
 
 async def list_ldd_reports(
@@ -596,11 +709,16 @@ async def generate_ldd_report(
 
     try:
         fname, fpath, fsize = await asyncio.to_thread(_render)
-        report.status = LDDReportStatus.READY
-        report.file_name = fname
-        report.file_path = fpath
-        report.file_size_bytes = fsize
-        report.error_message = None
+        placeholder_hits = await asyncio.to_thread(_find_docx_placeholder_hits, fpath)
+        if placeholder_hits:
+            report.status = LDDReportStatus.FAILED
+            report.error_message = f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+        else:
+            report.status = LDDReportStatus.READY
+            report.file_name = fname
+            report.file_path = fpath
+            report.file_size_bytes = fsize
+            report.error_message = None
     except Exception as exc:
         report.status = LDDReportStatus.FAILED
         report.error_message = str(exc)
@@ -623,7 +741,9 @@ async def _generate_law_firm_report(
     from app.ralph.generators.ldd.law_firm_narrative_adapter import LawFirmNarrativeAdapter
     from app.ralph.generators.ldd.law_firm_renderer import LawFirmDocxRenderer
     from app.ralph.generators.ldd.law_firm_template import LawFirmTemplateGenerator
+    from app.ralph.generators.ldd.project_green_style import format_project_green_date
 
+    DIRECT_TEMPLATE = TEMPLATE_DIR / "law_firm_template.docx"
     SOURCE_TEMPLATE = TEMPLATE_DIR / "law_firm_base.docx"
 
     report.status = LDDReportStatus.GENERATING
@@ -635,15 +755,20 @@ async def _generate_law_firm_report(
         def _render_law_firm() -> tuple[str, str, int]:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-            # Step 1: 빈 템플릿 생성
-            blank_path = OUTPUT_DIR / f"LDD_LAW_FIRM_blank_{report.id}.docx"
-            gen = LawFirmTemplateGenerator(SOURCE_TEMPLATE)
-            gen.generate_blank_template(
-                output_path=blank_path,
-                project_code=report.target_company or "[프로젝트 코드명]",
-                law_firm_name=report.law_firm or "[법무법인 명칭]",
-                report_date=report.dd_period or None,
-            )
+            template_path = DIRECT_TEMPLATE if DIRECT_TEMPLATE.exists() else None
+            generated_blank_path: Path | None = None
+
+            # Step 1 fallback: blank template가 없으면 기존 생성 경로 유지
+            if template_path is None:
+                generated_blank_path = OUTPUT_DIR / f"LDD_LAW_FIRM_blank_{report.id}.docx"
+                gen = LawFirmTemplateGenerator(SOURCE_TEMPLATE)
+                gen.generate_blank_template(
+                    output_path=generated_blank_path,
+                    project_code=report.target_company or "[프로젝트 코드명]",
+                    law_firm_name=report.law_firm or "[법무법인 명칭]",
+                    report_date=format_project_green_date(report.created_at or datetime.now(UTC)),
+                )
+                template_path = generated_blank_path
 
             # Step 2: 매핑 + 어댑터 + 렌더링
             mapper = LawFirmMapper()
@@ -698,13 +823,15 @@ async def _generate_law_firm_report(
             out = OUTPUT_DIR / fname
 
             renderer.render(
-                template_path=blank_path,
+                template_path=template_path,
                 output_path=out,
                 report_data={
                     "project_code": report.target_company or "",
                     "law_firm_name": report.law_firm or "",
-                    "report_date": report.dd_period or "",
+                    "report_date": format_project_green_date(report.created_at or datetime.now(UTC)),
                     "target_company": report.target_company or "",
+                    "report_type_label": "법률실사",
+                    "dd_period": report.dd_period or "",
                     "chapters": chapters,
                     "narratives": narratives,
                     "exec_summary": exec_summary,
@@ -712,17 +839,23 @@ async def _generate_law_firm_report(
                 },
             )
 
-            # 빈 템플릿 정리
-            blank_path.unlink(missing_ok=True)
+            # fallback으로 생성한 임시 blank만 정리
+            if generated_blank_path is not None:
+                generated_blank_path.unlink(missing_ok=True)
 
             return fname, str(out), out.stat().st_size
 
         fname, fpath, fsize = await asyncio.to_thread(_render_law_firm)
-        report.status = LDDReportStatus.READY
-        report.file_name = fname
-        report.file_path = fpath
-        report.file_size_bytes = fsize
-        report.error_message = None
+        placeholder_hits = await asyncio.to_thread(_find_docx_placeholder_hits, fpath)
+        if placeholder_hits:
+            report.status = LDDReportStatus.FAILED
+            report.error_message = f"Rendered DOCX still contains placeholder markers: {' | '.join(placeholder_hits[:3])}"
+        else:
+            report.status = LDDReportStatus.READY
+            report.file_name = fname
+            report.file_path = fpath
+            report.file_size_bytes = fsize
+            report.error_message = None
 
     except Exception as exc:
         logger.exception("법무법인 LDD 렌더링 실패: %s", exc)
@@ -964,6 +1097,114 @@ async def _insert_vdr_references(
     await db.flush()
 
 
+def _build_vdr_name_lookup(source_files: list) -> dict[str, uuid.UUID]:
+    """VDR 파일명 및 prefixed ref → VDR UUID 역매핑."""
+    vdr_name_to_id: dict[str, uuid.UUID] = {}
+    for vsf in source_files:
+        vdr_name_to_id[vsf.original_name] = vsf.vdr_document_id
+        vdr_name_to_id[f"[VDR:{vsf.vdr_document_id}]{vsf.original_name}"] = vsf.vdr_document_id
+    return vdr_name_to_id
+
+
+def _build_parsed_source_map(vdr_source_map: dict[str, list]) -> dict[str, list]:
+    """VdrSourceFile source_map을 ParsedFile source_map으로 변환한다."""
+    parsed_source_map: dict[str, list] = {}
+    for section_type, vsf_list in vdr_source_map.items():
+        parsed_list = []
+        for vsf in vsf_list:
+            parsed = copy.copy(vsf.parsed)
+            parsed.source_path = f"[VDR:{vsf.vdr_document_id}]{vsf.original_name}"
+            parsed_list.append(parsed)
+        parsed_source_map[section_type] = parsed_list
+    return parsed_source_map
+
+
+async def _prepare_ldd_vdr_inputs(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    source_files: list,
+    *,
+    min_common_confidence: float,
+) -> tuple[list, list, dict[str, Any], dict[str, list], dict[str, uuid.UUID]]:
+    """Route VDR sources by workstream and build LDD-only parsed source inputs."""
+    from app.services.ldd_source_controls import filter_ldd_relevant_sources, route_vdr_sources_for_ldd
+    from app.services.text_extraction_service import build_source_map
+    from app.services.vdr_routing_service import get_routing_override_map
+
+    routing_overrides = await get_routing_override_map(
+        db,
+        transaction_id,
+        document_ids=[source.vdr_document_id for source in source_files],
+    )
+    routed_sources, source_routing = route_vdr_sources_for_ldd(
+        source_files,
+        min_common_confidence=min_common_confidence,
+        routing_overrides=routing_overrides,
+    )
+    ldd_sources = filter_ldd_relevant_sources(routed_sources)
+    parsed_source_map: dict[str, list] = {}
+    if ldd_sources:
+        parsed_source_map = _build_parsed_source_map(build_source_map(ldd_sources))
+    return routed_sources, ldd_sources, source_routing, parsed_source_map, _build_vdr_name_lookup(source_files)
+
+
+async def _persist_ldd_evidence_records(
+    db: AsyncSession,
+    report: LDDReport,
+    evidence_records: list[dict[str, Any]],
+) -> None:
+    await db.execute(delete(LDDEvidenceRecord).where(LDDEvidenceRecord.ldd_report_id == report.id))
+    for record in evidence_records:
+        payload = dict(record)
+        vdr_document_id = payload.get("vdr_document_id")
+        transaction_id = payload.get("transaction_id")
+        payload["ldd_report_id"] = uuid.UUID(str(payload["ldd_report_id"]))
+        payload["transaction_id"] = uuid.UUID(str(transaction_id)) if transaction_id else None
+        payload["vdr_document_id"] = uuid.UUID(str(vdr_document_id)) if vdr_document_id else None
+        db.add(LDDEvidenceRecord(**payload))
+    await db.flush()
+
+
+async def _apply_ldd_source_controls(
+    db: AsyncSession,
+    report: LDDReport,
+    sections: list[dict],
+    routed_sources: list,
+    source_routing: dict[str, Any],
+    qa_result: dict[str, Any] | None,
+    *,
+    analysis_phase: str,
+) -> dict[str, Any]:
+    """Persist routing/evidence traceability and merge source-control QA into qa_result."""
+    from app.services.ldd_source_controls import (
+        build_ldd_evidence_ledger,
+        build_ldd_evidence_records,
+        build_ldd_source_control_qa,
+        merge_source_control_qa,
+    )
+
+    evidence_ledger = build_ldd_evidence_ledger(sections, routed_sources)
+    evidence_records = build_ldd_evidence_records(
+        transaction_id=str(report.transaction_id),
+        report_id=str(report.id),
+        evidence_ledger=evidence_ledger,
+        analysis_phase=analysis_phase,
+    )
+    source_control_qa = build_ldd_source_control_qa(
+        source_routing,
+        evidence_ledger,
+        sections=sections,
+        qa_result=qa_result,
+    )
+
+    report.source_routing = source_routing
+    report.evidence_ledger = evidence_ledger
+    merged_qa = merge_source_control_qa(qa_result, source_control_qa)
+    report.qa_result = merged_qa
+    await _persist_ldd_evidence_records(db, report, evidence_records)
+    return merged_qa
+
+
 async def create_ldd_report_from_vdr(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -988,7 +1229,7 @@ async def create_ldd_report_from_vdr(
     from app.ralph.llm_client import RalphLLMClient
     from app.ralph.orchestrator import LoopConfig, RalphLoopOrchestrator
     from app.ralph.prd_manager import load_prd
-    from app.services.text_extraction_service import TextExtractionService, build_source_map
+    from app.services.text_extraction_service import TextExtractionService
 
     now = datetime.now(UTC)
 
@@ -1036,24 +1277,23 @@ async def create_ldd_report_from_vdr(
             await db.refresh(report)
             return report
 
-        # 3. 섹션별 소스 매핑
-        vdr_source_map = build_source_map(source_files)
+        routed_sources, ldd_source_files, source_routing, parsed_source_map, vdr_name_to_id = (
+            await _prepare_ldd_vdr_inputs(
+                db,
+                transaction_id,
+                source_files,
+                min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
+            )
+        )
+        report.source_routing = source_routing
 
-        # VDR 파일명 → UUID 역매핑 (evidence 매칭용)
-        vdr_name_to_id: dict[str, uuid.UUID] = {}
-        for vsf in source_files:
-            vdr_name_to_id[vsf.original_name] = vsf.vdr_document_id
-            vdr_name_to_id[f"[VDR:{vsf.vdr_document_id}]{vsf.original_name}"] = vsf.vdr_document_id
-
-        # ParsedFile source_map 변환 (VDR 메타데이터를 source_path에 포함)
-        parsed_source_map: dict[str, list] = {}
-        for section_type, vsf_list in vdr_source_map.items():
-            parsed_list = []
-            for vsf in vsf_list:
-                p = copy.copy(vsf.parsed)
-                p.source_path = f"[VDR:{vsf.vdr_document_id}]{vsf.original_name}"
-                parsed_list.append(p)
-            parsed_source_map[section_type] = parsed_list
+        if not ldd_source_files:
+            report.status = LDDReportStatus.FAILED
+            report.error_message = "VDR에 LDD 관련 문서가 없습니다. 폴더 선택 또는 workstream 분류를 확인하세요."
+            report.analysis_completed_at = datetime.now(UTC)
+            await db.commit()
+            await db.refresh(report)
+            return report
 
         # 4. LLM 클라이언트 + 학습 패턴
         llm_client = RalphLLMClient.from_settings(settings)
@@ -1182,9 +1422,19 @@ async def create_ldd_report_from_vdr(
                     report.legal_citations = citation_summary
 
             report.appendices = pipeline_result.appendices
-            report.qa_result = pipeline_result.qa_result
             report.pipeline_stages = pipeline_result.stages
-            report.draft_score = pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
+            merged_qa = await _apply_ldd_source_controls(
+                db,
+                report,
+                sections_data,
+                routed_sources,
+                source_routing,
+                pipeline_result.qa_result,
+                analysis_phase="DRAFT",
+            )
+            report.draft_score = merged_qa.get("overall_score") if merged_qa.get("overall_score") is not None else (
+                pipeline_result.qa_result.get("overall_score") if pipeline_result.qa_result else None
+            )
 
             # 초안 QA 경고 — 점수가 기준 미달이면 리뷰 시 주의 메시지
             if report.draft_score is not None and report.draft_score < settings.LDD_MIN_DRAFT_SCORE:
@@ -1325,6 +1575,15 @@ async def create_ldd_report_from_vdr(
 
             report.draft_ralph_session_id = uuid.UUID(loop_result.session_id) if loop_result.session_id else None
             report.draft_score = loop_result.final_score
+            await _apply_ldd_source_controls(
+                db,
+                report,
+                sections_data,
+                routed_sources,
+                source_routing,
+                report.qa_result,
+                analysis_phase="DRAFT",
+            )
             report.status = LDDReportStatus.REVIEW
             report.analysis_completed_at = datetime.now(UTC)
             report.review_started_at = datetime.now(UTC)
@@ -1373,7 +1632,7 @@ async def finalize_ldd_report(
     from app.ralph.llm_client import RalphLLMClient
     from app.ralph.orchestrator import LoopConfig, RalphLoopOrchestrator
     from app.ralph.prd_manager import load_prd
-    from app.services.text_extraction_service import TextExtractionService, build_source_map
+    from app.services.text_extraction_service import TextExtractionService
 
     report = await get_ldd_report(db, transaction_id, report_id)
 
@@ -1407,18 +1666,28 @@ async def finalize_ldd_report(
 
         # 2. VDR 소스 재로딩 (VDR 기반인 경우)
         parsed_source_map: dict[str, list] = {}
+        routed_sources: list = []
+        source_routing = report.source_routing or {}
         if report.vdr_source:
             extractor = TextExtractionService()
             source_files = await extractor.extract_from_vdr_documents(db, transaction_id)
             if source_files:
-                vdr_source_map = build_source_map(source_files)
-                for section_type, vsf_list in vdr_source_map.items():
-                    parsed_list = []
-                    for vsf in vsf_list:
-                        p = copy.copy(vsf.parsed)
-                        p.source_path = f"[VDR:{vsf.vdr_document_id}]{vsf.original_name}"
-                        parsed_list.append(p)
-                    parsed_source_map[section_type] = parsed_list
+                routed_sources, ldd_source_files, source_routing, parsed_source_map, _vdr_name_to_id = (
+                    await _prepare_ldd_vdr_inputs(
+                        db,
+                        transaction_id,
+                        source_files,
+                        min_common_confidence=settings.LDD_ROUTER_MIN_COMMON_CONFIDENCE,
+                    )
+                )
+                report.source_routing = source_routing
+                if report.vdr_source and not ldd_source_files:
+                    report.status = LDDReportStatus.REVIEW
+                    report.error_message = "LDD 관련 VDR 문서가 식별되지 않아 최종 확정을 진행할 수 없습니다."
+                    report.review_started_at = datetime.now(UTC)
+                    await db.commit()
+                    await db.refresh(report)
+                    return report
 
         # 3. LLM 클라이언트
         llm_client = RalphLLMClient.from_settings(settings)
@@ -1536,9 +1805,19 @@ async def finalize_ldd_report(
         report.final_ralph_session_id = uuid.UUID(loop_result.session_id) if loop_result.session_id else None
         report.final_score = loop_result.final_score
         report.finalize_completed_at = datetime.now(UTC)
+        if report.vdr_source:
+            await _apply_ldd_source_controls(
+                db,
+                report,
+                sections,
+                routed_sources,
+                source_routing,
+                report.qa_result,
+                analysis_phase="FINAL",
+            )
 
         # 7. QA 게이트 — 최종 점수가 기준 미달이면 REVIEW로 되돌림
-        gate_passed, gate_reason = _check_qa_gate(
+        gate_passed, gate_reason = _check_qa_gate_v2(
             report.qa_result,
             report.final_score,
             settings.LDD_MIN_FINAL_SCORE,

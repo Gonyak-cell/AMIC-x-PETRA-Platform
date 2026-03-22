@@ -1,0 +1,293 @@
+section_id: PERMITS
+section_label: 인허가 및 규제
+generated_at: '2026-03-21T03:19:47.091408+00:00'
+candidate_count: 903
+candidates:
+- id: permits_01
+  normalized_text: 1. 짧은 시간 내에 효율적으로 실사를 수행하기 위하여는 귀사의 협조가 절대적으로 필요합니다. 다음 항목의 서류
+    및 자료들을 전자파일 또는 hard copy 사본으로 제공해 주시기 바라며, 서류의 제목이나 표제와 무관하게 그 안에 포함되어 있는 실질적인
+    내용을 기준으로 서류들을 제공해 주시기 바랍니다.
+  file_count: 3
+  hit_count: 3
+  headings:
+  - 2014/4/21 (M&A팀) | 문서 전반 검토 및 업데이트 완료 - 법령준수/인허가 파트 추가 > 법률 실사 요청자료 목록
+  examples:
+  - file: 28-v4-_K__DDRL_(MA_Training_Session_자료).DOC
+    heading: 2014/4/21 (M&A팀) | 문서 전반 검토 및 업데이트 완료 - 법령준수/인허가 파트 추가 > 법률 실사 요청자료 목록
+    text: 1. 짧은 시간 내에 효율적으로 실사를 수행하기 위하여는 귀사의 협조가 절대적으로 필요합니다. 다음 항목의 서류 및 자료들을 전자파일
+      또는 hard copy 사본으로 제공해 주시기 바라며, 서류의 제목이나 표제와 무관하게 그 안에 포함되어 있는 실질적인 내용을 기준으로
+      서류들을 제공해 주시기 바랍니다.
+- id: permits_02
+  normalized_text: '[써머스플랫폼, 팟빵] 조사 및 법령위반 제재 사례 {{NUMBER}}'
+  file_count: 2
+  hit_count: 2
+  headings:
+  - 2021년 11월 19일 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35
+  - 4. 공장등록 등 산집법 관련 이슈 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35 > text
+  examples:
+  - file: 1. 주식인수\Tailwind_-_법률실사_최종보고서.docx
+    heading: 2021년 11월 19일 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35
+    text: '[써머스플랫폼, 팟빵] 조사 및 법령위반 제재 사례 36'
+- id: permits_03
+  normalized_text: '[플레이오토] 기업부설연구소 인정 취소 가능성 {{NUMBER}}'
+  file_count: 2
+  hit_count: 2
+  headings:
+  - 2021년 11월 19일 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35
+  - 4. 공장등록 등 산집법 관련 이슈 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35 > text
+  examples:
+  - file: 1. 주식인수\Tailwind_-_법률실사_최종보고서.docx
+    heading: 2021년 11월 19일 > [MNC, 플레이오토, 링크프라이스] 부가통신사업 및 통신판매업 미신고 35
+    text: '[플레이오토] 기업부설연구소 인정 취소 가능성 36'
+- id: permits_04
+  normalized_text: battery, its manufacturing method andlithium ion
+  file_count: 1
+  hit_count: 5
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4 > 2001-09-14 2012-08-24
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14 2005-08-31
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14
+      2005-08-31
+    text: battery, its manufacturing method andlithium ion
+- id: permits_05
+  normalized_text: secondary battery using the same
+  file_count: 1
+  hit_count: 5
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4 > 2001-09-14 2012-08-24
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14 2005-08-31
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14
+      2005-08-31
+    text: secondary battery using the same
+- id: permits_06
+  normalized_text: Pocketed electrode plate for use in lithium ionsecondary
+  file_count: 1
+  hit_count: 4
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4 > 2001-09-14 2012-08-24
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14 2005-08-31
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1970340.4
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 1802876.4 > 2001-09-14
+      2005-08-31
+    text: Pocketed electrode plate for use in lithium ionsecondary
+- id: permits_07
+  normalized_text: '- 단, 원고와 피고는 {{DATE}}. 다음과 같은 합의서를 체결함.'
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: '- 단, 원고와 피고는 2025. 8. 13. 다음과 같은 합의서를 체결함.'
+- id: permits_08
+  normalized_text: (iii) 원고가 본 합의서상 의무를 위반하는 경우 위약금으로
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: (iii) 원고가 본 합의서상 의무를 위반하는 경우 위약금으로
+- id: permits_09
+  normalized_text: (iv) 피고가 본 합의서상 의무를 위반하는 경우 위약금으로
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: (iv) 피고가 본 합의서상 의무를 위반하는 경우 위약금으로
+- id: permits_10
+  normalized_text: 상호간 어떠한 민형사상 소송, 이의신청, 공정위 신고
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 상호간 어떠한 민형사상 소송, 이의신청, 공정위 신고
+- id: permits_11
+  normalized_text: 등 일체의 청구 및 권한을 포기하고, 향후 이를 이유로
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 등 일체의 청구 및 권한을 포기하고, 향후 이를 이유로
+- id: permits_12
+  normalized_text: (i) 피고는 위 사건에 대한 원고의 청구금액 전부를
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: (i) 피고는 위 사건에 대한 원고의 청구금액 전부를
+- id: permits_13
+  normalized_text: 인정하고, 원고는 위 사건과 관련하여 청구할 수 있는
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 인정하고, 원고는 위 사건과 관련하여 청구할 수 있는
+- id: permits_14
+  normalized_text: ‘명륜진사갈비’ 가맹사업자인 피고가 가맹계약기간 중
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 등록서비스표”)의 권리범위에 속하지 않는다 점에 대한 확인을
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 등록서비스표”)의 권리범위에 속하지 않는다 점에 대한 확인을
+    text: ‘명륜진사갈비’ 가맹사업자인 피고가 가맹계약기간 중
+- id: permits_15
+  normalized_text: 1억원 및 (i)에 따라 갑이 청구하지 않은 금액을
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 1억원 및 (i)에 따라 갑이 청구하지 않은 금액을
+- id: permits_16
+  normalized_text: (ii) 원고 및 피고는 가맹사업 운영과 관련하여
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: (ii) 원고 및 피고는 가맹사업 운영과 관련하여
+- id: permits_17
+  normalized_text: 경업금지 위반에 따른 손해배상금 및 소송비용 등
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 경업금지 위반에 따른 손해배상금 및 소송비용 등
+- id: permits_18
+  normalized_text: 발생하였거나 발송할 수 있는 모든 사안에 대하여
+  file_count: 1
+  hit_count: 4
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 발생하였거나 발송할 수 있는 모든 사안에 대하여
+- id: permits_19
+  normalized_text: 이차전지용 전극 조립체, 이의 제조 방법 및 이를 포함하는 리튬이
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 등록일자 > 2019-07-16 2021-03-18
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 등록일자 > 2019-07-23 2021-03-18
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 등록일자 > 2019-08-13 2021-01-14
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 등록일자 > 2019-07-16
+      2021-03-18
+    text: 이차전지용 전극 조립체, 이의 제조 방법 및 이를 포함하는 리튬이
+- id: permits_20
+  normalized_text: WRAPPING ELECTRODE PLATE FOR USE IN
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9 > 2015-03-09
+    2017-04-28
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+    text: WRAPPING ELECTRODE PLATE FOR USE IN
+- id: permits_21
+  normalized_text: LITHIUM ION SECONDARY BATTERY AND
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9 > 2015-03-09
+    2017-04-28
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+    text: LITHIUM ION SECONDARY BATTERY AND
+- id: permits_22
+  normalized_text: MANUFACTURING METHOD OF THE SAME
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9 > 2015-03-09
+    2017-04-28
+  - 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+  examples:
+  - file: 1. 주식인수\[루트제이트]_법률실사보고서(리튬이차전지).pdf
+    heading: 2019.07.22 한국기계전기전자시험연구원장 안전확인신고증명서(FLPB463535R-P1) > 201380047163.9
+    text: MANUFACTURING METHOD OF THE SAME
+- id: permits_23
+  normalized_text: 가맹사업과 동일업종인 ‘진양반갈비’를 운영하여 가맹계약상
+  file_count: 1
+  hit_count: 3
+  headings:
+  - II. > 2025. 8. 29. 피고 항소 취하
+  - II. > 7. 8. 피고 항소 취하
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: II. > 2025. 8. 29. 피고 항소 취하
+    text: 가맹사업과 동일업종인 ‘진양반갈비’를 운영하여 가맹계약상
+- id: permits_24
+  normalized_text: 사전 • 대표자 성명, 영업소 명칭, 상호 변경 시
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 인허가
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: 인허가
+    text: 사전 • 대표자 성명, 영업소 명칭, 상호 변경 시
+- id: permits_25
+  normalized_text: 사후 • 대표자 성명, 영업소 명칭, 상호 변경 시
+  file_count: 1
+  hit_count: 3
+  headings:
+  - 인허가
+  examples:
+  - file: 1. 주식인수\Project Covenant_LDD Report_251017.pdf
+    heading: 인허가
+    text: 사후 • 대표자 성명, 영업소 명칭, 상호 변경 시

@@ -1,6 +1,7 @@
 import logging
 import os
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _logger = logging.getLogger(__name__)
@@ -8,6 +9,17 @@ _logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def normalize_debug_flag(cls, value: object) -> object:
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"release", "prod", "production"}:
+                return False
+            if lowered in {"debug", "development", "dev"}:
+                return True
+        return value
 
     # App
     APP_NAME: str = "Deal Management"
@@ -95,6 +107,7 @@ class Settings(BaseSettings):
     LDD_TEMPLATE_SLOTFILL_ENABLED: bool = True  # 부동문자 bank + slot-fill 렌더링 활성화
     LDD_TEMPLATE_SLOTFILL_USE_LLM: bool = False  # L3 슬롯에 한해 LLM 보조 사용
     LDD_TEMPLATE_SLOTFILL_DIR: str = ""  # 비어 있으면 templates/ldd_slotfill 사용
+    LDD_ROUTER_MIN_COMMON_CONFIDENCE: float = 0.55  # COMMON 문서를 LDD에 허용할 최소 라우팅 신뢰도
 
     # LDD QA Gate
     LDD_MIN_DRAFT_SCORE: int = 3  # 초안 최소 품질 (1-5), REVIEW 시 경고

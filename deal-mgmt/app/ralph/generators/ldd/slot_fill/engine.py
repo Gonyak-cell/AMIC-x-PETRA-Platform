@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from app.models.enums import LDDIssueLevel, LDDItemStatus, LDDReportType
+from app.ralph.generators.ldd.project_green_style import (
+    ProjectGreenToneContext,
+    choose_project_green_modality,
+    normalize_project_green_text,
+)
 from app.ralph.generators.ldd.slot_fill.prompt_builder import LDDSlotFillPromptBuilder
 from app.ralph.generators.ldd.slot_fill.registry import TemplateRegistry
 from app.ralph.generators.ldd.slot_fill.renderer import LDDTemplateRenderer
@@ -122,6 +127,9 @@ class LDDTemplateSlotFillEngine:
                     }
                 )
 
+            if rendered_items and template.section_preamble:
+                rendered_items = self._compact_section_preamble(rendered_items, template.section_preamble)
+
             if rendered_items:
                 result[section_type] = rendered_items
 
@@ -174,25 +182,43 @@ class LDDTemplateSlotFillEngine:
         status = item.get("status", LDDItemStatus.PENDING)
         issue_level = item.get("issue_level")
         evidence_refs = [str(ref) for ref in item.get("evidence_refs", []) if ref]
-        finding_summary = self._ensure_sentence(item.get("description") or self._default_finding(status, issue_level))
-        impact_summary = self._ensure_sentence(item.get("deal_impact") or self._default_impact(status, issue_level))
-        recommendation_summary = self._ensure_sentence(
-            item.get("recommendation") or self._default_recommendation(status, issue_level)
+        finding_summary = normalize_project_green_text(
+            self._ensure_sentence(item.get("description") or self._default_finding(status, issue_level))
+        )
+        impact_summary = normalize_project_green_text(
+            self._ensure_sentence(item.get("deal_impact") or self._default_impact(status, issue_level))
+        )
+        recommendation_summary = normalize_project_green_text(
+            self._ensure_sentence(item.get("recommendation") or self._default_recommendation(status, issue_level))
         )
         target_company = getattr(report, "target_company", None) or "대상회사"
         confidence = item.get("confidence", 0.0) or 0.0
+        modality = choose_project_green_modality(
+            ProjectGreenToneContext(
+                evidence_count=len(evidence_refs),
+                confidence=float(confidence),
+                status=str(status),
+                issue_level=str(issue_level or ""),
+                rfi_required=bool(item.get("rfi_required")),
+                evidence_refs=tuple(evidence_refs),
+            )
+        )
         confidence_text = (
             f"AI 신뢰도는 약 {float(confidence) * 100:.0f}% 수준으로 평가되었습니다." if confidence else ""
         )
 
-        evidence_sentence = (
+        finding_summary = normalize_project_green_text(finding_summary, modality=modality)
+        impact_summary = normalize_project_green_text(impact_summary, modality=modality)
+        confidence_text = normalize_project_green_text(confidence_text)
+
+        evidence_sentence = normalize_project_green_text(
             self._ensure_sentence(
                 f"관련 근거자료로는 {', '.join(evidence_refs[:5])}{' 등' if len(evidence_refs) > 5 else ''}이 확인되었습니다."
             )
             if evidence_refs
             else "제출자료 범위 내에서 근거자료의 식별은 제한적이었습니다."
         )
-        rfi_sentence = (
+        rfi_sentence = normalize_project_green_text(
             self._ensure_sentence(
                 f"추가 확인을 위해 RFI {item.get('rfi_number') or item.get('item_id', '')} 발행 또는 보강자료 요청을 권고합니다."
             )
@@ -240,15 +266,24 @@ class LDDTemplateSlotFillEngine:
                 "finding_summary": finding_summary,
                 "impact_summary": impact_summary,
                 "recommendation_summary": recommendation_summary,
-                "status_sentence": self._build_status_sentence(
-                    target_company, item.get("name", ""), status, issue_level, finding_summary
+                "status_sentence": normalize_project_green_text(
+                    self._build_status_sentence(target_company, item.get("name", ""), status, issue_level, finding_summary),
+                    modality=modality,
                 ),
-                "analysis_sentence": self._build_analysis_sentence(status, issue_level),
-                "impact_sentence": self._build_impact_sentence(impact_summary),
-                "recommendation_sentence": self._build_recommendation_sentence(recommendation_summary),
+                "analysis_sentence": normalize_project_green_text(
+                    self._build_analysis_sentence(status, issue_level),
+                    modality=modality,
+                ),
+                "impact_sentence": normalize_project_green_text(
+                    self._build_impact_sentence(impact_summary),
+                    modality=modality,
+                ),
+                "recommendation_sentence": normalize_project_green_text(
+                    self._build_recommendation_sentence(recommendation_summary)
+                ),
                 "evidence_sentence": evidence_sentence,
                 "rfi_sentence": rfi_sentence,
-                "user_review_sentence": self._build_user_review_sentence(item),
+                "user_review_sentence": normalize_project_green_text(self._build_user_review_sentence(item)),
                 "confidence_sentence": confidence_text,
                 "supporting_documents": ", ".join(evidence_refs[:5]),
                 "raw_facts": (raw_narrative or {}).get("FACTS", ""),
@@ -388,3 +423,50 @@ class LDDTemplateSlotFillEngine:
                 }
             )
         return blocks
+
+    @classmethod
+    def _compact_section_preamble(
+        cls,
+        rendered_items: list[dict[str, Any]],
+        section_preamble: dict[str, int],
+    ) -> list[dict[str, Any]]:
+        if len(rendered_items) <= 1:
+            return rendered_items
+
+        compacted = [rendered_items[0]]
+        for item in rendered_items[1:]:
+            next_item = dict(item)
+            next_blocks: list[dict[str, Any]] = []
+            for block in item.get("blocks", []):
+                next_block = dict(block)
+                trim_count = section_preamble.get(str(block.get("block_type", "")), 0)
+                if trim_count > 0:
+                    trimmed = cls._trim_leading_sentences(str(block.get("content", "")), trim_count)
+                    if trimmed:
+                        next_block["content"] = trimmed
+                        next_block["word_count"] = len(trimmed)
+                    else:
+                        continue
+                next_blocks.append(next_block)
+            next_item["blocks"] = next_blocks
+            compacted.append(next_item)
+        return compacted
+
+    @staticmethod
+    def _trim_leading_sentences(text: str, sentence_count: int) -> str:
+        clean = (text or "").strip()
+        if not clean or sentence_count <= 0:
+            return clean
+
+        remaining = clean
+        trimmed_any = False
+        for _ in range(sentence_count):
+            match = re.search(r"[.!?](?:\s+|$)", remaining)
+            if not match:
+                break
+            remaining = remaining[match.end() :].lstrip()
+            trimmed_any = True
+
+        if not trimmed_any:
+            return clean
+        return remaining
