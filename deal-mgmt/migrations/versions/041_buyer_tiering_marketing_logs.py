@@ -1,9 +1,4 @@
-"""매수자 Tier 분류 + 마케팅 활동 로그 테이블 추가.
-
-- buyer_candidates: tier (TIER_1/2/3/NOT_TARGET), corp_code 컬럼 추가
-- buyer_marketing_logs: Short-List 6단계 마케팅 활동 로그 테이블 신규 생성
-- VdrFolderCategory enum에 MARKET_RESEARCH 추가
-- AttachmentEntityType enum에 MARKETING_LOG 추가
+"""Buyer tiering and marketing log schema updates.
 
 Revision ID: 041
 Revises: 040
@@ -13,6 +8,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision = "041"
 down_revision = "040"
@@ -20,54 +16,59 @@ branch_labels = None
 depends_on = None
 
 
+BUYER_TIER_VALUES = ("TIER_1", "TIER_2", "TIER_3", "NOT_TARGET")
+MARKETING_STAGE_VALUES = (
+    "IDENTIFIED",
+    "EMAIL_SENT",
+    "PHONE_CALL",
+    "ADVISOR_MEETING",
+    "NDA_SIGNED",
+    "TARGET_MEETING",
+)
+
+
+def _build_enum(name: str, values: tuple[str, ...], *, postgres: bool) -> sa.Enum:
+    if postgres:
+        return postgresql.ENUM(*values, name=name, create_type=False)
+    return sa.Enum(*values, name=name)
+
+
 def upgrade() -> None:
-    # 1. BuyerTier enum 생성
     bind = op.get_bind()
-    buyer_tier = sa.Enum(
-        "TIER_1",
-        "TIER_2",
-        "TIER_3",
-        "NOT_TARGET",
-        name="buyertier",
-    )
-    if bind.dialect.name == "postgresql":
-        buyer_tier.create(bind, checkfirst=True)
+    is_postgresql = bind.dialect.name == "postgresql"
 
-    # 2. MarketingStage enum 생성
-    marketing_stage = sa.Enum(
-        "IDENTIFIED",
-        "EMAIL_SENT",
-        "PHONE_CALL",
-        "ADVISOR_MEETING",
-        "NDA_SIGNED",
-        "TARGET_MEETING",
-        name="marketingstage",
-    )
-    if bind.dialect.name == "postgresql":
-        marketing_stage.create(bind, checkfirst=True)
+    if is_postgresql:
+        buyer_tier_values = ", ".join(f"'{value}'" for value in BUYER_TIER_VALUES)
+        marketing_stage_values = ", ".join(f"'{value}'" for value in MARKETING_STAGE_VALUES)
+        op.execute(
+            f"""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'buyertier') THEN
+                    CREATE TYPE buyertier AS ENUM ({buyer_tier_values});
+                END IF;
+            END $$;
+            """
+        )
+        op.execute(
+            f"""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'marketingstage') THEN
+                    CREATE TYPE marketingstage AS ENUM ({marketing_stage_values});
+                END IF;
+            END $$;
+            """
+        )
 
-    # 3. buyer_candidates 테이블에 컬럼 추가
-    op.add_column(
-        "buyer_candidates",
-        sa.Column(
-            "tier",
-            sa.Enum(
-                "TIER_1",
-                "TIER_2",
-                "TIER_3",
-                "NOT_TARGET",
-                name="buyertier",
-                create_type=False,
-            ),
-            nullable=True,
-        ),
-    )
-    op.add_column(
-        "buyer_candidates",
-        sa.Column("corp_code", sa.String(8), nullable=True),
+    buyer_tier = _build_enum("buyertier", BUYER_TIER_VALUES, postgres=is_postgresql)
+    marketing_stage = _build_enum(
+        "marketingstage",
+        MARKETING_STAGE_VALUES,
+        postgres=is_postgresql,
     )
 
-    # 4. buyer_marketing_logs 테이블 생성
+    op.add_column("buyer_candidates", sa.Column("tier", buyer_tier, nullable=True))
+    op.add_column("buyer_candidates", sa.Column("corp_code", sa.String(8), nullable=True))
+
     op.create_table(
         "buyer_marketing_logs",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -85,47 +86,32 @@ def upgrade() -> None:
             nullable=False,
             index=True,
         ),
-        sa.Column(
-            "stage",
-            sa.Enum(
-                "IDENTIFIED",
-                "EMAIL_SENT",
-                "PHONE_CALL",
-                "ADVISOR_MEETING",
-                "NDA_SIGNED",
-                "TARGET_MEETING",
-                name="marketingstage",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("stage", marketing_stage, nullable=False),
         sa.Column("log_date", sa.String(10), nullable=False),
         sa.Column("content", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
-    # 5. VdrFolderCategory enum에 MARKET_RESEARCH 추가 (PostgreSQL 전용)
-    if bind.dialect.name == "postgresql":
+    if is_postgresql:
         op.execute("ALTER TYPE vdrfoldercategory ADD VALUE IF NOT EXISTS 'MARKET_RESEARCH'")
-
-        # 6. AttachmentEntityType enum에 MARKETING_LOG 추가
-        op.execute("ALTER TYPE attachmententitytype ADD VALUE IF NOT EXISTS 'MARKETING_LOG'")
+        op.execute(
+            """
+            DO $$ BEGIN
+                IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attachmententitytype') THEN
+                    ALTER TYPE attachmententitytype ADD VALUE IF NOT EXISTS 'MARKETING_LOG';
+                END IF;
+            END $$;
+            """
+        )
 
 
 def downgrade() -> None:
-    # buyer_marketing_logs 테이블 삭제
     op.drop_table("buyer_marketing_logs")
-
-    # buyer_candidates 컬럼 제거
     op.drop_column("buyer_candidates", "corp_code")
     op.drop_column("buyer_candidates", "tier")
 
-    # enum 타입 삭제
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        sa.Enum(name="marketingstage").drop(bind, checkfirst=True)
-        sa.Enum(name="buyertier").drop(bind, checkfirst=True)
-
-    # PostgreSQL enum에서 값 제거는 불가 — downgrade 시 무시
-    # MARKET_RESEARCH, MARKETING_LOG 값은 enum에 남음
+        op.execute("DROP TYPE IF EXISTS marketingstage")
+        op.execute("DROP TYPE IF EXISTS buyertier")

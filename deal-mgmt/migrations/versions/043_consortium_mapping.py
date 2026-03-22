@@ -1,10 +1,4 @@
-"""컨소시엄/공동투자 매핑 테이블 + deal_role + created_by_email.
-
-- DealRole enum 생성 (SOLE_BUYER / CONSORTIUM_LEAD / CO_INVESTOR / FINANCING_PROVIDER)
-- ConsortiumStatus enum 생성 (TAPPING / CONFIRMED / DROPPED)
-- buyer_candidates.deal_role 컬럼 추가
-- buyer_marketing_logs.created_by_email 컬럼 추가
-- consortium_mappings 테이블 신규 생성
+"""Consortium mapping schema updates.
 
 Revision ID: 043
 Revises: 042
@@ -14,6 +8,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision = "043"
 down_revision = "042"
@@ -21,50 +16,55 @@ branch_labels = None
 depends_on = None
 
 
+DEAL_ROLE_VALUES = (
+    "SOLE_BUYER",
+    "CONSORTIUM_LEAD",
+    "CO_INVESTOR",
+    "FINANCING_PROVIDER",
+)
+CONSORTIUM_STATUS_VALUES = ("TAPPING", "CONFIRMED", "DROPPED")
+
+
+def _build_enum(name: str, values: tuple[str, ...], *, postgres: bool) -> sa.Enum:
+    if postgres:
+        return postgresql.ENUM(*values, name=name, create_type=False)
+    return sa.Enum(*values, name=name)
+
+
+def _ensure_postgres_enum(name: str, values: tuple[str, ...]) -> None:
+    values_sql = ", ".join(f"'{value}'" for value in values)
+    op.execute(
+        f"""
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '{name}') THEN
+                CREATE TYPE {name} AS ENUM ({values_sql});
+            END IF;
+        END $$;
+        """
+    )
+
+
 def upgrade() -> None:
-    # 1. DealRole enum 생성
-    deal_role_enum = sa.Enum(
-        "SOLE_BUYER",
-        "CONSORTIUM_LEAD",
-        "CO_INVESTOR",
-        "FINANCING_PROVIDER",
-        name="dealrole",
-    )
-    deal_role_enum.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    is_postgresql = bind.dialect.name == "postgresql"
 
-    # 2. ConsortiumStatus enum 생성
-    consortium_status_enum = sa.Enum(
-        "TAPPING",
-        "CONFIRMED",
-        "DROPPED",
-        name="consortiumstatus",
-    )
-    consortium_status_enum.create(op.get_bind(), checkfirst=True)
+    if is_postgresql:
+        _ensure_postgres_enum("dealrole", DEAL_ROLE_VALUES)
+        _ensure_postgres_enum("consortiumstatus", CONSORTIUM_STATUS_VALUES)
 
-    # 3. buyer_candidates.deal_role 컬럼 추가
-    op.add_column(
-        "buyer_candidates",
-        sa.Column(
-            "deal_role",
-            sa.Enum(
-                "SOLE_BUYER",
-                "CONSORTIUM_LEAD",
-                "CO_INVESTOR",
-                "FINANCING_PROVIDER",
-                name="dealrole",
-                create_type=False,
-            ),
-            nullable=True,
-        ),
+    deal_role_enum = _build_enum("dealrole", DEAL_ROLE_VALUES, postgres=is_postgresql)
+    consortium_status_enum = _build_enum(
+        "consortiumstatus",
+        CONSORTIUM_STATUS_VALUES,
+        postgres=is_postgresql,
     )
 
-    # 4. buyer_marketing_logs.created_by_email 컬럼 추가
+    op.add_column("buyer_candidates", sa.Column("deal_role", deal_role_enum, nullable=True))
     op.add_column(
         "buyer_marketing_logs",
         sa.Column("created_by_email", sa.String(255), nullable=True),
     )
 
-    # 5. consortium_mappings 테이블 생성
     op.create_table(
         "consortium_mappings",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -91,28 +91,14 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status",
-            sa.Enum(
-                "TAPPING",
-                "CONFIRMED",
-                "DROPPED",
-                name="consortiumstatus",
-                create_type=False,
-            ),
+            consortium_status_enum,
             nullable=False,
             server_default="TAPPING",
         ),
         sa.Column("equity_share_pct", sa.Numeric(5, 2), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.CheckConstraint(
             "lead_buyer_id != co_investor_buyer_id",
             name="ck_no_self_consortium",
@@ -131,15 +117,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # consortium_mappings 테이블 삭제
     op.drop_table("consortium_mappings")
-
-    # buyer_marketing_logs.created_by_email 제거
     op.drop_column("buyer_marketing_logs", "created_by_email")
-
-    # buyer_candidates.deal_role 제거
     op.drop_column("buyer_candidates", "deal_role")
 
-    # enum 타입 삭제 (생성 역순: dealrole → consortiumstatus)
-    sa.Enum(name="dealrole").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="consortiumstatus").drop(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS consortiumstatus")
+        op.execute("DROP TYPE IF EXISTS dealrole")

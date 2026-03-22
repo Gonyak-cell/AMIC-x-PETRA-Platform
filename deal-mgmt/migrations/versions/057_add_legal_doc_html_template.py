@@ -19,13 +19,21 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("legal_documents", sa.Column("generated_html", sa.Text, nullable=True))
-    op.add_column(
-        "legal_documents",
-        sa.Column("template_id", sa.Uuid, nullable=True),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("legal_documents")}
+
+    if "generated_html" not in existing_columns:
+        op.add_column("legal_documents", sa.Column("generated_html", sa.Text(), nullable=True))
+
+    if "template_id" not in existing_columns:
+        op.add_column(
+            "legal_documents",
+            sa.Column("template_id", sa.Uuid(), nullable=True),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("legal_documents", "template_id")
-    op.drop_column("legal_documents", "generated_html")
+    # These columns were originally introduced in revision 047 and this revision
+    # only backfills environments where the columns were missing.
+    pass
