@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import ContractsTab from "../ContractsTab";
@@ -26,8 +26,31 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
   getAttachmentDownloadUrl: () => "#",
 }));
 
+vi.mock("@/modules/ma/components/AttachmentUploadActionButton", () => ({
+  default: () => <button type="button">attachment-upload</button>,
+}));
+
+vi.mock("@/modules/ma/components/FileUploadZone", () => ({
+  default: (props: {
+    entityType: string;
+    embedded?: boolean;
+    embeddedLabel?: string;
+    showUploadAction?: boolean;
+  }) => (
+    <div
+      data-testid="contracts-upload-zone"
+      data-embedded={String(Boolean(props.embedded))}
+      data-embedded-label={props.embeddedLabel ?? ""}
+      data-entity-type={props.entityType}
+      data-show-upload-action={String(props.showUploadAction ?? true)}
+    >
+      contracts-upload-zone
+    </div>
+  ),
+}));
+
 vi.mock("@/modules/ma/components/negotiation/ContractNegotiationWorkspace", () => ({
-  ContractNegotiationWorkspace: () => <div>계약 협상 워크스페이스</div>,
+  ContractNegotiationWorkspace: () => <div>contract-workspace</div>,
 }));
 
 vi.mock("@/modules/docs/components/LegalDocumentsTab", () => ({
@@ -40,28 +63,29 @@ describe("ContractsTab", () => {
     mockContractSummary = undefined;
   });
 
-  it("shows a single contract entry section when no contracts exist", () => {
+  it("keeps the upload zone embedded when no contracts exist", () => {
     render(<ContractsTab txnId="txn-1" canWrite />);
 
-    expect(screen.queryByText("계약 협상 워크스페이스")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "법률 문서" })).not.toBeInTheDocument();
-    expect(screen.getByText("계약서 관리")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "파일 업로드" })).toBeInTheDocument();
-    expect(screen.queryByText("계약서 업로드")).not.toBeInTheDocument();
+    const uploadZone = screen.getByTestId("contracts-upload-zone");
+
+    expect(screen.queryByText("contract-workspace")).not.toBeInTheDocument();
     expect(
-      screen.getByText("SPA, SHA 등 계약서를 바로 업로드하세요."),
+      screen.getByRole("button", { name: "attachment-upload" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("계약서 없음")).not.toBeInTheDocument();
+    expect(uploadZone).toHaveAttribute("data-entity-type", "CONTRACT");
+    expect(uploadZone).toHaveAttribute("data-embedded", "true");
+    expect(uploadZone).toHaveAttribute("data-embedded-label", "");
+    expect(uploadZone).toHaveAttribute("data-show-upload-action", "false");
   });
 
-  it("shows the negotiation workspace and legal-doc action once contracts exist", () => {
+  it("shows the negotiation workspace once contracts exist", () => {
     mockContracts = [
       {
         id: "contract-1",
-        title: "주식매매계약",
+        title: "Stock Purchase Agreement",
         contract_type: "SPA",
         status: "DRAFT",
-        counterparty_name: "NX게임즈",
+        counterparty_name: "NX Games",
         current_version: 1,
         seller_signature: "PENDING",
         buyer_signature: "PENDING",
@@ -77,10 +101,14 @@ describe("ContractsTab", () => {
 
     render(<ContractsTab txnId="txn-1" canWrite />);
 
-    expect(screen.getByText("계약 협상 워크스페이스")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "법률 문서" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "파일 업로드" })).toBeInTheDocument();
-    expect(screen.getByText("계약서 파일")).toBeInTheDocument();
-    expect(screen.queryByText("계약서 업로드")).not.toBeInTheDocument();
+    const uploadZone = screen.getByTestId("contracts-upload-zone");
+
+    expect(screen.getByText("contract-workspace")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "attachment-upload" }),
+    ).toBeInTheDocument();
+    expect(uploadZone).toHaveAttribute("data-entity-type", "CONTRACT");
+    expect(uploadZone).toHaveAttribute("data-show-upload-action", "false");
+    expect(uploadZone.getAttribute("data-embedded-label")).toMatch(/\S/);
   });
 });

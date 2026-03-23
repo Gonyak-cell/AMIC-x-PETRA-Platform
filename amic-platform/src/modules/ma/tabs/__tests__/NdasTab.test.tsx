@@ -22,22 +22,36 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
   getAttachmentDownloadUrl: () => "#",
 }));
 
+vi.mock("@/modules/ma/components/FileUploadZone", () => ({
+  default: (props: {
+    entityType: string;
+    embedded?: boolean;
+    embeddedLabel?: string;
+  }) => (
+    <div
+      data-testid="ndas-upload-zone"
+      data-embedded={String(Boolean(props.embedded))}
+      data-embedded-label={props.embeddedLabel ?? ""}
+      data-entity-type={props.entityType}
+    >
+      ndas-upload-zone
+    </div>
+  ),
+}));
+
 vi.mock("@/modules/ma/components/NdaVersionPanel", () => ({
-  default: () => null,
+  default: () => <div>nda-version-panel</div>,
 }));
 
 describe("NdasTab", () => {
-  it("shows a direct NDA upload area instead of a generic attachment section", () => {
+  it("uses the embedded NDA upload zone instead of a generic attachment section", () => {
     render(<NdasTab txnId="txn-1" canWrite />);
 
-    expect(screen.queryByText("첨부 파일")).not.toBeInTheDocument();
-    expect(screen.queryByText("NDA 없음")).not.toBeInTheDocument();
-    expect(screen.getByText("NDA 업로드")).toBeInTheDocument();
-    expect(
-      screen.getByText("매수 후보와의 NDA 파일을 바로 업로드하세요."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "파일 업로드" }),
-    ).toBeInTheDocument();
+    const uploadZone = screen.getByTestId("ndas-upload-zone");
+
+    expect(uploadZone).toHaveAttribute("data-entity-type", "NDA");
+    expect(uploadZone).toHaveAttribute("data-embedded", "true");
+    expect(uploadZone.getAttribute("data-embedded-label")).toMatch(/\S/);
+    expect(screen.queryByText("nda-version-panel")).not.toBeInTheDocument();
   });
 });

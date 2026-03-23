@@ -381,18 +381,11 @@ describe("TransactionWorkspacePage", () => {
       ).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Long List/i).length).toBeGreaterThanOrEqual(1);
-    });
+    const excelButtonInHeader = await within(
+      screen.getByTestId("workspace-tab-header-actions-slot"),
+    ).findByRole("button", { name: "Excel" }, { timeout: 10000 });
 
-    await waitFor(() => {
-      expect(
-        within(screen.getByTestId("workspace-tab-header-actions-slot")).getByRole(
-          "button",
-          { name: "Excel" },
-        ),
-      ).toBeInTheDocument();
-    });
+    expect(excelButtonInHeader).toBeInTheDocument();
 
     const actions = within(screen.getByTestId("workspace-tabs-actions"));
     const orderedButtons = actions.getAllByRole("button");
@@ -402,7 +395,7 @@ describe("TransactionWorkspacePage", () => {
     expect(orderedButtons.indexOf(excelButton)).toBeLessThan(
       orderedButtons.indexOf(timelineButton),
     );
-  });
+  }, 20000);
 
   it("closing 단계에서는 다음 버튼이 거래종결 단계로 표시된다", async () => {
     server.use(

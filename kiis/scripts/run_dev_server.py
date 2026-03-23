@@ -5,6 +5,8 @@ import os
 import sys
 from pathlib import Path
 
+from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = PROJECT_ROOT.parent
 
@@ -26,8 +28,6 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 os.environ["ELASTICSEARCH_URL"] = os.environ.get("KIIS_ELASTICSEARCH_URL", "")
 os.environ["LOG_DIR"] = os.environ.get("KIIS_LOG_DIR", str(REPO_ROOT / "logs"))
-
-from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 
 SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
 SQLiteTypeCompiler.visit_UUID = lambda self, type_, **kw: "CHAR(36)"
