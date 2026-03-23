@@ -167,7 +167,7 @@ $kiisResult = Start-BackgroundProcess `
     -Name "kiis" `
     -Port $KiisPort `
     -FilePath "cmd.exe" `
-    -ArgumentList @("/c", "set KIIS_PORT=$KiisPort&& set KIIS_RELOAD=false&& set PYTHONUTF8=1&& set PYTHONIOENCODING=utf-8&& python kiis/scripts/run_dev_server.py") `
+    -ArgumentList @("/c", "set KIIS_PORT=$KiisPort&& set KIIS_RELOAD=false&& set KIIS_SCHEDULER_ENABLED=true&& set PYTHONUTF8=1&& set PYTHONIOENCODING=utf-8&& python kiis/scripts/run_dev_server.py") `
     -WorkingDirectory $workspaceRoot `
     -OutLog (Join-Path $logsDir "kiis-dev-$KiisPort.out.log") `
     -ErrLog (Join-Path $logsDir "kiis-dev-$KiisPort.err.log") `

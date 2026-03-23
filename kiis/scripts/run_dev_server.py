@@ -19,7 +19,7 @@ default_db_path.parent.mkdir(parents=True, exist_ok=True)
 os.environ["ENV"] = os.environ.get("KIIS_ENV", "local")
 os.environ["DEBUG"] = os.environ.get("KIIS_DEBUG", "true")
 os.environ["AUTH_ENABLED"] = os.environ.get("KIIS_AUTH_ENABLED", "false")
-os.environ["SCHEDULER_ENABLED"] = os.environ.get("KIIS_SCHEDULER_ENABLED", "false")
+os.environ["SCHEDULER_ENABLED"] = os.environ.get("KIIS_SCHEDULER_ENABLED", "true")
 os.environ["SECRET_KEY"] = os.environ.get("KIIS_SECRET_KEY", "kiis-local-dev-secret")
 os.environ["JWT_SECRET"] = os.environ.get("KIIS_JWT_SECRET", "kiis-local-dev-jwt-secret")
 os.environ["DATABASE_URL"] = os.environ.get(
