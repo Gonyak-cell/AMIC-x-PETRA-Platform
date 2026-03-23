@@ -51,9 +51,7 @@ _CATEGORY_TEXT_LIMITS: dict[str, int] = {
 }
 
 # 정형 문서 카테고리 — 경량 모델로 추출 (빠르고 저렴, 실패 시 primary 폴백)
-_MINI_MODEL_CATEGORIES: frozenset[str] = frozenset(
-    {"CORPORATE_DOCS", "REGISTRY_DOCS", "BIZ_REG_DOCS", "TAX_FILING"}
-)
+_MINI_MODEL_CATEGORIES: frozenset[str] = frozenset({"CORPORATE_DOCS", "REGISTRY_DOCS", "BIZ_REG_DOCS", "TAX_FILING"})
 
 # 경량 모델 우선순위 (프로바이더별): 사용 가능한 첫 번째 모델 사용
 _MINI_MODELS: list[str] = [
