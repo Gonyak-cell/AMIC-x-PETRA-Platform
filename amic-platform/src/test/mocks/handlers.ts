@@ -631,11 +631,17 @@ export const handlers = [
 
   // ── FDD Settings & Integrations ──
   http.get("*/api/fdd/settings/email-preferences", () => {
-    return HttpResponse.json({ notifications_enabled: true, digest_frequency: "daily" });
+    return HttpResponse.json({
+      deal_updates: true,
+      watchlist_alerts: false,
+      im_completion: true,
+      weekly_digest: true,
+    });
   }),
 
-  http.put("*/api/fdd/settings/email-preferences", () => {
-    return HttpResponse.json({ message: "Updated" });
+  http.put("*/api/fdd/settings/email-preferences", async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json(body);
   }),
 
   http.get("*/api/fdd/webhooks", () => {

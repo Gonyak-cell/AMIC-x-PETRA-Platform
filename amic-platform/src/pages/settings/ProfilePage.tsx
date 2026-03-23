@@ -8,9 +8,62 @@ import {
   useUpdateEmailPreferences,
 } from "@/hooks/useIntegrations";
 import { ROLE_PERMISSIONS } from "@/types/auth";
+import type { EmailNotificationPreference } from "@/types/integrations";
 import { Card, Input, Select, Button, Badge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { getMemberPhoto } from "@/lib/member-photos";
+
+type EmailNotificationOption = {
+  key: keyof EmailNotificationPreference;
+  label: string;
+  desc: string;
+};
+
+const INTERNAL_EMAIL_NOTIFICATION_OPTIONS: readonly EmailNotificationOption[] = [
+  {
+    key: "deal_updates",
+    label: "Deal Updates",
+    desc: "Receive email when deals are created or status changes",
+  },
+  {
+    key: "watchlist_alerts",
+    label: "Watchlist Alerts",
+    desc: "Get notified about watchlist company changes",
+  },
+  {
+    key: "im_completion",
+    label: "IM Completion",
+    desc: "Email when IM document generation completes",
+  },
+  {
+    key: "weekly_digest",
+    label: "Weekly Digest",
+    desc: "Summary of platform activity every Monday",
+  },
+];
+
+const CLIENT_EMAIL_NOTIFICATION_OPTIONS: readonly EmailNotificationOption[] = [
+  {
+    key: "deal_updates",
+    label: "Pipeline Stage Updates",
+    desc: "Receive email when your assigned deal moves across the M&A pipeline",
+  },
+  {
+    key: "watchlist_alerts",
+    label: "VDR & DD Requests",
+    desc: "Get notified when new files are shared or additional diligence materials are requested",
+  },
+  {
+    key: "im_completion",
+    label: "Marketing Materials Ready",
+    desc: "Email when teaser, deck, or IM materials are ready for review or distribution",
+  },
+  {
+    key: "weekly_digest",
+    label: "Weekly Deal Digest",
+    desc: "Monday summary of pipeline progress, recent uploads, and pending client actions",
+  },
+];
 
 const MODULE_OPTIONS = [
   { value: "/", label: "Dashboard" },
@@ -86,6 +139,10 @@ export default function ProfilePage() {
   };
 
   const userPermissions = ROLE_PERMISSIONS[user.role];
+  const emailNotificationOptions =
+    user.role === "CLIENT"
+      ? CLIENT_EMAIL_NOTIFICATION_OPTIONS
+      : INTERNAL_EMAIL_NOTIFICATION_OPTIONS;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -237,14 +294,7 @@ export default function ProfilePage() {
       <Card>
         <SectionTitle icon={Bell}>Email Notifications</SectionTitle>
         <div className="space-y-3">
-          {(
-            [
-              { key: "deal_updates", label: "Deal Updates", desc: "Receive email when deals are created or status changes" },
-              { key: "watchlist_alerts", label: "Watchlist Alerts", desc: "Get notified about watchlist company changes" },
-              { key: "im_completion", label: "IM Completion", desc: "Email when IM document generation completes" },
-              { key: "weekly_digest", label: "Weekly Digest", desc: "Summary of platform activity every Monday" },
-            ] as const
-          ).map((item) => (
+          {emailNotificationOptions.map((item) => (
             <label
               key={item.key}
               className="flex items-center justify-between p-3 border border-gray-border rounded-lg hover:bg-bg-cool transition-colors cursor-pointer"

@@ -6,6 +6,32 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.6",
+    date: "2026-03-23",
+    highlights: [
+      "Client email notices now match the M&A deal pipeline",
+      "Settings now surface VDR, diligence, and marketing updates in client-facing language",
+      "Email preference mocks now mirror the real checkbox payload shape",
+    ],
+    changes: [
+      {
+        type: "improvement",
+        description:
+          "Reframed CLIENT email notification labels around pipeline stage changes, VDR and diligence requests, marketing material readiness, and weekly deal summaries.",
+      },
+      {
+        type: "improvement",
+        description:
+          "Kept the existing internal-user notification set unchanged so manager and advisor workflows continue to use the broader platform wording.",
+      },
+      {
+        type: "fix",
+        description:
+          "Updated settings email-preference mocks and tests to use the same boolean payload shape as the real checkbox form, preventing stale or misleading test behavior.",
+      },
+    ],
+  },
+  {
     version: "0.15.5",
     date: "2026-03-23",
     highlights: [
