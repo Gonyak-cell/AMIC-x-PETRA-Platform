@@ -32,7 +32,6 @@ import {
   FileSignature,
   CalendarClock,
   ListChecks,
-  FolderLock,
   Calculator,
   FileStack,
 } from "lucide-react";
@@ -86,8 +85,6 @@ const MA_PIPELINE_NAV = [
 ];
 
 // ── VDR Navigation ──
-
-const VDR_NAV = [{ to: "/vdr", label: "VDR Overview", icon: FolderLock }];
 
 // ── Docs (Deal Document Studio) Navigation ──
 
@@ -159,7 +156,6 @@ export function Sidebar({
     location.pathname.startsWith("/docs") ||
     location.pathname.startsWith("/im") ||
     isFdd;
-  const isVdr = location.pathname.startsWith("/vdr");
   const isMa = location.pathname.startsWith("/ma");
   const isAdmin = location.pathname.startsWith("/admin");
   const isInDealWorkspace =
@@ -289,33 +285,6 @@ export function Sidebar({
                 ))}
               </nav>
 
-            </SidebarModuleGroup>
-          )}
-
-          {/* ── VDR ── */}
-          {!isClient && (
-            <SidebarModuleGroup
-              id="vdr"
-              label="VDR"
-              icon={FolderLock}
-              basePath="/vdr"
-              isActive={isVdr}
-              storageKey="module-vdr"
-              defaultOpen={isVdr}
-              onNavItemClick={onNavItemClick}
-            >
-              <nav className="space-y-1" aria-label="VDR navigation">
-                {VDR_NAV.map((item) => (
-                  <SidebarNavItem
-                    key={item.to}
-                    to={item.to}
-                    label={item.label}
-                    icon={item.icon}
-                    end
-                    onClick={onNavItemClick}
-                  />
-                ))}
-              </nav>
             </SidebarModuleGroup>
           )}
 

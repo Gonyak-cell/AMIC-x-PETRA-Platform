@@ -1,7 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Plus, Pencil, Briefcase, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Briefcase,
+  TrendingUp,
+  DollarSign,
+  FolderOpen,
+} from "lucide-react";
 
 import {
   useTransactions,
@@ -154,10 +161,31 @@ export default function TransactionListPage() {
       ),
     },
     {
+      key: "vdr" as keyof Transaction,
+      header: "VDR",
+      width: "120px",
+      align: "center",
+      render: (row) => (
+        <Button
+          type="button"
+          variant="accent"
+          size="sm"
+          icon={FolderOpen}
+          className="min-w-[88px]"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/ma/transactions/${row.id}/vdr`);
+          }}
+        >
+          VDR
+        </Button>
+      ),
+    },
+    {
       key: "estimated_deal_value",
       header: "예상 금액",
       width: "150px",
-      align: "right",
+      align: "center",
       mono: true,
       render: (row) => formatValue(row.estimated_deal_value, row.currency),
     },
@@ -165,6 +193,7 @@ export default function TransactionListPage() {
       key: "client_name",
       header: "클라이언트",
       width: "160px",
+      align: "center",
       render: (row) => (
         <span className="text-sm text-text-secondary">{row.client_name}</span>
       ),

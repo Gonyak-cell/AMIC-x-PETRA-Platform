@@ -38,7 +38,6 @@ const CalendarRoutes = React.lazy(
 );
 const ExportsRoutes = React.lazy(() => import("@/pages/exports/ExportsRoutes"));
 const DocsRoutes = React.lazy(() => import("@/modules/docs/DocsRoutes"));
-const VdrRoutes = React.lazy(() => import("@/modules/vdr/VdrRoutes"));
 const TeamPage = React.lazy(() => import("@/pages/team/TeamPage"));
 const InviteAcceptPage = React.lazy(
   () => import("@/pages/invite/InviteAcceptPage"),
@@ -177,13 +176,7 @@ export default function App() {
         />
         <Route
           path="vdr/*"
-          element={
-            <InternalOnlyRoute>
-              <Suspense fallback={<ModuleFallback />}>
-                <VdrRoutes />
-              </Suspense>
-            </InternalOnlyRoute>
-          }
+          element={<Navigate to="/ma/transactions" replace />}
         />
         <Route
           path="docs/*"
