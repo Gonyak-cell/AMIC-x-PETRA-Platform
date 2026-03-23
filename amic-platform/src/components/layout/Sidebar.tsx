@@ -259,34 +259,32 @@ export function Sidebar({
           )}
 
           {/* ── M&A Deals ── */}
-          {(!isClient || isMa) && (
-            <SidebarModuleGroup
-              id="ma"
-              label="M&A Deals"
-              icon={Handshake}
-              basePath="/ma/transactions"
-              isActive={isMa}
-              storageKey="module-ma"
-              defaultOpen={isMa}
-              onNavItemClick={onNavItemClick}
-            >
-              <nav className="space-y-1" aria-label="M&A navigation">
-                {MA_PIPELINE_NAV.filter(
-                  (item) => !isClient || item.to !== "/ma/transactions/new",
-                ).map((item) => (
-                  <SidebarNavItem
-                    key={item.to}
-                    to={item.to}
-                    label={item.label}
-                    icon={item.icon}
-                    end={(item as { end?: boolean }).end}
-                    onClick={onNavItemClick}
-                  />
-                ))}
-              </nav>
+          <SidebarModuleGroup
+            id="ma"
+            label="M&A Deals"
+            icon={Handshake}
+            basePath="/ma/transactions"
+            isActive={isMa}
+            storageKey="module-ma"
+            defaultOpen={isClient || isMa}
+            onNavItemClick={onNavItemClick}
+          >
+            <nav className="space-y-1" aria-label="M&A navigation">
+              {MA_PIPELINE_NAV.filter(
+                (item) => !isClient || item.to !== "/ma/transactions/new",
+              ).map((item) => (
+                <SidebarNavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={item.icon}
+                  end={(item as { end?: boolean }).end}
+                  onClick={onNavItemClick}
+                />
+              ))}
+            </nav>
 
-            </SidebarModuleGroup>
-          )}
+          </SidebarModuleGroup>
 
           {/* ── Deal Doc Studio ── */}
           {!isClient && (
