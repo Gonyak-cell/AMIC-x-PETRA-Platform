@@ -478,12 +478,13 @@ export function useAddTimelineEvent(txnId: string) {
 }
 
 // ── Dashboard Stats ────────────────────────────────────
-export function useMaStats() {
+export function useMaStats(enabled = true) {
   return useQuery<DashboardStats>({
     queryKey: ["ma", "dashboard", "stats"],
     queryFn: async () => {
       const { data } = await maApi.get<DashboardStats>("/dashboard/stats");
       return data;
     },
+    enabled,
   });
 }

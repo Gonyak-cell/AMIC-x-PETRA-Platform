@@ -101,7 +101,7 @@ export default function TransactionListPage() {
   }, [isClient, data, autoRedirected, isLoading, navigate]);
 
   // KPI 통계 (DB 집계 기반 — CLIENT는 403 방지를 위해 비활성화)
-  const { data: stats } = useMaStats();
+  const { data: stats } = useMaStats(!isClient);
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
