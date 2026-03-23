@@ -477,13 +477,14 @@ export default function BuyersTab({
   const showShortListToolbar = !isBuyersLoading && buyerSubTab === "short-list";
   const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
   const longListActionGroups = canWrite ? (
-    <>
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <Button
           icon={Building2}
           onClick={handleOpenFIRecommendModal}
           variant="primary"
           size="sm"
+          className="w-full justify-center"
         >
           FI 자동 추천
         </Button>
@@ -492,17 +493,18 @@ export default function BuyersTab({
           onClick={() => setShowSIMappingModal(true)}
           variant="primary"
           size="sm"
+          className="w-full justify-center"
         >
           SI 자동 매핑
         </Button>
       </div>
-      <div className="hidden h-6 w-px bg-border-default md:block" />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <Button
           icon={Plus}
           onClick={() => setManualBuyerKind("FI")}
           variant="secondary"
           size="sm"
+          className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
         >
           FI 추가
         </Button>
@@ -511,11 +513,12 @@ export default function BuyersTab({
           onClick={() => setManualBuyerKind("SI")}
           variant="secondary"
           size="sm"
+          className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
         >
           SI 추가
         </Button>
       </div>
-    </>
+    </div>
   ) : null;
 
   return (
