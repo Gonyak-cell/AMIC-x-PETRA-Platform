@@ -6,6 +6,53 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.3",
+    date: "2026-03-23",
+    highlights: [
+      "M&A 워크스페이스 UI와 빈 상태를 단계별 흐름에 맞게 재정리",
+      "NDA·입찰·계약 업로드를 직접 업로드/자동 기입 중심으로 단순화",
+      "전역 VDR dead-end 제거 및 거래별 VDR 진입 흐름 정리",
+      "LDD 소스 제어, OCR fallback, 로컬 인증 안정성 보강",
+    ],
+    changes: [
+      {
+        type: "feature",
+        description:
+          "M&A 워크스페이스의 히어로 shortcut, Timeline/Excel 액션, 단계 탭, 거래종결 화면을 현재 단계 기준으로 재구성했습니다.",
+      },
+      {
+        type: "feature",
+        description:
+          "NDA, 입찰, 계약 업로드 흐름을 직접 업로드 중심으로 통일하고, 입찰 문서 업로드 시 핵심 입찰 정보를 자동 기입하도록 연결했습니다.",
+      },
+      {
+        type: "feature",
+        description:
+          "거래 목록에 거래별 VDR 진입 버튼을 추가하고, 접근 불가능한 전역 /vdr 진입점은 제거했습니다.",
+      },
+      {
+        type: "improvement",
+        description:
+          "수임계약, 워킹 그룹, 계약/SPA, DD 등 주요 탭의 헤더 계층, CTA 위치, 빈 상태 메시지를 일관된 카드 패턴으로 정리했습니다.",
+      },
+      {
+        type: "improvement",
+        description:
+          "LDD 리포트에 source control, OCR fallback, 템플릿 튜닝을 추가하고 VDR evidence traceability를 강화했습니다.",
+      },
+      {
+        type: "fix",
+        description:
+          "거래명/대상기업/클라이언트의 한글 저장 경로를 검증하고, 손상 문자열(예: ???)이 저장되지 않도록 생성/수정 흐름을 보강했습니다.",
+      },
+      {
+        type: "fix",
+        description:
+          "로컬 인증 기반 개발 로그인과 dev stack 기동을 안정화하고, 테스트/포맷 불일치로 인한 배포 실패 요인을 정리했습니다.",
+      },
+    ],
+  },
+  {
     version: "0.15.1",
     date: "2026-03-18",
     highlights: ["마이 프로젝트 컨테이너 글래스모피즘 + 카드 CSS 그라디언트 적용", "프로젝트 캐러셀 카드 글래스모피즘 적용", "캐러셀을 피크(peek) 방식으로 전환"],

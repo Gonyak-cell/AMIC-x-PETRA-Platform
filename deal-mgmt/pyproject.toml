@@ -1,6 +1,6 @@
 [project]
 name = "deal-mgmt"
-version = "0.15.2"
+version = "0.15.3"
 description = "M&A Deal Management Service — 7단계 거래 워크플로우 관리 시스템"
 requires-python = ">=3.11"
 dependencies = [
