@@ -30,6 +30,7 @@ export function useMyProjects() {
       const { data: resp } = await maApi.get("/transactions", { params });
       return resp;
     },
+    meta: { suppressGlobalErrorToast: true },
     staleTime: 30_000,
     enabled,
   });

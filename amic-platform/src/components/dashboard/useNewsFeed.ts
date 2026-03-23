@@ -52,6 +52,7 @@ export function useNewsFeed(params: NewsFeedParams = {}) {
         });
         return resp;
       },
+      meta: { suppressGlobalErrorToast: true },
       staleTime: 5 * 60_000, // 5분
       refetchInterval: 10 * 60_000, // 10분
     });

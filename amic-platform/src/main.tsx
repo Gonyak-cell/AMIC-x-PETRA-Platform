@@ -20,6 +20,10 @@ type ApiErrorShape = Error & {
   response?: { status?: number };
 };
 
+type QueryMetaShape = {
+  suppressGlobalErrorToast?: boolean;
+};
+
 function getRequestInfo(error: Error) {
   const axiosErr = error as ApiErrorShape;
   const url = axiosErr.config?.url;
@@ -50,6 +54,10 @@ function shouldSuppressDevModuleQueryError(error: Error) {
   );
 }
 
+function shouldSuppressQueryErrorToast(meta: unknown) {
+  return (meta as QueryMetaShape | undefined)?.suppressGlobalErrorToast === true;
+}
+
 function handleGlobalError(error: Error) {
   const message = error.message || "요청 처리 중 오류가 발생했습니다";
   const { url, method, fullPath } = getRequestInfo(error);
@@ -61,7 +69,10 @@ function handleGlobalError(error: Error) {
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
+      if (shouldSuppressQueryErrorToast(query.meta)) {
+        return;
+      }
       if (shouldSuppressDevModuleQueryError(error)) {
         const { method, status, fullPath } = getRequestInfo(error);
         console.warn(

@@ -39,6 +39,7 @@ export function useCalendarEvents(_filter: CalendarFilter) {
       const raw = (data as { items?: unknown[] })?.items ?? data;
       return toArray<Transaction>(raw);
     },
+    meta: { suppressGlobalErrorToast: true },
     staleTime: 60_000,
   });
 

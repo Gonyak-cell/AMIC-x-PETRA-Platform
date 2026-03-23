@@ -203,13 +203,18 @@ async def collect_ib_articles(
 
     try:
         crawl_svc = _get_crawl_service()
-        insight_svc = _get_insight_service()
 
         # 수집
         results = await crawl_svc.collect_all(db, source_filter=source)
 
-        # 미분류 기사 NLP 처리 (classify_unprocessed 내부에서 commit)
-        classified = await insight_svc.classify_unprocessed(db)
+        classified = 0
+        try:
+            # 수집 시점에 section_primary는 이미 채워지므로, 경량 dev 환경에서
+            # NLP 자산이 없어도 기사 목록 자체는 사용할 수 있게 유지한다.
+            insight_svc = _get_insight_service()
+            classified = await insight_svc.classify_unprocessed(db)
+        except Exception:
+            logger.warning("IB NLP 후처리를 건너뜁니다. 수집된 기사 목록은 그대로 유지합니다.", exc_info=True)
 
         # 관련 캐시 무효화
         if redis:

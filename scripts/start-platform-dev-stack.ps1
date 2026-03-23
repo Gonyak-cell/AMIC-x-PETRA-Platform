@@ -1,5 +1,6 @@
 param(
     [int]$FrontendPort = 5173,
+    [int]$KiisPort = 8001,
     [int]$MaPort = 8003
 )
 
@@ -113,6 +114,16 @@ function Start-BackgroundProcess {
     }
 }
 
+$kiisResult = Start-BackgroundProcess `
+    -Name "kiis" `
+    -Port $KiisPort `
+    -FilePath "cmd.exe" `
+    -ArgumentList @("/c", "set KIIS_PORT=$KiisPort&& set KIIS_RELOAD=false&& set PYTHONUTF8=1&& set PYTHONIOENCODING=utf-8&& python kiis/scripts/run_dev_server.py") `
+    -WorkingDirectory $workspaceRoot `
+    -OutLog (Join-Path $logsDir "kiis-dev-$KiisPort.out.log") `
+    -ErrLog (Join-Path $logsDir "kiis-dev-$KiisPort.err.log") `
+    -HealthUrl "http://127.0.0.1:$KiisPort/health"
+
 $maResult = Start-BackgroundProcess `
     -Name "deal-mgmt" `
     -Port $MaPort `
@@ -133,7 +144,7 @@ $frontendResult = Start-BackgroundProcess `
     -ErrLog (Join-Path $logsDir "amic-platform-dev-$FrontendPort.err.log") `
     -HealthUrl "http://127.0.0.1:$FrontendPort/"
 
-foreach ($result in @($maResult, $frontendResult)) {
+foreach ($result in @($kiisResult, $maResult, $frontendResult)) {
     $status = if ($result.Reused) { "reused" } else { "started" }
     Write-Host ("{0} {1} on http://127.0.0.1:{2} (PID {3})" -f $status, $result.Name, $result.Port, $result.Pid)
 }
