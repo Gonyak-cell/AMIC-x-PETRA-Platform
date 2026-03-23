@@ -541,7 +541,7 @@ export function Sidebar({
                   {hasPermission("user:manage") && (
                     <SidebarNavItem
                       to="/admin/settings"
-                      label="Settings"
+                      label="Platform Settings"
                       icon={Settings}
                       onClick={onNavItemClick}
                     />

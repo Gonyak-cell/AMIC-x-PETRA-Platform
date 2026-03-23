@@ -19,11 +19,24 @@ describe("Sidebar", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Calendar")).toBeInTheDocument();
     expect(screen.getByText("Team")).toBeInTheDocument();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getAllByText("Settings")).toHaveLength(1);
     expect(screen.getByText("M&A Deals")).toBeInTheDocument();
     expect(screen.getByText("Pipeline")).toBeInTheDocument();
     expect(screen.getByText("Help")).toBeInTheDocument();
+    expect(screen.queryByText("Platform Settings")).not.toBeInTheDocument();
     expect(screen.queryByText("New Transaction")).not.toBeInTheDocument();
     expect(screen.queryByText("Exports")).not.toBeInTheDocument();
+  });
+
+  it("separates personal and admin settings labels for admin users", () => {
+    renderWithProviders(<Sidebar />, {
+      initialEntries: ["/"],
+      authContext: {
+        user: mockUser,
+      },
+    });
+
+    expect(screen.getAllByText("Settings")).toHaveLength(1);
+    expect(screen.getByText("Platform Settings")).toBeInTheDocument();
   });
 });
