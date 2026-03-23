@@ -65,6 +65,55 @@ export const IN_PROGRESS_STATUSES: ExtractionStatus[] = [
 /** 완료 상태 — 성공적으로 종료된 상태 */
 export const SUCCESS_STATUSES: ExtractionStatus[] = ["COMPLETED", "CONFIRMED"];
 
+function hasMeaningfulExtractionValue(value: unknown): boolean {
+  if (value == null) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(hasMeaningfulExtractionValue);
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(
+      hasMeaningfulExtractionValue,
+    );
+  }
+
+  return false;
+}
+
+export function hasMeaningfulExtractionData(
+  data: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!data) {
+    return false;
+  }
+
+  return Object.values(data).some(hasMeaningfulExtractionValue);
+}
+
+export function getExtractionStatusLabel(
+  status: ExtractionStatus,
+  extractedData?: Record<string, unknown> | null,
+): string {
+  if (status === "COMPLETED") {
+    return hasMeaningfulExtractionData(extractedData)
+      ? "검토 대기"
+      : "추출값 없음";
+  }
+
+  return STATUS_LABELS[status];
+}
+
 /** 매핑 가능 대상 모델 */
 export type TargetModel = "nda" | "bid" | "contract" | "transaction";
 

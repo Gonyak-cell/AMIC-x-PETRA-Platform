@@ -335,6 +335,18 @@ class TestExtractFields:
         assert result["counterparty_name"] == "테스트사"
         assert result["nda_type"] == "MUTUAL"
 
+    async def test_extract_registry_docs_fields(self) -> None:
+        parsed = ParsedFile(source_path="/tmp/registry.pdf", file_type="pdf")
+        parsed.text = "법인등기부등본 문서 내용 " * 200
+        response = '{"company_name": "테스트 주식회사", "corporate_registration_number": "110111-1234567"}'
+        llm = _mock_llm_client(response)
+
+        result = await extract_fields(parsed, DocExtractionCategory.REGISTRY_DOCS, llm)
+
+        assert result["company_name"] == "테스트 주식회사"
+        assert result["corporate_registration_number"] == "110111-1234567"
+        llm.call_with_model.assert_awaited()
+
     async def test_extract_reference_only_skipped(self) -> None:
         parsed = ParsedFile(source_path="/tmp/ref.pdf", file_type="pdf")
         parsed.text = "참고 문서"
@@ -1177,6 +1189,49 @@ class TestPipeline:
         assert ext.doc_category == DocExtractionCategory.NDA
         assert ext.extracted_data is not None
         assert ext.extracted_data["counterparty_name"] == "테스트사"
+
+    async def test_pipeline_registry_docs_runs_extraction(self, async_session: AsyncSession) -> None:
+        """REGISTRY_DOCS 분류도 추출 단계까지 진행한다."""
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/registry.pdf", file_type="pdf")
+        mock_parsed.text = "법인등기부등본 문서 내용 " * 200
+
+        classify_resp = '{"category": "REGISTRY_DOCS", "confidence": 0.99}'
+        extract_resp = '{"company_name": "테스트 주식회사", "representative_name": "홍길동"}'
+
+        llm = _mock_llm_client()
+        llm.call_with_model = AsyncMock(side_effect=[classify_resp, extract_resp])
+        llm.call = AsyncMock(return_value=extract_resp)
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        assert ext.status == ExtractionStatus.COMPLETED
+        assert ext.doc_category == DocExtractionCategory.REGISTRY_DOCS
+        assert ext.extracted_data is not None
+        assert ext.extracted_data["company_name"] == "테스트 주식회사"
+        assert ext.error_message is None
 
     async def test_pipeline_reference_only_no_extraction(self, async_session: AsyncSession) -> None:
         """REFERENCE_ONLY 분류 → 추출 건너뜀."""

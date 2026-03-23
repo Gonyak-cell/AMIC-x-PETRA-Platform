@@ -15,7 +15,8 @@ import { Card } from "@/components/ui/Card";
 import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
 import {
   CATEGORY_LABELS,
-  STATUS_LABELS,
+  getExtractionStatusLabel,
+  hasMeaningfulExtractionData,
 } from "@/modules/ma/types/document_extraction";
 import type {
   DocumentExtraction,
@@ -155,6 +156,9 @@ export default function ExtractionList({ txnId }: Props) {
                 const isSpinning =
                   extraction.status === "CLASSIFYING" ||
                   extraction.status === "EXTRACTING";
+                const hasMeaningfulData = hasMeaningfulExtractionData(
+                  extraction.extracted_data,
+                );
 
                 return (
                   <tr
@@ -176,11 +180,20 @@ export default function ExtractionList({ txnId }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={badge.variant}>
+                      <Badge
+                        variant={
+                          extraction.status === "COMPLETED" && !hasMeaningfulData
+                            ? "neutral"
+                            : badge.variant
+                        }
+                      >
                         <Icon
                           className={`mr-1 h-3 w-3 ${isSpinning ? "animate-spin" : ""}`}
                         />
-                        {STATUS_LABELS[extraction.status]}
+                        {getExtractionStatusLabel(
+                          extraction.status,
+                          extraction.extracted_data,
+                        )}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">

@@ -41,6 +41,9 @@ export function useFIRecommendations(
     },
     enabled: !!txnId,
     staleTime: 60_000,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
     retry: (failureCount, error) => {
       // 응답이 있으면 5xx만 재시도, 4xx(422 배수 오류, 401 인증 실패 등)는 재시도하지 않음
       if (axios.isAxiosError(error) && error.response) {

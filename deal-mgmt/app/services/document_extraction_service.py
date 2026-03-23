@@ -42,6 +42,8 @@ _PREVIEW_CHARS = 2_000
 # 카테고리별 추출 텍스트 제한 (정형 문서는 앞부분에 핵심 정보 집중)
 _CATEGORY_TEXT_LIMITS: dict[str, int] = {
     "CORPORATE_DOCS": 30_000,
+    "REGISTRY_DOCS": 30_000,
+    "BIZ_REG_DOCS": 30_000,
     "TAX_FILING": 40_000,
     "NDA": 20_000,
     "LOI_MOU": 30_000,
@@ -49,7 +51,9 @@ _CATEGORY_TEXT_LIMITS: dict[str, int] = {
 }
 
 # 정형 문서 카테고리 — 경량 모델로 추출 (빠르고 저렴, 실패 시 primary 폴백)
-_MINI_MODEL_CATEGORIES: frozenset[str] = frozenset({"CORPORATE_DOCS", "TAX_FILING"})
+_MINI_MODEL_CATEGORIES: frozenset[str] = frozenset(
+    {"CORPORATE_DOCS", "REGISTRY_DOCS", "BIZ_REG_DOCS", "TAX_FILING"}
+)
 
 # 경량 모델 우선순위 (프로바이더별): 사용 가능한 첫 번째 모델 사용
 _MINI_MODELS: list[str] = [

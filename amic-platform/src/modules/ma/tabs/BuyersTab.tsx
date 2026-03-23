@@ -91,7 +91,7 @@ export default function BuyersTab({
     isError: isBuyersError,
     refetch: refetchBuyers,
   } = useBuyers(txnId);
-  const { data: txn } = useTransaction(txnId);
+  const { data: txn, isLoading: isTransactionLoading } = useTransaction(txnId);
   const updateBuyer = useUpdateBuyer(txnId);
   const exportExcel = useExportBuyerExcel(txnId);
   const {
@@ -164,6 +164,22 @@ export default function BuyersTab({
       document.getElementById(headerActionPortalId),
     );
   }, [headerActionPortalId]);
+
+  const handleOpenFIRecommendModal = () => {
+    if (isTransactionLoading) {
+      toast.info("거래 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+
+    if (!txn?.estimated_deal_value?.trim()) {
+      toast.error(
+        "FI 자동 추천을 사용하려면 거래 설정에서 예상 거래금액을 먼저 입력해 주세요.",
+      );
+      return;
+    }
+
+    setShowFIRecommendModal(true);
+  };
 
   const buyerColumns: Column<BuyerCandidate>[] = useMemo(
     () => [
@@ -434,7 +450,7 @@ export default function BuyersTab({
                     <div className="flex justify-center gap-3 pb-6">
                       <Button
                         icon={Building2}
-                        onClick={() => setShowFIRecommendModal(true)}
+                        onClick={handleOpenFIRecommendModal}
                         variant="primary"
                         size="sm"
                       >
@@ -462,7 +478,7 @@ export default function BuyersTab({
                       <div className="flex gap-2">
                         <Button
                           icon={Building2}
-                          onClick={() => setShowFIRecommendModal(true)}
+                          onClick={handleOpenFIRecommendModal}
                           variant="primary"
                           size="sm"
                         >

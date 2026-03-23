@@ -8,6 +8,8 @@ import {
   FIELD_LABELS,
   EXTRACTABLE_CATEGORIES,
   TARGET_MODEL_LABELS,
+  getExtractionStatusLabel,
+  hasMeaningfulExtractionData,
   sortDirectorsByPosition,
 } from "@/modules/ma/types/document_extraction";
 import type {
@@ -29,6 +31,8 @@ const CATEGORY_DEFAULT_TARGET: Partial<Record<string, TargetModel>> = {
   LOI_MOU: "bid",
   SPA_BTA: "contract",
   CORPORATE_DOCS: "transaction",
+  REGISTRY_DOCS: "transaction",
+  BIZ_REG_DOCS: "transaction",
   TAX_FILING: "transaction",
 };
 
@@ -38,6 +42,8 @@ const CATEGORY_ALLOWED_TARGETS: Partial<Record<string, TargetModel[]>> = {
   LOI_MOU: ["bid"],
   SPA_BTA: ["contract"],
   CORPORATE_DOCS: ["transaction"],
+  REGISTRY_DOCS: ["transaction"],
+  BIZ_REG_DOCS: ["transaction"],
   TAX_FILING: ["transaction"],
 };
 
@@ -77,6 +83,9 @@ export default function ExtractionReviewModal({
   const allowedTargets = category
     ? (CATEGORY_ALLOWED_TARGETS[category] ?? [])
     : [];
+  const hasMeaningfulData = hasMeaningfulExtractionData(editedData);
+  const showEmptyExtractionNotice =
+    extraction.status === "COMPLETED" && isExtractable && !hasMeaningfulData;
 
   const confidencePct = extraction.classification_confidence
     ? Math.round(extraction.classification_confidence * 100)
@@ -98,7 +107,8 @@ export default function ExtractionReviewModal({
     );
   };
 
-  const isConfirmable = extraction.status === "COMPLETED" && isExtractable;
+  const isConfirmable =
+    extraction.status === "COMPLETED" && isExtractable && hasMeaningfulData;
 
   return (
     <Modal
@@ -143,7 +153,9 @@ export default function ExtractionReviewModal({
           <Badge
             variant={
               extraction.status === "COMPLETED"
-                ? "warning"
+                ? hasMeaningfulData
+                  ? "warning"
+                  : "neutral"
                 : extraction.status === "CONFIRMED"
                   ? "success"
                   : extraction.status === "FAILED"
@@ -152,13 +164,7 @@ export default function ExtractionReviewModal({
             }
             pill
           >
-            {extraction.status === "COMPLETED"
-              ? "검토 대기"
-              : extraction.status === "CONFIRMED"
-                ? "확정됨"
-                : extraction.status === "FAILED"
-                  ? "실패"
-                  : "분석중"}
+            {getExtractionStatusLabel(extraction.status, editedData)}
           </Badge>
           {extraction.llm_cost_usd > 0 && (
             <span className="text-xs text-text-secondary">
@@ -171,6 +177,13 @@ export default function ExtractionReviewModal({
         {extraction.error_message && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-negative">
             {extraction.error_message}
+          </div>
+        )}
+
+        {showEmptyExtractionNotice && (
+          <div className="rounded-md bg-amber-50 p-3 text-sm text-caution">
+            AI가 문서에서 채울 값을 찾지 못했습니다. 필요한 항목을 직접 입력한 뒤
+            확정하거나, 문서 유형을 다시 선택해 재분석해 주세요.
           </div>
         )}
 

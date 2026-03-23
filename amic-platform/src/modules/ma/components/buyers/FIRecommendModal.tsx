@@ -26,6 +26,7 @@ export default function FIRecommendModal({
     data: recommendations,
     isLoading,
     isError,
+    error,
   } = useFIRecommendations(txnId);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -43,6 +44,14 @@ export default function FIRecommendModal({
   const existingSet = useMemo(
     () => new Set(existingCompanyNames.map((n) => n.toLowerCase())),
     [existingCompanyNames],
+  );
+  const fiLoadErrorMessage = useMemo(
+    () =>
+      extractApiError(
+        error,
+        "FI 추천 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      ),
+    [error],
   );
 
   const toggleGP = (gpName: string) => {
@@ -152,7 +161,7 @@ export default function FIRecommendModal({
           <EmptyState
             icon={AlertTriangle}
             title="추천 조회 실패"
-            description="FI 추천 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+            description={fiLoadErrorMessage}
           />
         )}
 
