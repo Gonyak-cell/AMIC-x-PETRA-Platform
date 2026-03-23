@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
@@ -154,7 +154,7 @@ describe("MarketingMaterialsTab", () => {
     expect(screen.getByText("100.0 KB")).toBeInTheDocument();
   });
 
-  it("shows creation and upload buttons when write access is enabled", async () => {
+  it("shows one action button per TM/DM/IM document type when write access is enabled", async () => {
     renderTab({ canWrite: true });
 
     await waitFor(() => {
@@ -163,18 +163,52 @@ describe("MarketingMaterialsTab", () => {
 
     expect(screen.getByText("+ Discussion (DM)")).toBeInTheDocument();
     expect(screen.getByText("+ Information (IM)")).toBeInTheDocument();
-    expect(
-      screen.getByText(`TM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(`DM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(`IM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(`TM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();
+    expect(screen.queryByText(`DM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();
+    expect(screen.queryByText(`IM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();
   });
 
-  it("hides creation and upload buttons when write access is disabled", async () => {
+  it("opens a choice modal for each document type and can trigger generation", async () => {
+    const createRequestSpy = vi.fn();
+
+    server.use(
+      http.post("*/api/ma/transactions/:txnId/marketing-materials", async ({ request }) => {
+        createRequestSpy(await request.json());
+        return HttpResponse.json({
+          ...mockMaterial,
+          id: "mat-generated",
+          doc_type: "TM",
+          title: "Generated teaser",
+        });
+      }),
+    );
+
+    renderTab({ canWrite: true });
+
+    await waitFor(() => {
+      expect(screen.getByText("+ Teaser (TM)")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("+ Teaser (TM)"));
+
+    expect(await screen.findByText("Teaser (TM) 선택")).toBeInTheDocument();
+    expect(screen.getByText("TM 생성")).toBeInTheDocument();
+    expect(screen.getByText("TM 업로드")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("TM 생성"));
+
+    await waitFor(() => {
+      expect(createRequestSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ doc_type: "TM" }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Teaser (TM) 선택")).not.toBeInTheDocument();
+    });
+  });
+
+  it("hides marketing material action buttons when write access is disabled", async () => {
     renderTab({ canWrite: false });
 
     await waitFor(() => {
@@ -186,15 +220,6 @@ describe("MarketingMaterialsTab", () => {
     expect(screen.queryByText("+ Teaser (TM)")).not.toBeInTheDocument();
     expect(screen.queryByText("+ Discussion (DM)")).not.toBeInTheDocument();
     expect(screen.queryByText("+ Information (IM)")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(`TM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(`DM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(`IM ${"\uC5C5\uB85C\uB4DC"}`),
-    ).not.toBeInTheDocument();
   });
 
   it("renders externally uploaded materials in a separate section", async () => {
