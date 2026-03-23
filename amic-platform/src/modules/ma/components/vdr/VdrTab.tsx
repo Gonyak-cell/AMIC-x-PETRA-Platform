@@ -29,6 +29,9 @@ import VdrRoutingTriagePanel from "./VdrRoutingTriagePanel";
 
 interface Props {
   txnId: string;
+  readOnly?: boolean;
+  showReviewTabs?: boolean;
+  showExtractionTools?: boolean;
 }
 
 function InlineRetryCard({
@@ -76,7 +79,12 @@ function InlineRetryCard({
   );
 }
 
-export default function VdrTab({ txnId }: Props) {
+export default function VdrTab({
+  txnId,
+  readOnly = false,
+  showReviewTabs = true,
+  showExtractionTools = true,
+}: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,10 +96,16 @@ export default function VdrTab({ txnId }: Props) {
   const [showDirectUpload, setShowDirectUpload] = useState(false);
   const [directUploadResult, setDirectUploadResult] =
     useState<DirectUploadBatchResult | null>(null);
+  const canManageDocuments = !readOnly;
+  const canShowReviewTabs = showReviewTabs && !readOnly;
+  const canUseExtractionTools = showExtractionTools && !readOnly;
 
   const summaryQuery = useVdrSummary(txnId);
   const foldersQuery = useVdrFolders(txnId);
-  const extractionQuery = useExtractions(txnId, subTab === "documents");
+  const extractionQuery = useExtractions(
+    txnId,
+    canUseExtractionTools && subTab === "documents",
+  );
 
   const summary = summaryQuery.data;
   const folders = foldersQuery.data ?? [];
@@ -122,6 +136,13 @@ export default function VdrTab({ txnId }: Props) {
   const showingStaleExtractions =
     extractionQuery.isError && extractionQuery.data != null;
   const needsInitialization = Boolean(summary && !summary.initialized);
+  const subTabs = canShowReviewTabs
+    ? ([
+        ["documents", "Documents"],
+        ["routing", "Routing"],
+        ["access", "Access"],
+      ] as const)
+    : ([["documents", "Documents"]] as const);
 
   const repairVdr = useCallback(
     async (manual: boolean) => {
@@ -194,12 +215,18 @@ export default function VdrTab({ txnId }: Props) {
   }, [summary?.initialized]);
 
   useEffect(() => {
-    if (!wantsUploadEntry) return;
+    if (!canShowReviewTabs && subTab !== "documents") {
+      setSubTab("documents");
+    }
+  }, [canShowReviewTabs, subTab]);
+
+  useEffect(() => {
+    if (!canManageDocuments || !wantsUploadEntry) return;
     setSubTab("documents");
     if (summary?.initialized) {
       setShowDirectUpload(true);
     }
-  }, [summary?.initialized, wantsUploadEntry]);
+  }, [canManageDocuments, summary?.initialized, wantsUploadEntry]);
 
   useEffect(() => {
     if (!wantsUploadEntry || !showDirectUpload) return;
@@ -280,13 +307,7 @@ export default function VdrTab({ txnId }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
-          {(
-            [
-              ["documents", "Documents"],
-              ["routing", "Routing"],
-              ["access", "Access"],
-            ] as const
-          ).map(([value, label]) => (
+          {subTabs.map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -302,7 +323,7 @@ export default function VdrTab({ txnId }: Props) {
           ))}
         </div>
 
-        {summary?.initialized && subTab === "documents" && (
+        {canManageDocuments && summary?.initialized && subTab === "documents" && (
           <Button
             variant="accent"
             size="sm"
@@ -315,8 +336,12 @@ export default function VdrTab({ txnId }: Props) {
         )}
       </div>
 
-      {subTab === "access" && <VdrAccessDashboard txnId={txnId} />}
-      {subTab === "routing" && <VdrRoutingTriagePanel txnId={txnId} />}
+      {canShowReviewTabs && subTab === "access" && (
+        <VdrAccessDashboard txnId={txnId} />
+      )}
+      {canShowReviewTabs && subTab === "routing" && (
+        <VdrRoutingTriagePanel txnId={txnId} />
+      )}
 
       {subTab === "documents" && (
         <>
@@ -363,23 +388,25 @@ export default function VdrTab({ txnId }: Props) {
                     {initError ? ` ${initError}` : ""}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    void repairVdr(true);
-                  }}
-                  disabled={isRepairing}
-                >
-                  {isRepairing ? "Repairing..." : "Repair VDR"}
-                </Button>
+                {canManageDocuments && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      void repairVdr(true);
+                    }}
+                    disabled={isRepairing}
+                  >
+                    {isRepairing ? "Repairing..." : "Repair VDR"}
+                  </Button>
+                )}
               </div>
             </Card>
           )}
 
           <div ref={uploadEntryRef}>
-            {summary?.initialized && showDirectUpload && (
+            {canManageDocuments && summary?.initialized && showDirectUpload && (
               <DirectUploadZone
                 txnId={txnId}
                 onUploadComplete={handleDirectUploadComplete}
@@ -394,6 +421,8 @@ export default function VdrTab({ txnId }: Props) {
                 folders={folders}
                 onCreateFolder={handleCreateFolder}
                 onDeleteFolder={handleDeleteFolder}
+                readOnly={readOnly}
+                allowExtractionTools={canUseExtractionTools}
                 extractions={extractionData?.items ?? []}
               />
             </Card>
@@ -408,7 +437,7 @@ export default function VdrTab({ txnId }: Props) {
             />
           )}
 
-          {extractionUnavailable ? (
+          {canUseExtractionTools && extractionUnavailable ? (
             <InlineRetryCard
               title="AI extraction status could not be refreshed."
               description="Document uploads remain available while extraction data reloads."
@@ -416,7 +445,7 @@ export default function VdrTab({ txnId }: Props) {
                 void extractionQuery.refetch();
               }}
             />
-          ) : extractionCount > 0 ? (
+          ) : canUseExtractionTools && extractionCount > 0 ? (
             <div>
               {showingStaleExtractions && (
                 <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">

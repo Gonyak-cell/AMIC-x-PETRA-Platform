@@ -25,10 +25,11 @@ interface FileRowProps {
   type: "file";
   document: VdrDocument;
   txnId: string;
+  readOnly?: boolean;
   extraction?: DocumentExtraction;
-  onDelete: (docId: string) => void;
-  onStartExtraction: (docId: string) => void;
-  onRetryExtraction: (extractionId: string) => void;
+  onDelete?: (docId: string) => void;
+  onStartExtraction?: (docId: string) => void;
+  onRetryExtraction?: (extractionId: string) => void;
 }
 
 export type FileListRowProps = FolderRowProps | FileRowProps;
@@ -112,6 +113,7 @@ function FolderRow({ folder, onNavigate, onDelete }: FolderRowProps) {
 function FileRow({
   document: doc,
   txnId,
+  readOnly = false,
   extraction,
   onDelete,
   onStartExtraction,
@@ -155,12 +157,14 @@ function FileRow({
 
       {/* 액션 — 호버 시 표시 */}
       <div className="flex w-16 shrink-0 items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
-        <ExtractionBadge
-          extraction={extraction}
-          docId={doc.id}
-          onStartExtraction={onStartExtraction}
-          onRetryExtraction={onRetryExtraction}
-        />
+        {!readOnly && onStartExtraction && onRetryExtraction && (
+          <ExtractionBadge
+            extraction={extraction}
+            docId={doc.id}
+            onStartExtraction={onStartExtraction}
+            onRetryExtraction={onRetryExtraction}
+          />
+        )}
         <a
           href={getVdrDownloadUrl(txnId, doc.id)}
           className="rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-info"
@@ -169,7 +173,7 @@ function FileRow({
         >
           <Download className="h-3.5 w-3.5" />
         </a>
-        <button
+        {onDelete && <button
           type="button"
           className="rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-negative"
           title="삭제"
@@ -179,7 +183,7 @@ function FileRow({
           }}
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </button>}
       </div>
     </div>
   );

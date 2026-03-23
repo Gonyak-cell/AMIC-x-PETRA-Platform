@@ -68,6 +68,7 @@ export function TeamMemberCard({ member, onClick }: TeamMemberCardProps) {
     <div
       ref={cardRef}
       className="bg-white rounded-dr border border-gray-border overflow-hidden shadow-dr-sm cursor-pointer"
+      style={{ opacity: 1, visibility: "visible" }}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -83,6 +84,8 @@ export function TeamMemberCard({ member, onClick }: TeamMemberCardProps) {
             src={photoUrl}
             alt={`${member.name} - ${member.title}`}
             className="w-full h-full object-cover object-top"
+            loading="eager"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-amic to-amic-700 flex items-center justify-center">

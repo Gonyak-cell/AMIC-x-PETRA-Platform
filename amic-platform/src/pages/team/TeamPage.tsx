@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { PageHero } from "@/components/ui";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import heroImg from "@/assets/images/forest-bg.jpg";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { MemberDetailModal } from "./MemberDetailModal";
@@ -113,44 +112,6 @@ export default function TeamPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [selectedMember, setSelectedMember] = useState<TeamMemberData | null>(
     null,
-  );
-
-  useGSAP(
-    () => {
-      const el = gridRef.current;
-      if (!el || !el.children.length) return;
-
-      const cards = Array.from(el.children);
-
-      gsap.set(cards, {
-        opacity: 0,
-        y: 60,
-        scale: 0.9,
-        rotateX: 8,
-      });
-
-      gsap.to(cards, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        rotateX: 0,
-        duration: 0.7,
-        stagger: { each: 0.12, from: "start" },
-        ease: "back.out(1.2)",
-        scrollTrigger: {
-          trigger: el,
-          start: "top 80%",
-          toggleActions: "play none none none",
-        },
-      });
-
-      return () => {
-        ScrollTrigger.getAll()
-          .filter((t) => t.trigger === el)
-          .forEach((t) => t.kill());
-      };
-    },
-    { scope: gridRef },
   );
 
   return (

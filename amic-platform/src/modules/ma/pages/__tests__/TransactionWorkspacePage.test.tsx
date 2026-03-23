@@ -43,6 +43,15 @@ function renderPage(
   );
 }
 
+const clientAuth: Partial<AuthContextValue> = {
+  user: {
+    ...mockUser,
+    email: "client.demo@amic.kr",
+    display_name: "Client Demo",
+    role: "CLIENT",
+  },
+};
+
 describe("TransactionWorkspacePage", () => {
   beforeEach(() => {
     server.resetHandlers();
@@ -339,6 +348,9 @@ describe("TransactionWorkspacePage", () => {
     renderPage("/ma/transactions/txn-1?viewPhase=ENGAGEMENT");
 
     await waitFor(() => {
+      return void expect(
+        screen.getByTestId("workspace-hero-shortcuts"),
+      ).toBeInTheDocument();
       expect(
         screen.getByRole("heading", { name: "테스트 프로젝트" }),
       ).toBeInTheDocument();
@@ -535,5 +547,26 @@ describe("TransactionWorkspacePage", () => {
     ).toHaveTextContent("Overview");
     expect(screen.queryByText("PMI")).not.toBeInTheDocument();
     expect(screen.queryByText("어닝아웃")).not.toBeInTheDocument();
+  });
+  it("CLIENT sees a VDR shortcut in the workspace hero", async () => {
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+
+    renderPage("/ma/transactions/txn-1", clientAuth);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-hero-shortcuts")).toBeInTheDocument();
+      return;
+    });
+
+    const heroShortcuts = screen.getByTestId("workspace-hero-shortcuts");
+    expect(
+      within(heroShortcuts).getByRole("button", { name: "VDR" }),
+    ).toBeInTheDocument();
+    expect(
+      within(heroShortcuts).getByRole("button", { name: "Upload to VDR" }),
+    ).toBeInTheDocument();
   });
 });

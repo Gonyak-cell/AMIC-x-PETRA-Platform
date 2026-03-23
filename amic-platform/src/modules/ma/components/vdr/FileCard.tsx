@@ -7,15 +7,17 @@ import { ExtractionBadge, getMimeIcon } from "./vdrFileUtils";
 
 interface FileCardProps {
   document: VdrDocument;
+  readOnly?: boolean;
   extraction?: DocumentExtraction;
-  onDelete: (docId: string) => void;
-  onStartExtraction: (docId: string) => void;
-  onRetryExtraction: (extractionId: string) => void;
+  onDelete?: (docId: string) => void;
+  onStartExtraction?: (docId: string) => void;
+  onRetryExtraction?: (extractionId: string) => void;
   downloadUrl: string;
 }
 
 export default function FileCard({
   document: doc,
+  readOnly = false,
   extraction,
   onDelete,
   onStartExtraction,
@@ -44,12 +46,14 @@ export default function FileCard({
 
       {/* 호버 액션 오버레이 */}
       <div className="absolute inset-0 flex items-end justify-center gap-1 rounded-lg bg-white/90 pb-2 opacity-0 transition-opacity group-hover:opacity-100">
-        <ExtractionBadge
-          extraction={extraction}
-          docId={doc.id}
-          onStartExtraction={onStartExtraction}
-          onRetryExtraction={onRetryExtraction}
-        />
+        {!readOnly && onStartExtraction && onRetryExtraction && (
+          <ExtractionBadge
+            extraction={extraction}
+            docId={doc.id}
+            onStartExtraction={onStartExtraction}
+            onRetryExtraction={onRetryExtraction}
+          />
+        )}
         <a
           href={downloadUrl}
           className="rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-info"
@@ -58,7 +62,7 @@ export default function FileCard({
         >
           <Download className="h-3.5 w-3.5" />
         </a>
-        <button
+        {onDelete && <button
           type="button"
           className="rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-negative"
           title="삭제"
@@ -68,7 +72,7 @@ export default function FileCard({
           }}
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </button>}
       </div>
     </div>
   );

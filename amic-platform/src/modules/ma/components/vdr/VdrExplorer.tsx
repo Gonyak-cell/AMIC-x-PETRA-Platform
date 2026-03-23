@@ -41,6 +41,8 @@ interface VdrExplorerProps {
   onCreateFolder: (name: string, parentId?: string) => void;
   onDeleteFolder: (id: string) => void;
   extractions: DocumentExtraction[];
+  readOnly?: boolean;
+  allowExtractionTools?: boolean;
 }
 
 interface CategorySuggestion {
@@ -65,6 +67,8 @@ export default function VdrExplorer({
   onCreateFolder,
   onDeleteFolder,
   extractions,
+  readOnly = false,
+  allowExtractionTools = true,
 }: VdrExplorerProps) {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [pendingDocId, setPendingDocId] = useState<string | null>(null);
@@ -127,7 +131,7 @@ export default function VdrExplorer({
 
   const handleUploadFile = useCallback(
     (file: File) => {
-      if (!currentFolderId) return;
+      if (readOnly || !currentFolderId) return;
       uploadDoc.mutate(file);
       const currentFolder = folderById.get(currentFolderId);
       suggestCategory.mutate(file.name, {
@@ -146,7 +150,7 @@ export default function VdrExplorer({
         },
       });
     },
-    [currentFolderId, uploadDoc, suggestCategory, folderById],
+    [currentFolderId, folderById, readOnly, suggestCategory, uploadDoc],
   );
 
   const handleDrop = useCallback(
@@ -154,7 +158,7 @@ export default function VdrExplorer({
       e.preventDefault();
       e.stopPropagation();
       setIsDragOver(false);
-      if (!currentFolderId) return;
+      if (readOnly || !currentFolderId) return;
       for (const file of Array.from(e.dataTransfer.files)) {
         const error = validateFile(file);
         if (error) {
@@ -164,19 +168,19 @@ export default function VdrExplorer({
         handleUploadFile(file);
       }
     },
-    [currentFolderId, handleUploadFile],
+    [currentFolderId, handleUploadFile, readOnly],
   );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
-      if (!currentFolderId) return;
+      if (readOnly || !currentFolderId) return;
       e.preventDefault();
       e.stopPropagation();
       if (e.dataTransfer.types.includes("Files")) {
         setIsDragOver(true);
       }
     },
-    [currentFolderId],
+    [currentFolderId, readOnly],
   );
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
@@ -204,6 +208,7 @@ export default function VdrExplorer({
         currentFolderId={currentFolderId}
         isUploading={isUploading}
         onUploadClick={() => fileInputRef.current?.click()}
+        readOnly={readOnly}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
@@ -257,9 +262,11 @@ export default function VdrExplorer({
           className={`flex-1 overflow-y-auto transition-colors ${
             isDragOver ? "bg-accent/5 ring-2 ring-inset ring-accent/30" : ""
           }`}
-          onDragOver={currentFolderId ? handleDragOver : undefined}
-          onDragLeave={currentFolderId ? handleDragLeave : undefined}
-          onDrop={currentFolderId ? handleDrop : undefined}
+          onDragOver={!readOnly && currentFolderId ? handleDragOver : undefined}
+          onDragLeave={
+            !readOnly && currentFolderId ? handleDragLeave : undefined
+          }
+          onDrop={!readOnly && currentFolderId ? handleDrop : undefined}
         >
           {currentFolderId === null ? (
             rootFolders.length === 0 ? (
@@ -282,7 +289,9 @@ export default function VdrExplorer({
                     folder={folder}
                     onOpen={setCurrentFolderId}
                     onDelete={
-                      !folder.is_required ? handleDeleteFolder : undefined
+                      !readOnly && !folder.is_required
+                        ? handleDeleteFolder
+                        : undefined
                     }
                   />
                 ))}
@@ -311,22 +320,34 @@ export default function VdrExplorer({
                   key={folder.id}
                   folder={folder}
                   onOpen={setCurrentFolderId}
-                  onDelete={
-                    !folder.is_required ? handleDeleteFolder : undefined
-                  }
+                    onDelete={
+                      !readOnly && !folder.is_required
+                        ? handleDeleteFolder
+                        : undefined
+                    }
                 />
               ))}
               {documents.map((doc) => (
                 <FileCard
                   key={doc.id}
                   document={doc}
+                  readOnly={readOnly}
                   extraction={extractionByDocId.get(doc.id)}
-                  onDelete={(docId) =>
-                    deleteDoc.mutate({ docId, folderId: currentFolderId! })
+                  onDelete={
+                    readOnly
+                      ? undefined
+                      : (docId) =>
+                          deleteDoc.mutate({ docId, folderId: currentFolderId! })
                   }
-                  onStartExtraction={(docId) => setPendingDocId(docId)}
-                  onRetryExtraction={(extractionId) =>
-                    retryExtraction.mutate(extractionId)
+                  onStartExtraction={
+                    readOnly || !allowExtractionTools
+                      ? undefined
+                      : (docId) => setPendingDocId(docId)
+                  }
+                  onRetryExtraction={
+                    readOnly || !allowExtractionTools
+                      ? undefined
+                      : (extractionId) => retryExtraction.mutate(extractionId)
                   }
                   downloadUrl={getVdrDownloadUrl(txnId, doc.id)}
                 />
@@ -344,6 +365,7 @@ export default function VdrExplorer({
             onNavigate={setCurrentFolderId}
           />
           <VdrFileListPanel
+            readOnly={readOnly}
             currentFolderId={currentFolderId}
             subFolders={
               currentFolderId === null ? rootFolders : currentSubFolders
@@ -355,9 +377,13 @@ export default function VdrExplorer({
             onDeleteDoc={(docId) =>
               deleteDoc.mutate({ docId, folderId: currentFolderId! })
             }
-            onStartExtraction={(docId) => setPendingDocId(docId)}
-            onRetryExtraction={(extractionId) =>
-              retryExtraction.mutate(extractionId)
+            onStartExtraction={
+              allowExtractionTools ? (docId) => setPendingDocId(docId) : undefined
+            }
+            onRetryExtraction={
+              allowExtractionTools
+                ? (extractionId) => retryExtraction.mutate(extractionId)
+                : undefined
             }
             extractionByDocId={extractionByDocId}
             txnId={txnId}
@@ -371,7 +397,7 @@ export default function VdrExplorer({
 
       {/* AI 분석 카테고리 선택 모달 */}
       <Modal
-        open={pendingDocId !== null}
+        open={!readOnly && allowExtractionTools && pendingDocId !== null}
         onClose={() => setPendingDocId(null)}
         title="문서 종류 선택"
         size="sm"
@@ -411,7 +437,7 @@ export default function VdrExplorer({
 
       {/* 새 폴더 생성 모달 */}
       <Modal
-        open={showNewFolderModal}
+        open={!readOnly && showNewFolderModal}
         onClose={() => {
           setShowNewFolderModal(false);
           setNewFolderName("");

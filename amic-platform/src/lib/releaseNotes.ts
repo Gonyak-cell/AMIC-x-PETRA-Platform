@@ -6,6 +6,37 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.5",
+    date: "2026-03-23",
+    highlights: [
+      "CLIENT users can access and upload to VDR workspaces",
+      "Client workspace now exposes a direct VDR shortcut",
+      "Team page cards render reliably and heavy member media is optimized",
+    ],
+    changes: [
+      {
+        type: "feature",
+        description:
+          "Enabled CLIENT users assigned to a deal to create folders and upload documents in the transaction VDR.",
+      },
+      {
+        type: "feature",
+        description:
+          "Added a VDR shortcut and upload entry point to the client transaction workspace while keeping internal review tools hidden.",
+      },
+      {
+        type: "improvement",
+        description:
+          "Stabilized Team page card rendering for client users and optimized the oversized member image asset to prevent faded partial loads.",
+      },
+      {
+        type: "fix",
+        description:
+          "Removed stale opacity states from Team member cards so profile tiles render fully after navigation and refresh.",
+      },
+    ],
+  },
+  {
     version: "0.15.3",
     date: "2026-03-23",
     highlights: [

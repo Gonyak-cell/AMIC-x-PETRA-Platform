@@ -15,7 +15,13 @@ from app.core.blob_storage import blob_client
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
 from app.core.rate_limiter import InMemoryRateLimiter
-from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
+from app.core.security import (
+    JWTClaims,
+    check_client_deal_access,
+    get_jwt_claims,
+    require_vdr_write_access,
+    require_write_access,
+)
 from app.models.enums import VdrAccessAction, VdrDocumentStatus
 from app.models.transaction import Transaction
 from app.models.vdr_folder import VdrFolder
@@ -223,7 +229,7 @@ async def init_vdr(
     txn_id: uuid.UUID,
     body: VdrInitRequest | None = None,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """기본 VDR 폴더 구조를 생성한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -259,7 +265,7 @@ async def create_folder(
     txn_id: uuid.UUID,
     body: VdrFolderCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """새 VDR 폴더를 생성한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -276,7 +282,7 @@ async def update_folder(
     folder_id: uuid.UUID,
     body: VdrFolderUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """VDR 폴더를 수정한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -292,7 +298,7 @@ async def delete_folder(
     txn_id: uuid.UUID,
     folder_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """VDR 폴더를 삭제한다 (필수 폴더 제외)."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -360,7 +366,7 @@ async def upload_document(
     folder_id: uuid.UUID,
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """VDR에 파일을 업로드한다."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -475,7 +481,7 @@ async def update_document(
     doc_id: uuid.UUID,
     body: VdrDocumentUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """VDR 문서 설명 수정 또는 폴더 이동."""
     await _get_and_authorize_txn(db, txn_id, claims)
@@ -492,7 +498,7 @@ async def upsert_document_routing_override(
     doc_id: uuid.UUID,
     body: VdrRoutingOverrideUpsert,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """Persist a human-reviewed workstream override for a VDR document."""
     await _get_and_authorize_txn(db, txn_id, claims)

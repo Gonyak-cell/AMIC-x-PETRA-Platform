@@ -292,6 +292,8 @@ export default function TransactionWorkspacePage() {
     phaseForContent;
   const isCompletionPhase = phaseForContent === "POST_CLOSING";
   const showOverviewShortcut = true;
+  const isVdrRoute = safeActiveTab === "vdr";
+  const canUploadToVdr = canEdit || Boolean(isClient);
   const heroPhaseTabId = tabs.find((tab) => tab.id !== "overview")?.id;
   const contentTabs = tabs.filter((tab) => tab.id !== "overview");
   const contentTabActiveId = contentTabs.some(
@@ -327,14 +329,17 @@ export default function TransactionWorkspacePage() {
               showOverview={showOverviewShortcut}
               overviewActive={safeActiveTab === "overview"}
               phaseLabel={phaseLabel}
-              phaseActive={safeActiveTab !== "overview"}
+              phaseActive={safeActiveTab !== "overview" && !isVdrRoute}
+              showVdrShortcut={isClient}
+              vdrActive={isVdrRoute}
               onOverviewClick={() => handleTabChange("overview")}
               onPhaseClick={
                 heroPhaseTabId
                   ? () => handleTabChange(heroPhaseTabId)
                   : undefined
               }
-              showUploadAction={canEdit && !isClient && safeActiveTab !== "vdr"}
+              onVdrClick={() => handleTabChange("vdr")}
+              showUploadAction={canUploadToVdr && safeActiveTab !== "vdr"}
               onUploadClick={() =>
                 openVdrUpload({
                   returnLabel: currentTabLabel,
@@ -477,7 +482,14 @@ export default function TransactionWorkspacePage() {
                   headerActionPortalId={WORKSPACE_TAB_HEADER_ACTION_PORTAL_ID}
                 />
               )}
-              {safeActiveTab === "vdr" && <VdrTab txnId={id} />}
+              {safeActiveTab === "vdr" && (
+                <VdrTab
+                  txnId={id}
+                  readOnly={false}
+                  showReviewTabs={!(isClient ?? false)}
+                  showExtractionTools={!(isClient ?? false)}
+                />
+              )}
               {safeActiveTab === "rfi" && <RFIPanel txnId={id} />}
               {safeActiveTab === "ndas" && (
                 <NdasTab txnId={id} canWrite={canEdit} />

@@ -50,6 +50,9 @@ function renderTab(
     entryPath?: string;
     entrySearch?: string;
     entryState?: unknown;
+    readOnly?: boolean;
+    showReviewTabs?: boolean;
+    showExtractionTools?: boolean;
   },
 ) {
   const queryClient = createTestQueryClient();
@@ -65,7 +68,12 @@ function renderTab(
         ]}
       >
         <AuthContext.Provider value={defaultAuth}>
-          <VdrTab txnId={txnId} />
+          <VdrTab
+            txnId={txnId}
+            readOnly={options?.readOnly}
+            showReviewTabs={options?.showReviewTabs}
+            showExtractionTools={options?.showExtractionTools}
+          />
         </AuthContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -126,6 +134,28 @@ describe("VdrTab", () => {
     expect(screen.getByRole("button", { name: "Routing" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Access" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Quick Upload" })).toBeVisible();
+  });
+
+  it("renders a client upload view without internal review tabs", async () => {
+    installDefaultHandlers();
+    renderTab("txn-1", {
+      showReviewTabs: false,
+      showExtractionTools: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Documents" })).toBeVisible();
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Routing" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Access" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Quick Upload" }),
+    ).toBeVisible();
   });
 
   it("shows root folders in both the tree and the document list", async () => {

@@ -23,6 +23,7 @@ interface ExplorerToolbarProps {
   currentFolderId: string | null;
   isUploading: boolean;
   onUploadClick: () => void;
+  readOnly?: boolean;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
 }
@@ -34,6 +35,7 @@ export default function ExplorerToolbar({
   currentFolderId,
   isUploading,
   onUploadClick,
+  readOnly = false,
   viewMode = "grid",
   onViewModeChange,
 }: ExplorerToolbarProps) {
@@ -106,7 +108,7 @@ export default function ExplorerToolbar({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      {!readOnly && <div className="flex items-center gap-1.5 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -125,7 +127,7 @@ export default function ExplorerToolbar({
           <Upload className="h-3.5 w-3.5" />
           업로드
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }

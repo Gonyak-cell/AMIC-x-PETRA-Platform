@@ -144,6 +144,20 @@ def require_write_access() -> Callable[..., Coroutine[Any, Any, JWTClaims]]:
     return checker
 
 
+def require_vdr_write_access() -> Callable[..., Coroutine[Any, Any, JWTClaims]]:
+    """Allow VDR document management for authenticated workspace users, including CLIENT."""
+
+    async def checker(claims: JWTClaims = Depends(get_jwt_claims)) -> JWTClaims:
+        if not claims.role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="쓰기 권한이 없습니다",
+            )
+        return claims
+
+    return checker
+
+
 async def check_client_deal_access(
     db: AsyncSession,
     txn_id: uuid.UUID,

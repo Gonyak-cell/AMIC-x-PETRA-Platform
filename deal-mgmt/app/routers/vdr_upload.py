@@ -15,7 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.blob_storage import blob_client
 from app.core.database import get_db
 from app.core.exceptions import DocumentNotFoundError
-from app.core.security import JWTClaims, get_jwt_claims, require_write_access
+from app.core.security import (
+    JWTClaims,
+    get_jwt_claims,
+    require_vdr_write_access,
+)
 from app.models.enums import VdrClassificationStatus, VdrFolderCategory
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
@@ -410,7 +414,7 @@ async def auto_upload_document(
     txn_id: uuid.UUID,
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """파일을 분석하여 적합한 VDR 폴더에 자동으로 업로드한다."""
     await _prepare_vdr_upload_context(db, txn_id, claims)
@@ -456,7 +460,7 @@ async def upload_documents(
     files: list[UploadFile],
     folder_id: uuid.UUID | None = Form(None),
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """VDR 통합 업로드 진입점.
 
@@ -490,7 +494,7 @@ async def direct_upload(
     files: list[UploadFile],
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(require_vdr_write_access()),
 ):
     """다중 파일을 폴더 지정 없이 업로드 — 2-Phase 병렬 파이프라인.
 

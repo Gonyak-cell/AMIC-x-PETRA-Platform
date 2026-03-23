@@ -7,8 +7,11 @@ interface WorkspaceHeroShortcutRowProps {
   overviewActive: boolean;
   phaseLabel: string;
   phaseActive: boolean;
+  showVdrShortcut?: boolean;
+  vdrActive?: boolean;
   onOverviewClick: () => void;
   onPhaseClick?: () => void;
+  onVdrClick?: () => void;
   showUploadAction: boolean;
   onUploadClick: () => void;
 }
@@ -60,8 +63,11 @@ export default function WorkspaceHeroShortcutRow({
   overviewActive,
   phaseLabel,
   phaseActive,
+  showVdrShortcut = false,
+  vdrActive = false,
   onOverviewClick,
   onPhaseClick,
+  onVdrClick,
   showUploadAction,
   onUploadClick,
 }: WorkspaceHeroShortcutRowProps) {
@@ -84,6 +90,14 @@ export default function WorkspaceHeroShortcutRow({
         onClick={onPhaseClick}
         disabled={!onPhaseClick}
       />
+      {showVdrShortcut && (
+        <HeroShortcutButton
+          label="VDR"
+          active={vdrActive}
+          onClick={onVdrClick}
+          disabled={!onVdrClick}
+        />
+      )}
       {showUploadAction && (
         <HeroShortcutButton
           label="Upload to VDR"

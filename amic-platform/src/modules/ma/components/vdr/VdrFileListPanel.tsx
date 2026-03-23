@@ -20,6 +20,7 @@ interface SortState {
 // ── Props ────────────────────────────────────────────────
 
 interface VdrFileListPanelProps {
+  readOnly?: boolean;
   currentFolderId: string | null;
   subFolders: VdrFolder[];
   documents: VdrDocument[];
@@ -27,8 +28,8 @@ interface VdrFileListPanelProps {
   onNavigate: (folderId: string | null) => void;
   onDeleteFolder: (id: string) => void;
   onDeleteDoc: (docId: string) => void;
-  onStartExtraction: (docId: string) => void;
-  onRetryExtraction: (extractionId: string) => void;
+  onStartExtraction?: (docId: string) => void;
+  onRetryExtraction?: (extractionId: string) => void;
   extractionByDocId: Map<string, DocumentExtraction>;
   txnId: string;
   onDrop: (e: React.DragEvent) => void;
@@ -77,6 +78,7 @@ const COLUMNS: { key: SortColumn; label: string; className: string }[] = [
 // ── 컴포넌트 ─────────────────────────────────────────────
 
 export default function VdrFileListPanel({
+  readOnly = false,
   currentFolderId,
   subFolders,
   documents,
@@ -119,9 +121,9 @@ export default function VdrFileListPanel({
       className={`flex flex-1 min-w-0 flex-col transition-colors ${
         isDragOver ? "bg-accent/5 ring-2 ring-inset ring-accent/30" : ""
       }`}
-      onDragOver={currentFolderId ? onDragOver : undefined}
-      onDragLeave={currentFolderId ? onDragLeave : undefined}
-      onDrop={currentFolderId ? onDrop : undefined}
+      onDragOver={!readOnly && currentFolderId ? onDragOver : undefined}
+      onDragLeave={!readOnly && currentFolderId ? onDragLeave : undefined}
+      onDrop={!readOnly && currentFolderId ? onDrop : undefined}
     >
       {/* 컬럼 헤더 */}
       <div className="flex h-7 items-center gap-2 border-b border-slate-200 bg-slate-50 px-2 text-[11px] font-medium text-slate-500">
@@ -180,7 +182,9 @@ export default function VdrFileListPanel({
                 type="folder"
                 folder={folder}
                 onNavigate={onNavigate}
-                onDelete={!folder.is_required ? onDeleteFolder : undefined}
+                onDelete={
+                  !readOnly && !folder.is_required ? onDeleteFolder : undefined
+                }
               />
             ))}
             {sortedDocs.map((doc) => (
@@ -188,11 +192,12 @@ export default function VdrFileListPanel({
                 key={doc.id}
                 type="file"
                 document={doc}
+                readOnly={readOnly}
                 txnId={txnId}
                 extraction={extractionByDocId.get(doc.id)}
-                onDelete={onDeleteDoc}
-                onStartExtraction={onStartExtraction}
-                onRetryExtraction={onRetryExtraction}
+                onDelete={readOnly ? undefined : onDeleteDoc}
+                onStartExtraction={readOnly ? undefined : onStartExtraction}
+                onRetryExtraction={readOnly ? undefined : onRetryExtraction}
               />
             ))}
           </div>

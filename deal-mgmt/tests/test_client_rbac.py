@@ -11,6 +11,7 @@ CASCADE 감사 추적:
 
 from __future__ import annotations
 
+import io
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -226,6 +227,53 @@ class TestClientReadAccess:
         )
         assert resp.status_code == 200
         assert len(resp.json()) == 1
+
+
+class TestClientVdrWriteAccess:
+    """CLIENT assigned to a deal can use the VDR upload workflow."""
+
+    async def test_client_can_create_vdr_folder_for_assigned_deal(
+        self,
+        http_client: AsyncClient,
+        async_session: AsyncSession,
+    ) -> None:
+        _set_claims(ADMIN_CLAIMS)
+        txn_id = await _create_txn(http_client)
+        await _grant_deal_access(async_session, txn_id, CLIENT_CLAIMS.email)
+
+        _set_claims(CLIENT_CLAIMS)
+        resp = await http_client.post(
+            f"/api/v1/transactions/{txn_id}/vdr/folders",
+            json={"name": "Client Uploads"},
+        )
+
+        assert resp.status_code == 201
+        assert resp.json()["name"] == "Client Uploads"
+
+    async def test_client_can_direct_upload_to_assigned_deal_vdr(
+        self,
+        http_client: AsyncClient,
+        async_session: AsyncSession,
+    ) -> None:
+        _set_claims(ADMIN_CLAIMS)
+        txn_id = await _create_txn(http_client)
+        await _grant_deal_access(async_session, txn_id, CLIENT_CLAIMS.email)
+
+        _set_claims(CLIENT_CLAIMS)
+        resp = await http_client.post(
+            f"/api/v1/transactions/{txn_id}/vdr/uploads",
+            files=[
+                (
+                    "files",
+                    ("client-upload.pdf", io.BytesIO(b"client upload"), "application/pdf"),
+                )
+            ],
+        )
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["total_uploaded"] == 1
+        assert body["results"][0]["document"]["original_name"] == "client-upload.pdf"
 
 
 class TestClientDealIsolation:
