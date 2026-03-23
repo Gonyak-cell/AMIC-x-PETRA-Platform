@@ -71,6 +71,13 @@ pwgen -s 64 6
 | `SHARED_JWT_SECRET` | **공유 JWT 시크릿** (4개 백엔드 공통) | `pwgen -s 64 1` |
 | `FDD_DB_PASSWORD` | FDD DB 비밀번호 | `pwgen -s 64 1` |
 | `FDD_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
+| `FRONTEND_URL` | CLIENT 초대 링크에 들어갈 프론트 주소 | `https://platform.example.com` |
+| `SMTP_SERVER` | CLIENT 초대 이메일 발송용 SMTP 서버 | `smtp.example.com` |
+| `SMTP_PORT` | SMTP 포트 | `587` |
+| `SMTP_USERNAME` | SMTP 로그인 계정 | `noreply@example.com` |
+| `SMTP_PASSWORD` | SMTP 비밀번호 또는 앱 패스워드 | `app-password` |
+| `SMTP_FROM_EMAIL` | 발신 이메일 주소 | `noreply@example.com` |
+| `SMTP_USE_TLS` | SMTP TLS 사용 여부 | `true` |
 | `KIIS_DB_PASSWORD` | KIIS DB 비밀번호 | `pwgen -s 64 1` |
 | `KIIS_CORS_ORIGINS` | 허용 도메인 | `https://platform.example.com` |
 | `DART_API_KEY` | DART 공시정보 API 키 | https://opendart.fss.or.kr 에서 발급 |
@@ -182,6 +189,8 @@ docker compose exec fdd-api python scripts/seed-users.py
 
 - [ ] 로그인 페이지 로드
 - [ ] 로그인 성공 (seed 계정)
+- [ ] Admin에서 CLIENT 계정 생성 + 초대 메일 발송 성공
+- [ ] 초대 메일 링크에서 비밀번호 설정 후 CLIENT 로그인 성공
 - [ ] 대시보드 KPI 카드 로드
 - [ ] FDD: 거래 목록 → 거래 생성
 - [ ] KIIS: 회사 검색 → 상세 페이지

@@ -61,6 +61,21 @@ async def get_jwt_claims(
             raise RuntimeError(
                 f"CRITICAL: AUTH_ENABLED=False is only allowed in local/dev/test environments, got ENV={_env!r}"
             )
+        dev_auth_email = request.cookies.get("dev_auth_email")
+        if dev_auth_email:
+            try:
+                from app.routers.dev_auth import _DEV_ACCOUNTS
+
+                account = _DEV_ACCOUNTS.get(dev_auth_email)
+                if account:
+                    user = account["user"]
+                    return JWTClaims(
+                        user_id=str(user["id"]),
+                        email=user["email"],
+                        role=user["role"],
+                    )
+            except Exception:
+                logger.debug("Failed to resolve dev auth claims", exc_info=True)
         return _DEV_CLAIMS
 
     credentials_exception = HTTPException(

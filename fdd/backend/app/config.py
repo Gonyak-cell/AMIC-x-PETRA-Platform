@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@amic.kr"
     smtp_use_tls: bool = True
     invite_token_expire_hours: int = 72
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:3000"
 
     # Production settings
     cors_origins: str = "http://localhost:5173"

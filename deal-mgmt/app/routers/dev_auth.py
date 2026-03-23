@@ -86,6 +86,18 @@ _DEV_ACCOUNTS = {
             "created_at": _CREATED_AT,
         },
     },
+    "client.demo@amic.kr": {
+        "password": "1111",
+        "user": {
+            "id": "user-client-1",
+            "email": "client.demo@amic.kr",
+            "display_name": "Client Demo",
+            "title": "Client",
+            "role": "CLIENT",
+            "is_active": True,
+            "created_at": _CREATED_AT,
+        },
+    },
 }
 
 

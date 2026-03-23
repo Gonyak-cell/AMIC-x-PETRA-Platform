@@ -48,6 +48,13 @@ services:
       PPTX_SERVICE_URL: http://fdd-pptx:3100
       CORS_ORIGINS: ${FDD_CORS_ORIGINS}
       JWT_SECRET: ${SHARED_JWT_SECRET}
+      SMTP_SERVER: ${SMTP_SERVER:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@amic.kr}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       LOG_LEVEL: ${FDD_LOG_LEVEL:-INFO}
     restart: unless-stopped
     deploy:
