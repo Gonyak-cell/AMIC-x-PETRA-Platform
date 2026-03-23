@@ -12,6 +12,7 @@ import {
   Download,
   Building2,
   Sparkles,
+  Plus,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -47,6 +48,9 @@ import type { LongListFilterState } from "@/modules/ma/components/buyers/LongLis
 import ShortListMasterList from "@/modules/ma/components/buyers/ShortListMasterList";
 import BuyerDetailPanel from "@/modules/ma/components/buyers/BuyerDetailPanel";
 import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
+import ManualBuyerAddModal, {
+  type ManualBuyerKind,
+} from "@/modules/ma/components/buyers/ManualBuyerAddModal";
 import ShortListViewToggle from "@/modules/ma/components/buyers/ShortListViewToggle";
 import type { ShortListViewMode } from "@/modules/ma/components/buyers/ShortListViewToggle";
 import MarketingGridView from "@/modules/ma/components/buyers/MarketingGridView";
@@ -118,6 +122,8 @@ export default function BuyersTab({
   );
   const [showSIMappingModal, setShowSIMappingModal] = useState(false);
   const [showFIRecommendModal, setShowFIRecommendModal] = useState(false);
+  const [manualBuyerKind, setManualBuyerKind] =
+    useState<ManualBuyerKind | null>(null);
   const [buyerDetailCompanyId, setBuyerDetailCompanyId] = useState<
     string | null
   >(null);
@@ -160,9 +166,7 @@ export default function BuyersTab({
       return;
     }
 
-    setHeaderActionPortalTarget(
-      document.getElementById(headerActionPortalId),
-    );
+    setHeaderActionPortalTarget(document.getElementById(headerActionPortalId));
   }, [headerActionPortalId]);
 
   const handleOpenFIRecommendModal = () => {
@@ -352,6 +356,47 @@ export default function BuyersTab({
   );
   const showShortListToolbar = !isBuyersLoading && buyerSubTab === "short-list";
   const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
+  const longListActionGroups = canWrite ? (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          icon={Building2}
+          onClick={handleOpenFIRecommendModal}
+          variant="primary"
+          size="sm"
+        >
+          FI 자동 추천
+        </Button>
+        <Button
+          icon={Sparkles}
+          onClick={() => setShowSIMappingModal(true)}
+          variant="primary"
+          size="sm"
+        >
+          SI 자동 매핑
+        </Button>
+      </div>
+      <div className="hidden h-6 w-px bg-border-default md:block" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          icon={Plus}
+          onClick={() => setManualBuyerKind("FI")}
+          variant="secondary"
+          size="sm"
+        >
+          FI 추가
+        </Button>
+        <Button
+          icon={Plus}
+          onClick={() => setManualBuyerKind("SI")}
+          variant="secondary"
+          size="sm"
+        >
+          SI 추가
+        </Button>
+      </div>
+    </>
+  ) : null;
 
   return (
     <>
@@ -444,54 +489,24 @@ export default function BuyersTab({
                   <EmptyState
                     icon={Users}
                     title="Long List 후보 없음"
-                    description="AI 자동 매핑으로 후보를 추가하세요."
+                    description="자동 추천, 자동 매핑 또는 직접 추가로 후보를 등록하세요."
                   />
                   {canWrite && (
-                    <div className="flex justify-center gap-3 pb-6">
-                      <Button
-                        icon={Building2}
-                        onClick={handleOpenFIRecommendModal}
-                        variant="primary"
-                        size="sm"
-                      >
-                        FI 자동 추천
-                      </Button>
-                      <Button
-                        icon={Sparkles}
-                        onClick={() => setShowSIMappingModal(true)}
-                        variant="primary"
-                        size="sm"
-                      >
-                        SI 자동 매핑
-                      </Button>
+                    <div className="flex flex-wrap items-center justify-center gap-2 px-4 pb-6">
+                      {longListActionGroups}
                     </div>
                   )}
                 </>
               ) : (
                 <>
                   {canWrite && (
-                    <div className="flex items-center justify-between border-b border-border-default px-4 py-2">
+                    <div className="flex flex-col gap-3 border-b border-border-default px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
                       <LongListFilters
                         filters={longListFilters}
                         onChange={setLongListFilters}
                       />
-                      <div className="flex gap-2">
-                        <Button
-                          icon={Building2}
-                          onClick={handleOpenFIRecommendModal}
-                          variant="primary"
-                          size="sm"
-                        >
-                          FI 자동 추천
-                        </Button>
-                        <Button
-                          icon={Sparkles}
-                          onClick={() => setShowSIMappingModal(true)}
-                          variant="primary"
-                          size="sm"
-                        >
-                          SI 자동 매핑
-                        </Button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {longListActionGroups}
                       </div>
                     </div>
                   )}
@@ -531,6 +546,15 @@ export default function BuyersTab({
                 open
                 onClose={() => setShowFIRecommendModal(false)}
                 txnId={txnId}
+                existingCompanyNames={allBuyers.map((b) => b.company_name)}
+              />
+            )}
+            {manualBuyerKind && (
+              <ManualBuyerAddModal
+                open
+                onClose={() => setManualBuyerKind(null)}
+                txnId={txnId}
+                kind={manualBuyerKind}
                 existingCompanyNames={allBuyers.map((b) => b.company_name)}
               />
             )}

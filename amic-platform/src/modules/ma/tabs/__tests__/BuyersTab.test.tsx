@@ -30,6 +30,9 @@ const toastErrorSpy = vi
 const toastInfoSpy = vi
   .spyOn(toast, "info")
   .mockImplementation(() => "toast-info");
+const toastSuccessSpy = vi
+  .spyOn(toast, "success")
+  .mockImplementation(() => "toast-success");
 
 const mockBuyer = {
   id: "buyer-1",
@@ -87,6 +90,7 @@ describe("BuyersTab", () => {
     server.resetHandlers();
     toastErrorSpy.mockClear();
     toastInfoSpy.mockClear();
+    toastSuccessSpy.mockClear();
   });
 
   it("shows a spinner while buyers are loading", () => {
@@ -146,8 +150,25 @@ describe("BuyersTab", () => {
       );
     });
 
-    expect(screen.queryByRole("button", { name: /FI/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /SI/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /FI/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /SI/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows manual FI and SI add buttons for writable users", async () => {
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Long List/i).length).toBeGreaterThanOrEqual(
+        1,
+      );
+    });
+
+    expect(screen.getByRole("button", { name: "FI 추가" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "SI 추가" })).toBeInTheDocument();
   });
 
   it("renders the Excel action into the workspace header slot on long list", async () => {
@@ -191,7 +212,7 @@ describe("BuyersTab", () => {
       );
     });
 
-    await user.click(screen.getByRole("button", { name: /FI/i }));
+    await user.click(screen.getByRole("button", { name: "FI 자동 추천" }));
 
     const firstToastMessage = toastErrorSpy.mock.calls[0]?.[0];
     expect(firstToastMessage).toContain("FI 자동 추천");
@@ -218,8 +239,49 @@ describe("BuyersTab", () => {
       );
     });
 
-    await user.click(screen.getByRole("button", { name: /FI/i }));
+    await user.click(screen.getByRole("button", { name: "FI 자동 추천" }));
 
     expect(await screen.findByText(errorDetail)).toBeInTheDocument();
+  });
+
+  it("submits the SI manual add modal with strategic buyer type", async () => {
+    const user = userEvent.setup();
+    let requestBody: Record<string, unknown> | null = null;
+
+    server.use(
+      http.post("*/api/ma/transactions/:txnId/buyers", async ({ request }) => {
+        requestBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          ...mockBuyer,
+          id: "buyer-2",
+          company_name: requestBody.company_name,
+          buyer_type: requestBody.buyer_type,
+        });
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Long List/i).length).toBeGreaterThanOrEqual(
+        1,
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "SI 추가" }));
+
+    expect(await screen.findByText("전략적 투자자 (SI)")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("회사명"), "Strategic Partner");
+    await user.selectOptions(screen.getByLabelText("Tier"), "TIER_2");
+    await user.click(screen.getByRole("button", { name: "추가" }));
+
+    await waitFor(() => {
+      expect(requestBody).toMatchObject({
+        company_name: "Strategic Partner",
+        buyer_type: "STRATEGIC",
+        tier: "TIER_2",
+      });
+    });
   });
 });
