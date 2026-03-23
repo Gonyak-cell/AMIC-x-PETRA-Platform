@@ -7,6 +7,7 @@ import { TRANSACTION_STATUS_VARIANT } from "@/modules/ma/constants/status-varian
 import { TRANSACTION_STATUS_OPTIONS } from "@/modules/ma/constants/transaction";
 import { formatDate } from "@/lib/format";
 import type { Transaction } from "@/modules/ma/types/transaction";
+import type { UserRole } from "@/types/auth";
 
 const PHASE_LABEL: Record<string, string> = {};
 for (const p of PHASE_CONFIG) {
@@ -29,7 +30,13 @@ function timeAgo(dateStr: string): string {
   return `${days}일 전`;
 }
 
-function getMyRole(txn: Transaction, email: string): string {
+function getMyRole(
+  txn: Transaction,
+  email: string,
+  userRole: UserRole | null,
+): string {
+  if (userRole === "CLIENT") return "Client";
+
   const isLead = txn.lead_advisor_email === email;
   const isCaptain = txn.deal_captain_email === email;
   if (isLead && isCaptain) return "Lead Advisor / Deal Captain";
@@ -40,6 +47,7 @@ function getMyRole(txn: Transaction, email: string): string {
 interface ProjectSummaryPanelProps {
   transaction: Transaction;
   userEmail: string;
+  userRole: UserRole | null;
 }
 
 function Row({
@@ -62,6 +70,7 @@ function Row({
 export default function ProjectSummaryPanel({
   transaction: txn,
   userEmail,
+  userRole,
 }: ProjectSummaryPanelProps) {
   const statusLabel = STATUS_LABEL[txn.status] ?? txn.status;
   const statusVariant = TRANSACTION_STATUS_VARIANT[txn.status] ?? "neutral";
@@ -79,7 +88,7 @@ export default function ProjectSummaryPanel({
           </Badge>
         </Row>
         <Row label="Target Close">{formatDate(txn.target_close_date)}</Row>
-        <Row label="My Role">{getMyRole(txn, userEmail)}</Row>
+        <Row label="My Role">{getMyRole(txn, userEmail, userRole)}</Row>
         <Row label="Last Updated">{timeAgo(txn.updated_at)}</Row>
       </dl>
     </div>

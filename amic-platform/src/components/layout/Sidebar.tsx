@@ -204,52 +204,56 @@ export function Sidebar({
           }}
         />
 
-        {/* Home Link + Portal Nav (hidden for CLIENT) */}
-        {!isClient && (
-          <div className="px-3 pt-3 pb-1 space-y-1">
-            <SidebarNavItem
-              to="/"
-              label="Home"
-              icon={Home}
-              end
-              onClick={onNavItemClick}
-            />
-            <SidebarNavItem
-              to="/calendar"
-              label="Calendar"
-              icon={Calendar}
-              onClick={onNavItemClick}
-            />
+        {/* Home Link + Portal Nav */}
+        <div className="px-3 pt-3 pb-1 space-y-1">
+          <SidebarNavItem
+            to="/"
+            label="Home"
+            icon={Home}
+            end
+            onClick={onNavItemClick}
+          />
+          <SidebarNavItem
+            to="/calendar"
+            label="Calendar"
+            icon={Calendar}
+            onClick={onNavItemClick}
+          />
+          <SidebarNavItem
+            to="/team"
+            label="Team"
+            icon={Users}
+            onClick={onNavItemClick}
+          />
+          <SidebarNavItem
+            to="/settings"
+            label="Settings"
+            icon={Settings}
+            onClick={onNavItemClick}
+          />
+          {!isClient && (
             <SidebarNavItem
               to="/exports"
               label="Exports"
               icon={Download}
               onClick={onNavItemClick}
             />
-            <SidebarNavItem
-              to="/team"
-              label="Team"
-              icon={Users}
-              onClick={onNavItemClick}
-            />
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Module separator (hidden for CLIENT) */}
-        {!isClient && (
-          <div
-            className="h-px mx-3"
-            style={{
-              background:
-                "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
-            }}
-          />
-        )}
+        {/* Module separator */}
+        <div
+          className="h-px mx-3"
+          style={{
+            background:
+              "linear-gradient(to right, transparent, var(--sidebar-divider), transparent)",
+          }}
+        />
 
         {/* Module Navigation — all modules rendered, each with collapsible group */}
         <div className="flex-1 py-2 px-3">
           {/* MODULES label */}
-          {!isClient && !collapsed && (
+          {!collapsed && (
             <h3
               className="px-4 mb-2 mt-2 text-[10px] font-semibold uppercase tracking-[0.15em]"
               style={{ color: "var(--sidebar-text-muted)" }}

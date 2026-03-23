@@ -13,7 +13,7 @@ const CARD_GAP = 12; // 카드 간격 (px)
 
 export default function MyProjectsSection() {
   const navigate = useNavigate();
-  const { projects, isLoading, isError, email } = useMyProjects();
+  const { projects, isLoading, isError, email, role } = useMyProjects();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -183,7 +183,11 @@ export default function MyProjectsSection() {
 
             {/* Right: summary panel */}
             <div className="sm:w-[296px] shrink-0">
-              <ProjectSummaryPanel transaction={active} userEmail={email!} />
+              <ProjectSummaryPanel
+                transaction={active}
+                userEmail={email!}
+                userRole={role}
+              />
             </div>
           </div>
 

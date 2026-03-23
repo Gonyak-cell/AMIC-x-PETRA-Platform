@@ -19,8 +19,9 @@ export function useMyProjects() {
   const { user } = useAuth();
   const enabled = !!user?.email;
   const isAdmin = user?.role === "ADMIN";
+  const isClient = user?.role === "CLIENT";
 
-  const params = isAdmin
+  const params = isAdmin || isClient
     ? { limit: 100 }
     : { assigned_to_me: true, limit: 100 };
 
@@ -50,5 +51,6 @@ export function useMyProjects() {
     isLoading: enabled && isLoading,
     isError: enabled && isError,
     email: user?.email ?? null,
+    role: user?.role ?? null,
   };
 }

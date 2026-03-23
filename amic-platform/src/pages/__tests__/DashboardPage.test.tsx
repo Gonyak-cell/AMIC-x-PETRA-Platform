@@ -31,6 +31,24 @@ describe("DashboardPage", () => {
     expect(screen.getByText("KIIS")).toBeInTheDocument();
   });
 
+  it("renders the dashboard for client users without internal-only modules", async () => {
+    renderWithProviders(<DashboardPage />, {
+      authContext: {
+        user: {
+          ...mockUser,
+          role: "CLIENT",
+          email: "client.demo@amic.kr",
+          display_name: "Client Demo",
+        },
+      },
+    });
+
+    expect(screen.getByText("MY PROJECTS")).toBeInTheDocument();
+    expect(screen.getByText("M&A Deals")).toBeInTheDocument();
+    expect(screen.queryByText("Deal Doc Studio")).not.toBeInTheDocument();
+    expect(screen.queryByText("KIIS")).not.toBeInTheDocument();
+  });
+
   it("shows MY PROJECTS section", async () => {
     renderWithProviders(<DashboardPage />);
 

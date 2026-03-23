@@ -6,6 +6,12 @@ import { mockUser } from "@/test/mocks/data";
 import MyProjectsSection from "../MyProjectsSection";
 
 const EMAIL = mockUser.email; // jwsuh@amic.kr
+const mockClientUser = {
+  ...mockUser,
+  email: "client.demo@amic.kr",
+  display_name: "Client Demo",
+  role: "CLIENT" as const,
+};
 
 function makeTxn(
   id: string,
@@ -45,6 +51,17 @@ const mockItems = [
   makeTxn("t4", "Delta", "ON_HOLD", "PREPARATION", EMAIL, EMAIL, ago2h),
   makeTxn("t5", "Epsilon", "TERMINATED", "CLOSING", EMAIL, null, now),
 ];
+const clientItems = [
+  makeTxn(
+    "client-1",
+    "Project Next",
+    "ACTIVE",
+    "MARKETING",
+    "lead@amic.kr",
+    null,
+    now,
+  ),
+];
 
 function useMockTransactions() {
   server.use(
@@ -72,6 +89,34 @@ describe("MyProjectsSection", () => {
 
     expect(screen.queryByText("Beta")).not.toBeInTheDocument();
     expect(screen.queryByText("Epsilon")).not.toBeInTheDocument();
+  });
+
+  it("shows backend-assigned client projects without assigned_to_me", async () => {
+    server.use(
+      http.get("*/api/ma/transactions", ({ request }) => {
+        const url = new URL(request.url);
+
+        expect(url.searchParams.get("assigned_to_me")).toBeNull();
+        expect(url.searchParams.get("limit")).toBe("100");
+
+        return HttpResponse.json({
+          items: clientItems,
+          total: clientItems.length,
+          limit: 100,
+          offset: 0,
+        });
+      }),
+    );
+
+    renderWithProviders(<MyProjectsSection />, {
+      authContext: { user: mockClientUser },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Project Next")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Client")).toBeInTheDocument();
   });
 
   it("navigates between projects with peek carousel", async () => {

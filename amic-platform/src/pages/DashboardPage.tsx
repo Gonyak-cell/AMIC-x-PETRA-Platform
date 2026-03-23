@@ -8,8 +8,9 @@ import {
   FilePlus2,
   BarChart3,
   CalendarPlus,
+  Users,
+  Settings,
 } from "lucide-react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { Card, PageHero } from "@/components/ui";
@@ -51,6 +52,37 @@ const QUICK_ACTIONS = [
   },
 ] as const;
 
+const CLIENT_QUICK_ACTIONS = [
+  {
+    id: "client-pipeline",
+    label: "Pipeline",
+    icon: PlusCircle,
+    to: "/ma/transactions",
+    bg: "bg-amic-800",
+  },
+  {
+    id: "client-calendar",
+    label: "Calendar",
+    icon: CalendarPlus,
+    to: "/calendar",
+    bg: "bg-accent",
+  },
+  {
+    id: "client-team",
+    label: "Team",
+    icon: Users,
+    to: "/team",
+    bg: "bg-amic",
+  },
+  {
+    id: "client-settings",
+    label: "Settings",
+    icon: Settings,
+    to: "/settings/profile",
+    bg: "bg-[#1C8F57]",
+  },
+] as const;
+
 /* ── Module Card config (AMIC palette) ── */
 const MODULE_CARDS = [
   {
@@ -79,16 +111,19 @@ const MODULE_CARDS = [
   },
 ] as const;
 
+const CLIENT_MODULE_CARDS = MODULE_CARDS.filter((card) => card.id === "ma");
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isClient } = useAuth();
 
   const modulesRef = useRef<HTMLDivElement>(null);
+  const quickActions = isClient ? CLIENT_QUICK_ACTIONS : QUICK_ACTIONS;
+  const moduleCards = isClient ? CLIENT_MODULE_CARDS : MODULE_CARDS;
 
   useScrollReveal(modulesRef, { stagger: 0.08 });
 
   // CLIENT 역할은 MA Pipeline으로 리다이렉트
-  if (isClient) return <Navigate to="/ma/transactions" replace />;
 
   const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -124,7 +159,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="label-uppercase mb-1">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-              {QUICK_ACTIONS.map((action) => (
+              {quickActions.map((action) => (
                 <button
                   key={action.id}
                   onClick={() => navigate(action.to)}
@@ -150,7 +185,7 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col">
             <h2 className="label-uppercase mb-1">Modules</h2>
             <div ref={modulesRef} className="flex flex-col gap-1 flex-1">
-              {MODULE_CARDS.map((mod) => (
+              {moduleCards.map((mod) => (
                 <div
                   key={mod.id}
                   role="button"

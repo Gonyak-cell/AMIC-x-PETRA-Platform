@@ -157,11 +157,9 @@ export default function App() {
         <Route
           path="calendar/*"
           element={
-            <InternalOnlyRoute>
-              <Suspense fallback={<ModuleFallback />}>
-                <CalendarRoutes />
-              </Suspense>
-            </InternalOnlyRoute>
+            <Suspense fallback={<ModuleFallback />}>
+              <CalendarRoutes />
+            </Suspense>
           }
         />
         <Route
@@ -191,11 +189,9 @@ export default function App() {
         <Route
           path="team/*"
           element={
-            <InternalOnlyRoute>
-              <Suspense fallback={<ModuleFallback />}>
-                <TeamPage />
-              </Suspense>
-            </InternalOnlyRoute>
+            <Suspense fallback={<ModuleFallback />}>
+              <TeamPage />
+            </Suspense>
           }
         />
         <Route
