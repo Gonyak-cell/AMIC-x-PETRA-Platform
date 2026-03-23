@@ -214,7 +214,7 @@ export const maHandlers = [
   }),
 
   http.get("*/api/ma/transactions/:txnId/ndas", () => {
-    return HttpResponse.json({ items: [], total: 0 });
+    return HttpResponse.json([]);
   }),
 
   http.get("*/api/ma/transactions/:txnId/bids", () => {

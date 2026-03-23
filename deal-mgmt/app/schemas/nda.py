@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import NdaStatus, NdaType
+from app.models.enums import NdaPartyType, NdaStatus, NdaType
 
 
 class NDAOut(BaseModel):
@@ -13,7 +13,8 @@ class NDAOut(BaseModel):
 
     id: uuid.UUID
     transaction_id: uuid.UUID
-    buyer_candidate_id: uuid.UUID
+    party_type: NdaPartyType
+    buyer_candidate_id: uuid.UUID | None = None
     nda_type: NdaType
     status: NdaStatus
     sent_at: str | None = None
@@ -29,7 +30,9 @@ class NDAOut(BaseModel):
 
 
 class NDACreate(BaseModel):
-    buyer_candidate_id: uuid.UUID
+    party_type: NdaPartyType = NdaPartyType.BUYER
+    buyer_candidate_id: uuid.UUID | None = None
+    counterparty_name: str | None = Field(None, max_length=200)
     nda_type: NdaType = NdaType.MUTUAL
     sent_at: str | None = Field(None, max_length=10)
     expires_at: str | None = Field(None, max_length=10)
@@ -38,6 +41,7 @@ class NDACreate(BaseModel):
 
 
 class NDAUpdate(BaseModel):
+    counterparty_name: str | None = Field(None, max_length=200)
     nda_type: NdaType | None = None
     status: NdaStatus | None = None
     sent_at: str | None = Field(None, max_length=10)

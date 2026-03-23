@@ -1,11 +1,14 @@
 export type NdaType = "ONE_WAY" | "MUTUAL";
 
+export type NdaPartyType = "BUYER" | "CLIENT";
+
 export type NdaStatus = "DRAFT" | "SENT" | "SIGNED" | "EXPIRED" | "REJECTED";
 
 export interface NDA {
   id: string;
   transaction_id: string;
-  buyer_candidate_id: string;
+  party_type: NdaPartyType;
+  buyer_candidate_id: string | null;
   nda_type: NdaType;
   status: NdaStatus;
   sent_at: string | null;
@@ -21,7 +24,9 @@ export interface NDA {
 }
 
 export interface NDACreate {
-  buyer_candidate_id: string;
+  party_type?: NdaPartyType;
+  buyer_candidate_id?: string;
+  counterparty_name?: string;
   nda_type?: NdaType;
   sent_at?: string;
   expires_at?: string;
@@ -30,6 +35,7 @@ export interface NDACreate {
 }
 
 export interface NDAUpdate {
+  counterparty_name?: string;
   nda_type?: NdaType;
   status?: NdaStatus;
   sent_at?: string;

@@ -209,7 +209,12 @@ def auth_headers(test_user):
     """Generate auth headers for a test user (Analyst)."""
     from app.auth.token import create_access_token
 
-    token = create_access_token(test_user.id, test_user.email, test_user.role.value)
+    token = create_access_token(
+        test_user.id,
+        test_user.email,
+        test_user.role.value,
+        test_user.display_name,
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -218,7 +223,12 @@ def admin_headers(admin_user):
     """Generate auth headers for an admin user."""
     from app.auth.token import create_access_token
 
-    token = create_access_token(admin_user.id, admin_user.email, admin_user.role.value)
+    token = create_access_token(
+        admin_user.id,
+        admin_user.email,
+        admin_user.role.value,
+        admin_user.display_name,
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -228,7 +238,10 @@ def viewer_headers(viewer_user):
     from app.auth.token import create_access_token
 
     token = create_access_token(
-        viewer_user.id, viewer_user.email, viewer_user.role.value
+        viewer_user.id,
+        viewer_user.email,
+        viewer_user.role.value,
+        viewer_user.display_name,
     )
     return {"Authorization": f"Bearer {token}"}
 

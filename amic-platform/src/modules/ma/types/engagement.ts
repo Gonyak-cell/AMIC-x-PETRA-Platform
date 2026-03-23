@@ -65,3 +65,11 @@ export interface WorkingGroupMemberCreate {
   role: WorkingGroupRole;
   phone?: string;
 }
+
+export interface WorkingGroupMemberUpdate {
+  name?: string;
+  organization?: string;
+  role?: WorkingGroupRole;
+  phone?: string;
+  is_active?: boolean;
+}

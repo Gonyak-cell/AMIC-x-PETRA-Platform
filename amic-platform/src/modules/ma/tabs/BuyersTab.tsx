@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   useDeferredValue,
   lazy,
   Suspense,
@@ -23,6 +24,7 @@ import {
   useTransaction,
 } from "@/modules/ma/hooks/useTransactions";
 import { useShortListOverview } from "@/modules/ma/hooks/useBuyerMarketing";
+import { useNdas } from "@/modules/ma/hooks/useNdas";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
@@ -30,14 +32,19 @@ import type {
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
+import type { NDA } from "@/modules/ma/types/nda";
 import {
   BUYER_TYPE_OPTIONS,
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
   isShortListed,
   buildStageMap,
+  MARKETING_STAGES,
 } from "@/modules/ma/constants";
-import type { BuyerStageSummary } from "@/modules/ma/types/marketing_log";
+import type {
+  BuyerStageSummary,
+  MarketingStage,
+} from "@/modules/ma/types/marketing_log";
 import type { KpiFilter } from "@/modules/ma/components/buyers/ShortListOverview";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
@@ -46,7 +53,9 @@ import ShortListSummaryBar from "@/modules/ma/components/buyers/ShortListSummary
 import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
 import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
 import ShortListMasterList from "@/modules/ma/components/buyers/ShortListMasterList";
-import BuyerDetailPanel from "@/modules/ma/components/buyers/BuyerDetailPanel";
+import BuyerDetailPanel, {
+  type BuyerDetailTabId,
+} from "@/modules/ma/components/buyers/BuyerDetailPanel";
 import FIRecommendModal from "@/modules/ma/components/buyers/FIRecommendModal";
 import ManualBuyerAddModal, {
   type ManualBuyerKind,
@@ -84,6 +93,24 @@ interface BuyersTabProps {
   headerActionPortalId?: string;
 }
 
+function createEmptyStageRecord(): Partial<Record<MarketingStage, string | null>> {
+  const stages: Partial<Record<MarketingStage, string | null>> = {};
+  for (const stage of MARKETING_STAGES) {
+    stages[stage] = null;
+  }
+  return stages;
+}
+
+function resolveBuyerNdaSignedDate(nda: NDA): string | null {
+  if (nda.signed_at) {
+    return nda.signed_at;
+  }
+  if (nda.status === "SIGNED") {
+    return nda.updated_at.slice(0, 10);
+  }
+  return null;
+}
+
 export default function BuyersTab({
   txnId,
   canWrite,
@@ -103,6 +130,7 @@ export default function BuyersTab({
     isError: isOverviewError,
     refetch: refetchOverview,
   } = useShortListOverview(txnId);
+  const { data: buyerNdas } = useNdas(txnId, { partyType: "BUYER" });
 
   const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
@@ -135,6 +163,8 @@ export default function BuyersTab({
 
   // Short List detail panel state
   const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
+  const [buyerDetailInitialTab, setBuyerDetailInitialTab] =
+    useState<BuyerDetailTabId>("summary");
   const [shortListViewMode, setShortListViewMode] =
     useState<ShortListViewMode>("grid");
   const [activeFilter, setActiveFilter] = useState<KpiFilter>("all");
@@ -184,6 +214,37 @@ export default function BuyersTab({
 
     setShowFIRecommendModal(true);
   };
+
+  const openBuyerDetail = useCallback((
+    buyerId: string,
+    initialTab: BuyerDetailTabId = "summary",
+  ) => {
+    setBuyerDetailInitialTab(initialTab);
+    setSelectedBuyerId(buyerId);
+  }, []);
+
+  const handleToggleDrop = (
+    buyerId: string,
+    isCurrentlyDropped: boolean,
+  ) =>
+    updateBuyer.mutate(
+      {
+        buyerId,
+        body: {
+          status: isCurrentlyDropped ? "IDENTIFIED" : "BID_DROPPED",
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            isCurrentlyDropped ? "복구했습니다." : "Drop 처리했습니다.",
+          );
+        },
+        onError: () => {
+          toast.error("상태 변경에 실패했습니다");
+        },
+      },
+    );
 
   const buyerColumns: Column<BuyerCandidate>[] = useMemo(
     () => [
@@ -280,8 +341,28 @@ export default function BuyersTab({
           </Badge>
         ),
       },
+      {
+        key: "nda",
+        header: "NDA",
+        align: "right",
+        width: "84px",
+        render: (r) => (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={(event) => {
+              event.stopPropagation();
+              openBuyerDetail(r.id, "nda");
+            }}
+            className="!px-2 !py-0.5 text-xs"
+          >
+            NDA
+          </Button>
+        ),
+      },
     ],
-    [canWrite, updateBuyer],
+    [canWrite, openBuyerDetail, updateBuyer],
   );
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
@@ -307,15 +388,54 @@ export default function BuyersTab({
   const shortListBuyers =
     realShortList.length > 0 ? realShortList : devMockBuyers;
   const overviewMerged = useMemo(
-    () => [
-      ...(shortListOverview ?? []),
-      ...(realShortList.length > 0 ? [] : devMockOverview),
-    ],
-    [shortListOverview, realShortList.length, devMockOverview],
+    () => {
+      const baseOverview = [
+        ...(shortListOverview ?? []),
+        ...(realShortList.length > 0 ? [] : devMockOverview),
+      ];
+      const summaryMap = new Map<string, BuyerStageSummary>();
+
+      for (const summary of baseOverview) {
+        summaryMap.set(summary.buyer_id, {
+          buyer_id: summary.buyer_id,
+          stages: { ...summary.stages },
+        });
+      }
+
+      for (const nda of buyerNdas ?? []) {
+        const buyerId = nda.buyer_candidate_id;
+        const signedDate = resolveBuyerNdaSignedDate(nda);
+        if (!buyerId || !signedDate) continue;
+
+        const existing = summaryMap.get(buyerId);
+        if (existing) {
+          const currentDate = existing.stages.NDA_SIGNED;
+          if (!currentDate || currentDate < signedDate) {
+            existing.stages.NDA_SIGNED = signedDate;
+          }
+          continue;
+        }
+
+        summaryMap.set(buyerId, {
+          buyer_id: buyerId,
+          stages: {
+            ...createEmptyStageRecord(),
+            NDA_SIGNED: signedDate,
+          },
+        });
+      }
+
+      return Array.from(summaryMap.values());
+    },
+    [buyerNdas, devMockOverview, realShortList.length, shortListOverview],
   );
 
   const stageMap = useMemo(
     () => buildStageMap(overviewMerged),
+    [overviewMerged],
+  );
+  const stageSummaryMap = useMemo(
+    () => new Map(overviewMerged.map((summary) => [summary.buyer_id, summary])),
     [overviewMerged],
   );
 
@@ -351,8 +471,8 @@ export default function BuyersTab({
     [allBuyers, selectedBuyerId],
   );
   const selectedStageSummary = useMemo(
-    () => (shortListOverview ?? []).find((s) => s.buyer_id === selectedBuyerId),
-    [shortListOverview, selectedBuyerId],
+    () => (selectedBuyerId ? stageSummaryMap.get(selectedBuyerId) : undefined),
+    [selectedBuyerId, stageSummaryMap],
   );
   const showShortListToolbar = !isBuyersLoading && buyerSubTab === "short-list";
   const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
@@ -576,7 +696,7 @@ export default function BuyersTab({
                     buyers={shortListBuyers}
                     stageMap={stageMap}
                     selectedBuyerId={selectedBuyerId}
-                    onSelectBuyer={setSelectedBuyerId}
+                    onSelectBuyer={(buyerId) => openBuyerDetail(buyerId)}
                     totalBuyerCount={allBuyers.length}
                   />
                 </div>
@@ -587,7 +707,7 @@ export default function BuyersTab({
                   <MarketingGridView
                     buyers={shortListBuyers}
                     stageMap={stageMap}
-                    onSelectBuyer={setSelectedBuyerId}
+                    onSelectBuyer={(buyerId) => openBuyerDetail(buyerId)}
                   />
                 )}
                 {shortListViewMode === "kanban" && (
@@ -601,7 +721,7 @@ export default function BuyersTab({
                     <MarketingKanbanView
                       buyers={shortListBuyers}
                       stageMap={stageMap}
-                      onSelectBuyer={setSelectedBuyerId}
+                      onSelectBuyer={(buyerId) => openBuyerDetail(buyerId)}
                     />
                   </Suspense>
                 )}
@@ -616,7 +736,7 @@ export default function BuyersTab({
                     <MarketingTimelineView
                       buyers={shortListBuyers}
                       stageMap={stageMap}
-                      onSelectBuyer={setSelectedBuyerId}
+                      onSelectBuyer={(buyerId) => openBuyerDetail(buyerId)}
                       canWrite={canWrite}
                       txnId={txnId}
                     />
@@ -631,6 +751,7 @@ export default function BuyersTab({
               stageSummary={selectedStageSummary}
               onClose={() => setSelectedBuyerId(null)}
               canWrite={canWrite}
+              initialTab={buyerDetailInitialTab}
               onToggleDrop={(buyerId, isCurrentlyDropped) =>
                 updateBuyer.mutate(
                   {
@@ -656,6 +777,18 @@ export default function BuyersTab({
               }
             />
           </>
+        )}
+
+        {buyerSubTab === "long-list" && (
+          <BuyerDetailPanel
+            txnId={txnId}
+            buyer={selectedBuyer}
+            stageSummary={selectedStageSummary}
+            onClose={() => setSelectedBuyerId(null)}
+            canWrite={canWrite}
+            initialTab={buyerDetailInitialTab}
+            onToggleDrop={handleToggleDrop}
+          />
         )}
 
         <SIDetailPanel

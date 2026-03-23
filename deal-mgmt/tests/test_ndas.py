@@ -167,6 +167,91 @@ async def test_nda_summary(client):
 # ── Redline .docx Guard ───────────────────────────────────
 
 
+async def test_create_client_nda_defaults_counterparty_to_client_name(client):
+    txn_resp = await client.post("/api/v1/transactions", json=SAMPLE_TXN)
+    txn_id = txn_resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"party_type": "CLIENT", "nda_type": "MUTUAL"},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["party_type"] == "CLIENT"
+    assert data["buyer_candidate_id"] is None
+    assert data["counterparty_name"] == SAMPLE_TXN["client_name"]
+
+
+async def test_create_client_nda_rejects_buyer_candidate_id(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={
+            "party_type": "CLIENT",
+            "buyer_candidate_id": buyer_id,
+            "counterparty_name": SAMPLE_TXN["client_name"],
+        },
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_list_ndas_filter_party_type(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"party_type": "CLIENT", "counterparty_name": SAMPLE_TXN["client_name"]},
+    )
+
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        params={"party_type": "CLIENT"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["party_type"] == "CLIENT"
+
+
+async def test_nda_summary_filter_party_type(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    buyer_nda = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/ndas/{buyer_nda.json()['id']}",
+        json={"status": "SIGNED"},
+    )
+
+    client_nda = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"party_type": "CLIENT", "counterparty_name": SAMPLE_TXN["client_name"]},
+    )
+    await client.patch(
+        f"/api/v1/transactions/{txn_id}/ndas/{client_nda.json()['id']}",
+        json={"status": "SENT"},
+    )
+
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/ndas/summary",
+        params={"party_type": "CLIENT"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["signed_count"] == 0
+    assert data["pending_count"] == 1
+
+
 async def test_redline_non_docx_returns_400(client, async_session):
     """PDF 파일로 redline 요청 시 400 반환 (.docx 가드)."""
 

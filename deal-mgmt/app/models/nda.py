@@ -4,7 +4,7 @@ from sqlalchemy import Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import NdaStatus, NdaType
+from app.models.enums import NdaPartyType, NdaStatus, NdaType
 
 
 class NDA(Base, TimestampMixin):
@@ -14,8 +14,17 @@ class NDA(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     transaction_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("transactions.id"), nullable=False, index=True)
-    buyer_candidate_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("buyer_candidates.id"), nullable=False, index=True
+    party_type: Mapped[NdaPartyType] = mapped_column(
+        Enum(NdaPartyType),
+        nullable=False,
+        default=NdaPartyType.BUYER,
+        index=True,
+    )
+    buyer_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("buyer_candidates.id"),
+        nullable=True,
+        index=True,
     )
     nda_type: Mapped[NdaType] = mapped_column(Enum(NdaType), nullable=False, default=NdaType.MUTUAL)
     status: Mapped[NdaStatus] = mapped_column(Enum(NdaStatus), nullable=False, default=NdaStatus.DRAFT)

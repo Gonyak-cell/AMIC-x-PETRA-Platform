@@ -29,6 +29,7 @@ class JWTClaims:
     user_id: str
     email: str | None
     role: str
+    display_name: str | None = None
 
 
 def get_jwt_secret() -> str:
@@ -43,6 +44,7 @@ _DEV_CLAIMS = JWTClaims(
     user_id="00000000-0000-0000-0000-000000000000",
     email="system@autofdd.dev",
     role="ANALYST",
+    display_name="System (Dev)",
 )
 
 
@@ -73,6 +75,7 @@ async def get_jwt_claims(
                         user_id=str(user["id"]),
                         email=user["email"],
                         role=user["role"],
+                        display_name=user.get("display_name"),
                     )
             except Exception:
                 logger.debug("Failed to resolve dev auth claims", exc_info=True)
@@ -106,6 +109,7 @@ async def get_jwt_claims(
         user_id=sub,
         email=payload.get("email"),
         role=payload.get("role", ""),
+        display_name=payload.get("display_name"),
     )
 
 

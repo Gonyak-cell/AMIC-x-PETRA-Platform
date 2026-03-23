@@ -92,7 +92,12 @@ def authenticate_user(
     user.last_login_at = datetime.now(UTC)
     db.commit()
 
-    access = create_access_token(user.id, user.email, user.role.value)
+    access = create_access_token(
+        user.id,
+        user.email,
+        user.role.value,
+        user.display_name,
+    )
     refresh = create_refresh_token(user.id)
     logger.info("User authenticated", extra={"ctx": {"email": email}})
     return access, refresh
@@ -137,7 +142,12 @@ def refresh_tokens(
         )
         db.flush()
 
-    access = create_access_token(user.id, user.email, user.role.value)
+    access = create_access_token(
+        user.id,
+        user.email,
+        user.role.value,
+        user.display_name,
+    )
     refresh = create_refresh_token(user.id)
     db.commit()
     return access, refresh

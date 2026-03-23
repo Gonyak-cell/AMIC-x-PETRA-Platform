@@ -111,7 +111,7 @@ export function isRailToolVisible(
 
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
   ENGAGEMENT: ["engagement", "rfi"],
-  PREPARATION: ["marketing-materials", "models", "ndas"],
+  PREPARATION: ["marketing-materials", "models"],
   MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs"],
   BIDDING: [...ALWAYS_VISIBLE_TABS, "bids"],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts"], // deprecated -- 호환성 유지

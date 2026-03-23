@@ -23,6 +23,7 @@ const defaultAuth: AuthContextValue = {
 
 function renderTab(props: Partial<{ txnId: string; canWrite: boolean }> = {}) {
   const queryClient = createTestQueryClient();
+
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -56,12 +57,26 @@ const mockMaterial = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
+const mockExternalUpload = {
+  id: "att-1",
+  transaction_id: "txn-1",
+  entity_type: "MARKETING_MATERIAL",
+  entity_id: "IM",
+  file_name: "external-im.pdf",
+  file_size_bytes: 524288,
+  mime_type: "application/pdf",
+  description: null,
+  uploaded_by_email: "test@amic.kr",
+  created_at: "2026-02-01T00:00:00Z",
+  updated_at: "2026-02-01T00:00:00Z",
+};
+
 describe("MarketingMaterialsTab", () => {
   beforeEach(() => {
     server.resetHandlers();
   });
 
-  it("renders the VDR source preview instead of the attachment upload zone", async () => {
+  it("renders the VDR source preview instead of a generic upload zone", async () => {
     server.use(
       http.get("*/api/ma/transactions/:txnId/marketing-materials", () =>
         HttpResponse.json([]),
@@ -115,14 +130,11 @@ describe("MarketingMaterialsTab", () => {
 
     renderTab();
 
-    await waitFor(() => {
-      expect(screen.getByText("VDR 입력 파일")).toBeInTheDocument();
-    });
-
     expect(await screen.findByText("company_overview.pdf")).toBeInTheDocument();
     expect(await screen.findByText("tax_notice.pdf")).toBeInTheDocument();
-    expect(await screen.findByText("마케팅 자료 입력 포함")).toBeInTheDocument();
-    expect(screen.queryByText("첨부 파일")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("\uCCA8\uBD80 \uD30C\uC77C"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders marketing materials in the table", async () => {
@@ -139,10 +151,10 @@ describe("MarketingMaterialsTab", () => {
     });
 
     expect(screen.getByText("TM")).toBeInTheDocument();
-    expect(screen.getByText("100 KB")).toBeInTheDocument();
+    expect(screen.getByText("100.0 KB")).toBeInTheDocument();
   });
 
-  it("shows creation buttons when write access is enabled", async () => {
+  it("shows creation and upload buttons when write access is enabled", async () => {
     renderTab({ canWrite: true });
 
     await waitFor(() => {
@@ -151,18 +163,63 @@ describe("MarketingMaterialsTab", () => {
 
     expect(screen.getByText("+ Discussion (DM)")).toBeInTheDocument();
     expect(screen.getByText("+ Information (IM)")).toBeInTheDocument();
+    expect(
+      screen.getByText(`TM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`DM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`IM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).toBeInTheDocument();
   });
 
-  it("hides creation buttons when write access is disabled", async () => {
+  it("hides creation and upload buttons when write access is disabled", async () => {
     renderTab({ canWrite: false });
 
     await waitFor(() => {
-      expect(screen.getByText("VDR 입력 파일")).toBeInTheDocument();
+      expect(
+        screen.getByText("\uB9C8\uCF00\uD305 \uC790\uB8CC \uC5C6\uC74C"),
+      ).toBeInTheDocument();
     });
 
     expect(screen.queryByText("+ Teaser (TM)")).not.toBeInTheDocument();
     expect(screen.queryByText("+ Discussion (DM)")).not.toBeInTheDocument();
     expect(screen.queryByText("+ Information (IM)")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(`TM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(`DM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(`IM ${"\uC5C5\uB85C\uB4DC"}`),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders externally uploaded materials in a separate section", async () => {
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/marketing-materials", () =>
+        HttpResponse.json([]),
+      ),
+      http.get("*/api/ma/transactions/:txnId/attachments", () =>
+        HttpResponse.json({ items: [mockExternalUpload], total: 1 }),
+      ),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByText("external-im.pdf")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText("\uC678\uBD80 \uC5C5\uB85C\uB4DC \uC790\uB8CC"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Information Memo .*본|Information Memo 업로드본/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("512.0 KB")).toBeInTheDocument();
   });
 
   it("shows the download button for READY materials", async () => {
@@ -175,7 +232,9 @@ describe("MarketingMaterialsTab", () => {
     renderTab();
 
     await waitFor(() => {
-      expect(screen.getByText("다운로드")).toBeInTheDocument();
+      expect(
+        screen.getAllByText("\uB2E4\uC6B4\uB85C\uB4DC")[0],
+      ).toBeInTheDocument();
     });
   });
 });

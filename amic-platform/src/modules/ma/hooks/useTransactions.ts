@@ -18,6 +18,7 @@ import type {
   EngagementCreate,
   WorkingGroupMember,
   WorkingGroupMemberCreate,
+  WorkingGroupMemberUpdate,
 } from "@/modules/ma/types/engagement";
 import type {
   BuyerCandidate,
@@ -486,5 +487,33 @@ export function useMaStats(enabled = true) {
       return data;
     },
     enabled,
+  });
+}
+
+export function useUpdateMember(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      memberId,
+      body,
+    }: {
+      memberId: string;
+      body: WorkingGroupMemberUpdate;
+    }) => {
+      const { data } = await maApi.patch(
+        `/transactions/${txnId}/members/${memberId}`,
+        body,
+      );
+      return data as WorkingGroupMember;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "members"],
+      });
+      toast.success("멤버 정보가 수정되었습니다.");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "멤버 수정에 실패했습니다."));
+    },
   });
 }

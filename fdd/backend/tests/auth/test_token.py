@@ -20,11 +20,12 @@ from app.core.exceptions import AuthenticationError
 class TestAccessToken:
     def test_create_and_decode_roundtrip(self):
         uid = uuid.uuid4()
-        token = create_access_token(uid, "test@test.com", "ADMIN")
+        token = create_access_token(uid, "test@test.com", "ADMIN", "Test User")
         payload = decode_access_token(token)
         assert payload["sub"] == str(uid)
         assert payload["email"] == "test@test.com"
         assert payload["role"] == "ADMIN"
+        assert payload["display_name"] == "Test User"
         assert payload["type"] == "access"
 
     def test_expired_token_raises(self):

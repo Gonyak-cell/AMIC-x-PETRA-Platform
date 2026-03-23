@@ -124,6 +124,7 @@ MOCK_CLAIMS = JWTClaims(
     user_id="test-user-id",
     email="test@example.com",
     role="ADMIN",
+    display_name="Test Admin",
 )
 
 
@@ -191,9 +192,15 @@ def make_claims(
     role: str = "ADMIN",
     email: str = "test@example.com",
     user_id: str = "test-user-id",
+    display_name: str | None = None,
 ) -> JWTClaims:
     """역할별 JWT Claims 팩토리 — 테스트에서 RBAC 검증용."""
-    return JWTClaims(user_id=user_id, email=email, role=role)
+    return JWTClaims(
+        user_id=user_id,
+        email=email,
+        role=role,
+        display_name=display_name,
+    )
 
 
 @pytest.fixture

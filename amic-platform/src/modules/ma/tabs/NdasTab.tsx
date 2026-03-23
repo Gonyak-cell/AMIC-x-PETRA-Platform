@@ -31,8 +31,8 @@ interface NdasTabProps {
 }
 
 export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
-  const { data: ndas } = useNdas(txnId);
-  const { data: ndaSummary } = useNdaSummary(txnId);
+  const { data: ndas } = useNdas(txnId, { partyType: "BUYER" });
+  const { data: ndaSummary } = useNdaSummary(txnId, { partyType: "BUYER" });
   const { data: buyers } = useBuyers(txnId);
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
@@ -43,6 +43,7 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
     null,
   );
   const [ndaForm, setNdaForm] = useState<NDACreate>({
+    party_type: "BUYER",
     buyer_candidate_id: "",
     nda_type: "MUTUAL",
   });
@@ -100,9 +101,7 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
                   const buyer = buyers?.find(
                     (b) => b.id === r.buyer_candidate_id,
                   );
-                  return (
-                    buyer?.company_name ?? r.buyer_candidate_id.slice(0, 8)
-                  );
+                  return buyer?.company_name ?? r.buyer_candidate_id?.slice(0, 8) ?? "-";
                 },
               },
               {
@@ -254,7 +253,11 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
             createNda.mutate(ndaForm, {
               onSuccess: () => {
                 setShowNdaModal(false);
-                setNdaForm({ buyer_candidate_id: "", nda_type: "MUTUAL" });
+                setNdaForm({
+                  party_type: "BUYER",
+                  buyer_candidate_id: "",
+                  nda_type: "MUTUAL",
+                });
               },
             });
           }}
@@ -316,7 +319,11 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
               type="button"
               onClick={() => {
                 setShowNdaModal(false);
-                setNdaForm({ buyer_candidate_id: "", nda_type: "MUTUAL" });
+                setNdaForm({
+                  party_type: "BUYER",
+                  buyer_candidate_id: "",
+                  nda_type: "MUTUAL",
+                });
               }}
             >
               취소

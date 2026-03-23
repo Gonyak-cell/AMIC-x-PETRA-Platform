@@ -1,18 +1,25 @@
 import { useState } from "react";
-import { FileText, Plus, Users } from "lucide-react";
+import { FileText, Pencil, Plus, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useEngagements,
   useCreateEngagement,
   useWorkingGroup,
   useAddMember,
+  useUpdateMember,
 } from "@/modules/ma/hooks/useTransactions";
-import type { EngagementCreate } from "@/modules/ma/types/engagement";
-import type { WorkingGroupMemberCreate } from "@/modules/ma/types/engagement";
-import type { WorkingGroupMember } from "@/modules/ma/types/engagement";
+import type {
+  EngagementCreate,
+  WorkingGroupMember,
+  WorkingGroupMemberCreate,
+  WorkingGroupMemberUpdate,
+  WorkingGroupRole,
+} from "@/modules/ma/types/engagement";
 import {
   ENGAGEMENT_TYPE_OPTIONS,
   WORKING_GROUP_ROLE_OPTIONS,
 } from "@/modules/ma/constants";
+import ClientNdaSection from "@/modules/ma/components/engagement/ClientNdaSection";
 
 import {
   Badge,
@@ -31,22 +38,98 @@ interface EngagementTabProps {
   canWrite: boolean;
 }
 
+interface MemberEditFormState {
+  name: string;
+  organization: string;
+  role: WorkingGroupRole;
+  phone: string;
+}
+
+const WORKING_GROUP_MANAGER_ROLES = new Set(["ADMIN", "MANAGER"]);
+
+function normalizePersonName(value: string | undefined) {
+  return value?.trim().replace(/\s+/g, " ").toLowerCase() ?? "";
+}
+
+function toOptionalText(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function createEmptyMemberForm(): WorkingGroupMemberCreate {
+  return {
+    name: "",
+    email: "",
+    role: "LEAD_ADVISOR",
+  };
+}
+
+function createMemberEditForm(member: WorkingGroupMember): MemberEditFormState {
+  return {
+    name: member.name,
+    organization: member.organization ?? "",
+    role: member.role,
+    phone: member.phone ?? "",
+  };
+}
+
 export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
+  const { user } = useAuth();
   const { data: engagements } = useEngagements(txnId);
   const { data: members } = useWorkingGroup(txnId);
   const createEngagement = useCreateEngagement(txnId);
   const addMember = useAddMember(txnId);
+  const updateMember = useUpdateMember(txnId);
 
   const [showEngModal, setShowEngModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<WorkingGroupMember | null>(
+    null,
+  );
   const [engForm, setEngForm] = useState<EngagementCreate>({
     type: "EXCLUSIVE",
   });
-  const [memberForm, setMemberForm] = useState<WorkingGroupMemberCreate>({
+  const [memberForm, setMemberForm] = useState<WorkingGroupMemberCreate>(
+    createEmptyMemberForm(),
+  );
+  const [memberEditForm, setMemberEditForm] = useState<MemberEditFormState>({
     name: "",
-    email: "",
+    organization: "",
     role: "LEAD_ADVISOR",
+    phone: "",
   });
+
+  const canManageWorkingGroup = user
+    ? WORKING_GROUP_MANAGER_ROLES.has(user.role)
+    : false;
+
+  const isOwnWorkingGroupMember = (member: WorkingGroupMember) => {
+    if (!user) return false;
+
+    if (user.email.trim().toLowerCase() === member.email.trim().toLowerCase()) {
+      return true;
+    }
+
+    return (
+      normalizePersonName(user.display_name) === normalizePersonName(member.name)
+    );
+  };
+
+  const canEditWorkingGroupMember = (member: WorkingGroupMember) =>
+    canManageWorkingGroup || isOwnWorkingGroupMember(member);
+
+  const showMemberActions = Boolean(
+    members?.some((member) => canEditWorkingGroupMember(member)),
+  );
+
+  const handleOpenMemberEditor = (member: WorkingGroupMember) => {
+    setEditingMember(member);
+    setMemberEditForm(createMemberEditForm(member));
+  };
+
+  const handleCloseMemberEditor = () => {
+    setEditingMember(null);
+  };
 
   const memberColumns: Column<WorkingGroupMember>[] = [
     { key: "name", header: "이름" },
@@ -54,17 +137,39 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
       key: "role",
       header: "역할",
       render: (row) =>
-        WORKING_GROUP_ROLE_OPTIONS.find((o) => o.value === row.role)?.label ||
-        row.role,
+        WORKING_GROUP_ROLE_OPTIONS.find((option) => option.value === row.role)
+          ?.label ?? row.role,
     },
     { key: "organization", header: "소속" },
     { key: "email", header: "이메일" },
   ];
 
+  if (showMemberActions) {
+    memberColumns.push({
+      key: "actions",
+      header: "관리",
+      align: "right",
+      width: "120px",
+      render: (row) =>
+        canEditWorkingGroupMember(row) ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            icon={Pencil}
+            aria-label={`${row.name} 수정`}
+            onClick={() => handleOpenMemberEditor(row)}
+          >
+            수정
+          </Button>
+        ) : null,
+    });
+  }
+
   return (
     <>
       <Card
-        title="수임계약"
+        title="계약"
         headerBar
         padding="none"
         actions={
@@ -75,7 +180,7 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               onClick={() => setShowEngModal(true)}
               variant="ghost"
             >
-              수임계약 추가
+              계약 추가
             </Button>
           ) : undefined
         }
@@ -83,8 +188,8 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
         {!engagements?.length ? (
           <EmptyState
             icon={FileText}
-            title="수임계약 없음"
-            description="수임계약을 등록하세요."
+            title="계약 정보 없음"
+            description="계약 정보를 등록하세요."
           />
         ) : (
           <DataTable
@@ -92,10 +197,11 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               {
                 key: "type",
                 header: "유형",
-                render: (r) => (
+                render: (row) => (
                   <Badge variant="info">
-                    {ENGAGEMENT_TYPE_OPTIONS.find((o) => o.value === r.type)
-                      ?.label ?? r.type}
+                    {ENGAGEMENT_TYPE_OPTIONS.find(
+                      (option) => option.value === row.type,
+                    )?.label ?? row.type}
                   </Badge>
                 ),
               },
@@ -109,13 +215,14 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
         )}
       </Card>
 
-      {/* Working Group 멤버 */}
+      <ClientNdaSection txnId={txnId} canWrite={canWrite} />
+
       <Card
         title="워킹 그룹"
         headerBar
         padding="none"
         actions={
-          canWrite ? (
+          canManageWorkingGroup ? (
             <Button
               size="sm"
               variant="ghost"
@@ -133,20 +240,23 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           <EmptyState
             icon={Users}
             title="등록된 멤버가 없습니다"
-            description="워킹 그룹 멤버를 추가하세요."
+            description={
+              canManageWorkingGroup
+                ? "워킹 그룹 멤버를 추가하세요."
+                : "워킹 그룹 멤버가 등록되면 여기에서 확인할 수 있습니다."
+            }
           />
         )}
       </Card>
 
-      {/* Engagement 추가 모달 */}
       <Modal
         open={showEngModal}
         onClose={() => setShowEngModal(false)}
-        title="수임계약 추가"
+        title="계약 추가"
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
+          onSubmit={(event) => {
+            event.preventDefault();
             createEngagement.mutate(engForm, {
               onSuccess: () => {
                 setShowEngModal(false);
@@ -160,10 +270,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             label="유형"
             options={ENGAGEMENT_TYPE_OPTIONS}
             value={engForm.type}
-            onChange={(e) =>
+            onChange={(event) =>
               setEngForm({
                 ...engForm,
-                type: e.target.value as EngagementCreate["type"],
+                type: event.target.value as EngagementCreate["type"],
               })
             }
           />
@@ -172,10 +282,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               label="체결일"
               type="date"
               value={engForm.signed_at ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setEngForm({
                   ...engForm,
-                  signed_at: e.target.value || undefined,
+                  signed_at: event.target.value || undefined,
                 })
               }
             />
@@ -183,10 +293,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               label="만료일"
               type="date"
               value={engForm.expires_at ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setEngForm({
                   ...engForm,
-                  expires_at: e.target.value || undefined,
+                  expires_at: event.target.value || undefined,
                 })
               }
             />
@@ -194,8 +304,11 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           <Input
             label="비고"
             value={engForm.notes ?? ""}
-            onChange={(e) =>
-              setEngForm({ ...engForm, notes: e.target.value || undefined })
+            onChange={(event) =>
+              setEngForm({
+                ...engForm,
+                notes: event.target.value || undefined,
+              })
             }
           />
           <div className="flex justify-end gap-2 pt-2">
@@ -213,19 +326,18 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
         </form>
       </Modal>
 
-      {/* Member 추가 모달 */}
       <Modal
         open={showMemberModal}
         onClose={() => setShowMemberModal(false)}
         title="멤버 추가"
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
+          onSubmit={(event) => {
+            event.preventDefault();
             addMember.mutate(memberForm, {
               onSuccess: () => {
                 setShowMemberModal(false);
-                setMemberForm({ name: "", email: "", role: "LEAD_ADVISOR" });
+                setMemberForm(createEmptyMemberForm());
               },
             });
           }}
@@ -236,8 +348,8 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               label="이름"
               required
               value={memberForm.name}
-              onChange={(e) =>
-                setMemberForm({ ...memberForm, name: e.target.value })
+              onChange={(event) =>
+                setMemberForm({ ...memberForm, name: event.target.value })
               }
             />
             <Input
@@ -245,8 +357,8 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               type="email"
               required
               value={memberForm.email}
-              onChange={(e) =>
-                setMemberForm({ ...memberForm, email: e.target.value })
+              onChange={(event) =>
+                setMemberForm({ ...memberForm, email: event.target.value })
               }
             />
           </div>
@@ -254,10 +366,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             <Input
               label="소속"
               value={memberForm.organization ?? ""}
-              onChange={(e) =>
+              onChange={(event) =>
                 setMemberForm({
                   ...memberForm,
-                  organization: e.target.value || undefined,
+                  organization: event.target.value || undefined,
                 })
               }
             />
@@ -265,10 +377,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               label="역할"
               options={WORKING_GROUP_ROLE_OPTIONS}
               value={memberForm.role}
-              onChange={(e) =>
+              onChange={(event) =>
                 setMemberForm({
                   ...memberForm,
-                  role: e.target.value as WorkingGroupMemberCreate["role"],
+                  role: event.target.value as WorkingGroupMemberCreate["role"],
                 })
               }
             />
@@ -276,10 +388,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           <Input
             label="전화"
             value={memberForm.phone ?? ""}
-            onChange={(e) =>
+            onChange={(event) =>
               setMemberForm({
                 ...memberForm,
-                phone: e.target.value || undefined,
+                phone: event.target.value || undefined,
               })
             }
           />
@@ -293,6 +405,113 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             </Button>
             <Button type="submit" loading={addMember.isPending}>
               추가
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(editingMember)}
+        onClose={handleCloseMemberEditor}
+        title={canManageWorkingGroup ? "멤버 수정" : "내 정보 수정"}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!editingMember) return;
+
+            const updateBody: WorkingGroupMemberUpdate = canManageWorkingGroup
+              ? {
+                  name: memberEditForm.name.trim(),
+                  organization: toOptionalText(memberEditForm.organization),
+                  role: memberEditForm.role,
+                  phone: toOptionalText(memberEditForm.phone),
+                }
+              : {
+                  organization: toOptionalText(memberEditForm.organization),
+                  phone: toOptionalText(memberEditForm.phone),
+                };
+
+            updateMember.mutate(
+              {
+                memberId: editingMember.id,
+                body: updateBody,
+              },
+              {
+                onSuccess: () => {
+                  handleCloseMemberEditor();
+                },
+              },
+            );
+          }}
+          className="space-y-4"
+        >
+          {!canManageWorkingGroup && (
+            <p className="rounded-dr-sm bg-bg-cool px-3 py-2 text-sm text-text-secondary">
+              본인 항목에서는 소속과 연락처만 수정할 수 있습니다.
+            </p>
+          )}
+
+          {canManageWorkingGroup && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="이름"
+                required
+                value={memberEditForm.name}
+                onChange={(event) =>
+                  setMemberEditForm({
+                    ...memberEditForm,
+                    name: event.target.value,
+                  })
+                }
+              />
+              <Select
+                label="역할"
+                options={WORKING_GROUP_ROLE_OPTIONS}
+                value={memberEditForm.role}
+                onChange={(event) =>
+                  setMemberEditForm({
+                    ...memberEditForm,
+                    role: event.target.value as WorkingGroupRole,
+                  })
+                }
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="소속"
+              value={memberEditForm.organization}
+              onChange={(event) =>
+                setMemberEditForm({
+                  ...memberEditForm,
+                  organization: event.target.value,
+                })
+              }
+            />
+            <Input
+              label="전화"
+              value={memberEditForm.phone}
+              onChange={(event) =>
+                setMemberEditForm({
+                  ...memberEditForm,
+                  phone: event.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={handleCloseMemberEditor}
+            >
+              취소
+            </Button>
+            <Button type="submit" loading={updateMember.isPending}>
+              저장
             </Button>
           </div>
         </form>

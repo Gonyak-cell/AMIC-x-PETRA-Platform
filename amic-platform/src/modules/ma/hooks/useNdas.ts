@@ -6,13 +6,24 @@ import type {
   NDACreate,
   NDAUpdate,
   NDASummary,
+  NdaPartyType,
 } from "@/modules/ma/types/nda";
 
-export function useNdas(txnId: string, buyerId?: string, active = true) {
+interface UseNdasOptions {
+  buyerId?: string;
+  partyType?: NdaPartyType;
+  active?: boolean;
+}
+
+export function useNdas(txnId: string, options: UseNdasOptions = {}) {
+  const { buyerId, partyType, active = true } = options;
   return useQuery<NDA[]>({
-    queryKey: ["ma", "transactions", txnId, "ndas", { buyerId }],
+    queryKey: ["ma", "transactions", txnId, "ndas", { buyerId, partyType }],
     queryFn: async () => {
-      const params = buyerId ? { buyer_id: buyerId } : {};
+      const params = {
+        ...(buyerId ? { buyer_id: buyerId } : {}),
+        ...(partyType ? { party_type: partyType } : {}),
+      };
       const { data } = await maApi.get(`/transactions/${txnId}/ndas`, {
         params,
       });
@@ -22,11 +33,17 @@ export function useNdas(txnId: string, buyerId?: string, active = true) {
   });
 }
 
-export function useNdaSummary(txnId: string, active = true) {
+export function useNdaSummary(
+  txnId: string,
+  options: Pick<UseNdasOptions, "partyType" | "active"> = {},
+) {
+  const { partyType, active = true } = options;
   return useQuery<NDASummary>({
-    queryKey: ["ma", "transactions", txnId, "ndas", "summary"],
+    queryKey: ["ma", "transactions", txnId, "ndas", "summary", { partyType }],
     queryFn: async () => {
-      const { data } = await maApi.get(`/transactions/${txnId}/ndas/summary`);
+      const { data } = await maApi.get(`/transactions/${txnId}/ndas/summary`, {
+        params: partyType ? { party_type: partyType } : {},
+      });
       return data;
     },
     enabled: !!txnId && active,

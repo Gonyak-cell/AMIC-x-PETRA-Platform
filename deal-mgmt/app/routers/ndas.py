@@ -1,4 +1,4 @@
-"""NDA 관리 라우터 — 매수자별 NDA 추적."""
+"""NDA management APIs for buyer and client counterparties."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import AuditAction, NdaStatus
+from app.models.enums import AuditAction, NdaPartyType, NdaStatus
 from app.models.nda import NDA
 from app.schemas.nda import NDACreate, NDAOut, NDASummary, NDAUpdate
 from app.services import audit_service, transaction_service
@@ -18,46 +18,92 @@ from app.services import audit_service, transaction_service
 router = APIRouter(prefix="/transactions/{txn_id}/ndas", tags=["NDAs"])
 
 
+def _normalized_counterparty_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _validate_nda_payload(
+    *,
+    transaction_client_name: str,
+    party_type: NdaPartyType,
+    buyer_candidate_id: uuid.UUID | None,
+    counterparty_name: str | None,
+) -> tuple[uuid.UUID | None, str | None]:
+    if party_type == NdaPartyType.BUYER:
+        if buyer_candidate_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="매수자 NDA에는 buyer_candidate_id가 필요합니다.",
+            )
+        return buyer_candidate_id, counterparty_name
+
+    if buyer_candidate_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="클라이언트 NDA에는 buyer_candidate_id를 사용할 수 없습니다.",
+        )
+
+    return None, counterparty_name or transaction_client_name
+
+
 @router.get("", response_model=list[NDAOut])
 async def list_ndas(
     txn_id: uuid.UUID,
     buyer_id: uuid.UUID | None = None,
+    party_type: NdaPartyType | None = None,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(NDA).where(NDA.transaction_id == txn_id)
+
+    query = select(NDA).where(NDA.transaction_id == txn_id)
     if buyer_id:
-        q = q.where(NDA.buyer_candidate_id == buyer_id)
-    q = q.order_by(NDA.created_at.desc())
-    result = await db.execute(q)
-    return [NDAOut.model_validate(n) for n in result.scalars().all()]
+        query = query.where(NDA.buyer_candidate_id == buyer_id)
+    if party_type:
+        query = query.where(NDA.party_type == party_type)
+
+    query = query.order_by(NDA.created_at.desc())
+    result = await db.execute(query)
+    return [NDAOut.model_validate(item) for item in result.scalars().all()]
 
 
 @router.get("/summary", response_model=NDASummary)
 async def nda_summary(
     txn_id: uuid.UUID,
+    party_type: NdaPartyType | None = None,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(NDA).where(NDA.transaction_id == txn_id)
-    result = await db.execute(q)
+
+    query = select(NDA).where(NDA.transaction_id == txn_id)
+    if party_type:
+        query = query.where(NDA.party_type == party_type)
+
+    result = await db.execute(query)
     ndas = list(result.scalars().all())
 
     by_status: dict[str, int] = {}
     signed = 0
     pending = 0
-    for n in ndas:
-        by_status[n.status.value] = by_status.get(n.status.value, 0) + 1
-        if n.status == NdaStatus.SIGNED:
+    for nda in ndas:
+        by_status[nda.status.value] = by_status.get(nda.status.value, 0) + 1
+        if nda.status == NdaStatus.SIGNED:
             signed += 1
-        elif n.status in (NdaStatus.DRAFT, NdaStatus.SENT):
+        elif nda.status in (NdaStatus.DRAFT, NdaStatus.SENT):
             pending += 1
 
-    return NDASummary(total=len(ndas), by_status=by_status, signed_count=signed, pending_count=pending)
+    return NDASummary(
+        total=len(ndas),
+        by_status=by_status,
+        signed_count=signed,
+        pending_count=pending,
+    )
 
 
 @router.post("", response_model=NDAOut, status_code=201)
@@ -67,10 +113,28 @@ async def create_nda(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    await transaction_service.get_transaction(db, txn_id)
-    nda = NDA(transaction_id=txn_id, **body.model_dump())
+    transaction = await transaction_service.get_transaction(db, txn_id)
+    buyer_candidate_id, counterparty_name = _validate_nda_payload(
+        transaction_client_name=transaction.client_name,
+        party_type=body.party_type,
+        buyer_candidate_id=body.buyer_candidate_id,
+        counterparty_name=_normalized_counterparty_name(body.counterparty_name),
+    )
+
+    nda = NDA(
+        transaction_id=txn_id,
+        party_type=body.party_type,
+        buyer_candidate_id=buyer_candidate_id,
+        counterparty_name=counterparty_name,
+        nda_type=body.nda_type,
+        sent_at=body.sent_at,
+        expires_at=body.expires_at,
+        document_url=body.document_url,
+        notes=body.notes,
+    )
     db.add(nda)
     await db.flush()
+
     await audit_service.record(
         db,
         entity_type="NDA",
@@ -92,14 +156,24 @@ async def update_nda(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    q = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
-    nda = (await db.execute(q)).scalar_one_or_none()
+    query = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
+    nda = (await db.execute(query)).scalar_one_or_none()
     if nda is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NDA를 찾을 수 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="NDA를 찾을 수 없습니다.",
+        )
+
     update_data = body.model_dump(exclude_unset=True)
-    old_value = {k: getattr(nda, k) for k in update_data}
-    for k, v in update_data.items():
-        setattr(nda, k, v)
+    if "counterparty_name" in update_data:
+        update_data["counterparty_name"] = _normalized_counterparty_name(
+            update_data["counterparty_name"],
+        )
+
+    old_value = {key: getattr(nda, key) for key in update_data}
+    for key, value in update_data.items():
+        setattr(nda, key, value)
+
     await audit_service.record(
         db,
         entity_type="NDA",
@@ -121,10 +195,14 @@ async def delete_nda(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    q = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
-    nda = (await db.execute(q)).scalar_one_or_none()
+    query = select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id)
+    nda = (await db.execute(query)).scalar_one_or_none()
     if nda is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NDA를 찾을 수 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="NDA를 찾을 수 없습니다.",
+        )
+
     await audit_service.record(
         db,
         entity_type="NDA",

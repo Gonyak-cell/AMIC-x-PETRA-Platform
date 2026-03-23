@@ -9,6 +9,7 @@ import BuyerMeetingTimeline from "./BuyerMeetingTimeline";
 import BuyerVdrAccessCard from "./BuyerVdrAccessCard";
 import MaterialTracker from "./MaterialTracker";
 import BuyerFeedbackSection from "./BuyerFeedbackSection";
+import BuyerNdaSection from "./BuyerNdaSection";
 import { useNavigate } from "react-router-dom";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui";
@@ -20,16 +21,39 @@ interface BuyerDetailPanelProps {
   stageSummary: BuyerStageSummary | undefined;
   onClose: () => void;
   canWrite: boolean;
+  initialTab?: BuyerDetailTabId;
   onToggleDrop?: (buyerId: string, isCurrentlyDropped: boolean) => void;
 }
 
+export type BuyerDetailTabId =
+  | "summary"
+  | "nda"
+  | "meetings"
+  | "materials"
+  | "feedback"
+  | "comments";
+
 const TABS: TabItem[] = [
+  { id: "nda", label: "NDA" },
   { id: "summary", label: "요약" },
   { id: "meetings", label: "미팅" },
   { id: "materials", label: "자료" },
   { id: "feedback", label: "피드백" },
   { id: "comments", label: "댓글" },
 ];
+
+const TAB_DISPLAY_ORDER: BuyerDetailTabId[] = [
+  "summary",
+  "nda",
+  "meetings",
+  "materials",
+  "feedback",
+  "comments",
+];
+
+const ORDERED_TABS = TAB_DISPLAY_ORDER.map(
+  (tabId) => TABS.find((tab) => tab.id === tabId)!,
+);
 
 function getBuyerTypeLabel(buyerType: string): string {
   const option = BUYER_TYPE_OPTIONS.find((o) => o.value === buyerType);
@@ -42,16 +66,17 @@ export default function BuyerDetailPanel({
   stageSummary,
   onClose,
   canWrite,
+  initialTab = "summary",
   onToggleDrop,
 }: BuyerDetailPanelProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("summary");
+  const [activeTab, setActiveTab] = useState<BuyerDetailTabId>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setActiveTab("summary");
+    setActiveTab(initialTab);
     contentRef.current?.scrollTo(0, 0);
-  }, [buyer?.id]);
+  }, [buyer?.id, initialTab]);
 
   const isOpen = !!buyer;
   const isDropped = buyer?.status === "BID_DROPPED";
@@ -84,9 +109,9 @@ export default function BuyerDetailPanel({
           )}
 
           <Tabs
-            tabs={TABS}
+            tabs={ORDERED_TABS}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(tabId) => setActiveTab(tabId as BuyerDetailTabId)}
             variant="underline"
             size="sm"
           />
@@ -98,6 +123,9 @@ export default function BuyerDetailPanel({
                 txnId={txnId}
                 stageSummary={stageSummary}
               />
+            )}
+            {activeTab === "nda" && (
+              <BuyerNdaSection txnId={txnId} buyer={buyer} canWrite={canWrite} />
             )}
             {activeTab === "meetings" && (
               <div className="space-y-4">

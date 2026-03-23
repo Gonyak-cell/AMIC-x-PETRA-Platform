@@ -19,6 +19,7 @@ def create_access_token(
     user_id: uuid.UUID,
     email: str,
     role: str,
+    display_name: str | None = None,
 ) -> str:
     """JWT Access Token을 생성한다."""
     expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
@@ -31,6 +32,8 @@ def create_access_token(
         "iat": datetime.now(UTC),
         "jti": str(uuid.uuid4()),
     }
+    if display_name:
+        payload["display_name"] = display_name
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

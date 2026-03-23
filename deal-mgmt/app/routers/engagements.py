@@ -1,4 +1,4 @@
-"""수임계약 + 워킹그룹 라우터."""
+"""Engagement and Working Group APIs."""
 
 from __future__ import annotations
 
@@ -25,8 +25,69 @@ from app.services import audit_service, transaction_service
 
 router = APIRouter(prefix="/transactions/{txn_id}", tags=["Engagements"])
 
+_WORKING_GROUP_MANAGER_ROLES = {"ADMIN", "MANAGER"}
+_SELF_EDITABLE_MEMBER_FIELDS = {"organization", "phone"}
 
-# ── Engagement CRUD ─────────────────────────────────────
+
+def _normalize_person_name(value: str | None) -> str:
+    return " ".join((value or "").split()).casefold()
+
+
+def _can_manage_working_group(claims: JWTClaims) -> bool:
+    return claims.role in _WORKING_GROUP_MANAGER_ROLES
+
+
+def _is_own_working_group_member(
+    claims: JWTClaims,
+    member: WorkingGroupMember,
+) -> bool:
+    claim_email = (claims.email or "").strip().casefold()
+    member_email = (member.email or "").strip().casefold()
+    if claim_email and member_email and claim_email == member_email:
+        return True
+
+    claim_name = _normalize_person_name(claims.display_name)
+    return bool(claim_name) and claim_name == _normalize_person_name(member.name)
+
+
+def _require_working_group_manager(claims: JWTClaims) -> None:
+    if _can_manage_working_group(claims):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="워킹 그룹 변경은 어드민 또는 매니저만 할 수 있습니다.",
+    )
+
+
+def _build_member_update_data(
+    body: WorkingGroupMemberUpdate,
+    claims: JWTClaims,
+    member: WorkingGroupMember,
+) -> dict[str, object]:
+    update_data = body.model_dump(exclude_unset=True)
+
+    if _can_manage_working_group(claims):
+        return update_data
+
+    if not _is_own_working_group_member(claims, member):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인 워킹 그룹 정보만 수정할 수 있습니다.",
+        )
+
+    filtered = {
+        key: value
+        for key, value in update_data.items()
+        if key in _SELF_EDITABLE_MEMBER_FIELDS
+    }
+    if len(filtered) != len(update_data):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인 워킹 그룹 정보는 소속과 연락처만 수정할 수 있습니다.",
+        )
+    return filtered
+
+
 @router.get("/engagements", response_model=list[EngagementOut])
 async def list_engagements(
     txn_id: uuid.UUID,
@@ -35,9 +96,13 @@ async def list_engagements(
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = select(Engagement).where(Engagement.transaction_id == txn_id).order_by(Engagement.created_at.desc())
-    result = await db.execute(q)
-    return [EngagementOut.model_validate(e) for e in result.scalars().all()]
+    query = (
+        select(Engagement)
+        .where(Engagement.transaction_id == txn_id)
+        .order_by(Engagement.created_at.desc())
+    )
+    result = await db.execute(query)
+    return [EngagementOut.model_validate(item) for item in result.scalars().all()]
 
 
 @router.post("/engagements", response_model=EngagementOut, status_code=201)
@@ -48,20 +113,20 @@ async def create_engagement(
     claims: JWTClaims = Depends(require_write_access()),
 ):
     await transaction_service.get_transaction(db, txn_id)
-    eng = Engagement(transaction_id=txn_id, **body.model_dump())
-    db.add(eng)
+    engagement = Engagement(transaction_id=txn_id, **body.model_dump())
+    db.add(engagement)
     await db.flush()
     await audit_service.record(
         db,
         entity_type="Engagement",
-        entity_id=eng.id,
+        entity_id=engagement.id,
         action=AuditAction.CREATE,
         actor_email=claims.email,
         new_value=body.model_dump(mode="json"),
     )
     await db.commit()
-    await db.refresh(eng)
-    return EngagementOut.model_validate(eng)
+    await db.refresh(engagement)
+    return EngagementOut.model_validate(engagement)
 
 
 @router.patch("/engagements/{eng_id}", response_model=EngagementOut)
@@ -72,24 +137,32 @@ async def update_engagement(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    q = select(Engagement).where(Engagement.id == eng_id, Engagement.transaction_id == txn_id)
-    eng = (await db.execute(q)).scalar_one_or_none()
-    if eng is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="수임계약을 찾을 수 없습니다")
+    query = select(Engagement).where(
+        Engagement.id == eng_id,
+        Engagement.transaction_id == txn_id,
+    )
+    engagement = (await db.execute(query)).scalar_one_or_none()
+    if engagement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="계약 정보를 찾을 수 없습니다.",
+        )
+
     update_data = body.model_dump(exclude_unset=True)
-    for k, v in update_data.items():
-        setattr(eng, k, v)
+    for key, value in update_data.items():
+        setattr(engagement, key, value)
+
     await audit_service.record(
         db,
         entity_type="Engagement",
-        entity_id=eng.id,
+        entity_id=engagement.id,
         action=AuditAction.UPDATE,
         actor_email=claims.email,
         new_value=update_data,
     )
     await db.commit()
-    await db.refresh(eng)
-    return EngagementOut.model_validate(eng)
+    await db.refresh(engagement)
+    return EngagementOut.model_validate(engagement)
 
 
 @router.delete("/engagements/{eng_id}", status_code=204)
@@ -99,22 +172,28 @@ async def delete_engagement(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    q = select(Engagement).where(Engagement.id == eng_id, Engagement.transaction_id == txn_id)
-    eng = (await db.execute(q)).scalar_one_or_none()
-    if eng is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="수임계약을 찾을 수 없습니다")
+    query = select(Engagement).where(
+        Engagement.id == eng_id,
+        Engagement.transaction_id == txn_id,
+    )
+    engagement = (await db.execute(query)).scalar_one_or_none()
+    if engagement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="계약 정보를 찾을 수 없습니다.",
+        )
+
     await audit_service.record(
         db,
         entity_type="Engagement",
-        entity_id=eng.id,
+        entity_id=engagement.id,
         action=AuditAction.DELETE,
         actor_email=claims.email,
     )
-    await db.delete(eng)
+    await db.delete(engagement)
     await db.commit()
 
 
-# ── Working Group CRUD ──────────────────────────────────
 @router.get("/members", response_model=list[WorkingGroupMemberOut], tags=["Working Group"])
 async def list_members(
     txn_id: uuid.UUID,
@@ -123,13 +202,13 @@ async def list_members(
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    q = (
+    query = (
         select(WorkingGroupMember)
         .where(WorkingGroupMember.transaction_id == txn_id)
         .order_by(WorkingGroupMember.created_at)
     )
-    result = await db.execute(q)
-    return [WorkingGroupMemberOut.model_validate(m) for m in result.scalars().all()]
+    result = await db.execute(query)
+    return [WorkingGroupMemberOut.model_validate(item) for item in result.scalars().all()]
 
 
 @router.post("/members", response_model=WorkingGroupMemberOut, status_code=201, tags=["Working Group"])
@@ -137,9 +216,11 @@ async def add_member(
     txn_id: uuid.UUID,
     body: WorkingGroupMemberCreate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
+    _require_working_group_manager(claims)
     await transaction_service.get_transaction(db, txn_id)
+
     member = WorkingGroupMember(transaction_id=txn_id, **body.model_dump())
     db.add(member)
     try:
@@ -148,8 +229,9 @@ async def add_member(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"이메일 '{body.email}'은(는) 이미 이 거래의 멤버입니다",
+            detail=f"이메일 '{body.email}'은 이미 이 거래의 워킹 그룹 멤버입니다.",
         )
+
     await audit_service.record(
         db,
         entity_type="WorkingGroupMember",
@@ -169,17 +251,23 @@ async def update_member(
     member_id: uuid.UUID,
     body: WorkingGroupMemberUpdate,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    q = select(WorkingGroupMember).where(
-        WorkingGroupMember.id == member_id, WorkingGroupMember.transaction_id == txn_id
+    query = select(WorkingGroupMember).where(
+        WorkingGroupMember.id == member_id,
+        WorkingGroupMember.transaction_id == txn_id,
     )
-    member = (await db.execute(q)).scalar_one_or_none()
+    member = (await db.execute(query)).scalar_one_or_none()
     if member is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="멤버를 찾을 수 없습니다")
-    update_data = body.model_dump(exclude_unset=True)
-    for k, v in update_data.items():
-        setattr(member, k, v)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="워킹 그룹 멤버를 찾을 수 없습니다.",
+        )
+
+    update_data = _build_member_update_data(body, claims, member)
+    for key, value in update_data.items():
+        setattr(member, key, value)
+
     await audit_service.record(
         db,
         entity_type="WorkingGroupMember",
@@ -198,14 +286,20 @@ async def remove_member(
     txn_id: uuid.UUID,
     member_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    claims: JWTClaims = Depends(require_write_access()),
+    claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    q = select(WorkingGroupMember).where(
-        WorkingGroupMember.id == member_id, WorkingGroupMember.transaction_id == txn_id
+    _require_working_group_manager(claims)
+    query = select(WorkingGroupMember).where(
+        WorkingGroupMember.id == member_id,
+        WorkingGroupMember.transaction_id == txn_id,
     )
-    member = (await db.execute(q)).scalar_one_or_none()
+    member = (await db.execute(query)).scalar_one_or_none()
     if member is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="멤버를 찾을 수 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="워킹 그룹 멤버를 찾을 수 없습니다.",
+        )
+
     await audit_service.record(
         db,
         entity_type="WorkingGroupMember",

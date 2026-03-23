@@ -137,6 +137,11 @@ class NdaType(enum.StrEnum):
     MUTUAL = "MUTUAL"
 
 
+class NdaPartyType(enum.StrEnum):
+    BUYER = "BUYER"
+    CLIENT = "CLIENT"
+
+
 class NdaStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     SENT = "SENT"
