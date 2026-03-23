@@ -205,6 +205,10 @@ export default function FileUploadZone({
   );
 
   if (embedded) {
+    const showEmbeddedLabel =
+      embeddedLabel.trim().length > 0 && items.length > 0;
+    const showEmbeddedHeader = showEmbeddedLabel || (!readOnly && showUploadAction);
+
     return (
       <div
         className={`px-5 ${
@@ -213,28 +217,30 @@ export default function FileUploadZone({
         onDragOver={(event) => event.preventDefault()}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-medium text-text-secondary">
-            {embeddedLabel}
-            {items.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
-                {items.length}
-              </span>
+        {showEmbeddedHeader && (
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-medium text-text-secondary">
+              {showEmbeddedLabel ? embeddedLabel : null}
+              {showEmbeddedLabel && (
+                <span className="ml-1.5 rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
+                  {items.length}
+                </span>
+              )}
+            </span>
+            {!readOnly && showUploadAction && (
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => openAttachmentFilePicker(fileInputRef)}
+                disabled={uploadMutation.isPending}
+              >
+                <Upload className="mr-1 h-3.5 w-3.5" />
+                {uploadLabel}
+              </Button>
             )}
-          </span>
-          {!readOnly && showUploadAction && (
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              onClick={() => openAttachmentFilePicker(fileInputRef)}
-              disabled={uploadMutation.isPending}
-            >
-              <Upload className="mr-1 h-3.5 w-3.5" />
-              {uploadLabel}
-            </Button>
-          )}
-        </div>
+          </div>
+        )}
         {fileList}
         {hiddenInput}
       </div>

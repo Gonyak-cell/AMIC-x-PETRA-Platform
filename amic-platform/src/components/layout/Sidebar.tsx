@@ -20,7 +20,6 @@ import {
   Users,
   ClipboardCheck,
   ClipboardList,
-  Activity,
   BarChart2,
   Calendar,
   Download,
@@ -84,11 +83,6 @@ const KIIS_RESEARCH = [
 const MA_PIPELINE_NAV = [
   { to: "/ma/transactions", label: "Pipeline", icon: Handshake, end: true },
   { to: "/ma/transactions/new", label: "New Transaction", icon: PlusCircle },
-];
-
-const MA_TOOLS_NAV = [
-  { to: "vdr", label: "VDR", icon: FolderLock },
-  { to: "timeline", label: "타임라인", icon: Activity },
 ];
 
 // ── VDR Navigation ──
@@ -170,11 +164,6 @@ export function Sidebar({
   const isAdmin = location.pathname.startsWith("/admin");
   const isInDealWorkspace =
     isFdd && location.pathname.startsWith("/fdd/deals/") && dealId;
-
-  // MA 워크스페이스 감지: /ma/transactions/:txnId (new 제외)
-  const maTxnMatch = location.pathname.match(/^\/ma\/transactions\/([^/]+)/);
-  const maTxnId = maTxnMatch?.[1];
-  const isInMaWorkspace = isMa && !!maTxnId && maTxnId !== "new";
 
   return (
     <SidebarContext.Provider value={{ collapsed }}>
@@ -300,32 +289,6 @@ export function Sidebar({
                 ))}
               </nav>
 
-              {!isClient && (
-                <>
-                  <SidebarSection
-                    title="Tools"
-                    collapsible
-                    defaultOpen
-                    storageKey="ma-tools"
-                    className="mt-3"
-                  >
-                    {MA_TOOLS_NAV.map((item) => (
-                      <SidebarNavItem
-                        key={item.to}
-                        to={
-                          isInMaWorkspace
-                            ? `/ma/transactions/${maTxnId}/${item.to}`
-                            : "#"
-                        }
-                        label={item.label}
-                        icon={item.icon}
-                        disabled={!isInMaWorkspace}
-                        onClick={onNavItemClick}
-                      />
-                    ))}
-                  </SidebarSection>
-                </>
-              )}
             </SidebarModuleGroup>
           )}
 

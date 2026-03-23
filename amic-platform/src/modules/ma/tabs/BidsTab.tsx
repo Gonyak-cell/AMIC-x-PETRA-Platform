@@ -7,6 +7,7 @@ import {
   BUYER_TYPE_OPTIONS,
   VALUATION_METHOD_OPTIONS,
 } from "@/modules/ma/constants";
+import AttachmentUploadActionButton from "@/modules/ma/components/AttachmentUploadActionButton";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import {
   useBidComparison,
@@ -134,14 +135,29 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
         padding="none"
         actions={
           canWrite ? (
-            <Button
-              icon={Plus}
-              size="sm"
-              onClick={() => setShowBidModal(true)}
-              variant="ghost"
-            >
+            <>
+              <AttachmentUploadActionButton
+                txnId={txnId}
+                entityType="BID"
+                onUploaded={async (attachment) => {
+                  await importBidFromAttachment.mutateAsync({
+                    attachmentId: attachment.id,
+                    buyerCandidateId: uploadBuyerId || undefined,
+                    bidType: (uploadBidType || undefined) as
+                      | BidType
+                      | undefined,
+                  });
+                }}
+              />
+              <Button
+                icon={Plus}
+                size="sm"
+                onClick={() => setShowBidModal(true)}
+                variant="ghost"
+              >
               입찰 추가
             </Button>
+            </>
           ) : undefined
         }
       >
@@ -281,8 +297,8 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
         ) : null}
 
         {canWrite && (
-          <div className="border-t border-gray-border px-5 pt-4">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,240px)_minmax(0,220px)_1fr] md:items-end">
+          <div className="border-t border-gray-border px-5 py-5">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,240px)_minmax(0,240px)_minmax(0,1fr)] xl:items-start">
               <Select
                 label="매수후보 우선 지정"
                 options={buyerOptions}
@@ -297,7 +313,7 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
                 onChange={(event) => setUploadBidType(event.target.value)}
                 hint="비워두면 IOI, LOI, Final Offer를 자동 감지합니다."
               />
-              <p className="pb-2 text-sm text-text-secondary">
+              <p className="rounded-2xl border border-gray-border bg-bg-cool/50 px-4 py-4 text-sm leading-6 text-text-secondary xl:self-start">
                 LOI, IOI, Final Offer 문서를 업로드하면 금액, 제출일, 유효기간,
                 밸류에이션 방식을 자동으로 기재합니다.
               </p>
@@ -315,6 +331,7 @@ export default function BidsTab({ txnId, canWrite }: BidsTabProps) {
           emptyDescription="입찰 자료를 바로 업로드하세요."
           emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
           embeddedSeparator={false}
+          showUploadAction={false}
           onUploaded={async (attachment) => {
             await importBidFromAttachment.mutateAsync({
               attachmentId: attachment.id,
