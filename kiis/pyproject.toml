@@ -1,6 +1,6 @@
 [project]
 name = "kiis"
-version = "0.15.1"
+version = "0.15.7"
 description = "Korea Investment Intelligence System - 차세대 지능형 투자정보 통합 시스템"
 requires-python = ">=3.11"
 dependencies = [

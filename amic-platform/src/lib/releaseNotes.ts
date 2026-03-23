@@ -6,6 +6,32 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.7",
+    date: "2026-03-23",
+    highlights: [
+      "Release gating now clears the deal-mgmt backend quality checks reliably",
+      "The text extraction service no longer trips the import-order lint regression during deploys",
+      "KIIS local startup enables scheduled news collection by default for smoother operations",
+    ],
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Resolved the import-order issue in the deal-mgmt text extraction service that was failing the backend CI lint gate and blocking release flow.",
+      },
+      {
+        type: "improvement",
+        description:
+          "Aligned the shared project version metadata so the frontend app version, Python module versions, and root release version move together again.",
+      },
+      {
+        type: "improvement",
+        description:
+          "Enabled the KIIS dev startup path to turn on the scheduler automatically, reducing manual steps for recurring news collection in local environments.",
+      },
+    ],
+  },
+  {
     version: "0.15.6",
     date: "2026-03-23",
     highlights: [
