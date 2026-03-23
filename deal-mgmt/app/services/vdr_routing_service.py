@@ -214,6 +214,7 @@ async def _build_routing_source_files(
         db,
         transaction_id,
         document_ids=doc_ids,
+        use_cache_only=True,
     )
     source_by_id = {source.vdr_document_id: source for source in source_files}
 

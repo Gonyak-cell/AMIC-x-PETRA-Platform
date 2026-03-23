@@ -165,6 +165,7 @@ async def preview_marketing_material_source_routing(
     source_files = await TextExtractionService().extract_from_vdr_documents(
         db,
         transaction_id,
+        use_cache_only=True,
     )
     if not source_files:
         return _build_marketing_material_source_routing([], target_workstreams)

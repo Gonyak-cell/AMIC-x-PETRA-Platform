@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.blob_storage import blob_client
 from app.models.vdr_document import VdrDocument
 from app.models.vdr_folder import VdrFolder
 from app.models.vdr_text_cache import VdrTextCache
@@ -61,6 +65,8 @@ class TextExtractionService:
         transaction_id: uuid.UUID,
         folder_ids: list[uuid.UUID] | None = None,
         document_ids: list[uuid.UUID] | None = None,
+        *,
+        use_cache_only: bool = False,
     ) -> list[VdrSourceFile]:
         """VDR 문서를 ParsedFile로 변환한다 (캐시 활용).
 
@@ -98,7 +104,7 @@ class TextExtractionService:
 
         source_files: list[VdrSourceFile] = []
         for doc, folder in rows:
-            parsed = await self._get_or_extract(db, doc)
+            parsed = await self._get_or_extract(db, doc, use_cache_only=use_cache_only)
             if parsed.is_valid or parsed.parse_error:
                 source_files.append(
                     VdrSourceFile(
@@ -117,6 +123,8 @@ class TextExtractionService:
         self,
         db: AsyncSession,
         doc: VdrDocument,
+        *,
+        use_cache_only: bool = False,
     ) -> ParsedFile:
         """캐시에 있으면 캐시 반환, 없거나 해시 불일치면 새로 추출."""
         stmt = select(VdrTextCache).where(VdrTextCache.vdr_document_id == doc.id)
@@ -126,16 +134,27 @@ class TextExtractionService:
         if cache and cache.sha256_hash == doc.sha256_hash and cache.is_valid:
             logger.debug("캐시 히트: %s (hash=%s)", doc.original_name, doc.sha256_hash[:8])
             parsed = self._cache_to_parsed_file(cache, doc)
-            await replace_document_chunks(
-                db,
-                transaction_id=doc.transaction_id,
-                vdr_document_id=doc.id,
-                vdr_text_cache_id=cache.id,
-                chunks=list((parsed.metadata or {}).get("chunks") or []),
-            )
+            if not use_cache_only:
+                try:
+                    await replace_document_chunks(
+                        db,
+                        transaction_id=doc.transaction_id,
+                        vdr_document_id=doc.id,
+                        vdr_text_cache_id=cache.id,
+                        chunks=list((parsed.metadata or {}).get("chunks") or []),
+                    )
+                except SQLAlchemyError as exc:
+                    await db.rollback()
+                    logger.warning(
+                        "VDR cached chunk sync skipped for %s: %s",
+                        doc.original_name,
+                        exc,
+                    )
             return parsed
 
         logger.debug("캐시 미스: %s → 추출 시작", doc.original_name)
+        if use_cache_only:
+            return self._build_placeholder_parsed_file(doc)
         return await self._extract_and_cache(db, doc, existing_cache=cache)
 
     def _cache_to_parsed_file(self, cache: VdrTextCache, doc: VdrDocument) -> ParsedFile:
@@ -165,9 +184,37 @@ class TextExtractionService:
     ) -> ParsedFile:
         """파일을 파싱하고 캐시에 저장."""
         file_path = doc.file_path or ""
+        ext = Path(doc.original_name).suffix
+        tmp_path: str | None = None
 
         # 동기 파서를 비동기로 실행
-        parsed = await asyncio.to_thread(parse_file, file_path)
+        try:
+            await blob_client.ensure_initialized()
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp_path = tmp.name
+
+            await blob_client.download_blob_to_file(file_path, Path(tmp_path))
+            parsed = await asyncio.to_thread(parse_file, tmp_path)
+        except FileNotFoundError:
+            logger.warning("VDR source blob missing during extraction: %s", file_path)
+            parsed = ParsedFile(
+                source_path=file_path,
+                file_type=ext.lstrip(".") or "unknown",
+                parse_error="Source file not found in blob storage.",
+            )
+        except Exception as exc:
+            logger.warning("VDR extraction preprocessing failed %s: %s", file_path, exc)
+            parsed = ParsedFile(
+                source_path=file_path,
+                file_type=ext.lstrip(".") or "unknown",
+                parse_error=str(exc),
+            )
+        finally:
+            if tmp_path:
+                try:
+                    Path(tmp_path).unlink(missing_ok=True)
+                except OSError:
+                    logger.debug("Temporary extraction file cleanup failed: %s", tmp_path, exc_info=True)
 
         # DDRL 섹션 분류
         parsed.ddrl_sections = classify_file(file_path, parsed)
@@ -180,12 +227,12 @@ class TextExtractionService:
         chunks_data = list((parsed.metadata or {}).get("chunks") or [])
 
         # 파일 타입 추출
-        ext = doc.original_name.rsplit(".", 1)[-1].lower() if "." in doc.original_name else "unknown"
+        ext_name = doc.original_name.rsplit(".", 1)[-1].lower() if "." in doc.original_name else "unknown"
 
         if existing_cache:
             # 기존 캐시 업데이트
             existing_cache.sha256_hash = doc.sha256_hash
-            existing_cache.file_type = ext
+            existing_cache.file_type = ext_name
             existing_cache.extracted_text = parsed.text
             existing_cache.tables_json = tables_data
             existing_cache.chunks_json = chunks_data
@@ -198,7 +245,7 @@ class TextExtractionService:
             cache = VdrTextCache(
                 vdr_document_id=doc.id,
                 sha256_hash=doc.sha256_hash,
-                file_type=ext,
+                file_type=ext_name,
                 extracted_text=parsed.text,
                 tables_json=tables_data,
                 chunks_json=chunks_data,
@@ -209,15 +256,23 @@ class TextExtractionService:
             )
             db.add(cache)
 
-        await db.flush()
-        cache_record = existing_cache or cache
-        await replace_document_chunks(
-            db,
-            transaction_id=doc.transaction_id,
-            vdr_document_id=doc.id,
-            vdr_text_cache_id=cache_record.id if cache_record else None,
-            chunks=chunks_data,
-        )
+        try:
+            await db.flush()
+            cache_record = existing_cache or cache
+            await replace_document_chunks(
+                db,
+                transaction_id=doc.transaction_id,
+                vdr_document_id=doc.id,
+                vdr_text_cache_id=cache_record.id if cache_record else None,
+                chunks=chunks_data,
+            )
+        except SQLAlchemyError as exc:
+            await db.rollback()
+            logger.warning(
+                "VDR text cache persistence skipped for %s: %s",
+                doc.original_name,
+                exc,
+            )
         return parsed
 
     def _ensure_trace_chunks(self, parsed: ParsedFile) -> None:
@@ -286,6 +341,19 @@ class TextExtractionService:
 
         metadata["chunks"] = chunks
         parsed.metadata = metadata
+
+    def _build_placeholder_parsed_file(self, doc: VdrDocument) -> ParsedFile:
+        suffix = Path(doc.original_name).suffix.lower().lstrip(".") or "unknown"
+        parsed = ParsedFile(
+            source_path=doc.file_path or doc.original_name,
+            file_type=suffix,
+            text="",
+            metadata={},
+            ddrl_sections=classify_file(doc.original_name),
+            parse_error="cache_miss_preview_placeholder",
+        )
+        self._ensure_trace_chunks(parsed)
+        return parsed
 
 
 def build_source_map(
