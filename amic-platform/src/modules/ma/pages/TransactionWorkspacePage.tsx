@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import {
   useParams,
   useNavigate,
@@ -44,16 +44,25 @@ import {
   CLIENT_OVERVIEW_STEPS,
 } from "@/components/onboarding";
 import { CalendarDays, HelpCircle } from "lucide-react";
-const MeetingLogsTab = lazy(
+const MeetingLogsTab = lazyWithRetry(
   () => import("@/modules/ma/components/meetings/MeetingLogsTab"),
+  "modules/ma/components/meetings/MeetingLogsTab",
 );
-const VdrTab = lazy(() => import("@/modules/ma/components/vdr/VdrTab"));
-const RFIPanel = lazy(() => import("@/modules/ma/components/rfi/RFIPanel"));
-const TransactionOverviewTab = lazy(
+const VdrTab = lazyWithRetry(
+  () => import("@/modules/ma/components/vdr/VdrTab"),
+  "modules/ma/components/vdr/VdrTab",
+);
+const RFIPanel = lazyWithRetry(
+  () => import("@/modules/ma/components/rfi/RFIPanel"),
+  "modules/ma/components/rfi/RFIPanel",
+);
+const TransactionOverviewTab = lazyWithRetry(
   () => import("@/modules/ma/components/overview/TransactionOverviewTab"),
+  "modules/ma/components/overview/TransactionOverviewTab",
 );
-const TransactionCompletionOverview = lazy(
+const TransactionCompletionOverview = lazyWithRetry(
   () => import("@/modules/ma/components/overview/TransactionCompletionOverview"),
+  "modules/ma/components/overview/TransactionCompletionOverview",
 );
 
 import {
@@ -65,21 +74,47 @@ import {
   Tabs,
 } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import heroImg from "@/assets/images/heroes/hero-arch-dark-round.jpg";
 import TimelineTab from "@/modules/ma/tabs/TimelineTab";
 
 // ── Tab components (lazy-loaded) ────────────────────────
-const BuyersTab = lazy(() => import("@/modules/ma/tabs/BuyersTab"));
-const ContractsTab = lazy(() => import("@/modules/ma/tabs/ContractsTab"));
-const ClosingTab = lazy(() => import("@/modules/ma/tabs/ClosingTab"));
-const NdasTab = lazy(() => import("@/modules/ma/tabs/NdasTab"));
-const BidsTab = lazy(() => import("@/modules/ma/tabs/BidsTab"));
-const DDChecklistTab = lazy(() => import("@/modules/ma/tabs/DDChecklistTab"));
-const MarketingMaterialsTab = lazy(
-  () => import("@/modules/ma/tabs/MarketingMaterialsTab"),
+const BuyersTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/BuyersTab"),
+  "modules/ma/tabs/BuyersTab",
 );
-const ModelsTab = lazy(() => import("@/modules/ma/tabs/ModelsTab"));
-const EngagementTab = lazy(() => import("@/modules/ma/tabs/EngagementTab"));
+const ContractsTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/ContractsTab"),
+  "modules/ma/tabs/ContractsTab",
+);
+const ClosingTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/ClosingTab"),
+  "modules/ma/tabs/ClosingTab",
+);
+const NdasTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/NdasTab"),
+  "modules/ma/tabs/NdasTab",
+);
+const BidsTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/BidsTab"),
+  "modules/ma/tabs/BidsTab",
+);
+const DDChecklistTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/DDChecklistTab"),
+  "modules/ma/tabs/DDChecklistTab",
+);
+const MarketingMaterialsTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/MarketingMaterialsTab"),
+  "modules/ma/tabs/MarketingMaterialsTab",
+);
+const ModelsTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/ModelsTab"),
+  "modules/ma/tabs/ModelsTab",
+);
+const EngagementTab = lazyWithRetry(
+  () => import("@/modules/ma/tabs/EngagementTab"),
+  "modules/ma/tabs/EngagementTab",
+);
 
 const REMOVED_WORKSPACE_TOOLS = [
   "risks",

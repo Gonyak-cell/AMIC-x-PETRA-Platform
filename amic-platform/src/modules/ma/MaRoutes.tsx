@@ -1,12 +1,20 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Spinner } from "@/components/ui";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { MaErrorBoundary } from "./components/MaErrorBoundary";
 
-const TransactionListPage = lazy(() => import("./pages/TransactionListPage"));
-const DealSetupWizardPage = lazy(() => import("./pages/DealSetupWizardPage"));
-const TransactionWorkspacePage = lazy(
+const TransactionListPage = lazyWithRetry(
+  () => import("./pages/TransactionListPage"),
+  "modules/ma/pages/TransactionListPage",
+);
+const DealSetupWizardPage = lazyWithRetry(
+  () => import("./pages/DealSetupWizardPage"),
+  "modules/ma/pages/DealSetupWizardPage",
+);
+const TransactionWorkspacePage = lazyWithRetry(
   () => import("./pages/TransactionWorkspacePage"),
+  "modules/ma/pages/TransactionWorkspacePage",
 );
 
 export default function MaRoutes() {

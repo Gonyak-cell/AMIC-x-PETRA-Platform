@@ -6,6 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui";
 import { PlatformSettingsProvider } from "@/contexts/PlatformSettingsContext";
 import { useAuth } from "@/hooks/useAuth";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 /** CLIENT 역할의 사내 전용 라우트 접근을 차단한다. */
 function InternalOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -20,27 +21,61 @@ function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
-const FddRoutes = React.lazy(() => import("@/modules/fdd/FddRoutes"));
-const KiisRoutes = React.lazy(() => import("@/modules/kiis/KiisRoutes"));
-const ImRoutes = React.lazy(() => import("@/modules/im/ImRoutes"));
-const MaRoutes = React.lazy(() => import("@/modules/ma/MaRoutes"));
-const AdminRoutes = React.lazy(() => import("@/pages/admin/AdminRoutes"));
-const SettingsRoutes = React.lazy(
+const DashboardPage = lazyWithRetry(
+  () => import("@/pages/DashboardPage"),
+  "pages/DashboardPage",
+);
+const FddRoutes = lazyWithRetry(
+  () => import("@/modules/fdd/FddRoutes"),
+  "modules/fdd/FddRoutes",
+);
+const KiisRoutes = lazyWithRetry(
+  () => import("@/modules/kiis/KiisRoutes"),
+  "modules/kiis/KiisRoutes",
+);
+const ImRoutes = lazyWithRetry(
+  () => import("@/modules/im/ImRoutes"),
+  "modules/im/ImRoutes",
+);
+const MaRoutes = lazyWithRetry(
+  () => import("@/modules/ma/MaRoutes"),
+  "modules/ma/MaRoutes",
+);
+const AdminRoutes = lazyWithRetry(
+  () => import("@/pages/admin/AdminRoutes"),
+  "pages/admin/AdminRoutes",
+);
+const SettingsRoutes = lazyWithRetry(
   () => import("@/pages/settings/SettingsRoutes"),
+  "pages/settings/SettingsRoutes",
 );
-const AnalyticsRoutes = React.lazy(
+const AnalyticsRoutes = lazyWithRetry(
   () => import("@/pages/analytics/AnalyticsRoutes"),
+  "pages/analytics/AnalyticsRoutes",
 );
-const HelpRoutes = React.lazy(() => import("@/pages/help/HelpRoutes"));
-const CalendarRoutes = React.lazy(
+const HelpRoutes = lazyWithRetry(
+  () => import("@/pages/help/HelpRoutes"),
+  "pages/help/HelpRoutes",
+);
+const CalendarRoutes = lazyWithRetry(
   () => import("@/pages/calendar/CalendarRoutes"),
+  "pages/calendar/CalendarRoutes",
 );
-const ExportsRoutes = React.lazy(() => import("@/pages/exports/ExportsRoutes"));
-const DocsRoutes = React.lazy(() => import("@/modules/docs/DocsRoutes"));
-const TeamPage = React.lazy(() => import("@/pages/team/TeamPage"));
-const InviteAcceptPage = React.lazy(
+const ExportsRoutes = lazyWithRetry(
+  () => import("@/pages/exports/ExportsRoutes"),
+  "pages/exports/ExportsRoutes",
+);
+const DocsRoutes = lazyWithRetry(
+  () => import("@/modules/docs/DocsRoutes"),
+  "modules/docs/DocsRoutes",
+);
+const TeamPage = lazyWithRetry(
+  () => import("@/pages/team/TeamPage"),
+  "pages/team/TeamPage",
+);
+const InviteAcceptPage = lazyWithRetry(
   () => import("@/pages/invite/InviteAcceptPage"),
+  "pages/invite/InviteAcceptPage",
 );
 
 function ModuleFallback() {

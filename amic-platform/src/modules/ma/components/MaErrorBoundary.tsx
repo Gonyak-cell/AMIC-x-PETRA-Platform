@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import * as Sentry from "@sentry/react";
 import { AlertTriangle } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { isRecoverableChunkLoadError } from "@/lib/lazyWithRetry";
 
 interface Props {
   children: ReactNode;
@@ -28,6 +29,12 @@ export class MaErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const isChunkLoadError = isRecoverableChunkLoadError(this.state.error);
+      const message = isChunkLoadError
+        ? "새 배포가 반영되는 중일 수 있습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요."
+        : this.state.error?.message ||
+          "M&A 모듈에서 예기치 않은 오류가 발생했습니다.";
+
       return (
         <Card className="max-w-lg mx-auto mt-12">
           <div
@@ -38,15 +45,18 @@ export class MaErrorBoundary extends Component<Props, State> {
             <h2 className="text-lg font-heading font-semibold text-text-dark mb-2">
               오류가 발생했습니다
             </h2>
-            <p className="text-sm text-text-secondary mb-4">
-              {this.state.error?.message ||
-                "M&A 모듈에서 예기치 않은 오류가 발생했습니다."}
-            </p>
+            <p className="text-sm text-text-secondary mb-4">{message}</p>
             <Button
               variant="primary"
-              onClick={() => this.setState({ hasError: false, error: null })}
+              onClick={() => {
+                if (isChunkLoadError) {
+                  window.location.reload();
+                  return;
+                }
+                this.setState({ hasError: false, error: null });
+              }}
             >
-              다시 시도
+              {isChunkLoadError ? "새로고침" : "다시 시도"}
             </Button>
           </div>
         </Card>
