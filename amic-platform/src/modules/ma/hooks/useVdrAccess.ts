@@ -40,6 +40,9 @@ export function useVdrAccessLogs(
       return data;
     },
     enabled: !!txnId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -53,6 +56,9 @@ export function useVdrAccessSummary(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -74,5 +80,8 @@ export function useDocumentAccessLogs(
       return data;
     },
     enabled: !!txnId && !!docId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }

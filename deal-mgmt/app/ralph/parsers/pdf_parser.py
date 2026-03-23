@@ -12,6 +12,40 @@ logger = logging.getLogger(__name__)
 _PDF_MIN_MEANINGFUL_TEXT_CHARS = 40
 
 
+def get_pdf_ocr_status() -> dict[str, bool | str | None]:
+    """Return the OCR fallback runtime status used by health checks."""
+    try:
+        import fitz  # noqa: F401
+        import pytesseract
+        from PIL import Image  # noqa: F401
+    except ImportError as exc:
+        return {
+            "enabled": False,
+            "available": False,
+            "required": False,
+            "reason": str(exc),
+        }
+
+    try:
+        version = str(pytesseract.get_tesseract_version())
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "available": False,
+            "required": False,
+            "reason": str(exc),
+        }
+
+    return {
+        "enabled": True,
+        "available": True,
+        "required": False,
+        "reason": None,
+        "engine": "pytesseract",
+        "version": version,
+    }
+
+
 def parse_pdf(file_path: str) -> ParsedFile:
     """PDF 파일을 파싱한다. PyMuPDF 우선, fallback으로 pdfplumber."""
     best_candidate: ParsedFile | None = None

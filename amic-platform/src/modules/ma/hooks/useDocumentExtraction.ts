@@ -35,6 +35,9 @@ export function useExtractions(txnId: string, active = true) {
       );
       return hasInProgress ? 3000 : false;
     },
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -53,6 +56,9 @@ export function useExtraction(txnId: string, id: string) {
       const status = query.state.data?.status;
       if (!status) return false;
       return IN_PROGRESS_STATUSES.includes(status) ? 2000 : false;
+    },
+    meta: {
+      suppressGlobalErrorToast: true,
     },
   });
 }

@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   FolderKanban,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -286,7 +287,7 @@ function RoutingQueueRow({
 
 export default function VdrRoutingTriagePanel({ txnId }: Props) {
   const [status, setStatus] = useState<VdrRoutingQueueStatus>("open");
-  const { data, isLoading } = useVdrRoutingQueue(txnId, status);
+  const { data, isLoading, isError, refetch } = useVdrRoutingQueue(txnId, status);
   const saveOverride = useUpsertVdrRoutingOverride(txnId);
   const deleteOverride = useDeleteVdrRoutingOverride(txnId);
 
@@ -295,6 +296,25 @@ export default function VdrRoutingTriagePanel({ txnId }: Props) {
 
   return (
     <div className="space-y-4">
+      {isError && data && (
+        <Card padding="sm" className="border border-amber-200 bg-amber-50">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-800">
+              Showing the last loaded routing queue while refresh retries.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void refetch()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-4">
         <Card padding="md">
           <div className="flex items-center gap-3">
@@ -397,10 +417,33 @@ export default function VdrRoutingTriagePanel({ txnId }: Props) {
         )}
       </Card>
 
-      {isLoading ? (
+      {isLoading && !data ? (
         <Card padding="lg">
           <div className="py-16 text-center text-sm text-slate-500">
             Loading routing queue...
+          </div>
+        </Card>
+      ) : isError && !data ? (
+        <Card padding="lg" className="border border-red-200 bg-red-50">
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <AlertTriangle className="h-6 w-6 text-red-500" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-red-900">
+                The routing queue is temporarily unavailable.
+              </p>
+              <p className="text-sm text-red-800">
+                Retry without leaving the VDR routing tab.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void refetch()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
           </div>
         </Card>
       ) : items.length === 0 ? (

@@ -1,7 +1,17 @@
 import { useState } from "react";
-import { Sparkles, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
 import {
   CATEGORY_LABELS,
@@ -11,6 +21,7 @@ import type {
   DocumentExtraction,
   ExtractionStatus,
 } from "@/modules/ma/types/document_extraction";
+
 import ExtractionReviewModal from "./ExtractionReviewModal";
 
 interface Props {
@@ -19,7 +30,10 @@ interface Props {
 
 const STATUS_BADGE: Record<
   ExtractionStatus,
-  { variant: "info" | "warning" | "success" | "error" | "neutral"; icon: typeof Sparkles }
+  {
+    variant: "info" | "warning" | "success" | "error" | "neutral";
+    icon: typeof Sparkles;
+  }
 > = {
   PENDING: { variant: "neutral", icon: Clock },
   CLASSIFYING: { variant: "info", icon: Loader2 },
@@ -30,18 +44,48 @@ const STATUS_BADGE: Record<
 };
 
 export default function ExtractionList({ txnId }: Props) {
-  const { data, isLoading } = useExtractions(txnId);
+  const { data, isLoading, isError, refetch } = useExtractions(txnId);
   const [selectedExtraction, setSelectedExtraction] =
     useState<DocumentExtraction | null>(null);
 
   const items = data?.items ?? [];
+  const hasCachedData = data != null;
 
-  if (isLoading) {
+  if (isLoading && !hasCachedData) {
     return (
       <Card padding="md">
-        <div className="flex items-center gap-2 text-text-secondary text-sm">
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
           <Loader2 className="h-4 w-4 animate-spin" />
-          AI 분석 결과 로딩 중...
+          Loading AI extraction results...
+        </div>
+      </Card>
+    );
+  }
+
+  if (isError && !hasCachedData) {
+    return (
+      <Card padding="md" className="border border-red-200 bg-red-50">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-red-900">
+                AI extraction results could not be loaded.
+              </p>
+              <p className="text-sm text-red-800">
+                Retry without leaving the VDR workspace.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => void refetch()}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
         </div>
       </Card>
     );
@@ -50,9 +94,9 @@ export default function ExtractionList({ txnId }: Props) {
   if (items.length === 0) {
     return (
       <Card padding="md">
-        <div className="text-sm text-text-secondary text-center py-4">
-          <Sparkles className="h-5 w-5 mx-auto mb-2 text-text-tertiary" />
-          AI 분석 결과가 없습니다. VDR 문서에서 "AI 분석" 버튼을 클릭하세요.
+        <div className="py-4 text-center text-sm text-text-secondary">
+          <Sparkles className="mx-auto mb-2 h-5 w-5 text-text-tertiary" />
+          No AI extraction results yet. Start an extraction from a VDR document.
         </div>
       </Card>
     );
@@ -60,78 +104,97 @@ export default function ExtractionList({ txnId }: Props) {
 
   return (
     <>
+      {isError && (
+        <Card padding="sm" className="mb-3 border border-amber-200 bg-amber-50">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-800">
+              Showing the last loaded extraction results while refresh retries.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void refetch()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <Card padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-bg-cool border-b border-gray-border">
+              <tr className="border-b border-gray-border bg-bg-cool">
                 <th className="px-4 py-2.5 text-left font-medium text-text-secondary">
-                  문서 ID
+                  Document ID
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-text-secondary">
-                  분류
+                  Category
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-text-secondary">
-                  상태
+                  Status
                 </th>
                 <th className="px-4 py-2.5 text-center font-medium text-text-secondary">
-                  신뢰도
+                  Confidence
                 </th>
                 <th className="px-4 py-2.5 text-right font-medium text-text-secondary">
-                  비용
+                  Cost
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-text-secondary">
-                  검토자
+                  Reviewer
                 </th>
               </tr>
             </thead>
             <tbody>
-              {items.map((ext) => {
-                const badge = STATUS_BADGE[ext.status];
+              {items.map((extraction) => {
+                const badge = STATUS_BADGE[extraction.status];
                 const Icon = badge.icon;
                 const isSpinning =
-                  ext.status === "CLASSIFYING" ||
-                  ext.status === "EXTRACTING";
+                  extraction.status === "CLASSIFYING" ||
+                  extraction.status === "EXTRACTING";
 
                 return (
                   <tr
-                    key={ext.id}
-                    className="border-b border-gray-border last:border-0 hover:bg-bg-cool/50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedExtraction(ext)}
+                    key={extraction.id}
+                    className="cursor-pointer border-b border-gray-border last:border-0 hover:bg-bg-cool/50 transition-colors"
+                    onClick={() => setSelectedExtraction(extraction)}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-text-secondary">
-                      {ext.vdr_document_id.slice(0, 8)}...
+                      {extraction.vdr_document_id.slice(0, 8)}...
                     </td>
                     <td className="px-4 py-3">
-                      {ext.doc_category ? (
+                      {extraction.doc_category ? (
                         <Badge variant="info">
-                          {CATEGORY_LABELS[ext.doc_category] ??
-                            ext.doc_category}
+                          {CATEGORY_LABELS[extraction.doc_category] ??
+                            extraction.doc_category}
                         </Badge>
                       ) : (
-                        <span className="text-text-tertiary">—</span>
+                        <span className="text-text-tertiary">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={badge.variant}>
                         <Icon
-                          className={`h-3 w-3 mr-1 ${isSpinning ? "animate-spin" : ""}`}
+                          className={`mr-1 h-3 w-3 ${isSpinning ? "animate-spin" : ""}`}
                         />
-                        {STATUS_LABELS[ext.status]}
+                        {STATUS_LABELS[extraction.status]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {ext.classification_confidence != null
-                        ? `${Math.round(ext.classification_confidence * 100)}%`
-                        : "—"}
+                      {extraction.classification_confidence != null
+                        ? `${Math.round(extraction.classification_confidence * 100)}%`
+                        : "-"}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-xs">
-                      {ext.llm_cost_usd > 0
-                        ? `$${ext.llm_cost_usd.toFixed(3)}`
-                        : "—"}
+                      {extraction.llm_cost_usd > 0
+                        ? `$${extraction.llm_cost_usd.toFixed(3)}`
+                        : "-"}
                     </td>
                     <td className="px-4 py-3 text-xs text-text-secondary">
-                      {ext.reviewed_by_email ?? "—"}
+                      {extraction.reviewed_by_email ?? "-"}
                     </td>
                   </tr>
                 );
@@ -144,7 +207,7 @@ export default function ExtractionList({ txnId }: Props) {
       <ExtractionReviewModal
         txnId={txnId}
         extraction={selectedExtraction}
-        open={!!selectedExtraction}
+        open={selectedExtraction !== null}
         onClose={() => setSelectedExtraction(null)}
       />
     </>

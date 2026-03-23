@@ -78,6 +78,9 @@ export function useVdrSummary(txnId: string) {
       return data;
     },
     enabled: !!txnId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -89,6 +92,9 @@ export function useVdrFolders(txnId: string) {
       return flattenVdrFolders(data);
     },
     enabled: !!txnId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -163,6 +169,9 @@ export function useVdrDocuments(txnId: string, folderId: string | null) {
       return data;
     },
     enabled: !!txnId && !!folderId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -252,6 +261,9 @@ export function useVdrRoutingQueue(
       return data;
     },
     enabled: !!txnId,
+    meta: {
+      suppressGlobalErrorToast: true,
+    },
   });
 }
 
@@ -347,6 +359,7 @@ export function useClassificationStatus(txnId: string, docIds: string[]) {
     retry: 3,
     meta: {
       errorMessage: "Failed to load classification status.",
+      suppressGlobalErrorToast: true,
     },
   });
 }

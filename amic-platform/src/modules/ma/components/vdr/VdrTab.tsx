@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react";
+import { AlertTriangle, RefreshCw, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,13 +10,13 @@ import { maApi } from "@/api/maClient";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useExtractions } from "@/modules/ma/hooks/useDocumentExtraction";
-import { getVdrUploadEntryState } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import {
   useCreateVdrFolder,
   useDeleteVdrFolder,
   useVdrFolders,
   useVdrSummary,
 } from "@/modules/ma/hooks/useVdr";
+import { getVdrUploadEntryState } from "@/modules/ma/hooks/useVdrUploadNavigation";
 import type { DirectUploadBatchResult } from "@/modules/ma/types/vdr";
 
 import ExtractionList from "../extraction/ExtractionList";
@@ -31,16 +31,56 @@ interface Props {
   txnId: string;
 }
 
+function InlineRetryCard({
+  title,
+  description,
+  tone = "warning",
+  actionLabel = "Retry",
+  onAction,
+}: {
+  title: string;
+  description: string;
+  tone?: "warning" | "error";
+  actionLabel?: string;
+  onAction: () => void;
+}) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-900"
+      : "border-amber-200 bg-amber-50 text-amber-900";
+  const bodyClass = tone === "error" ? "text-red-800" : "text-amber-800";
+  const iconClass = tone === "error" ? "text-red-500" : "text-amber-500";
+
+  return (
+    <Card padding="md" className={`border ${toneClass}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${iconClass}`} />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{title}</p>
+            <p className={`text-sm ${bodyClass}`}>{description}</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={onAction}
+          className="shrink-0"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {actionLabel}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 export default function VdrTab({ txnId }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
-  const { data: summary, isLoading: summaryLoading } = useVdrSummary(txnId);
-  const { data: folders = [], isLoading: foldersLoading } =
-    useVdrFolders(txnId);
-  const createFolder = useCreateVdrFolder(txnId);
-  const deleteFolder = useDeleteVdrFolder(txnId);
   const uploadEntryRef = useRef<HTMLDivElement | null>(null);
   const [subTab, setSubTab] = useState<"documents" | "routing" | "access">(
     "documents",
@@ -49,12 +89,39 @@ export default function VdrTab({ txnId }: Props) {
   const [directUploadResult, setDirectUploadResult] =
     useState<DirectUploadBatchResult | null>(null);
 
+  const summaryQuery = useVdrSummary(txnId);
+  const foldersQuery = useVdrFolders(txnId);
+  const extractionQuery = useExtractions(txnId, subTab === "documents");
+
+  const summary = summaryQuery.data;
+  const folders = foldersQuery.data ?? [];
+  const extractionData = extractionQuery.data;
+  const extractionCount = extractionData?.total ?? 0;
+
+  const createFolder = useCreateVdrFolder(txnId);
+  const deleteFolder = useDeleteVdrFolder(txnId);
+
   const autoInitRef = useRef(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const uploadEntry = getVdrUploadEntryState(location.state);
   const wantsUploadEntry = searchParams.get("upload") === "1";
   const canReturnToOrigin = Boolean(uploadEntry?.returnTo);
+
+  const hasWorkspaceData = summary != null || foldersQuery.data != null;
+  const isWorkspaceBootstrapping =
+    !hasWorkspaceData && (summaryQuery.isLoading || foldersQuery.isLoading);
+  const summaryUnavailable = summaryQuery.isError && summaryQuery.data == null;
+  const foldersUnavailable = foldersQuery.isError && foldersQuery.data == null;
+  const extractionUnavailable =
+    extractionQuery.isError && extractionQuery.data == null;
+  const hasWorkspaceLoadFailure = summaryUnavailable || foldersUnavailable;
+  const showingStaleWorkspace =
+    (summaryQuery.isError && summary != null) ||
+    (foldersQuery.isError && foldersQuery.data != null);
+  const showingStaleExtractions =
+    extractionQuery.isError && extractionQuery.data != null;
+  const needsInitialization = Boolean(summary && !summary.initialized);
 
   const repairVdr = useCallback(
     async (manual: boolean) => {
@@ -144,13 +211,6 @@ export default function VdrTab({ txnId }: Props) {
     }
   }, [showDirectUpload, wantsUploadEntry]);
 
-  const { data: extractionData } = useExtractions(
-    txnId,
-    subTab === "documents",
-  );
-  const extractionCount = extractionData?.total ?? 0;
-  const needsInitialization = Boolean(summary && !summary.initialized);
-
   const clearUploadQuery = useCallback(() => {
     if (!searchParams.has("upload")) return;
     const next = new URLSearchParams(searchParams);
@@ -198,7 +258,15 @@ export default function VdrTab({ txnId }: Props) {
     navigate(-1);
   }, [navigate, uploadEntry]);
 
-  if (summaryLoading || foldersLoading) {
+  const handleRetryWorkspace = useCallback(() => {
+    void Promise.allSettled([
+      summaryQuery.refetch(),
+      foldersQuery.refetch(),
+      extractionQuery.refetch(),
+    ]);
+  }, [extractionQuery, foldersQuery, summaryQuery]);
+
+  if (isWorkspaceBootstrapping) {
     return (
       <Card padding="lg">
         <div className="flex h-64 items-center justify-center text-sm text-slate-400">
@@ -234,7 +302,7 @@ export default function VdrTab({ txnId }: Props) {
           ))}
         </div>
 
-        {summary && subTab === "documents" && summary.initialized && (
+        {summary?.initialized && subTab === "documents" && (
           <Button
             variant="accent"
             size="sm"
@@ -256,6 +324,30 @@ export default function VdrTab({ txnId }: Props) {
             <VdrReturnToOriginCard
               returnLabel={uploadEntry?.returnLabel}
               onReturn={handleReturnToOrigin}
+            />
+          )}
+
+          {hasWorkspaceLoadFailure && (
+            <InlineRetryCard
+              tone="error"
+              title="Some VDR data could not be loaded."
+              description={
+                summaryUnavailable && foldersUnavailable
+                  ? "The VDR summary and folder tree are both unavailable right now."
+                  : summaryUnavailable
+                    ? "The VDR summary is unavailable, so upload controls stay limited until it reloads."
+                    : "The folder tree is unavailable, so browsing is paused until it reloads."
+              }
+              onAction={handleRetryWorkspace}
+            />
+          )}
+
+          {showingStaleWorkspace && (
+            <InlineRetryCard
+              title="Refresh failed, but your last loaded VDR data is still shown."
+              description="You can keep working and retry when you need the latest server state."
+              actionLabel="Refresh"
+              onAction={handleRetryWorkspace}
             />
           )}
 
@@ -295,24 +387,48 @@ export default function VdrTab({ txnId }: Props) {
             )}
           </div>
 
-          <Card padding="none" className="overflow-hidden">
-            <VdrExplorer
-              txnId={txnId}
-              folders={folders}
-              onCreateFolder={handleCreateFolder}
-              onDeleteFolder={handleDeleteFolder}
-              extractions={extractionData?.items ?? []}
+          {foldersQuery.data != null ? (
+            <Card padding="none" className="overflow-hidden">
+              <VdrExplorer
+                txnId={txnId}
+                folders={folders}
+                onCreateFolder={handleCreateFolder}
+                onDeleteFolder={handleDeleteFolder}
+                extractions={extractionData?.items ?? []}
+              />
+            </Card>
+          ) : (
+            <InlineRetryCard
+              tone="error"
+              title="The folder explorer is temporarily unavailable."
+              description="Retry loading the folder tree to resume browsing documents."
+              onAction={() => {
+                void foldersQuery.refetch();
+              }}
             />
-          </Card>
+          )}
 
-          {extractionCount > 0 && (
+          {extractionUnavailable ? (
+            <InlineRetryCard
+              title="AI extraction status could not be refreshed."
+              description="Document uploads remain available while extraction data reloads."
+              onAction={() => {
+                void extractionQuery.refetch();
+              }}
+            />
+          ) : extractionCount > 0 ? (
             <div>
+              {showingStaleExtractions && (
+                <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Showing the last loaded extraction results while refresh retries.
+                </div>
+              )}
               <h3 className="mb-2 text-sm font-semibold text-slate-700">
                 AI Extraction Results
               </h3>
               <ExtractionList txnId={txnId} />
             </div>
-          )}
+          ) : null}
         </>
       )}
 

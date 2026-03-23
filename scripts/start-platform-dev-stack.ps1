@@ -25,14 +25,23 @@ function Get-ListeningProcessId {
 function Wait-ForHttpOk {
     param(
         [string]$Url,
-        [int]$TimeoutSeconds = 30
+        [int]$TimeoutSeconds = 30,
+        [string]$ExpectedContent
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         try {
             $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+            $body = if ($null -ne $response.Content) { [string]$response.Content } else { "" }
+            if (
+                $response.StatusCode -ge 200 -and
+                $response.StatusCode -lt 500 -and
+                (
+                    [string]::IsNullOrWhiteSpace($ExpectedContent) -or
+                    $body.Contains($ExpectedContent)
+                )
+            ) {
                 return
             }
         } catch {
@@ -44,14 +53,36 @@ function Wait-ForHttpOk {
 }
 
 function Test-HttpOk {
-    param([string]$Url)
+    param(
+        [string]$Url,
+        [string]$ExpectedContent
+    )
 
     try {
         $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
-        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+        $body = if ($null -ne $response.Content) { [string]$response.Content } else { "" }
+        return (
+            $response.StatusCode -ge 200 -and
+            $response.StatusCode -lt 500 -and
+            (
+                [string]::IsNullOrWhiteSpace($ExpectedContent) -or
+                $body.Contains($ExpectedContent)
+            )
+        )
     } catch {
         return $false
     }
+}
+
+function Get-ProcessSummary {
+    param([int]$ProcessId)
+
+    if (-not $ProcessId) {
+        return $null
+    }
+
+    return Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue |
+        Select-Object -First 1 ProcessId, Name, CommandLine
 }
 
 function Start-BackgroundProcess {
@@ -63,21 +94,39 @@ function Start-BackgroundProcess {
         [string]$WorkingDirectory,
         [string]$OutLog,
         [string]$ErrLog,
-        [string]$HealthUrl
+        [string]$HealthUrl,
+        [string]$ExpectedContent
     )
 
     $existingPid = Get-ListeningProcessId -Port $Port
     if ($existingPid) {
-        if (-not (Test-HttpOk -Url $HealthUrl)) {
-            Stop-Process -Id $existingPid -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 1
-        } else {
+        if (Test-HttpOk -Url $HealthUrl -ExpectedContent $ExpectedContent) {
             return @{
                 Name = $Name
                 Port = $Port
                 Pid = $existingPid
                 Reused = $true
             }
+        }
+
+        if (Test-HttpOk -Url $HealthUrl) {
+            $processSummary = Get-ProcessSummary -ProcessId $existingPid
+            $commandLine = if ($processSummary -and $processSummary.CommandLine) {
+                $processSummary.CommandLine
+            } else {
+                "<unknown>"
+            }
+            throw (
+                "Port $Port is already serving a different app. " +
+                "Expected '$Name' at $HealthUrl but found another healthy process " +
+                "(PID $existingPid, command: $commandLine). " +
+                "Start with a different port or stop the conflicting app."
+            )
+        }
+
+        if (-not (Test-HttpOk -Url $HealthUrl)) {
+            Stop-Process -Id $existingPid -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
         }
     }
 
@@ -99,7 +148,7 @@ function Start-BackgroundProcess {
         -RedirectStandardError $ErrLog `
         -PassThru
 
-    Wait-ForHttpOk -Url $HealthUrl
+    Wait-ForHttpOk -Url $HealthUrl -ExpectedContent $ExpectedContent
 
     $pid = Get-ListeningProcessId -Port $Port
     if (-not $pid) {
@@ -122,7 +171,8 @@ $kiisResult = Start-BackgroundProcess `
     -WorkingDirectory $workspaceRoot `
     -OutLog (Join-Path $logsDir "kiis-dev-$KiisPort.out.log") `
     -ErrLog (Join-Path $logsDir "kiis-dev-$KiisPort.err.log") `
-    -HealthUrl "http://127.0.0.1:$KiisPort/health"
+    -HealthUrl "http://127.0.0.1:$KiisPort/health" `
+    -ExpectedContent '"service":"kiis"'
 
 $maResult = Start-BackgroundProcess `
     -Name "deal-mgmt" `
@@ -132,7 +182,8 @@ $maResult = Start-BackgroundProcess `
     -WorkingDirectory $workspaceRoot `
     -OutLog (Join-Path $logsDir "deal-mgmt-dev-$MaPort.out.log") `
     -ErrLog (Join-Path $logsDir "deal-mgmt-dev-$MaPort.err.log") `
-    -HealthUrl "http://127.0.0.1:$MaPort/health"
+    -HealthUrl "http://127.0.0.1:$MaPort/health" `
+    -ExpectedContent '"service":"deal-mgmt"'
 
 $frontendResult = Start-BackgroundProcess `
     -Name "amic-platform" `
@@ -142,7 +193,8 @@ $frontendResult = Start-BackgroundProcess `
     -WorkingDirectory (Join-Path $workspaceRoot "amic-platform") `
     -OutLog (Join-Path $logsDir "amic-platform-dev-$FrontendPort.out.log") `
     -ErrLog (Join-Path $logsDir "amic-platform-dev-$FrontendPort.err.log") `
-    -HealthUrl "http://127.0.0.1:$FrontendPort/"
+    -HealthUrl "http://127.0.0.1:$FrontendPort/" `
+    -ExpectedContent "AMIC x PETRA Platform"
 
 foreach ($result in @($kiisResult, $maResult, $frontendResult)) {
     $status = if ($result.Reused) { "reused" } else { "started" }
