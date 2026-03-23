@@ -75,11 +75,7 @@ def _build_member_update_data(
             detail="본인 워킹 그룹 정보만 수정할 수 있습니다.",
         )
 
-    filtered = {
-        key: value
-        for key, value in update_data.items()
-        if key in _SELF_EDITABLE_MEMBER_FIELDS
-    }
+    filtered = {key: value for key, value in update_data.items() if key in _SELF_EDITABLE_MEMBER_FIELDS}
     if len(filtered) != len(update_data):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -96,11 +92,7 @@ async def list_engagements(
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
-    query = (
-        select(Engagement)
-        .where(Engagement.transaction_id == txn_id)
-        .order_by(Engagement.created_at.desc())
-    )
+    query = select(Engagement).where(Engagement.transaction_id == txn_id).order_by(Engagement.created_at.desc())
     result = await db.execute(query)
     return [EngagementOut.model_validate(item) for item in result.scalars().all()]
 
