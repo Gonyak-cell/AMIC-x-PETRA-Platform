@@ -6,6 +6,38 @@ export const CURRENT_VERSION = APP_VERSION;
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.15.8",
+    date: "2026-03-24",
+    highlights: [
+      "Working group editing now follows admin, manager, and self-edit rules",
+      "NDA flow is split between client engagement and buyer-by-buyer marketing execution",
+      "Marketing materials now support direct upload for externally prepared TM, DM, and IM files",
+      "Vitest now resolves the local setup file reliably from the active workspace path",
+    ],
+    changes: [
+      {
+        type: "feature",
+        description:
+          "Restricted working group edits so only admins and managers can manage all rows, while individual users can update only their own allowed fields.",
+      },
+      {
+        type: "feature",
+        description:
+          "Separated client NDA handling into the engagement stage and moved buyer NDA execution into the marketing-stage buyer workflow.",
+      },
+      {
+        type: "feature",
+        description:
+          "Added external marketing material upload actions for TM, DM, and IM alongside generated materials, with separate listing, download, and delete controls.",
+      },
+      {
+        type: "fix",
+        description:
+          "Stabilized Vitest configuration so setup files resolve against the current workspace path instead of a stale absolute local path.",
+      },
+    ],
+  },
+  {
     version: "0.15.7",
     date: "2026-03-23",
     highlights: [
