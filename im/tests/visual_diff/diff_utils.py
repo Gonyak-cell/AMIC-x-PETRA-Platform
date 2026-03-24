@@ -12,6 +12,7 @@ import logging
 import platform
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -89,21 +90,27 @@ def pptx_to_pngs(pptx_path: str, output_dir: str, dpi: int = 150) -> list[str]:
 
     lo_bin = _find_libreoffice()
     try:
-        subprocess.run(
-            [
-                lo_bin,
-                "--headless",
-                "--convert-to",
-                "pdf",
-                "--outdir",
-                str(output_path),
-                pptx_path,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=True,
-        )
+        with tempfile.TemporaryDirectory(prefix="lo-profile-") as profile_dir:
+            profile_uri = Path(profile_dir).as_uri()
+            subprocess.run(
+                [
+                    lo_bin,
+                    f"-env:UserInstallation={profile_uri}",
+                    "--headless",
+                    "--nologo",
+                    "--nodefault",
+                    "--norestore",
+                    "--convert-to",
+                    "pdf",
+                    "--outdir",
+                    str(output_path),
+                    pptx_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=True,
+            )
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             "LibreOffice 미설치. CI Docker에 libreoffice-impress 필요."

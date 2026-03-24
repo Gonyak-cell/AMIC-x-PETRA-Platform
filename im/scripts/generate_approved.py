@@ -31,9 +31,12 @@ from pathlib import Path
 # 스크립트는 im/scripts/ 에 위치 → 부모의 부모가 im/ 루트
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _MODULE_ROOT = _SCRIPT_DIR.parent  # im/
+_TESTS_ROOT = _MODULE_ROOT / "tests"
 
 if str(_MODULE_ROOT) not in sys.path:
     sys.path.insert(0, str(_MODULE_ROOT))
+if str(_TESTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_TESTS_ROOT))
 
 _FIXTURES_DIR = _MODULE_ROOT / "tests" / "fixtures" / "golden_samples"
 _VISUAL_DIFF_DIR = _MODULE_ROOT / "tests" / "visual_diff"
@@ -46,7 +49,7 @@ VARIANTS: list[str] = ["tm_default", "dm_default", "im_full"]
 
 def check_libreoffice() -> None:
     """LibreOffice 설치 여부를 확인한다. 없으면 에러 메시지 출력 후 exit(1)."""
-    from tests.visual_diff.diff_utils import _find_libreoffice
+    from visual_diff.diff_utils import _find_libreoffice
 
     try:
         _find_libreoffice()
@@ -70,7 +73,7 @@ def clean_approved_pngs(approved_dir: Path) -> int:
 def generate_variant(variant: str, force: bool) -> None:
     """단일 variant의 승인 PNG를 생성한다."""
     from src.design_renderer.pipeline import IMPipeline
-    from tests.visual_diff.diff_utils import pptx_to_pngs
+    from visual_diff.diff_utils import pptx_to_pngs
 
     approved_dir = _FIXTURES_DIR / variant / "approved"
 
@@ -86,7 +89,7 @@ def generate_variant(variant: str, force: bool) -> None:
     print(f"[{variant}] 생성 시작...")
 
     # 1. IMDocumentData 구성 (shared builder 사용)
-    from tests.visual_diff.sample_builders import VARIANT_BUILDERS
+    from visual_diff.sample_builders import VARIANT_BUILDERS
 
     builder = VARIANT_BUILDERS[variant]
     data = builder()  # type: ignore[operator]

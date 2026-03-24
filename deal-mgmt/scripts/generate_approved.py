@@ -32,9 +32,12 @@ from pathlib import Path
 # 스크립트는 deal-mgmt/scripts/ 에 위치 → 부모의 부모가 deal-mgmt 루트
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _MODULE_ROOT = _SCRIPT_DIR.parent  # deal-mgmt/
+_TESTS_ROOT = _MODULE_ROOT / "tests"
 
 if str(_MODULE_ROOT) not in sys.path:
     sys.path.insert(0, str(_MODULE_ROOT))
+if str(_TESTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_TESTS_ROOT))
 
 _FIXTURES_DIR = _MODULE_ROOT / "tests" / "fixtures" / "golden_samples"
 _VISUAL_DIFF_DIR = _MODULE_ROOT / "tests" / "visual_diff"
@@ -47,7 +50,7 @@ VARIANTS: list[str] = ["tm", "dm"]
 
 def check_libreoffice() -> None:
     """LibreOffice 설치 여부를 확인한다. 없으면 에러 메시지 출력 후 exit(1)."""
-    from tests.visual_diff.diff_utils import _find_libreoffice
+    from visual_diff.diff_utils import _find_libreoffice
 
     try:
         _find_libreoffice()
@@ -80,7 +83,7 @@ def clean_approved_pngs(approved_dir: Path) -> int:
 def generate_variant(variant: str, force: bool) -> None:
     """단일 variant(tm 또는 dm)의 승인 PNG를 생성한다."""
     from app.pptx.memo_generator import generate_memo
-    from tests.visual_diff.diff_utils import pptx_to_pngs
+    from visual_diff.diff_utils import pptx_to_pngs
 
     approved_dir = _FIXTURES_DIR / variant / "approved"
 

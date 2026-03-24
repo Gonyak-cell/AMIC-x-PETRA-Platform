@@ -13,10 +13,17 @@ from pathlib import Path
 
 import pytest
 
+_WINDOWS_LO_PATHS = (
+    Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+    Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+)
+
 
 def _has_libreoffice() -> bool:
     """LibreOffice headless 실행 가능 여부."""
-    return shutil.which("libreoffice") is not None
+    if shutil.which("libreoffice") or shutil.which("soffice"):
+        return True
+    return any(path.exists() for path in _WINDOWS_LO_PATHS)
 
 
 def _has_scikit_image() -> bool:
