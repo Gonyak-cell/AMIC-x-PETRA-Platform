@@ -72,22 +72,22 @@ export interface BuyerCandidateCreate {
 
 export interface BuyerCandidateUpdate {
   company_name?: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
   buyer_type?: BuyerType;
   status?: BuyerStatus;
-  tier?: BuyerTier;
-  deal_role?: DealRole;
+  tier?: BuyerTier | null;
+  deal_role?: DealRole | null;
   is_short_listed?: boolean;
-  corp_code?: string;
+  corp_code?: string | null;
   ioi_value?: string | null;
   ioi_date?: string | null;
   loi_value?: string | null;
   loi_date?: string | null;
   final_offer_value?: string | null;
-  rejection_reason?: string;
-  notes?: string;
+  rejection_reason?: string | null;
+  notes?: string | null;
   extra_data?: Record<string, unknown>;
 }
 

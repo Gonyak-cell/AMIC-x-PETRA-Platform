@@ -168,86 +168,88 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
 
   return (
     <>
-      <Card
-        title="계약"
-        headerBar
-        padding="none"
-        actions={
-          canWrite ? (
-            <Button
+      <div className="space-y-6">
+        <Card
+          title="계약"
+          headerBar
+          padding="none"
+          actions={
+            canWrite ? (
+              <Button
+                icon={FileText}
+                size="sm"
+                onClick={() => setShowEngModal(true)}
+                variant="ghost"
+              >
+                계약 추가
+              </Button>
+            ) : undefined
+          }
+        >
+          {!engagements?.length ? (
+            <EmptyState
               icon={FileText}
-              size="sm"
-              onClick={() => setShowEngModal(true)}
-              variant="ghost"
-            >
-              계약 추가
-            </Button>
-          ) : undefined
-        }
-      >
-        {!engagements?.length ? (
-          <EmptyState
-            icon={FileText}
-            title="계약 정보 없음"
-            description="계약 정보를 등록하세요."
-          />
-        ) : (
-          <DataTable
-            columns={[
-              {
-                key: "type",
-                header: "유형",
-                render: (row) => (
-                  <Badge variant="info">
-                    {ENGAGEMENT_TYPE_OPTIONS.find(
-                      (option) => option.value === row.type,
-                    )?.label ?? row.type}
-                  </Badge>
-                ),
-              },
-              { key: "signed_at", header: "체결일" },
-              { key: "expires_at", header: "만료일" },
-              { key: "notes", header: "비고" },
-            ]}
-            data={engagements}
-            keyField="id"
-          />
-        )}
-      </Card>
+              title="계약 정보 없음"
+              description="계약 정보를 등록하세요."
+            />
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  key: "type",
+                  header: "유형",
+                  render: (row) => (
+                    <Badge variant="info">
+                      {ENGAGEMENT_TYPE_OPTIONS.find(
+                        (option) => option.value === row.type,
+                      )?.label ?? row.type}
+                    </Badge>
+                  ),
+                },
+                { key: "signed_at", header: "체결일" },
+                { key: "expires_at", header: "만료일" },
+                { key: "notes", header: "비고" },
+              ]}
+              data={engagements}
+              keyField="id"
+            />
+          )}
+        </Card>
 
-      <ClientNdaSection txnId={txnId} canWrite={canWrite} />
+        <ClientNdaSection txnId={txnId} canWrite={canWrite} />
 
-      <Card
-        title="워킹 그룹"
-        headerBar
-        padding="none"
-        actions={
-          canManageWorkingGroup ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={Plus}
-              onClick={() => setShowMemberModal(true)}
-            >
-              멤버 추가
-            </Button>
-          ) : undefined
-        }
-      >
-        {members && members.length > 0 ? (
-          <DataTable columns={memberColumns} data={members} keyField="id" />
-        ) : (
-          <EmptyState
-            icon={Users}
-            title="등록된 멤버가 없습니다"
-            description={
-              canManageWorkingGroup
-                ? "워킹 그룹 멤버를 추가하세요."
-                : "워킹 그룹 멤버가 등록되면 여기에서 확인할 수 있습니다."
-            }
-          />
-        )}
-      </Card>
+        <Card
+          title="워킹 그룹"
+          headerBar
+          padding="none"
+          actions={
+            canManageWorkingGroup ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={Plus}
+                onClick={() => setShowMemberModal(true)}
+              >
+                멤버 추가
+              </Button>
+            ) : undefined
+          }
+        >
+          {members && members.length > 0 ? (
+            <DataTable columns={memberColumns} data={members} keyField="id" />
+          ) : (
+            <EmptyState
+              icon={Users}
+              title="등록된 멤버가 없습니다"
+              description={
+                canManageWorkingGroup
+                  ? "워킹 그룹 멤버를 추가하세요."
+                  : "워킹 그룹 멤버가 등록되면 여기에서 확인할 수 있습니다."
+              }
+            />
+          )}
+        </Card>
+      </div>
 
       <Modal
         open={showEngModal}

@@ -1,16 +1,33 @@
-import { useRef, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Plus, Download, Upload, Sparkles } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { type ChangeEvent, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
+  Download,
+  Paperclip,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+import { Badge, Button, Card, Modal } from "@/components/ui";
+import {
+  openAttachmentFilePicker,
+  validateAttachmentFile,
+} from "@/modules/ma/components/attachmentUploadUtils";
+import {
+  useDeleteAttachment as useDeleteRFIAttachment,
   useExportRFI,
-  useImportRFI,
   useGenerateRFI,
+  useImportRFI,
+  useRFIAttachments,
+  useUploadAttachments,
 } from "@/modules/ma/hooks/useRFI";
-import type { RFIAutoGenerateRequest } from "@/modules/ma/types/rfi";
+import type { RFIAttachment, RFIAutoGenerateRequest } from "@/modules/ma/types/rfi";
+import { formatISODate } from "@/modules/ma/utils/format";
+
 import RFIDashboard from "./RFIDashboard";
-import RFIItemList from "./RFIItemList";
 import RFIItemDetail from "./RFIItemDetail";
+import RFIItemList from "./RFIItemList";
 import RFICreateModal from "./RFICreateModal";
 
 interface RFIPanelProps {
@@ -19,45 +36,80 @@ interface RFIPanelProps {
 
 type TabType = "dashboard" | "list";
 
+function getRFIAttachmentDownloadUrl(txnId: string, attachmentId: string) {
+  return `/api/ma/transactions/${txnId}/rfi/attachments/${attachmentId}/download`;
+}
+
+function getAttachmentStatusLabel(attachment: RFIAttachment) {
+  return attachment.is_mapped ? "매핑됨" : "미매핑";
+}
+
 export default function RFIPanel({ txnId }: RFIPanelProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("list");
-
-  // AI generate form state
   const [genIndustry, setGenIndustry] = useState("");
   const [genPurpose, setGenPurpose] = useState("");
   const [genFocusAreas, setGenFocusAreas] = useState("");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const excelFileInputRef = useRef<HTMLInputElement>(null);
+  const rfiUploadInputRef = useRef<HTMLInputElement>(null);
 
   const exportRFI = useExportRFI(txnId);
   const importRFI = useImportRFI(txnId);
   const generateRFI = useGenerateRFI(txnId);
+  const uploadRFI = useUploadAttachments(txnId);
+  const deleteRFIAttachment = useDeleteRFIAttachment(txnId);
+  const { data: uploadedRFIAttachments } = useRFIAttachments(txnId);
+
+  const rfiAttachments = uploadedRFIAttachments ?? [];
 
   const handleImportClick = () => {
-    fileInputRef.current?.click();
+    openAttachmentFilePicker(excelFileInputRef);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleUploadClick = () => {
+    openAttachmentFilePicker(rfiUploadInputRef);
+  };
+
+  const handleExcelFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     importRFI.mutate(file);
-    // Reset input so the same file can be re-selected
-    e.target.value = "";
+    event.target.value = "";
+  };
+
+  const handleRFIUploadChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    const validFiles = files.filter((file) => {
+      const error = validateAttachmentFile(file);
+      if (error) {
+        toast.error(error);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      uploadRFI.mutate(validFiles);
+    }
+
+    event.target.value = "";
   };
 
   const handleGenerateSubmit = () => {
     if (!genIndustry.trim() || !genPurpose.trim()) return;
+
     const payload: RFIAutoGenerateRequest = {
       industry: genIndustry.trim(),
       deal_purpose: genPurpose.trim(),
       focus_areas: genFocusAreas
         .split(",")
-        .map((s) => s.trim())
+        .map((value) => value.trim())
         .filter(Boolean),
     };
+
     generateRFI.mutate(payload, {
       onSuccess: () => {
         setShowGenerateModal(false);
@@ -68,7 +120,14 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
     });
   };
 
-  // Detail view takes over the entire panel
+  const handleDeleteAttachment = (attachmentId: string) => {
+    if (!window.confirm("업로드한 RFI 파일을 삭제하시겠습니까?")) {
+      return;
+    }
+
+    deleteRFIAttachment.mutate(attachmentId);
+  };
+
   if (selectedItemId) {
     return (
       <RFIItemDetail
@@ -81,13 +140,11 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
 
   return (
     <div className="space-y-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <h2 className="text-lg font-semibold text-text-dark">RFI 관리</h2>
 
-          {/* Tab buttons */}
-          <div className="flex items-center gap-1 ml-4" role="tablist">
+          <div className="flex items-center gap-1 lg:ml-4" role="tablist">
             <Button
               size="sm"
               variant={activeTab === "dashboard" ? "primary" : "secondary"}
@@ -113,8 +170,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
           <Button
             size="sm"
             variant="primary"
@@ -143,6 +199,15 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           </Button>
           <Button
             size="sm"
+            variant="secondary"
+            icon={Paperclip}
+            onClick={handleUploadClick}
+            loading={uploadRFI.isPending}
+          >
+            RFI 업로드
+          </Button>
+          <Button
+            size="sm"
             variant="accent"
             icon={Sparkles}
             onClick={() => setShowGenerateModal(true)}
@@ -153,11 +218,68 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
         </div>
       </div>
 
-      {/* Main content */}
+      {rfiAttachments.length > 0 ? (
+        <Card title={`업로드한 RFI 파일 (${rfiAttachments.length}건)`} padding="none">
+          <div className="divide-y divide-gray-border">
+            {rfiAttachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Paperclip className="h-4 w-4 text-text-muted" />
+                    <p className="truncate text-sm font-medium text-text-dark">
+                      {attachment.file_name}
+                    </p>
+                    <Badge
+                      variant={attachment.is_mapped ? "info" : "neutral"}
+                      pill
+                    >
+                      {getAttachmentStatusLabel(attachment)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    업로드일 {formatISODate(attachment.created_at)}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Download}
+                    onClick={() =>
+                      window.open(
+                        getRFIAttachmentDownloadUrl(txnId, attachment.id),
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
+                  >
+                    다운로드
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Trash2}
+                    onClick={() => handleDeleteAttachment(attachment.id)}
+                    disabled={deleteRFIAttachment.isPending}
+                    aria-label={`${attachment.file_name} 삭제`}
+                  >
+                    삭제
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
       <div
         role="tabpanel"
-        id={"rfi-tabpanel-" + activeTab}
-        aria-labelledby={"rfi-tab-" + activeTab}
+        id={`rfi-tabpanel-${activeTab}`}
+        aria-labelledby={`rfi-tab-${activeTab}`}
       >
         {activeTab === "dashboard" ? (
           <RFIDashboard txnId={txnId} />
@@ -166,27 +288,34 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
         )}
       </div>
 
-      {/* Hidden file input for Excel import */}
       <input
-        ref={fileInputRef}
+        ref={excelFileInputRef}
         type="file"
         accept=".xlsx,.xls"
         className="hidden"
         aria-label="Excel 파일 선택"
-        onChange={handleFileChange}
+        onChange={handleExcelFileChange}
+      />
+      <input
+        ref={rfiUploadInputRef}
+        type="file"
+        className="hidden"
+        multiple
+        aria-label="RFI 파일 선택"
+        onChange={handleRFIUploadChange}
       />
 
-      {/* Create modal */}
       <RFICreateModal
         txnId={txnId}
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
       />
 
-      {/* AI Generate modal */}
       <Modal
         open={showGenerateModal}
-        onClose={() => { if (!generateRFI.isPending) setShowGenerateModal(false); }}
+        onClose={() => {
+          if (!generateRFI.isPending) setShowGenerateModal(false);
+        }}
         title="AI RFI 자동 생성"
         size="md"
       >
@@ -194,7 +323,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <div>
             <label
               htmlFor="gen-industry"
-              className="block text-sm font-medium text-text-body mb-1"
+              className="mb-1 block text-sm font-medium text-text-body"
             >
               산업군 <span className="text-red-500">*</span>
             </label>
@@ -202,15 +331,15 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               id="gen-industry"
               type="text"
               value={genIndustry}
-              onChange={(e) => setGenIndustry(e.target.value)}
+              onChange={(event) => setGenIndustry(event.target.value)}
               placeholder="예: 제조업, IT/소프트웨어, 유통"
-              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
             />
           </div>
           <div>
             <label
               htmlFor="gen-purpose"
-              className="block text-sm font-medium text-text-body mb-1"
+              className="mb-1 block text-sm font-medium text-text-body"
             >
               거래 목적 <span className="text-red-500">*</span>
             </label>
@@ -218,15 +347,15 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               id="gen-purpose"
               type="text"
               value={genPurpose}
-              onChange={(e) => setGenPurpose(e.target.value)}
+              onChange={(event) => setGenPurpose(event.target.value)}
               placeholder="예: 경영권 인수, 지분 투자, 합병"
-              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
             />
           </div>
           <div>
             <label
               htmlFor="gen-focus"
-              className="block text-sm font-medium text-text-body mb-1"
+              className="mb-1 block text-sm font-medium text-text-body"
             >
               중점 분야 (쉼표 구분)
             </label>
@@ -234,13 +363,13 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
               id="gen-focus"
               type="text"
               value={genFocusAreas}
-              onChange={(e) => setGenFocusAreas(e.target.value)}
-              placeholder="예: 재무, 법률, 인사, IT"
-              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+              onChange={(event) => setGenFocusAreas(event.target.value)}
+              placeholder="예: 재무, 법무, 인사, IT"
+              className="w-full rounded-md border border-gray-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-border">
+        <div className="mt-4 flex justify-end gap-2 border-t border-gray-border pt-4">
           <Button
             size="sm"
             variant="secondary"

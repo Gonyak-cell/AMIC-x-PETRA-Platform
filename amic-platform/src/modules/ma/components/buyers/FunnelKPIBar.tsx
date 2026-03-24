@@ -25,8 +25,8 @@ export default function FunnelKPIBar({ buyers }: FunnelKPIBarProps) {
     }
     return [
       { label: "Long List", count: buyers.length },
-      { label: "Short List", count: shortList },
       { label: "NDA 체결", count: nda },
+      { label: "Short List", count: shortList },
       { label: "IM 발송", count: cim },
       { label: "DD 진행", count: dd },
     ];

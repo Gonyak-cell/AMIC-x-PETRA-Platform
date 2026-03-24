@@ -231,16 +231,16 @@ function MarketingMaterialActionModal({
           <Button
             type="button"
             variant="primary"
-            className="h-auto min-h-[132px] flex-col items-start justify-start px-4 py-4 text-left"
+            className="h-auto min-h-[132px] flex-col items-stretch justify-start px-4 py-4 text-left whitespace-normal"
             loading={generating}
             disabled={uploadMutation.isPending}
             onClick={() => onGenerate(docType)}
           >
-            <div className="flex items-center gap-2 text-sm font-semibold">
+            <div className="flex w-full items-center gap-2 text-sm font-semibold">
               <FileText className="h-4 w-4" />
               <span>{meta.generateTitle}</span>
             </div>
-            <p className="text-xs leading-5 text-white/90">
+            <p className="w-full whitespace-normal break-keep text-xs leading-5 text-white/90">
               {meta.generateDescription}
             </p>
           </Button>
@@ -248,16 +248,16 @@ function MarketingMaterialActionModal({
           <Button
             type="button"
             variant="secondary"
-            className="h-auto min-h-[132px] flex-col items-start justify-start px-4 py-4 text-left"
+            className="h-auto min-h-[132px] flex-col items-stretch justify-start px-4 py-4 text-left whitespace-normal"
             loading={uploadMutation.isPending}
             disabled={generating}
             onClick={handlePickFile}
           >
-            <div className="flex items-center gap-2 text-sm font-semibold">
+            <div className="flex w-full items-center gap-2 text-sm font-semibold">
               <Upload className="h-4 w-4" />
               <span>{meta.uploadTitle}</span>
             </div>
-            <p className="text-xs leading-5 text-text-secondary">
+            <p className="w-full whitespace-normal break-keep text-xs leading-5 text-text-secondary">
               {meta.uploadDescription}
             </p>
           </Button>
@@ -317,31 +317,27 @@ export default function MarketingMaterialsTab({
       {showSourcePreview && <MMSourceRoutingPreviewPanel txnId={txnId} />}
 
       <Card
-        title={"\uB9C8\uCF00\uD305 \uC790\uB8CC"}
-        headerBar
         padding="none"
         className={
           isFlatSurface
             ? "border-0 shadow-none rounded-none bg-transparent"
             : undefined
         }
-        actions={
-          canWrite ? (
-            <div className="flex flex-wrap justify-end gap-2">
-              {(["TM", "DM", "IM"] as MarketingDocType[]).map((docType) => (
-                <Button
-                  key={docType}
-                  size="sm"
-                  variant={DOC_TYPE_ACTION_META[docType].triggerVariant}
-                  onClick={() => setActionTarget(docType)}
-                >
-                  {DOC_TYPE_ACTION_META[docType].triggerLabel}
-                </Button>
-              ))}
-            </div>
-          ) : undefined
-        }
       >
+        {canWrite ? (
+          <div className="flex flex-wrap justify-end gap-2 border-b border-gray-border px-5 py-3">
+            {(["TM", "DM", "IM"] as MarketingDocType[]).map((docType) => (
+              <Button
+                key={docType}
+                size="sm"
+                variant={DOC_TYPE_ACTION_META[docType].triggerVariant}
+                onClick={() => setActionTarget(docType)}
+              >
+                {DOC_TYPE_ACTION_META[docType].triggerLabel}
+              </Button>
+            ))}
+          </div>
+        ) : null}
         {!hasAnyMaterials ? (
           <EmptyState
             icon={FileText}

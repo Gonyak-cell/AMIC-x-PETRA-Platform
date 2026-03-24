@@ -32,6 +32,7 @@ import type {
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
+import { getBuyerLogoUrl } from "@/modules/ma/utils/buyerLogo";
 import type { NDA } from "@/modules/ma/types/nda";
 import {
   BUYER_TYPE_OPTIONS,
@@ -46,6 +47,7 @@ import type {
   MarketingStage,
 } from "@/modules/ma/types/marketing_log";
 import type { KpiFilter } from "@/modules/ma/components/buyers/ShortListOverview";
+import BuyerCompanyLogo from "@/modules/ma/components/buyers/BuyerCompanyLogo";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
 import FunnelNav from "@/modules/ma/components/buyers/FunnelNav";
@@ -152,6 +154,7 @@ export default function BuyersTab({
   const [showFIRecommendModal, setShowFIRecommendModal] = useState(false);
   const [manualBuyerKind, setManualBuyerKind] =
     useState<ManualBuyerKind | null>(null);
+  const [showManualBuyerMenu, setShowManualBuyerMenu] = useState(false);
   const [buyerDetailCompanyId, setBuyerDetailCompanyId] = useState<
     string | null
   >(null);
@@ -255,28 +258,51 @@ export default function BuyersTab({
         render: (r) => {
           const siId = (r.extra_data as Record<string, unknown> | null)
             ?.si_company_id as string | undefined;
+          const canOpenSIDetail = r.buyer_type === "STRATEGIC";
+          const logoUrl = getBuyerLogoUrl(r.extra_data);
 
           return (
-            <div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (siId) {
-                    setBuyerDetailCompanyId(siId);
-                  } else {
-                    setBuyerDetailSearchName(r.company_name);
-                  }
-                }}
-                className="text-left font-medium hover:text-accent hover:underline"
-              >
-                {r.company_name}
-              </button>
-              {r.contact_name && (
-                <span className="block text-xs text-text-muted">
-                  {r.contact_name}
-                </span>
-              )}
+            <div className="flex items-start gap-3">
+              <BuyerCompanyLogo
+                logoUrl={logoUrl}
+                name={r.company_name}
+                size="sm"
+              />
+              <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openBuyerDetail(r.id, "summary");
+                  }}
+                  className="text-left font-medium hover:text-accent hover:underline"
+                >
+                  {r.company_name}
+                </button>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {r.contact_name && (
+                    <span className="text-xs text-text-muted">
+                      {r.contact_name}
+                    </span>
+                  )}
+                  {canOpenSIDetail && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (siId) {
+                          setBuyerDetailCompanyId(siId);
+                        } else {
+                          setBuyerDetailSearchName(r.company_name);
+                        }
+                      }}
+                      className="text-xs font-medium text-accent hover:underline"
+                    >
+                      SI 상세
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           );
         },
@@ -478,13 +504,13 @@ export default function BuyersTab({
   const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
   const longListActionGroups = canWrite ? (
     <div className="flex flex-col gap-2">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           icon={Building2}
           onClick={handleOpenFIRecommendModal}
           variant="primary"
           size="sm"
-          className="w-full justify-center"
+          className="w-full justify-center sm:w-auto"
         >
           FI 자동 추천
         </Button>
@@ -493,31 +519,48 @@ export default function BuyersTab({
           onClick={() => setShowSIMappingModal(true)}
           variant="primary"
           size="sm"
-          className="w-full justify-center"
+          className="w-full justify-center sm:w-auto"
         >
           SI 자동 매핑
         </Button>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
         <Button
           icon={Plus}
-          onClick={() => setManualBuyerKind("FI")}
+          onClick={() => setShowManualBuyerMenu((open) => !open)}
           variant="secondary"
           size="sm"
-          className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
-        >
-          FI 추가
-        </Button>
-        <Button
-          icon={Plus}
-          onClick={() => setManualBuyerKind("SI")}
-          variant="secondary"
-          size="sm"
-          className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
-        >
-          SI 추가
-        </Button>
+          className="h-9 w-9 justify-center border-accent/60 px-0 text-text-dark hover:border-accent hover:bg-accent/5"
+          aria-label="매수자 추가"
+          title="매수자 추가"
+        />
       </div>
+      {showManualBuyerMenu ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            icon={Plus}
+            onClick={() => {
+              setManualBuyerKind("FI");
+              setShowManualBuyerMenu(false);
+            }}
+            variant="secondary"
+            size="sm"
+            className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
+          >
+            FI 추가
+          </Button>
+          <Button
+            icon={Plus}
+            onClick={() => {
+              setManualBuyerKind("SI");
+              setShowManualBuyerMenu(false);
+            }}
+            variant="secondary"
+            size="sm"
+            className="w-full justify-center border-accent/60 text-text-dark hover:border-accent hover:bg-accent/5"
+          >
+            SI 추가
+          </Button>
+        </div>
+      ) : null}
     </div>
   ) : null;
 

@@ -23,6 +23,19 @@ import type {
 const KEY = "ma";
 const rfiKeys = (txnId: string) => [KEY, "transactions", txnId, "rfi"];
 
+export function useRFIAttachments(txnId: string) {
+  return useQuery<RFIAttachment[]>({
+    queryKey: [...rfiKeys(txnId), "attachments"],
+    queryFn: async () => {
+      const { data } = await maApi.get<RFIAttachment[]>(
+        `/transactions/${txnId}/rfi/attachments`,
+      );
+      return data;
+    },
+    enabled: !!txnId,
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /*  Queries                                                           */
 /* ------------------------------------------------------------------ */

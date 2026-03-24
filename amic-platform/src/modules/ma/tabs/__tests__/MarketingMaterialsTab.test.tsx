@@ -158,11 +158,12 @@ describe("MarketingMaterialsTab", () => {
     renderTab({ canWrite: true });
 
     await waitFor(() => {
-      expect(screen.getByText("+ Teaser (TM)")).toBeInTheDocument();
+    expect(screen.getByText("+ Teaser (TM)")).toBeInTheDocument();
     });
 
     expect(screen.getByText("+ Discussion (DM)")).toBeInTheDocument();
     expect(screen.getByText("+ Information (IM)")).toBeInTheDocument();
+    expect(screen.queryByText(/^마케팅 자료$/)).not.toBeInTheDocument();
     expect(screen.queryByText(`TM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();
     expect(screen.queryByText(`DM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();
     expect(screen.queryByText(`IM ${"\uC5C5\uB85C\uB4DC"}`)).not.toBeInTheDocument();

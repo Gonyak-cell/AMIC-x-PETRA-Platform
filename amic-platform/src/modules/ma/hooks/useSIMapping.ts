@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -77,11 +78,18 @@ export function useSICompanyByName(name: string | null) {
   return useQuery<SICompany | null>({
     queryKey: siQK.searchByName(name ?? ""),
     queryFn: async () => {
-      const { data } = await maApi.get<SICompany | null>(
-        `/si-mapping/companies/search-by-name`,
-        { params: { name } },
-      );
-      return data;
+      try {
+        const { data } = await maApi.get<SICompany | null>(
+          `/si-mapping/companies/search-by-name`,
+          { params: { name } },
+        );
+        return data;
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: !!name,
     staleTime: 10 * 60 * 1000,

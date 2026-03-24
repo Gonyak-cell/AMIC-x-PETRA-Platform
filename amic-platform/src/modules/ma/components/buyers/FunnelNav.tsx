@@ -46,13 +46,13 @@ export default function FunnelNav({
         count: buyers.length,
         clickable: true,
       },
+      { id: "nda", label: "NDA 체결", count: nda, clickable: false },
       {
         id: "short-list",
         label: "Short List",
         count: shortList,
         clickable: true,
       },
-      { id: "nda", label: "NDA 체결", count: nda, clickable: false },
       { id: "im", label: "IM 발송", count: cim, clickable: false },
       { id: "dd", label: "DD 진행", count: dd, clickable: false },
     ];

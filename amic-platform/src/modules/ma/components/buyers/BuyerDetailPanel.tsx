@@ -75,7 +75,9 @@ export default function BuyerDetailPanel({
 
   useEffect(() => {
     setActiveTab(initialTab);
-    contentRef.current?.scrollTo(0, 0);
+    if (typeof contentRef.current?.scrollTo === "function") {
+      contentRef.current.scrollTo(0, 0);
+    }
   }, [buyer?.id, initialTab]);
 
   const isOpen = !!buyer;
@@ -122,6 +124,7 @@ export default function BuyerDetailPanel({
                 buyer={buyer}
                 txnId={txnId}
                 stageSummary={stageSummary}
+                canWrite={canWrite}
               />
             )}
             {activeTab === "nda" && (

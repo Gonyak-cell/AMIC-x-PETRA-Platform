@@ -129,7 +129,132 @@ describe("BuyersTab", () => {
     });
   });
 
-  it("shows both Long List and Short List steps", async () => {
+  it("renders a company logo when the buyer has a logo URL", async () => {
+    const logoBuyer = {
+      ...mockBuyer,
+      id: "buyer-logo",
+      company_name: "Logo Buyer",
+      extra_data: {
+        logo_url: "https://example.com/logo.png",
+      },
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [logoBuyer], total: 1 });
+      }),
+    );
+
+    renderTab();
+
+    expect(await screen.findByAltText("Logo Buyer logo")).toBeInTheDocument();
+  });
+
+  it("opens the long-list detail panel for financial sponsor buyers without showing an SI trigger", async () => {
+    const user = userEvent.setup();
+    const financialBuyer = {
+      ...mockBuyer,
+      id: "buyer-fi",
+      company_name: "Heimdall Private Equity",
+      buyer_type: "FINANCIAL_SPONSOR" as const,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [financialBuyer], total: 1 });
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByText(financialBuyer.company_name)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: "SI 상세" })).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: financialBuyer.company_name }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "롱리스트 정보 수정" }),
+    ).toBeInTheDocument();
+  });
+
+  it("saves edited long-list buyer information from the summary panel", async () => {
+    const user = userEvent.setup();
+    let requestBody: Record<string, unknown> | null = null;
+    const editableBuyer = {
+      ...mockBuyer,
+      extra_data: {
+        si_company_id: "si-company-1",
+      },
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [editableBuyer], total: 1 });
+      }),
+      http.patch("*/api/ma/transactions/:txnId/buyers/:buyerId", async ({ request }) => {
+        requestBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          ...editableBuyer,
+          ...requestBody,
+          contact_name: requestBody.contact_name,
+          contact_email: requestBody.contact_email,
+          contact_phone: requestBody.contact_phone,
+          notes: requestBody.notes,
+          buyer_type: requestBody.buyer_type,
+          tier: requestBody.tier,
+          deal_role: requestBody.deal_role,
+        });
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: editableBuyer.company_name }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: editableBuyer.company_name }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "롱리스트 정보 수정" }),
+    );
+
+    const companyNameInput = screen.getByLabelText("회사명");
+    await user.clear(companyNameInput);
+    await user.type(companyNameInput, "Updated Buyer");
+    await user.clear(screen.getByLabelText("담당자"));
+    await user.type(screen.getByLabelText("담당자"), "Lee");
+    await user.selectOptions(screen.getByLabelText("유형"), "FINANCIAL_SPONSOR");
+    await user.type(
+      screen.getByLabelText("로고 URL"),
+      "https://example.com/logos/updated-buyer.png",
+    );
+    await user.type(screen.getByLabelText("비고"), "Updated from long list");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(requestBody).toMatchObject({
+        company_name: "Updated Buyer",
+        contact_name: "Lee",
+        buyer_type: "FINANCIAL_SPONSOR",
+        notes: "Updated from long list",
+        extra_data: {
+          si_company_id: "si-company-1",
+          logo_url: "https://example.com/logos/updated-buyer.png",
+        },
+      });
+    });
+  });
+
+  it("shows the funnel steps in Long List, NDA, Short List order", async () => {
     renderTab();
 
     await waitFor(() => {
@@ -139,6 +264,20 @@ describe("BuyersTab", () => {
     });
 
     expect(screen.getAllByText(/Short List/i).length).toBeGreaterThanOrEqual(1);
+
+    const tabTexts = within(screen.getByRole("tablist"))
+      .getAllByRole("tab")
+      .map((tab) => tab.textContent ?? "");
+
+    const longListIndex = tabTexts.findIndex((text) => text.includes("Long List"));
+    const ndaIndex = tabTexts.findIndex((text) => text.includes("NDA"));
+    const shortListIndex = tabTexts.findIndex((text) => text.includes("Short List"));
+
+    expect(longListIndex).toBeGreaterThanOrEqual(0);
+    expect(ndaIndex).toBeGreaterThanOrEqual(0);
+    expect(shortListIndex).toBeGreaterThanOrEqual(0);
+    expect(longListIndex).toBeLessThan(ndaIndex);
+    expect(ndaIndex).toBeLessThan(shortListIndex);
   });
 
   it("hides FI and SI automation buttons for read-only users", async () => {
@@ -158,7 +297,9 @@ describe("BuyersTab", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows manual FI and SI add buttons for writable users", async () => {
+  it("shows FI, SI, and plus actions first, then reveals manual add actions", async () => {
+    const user = userEvent.setup();
+
     renderTab();
 
     await waitFor(() => {
@@ -166,6 +307,20 @@ describe("BuyersTab", () => {
         1,
       );
     });
+
+    expect(screen.getByRole("button", { name: "FI 자동 추천" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "SI 자동 매핑" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "매수자 추가" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "FI 추가" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "SI 추가" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "매수자 추가" }));
 
     expect(screen.getByRole("button", { name: "FI 추가" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "SI 추가" })).toBeInTheDocument();
@@ -268,6 +423,7 @@ describe("BuyersTab", () => {
       );
     });
 
+    await user.click(screen.getByRole("button", { name: "매수자 추가" }));
     await user.click(screen.getByRole("button", { name: "SI 추가" }));
 
     expect(await screen.findByText("전략적 투자자 (SI)")).toBeInTheDocument();
