@@ -48,10 +48,7 @@ def _repair_legacy_nda_schema(db_path: Path) -> None:
         if "ndas" not in tables:
             return
 
-        columns = {
-            row[1]: row
-            for row in conn.execute("PRAGMA table_info(ndas)").fetchall()
-        }
+        columns = {row[1]: row for row in conn.execute("PRAGMA table_info(ndas)").fetchall()}
         buyer_candidate = columns.get("buyer_candidate_id")
         buyer_candidate_not_null = bool(buyer_candidate and buyer_candidate[3])
         needs_rebuild = "party_type" not in columns or buyer_candidate_not_null
@@ -72,13 +69,9 @@ def _repair_legacy_nda_schema(db_path: Path) -> None:
             "document_url": "document_url",
             "notes": "notes",
             "counterparty_name": (
-                "counterparty_name"
-                if "counterparty_name" in columns
-                else "NULL AS counterparty_name"
+                "counterparty_name" if "counterparty_name" in columns else "NULL AS counterparty_name"
             ),
-            "jurisdiction": (
-                "jurisdiction" if "jurisdiction" in columns else "NULL AS jurisdiction"
-            ),
+            "jurisdiction": ("jurisdiction" if "jurisdiction" in columns else "NULL AS jurisdiction"),
             "confidentiality_period_months": (
                 "confidentiality_period_months"
                 if "confidentiality_period_months" in columns

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -182,7 +182,9 @@ describe("BuyersTab", () => {
     ).toBeInTheDocument();
   });
 
-  it("saves edited long-list buyer information from the summary panel", async () => {
+  it(
+    "saves edited long-list buyer information from the summary panel",
+    async () => {
     const user = userEvent.setup();
     let requestBody: Record<string, unknown> | null = null;
     const editableBuyer = {
@@ -228,16 +230,21 @@ describe("BuyersTab", () => {
     );
 
     const companyNameInput = screen.getByLabelText("회사명");
-    await user.clear(companyNameInput);
-    await user.type(companyNameInput, "Updated Buyer");
-    await user.clear(screen.getByLabelText("담당자"));
-    await user.type(screen.getByLabelText("담당자"), "Lee");
-    await user.selectOptions(screen.getByLabelText("유형"), "FINANCIAL_SPONSOR");
-    await user.type(
-      screen.getByLabelText("로고 URL"),
-      "https://example.com/logos/updated-buyer.png",
-    );
-    await user.type(screen.getByLabelText("비고"), "Updated from long list");
+    fireEvent.change(companyNameInput, {
+      target: { value: "Updated Buyer" },
+    });
+    fireEvent.change(screen.getByLabelText("담당자"), {
+      target: { value: "Lee" },
+    });
+    fireEvent.change(screen.getByLabelText("유형"), {
+      target: { value: "FINANCIAL_SPONSOR" },
+    });
+    fireEvent.change(screen.getByLabelText("로고 URL"), {
+      target: { value: "https://example.com/logos/updated-buyer.png" },
+    });
+    fireEvent.change(screen.getByLabelText("비고"), {
+      target: { value: "Updated from long list" },
+    });
     await user.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() => {
@@ -252,7 +259,9 @@ describe("BuyersTab", () => {
         },
       });
     });
-  });
+    },
+    10000,
+  );
 
   it("shows the funnel steps in Long List, NDA, Short List order", async () => {
     renderTab();

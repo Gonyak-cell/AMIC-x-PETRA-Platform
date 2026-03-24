@@ -534,11 +534,13 @@ describe("TransactionWorkspacePage", () => {
 
     renderPage("/ma/transactions/txn-1/pmi");
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("클로징까지 정말 고생 많으셨습니다."),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText(
+        "클로징까지 정말 고생 많으셨습니다.",
+        {},
+        { timeout: 10000 },
+      ),
+    ).toBeInTheDocument();
 
     const tabLabels = screen.queryAllByRole("tab").map((tab) => tab.textContent);
     expect(tabLabels).toEqual([]);

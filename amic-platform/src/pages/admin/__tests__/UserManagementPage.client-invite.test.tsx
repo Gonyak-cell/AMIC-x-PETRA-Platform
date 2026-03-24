@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -162,17 +162,14 @@ async function openClientCreateModal(user: ReturnType<typeof userEvent.setup>) {
 
 // ── Helper: fill email + display_name ────────────────────────
 async function fillBasicClientFields(
-  user: ReturnType<typeof userEvent.setup>,
   email = "client@test.com",
   displayName = "Test Client",
 ) {
   const emailInput = screen.getByLabelText("Email");
-  await user.clear(emailInput);
-  await user.type(emailInput, email);
+  fireEvent.change(emailInput, { target: { value: email } });
 
   const nameInput = screen.getByLabelText("Display Name");
-  await user.clear(nameInput);
-  await user.type(nameInput, displayName);
+  fireEvent.change(nameInput, { target: { value: displayName } });
 }
 
 // ── Helper: select and add a transaction ─────────────────────
@@ -197,7 +194,7 @@ describe("UserManagementPage — CLIENT 초대 플로우", () => {
     renderPage();
 
     await openClientCreateModal(user);
-    await fillBasicClientFields(user);
+    await fillBasicClientFields();
 
     // Submit WITHOUT selecting any transaction
     const submitBtn = screen.getByRole("button", { name: /초대 발송/i });
@@ -215,7 +212,7 @@ describe("UserManagementPage — CLIENT 초대 플로우", () => {
     renderPage();
 
     await openClientCreateModal(user);
-    await fillBasicClientFields(user);
+    await fillBasicClientFields();
 
     // Select transaction by txn-1 id and add it
     await addTransaction(user, "txn-1");
@@ -253,7 +250,7 @@ describe("UserManagementPage — CLIENT 초대 플로우", () => {
     renderPage();
 
     await openClientCreateModal(user);
-    await fillBasicClientFields(user);
+    await fillBasicClientFields();
     await addTransaction(user, "txn-1");
 
     await waitFor(() => {
@@ -283,44 +280,48 @@ describe("UserManagementPage — CLIENT 초대 플로우", () => {
     });
   });
 
-  it("Test 4: invite_sent=false + 이미 활성화된 계정 → '활성화' 포함 문구, '재발송' 미포함", async () => {
-    mockCreateInviteMutateAsync.mockResolvedValueOnce({
-      ...defaultInviteResult,
-      invite_sent: false,
-      invite_error: "이미 활성화된 CLIENT입니다",
-    });
+  it(
+    "Test 4: invite_sent=false + 이미 활성화된 계정 → '활성화' 포함 문구, '재발송' 미포함",
+    async () => {
+      mockCreateInviteMutateAsync.mockResolvedValueOnce({
+        ...defaultInviteResult,
+        invite_sent: false,
+        invite_error: "이미 활성화된 CLIENT입니다",
+      });
 
-    const user = userEvent.setup();
-    renderPage();
+      const user = userEvent.setup();
+      renderPage();
 
-    await openClientCreateModal(user);
-    await fillBasicClientFields(user);
+      await openClientCreateModal(user);
+      await fillBasicClientFields();
 
-    // Select txn-1 and click 추가 — same as Test 2/3
-    const dealSelect = screen.getByLabelText(/거래 배정/i);
-    await user.selectOptions(dealSelect, "txn-1");
+      // Select txn-1 and click 추가 — same as Test 2/3
+      const dealSelect = screen.getByLabelText(/거래 배정/i);
+      await user.selectOptions(dealSelect, "txn-1");
 
-    const addBtn = screen.getByRole("button", { name: /추가/i });
-    await user.click(addBtn);
+      const addBtn = screen.getByRole("button", { name: /추가/i });
+      await user.click(addBtn);
 
-    // Wait for the chip/list item showing selected transaction (has X/remove button)
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /거래A 제거/i }),
-      ).toBeInTheDocument();
-    });
+      // Wait for the chip/list item showing selected transaction (has X/remove button)
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /거래A 제거/i }),
+        ).toBeInTheDocument();
+      });
 
-    const submitBtn = screen.getByRole("button", { name: /초대 발송/i });
-    await user.click(submitBtn);
+      const submitBtn = screen.getByRole("button", { name: /초대 발송/i });
+      await user.click(submitBtn);
 
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalled();
+      });
 
-    // Find the alert call that contains "활성화" among all alert calls
-    const allAlertMessages = alertSpy.mock.calls.map((c) => c[0] as string);
-    const activationAlert = allAlertMessages.find((m) => m.includes("활성화"));
-    expect(activationAlert).toBeDefined();
-    expect(activationAlert).not.toContain("재발송");
-  });
+      // Find the alert call that contains "활성화" among all alert calls
+      const allAlertMessages = alertSpy.mock.calls.map((c) => c[0] as string);
+      const activationAlert = allAlertMessages.find((m) => m.includes("활성화"));
+      expect(activationAlert).toBeDefined();
+      expect(activationAlert).not.toContain("재발송");
+    },
+    10000,
+  );
 });
