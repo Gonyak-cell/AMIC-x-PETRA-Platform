@@ -82,8 +82,9 @@ def clean_approved_pngs(approved_dir: Path) -> int:
 
 def generate_variant(variant: str, force: bool) -> None:
     """단일 variant(tm 또는 dm)의 승인 PNG를 생성한다."""
-    from app.pptx.memo_generator import generate_memo
     from visual_diff.diff_utils import pptx_to_pngs
+
+    from app.pptx.memo_generator import generate_memo
 
     approved_dir = _FIXTURES_DIR / variant / "approved"
 
