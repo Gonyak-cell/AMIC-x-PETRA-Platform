@@ -54,6 +54,8 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .coverage
+amic-platform/coverage/
+deal-mgmt/coverage.xml
 htmlcov/
 .venv/
 venv/
@@ -80,5 +82,12 @@ im/CLAUDE.local.md
 # User uploads & generated data
 deal-mgmt/uploads/
 fdd/backend/generated/
+kiis/generated/
+kiis/test.db
+# Local scratch files
+/tmp-amic-platform-prod_key.pem
+/123123123(1).png
+/123123123.jpeg
+/unnamed (1).png
 finance model/sample/
 오픈API 활용자가이드*.docx
