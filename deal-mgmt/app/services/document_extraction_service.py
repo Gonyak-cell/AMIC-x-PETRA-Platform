@@ -600,9 +600,7 @@ async def confirm_extraction(
     )
 
     if applied_id is None and target_model in ("nda", "bid", "contract", "engagement", "marketing_material"):
-        raise ValueError(
-            f"{target_model} 데이터 적용 실패: 대상 레코드가 없거나 필수 필드가 누락되었습니다"
-        )
+        raise ValueError(f"{target_model} 데이터 적용 실패: 대상 레코드가 없거나 필수 필드가 누락되었습니다")
 
     # 추출 레코드 업데이트
     extraction.extracted_data = confirmed_data

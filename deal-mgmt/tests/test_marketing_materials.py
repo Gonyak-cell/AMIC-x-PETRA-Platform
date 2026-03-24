@@ -366,9 +366,7 @@ async def test_download_uploaded_marketing_material(client, _txn, async_session)
     async_session.add(material)
     await async_session.commit()
 
-    resp = await client.get(
-        f"/api/v1/transactions/{txn_id}/marketing-materials/{material.id}/download"
-    )
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/marketing-materials/{material.id}/download")
     assert resp.status_code == 200
     assert resp.content == pdf_bytes
     assert resp.headers["content-type"] == "application/pdf"

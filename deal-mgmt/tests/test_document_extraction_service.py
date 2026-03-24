@@ -635,9 +635,7 @@ class TestConfirmNda:
         await async_session.refresh(nda)
         assert nda.nda_type == NdaType.ONE_WAY
 
-
-# ── confirm_extraction + _apply_to_bid ───────────────────────
-
+    # ── confirm_extraction + _apply_to_bid ───────────────────────
 
     async def test_confirm_creates_client_nda_without_buyer(self, async_session: AsyncSession) -> None:
         txn = await _make_txn(async_session)
