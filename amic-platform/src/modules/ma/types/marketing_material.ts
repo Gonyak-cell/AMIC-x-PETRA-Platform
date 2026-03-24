@@ -10,6 +10,8 @@ export interface MarketingMaterial {
   project_code: string | null;
   status: MarketingDocStatus;
   error_message: string | null;
+  source_mode: "GENERATED" | "UPLOADED";
+  attachment_id: string | null;
   parameters: Record<string, unknown> | null;
   file_path: string | null;
   file_name: string | null;

@@ -11,21 +11,27 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.attachment import Attachment
 from app.models.bid import Bid
 from app.models.buyer_candidate import BuyerCandidate
 from app.models.contract import Contract
+from app.models.engagement import Engagement
 from app.models.enums import (
     BidType,
     BuyerCandidateStatus,
     BuyerType,
     DocExtractionCategory,
+    EngagementType,
     ExtractionStatus,
+    MarketingDocType,
+    NdaPartyType,
     NdaType,
     TransactionSide,
     ValuationMethod,
     VdrDocumentStatus,
     VdrFolderCategory,
 )
+from app.models.marketing_material import MarketingMaterial
 from app.models.nda import NDA
 from app.models.transaction import Transaction
 from app.models.vdr_document import VdrDocument
@@ -102,6 +108,32 @@ async def _make_buyer(db: AsyncSession, txn: Transaction) -> BuyerCandidate:
     db.add(buyer)
     await db.flush()
     return buyer
+
+
+async def _make_attachment(
+    db: AsyncSession,
+    txn: Transaction,
+    *,
+    entity_type: str,
+    entity_id: str | None = None,
+    vdr_doc: VdrDocument | None = None,
+    file_name: str = "uploaded.pdf",
+    mime_type: str = "application/pdf",
+) -> Attachment:
+    attachment = Attachment(
+        transaction_id=txn.id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        file_path=f"/tmp/{file_name}",
+        file_name=file_name,
+        file_size_bytes=2048,
+        mime_type=mime_type,
+        vdr_document_id=vdr_doc.id if vdr_doc else None,
+        uploaded_by_email="upload@example.com",
+    )
+    db.add(attachment)
+    await db.flush()
+    return attachment
 
 
 def _mock_llm_client(response: str = '{"category": "NDA", "confidence": 0.95}') -> MagicMock:
@@ -334,6 +366,34 @@ class TestExtractFields:
         result = await extract_fields(parsed, DocExtractionCategory.NDA, llm)
         assert result["counterparty_name"] == "테스트사"
         assert result["nda_type"] == "MUTUAL"
+
+    async def test_extract_engagement_contract_fields(self) -> None:
+        parsed = ParsedFile(source_path="/tmp/engagement.pdf", file_type="pdf")
+        parsed.text = "Engagement agreement " * 150
+        response = (
+            '{"type": "EXCLUSIVE", "counterparty_name": "Client Co", '
+            '"service_scope_summary": "Sell-side advisory", '
+            '"fee_structure": {"retainer_fee": 100000000}}'
+        )
+        llm = _mock_llm_client(response)
+
+        result = await extract_fields(parsed, DocExtractionCategory.ENGAGEMENT_CONTRACT, llm)
+
+        assert result["type"] == "EXCLUSIVE"
+        assert result["counterparty_name"] == "Client Co"
+        assert result["fee_structure"]["retainer_fee"] == 100000000
+
+    async def test_extract_teaser_im_fields(self) -> None:
+        parsed = ParsedFile(source_path="/tmp/im.pdf", file_type="pdf")
+        parsed.text = "Information memorandum " * 150
+        response = '{"doc_type": "IM", "title": "Project Alpha IM", "project_code": "ALPHA"}'
+        llm = _mock_llm_client(response)
+
+        result = await extract_fields(parsed, DocExtractionCategory.TEASER_IM, llm)
+
+        assert result["doc_type"] == "IM"
+        assert result["title"] == "Project Alpha IM"
+        assert result["project_code"] == "ALPHA"
 
     async def test_extract_registry_docs_fields(self) -> None:
         parsed = ParsedFile(source_path="/tmp/registry.pdf", file_type="pdf")
@@ -577,6 +637,115 @@ class TestConfirmNda:
 
 
 # ── confirm_extraction + _apply_to_bid ───────────────────────
+
+
+    async def test_confirm_creates_client_nda_without_buyer(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "party_type": "CLIENT",
+                "counterparty_name": "Client Co",
+                "nda_type": "MUTUAL",
+            },
+            target_model="nda",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+
+        nda = await async_session.get(NDA, updated.target_id)
+        assert nda is not None
+        assert nda.party_type == NdaPartyType.CLIENT
+        assert nda.buyer_candidate_id is None
+        assert nda.counterparty_name == "Client Co"
+
+
+class TestConfirmEngagement:
+    async def test_confirm_creates_engagement(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "type": "EXCLUSIVE",
+                "counterparty_name": "Client Co",
+                "signed_at": "2026-03-01",
+                "expires_at": "2026-12-31",
+                "service_scope_summary": "Sell-side advisory",
+                "fee_structure": {
+                    "retainer_fee": 100000000,
+                    "success_fee_rate": 3.5,
+                },
+                "notes": "Key coverage terms",
+            },
+            target_model="engagement",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+
+        engagement = await async_session.get(Engagement, updated.target_id)
+        assert engagement is not None
+        assert engagement.type == EngagementType.EXCLUSIVE
+        assert engagement.counterparty_name == "Client Co"
+        assert engagement.service_scope_summary == "Sell-side advisory"
+        assert engagement.fee_structure["retainer_fee"] == 100000000
+        assert engagement.fee_structure["success_fee_rate"] == 3.5
+
+
+class TestConfirmMarketingMaterial:
+    async def test_confirm_creates_uploaded_marketing_material(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        attachment = await _make_attachment(
+            async_session,
+            txn,
+            entity_type="MARKETING_MATERIAL",
+            entity_id="IM",
+            vdr_doc=vdr_doc,
+            file_name="project-alpha-im.pdf",
+        )
+
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id)
+        ext.status = ExtractionStatus.COMPLETED
+        await async_session.flush()
+
+        updated = await confirm_extraction(
+            db=async_session,
+            extraction_id=ext.id,
+            confirmed_data={
+                "doc_type": "IM",
+                "title": "Project Alpha IM",
+                "project_code": "ALPHA",
+            },
+            target_model="marketing_material",
+            target_id=None,
+            create_new=True,
+            user_email="test@example.com",
+        )
+
+        material = await async_session.get(MarketingMaterial, updated.target_id)
+        assert material is not None
+        assert material.doc_type == MarketingDocType.IM
+        assert material.source_mode == "UPLOADED"
+        assert material.attachment_id == attachment.id
+        assert material.file_name == attachment.file_name
+        assert material.status.value == "READY"
+        assert material.quality_status == "SKIPPED"
 
 
 class TestConfirmBid:

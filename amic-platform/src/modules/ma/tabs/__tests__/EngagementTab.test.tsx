@@ -21,6 +21,22 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+vi.mock("@/modules/ma/hooks/useAttachmentExtractionFlow", () => ({
+  useAttachmentExtractionFlow: () => ({
+    activeReview: null,
+    closeReview: vi.fn(),
+    startExtractionFromUpload: vi.fn(),
+  }),
+}));
+
+vi.mock("@/modules/ma/components/FileUploadZone", () => ({
+  default: () => <div>engagement-upload-zone</div>,
+}));
+
+vi.mock("@/modules/ma/components/extraction/ExtractionReviewModal", () => ({
+  default: () => null,
+}));
+
 vi.mock("@/modules/ma/components/engagement/ClientNdaSection", () => ({
   default: () => <div>client-nda-section</div>,
 }));
@@ -49,9 +65,11 @@ describe("EngagementTab", () => {
     expect(screen.getAllByText("계약 추가")).toHaveLength(1);
     expect(screen.getAllByText("멤버 추가")).toHaveLength(1);
     expect(
-      screen.getByRole("heading", { name: "워킹 그룹" }),
+      screen.getByRole("heading", { name: "Working Group List" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Working Group")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "워킹 그룹" }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides working group add action for non-manager roles", () => {

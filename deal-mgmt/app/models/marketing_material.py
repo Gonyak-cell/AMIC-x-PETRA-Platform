@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import MarketingDocStatus, MarketingDocType
+from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 
 
 class MarketingMaterial(Base, TimestampMixin):
@@ -33,6 +33,17 @@ class MarketingMaterial(Base, TimestampMixin):
         Enum(MarketingDocStatus), nullable=False, default=MarketingDocStatus.DRAFT
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_mode: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=MarketingMaterialSourceMode.GENERATED.value,
+    )
+    attachment_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("attachments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # ── 콘텐츠 파라미터 (memo_generator content JSON) ───────────
     parameters: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)

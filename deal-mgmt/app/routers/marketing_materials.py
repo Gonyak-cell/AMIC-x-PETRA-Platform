@@ -29,6 +29,7 @@ router = APIRouter(
 
 # 경로 탐색(Path Traversal) 방어
 _SAFE_OUTPUT_DIR = (Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum").resolve()
+_SAFE_ATTACHMENT_DIR = (Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments").resolve()
 
 
 async def _get_and_authorize_txn(
@@ -167,6 +168,28 @@ async def download_marketing_material(
         mat = await marketing_material_service.get_marketing_material(db, txn_id, mat_id)
     except DocumentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    if mat.source_mode == "UPLOADED":
+        from app.models.attachment import Attachment
+
+        if not mat.attachment_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="원본 첨부파일을 찾을 수 없습니다.")
+
+        attachment = await db.get(Attachment, mat.attachment_id)
+        if not attachment or attachment.transaction_id != txn_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="원본 첨부파일을 찾을 수 없습니다.")
+
+        file_path = Path(attachment.file_path).resolve()
+        if not str(file_path).startswith(str(_SAFE_ATTACHMENT_DIR)):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="유효하지 않은 첨부파일 경로입니다.")
+        if not file_path.exists():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="첨부파일이 존재하지 않습니다.")
+
+        return FileResponse(
+            path=str(file_path),
+            media_type=attachment.mime_type or "application/octet-stream",
+            filename=attachment.file_name,
+        )
 
     if mat.status not in (MarketingDocStatus.READY, MarketingDocStatus.CONDITIONAL_READY) or not mat.file_path:
         raise HTTPException(

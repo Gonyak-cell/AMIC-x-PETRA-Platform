@@ -5,13 +5,13 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.engagement import Engagement
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, WorkingGroupRole
 from app.models.working_group import WorkingGroupMember
 from app.schemas.engagement import (
     EngagementCreate,
@@ -27,6 +27,15 @@ router = APIRouter(prefix="/transactions/{txn_id}", tags=["Engagements"])
 
 _WORKING_GROUP_MANAGER_ROLES = {"ADMIN", "MANAGER"}
 _SELF_EDITABLE_MEMBER_FIELDS = {"organization", "phone"}
+_WORKING_GROUP_ROLE_DISPLAY_ORDER = (
+    WorkingGroupRole.LEAD_ADVISOR,
+    WorkingGroupRole.LEGAL_COUNSEL,
+    WorkingGroupRole.ACCOUNTING_ADVISOR,
+    WorkingGroupRole.VALUATION_ADVISOR,
+    WorkingGroupRole.TAX_ADVISOR,
+    WorkingGroupRole.INDUSTRY_EXPERT,
+    WorkingGroupRole.OTHER,
+)
 
 
 def _normalize_person_name(value: str | None) -> str:
@@ -194,10 +203,17 @@ async def list_members(
 ):
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    role_priority = case(
+        *(
+            (WorkingGroupMember.role == role, priority)
+            for priority, role in enumerate(_WORKING_GROUP_ROLE_DISPLAY_ORDER)
+        ),
+        else_=len(_WORKING_GROUP_ROLE_DISPLAY_ORDER),
+    )
     query = (
         select(WorkingGroupMember)
         .where(WorkingGroupMember.transaction_id == txn_id)
-        .order_by(WorkingGroupMember.created_at)
+        .order_by(role_priority, WorkingGroupMember.created_at.asc())
     )
     result = await db.execute(query)
     return [WorkingGroupMemberOut.model_validate(item) for item in result.scalars().all()]

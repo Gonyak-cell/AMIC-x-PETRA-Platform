@@ -46,7 +46,9 @@ _CATEGORY_TEXT_LIMITS: dict[str, int] = {
     "BIZ_REG_DOCS": 30_000,
     "TAX_FILING": 40_000,
     "NDA": 20_000,
+    "ENGAGEMENT_CONTRACT": 30_000,
     "LOI_MOU": 30_000,
+    "TEASER_IM": 30_000,
     "SPA_BTA": _MAX_TEXT_CHARS,
 }
 
@@ -562,7 +564,7 @@ async def confirm_extraction(
     db: AsyncSession,
     extraction_id: uuid.UUID,
     confirmed_data: dict,
-    target_model: Literal["nda", "bid", "contract", "transaction"],
+    target_model: Literal["nda", "bid", "contract", "transaction", "engagement", "marketing_material"],
     target_id: uuid.UUID | None,
     create_new: bool,
     user_email: str,
@@ -590,15 +592,16 @@ async def confirm_extraction(
     applied_id = await _apply_to_model(
         db=db,
         transaction_id=extraction.transaction_id,
+        source_vdr_document_id=extraction.vdr_document_id,
         target_model=target_model,
         target_id=target_id,
         create_new=create_new,
         data=confirmed_data,
     )
 
-    if applied_id is None and target_model in ("nda", "bid", "contract"):
+    if applied_id is None and target_model in ("nda", "bid", "contract", "engagement", "marketing_material"):
         raise ValueError(
-            f"{target_model} 데이터 적용 실패: 대상 레코드가 없거나 필수 필드(buyer_candidate_id)가 누락되었습니다"
+            f"{target_model} 데이터 적용 실패: 대상 레코드가 없거나 필수 필드가 누락되었습니다"
         )
 
     # 추출 레코드 업데이트
@@ -624,6 +627,7 @@ async def confirm_extraction(
 async def _apply_to_model(
     db: AsyncSession,
     transaction_id: uuid.UUID,
+    source_vdr_document_id: uuid.UUID,
     target_model: str,
     target_id: uuid.UUID | None,
     create_new: bool,
@@ -638,6 +642,16 @@ async def _apply_to_model(
         return await _apply_to_contract(db, transaction_id, data, target_id, create_new)
     elif target_model == "transaction":
         return await _apply_to_transaction(db, transaction_id, data)
+    elif target_model == "engagement":
+        return await _apply_to_engagement(db, transaction_id, data, target_id, create_new)
+    elif target_model == "marketing_material":
+        return await _apply_to_marketing_material(
+            db,
+            transaction_id,
+            source_vdr_document_id,
+            data,
+            target_id,
+        )
     else:
         logger.warning("지원하지 않는 target_model: %s", target_model)
         return None
@@ -688,7 +702,7 @@ async def _apply_to_nda(
     create_new: bool,
 ) -> uuid.UUID | None:
     """NDA 모델에 추출 데이터를 적용한다."""
-    from app.models.enums import NdaType
+    from app.models.enums import NdaPartyType, NdaType
     from app.models.nda import NDA
 
     field_map = {
@@ -709,10 +723,17 @@ async def _apply_to_nda(
             nda.nda_type = nda_type_val  # type: ignore[attr-defined]
 
     if create_new:
-        buyer_id = await _resolve_buyer_candidate(db, transaction_id, data, "NDA")
-        if buyer_id is None:
-            return None
-        nda = NDA(transaction_id=transaction_id, buyer_candidate_id=buyer_id)
+        party_type = _safe_enum_value(NdaPartyType, data.get("party_type")) or NdaPartyType.BUYER
+        buyer_id = None
+        if party_type == NdaPartyType.BUYER:
+            buyer_id = await _resolve_buyer_candidate(db, transaction_id, data, "NDA")
+            if buyer_id is None:
+                return None
+        nda = NDA(
+            transaction_id=transaction_id,
+            party_type=party_type,
+            buyer_candidate_id=buyer_id,
+        )
         _apply_fields(nda)
         db.add(nda)
         await db.flush()
@@ -837,6 +858,159 @@ async def _apply_to_contract(
     return None
 
 
+async def _apply_to_engagement(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    data: dict,
+    target_id: uuid.UUID | None,
+    create_new: bool,
+) -> uuid.UUID | None:
+    """Engagement 모델에 추출 데이터를 적용한다."""
+    from app.models.engagement import Engagement
+    from app.models.enums import EngagementType
+
+    field_map = {
+        "counterparty_name": "counterparty_name",
+        "signed_at": "signed_at",
+        "expires_at": "expires_at",
+        "service_scope_summary": "service_scope_summary",
+        "notes": "notes",
+    }
+
+    def _apply_fields(engagement: object) -> None:
+        for src, dst in field_map.items():
+            val = data.get(src)
+            if val is not None:
+                _safe_set_field(engagement, dst, val)
+
+        engagement_type = _safe_enum_value(EngagementType, data.get("type"))
+        if engagement_type is not None:
+            engagement.type = engagement_type  # type: ignore[attr-defined]
+
+        fee_structure = _normalize_fee_structure(data.get("fee_structure"))
+        if fee_structure:
+            existing = getattr(engagement, "fee_structure", None) or {}
+            engagement.fee_structure = {**existing, **fee_structure}  # type: ignore[attr-defined]
+
+    if create_new:
+        engagement_type = _safe_enum_value(EngagementType, data.get("type")) or EngagementType.EXCLUSIVE
+        engagement = Engagement(
+            transaction_id=transaction_id,
+            type=engagement_type,
+        )
+        _apply_fields(engagement)
+        db.add(engagement)
+        await db.flush()
+        return engagement.id
+    elif target_id:
+        engagement = await db.get(Engagement, target_id)
+        if engagement and engagement.transaction_id == transaction_id:
+            _apply_fields(engagement)
+            await db.flush()
+            return engagement.id
+    return None
+
+
+async def _resolve_attachment_for_vdr_document(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    source_vdr_document_id: uuid.UUID,
+    *,
+    entity_type: str | None = None,
+) -> object | None:
+    from app.models.attachment import Attachment
+
+    query = select(Attachment).where(
+        Attachment.transaction_id == transaction_id,
+        Attachment.vdr_document_id == source_vdr_document_id,
+    )
+    if entity_type is not None:
+        query = query.where(Attachment.entity_type == entity_type)
+    query = query.order_by(Attachment.created_at.desc()).limit(1)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def _apply_to_marketing_material(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    source_vdr_document_id: uuid.UUID,
+    data: dict,
+    target_id: uuid.UUID | None,
+) -> uuid.UUID | None:
+    """MarketingMaterial 모델에 업로드형 마케팅 자료를 생성/갱신한다."""
+    from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
+    from app.models.marketing_material import MarketingMaterial
+
+    attachment = await _resolve_attachment_for_vdr_document(
+        db,
+        transaction_id,
+        source_vdr_document_id,
+        entity_type="MARKETING_MATERIAL",
+    )
+    if attachment is None:
+        logger.warning(
+            "MarketingMaterial 적용 실패: source attachment 없음 (txn=%s, vdr=%s)",
+            transaction_id,
+            source_vdr_document_id,
+        )
+        return None
+
+    doc_type = _safe_enum_value(MarketingDocType, data.get("doc_type"))
+    if doc_type is None and getattr(attachment, "entity_id", None):
+        doc_type = _safe_enum_value(MarketingDocType, getattr(attachment, "entity_id"))
+    if doc_type is None:
+        logger.warning(
+            "MarketingMaterial 적용 실패: doc_type 누락/무효 (txn=%s, attachment=%s)",
+            transaction_id,
+            attachment.id,
+        )
+        return None
+
+    def _apply_fields(material: object) -> None:
+        _safe_set_field(material, "source_mode", MarketingMaterialSourceMode.UPLOADED.value)
+        _safe_set_field(material, "status", MarketingDocStatus.READY)
+        _safe_set_field(material, "attachment_id", attachment.id)
+        _safe_set_field(material, "file_path", attachment.file_path)
+        _safe_set_field(material, "file_name", attachment.file_name)
+        _safe_set_field(material, "file_size_bytes", attachment.file_size_bytes)
+        _safe_set_field(material, "quality_status", "SKIPPED")
+        _safe_set_field(material, "created_by_email", attachment.uploaded_by_email)
+        _safe_set_field(material, "doc_type", doc_type)
+
+        title = data.get("title") or Path(attachment.file_name).stem or f"{doc_type.value} Upload"
+        _safe_set_field(material, "title", title)
+
+        project_code = data.get("project_code")
+        if project_code is not None:
+            _safe_set_field(material, "project_code", project_code)
+
+    if target_id:
+        material = await db.get(MarketingMaterial, target_id)
+        if material and material.transaction_id == transaction_id:
+            _apply_fields(material)
+            await db.flush()
+            return material.id
+
+    material = MarketingMaterial(
+        transaction_id=transaction_id,
+        doc_type=doc_type,
+        title=Path(attachment.file_name).stem or f"{doc_type.value} Upload",
+        status=MarketingDocStatus.READY,
+        source_mode=MarketingMaterialSourceMode.UPLOADED.value,
+        attachment_id=attachment.id,
+        file_path=attachment.file_path,
+        file_name=attachment.file_name,
+        file_size_bytes=attachment.file_size_bytes,
+        quality_status="SKIPPED",
+        created_by_email=attachment.uploaded_by_email,
+    )
+    _apply_fields(material)
+    db.add(material)
+    await db.flush()
+    return material.id
+
+
 async def _apply_to_transaction(
     db: AsyncSession,
     transaction_id: uuid.UUID,
@@ -910,8 +1084,12 @@ _STRING_LIMITS: dict[str, int] = {
     "valid_until": 10,
     "currency": 3,
     "title": 300,
+    "project_code": 100,
     "effective_date": 10,
     "expiry_date": 10,
+    "source_mode": 20,
+    "quality_status": 20,
+    "created_by_email": 255,
     "ai_analysis_summary": 0,  # Text — 제한 없음
 }
 
@@ -927,6 +1105,42 @@ _NUMERIC_FIELDS: frozenset[str] = frozenset(
         "amount",
     }
 )
+
+
+def _normalize_fee_number(value: object) -> float | int | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        stripped = value.replace(",", "").strip()
+        if not stripped:
+            return None
+        try:
+            parsed = float(stripped)
+        except ValueError:
+            logger.warning("fee_structure 숫자 변환 불가 값 무시: %r", value)
+            return None
+        return int(parsed) if parsed.is_integer() else parsed
+    logger.warning("fee_structure 숫자 변환 불가 타입 무시: %r", type(value))
+    return None
+
+
+def _normalize_fee_structure(value: object) -> dict | None:
+    if not isinstance(value, dict):
+        return None
+
+    normalized: dict[str, object] = {}
+    for key in ("retainer_fee", "success_fee_rate", "minimum_fee", "expense_cap"):
+        number = _normalize_fee_number(value.get(key))
+        if number is not None:
+            normalized[key] = number
+
+    notes = value.get("notes")
+    if isinstance(notes, str) and notes.strip():
+        normalized["notes"] = notes.strip()
+
+    return normalized or None
 
 
 def _safe_set_field(obj: object, attr: str, val: object) -> None:

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { FileText, Pencil, Plus, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 import {
   useEngagements,
   useCreateEngagement,
@@ -77,6 +80,8 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
   const { user } = useAuth();
   const { data: engagements } = useEngagements(txnId);
   const { data: members } = useWorkingGroup(txnId);
+  const { activeReview, closeReview, startExtractionFromUpload } =
+    useAttachmentExtractionFlow(txnId);
   const createEngagement = useCreateEngagement(txnId);
   const addMember = useAddMember(txnId);
   const updateMember = useUpdateMember(txnId);
@@ -214,12 +219,31 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               keyField="id"
             />
           )}
+
+          <FileUploadZone
+            txnId={txnId}
+            entityType="ENGAGEMENT"
+            embedded
+            embeddedLabel={engagements?.length ? "Engagement Files" : "Engagement Upload"}
+            uploadLabel="Upload Files"
+            emptyDescription="Drop the engagement contract PDF here to run OCR and prefill the review form."
+            emptyHint="OCR runs for PDF uploads after VDR sync completes. Non-PDF files stay attached without auto-fill."
+            embeddedSeparator={Boolean(engagements?.length)}
+            onUploaded={(attachment, file) =>
+              startExtractionFromUpload({
+                attachment,
+                file,
+                docCategoryHint: "ENGAGEMENT_CONTRACT",
+                reviewContext: { source: "engagement" },
+              })
+            }
+          />
         </Card>
 
         <ClientNdaSection txnId={txnId} canWrite={canWrite} />
 
         <Card
-          title="워킹 그룹"
+          title="Working Group List"
           headerBar
           padding="none"
           actions={
@@ -411,6 +435,14 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           </div>
         </form>
       </Modal>
+
+      <ExtractionReviewModal
+        txnId={txnId}
+        extraction={activeReview?.extraction ?? null}
+        reviewContext={activeReview?.context}
+        open={activeReview !== null}
+        onClose={closeReview}
+      />
 
       <Modal
         open={Boolean(editingMember)}

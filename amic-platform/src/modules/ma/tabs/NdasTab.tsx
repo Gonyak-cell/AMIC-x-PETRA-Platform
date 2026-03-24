@@ -12,6 +12,8 @@ import { useBuyers } from "@/modules/ma/hooks/useTransactions";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import { NDA_TYPE_OPTIONS, NDA_STATUS_OPTIONS } from "@/modules/ma/constants";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 
 import {
   Badge,
@@ -37,6 +39,8 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
+  const { activeReview, closeReview, startExtractionFromUpload } =
+    useAttachmentExtractionFlow(txnId);
 
   const [showNdaModal, setShowNdaModal] = useState(false);
   const [versionPanelNdaId, setVersionPanelNdaId] = useState<string | null>(
@@ -238,6 +242,14 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           emptyDescription="매수 후보와의 NDA 파일을 바로 업로드하세요."
           emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
           embeddedSeparator={Boolean(ndas?.length)}
+          onUploaded={(attachment, file) =>
+            startExtractionFromUpload({
+              attachment,
+              file,
+              docCategoryHint: "NDA",
+              reviewContext: { source: "buyer-nda" },
+            })
+          }
         />
       </Card>
 
@@ -353,6 +365,14 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           canWrite={canWrite}
         />
       )}
+
+      <ExtractionReviewModal
+        txnId={txnId}
+        extraction={activeReview?.extraction ?? null}
+        reviewContext={activeReview?.context}
+        open={activeReview !== null}
+        onClose={closeReview}
+      />
     </div>
   );
 }

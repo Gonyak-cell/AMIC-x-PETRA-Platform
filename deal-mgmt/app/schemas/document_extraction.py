@@ -34,7 +34,7 @@ class ExtractionConfirmRequest(BaseModel):
     """사용자 검토 확정 요청."""
 
     confirmed_data: dict  # 사용자가 수정한 추출 결과 JSON
-    target_model: Literal["nda", "bid", "contract", "transaction"]
+    target_model: Literal["nda", "bid", "contract", "transaction", "engagement", "marketing_material"]
     target_id: uuid.UUID | None = None  # 기존 레코드 업데이트 시
     create_new: bool = False  # True면 신규 레코드 생성
 

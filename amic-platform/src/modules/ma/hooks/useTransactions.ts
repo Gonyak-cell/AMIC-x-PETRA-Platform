@@ -250,14 +250,14 @@ export function useChangeStatus(txnId: string) {
 }
 
 // ── Engagement ─────────────────────────────────────────
-export function useEngagements(txnId: string) {
+export function useEngagements(txnId: string, active = true) {
   return useQuery<Engagement[]>({
     queryKey: ["ma", "transactions", txnId, "engagements"],
     queryFn: async () => {
       const { data } = await maApi.get(`/transactions/${txnId}/engagements`);
       return data;
     },
-    enabled: !!txnId,
+    enabled: !!txnId && active,
     staleTime: 60_000,
   });
 }

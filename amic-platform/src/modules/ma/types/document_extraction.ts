@@ -2,6 +2,7 @@
 
 export type DocExtractionCategory =
   | "NDA"
+  | "ENGAGEMENT_CONTRACT"
   | "LOI_MOU"
   | "SPA_BTA"
   | "CORPORATE_DOCS"
@@ -23,6 +24,7 @@ export type ExtractionStatus =
 
 export const CATEGORY_LABELS: Record<DocExtractionCategory, string> = {
   NDA: "NDA (비밀유지계약)",
+  ENGAGEMENT_CONTRACT: "수임계약",
   LOI_MOU: "LOI/MOU (인수의향서)",
   SPA_BTA: "SPA/BTA (주식매매계약)",
   CORPORATE_DOCS: "등기부등본/사업자등록증",
@@ -47,12 +49,14 @@ export const STATUS_LABELS: Record<ExtractionStatus, string> = {
 /** 추출 가능 카테고리 (LLM 추출 수행 대상) */
 export const EXTRACTABLE_CATEGORIES: Set<DocExtractionCategory> = new Set([
   "NDA",
+  "ENGAGEMENT_CONTRACT",
   "LOI_MOU",
   "SPA_BTA",
   "CORPORATE_DOCS",
   "REGISTRY_DOCS",
   "BIZ_REG_DOCS",
   "TAX_FILING",
+  "TEASER_IM",
 ]);
 
 /** 진행중 상태 — 폴링이 필요한 상태 */
@@ -115,13 +119,21 @@ export function getExtractionStatusLabel(
 }
 
 /** 매핑 가능 대상 모델 */
-export type TargetModel = "nda" | "bid" | "contract" | "transaction";
+export type TargetModel =
+  | "nda"
+  | "bid"
+  | "contract"
+  | "transaction"
+  | "engagement"
+  | "marketing_material";
 
 export const TARGET_MODEL_LABELS: Record<TargetModel, string> = {
   nda: "NDA",
   bid: "입찰 (Bid)",
   contract: "계약 (Contract)",
   transaction: "거래 (Transaction)",
+  engagement: "수임계약",
+  marketing_material: "마케팅자료",
 };
 
 // ── API 응답 모델 ──────────────────────────────────────────
@@ -176,6 +188,24 @@ export interface NdaExtractedData {
   expires_at: string | null;
   confidentiality_period_months: number | null;
   jurisdiction: string | null;
+}
+
+export interface EngagementFeeStructure {
+  retainer_fee?: number | null;
+  success_fee_rate?: number | null;
+  minimum_fee?: number | null;
+  expense_cap?: number | null;
+  notes?: string | null;
+}
+
+export interface EngagementContractExtractedData {
+  type: "EXCLUSIVE" | "NON_EXCLUSIVE" | "CO_ADVISORY" | null;
+  signed_at: string | null;
+  expires_at: string | null;
+  counterparty_name: string | null;
+  service_scope_summary: string | null;
+  fee_structure: EngagementFeeStructure | null;
+  notes: string | null;
 }
 
 export interface LoiMouExtractedData {
@@ -267,13 +297,21 @@ export interface TaxFilingExtractedData {
   total_equity: number | null;
 }
 
+export interface TeaserImExtractedData {
+  doc_type: "TM" | "DM" | "IM" | null;
+  title: string | null;
+  project_code: string | null;
+}
+
 /** 카테고리 → 추출 데이터 타입 매핑 */
 export type ExtractedDataByCategory = {
   NDA: NdaExtractedData;
+  ENGAGEMENT_CONTRACT: EngagementContractExtractedData;
   LOI_MOU: LoiMouExtractedData;
   SPA_BTA: SpaBtaExtractedData;
   CORPORATE_DOCS: CorporateDocsExtractedData;
   TAX_FILING: TaxFilingExtractedData;
+  TEASER_IM: TeaserImExtractedData;
 };
 
 /** 카테고리별 추출 필드 라벨 */
@@ -285,6 +323,15 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     expires_at: "만료일",
     confidentiality_period_months: "비밀유지 기간(월)",
     jurisdiction: "관할법원",
+  },
+  ENGAGEMENT_CONTRACT: {
+    type: "계약 유형",
+    signed_at: "체결일",
+    expires_at: "종료일",
+    counterparty_name: "상대방",
+    service_scope_summary: "업무범위",
+    fee_structure: "보수 구조",
+    notes: "비고",
   },
   LOI_MOU: {
     proposed_amount: "제안 인수가액",
@@ -360,4 +407,14 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     total_liabilities: "총부채",
     total_equity: "총자본",
   },
+  TEASER_IM: {
+    doc_type: "문서 유형",
+    title: "문서 제목",
+    project_code: "프로젝트 코드",
+  },
 };
+
+export interface ExtractionReviewContext {
+  source: "buyer-nda" | "client-nda" | "engagement" | "marketing-material";
+  marketingDocType?: "TM" | "DM" | "IM";
+}

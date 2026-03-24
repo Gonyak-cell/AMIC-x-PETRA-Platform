@@ -21,9 +21,11 @@ export interface Engagement {
   id: string;
   transaction_id: string;
   type: EngagementType;
+  counterparty_name: string | null;
   fee_structure: FeeStructure;
   signed_at: string | null;
   expires_at: string | null;
+  service_scope_summary: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -31,17 +33,21 @@ export interface Engagement {
 
 export interface EngagementCreate {
   type: EngagementType;
+  counterparty_name?: string;
   fee_structure?: FeeStructure;
   signed_at?: string;
   expires_at?: string;
+  service_scope_summary?: string;
   notes?: string;
 }
 
 export interface EngagementUpdate {
   type?: EngagementType;
+  counterparty_name?: string;
   fee_structure?: FeeStructure;
   signed_at?: string;
   expires_at?: string;
+  service_scope_summary?: string;
   notes?: string;
 }
 

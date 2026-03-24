@@ -39,6 +39,8 @@ class MarketingMaterialOut(BaseModel):
     project_code: str | None
     status: MarketingDocStatus
     error_message: str | None
+    source_mode: str
+    attachment_id: uuid.UUID | None
     parameters: dict | None
     file_path: str | None
     file_name: str | None

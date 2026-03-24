@@ -175,6 +175,8 @@ export function useConfirmExtraction(txnId: string) {
           bid: "bids",
           contract: "contracts",
           nda: "ndas",
+          engagement: "engagements",
+          marketing_material: "marketing-materials",
         };
         const qk = MODEL_TO_QK[data.target_model];
         if (qk === "") {

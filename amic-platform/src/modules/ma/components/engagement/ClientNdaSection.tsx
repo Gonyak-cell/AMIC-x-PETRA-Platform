@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { FileText, Plus, Trash2 } from "lucide-react";
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 import {
   useCreateNda,
   useDeleteNda,
@@ -39,6 +42,8 @@ export default function ClientNdaSection({
 }: ClientNdaSectionProps) {
   const { data: transaction } = useTransaction(txnId);
   const { data: ndas } = useNdas(txnId, { partyType: "CLIENT" });
+  const { activeReview, closeReview, startExtractionFromUpload } =
+    useAttachmentExtractionFlow(txnId);
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
@@ -219,6 +224,25 @@ export default function ClientNdaSection({
         />
       )}
 
+      <FileUploadZone
+        txnId={txnId}
+        entityType="NDA"
+        embedded
+        embeddedLabel={ndas?.length ? "Client NDA Files" : "Client NDA Upload"}
+        uploadLabel="Upload Files"
+        emptyDescription="Drop the client NDA PDF here to run OCR and prefill the review form."
+        emptyHint="OCR starts for PDF uploads after VDR sync succeeds. Other files stay attached without auto-fill."
+        embeddedSeparator={Boolean(ndas?.length)}
+        onUploaded={(attachment, file) =>
+          startExtractionFromUpload({
+            attachment,
+            file,
+            docCategoryHint: "NDA",
+            reviewContext: { source: "client-nda" },
+          })
+        }
+      />
+
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -319,6 +343,14 @@ export default function ClientNdaSection({
           </div>
         </form>
       </Modal>
+
+      <ExtractionReviewModal
+        txnId={txnId}
+        extraction={activeReview?.extraction ?? null}
+        reviewContext={activeReview?.context}
+        open={activeReview !== null}
+        onClose={closeReview}
+      />
     </Card>
   );
 }

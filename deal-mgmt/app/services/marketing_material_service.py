@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.exceptions import DocumentNotFoundError
-from app.models.enums import MarketingDocStatus, MarketingDocType
+from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 from app.models.marketing_material import MarketingMaterial
 from app.schemas.marketing_material import DistributionUpdate, MarketingMaterialCreate
 from app.services.text_extraction_service import TextExtractionService
@@ -235,6 +235,7 @@ async def create_marketing_material(
         title=body.title,
         project_code=body.project_code,
         status=MarketingDocStatus.GENERATING,
+        source_mode=MarketingMaterialSourceMode.GENERATED.value,
         parameters=body.parameters,
         created_by_email=created_by_email,
     )
@@ -384,6 +385,7 @@ async def create_marketing_material_with_ralph(
         title=body.title,
         project_code=body.project_code,
         status=MarketingDocStatus.GENERATING,
+        source_mode=MarketingMaterialSourceMode.GENERATED.value,
         parameters=body.parameters,
         created_by_email=created_by_email,
     )
@@ -440,6 +442,8 @@ async def generate_marketing_material(
 ) -> MarketingMaterial:
     """이미 생성된 자료를 재생성 (FAILED → GENERATING → READY)."""
     mat = await get_marketing_material(db, transaction_id, mat_id)
+    if mat.source_mode == MarketingMaterialSourceMode.UPLOADED.value:
+        raise DocumentNotFoundError("외부 업로드 자료는 재생성할 수 없습니다.")
 
     from app.pptx.memo_generator import generate_memo
 
@@ -533,7 +537,7 @@ async def delete_marketing_material(
     mat = await get_marketing_material(db, transaction_id, mat_id)
 
     # 생성된 PPTX 파일 삭제
-    if mat.file_path:
+    if mat.file_path and mat.source_mode != MarketingMaterialSourceMode.UPLOADED.value:
         p = Path(mat.file_path)
         if p.exists():
             p.unlink(missing_ok=True)

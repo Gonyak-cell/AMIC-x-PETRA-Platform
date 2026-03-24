@@ -15,9 +15,11 @@ class EngagementOut(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
     type: EngagementType
+    counterparty_name: str | None = None
     fee_structure: dict | None = None
     signed_at: str | None = None
     expires_at: str | None = None
+    service_scope_summary: str | None = None
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -25,17 +27,21 @@ class EngagementOut(BaseModel):
 
 class EngagementCreate(BaseModel):
     type: EngagementType
+    counterparty_name: str | None = Field(None, max_length=200)
     fee_structure: dict | None = None
     signed_at: str | None = Field(None, max_length=10)
     expires_at: str | None = Field(None, max_length=10)
+    service_scope_summary: str | None = None
     notes: str | None = None
 
 
 class EngagementUpdate(BaseModel):
     type: EngagementType | None = None
+    counterparty_name: str | None = Field(None, max_length=200)
     fee_structure: dict | None = None
     signed_at: str | None = Field(None, max_length=10)
     expires_at: str | None = Field(None, max_length=10)
+    service_scope_summary: str | None = None
     notes: str | None = None
 
 

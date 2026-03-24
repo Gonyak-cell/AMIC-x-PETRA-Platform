@@ -420,6 +420,11 @@ class MarketingDocStatus(enum.StrEnum):
     FAILED = "FAILED"  # 생성 실패
 
 
+class MarketingMaterialSourceMode(enum.StrEnum):
+    GENERATED = "GENERATED"
+    UPLOADED = "UPLOADED"
+
+
 # ── Phase 7: LDD (Legal Due Diligence) Reports ────────
 class LDDDealType(enum.StrEnum):
     """LDD 보고서 거래유형 — 템플릿 선택 기준."""
@@ -788,6 +793,7 @@ class DocExtractionCategory(enum.StrEnum):
     """업로드 문서 AI 분류 카테고리."""
 
     NDA = "NDA"  # 비밀유지계약서
+    ENGAGEMENT_CONTRACT = "ENGAGEMENT_CONTRACT"  # 수임계약서
     LOI_MOU = "LOI_MOU"  # LOI, MOU, IOI
     SPA_BTA = "SPA_BTA"  # SPA, SHA, BTA, SSA
     CORPORATE_DOCS = "CORPORATE_DOCS"  # 등기부등본, 사업자등록증 (레거시 — 두 종류 혼합)
@@ -803,6 +809,7 @@ class DocExtractionCategory(enum.StrEnum):
 class AttachmentEntityType(enum.StrEnum):
     """범용 첨부파일 대상 엔티티 타입."""
 
+    ENGAGEMENT = "ENGAGEMENT"
     MARKETING_MATERIAL = "MARKETING_MATERIAL"
     FINANCIAL_MODEL = "FINANCIAL_MODEL"
     NDA = "NDA"

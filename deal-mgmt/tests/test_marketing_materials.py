@@ -322,6 +322,59 @@ async def test_download_not_ready(client, _txn):
 
 
 @pytest.mark.asyncio
+async def test_download_uploaded_marketing_material(client, _txn, async_session):
+    """업로드형 마케팅자료는 attachment 원본 PDF를 내려준다."""
+    import uuid
+    from pathlib import Path
+
+    from app.models.attachment import Attachment
+    from app.models.enums import MarketingDocStatus, MarketingDocType
+    from app.models.marketing_material import MarketingMaterial
+
+    txn_id = _txn["id"]
+    pdf_bytes = b"%PDF-1.4\nuploaded marketing material\n"
+    upload_dir = Path(__file__).resolve().parents[1] / "uploads" / "attachments"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / f"{uuid.uuid4()}_uploaded-im.pdf"
+    file_path.write_bytes(pdf_bytes)
+
+    attachment = Attachment(
+        transaction_id=uuid.UUID(txn_id),
+        entity_type="MARKETING_MATERIAL",
+        entity_id="IM",
+        file_path=str(file_path),
+        file_name="uploaded-im.pdf",
+        file_size_bytes=len(pdf_bytes),
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+    )
+    async_session.add(attachment)
+    await async_session.flush()
+
+    material = MarketingMaterial(
+        transaction_id=uuid.UUID(txn_id),
+        doc_type=MarketingDocType.IM,
+        title="Uploaded IM",
+        status=MarketingDocStatus.READY,
+        source_mode="UPLOADED",
+        attachment_id=attachment.id,
+        file_path=str(file_path),
+        file_name="uploaded-im.pdf",
+        file_size_bytes=len(pdf_bytes),
+        quality_status="SKIPPED",
+    )
+    async_session.add(material)
+    await async_session.commit()
+
+    resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/{material.id}/download"
+    )
+    assert resp.status_code == 200
+    assert resp.content == pdf_bytes
+    assert resp.headers["content-type"] == "application/pdf"
+
+
+@pytest.mark.asyncio
 async def test_cross_transaction_isolation(client, _txn, _other_txn):
     """다른 거래의 자료는 접근 불가 — 404."""
     txn_id = _txn["id"]

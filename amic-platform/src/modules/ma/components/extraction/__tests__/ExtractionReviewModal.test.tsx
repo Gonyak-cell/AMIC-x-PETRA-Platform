@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DocumentExtraction } from "@/modules/ma/types/document_extraction";
 import { renderWithProviders, screen } from "@/test/test-utils";
@@ -6,12 +6,33 @@ import { renderWithProviders, screen } from "@/test/test-utils";
 import ExtractionReviewModal from "../ExtractionReviewModal";
 
 const mutateMock = vi.fn();
+const emptyBuyers: [] = [];
+const emptyNdas: [] = [];
+const emptyEngagements: [] = [];
+const transactionData = {
+  client_name: "Client Co",
+};
 
 vi.mock("@/modules/ma/hooks/useDocumentExtraction", () => ({
   useConfirmExtraction: () => ({
     mutate: mutateMock,
     isPending: false,
   }),
+  useExtraction: () => ({
+    data: undefined,
+  }),
+}));
+
+vi.mock("@/modules/ma/hooks/useTransactions", () => ({
+  useBuyers: () => ({ data: emptyBuyers }),
+  useEngagements: () => ({ data: emptyEngagements }),
+  useTransaction: () => ({
+    data: transactionData,
+  }),
+}));
+
+vi.mock("@/modules/ma/hooks/useNdas", () => ({
+  useNdas: () => ({ data: emptyNdas }),
 }));
 
 const baseExtraction: DocumentExtraction = {
@@ -44,6 +65,10 @@ function renderModal(overrides: Partial<DocumentExtraction> = {}) {
 }
 
 describe("ExtractionReviewModal", () => {
+  beforeEach(() => {
+    mutateMock.mockReset();
+  });
+
   it("shows an empty-result state instead of review pending when extracted data is blank", () => {
     renderModal({
       extracted_data: {},

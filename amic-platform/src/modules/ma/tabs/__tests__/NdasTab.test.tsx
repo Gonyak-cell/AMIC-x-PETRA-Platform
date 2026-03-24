@@ -15,6 +15,14 @@ vi.mock("@/modules/ma/hooks/useTransactions", () => ({
   useBuyers: () => ({ data: [] }),
 }));
 
+vi.mock("@/modules/ma/hooks/useAttachmentExtractionFlow", () => ({
+  useAttachmentExtractionFlow: () => ({
+    activeReview: null,
+    closeReview: vi.fn(),
+    startExtractionFromUpload: vi.fn(),
+  }),
+}));
+
 vi.mock("@/modules/ma/hooks/useAttachments", () => ({
   useAttachments: () => ({ data: { items: [] } }),
   useUploadAttachment: () => ({ mutate: vi.fn(), isPending: false }),
@@ -41,6 +49,10 @@ vi.mock("@/modules/ma/components/FileUploadZone", () => ({
 
 vi.mock("@/modules/ma/components/NdaVersionPanel", () => ({
   default: () => <div>nda-version-panel</div>,
+}));
+
+vi.mock("@/modules/ma/components/extraction/ExtractionReviewModal", () => ({
+  default: () => null,
 }));
 
 describe("NdasTab", () => {

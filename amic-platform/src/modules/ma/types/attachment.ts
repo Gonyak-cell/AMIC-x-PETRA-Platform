@@ -29,6 +29,7 @@ export interface AttachmentListResponse {
 }
 
 export type AttachmentEntityType =
+  | "ENGAGEMENT"
   | "MARKETING_MATERIAL"
   | "FINANCIAL_MODEL"
   | "NDA"
@@ -43,6 +44,7 @@ export type AttachmentEntityType =
 
 /** 탭 ID → entity_type 매핑. */
 export const TAB_ENTITY_TYPE_MAP: Record<string, AttachmentEntityType> = {
+  engagements: "ENGAGEMENT",
   "marketing-materials": "MARKETING_MATERIAL",
   models: "FINANCIAL_MODEL",
   ndas: "NDA",

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import JWTClaims, get_jwt_claims
 from app.main import app
+from app.models.working_group import WorkingGroupMember
 
 SAMPLE_TXN = {
     "name": "프로젝트 감마",
@@ -77,6 +82,19 @@ async def _create_txn(client, **overrides) -> str:
     resp = await client.post("/api/v1/transactions", json=body)
     assert resp.status_code == 201
     return resp.json()["id"]
+
+
+async def _set_member_created_at(
+    async_session: AsyncSession,
+    member_id: str,
+    created_at: datetime,
+) -> None:
+    await async_session.execute(
+        update(WorkingGroupMember)
+        .where(WorkingGroupMember.id == uuid.UUID(member_id))
+        .values(created_at=created_at, updated_at=created_at)
+    )
+    await async_session.commit()
 
 
 async def test_create_engagement(client):
@@ -188,6 +206,98 @@ async def test_list_members(client):
     resp = await client.get(f"/api/v1/transactions/{txn_id}/members")
     assert resp.status_code == 200
     assert len(resp.json()) == 2
+
+
+async def test_list_members_orders_by_role_priority(client):
+    txn_id = await _create_txn(client)
+    payloads = [
+        _member_payload(
+            name="최산업",
+            email="choi@industry.co.kr",
+            role="INDUSTRY_EXPERT",
+        ),
+        _member_payload(
+            name="김리드",
+            email="kim@lead.co.kr",
+            role="LEAD_ADVISOR",
+        ),
+        _member_payload(
+            name="오기타",
+            email="oh@other.co.kr",
+            role="OTHER",
+        ),
+        _member_payload(
+            name="정세무",
+            email="jung@tax.co.kr",
+            role="TAX_ADVISOR",
+        ),
+        _member_payload(
+            name="박회계",
+            email="park@accounting.co.kr",
+            role="ACCOUNTING_ADVISOR",
+        ),
+        _member_payload(
+            name="윤가치",
+            email="yoon@valuation.co.kr",
+            role="VALUATION_ADVISOR",
+        ),
+        _member_payload(
+            name="한법률",
+            email="han@law.co.kr",
+            role="LEGAL_COUNSEL",
+        ),
+    ]
+
+    for payload in payloads:
+        resp = await client.post(f"/api/v1/transactions/{txn_id}/members", json=payload)
+        assert resp.status_code == 201
+
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/members")
+    assert resp.status_code == 200
+    assert [member["role"] for member in resp.json()] == [
+        "LEAD_ADVISOR",
+        "LEGAL_COUNSEL",
+        "ACCOUNTING_ADVISOR",
+        "VALUATION_ADVISOR",
+        "TAX_ADVISOR",
+        "INDUSTRY_EXPERT",
+        "OTHER",
+    ]
+
+
+async def test_list_members_keeps_created_order_within_same_role(client, async_session):
+    txn_id = await _create_txn(client)
+    first_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/members",
+        json=_member_payload(
+            name="김법률",
+            email="kim.legal@law.co.kr",
+            role="LEGAL_COUNSEL",
+        ),
+    )
+    second_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/members",
+        json=_member_payload(
+            name="박법률",
+            email="park.legal@law.co.kr",
+            role="LEGAL_COUNSEL",
+        ),
+    )
+
+    assert first_resp.status_code == 201
+    assert second_resp.status_code == 201
+
+    created_base = datetime(2026, 1, 1, tzinfo=UTC)
+    await _set_member_created_at(async_session, first_resp.json()["id"], created_base)
+    await _set_member_created_at(
+        async_session,
+        second_resp.json()["id"],
+        created_base + timedelta(minutes=1),
+    )
+
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/members")
+    assert resp.status_code == 200
+    assert [member["name"] for member in resp.json()] == ["김법률", "박법률"]
 
 
 async def test_update_member_as_manager(client):

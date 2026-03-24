@@ -1,5 +1,5 @@
-import { type ChangeEvent, useCallback, useRef, useState } from "react";
-import { FileText, Send, Trash2, Upload } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { FileText, Send, Trash2 } from "lucide-react";
 
 import {
   Badge,
@@ -10,13 +10,15 @@ import {
   Modal,
 } from "@/components/ui";
 import DistributionModal from "@/modules/ma/components/DistributionModal";
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import MMSourceRoutingPreviewPanel from "@/modules/ma/components/marketing/MMSourceRoutingPreviewPanel";
 import {
   getAttachmentDownloadUrl,
   useAttachments,
   useDeleteAttachment,
-  useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
+import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 import {
   getDownloadUrl,
   useCreateMarketingMaterial,
@@ -36,10 +38,6 @@ import {
   QUALITY_STATUS_VARIANT,
 } from "@/modules/ma/types/marketing_material";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
-import {
-  openAttachmentFilePicker,
-  uploadAttachmentFiles,
-} from "@/modules/ma/components/attachmentUploadUtils";
 
 interface MarketingMaterialsTabProps {
   txnId: string;
@@ -152,6 +150,11 @@ interface MarketingMaterialActionModalProps {
   generating: boolean;
   onClose: () => void;
   onGenerate: (docType: MarketingDocType) => void;
+  onUploaded: (
+    attachment: Attachment,
+    file: File,
+    docType: MarketingDocType,
+  ) => Promise<void> | void;
 }
 
 function MarketingMaterialActionModal({
@@ -162,33 +165,9 @@ function MarketingMaterialActionModal({
   generating,
   onClose,
   onGenerate,
+  onUploaded,
 }: MarketingMaterialActionModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadMutation = useUploadAttachment(txnId);
   const meta = DOC_TYPE_ACTION_META[docType];
-
-  const handlePickFile = useCallback(() => {
-    openAttachmentFilePicker(fileInputRef);
-  }, []);
-
-  const handleFileSelect = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files ?? []);
-      if (files.length === 0) {
-        return;
-      }
-
-      await uploadAttachmentFiles({
-        files,
-        entityType: "MARKETING_MATERIAL",
-        entityId: docType,
-        uploadMutation,
-      });
-      event.target.value = "";
-      onClose();
-    },
-    [docType, onClose, uploadMutation],
-  );
 
   return (
     <Modal
@@ -202,15 +181,6 @@ function MarketingMaterialActionModal({
         </Button>
       }
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="sr-only"
-        multiple
-        tabIndex={-1}
-        onChange={handleFileSelect}
-      />
-
       <div className="space-y-4">
         <div>
           <p className="text-sm font-semibold text-text-dark">
@@ -233,7 +203,6 @@ function MarketingMaterialActionModal({
             variant="primary"
             className="h-auto min-h-[132px] flex-col items-stretch justify-start px-4 py-4 text-left whitespace-normal"
             loading={generating}
-            disabled={uploadMutation.isPending}
             onClick={() => onGenerate(docType)}
           >
             <div className="flex w-full items-center gap-2 text-sm font-semibold">
@@ -245,22 +214,28 @@ function MarketingMaterialActionModal({
             </p>
           </Button>
 
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-auto min-h-[132px] flex-col items-stretch justify-start px-4 py-4 text-left whitespace-normal"
-            loading={uploadMutation.isPending}
-            disabled={generating}
-            onClick={handlePickFile}
-          >
-            <div className="flex w-full items-center gap-2 text-sm font-semibold">
-              <Upload className="h-4 w-4" />
-              <span>{meta.uploadTitle}</span>
+          <div className="rounded-lg border border-gray-border bg-bg-cool/30">
+            <div className="border-b border-gray-border px-4 py-3">
+              <p className="text-sm font-semibold text-text-dark">
+                {meta.uploadTitle}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-text-secondary">
+                {meta.uploadDescription}
+              </p>
             </div>
-            <p className="w-full whitespace-normal break-keep text-xs leading-5 text-text-secondary">
-              {meta.uploadDescription}
-            </p>
-          </Button>
+            <FileUploadZone
+              txnId={txnId}
+              entityType="MARKETING_MATERIAL"
+              entityId={docType}
+              embedded
+              embeddedLabel=""
+              uploadLabel="Upload Files"
+              emptyDescription="Drop TM/DM/IM PDF files here to OCR and prefill metadata."
+              emptyHint="PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only."
+              embeddedSeparator={false}
+              onUploaded={(attachment, file) => onUploaded(attachment, file, docType)}
+            />
+          </div>
         </div>
       </div>
     </Modal>
@@ -282,23 +257,42 @@ export default function MarketingMaterialsTab({
   const createMarketingMaterial = useCreateMarketingMaterial(txnId);
   const deleteMarketingMaterial = useDeleteMarketingMaterial(txnId);
   const deleteAttachment = useDeleteAttachment(txnId);
+  const { activeReview, closeReview, startExtractionFromUpload } =
+    useAttachmentExtractionFlow(txnId);
   const [distTarget, setDistTarget] = useState<MarketingMaterial | null>(null);
   const [actionTarget, setActionTarget] = useState<MarketingDocType | null>(
     null,
   );
   const isFlatSurface = surface === "flat";
 
-  const generatedMaterials = marketingMaterials ?? [];
+  const managedMaterials = marketingMaterials ?? [];
+  const linkedAttachmentIds = useMemo(
+    () =>
+      new Set(
+        managedMaterials
+          .map((material) => material.attachment_id)
+          .filter((attachmentId): attachmentId is string => Boolean(attachmentId)),
+      ),
+    [managedMaterials],
+  );
+  const generatedMaterials = managedMaterials;
+  const uploadedMaterialRecords = managedMaterials.filter(
+    (material) => material.source_mode === "UPLOADED",
+  );
   const externalUploads: ExternalMarketingUpload[] = (
     uploadedMaterials?.items ?? []
-  ).map((attachment) => ({
-    ...attachment,
-    docType: resolveMarketingDocType(attachment.entity_id),
-  }));
+  )
+    .filter((attachment) => !linkedAttachmentIds.has(attachment.id))
+    .map((attachment) => ({
+      ...attachment,
+      docType: resolveMarketingDocType(attachment.entity_id),
+    }));
 
   const hasGeneratedMaterials = generatedMaterials.length > 0;
+  const hasUploadedMaterialRecords = uploadedMaterialRecords.length > 0;
   const hasExternalUploads = externalUploads.length > 0;
-  const hasAnyMaterials = hasGeneratedMaterials || hasExternalUploads;
+  const hasAnyMaterials =
+    hasGeneratedMaterials || hasUploadedMaterialRecords || hasExternalUploads;
 
   const handleGenerateMaterial = useCallback(
     (docType: MarketingDocType) => {
@@ -310,6 +304,26 @@ export default function MarketingMaterialsTab({
       );
     },
     [createMarketingMaterial, txn?.code_name],
+  );
+
+  const handleUploadedMaterial = useCallback(
+    async (
+      attachment: Attachment,
+      file: File,
+      docType: MarketingDocType,
+    ) => {
+      await startExtractionFromUpload({
+        attachment,
+        file,
+        docCategoryHint: "TEASER_IM",
+        reviewContext: {
+          source: "marketing-material",
+          marketingDocType: docType,
+        },
+      });
+      setActionTarget(null);
+    },
+    [startExtractionFromUpload],
   );
 
   return (
@@ -634,8 +648,17 @@ export default function MarketingMaterialsTab({
           generating={createMarketingMaterial.isPending}
           onClose={() => setActionTarget(null)}
           onGenerate={handleGenerateMaterial}
+          onUploaded={handleUploadedMaterial}
         />
       )}
+
+      <ExtractionReviewModal
+        txnId={txnId}
+        extraction={activeReview?.extraction ?? null}
+        reviewContext={activeReview?.context}
+        open={activeReview !== null}
+        onClose={closeReview}
+      />
     </div>
   );
 }
