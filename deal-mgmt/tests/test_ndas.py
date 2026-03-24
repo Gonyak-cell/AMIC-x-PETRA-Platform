@@ -105,6 +105,10 @@ async def test_update_nda_signed(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "SIGNED"
 
+    buyer_resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}")
+    assert buyer_resp.status_code == 200
+    assert buyer_resp.json()["status"] == "NDA_SIGNED"
+
 
 async def test_update_nda_404(client):
     txn_id, _ = await _create_txn_and_buyer(client)

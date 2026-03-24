@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { maApi } from "@/api/maClient";
 import type {
   NDA,
   NDACreate,
-  NDAUpdate,
   NDASummary,
+  NDAUpdate,
   NdaPartyType,
 } from "@/modules/ma/types/nda";
 
@@ -15,8 +15,27 @@ interface UseNdasOptions {
   active?: boolean;
 }
 
+function invalidateNdaRelatedQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  txnId: string,
+) {
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "ndas"],
+  });
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "buyers"],
+  });
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+  });
+  qc.invalidateQueries({
+    queryKey: ["ma", "transactions", txnId, "workspace-summary"],
+  });
+}
+
 export function useNdas(txnId: string, options: UseNdasOptions = {}) {
   const { buyerId, partyType, active = true } = options;
+
   return useQuery<NDA[]>({
     queryKey: ["ma", "transactions", txnId, "ndas", { buyerId, partyType }],
     queryFn: async () => {
@@ -38,6 +57,7 @@ export function useNdaSummary(
   options: Pick<UseNdasOptions, "partyType" | "active"> = {},
 ) {
   const { partyType, active = true } = options;
+
   return useQuery<NDASummary>({
     queryKey: ["ma", "transactions", txnId, "ndas", "summary", { partyType }],
     queryFn: async () => {
@@ -52,15 +72,14 @@ export function useNdaSummary(
 
 export function useCreateNda(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async (body: NDACreate) => {
       const { data } = await maApi.post(`/transactions/${txnId}/ndas`, body);
       return data as NDA;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "ndas"],
-      });
+      invalidateNdaRelatedQueries(qc, txnId);
       toast.success("NDA가 생성되었습니다.");
     },
     onError: () => {
@@ -71,6 +90,7 @@ export function useCreateNda(txnId: string) {
 
 export function useUpdateNda(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ ndaId, body }: { ndaId: string; body: NDAUpdate }) => {
       const { data } = await maApi.patch(
@@ -80,9 +100,7 @@ export function useUpdateNda(txnId: string) {
       return data as NDA;
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "ndas"],
-      });
+      invalidateNdaRelatedQueries(qc, txnId);
       toast.success("NDA가 수정되었습니다.");
     },
     onError: () => {
@@ -93,14 +111,13 @@ export function useUpdateNda(txnId: string) {
 
 export function useDeleteNda(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async (ndaId: string) => {
       await maApi.delete(`/transactions/${txnId}/ndas/${ndaId}`);
     },
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: ["ma", "transactions", txnId, "ndas"],
-      });
+      invalidateNdaRelatedQueries(qc, txnId);
       toast.success("NDA가 삭제되었습니다.");
     },
     onError: () => {

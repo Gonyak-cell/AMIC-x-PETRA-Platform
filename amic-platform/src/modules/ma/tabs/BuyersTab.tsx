@@ -4,6 +4,7 @@ import {
   useMemo,
   useCallback,
   useDeferredValue,
+  useRef,
   lazy,
   Suspense,
 } from "react";
@@ -38,6 +39,9 @@ import {
   BUYER_TYPE_OPTIONS,
   BUYER_TIER_OPTIONS,
   DEAL_ROLE_OPTIONS,
+  FUNNEL_CIM_AND_AFTER,
+  FUNNEL_DD_AND_AFTER,
+  FUNNEL_NDA_AND_AFTER,
   isShortListed,
   buildStageMap,
   MARKETING_STAGES,
@@ -50,7 +54,12 @@ import type { KpiFilter } from "@/modules/ma/components/buyers/ShortListOverview
 import BuyerCompanyLogo from "@/modules/ma/components/buyers/BuyerCompanyLogo";
 import BuyerTierBadge from "@/modules/ma/components/buyers/BuyerTierBadge";
 import DealRoleBadge from "@/modules/ma/components/buyers/DealRoleBadge";
-import FunnelNav from "@/modules/ma/components/buyers/FunnelNav";
+import FunnelNav, {
+  type FunnelStep,
+  type FunnelStepId,
+} from "@/modules/ma/components/buyers/FunnelNav";
+import BuyerNdaStageBoard from "@/modules/ma/components/buyers/BuyerNdaStageBoard";
+import BuyerNdaExecutionPanel from "@/modules/ma/components/buyers/BuyerNdaExecutionPanel";
 import ShortListSummaryBar from "@/modules/ma/components/buyers/ShortListSummaryBar";
 import LongListFilters from "@/modules/ma/components/buyers/LongListFilters";
 import type { LongListFilterState } from "@/modules/ma/components/buyers/LongListFilters";
@@ -113,6 +122,32 @@ function resolveBuyerNdaSignedDate(nda: NDA): string | null {
   return null;
 }
 
+function hasTierDecision(buyer: BuyerCandidate): boolean {
+  return buyer.tier !== null;
+}
+
+function isNdaCandidateTier(tier: BuyerCandidate["tier"]): boolean {
+  return tier === "TIER_1" || tier === "TIER_2" || tier === "TIER_3";
+}
+
+function hasBuyerReachedSignedStage(
+  buyer: BuyerCandidate,
+  nda?: NDA,
+): boolean {
+  return nda?.status === "SIGNED" || FUNNEL_NDA_AND_AFTER.has(buyer.status);
+}
+
+function compareFunnelStep(a: FunnelStepId, b: FunnelStepId): number {
+  const order: Record<FunnelStepId, number> = {
+    "long-list": 0,
+    nda: 1,
+    "short-list": 2,
+    im: 3,
+    dd: 4,
+  };
+  return order[a] - order[b];
+}
+
 export default function BuyersTab({
   txnId,
   canWrite,
@@ -147,9 +182,8 @@ export default function BuyersTab({
     return null;
   }, [txn?.corporate_info]);
 
-  const [buyerSubTab, setBuyerSubTab] = useState<"long-list" | "short-list">(
-    "long-list",
-  );
+  const [buyerSubTab, setBuyerSubTab] =
+    useState<FunnelStepId>("long-list");
   const [showSIMappingModal, setShowSIMappingModal] = useState(false);
   const [showFIRecommendModal, setShowFIRecommendModal] = useState(false);
   const [manualBuyerKind, setManualBuyerKind] =
@@ -166,6 +200,9 @@ export default function BuyersTab({
 
   // Short List detail panel state
   const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
+  const [selectedNdaBuyerId, setSelectedNdaBuyerId] = useState<string | null>(
+    null,
+  );
   const [buyerDetailInitialTab, setBuyerDetailInitialTab] =
     useState<BuyerDetailTabId>("summary");
   const [shortListViewMode, setShortListViewMode] =
@@ -174,6 +211,13 @@ export default function BuyersTab({
   const [masterListOpen, setMasterListOpen] = useState(false);
   const [headerActionPortalTarget, setHeaderActionPortalTarget] =
     useState<HTMLElement | null>(null);
+  const autoStepRef = useRef<{
+    ndaUnlocked: boolean;
+    shortListUnlocked: boolean;
+  }>({
+    ndaUnlocked: false,
+    shortListUnlocked: false,
+  });
 
   // Long List filter state
   const [longListFilters, setLongListFilters] = useState<LongListFilterState>({
@@ -392,6 +436,37 @@ export default function BuyersTab({
   );
 
   const allBuyers = useMemo(() => buyers ?? [], [buyers]);
+  const buyerNdaMap = useMemo(() => {
+    const entries = new Map<string, NDA>();
+    for (const nda of buyerNdas ?? []) {
+      const buyerId = nda.buyer_candidate_id;
+      if (!buyerId) continue;
+
+      const existing = entries.get(buyerId);
+      if (!existing || existing.created_at < nda.created_at) {
+        entries.set(buyerId, nda);
+      }
+    }
+    return entries;
+  }, [buyerNdas]);
+  const hasAllTierDecisions = useMemo(
+    () => allBuyers.length > 0 && allBuyers.every(hasTierDecision),
+    [allBuyers],
+  );
+  const ndaStageBuyers = useMemo(
+    () => allBuyers.filter((buyer) => isNdaCandidateTier(buyer.tier)),
+    [allBuyers],
+  );
+  const signedNdaBuyers = useMemo(
+    () =>
+      ndaStageBuyers.filter((buyer) =>
+        hasBuyerReachedSignedStage(buyer, buyerNdaMap.get(buyer.id)),
+      ),
+    [buyerNdaMap, ndaStageBuyers],
+  );
+  const ndaStepUnlocked = hasAllTierDecisions && ndaStageBuyers.length > 0;
+  const shortListUnlocked =
+    ndaStageBuyers.length > 0 && signedNdaBuyers.length === ndaStageBuyers.length;
   const realShortList = useMemo(
     () => allBuyers.filter(isShortListed),
     [allBuyers],
@@ -410,6 +485,35 @@ export default function BuyersTab({
       setDevMockOverview(mod.createDevMockOverview());
     });
   }, [txnId]);
+
+  useEffect(() => {
+    if (isBuyersLoading) return;
+
+    const previous = autoStepRef.current;
+
+    if (!ndaStepUnlocked) {
+      if (buyerSubTab !== "long-list") {
+        setBuyerSubTab("long-list");
+      }
+    } else if (shortListUnlocked) {
+      if (!previous.shortListUnlocked) {
+        setBuyerSubTab("short-list");
+      }
+    } else if (!previous.ndaUnlocked || buyerSubTab === "short-list") {
+      setBuyerSubTab("nda");
+    }
+
+    autoStepRef.current = {
+      ndaUnlocked: ndaStepUnlocked,
+      shortListUnlocked,
+    };
+  }, [buyerSubTab, isBuyersLoading, ndaStepUnlocked, shortListUnlocked]);
+
+  useEffect(() => {
+    if (buyerSubTab !== "nda") {
+      setSelectedNdaBuyerId(null);
+    }
+  }, [buyerSubTab]);
 
   const shortListBuyers =
     realShortList.length > 0 ? realShortList : devMockBuyers;
@@ -491,14 +595,72 @@ export default function BuyersTab({
     deferredSearch,
   ]);
 
+  const funnelSteps = useMemo((): FunnelStep[] => {
+    let cim = 0;
+    let dd = 0;
+
+    for (const buyer of allBuyers) {
+      if (FUNNEL_CIM_AND_AFTER.has(buyer.status)) cim++;
+      if (FUNNEL_DD_AND_AFTER.has(buyer.status)) dd++;
+    }
+
+    return [
+      {
+        id: "long-list",
+        label: "Long List",
+        count: allBuyers.length,
+        clickable: true,
+      },
+      {
+        id: "nda",
+        label: "NDA 체결",
+        count: ndaStageBuyers.length,
+        clickable: ndaStepUnlocked,
+      },
+      {
+        id: "short-list",
+        label: "Short List",
+        count: signedNdaBuyers.length,
+        clickable: shortListUnlocked,
+      },
+      {
+        id: "im",
+        label: "IM 발송",
+        count: cim,
+        clickable: false,
+      },
+      {
+        id: "dd",
+        label: "DD 진행",
+        count: dd,
+        clickable: false,
+      },
+    ];
+  }, [
+    allBuyers,
+    ndaStageBuyers.length,
+    ndaStepUnlocked,
+    shortListUnlocked,
+    signedNdaBuyers.length,
+  ]);
+
   // Derive selected buyer and its stage summary for SlidePanel
   const selectedBuyer = useMemo(
     () => allBuyers.find((b) => b.id === selectedBuyerId) ?? null,
     [allBuyers, selectedBuyerId],
   );
+  const selectedNdaBuyer = useMemo(
+    () => allBuyers.find((b) => b.id === selectedNdaBuyerId) ?? null,
+    [allBuyers, selectedNdaBuyerId],
+  );
   const selectedStageSummary = useMemo(
     () => (selectedBuyerId ? stageSummaryMap.get(selectedBuyerId) : undefined),
     [selectedBuyerId, stageSummaryMap],
+  );
+  const selectedNdaBuyerNda = useMemo(
+    () =>
+      selectedNdaBuyerId ? buyerNdaMap.get(selectedNdaBuyerId) ?? null : null,
+    [buyerNdaMap, selectedNdaBuyerId],
   );
   const showShortListToolbar = !isBuyersLoading && buyerSubTab === "short-list";
   const showHeaderExcelAction = !isBuyersLoading && buyerSubTab === "long-list";
@@ -580,9 +742,20 @@ export default function BuyersTab({
       <div className="space-y-4">
         {/* Funnel Navigation (탭 + 퍼널 통합) */}
         <FunnelNav
-          buyers={allBuyers}
+          steps={funnelSteps}
           activeStep={buyerSubTab}
-          onStepChange={setBuyerSubTab}
+          onStepChange={(nextStep) => {
+            if (compareFunnelStep(nextStep, "nda") >= 0 && !ndaStepUnlocked) {
+              return;
+            }
+            if (
+              compareFunnelStep(nextStep, "short-list") >= 0 &&
+              !shortListUnlocked
+            ) {
+              return;
+            }
+            setBuyerSubTab(nextStep);
+          }}
         />
 
         {/* 인라인 KPI 바 + 액션 버튼 */}
@@ -724,6 +897,24 @@ export default function BuyersTab({
                 existingCompanyNames={allBuyers.map((b) => b.company_name)}
               />
             )}
+          </>
+        )}
+
+        {buyerSubTab === "nda" && (
+          <>
+            <BuyerNdaStageBoard
+              buyers={ndaStageBuyers}
+              ndaByBuyerId={buyerNdaMap}
+              onSelectBuyer={(buyerId) => setSelectedNdaBuyerId(buyerId)}
+            />
+            <BuyerNdaExecutionPanel
+              open={!!selectedNdaBuyer}
+              onClose={() => setSelectedNdaBuyerId(null)}
+              txnId={txnId}
+              buyer={selectedNdaBuyer}
+              nda={selectedNdaBuyerNda}
+              canWrite={canWrite}
+            />
           </>
         )}
 

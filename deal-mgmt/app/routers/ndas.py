@@ -10,10 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
-from app.models.enums import AuditAction, NdaPartyType, NdaStatus
+from app.models.buyer_candidate import BuyerCandidate
+from app.models.enums import AuditAction, BuyerCandidateStatus, NdaPartyType, NdaStatus
 from app.models.nda import NDA
 from app.schemas.nda import NDACreate, NDAOut, NDASummary, NDAUpdate
 from app.services import audit_service, transaction_service
+from app.services.buyer_status_service import auto_advance_buyer_status
 
 router = APIRouter(prefix="/transactions/{txn_id}/ndas", tags=["NDAs"])
 
@@ -173,6 +175,20 @@ async def update_nda(
     old_value = {key: getattr(nda, key) for key in update_data}
     for key, value in update_data.items():
         setattr(nda, key, value)
+
+    if (
+        nda.party_type == NdaPartyType.BUYER
+        and nda.buyer_candidate_id is not None
+        and nda.status == NdaStatus.SIGNED
+    ):
+        buyer = await db.get(BuyerCandidate, nda.buyer_candidate_id)
+        if buyer is not None:
+            await auto_advance_buyer_status(
+                db,
+                buyer,
+                BuyerCandidateStatus.NDA_SIGNED,
+                claims.email,
+            )
 
     await audit_service.record(
         db,

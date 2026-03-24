@@ -43,7 +43,7 @@ const mockBuyer = {
   contact_phone: null,
   buyer_type: "STRATEGIC",
   status: "CONTACTED",
-  tier: "TIER_1",
+  tier: null,
   corp_code: null,
   deal_role: "SOLE_BUYER",
   is_short_listed: false,
@@ -287,6 +287,160 @@ describe("BuyersTab", () => {
     expect(shortListIndex).toBeGreaterThanOrEqual(0);
     expect(longListIndex).toBeLessThan(ndaIndex);
     expect(ndaIndex).toBeLessThan(shortListIndex);
+  });
+
+  it("auto-advances into the NDA step once every buyer has a tier decision", async () => {
+    const tieredBuyer = {
+      ...mockBuyer,
+      tier: "TIER_1",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [tieredBuyer], total: 1 });
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /NDA/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    expect(screen.getByText("Tier 1")).toBeInTheDocument();
+  });
+
+  it("opens the NDA panel with an upload CTA when no NDA exists yet", async () => {
+    const user = userEvent.setup();
+    const tieredBuyer = {
+      ...mockBuyer,
+      tier: "TIER_1",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [tieredBuyer], total: 1 });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /NDA/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: tieredBuyer.company_name }));
+
+    expect(
+      await screen.findByText("업로드된 NDA가 없습니다"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "NDA 업로드" }),
+    ).toBeInTheDocument();
+  });
+
+  it("signs the current NDA from the panel and advances to Short List", async () => {
+    const user = userEvent.setup();
+    const tieredBuyer = {
+      ...mockBuyer,
+      tier: "TIER_1",
+    };
+    let ndas = [
+      {
+        id: "nda-1",
+        transaction_id: "txn-1",
+        party_type: "BUYER",
+        buyer_candidate_id: tieredBuyer.id,
+        nda_type: "MUTUAL",
+        status: "DRAFT",
+        sent_at: null,
+        signed_at: null,
+        expires_at: null,
+        document_url: null,
+        counterparty_name: tieredBuyer.company_name,
+        jurisdiction: null,
+        confidentiality_period_months: null,
+        notes: null,
+        created_at: "2026-03-01T00:00:00Z",
+        updated_at: "2026-03-01T00:00:00Z",
+      },
+    ];
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [tieredBuyer], total: 1 });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json(ndas);
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas/:ndaId/markups", () => {
+        return HttpResponse.json({
+          items: [
+            {
+              id: "markup-1",
+              nda_id: "nda-1",
+              version_label: "v1",
+              version_number: 1,
+              version_date: "2026-03-01",
+              source_party: null,
+              markup_type: null,
+              file_name: "nda-v1.pdf",
+              file_size_bytes: 1024,
+              changes_summary: "초안 검토본",
+              key_changes: null,
+              redline_issues_count: null,
+              base_version_id: null,
+              created_by_email: "advisor@test.com",
+              created_at: "2026-03-01T00:00:00Z",
+              updated_at: "2026-03-01T00:00:00Z",
+              has_file: true,
+              has_redline: false,
+            },
+          ],
+          total: 1,
+          limit: 50,
+          offset: 0,
+        });
+      }),
+      http.patch("*/api/ma/transactions/:txnId/ndas/:ndaId", async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        ndas = ndas.map((nda) => ({
+          ...nda,
+          status: (body.status as string | undefined) ?? nda.status,
+          signed_at: (body.signed_at as string | undefined) ?? nda.signed_at,
+          updated_at: "2026-03-10T00:00:00Z",
+        }));
+        return HttpResponse.json(ndas[0]);
+      }),
+    );
+
+    renderTab();
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /NDA/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: tieredBuyer.company_name }));
+    await user.click(await screen.findByRole("button", { name: "날인" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /Short List/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
   });
 
   it("hides FI and SI automation buttons for read-only users", async () => {

@@ -6,7 +6,6 @@ import {
   useNdas,
   useUpdateNda,
 } from "@/modules/ma/hooks/useNdas";
-import { useUpdateBuyer } from "@/modules/ma/hooks/useTransactions";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
@@ -37,18 +36,6 @@ function createInitialForm(buyerId: string): NDACreate {
   };
 }
 
-function shouldAdvanceToSent(status: BuyerCandidate["status"]) {
-  return status === "IDENTIFIED" || status === "CONTACTED";
-}
-
-function shouldAdvanceToSigned(status: BuyerCandidate["status"]) {
-  return (
-    status === "IDENTIFIED" ||
-    status === "CONTACTED" ||
-    status === "NDA_SENT"
-  );
-}
-
 export default function BuyerNdaSection({
   txnId,
   buyer,
@@ -61,7 +48,6 @@ export default function BuyerNdaSection({
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
-  const updateBuyer = useUpdateBuyer(txnId);
 
   const [showModal, setShowModal] = useState(false);
   const [versionPanelNdaId, setVersionPanelNdaId] = useState<string | null>(
@@ -81,51 +67,18 @@ export default function BuyerNdaSection({
     [ndas],
   );
 
-  const maybeAdvanceBuyerStatus = (nextStatus: NdaStatus) => {
-    if (!canWrite) return;
-
-    if (nextStatus === "SIGNED" && shouldAdvanceToSigned(buyer.status)) {
-      updateBuyer.mutate({
-        buyerId: buyer.id,
-        body: { status: "NDA_SIGNED" },
-      });
-      return;
-    }
-
-    if (nextStatus === "SENT" && shouldAdvanceToSent(buyer.status)) {
-      updateBuyer.mutate({
-        buyerId: buyer.id,
-        body: { status: "NDA_SENT" },
-      });
-    }
-  };
-
   const handleStatusChange = (ndaId: string, status: NdaStatus) => {
-    updateNda.mutate(
-      {
-        ndaId,
-        body: { status },
-      },
-      {
-        onSuccess: () => maybeAdvanceBuyerStatus(status),
-      },
-    );
+    updateNda.mutate({
+      ndaId,
+      body: { status },
+    });
   };
 
   const handleSignedDateChange = (ndaId: string, signedAt?: string) => {
-    updateNda.mutate(
-      {
-        ndaId,
-        body: { signed_at: signedAt },
-      },
-      {
-        onSuccess: () => {
-          if (signedAt) {
-            maybeAdvanceBuyerStatus("SIGNED");
-          }
-        },
-      },
-    );
+    updateNda.mutate({
+      ndaId,
+      body: { signed_at: signedAt },
+    });
   };
 
   return (
