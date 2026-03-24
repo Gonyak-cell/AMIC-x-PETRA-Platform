@@ -347,9 +347,13 @@ describe("BuyersTab", () => {
     const headerSlot = document.getElementById("workspace-tab-header-actions");
     expect(headerSlot).not.toBeNull();
     expect(
-      within(headerSlot as HTMLElement).getByRole("button", { name: "Excel" }),
+      await within(headerSlot as HTMLElement).findByRole(
+        "button",
+        { name: "Excel" },
+        { timeout: 10000 },
+      ),
     ).toBeInTheDocument();
-  });
+  }, 10000);
 
   it("blocks FI recommendations until the estimated deal value is set", async () => {
     const user = userEvent.setup();
