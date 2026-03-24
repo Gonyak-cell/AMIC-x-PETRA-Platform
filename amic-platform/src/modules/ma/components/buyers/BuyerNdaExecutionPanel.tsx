@@ -76,10 +76,10 @@ export default function BuyerNdaExecutionPanel({
   const updateNda = useUpdateNda(txnId);
   const deleteMarkup = useDeleteNdaMarkup(txnId, effectiveNdaId);
   const { data, isLoading, isError } = useNdaMarkups(txnId, effectiveNdaId);
-  const markups = data?.items ?? [];
+  const markups = data?.items;
 
   const sortedMarkups = useMemo(
-    () => [...markups].sort((a, b) => b.version_number - a.version_number),
+    () => [...(markups ?? [])].sort((a, b) => b.version_number - a.version_number),
     [markups],
   );
   const selectedMarkup =
@@ -159,7 +159,7 @@ export default function BuyerNdaExecutionPanel({
       const nextNdaId = await ensureNdaId();
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("version_label", getNextVersionLabel(markups));
+      formData.append("version_label", getNextVersionLabel(sortedMarkups));
       formData.append("version_date", getLocalDateString());
 
       const { data: uploaded } = await maApi.post<NdaMarkup>(
@@ -188,7 +188,7 @@ export default function BuyerNdaExecutionPanel({
   }
 
   async function handleSign() {
-    if (!canWrite || !buyer || !effectiveNdaId || markups.length === 0) {
+    if (!canWrite || !buyer || !effectiveNdaId || sortedMarkups.length === 0) {
       return;
     }
 
@@ -226,7 +226,7 @@ export default function BuyerNdaExecutionPanel({
             size="sm"
             variant="accent"
             icon={PenLine}
-            disabled={markups.length === 0}
+            disabled={sortedMarkups.length === 0}
             loading={updateNda.isPending}
             onClick={() => {
               void handleSign();

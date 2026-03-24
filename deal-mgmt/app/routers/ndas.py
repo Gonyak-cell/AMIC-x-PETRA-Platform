@@ -176,11 +176,7 @@ async def update_nda(
     for key, value in update_data.items():
         setattr(nda, key, value)
 
-    if (
-        nda.party_type == NdaPartyType.BUYER
-        and nda.buyer_candidate_id is not None
-        and nda.status == NdaStatus.SIGNED
-    ):
+    if nda.party_type == NdaPartyType.BUYER and nda.buyer_candidate_id is not None and nda.status == NdaStatus.SIGNED:
         buyer = await db.get(BuyerCandidate, nda.buyer_candidate_id)
         if buyer is not None:
             await auto_advance_buyer_status(
