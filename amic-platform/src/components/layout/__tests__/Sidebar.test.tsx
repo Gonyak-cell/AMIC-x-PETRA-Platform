@@ -3,7 +3,7 @@ import { Sidebar } from "../Sidebar";
 import { mockUser } from "@/test/mocks/data";
 
 describe("Sidebar", () => {
-  it("shows dashboard and account navigation for client users on the help page", () => {
+  it("shows dashboard navigation and the profile shortcut for client users", () => {
     renderWithProviders(<Sidebar />, {
       initialEntries: ["/help"],
       authContext: {
@@ -19,7 +19,8 @@ describe("Sidebar", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Calendar")).toBeInTheDocument();
     expect(screen.getByText("Team")).toBeInTheDocument();
-    expect(screen.getAllByText("Settings")).toHaveLength(1);
+    expect(screen.queryByText(/^Settings$/)).not.toBeInTheDocument();
+    expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("M&A Deals")).toBeInTheDocument();
     expect(screen.getByText("Pipeline")).toBeInTheDocument();
     expect(screen.getByText("Help")).toBeInTheDocument();
@@ -28,7 +29,7 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Exports")).not.toBeInTheDocument();
   });
 
-  it("separates personal and admin settings labels for admin users", () => {
+  it("keeps platform settings for admins without the top settings shortcut", () => {
     renderWithProviders(<Sidebar />, {
       initialEntries: ["/"],
       authContext: {
@@ -36,7 +37,8 @@ describe("Sidebar", () => {
       },
     });
 
-    expect(screen.getAllByText("Settings")).toHaveLength(1);
+    expect(screen.queryByText(/^Settings$/)).not.toBeInTheDocument();
+    expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("Platform Settings")).toBeInTheDocument();
   });
 });

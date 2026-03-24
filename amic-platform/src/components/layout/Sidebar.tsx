@@ -2,6 +2,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   Eye,
   Settings,
+  User,
   FolderOpen,
   FileText,
   Upload,
@@ -41,8 +42,7 @@ import { SidebarContext } from "./SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarNavItem, SidebarSection } from "./SidebarNavItem";
 import { SidebarModuleGroup } from "./SidebarModuleGroup";
-import { Badge } from "@/components/ui";
-import { APP_VERSION } from "@/lib/app-version";
+import { Badge, Button } from "@/components/ui";
 import { SidebarFavorites } from "@/components/SidebarFavorites";
 import { HealthIndicator } from "@/components/layout/HealthIndicator";
 import { getMemberPhoto } from "@/lib/member-photos";
@@ -223,12 +223,6 @@ export function Sidebar({
             to="/team"
             label="Team"
             icon={Users}
-            onClick={onNavItemClick}
-          />
-          <SidebarNavItem
-            to="/settings"
-            label="Settings"
-            icon={Settings}
             onClick={onNavItemClick}
           />
           {!isClient && (
@@ -570,41 +564,69 @@ export function Sidebar({
             className="border-t px-4 py-4"
             style={{ borderColor: "var(--sidebar-divider)" }}
           >
-            <button
-              onClick={() => {
-                navigate("/settings/profile");
-                onNavItemClick?.();
-              }}
-              className="w-full flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-white/5 transition-colors cursor-pointer"
-              aria-label="Open profile settings"
-            >
+            <div className="mb-3 flex items-center gap-3">
               {(() => {
                 const photoUrl = getMemberPhoto(user.display_name ?? "");
                 return photoUrl ? (
-                  <img
-                    src={photoUrl}
-                    alt={user.display_name ?? ""}
-                    className="w-10 h-10 rounded-full object-cover ring-1 ring-accent/30 bg-amic-700"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate("/settings/profile");
+                      onNavItemClick?.();
+                    }}
+                    className="shrink-0 rounded-full transition-transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-transparent"
+                    aria-label="Open profile settings"
+                    title={collapsed ? "Profile" : undefined}
+                  >
+                    <img
+                      src={photoUrl}
+                      alt={user.display_name ?? ""}
+                      className="w-10 h-10 rounded-full object-cover ring-1 ring-accent/30 bg-amic-700"
+                    />
+                  </button>
                 ) : (
-                  <div className="w-10 h-10 bg-accent/25 rounded-full flex items-center justify-center ring-1 ring-accent/30">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate("/settings/profile");
+                      onNavItemClick?.();
+                    }}
+                    className="w-10 h-10 shrink-0 rounded-full bg-accent/25 flex items-center justify-center ring-1 ring-accent/30 transition-transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-transparent"
+                    aria-label="Open profile settings"
+                    title={collapsed ? "Profile" : undefined}
+                  >
                     <span className="text-white font-medium text-sm">
                       {user.display_name?.charAt(0).toUpperCase() || "U"}
                     </span>
-                  </div>
+                  </button>
                 );
               })()}
               {!collapsed && (
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="text-white text-sm font-medium truncate">
-                    {user.display_name}
+                <div className="flex flex-1 items-center justify-between gap-3 min-w-0">
+                  <div className="min-w-0 text-left">
+                    <div className="text-white text-sm font-medium truncate">
+                      {user.display_name}
+                    </div>
+                    <Badge variant="neutral" className="mt-0.5 text-xs">
+                      {user.role}
+                    </Badge>
                   </div>
-                  <Badge variant="neutral" className="mt-0.5 text-xs">
-                    {user.role}
-                  </Badge>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="accent"
+                    icon={User}
+                    className="shrink-0 rounded-full px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-glow-green"
+                    onClick={() => {
+                      navigate("/settings/profile");
+                      onNavItemClick?.();
+                    }}
+                  >
+                    Profile
+                  </Button>
                 </div>
               )}
-            </button>
+            </div>
             <button
               onClick={async () => {
                 await logout();
@@ -616,12 +638,6 @@ export function Sidebar({
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>Logout</span>}
             </button>
-            <div
-              className="mt-2 text-center text-[10px] opacity-40"
-              style={{ color: "var(--sidebar-text-muted)" }}
-            >
-              v{APP_VERSION}
-            </div>
           </div>
         )}
       </aside>
