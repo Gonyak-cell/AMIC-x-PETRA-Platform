@@ -182,7 +182,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <Button
             size="sm"
             variant="secondary"
-            icon={Download}
+            icon={Upload}
             onClick={() => exportRFI.mutate(undefined)}
             loading={exportRFI.isPending}
           >
@@ -191,7 +191,7 @@ export default function RFIPanel({ txnId }: RFIPanelProps) {
           <Button
             size="sm"
             variant="secondary"
-            icon={Upload}
+            icon={Download}
             onClick={handleImportClick}
             loading={importRFI.isPending}
           >

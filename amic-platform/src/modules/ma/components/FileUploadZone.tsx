@@ -7,7 +7,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import {
@@ -44,6 +44,7 @@ interface FileUploadZoneProps {
   emptyHint?: string;
   embeddedSeparator?: boolean;
   showUploadAction?: boolean;
+  registerOpenPicker?: (openPicker: (() => void) | null) => void;
   onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
 }
 
@@ -61,6 +62,7 @@ export default function FileUploadZone({
   emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX, PPTX, HWP 등`,
   embeddedSeparator = true,
   showUploadAction = true,
+  registerOpenPicker,
   onUploaded,
 }: FileUploadZoneProps) {
   const [expanded, setExpanded] = useState(!compact);
@@ -101,6 +103,18 @@ export default function FileUploadZone({
     [handleUpload],
   );
 
+  const openPicker = useCallback(() => {
+    openAttachmentFilePicker(fileInputRef);
+  }, []);
+
+  useEffect(() => {
+    registerOpenPicker?.(readOnly ? null : openPicker);
+
+    return () => {
+      registerOpenPicker?.(null);
+    };
+  }, [openPicker, readOnly, registerOpenPicker]);
+
   const hiddenInput = !readOnly && (
     <input
       ref={fileInputRef}
@@ -122,14 +136,14 @@ export default function FileUploadZone({
           }`}
           onDragOver={(event) => event.preventDefault()}
           onDrop={readOnly ? undefined : handleDrop}
-          onClick={readOnly ? undefined : () => openAttachmentFilePicker(fileInputRef)}
+          onClick={readOnly ? undefined : openPicker}
           onKeyDown={
             readOnly
               ? undefined
               : (event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    openAttachmentFilePicker(fileInputRef);
+                    openPicker();
                   }
                 }
           }
@@ -232,7 +246,7 @@ export default function FileUploadZone({
                 variant="ghost"
                 size="sm"
                 type="button"
-                onClick={() => openAttachmentFilePicker(fileInputRef)}
+                onClick={openPicker}
                 disabled={uploadMutation.isPending}
               >
                 <Upload className="mr-1 h-3.5 w-3.5" />
@@ -299,7 +313,7 @@ export default function FileUploadZone({
                 variant="ghost"
                 size="sm"
                 type="button"
-                onClick={() => openAttachmentFilePicker(fileInputRef)}
+                onClick={openPicker}
                 disabled={uploadMutation.isPending}
               >
                 <Upload className="mr-1 h-3.5 w-3.5" />
@@ -315,7 +329,7 @@ export default function FileUploadZone({
               variant="ghost"
               size="sm"
               type="button"
-              onClick={() => openAttachmentFilePicker(fileInputRef)}
+              onClick={openPicker}
               disabled={uploadMutation.isPending}
             >
               <Upload className="mr-1 h-3.5 w-3.5" />

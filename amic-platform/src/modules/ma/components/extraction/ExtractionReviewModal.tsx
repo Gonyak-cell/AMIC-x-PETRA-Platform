@@ -247,6 +247,10 @@ export default function ExtractionReviewModal({
     if (nextTargetModel === "nda") {
       if (reviewContext?.source === "buyer-nda") {
         nextNdaPartyType = "BUYER";
+        if (reviewContext.buyerCandidateId) {
+          nextBuyerId = reviewContext.buyerCandidateId;
+          nextEditedData.buyer_candidate_id = reviewContext.buyerCandidateId;
+        }
       }
 
       nextEditedData.party_type = nextNdaPartyType;

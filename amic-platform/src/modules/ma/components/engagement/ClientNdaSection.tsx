@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Plus, Trash2, Upload } from "lucide-react";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
@@ -50,6 +50,7 @@ export default function ClientNdaSection({
 
   const [showModal, setShowModal] = useState(false);
   const [ndaForm, setNdaForm] = useState<NDACreate>(createInitialForm());
+  const openUploadPickerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setNdaForm((current) => {
@@ -66,16 +67,26 @@ export default function ClientNdaSection({
       headerBar
       padding="none"
       actions={
-        canWrite ? (
+        <div className="flex flex-wrap items-center justify-end gap-1">
           <Button
-            icon={Plus}
+            icon={Upload}
             size="sm"
-            onClick={() => setShowModal(true)}
+            onClick={() => openUploadPickerRef.current?.()}
             variant="ghost"
           >
-            NDA 추가
+            NDA 업로드
           </Button>
-        ) : undefined
+          {canWrite ? (
+            <Button
+              icon={Plus}
+              size="sm"
+              onClick={() => setShowModal(true)}
+              variant="ghost"
+            >
+              NDA 추가
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {ndas?.length ? (
@@ -233,6 +244,10 @@ export default function ClientNdaSection({
         emptyDescription="Drop the client NDA PDF here to run OCR and prefill the review form."
         emptyHint="OCR starts for PDF uploads after VDR sync succeeds. Other files stay attached without auto-fill."
         embeddedSeparator={Boolean(ndas?.length)}
+        showUploadAction={false}
+        registerOpenPicker={(openPicker) => {
+          openUploadPickerRef.current = openPicker;
+        }}
         onUploaded={(attachment, file) =>
           startExtractionFromUpload({
             attachment,

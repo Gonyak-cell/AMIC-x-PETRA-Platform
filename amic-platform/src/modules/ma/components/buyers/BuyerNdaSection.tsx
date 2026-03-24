@@ -1,5 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { FileText, Plus, Trash2, Upload } from "lucide-react";
+import { cn } from "@/lib/cn";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import {
+  openAttachmentFilePicker,
+  uploadAttachmentFiles,
+} from "@/modules/ma/components/attachmentUploadUtils";
+import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
+import { useUploadAttachment } from "@/modules/ma/hooks/useAttachments";
 import {
   useCreateNda,
   useDeleteNda,
@@ -21,6 +37,7 @@ import {
   Modal,
   Select,
 } from "@/components/ui";
+import { ATTACHMENT_CONSTRAINTS } from "@/modules/ma/types/attachment";
 
 interface BuyerNdaSectionProps {
   txnId: string;
@@ -48,12 +65,17 @@ export default function BuyerNdaSection({
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
+  const uploadAttachment = useUploadAttachment(txnId);
+  const { activeReview, closeReview, startExtractionFromUpload } =
+    useAttachmentExtractionFlow(txnId);
 
   const [showModal, setShowModal] = useState(false);
   const [versionPanelNdaId, setVersionPanelNdaId] = useState<string | null>(
     null,
   );
   const [ndaForm, setNdaForm] = useState<NDACreate>(createInitialForm(buyer.id));
+  const [isDropActive, setIsDropActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNdaForm(createInitialForm(buyer.id));
@@ -81,6 +103,48 @@ export default function BuyerNdaSection({
     });
   };
 
+  const handleUpload = useCallback(
+    async (files: File[]) => {
+      if (!canWrite || files.length === 0) {
+        return;
+      }
+
+      await uploadAttachmentFiles({
+        files,
+        entityType: "NDA",
+        uploadMutation: uploadAttachment,
+        onUploaded: (attachment, file) =>
+          startExtractionFromUpload({
+            attachment,
+            file,
+            docCategoryHint: "NDA",
+            reviewContext: {
+              source: "buyer-nda",
+              buyerCandidateId: buyer.id,
+            },
+          }),
+      });
+    },
+    [buyer.id, canWrite, startExtractionFromUpload, uploadAttachment],
+  );
+
+  const handleFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      void handleUpload(Array.from(event.target.files ?? []));
+      event.target.value = "";
+    },
+    [handleUpload],
+  );
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDropActive(false);
+      void handleUpload(Array.from(event.dataTransfer.files));
+    },
+    [handleUpload],
+  );
+
   return (
     <div className="space-y-4">
       <Card
@@ -89,14 +153,24 @@ export default function BuyerNdaSection({
         padding="none"
         actions={
           canWrite ? (
-            <Button
-              icon={Plus}
-              size="sm"
-              onClick={() => setShowModal(true)}
-              variant="ghost"
-            >
-              NDA 추가
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              <Button
+                icon={Upload}
+                size="sm"
+                onClick={() => openAttachmentFilePicker(fileInputRef)}
+                variant="ghost"
+              >
+                NDA 업로드
+              </Button>
+              <Button
+                icon={Plus}
+                size="sm"
+                onClick={() => setShowModal(true)}
+                variant="ghost"
+              >
+                NDA 추가
+              </Button>
+            </div>
           ) : undefined
         }
       >
@@ -246,10 +320,129 @@ export default function BuyerNdaSection({
             keyField="id"
           />
         ) : (
-          <EmptyState
-            icon={FileText}
-            title="NDA 없음"
-            description={`${buyer.company_name}와 체결한 NDA를 등록하세요.`}
+          <div
+            className={cn(
+              "mx-5 my-5 rounded-2xl border-2 border-dashed transition-colors",
+              isDropActive
+                ? "border-primary-300 bg-primary-50/40"
+                : "border-gray-border bg-white",
+              canWrite ? "cursor-pointer" : "",
+            )}
+            onClick={canWrite ? () => openAttachmentFilePicker(fileInputRef) : undefined}
+            onKeyDown={
+              canWrite
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openAttachmentFilePicker(fileInputRef);
+                    }
+                  }
+                : undefined
+            }
+            onDragEnter={
+              canWrite
+                ? (event) => {
+                    event.preventDefault();
+                    setIsDropActive(true);
+                  }
+                : undefined
+            }
+            onDragOver={
+              canWrite
+                ? (event) => {
+                    event.preventDefault();
+                    setIsDropActive(true);
+                  }
+                : undefined
+            }
+            onDragLeave={
+              canWrite
+                ? (event) => {
+                    event.preventDefault();
+                    if (event.currentTarget === event.target) {
+                      setIsDropActive(false);
+                    }
+                  }
+                : undefined
+            }
+            onDrop={canWrite ? handleDrop : undefined}
+            role={canWrite ? "button" : undefined}
+            tabIndex={canWrite ? 0 : undefined}
+          >
+            <EmptyState
+              icon={FileText}
+              title="NDA 없음"
+              description={`${buyer.company_name}와 체결한 NDA를 등록하세요.`}
+              className="pb-4"
+            />
+            {canWrite && (
+              <div className="pb-8 text-center">
+                <p className="text-sm text-text-body">
+                  NDA PDF를 이곳에 드롭하면 OCR로 검토값을 자동 입력합니다.
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  OCR은 PDF 업로드에서 VDR 동기화 완료 후 시작되며, 다른 파일은 첨부만
+                  저장됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {canWrite && sortedNdas.length > 0 && (
+          <div className="mx-5 mt-4 border-t border-gray-border pt-4">
+            <div
+              className={cn(
+                "rounded-xl border border-dashed px-4 py-5 text-center transition-colors",
+                isDropActive
+                  ? "border-primary-300 bg-primary-50/40"
+                  : "border-gray-border bg-bg-cool/30",
+              )}
+              onClick={() => openAttachmentFilePicker(fileInputRef)}
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDropActive(true);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDropActive(true);
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                if (event.currentTarget === event.target) {
+                  setIsDropActive(false);
+                }
+              }}
+              onDrop={handleDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openAttachmentFilePicker(fileInputRef);
+                }
+              }}
+            >
+              <Upload className="mx-auto h-5 w-5 text-text-muted" />
+              <p className="mt-2 text-sm text-text-body">
+                NDA PDF를 드롭하거나 클릭해 업로드하세요.
+              </p>
+              <p className="mt-1 text-xs text-text-secondary">
+                PDF는 OCR 검토까지 이어지고, 다른 파일은 첨부만 저장됩니다.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {canWrite && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="sr-only"
+            multiple
+            tabIndex={-1}
+            accept={ATTACHMENT_CONSTRAINTS.ACCEPT_EXTENSIONS}
+            onChange={handleFileChange}
           />
         )}
       </Card>
@@ -345,6 +538,14 @@ export default function BuyerNdaSection({
           canWrite={canWrite}
         />
       )}
+
+      <ExtractionReviewModal
+        txnId={txnId}
+        extraction={activeReview?.extraction ?? null}
+        open={Boolean(activeReview)}
+        onClose={closeReview}
+        reviewContext={activeReview?.context}
+      />
     </div>
   );
 }

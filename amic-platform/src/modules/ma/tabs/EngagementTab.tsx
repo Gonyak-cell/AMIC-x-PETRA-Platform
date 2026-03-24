@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FileText, Pencil, Plus, Users } from "lucide-react";
+import { useRef, useState } from "react";
+import { FileText, Pencil, Plus, Upload, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
@@ -103,6 +103,7 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
     role: "LEAD_ADVISOR",
     phone: "",
   });
+  const openEngagementUploadPickerRef = useRef<(() => void) | null>(null);
 
   const canManageWorkingGroup = user
     ? WORKING_GROUP_MANAGER_ROLES.has(user.role)
@@ -179,16 +180,26 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
           headerBar
           padding="none"
           actions={
-            canWrite ? (
+            <div className="flex flex-wrap items-center justify-end gap-1">
               <Button
-                icon={FileText}
+                icon={Upload}
                 size="sm"
-                onClick={() => setShowEngModal(true)}
+                onClick={() => openEngagementUploadPickerRef.current?.()}
                 variant="ghost"
               >
-                계약 추가
+                계약 업로드
               </Button>
-            ) : undefined
+              {canWrite ? (
+                <Button
+                  icon={Plus}
+                  size="sm"
+                  onClick={() => setShowEngModal(true)}
+                  variant="ghost"
+                >
+                  계약 추가
+                </Button>
+              ) : null}
+            </div>
           }
         >
           {!engagements?.length ? (
@@ -229,6 +240,10 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             emptyDescription="Drop the engagement contract PDF here to run OCR and prefill the review form."
             emptyHint="OCR runs for PDF uploads after VDR sync completes. Non-PDF files stay attached without auto-fill."
             embeddedSeparator={Boolean(engagements?.length)}
+            showUploadAction={false}
+            registerOpenPicker={(openPicker) => {
+              openEngagementUploadPickerRef.current = openPicker;
+            }}
             onUploaded={(attachment, file) =>
               startExtractionFromUpload({
                 attachment,

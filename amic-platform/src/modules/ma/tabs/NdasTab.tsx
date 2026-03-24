@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { useRef, useState } from "react";
+import { FileText, Plus, Trash2, Upload } from "lucide-react";
 import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import {
   useNdas,
@@ -46,6 +46,7 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
   const [versionPanelNdaId, setVersionPanelNdaId] = useState<string | null>(
     null,
   );
+  const openUploadPickerRef = useRef<(() => void) | null>(null);
   const [ndaForm, setNdaForm] = useState<NDACreate>({
     party_type: "BUYER",
     buyer_candidate_id: "",
@@ -83,16 +84,26 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
         headerBar
         padding="none"
         actions={
-          canWrite ? (
+          <div className="flex flex-wrap items-center justify-end gap-1">
             <Button
-              icon={Plus}
+              icon={Upload}
               size="sm"
-              onClick={() => setShowNdaModal(true)}
+              onClick={() => openUploadPickerRef.current?.()}
               variant="ghost"
             >
-              NDA 추가
+              NDA 업로드
             </Button>
-          ) : undefined
+            {canWrite ? (
+              <Button
+                icon={Plus}
+                size="sm"
+                onClick={() => setShowNdaModal(true)}
+                variant="ghost"
+              >
+                NDA 추가
+              </Button>
+            ) : null}
+          </div>
         }
       >
         {ndas?.length ? (
@@ -242,6 +253,10 @@ export default function NdasTab({ txnId, canWrite }: NdasTabProps) {
           emptyDescription="매수 후보와의 NDA 파일을 바로 업로드하세요."
           emptyHint="최대 50MB · PDF, DOCX, XLSX, PPTX, HWP 등"
           embeddedSeparator={Boolean(ndas?.length)}
+          showUploadAction={false}
+          registerOpenPicker={(openPicker) => {
+            openUploadPickerRef.current = openPicker;
+          }}
           onUploaded={(attachment, file) =>
             startExtractionFromUpload({
               attachment,
