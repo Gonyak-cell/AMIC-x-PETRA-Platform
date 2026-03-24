@@ -70,6 +70,10 @@ const CATEGORY_ALLOWED_TARGETS: Partial<Record<string, TargetModel[]>> = {
   TEASER_IM: ["marketing_material"],
 };
 
+const EMPTY_BUYERS: BuyerCandidate[] = [];
+const EMPTY_NDAS: NDA[] = [];
+const EMPTY_ENGAGEMENTS: Engagement[] = [];
+
 function normalizeCounterpartyName(value: string | null | undefined) {
   return (value ?? "")
     .toLowerCase()
@@ -188,10 +192,19 @@ export default function ExtractionReviewModal({
   const { data: transaction } = useTransaction(txnId);
 
   const currentExtraction = latestExtraction ?? extraction;
-  const buyers = buyersData ?? [];
-  const clientNdas = clientNdasData ?? [];
-  const buyerNdas = buyerNdasData ?? [];
-  const engagements = engagementsData ?? [];
+  const buyers = useMemo(() => buyersData ?? EMPTY_BUYERS, [buyersData]);
+  const clientNdas = useMemo(
+    () => clientNdasData ?? EMPTY_NDAS,
+    [clientNdasData],
+  );
+  const buyerNdas = useMemo(
+    () => buyerNdasData ?? EMPTY_NDAS,
+    [buyerNdasData],
+  );
+  const engagements = useMemo(
+    () => engagementsData ?? EMPTY_ENGAGEMENTS,
+    [engagementsData],
+  );
 
   const [editedData, setEditedData] = useState<Record<string, unknown>>({});
   const [targetModel, setTargetModel] = useState<TargetModel>("nda");

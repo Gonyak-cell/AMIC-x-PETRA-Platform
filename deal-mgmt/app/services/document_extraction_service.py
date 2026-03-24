@@ -957,8 +957,9 @@ async def _apply_to_marketing_material(
         return None
 
     doc_type = _safe_enum_value(MarketingDocType, data.get("doc_type"))
-    if doc_type is None and getattr(attachment, "entity_id", None):
-        doc_type = _safe_enum_value(MarketingDocType, getattr(attachment, "entity_id"))
+    attachment_entity_id = attachment.entity_id
+    if doc_type is None and attachment_entity_id:
+        doc_type = _safe_enum_value(MarketingDocType, attachment_entity_id)
     if doc_type is None:
         logger.warning(
             "MarketingMaterial 적용 실패: doc_type 누락/무효 (txn=%s, attachment=%s)",

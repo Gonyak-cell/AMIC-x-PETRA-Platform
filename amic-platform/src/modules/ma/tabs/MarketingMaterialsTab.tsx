@@ -50,6 +50,9 @@ type ExternalMarketingUpload = Attachment & {
   docType: MarketingDocType | null;
 };
 
+const EMPTY_MARKETING_MATERIALS: MarketingMaterial[] = [];
+const EMPTY_ATTACHMENTS: Attachment[] = [];
+
 const DOC_TYPE_ACTION_META: Record<
   MarketingDocType,
   {
@@ -265,7 +268,14 @@ export default function MarketingMaterialsTab({
   );
   const isFlatSurface = surface === "flat";
 
-  const managedMaterials = marketingMaterials ?? [];
+  const managedMaterials = useMemo(
+    () => marketingMaterials ?? EMPTY_MARKETING_MATERIALS,
+    [marketingMaterials],
+  );
+  const marketingAttachments = useMemo(
+    () => uploadedMaterials?.items ?? EMPTY_ATTACHMENTS,
+    [uploadedMaterials?.items],
+  );
   const linkedAttachmentIds = useMemo(
     () =>
       new Set(
@@ -279,9 +289,7 @@ export default function MarketingMaterialsTab({
   const uploadedMaterialRecords = managedMaterials.filter(
     (material) => material.source_mode === "UPLOADED",
   );
-  const externalUploads: ExternalMarketingUpload[] = (
-    uploadedMaterials?.items ?? []
-  )
+  const externalUploads: ExternalMarketingUpload[] = marketingAttachments
     .filter((attachment) => !linkedAttachmentIds.has(attachment.id))
     .map((attachment) => ({
       ...attachment,
