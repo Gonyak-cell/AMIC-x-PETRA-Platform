@@ -88,9 +88,7 @@ def pptx_to_pngs(pptx_path: str, output_dir: str, dpi: int = 150) -> list[str]:
                 timeout=120,
             )
     except FileNotFoundError as exc:
-        raise FileNotFoundError(
-            "LibreOffice is required for visual diff rendering."
-        ) from exc
+        raise FileNotFoundError("LibreOffice is required for visual diff rendering.") from exc
 
     if result.returncode != 0:
         stdout = result.stdout.strip()
@@ -141,9 +139,7 @@ def compute_ssim(image_a_path: str, image_b_path: str) -> tuple[float, float]:
         from PIL import Image
         from skimage.metrics import structural_similarity
     except ImportError as exc:
-        raise ImportError(
-            "scikit-image + Pillow are required for visual diff tests."
-        ) from exc
+        raise ImportError("scikit-image + Pillow are required for visual diff tests.") from exc
 
     img_a = np.array(Image.open(image_a_path).convert("RGB"))
     img_b = np.array(Image.open(image_b_path).convert("RGB"))
@@ -234,9 +230,7 @@ def compare_slide_pngs(
         ssim_score, changed_ratio = compute_ssim(str(approved_png), str(generated_png))
 
         heatmap_path = None
-        if diff_output_dir and (
-            ssim_score < SSIM_THRESHOLD or changed_ratio > CHANGED_PIXEL_RATIO_THRESHOLD
-        ):
+        if diff_output_dir and (ssim_score < SSIM_THRESHOLD or changed_ratio > CHANGED_PIXEL_RATIO_THRESHOLD):
             heatmap_path = generate_diff_heatmap(
                 str(approved_png),
                 str(generated_png),
