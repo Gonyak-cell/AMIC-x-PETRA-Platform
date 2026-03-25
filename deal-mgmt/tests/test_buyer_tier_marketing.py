@@ -422,6 +422,25 @@ async def test_short_list_overview_with_marketing_data(client):
     assert by_buyer[b2["id"]]["TEASER_SENT"] is None
 
 
+async def test_short_list_overview_repairs_stale_short_list_flag(client):
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id, company_name="Synced Buyer")
+
+    await _promote_to_short_list(client, txn_id, buyer["id"], "TIER_1")
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
+        json={"is_short_listed": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_short_listed"] is False
+
+    overview_resp = await client.get(
+        f"/api/v1/transactions/{txn_id}/short-list/marketing-overview",
+    )
+    assert overview_resp.status_code == 200
+    assert [item["buyer_id"] for item in overview_resp.json()] == [buyer["id"]]
+
+
 # ── Excel Export ──────────────────────────────────────────
 
 

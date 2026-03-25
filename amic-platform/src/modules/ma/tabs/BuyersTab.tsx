@@ -26,10 +26,12 @@ import {
 } from "@/modules/ma/hooks/useTransactions";
 import { useShortListOverview } from "@/modules/ma/hooks/useBuyerMarketing";
 import { useNdas } from "@/modules/ma/hooks/useNdas";
+import { useMarketingMaterials } from "@/modules/ma/hooks/useMarketingMaterials";
 import { useSICompanyByName } from "@/modules/ma/hooks/useSIMapping";
 import type { CorporateDocsExtractedData } from "@/modules/ma/types/document_extraction";
 import type {
   BuyerCandidate,
+  BuyerStatus,
   BuyerTier,
   DealRole,
 } from "@/modules/ma/types/buyer";
@@ -41,7 +43,6 @@ import {
   DEAL_ROLE_OPTIONS,
   FUNNEL_CIM_AND_AFTER,
   FUNNEL_DD_AND_AFTER,
-  isShortListed,
   buildStageMap,
   MARKETING_STAGES,
 } from "@/modules/ma/constants";
@@ -84,6 +85,11 @@ const SIMappingPanel = lazy(
 );
 import SIDetailPanel from "@/modules/ma/components/si-mapping/SIDetailPanel";
 import WorkspaceHeaderActionButton from "@/modules/ma/pages/workspace/WorkspaceHeaderActionButton";
+import {
+  buildVersionedMarketingMaterials,
+  getLatestRecipientDistribution,
+  getRecipientDistributionDate,
+} from "@/modules/ma/utils/marketingMaterialRecipients";
 import { toast } from "sonner";
 
 import {
@@ -121,6 +127,32 @@ function resolveBuyerNdaSignedDate(nda: NDA): string | null {
   return null;
 }
 
+function compareIsoDates(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): number {
+  if (!left && !right) return 0;
+  if (!left) return -1;
+  if (!right) return 1;
+  return left.localeCompare(right);
+}
+
+function resolveBuyerNdaSortDate(nda: NDA): string {
+  return (
+    resolveBuyerNdaSignedDate(nda) ??
+    nda.updated_at.slice(0, 10) ??
+    nda.created_at.slice(0, 10)
+  );
+}
+
+function getBuyerIdentifiedDate(buyer: BuyerCandidate): string {
+  return buyer.created_at.slice(0, 10);
+}
+
+function getBuyerShortListNdaDate(buyer: BuyerCandidate): string {
+  return buyer.updated_at.slice(0, 10);
+}
+
 function hasTierDecision(buyer: BuyerCandidate): boolean {
   return buyer.tier !== null;
 }
@@ -129,15 +161,30 @@ function isNdaCandidateTier(tier: BuyerCandidate["tier"]): boolean {
   return tier === "TIER_1" || tier === "TIER_2" || tier === "TIER_3";
 }
 
-function compareFunnelStep(a: FunnelStepId, b: FunnelStepId): number {
-  const order: Record<FunnelStepId, number> = {
-    "long-list": 0,
-    nda: 1,
-    "short-list": 2,
-    im: 3,
-    dd: 4,
-  };
-  return order[a] - order[b];
+const SHORT_LIST_ENTRY_STATUSES: ReadonlySet<BuyerStatus> = new Set([
+  "NDA_SIGNED",
+  "CIM_SENT",
+  "INTEREST_CONFIRMED",
+  "IOI_RECEIVED",
+  "IOI_ACCEPTED",
+  "DD_GRANTED",
+  "DD_IN_PROGRESS",
+  "LOI_RECEIVED",
+  "LOI_ACCEPTED",
+  "SELECTED",
+  "BID_SUBMITTED",
+]);
+
+function hasShortListEntryStatus(status: BuyerStatus): boolean {
+  return SHORT_LIST_ENTRY_STATUSES.has(status);
+}
+
+function matchesShortListRule(buyer: BuyerCandidate, nda?: NDA | null): boolean {
+  if (!isNdaCandidateTier(buyer.tier)) {
+    return false;
+  }
+
+  return hasShortListEntryStatus(buyer.status) || nda?.status === "SIGNED";
 }
 
 export default function BuyersTab({
@@ -160,6 +207,7 @@ export default function BuyersTab({
     refetch: refetchOverview,
   } = useShortListOverview(txnId);
   const { data: buyerNdas } = useNdas(txnId, { partyType: "BUYER" });
+  const { data: marketingMaterials } = useMarketingMaterials(txnId);
 
   const corporateInfo = useMemo((): CorporateDocsExtractedData | null => {
     const v = txn?.corporate_info;
@@ -285,6 +333,70 @@ export default function BuyersTab({
       },
     );
 
+  const allBuyers = useMemo(() => buyers ?? [], [buyers]);
+  const { buyerNdaMap, buyerSignedNdaMap } = useMemo(() => {
+    const latestByBuyer = new Map<string, NDA>();
+    const latestSignedByBuyer = new Map<string, NDA>();
+
+    for (const nda of buyerNdas ?? []) {
+      const buyerId = nda.buyer_candidate_id;
+      if (!buyerId) continue;
+
+      const existing = latestByBuyer.get(buyerId);
+      if (!existing || existing.created_at < nda.created_at) {
+        latestByBuyer.set(buyerId, nda);
+      }
+
+      if (nda.status !== "SIGNED") {
+        continue;
+      }
+
+      const existingSigned = latestSignedByBuyer.get(buyerId);
+      if (
+        !existingSigned ||
+        compareIsoDates(
+          resolveBuyerNdaSortDate(existingSigned),
+          resolveBuyerNdaSortDate(nda),
+        ) < 0
+      ) {
+        latestSignedByBuyer.set(buyerId, nda);
+      }
+    }
+
+    return {
+      buyerNdaMap: latestByBuyer,
+      buyerSignedNdaMap: latestSignedByBuyer,
+    };
+  }, [buyerNdas]);
+  const versionedTeasers = useMemo(
+    () => buildVersionedMarketingMaterials(marketingMaterials ?? [], "TM"),
+    [marketingMaterials],
+  );
+  const buyerLatestTeaserMap = useMemo(() => {
+    const entries = new Map<
+      string,
+      { materialId: string; sentAt: string; versionLabel: string }
+    >();
+
+    for (const buyer of allBuyers) {
+      const latestTeaser = getLatestRecipientDistribution(
+        versionedTeasers,
+        buyer.company_name,
+      );
+      if (!latestTeaser) {
+        continue;
+      }
+
+      entries.set(buyer.id, {
+        materialId: latestTeaser.material.id,
+        sentAt: getRecipientDistributionDate(latestTeaser.material),
+        versionLabel: latestTeaser.versionLabel,
+      });
+    }
+
+    return entries;
+  }, [allBuyers, versionedTeasers]);
+
   const buyerColumns: Column<BuyerCandidate>[] = useMemo(
     () => [
       {
@@ -405,49 +517,77 @@ export default function BuyersTab({
       },
       {
         key: "nda",
-        header: "NDA",
+        header: "NDA / Teaser",
         align: "right",
-        width: "84px",
-        render: (r) => (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={(event) => {
-              event.stopPropagation();
-              openBuyerDetail(r.id, "nda");
-            }}
-            className="!px-2 !py-0.5 text-xs"
-          >
-            NDA
-          </Button>
-        ),
+        width: "196px",
+        render: (r) => {
+          const nda = buyerNdaMap.get(r.id);
+          const teaser = buyerLatestTeaserMap.get(r.id);
+          const ndaSigned = matchesShortListRule(
+            r,
+            buyerSignedNdaMap.get(r.id) ?? nda,
+          );
+          const ndaLabel = ndaSigned
+            ? "NDA 체결"
+            : nda?.status
+              ? `NDA ${nda.status}`
+              : "NDA 미체결";
+
+          return (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                openBuyerDetail(r.id, "nda");
+              }}
+              className="ml-auto flex min-w-[168px] flex-col items-end gap-1 rounded-lg px-2 py-1 text-right transition-colors hover:bg-bg-cool/60"
+            >
+              <div className="flex flex-wrap justify-end gap-1">
+                <Badge variant={ndaSigned ? "success" : nda ? "warning" : "neutral"}>
+                  {ndaLabel}
+                </Badge>
+                <Badge variant={teaser ? "info" : "neutral"}>
+                  {teaser ? `Teaser ${teaser.versionLabel}` : "Teaser 미송부"}
+                </Badge>
+              </div>
+              <span className="text-[11px] text-text-secondary">
+                {teaser ? `${teaser.sentAt} 송부` : "상세 보기"}
+              </span>
+            </button>
+          );
+        },
       },
     ],
-    [canWrite, openBuyerDetail, updateBuyer],
+    [
+      buyerLatestTeaserMap,
+      buyerNdaMap,
+      buyerSignedNdaMap,
+      canWrite,
+      openBuyerDetail,
+      updateBuyer,
+    ],
   );
 
-  const allBuyers = useMemo(() => buyers ?? [], [buyers]);
-  const buyerNdaMap = useMemo(() => {
-    const entries = new Map<string, NDA>();
-    for (const nda of buyerNdas ?? []) {
-      const buyerId = nda.buyer_candidate_id;
-      if (!buyerId) continue;
-
-      const existing = entries.get(buyerId);
-      if (!existing || existing.created_at < nda.created_at) {
-        entries.set(buyerId, nda);
-      }
-    }
-    return entries;
-  }, [buyerNdas]);
   const realShortList = useMemo(
-    () => allBuyers.filter(isShortListed),
-    [allBuyers],
+    () =>
+      allBuyers.filter((buyer) =>
+        matchesShortListRule(
+          buyer,
+          buyerSignedNdaMap.get(buyer.id) ?? buyerNdaMap.get(buyer.id),
+        ),
+      ),
+    [allBuyers, buyerNdaMap, buyerSignedNdaMap],
   );
   const longListBuyers = useMemo(
-    () => allBuyers.filter((buyer) => !isShortListed(buyer)),
-    [allBuyers],
+    () =>
+      allBuyers.filter(
+        (buyer) =>
+          !matchesShortListRule(
+            buyer,
+            buyerSignedNdaMap.get(buyer.id) ?? buyerNdaMap.get(buyer.id),
+          ),
+      ),
+    [allBuyers, buyerNdaMap, buyerSignedNdaMap],
   );
   const hasAllTierDecisions = useMemo(
     () => longListBuyers.length > 0 && longListBuyers.every(hasTierDecision),
@@ -521,6 +661,39 @@ export default function BuyersTab({
         });
       }
 
+      for (const buyer of shortListBuyers) {
+        const existing = summaryMap.get(buyer.id);
+        const stages = {
+          ...createEmptyStageRecord(),
+          ...(existing?.stages ?? {}),
+        };
+        const signedNda =
+          buyerSignedNdaMap.get(buyer.id) ?? buyerNdaMap.get(buyer.id);
+        const signedDate = signedNda
+          ? resolveBuyerNdaSignedDate(signedNda)
+          : null;
+        const teaser = buyerLatestTeaserMap.get(buyer.id);
+
+        if (!stages.IDENTIFIED) {
+          stages.IDENTIFIED = getBuyerIdentifiedDate(buyer);
+        }
+        if (!stages.TEASER_SENT && teaser?.sentAt) {
+          stages.TEASER_SENT = teaser.sentAt;
+        }
+        if (!stages.NDA_SIGNED) {
+          stages.NDA_SIGNED =
+            signedDate ??
+            (matchesShortListRule(buyer, signedNda)
+              ? getBuyerShortListNdaDate(buyer)
+              : null);
+        }
+
+        summaryMap.set(buyer.id, {
+          buyer_id: buyer.id,
+          stages,
+        });
+      }
+
       for (const nda of buyerNdas ?? []) {
         const buyerId = nda.buyer_candidate_id;
         const signedDate = resolveBuyerNdaSignedDate(nda);
@@ -544,9 +717,48 @@ export default function BuyersTab({
         });
       }
 
-      return Array.from(summaryMap.values());
+      for (const [buyerId, teaser] of buyerLatestTeaserMap.entries()) {
+        const existing = summaryMap.get(buyerId);
+        if (existing) {
+          const currentDate = existing.stages.TEASER_SENT;
+          if (!currentDate || currentDate < teaser.sentAt) {
+            existing.stages.TEASER_SENT = teaser.sentAt;
+          }
+          continue;
+        }
+
+        summaryMap.set(buyerId, {
+          buyer_id: buyerId,
+          stages: {
+            ...createEmptyStageRecord(),
+            TEASER_SENT: teaser.sentAt,
+          },
+        });
+      }
+
+      return shortListBuyers.map((buyer) => {
+        const existing = summaryMap.get(buyer.id);
+        return (
+          existing ?? {
+            buyer_id: buyer.id,
+            stages: {
+              ...createEmptyStageRecord(),
+              IDENTIFIED: getBuyerIdentifiedDate(buyer),
+            },
+          }
+        );
+      });
     },
-    [buyerNdas, devMockOverview, realShortList.length, shortListOverview],
+    [
+      buyerLatestTeaserMap,
+      buyerNdaMap,
+      buyerSignedNdaMap,
+      buyerNdas,
+      devMockOverview,
+      realShortList.length,
+      shortListBuyers,
+      shortListOverview,
+    ],
   );
 
   const stageMap = useMemo(
@@ -603,7 +815,7 @@ export default function BuyersTab({
       {
         id: "nda",
         label: "NDA 체결",
-        count: ndaPendingBuyers.length,
+        count: realShortList.length,
         clickable: ndaStepUnlocked,
       },
       {
@@ -628,7 +840,6 @@ export default function BuyersTab({
   }, [
     allBuyers,
     longListBuyers.length,
-    ndaPendingBuyers.length,
     ndaStepUnlocked,
     realShortList.length,
     shortListUnlocked,
@@ -735,13 +946,10 @@ export default function BuyersTab({
           steps={funnelSteps}
           activeStep={buyerSubTab}
           onStepChange={(nextStep) => {
-            if (compareFunnelStep(nextStep, "nda") >= 0 && !ndaStepUnlocked) {
+            if (nextStep === "nda" && !ndaStepUnlocked) {
               return;
             }
-            if (
-              compareFunnelStep(nextStep, "short-list") >= 0 &&
-              !shortListUnlocked
-            ) {
+            if (nextStep === "short-list" && !shortListUnlocked) {
               return;
             }
             setBuyerSubTab(nextStep);

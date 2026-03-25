@@ -37,6 +37,10 @@ vi.mock("@/modules/ma/components/extraction/ExtractionReviewModal", () => ({
   default: () => null,
 }));
 
+vi.mock("../BuyerTeaserSection", () => ({
+  default: () => <div>buyer-teaser-section</div>,
+}));
+
 describe("BuyerNdaSection", () => {
   beforeEach(() => {
     mockUseNdas.mockReturnValue({ data: [] });

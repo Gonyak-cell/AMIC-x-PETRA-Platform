@@ -22,10 +22,12 @@ import {
   useNdas,
   useUpdateNda,
 } from "@/modules/ma/hooks/useNdas";
+import type { Attachment } from "@/modules/ma/types/attachment";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
 import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
+import BuyerTeaserSection from "@/modules/ma/components/buyers/BuyerTeaserSection";
 import {
   Badge,
   Button,
@@ -140,6 +142,21 @@ export default function BuyerNdaSection({
       event.target.value = "";
     },
     [handleUpload],
+  );
+
+  const handleTeaserUploaded = useCallback(
+    async (attachment: Attachment, file: File) => {
+      await startExtractionFromUpload({
+        attachment,
+        file,
+        docCategoryHint: "TEASER_IM",
+        reviewContext: {
+          source: "marketing-material",
+          marketingDocType: "TM",
+        },
+      });
+    },
+    [startExtractionFromUpload],
   );
 
   const handleDrop = useCallback(
@@ -466,6 +483,13 @@ export default function BuyerNdaSection({
           />
         )}
       </Card>
+
+      <BuyerTeaserSection
+        txnId={txnId}
+        buyer={buyer}
+        canWrite={canWrite}
+        onUploaded={handleTeaserUploaded}
+      />
 
       <Modal
         open={showModal}

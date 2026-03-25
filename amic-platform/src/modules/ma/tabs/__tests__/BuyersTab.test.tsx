@@ -481,6 +481,301 @@ describe("BuyersTab", () => {
     });
   });
 
+  it("allows returning to Short List even when the NDA step is locked", async () => {
+    const user = userEvent.setup();
+    const shortlistedBuyer = {
+      ...mockBuyer,
+      id: "buyer-return-shortlist",
+      company_name: "Return Short List Buyer",
+      tier: "TIER_1" as const,
+      status: "NDA_SIGNED" as const,
+      is_short_listed: true,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-03-10T00:00:00Z",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [shortlistedBuyer],
+          total: 1,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    const shortListTab = await screen.findByRole("tab", { name: /Short List/i });
+
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    await user.click(screen.getByRole("tab", { name: /Long List/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /Long List/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    await user.click(shortListTab);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /Short List/i })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+  });
+
+  it("keeps the NDA count aligned with short list buyers and backfills shortlist stages", async () => {
+    const shortlistedBuyer = {
+      ...mockBuyer,
+      id: "buyer-short",
+      company_name: "Short List Buyer",
+      tier: "TIER_1" as const,
+      status: "NDA_SIGNED" as const,
+      is_short_listed: true,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-03-10T00:00:00Z",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [shortlistedBuyer],
+          total: 1,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    const ndaTab = await screen.findByRole("tab", { name: /NDA/i });
+    const shortListTab = screen.getByRole("tab", { name: /Short List/i });
+
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    expect(ndaTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+    expect(shortListTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+
+    const grid = await screen.findByTestId("marketing-grid");
+    expect(within(grid).getByTestId("grid-cell-IDENTIFIED")).toHaveTextContent(
+      "01-01",
+    );
+    expect(within(grid).getByTestId("grid-cell-NDA_SIGNED")).toHaveTextContent(
+      "03-10",
+    );
+  });
+
+  it("treats tiered buyers with signed NDAs as short list even when the flag is stale", async () => {
+    const syncedBuyer = {
+      ...mockBuyer,
+      id: "buyer-synced",
+      company_name: "Synced Buyer",
+      tier: "TIER_1" as const,
+      status: "CONTACTED" as const,
+      is_short_listed: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-03-10T00:00:00Z",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [syncedBuyer],
+          total: 1,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([
+          {
+            id: "nda-signed",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: syncedBuyer.id,
+            nda_type: "MUTUAL",
+            status: "SIGNED",
+            sent_at: null,
+            signed_at: "2026-03-10",
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: syncedBuyer.company_name,
+            created_at: "2026-03-10T00:00:00Z",
+            updated_at: "2026-03-10T00:00:00Z",
+          },
+        ]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    const ndaTab = await screen.findByRole("tab", { name: /NDA/i });
+    const shortListTab = screen.getByRole("tab", { name: /Short List/i });
+
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    expect(ndaTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+    expect(shortListTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+    expect(screen.queryByText("Long List 후보 없음")).not.toBeInTheDocument();
+  });
+
+  it("keeps shortlist stages visible when a newer draft NDA exists after a signed NDA", async () => {
+    const buyerWithMultipleNdas = {
+      ...mockBuyer,
+      id: "buyer-multi-nda",
+      company_name: "Multi NDA Buyer",
+      tier: "TIER_1" as const,
+      status: "CONTACTED" as const,
+      is_short_listed: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-03-20T00:00:00Z",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [buyerWithMultipleNdas],
+          total: 1,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([
+          {
+            id: "nda-signed-older",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: buyerWithMultipleNdas.id,
+            nda_type: "MUTUAL",
+            status: "SIGNED",
+            sent_at: null,
+            signed_at: "2026-03-10",
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: buyerWithMultipleNdas.company_name,
+            created_at: "2026-03-10T00:00:00Z",
+            updated_at: "2026-03-10T00:00:00Z",
+          },
+          {
+            id: "nda-draft-newer",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: buyerWithMultipleNdas.id,
+            nda_type: "MUTUAL",
+            status: "DRAFT",
+            sent_at: null,
+            signed_at: null,
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: buyerWithMultipleNdas.company_name,
+            created_at: "2026-03-20T00:00:00Z",
+            updated_at: "2026-03-20T00:00:00Z",
+          },
+        ]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    const ndaTab = await screen.findByRole("tab", { name: /NDA/i });
+    const shortListTab = screen.getByRole("tab", { name: /Short List/i });
+
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    expect(ndaTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+    expect(shortListTab.textContent?.match(/\d+/)?.[0]).toBe("1");
+
+    const grid = await screen.findByTestId("marketing-grid");
+    expect(within(grid).getByTestId("grid-cell-IDENTIFIED")).toHaveTextContent(
+      "01-01",
+    );
+    expect(within(grid).getByTestId("grid-cell-NDA_SIGNED")).toHaveTextContent(
+      "03-10",
+    );
+  });
+
+  it("shows teaser delivery status and version inside the long-list NDA / Teaser column", async () => {
+    const teaserBuyer = {
+      ...mockBuyer,
+      id: "buyer-teaser",
+      company_name: "Teaser Buyer",
+      status: "CONTACTED" as const,
+      is_short_listed: false,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [teaserBuyer], total: 1 });
+      }),
+      http.get("*/api/ma/transactions/:txnId/marketing-materials", () => {
+        return HttpResponse.json([
+          {
+            id: "tm-1",
+            transaction_id: "txn-1",
+            doc_type: "TM",
+            title: "Teaser v1",
+            project_code: "TM-001",
+            status: "READY",
+            error_message: null,
+            source_mode: "UPLOADED",
+            attachment_id: "att-1",
+            parameters: null,
+            file_path: null,
+            file_name: "teaser-v1.pdf",
+            file_size_bytes: 1024,
+            quality_score: null,
+            quality_status: null,
+            quality_issues: null,
+            slide_count: null,
+            pipeline_metrics: null,
+            distribution_eligible: true,
+            distributed_to: [teaserBuyer.company_name],
+            distributed_at: "2026-03-20T00:00:00Z",
+            created_by_email: "advisor@test.com",
+            created_at: "2026-03-01T00:00:00Z",
+            updated_at: "2026-03-20T00:00:00Z",
+          },
+        ]);
+      }),
+    );
+
+    renderTab();
+
+    expect(await screen.findByText(teaserBuyer.company_name)).toBeInTheDocument();
+    expect(screen.getByText("NDA / Teaser")).toBeInTheDocument();
+    expect(screen.getByText("Teaser v1")).toBeInTheDocument();
+    expect(screen.getByText(/2026-03-20/)).toBeInTheDocument();
+  });
+
   it("hides FI and SI automation buttons for read-only users", async () => {
     renderTab({ canWrite: false });
 

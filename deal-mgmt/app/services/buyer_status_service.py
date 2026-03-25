@@ -109,7 +109,7 @@ async def derive_short_list_membership(
     if not is_short_list_tier(tier):
         return False
 
-    if current_short_listed or has_short_list_entry_status(status):
+    if has_short_list_entry_status(status):
         return True
 
     if signed_nda is not None:
@@ -139,6 +139,27 @@ async def sync_short_list_membership(
     )
     buyer.is_short_listed = next_value
     return next_value
+
+
+async def sync_transaction_short_list_memberships(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+) -> None:
+    buyers = (
+        await db.execute(
+            select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id),
+        )
+    ).scalars().all()
+
+    changed = False
+    for buyer in buyers:
+        previous = buyer.is_short_listed
+        next_value = await sync_short_list_membership(db, buyer)
+        if previous != next_value:
+            changed = True
+
+    if changed:
+        await db.flush()
 
 
 async def auto_advance_buyer_status(

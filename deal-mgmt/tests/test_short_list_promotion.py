@@ -237,6 +237,29 @@ async def test_is_short_listed_filter_uses_synced_membership(client):
     assert b2["id"] in returned_ids
 
 
+async def test_reads_repair_stale_short_list_flag_for_tiered_signed_nda(client):
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id, company_name="Buyer synced")
+
+    await _patch_buyer(client, txn_id, buyer["id"], {"tier": "TIER_1"})
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"is_short_listed": False},
+    )
+    assert patched["is_short_listed"] is False
+
+    detail_resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}")
+    assert detail_resp.status_code == 200
+    assert detail_resp.json()["is_short_listed"] is True
+
+    list_resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=true")
+    assert list_resp.status_code == 200
+    assert [item["id"] for item in list_resp.json()["items"]] == [buyer["id"]]
+
+
 async def test_new_buyer_status_values(client):
     txn_id = await _create_txn(client)
 

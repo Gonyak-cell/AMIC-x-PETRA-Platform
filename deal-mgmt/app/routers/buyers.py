@@ -25,7 +25,10 @@ from app.schemas.buyer import (
     BuyerPipelineSummary,
 )
 from app.services import audit_service, transaction_service
-from app.services.buyer_status_service import derive_short_list_membership
+from app.services.buyer_status_service import (
+    derive_short_list_membership,
+    sync_transaction_short_list_memberships,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,7 @@ async def list_buyers(
 ) -> BuyerCandidateListResponse:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await sync_transaction_short_list_memberships(db, txn_id)
     base = select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id)
     if buyer_status:
         base = base.where(BuyerCandidate.status == buyer_status)
@@ -99,6 +103,7 @@ async def buyer_summary(
     """매수자 파이프라인 요약 통계 — DB 집계 쿼리로 처리."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await sync_transaction_short_list_memberships(db, txn_id)
     _where = BuyerCandidate.transaction_id == txn_id
 
     # 1. 전체 카운트 + 평균 (nullif로 0 제외 — 기존 동작 유지)
@@ -220,6 +225,7 @@ async def get_buyer(
 ) -> BuyerCandidateOut:
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await sync_transaction_short_list_memberships(db, txn_id)
     q = select(BuyerCandidate).where(BuyerCandidate.id == buyer_id, BuyerCandidate.transaction_id == txn_id)
     buyer = (await db.execute(q)).scalar_one_or_none()
     if buyer is None:

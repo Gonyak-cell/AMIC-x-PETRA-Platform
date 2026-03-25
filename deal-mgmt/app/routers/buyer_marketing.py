@@ -35,7 +35,12 @@ from app.schemas.marketing_log import (
 )
 from app.services import audit_service, transaction_service
 from app.services.buyer_export_service import build_buyer_excel
-from app.services.buyer_status_service import auto_advance_buyer_status, check_status_after_delete, get_advance_target
+from app.services.buyer_status_service import (
+    auto_advance_buyer_status,
+    check_status_after_delete,
+    get_advance_target,
+    sync_transaction_short_list_memberships,
+)
 from app.services.platform_settings_service import get_or_create_settings
 from app.services.protocols import KIISClientProtocol
 
@@ -346,6 +351,7 @@ async def short_list_marketing_overview(
     """Short-List(is_short_listed=True) 매수자 전원의 마케팅 단계 완료 현황."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
+    await sync_transaction_short_list_memberships(db, txn_id)
 
     # Short-List = is_short_listed 플래그 기반
     buyers_q = select(BuyerCandidate.id).where(

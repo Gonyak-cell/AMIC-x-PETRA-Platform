@@ -1,0 +1,242 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
+
+import { maApi } from "@/api/maClient";
+import { createTestQueryClient } from "@/test/test-utils";
+
+import BuyerTeaserSection from "../BuyerTeaserSection";
+
+const mockUseMarketingMaterials = vi.fn();
+
+vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
+  useMarketingMaterials: () => mockUseMarketingMaterials(),
+}));
+
+vi.mock("@/modules/ma/components/FileUploadZone", () => ({
+  default: ({ embeddedLabel }: { embeddedLabel?: string }) => (
+    <div>{embeddedLabel ?? "file-upload-zone"}</div>
+  ),
+}));
+
+const toastSuccessSpy = vi
+  .spyOn(toast, "success")
+  .mockImplementation(() => "toast-success");
+const toastErrorSpy = vi
+  .spyOn(toast, "error")
+  .mockImplementation(() => "toast-error");
+
+function renderSection() {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BuyerTeaserSection
+        txnId="txn-1"
+        canWrite
+        buyer={{
+          id: "buyer-1",
+          transaction_id: "txn-1",
+          company_name: "Test Buyer",
+          contact_name: "Hong",
+          contact_email: null,
+          contact_phone: null,
+          buyer_type: "STRATEGIC",
+          status: "CONTACTED",
+          tier: "TIER_1",
+          deal_role: "SOLE_BUYER",
+          is_short_listed: false,
+          corp_code: null,
+          ioi_value: null,
+          ioi_date: null,
+          loi_value: null,
+          loi_date: null,
+          final_offer_value: null,
+          rejection_reason: null,
+          notes: null,
+          extra_data: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }}
+        onUploaded={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+}
+
+describe("BuyerTeaserSection", () => {
+  beforeEach(() => {
+    mockUseMarketingMaterials.mockReset();
+    toastSuccessSpy.mockClear();
+    toastErrorSpy.mockClear();
+    vi.spyOn(maApi, "put").mockReset();
+  });
+
+  it("renders teaser versions and the latest distributed version", async () => {
+    mockUseMarketingMaterials.mockReturnValue({
+      data: [
+        {
+          id: "tm-1",
+          transaction_id: "txn-1",
+          doc_type: "TM",
+          title: "Teaser v1",
+          project_code: "T-001",
+          status: "READY",
+          error_message: null,
+          source_mode: "UPLOADED",
+          attachment_id: "att-1",
+          parameters: null,
+          file_path: null,
+          file_name: "teaser-v1.pdf",
+          file_size_bytes: 1024,
+          quality_score: null,
+          quality_status: null,
+          quality_issues: null,
+          slide_count: null,
+          pipeline_metrics: null,
+          distribution_eligible: true,
+          distributed_to: [],
+          distributed_at: null,
+          created_by_email: "advisor@test.com",
+          created_at: "2026-03-01T00:00:00Z",
+          updated_at: "2026-03-01T00:00:00Z",
+        },
+        {
+          id: "tm-2",
+          transaction_id: "txn-1",
+          doc_type: "TM",
+          title: "Teaser v2",
+          project_code: "T-002",
+          status: "READY",
+          error_message: null,
+          source_mode: "UPLOADED",
+          attachment_id: "att-2",
+          parameters: null,
+          file_path: null,
+          file_name: "teaser-v2.pdf",
+          file_size_bytes: 2048,
+          quality_score: null,
+          quality_status: null,
+          quality_issues: null,
+          slide_count: null,
+          pipeline_metrics: null,
+          distribution_eligible: true,
+          distributed_to: ["Test Buyer"],
+          distributed_at: "2026-03-20T00:00:00Z",
+          created_by_email: "advisor@test.com",
+          created_at: "2026-03-10T00:00:00Z",
+          updated_at: "2026-03-20T00:00:00Z",
+        },
+      ],
+    });
+
+    renderSection();
+
+    expect(
+      await screen.findByRole("heading", { name: "Teaser" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("2 version(s)")).toBeInTheDocument();
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    expect(screen.getAllByText("v2").length).toBeGreaterThan(0);
+    expect(screen.getByText("2026-03-20")).toBeInTheDocument();
+    expect(screen.getByText("Teaser 업로드")).toBeInTheDocument();
+  });
+
+  it("moves teaser distribution to the selected version", async () => {
+    const putSpy = vi.spyOn(maApi, "put").mockResolvedValue({
+      data: {
+        id: "tm-2",
+      },
+    } as never);
+
+    mockUseMarketingMaterials.mockReturnValue({
+      data: [
+        {
+          id: "tm-1",
+          transaction_id: "txn-1",
+          doc_type: "TM",
+          title: "Teaser v1",
+          project_code: null,
+          status: "READY",
+          error_message: null,
+          source_mode: "UPLOADED",
+          attachment_id: "att-1",
+          parameters: null,
+          file_path: null,
+          file_name: "teaser-v1.pdf",
+          file_size_bytes: 1024,
+          quality_score: null,
+          quality_status: null,
+          quality_issues: null,
+          slide_count: null,
+          pipeline_metrics: null,
+          distribution_eligible: true,
+          distributed_to: ["Test Buyer"],
+          distributed_at: "2026-03-15T00:00:00Z",
+          created_by_email: "advisor@test.com",
+          created_at: "2026-03-01T00:00:00Z",
+          updated_at: "2026-03-15T00:00:00Z",
+        },
+        {
+          id: "tm-2",
+          transaction_id: "txn-1",
+          doc_type: "TM",
+          title: "Teaser v2",
+          project_code: null,
+          status: "READY",
+          error_message: null,
+          source_mode: "UPLOADED",
+          attachment_id: "att-2",
+          parameters: null,
+          file_path: null,
+          file_name: "teaser-v2.pdf",
+          file_size_bytes: 2048,
+          quality_score: null,
+          quality_status: null,
+          quality_issues: null,
+          slide_count: null,
+          pipeline_metrics: null,
+          distribution_eligible: true,
+          distributed_to: [],
+          distributed_at: null,
+          created_by_email: "advisor@test.com",
+          created_at: "2026-03-10T00:00:00Z",
+          updated_at: "2026-03-10T00:00:00Z",
+        },
+      ],
+    });
+
+    renderSection();
+
+    const versionCell = await screen.findByText("v2");
+    const row = versionCell.closest("tr");
+    expect(row).not.toBeNull();
+
+    const buttons = within(row as HTMLElement).getAllByRole("button");
+    fireEvent.click(buttons[buttons.length - 1]);
+
+    await waitFor(() => {
+      expect(putSpy).toHaveBeenCalledTimes(2);
+    });
+
+    const payloads = putSpy.mock.calls.map(([url, body]) => ({ url, body }));
+    expect(payloads).toEqual(
+      expect.arrayContaining([
+        {
+          url: "/transactions/txn-1/marketing-materials/tm-1/distribute",
+          body: expect.objectContaining({
+            distributed_to: [],
+          }),
+        },
+        {
+          url: "/transactions/txn-1/marketing-materials/tm-2/distribute",
+          body: expect.objectContaining({
+            distributed_to: ["Test Buyer"],
+            distributed_at: expect.any(String),
+          }),
+        },
+      ]),
+    );
+    expect(toastSuccessSpy).toHaveBeenCalled();
+  });
+});
