@@ -146,10 +146,14 @@ async def sync_transaction_short_list_memberships(
     txn_id: uuid.UUID,
 ) -> None:
     buyers = (
-        await db.execute(
-            select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id),
+        (
+            await db.execute(
+                select(BuyerCandidate).where(BuyerCandidate.transaction_id == txn_id),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     changed = False
     for buyer in buyers:
