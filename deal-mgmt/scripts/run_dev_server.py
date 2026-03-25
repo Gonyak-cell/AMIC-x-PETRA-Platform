@@ -43,10 +43,7 @@ def _get_sqlite_tables(conn: sqlite3.Connection) -> set[str]:
 
 
 def _get_sqlite_columns(conn: sqlite3.Connection, table_name: str) -> dict[str, tuple]:
-    return {
-        row[1]: row
-        for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
-    }
+    return {row[1]: row for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
 
 
 def _get_local_dev_rebuild_reason(db_path: Path) -> str | None:
@@ -62,10 +59,7 @@ def _get_local_dev_rebuild_reason(db_path: Path) -> str | None:
                 REQUIRED_MARKETING_MATERIAL_COLUMNS - marketing_columns,
             )
             if missing_marketing_columns:
-                return (
-                    "marketing_materials is missing required columns: "
-                    f"{', '.join(missing_marketing_columns)}"
-                )
+                return f"marketing_materials is missing required columns: {', '.join(missing_marketing_columns)}"
 
         if "ndas" in tables:
             nda_columns = _get_sqlite_columns(conn, "ndas")
