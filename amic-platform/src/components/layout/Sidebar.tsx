@@ -612,7 +612,7 @@ export function Sidebar({
                   </div>
                   <Button
                     type="button"
-                    size="xs"
+                    size="sm"
                     variant="accent"
                     icon={User}
                     className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"

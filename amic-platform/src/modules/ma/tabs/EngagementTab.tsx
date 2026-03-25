@@ -220,7 +220,7 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
                 { key: "expires_at", header: "만료일" },
                 { key: "notes", header: "비고" },
               ]}
-              data={engagements}
+              data={engagements ?? []}
               keyField="id"
             />
           ) : null}

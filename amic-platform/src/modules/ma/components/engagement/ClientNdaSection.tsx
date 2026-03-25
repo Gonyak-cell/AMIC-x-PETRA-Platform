@@ -224,7 +224,7 @@ export default function ClientNdaSection({
                 ) : null,
             },
           ]}
-          data={ndas}
+          data={ndas ?? []}
           keyField="id"
         />
       ) : null}

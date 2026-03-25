@@ -1,15 +1,14 @@
-/** 로그인 페이지 (포레스트 배경 + 글래스 카드 + 공식 SVG 로고) */
-
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation, useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Button, Input } from "@/components/ui";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LogIn } from "lucide-react";
-import { APP_VERSION } from "@/lib/app-version";
-import { DEFAULT_DEV_LOGIN } from "@/lib/devAuth";
+
 import brochureCover from "@/assets/images/brochure-cover.png";
 import forestCover from "@/assets/images/forest-cover.jpg";
 import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg";
+import { Button, Input } from "@/components/ui";
+import { useAuth } from "@/hooks/useAuth";
+import { APP_VERSION } from "@/lib/app-version";
+import { DEFAULT_DEV_LOGIN } from "@/lib/devAuth";
 
 const DEV_LOCAL_AUTH_ENABLED =
   (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
@@ -25,11 +24,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Already authenticated — redirect to dashboard
-  if (isAuthenticated) {
-    return <Navigate to={POST_LOGIN_PATH} replace />;
-  }
 
   useEffect(() => {
     if (!DEV_LOCAL_AUTH_ENABLED || isAuthenticated) return;
@@ -61,6 +55,10 @@ export default function LoginPage() {
     };
   }, [isAuthenticated, location.search, login, navigate]);
 
+  if (isAuthenticated) {
+    return <Navigate to={POST_LOGIN_PATH} replace />;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -77,7 +75,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] flex overflow-x-hidden">
-      {/* Left Panel — Brochure Cover (Desktop only) */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <img
           src={brochureCover}
@@ -86,9 +83,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Right Panel — Login Form */}
       <div className="flex-1 relative flex items-center justify-center px-6 lg:px-20 lg:bg-white">
-        {/* Mobile Forest Background */}
         <div className="absolute inset-0 lg:hidden">
           <img
             src={forestCover}
@@ -99,9 +94,7 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-amic-900/60 via-amic-900/70 to-amic-900/90" />
         </div>
 
-        {/* Form Container */}
         <div className="relative z-10 w-full max-w-lg">
-          {/* Mobile Logo — SVG (white, on forest background) */}
           <div className="lg:hidden mb-10 flex flex-col items-center">
             <img
               src={amicPetraWhiteUrl}
@@ -111,7 +104,6 @@ export default function LoginPage() {
             <div className="mt-4 h-px w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           </div>
 
-          {/* Glass Card on mobile, plain on desktop */}
           <div
             className="login-dark-theme lg:bg-transparent lg:border-0 lg:shadow-none lg:backdrop-blur-none
                         bg-white/[0.08] backdrop-blur-xl border border-white/[0.12]

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import logging
 import re
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
@@ -362,7 +362,7 @@ def _serialize_attachment_out(
     """직렬화 시 ORM lazy-load를 피하고 저장된 스냅샷으로 응답을 구성한다."""
 
     state = attachment.__dict__
-    created_at = state.get("created_at") or datetime.now(timezone.utc)
+    created_at = state.get("created_at") or datetime.now(UTC)
     updated_at = state.get("updated_at") or created_at
 
     return AttachmentOut(
