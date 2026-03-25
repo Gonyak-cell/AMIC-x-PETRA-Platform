@@ -5,6 +5,9 @@ import io
 import pytest
 from httpx import AsyncClient
 
+from app.models.attachment import Attachment
+from app.routers import attachments as attachments_router
+
 pytestmark = pytest.mark.anyio
 
 BASE = "/api/v1/transactions"
@@ -61,6 +64,39 @@ async def test_upload_with_description(client: AsyncClient, transaction_id: str)
     resp = await _upload(client, transaction_id, description="NDA 초안")
     assert resp.status_code == 201
     assert resp.json()["description"] == "NDA 초안"
+
+
+async def test_upload_engagement_succeeds_even_if_refresh_fails(
+    client: AsyncClient,
+    transaction_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    original_refresh = attachments_router.AsyncSession.refresh
+
+    async def flaky_refresh(self, instance, *args, **kwargs):
+        if isinstance(instance, Attachment):
+            raise RuntimeError("attachment refresh failed after commit")
+        return await original_refresh(self, instance, *args, **kwargs)
+
+    monkeypatch.setattr(attachments_router.AsyncSession, "refresh", flaky_refresh)
+
+    resp = await _upload(
+        client,
+        transaction_id,
+        entity_type="ENGAGEMENT",
+        filename="engagement.pdf",
+    )
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["entity_type"] == "ENGAGEMENT"
+    assert body["file_name"] == "engagement.pdf"
+
+    list_resp = await client.get(
+        f"{BASE}/{transaction_id}/attachments?entity_type=ENGAGEMENT",
+    )
+    assert list_resp.status_code == 200
+    assert list_resp.json()["total"] == 1
 
 
 async def test_upload_invalid_entity_type(client: AsyncClient, transaction_id: str):

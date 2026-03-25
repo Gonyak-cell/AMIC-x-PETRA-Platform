@@ -1,11 +1,12 @@
 /** 로그인 페이지 (포레스트 배경 + 글래스 카드 + 공식 SVG 로고) */
 
-import { useState, type FormEvent } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input } from "@/components/ui";
 import { LogIn } from "lucide-react";
 import { APP_VERSION } from "@/lib/app-version";
+import { DEFAULT_DEV_LOGIN } from "@/lib/devAuth";
 import brochureCover from "@/assets/images/brochure-cover.png";
 import forestCover from "@/assets/images/forest-cover.jpg";
 import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg";
@@ -13,9 +14,11 @@ import amicPetraWhiteUrl from "@/assets/logos/AMIC_n_PETRA_Main_Simple_White.svg
 const DEV_LOCAL_AUTH_ENABLED =
   (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
 const POST_LOGIN_PATH = DEV_LOCAL_AUTH_ENABLED ? "/ma/transactions" : "/";
+const DEV_AUTO_LOGIN_QUERY = "devLogin";
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -27,6 +30,36 @@ export default function LoginPage() {
   if (isAuthenticated) {
     return <Navigate to={POST_LOGIN_PATH} replace />;
   }
+
+  useEffect(() => {
+    if (!DEV_LOCAL_AUTH_ENABLED || isAuthenticated) return;
+
+    const params = new URLSearchParams(location.search);
+    if (params.get(DEV_AUTO_LOGIN_QUERY) !== "1") return;
+
+    let cancelled = false;
+
+    setError("");
+    setLoading(true);
+
+    void login(DEFAULT_DEV_LOGIN)
+      .then(() => {
+        if (cancelled) return;
+        navigate(POST_LOGIN_PATH, { replace: true });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Development auto-login failed.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, location.search, login, navigate]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

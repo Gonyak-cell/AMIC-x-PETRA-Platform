@@ -1,21 +1,19 @@
-"""매수자 상태 자동 승격 서비스 — 마케팅 스테이지 기반."""
+"""Buyer status auto-advance and shortlist sync helpers."""
 
 from __future__ import annotations
 
-import logging
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.buyer_candidate import BuyerCandidate
-from app.models.enums import AuditAction, BuyerCandidateStatus, MarketingStage
+from app.models.enums import AuditAction, BuyerCandidateStatus, BuyerTier, MarketingStage, NdaPartyType, NdaStatus
+from app.models.nda import NDA
 from app.services import audit_service
-
-logger = logging.getLogger(__name__)
 
 _S = BuyerCandidateStatus
 
-# 마케팅 스테이지 → 목표 buyer status 매핑
 MARKETING_STATUS_ADVANCE: dict[MarketingStage, BuyerCandidateStatus] = {
     MarketingStage.TEASER_SENT: _S.CONTACTED,
     MarketingStage.NDA_SIGNED: _S.NDA_SIGNED,
@@ -24,10 +22,8 @@ MARKETING_STATUS_ADVANCE: dict[MarketingStage, BuyerCandidateStatus] = {
     MarketingStage.DD_IN_PROGRESS: _S.DD_IN_PROGRESS,
 }
 
-# 선형 승격 경로 (중간 상태를 순차적으로 통과)
-# NOTE: CONTACTED → NDA_SIGNED은 의도적으로 NDA_SENT를 건너뜀.
-# 마케팅 스테이지에 "NDA 발송" 단계가 없으므로 자동 승격 시 NDA_SENT를 경유하지 않는다.
-# NDA_SENT 상태의 buyer가 있는 경우를 위해 NDA_SENT → NDA_SIGNED 경로는 별도 유지.
+# CONTACTED moves straight to NDA_SIGNED because the marketing log flow does not
+# have a separate "NDA sent" milestone.
 ADVANCE_PATH: dict[BuyerCandidateStatus, BuyerCandidateStatus] = {
     _S.IDENTIFIED: _S.CONTACTED,
     _S.CONTACTED: _S.NDA_SIGNED,
@@ -44,7 +40,6 @@ ADVANCE_PATH: dict[BuyerCandidateStatus, BuyerCandidateStatus] = {
     _S.SELECTED: _S.BID_SUBMITTED,
 }
 
-# 순서 판정용 ordinal (터미널 상태 제외)
 STATUS_ORDER: dict[BuyerCandidateStatus, int] = {
     _S.IDENTIFIED: 0,
     _S.CONTACTED: 1,
@@ -70,6 +65,81 @@ TERMINAL_STATUSES: frozenset[BuyerCandidateStatus] = frozenset(
     }
 )
 
+SHORT_LIST_TIERS: frozenset[BuyerTier] = frozenset(
+    {
+        BuyerTier.TIER_1,
+        BuyerTier.TIER_2,
+        BuyerTier.TIER_3,
+    }
+)
+_SHORT_LIST_ENTRY_ORDINAL = STATUS_ORDER[_S.NDA_SIGNED]
+
+
+def is_short_list_tier(tier: BuyerTier | None) -> bool:
+    return tier in SHORT_LIST_TIERS
+
+
+def has_short_list_entry_status(status: BuyerCandidateStatus) -> bool:
+    ordinal = STATUS_ORDER.get(status)
+    return ordinal is not None and ordinal >= _SHORT_LIST_ENTRY_ORDINAL
+
+
+async def buyer_has_signed_nda(db: AsyncSession, buyer_id: uuid.UUID) -> bool:
+    query = (
+        select(NDA.id)
+        .where(
+            NDA.buyer_candidate_id == buyer_id,
+            NDA.party_type == NdaPartyType.BUYER,
+            NDA.status == NdaStatus.SIGNED,
+        )
+        .limit(1)
+    )
+    return (await db.execute(query)).scalar_one_or_none() is not None
+
+
+async def derive_short_list_membership(
+    db: AsyncSession,
+    *,
+    tier: BuyerTier | None,
+    status: BuyerCandidateStatus,
+    current_short_listed: bool = False,
+    buyer_id: uuid.UUID | None = None,
+    signed_nda: bool | None = None,
+) -> bool:
+    if not is_short_list_tier(tier):
+        return False
+
+    if current_short_listed or has_short_list_entry_status(status):
+        return True
+
+    if signed_nda is not None:
+        return signed_nda
+
+    if buyer_id is None:
+        return False
+
+    return await buyer_has_signed_nda(db, buyer_id)
+
+
+async def sync_short_list_membership(
+    db: AsyncSession,
+    buyer: BuyerCandidate,
+    *,
+    tier: BuyerTier | None = None,
+    status: BuyerCandidateStatus | None = None,
+    signed_nda: bool | None = None,
+) -> bool:
+    next_value = await derive_short_list_membership(
+        db,
+        tier=buyer.tier if tier is None else tier,
+        status=buyer.status if status is None else status,
+        current_short_listed=buyer.is_short_listed,
+        buyer_id=buyer.id,
+        signed_nda=signed_nda,
+    )
+    buyer.is_short_listed = next_value
+    return next_value
+
 
 async def auto_advance_buyer_status(
     db: AsyncSession,
@@ -77,20 +147,21 @@ async def auto_advance_buyer_status(
     target: BuyerCandidateStatus,
     actor_email: str,
 ) -> None:
-    """buyer.status를 target까지 순차 승격. 이미 같거나 높으면 무시."""
-    # 터미널 상태(REJECTED, BID_DROPPED 등)는 승격하지 않음
+    """Advance buyer.status toward target when the request moves forward."""
     if buyer.status in TERMINAL_STATUSES:
+        await sync_short_list_membership(db, buyer, signed_nda=False)
         return
 
     cur_ord = STATUS_ORDER.get(buyer.status)
     tgt_ord = STATUS_ORDER.get(target)
     if cur_ord is None or tgt_ord is None or cur_ord >= tgt_ord:
+        await sync_short_list_membership(db, buyer, signed_nda=False)
         return
 
     visited: set[BuyerCandidateStatus] = set()
     while STATUS_ORDER.get(buyer.status, 99) < tgt_ord:
         if buyer.status in visited:
-            break  # 순환 방지
+            break
         visited.add(buyer.status)
         next_status = ADVANCE_PATH.get(buyer.status)
         if next_status is None:
@@ -105,17 +176,17 @@ async def auto_advance_buyer_status(
             actor_email=actor_email,
             old_value={"status": old.value},
             new_value={"status": next_status.value},
-            notes="마케팅 스테이지 기반 자동 승격",
+            notes="Marketing-stage auto advance",
         )
+
+    await sync_short_list_membership(db, buyer, signed_nda=False)
 
 
 def get_advance_target(stage: MarketingStage) -> BuyerCandidateStatus | None:
-    """마케팅 스테이지에 대응하는 목표 buyer status를 반환한다."""
     return MARKETING_STATUS_ADVANCE.get(stage)
 
 
 def has_advance_mapping(stage: MarketingStage) -> bool:
-    """해당 마케팅 스테이지가 자동 승격 매핑을 가지는지 반환한다."""
     return stage in MARKETING_STATUS_ADVANCE
 
 
@@ -125,11 +196,7 @@ async def check_status_after_delete(
     deleted_stage: MarketingStage,
     actor_email: str,
 ) -> None:
-    """마케팅 로그 삭제 후, 자동 승격에 영향을 줄 수 있음을 감사 로그에 기록한다.
-
-    buyer.status 롤백은 수행하지 않는다 (안전한 롤백 대상 결정이 어려움).
-    대신 감사 로그에 경고를 남겨 수동 검토를 유도한다.
-    """
+    """Log that manual buyer status review may be needed after log deletion."""
     if not has_advance_mapping(deleted_stage):
         return
 
@@ -140,7 +207,7 @@ async def check_status_after_delete(
         action=AuditAction.STATUS_CHANGE,
         actor_email=actor_email,
         notes=(
-            f"마케팅 로그 삭제됨 (stage={deleted_stage.value}). "
-            "이 스테이지는 자동 승격 트리거였으므로 buyer.status 수동 검토 필요."
+            f"Marketing log deleted (stage={deleted_stage.value}). "
+            "Review buyer.status manually because auto-advance history changed."
         ),
     )

@@ -41,7 +41,6 @@ import {
   DEAL_ROLE_OPTIONS,
   FUNNEL_CIM_AND_AFTER,
   FUNNEL_DD_AND_AFTER,
-  FUNNEL_NDA_AND_AFTER,
   isShortListed,
   buildStageMap,
   MARKETING_STAGES,
@@ -128,13 +127,6 @@ function hasTierDecision(buyer: BuyerCandidate): boolean {
 
 function isNdaCandidateTier(tier: BuyerCandidate["tier"]): boolean {
   return tier === "TIER_1" || tier === "TIER_2" || tier === "TIER_3";
-}
-
-function hasBuyerReachedSignedStage(
-  buyer: BuyerCandidate,
-  nda?: NDA,
-): boolean {
-  return nda?.status === "SIGNED" || FUNNEL_NDA_AND_AFTER.has(buyer.status);
 }
 
 function compareFunnelStep(a: FunnelStepId, b: FunnelStepId): number {
@@ -449,28 +441,25 @@ export default function BuyersTab({
     }
     return entries;
   }, [buyerNdas]);
-  const hasAllTierDecisions = useMemo(
-    () => allBuyers.length > 0 && allBuyers.every(hasTierDecision),
-    [allBuyers],
-  );
-  const ndaStageBuyers = useMemo(
-    () => allBuyers.filter((buyer) => isNdaCandidateTier(buyer.tier)),
-    [allBuyers],
-  );
-  const signedNdaBuyers = useMemo(
-    () =>
-      ndaStageBuyers.filter((buyer) =>
-        hasBuyerReachedSignedStage(buyer, buyerNdaMap.get(buyer.id)),
-      ),
-    [buyerNdaMap, ndaStageBuyers],
-  );
-  const ndaStepUnlocked = hasAllTierDecisions && ndaStageBuyers.length > 0;
-  const shortListUnlocked =
-    ndaStageBuyers.length > 0 && signedNdaBuyers.length === ndaStageBuyers.length;
   const realShortList = useMemo(
     () => allBuyers.filter(isShortListed),
     [allBuyers],
   );
+  const longListBuyers = useMemo(
+    () => allBuyers.filter((buyer) => !isShortListed(buyer)),
+    [allBuyers],
+  );
+  const hasAllTierDecisions = useMemo(
+    () => longListBuyers.length > 0 && longListBuyers.every(hasTierDecision),
+    [longListBuyers],
+  );
+  const ndaPendingBuyers = useMemo(
+    () =>
+      longListBuyers.filter((buyer) => isNdaCandidateTier(buyer.tier)),
+    [longListBuyers],
+  );
+  const ndaStepUnlocked = hasAllTierDecisions && ndaPendingBuyers.length > 0;
+  const shortListUnlocked = realShortList.length > 0;
 
   // ── Dev-only mock data for Short List preview (동적 import) ──
   const [devMockBuyers, setDevMockBuyers] = useState<BuyerCandidate[]>([]);
@@ -491,13 +480,13 @@ export default function BuyersTab({
 
     const previous = autoStepRef.current;
 
-    if (!ndaStepUnlocked) {
-      if (buyerSubTab !== "long-list") {
-        setBuyerSubTab("long-list");
-      }
-    } else if (shortListUnlocked) {
+    if (shortListUnlocked) {
       if (!previous.shortListUnlocked) {
         setBuyerSubTab("short-list");
+      }
+    } else if (!ndaStepUnlocked) {
+      if (buyerSubTab !== "long-list") {
+        setBuyerSubTab("long-list");
       }
     } else if (!previous.ndaUnlocked || buyerSubTab === "short-list") {
       setBuyerSubTab("nda");
@@ -572,7 +561,7 @@ export default function BuyersTab({
   // Client-side filtering for Long List
   const deferredSearch = useDeferredValue(longListFilters.search);
   const filteredBuyers = useMemo(() => {
-    let result = allBuyers;
+    let result = longListBuyers;
     if (longListFilters.type) {
       result = result.filter((b) => b.buyer_type === longListFilters.type);
     }
@@ -588,7 +577,7 @@ export default function BuyersTab({
     }
     return result;
   }, [
-    allBuyers,
+    longListBuyers,
     longListFilters.type,
     longListFilters.tier,
     longListFilters.status,
@@ -608,19 +597,19 @@ export default function BuyersTab({
       {
         id: "long-list",
         label: "Long List",
-        count: allBuyers.length,
+        count: longListBuyers.length,
         clickable: true,
       },
       {
         id: "nda",
         label: "NDA 체결",
-        count: ndaStageBuyers.length,
+        count: ndaPendingBuyers.length,
         clickable: ndaStepUnlocked,
       },
       {
         id: "short-list",
         label: "Short List",
-        count: signedNdaBuyers.length,
+        count: realShortList.length,
         clickable: shortListUnlocked,
       },
       {
@@ -638,10 +627,11 @@ export default function BuyersTab({
     ];
   }, [
     allBuyers,
-    ndaStageBuyers.length,
+    longListBuyers.length,
+    ndaPendingBuyers.length,
     ndaStepUnlocked,
+    realShortList.length,
     shortListUnlocked,
-    signedNdaBuyers.length,
   ]);
 
   // Derive selected buyer and its stage summary for SlidePanel
@@ -823,7 +813,7 @@ export default function BuyersTab({
         {buyerSubTab === "long-list" && (
           <>
             <Card title="Long List" headerBar padding="none">
-              {!allBuyers.length ? (
+              {!longListBuyers.length ? (
                 <>
                   <EmptyState
                     icon={Users}
@@ -903,7 +893,7 @@ export default function BuyersTab({
         {buyerSubTab === "nda" && (
           <>
             <BuyerNdaStageBoard
-              buyers={ndaStageBuyers}
+              buyers={ndaPendingBuyers}
               ndaByBuyerId={buyerNdaMap}
               onSelectBuyer={(buyerId) => setSelectedNdaBuyerId(buyerId)}
             />

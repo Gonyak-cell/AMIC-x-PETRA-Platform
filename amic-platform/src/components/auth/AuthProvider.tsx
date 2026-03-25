@@ -1,5 +1,3 @@
-/** 인증 Context Provider (Sprint 11). */
-
 import {
   useState,
   useEffect,
@@ -11,8 +9,14 @@ import { authApi } from "@/api/client";
 import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 import type { AuthUser, AuthState } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
+import {
+  DEV_LOCAL_AUTH_ENABLED,
+  clearLocalAuthSession,
+  getLocalAuthSession,
+} from "@/lib/devAuth";
 
-/** 사이드바 메뉴 상태(sessionStorage) 일괄 초기화 */
+/** ?뭭 ?꾩슂 ?뚯씠?? Context Provider (Sprint 11). */
+
 function clearSidebarStorage(): void {
   try {
     Object.keys(sessionStorage)
@@ -38,17 +42,27 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   // M9: Listen for force-logout events from interceptor
   useEffect(() => {
     const handler = () => {
-      // 쿠키는 백엔드가 삭제함
       queryClient.clear();
       clearSidebarStorage();
+      clearLocalAuthSession();
       setState({ user: null, isAuthenticated: false, isLoading: false });
     };
     window.addEventListener(AUTH_LOGOUT_EVENT, handler);
     return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handler);
   }, [queryClient]);
 
-  // On mount: check for existing token and fetch user profile (M12: AbortController cleanup)
+  // On mount: check local auth state first (DEV mode), otherwise fetch me profile
   useEffect(() => {
+    if (DEV_LOCAL_AUTH_ENABLED) {
+      const user = getLocalAuthSession();
+      setState({
+        user,
+        isAuthenticated: Boolean(user),
+        isLoading: false,
+      });
+      return;
+    }
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -61,7 +75,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           if (cancelled) return;
-          // 쿠키가 없거나 만료되면 401 반환, 로그아웃 상태로 전환
           setState({ user: null, isAuthenticated: false, isLoading: false });
         });
     };

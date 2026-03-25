@@ -47,12 +47,8 @@ export const BUYER_TIER_LABELS: Record<string, string> = {
   NOT_TARGET: "대상 아님",
 };
 
-/** Tier 1/2/3 → Short List 자동 승격 대상 */
-const SHORT_LIST_TIER_SET = new Set<string>(["TIER_1", "TIER_2", "TIER_3"]);
-
-/** tier 기반 Short List 판정 (is_short_listed 플래그 + tier SSOT 보정) */
 export function isShortListed(b: BuyerCandidate): boolean {
-  return b.is_short_listed || (!!b.tier && SHORT_LIST_TIER_SET.has(b.tier));
+  return b.is_short_listed;
 }
 
 // ── Marketing Stage ─────────────────────────────────

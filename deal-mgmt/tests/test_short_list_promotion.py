@@ -1,24 +1,24 @@
-"""Tier 기반 Short-List 자동 승격 + 입찰 상태 + 필터 테스트."""
+"""Short-list promotion, bidding status, and buyer status regression tests."""
 
 SAMPLE_TXN = {
-    "name": "프로젝트 델타",
+    "name": "Project Alpha",
     "deal_type": "SE",
     "side": "SELL",
-    "target_company_name": "델타기업",
-    "client_name": "의뢰기업",
+    "target_company_name": "Alpha Target",
+    "client_name": "Client Corp",
     "lead_advisor_email": "advisor@example.com",
 }
 
 BUYER_WITH_CONTACT = {
-    "company_name": "매수기업A",
-    "contact_name": "홍길동",
+    "company_name": "Buyer A",
+    "contact_name": "Hong",
     "contact_email": "hong@buyer.com",
     "contact_phone": "010-1234-5678",
     "buyer_type": "STRATEGIC",
 }
 
 BUYER_NO_CONTACT = {
-    "company_name": "매수기업B",
+    "company_name": "Buyer B",
     "buyer_type": "FINANCIAL_SPONSOR",
 }
 
@@ -36,9 +36,33 @@ async def _add_buyer(client, txn_id: str, **overrides) -> dict:
     return resp.json()
 
 
+async def _patch_buyer(client, txn_id: str, buyer_id: str, body: dict) -> dict:
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+        json=body,
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+async def _sign_buyer_nda(client, txn_id: str, buyer_id: str) -> dict:
+    create_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    assert create_resp.status_code == 201
+    nda_id = create_resp.json()["id"]
+
+    resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}",
+        json={"status": "SIGNED", "signed_at": "2026-03-10"},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
 async def _advance_to_status(client, txn_id: str, buyer_id: str, target: str) -> None:
-    """유효한 상태 전이 경로를 따라 buyer를 target 상태까지 이동."""
-    _PATHS: dict[str, list[str]] = {
+    paths: dict[str, list[str]] = {
         "BID_SUBMITTED": [
             "CONTACTED",
             "NDA_SIGNED",
@@ -67,187 +91,168 @@ async def _advance_to_status(client, txn_id: str, buyer_id: str, target: str) ->
             "BID_DROPPED",
         ],
     }
-    for s in _PATHS[target]:
+    for status in paths[target]:
         resp = await client.patch(
             f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
-            json={"status": s},
+            json={"status": status},
         )
-        assert resp.status_code == 200, f"Failed transition to {s}: {resp.text}"
+        assert resp.status_code == 200, f"Failed transition to {status}: {resp.text}"
 
 
-# ── Tier 기반 Short-List 자동 승격 ─────────────────────────
-
-
-async def test_tier_1_auto_short_list(client):
-    """Tier 1 설정 → is_short_listed=True 자동 승격."""
+async def test_tier_alone_does_not_auto_short_list(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
-    assert buyer["is_short_listed"] is False
 
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_1"},
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"tier": "TIER_1"},
     )
+
+    assert patched["tier"] == "TIER_1"
+    assert patched["is_short_listed"] is False
+
+
+async def test_status_update_to_nda_signed_auto_short_lists_with_tier(client):
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    await _patch_buyer(client, txn_id, buyer["id"], {"tier": "TIER_1"})
+    await _patch_buyer(client, txn_id, buyer["id"], {"status": "CONTACTED"})
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"status": "NDA_SIGNED"},
+    )
+
+    assert patched["status"] == "NDA_SIGNED"
+    assert patched["is_short_listed"] is True
+
+
+async def test_signed_nda_with_short_list_tier_auto_short_lists(client):
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    await _patch_buyer(client, txn_id, buyer["id"], {"tier": "TIER_2"})
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}")
     assert resp.status_code == 200
+    assert resp.json()["status"] == "NDA_SIGNED"
     assert resp.json()["is_short_listed"] is True
-    assert resp.json()["tier"] == "TIER_1"
 
 
-async def test_tier_2_auto_short_list(client):
-    """Tier 2 설정 → is_short_listed=True 자동 승격."""
+async def test_signed_nda_without_short_list_tier_stays_out_of_short_list(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_2"},
-    )
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+
+    resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}")
     assert resp.status_code == 200
-    assert resp.json()["is_short_listed"] is True
-
-
-async def test_tier_3_auto_short_list(client):
-    """Tier 3 설정 → is_short_listed=True 자동 승격."""
-    txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id)
-
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_3"},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["is_short_listed"] is True
-
-
-async def test_not_target_removes_short_list(client):
-    """NOT_TARGET 설정 → is_short_listed=False 자동 해제."""
-    txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id)
-
-    # 먼저 Tier 1로 승격
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_1"},
-    )
-
-    # NOT_TARGET으로 변경 → Short List 해제
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "NOT_TARGET"},
-    )
-    assert resp.status_code == 200
+    assert resp.json()["status"] == "NDA_SIGNED"
     assert resp.json()["is_short_listed"] is False
-    assert resp.json()["tier"] == "NOT_TARGET"
 
 
-async def test_null_tier_removes_short_list(client):
-    """Tier를 null로 설정 → is_short_listed=False 자동 해제."""
+async def test_assigning_tier_after_nda_signed_auto_short_lists(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
-    # 먼저 Tier 1로 승격
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_1"},
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"tier": "TIER_3"},
     )
 
-    # Tier null로 변경 → Short List 해제
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": None},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["is_short_listed"] is False
-    assert resp.json()["tier"] is None
+    assert patched["tier"] == "TIER_3"
+    assert patched["is_short_listed"] is True
 
 
-async def test_no_contact_required_for_short_list(client):
-    """연락처 없이 Tier 1 설정 → 성공 (422 아님)."""
+async def test_not_target_removes_short_list_even_after_nda_signed(client):
     txn_id = await _create_txn(client)
-    resp = await client.post(f"/api/v1/transactions/{txn_id}/buyers", json=BUYER_NO_CONTACT)
-    assert resp.status_code == 201
-    buyer = resp.json()
+    buyer = await _add_buyer(client, txn_id)
 
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_1"},
+    await _patch_buyer(client, txn_id, buyer["id"], {"tier": "TIER_1"})
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"tier": "NOT_TARGET"},
     )
-    assert resp.status_code == 200
-    assert resp.json()["is_short_listed"] is True
+
+    assert patched["tier"] == "NOT_TARGET"
+    assert patched["is_short_listed"] is False
 
 
-async def test_add_buyer_with_tier_auto_short_list(client):
-    """POST 생성 시 tier=TIER_1 → is_short_listed=True 자동 설정."""
+async def test_null_tier_removes_short_list_even_after_nda_signed(client):
+    txn_id = await _create_txn(client)
+    buyer = await _add_buyer(client, txn_id)
+
+    await _patch_buyer(client, txn_id, buyer["id"], {"tier": "TIER_1"})
+    await _sign_buyer_nda(client, txn_id, buyer["id"])
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"tier": None},
+    )
+
+    assert patched["tier"] is None
+    assert patched["is_short_listed"] is False
+
+
+async def test_add_buyer_with_tier_stays_long_list_until_nda_signed(client):
     txn_id = await _create_txn(client)
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/buyers",
         json={**BUYER_NO_CONTACT, "tier": "TIER_1"},
     )
     assert resp.status_code == 201
-    assert resp.json()["is_short_listed"] is True
     assert resp.json()["tier"] == "TIER_1"
+    assert resp.json()["is_short_listed"] is False
 
 
-async def test_add_buyer_without_tier_not_short_listed(client):
-    """POST 생성 시 tier 미지정 → is_short_listed=False 기본값."""
+async def test_is_short_listed_filter_uses_synced_membership(client):
     txn_id = await _create_txn(client)
-    buyer = await _add_buyer(client, txn_id)
-    assert buyer["is_short_listed"] is False
+    b1 = await _add_buyer(client, txn_id, company_name="Buyer 1")
+    b2 = await _add_buyer(client, txn_id, company_name="Buyer 2")
 
+    await _patch_buyer(client, txn_id, b1["id"], {"tier": "TIER_1"})
+    await _sign_buyer_nda(client, txn_id, b1["id"])
+    await _patch_buyer(client, txn_id, b2["id"], {"tier": "TIER_2"})
 
-# ── is_short_listed 필터 ─────────────────────────────────
+    resp_true = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=true")
+    assert resp_true.status_code == 200
+    assert [item["id"] for item in resp_true.json()["items"]] == [b1["id"]]
 
-
-async def test_is_short_listed_filter(client):
-    """?is_short_listed=true 필터 동작 확인."""
-    txn_id = await _create_txn(client)
-    b1 = await _add_buyer(client, txn_id, company_name="기업1")
-    await _add_buyer(client, txn_id, company_name="기업2")
-
-    # b1만 Tier 1로 승격
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
-        json={"tier": "TIER_1"},
-    )
-
-    # is_short_listed=true 필터
-    resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=true")
-    assert resp.status_code == 200
-    data = resp.json()["items"]
-    assert len(data) == 1
-    assert data[0]["id"] == b1["id"]
-
-    # is_short_listed=false 필터
     resp_false = await client.get(f"/api/v1/transactions/{txn_id}/buyers?is_short_listed=false")
     assert resp_false.status_code == 200
-    data_false = resp_false.json()["items"]
-    assert len(data_false) == 1
-    assert data_false[0]["is_short_listed"] is False
-
-
-# ── Bidding Status ─────────────────────────────────────────
+    returned_ids = {item["id"] for item in resp_false.json()["items"]}
+    assert b1["id"] not in returned_ids
+    assert b2["id"] in returned_ids
 
 
 async def test_new_buyer_status_values(client):
-    """BID_SUBMITTED/BID_NOT_SUBMITTED/BID_DROPPED 상태 사용 가능."""
     txn_id = await _create_txn(client)
 
     for target in ["BID_SUBMITTED", "BID_NOT_SUBMITTED", "BID_DROPPED"]:
-        buyer = await _add_buyer(client, txn_id, company_name=f"기업_{target}")
+        buyer = await _add_buyer(client, txn_id, company_name=f"Buyer_{target}")
         await _advance_to_status(client, txn_id, buyer["id"], target)
-        # 최종 상태 확인
         resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}")
         assert resp.status_code == 200
         assert resp.json()["status"] == target
 
 
 async def test_bidding_summary(client):
-    """BID_SUBMITTED 2건, BID_DROPPED 1건 → 집계 확인."""
     txn_id = await _create_txn(client)
 
-    # 3명의 buyer 생성 후 유효한 전이 경로를 통해 입찰 상태 설정
     for i, target in enumerate(["BID_SUBMITTED", "BID_SUBMITTED", "BID_DROPPED"]):
-        buyer = await _add_buyer(client, txn_id, company_name=f"입찰기업{i}")
+        buyer = await _add_buyer(client, txn_id, company_name=f"Bidder{i}")
         await _advance_to_status(client, txn_id, buyer["id"], target)
 
     resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/bidding-summary")
@@ -259,11 +264,7 @@ async def test_bidding_summary(client):
     assert data["bid_dropped"] == 1
 
 
-# ── Status Transition Validation ──────────────────────────
-
-
 async def test_invalid_status_transition(client):
-    """IDENTIFIED → BID_SUBMITTED 직접 전이 → 422."""
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
@@ -275,15 +276,10 @@ async def test_invalid_status_transition(client):
     assert "상태 전이 불가" in resp.json()["detail"]
 
 
-# ── is_short_listed toggle via PATCH ──────────────────────
-
-
 async def test_toggle_short_listed_via_patch(client):
-    """PATCH로 is_short_listed 직접 토글 가능 (Tier 없이)."""
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
-    # True로 설정
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
         json={"is_short_listed": True},
@@ -291,7 +287,6 @@ async def test_toggle_short_listed_via_patch(client):
     assert resp.status_code == 200
     assert resp.json()["is_short_listed"] is True
 
-    # False로 토글
     resp = await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
         json={"is_short_listed": False},
@@ -300,25 +295,24 @@ async def test_toggle_short_listed_via_patch(client):
     assert resp.json()["is_short_listed"] is False
 
 
-async def test_tier_overrides_is_short_listed_mismatch(client):
-    """Tier + is_short_listed 동시 PATCH 시 Tier가 우선한다."""
+async def test_tier_and_status_sync_override_conflicting_short_list_payload(client):
     txn_id = await _create_txn(client)
     buyer = await _add_buyer(client, txn_id)
 
-    # Tier=TIER_1 + is_short_listed=False 동시 전송 → Tier 우선 → True
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "TIER_1", "is_short_listed": False},
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"tier": "TIER_1", "is_short_listed": False},
     )
-    assert resp.status_code == 200
-    assert resp.json()["tier"] == "TIER_1"
-    assert resp.json()["is_short_listed"] is True
+    assert patched["is_short_listed"] is False
 
-    # Tier=NOT_TARGET + is_short_listed=True 동시 전송 → Tier 우선 → False
-    resp = await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{buyer['id']}",
-        json={"tier": "NOT_TARGET", "is_short_listed": True},
+    await _patch_buyer(client, txn_id, buyer["id"], {"status": "CONTACTED"})
+    patched = await _patch_buyer(
+        client,
+        txn_id,
+        buyer["id"],
+        {"status": "NDA_SIGNED", "is_short_listed": False},
     )
-    assert resp.status_code == 200
-    assert resp.json()["tier"] == "NOT_TARGET"
-    assert resp.json()["is_short_listed"] is False
+    assert patched["status"] == "NDA_SIGNED"
+    assert patched["is_short_listed"] is True

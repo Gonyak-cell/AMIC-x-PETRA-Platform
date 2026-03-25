@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
@@ -16,7 +16,6 @@ import {
   Button,
   Card,
   DataTable,
-  EmptyState,
   INLINE_INPUT_CLS,
   Input,
   Modal,
@@ -60,6 +59,7 @@ export default function ClientNdaSection({
       return createInitialForm(transaction?.client_name);
     });
   }, [transaction?.client_name]);
+  const hasClientNdas = Boolean(ndas?.length);
 
   return (
     <Card
@@ -89,7 +89,7 @@ export default function ClientNdaSection({
         </div>
       }
     >
-      {ndas?.length ? (
+      {hasClientNdas ? (
         <DataTable
           columns={[
             {
@@ -227,23 +227,17 @@ export default function ClientNdaSection({
           data={ndas}
           keyField="id"
         />
-      ) : (
-        <EmptyState
-          icon={FileText}
-          title="클라이언트 NDA 없음"
-          description={`페트라브릿지파트너스와 ${transaction?.client_name ?? "클라이언트"} 간 NDA를 등록하세요.`}
-        />
-      )}
+      ) : null}
 
       <FileUploadZone
         txnId={txnId}
         entityType="NDA"
         embedded
-        embeddedLabel={ndas?.length ? "Client NDA Files" : "Client NDA Upload"}
+        embeddedLabel={hasClientNdas ? "Client NDA Files" : "Client NDA Upload"}
         uploadLabel="Upload Files"
         emptyDescription="Drop the client NDA PDF here to run OCR and prefill the review form."
         emptyHint="OCR starts for PDF uploads after VDR sync succeeds. Other files stay attached without auto-fill."
-        embeddedSeparator={Boolean(ndas?.length)}
+        embeddedSeparator={hasClientNdas}
         showUploadAction={false}
         registerOpenPicker={(openPicker) => {
           openUploadPickerRef.current = openPicker;

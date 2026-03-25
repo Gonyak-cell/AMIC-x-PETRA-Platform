@@ -15,7 +15,7 @@ from app.models.enums import AuditAction, BuyerCandidateStatus, NdaPartyType, Nd
 from app.models.nda import NDA
 from app.schemas.nda import NDACreate, NDAOut, NDASummary, NDAUpdate
 from app.services import audit_service, transaction_service
-from app.services.buyer_status_service import auto_advance_buyer_status
+from app.services.buyer_status_service import auto_advance_buyer_status, sync_short_list_membership
 
 router = APIRouter(prefix="/transactions/{txn_id}/ndas", tags=["NDAs"])
 
@@ -185,6 +185,7 @@ async def update_nda(
                 BuyerCandidateStatus.NDA_SIGNED,
                 claims.email,
             )
+            await sync_short_list_membership(db, buyer, signed_nda=True)
 
     await audit_service.record(
         db,

@@ -72,6 +72,13 @@ describe("EngagementTab", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("uses only the upload empty state when there are no engagement rows or files", () => {
+    render(<EngagementTab txnId="txn-1" canWrite />);
+
+    expect(screen.queryByText("계약 정보 없음")).not.toBeInTheDocument();
+    expect(screen.getByText("engagement-upload-zone")).toBeInTheDocument();
+  });
+
   it("hides working group add action for non-manager roles", () => {
     mockUseAuth.mockReturnValue({
       user: {

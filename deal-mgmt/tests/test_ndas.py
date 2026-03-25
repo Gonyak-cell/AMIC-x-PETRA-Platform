@@ -92,6 +92,11 @@ async def test_update_nda_status(client):
 
 async def test_update_nda_signed(client):
     txn_id, buyer_id = await _create_txn_and_buyer(client)
+    tier_resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+        json={"tier": "TIER_1"},
+    )
+    assert tier_resp.status_code == 200
     create_resp = await client.post(
         f"/api/v1/transactions/{txn_id}/ndas",
         json={"buyer_candidate_id": buyer_id},
@@ -108,6 +113,7 @@ async def test_update_nda_signed(client):
     buyer_resp = await client.get(f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}")
     assert buyer_resp.status_code == 200
     assert buyer_resp.json()["status"] == "NDA_SIGNED"
+    assert buyer_resp.json()["is_short_listed"] is True
 
 
 async def test_update_nda_404(client):

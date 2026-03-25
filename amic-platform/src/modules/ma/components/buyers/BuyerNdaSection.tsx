@@ -45,6 +45,11 @@ interface BuyerNdaSectionProps {
   canWrite: boolean;
 }
 
+function hasDraggedFiles(event: DragEvent<HTMLDivElement>) {
+  const types = Array.from(event.dataTransfer.types ?? []);
+  return types.includes("Files") || event.dataTransfer.files.length > 0;
+}
+
 function createInitialForm(buyerId: string): NDACreate {
   return {
     party_type: "BUYER",
@@ -75,6 +80,7 @@ export default function BuyerNdaSection({
   );
   const [ndaForm, setNdaForm] = useState<NDACreate>(createInitialForm(buyer.id));
   const [isDropActive, setIsDropActive] = useState(false);
+  const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -139,10 +145,56 @@ export default function BuyerNdaSection({
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      event.stopPropagation();
+      dragDepthRef.current = 0;
       setIsDropActive(false);
+      if (!hasDraggedFiles(event)) {
+        return;
+      }
       void handleUpload(Array.from(event.dataTransfer.files));
     },
     [handleUpload],
+  );
+
+  const handleDragEnter = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!canWrite || !hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      dragDepthRef.current += 1;
+      setIsDropActive(true);
+    },
+    [canWrite],
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!canWrite || !hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "copy";
+      setIsDropActive(true);
+    },
+    [canWrite],
+  );
+
+  const handleDragLeave = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!canWrite || !hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) {
+        setIsDropActive(false);
+      }
+    },
+    [canWrite],
   );
 
   return (
@@ -339,35 +391,13 @@ export default function BuyerNdaSection({
                   }
                 : undefined
             }
-            onDragEnter={
-              canWrite
-                ? (event) => {
-                    event.preventDefault();
-                    setIsDropActive(true);
-                  }
-                : undefined
-            }
-            onDragOver={
-              canWrite
-                ? (event) => {
-                    event.preventDefault();
-                    setIsDropActive(true);
-                  }
-                : undefined
-            }
-            onDragLeave={
-              canWrite
-                ? (event) => {
-                    event.preventDefault();
-                    if (event.currentTarget === event.target) {
-                      setIsDropActive(false);
-                    }
-                  }
-                : undefined
-            }
+            onDragEnter={canWrite ? handleDragEnter : undefined}
+            onDragOver={canWrite ? handleDragOver : undefined}
+            onDragLeave={canWrite ? handleDragLeave : undefined}
             onDrop={canWrite ? handleDrop : undefined}
             role={canWrite ? "button" : undefined}
             tabIndex={canWrite ? 0 : undefined}
+            aria-label={canWrite ? `${buyer.company_name} NDA 드래그 앤 드롭 업로드` : undefined}
           >
             <EmptyState
               icon={FileText}
@@ -399,23 +429,13 @@ export default function BuyerNdaSection({
                   : "border-gray-border bg-bg-cool/30",
               )}
               onClick={() => openAttachmentFilePicker(fileInputRef)}
-              onDragEnter={(event) => {
-                event.preventDefault();
-                setIsDropActive(true);
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setIsDropActive(true);
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                if (event.currentTarget === event.target) {
-                  setIsDropActive(false);
-                }
-              }}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               role="button"
               tabIndex={0}
+              aria-label={`${buyer.company_name} NDA 파일 추가 업로드`}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();

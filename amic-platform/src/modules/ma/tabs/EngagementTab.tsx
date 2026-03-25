@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileText, Pencil, Plus, Upload, Users } from "lucide-react";
+import { Pencil, Plus, Upload, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
@@ -123,7 +123,7 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
 
   const canEditWorkingGroupMember = (member: WorkingGroupMember) =>
     canManageWorkingGroup || isOwnWorkingGroupMember(member);
-
+  const hasEngagements = Boolean(engagements?.length);
   const showMemberActions = Boolean(
     members?.some((member) => canEditWorkingGroupMember(member)),
   );
@@ -202,13 +202,7 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
             </div>
           }
         >
-          {!engagements?.length ? (
-            <EmptyState
-              icon={FileText}
-              title="계약 정보 없음"
-              description="계약 정보를 등록하세요."
-            />
-          ) : (
+          {hasEngagements ? (
             <DataTable
               columns={[
                 {
@@ -229,17 +223,17 @@ export default function EngagementTab({ txnId, canWrite }: EngagementTabProps) {
               data={engagements}
               keyField="id"
             />
-          )}
+          ) : null}
 
           <FileUploadZone
             txnId={txnId}
             entityType="ENGAGEMENT"
             embedded
-            embeddedLabel={engagements?.length ? "Engagement Files" : "Engagement Upload"}
+            embeddedLabel={hasEngagements ? "Engagement Files" : "Engagement Upload"}
             uploadLabel="Upload Files"
             emptyDescription="Drop the engagement contract PDF here to run OCR and prefill the review form."
             emptyHint="OCR runs for PDF uploads after VDR sync completes. Non-PDF files stay attached without auto-fill."
-            embeddedSeparator={Boolean(engagements?.length)}
+            embeddedSeparator={hasEngagements}
             showUploadAction={false}
             registerOpenPicker={(openPicker) => {
               openEngagementUploadPickerRef.current = openPicker;

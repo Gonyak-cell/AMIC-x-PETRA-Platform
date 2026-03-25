@@ -129,6 +129,38 @@ describe("BuyersTab", () => {
     });
   });
 
+  it("hides shortlisted buyers from the long-list table", async () => {
+    const user = userEvent.setup();
+    const longListBuyer = {
+      ...mockBuyer,
+      id: "buyer-long",
+      company_name: "Long List Buyer",
+    };
+    const shortListBuyer = {
+      ...mockBuyer,
+      id: "buyer-short",
+      company_name: "Short List Buyer",
+      tier: "TIER_1" as const,
+      status: "NDA_SIGNED" as const,
+      is_short_listed: true,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [longListBuyer, shortListBuyer],
+          total: 2,
+        });
+      }),
+    );
+
+    renderTab();
+
+    await user.click(await screen.findByRole("tab", { name: /Long List/i }));
+    expect(await screen.findByText(longListBuyer.company_name)).toBeInTheDocument();
+    expect(screen.queryByText(shortListBuyer.company_name)).not.toBeInTheDocument();
+  });
+
   it("renders a company logo when the buyer has a logo URL", async () => {
     const logoBuyer = {
       ...mockBuyer,
@@ -350,7 +382,7 @@ describe("BuyersTab", () => {
 
   it("signs the current NDA from the panel and advances to Short List", async () => {
     const user = userEvent.setup();
-    const tieredBuyer = {
+    let tieredBuyer = {
       ...mockBuyer,
       tier: "TIER_1",
     };
@@ -419,6 +451,12 @@ describe("BuyersTab", () => {
           signed_at: (body.signed_at as string | undefined) ?? nda.signed_at,
           updated_at: "2026-03-10T00:00:00Z",
         }));
+        tieredBuyer = {
+          ...tieredBuyer,
+          status: "NDA_SIGNED",
+          is_short_listed: true,
+          updated_at: "2026-03-10T00:00:00Z",
+        };
         return HttpResponse.json(ndas[0]);
       }),
     );

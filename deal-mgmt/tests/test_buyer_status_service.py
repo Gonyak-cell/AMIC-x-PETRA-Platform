@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.enums import BuyerCandidateStatus, MarketingStage
+from app.models.enums import BuyerCandidateStatus, BuyerTier, MarketingStage
 from app.services.buyer_status_service import (
     ADVANCE_PATH,
     MARKETING_STATUS_ADVANCE,
@@ -102,6 +102,8 @@ def _make_buyer(status: BuyerCandidateStatus) -> MagicMock:
     buyer = MagicMock()
     buyer.id = uuid.uuid4()
     buyer.status = status
+    buyer.tier = None
+    buyer.is_short_listed = False
     return buyer
 
 
@@ -219,7 +221,19 @@ class TestAutoAdvanceBuyerStatus:
         assert call_kwargs["old_value"] == {"status": "IDENTIFIED"}
         assert call_kwargs["new_value"] == {"status": "CONTACTED"}
         assert call_kwargs["actor_email"] == "actor@test.com"
-        assert call_kwargs["notes"] == "마케팅 스테이지 기반 자동 승격"
+        assert call_kwargs["notes"] == "Marketing-stage auto advance"
+
+    @patch("app.services.buyer_status_service.audit_service")
+    async def test_tiered_buyer_becomes_short_listed_at_nda_signed(self, mock_audit: MagicMock) -> None:
+        mock_audit.record = AsyncMock()
+        db = AsyncMock()
+        buyer = _make_buyer(_S.CONTACTED)
+        buyer.tier = BuyerTier.TIER_1
+
+        await auto_advance_buyer_status(db, buyer, _S.NDA_SIGNED, "test@test.com")
+
+        assert buyer.status == _S.NDA_SIGNED
+        assert buyer.is_short_listed is True
 
 
 @pytest.mark.asyncio
@@ -237,9 +251,9 @@ class TestCheckStatusAfterDelete:
 
         mock_audit.record.assert_called_once()
         call_kwargs = mock_audit.record.call_args.kwargs
-        assert "마케팅 로그 삭제됨" in call_kwargs["notes"]
+        assert "Marketing log deleted" in call_kwargs["notes"]
         assert "NDA_SIGNED" in call_kwargs["notes"]
-        assert "수동 검토 필요" in call_kwargs["notes"]
+        assert "Review buyer.status manually" in call_kwargs["notes"]
 
     @patch("app.services.buyer_status_service.audit_service")
     async def test_unmapped_stage_no_log(self, mock_audit: MagicMock) -> None:

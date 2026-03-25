@@ -32,6 +32,27 @@ async def _add_buyer(client, txn_id: str, **overrides) -> dict:
     return resp.json()
 
 
+async def _promote_to_short_list(client, txn_id: str, buyer_id: str, tier: str) -> None:
+    tier_resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+        json={"tier": tier},
+    )
+    assert tier_resp.status_code == 200
+
+    contacted_resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+        json={"status": "CONTACTED"},
+    )
+    assert contacted_resp.status_code == 200
+
+    signed_resp = await client.patch(
+        f"/api/v1/transactions/{txn_id}/buyers/{buyer_id}",
+        json={"status": "NDA_SIGNED"},
+    )
+    assert signed_resp.status_code == 200
+    assert signed_resp.json()["is_short_listed"] is True
+
+
 # ── Tier CRUD ─────────────────────────────────────────────
 
 
@@ -319,15 +340,9 @@ async def test_short_list_overview(client):
     b2 = await _add_buyer(client, txn_id, company_name="B사")
     b3 = await _add_buyer(client, txn_id, company_name="C사")
 
-    # b1=TIER_1 + short-listed, b2=TIER_2 + short-listed, b3=NOT_TARGET
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
-        json={"tier": "TIER_1", "is_short_listed": True},
-    )
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
-        json={"tier": "TIER_2", "is_short_listed": True},
-    )
+    # b1, b2 reach Short List; b3 stays out
+    await _promote_to_short_list(client, txn_id, b1["id"], "TIER_1")
+    await _promote_to_short_list(client, txn_id, b2["id"], "TIER_2")
     await client.patch(
         f"/api/v1/transactions/{txn_id}/buyers/{b3['id']}",
         json={"tier": "NOT_TARGET"},
@@ -363,15 +378,9 @@ async def test_short_list_overview_with_marketing_data(client):
     b1 = await _add_buyer(client, txn_id, company_name="A사")
     b2 = await _add_buyer(client, txn_id, company_name="B사")
 
-    # b1=TIER_1 + short-listed, b2=TIER_2 + short-listed
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{b1['id']}",
-        json={"tier": "TIER_1", "is_short_listed": True},
-    )
-    await client.patch(
-        f"/api/v1/transactions/{txn_id}/buyers/{b2['id']}",
-        json={"tier": "TIER_2", "is_short_listed": True},
-    )
+    # b1, b2 reach Short List first
+    await _promote_to_short_list(client, txn_id, b1["id"], "TIER_1")
+    await _promote_to_short_list(client, txn_id, b2["id"], "TIER_2")
 
     # b1에 마케팅 로그 2건 — IDENTIFIED(03-01), TEASER_SENT(03-05, 03-10)
     await client.post(

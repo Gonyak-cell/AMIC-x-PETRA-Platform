@@ -1,9 +1,14 @@
-/** 인증 훅 — 로그인, 로그아웃, 토큰 관리 (Sprint 11). */
-
 import { useContext, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "@/components/auth/AuthContext";
 import { authApi } from "@/api/client";
+import {
+  DEV_LOCAL_AUTH_ENABLED,
+  loginWithDevCredentials,
+  clearLocalAuthSession,
+  getLocalAuthSession,
+  setLocalAuthSession,
+} from "@/lib/devAuth";
 import type {
   LoginRequest,
   AuthUser,
@@ -11,7 +16,7 @@ import type {
 } from "@/types/auth";
 import { ROLE_PERMISSIONS } from "@/types/auth";
 
-// ── Main hook ──
+// ?뭭 auth?쒓굅?? Main hook ?뭭
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
@@ -24,11 +29,21 @@ export function useAuth() {
 
   const login = useCallback(
     async (credentials: LoginRequest) => {
+      if (DEV_LOCAL_AUTH_ENABLED) {
+        const user = loginWithDevCredentials(credentials);
+        if (!user) {
+          throw new Error("Invalid email or password.");
+        }
+        setLocalAuthSession(user);
+        setAuthState({ user, isAuthenticated: true, isLoading: false });
+        return;
+      }
+
       await authApi.post<{ message: string }>(
         "/auth/login",
         credentials,
       );
-      // 토큰은 쿠키로 자동 설정됨
+      // ?좏겙? 荑좏궎濡??먮룞 ?ㅼ젙??
 
       try {
         const { data: me } = await authApi.get<AuthUser>("/auth/me");
@@ -45,12 +60,13 @@ export function useAuth() {
     try {
       await authApi.post("/auth/logout");
     } finally {
-      // 쿠키는 백엔드가 삭제함
+      // 荑좏궎??諛깆뿏?쒓? ??젣??
       queryClient.clear();
-      // 사이드바 메뉴 상태 초기화 (로그아웃 시 하위 메뉴 접힘)
+      // ?ъ씠?쒕컮 硫붾돱 ?곹깭 珥덇린??(濡쒓렇?꾩썐 ???섏쐞 硫붾돱 ?묓옒)
       Object.keys(sessionStorage)
         .filter(k => k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"))
         .forEach(k => sessionStorage.removeItem(k));
+      clearLocalAuthSession();
       setAuthState({ user: null, isAuthenticated: false, isLoading: false });
     }
   }, [setAuthState, queryClient]);
@@ -73,5 +89,16 @@ export function useAuth() {
     [user],
   );
 
-  return { user, isAuthenticated, isLoading, login, logout, hasPermission, isClient, canWrite };
+  return {
+    user,
+    isAuthenticated,
+    isLoading: DEV_LOCAL_AUTH_ENABLED
+      ? isLoading && !getLocalAuthSession()
+      : isLoading,
+    login,
+    logout,
+    hasPermission,
+    isClient,
+    canWrite,
+  };
 }

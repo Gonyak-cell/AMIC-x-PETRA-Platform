@@ -25,23 +25,11 @@ from app.schemas.buyer import (
     BuyerPipelineSummary,
 )
 from app.services import audit_service, transaction_service
+from app.services.buyer_status_service import derive_short_list_membership
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions/{txn_id}/buyers", tags=["Buyers"])
-
-_SHORT_LIST_TIERS = frozenset({BuyerTier.TIER_1, BuyerTier.TIER_2, BuyerTier.TIER_3})
-
-
-def _sync_tier_short_list(data: dict[str, object]) -> None:
-    """Tier 값에 따라 is_short_listed를 동기화한다 (SSOT).
-
-    tier + is_short_listed가 동시에 전달되더라도 tier가 우선한다.
-    tier가 없으면 is_short_listed 직접 PATCH를 허용한다.
-    """
-    tier = data.get("tier")
-    if tier is not None or "tier" in data:
-        data["is_short_listed"] = tier in _SHORT_LIST_TIERS
 
 
 # ── BuyerCandidateStatus 상태 전이 규칙 ──────────────────
@@ -165,7 +153,13 @@ async def add_buyer(
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     data = body.model_dump()
-    _sync_tier_short_list(data)
+    data["is_short_listed"] = await derive_short_list_membership(
+        db,
+        tier=data.get("tier"),
+        status=BuyerCandidateStatus.IDENTIFIED,
+        current_short_listed=False,
+        signed_nda=False,
+    )
 
     buyer = BuyerCandidate(transaction_id=txn_id, **data)
     db.add(buyer)
@@ -267,12 +261,23 @@ async def update_buyer(
                 detail="상태 전이 불가: 현재 상태에서 요청한 상태로 전환할 수 없습니다",
             )
 
-    _sync_tier_short_list(update_data)
-    if "tier" in update_data:
+    if "tier" in update_data or "status" in update_data:
+        next_tier = update_data.get("tier", buyer.tier)
+        next_status = update_data.get("status", buyer.status)
+        update_data["is_short_listed"] = await derive_short_list_membership(
+            db,
+            tier=next_tier,
+            status=next_status,
+            current_short_listed=buyer.is_short_listed,
+            buyer_id=buyer.id,
+        )
+
+    if "tier" in update_data or "status" in update_data:
         logger.debug(
-            "Tier 동기화: buyer=%s, tier=%s → is_short_listed=%s",
+            "Short-list sync: buyer=%s, tier=%s, status=%s -> is_short_listed=%s",
             buyer_id,
-            update_data.get("tier"),
+            update_data.get("tier", buyer.tier),
+            update_data.get("status", buyer.status),
             update_data.get("is_short_listed"),
         )
 

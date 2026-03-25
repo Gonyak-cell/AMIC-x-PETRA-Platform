@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 import logging
 import re
 import uuid
@@ -241,10 +242,15 @@ async def upload_attachment(
         new_value={"entity_type": entity_type, "file_name": safe_filename},
     )
     await db.commit()
-    await db.refresh(attachment)
-
-    # M-1 fix: rollback 시 attachment 객체가 expire 되므로 미리 직렬화
-    result = AttachmentOut.model_validate(attachment)
+    try:
+        await db.refresh(attachment)
+    except Exception:
+        logger.warning(
+            "첨부 refresh 실패, 저장된 메타데이터로 응답을 지속합니다: txn=%s, attachment=%s",
+            txn_id,
+            attachment.id,
+            exc_info=True,
+        )
 
     # ── VDR 자동 연동 (best-effort) ──────────────────────
     # H1 fix: VDR 쓰기 권한이 있는 사용자만 연동 (ADMIN / lead_advisor / deal_captain)
@@ -275,8 +281,7 @@ async def upload_attachment(
             await db.rollback()
             logger.warning("VDR 연동 실패: txn=%s, attachment=%s", txn_id, attachment.id, exc_info=True)
 
-    result.vdr_sync = vdr_sync
-    return result
+    return _serialize_attachment_out(attachment, vdr_sync=vdr_sync)
 
 
 @router.get("/{attachment_id}/download")
@@ -347,6 +352,33 @@ def _validate_entity_id(entity_id: str) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="entity_id는 영문, 숫자, _, - 만 허용되며 50자 이내여야 합니다",
         )
+
+
+def _serialize_attachment_out(
+    attachment: Attachment,
+    *,
+    vdr_sync: VdrSyncInfo | None = None,
+) -> AttachmentOut:
+    """직렬화 시 ORM lazy-load를 피하고 저장된 스냅샷으로 응답을 구성한다."""
+
+    state = attachment.__dict__
+    created_at = state.get("created_at") or datetime.now(timezone.utc)
+    updated_at = state.get("updated_at") or created_at
+
+    return AttachmentOut(
+        id=state["id"],
+        transaction_id=state["transaction_id"],
+        entity_type=state["entity_type"],
+        entity_id=state.get("entity_id"),
+        file_name=state["file_name"],
+        file_size_bytes=state["file_size_bytes"],
+        mime_type=state["mime_type"],
+        description=state.get("description"),
+        uploaded_by_email=state.get("uploaded_by_email"),
+        created_at=created_at,
+        updated_at=updated_at,
+        vdr_sync=vdr_sync,
+    )
 
 
 def _validate_magic_bytes(content: bytes, ext: str) -> None:

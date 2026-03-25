@@ -54,6 +54,11 @@ interface BuyerNdaExecutionPanelProps {
   canWrite: boolean;
 }
 
+function hasDraggedFiles(event: React.DragEvent<HTMLDivElement>) {
+  const types = Array.from(event.dataTransfer.types ?? []);
+  return types.includes("Files") || event.dataTransfer.files.length > 0;
+}
+
 export default function BuyerNdaExecutionPanel({
   open,
   onClose,
@@ -279,13 +284,25 @@ export default function BuyerNdaExecutionPanel({
             )}
             onDragOver={(event) => {
               if (!canWrite) return;
+              if (!hasDraggedFiles(event)) return;
               event.preventDefault();
+              event.stopPropagation();
+              event.dataTransfer.dropEffect = "copy";
               setIsDragActive(true);
             }}
-            onDragLeave={() => setIsDragActive(false)}
+            onDragLeave={(event) => {
+              if (!canWrite) return;
+              if (!hasDraggedFiles(event)) return;
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(false);
+            }}
             onDrop={(event) => {
               if (!canWrite) return;
+              if (!hasDraggedFiles(event)) return;
               event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(false);
               const file = event.dataTransfer.files?.[0];
               if (file) {
                 void handleUploadFile(file);
