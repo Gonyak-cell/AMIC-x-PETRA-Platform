@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, Send } from "lucide-react";
+import { Download, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
-import { Badge, Button, Card, DataTable, EmptyState } from "@/components/ui";
+import { Badge, Button, Card, DataTable } from "@/components/ui";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import { useMarketingMaterials } from "@/modules/ma/hooks/useMarketingMaterials";
 import type { Attachment } from "@/modules/ma/types/attachment";
@@ -44,6 +44,7 @@ export default function BuyerTeaserSection({
     () => getLatestRecipientDistribution(teaserMaterials, buyer.company_name),
     [buyer.company_name, teaserMaterials],
   );
+  const hasTeasers = teaserMaterials.length > 0;
 
   async function updateDistribution(
     materialId: string,
@@ -96,10 +97,15 @@ export default function BuyerTeaserSection({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
       });
       toast.success(
-        `${buyer.company_name}에 ${target.versionLabel} Teaser 송부 기록을 반영했습니다.`,
+        `${buyer.company_name}\uc5d0 ${target.versionLabel} Teaser \uc1a1\ubd80 \uae30\ub85d\uc774 \ubc18\uc601\ub418\uc5c8\uc2b5\ub2c8\ub2e4.`,
       );
     } catch (error) {
-      toast.error(extractApiError(error, "Teaser 송부 기록 저장에 실패했습니다."));
+      toast.error(
+        extractApiError(
+          error,
+          "Teaser \uc1a1\ubd80 \uae30\ub85d \uc800\uc7a5\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
+        ),
+      );
     } finally {
       setPendingMaterialId(null);
     }
@@ -111,32 +117,34 @@ export default function BuyerTeaserSection({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-text-dark">
-              {buyer.company_name} 대상 Teaser 송부 관리
+              {buyer.company_name} \ub300\uc0c1 Teaser \uc1a1\ubd80 \uad00\ub9ac
             </p>
             <p className="mt-1 text-xs text-text-secondary">
-              거래에 등록된 TM 버전 중 현재 매수자에게 송부된 버전을 한 개 기준으로 관리합니다.
+              \uac70\ub798\uc5d0 \ub4f1\ub85d\ub41c TM \ubc84\uc804 \uc911 \ud604\uc7ac \ub9e4\uc218\uc790\uc5d0\uac8c \uc1a1\ubd80\ub41c \ubc84\uc804\uc744 \ud55c \uac1c \uae30\uc900\uc73c\ub85c \uad00\ub9ac\ud569\ub2c8\ub2e4.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={latestTeaser ? "info" : "neutral"}>
-              {latestTeaser ? `송부됨 ${latestTeaser.versionLabel}` : "미송부"}
+              {latestTeaser
+                ? `\uc1a1\ubd80\ub428 ${latestTeaser.versionLabel}`
+                : "\ubbf8\uc1a1\ubd80"}
             </Badge>
             <Badge variant="neutral">{teaserMaterials.length} version(s)</Badge>
           </div>
         </div>
         {latestTeaser ? (
           <p className="mt-2 text-xs text-text-secondary">
-            최신 송부일 {getRecipientDistributionDate(latestTeaser.material)}
+            \ucd5c\uc2e0 \uc1a1\ubd80\uc77c {getRecipientDistributionDate(latestTeaser.material)}
           </p>
         ) : null}
       </div>
 
-      {teaserMaterials.length > 0 ? (
+      {hasTeasers ? (
         <DataTable<VersionedMarketingMaterial>
           columns={[
             {
               key: "versionLabel",
-              header: "버전",
+              header: "\ubc84\uc804",
               width: "92px",
               render: (row) => <Badge variant="neutral">{row.versionLabel}</Badge>,
             },
@@ -156,7 +164,7 @@ export default function BuyerTeaserSection({
             },
             {
               key: "sent",
-              header: "송부 여부",
+              header: "\uc1a1\ubd80 \uc5ec\ubd80",
               render: (row) => {
                 const isSent = isDistributedToRecipient(
                   row.material,
@@ -166,7 +174,7 @@ export default function BuyerTeaserSection({
                 return (
                   <div className="flex flex-col items-start gap-1">
                     <Badge variant={isSent ? "success" : "neutral"}>
-                      {isSent ? "송부됨" : "미송부"}
+                      {isSent ? "\uc1a1\ubd80\ub428" : "\ubbf8\uc1a1\ubd80"}
                     </Badge>
                     {isSent ? (
                       <span className="text-xs text-text-secondary">
@@ -203,7 +211,7 @@ export default function BuyerTeaserSection({
                         }
                       >
                         <Download className="mr-1 h-3.5 w-3.5" />
-                        다운로드
+                        \ub2e4\uc6b4\ub85c\ub4dc
                       </Button>
                     )}
                     {canWrite ? (
@@ -214,7 +222,7 @@ export default function BuyerTeaserSection({
                         loading={pendingMaterialId === row.material.id}
                         title={
                           !canDistribute
-                            ? "품질 검증을 통과한 Teaser만 송부할 수 있습니다."
+                            ? "\ud488\uc9c8 \uac80\uc99d\uc744 \ud1b5\uacfc\ud55c Teaser\ub9cc \uc1a1\ubd80\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
                             : undefined
                         }
                         onClick={() => {
@@ -222,34 +230,41 @@ export default function BuyerTeaserSection({
                         }}
                       >
                         <Send className="mr-1 h-3.5 w-3.5" />
-                        {isSent ? "현재 송부본" : "이 버전 송부"}
+                        {isSent
+                          ? "\ud604\uc7ac \uc1a1\ubd80\ubcf8"
+                          : "\uc774 \ubc84\uc804 \uc1a1\ubd80"}
                       </Button>
                     ) : null}
                   </div>
                 );
               },
             },
-        ]}
+          ]}
           data={teaserMaterials}
           keyField="versionLabel"
         />
-      ) : (
-        <EmptyState
-          icon={FileText}
-          title="등록된 Teaser 없음"
-          description="Teaser 자료를 업로드하면 매수자별 송부 버전과 송부 여부를 여기서 관리할 수 있습니다."
-        />
-      )}
+      ) : null}
 
       <FileUploadZone
         txnId={txnId}
         entityType="MARKETING_MATERIAL"
         entityId="TM"
         embedded
-        embeddedLabel="Teaser 업로드"
-        uploadLabel="Teaser 업로드"
-        emptyDescription="Teaser PDF/PPTX 파일을 여기에 드롭하거나 업로드 버튼으로 추가하세요."
-        emptyHint="PDF 업로드는 OCR 검토를 열고, 검토 확정 후 TM 자료로 연결할 수 있습니다."
+        embeddedLabel={hasTeasers ? "Teaser \uc5c5\ub85c\ub4dc" : ""}
+        uploadLabel={"Teaser \uc5c5\ub85c\ub4dc"}
+        emptyTitle={hasTeasers ? undefined : "\ub4f1\ub85d\ub41c Teaser \uc5c6\uc74c"}
+        emptyDescription={
+          hasTeasers
+            ? "Teaser PDF/PPTX \ud30c\uc77c\uc744 \uc5ec\uae30\uc5d0 \ub4dc\ub86d\ud558\uac70\ub098 \uc5c5\ub85c\ub4dc \ubc84\ud2bc\uc73c\ub85c \ucd94\uac00\ud558\uc138\uc694."
+            : "Teaser \uc790\ub8cc\ub97c \uc5c5\ub85c\ub4dc\ud558\uba74 \ub9e4\uc218\uc790\ubcc4 \uc1a1\ubd80 \ubc84\uc804\uacfc \uc1a1\ubd80 \uc5ec\ubd80\ub97c \uc5ec\uae30\uc11c \uad00\ub9ac\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+        }
+        emptyHint={
+          hasTeasers
+            ? "PDF \uc5c5\ub85c\ub4dc\ub294 OCR \uac80\ud1a0\ub97c \uc5f4\uace0, \uac80\ud1a0 \ud655\uc815 \ud6c4 TM \uc790\ub8cc\ub85c \uc5f0\uacb0\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+            : "Teaser PDF/PPTX \ud30c\uc77c\uc744 \uc5ec\uae30\uc5d0 \ub4dc\ub86d\ud558\uac70\ub098 \ud074\ub9ad\ud558\uc5ec \ucd94\uac00\ud558\uc138\uc694. PDF \uc5c5\ub85c\ub4dc\ub294 OCR \uac80\ud1a0\ub97c \uc5f4\uace0, \uac80\ud1a0 \ud655\uc815 \ud6c4 TM \uc790\ub8cc\ub85c \uc5f0\uacb0\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+        }
+        embeddedSeparator={hasTeasers}
+        showUploadAction={hasTeasers}
         onUploaded={onUploaded}
         readOnly={!canWrite}
       />

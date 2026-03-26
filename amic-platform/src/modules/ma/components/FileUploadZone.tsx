@@ -40,6 +40,7 @@ interface FileUploadZoneProps {
   title?: string;
   embeddedLabel?: string;
   uploadLabel?: string;
+  emptyTitle?: string;
   emptyDescription?: string;
   emptyHint?: string;
   embeddedSeparator?: boolean;
@@ -55,6 +56,7 @@ export default function FileUploadZone({
   compact = false,
   embedded = false,
   readOnly = false,
+  emptyTitle,
   title = "첨부 자료",
   embeddedLabel = "첨부 파일",
   uploadLabel = "업로드",
@@ -151,8 +153,13 @@ export default function FileUploadZone({
           tabIndex={readOnly ? undefined : 0}
         >
           <Upload className="h-8 w-8 text-text-muted" />
-          <p>{emptyDescription}</p>
-          <p className="text-xs">{emptyHint}</p>
+          {emptyTitle ? (
+            <p className="text-lg font-semibold text-text-dark">{emptyTitle}</p>
+          ) : null}
+          <p className={emptyTitle ? "max-w-2xl text-center text-text-body" : ""}>
+            {emptyDescription}
+          </p>
+          <p className="max-w-2xl text-center text-xs">{emptyHint}</p>
         </div>
       ) : (
         <table className="w-full text-sm">

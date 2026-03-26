@@ -15,8 +15,26 @@ vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
 }));
 
 vi.mock("@/modules/ma/components/FileUploadZone", () => ({
-  default: ({ embeddedLabel }: { embeddedLabel?: string }) => (
-    <div>{embeddedLabel ?? "file-upload-zone"}</div>
+  default: ({
+    embeddedLabel,
+    emptyTitle,
+    emptyDescription,
+    emptyHint,
+    showUploadAction,
+  }: {
+    embeddedLabel?: string;
+    emptyTitle?: string;
+    emptyDescription?: string;
+    emptyHint?: string;
+    showUploadAction?: boolean;
+  }) => (
+    <div data-testid="file-upload-zone">
+      <div>{embeddedLabel ?? "file-upload-zone"}</div>
+      {emptyTitle ? <div>{emptyTitle}</div> : null}
+      {emptyDescription ? <div>{emptyDescription}</div> : null}
+      {emptyHint ? <div>{emptyHint}</div> : null}
+      <div>{String(showUploadAction ?? true)}</div>
+    </div>
   ),
 }));
 
@@ -238,5 +256,31 @@ describe("BuyerTeaserSection", () => {
       ]),
     );
     expect(toastSuccessSpy).toHaveBeenCalled();
+  });
+
+  it("renders a combined empty upload state when no teaser exists", async () => {
+    mockUseMarketingMaterials.mockReturnValue({
+      data: [],
+    });
+
+    renderSection();
+
+    expect(
+      await screen.findByRole("heading", { name: "Teaser" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("등록된 Teaser 없음")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Teaser 자료를 업로드하면 매수자별 송부 버전과 송부 여부를 여기서 관리할 수 있습니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Teaser PDF/PPTX 파일을 여기에 드롭하거나 클릭하여 추가하세요. PDF 업로드는 OCR 검토를 열고, 검토 확정 후 TM 자료로 연결할 수 있습니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("file-upload-zone")).getByText("false"),
+    ).toBeInTheDocument();
   });
 });
