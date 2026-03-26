@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useId } from "react";
+import { useEffect, useRef, useCallback, useId, type DragEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
@@ -22,6 +22,11 @@ const sizeStyles = {
 // 포커스 가능한 요소 선택자
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function hasDraggedFiles(event: DragEvent<HTMLElement>) {
+  const types = Array.from(event.dataTransfer.types ?? []);
+  return types.includes("Files") || event.dataTransfer.files.length > 0;
+}
 
 export function Modal({
   open,
@@ -105,6 +110,27 @@ export function Modal({
     );
   }, [onClose]);
 
+  const allowFileDropWithinModal = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    },
+    [],
+  );
+
+  const preventUnhandledFileDrop = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+    },
+    [],
+  );
+
   if (!open) return null;
 
   return (
@@ -121,6 +147,9 @@ export function Modal({
       onClick={(e) => {
         if (e.target === dialogRef.current) handleClose();
       }}
+      onDragEnterCapture={allowFileDropWithinModal}
+      onDragOverCapture={allowFileDropWithinModal}
+      onDropCapture={preventUnhandledFileDrop}
       aria-labelledby={titleId}
     >
       {/* Animated backdrop */}

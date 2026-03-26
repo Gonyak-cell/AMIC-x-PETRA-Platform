@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useId } from "react";
+import { useEffect, useRef, useCallback, useId, type DragEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
@@ -22,6 +22,11 @@ const widthStyles = {
 
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function hasDraggedFiles(event: DragEvent<HTMLElement>) {
+  const types = Array.from(event.dataTransfer.types ?? []);
+  return types.includes("Files") || event.dataTransfer.files.length > 0;
+}
 
 export function SlidePanel({
   open,
@@ -97,6 +102,27 @@ export function SlidePanel({
     );
   }, [onClose]);
 
+  const allowFileDropWithinPanel = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    },
+    [],
+  );
+
+  const preventUnhandledFileDrop = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+    },
+    [],
+  );
+
   if (!open) return null;
 
   return (
@@ -113,6 +139,9 @@ export function SlidePanel({
       onClick={(e) => {
         if (e.target === dialogRef.current) handleClose();
       }}
+      onDragEnterCapture={allowFileDropWithinPanel}
+      onDragOverCapture={allowFileDropWithinPanel}
+      onDropCapture={preventUnhandledFileDrop}
       aria-labelledby={titleId}
     >
       {/* Backdrop */}
