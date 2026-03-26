@@ -27,5 +27,11 @@ describe("SlidePanel", () => {
       }),
     ).toBe(false);
     expect(dataTransfer.dropEffect).toBe("copy");
+
+    expect(
+      fireEvent.dragOver(document.body, {
+        dataTransfer,
+      }),
+    ).toBe(false);
   });
 });

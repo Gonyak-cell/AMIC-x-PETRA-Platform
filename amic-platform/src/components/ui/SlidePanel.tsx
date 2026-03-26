@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useId, type DragEvent } from "react";
+import { useEffect, useRef, useCallback, useId, type DragEvent as ReactDragEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap } from "@/lib/gsap";
@@ -23,9 +23,12 @@ const widthStyles = {
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-function hasDraggedFiles(event: DragEvent<HTMLElement>) {
-  const types = Array.from(event.dataTransfer.types ?? []);
-  return types.includes("Files") || event.dataTransfer.files.length > 0;
+function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
+  if (!dataTransfer) {
+    return false;
+  }
+  const types = Array.from(dataTransfer.types ?? []);
+  return types.includes("Files") || dataTransfer.files.length > 0;
 }
 
 export function SlidePanel({
@@ -76,6 +79,39 @@ export function SlidePanel({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const allowNativeFileDrag = (event: globalThis.DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const preventNativeFileDrop = (event: globalThis.DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    document.addEventListener("dragenter", allowNativeFileDrag, true);
+    document.addEventListener("dragover", allowNativeFileDrag, true);
+    document.addEventListener("drop", preventNativeFileDrop, true);
+
+    return () => {
+      document.removeEventListener("dragenter", allowNativeFileDrag, true);
+      document.removeEventListener("dragover", allowNativeFileDrag, true);
+      document.removeEventListener("drop", preventNativeFileDrop, true);
+    };
+  }, [open]);
+
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -103,8 +139,8 @@ export function SlidePanel({
   }, [onClose]);
 
   const allowFileDropWithinPanel = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      if (!hasDraggedFiles(event)) {
+    (event: ReactDragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
         return;
       }
       event.preventDefault();
@@ -114,8 +150,8 @@ export function SlidePanel({
   );
 
   const preventUnhandledFileDrop = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      if (!hasDraggedFiles(event)) {
+    (event: ReactDragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
         return;
       }
       event.preventDefault();
