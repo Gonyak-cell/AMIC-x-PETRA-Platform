@@ -31,6 +31,10 @@ function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
   return types.includes("Files") || dataTransfer.files.length > 0;
 }
 
+function isHandledFileDropTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest("[data-file-dropzone='true']") !== null;
+}
+
 export function Modal({
   open,
   onClose,
@@ -103,6 +107,9 @@ export function Modal({
       if (!hasDraggedFiles(event.dataTransfer)) {
         return;
       }
+      if (isHandledFileDropTarget(event.target)) {
+        return;
+      }
       event.preventDefault();
     };
 
@@ -169,6 +176,9 @@ export function Modal({
   const preventUnhandledFileDrop = useCallback(
     (event: ReactDragEvent<HTMLElement>) => {
       if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+      if (isHandledFileDropTarget(event.target)) {
         return;
       }
       event.preventDefault();

@@ -140,6 +140,67 @@ export default function FileUploadZone({
     [handleUpload],
   );
 
+  const handleEmptyDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer) || readOnly) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current += 1;
+      setIsEmptyDropActive(true);
+      event.dataTransfer.dropEffect = "copy";
+    },
+    [readOnly],
+  );
+
+  const handleEmptyDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer) || readOnly) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsEmptyDropActive(true);
+      event.dataTransfer.dropEffect = "copy";
+    },
+    [readOnly],
+  );
+
+  const handleEmptyDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer) || readOnly) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current = Math.max(0, emptyDragDepthRef.current - 1);
+      if (emptyDragDepthRef.current === 0) {
+        setIsEmptyDropActive(false);
+      }
+    },
+    [readOnly],
+  );
+
+  const handleEmptyDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer) || readOnly) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current = 0;
+      setIsEmptyDropActive(false);
+      event.dataTransfer.dropEffect = "copy";
+      void handleUpload(Array.from(event.dataTransfer.files));
+    },
+    [handleUpload, readOnly],
+  );
+
   const openPicker = useCallback(() => {
     openAttachmentFilePicker(fileInputRef);
   }, []);
@@ -156,81 +217,8 @@ export default function FileUploadZone({
     if (!isEmpty || readOnly) {
       emptyDragDepthRef.current = 0;
       setIsEmptyDropActive(false);
-      return;
     }
-
-    const node = emptyDropzoneRef.current;
-    if (!node) {
-      return;
-    }
-
-    const activateDropzone = (event: DragEvent) => {
-      if (!hasDraggedFiles(event.dataTransfer)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      emptyDragDepthRef.current += 1;
-      setIsEmptyDropActive(true);
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "copy";
-      }
-    };
-
-    const handleNativeDragOver = (event: DragEvent) => {
-      if (!hasDraggedFiles(event.dataTransfer)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      setIsEmptyDropActive(true);
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "copy";
-      }
-    };
-
-    const handleNativeDragLeave = (event: DragEvent) => {
-      if (!hasDraggedFiles(event.dataTransfer)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      emptyDragDepthRef.current = Math.max(0, emptyDragDepthRef.current - 1);
-      if (emptyDragDepthRef.current === 0) {
-        setIsEmptyDropActive(false);
-      }
-    };
-
-    const handleNativeDrop = (event: DragEvent) => {
-      if (!hasDraggedFiles(event.dataTransfer)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      emptyDragDepthRef.current = 0;
-      setIsEmptyDropActive(false);
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "copy";
-      }
-      void handleUpload(Array.from(event.dataTransfer?.files ?? []));
-    };
-
-    node.addEventListener("dragenter", activateDropzone);
-    node.addEventListener("dragover", handleNativeDragOver);
-    node.addEventListener("dragleave", handleNativeDragLeave);
-    node.addEventListener("drop", handleNativeDrop);
-
-    return () => {
-      node.removeEventListener("dragenter", activateDropzone);
-      node.removeEventListener("dragover", handleNativeDragOver);
-      node.removeEventListener("dragleave", handleNativeDragLeave);
-      node.removeEventListener("drop", handleNativeDrop);
-    };
-  }, [handleUpload, isEmpty, readOnly]);
+  }, [isEmpty, readOnly]);
 
   const hiddenInput = !readOnly && (
     <input
@@ -247,6 +235,7 @@ export default function FileUploadZone({
   const fileList = isEmpty ? (
     <div
       ref={emptyDropzoneRef}
+      data-file-dropzone="true"
       className={cn(
         "flex flex-col items-center justify-center gap-2 text-center text-sm text-text-muted",
         emptyVariant === "dashed"
@@ -259,6 +248,10 @@ export default function FileUploadZone({
         !readOnly && "cursor-pointer",
       )}
       onClick={readOnly ? undefined : openPicker}
+      onDragEnter={handleEmptyDragEnter}
+      onDragOver={handleEmptyDragOver}
+      onDragLeave={handleEmptyDragLeave}
+      onDrop={handleEmptyDrop}
       onKeyDown={
         readOnly
           ? undefined
@@ -358,6 +351,7 @@ export default function FileUploadZone({
         className={`px-5 ${
           embeddedSeparator ? "mt-4 border-t border-gray-border pt-4" : "py-5"
         }`}
+        data-file-dropzone="true"
         onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >
@@ -422,6 +416,7 @@ export default function FileUploadZone({
 
       <div
         className={`${compact ? "mt-1 " : ""}rounded-lg border border-gray-border bg-white`}
+        data-file-dropzone="true"
         onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >

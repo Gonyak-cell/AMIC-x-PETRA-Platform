@@ -31,6 +31,10 @@ function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
   return types.includes("Files") || dataTransfer.files.length > 0;
 }
 
+function isHandledFileDropTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest("[data-file-dropzone='true']") !== null;
+}
+
 export function SlidePanel({
   open,
   onClose,
@@ -98,6 +102,9 @@ export function SlidePanel({
       if (!hasDraggedFiles(event.dataTransfer)) {
         return;
       }
+      if (isHandledFileDropTarget(event.target)) {
+        return;
+      }
       event.preventDefault();
     };
 
@@ -161,6 +168,9 @@ export function SlidePanel({
   const preventUnhandledFileDrop = useCallback(
     (event: ReactDragEvent<HTMLElement>) => {
       if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+      if (isHandledFileDropTarget(event.target)) {
         return;
       }
       event.preventDefault();
