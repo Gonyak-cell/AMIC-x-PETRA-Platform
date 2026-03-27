@@ -46,8 +46,12 @@ export function openAttachmentFilePicker(
     showPicker?: () => void;
   };
   if (typeof picker.showPicker === "function") {
-    picker.showPicker();
-    return;
+    try {
+      picker.showPicker();
+      return;
+    } catch {
+      // Some browsers reject showPicker() for hidden inputs or modal/top-layer contexts.
+    }
   }
 
   element.click();

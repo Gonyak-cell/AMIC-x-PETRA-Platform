@@ -106,14 +106,23 @@ export function Modal({
       event.preventDefault();
     };
 
-    document.addEventListener("dragenter", allowNativeFileDrag, true);
-    document.addEventListener("dragover", allowNativeFileDrag, true);
-    document.addEventListener("drop", preventNativeFileDrop, true);
+    const targets: Pick<
+      Window,
+      "addEventListener" | "removeEventListener"
+    >[] = [window, document];
+
+    for (const target of targets) {
+      target.addEventListener("dragenter", allowNativeFileDrag, true);
+      target.addEventListener("dragover", allowNativeFileDrag, true);
+      target.addEventListener("drop", preventNativeFileDrop, true);
+    }
 
     return () => {
-      document.removeEventListener("dragenter", allowNativeFileDrag, true);
-      document.removeEventListener("dragover", allowNativeFileDrag, true);
-      document.removeEventListener("drop", preventNativeFileDrop, true);
+      for (const target of targets) {
+        target.removeEventListener("dragenter", allowNativeFileDrag, true);
+        target.removeEventListener("dragover", allowNativeFileDrag, true);
+        target.removeEventListener("drop", preventNativeFileDrop, true);
+      }
     };
   }, [open]);
 

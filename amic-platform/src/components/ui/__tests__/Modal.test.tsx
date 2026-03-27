@@ -33,5 +33,11 @@ describe("Modal", () => {
         dataTransfer,
       }),
     ).toBe(false);
+
+    expect(
+      fireEvent.dragOver(window, {
+        dataTransfer,
+      }),
+    ).toBe(false);
   });
 });
