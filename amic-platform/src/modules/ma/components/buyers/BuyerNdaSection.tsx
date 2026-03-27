@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 
+import { extractApiError } from "@/api/errors";
+import { maApi } from "@/api/maClient";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
 import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
@@ -16,6 +20,7 @@ import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
 import type { Attachment } from "@/modules/ma/types/attachment";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
+import type { NdaMarkup } from "@/modules/ma/types/nda_markup";
 import {
   Badge,
   Button,
@@ -41,11 +46,21 @@ function createInitialForm(buyerId: string): NDACreate {
   };
 }
 
+function getLocalDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildUploadedVersionLabel(fileName: string) {
+  const stem = fileName.trim().replace(/\.[^.]+$/, "").trim();
+  return stem || "업로드본";
+}
+
 export default function BuyerNdaSection({
   txnId,
   buyer,
   canWrite,
 }: BuyerNdaSectionProps) {
+  const queryClient = useQueryClient();
   const { data: ndas } = useNdas(txnId, {
     buyerId: buyer.id,
     partyType: "BUYER",
@@ -98,6 +113,42 @@ export default function BuyerNdaSection({
 
   const handleNdaUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
+      try {
+        const targetNda =
+          sortedNdas[0] ??
+          (await createNda.mutateAsync({
+            party_type: "BUYER",
+            buyer_candidate_id: buyer.id,
+            counterparty_name: buyer.company_name,
+            nda_type: "MUTUAL",
+          }));
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("version_label", buildUploadedVersionLabel(file.name));
+        formData.append("version_date", getLocalDateString());
+        formData.append("changes_summary", "구매자 상세 NDA 업로드");
+
+        await maApi.post<NdaMarkup>(
+          `/transactions/${txnId}/ndas/${targetNda.id}/markups`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
+
+        await queryClient.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "ndas", targetNda.id, "markups"],
+        });
+      } catch (error) {
+        toast.error(
+          extractApiError(
+            error,
+            "NDA 체결 단계에 업로드를 반영하지 못했습니다.",
+          ),
+        );
+      }
+
       await startExtractionFromUpload({
         attachment,
         file,
@@ -108,7 +159,15 @@ export default function BuyerNdaSection({
         },
       });
     },
-    [buyer.id, startExtractionFromUpload],
+    [
+      buyer.company_name,
+      buyer.id,
+      createNda,
+      queryClient,
+      sortedNdas,
+      startExtractionFromUpload,
+      txnId,
+    ],
   );
 
   const handleTeaserUploaded = useCallback(

@@ -479,6 +479,11 @@ describe("BuyersTab", () => {
         "true",
       );
     });
+
+    const grid = await screen.findByTestId("marketing-grid");
+    expect(within(grid).getByTestId("grid-cell-NDA_SIGNED")).toHaveTextContent(
+      /\d{2}-\d{2}/,
+    );
   });
 
   it("allows returning to Short List even when the NDA step is locked", async () => {

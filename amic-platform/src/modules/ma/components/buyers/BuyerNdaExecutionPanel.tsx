@@ -156,6 +156,48 @@ export default function BuyerNdaExecutionPanel({
     });
   }
 
+  function syncNdaStatusCache(updatedNda: NDA) {
+    const ndaQueries = queryClient.getQueriesData<NDA[]>({
+      queryKey: ["ma", "transactions", txnId, "ndas"],
+    });
+
+    for (const [queryKey, current] of ndaQueries) {
+      if (!Array.isArray(current)) {
+        continue;
+      }
+
+      queryClient.setQueryData<NDA[]>(queryKey, (items) => {
+        if (!items) {
+          return items;
+        }
+
+        return items.map((item) =>
+          item.id === updatedNda.id ? { ...item, ...updatedNda } : item,
+        );
+      });
+    }
+  }
+
+  function syncBuyerStatusCache(updatedNda: NDA) {
+    if (updatedNda.status !== "SIGNED" || !updatedNda.buyer_candidate_id) {
+      return;
+    }
+
+    queryClient.setQueryData<BuyerCandidate[]>(
+      ["ma", "transactions", txnId, "buyers"],
+      (current) =>
+        current?.map((candidate) =>
+          candidate.id === updatedNda.buyer_candidate_id
+            ? {
+                ...candidate,
+                status: "NDA_SIGNED",
+                updated_at: updatedNda.updated_at,
+              }
+            : candidate,
+        ),
+    );
+  }
+
   async function handleUploadFile(file: File) {
     if (!buyer || !canWrite) return;
 
@@ -197,13 +239,32 @@ export default function BuyerNdaExecutionPanel({
       return;
     }
 
-    await updateNda.mutateAsync({
+    const updatedNda = await updateNda.mutateAsync({
       ndaId: effectiveNdaId,
       body: {
         status: "SIGNED",
         signed_at: getLocalDateString(),
       },
     });
+
+    syncNdaStatusCache(updatedNda);
+    syncBuyerStatusCache(updatedNda);
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "ndas"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "buyers"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "workspace-summary"],
+      }),
+    ]);
+
     onClose();
   }
 

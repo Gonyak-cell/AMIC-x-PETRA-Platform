@@ -1,15 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { maApi } from "@/api/maClient";
 import BuyerNdaSection from "../BuyerNdaSection";
 
 const mockUseNdas = vi.fn();
 const uploadMutateAsync = vi.fn();
 const startExtractionFromUpload = vi.fn();
+const createNdaMutateAsync = vi.fn();
+const invalidateQueries = vi.fn();
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({
+    invalidateQueries,
+  }),
+}));
 
 vi.mock("@/modules/ma/hooks/useNdas", () => ({
   useNdas: () => mockUseNdas(),
-  useCreateNda: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateNda: () => ({
+    mutate: vi.fn(),
+    mutateAsync: createNdaMutateAsync,
+    isPending: false,
+  }),
   useUpdateNda: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteNda: () => ({ mutate: vi.fn(), isPending: false }),
 }));
@@ -44,11 +57,41 @@ vi.mock("../BuyerTeaserSection", () => ({
   default: () => <div>buyer-teaser-section</div>,
 }));
 
+const buyer = {
+  id: "buyer-1",
+  transaction_id: "txn-1",
+  company_name: "ATU파트너스",
+  contact_name: null,
+  contact_email: null,
+  contact_phone: null,
+  buyer_type: "FINANCIAL_SPONSOR",
+  status: "IDENTIFIED",
+  tier: null,
+  deal_role: null,
+  is_short_listed: false,
+  corp_code: null,
+  ioi_value: null,
+  ioi_date: null,
+  loi_value: null,
+  loi_date: null,
+  final_offer_value: null,
+  rejection_reason: null,
+  notes: null,
+  extra_data: null,
+  created_at: "2026-03-25T00:00:00Z",
+  updated_at: "2026-03-25T00:00:00Z",
+} as const;
+
 describe("BuyerNdaSection", () => {
   beforeEach(() => {
     mockUseNdas.mockReturnValue({ data: [] });
     uploadMutateAsync.mockReset();
     startExtractionFromUpload.mockReset();
+    createNdaMutateAsync.mockReset();
+    invalidateQueries.mockReset();
+
+    vi.spyOn(maApi, "post").mockReset();
+
     uploadMutateAsync.mockResolvedValue({
       id: "att-1",
       transaction_id: "txn-1",
@@ -63,44 +106,30 @@ describe("BuyerNdaSection", () => {
       updated_at: "2026-03-25T00:00:00Z",
       vdr_sync: null,
     });
+    createNdaMutateAsync.mockResolvedValue({
+      id: "nda-1",
+      transaction_id: "txn-1",
+      party_type: "BUYER",
+      buyer_candidate_id: "buyer-1",
+      counterparty_name: "ATU파트너스",
+      nda_type: "MUTUAL",
+      status: "DRAFT",
+      sent_at: null,
+      signed_at: null,
+      expires_at: null,
+      notes: null,
+      created_at: "2026-03-25T00:00:00Z",
+      updated_at: "2026-03-25T00:00:00Z",
+    });
+    vi.spyOn(maApi, "post").mockResolvedValue({
+      data: {
+        id: "markup-1",
+      },
+    });
   });
 
-  it("uploads a dropped file from the unified NDA empty upload zone", async () => {
-    render(
-      <BuyerNdaSection
-        txnId="txn-1"
-        canWrite
-        buyer={{
-          id: "buyer-1",
-          transaction_id: "txn-1",
-          company_name: "ATU파트너스",
-          contact_name: null,
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR",
-          status: "IDENTIFIED",
-          tier: null,
-          deal_role: null,
-          is_short_listed: false,
-          corp_code: null,
-          ioi_value: null,
-          ioi_date: null,
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-03-25T00:00:00Z",
-          updated_at: "2026-03-25T00:00:00Z",
-        }}
-      />,
-    );
-
-    expect(screen.getByText("NDA 없음")).toBeInTheDocument();
-    expect(
-      screen.getByText("ATU파트너스와 체결한 NDA를 등록하세요."),
-    ).toBeInTheDocument();
+  it("creates an NDA record and first version after a dropped upload", async () => {
+    render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
 
     const dropZone = screen.getByRole("button", { name: /NDA 없음/ });
     const file = new File(["pdf-content"], "buyer-nda.pdf", {
@@ -125,6 +154,31 @@ describe("BuyerNdaSection", () => {
     });
 
     await waitFor(() => {
+      expect(createNdaMutateAsync).toHaveBeenCalledWith({
+        party_type: "BUYER",
+        buyer_candidate_id: "buyer-1",
+        counterparty_name: "ATU파트너스",
+        nda_type: "MUTUAL",
+      });
+    });
+
+    await waitFor(() => {
+      expect(maApi.post).toHaveBeenCalledWith(
+        "/transactions/txn-1/ndas/nda-1/markups",
+        expect.any(FormData),
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+    });
+
+    await waitFor(() => {
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["ma", "transactions", "txn-1", "ndas", "nda-1", "markups"],
+      });
+    });
+
+    await waitFor(() => {
       expect(startExtractionFromUpload).toHaveBeenCalledWith({
         attachment: expect.objectContaining({
           id: "att-1",
@@ -140,15 +194,15 @@ describe("BuyerNdaSection", () => {
     });
   });
 
-  it("keeps the shared upload zone when NDA rows already exist", () => {
+  it("reuses the existing NDA and only adds a new version", async () => {
     mockUseNdas.mockReturnValue({
       data: [
         {
-          id: "nda-1",
+          id: "nda-existing",
           transaction_id: "txn-1",
           party_type: "BUYER",
           buyer_candidate_id: "buyer-1",
-          counterparty_name: null,
+          counterparty_name: "ATU파트너스",
           nda_type: "MUTUAL",
           status: "SENT",
           sent_at: "2026-03-20",
@@ -161,38 +215,27 @@ describe("BuyerNdaSection", () => {
       ],
     });
 
-    render(
-      <BuyerNdaSection
-        txnId="txn-1"
-        canWrite
-        buyer={{
-          id: "buyer-1",
-          transaction_id: "txn-1",
-          company_name: "ATU파트너스",
-          contact_name: null,
-          contact_email: null,
-          contact_phone: null,
-          buyer_type: "FINANCIAL_SPONSOR",
-          status: "IDENTIFIED",
-          tier: null,
-          deal_role: null,
-          is_short_listed: false,
-          corp_code: null,
-          ioi_value: null,
-          ioi_date: null,
-          loi_value: null,
-          loi_date: null,
-          final_offer_value: null,
-          rejection_reason: null,
-          notes: null,
-          extra_data: null,
-          created_at: "2026-03-25T00:00:00Z",
-          updated_at: "2026-03-25T00:00:00Z",
-        }}
-      />,
-    );
+    render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
 
-    expect(screen.getByText("NDA PDF를 여기에 드롭하거나 클릭하여 추가하세요.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "NDA 업로드" })).toBeInTheDocument();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["pdf-content"], "buyer-nda.pdf", {
+      type: "application/pdf",
+    });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(createNdaMutateAsync).not.toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(maApi.post).toHaveBeenCalledWith(
+        "/transactions/txn-1/ndas/nda-existing/markups",
+        expect.any(FormData),
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+    });
   });
 });
