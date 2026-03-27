@@ -10,12 +10,17 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 import {
   getAttachmentDownloadUrl,
   useAttachments,
   useDeleteAttachment,
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
+import {
+  openAttachmentFilePicker,
+  uploadAttachmentFiles,
+} from "@/modules/ma/components/attachmentUploadUtils";
 import type {
   Attachment,
   AttachmentEntityType,
@@ -25,10 +30,6 @@ import {
   ATTACHMENT_MIME_LABELS,
 } from "@/modules/ma/types/attachment";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
-import {
-  openAttachmentFilePicker,
-  uploadAttachmentFiles,
-} from "@/modules/ma/components/attachmentUploadUtils";
 
 interface FileUploadZoneProps {
   txnId: string;
@@ -43,10 +44,20 @@ interface FileUploadZoneProps {
   emptyTitle?: string;
   emptyDescription?: string;
   emptyHint?: string;
+  emptyVariant?: "plain" | "dashed";
   embeddedSeparator?: boolean;
   showUploadAction?: boolean;
   registerOpenPicker?: (openPicker: (() => void) | null) => void;
   onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
+}
+
+function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  const types = Array.from(dataTransfer.types ?? []);
+  return types.includes("Files") || dataTransfer.files.length > 0;
 }
 
 export default function FileUploadZone({
@@ -56,28 +67,37 @@ export default function FileUploadZone({
   compact = false,
   embedded = false,
   readOnly = false,
-  emptyTitle,
   title = "첨부 자료",
   embeddedLabel = "첨부 파일",
   uploadLabel = "업로드",
-  emptyDescription = "파일을 여기에 드래그하거나 업로드 버튼을 클릭하세요.",
-  emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX, PPTX, HWP 등`,
+  emptyTitle,
+  emptyDescription = "파일을 여기에 드롭하거나 클릭해 업로드하세요.",
+  emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX, PPTX, HWP`,
+  emptyVariant = "plain",
   embeddedSeparator = true,
   showUploadAction = true,
   registerOpenPicker,
   onUploaded,
 }: FileUploadZoneProps) {
   const [expanded, setExpanded] = useState(!compact);
+  const [isEmptyDropActive, setIsEmptyDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emptyDropzoneRef = useRef<HTMLDivElement>(null);
+  const emptyDragDepthRef = useRef(0);
 
   const { data } = useAttachments(txnId, entityType, entityId);
   const uploadMutation = useUploadAttachment(txnId);
   const deleteMutation = useDeleteAttachment(txnId);
 
   const items = data?.items ?? [];
+  const isEmpty = items.length === 0;
 
   const handleUpload = useCallback(
     async (files: File[]) => {
+      if (files.length === 0) {
+        return;
+      }
+
       await uploadAttachmentFiles({
         files,
         entityType,
@@ -90,12 +110,27 @@ export default function FileUploadZone({
   );
 
   const handleDrop = useCallback(
-    (event: React.DragEvent) => {
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+
       event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "copy";
       void handleUpload(Array.from(event.dataTransfer.files));
     },
     [handleUpload],
   );
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
+    if (!hasDraggedFiles(event.dataTransfer)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
 
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +152,86 @@ export default function FileUploadZone({
     };
   }, [openPicker, readOnly, registerOpenPicker]);
 
+  useEffect(() => {
+    if (!isEmpty || readOnly) {
+      emptyDragDepthRef.current = 0;
+      setIsEmptyDropActive(false);
+      return;
+    }
+
+    const node = emptyDropzoneRef.current;
+    if (!node) {
+      return;
+    }
+
+    const activateDropzone = (event: DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current += 1;
+      setIsEmptyDropActive(true);
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const handleNativeDragOver = (event: DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsEmptyDropActive(true);
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const handleNativeDragLeave = (event: DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current = Math.max(0, emptyDragDepthRef.current - 1);
+      if (emptyDragDepthRef.current === 0) {
+        setIsEmptyDropActive(false);
+      }
+    };
+
+    const handleNativeDrop = (event: DragEvent) => {
+      if (!hasDraggedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      emptyDragDepthRef.current = 0;
+      setIsEmptyDropActive(false);
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+      void handleUpload(Array.from(event.dataTransfer?.files ?? []));
+    };
+
+    node.addEventListener("dragenter", activateDropzone);
+    node.addEventListener("dragover", handleNativeDragOver);
+    node.addEventListener("dragleave", handleNativeDragLeave);
+    node.addEventListener("drop", handleNativeDrop);
+
+    return () => {
+      node.removeEventListener("dragenter", activateDropzone);
+      node.removeEventListener("dragover", handleNativeDragOver);
+      node.removeEventListener("dragleave", handleNativeDragLeave);
+      node.removeEventListener("drop", handleNativeDrop);
+    };
+  }, [handleUpload, isEmpty, readOnly]);
+
   const hiddenInput = !readOnly && (
     <input
       ref={fileInputRef}
@@ -129,100 +244,108 @@ export default function FileUploadZone({
     />
   );
 
-  const fileList = (
-    <>
-      {items.length === 0 ? (
-        <div
-          className={`flex flex-col items-center justify-center gap-2 py-8 text-sm text-text-muted ${
-            readOnly ? "" : "cursor-pointer"
-          }`}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={readOnly ? undefined : handleDrop}
-          onClick={readOnly ? undefined : openPicker}
-          onKeyDown={
-            readOnly
-              ? undefined
-              : (event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    openPicker();
-                  }
-                }
-          }
-          role={readOnly ? undefined : "button"}
-          tabIndex={readOnly ? undefined : 0}
-        >
-          <Upload className="h-8 w-8 text-text-muted" />
-          {emptyTitle ? (
-            <p className="text-lg font-semibold text-text-dark">{emptyTitle}</p>
-          ) : null}
-          <p className={emptyTitle ? "max-w-2xl text-center text-text-body" : ""}>
-            {emptyDescription}
-          </p>
-          <p className="max-w-2xl text-center text-xs">{emptyHint}</p>
-        </div>
-      ) : (
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-border text-left text-xs text-text-secondary">
-            <tr>
-              <th className="px-5 py-2 font-medium">파일명</th>
-              <th className="px-5 py-2 font-medium">형식</th>
-              <th className="px-5 py-2 font-medium">크기</th>
-              <th className="px-5 py-2 font-medium">업로드일</th>
-              <th className="px-5 py-2 font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((attachment) => (
-              <tr
-                key={attachment.id}
-                className="border-b border-gray-border/50 hover:bg-bg-cool/50"
-              >
-                <td className="px-5 py-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 shrink-0 text-text-muted" />
-                    <span className="truncate" title={attachment.file_name}>
-                      {attachment.file_name}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-5 py-2 text-text-secondary">
-                  {ATTACHMENT_MIME_LABELS[attachment.mime_type] ??
-                    attachment.mime_type.split("/")[1]}
-                </td>
-                <td className="px-5 py-2 text-text-secondary">
-                  {formatFileSize(attachment.file_size_bytes)}
-                </td>
-                <td className="px-5 py-2 text-text-secondary">
-                  {formatISODate(attachment.created_at)}
-                </td>
-                <td className="px-5 py-2">
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={getAttachmentDownloadUrl(txnId, attachment.id)}
-                      className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
-                      title="다운로드"
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
-                    {!readOnly && (
-                      <button
-                        type="button"
-                        className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
-                        title="삭제"
-                        onClick={() => deleteMutation.mutate(attachment.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  const fileList = isEmpty ? (
+    <div
+      ref={emptyDropzoneRef}
+      className={cn(
+        "flex flex-col items-center justify-center gap-2 text-center text-sm text-text-muted",
+        emptyVariant === "dashed"
+          ? "rounded-2xl border border-dashed px-6 py-10"
+          : "py-8",
+        emptyVariant === "dashed" &&
+          (isEmptyDropActive
+            ? "border-primary-300 bg-primary-50/40"
+            : "border-gray-border bg-bg-cool/20"),
+        !readOnly && "cursor-pointer",
       )}
-    </>
+      onClick={readOnly ? undefined : openPicker}
+      onKeyDown={
+        readOnly
+          ? undefined
+          : (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openPicker();
+              }
+            }
+      }
+      role={readOnly ? undefined : "button"}
+      tabIndex={readOnly ? undefined : 0}
+    >
+      <Upload
+        className={cn(
+          "text-text-muted",
+          emptyVariant === "dashed" ? "h-10 w-10" : "h-8 w-8",
+        )}
+      />
+      {emptyTitle ? (
+        <p className="text-lg font-semibold text-text-dark">{emptyTitle}</p>
+      ) : null}
+      <p className={cn("max-w-2xl", emptyTitle && "text-text-body")}>
+        {emptyDescription}
+      </p>
+      <p className="max-w-2xl text-xs text-text-secondary">{emptyHint}</p>
+    </div>
+  ) : (
+    <table className="w-full text-sm">
+      <thead className="border-b border-gray-border text-left text-xs text-text-secondary">
+        <tr>
+          <th className="px-5 py-2 font-medium">파일명</th>
+          <th className="px-5 py-2 font-medium">형식</th>
+          <th className="px-5 py-2 font-medium">크기</th>
+          <th className="px-5 py-2 font-medium">업로드일</th>
+          <th className="px-5 py-2 font-medium" />
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((attachment) => (
+          <tr
+            key={attachment.id}
+            className="border-b border-gray-border/50 hover:bg-bg-cool/50"
+          >
+            <td className="px-5 py-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 shrink-0 text-text-muted" />
+                <span className="truncate" title={attachment.file_name}>
+                  {attachment.file_name}
+                </span>
+              </div>
+            </td>
+            <td className="px-5 py-2 text-text-secondary">
+              {ATTACHMENT_MIME_LABELS[attachment.mime_type] ??
+                attachment.mime_type.split("/")[1]}
+            </td>
+            <td className="px-5 py-2 text-text-secondary">
+              {formatFileSize(attachment.file_size_bytes)}
+            </td>
+            <td className="px-5 py-2 text-text-secondary">
+              {formatISODate(attachment.created_at)}
+            </td>
+            <td className="px-5 py-2">
+              <div className="flex items-center gap-1">
+                <a
+                  href={getAttachmentDownloadUrl(txnId, attachment.id)}
+                  className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
+                  title="다운로드"
+                >
+                  <Download className="h-4 w-4" />
+                </a>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
+                    title="삭제"
+                    onClick={() => deleteMutation.mutate(attachment.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 
   if (embedded) {
@@ -235,7 +358,7 @@ export default function FileUploadZone({
         className={`px-5 ${
           embeddedSeparator ? "mt-4 border-t border-gray-border pt-4" : "py-5"
         }`}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >
         {showEmbeddedHeader && (
@@ -299,7 +422,7 @@ export default function FileUploadZone({
 
       <div
         className={`${compact ? "mt-1 " : ""}rounded-lg border border-gray-border bg-white`}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >
         {!compact && (

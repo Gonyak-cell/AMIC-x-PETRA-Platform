@@ -1,5 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 
@@ -153,11 +159,14 @@ describe("BuyerTeaserSection", () => {
     expect(
       await screen.findByRole("heading", { name: "Teaser" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Test Buyer 대상 Teaser 송부 관리")).toBeInTheDocument();
+    expect(screen.getByText("송부됨 v2")).toBeInTheDocument();
     expect(screen.getByText("2 version(s)")).toBeInTheDocument();
     expect(screen.getByText("v1")).toBeInTheDocument();
     expect(screen.getAllByText("v2").length).toBeGreaterThan(0);
     expect(screen.getByText("2026-03-20")).toBeInTheDocument();
     expect(screen.getByText("Teaser 업로드")).toBeInTheDocument();
+    expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
   });
 
   it("moves teaser distribution to the selected version", async () => {
@@ -258,7 +267,7 @@ describe("BuyerTeaserSection", () => {
     expect(toastSuccessSpy).toHaveBeenCalled();
   });
 
-  it("renders a combined empty upload state when no teaser exists", async () => {
+  it("renders only the upload zone when no teaser exists", async () => {
     mockUseMarketingMaterials.mockReturnValue({
       data: [],
     });
@@ -268,6 +277,10 @@ describe("BuyerTeaserSection", () => {
     expect(
       await screen.findByRole("heading", { name: "Teaser" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Test Buyer 대상 Teaser 송부 관리"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("0 version(s)")).not.toBeInTheDocument();
     expect(screen.getByText("등록된 Teaser 없음")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -282,5 +295,6 @@ describe("BuyerTeaserSection", () => {
     expect(
       within(screen.getByTestId("file-upload-zone")).getByText("false"),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
   });
 });

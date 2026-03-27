@@ -1,55 +1,36 @@
-import {
-  type ChangeEvent,
-  type DragEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { FileText, Plus, Trash2, Upload } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Trash2, Upload } from "lucide-react";
+
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
-import {
-  openAttachmentFilePicker,
-  uploadAttachmentFiles,
-} from "@/modules/ma/components/attachmentUploadUtils";
+import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
+import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import BuyerTeaserSection from "@/modules/ma/components/buyers/BuyerTeaserSection";
 import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
-import { useUploadAttachment } from "@/modules/ma/hooks/useAttachments";
 import {
   useCreateNda,
   useDeleteNda,
   useNdas,
   useUpdateNda,
 } from "@/modules/ma/hooks/useNdas";
+import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
 import type { Attachment } from "@/modules/ma/types/attachment";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
-import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
-import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
-import BuyerTeaserSection from "@/modules/ma/components/buyers/BuyerTeaserSection";
 import {
   Badge,
   Button,
   Card,
   DataTable,
-  EmptyState,
   INLINE_INPUT_CLS,
   Input,
   Modal,
   Select,
 } from "@/components/ui";
-import { ATTACHMENT_CONSTRAINTS } from "@/modules/ma/types/attachment";
 
 interface BuyerNdaSectionProps {
   txnId: string;
   buyer: BuyerCandidate;
   canWrite: boolean;
-}
-
-function hasDraggedFiles(event: DragEvent<HTMLDivElement>) {
-  const types = Array.from(event.dataTransfer.types ?? []);
-  return types.includes("Files") || event.dataTransfer.files.length > 0;
 }
 
 function createInitialForm(buyerId: string): NDACreate {
@@ -72,7 +53,6 @@ export default function BuyerNdaSection({
   const createNda = useCreateNda(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
-  const uploadAttachment = useUploadAttachment(txnId);
   const { activeReview, closeReview, startExtractionFromUpload } =
     useAttachmentExtractionFlow(txnId);
 
@@ -81,9 +61,7 @@ export default function BuyerNdaSection({
     null,
   );
   const [ndaForm, setNdaForm] = useState<NDACreate>(createInitialForm(buyer.id));
-  const [isDropActive, setIsDropActive] = useState(false);
-  const dragDepthRef = useRef(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const openUploadPickerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setNdaForm(createInitialForm(buyer.id));
@@ -96,52 +74,41 @@ export default function BuyerNdaSection({
       ),
     [ndas],
   );
+  const hasNdas = sortedNdas.length > 0;
 
-  const handleStatusChange = (ndaId: string, status: NdaStatus) => {
-    updateNda.mutate({
-      ndaId,
-      body: { status },
-    });
-  };
-
-  const handleSignedDateChange = (ndaId: string, signedAt?: string) => {
-    updateNda.mutate({
-      ndaId,
-      body: { signed_at: signedAt },
-    });
-  };
-
-  const handleUpload = useCallback(
-    async (files: File[]) => {
-      if (!canWrite || files.length === 0) {
-        return;
-      }
-
-      await uploadAttachmentFiles({
-        files,
-        entityType: "NDA",
-        uploadMutation: uploadAttachment,
-        onUploaded: (attachment, file) =>
-          startExtractionFromUpload({
-            attachment,
-            file,
-            docCategoryHint: "NDA",
-            reviewContext: {
-              source: "buyer-nda",
-              buyerCandidateId: buyer.id,
-            },
-          }),
+  const handleStatusChange = useCallback(
+    (ndaId: string, status: NdaStatus) => {
+      updateNda.mutate({
+        ndaId,
+        body: { status },
       });
     },
-    [buyer.id, canWrite, startExtractionFromUpload, uploadAttachment],
+    [updateNda],
   );
 
-  const handleFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      void handleUpload(Array.from(event.target.files ?? []));
-      event.target.value = "";
+  const handleSignedDateChange = useCallback(
+    (ndaId: string, signedAt?: string) => {
+      updateNda.mutate({
+        ndaId,
+        body: { signed_at: signedAt },
+      });
     },
-    [handleUpload],
+    [updateNda],
+  );
+
+  const handleNdaUploaded = useCallback(
+    async (attachment: Attachment, file: File) => {
+      await startExtractionFromUpload({
+        attachment,
+        file,
+        docCategoryHint: "NDA",
+        reviewContext: {
+          source: "buyer-nda",
+          buyerCandidateId: buyer.id,
+        },
+      });
+    },
+    [buyer.id, startExtractionFromUpload],
   );
 
   const handleTeaserUploaded = useCallback(
@@ -159,61 +126,6 @@ export default function BuyerNdaSection({
     [startExtractionFromUpload],
   );
 
-  const handleDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      dragDepthRef.current = 0;
-      setIsDropActive(false);
-      if (!hasDraggedFiles(event)) {
-        return;
-      }
-      void handleUpload(Array.from(event.dataTransfer.files));
-    },
-    [handleUpload],
-  );
-
-  const handleDragEnter = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      if (!canWrite || !hasDraggedFiles(event)) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      dragDepthRef.current += 1;
-      setIsDropActive(true);
-    },
-    [canWrite],
-  );
-
-  const handleDragOver = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      if (!canWrite || !hasDraggedFiles(event)) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      event.dataTransfer.dropEffect = "copy";
-      setIsDropActive(true);
-    },
-    [canWrite],
-  );
-
-  const handleDragLeave = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      if (!canWrite || !hasDraggedFiles(event)) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-      if (dragDepthRef.current === 0) {
-        setIsDropActive(false);
-      }
-    },
-    [canWrite],
-  );
-
   return (
     <div className="space-y-4">
       <Card
@@ -226,7 +138,7 @@ export default function BuyerNdaSection({
               <Button
                 icon={Upload}
                 size="sm"
-                onClick={() => openAttachmentFilePicker(fileInputRef)}
+                onClick={() => openUploadPickerRef.current?.()}
                 variant="ghost"
               >
                 NDA 업로드
@@ -243,7 +155,7 @@ export default function BuyerNdaSection({
           ) : undefined
         }
       >
-        {sortedNdas.length ? (
+        {hasNdas ? (
           <DataTable
             columns={[
               {
@@ -270,7 +182,7 @@ export default function BuyerNdaSection({
                           event.target.value as NdaStatus,
                         )
                       }
-                      className="!py-0.5 !px-1.5 !text-xs"
+                      className="!px-1.5 !py-0.5 !text-xs"
                     />
                   ) : (
                     <span className="text-sm text-text-body">
@@ -388,100 +300,34 @@ export default function BuyerNdaSection({
             data={sortedNdas}
             keyField="id"
           />
-        ) : (
-          <div
-            className={cn(
-              "mx-5 my-5 rounded-2xl border-2 border-dashed transition-colors",
-              isDropActive
-                ? "border-primary-300 bg-primary-50/40"
-                : "border-gray-border bg-white",
-              canWrite ? "cursor-pointer" : "",
-            )}
-            onClick={canWrite ? () => openAttachmentFilePicker(fileInputRef) : undefined}
-            onKeyDown={
-              canWrite
-                ? (event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openAttachmentFilePicker(fileInputRef);
-                    }
-                  }
-                : undefined
-            }
-            onDragEnter={canWrite ? handleDragEnter : undefined}
-            onDragOver={canWrite ? handleDragOver : undefined}
-            onDragLeave={canWrite ? handleDragLeave : undefined}
-            onDrop={canWrite ? handleDrop : undefined}
-            role={canWrite ? "button" : undefined}
-            tabIndex={canWrite ? 0 : undefined}
-            aria-label={canWrite ? `${buyer.company_name} NDA 드래그 앤 드롭 업로드` : undefined}
-          >
-            <EmptyState
-              icon={FileText}
-              title="NDA 없음"
-              description={`${buyer.company_name}와 체결한 NDA를 등록하세요.`}
-              className="pb-4"
-            />
-            {canWrite && (
-              <div className="pb-8 text-center">
-                <p className="text-sm text-text-body">
-                  NDA PDF를 이곳에 드롭하면 OCR로 검토값을 자동 입력합니다.
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  OCR은 PDF 업로드에서 VDR 동기화 완료 후 시작되며, 다른 파일은 첨부만
-                  저장됩니다.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+        ) : null}
 
-        {canWrite && sortedNdas.length > 0 && (
-          <div className="mx-5 mt-4 border-t border-gray-border pt-4">
-            <div
-              className={cn(
-                "rounded-xl border border-dashed px-4 py-5 text-center transition-colors",
-                isDropActive
-                  ? "border-primary-300 bg-primary-50/40"
-                  : "border-gray-border bg-bg-cool/30",
-              )}
-              onClick={() => openAttachmentFilePicker(fileInputRef)}
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              role="button"
-              tabIndex={0}
-              aria-label={`${buyer.company_name} NDA 파일 추가 업로드`}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  openAttachmentFilePicker(fileInputRef);
-                }
-              }}
-            >
-              <Upload className="mx-auto h-5 w-5 text-text-muted" />
-              <p className="mt-2 text-sm text-text-body">
-                NDA PDF를 드롭하거나 클릭해 업로드하세요.
-              </p>
-              <p className="mt-1 text-xs text-text-secondary">
-                PDF는 OCR 검토까지 이어지고, 다른 파일은 첨부만 저장됩니다.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {canWrite && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="sr-only"
-            multiple
-            tabIndex={-1}
-            accept={ATTACHMENT_CONSTRAINTS.ACCEPT_EXTENSIONS}
-            onChange={handleFileChange}
-          />
-        )}
+        <FileUploadZone
+          txnId={txnId}
+          entityType="NDA"
+          embedded
+          readOnly={!canWrite}
+          emptyVariant="dashed"
+          embeddedLabel={hasNdas ? "NDA 파일" : ""}
+          uploadLabel="NDA 업로드"
+          emptyTitle={hasNdas ? undefined : "NDA 없음"}
+          emptyDescription={
+            hasNdas
+              ? "NDA PDF를 여기에 드롭하거나 클릭하여 추가하세요."
+              : `${buyer.company_name}와 체결한 NDA를 등록하세요.`
+          }
+          emptyHint={
+            hasNdas
+              ? "PDF 업로드는 OCR 검토를 열고, 다른 파일은 첨부만 저장됩니다."
+              : "NDA PDF를 이곳에 드롭하면 OCR로 검토값을 자동 입력합니다. OCR은 PDF 업로드에서 VDR 동기화 완료 후 시작되며, 다른 파일은 첨부만 저장됩니다."
+          }
+          embeddedSeparator={hasNdas}
+          showUploadAction={false}
+          registerOpenPicker={(openPicker) => {
+            openUploadPickerRef.current = openPicker;
+          }}
+          onUploaded={handleNdaUploaded}
+        />
       </Card>
 
       <BuyerTeaserSection
