@@ -74,8 +74,13 @@ jobs:
        (github.event_name == 'push' && needs.wait-for-ci.result == 'success'))
     environment: ${{ github.event.inputs.environment || 'production' }}
     env:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       HAS_AZURE_OIDC: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      HAS_AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      HAS_AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && secrets.AZURE_CLIENT_SECRET != '' }}
+      HAS_AZURE_RECOVERY: ${{ secrets.AZURE_CREDENTIALS != '' || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '') || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && secrets.AZURE_CLIENT_SECRET != '') }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
@@ -98,9 +103,31 @@ jobs:
             exit 1
           fi
 
-      - name: Login to Azure for VM recovery
+      - name: Login to Azure for VM recovery via AZURE_CREDENTIALS
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          env.HAS_AZURE_CREDENTIALS == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure for VM recovery via client secret
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          env.HAS_AZURE_CREDENTIALS != 'true' &&
+          env.HAS_AZURE_CLIENT_SECRET == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+
+      - name: Login to Azure for VM recovery via OIDC
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          env.HAS_AZURE_CREDENTIALS != 'true' &&
+          env.HAS_AZURE_CLIENT_SECRET != 'true' &&
           env.HAS_AZURE_OIDC == 'true'
         uses: azure/login@v2
         with:
@@ -111,7 +138,7 @@ jobs:
       - name: Restart Azure VM when SSH is down
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          env.HAS_AZURE_OIDC == 'true'
+          env.HAS_AZURE_RECOVERY == 'true'
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -155,7 +182,7 @@ jobs:
         id: ssh_probe_recovered
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          env.HAS_AZURE_OIDC == 'true'
+          env.HAS_AZURE_RECOVERY == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -179,11 +206,11 @@ jobs:
       - name: Abort when SSH recovery is unavailable
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          env.HAS_AZURE_OIDC != 'true'
+          env.HAS_AZURE_RECOVERY != 'true'
         shell: bash
         run: |
           echo "SSH to ${{ secrets.DEPLOY_HOST }} is down and Azure OIDC secrets are not configured."
-          echo "Configure AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID, or recover the VM manually."
+          echo "Configure AZURE_CREDENTIALS or AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID (/ AZURE_CLIENT_SECRET), or recover the VM manually."
           exit 1
 
       - name: Abort when SSH is still down after recovery
