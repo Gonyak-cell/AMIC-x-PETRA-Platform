@@ -44,8 +44,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          MAX_ATTEMPTS=160
+          SLEEP_SECONDS=15
           echo "Waiting for CI Gate on commit ${{ github.sha }}..."
-          for i in $(seq 1 80); do
+          for i in $(seq 1 "$MAX_ATTEMPTS"); do
             # CI Gate is the single required status check (alls-green)
             STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
               --jq '.check_runs[] | select(.name == "CI Gate") | .conclusion' 2>/dev/null || echo "")
@@ -56,10 +58,10 @@ jobs:
               echo "CI Gate failed — aborting deploy"
               exit 1
             fi
-            echo "  Attempt $i/40: CI Gate status='${STATUS:-pending}', waiting 15s..."
-            sleep 15
+            echo "  Attempt $i/$MAX_ATTEMPTS: CI Gate status='${STATUS:-pending}', waiting ${SLEEP_SECONDS}s..."
+            sleep "$SLEEP_SECONDS"
           done
-          echo "CI Gate did not complete within 20 minutes — aborting deploy"
+          echo "CI Gate did not complete within 40 minutes — aborting deploy"
           exit 1
 
   deploy:
