@@ -27,6 +27,7 @@ on:
 permissions:
   checks: read
   contents: read
+  id-token: write
 
 concurrency:
   group: deploy-${{ github.event.inputs.environment || 'production' }}
@@ -73,7 +74,134 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check SSH reachability
+        id: ssh_probe_initial
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          HOST="${{ secrets.DEPLOY_HOST }}"
+          echo "Checking SSH reachability to ${HOST}:22..."
+          if timeout 5 bash -c ":</dev/tcp/${HOST}/22" 2>/dev/null; then
+            echo "reachable=true" >> "$GITHUB_OUTPUT"
+            echo "SSH is reachable."
+          else
+            echo "reachable=false" >> "$GITHUB_OUTPUT"
+            echo "SSH is unreachable."
+            exit 1
+          fi
+
+      - name: Login to Azure for VM recovery
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          secrets.AZURE_CLIENT_ID != '' &&
+          secrets.AZURE_TENANT_ID != '' &&
+          secrets.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restart Azure VM when SSH is down
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          secrets.AZURE_CLIENT_ID != '' &&
+          secrets.AZURE_TENANT_ID != '' &&
+          secrets.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            TARGET_IP="${{ secrets.DEPLOY_HOST }}"
+            echo "Searching for Azure VM bound to public IP ${TARGET_IP}..."
+            VM_INFO=$(az vm list -d --query "[?contains(publicIps, '${TARGET_IP}')] | [0].[name,resourceGroup,powerState,publicIps]" -o tsv)
+            if [ -z "${VM_INFO}" ]; then
+              echo "No Azure VM was found for public IP ${TARGET_IP}."
+              exit 1
+            fi
+
+            IFS=$'\t' read -r VM_NAME RESOURCE_GROUP POWER_STATE PUBLIC_IPS <<< "${VM_INFO}"
+            echo "Matched VM ${VM_NAME} in resource group ${RESOURCE_GROUP} (${POWER_STATE}; IPs=${PUBLIC_IPS})."
+
+            case "${POWER_STATE}" in
+              "VM stopped"|"VM deallocated")
+                echo "VM is stopped. Starting it..."
+                az vm start --resource-group "${RESOURCE_GROUP}" --name "${VM_NAME}"
+                ;;
+              *)
+                echo "VM is not healthy enough for SSH. Restarting it..."
+                az vm restart --resource-group "${RESOURCE_GROUP}" --name "${VM_NAME}"
+                ;;
+            esac
+
+            echo "Waiting for Azure power state to report running..."
+            for i in $(seq 1 20); do
+              CURRENT_STATE=$(az vm get-instance-view --resource-group "${RESOURCE_GROUP}" --name "${VM_NAME}" --query "instanceView.statuses[?starts_with(code, 'PowerState/')].displayStatus | [0]" -o tsv)
+              echo "  Attempt ${i}/20: ${CURRENT_STATE}"
+              if [ "${CURRENT_STATE}" = "VM running" ]; then
+                exit 0
+              fi
+              sleep 15
+            done
+
+            echo "Azure VM did not reach running state in time."
+            exit 1
+
+      - name: Wait for SSH after VM recovery
+        id: ssh_probe_recovered
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          secrets.AZURE_CLIENT_ID != '' &&
+          secrets.AZURE_TENANT_ID != '' &&
+          secrets.AZURE_SUBSCRIPTION_ID != ''
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          HOST="${{ secrets.DEPLOY_HOST }}"
+          echo "Waiting for SSH to recover on ${HOST}:22..."
+          for i in $(seq 1 40); do
+            if timeout 5 bash -c ":</dev/tcp/${HOST}/22" 2>/dev/null; then
+              echo "reachable=true" >> "$GITHUB_OUTPUT"
+              echo "SSH recovered on attempt ${i}/40."
+              exit 0
+            fi
+            echo "  Attempt ${i}/40: SSH still unavailable, waiting 15s..."
+            sleep 15
+          done
+
+          echo "reachable=false" >> "$GITHUB_OUTPUT"
+          echo "SSH did not recover in time."
+          exit 1
+
+      - name: Abort when SSH recovery is unavailable
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          (
+            secrets.AZURE_CLIENT_ID == '' ||
+            secrets.AZURE_TENANT_ID == '' ||
+            secrets.AZURE_SUBSCRIPTION_ID == ''
+          )
+        shell: bash
+        run: |
+          echo "SSH to ${{ secrets.DEPLOY_HOST }} is down and Azure OIDC secrets are not configured."
+          echo "Configure AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID, or recover the VM manually."
+          exit 1
+
+      - name: Abort when SSH is still down after recovery
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'false' &&
+          steps.ssh_probe_recovered.outputs.reachable != 'true'
+        shell: bash
+        run: |
+          echo "SSH to ${{ secrets.DEPLOY_HOST }} is still unavailable after VM recovery attempts."
+          exit 1
+
       - name: Deploy via SSH
+        if: >
+          steps.ssh_probe_initial.outputs.reachable == 'true' ||
+          steps.ssh_probe_recovered.outputs.reachable == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
