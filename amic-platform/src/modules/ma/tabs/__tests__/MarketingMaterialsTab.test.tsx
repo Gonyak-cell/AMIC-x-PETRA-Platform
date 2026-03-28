@@ -223,6 +223,35 @@ describe("MarketingMaterialsTab", () => {
     expect(screen.queryByText("+ Information (IM)")).not.toBeInTheDocument();
   });
 
+  it("uses the DM upload card itself as the drop area without extra helper text", async () => {
+    const dmUploadTitle = `DM ${"\uC5C5\uB85C\uB4DC"}`;
+    const dmUploadDescription =
+      "\uC678\uBD80\uC5D0\uC11C \uC791\uC131\uD55C DM \uD30C\uC77C\uC744 \uC62C\uB824 \uB3D9\uC77C\uD55C \uD654\uBA74\uC5D0\uC11C \uAD00\uB9AC\uD569\uB2C8\uB2E4.";
+
+    renderTab({ canWrite: true });
+
+    await waitFor(() => {
+      expect(screen.getByText("+ Discussion (DM)")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("+ Discussion (DM)"));
+
+    expect(await screen.findByText(dmUploadTitle)).toBeInTheDocument();
+    expect(screen.getByText(dmUploadDescription)).toBeInTheDocument();
+    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Drop TM/DM/IM PDF files here to OCR and prefill metadata."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only.",
+      ),
+    ).not.toBeInTheDocument();
+
+    const description = screen.getByText(dmUploadDescription);
+    expect(description.closest("[data-file-dropzone='true']")).not.toBeNull();
+  });
+
   it("renders externally uploaded materials in a separate section", async () => {
     server.use(
       http.get("*/api/ma/transactions/:txnId/marketing-materials", () =>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { FileText, Send, Trash2 } from "lucide-react";
 
 import {
@@ -9,6 +9,10 @@ import {
   EmptyState,
   Modal,
 } from "@/components/ui";
+import {
+  openAttachmentFilePicker,
+  uploadAttachmentFiles,
+} from "@/modules/ma/components/attachmentUploadUtils";
 import DistributionModal from "@/modules/ma/components/DistributionModal";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
@@ -17,6 +21,7 @@ import {
   getAttachmentDownloadUrl,
   useAttachments,
   useDeleteAttachment,
+  useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
 import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 import {
@@ -38,6 +43,7 @@ import {
   QUALITY_STATUS_VARIANT,
 } from "@/modules/ma/types/marketing_material";
 import { formatFileSize, formatISODate } from "@/modules/ma/utils/format";
+import { cn } from "@/lib/cn";
 
 interface MarketingMaterialsTabProps {
   txnId: string;
@@ -145,6 +151,138 @@ function buildMarketingMaterialPayload(
   };
 }
 
+function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  const types = Array.from(dataTransfer.types ?? []);
+  return types.includes("Files") || dataTransfer.files.length > 0;
+}
+
+interface MarketingMaterialInlineUploadCardProps {
+  txnId: string;
+  docType: MarketingDocType;
+  title: string;
+  description: string;
+  onUploaded: (
+    attachment: Attachment,
+    file: File,
+    docType: MarketingDocType,
+  ) => Promise<void> | void;
+}
+
+function MarketingMaterialInlineUploadCard({
+  txnId,
+  docType,
+  title,
+  description,
+  onUploaded,
+}: MarketingMaterialInlineUploadCardProps) {
+  const uploadMutation = useUploadAttachment(txnId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleUpload = useCallback(
+    async (files: File[]) => {
+      await uploadAttachmentFiles({
+        files,
+        entityType: "MARKETING_MATERIAL",
+        entityId: docType,
+        uploadMutation,
+        onUploaded: (attachment, file) => onUploaded(attachment, file, docType),
+      });
+    },
+    [docType, onUploaded, uploadMutation],
+  );
+
+  const openPicker = useCallback(() => {
+    openAttachmentFilePicker(fileInputRef);
+  }, []);
+
+  return (
+    <div
+      data-file-dropzone="true"
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "rounded-lg border border-gray-border bg-bg-cool/30 transition-colors outline-none",
+        "cursor-pointer focus-visible:ring-2 focus-visible:ring-accent/30",
+        isDragActive && "border-primary-300 bg-primary-50/40",
+      )}
+      onClick={openPicker}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPicker();
+        }
+      }}
+      onDragEnter={(event) => {
+        if (!hasDraggedFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepthRef.current += 1;
+        setIsDragActive(true);
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDragOver={(event) => {
+        if (!hasDraggedFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(true);
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={(event) => {
+        if (!hasDraggedFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) {
+          setIsDragActive(false);
+        }
+      }}
+      onDrop={(event) => {
+        if (!hasDraggedFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepthRef.current = 0;
+        setIsDragActive(false);
+        event.dataTransfer.dropEffect = "copy";
+        void handleUpload(Array.from(event.dataTransfer.files));
+      }}
+    >
+      <div className="border-b border-gray-border px-4 py-3">
+        <p className="text-sm font-semibold text-text-dark">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-text-secondary">
+          {description}
+        </p>
+      </div>
+      <div className="min-h-[132px]" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="sr-only"
+        multiple
+        tabIndex={-1}
+        accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt"
+        onChange={(event) => {
+          void handleUpload(Array.from(event.target.files ?? []));
+          event.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 interface MarketingMaterialActionModalProps {
   open: boolean;
   txnId: string;
@@ -217,28 +355,40 @@ function MarketingMaterialActionModal({
             </p>
           </Button>
 
-          <div className="rounded-lg border border-gray-border bg-bg-cool/30">
-            <div className="border-b border-gray-border px-4 py-3">
-              <p className="text-sm font-semibold text-text-dark">
-                {meta.uploadTitle}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-text-secondary">
-                {meta.uploadDescription}
-              </p>
-            </div>
-            <FileUploadZone
+          {docType === "DM" ? (
+            <MarketingMaterialInlineUploadCard
               txnId={txnId}
-              entityType="MARKETING_MATERIAL"
-              entityId={docType}
-              embedded
-              embeddedLabel=""
-              uploadLabel="Upload Files"
-              emptyDescription="Drop TM/DM/IM PDF files here to OCR and prefill metadata."
-              emptyHint="PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only."
-              embeddedSeparator={false}
-              onUploaded={(attachment, file) => onUploaded(attachment, file, docType)}
+              docType={docType}
+              title={meta.uploadTitle}
+              description={meta.uploadDescription}
+              onUploaded={onUploaded}
             />
-          </div>
+          ) : (
+            <div className="rounded-lg border border-gray-border bg-bg-cool/30">
+              <div className="border-b border-gray-border px-4 py-3">
+                <p className="text-sm font-semibold text-text-dark">
+                  {meta.uploadTitle}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">
+                  {meta.uploadDescription}
+                </p>
+              </div>
+              <FileUploadZone
+                txnId={txnId}
+                entityType="MARKETING_MATERIAL"
+                entityId={docType}
+                embedded
+                embeddedLabel=""
+                uploadLabel="Upload Files"
+                emptyDescription="Drop TM/DM/IM PDF files here to OCR and prefill metadata."
+                emptyHint="PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only."
+                embeddedSeparator={false}
+                onUploaded={(attachment, file) =>
+                  onUploaded(attachment, file, docType)
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
     </Modal>
