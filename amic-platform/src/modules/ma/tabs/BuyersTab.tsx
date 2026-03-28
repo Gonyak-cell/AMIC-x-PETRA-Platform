@@ -657,12 +657,15 @@ export default function BuyersTab({
     enableDevShortListPreview &&
     allBuyers.length === 0 &&
     realShortList.length === 0;
-  const shortListBuyers =
-    realShortList.length > 0
-      ? realShortList
-      : useDevShortListFallback
-        ? devMockBuyers
-        : [];
+  const shortListBuyers = useMemo(
+    () =>
+      realShortList.length > 0
+        ? realShortList
+        : useDevShortListFallback
+          ? devMockBuyers
+          : [],
+    [devMockBuyers, realShortList, useDevShortListFallback],
+  );
   const overviewMerged = useMemo(
     () => {
       const baseOverview = [
