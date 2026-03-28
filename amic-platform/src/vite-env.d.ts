@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_AUTH_REFRESH_URL: string;
   readonly VITE_MA_AUTH_REFRESH_URL?: string;
   readonly VITE_DEV_LOCAL_AUTH?: string;
+  readonly VITE_ENABLE_BUYER_DEV_MOCKS?: string;
 }
 
 interface ImportMeta {

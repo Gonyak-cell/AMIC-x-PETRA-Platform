@@ -602,6 +602,9 @@ export default function BuyersTab({
   );
   const ndaStepUnlocked = hasAllTierDecisions && ndaPendingBuyers.length > 0;
   const shortListUnlocked = realShortList.length > 0;
+  const enableDevShortListPreview =
+    import.meta.env.DEV &&
+    import.meta.env.VITE_ENABLE_BUYER_DEV_MOCKS === "true";
 
   // ── Dev-only mock data for Short List preview (동적 import) ──
   const [devMockBuyers, setDevMockBuyers] = useState<BuyerCandidate[]>([]);
@@ -610,12 +613,16 @@ export default function BuyersTab({
   );
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (!enableDevShortListPreview) {
+      setDevMockBuyers([]);
+      setDevMockOverview([]);
+      return;
+    }
     import("@/modules/ma/constants/devMockBuyers").then((mod) => {
       setDevMockBuyers(mod.createDevMockBuyers(txnId));
       setDevMockOverview(mod.createDevMockOverview());
     });
-  }, [txnId]);
+  }, [enableDevShortListPreview, txnId]);
 
   useEffect(() => {
     if (isBuyersLoading) return;
@@ -646,13 +653,21 @@ export default function BuyersTab({
     }
   }, [buyerSubTab]);
 
+  const useDevShortListFallback =
+    enableDevShortListPreview &&
+    allBuyers.length === 0 &&
+    realShortList.length === 0;
   const shortListBuyers =
-    realShortList.length > 0 ? realShortList : devMockBuyers;
+    realShortList.length > 0
+      ? realShortList
+      : useDevShortListFallback
+        ? devMockBuyers
+        : [];
   const overviewMerged = useMemo(
     () => {
       const baseOverview = [
         ...(shortListOverview ?? []),
-        ...(realShortList.length > 0 ? [] : devMockOverview),
+        ...(useDevShortListFallback ? devMockOverview : []),
       ];
       const summaryMap = new Map<string, BuyerStageSummary>();
 
@@ -757,9 +772,9 @@ export default function BuyersTab({
       buyerSignedNdaMap,
       buyerNdas,
       devMockOverview,
-      realShortList.length,
       shortListBuyers,
       shortListOverview,
+      useDevShortListFallback,
     ],
   );
 
