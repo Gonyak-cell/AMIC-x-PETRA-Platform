@@ -71,6 +71,11 @@ jobs:
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && needs.wait-for-ci.result == 'success'))
     environment: ${{ github.event.inputs.environment || 'production' }}
+    env:
+      HAS_AZURE_OIDC: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -94,21 +99,17 @@ jobs:
       - name: Login to Azure for VM recovery
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          secrets.AZURE_CLIENT_ID != '' &&
-          secrets.AZURE_TENANT_ID != '' &&
-          secrets.AZURE_SUBSCRIPTION_ID != ''
+          env.HAS_AZURE_OIDC == 'true'
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Restart Azure VM when SSH is down
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          secrets.AZURE_CLIENT_ID != '' &&
-          secrets.AZURE_TENANT_ID != '' &&
-          secrets.AZURE_SUBSCRIPTION_ID != ''
+          env.HAS_AZURE_OIDC == 'true'
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -152,9 +153,7 @@ jobs:
         id: ssh_probe_recovered
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          secrets.AZURE_CLIENT_ID != '' &&
-          secrets.AZURE_TENANT_ID != '' &&
-          secrets.AZURE_SUBSCRIPTION_ID != ''
+          env.HAS_AZURE_OIDC == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -178,11 +177,7 @@ jobs:
       - name: Abort when SSH recovery is unavailable
         if: >
           steps.ssh_probe_initial.outputs.reachable == 'false' &&
-          (
-            secrets.AZURE_CLIENT_ID == '' ||
-            secrets.AZURE_TENANT_ID == '' ||
-            secrets.AZURE_SUBSCRIPTION_ID == ''
-          )
+          env.HAS_AZURE_OIDC != 'true'
         shell: bash
         run: |
           echo "SSH to ${{ secrets.DEPLOY_HOST }} is down and Azure OIDC secrets are not configured."
