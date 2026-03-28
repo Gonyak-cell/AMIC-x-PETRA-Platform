@@ -827,6 +827,110 @@ describe("BuyersTab", () => {
     expect(within(table).getByText("NDA 체결")).toBeInTheDocument();
   });
 
+  it("matches legacy signed NDAs by counterparty name when buyer_candidate_id is missing", async () => {
+    const legacyMatchedBuyer = {
+      ...mockBuyer,
+      id: "buyer-legacy-nda",
+      company_name: "Legacy Signed Buyer",
+      status: "CONTACTED" as const,
+      tier: null,
+      is_short_listed: false,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [legacyMatchedBuyer], total: 1 });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([
+          {
+            id: "nda-legacy-signed",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: null,
+            nda_type: "MUTUAL",
+            status: "SIGNED",
+            sent_at: null,
+            signed_at: "2026-03-28",
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: legacyMatchedBuyer.company_name,
+            created_at: "2026-03-28T00:00:00Z",
+            updated_at: "2026-03-28T00:00:00Z",
+          },
+        ]);
+      }),
+    );
+
+    renderTab();
+
+    expect(
+      await screen.findByRole("button", { name: /Legacy Signed Buyer/i }),
+    ).toBeInTheDocument();
+
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("NDA 체결")).toBeInTheDocument();
+  });
+
+  it("promotes tiered buyers into short list when a legacy signed NDA matches by counterparty name", async () => {
+    const legacyShortListBuyer = {
+      ...mockBuyer,
+      id: "buyer-legacy-shortlist",
+      company_name: "Legacy Short List Buyer",
+      tier: "TIER_2" as const,
+      status: "CONTACTED" as const,
+      is_short_listed: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-03-28T00:00:00Z",
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [legacyShortListBuyer],
+          total: 1,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([
+          {
+            id: "nda-legacy-shortlist",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: null,
+            nda_type: "MUTUAL",
+            status: "SIGNED",
+            sent_at: null,
+            signed_at: "2026-03-28",
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: legacyShortListBuyer.company_name,
+            created_at: "2026-03-28T00:00:00Z",
+            updated_at: "2026-03-28T00:00:00Z",
+          },
+        ]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderTab();
+
+    const shortListTab = await screen.findByRole("tab", { name: /Short List/i });
+
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const grid = await screen.findByTestId("marketing-grid");
+    expect(grid).toHaveTextContent("Legacy Short List Buyer");
+    expect(screen.getByRole("tab", { name: /Long List/i })).toHaveTextContent("0");
+    expect(shortListTab).toHaveTextContent("1");
+  });
+
   it("hides FI and SI automation buttons for read-only users", async () => {
     renderTab({ canWrite: false });
 

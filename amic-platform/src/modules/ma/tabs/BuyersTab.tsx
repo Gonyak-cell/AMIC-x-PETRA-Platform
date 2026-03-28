@@ -161,6 +161,15 @@ function isNdaCandidateTier(tier: BuyerCandidate["tier"]): boolean {
   return tier === "TIER_1" || tier === "TIER_2" || tier === "TIER_3";
 }
 
+function normalizeBuyerMatchKey(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/\s+/g, " ").toLowerCase();
+  return normalized || null;
+}
+
 const SHORT_LIST_ENTRY_STATUSES: ReadonlySet<BuyerStatus> = new Set([
   "NDA_SIGNED",
   "CIM_SENT",
@@ -341,18 +350,27 @@ export default function BuyersTab({
   const { buyerNdaMap, buyerSignedNdaMap } = useMemo(() => {
     const latestByBuyer = new Map<string, NDA>();
     const latestSignedByBuyer = new Map<string, NDA>();
+    const buyerIdsByName = new Map<string, string[]>();
 
-    for (const nda of buyerNdas ?? []) {
-      const buyerId = nda.buyer_candidate_id;
-      if (!buyerId) continue;
+    for (const buyer of allBuyers) {
+      const nameKey = normalizeBuyerMatchKey(buyer.company_name);
+      if (!nameKey) {
+        continue;
+      }
 
+      const existingBuyerIds = buyerIdsByName.get(nameKey) ?? [];
+      existingBuyerIds.push(buyer.id);
+      buyerIdsByName.set(nameKey, existingBuyerIds);
+    }
+
+    const registerNdaForBuyer = (buyerId: string, nda: NDA) => {
       const existing = latestByBuyer.get(buyerId);
       if (!existing || existing.created_at < nda.created_at) {
         latestByBuyer.set(buyerId, nda);
       }
 
       if (nda.status !== "SIGNED") {
-        continue;
+        return;
       }
 
       const existingSigned = latestSignedByBuyer.get(buyerId);
@@ -365,13 +383,36 @@ export default function BuyersTab({
       ) {
         latestSignedByBuyer.set(buyerId, nda);
       }
+    };
+
+    for (const nda of buyerNdas ?? []) {
+      if (nda.buyer_candidate_id) {
+        registerNdaForBuyer(nda.buyer_candidate_id, nda);
+        continue;
+      }
+
+      if (nda.party_type !== "BUYER") {
+        continue;
+      }
+
+      const counterpartyKey = normalizeBuyerMatchKey(nda.counterparty_name);
+      if (!counterpartyKey) {
+        continue;
+      }
+
+      const matchedBuyerIds = buyerIdsByName.get(counterpartyKey);
+      if (matchedBuyerIds?.length !== 1) {
+        continue;
+      }
+
+      registerNdaForBuyer(matchedBuyerIds[0], nda);
     }
 
     return {
       buyerNdaMap: latestByBuyer,
       buyerSignedNdaMap: latestSignedByBuyer,
     };
-  }, [buyerNdas]);
+  }, [allBuyers, buyerNdas]);
   const versionedTeasers = useMemo(
     () => buildVersionedMarketingMaterials(marketingMaterials ?? [], "TM"),
     [marketingMaterials],
