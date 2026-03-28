@@ -179,12 +179,16 @@ function hasShortListEntryStatus(status: BuyerStatus): boolean {
   return SHORT_LIST_ENTRY_STATUSES.has(status);
 }
 
+function hasBuyerSignedNda(buyer: BuyerCandidate, nda?: NDA | null): boolean {
+  return hasShortListEntryStatus(buyer.status) || nda?.status === "SIGNED";
+}
+
 function matchesShortListRule(buyer: BuyerCandidate, nda?: NDA | null): boolean {
   if (!isNdaCandidateTier(buyer.tier)) {
     return false;
   }
 
-  return hasShortListEntryStatus(buyer.status) || nda?.status === "SIGNED";
+  return hasBuyerSignedNda(buyer, nda);
 }
 
 export default function BuyersTab({
@@ -523,10 +527,8 @@ export default function BuyersTab({
         render: (r) => {
           const nda = buyerNdaMap.get(r.id);
           const teaser = buyerLatestTeaserMap.get(r.id);
-          const ndaSigned = matchesShortListRule(
-            r,
-            buyerSignedNdaMap.get(r.id) ?? nda,
-          );
+          const signedNda = buyerSignedNdaMap.get(r.id) ?? nda;
+          const ndaSigned = hasBuyerSignedNda(r, signedNda);
           const ndaLabel = ndaSigned
             ? "NDA 체결"
             : nda?.status

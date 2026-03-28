@@ -781,6 +781,52 @@ describe("BuyersTab", () => {
     expect(screen.getByText(/2026-03-20/)).toBeInTheDocument();
   });
 
+  it("shows NDA 체결 in the long-list column when a signed NDA exists even without tiering", async () => {
+    const unsignedTierBuyer = {
+      ...mockBuyer,
+      id: "buyer-signed-long-list",
+      company_name: "Signed Long List Buyer",
+      status: "CONTACTED" as const,
+      tier: null,
+      is_short_listed: false,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({ items: [unsignedTierBuyer], total: 1 });
+      }),
+      http.get("*/api/ma/transactions/:txnId/ndas", () => {
+        return HttpResponse.json([
+          {
+            id: "nda-signed-long-list",
+            transaction_id: "txn-1",
+            party_type: "BUYER",
+            buyer_candidate_id: unsignedTierBuyer.id,
+            nda_type: "MUTUAL",
+            status: "SIGNED",
+            sent_at: null,
+            signed_at: "2026-03-28",
+            expires_at: null,
+            document_url: null,
+            notes: null,
+            counterparty_name: unsignedTierBuyer.company_name,
+            created_at: "2026-03-28T00:00:00Z",
+            updated_at: "2026-03-28T00:00:00Z",
+          },
+        ]);
+      }),
+    );
+
+    renderTab();
+
+    expect(
+      await screen.findByRole("button", { name: /Signed Long List Buyer/i }),
+    ).toBeInTheDocument();
+
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("NDA 체결")).toBeInTheDocument();
+  });
+
   it("hides FI and SI automation buttons for read-only users", async () => {
     renderTab({ canWrite: false });
 
