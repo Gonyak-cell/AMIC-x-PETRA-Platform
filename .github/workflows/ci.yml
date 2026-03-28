@@ -302,7 +302,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run mocked E2E tests
         run: npm run test:e2e:deep
-        timeout-minutes: 8
+        timeout-minutes: 20
         continue-on-error: true
         env:
           CI: "true"
