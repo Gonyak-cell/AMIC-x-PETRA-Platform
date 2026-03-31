@@ -55,10 +55,10 @@ if "celery" not in sys.modules:
     # celery.exceptions 서브모듈 mock (task 모듈의 SoftTimeLimitExceeded import 대응)
     _celery_exceptions = ModuleType("celery.exceptions")
 
-    class _SoftTimeLimitExceeded(Exception):
+    class _SoftTimeLimitExceededError(Exception):
         pass
 
-    _celery_exceptions.SoftTimeLimitExceeded = _SoftTimeLimitExceeded  # type: ignore[attr-defined]
+    _celery_exceptions.SoftTimeLimitExceeded = _SoftTimeLimitExceededError  # type: ignore[attr-defined]
     sys.modules["celery.exceptions"] = _celery_exceptions
 
     # celery.schedules 서브모듈 mock (cleanup_tasks.py의 crontab import 대응)

@@ -23,6 +23,7 @@ from app.services import document_extraction_service as svc
 from app.services import transaction_service
 
 logger = logging.getLogger(__name__)
+_pending_celery_dispatch_tasks: set[asyncio.Task[None]] = set()
 
 router = APIRouter(
     prefix="/transactions/{txn_id}/extractions",
@@ -46,7 +47,9 @@ async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: Backg
     background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
 
     # Celery broker 연결 대기로 요청 응답이 막히지 않도록 request path 밖에서 시도한다.
-    asyncio.create_task(_dispatch_celery_best_effort(extraction_id))
+    dispatch_task = asyncio.create_task(_dispatch_celery_best_effort(extraction_id))
+    _pending_celery_dispatch_tasks.add(dispatch_task)
+    dispatch_task.add_done_callback(_pending_celery_dispatch_tasks.discard)
 
 
 async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) -> None:
