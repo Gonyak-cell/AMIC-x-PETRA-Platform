@@ -82,6 +82,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Worker containers do not serve the HTTP health endpoint defined in the base image.
+    healthcheck:
+      disable: true
 
   celery-beat:
     build:
@@ -102,6 +105,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Beat containers do not serve the HTTP health endpoint defined in the base image.
+    healthcheck:
+      disable: true
 
 volumes:
   im_postgres_data:
