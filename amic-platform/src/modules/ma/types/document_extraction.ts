@@ -418,4 +418,5 @@ export interface ExtractionReviewContext {
   source: "buyer-nda" | "client-nda" | "engagement" | "marketing-material";
   marketingDocType?: "TM" | "DM" | "IM";
   buyerCandidateId?: string;
+  marketingMaterialId?: string;
 }

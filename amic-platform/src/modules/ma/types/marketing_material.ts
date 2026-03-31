@@ -65,6 +65,9 @@ export interface MarketingMaterialCreate {
   title: string;
   project_code?: string;
   parameters?: Record<string, unknown>;
+  attachment_id?: string;
+  distributed_to?: string[];
+  distributed_at?: string;
 }
 
 export interface DistributionUpdate {
