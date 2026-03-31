@@ -52,6 +52,15 @@ if "celery" not in sys.modules:
     _celery_mock.Celery = _FakeCelery  # type: ignore[attr-defined]
     sys.modules["celery"] = _celery_mock
 
+    # celery.exceptions 서브모듈 mock (task 모듈의 SoftTimeLimitExceeded import 대응)
+    _celery_exceptions = ModuleType("celery.exceptions")
+
+    class _SoftTimeLimitExceeded(Exception):
+        pass
+
+    _celery_exceptions.SoftTimeLimitExceeded = _SoftTimeLimitExceeded  # type: ignore[attr-defined]
+    sys.modules["celery.exceptions"] = _celery_exceptions
+
     # celery.schedules 서브모듈 mock (cleanup_tasks.py의 crontab import 대응)
     _celery_schedules = ModuleType("celery.schedules")
     _celery_schedules.crontab = MagicMock(name="crontab")  # type: ignore[attr-defined]

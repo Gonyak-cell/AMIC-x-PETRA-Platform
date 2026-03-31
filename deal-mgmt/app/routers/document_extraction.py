@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 
@@ -44,14 +45,8 @@ async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: Backg
     # 항상 BackgroundTasks 등록 (실행 보장)
     background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
 
-    # Celery도 시도 (워커가 정상이면 더 빠르게 처리)
-    try:
-        from app.tasks.extraction_tasks import run_extraction_task
-
-        run_extraction_task.delay(str(extraction_id))
-        logger.info("Celery 디스패치 성공 (BackgroundTasks도 등록됨): %s", extraction_id)
-    except Exception as exc:
-        logger.debug("Celery 디스패치 실패 (BackgroundTasks로 처리): %s", exc)
+    # Celery broker 연결 대기로 요청 응답이 막히지 않도록 request path 밖에서 시도한다.
+    asyncio.create_task(_dispatch_celery_best_effort(extraction_id))
 
 
 async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) -> None:
@@ -59,6 +54,17 @@ async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) 
     from app.services.document_extraction_service import run_extraction_pipeline
 
     await run_extraction_pipeline(extraction_id, session_factory)
+
+
+async def _dispatch_celery_best_effort(extraction_id: uuid.UUID) -> None:
+    """Celery dispatch를 응답 경로 밖에서 best-effort로 시도한다."""
+    try:
+        from app.tasks.extraction_tasks import run_extraction_task
+
+        await asyncio.to_thread(run_extraction_task.delay, str(extraction_id))
+        logger.info("Celery 디스패치 성공 (응답 비차단): %s", extraction_id)
+    except Exception as exc:
+        logger.debug("Celery 디스패치 실패 (sync fallback으로 처리): %s", exc)
 
 
 # ── 엔드포인트 ───────────────────────────────────────────────
