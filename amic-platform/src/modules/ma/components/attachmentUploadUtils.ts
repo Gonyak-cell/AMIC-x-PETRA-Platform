@@ -16,6 +16,11 @@ interface UploadAttachmentMutation {
   }) => Promise<Attachment>;
 }
 
+export type AttachmentUploadHandler = (
+  attachment: Attachment,
+  file: File,
+) => Promise<unknown> | void;
+
 export function validateAttachmentFile(file: File): string | null {
   if (file.size > ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE) {
     return `파일 크기(${formatFileSize(file.size)})가 최대 허용치(${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL})를 초과했습니다.`;
@@ -68,7 +73,7 @@ export async function uploadAttachmentFiles({
   entityType: AttachmentEntityType;
   entityId?: string;
   uploadMutation: UploadAttachmentMutation;
-  onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
+  onUploaded?: AttachmentUploadHandler;
 }) {
   for (const file of files) {
     const error = validateAttachmentFile(file);

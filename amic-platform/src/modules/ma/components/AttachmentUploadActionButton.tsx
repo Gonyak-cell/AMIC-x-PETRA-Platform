@@ -3,13 +3,11 @@ import { Upload } from "lucide-react";
 
 import { Button, type ButtonProps } from "@/components/ui/Button";
 import { useUploadAttachment } from "@/modules/ma/hooks/useAttachments";
-import type {
-  Attachment,
-  AttachmentEntityType,
-} from "@/modules/ma/types/attachment";
+import type { AttachmentEntityType } from "@/modules/ma/types/attachment";
 import { ATTACHMENT_CONSTRAINTS } from "@/modules/ma/types/attachment";
 
 import {
+  type AttachmentUploadHandler,
   openAttachmentFilePicker,
   uploadAttachmentFiles,
 } from "./attachmentUploadUtils";
@@ -20,7 +18,7 @@ interface AttachmentUploadActionButtonProps
   entityType: AttachmentEntityType;
   entityId?: string;
   label?: string;
-  onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
+  onUploaded?: AttachmentUploadHandler;
 }
 
 export default function AttachmentUploadActionButton({

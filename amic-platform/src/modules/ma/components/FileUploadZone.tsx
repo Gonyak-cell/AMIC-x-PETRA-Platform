@@ -18,13 +18,11 @@ import {
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
 import {
+  type AttachmentUploadHandler,
   openAttachmentFilePicker,
   uploadAttachmentFiles,
 } from "@/modules/ma/components/attachmentUploadUtils";
-import type {
-  Attachment,
-  AttachmentEntityType,
-} from "@/modules/ma/types/attachment";
+import type { AttachmentEntityType } from "@/modules/ma/types/attachment";
 import {
   ATTACHMENT_CONSTRAINTS,
   ATTACHMENT_MIME_LABELS,
@@ -48,7 +46,7 @@ interface FileUploadZoneProps {
   embeddedSeparator?: boolean;
   showUploadAction?: boolean;
   registerOpenPicker?: (openPicker: (() => void) | null) => void;
-  onUploaded?: (attachment: Attachment, file: File) => Promise<void> | void;
+  onUploaded?: AttachmentUploadHandler;
 }
 
 function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
