@@ -335,9 +335,7 @@ async def _create_uploaded_marketing_material(
 
     if body.distributed_to is not None:
         mat.distributed_to = body.distributed_to
-        mat.distributed_at = body.distributed_at or (
-            datetime.now(UTC).isoformat() if body.distributed_to else None
-        )
+        mat.distributed_at = body.distributed_at or (datetime.now(UTC).isoformat() if body.distributed_to else None)
     elif body.distributed_at is not None:
         mat.distributed_at = body.distributed_at
 

@@ -21,7 +21,6 @@ class MarketingMaterialCreate(BaseModel):
     ralph_max_iterations: int = Field(3, ge=1, le=10, description="Ralph Loop 최대 반복 횟수")
     ralph_max_cost_usd: float = Field(10.0, ge=1.0, le=50.0, description="Ralph Loop 최대 비용 (USD)")
 
-
     attachment_id: uuid.UUID | None = Field(
         None,
         description="이미 업로드된 MARKETING_MATERIAL attachment를 연결할 때 사용.",
