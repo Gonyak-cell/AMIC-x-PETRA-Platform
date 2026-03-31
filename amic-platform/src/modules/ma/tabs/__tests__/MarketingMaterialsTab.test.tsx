@@ -226,7 +226,7 @@ describe("MarketingMaterialsTab", () => {
   it("uses the DM upload card itself as the drop area without extra helper text", async () => {
     const dmUploadTitle = `DM ${"\uC5C5\uB85C\uB4DC"}`;
     const dmUploadDescription =
-      "\uC678\uBD80\uC5D0\uC11C \uC791\uC131\uD55C DM \uD30C\uC77C\uC744 \uC62C\uB824 \uB3D9\uC77C\uD55C \uD654\uBA74\uC5D0\uC11C \uAD00\uB9AC\uD569\uB2C8\uB2E4.";
+      "\uC678\uBD80\uC5D0\uC11C \uC791\uC131\uD55C DM \uD30C\uC77C\uC744 \uBC14\uB85C \uB4F1\uB85D\uD569\uB2C8\uB2E4.";
 
     renderTab({ canWrite: true });
 
@@ -249,6 +249,35 @@ describe("MarketingMaterialsTab", () => {
     ).not.toBeInTheDocument();
 
     const description = screen.getByText(dmUploadDescription);
+    expect(description.closest("[data-file-dropzone='true']")).not.toBeNull();
+  });
+
+  it("uses the TM upload card itself as the drop area without extra helper text", async () => {
+    const tmUploadTitle = `TM ${"\uC5C5\uB85C\uB4DC"}`;
+    const tmUploadDescription =
+      "\uC678\uBD80\uC5D0\uC11C \uC791\uC131\uD55C TM \uD30C\uC77C\uC744 \uBC14\uB85C \uB4F1\uB85D\uD569\uB2C8\uB2E4.";
+
+    renderTab({ canWrite: true });
+
+    await waitFor(() => {
+      expect(screen.getByText("+ Teaser (TM)")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("+ Teaser (TM)"));
+
+    expect(await screen.findByText(tmUploadTitle)).toBeInTheDocument();
+    expect(screen.getByText(tmUploadDescription)).toBeInTheDocument();
+    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Drop TM/DM/IM PDF files here to OCR and prefill metadata."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only.",
+      ),
+    ).not.toBeInTheDocument();
+
+    const description = screen.getByText(tmUploadDescription);
     expect(description.closest("[data-file-dropzone='true']")).not.toBeNull();
   });
 

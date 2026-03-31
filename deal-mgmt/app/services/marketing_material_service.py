@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,7 @@ from app.services.workstream_router_service import (
 )
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum"
+logger = logging.getLogger(__name__)
 
 
 async def _run_quality_gate(
@@ -229,6 +231,14 @@ async def create_marketing_material(
             detail={"validation_errors": errors},
         )
 
+    if body.attachment_id:
+        return await _create_uploaded_marketing_material(
+            db,
+            transaction_id,
+            body,
+            created_by_email=created_by_email,
+        )
+
     mat = MarketingMaterial(
         transaction_id=transaction_id,
         doc_type=body.doc_type,
@@ -246,12 +256,93 @@ async def create_marketing_material(
     # PPTX 생성 — Celery 태스크로 실행
     from app.tasks.marketing_tasks import generate_pptx_task
 
-    generate_pptx_task.delay(
-        mat_id=str(mat.id),
-        transaction_id=str(transaction_id),
-        body_dict=body.model_dump(mode="json"),
-    )
+    try:
+        generate_pptx_task.delay(
+            mat_id=str(mat.id),
+            transaction_id=str(transaction_id),
+            body_dict=body.model_dump(mode="json"),
+        )
+    except Exception:
+        logger.exception(
+            "Failed to enqueue marketing material generation task",
+            extra={
+                "transaction_id": str(transaction_id),
+                "marketing_material_id": str(mat.id),
+                "doc_type": body.doc_type.value,
+            },
+        )
+        mat.status = MarketingDocStatus.FAILED
+        mat.error_message = "작업 큐에 연결할 수 없어 생성 요청을 시작하지 못했습니다."
+        await db.commit()
+        await db.refresh(mat)
 
+    return mat
+
+
+async def _create_uploaded_marketing_material(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    body: MarketingMaterialCreate,
+    *,
+    created_by_email: str | None = None,
+) -> MarketingMaterial:
+    from app.models.attachment import Attachment
+
+    attachment = await db.get(Attachment, body.attachment_id)
+    if not attachment or attachment.transaction_id != transaction_id:
+        raise DocumentNotFoundError("업로드한 마케팅 자료 첨부파일을 찾을 수 없습니다.")
+    if attachment.entity_type != "MARKETING_MATERIAL":
+        raise DocumentNotFoundError("마케팅 자료 첨부파일만 연결할 수 있습니다.")
+
+    result = await db.execute(
+        select(MarketingMaterial).where(
+            MarketingMaterial.transaction_id == transaction_id,
+            MarketingMaterial.attachment_id == attachment.id,
+        )
+    )
+    mat = result.scalar_one_or_none()
+
+    if mat is None:
+        mat = MarketingMaterial(
+            transaction_id=transaction_id,
+            doc_type=body.doc_type,
+            title=body.title,
+            project_code=body.project_code,
+            status=MarketingDocStatus.READY,
+            source_mode=MarketingMaterialSourceMode.UPLOADED.value,
+            attachment_id=attachment.id,
+            parameters=body.parameters,
+            file_path=attachment.file_path,
+            file_name=attachment.file_name,
+            file_size_bytes=attachment.file_size_bytes,
+            quality_status="SKIPPED",
+            created_by_email=created_by_email or attachment.uploaded_by_email,
+        )
+        db.add(mat)
+    else:
+        mat.doc_type = body.doc_type
+        mat.title = body.title
+        mat.project_code = body.project_code
+        mat.status = MarketingDocStatus.READY
+        mat.source_mode = MarketingMaterialSourceMode.UPLOADED.value
+        mat.attachment_id = attachment.id
+        mat.parameters = body.parameters
+        mat.file_path = attachment.file_path
+        mat.file_name = attachment.file_name
+        mat.file_size_bytes = attachment.file_size_bytes
+        mat.quality_status = "SKIPPED"
+        mat.created_by_email = created_by_email or attachment.uploaded_by_email
+
+    if body.distributed_to is not None:
+        mat.distributed_to = body.distributed_to
+        mat.distributed_at = body.distributed_at or (
+            datetime.now(UTC).isoformat() if body.distributed_to else None
+        )
+    elif body.distributed_at is not None:
+        mat.distributed_at = body.distributed_at
+
+    await db.commit()
+    await db.refresh(mat)
     return mat
 
 
@@ -507,7 +598,7 @@ async def update_distribution(
     if mat.status != MarketingDocStatus.READY or not mat.file_path:
         raise DocumentNotFoundError("배포하려면 READY 상태이고 파일이 존재해야 합니다")
 
-    if mat.quality_status != "PASS":
+    if mat.source_mode != MarketingMaterialSourceMode.UPLOADED.value and mat.quality_status != "PASS":
         _msg_map = {
             "FAIL": "품질 게이트 미통과 자료는 배포할 수 없습니다. 자료를 재생성해 주세요.",
             "CONDITIONAL": "조건부 통과 자료는 배포할 수 없습니다. 재검토 후 재생성해 주세요.",

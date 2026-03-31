@@ -23,7 +23,10 @@ import {
   useDeleteAttachment,
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
-import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
+import {
+  canStartExtractionFromUpload,
+  useAttachmentExtractionFlow,
+} from "@/modules/ma/hooks/useAttachmentExtractionFlow";
 import {
   getDownloadUrl,
   useCreateMarketingMaterial,
@@ -77,9 +80,9 @@ const DOC_TYPE_ACTION_META: Record<
     triggerVariant: "secondary",
     modalTitle: "Teaser (TM)",
     generateTitle: "TM 생성",
-    generateDescription: "플랫폼에서 Teaser Memo 초안을 생성해 바로 관리합니다.",
+    generateDescription: "Teaser Memo 초안을 생성해 바로 관리합니다.",
     uploadTitle: "TM 업로드",
-    uploadDescription: "외부에서 작성한 TM 파일을 올려 기존 자료 흐름에 합칩니다.",
+    uploadDescription: "외부에서 작성한 TM 파일을 바로 등록합니다.",
     materialTitle: "Teaser Memo",
   },
   DM: {
@@ -87,10 +90,9 @@ const DOC_TYPE_ACTION_META: Record<
     triggerVariant: "secondary",
     modalTitle: "Discussion (DM)",
     generateTitle: "DM 생성",
-    generateDescription:
-      "플랫폼에서 Discussion Memo 초안을 생성해 버전과 배포를 이어갑니다.",
+    generateDescription: "Discussion Memo 초안을 생성합니다.",
     uploadTitle: "DM 업로드",
-    uploadDescription: "외부에서 작성한 DM 파일을 올려 동일한 화면에서 관리합니다.",
+    uploadDescription: "외부에서 작성한 DM 파일을 바로 등록합니다.",
     materialTitle: "Discussion Memo",
   },
   IM: {
@@ -98,10 +100,9 @@ const DOC_TYPE_ACTION_META: Record<
     triggerVariant: "primary",
     modalTitle: "Information (IM)",
     generateTitle: "IM 생성",
-    generateDescription:
-      "플랫폼에서 Information Memo 초안을 생성해 후속 배포까지 연결합니다.",
+    generateDescription: "Information Memo 초안을 생성합니다.",
     uploadTitle: "IM 업로드",
-    uploadDescription: "외부에서 작성한 IM 파일을 올려 자료 이력을 이어서 관리합니다.",
+    uploadDescription: "외부에서 작성한 IM 파일을 업로드합니다.",
     materialTitle: "Information Memo",
   },
 };
@@ -149,6 +150,14 @@ function buildMarketingMaterialPayload(
     title: `${projectCode ?? "Project"} - ${DOC_TYPE_ACTION_META[docType].materialTitle}`,
     project_code: projectCode ?? undefined,
   };
+}
+
+function buildUploadedMarketingMaterialTitle(
+  fileName: string,
+  fallbackTitle: string,
+) {
+  const stem = fileName.trim().replace(/\.[^.]+$/, "").trim();
+  return stem || fallbackTitle;
 }
 
 function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
@@ -287,7 +296,6 @@ interface MarketingMaterialActionModalProps {
   open: boolean;
   txnId: string;
   docType: MarketingDocType;
-  projectCode?: string;
   generating: boolean;
   onClose: () => void;
   onGenerate: (docType: MarketingDocType) => void;
@@ -302,7 +310,6 @@ function MarketingMaterialActionModal({
   open,
   txnId,
   docType,
-  projectCode,
   generating,
   onClose,
   onGenerate,
@@ -328,14 +335,8 @@ function MarketingMaterialActionModal({
             {meta.modalTitle} 자료를 어떻게 준비할까요?
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            새로 생성하거나, 이미 작성된 파일을 업로드해서 같은 자료 흐름에서
-            관리할 수 있습니다.
+            생성하거나 업로드해 바로 관리할 수 있습니다.
           </p>
-          {projectCode && (
-            <p className="mt-2 text-xs text-text-secondary">
-              생성 시 제목: {buildMarketingMaterialPayload(docType, projectCode).title}
-            </p>
-          )}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -355,7 +356,7 @@ function MarketingMaterialActionModal({
             </p>
           </Button>
 
-          {docType === "DM" ? (
+          {docType !== "IM" ? (
             <MarketingMaterialInlineUploadCard
               txnId={txnId}
               docType={docType}
@@ -379,9 +380,9 @@ function MarketingMaterialActionModal({
                 entityId={docType}
                 embedded
                 embeddedLabel=""
-                uploadLabel="Upload Files"
-                emptyDescription="Drop TM/DM/IM PDF files here to OCR and prefill metadata."
-                emptyHint="PDF uploads open a review modal after OCR. Non-PDF uploads remain as attachments only."
+                uploadLabel="파일 업로드"
+                emptyDescription="IM 파일을 여기에 드롭해 업로드하세요."
+                emptyHint="PDF는 OCR 검토를 열고, 다른 파일은 첨부로 저장됩니다."
                 embeddedSeparator={false}
                 onUploaded={(attachment, file) =>
                   onUploaded(attachment, file, docType)
@@ -470,18 +471,36 @@ export default function MarketingMaterialsTab({
       file: File,
       docType: MarketingDocType,
     ) => {
-      await startExtractionFromUpload({
-        attachment,
-        file,
-        docCategoryHint: "TEASER_IM",
-        reviewContext: {
-          source: "marketing-material",
-          marketingDocType: docType,
-        },
-      });
-      setActionTarget(null);
+      try {
+        const material = await createMarketingMaterial.mutateAsync({
+          doc_type: docType,
+          title: buildUploadedMarketingMaterialTitle(
+            file.name,
+            buildMarketingMaterialPayload(docType, txn?.code_name ?? undefined).title,
+          ),
+          project_code: txn?.code_name ?? undefined,
+          attachment_id: attachment.id,
+        });
+
+        if (canStartExtractionFromUpload(attachment, file)) {
+          await startExtractionFromUpload({
+            attachment,
+            file,
+            docCategoryHint: "TEASER_IM",
+            reviewContext: {
+              source: "marketing-material",
+              marketingDocType: docType,
+              marketingMaterialId: material.id,
+            },
+          });
+        }
+      } catch {
+        // Mutation hook already surfaces the error.
+      } finally {
+        setActionTarget(null);
+      }
     },
-    [startExtractionFromUpload],
+    [createMarketingMaterial, startExtractionFromUpload, txn?.code_name],
   );
 
   return (
@@ -802,7 +821,6 @@ export default function MarketingMaterialsTab({
           open={!!actionTarget}
           txnId={txnId}
           docType={actionTarget}
-          projectCode={txn?.code_name ?? undefined}
           generating={createMarketingMaterial.isPending}
           onClose={() => setActionTarget(null)}
           onGenerate={handleGenerateMaterial}

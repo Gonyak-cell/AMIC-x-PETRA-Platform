@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, computed_field
 
-from app.models.enums import MarketingDocStatus, MarketingDocType
+from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 
 
 class MarketingMaterialCreate(BaseModel):
@@ -20,6 +20,20 @@ class MarketingMaterialCreate(BaseModel):
     enable_ralph_loop: bool = Field(False, description="Ralph Loop 품질 강화 모드 활성화")
     ralph_max_iterations: int = Field(3, ge=1, le=10, description="Ralph Loop 최대 반복 횟수")
     ralph_max_cost_usd: float = Field(10.0, ge=1.0, le=50.0, description="Ralph Loop 최대 비용 (USD)")
+
+
+    attachment_id: uuid.UUID | None = Field(
+        None,
+        description="이미 업로드된 MARKETING_MATERIAL attachment를 연결할 때 사용.",
+    )
+    distributed_to: list[str] | None = Field(
+        None,
+        description="업로드형 자료를 생성하면서 바로 송부 대상을 기록할 때 사용.",
+    )
+    distributed_at: str | None = Field(
+        None,
+        description="업로드형 자료 송부 시각 (ISO 8601).",
+    )
 
 
 class DistributionUpdate(BaseModel):
@@ -69,6 +83,8 @@ class MarketingMaterialOut(BaseModel):
     @property
     def distribution_eligible(self) -> bool:
         """PASS 상태만 배포 가능."""
+        if self.source_mode == MarketingMaterialSourceMode.UPLOADED.value:
+            return self.status == MarketingDocStatus.READY and self.attachment_id is not None
         return self.quality_status == "PASS"
 
     model_config = {"from_attributes": True}

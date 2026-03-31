@@ -174,6 +174,90 @@ async def test_create_im(client, _txn):
 
 
 @pytest.mark.asyncio
+async def test_create_tm_marks_material_failed_when_task_queue_is_unavailable(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from app.tasks import marketing_tasks
+
+    def _raise_queue_error(*args, **kwargs):
+        raise RuntimeError("queue unavailable")
+
+    monkeypatch.setattr(marketing_tasks.generate_pptx_task, "delay", _raise_queue_error)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials",
+        json=TM_BODY,
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["doc_type"] == "TM"
+    assert data["status"] == "FAILED"
+    assert "작업 큐" in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_create_uploaded_tm_registers_attachment_without_queue(
+    client,
+    _txn,
+    async_session,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import uuid
+    from pathlib import Path
+
+    from app.models.attachment import Attachment
+    from app.tasks import marketing_tasks
+
+    def _raise_if_called(*args, **kwargs):
+        raise AssertionError("queue should not be used for uploaded marketing materials")
+
+    monkeypatch.setattr(marketing_tasks.generate_pptx_task, "delay", _raise_if_called)
+
+    txn_id = _txn["id"]
+    pdf_bytes = b"%PDF-1.4\nuploaded teaser\n"
+    upload_dir = Path(__file__).resolve().parents[1] / "uploads" / "attachments"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / f"{uuid.uuid4()}_uploaded-tm.pdf"
+    file_path.write_bytes(pdf_bytes)
+
+    attachment = Attachment(
+        transaction_id=uuid.UUID(txn_id),
+        entity_type="MARKETING_MATERIAL",
+        entity_id="TM",
+        file_path=str(file_path),
+        file_name="uploaded-tm.pdf",
+        file_size_bytes=len(pdf_bytes),
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+    )
+    async_session.add(attachment)
+    await async_session.commit()
+    await async_session.refresh(attachment)
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials",
+        json={
+            **TM_BODY,
+            "title": "Uploaded teaser memo",
+            "attachment_id": str(attachment.id),
+        },
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["doc_type"] == "TM"
+    assert data["status"] == "READY"
+    assert data["source_mode"] == "UPLOADED"
+    assert data["attachment_id"] == str(attachment.id)
+    assert data["file_name"] == "uploaded-tm.pdf"
+    assert data["quality_status"] == "SKIPPED"
+
+
+@pytest.mark.asyncio
 async def test_create_with_custom_content(client, _txn):
     """커스텀 콘텐츠 파라미터로 TM 생성."""
     txn_id = _txn["id"]

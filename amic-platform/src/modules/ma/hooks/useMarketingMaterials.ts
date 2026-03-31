@@ -68,14 +68,27 @@ export function useCreateMarketingMaterial(txnId: string) {
       );
       return data as MarketingMaterial;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: QK(txnId) });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
       const label =
         data.doc_type === "TM"
           ? "Teaser Memo"
           : data.doc_type === "DM"
             ? "Discussion Memo"
             : "Information Memo";
+      if (data.source_mode === "UPLOADED" || variables.attachment_id) {
+        toast.success(`${label} 업로드가 등록되었습니다.`);
+        return;
+      }
+      if (data.status === "FAILED") {
+        toast.error(
+          data.error_message ?? `${label} 생성 요청을 시작하지 못했습니다.`,
+        );
+        return;
+      }
       toast.success(
         `${label} 생성을 시작했습니다. 완료 후 다운로드 가능합니다.`,
       );
