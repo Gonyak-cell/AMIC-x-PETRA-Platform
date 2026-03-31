@@ -4,6 +4,7 @@ from pathlib import Path
 from scripts.run_dev_server import (
     _get_local_dev_rebuild_reason,
     _rebuild_local_dev_database_if_needed,
+    _resolve_reload_enabled,
 )
 
 
@@ -101,3 +102,16 @@ def test_rebuild_local_dev_database_if_needed_deletes_stale_db(tmp_path):
     _rebuild_local_dev_database_if_needed(db_path)
 
     assert not db_path.exists()
+
+
+def test_resolve_reload_enabled_defaults_false_on_windows():
+    assert _resolve_reload_enabled(platform_name="nt", configured_value=None) is False
+
+
+def test_resolve_reload_enabled_defaults_true_on_non_windows():
+    assert _resolve_reload_enabled(platform_name="posix", configured_value=None) is True
+
+
+def test_resolve_reload_enabled_honors_explicit_override():
+    assert _resolve_reload_enabled(platform_name="nt", configured_value="true") is True
+    assert _resolve_reload_enabled(platform_name="posix", configured_value="false") is False

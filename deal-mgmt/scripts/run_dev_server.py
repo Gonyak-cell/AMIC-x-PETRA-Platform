@@ -14,6 +14,19 @@ logger = logging.getLogger(__name__)
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+
+def _configure_dev_stdio() -> None:
+    """Keep local Windows consoles from crashing on Korean warning logs."""
+
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+_configure_dev_stdio()
+
 default_db_path = PROJECT_ROOT / "generated" / "deal_mgmt_dev.db"
 default_db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -200,6 +213,18 @@ async def _bootstrap_database() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
+def _resolve_reload_enabled(
+    platform_name: str | None = None,
+    configured_value: str | None = None,
+) -> bool:
+    effective_os_name = platform_name or os.name
+    default_reload = "false" if effective_os_name == "nt" else "true"
+    raw_value = configured_value
+    if raw_value is None:
+        raw_value = os.environ.get("DEAL_MGMT_RELOAD", default_reload)
+    return raw_value.lower() == "true"
+
+
 def main() -> None:
     asyncio.run(_bootstrap_database())
 
@@ -207,7 +232,8 @@ def main() -> None:
 
     host = os.environ.get("DEAL_MGMT_HOST", "127.0.0.1")
     port = int(os.environ.get("DEAL_MGMT_PORT", "8000"))
-    reload_enabled = os.environ.get("DEAL_MGMT_RELOAD", "true").lower() == "true"
+    # Windows + watchfiles + our mirrored workspace setup causes noisy reload loops in local dev.
+    reload_enabled = _resolve_reload_enabled()
     uvicorn.run("app.main:app", host=host, port=port, reload=reload_enabled)
 
 
