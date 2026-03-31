@@ -9,7 +9,11 @@ import ExtractionReviewModal from "@/modules/ma/components/extraction/Extraction
 import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
 import BuyerTeaserSection from "@/modules/ma/components/buyers/BuyerTeaserSection";
-import { useAttachmentExtractionFlow } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
+import {
+  canStartExtractionFromUpload,
+  useAttachmentExtractionFlow,
+} from "@/modules/ma/hooks/useAttachmentExtractionFlow";
+import { useCreateMarketingMaterial } from "@/modules/ma/hooks/useMarketingMaterials";
 import {
   useCreateNda,
   useDeleteNda,
@@ -55,6 +59,11 @@ function buildUploadedVersionLabel(fileName: string) {
   return stem || "업로드본";
 }
 
+function buildUploadedMarketingMaterialTitle(fileName: string, fallback: string) {
+  const stem = fileName.trim().replace(/\.[^.]+$/, "").trim();
+  return stem || fallback;
+}
+
 export default function BuyerNdaSection({
   txnId,
   buyer,
@@ -66,6 +75,7 @@ export default function BuyerNdaSection({
     partyType: "BUYER",
   });
   const createNda = useCreateNda(txnId);
+  const createMarketingMaterial = useCreateMarketingMaterial(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
   const { activeReview, closeReview, startExtractionFromUpload } =
@@ -113,6 +123,8 @@ export default function BuyerNdaSection({
 
   const handleNdaUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
+      let targetNdaId: string | null = null;
+
       try {
         const targetNda =
           sortedNdas[0] ??
@@ -122,6 +134,7 @@ export default function BuyerNdaSection({
             counterparty_name: buyer.company_name,
             nda_type: "MUTUAL",
           }));
+        targetNdaId = targetNda.id;
 
         const formData = new FormData();
         formData.append("file", file);
@@ -144,20 +157,28 @@ export default function BuyerNdaSection({
         toast.error(
           extractApiError(
             error,
-            "NDA 체결 단계에 업로드를 반영하지 못했습니다.",
+            "파일은 업로드되었지만 NDA 버전 등록에는 실패했습니다.",
           ),
         );
+        return;
       }
 
-      await startExtractionFromUpload({
-        attachment,
-        file,
-        docCategoryHint: "NDA",
-        reviewContext: {
-          source: "buyer-nda",
-          buyerCandidateId: buyer.id,
+      await startExtractionFromUpload(
+        {
+          attachment,
+          file,
+          docCategoryHint: "NDA",
+          reviewContext: {
+            source: "buyer-nda",
+            buyerCandidateId: buyer.id,
+          },
         },
-      });
+        {
+          successToast: targetNdaId ? "NDA OCR 분석을 시작했습니다." : undefined,
+          failureToast: "파일은 업로드되었지만 OCR 시작에는 실패했습니다.",
+          failureToastVariant: "warning",
+        },
+      );
     },
     [
       buyer.company_name,
@@ -172,17 +193,37 @@ export default function BuyerNdaSection({
 
   const handleTeaserUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
-      await startExtractionFromUpload({
-        attachment,
-        file,
-        docCategoryHint: "TEASER_IM",
-        reviewContext: {
-          source: "marketing-material",
-          marketingDocType: "TM",
-        },
-      });
+      try {
+        const material = await createMarketingMaterial.mutateAsync({
+          doc_type: "TM",
+          title: buildUploadedMarketingMaterialTitle(
+            file.name,
+            `${buyer.company_name} Teaser`,
+          ),
+          attachment_id: attachment.id,
+          distributed_to: [buyer.company_name],
+          distributed_at: new Date().toISOString(),
+        });
+
+        if (!canStartExtractionFromUpload(attachment, file)) {
+          return;
+        }
+
+        await startExtractionFromUpload({
+          attachment,
+          file,
+          docCategoryHint: "TEASER_IM",
+          reviewContext: {
+            source: "marketing-material",
+            marketingDocType: "TM",
+            marketingMaterialId: material.id,
+          },
+        });
+      } catch {
+        // Mutation hook already surfaces the error.
+      }
     },
-    [startExtractionFromUpload],
+    [buyer.company_name, createMarketingMaterial, startExtractionFromUpload],
   );
 
   return (

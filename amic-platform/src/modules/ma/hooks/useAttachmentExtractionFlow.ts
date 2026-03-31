@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { useCreateExtraction } from "@/modules/ma/hooks/useDocumentExtraction";
+import { extractApiError } from "@/api/errors";
+import { maApi } from "@/api/maClient";
 import type { Attachment } from "@/modules/ma/types/attachment";
 import type {
   DocExtractionCategory,
@@ -14,6 +16,12 @@ interface StartExtractionFromUploadParams {
   file: File;
   docCategoryHint: DocExtractionCategory;
   reviewContext: ExtractionReviewContext;
+}
+
+interface StartExtractionToastOptions {
+  successToast?: string | null;
+  failureToast?: string | null;
+  failureToastVariant?: "error" | "warning" | "info";
 }
 
 export interface ActiveExtractionReview {
@@ -29,8 +37,18 @@ function isPdfUpload(attachment: Attachment, file: File) {
   );
 }
 
+export function canStartExtractionFromUpload(
+  attachment: Attachment,
+  file: File,
+) {
+  return (
+    isPdfUpload(attachment, file) &&
+    Boolean(attachment.vdr_sync?.vdr_document_id)
+  );
+}
+
 export function useAttachmentExtractionFlow(txnId: string) {
-  const createExtraction = useCreateExtraction(txnId);
+  const queryClient = useQueryClient();
   const [activeReview, setActiveReview] = useState<ActiveExtractionReview | null>(
     null,
   );
@@ -40,34 +58,69 @@ export function useAttachmentExtractionFlow(txnId: string) {
   }, []);
 
   const startExtractionFromUpload = useCallback(
-    async ({
-      attachment,
-      file,
-      docCategoryHint,
-      reviewContext,
-    }: StartExtractionFromUploadParams) => {
+    async (
+      {
+        attachment,
+        file,
+        docCategoryHint,
+        reviewContext,
+      }: StartExtractionFromUploadParams,
+      options: StartExtractionToastOptions = {},
+    ) => {
       if (!isPdfUpload(attachment, file)) {
         toast.info("PDF 업로드만 OCR 자동기재를 지원합니다.");
-        return;
+        return null;
       }
 
       const vdrDocumentId = attachment.vdr_sync?.vdr_document_id;
       if (!vdrDocumentId) {
-        toast.info("VDR 동기화가 완료된 파일만 OCR 자동기재를 실행할 수 있습니다.");
-        return;
+        toast.info(
+          "VDR 동기화가 완료된 파일만 OCR 자동기재를 실행할 수 있습니다.",
+        );
+        return null;
       }
 
       try {
-        const extraction = await createExtraction.mutateAsync({
-          vdrDocumentId,
-          docCategoryHint,
+        const { data: extraction } = await maApi.post<DocumentExtraction>(
+          `/transactions/${txnId}/extractions`,
+          {
+            vdr_document_id: vdrDocumentId,
+            doc_category_hint: docCategoryHint,
+          },
+        );
+        await queryClient.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "extractions"],
         });
+        if (options.successToast !== null) {
+          toast.success(options.successToast ?? "AI 분석을 시작했습니다.");
+        }
         setActiveReview({ extraction, context: reviewContext });
-      } catch {
-        // Mutation hook already surfaces the error.
+        return extraction;
+      } catch (error) {
+        if (options.failureToast === null) {
+          return null;
+        }
+
+        const message = extractApiError(
+          error,
+          options.failureToast ?? "AI 분석 생성에 실패했습니다.",
+        );
+
+        if (options.failureToastVariant === "warning") {
+          toast.warning(message);
+          return null;
+        }
+
+        if (options.failureToastVariant === "info") {
+          toast.info(message);
+          return null;
+        }
+
+        toast.error(message);
+        return null;
       }
     },
-    [createExtraction],
+    [queryClient, txnId],
   );
 
   return {

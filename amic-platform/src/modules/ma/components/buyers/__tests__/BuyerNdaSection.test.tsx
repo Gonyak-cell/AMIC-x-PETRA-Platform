@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { toast } from "sonner";
 
 import { maApi } from "@/api/maClient";
 import BuyerNdaSection from "../BuyerNdaSection";
@@ -8,7 +9,22 @@ const mockUseNdas = vi.fn();
 const uploadMutateAsync = vi.fn();
 const startExtractionFromUpload = vi.fn();
 const createNdaMutateAsync = vi.fn();
+const createMarketingMaterialMutateAsync = vi.fn();
 const invalidateQueries = vi.fn();
+const teaserUploadHandlerState = vi.hoisted(() => ({
+  handler: null as
+    | ((attachment: Record<string, unknown>, file: File) => Promise<void> | void)
+    | null,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({
@@ -38,10 +54,25 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
 }));
 
 vi.mock("@/modules/ma/hooks/useAttachmentExtractionFlow", () => ({
+  canStartExtractionFromUpload: (
+    attachment: { mime_type?: string; vdr_sync?: { vdr_document_id?: string } | null },
+    file: File,
+  ) =>
+    Boolean(attachment.vdr_sync?.vdr_document_id) &&
+    (attachment.mime_type === "application/pdf" ||
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf")),
   useAttachmentExtractionFlow: () => ({
     activeReview: null,
     closeReview: vi.fn(),
     startExtractionFromUpload,
+  }),
+}));
+
+vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
+  useCreateMarketingMaterial: () => ({
+    mutateAsync: createMarketingMaterialMutateAsync,
+    isPending: false,
   }),
 }));
 
@@ -54,7 +85,17 @@ vi.mock("@/modules/ma/components/extraction/ExtractionReviewModal", () => ({
 }));
 
 vi.mock("../BuyerTeaserSection", () => ({
-  default: () => <div>buyer-teaser-section</div>,
+  default: ({
+    onUploaded,
+  }: {
+    onUploaded: (
+      attachment: Record<string, unknown>,
+      file: File,
+    ) => Promise<void> | void;
+  }) => {
+    teaserUploadHandlerState.handler = onUploaded;
+    return <div>buyer-teaser-section</div>;
+  },
 }));
 
 const buyer = {
@@ -88,7 +129,10 @@ describe("BuyerNdaSection", () => {
     uploadMutateAsync.mockReset();
     startExtractionFromUpload.mockReset();
     createNdaMutateAsync.mockReset();
+    createMarketingMaterialMutateAsync.mockReset();
     invalidateQueries.mockReset();
+    teaserUploadHandlerState.handler = null;
+    vi.mocked(toast.error).mockReset();
 
     vi.spyOn(maApi, "post").mockReset();
 
@@ -118,6 +162,32 @@ describe("BuyerNdaSection", () => {
       signed_at: null,
       expires_at: null,
       notes: null,
+      created_at: "2026-03-25T00:00:00Z",
+      updated_at: "2026-03-25T00:00:00Z",
+    });
+    createMarketingMaterialMutateAsync.mockResolvedValue({
+      id: "tm-1",
+      transaction_id: "txn-1",
+      doc_type: "TM",
+      title: "atu-teaser",
+      project_code: null,
+      status: "READY",
+      error_message: null,
+      source_mode: "UPLOADED",
+      attachment_id: "att-tm-1",
+      parameters: null,
+      file_path: "/uploads/tm.pdf",
+      file_name: "atu-teaser.pdf",
+      file_size_bytes: 256,
+      quality_score: null,
+      quality_status: "SKIPPED",
+      quality_issues: null,
+      slide_count: null,
+      pipeline_metrics: null,
+      distribution_eligible: true,
+      distributed_to: ["ATU?뚰듃?덉뒪"],
+      distributed_at: "2026-03-25T00:00:00Z",
+      created_by_email: "test@example.com",
       created_at: "2026-03-25T00:00:00Z",
       updated_at: "2026-03-25T00:00:00Z",
     });
@@ -179,18 +249,25 @@ describe("BuyerNdaSection", () => {
     });
 
     await waitFor(() => {
-      expect(startExtractionFromUpload).toHaveBeenCalledWith({
-        attachment: expect.objectContaining({
-          id: "att-1",
-          file_name: "buyer-nda.pdf",
-        }),
-        file,
-        docCategoryHint: "NDA",
-        reviewContext: {
-          source: "buyer-nda",
-          buyerCandidateId: "buyer-1",
+      expect(startExtractionFromUpload).toHaveBeenCalledWith(
+        {
+          attachment: expect.objectContaining({
+            id: "att-1",
+            file_name: "buyer-nda.pdf",
+          }),
+          file,
+          docCategoryHint: "NDA",
+          reviewContext: {
+            source: "buyer-nda",
+            buyerCandidateId: "buyer-1",
+          },
         },
-      });
+        {
+          successToast: "NDA OCR 분석을 시작했습니다.",
+          failureToast: "파일은 업로드되었지만 OCR 시작에는 실패했습니다.",
+          failureToastVariant: "warning",
+        },
+      );
     });
   });
 
@@ -236,6 +313,121 @@ describe("BuyerNdaSection", () => {
           headers: { "Content-Type": "multipart/form-data" },
         },
       );
+    });
+  });
+
+  it("does not start OCR when NDA version registration fails after upload", async () => {
+    vi.spyOn(maApi, "post").mockRejectedValueOnce({
+      response: { status: 500 },
+    });
+
+    render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
+
+    const dropZone = screen.getByRole("button", { name: /NDA 없음/ });
+    const file = new File(["pdf-content"], "buyer-nda.pdf", {
+      type: "application/pdf",
+    });
+    const dataTransfer = {
+      files: [file],
+      types: ["Files"],
+      dropEffect: "none",
+    };
+
+    fireEvent.dragEnter(dropZone, { dataTransfer });
+    fireEvent.dragOver(dropZone, { dataTransfer });
+    fireEvent.drop(dropZone, { dataTransfer });
+
+    await waitFor(() => {
+      expect(uploadMutateAsync).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(createNdaMutateAsync).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(startExtractionFromUpload).not.toHaveBeenCalled();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "파일은 업로드되었지만 NDA 버전 등록에는 실패했습니다. (HTTP 500)",
+    );
+  });
+
+  it("creates and auto-distributes an uploaded teaser for the current buyer", async () => {
+    render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
+
+    const file = new File(["pdf-content"], "atu-teaser.pdf", {
+      type: "application/pdf",
+    });
+
+    await teaserUploadHandlerState.handler?.(
+      {
+        id: "att-tm-1",
+        transaction_id: "txn-1",
+        entity_type: "MARKETING_MATERIAL",
+        entity_id: "TM",
+        file_name: "atu-teaser.pdf",
+        file_size_bytes: 256,
+        mime_type: "application/pdf",
+        description: null,
+        uploaded_by_email: "test@example.com",
+        created_at: "2026-03-25T00:00:00Z",
+        updated_at: "2026-03-25T00:00:00Z",
+        vdr_sync: null,
+      },
+      file,
+    );
+
+    expect(createMarketingMaterialMutateAsync).toHaveBeenCalledWith({
+      doc_type: "TM",
+      title: "atu-teaser",
+      attachment_id: "att-tm-1",
+      distributed_to: [buyer.company_name],
+      distributed_at: expect.any(String),
+    });
+    expect(startExtractionFromUpload).not.toHaveBeenCalled();
+  });
+
+  it("reuses the created teaser material as the OCR review target when VDR sync exists", async () => {
+    render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
+
+    const file = new File(["pdf-content"], "atu-teaser.pdf", {
+      type: "application/pdf",
+    });
+
+    await teaserUploadHandlerState.handler?.(
+      {
+        id: "att-tm-1",
+        transaction_id: "txn-1",
+        entity_type: "MARKETING_MATERIAL",
+        entity_id: "TM",
+        file_name: "atu-teaser.pdf",
+        file_size_bytes: 256,
+        mime_type: "application/pdf",
+        description: null,
+        uploaded_by_email: "test@example.com",
+        created_at: "2026-03-25T00:00:00Z",
+        updated_at: "2026-03-25T00:00:00Z",
+        vdr_sync: {
+          vdr_document_id: "vdr-1",
+        },
+      },
+      file,
+    );
+
+    expect(startExtractionFromUpload).toHaveBeenCalledWith({
+      attachment: expect.objectContaining({
+        id: "att-tm-1",
+        file_name: "atu-teaser.pdf",
+      }),
+      file,
+      docCategoryHint: "TEASER_IM",
+      reviewContext: {
+        source: "marketing-material",
+        marketingDocType: "TM",
+        marketingMaterialId: "tm-1",
+      },
     });
   });
 });
