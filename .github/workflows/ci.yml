@@ -384,6 +384,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.deal-mgmt == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: true
     env:
       FORCE_VISUAL_DIFF: "1"
@@ -419,6 +420,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.im == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: true
     env:
       FORCE_VISUAL_DIFF: "1"
