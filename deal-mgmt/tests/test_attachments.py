@@ -227,9 +227,7 @@ async def test_list_marketing_material_attachments_normalizes_legacy_blank_statu
     await async_session.commit()
     async_session.expire_all()
 
-    resp = await client.get(
-        f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM"
-    )
+    resp = await client.get(f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM")
 
     assert resp.status_code == 200
     body = resp.json()
@@ -323,9 +321,7 @@ async def test_list_attachments_normalizes_synced_state_from_linked_vdr_document
     await async_session.commit()
     async_session.expire_all()
 
-    resp = await client.get(
-        f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM"
-    )
+    resp = await client.get(f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM")
 
     assert resp.status_code == 200
     body = resp.json()
