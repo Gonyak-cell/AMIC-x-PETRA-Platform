@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   DataTable,
+  InlineSelect,
   INLINE_INPUT_CLS,
   Input,
   Modal,
@@ -352,12 +353,19 @@ export default function BuyerNdaSection({
       >
         {hasNdas ? (
           <DataTable
+            compact
+            className="[&_th]:whitespace-nowrap [&_td]:align-middle"
             columns={[
               {
                 key: "nda_type",
-                header: "유형",
+                header: <span className="whitespace-nowrap">유형</span>,
+                width: "112px",
+                minWidth: "112px",
                 render: (row) => (
-                  <Badge variant="neutral">
+                  <Badge
+                    variant="neutral"
+                    className="max-w-full whitespace-nowrap !px-2 !py-1 text-[11px]"
+                  >
                     {NDA_TYPE_OPTIONS.find((option) => option.value === row.nda_type)
                       ?.label ?? row.nda_type}
                   </Badge>
@@ -365,22 +373,21 @@ export default function BuyerNdaSection({
               },
               {
                 key: "status",
-                header: "상태",
+                header: <span className="whitespace-nowrap">상태</span>,
+                width: "88px",
+                minWidth: "88px",
                 render: (row) =>
                   canWrite ? (
-                    <Select
+                    <InlineSelect
                       options={NDA_STATUS_OPTIONS}
                       value={row.status}
-                      onChange={(event) =>
-                        handleStatusChange(
-                          row.id,
-                          event.target.value as NdaStatus,
-                        )
+                      onChange={(value) =>
+                        handleStatusChange(row.id, value as NdaStatus)
                       }
-                      className="!px-1.5 !py-0.5 !text-xs"
+                      className="w-[72px]"
                     />
                   ) : (
-                    <span className="text-sm text-text-body">
+                    <span className="block whitespace-nowrap text-xs text-text-body">
                       {NDA_STATUS_OPTIONS.find(
                         (option) => option.value === row.status,
                       )?.label ?? row.status}
@@ -389,13 +396,15 @@ export default function BuyerNdaSection({
               },
               {
                 key: "sent_at",
-                header: "발송일",
+                header: <span className="whitespace-nowrap">발송일</span>,
+                width: "136px",
+                minWidth: "136px",
                 render: (row) =>
                   canWrite ? (
                     <input
                       key={`${row.id}-sent-${row.sent_at}`}
                       type="date"
-                      className={`${INLINE_INPUT_CLS} w-32`}
+                      className={`${INLINE_INPUT_CLS} w-[118px] min-w-0 text-[11px]`}
                       defaultValue={row.sent_at ?? ""}
                       onChange={(event) =>
                         updateNda.mutate({
@@ -405,18 +414,22 @@ export default function BuyerNdaSection({
                       }
                     />
                   ) : (
-                    row.sent_at ?? "-"
+                    <span className="block whitespace-nowrap text-xs">
+                      {row.sent_at ?? "-"}
+                    </span>
                   ),
               },
               {
                 key: "signed_at",
-                header: "체결일",
+                header: <span className="whitespace-nowrap">체결일</span>,
+                width: "136px",
+                minWidth: "136px",
                 render: (row) =>
                   canWrite ? (
                     <input
                       key={`${row.id}-signed-${row.signed_at}`}
                       type="date"
-                      className={`${INLINE_INPUT_CLS} w-32`}
+                      className={`${INLINE_INPUT_CLS} w-[118px] min-w-0 text-[11px]`}
                       defaultValue={row.signed_at ?? ""}
                       onChange={(event) =>
                         handleSignedDateChange(
@@ -426,18 +439,22 @@ export default function BuyerNdaSection({
                       }
                     />
                   ) : (
-                    row.signed_at ?? "-"
+                    <span className="block whitespace-nowrap text-xs">
+                      {row.signed_at ?? "-"}
+                    </span>
                   ),
               },
               {
                 key: "expires_at",
-                header: "만료일",
+                header: <span className="whitespace-nowrap">만료일</span>,
+                width: "136px",
+                minWidth: "136px",
                 render: (row) =>
                   canWrite ? (
                     <input
                       key={`${row.id}-expires-${row.expires_at}`}
                       type="date"
-                      className={`${INLINE_INPUT_CLS} w-32`}
+                      className={`${INLINE_INPUT_CLS} w-[118px] min-w-0 text-[11px]`}
                       defaultValue={row.expires_at ?? ""}
                       onChange={(event) =>
                         updateNda.mutate({
@@ -447,34 +464,47 @@ export default function BuyerNdaSection({
                       }
                     />
                   ) : (
-                    row.expires_at ?? "-"
+                    <span className="block whitespace-nowrap text-xs">
+                      {row.expires_at ?? "-"}
+                    </span>
                   ),
               },
               {
                 key: "notes",
-                header: "비고",
-                render: (row) => row.notes ?? "-",
+                header: <span className="whitespace-nowrap">비고</span>,
+                width: "52px",
+                minWidth: "52px",
+                render: (row) => (
+                  <span
+                    className="block max-w-[36px] truncate text-xs text-text-secondary"
+                    title={row.notes ?? "-"}
+                  >
+                    {row.notes ?? "-"}
+                  </span>
+                ),
               },
               {
                 key: "version",
-                header: "버전",
-                width: "88px",
+                header: <span className="whitespace-nowrap">버전</span>,
+                width: "56px",
+                minWidth: "56px",
                 render: (row) => (
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
                     onClick={() => setVersionPanelNdaId(row.id)}
-                    className="!px-2 !py-0.5 text-xs"
+                    className="!px-1.5 !py-0.5 text-[11px]"
                   >
-                    버전
+                    보기
                   </Button>
                 ),
               },
               {
                 key: "actions",
                 header: "",
-                width: "44px",
+                width: "32px",
+                minWidth: "32px",
                 render: (row) =>
                   canWrite ? (
                     <button

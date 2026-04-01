@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import io
+import uuid
 from unittest.mock import MagicMock
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
 
 from app.models.attachment import Attachment
+from app.models.enums import VdrClassificationStatus, VdrDocumentStatus, VdrFolderCategory
+from app.models.vdr_document import VdrDocument
+from app.models.vdr_folder import VdrFolder
 from app.routers import attachments as attachments_router
 
 pytestmark = pytest.mark.anyio
@@ -195,6 +200,158 @@ async def test_list_filter_entity_type(client: AsyncClient, transaction_id: str)
     body = resp.json()
     assert body["total"] == 1
     assert body["items"][0]["entity_type"] == "NDA"
+
+
+async def test_list_marketing_material_attachments_normalizes_legacy_blank_status(
+    client: AsyncClient,
+    transaction_id: str,
+    async_session,
+):
+    attachment = Attachment(
+        transaction_id=uuid.UUID(transaction_id),
+        entity_type="MARKETING_MATERIAL",
+        entity_id="TM",
+        file_path="/tmp/tm.pdf",
+        file_name="tm.pdf",
+        file_size_bytes=10,
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+    )
+    async_session.add(attachment)
+    await async_session.commit()
+
+    await async_session.execute(
+        text("UPDATE attachments SET processing_status = '' WHERE id = :attachment_id"),
+        {"attachment_id": attachment.id.hex},
+    )
+    await async_session.commit()
+    async_session.expire_all()
+
+    resp = await client.get(
+        f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM"
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["items"][0]["processing_status"] == "SKIPPED"
+
+
+async def test_list_nda_attachments_normalizes_invalid_status_to_pending(
+    client: AsyncClient,
+    transaction_id: str,
+    async_session,
+):
+    attachment = Attachment(
+        transaction_id=uuid.UUID(transaction_id),
+        entity_type="NDA",
+        entity_id="nda-1",
+        file_path="/tmp/nda.pdf",
+        file_name="nda.pdf",
+        file_size_bytes=10,
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+    )
+    async_session.add(attachment)
+    await async_session.commit()
+
+    await async_session.execute(
+        text("UPDATE attachments SET processing_status = 'BROKEN' WHERE id = :attachment_id"),
+        {"attachment_id": attachment.id.hex},
+    )
+    await async_session.commit()
+    async_session.expire_all()
+
+    resp = await client.get(f"{BASE}/{transaction_id}/attachments?entity_type=NDA&entity_id=nda-1")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["items"][0]["processing_status"] == "PENDING"
+
+
+async def test_list_attachments_normalizes_synced_state_from_linked_vdr_document(
+    client: AsyncClient,
+    transaction_id: str,
+    async_session,
+):
+    folder = VdrFolder(
+        transaction_id=uuid.UUID(transaction_id),
+        parent_id=None,
+        name="TM",
+        category=VdrFolderCategory.COMMERCIAL,
+        order_index=0,
+        is_required=False,
+        description=None,
+    )
+    async_session.add(folder)
+    await async_session.flush()
+
+    document = VdrDocument(
+        transaction_id=uuid.UUID(transaction_id),
+        folder_id=folder.id,
+        original_name="tm.pdf",
+        stored_name="tm.pdf",
+        file_path="/tmp/tm.pdf",
+        file_size_bytes=10,
+        mime_type="application/pdf",
+        status=VdrDocumentStatus.ACTIVE,
+        classification_status=VdrClassificationStatus.DIRECT,
+        uploaded_by_email="test@example.com",
+    )
+    async_session.add(document)
+    await async_session.flush()
+    document_id = document.id
+
+    attachment = Attachment(
+        transaction_id=uuid.UUID(transaction_id),
+        entity_type="MARKETING_MATERIAL",
+        entity_id="TM",
+        file_path="/tmp/tm.pdf",
+        file_name="tm.pdf",
+        file_size_bytes=10,
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+        vdr_document_id=document_id,
+    )
+    async_session.add(attachment)
+    await async_session.commit()
+
+    await async_session.execute(
+        text("UPDATE attachments SET processing_status = 'BROKEN' WHERE id = :attachment_id"),
+        {"attachment_id": attachment.id.hex},
+    )
+    await async_session.commit()
+    async_session.expire_all()
+
+    resp = await client.get(
+        f"{BASE}/{transaction_id}/attachments?entity_type=MARKETING_MATERIAL&entity_id=TM"
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["items"][0]["processing_status"] == "SYNCED"
+    assert body["items"][0]["vdr_sync"]["vdr_document_id"] == str(document_id)
+
+
+def test_serialize_attachment_out_normalizes_none_processing_state_for_marketing_material():
+    attachment = Attachment(
+        id=uuid.uuid4(),
+        transaction_id=uuid.uuid4(),
+        entity_type="MARKETING_MATERIAL",
+        entity_id="TM",
+        file_path="/tmp/tm.pdf",
+        file_name="tm.pdf",
+        file_size_bytes=10,
+        mime_type="application/pdf",
+        uploaded_by_email="test@example.com",
+    )
+    attachment.__dict__["processing_status"] = None
+    attachment.__dict__["processing_error"] = {"unexpected": "shape"}
+
+    serialized = attachments_router._serialize_attachment_out(attachment)
+
+    assert serialized.processing_status == "SKIPPED"
+    assert serialized.processing_error is None
 
 
 async def test_download(client: AsyncClient, transaction_id: str):

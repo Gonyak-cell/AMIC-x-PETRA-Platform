@@ -167,6 +167,7 @@ export function useAttachments(
   options?: {
     enabled?: boolean;
     refetchWhileProcessing?: boolean;
+    suppressGlobalErrorToast?: boolean;
   },
 ) {
   return useQuery<AttachmentListResponse>({
@@ -185,6 +186,9 @@ export function useAttachments(
       return data;
     },
     enabled: options?.enabled ?? !!txnId,
+    meta: options?.suppressGlobalErrorToast
+      ? { suppressGlobalErrorToast: true }
+      : undefined,
     refetchInterval:
       options?.refetchWhileProcessing === true
         ? (query) =>

@@ -26,7 +26,9 @@ from app.services.vdr_service import check_vdr_write_permission
 from app.tasks.attachment_tasks import (
     PROCESSING_FAILED,
     PROCESSING_PENDING,
+    PROCESSING_RUNNING,
     PROCESSING_SKIPPED,
+    PROCESSING_SYNCED,
     process_attachment_task,
 )
 
@@ -77,6 +79,13 @@ _MAGIC_SIGNATURES: list[tuple[bytes, set[str]]] = [
 ]
 
 router = APIRouter(prefix="/transactions/{txn_id}/attachments", tags=["Attachments"])
+VALID_PROCESSING_STATUSES = {
+    PROCESSING_PENDING,
+    PROCESSING_RUNNING,
+    PROCESSING_SYNCED,
+    PROCESSING_FAILED,
+    PROCESSING_SKIPPED,
+}
 
 
 @router.get("", response_model=AttachmentListResponse)
@@ -111,9 +120,27 @@ async def list_attachments(
     result = await db.execute(q.order_by(Attachment.created_at.desc()).offset(offset).limit(limit))
     attachments = list(result.scalars().all())
     vdr_sync_map = await _load_vdr_sync_map(db, attachments)
-    items = [
-        _serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id)) for attachment in attachments
-    ]
+    items: list[AttachmentOut] = []
+    skipped_rows = 0
+    for attachment in attachments:
+        try:
+            items.append(
+                _serialize_attachment_out(
+                    attachment,
+                    vdr_sync=vdr_sync_map.get(attachment.id),
+                )
+            )
+        except Exception:
+            skipped_rows += 1
+            logger.exception(
+                "Attachment list serialization failed: txn=%s attachment_id=%s entity_type=%s entity_id=%s",
+                txn_id,
+                getattr(attachment, "id", None),
+                getattr(attachment, "entity_type", None),
+                getattr(attachment, "entity_id", None),
+            )
+    if skipped_rows:
+        total = max(total - skipped_rows, 0)
     return AttachmentListResponse(items=items, total=total)
 
 
@@ -406,6 +433,8 @@ def _serialize_attachment_out(
     state = attachment.__dict__
     created_at = state.get("created_at") or datetime.now(UTC)
     updated_at = state.get("updated_at") or created_at
+    processing_status = _normalize_processing_status(state)
+    processing_error = state.get("processing_error")
     return AttachmentOut(
         id=state["id"],
         transaction_id=state["transaction_id"],
@@ -414,14 +443,28 @@ def _serialize_attachment_out(
         file_name=state["file_name"],
         file_size_bytes=state["file_size_bytes"],
         mime_type=state["mime_type"],
-        processing_status=state.get("processing_status", PROCESSING_PENDING),
-        processing_error=state.get("processing_error"),
+        processing_status=processing_status,
+        processing_error=processing_error if isinstance(processing_error, str) else None,
         description=state.get("description"),
         uploaded_by_email=state.get("uploaded_by_email"),
         created_at=created_at,
         updated_at=updated_at,
         vdr_sync=vdr_sync,
     )
+
+
+def _normalize_processing_status(state: dict) -> str:
+    raw_status = state.get("processing_status")
+    if isinstance(raw_status, str):
+        normalized = raw_status.strip().upper()
+        if normalized in VALID_PROCESSING_STATUSES:
+            return normalized
+
+    if state.get("vdr_document_id") is not None:
+        return PROCESSING_SYNCED
+    if state.get("entity_type") == AttachmentEntityType.MARKETING_MATERIAL.value:
+        return PROCESSING_SKIPPED
+    return PROCESSING_PENDING
 
 
 async def _load_vdr_sync_map(

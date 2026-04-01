@@ -3,12 +3,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import FileUploadZone from "../FileUploadZone";
 
+const mockUseAttachments = vi.fn();
 const uploadMutateAsync = vi.fn();
 const deleteMutate = vi.fn();
 const retryMutate = vi.fn();
 
 vi.mock("@/modules/ma/hooks/useAttachments", () => ({
-  useAttachments: () => ({ data: { items: [] } }),
+  useAttachments: (...args: unknown[]) => mockUseAttachments(...args),
   useUploadAttachment: () => ({
     mutateAsync: uploadMutateAsync,
     isPending: false,
@@ -26,9 +27,14 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
 
 describe("FileUploadZone", () => {
   beforeEach(() => {
+    mockUseAttachments.mockReset();
     uploadMutateAsync.mockReset();
     deleteMutate.mockReset();
     retryMutate.mockReset();
+    mockUseAttachments.mockReturnValue({
+      data: { items: [] },
+      isError: false,
+    });
     uploadMutateAsync.mockImplementation(
       async ({
         entityId,
@@ -49,6 +55,44 @@ describe("FileUploadZone", () => {
         created_at: "2026-03-25T00:00:00Z",
         updated_at: "2026-03-25T00:00:00Z",
         vdr_sync: null,
+      }),
+      );
+  });
+
+  it("shows an inline list error while keeping the upload zone available", () => {
+    mockUseAttachments.mockReturnValue({
+      data: { items: [] },
+      isError: true,
+    });
+
+    render(
+      <FileUploadZone
+        txnId="txn-1"
+        entityType="MARKETING_MATERIAL"
+        entityId="TM"
+        embedded
+        emptyVariant="dashed"
+        emptyTitle="등록된 Teaser 없음"
+        suppressListErrorToast
+        listErrorMessage="기존 Teaser 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다."
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "기존 Teaser 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /등록된 Teaser 없음/ }),
+    ).toBeInTheDocument();
+    expect(mockUseAttachments).toHaveBeenCalledWith(
+      "txn-1",
+      "MARKETING_MATERIAL",
+      "TM",
+      expect.objectContaining({
+        refetchWhileProcessing: true,
+        suppressGlobalErrorToast: true,
       }),
     );
   });
