@@ -6,6 +6,7 @@ import { Modal } from "../Modal";
 
 const uploadMutateAsync = vi.fn();
 const deleteMutate = vi.fn();
+const retryMutate = vi.fn();
 
 vi.mock("@/modules/ma/hooks/useAttachments", () => ({
   useAttachments: () => ({ data: { items: [] } }),
@@ -17,6 +18,10 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
     mutate: deleteMutate,
     isPending: false,
   }),
+  useRetryAttachmentProcessing: () => ({
+    mutate: retryMutate,
+    isPending: false,
+  }),
   getAttachmentDownloadUrl: () => "#",
 }));
 
@@ -24,6 +29,7 @@ describe("Modal", () => {
   beforeEach(() => {
     uploadMutateAsync.mockReset();
     deleteMutate.mockReset();
+    retryMutate.mockReset();
     uploadMutateAsync.mockResolvedValue({
       id: "att-1",
       transaction_id: "txn-1",
@@ -36,6 +42,8 @@ describe("Modal", () => {
       uploaded_by_email: "test@example.com",
       created_at: "2026-03-27T00:00:00Z",
       updated_at: "2026-03-27T00:00:00Z",
+      processing_status: "PENDING",
+      processing_error: null,
       vdr_sync: null,
     });
   });

@@ -45,9 +45,7 @@ async def list_nda_markups(
     await check_client_deal_access(db, txn_id, claims)
     await _get_nda_or_404(db, txn_id, nda_id)
 
-    total = (
-        await db.execute(select(func.count(NdaMarkup.id)).where(NdaMarkup.nda_id == nda_id))
-    ).scalar() or 0
+    total = (await db.execute(select(func.count(NdaMarkup.id)).where(NdaMarkup.nda_id == nda_id))).scalar() or 0
     result = await db.execute(
         select(NdaMarkup)
         .where(NdaMarkup.nda_id == nda_id)
@@ -125,7 +123,9 @@ async def create_nda_markup(
         assert file is not None
         content = await file.read()
         if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File size exceeds the 50MB limit.")
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File size exceeds the 50MB limit."
+            )
 
         safe_filename = Path(file.filename or "markup").name
         ext = Path(safe_filename).suffix.lower()
@@ -345,7 +345,9 @@ async def generate_nda_redline(
         if prev_markup and prev_markup.file_path and Path(prev_markup.file_path).exists():
             prev_path = Path(prev_markup.file_path)
             _validate_markup_file_path(prev_path)
-            reference_text = await run_in_threadpool(lambda: redline_engine.extract_paragraphs_text(prev_path.read_bytes()))
+            reference_text = await run_in_threadpool(
+                lambda: redline_engine.extract_paragraphs_text(prev_path.read_bytes())
+            )
             base_id = prev_markup.id
         else:
             reference_text = "(No prior version available for comparison.)"
@@ -448,9 +450,7 @@ def _is_relative_to(path: Path, root: Path) -> bool:
 
 
 async def _get_nda_or_404(db: AsyncSession, txn_id: uuid.UUID, nda_id: uuid.UUID) -> NDA:
-    nda = (
-        await db.execute(select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id))
-    ).scalar_one_or_none()
+    nda = (await db.execute(select(NDA).where(NDA.id == nda_id, NDA.transaction_id == txn_id))).scalar_one_or_none()
     if nda is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NDA was not found.")
     return nda

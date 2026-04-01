@@ -26,6 +26,10 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useRetryAttachmentProcessing: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
   useDeleteAttachment: () => ({ mutate: vi.fn(), isPending: false }),
   getAttachmentDownloadUrl: () => "#",
 }));

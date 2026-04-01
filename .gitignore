@@ -84,6 +84,22 @@ deal-mgmt/uploads/
 fdd/backend/generated/
 kiis/generated/
 kiis/test.db
+# CI/debug scratch files
+/actions-branch.html
+/backend-job-log.txt
+/ci-run.html
+/deploy-run.html
+/frontend-dev-log.txt
+/lint-job-log.txt
+/coverage.xml
+/tmp_test_nda_upload.pdf
+/uploads/
+/kiis/.venv-ci/
+/amic-platform/esbuild-wrap.cmd
+/amic-platform/spawn-cmd.js
+/amic-platform/test-cmdspawn.js
+/amic-platform/test-epm.js
+/amic-platform/tmp-esbuild.cmd
 # Local scratch files
 /tmp-amic-platform-prod_key.pem
 /123123123(1).png

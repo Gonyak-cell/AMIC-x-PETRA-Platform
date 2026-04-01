@@ -111,7 +111,9 @@ async def list_attachments(
     result = await db.execute(q.order_by(Attachment.created_at.desc()).offset(offset).limit(limit))
     attachments = list(result.scalars().all())
     vdr_sync_map = await _load_vdr_sync_map(db, attachments)
-    items = [_serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id)) for attachment in attachments]
+    items = [
+        _serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id)) for attachment in attachments
+    ]
     return AttachmentListResponse(items=items, total=total)
 
 
@@ -149,7 +151,9 @@ async def upload_attachment(
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file type.")
         if len(Path(safe_filename).suffixes) > 1:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Multiple file extensions are not allowed.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Multiple file extensions are not allowed."
+            )
 
         header = await file.read(32)
         _validate_magic_bytes(header, ext)
@@ -275,7 +279,9 @@ async def upload_attachment(
             try:
                 await db.refresh(attachment)
             except Exception:
-                logger.warning("Attachment refresh failed after enqueue error: attachment=%s", attachment.id, exc_info=True)
+                logger.warning(
+                    "Attachment refresh failed after enqueue error: attachment=%s", attachment.id, exc_info=True
+                )
 
     vdr_sync_map = await _load_vdr_sync_map(db, [attachment])
     return _serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id))
@@ -297,9 +303,13 @@ async def retry_attachment_processing(
             detail="Attachment processing was skipped and cannot be retried automatically.",
         )
     if attachment.processing_status == "RUNNING":
-        return _serialize_attachment_out(attachment, vdr_sync=(await _load_vdr_sync_map(db, [attachment])).get(attachment.id))
+        return _serialize_attachment_out(
+            attachment, vdr_sync=(await _load_vdr_sync_map(db, [attachment])).get(attachment.id)
+        )
     if attachment.processing_status == "SYNCED" and attachment.vdr_document_id is not None:
-        return _serialize_attachment_out(attachment, vdr_sync=(await _load_vdr_sync_map(db, [attachment])).get(attachment.id))
+        return _serialize_attachment_out(
+            attachment, vdr_sync=(await _load_vdr_sync_map(db, [attachment])).get(attachment.id)
+        )
 
     attachment.processing_status = PROCESSING_PENDING
     attachment.processing_error = None
@@ -438,7 +448,9 @@ async def _load_vdr_sync_map(
             vdr_document_id=doc_id,
             folder_name=folder_name,
             category=category.value if hasattr(category, "value") else category,
-            classification_status=classification_status.value if hasattr(classification_status, "value") else str(classification_status),
+            classification_status=classification_status.value
+            if hasattr(classification_status, "value")
+            else str(classification_status),
         )
 
     attachment_map: dict[uuid.UUID, VdrSyncInfo] = {}
@@ -460,7 +472,7 @@ def _validate_magic_bytes(content: bytes, ext: str) -> None:
             if ext not in valid_exts:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"File content does not match extension {ext}.",
+                    detail=f"파일 내용과 확장자({ext})가 일치하지 않습니다.",
                 )
             return
 
@@ -468,14 +480,14 @@ def _validate_magic_bytes(content: bytes, ext: str) -> None:
         if b"\x00" in content:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File content does not match extension {ext}.",
+                detail=f"파일 내용과 확장자({ext})가 일치하지 않습니다.",
             )
         return
 
     if ext not in {".aac"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File content does not match extension {ext}.",
+            detail=f"파일 내용과 확장자({ext})가 일치하지 않습니다.",
         )
 
 
