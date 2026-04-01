@@ -4,10 +4,11 @@ import {
   Download,
   FileText,
   Paperclip,
+  RefreshCw,
   Trash2,
   Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -15,6 +16,7 @@ import {
   getAttachmentDownloadUrl,
   useAttachments,
   useDeleteAttachment,
+  useRetryAttachmentProcessing,
   useUploadAttachment,
 } from "@/modules/ma/hooks/useAttachments";
 import {
@@ -33,6 +35,8 @@ interface FileUploadZoneProps {
   txnId: string;
   entityType: AttachmentEntityType;
   entityId?: string;
+  entityIds?: string[];
+  resolveEntityId?: () => Promise<string | undefined>;
   compact?: boolean;
   embedded?: boolean;
   readOnly?: boolean;
@@ -58,19 +62,52 @@ function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
   return types.includes("Files") || dataTransfer.files.length > 0;
 }
 
+function getProcessingLabel(status: string) {
+  switch (status) {
+    case "SYNCED":
+      return {
+        label: "동기화 완료",
+        className: "bg-emerald-50 text-emerald-700",
+      };
+    case "RUNNING":
+      return {
+        label: "처리 중",
+        className: "bg-blue-50 text-blue-700",
+      };
+    case "FAILED":
+      return {
+        label: "후속 처리 실패",
+        className: "bg-amber-50 text-amber-700",
+      };
+    case "SKIPPED":
+      return {
+        label: "처리 생략",
+        className: "bg-slate-100 text-slate-600",
+      };
+    case "PENDING":
+    default:
+      return {
+        label: "처리 대기",
+        className: "bg-sky-50 text-sky-700",
+      };
+  }
+}
+
 export default function FileUploadZone({
   txnId,
   entityType,
   entityId,
+  entityIds,
+  resolveEntityId,
   compact = false,
   embedded = false,
   readOnly = false,
-  title = "첨부 자료",
+  title = "첨부 파일",
   embeddedLabel = "첨부 파일",
   uploadLabel = "업로드",
   emptyTitle,
-  emptyDescription = "파일을 여기에 드롭하거나 클릭해 업로드하세요.",
-  emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL} · PDF, DOCX, XLSX, PPTX, HWP`,
+  emptyDescription = "파일을 여기에 드롭하거나 클릭해서 업로드하세요.",
+  emptyHint = `최대 ${ATTACHMENT_CONSTRAINTS.MAX_FILE_SIZE_LABEL}, PDF/DOCX/XLSX/PPTX/HWP 지원`,
   emptyVariant = "plain",
   embeddedSeparator = true,
   showUploadAction = true,
@@ -80,14 +117,31 @@ export default function FileUploadZone({
   const [expanded, setExpanded] = useState(!compact);
   const [isEmptyDropActive, setIsEmptyDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const emptyDropzoneRef = useRef<HTMLDivElement>(null);
   const emptyDragDepthRef = useRef(0);
 
-  const { data } = useAttachments(txnId, entityType, entityId);
+  const { data } = useAttachments(txnId, entityType, entityId, {
+    refetchWhileProcessing: true,
+  });
   const uploadMutation = useUploadAttachment(txnId);
   const deleteMutation = useDeleteAttachment(txnId);
+  const retryProcessingMutation = useRetryAttachmentProcessing(txnId);
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => {
+    const rawItems = data?.items ?? [];
+    if (!entityIds) {
+      return rawItems;
+    }
+    if (entityIds.length === 0) {
+      return [];
+    }
+
+    const entityIdSet = new Set(entityIds);
+    return rawItems.filter(
+      (attachment) =>
+        attachment.entity_id !== null && entityIdSet.has(attachment.entity_id),
+    );
+  }, [data?.items, entityIds]);
+
   const isEmpty = items.length === 0;
 
   const handleUpload = useCallback(
@@ -96,15 +150,27 @@ export default function FileUploadZone({
         return;
       }
 
-      await uploadAttachmentFiles({
-        files,
-        entityType,
-        entityId,
-        uploadMutation,
-        onUploaded,
-      });
+      for (const file of files) {
+        let resolvedEntityId = entityId;
+
+        if (resolveEntityId) {
+          try {
+            resolvedEntityId = await resolveEntityId();
+          } catch {
+            return;
+          }
+        }
+
+        await uploadAttachmentFiles({
+          files: [file],
+          entityType,
+          entityId: resolvedEntityId,
+          uploadMutation,
+          onUploaded,
+        });
+      }
     },
-    [entityId, entityType, onUploaded, uploadMutation],
+    [entityId, entityType, onUploaded, resolveEntityId, uploadMutation],
   );
 
   const handleDrop = useCallback(
@@ -232,7 +298,6 @@ export default function FileUploadZone({
 
   const fileList = isEmpty ? (
     <div
-      ref={emptyDropzoneRef}
       data-file-dropzone="true"
       className={cn(
         "flex flex-col items-center justify-center gap-2 text-center text-sm text-text-muted",
@@ -284,57 +349,91 @@ export default function FileUploadZone({
           <th className="px-5 py-2 font-medium">파일명</th>
           <th className="px-5 py-2 font-medium">형식</th>
           <th className="px-5 py-2 font-medium">크기</th>
+          <th className="px-5 py-2 font-medium">처리 상태</th>
           <th className="px-5 py-2 font-medium">업로드일</th>
           <th className="px-5 py-2 font-medium" />
         </tr>
       </thead>
       <tbody>
-        {items.map((attachment) => (
-          <tr
-            key={attachment.id}
-            className="border-b border-gray-border/50 hover:bg-bg-cool/50"
-          >
-            <td className="px-5 py-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 shrink-0 text-text-muted" />
-                <span className="truncate" title={attachment.file_name}>
-                  {attachment.file_name}
-                </span>
-              </div>
-            </td>
-            <td className="px-5 py-2 text-text-secondary">
-              {ATTACHMENT_MIME_LABELS[attachment.mime_type] ??
-                attachment.mime_type.split("/")[1]}
-            </td>
-            <td className="px-5 py-2 text-text-secondary">
-              {formatFileSize(attachment.file_size_bytes)}
-            </td>
-            <td className="px-5 py-2 text-text-secondary">
-              {formatISODate(attachment.created_at)}
-            </td>
-            <td className="px-5 py-2">
-              <div className="flex items-center gap-1">
-                <a
-                  href={getAttachmentDownloadUrl(txnId, attachment.id)}
-                  className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
-                  title="다운로드"
+        {items.map((attachment) => {
+          const processing = getProcessingLabel(attachment.processing_status);
+
+          return (
+            <tr
+              key={attachment.id}
+              className="border-b border-gray-border/50 hover:bg-bg-cool/50"
+            >
+              <td className="px-5 py-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 shrink-0 text-text-muted" />
+                  <div className="min-w-0">
+                    <span className="block truncate" title={attachment.file_name}>
+                      {attachment.file_name}
+                    </span>
+                    {attachment.processing_error ? (
+                      <span className="block truncate text-xs text-amber-700">
+                        {attachment.processing_error}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </td>
+              <td className="px-5 py-2 text-text-secondary">
+                {ATTACHMENT_MIME_LABELS[attachment.mime_type] ??
+                  attachment.mime_type.split("/")[1]}
+              </td>
+              <td className="px-5 py-2 text-text-secondary">
+                {formatFileSize(attachment.file_size_bytes)}
+              </td>
+              <td className="px-5 py-2">
+                <span
+                  className={cn(
+                    "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+                    processing.className,
+                  )}
                 >
-                  <Download className="h-4 w-4" />
-                </a>
-                {!readOnly && (
-                  <button
-                    type="button"
-                    className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
-                    title="삭제"
-                    onClick={() => deleteMutation.mutate(attachment.id)}
+                  {processing.label}
+                </span>
+              </td>
+              <td className="px-5 py-2 text-text-secondary">
+                {formatISODate(attachment.created_at)}
+              </td>
+              <td className="px-5 py-2">
+                <div className="flex items-center justify-end gap-1">
+                  {attachment.processing_status === "FAILED" && !readOnly ? (
+                    <button
+                      type="button"
+                      className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-primary"
+                      title="후속 처리 재시도"
+                      onClick={() =>
+                        retryProcessingMutation.mutate(attachment.id)
+                      }
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                  <a
+                    href={getAttachmentDownloadUrl(txnId, attachment.id)}
+                    className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-info"
+                    title="다운로드"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
-        ))}
+                    <Download className="h-4 w-4" />
+                  </a>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className="rounded p-1 text-text-muted hover:bg-bg-cool hover:text-negative"
+                      title="삭제"
+                      onClick={() => deleteMutation.mutate(attachment.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -342,7 +441,8 @@ export default function FileUploadZone({
   if (embedded) {
     const showEmbeddedLabel =
       embeddedLabel.trim().length > 0 && items.length > 0;
-    const showEmbeddedHeader = showEmbeddedLabel || (!readOnly && showUploadAction);
+    const showEmbeddedHeader =
+      showEmbeddedLabel || (!readOnly && showUploadAction);
 
     return (
       <div
@@ -353,17 +453,17 @@ export default function FileUploadZone({
         onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        {showEmbeddedHeader && (
+        {showEmbeddedHeader ? (
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-medium text-text-secondary">
               {showEmbeddedLabel ? embeddedLabel : null}
-              {showEmbeddedLabel && (
+              {showEmbeddedLabel ? (
                 <span className="ml-1.5 rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
                   {items.length}
                 </span>
-              )}
+              ) : null}
             </span>
-            {!readOnly && showUploadAction && (
+            {!readOnly && showUploadAction ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -374,9 +474,9 @@ export default function FileUploadZone({
                 <Upload className="mr-1 h-3.5 w-3.5" />
                 {uploadLabel}
               </Button>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
         {fileList}
         {hiddenInput}
       </div>
@@ -396,11 +496,11 @@ export default function FileUploadZone({
       )}
       <Paperclip className="h-4 w-4 text-text-secondary" />
       <span className="font-medium text-text-dark">{title}</span>
-      {items.length > 0 && (
+      {items.length > 0 ? (
         <span className="rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
           {items.length}
         </span>
-      )}
+      ) : null}
     </button>
   );
 
@@ -410,7 +510,7 @@ export default function FileUploadZone({
 
   return (
     <div className="mt-3">
-      {compact && header}
+      {compact ? header : null}
 
       <div
         className={`${compact ? "mt-1 " : ""}rounded-lg border border-gray-border bg-white`}
@@ -418,20 +518,20 @@ export default function FileUploadZone({
         onDragOver={readOnly ? undefined : handleDragOver}
         onDrop={readOnly ? undefined : handleDrop}
       >
-        {!compact && (
+        {!compact ? (
           <div className="flex items-center justify-between border-b border-gray-border px-4 py-2.5">
             <div className="flex items-center gap-2">
               <Paperclip className="h-4 w-4 text-text-secondary" />
               <span className="text-sm font-medium text-text-dark">
                 {title}
               </span>
-              {items.length > 0 && (
+              {items.length > 0 ? (
                 <span className="rounded-full bg-bg-cool px-2 py-0.5 text-xs text-text-secondary">
                   {items.length}
                 </span>
-              )}
+              ) : null}
             </div>
-            {!readOnly && showUploadAction && (
+            {!readOnly && showUploadAction ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -442,11 +542,11 @@ export default function FileUploadZone({
                 <Upload className="mr-1 h-3.5 w-3.5" />
                 {uploadLabel}
               </Button>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
-        {compact && !readOnly && showUploadAction && (
+        {compact && !readOnly && showUploadAction ? (
           <div className="flex justify-end border-b border-gray-border px-4 py-2">
             <Button
               variant="ghost"
@@ -459,7 +559,7 @@ export default function FileUploadZone({
               {uploadLabel}
             </Button>
           </div>
-        )}
+        ) : null}
 
         {fileList}
       </div>

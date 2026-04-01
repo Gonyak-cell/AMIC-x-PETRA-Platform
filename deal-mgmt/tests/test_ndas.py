@@ -288,3 +288,105 @@ async def test_redline_non_docx_returns_400(client, async_session):
     )
     assert resp.status_code == 400
     assert "docx" in resp.json()["detail"].lower() or "DOCX" in resp.json()["detail"]
+
+
+async def test_create_nda_markup_from_attachment_id(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    nda_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    nda_id = nda_resp.json()["id"]
+
+    attachment_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        data={"entity_type": "NDA", "entity_id": nda_id},
+        files={
+            "file": ("buyer-nda.pdf", b"%PDF-1.4 buyer nda", "application/pdf"),
+        },
+    )
+    assert attachment_resp.status_code == 201
+    attachment_id = attachment_resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups",
+        data={
+            "attachment_id": attachment_id,
+            "version_label": "v1",
+            "version_date": "2026-03-01",
+        },
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["attachment_id"] == attachment_id
+    assert data["version_number"] == 1
+
+
+async def test_create_nda_markup_from_attachment_id_is_idempotent(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    nda_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    nda_id = nda_resp.json()["id"]
+
+    attachment_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        data={"entity_type": "NDA", "entity_id": nda_id},
+        files={
+            "file": ("buyer-nda.pdf", b"%PDF-1.4 buyer nda", "application/pdf"),
+        },
+    )
+    attachment_id = attachment_resp.json()["id"]
+
+    first = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups",
+        data={
+            "attachment_id": attachment_id,
+            "version_label": "v1",
+            "version_date": "2026-03-01",
+        },
+    )
+    second = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups",
+        data={
+            "attachment_id": attachment_id,
+            "version_label": "v1",
+            "version_date": "2026-03-01",
+        },
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["id"] == second.json()["id"]
+
+
+async def test_create_nda_markup_rejects_attachment_from_wrong_scope(client):
+    txn_id, buyer_id = await _create_txn_and_buyer(client)
+    nda_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas",
+        json={"buyer_candidate_id": buyer_id},
+    )
+    nda_id = nda_resp.json()["id"]
+
+    attachment_resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/attachments",
+        data={"entity_type": "MARKETING_MATERIAL", "entity_id": "TM"},
+        files={
+            "file": ("teaser.pdf", b"%PDF-1.4 teaser", "application/pdf"),
+        },
+    )
+    attachment_id = attachment_resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/ndas/{nda_id}/markups",
+        data={
+            "attachment_id": attachment_id,
+            "version_label": "v1",
+            "version_date": "2026-03-01",
+        },
+    )
+
+    assert resp.status_code == 409
+    assert "NDA attachment" in resp.json()["detail"]

@@ -1,6 +1,9 @@
-"""범용 첨부파일 API 테스트."""
+"""Tests for generic attachment upload APIs."""
+
+from __future__ import annotations
 
 import io
+from unittest.mock import MagicMock
 
 import pytest
 from httpx import AsyncClient
@@ -12,8 +15,6 @@ pytestmark = pytest.mark.anyio
 
 BASE = "/api/v1/transactions"
 
-
-# 확장자별 매직바이트 — _validate_magic_bytes 검증 통과용
 _MAGIC_BY_EXT: dict[str, bytes] = {
     ".pdf": b"%PDF-1.4 fake content",
     ".docx": b"PK\x03\x04 fake docx content",
@@ -27,7 +28,7 @@ _MAGIC_BY_EXT: dict[str, bytes] = {
 }
 
 
-async def _upload(client: AsyncClient, txn_id: str, **overrides) -> dict:
+async def _upload(client: AsyncClient, txn_id: str, **overrides):
     data = {
         "entity_type": overrides.get("entity_type", "NDA"),
     }
@@ -42,15 +43,12 @@ async def _upload(client: AsyncClient, txn_id: str, **overrides) -> dict:
     content = overrides.get("content", default_content)
     files = {"file": (filename, io.BytesIO(content), "application/octet-stream")}
 
-    resp = await client.post(f"{BASE}/{txn_id}/attachments", data=data, files=files)
-    return resp
-
-
-# ── 업로드 ────────────────────────────────────────────────
+    return await client.post(f"{BASE}/{txn_id}/attachments", data=data, files=files)
 
 
 async def test_upload_success(client: AsyncClient, transaction_id: str):
     resp = await _upload(client, transaction_id)
+
     assert resp.status_code == 201
     body = resp.json()
     assert body["entity_type"] == "NDA"
@@ -58,6 +56,24 @@ async def test_upload_success(client: AsyncClient, transaction_id: str):
     assert body["file_size_bytes"] > 0
     assert body["uploaded_by_email"] == "test@example.com"
     assert body["transaction_id"] == transaction_id
+    assert body["processing_status"] in {"PENDING", "SKIPPED", "FAILED"}
+    assert "processing_error" in body
+
+
+async def test_upload_binds_attachment_to_entity_scope(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    resp = await _upload(
+        client,
+        transaction_id,
+        entity_type="NDA",
+        entity_id="nda-1",
+        filename="buyer-nda.pdf",
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["entity_id"] == "nda-1"
 
 
 async def test_upload_with_description(client: AsyncClient, transaction_id: str):
@@ -99,25 +115,64 @@ async def test_upload_engagement_succeeds_even_if_refresh_fails(
     assert list_resp.json()["total"] == 1
 
 
+async def test_upload_enqueue_failure_does_not_fail_the_request(
+    client: AsyncClient,
+    transaction_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    delay_mock = MagicMock(side_effect=RuntimeError("queue down"))
+    monkeypatch.setattr(attachments_router.process_attachment_task, "delay", delay_mock)
+
+    resp = await _upload(client, transaction_id, entity_type="NDA")
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["processing_status"] == "FAILED"
+    assert "queue down" in (body["processing_error"] or "")
+
+
+async def test_retry_processing_requeues_failed_attachment(
+    client: AsyncClient,
+    transaction_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    initial_delay = MagicMock(side_effect=RuntimeError("queue down"))
+    monkeypatch.setattr(attachments_router.process_attachment_task, "delay", initial_delay)
+
+    upload_resp = await _upload(client, transaction_id, entity_type="NDA")
+    assert upload_resp.status_code == 201
+    attachment_id = upload_resp.json()["id"]
+
+    retry_delay = MagicMock()
+    monkeypatch.setattr(attachments_router.process_attachment_task, "delay", retry_delay)
+
+    retry_resp = await client.post(
+        f"{BASE}/{transaction_id}/attachments/{attachment_id}/retry-processing",
+    )
+
+    assert retry_resp.status_code == 200
+    body = retry_resp.json()
+    assert body["processing_status"] == "PENDING"
+    assert body["processing_error"] is None
+    retry_delay.assert_called_once_with(attachment_id)
+
+
 async def test_upload_invalid_entity_type(client: AsyncClient, transaction_id: str):
     resp = await _upload(client, transaction_id, entity_type="INVALID_TYPE")
     assert resp.status_code == 400
-    assert "유효하지 않은 entity_type" in resp.json()["detail"]
+    assert "Invalid entity_type" in resp.json()["detail"]
 
 
 async def test_upload_disallowed_extension(client: AsyncClient, transaction_id: str):
     resp = await _upload(client, transaction_id, filename="malware.exe")
     assert resp.status_code == 400
-    assert "허용되지 않는 파일 형식" in resp.json()["detail"]
+    assert "Unsupported file type" in resp.json()["detail"]
 
 
 async def test_upload_file_too_large(client: AsyncClient, transaction_id: str):
-    large_content = b"x" * (50 * 1024 * 1024 + 1)  # 50MB + 1 byte
+    large_content = b"x" * (50 * 1024 * 1024 + 1)
     resp = await _upload(client, transaction_id, content=large_content)
     assert resp.status_code == 413
-
-
-# ── 목록 조회 ─────────────────────────────────────────────
 
 
 async def test_list_all(client: AsyncClient, transaction_id: str):
@@ -142,30 +197,27 @@ async def test_list_filter_entity_type(client: AsyncClient, transaction_id: str)
     assert body["items"][0]["entity_type"] == "NDA"
 
 
-# ── 다운로드 ──────────────────────────────────────────────
-
-
 async def test_download(client: AsyncClient, transaction_id: str):
     pdf_content = b"%PDF-1.4 hello world pdf"
     upload_resp = await _upload(client, transaction_id, content=pdf_content)
-    att_id = upload_resp.json()["id"]
+    attachment_id = upload_resp.json()["id"]
 
-    resp = await client.get(f"{BASE}/{transaction_id}/attachments/{att_id}/download")
+    resp = await client.get(
+        f"{BASE}/{transaction_id}/attachments/{attachment_id}/download",
+    )
     assert resp.status_code == 200
     assert b"hello world pdf" in resp.content
 
 
-# ── 삭제 ──────────────────────────────────────────────────
-
-
 async def test_delete(client: AsyncClient, transaction_id: str):
     upload_resp = await _upload(client, transaction_id)
-    att_id = upload_resp.json()["id"]
+    attachment_id = upload_resp.json()["id"]
 
-    resp = await client.delete(f"{BASE}/{transaction_id}/attachments/{att_id}")
+    resp = await client.delete(
+        f"{BASE}/{transaction_id}/attachments/{attachment_id}",
+    )
     assert resp.status_code == 204
 
-    # 삭제 확인
     list_resp = await client.get(f"{BASE}/{transaction_id}/attachments")
     assert list_resp.json()["total"] == 0
 

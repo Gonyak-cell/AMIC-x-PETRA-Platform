@@ -8,6 +8,13 @@ export interface VdrSyncInfo {
   classification_status: string;
 }
 
+export type AttachmentProcessingStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "SYNCED"
+  | "FAILED"
+  | "SKIPPED";
+
 export interface Attachment {
   id: string;
   transaction_id: string;
@@ -16,6 +23,8 @@ export interface Attachment {
   file_name: string;
   file_size_bytes: number;
   mime_type: string;
+  processing_status: AttachmentProcessingStatus;
+  processing_error: string | null;
   description: string | null;
   uploaded_by_email: string | null;
   created_at: string;

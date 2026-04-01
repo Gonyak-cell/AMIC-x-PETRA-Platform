@@ -14,6 +14,7 @@ class NdaMarkupOut(BaseModel):
 
     id: uuid.UUID
     nda_id: uuid.UUID
+    attachment_id: uuid.UUID | None = None
     version_label: str
     version_number: int
     version_date: str

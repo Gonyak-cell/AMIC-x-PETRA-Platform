@@ -41,6 +41,13 @@ class Attachment(Base, TimestampMixin):
     vdr_document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("vdr_documents.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    processing_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="PENDING",
+        server_default="PENDING",
+    )
+    processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 메타 ──────────────────────────────────────────────
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -5,6 +5,7 @@ import FileUploadZone from "../FileUploadZone";
 
 const uploadMutateAsync = vi.fn();
 const deleteMutate = vi.fn();
+const retryMutate = vi.fn();
 
 vi.mock("@/modules/ma/hooks/useAttachments", () => ({
   useAttachments: () => ({ data: { items: [] } }),
@@ -16,6 +17,10 @@ vi.mock("@/modules/ma/hooks/useAttachments", () => ({
     mutate: deleteMutate,
     isPending: false,
   }),
+  useRetryAttachmentProcessing: () => ({
+    mutate: retryMutate,
+    isPending: false,
+  }),
   getAttachmentDownloadUrl: () => "#",
 }));
 
@@ -23,24 +28,34 @@ describe("FileUploadZone", () => {
   beforeEach(() => {
     uploadMutateAsync.mockReset();
     deleteMutate.mockReset();
-    uploadMutateAsync.mockResolvedValue({
-      id: "att-1",
-      transaction_id: "txn-1",
-      entity_type: "NDA",
-      entity_id: null,
-      file_name: "buyer-nda.pdf",
-      file_size_bytes: 128,
-      mime_type: "application/pdf",
-      description: null,
-      uploaded_by_email: "test@example.com",
-      created_at: "2026-03-25T00:00:00Z",
-      updated_at: "2026-03-25T00:00:00Z",
-      vdr_sync: null,
-    });
+    retryMutate.mockReset();
+    uploadMutateAsync.mockImplementation(
+      async ({
+        entityId,
+      }: {
+        entityId?: string;
+      }) => ({
+        id: "att-1",
+        transaction_id: "txn-1",
+        entity_type: "NDA",
+        entity_id: entityId ?? null,
+        file_name: "buyer-nda.pdf",
+        file_size_bytes: 128,
+        mime_type: "application/pdf",
+        processing_status: "PENDING",
+        processing_error: null,
+        description: null,
+        uploaded_by_email: "test@example.com",
+        created_at: "2026-03-25T00:00:00Z",
+        updated_at: "2026-03-25T00:00:00Z",
+        vdr_sync: null,
+      }),
+    );
   });
 
   it("uploads a dropped file from the empty dashed state and sets dropEffect", async () => {
     const onUploaded = vi.fn();
+    const resolveEntityId = vi.fn().mockResolvedValue("nda-1");
 
     render(
       <FileUploadZone
@@ -49,6 +64,7 @@ describe("FileUploadZone", () => {
         embedded
         emptyVariant="dashed"
         emptyTitle="NDA 없음"
+        resolveEntityId={resolveEntityId}
         onUploaded={onUploaded}
       />,
     );
@@ -71,10 +87,14 @@ describe("FileUploadZone", () => {
     fireEvent.drop(dropZone, { dataTransfer });
 
     await waitFor(() => {
+      expect(resolveEntityId).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
       expect(uploadMutateAsync).toHaveBeenCalledWith({
         file,
         entityType: "NDA",
-        entityId: undefined,
+        entityId: "nda-1",
       });
     });
 
@@ -82,6 +102,7 @@ describe("FileUploadZone", () => {
       expect(onUploaded).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "att-1",
+          entity_id: "nda-1",
           file_name: "buyer-nda.pdf",
         }),
         file,

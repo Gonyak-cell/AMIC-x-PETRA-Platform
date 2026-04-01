@@ -28,6 +28,8 @@ class AttachmentOut(BaseModel):
     file_name: str
     file_size_bytes: int
     mime_type: str
+    processing_status: str
+    processing_error: str | None = None
     description: str | None = None
     uploaded_by_email: str | None = None
     created_at: datetime

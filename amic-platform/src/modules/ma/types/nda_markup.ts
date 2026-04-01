@@ -3,6 +3,7 @@
 export interface NdaMarkup {
   id: string;
   nda_id: string;
+  attachment_id: string | null;
   version_label: string;
   version_number: number;
   version_date: string;

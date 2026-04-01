@@ -12,7 +12,6 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.blob_storage import blob_client
@@ -82,7 +81,6 @@ async def sync_attachment_to_vdr(
     transaction_id: uuid.UUID,
     attachment: Attachment,
     file_path: Path,
-    background_tasks: BackgroundTasks,
 ) -> VdrSyncResult | None:
     """첨부 파일을 VDR에 자동 연동한다.
 
@@ -204,7 +202,7 @@ async def sync_attachment_to_vdr(
             # 2차 심사 비동기 디스패치
             from app.services.vdr_classification_service import run_secondary_classification
 
-            background_tasks.add_task(run_secondary_classification, doc.id, transaction_id)
+            await run_secondary_classification(doc.id, transaction_id)
 
             return VdrSyncResult(
                 document=doc,

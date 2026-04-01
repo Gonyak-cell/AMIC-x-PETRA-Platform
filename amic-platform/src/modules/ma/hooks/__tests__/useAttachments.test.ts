@@ -23,7 +23,7 @@ describe("useAttachments helpers", () => {
       response: {
         status: 400,
         data: {
-          detail: "허용하지 않는 파일 형식입니다.",
+          detail: "지원하지 않는 파일 형식입니다.",
         },
       },
     };
@@ -40,11 +40,7 @@ describe("useAttachments helpers", () => {
     };
 
     expect(
-      buildAttachmentUploadErrorMessage(
-        err,
-        true,
-        "http://127.0.0.1:8003",
-      ),
+      buildAttachmentUploadErrorMessage(err, true, "http://127.0.0.1:8003"),
     ).toContain("개발 MA 백엔드");
   });
 
@@ -53,13 +49,13 @@ describe("useAttachments helpers", () => {
       response: {
         status: 400,
         data: {
-          detail: "허용하지 않는 파일 형식입니다.",
+          detail: "지원하지 않는 파일 형식입니다.",
         },
       },
     };
 
     expect(buildAttachmentUploadErrorMessage(err, true)).toBe(
-      "허용하지 않는 파일 형식입니다.",
+      "지원하지 않는 파일 형식입니다.",
     );
   });
 });

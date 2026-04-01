@@ -5,10 +5,22 @@ import { toast } from "sonner";
 
 import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
-import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
-import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  INLINE_INPUT_CLS,
+  Input,
+  Modal,
+  Select,
+} from "@/components/ui";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
+import NdaVersionPanel from "@/modules/ma/components/NdaVersionPanel";
 import BuyerTeaserSection from "@/modules/ma/components/buyers/BuyerTeaserSection";
+import ExtractionReviewModal from "@/modules/ma/components/extraction/ExtractionReviewModal";
+import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
+import { useAttachments } from "@/modules/ma/hooks/useAttachments";
 import {
   canStartExtractionFromUpload,
   useAttachmentExtractionFlow,
@@ -20,21 +32,10 @@ import {
   useNdas,
   useUpdateNda,
 } from "@/modules/ma/hooks/useNdas";
-import { NDA_STATUS_OPTIONS, NDA_TYPE_OPTIONS } from "@/modules/ma/constants";
 import type { Attachment } from "@/modules/ma/types/attachment";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import type { NdaMarkup } from "@/modules/ma/types/nda_markup";
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  INLINE_INPUT_CLS,
-  Input,
-  Modal,
-  Select,
-} from "@/components/ui";
 
 interface BuyerNdaSectionProps {
   txnId: string;
@@ -86,6 +87,9 @@ export default function BuyerNdaSection({
     null,
   );
   const [ndaForm, setNdaForm] = useState<NDACreate>(createInitialForm(buyer.id));
+  const [pendingNdaExtractions, setPendingNdaExtractions] = useState<
+    Record<string, { file: File }>
+  >({});
   const openUploadPickerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -100,6 +104,25 @@ export default function BuyerNdaSection({
     [ndas],
   );
   const hasNdas = sortedNdas.length > 0;
+  const buyerNdaIds = useMemo(
+    () => sortedNdas.map((nda) => nda.id),
+    [sortedNdas],
+  );
+
+  const { data: ndaAttachmentsData } = useAttachments(txnId, "NDA", undefined, {
+    refetchWhileProcessing: true,
+  });
+  const buyerNdaAttachments = useMemo(() => {
+    if (buyerNdaIds.length === 0) {
+      return [] as Attachment[];
+    }
+
+    const ndaIdSet = new Set(buyerNdaIds);
+    return (ndaAttachmentsData?.items ?? []).filter(
+      (attachment) =>
+        attachment.entity_id !== null && ndaIdSet.has(attachment.entity_id),
+    );
+  }, [buyerNdaIds, ndaAttachmentsData?.items]);
 
   const handleStatusChange = useCallback(
     (ndaId: string, status: NdaStatus) => {
@@ -121,75 +144,147 @@ export default function BuyerNdaSection({
     [updateNda],
   );
 
+  const ensureBuyerNdaId = useCallback(async () => {
+    const existing = sortedNdas[0];
+    if (existing) {
+      return existing.id;
+    }
+
+    const created = await createNda.mutateAsync({
+      party_type: "BUYER",
+      buyer_candidate_id: buyer.id,
+      counterparty_name: buyer.company_name,
+      nda_type: "MUTUAL",
+    });
+    return created.id;
+  }, [buyer.company_name, buyer.id, createNda, sortedNdas]);
+
   const handleNdaUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
-      let targetNdaId: string | null = null;
-
       try {
-        const targetNda =
-          sortedNdas[0] ??
-          (await createNda.mutateAsync({
-            party_type: "BUYER",
-            buyer_candidate_id: buyer.id,
-            counterparty_name: buyer.company_name,
-            nda_type: "MUTUAL",
-          }));
-        targetNdaId = targetNda.id;
-
+        const targetNdaId = attachment.entity_id ?? (await ensureBuyerNdaId());
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("attachment_id", attachment.id);
         formData.append("version_label", buildUploadedVersionLabel(file.name));
         formData.append("version_date", getLocalDateString());
-        formData.append("changes_summary", "구매자 상세 NDA 업로드");
+        formData.append("changes_summary", "Buyer detail NDA upload");
 
         await maApi.post<NdaMarkup>(
-          `/transactions/${txnId}/ndas/${targetNda.id}/markups`,
+          `/transactions/${txnId}/ndas/${targetNdaId}/markups`,
           formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          },
         );
 
         await queryClient.invalidateQueries({
-          queryKey: ["ma", "transactions", txnId, "ndas", targetNda.id, "markups"],
+          queryKey: ["ma", "transactions", txnId, "ndas", targetNdaId, "markups"],
         });
       } catch (error) {
         toast.error(
           extractApiError(
             error,
-            "파일은 업로드되었지만 NDA 버전 등록에는 실패했습니다.",
+            "파일은 업로드됐지만 NDA 버전 생성에는 실패했습니다.",
           ),
         );
         return;
       }
 
-      await startExtractionFromUpload(
-        {
-          attachment,
-          file,
-          docCategoryHint: "NDA",
-          reviewContext: {
-            source: "buyer-nda",
-            buyerCandidateId: buyer.id,
+      if (canStartExtractionFromUpload(attachment, file)) {
+        await startExtractionFromUpload(
+          {
+            attachment,
+            file,
+            docCategoryHint: "NDA",
+            reviewContext: {
+              source: "buyer-nda",
+              buyerCandidateId: buyer.id,
+            },
           },
-        },
-        {
-          successToast: targetNdaId ? "NDA OCR 분석을 시작했습니다." : undefined,
-          failureToast: "파일은 업로드되었지만 OCR 시작에는 실패했습니다.",
-          failureToastVariant: "warning",
-        },
-      );
+          {
+            successToast: "NDA OCR 분석을 시작했습니다.",
+            failureToast:
+              "파일은 업로드됐지만 OCR 시작에는 실패했습니다.",
+            failureToastVariant: "warning",
+          },
+        );
+        return;
+      }
+
+      setPendingNdaExtractions((current) => ({
+        ...current,
+        [attachment.id]: { file },
+      }));
     },
-    [
-      buyer.company_name,
-      buyer.id,
-      createNda,
-      queryClient,
-      sortedNdas,
-      startExtractionFromUpload,
-      txnId,
-    ],
+    [buyer.id, ensureBuyerNdaId, queryClient, startExtractionFromUpload, txnId],
   );
+
+  useEffect(() => {
+    const pendingEntries = Object.entries(pendingNdaExtractions);
+    if (pendingEntries.length === 0) {
+      return;
+    }
+
+    const latestById = new Map(
+      buyerNdaAttachments.map((attachment) => [attachment.id, attachment]),
+    );
+    const resolvedIds: string[] = [];
+
+    for (const [attachmentId, pendingUpload] of pendingEntries) {
+      const latestAttachment = latestById.get(attachmentId);
+      if (!latestAttachment) {
+        continue;
+      }
+
+      if (canStartExtractionFromUpload(latestAttachment, pendingUpload.file)) {
+        resolvedIds.push(attachmentId);
+        void startExtractionFromUpload(
+          {
+            attachment: latestAttachment,
+            file: pendingUpload.file,
+            docCategoryHint: "NDA",
+            reviewContext: {
+              source: "buyer-nda",
+              buyerCandidateId: buyer.id,
+            },
+          },
+          {
+            successToast: "NDA OCR 분석을 시작했습니다.",
+            failureToast:
+              "파일은 업로드됐지만 OCR 시작에는 실패했습니다.",
+            failureToastVariant: "warning",
+          },
+        );
+        continue;
+      }
+
+      if (latestAttachment.processing_status === "FAILED") {
+        resolvedIds.push(attachmentId);
+        toast.warning(
+          latestAttachment.processing_error ??
+            "NDA 파일은 업로드됐지만 후속 VDR/OCR 처리에는 실패했습니다. 첨부 목록에서 재시도해 주세요.",
+        );
+      } else if (latestAttachment.processing_status === "SKIPPED") {
+        resolvedIds.push(attachmentId);
+        toast.info(
+          latestAttachment.processing_error ??
+            "NDA 파일은 업로드됐지만 후속 VDR/OCR 처리는 생략되었습니다.",
+        );
+      }
+    }
+
+    if (resolvedIds.length > 0) {
+      setPendingNdaExtractions((current) => {
+        const next = { ...current };
+        for (const attachmentId of resolvedIds) {
+          delete next[attachmentId];
+        }
+        return next;
+      });
+    }
+  }, [
+    buyer.id,
+    buyerNdaAttachments,
+    pendingNdaExtractions,
+    startExtractionFromUpload,
+  ]);
 
   const handleTeaserUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
@@ -220,7 +315,7 @@ export default function BuyerNdaSection({
           },
         });
       } catch {
-        // Mutation hook already surfaces the error.
+        // The upload/material hooks already show their own error toasts.
       }
     },
     [buyer.company_name, createMarketingMaterial, startExtractionFromUpload],
@@ -405,6 +500,8 @@ export default function BuyerNdaSection({
         <FileUploadZone
           txnId={txnId}
           entityType="NDA"
+          entityIds={buyerNdaIds}
+          resolveEntityId={ensureBuyerNdaId}
           embedded
           readOnly={!canWrite}
           emptyVariant="dashed"
@@ -413,13 +510,13 @@ export default function BuyerNdaSection({
           emptyTitle={hasNdas ? undefined : "NDA 없음"}
           emptyDescription={
             hasNdas
-              ? "NDA PDF를 여기에 드롭하거나 클릭하여 추가하세요."
+              ? "NDA PDF를 여기에 드롭하거나 클릭해 추가하세요."
               : `${buyer.company_name}와 체결한 NDA를 등록하세요.`
           }
           emptyHint={
             hasNdas
-              ? "PDF 업로드는 OCR 검토를 열고, 다른 파일은 첨부만 저장됩니다."
-              : "NDA PDF를 이곳에 드롭하면 OCR로 검토값을 자동 입력합니다. OCR은 PDF 업로드에서 VDR 동기화 완료 후 시작되며, 다른 파일은 첨부만 저장됩니다."
+              ? "PDF 업로드 후 NDA 버전이 생성되고, 후속 VDR/OCR 처리는 상태에 따라 이어집니다."
+              : "NDA PDF를 드롭하면 업로드 후 NDA 버전이 생성되고, 후속 VDR/OCR 처리는 상태에 따라 이어집니다."
           }
           embeddedSeparator={hasNdas}
           showUploadAction={false}
@@ -437,11 +534,7 @@ export default function BuyerNdaSection({
         onUploaded={handleTeaserUploaded}
       />
 
-      <Modal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        title="NDA 추가"
-      >
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="NDA 추가">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -518,7 +611,7 @@ export default function BuyerNdaSection({
         </form>
       </Modal>
 
-      {versionPanelNdaId && (
+      {versionPanelNdaId ? (
         <NdaVersionPanel
           open={Boolean(versionPanelNdaId)}
           onClose={() => setVersionPanelNdaId(null)}
@@ -527,7 +620,7 @@ export default function BuyerNdaSection({
           ndaLabel={buyer.company_name}
           canWrite={canWrite}
         />
-      )}
+      ) : null}
 
       <ExtractionReviewModal
         txnId={txnId}

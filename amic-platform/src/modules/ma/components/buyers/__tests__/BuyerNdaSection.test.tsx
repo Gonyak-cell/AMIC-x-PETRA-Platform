@@ -6,10 +6,11 @@ import { maApi } from "@/api/maClient";
 import BuyerNdaSection from "../BuyerNdaSection";
 
 const mockUseNdas = vi.fn();
+const mockUseAttachments = vi.fn();
 const uploadMutateAsync = vi.fn();
-const startExtractionFromUpload = vi.fn();
 const createNdaMutateAsync = vi.fn();
 const createMarketingMaterialMutateAsync = vi.fn();
+const startExtractionFromUpload = vi.fn();
 const invalidateQueries = vi.fn();
 const teaserUploadHandlerState = vi.hoisted(() => ({
   handler: null as
@@ -44,20 +45,26 @@ vi.mock("@/modules/ma/hooks/useNdas", () => ({
 }));
 
 vi.mock("@/modules/ma/hooks/useAttachments", () => ({
-  useAttachments: () => ({ data: { items: [] } }),
+  useAttachments: () => mockUseAttachments(),
   useUploadAttachment: () => ({
     mutateAsync: uploadMutateAsync,
     isPending: false,
   }),
   useDeleteAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useRetryAttachmentProcessing: () => ({ mutate: vi.fn(), isPending: false }),
   getAttachmentDownloadUrl: () => "#",
 }));
 
 vi.mock("@/modules/ma/hooks/useAttachmentExtractionFlow", () => ({
   canStartExtractionFromUpload: (
-    attachment: { mime_type?: string; vdr_sync?: { vdr_document_id?: string } | null },
+    attachment: {
+      mime_type?: string;
+      processing_status?: string;
+      vdr_sync?: { vdr_document_id?: string } | null;
+    },
     file: File,
   ) =>
+    attachment.processing_status === "SYNCED" &&
     Boolean(attachment.vdr_sync?.vdr_document_id) &&
     (attachment.mime_type === "application/pdf" ||
       file.type === "application/pdf" ||
@@ -123,33 +130,62 @@ const buyer = {
   updated_at: "2026-03-25T00:00:00Z",
 } as const;
 
+function makeAttachment(overrides?: Record<string, unknown>) {
+  return {
+    id: "att-1",
+    transaction_id: "txn-1",
+    entity_type: "NDA",
+    entity_id: "nda-1",
+    file_name: "buyer-nda.pdf",
+    file_size_bytes: 128,
+    mime_type: "application/pdf",
+    processing_status: "SYNCED",
+    processing_error: null,
+    description: null,
+    uploaded_by_email: "test@example.com",
+    created_at: "2026-03-25T00:00:00Z",
+    updated_at: "2026-03-25T00:00:00Z",
+    vdr_sync: {
+      vdr_document_id: "vdr-1",
+      folder_name: "NDA",
+      category: "NDA",
+      classification_status: "READY",
+    },
+    ...overrides,
+  };
+}
+
 describe("BuyerNdaSection", () => {
   beforeEach(() => {
     mockUseNdas.mockReturnValue({ data: [] });
+    mockUseAttachments.mockReturnValue({ data: { items: [] } });
     uploadMutateAsync.mockReset();
-    startExtractionFromUpload.mockReset();
     createNdaMutateAsync.mockReset();
     createMarketingMaterialMutateAsync.mockReset();
+    startExtractionFromUpload.mockReset();
     invalidateQueries.mockReset();
     teaserUploadHandlerState.handler = null;
     vi.mocked(toast.error).mockReset();
+    vi.mocked(toast.warning).mockReset();
+    vi.mocked(toast.info).mockReset();
 
-    vi.spyOn(maApi, "post").mockReset();
+    uploadMutateAsync.mockImplementation(
+      async ({
+        entityType,
+        entityId,
+        file,
+      }: {
+        entityType: string;
+        entityId?: string;
+        file: File;
+      }) =>
+        makeAttachment({
+          entity_type: entityType,
+          entity_id: entityId ?? null,
+          file_name: file.name,
+        }),
+    );
 
-    uploadMutateAsync.mockResolvedValue({
-      id: "att-1",
-      transaction_id: "txn-1",
-      entity_type: "NDA",
-      entity_id: null,
-      file_name: "buyer-nda.pdf",
-      file_size_bytes: 128,
-      mime_type: "application/pdf",
-      description: null,
-      uploaded_by_email: "test@example.com",
-      created_at: "2026-03-25T00:00:00Z",
-      updated_at: "2026-03-25T00:00:00Z",
-      vdr_sync: null,
-    });
     createNdaMutateAsync.mockResolvedValue({
       id: "nda-1",
       transaction_id: "txn-1",
@@ -165,6 +201,7 @@ describe("BuyerNdaSection", () => {
       created_at: "2026-03-25T00:00:00Z",
       updated_at: "2026-03-25T00:00:00Z",
     });
+
     createMarketingMaterialMutateAsync.mockResolvedValue({
       id: "tm-1",
       transaction_id: "txn-1",
@@ -185,12 +222,14 @@ describe("BuyerNdaSection", () => {
       slide_count: null,
       pipeline_metrics: null,
       distribution_eligible: true,
-      distributed_to: ["ATU?뚰듃?덉뒪"],
+      distributed_to: ["ATU파트너스"],
       distributed_at: "2026-03-25T00:00:00Z",
       created_by_email: "test@example.com",
       created_at: "2026-03-25T00:00:00Z",
       updated_at: "2026-03-25T00:00:00Z",
     });
+
+    vi.spyOn(maApi, "post").mockReset();
     vi.spyOn(maApi, "post").mockResolvedValue({
       data: {
         id: "markup-1",
@@ -198,7 +237,7 @@ describe("BuyerNdaSection", () => {
     });
   });
 
-  it("creates an NDA record and first version after a dropped upload", async () => {
+  it("creates an NDA record, uploads against nda.id, and creates the first version", async () => {
     render(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
 
     const dropZone = screen.getByRole("button", { name: /NDA 없음/ });
@@ -216,14 +255,6 @@ describe("BuyerNdaSection", () => {
     fireEvent.drop(dropZone, { dataTransfer });
 
     await waitFor(() => {
-      expect(uploadMutateAsync).toHaveBeenCalledWith({
-        file,
-        entityType: "NDA",
-        entityId: undefined,
-      });
-    });
-
-    await waitFor(() => {
       expect(createNdaMutateAsync).toHaveBeenCalledWith({
         party_type: "BUYER",
         buyer_candidate_id: "buyer-1",
@@ -233,14 +264,24 @@ describe("BuyerNdaSection", () => {
     });
 
     await waitFor(() => {
+      expect(uploadMutateAsync).toHaveBeenCalledWith({
+        file,
+        entityType: "NDA",
+        entityId: "nda-1",
+      });
+    });
+
+    await waitFor(() => {
       expect(maApi.post).toHaveBeenCalledWith(
         "/transactions/txn-1/ndas/nda-1/markups",
         expect.any(FormData),
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        },
       );
     });
+
+    const formData = vi.mocked(maApi.post).mock.calls[0]?.[1] as FormData;
+    expect(formData.get("attachment_id")).toBe("att-1");
+    expect(formData.get("version_label")).toBe("buyer-nda");
+    expect(formData.get("version_date")).toBeTruthy();
 
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({
@@ -253,6 +294,7 @@ describe("BuyerNdaSection", () => {
         {
           attachment: expect.objectContaining({
             id: "att-1",
+            entity_id: "nda-1",
             file_name: "buyer-nda.pdf",
           }),
           file,
@@ -264,14 +306,14 @@ describe("BuyerNdaSection", () => {
         },
         {
           successToast: "NDA OCR 분석을 시작했습니다.",
-          failureToast: "파일은 업로드되었지만 OCR 시작에는 실패했습니다.",
+          failureToast: "파일은 업로드됐지만 OCR 시작에는 실패했습니다.",
           failureToastVariant: "warning",
         },
       );
     });
   });
 
-  it("reuses the existing NDA and only adds a new version", async () => {
+  it("reuses the existing NDA instead of creating a second one", async () => {
     mockUseNdas.mockReturnValue({
       data: [
         {
@@ -306,18 +348,23 @@ describe("BuyerNdaSection", () => {
     });
 
     await waitFor(() => {
+      expect(uploadMutateAsync).toHaveBeenCalledWith({
+        file,
+        entityType: "NDA",
+        entityId: "nda-existing",
+      });
+    });
+
+    await waitFor(() => {
       expect(maApi.post).toHaveBeenCalledWith(
         "/transactions/txn-1/ndas/nda-existing/markups",
         expect.any(FormData),
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        },
       );
     });
   });
 
-  it("does not start OCR when NDA version registration fails after upload", async () => {
-    vi.spyOn(maApi, "post").mockRejectedValueOnce({
+  it("keeps the upload successful but stops before OCR when markup creation fails", async () => {
+    vi.mocked(maApi.post).mockRejectedValueOnce({
       response: { status: 500 },
     });
 
@@ -342,15 +389,11 @@ describe("BuyerNdaSection", () => {
     });
 
     await waitFor(() => {
-      expect(createNdaMutateAsync).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
       expect(startExtractionFromUpload).not.toHaveBeenCalled();
     });
 
     expect(toast.error).toHaveBeenCalledWith(
-      "파일은 업로드되었지만 NDA 버전 등록에는 실패했습니다. (HTTP 500)",
+      expect.stringContaining("NDA 버전 생성에는 실패했습니다."),
     );
   });
 
@@ -370,6 +413,8 @@ describe("BuyerNdaSection", () => {
         file_name: "atu-teaser.pdf",
         file_size_bytes: 256,
         mime_type: "application/pdf",
+        processing_status: "PENDING",
+        processing_error: null,
         description: null,
         uploaded_by_email: "test@example.com",
         created_at: "2026-03-25T00:00:00Z",
@@ -405,12 +450,17 @@ describe("BuyerNdaSection", () => {
         file_name: "atu-teaser.pdf",
         file_size_bytes: 256,
         mime_type: "application/pdf",
+        processing_status: "SYNCED",
+        processing_error: null,
         description: null,
         uploaded_by_email: "test@example.com",
         created_at: "2026-03-25T00:00:00Z",
         updated_at: "2026-03-25T00:00:00Z",
         vdr_sync: {
           vdr_document_id: "vdr-1",
+          folder_name: "TM",
+          category: "TM",
+          classification_status: "READY",
         },
       },
       file,
@@ -428,6 +478,96 @@ describe("BuyerNdaSection", () => {
         marketingDocType: "TM",
         marketingMaterialId: "tm-1",
       },
+    });
+  });
+
+  it("starts OCR later when the uploaded NDA attachment finishes syncing", async () => {
+    let currentAttachmentItems: ReturnType<typeof makeAttachment>[] = [];
+    let currentNdas: Array<Record<string, unknown>> = [];
+    mockUseNdas.mockImplementation(() => ({ data: currentNdas }));
+    uploadMutateAsync.mockResolvedValueOnce(
+      makeAttachment({
+        processing_status: "PENDING",
+        vdr_sync: null,
+      }),
+    );
+    mockUseAttachments.mockImplementation(() => ({
+      data: { items: currentAttachmentItems },
+    }));
+
+    const { rerender } = render(
+      <BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />,
+    );
+
+    const dropZone = screen.getByRole("button", { name: /NDA 없음/ });
+    const file = new File(["pdf-content"], "buyer-nda.pdf", {
+      type: "application/pdf",
+    });
+    const dataTransfer = {
+      files: [file],
+      types: ["Files"],
+      dropEffect: "none",
+    };
+
+    fireEvent.dragEnter(dropZone, { dataTransfer });
+    fireEvent.dragOver(dropZone, { dataTransfer });
+    fireEvent.drop(dropZone, { dataTransfer });
+
+    await waitFor(() => {
+      expect(startExtractionFromUpload).not.toHaveBeenCalled();
+    });
+
+    currentAttachmentItems = [
+      makeAttachment({
+        processing_status: "SYNCED",
+        entity_id: "nda-1",
+        vdr_sync: {
+          vdr_document_id: "vdr-1",
+          folder_name: "NDA",
+          category: "NDA",
+          classification_status: "READY",
+        },
+      }),
+    ];
+    currentNdas = [
+      {
+        id: "nda-1",
+        transaction_id: "txn-1",
+        party_type: "BUYER",
+        buyer_candidate_id: "buyer-1",
+        counterparty_name: "ATU파트너스",
+        nda_type: "MUTUAL",
+        status: "DRAFT",
+        sent_at: null,
+        signed_at: null,
+        expires_at: null,
+        notes: null,
+        created_at: "2026-03-25T00:00:00Z",
+        updated_at: "2026-03-25T00:00:00Z",
+      },
+    ];
+    rerender(<BuyerNdaSection txnId="txn-1" canWrite buyer={buyer} />);
+
+    await waitFor(() => {
+      expect(startExtractionFromUpload).toHaveBeenCalledWith(
+        {
+          attachment: expect.objectContaining({
+            id: "att-1",
+            processing_status: "SYNCED",
+          }),
+          file,
+          docCategoryHint: "NDA",
+          reviewContext: {
+            source: "buyer-nda",
+            buyerCandidateId: "buyer-1",
+          },
+        },
+        {
+          successToast: "NDA OCR 분석을 시작했습니다.",
+          failureToast: "파일은 업로드됐지만 OCR 시작에는 실패했습니다.",
+          failureToastVariant: "warning",
+        },
+      );
     });
   });
 });

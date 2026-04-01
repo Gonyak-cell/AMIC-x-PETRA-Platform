@@ -21,6 +21,12 @@ class NdaMarkup(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
+    attachment_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("attachments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # 버전 관리
     version_label: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "v2 - 매수인 수정본"

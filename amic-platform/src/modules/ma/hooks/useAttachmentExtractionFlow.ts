@@ -42,6 +42,7 @@ export function canStartExtractionFromUpload(
   file: File,
 ) {
   return (
+    attachment.processing_status === "SYNCED" &&
     isPdfUpload(attachment, file) &&
     Boolean(attachment.vdr_sync?.vdr_document_id)
   );
@@ -68,14 +69,14 @@ export function useAttachmentExtractionFlow(txnId: string) {
       options: StartExtractionToastOptions = {},
     ) => {
       if (!isPdfUpload(attachment, file)) {
-        toast.info("PDF 업로드만 OCR 자동기재를 지원합니다.");
+        toast.info("PDF 업로드만 OCR 자동 등록을 지원합니다.");
         return null;
       }
 
       const vdrDocumentId = attachment.vdr_sync?.vdr_document_id;
       if (!vdrDocumentId) {
         toast.info(
-          "VDR 동기화가 완료된 파일만 OCR 자동기재를 실행할 수 있습니다.",
+          "VDR 동기화가 완료된 파일만 OCR 자동 등록을 시작할 수 있습니다.",
         );
         return null;
       }
