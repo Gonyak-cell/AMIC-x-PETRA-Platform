@@ -317,9 +317,14 @@ export default function ExtractionReviewModal({
       }
     }
 
-    if (nextTargetModel === "marketing_material" && !currentExtraction.target_id) {
-      nextCreateNew = true;
-      nextTargetId = undefined;
+    if (nextTargetModel === "marketing_material") {
+      if (reviewContext?.marketingMaterialId) {
+        nextCreateNew = false;
+        nextTargetId = reviewContext.marketingMaterialId;
+      } else if (!currentExtraction.target_id) {
+        nextCreateNew = true;
+        nextTargetId = undefined;
+      }
     }
 
     setEditedData(nextEditedData);
