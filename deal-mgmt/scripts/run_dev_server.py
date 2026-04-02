@@ -31,6 +31,7 @@ default_db_path = PROJECT_ROOT / "generated" / "deal_mgmt_dev.db"
 default_db_path.parent.mkdir(parents=True, exist_ok=True)
 
 REQUIRED_MARKETING_MATERIAL_COLUMNS = frozenset({"source_mode", "attachment_id"})
+REQUIRED_ATTACHMENT_COLUMNS = frozenset({"processing_status", "processing_error"})
 
 os.environ.setdefault("ENV", "local")
 os.environ.setdefault("DEBUG", "true")
@@ -73,6 +74,14 @@ def _get_local_dev_rebuild_reason(db_path: Path) -> str | None:
             )
             if missing_marketing_columns:
                 return f"marketing_materials is missing required columns: {', '.join(missing_marketing_columns)}"
+
+        if "attachments" in tables:
+            attachment_columns = set(_get_sqlite_columns(conn, "attachments"))
+            missing_attachment_columns = sorted(
+                REQUIRED_ATTACHMENT_COLUMNS - attachment_columns,
+            )
+            if missing_attachment_columns:
+                return f"attachments is missing required columns: {', '.join(missing_attachment_columns)}"
 
         if "ndas" in tables:
             nda_columns = _get_sqlite_columns(conn, "ndas")

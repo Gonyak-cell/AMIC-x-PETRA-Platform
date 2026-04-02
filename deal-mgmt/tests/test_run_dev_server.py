@@ -63,6 +63,31 @@ def test_get_local_dev_rebuild_reason_accepts_current_marketing_material_schema(
     assert _get_local_dev_rebuild_reason(db_path) is None
 
 
+def test_get_local_dev_rebuild_reason_detects_stale_attachment_columns(tmp_path):
+    db_path = tmp_path / "stale-attachments.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL
+        );
+        """,
+    )
+
+    reason = _get_local_dev_rebuild_reason(db_path)
+
+    assert reason is not None
+    assert "attachments" in reason
+    assert "processing_status" in reason
+    assert "processing_error" in reason
+
+
 def test_get_local_dev_rebuild_reason_detects_legacy_nda_schema(tmp_path):
     db_path = tmp_path / "legacy-nda.db"
     _write_db(

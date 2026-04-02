@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
   DistributionUpdate,
@@ -11,6 +10,11 @@ import type {
   MarketingMaterialSourceRouting,
   UploadedMarketingMaterialInput,
 } from "@/modules/ma/types/marketing_material";
+import {
+  buildUploadErrorMessage,
+  DEV_LOCAL_AUTH_ENABLED,
+  DEV_MA_PROXY_TARGET,
+} from "./uploadErrors";
 
 const QK = (txnId: string) => [
   "ma",
@@ -49,12 +53,15 @@ function getUploadedMarketingMaterialLabel(docType: MarketingDocType) {
 export function buildMarketingMaterialUploadErrorMessage(
   err: unknown,
   docType: MarketingDocType,
+  isLocalDev: boolean = DEV_LOCAL_AUTH_ENABLED,
+  proxyTarget: string = DEV_MA_PROXY_TARGET,
 ) {
   const label = getUploadedMarketingMaterialLabel(docType);
-  return extractApiError(
-    err,
-    `${label} 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.`,
-  );
+  return buildUploadErrorMessage(err, {
+    fallback: `${label} 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.`,
+    isLocalDev,
+    proxyTarget,
+  });
 }
 
 export function useMarketingMaterials(txnId: string, active = true) {
