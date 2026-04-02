@@ -7,6 +7,7 @@ import type {
   DistributionUpdate,
   MarketingMaterialSourceRouting,
   MarketingDocType,
+  UploadedMarketingMaterialInput,
 } from "@/modules/ma/types/marketing_material";
 
 const QK = (txnId: string) => [
@@ -95,6 +96,56 @@ export function useCreateMarketingMaterial(txnId: string) {
     },
     onError: () => {
       toast.error("마케팅 자료 생성에 실패했습니다.");
+    },
+  });
+}
+
+export function useUploadMarketingMaterial(txnId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      file,
+      docType,
+      title,
+      projectCode,
+      distributedTo,
+      distributedAt,
+    }: UploadedMarketingMaterialInput) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("doc_type", docType);
+      formData.append("title", title);
+      if (projectCode) {
+        formData.append("project_code", projectCode);
+      }
+      for (const recipient of distributedTo ?? []) {
+        formData.append("distributed_to", recipient);
+      }
+      if (distributedAt) {
+        formData.append("distributed_at", distributedAt);
+      }
+
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/marketing-materials/uploaded`,
+        formData,
+      );
+      return data as MarketingMaterial;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: QK(txnId) });
+      qc.invalidateQueries({
+        queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
+      });
+      const label =
+        data.doc_type === "TM"
+          ? "Teaser"
+          : data.doc_type === "DM"
+            ? "DM"
+            : "IM";
+      toast.success(`${label} 업로드가 등록되었습니다.`);
+    },
+    onError: () => {
+      toast.error("Teaser 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     },
   });
 }

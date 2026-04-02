@@ -81,6 +81,21 @@ async def test_upload_binds_attachment_to_entity_scope(
     assert resp.json()["entity_id"] == "nda-1"
 
 
+async def test_upload_rejects_unbound_marketing_material_attachment(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    resp = await _upload(
+        client,
+        transaction_id,
+        entity_type="MARKETING_MATERIAL",
+        filename="teaser.pdf",
+    )
+
+    assert resp.status_code == 400
+    assert "MARKETING_MATERIAL attachments must be bound" in resp.json()["detail"]
+
+
 async def test_upload_with_description(client: AsyncClient, transaction_id: str):
     resp = await _upload(client, transaction_id, description="NDA 초안")
     assert resp.status_code == 201

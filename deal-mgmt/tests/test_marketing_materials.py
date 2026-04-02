@@ -200,6 +200,100 @@ async def test_create_tm_marks_material_failed_when_task_queue_is_unavailable(
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_creates_material_and_bound_attachment(
+    client,
+    _txn,
+    async_session,
+):
+    import uuid
+
+    from sqlalchemy import select
+
+    from app.models.attachment import Attachment
+    from app.models.marketing_material import MarketingMaterial
+
+    txn_id = _txn["id"]
+    pdf_bytes = b"%PDF-1.4\nuploaded teaser\n"
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Uploaded teaser memo",
+            "distributed_to": "Buyer A",
+            "distributed_at": "2026-03-01T09:00:00+09:00",
+        },
+        files={"file": ("uploaded-tm.pdf", pdf_bytes, "application/pdf")},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["doc_type"] == "TM"
+    assert data["source_mode"] == "UPLOADED"
+    assert data["status"] == "READY"
+    assert data["attachment_id"] is not None
+
+    material_result = await async_session.execute(
+        select(MarketingMaterial).where(MarketingMaterial.id == uuid.UUID(data["id"]))
+    )
+    material = material_result.scalar_one()
+    assert material.attachment_id is not None
+
+    attachment_result = await async_session.execute(
+        select(Attachment).where(Attachment.id == material.attachment_id)
+    )
+    attachment = attachment_result.scalar_one()
+    assert attachment.entity_type == "MARKETING_MATERIAL"
+    assert attachment.entity_id == str(material.id)
+
+
+@pytest.mark.asyncio
+async def test_upload_tm_rolls_back_when_material_finalize_fails(
+    client,
+    _txn,
+    async_session,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy import select
+
+    from app.models.attachment import Attachment
+    from app.models.marketing_material import MarketingMaterial
+    from app.services import marketing_material_service
+
+    def _raise_finalize(*args, **kwargs):
+        raise RuntimeError("finalize failed")
+
+    monkeypatch.setattr(
+        marketing_material_service,
+        "_apply_uploaded_material_fields",
+        _raise_finalize,
+    )
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Broken teaser memo",
+        },
+        files={"file": ("broken-teaser.pdf", b"%PDF-1.4\nbroken teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    assert "material_finalize" in resp.json()["detail"]
+
+    material_result = await async_session.execute(
+        select(MarketingMaterial).where(MarketingMaterial.title == "Broken teaser memo")
+    )
+    assert material_result.scalars().first() is None
+
+    attachment_result = await async_session.execute(
+        select(Attachment).where(Attachment.file_name == "broken-teaser.pdf")
+    )
+    assert attachment_result.scalars().first() is None
+
+
+@pytest.mark.asyncio
 async def test_create_uploaded_tm_registers_attachment_without_queue(
     client,
     _txn,

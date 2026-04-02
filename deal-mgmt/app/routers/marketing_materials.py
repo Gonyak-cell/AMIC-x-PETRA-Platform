@@ -6,7 +6,7 @@ import unicodedata
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -96,6 +96,35 @@ async def create_marketing_material(
             db, txn_id, body, created_by_email=claims.email
         )
     return await marketing_material_service.create_marketing_material(db, txn_id, body, created_by_email=claims.email)
+
+
+@router.post("/uploaded", response_model=MarketingMaterialOut, status_code=status.HTTP_201_CREATED)
+async def upload_marketing_material(
+    txn_id: uuid.UUID,
+    file: UploadFile = File(...),
+    doc_type: MarketingDocType = Form(...),
+    title: str = Form(...),
+    project_code: str | None = Form(None),
+    distributed_to: list[str] | None = Form(None),
+    distributed_at: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+):
+    txn = await _get_and_authorize_txn(db, txn_id, claims)
+    return await marketing_material_service.create_uploaded_marketing_material_from_file(
+        db,
+        txn_id,
+        file=file,
+        doc_type=doc_type,
+        title=title,
+        project_code=project_code,
+        distributed_to=distributed_to,
+        distributed_at=distributed_at,
+        created_by_email=claims.email,
+        uploader_role=claims.role,
+        lead_advisor_email=txn.lead_advisor_email,
+        deal_captain_email=txn.deal_captain_email,
+    )
 
 
 # ── 단건 조회 ──────────────────────────────────────────────────

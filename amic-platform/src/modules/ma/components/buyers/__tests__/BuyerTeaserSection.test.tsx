@@ -15,16 +15,22 @@ import { createTestQueryClient } from "@/test/test-utils";
 import BuyerTeaserSection from "../BuyerTeaserSection";
 
 const mockUseMarketingMaterials = vi.fn();
+const uploadMarketingMaterialMutateAsync = vi.fn();
 const fileUploadZoneState = vi.hoisted(() => ({
   props: null as {
     entityType?: string;
     entityId?: string;
     uploadOnly?: boolean;
+    customUpload?: ((files: File[]) => Promise<void> | void) | null;
   } | null,
 }));
 
 vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
   useMarketingMaterials: () => mockUseMarketingMaterials(),
+  useUploadMarketingMaterial: () => ({
+    mutateAsync: uploadMarketingMaterialMutateAsync,
+    isPending: false,
+  }),
 }));
 
 vi.mock("@/modules/ma/components/FileUploadZone", () => ({
@@ -32,22 +38,29 @@ vi.mock("@/modules/ma/components/FileUploadZone", () => ({
     entityType,
     entityId,
     uploadOnly,
+    customUpload,
     embeddedLabel,
     emptyTitle,
     emptyDescription,
     emptyHint,
     showUploadAction,
   }: {
-    entityType?: string;
-    entityId?: string;
-    uploadOnly?: boolean;
-    embeddedLabel?: string;
-    emptyTitle?: string;
-    emptyDescription?: string;
+      entityType?: string;
+      entityId?: string;
+      uploadOnly?: boolean;
+      customUpload?: (files: File[]) => Promise<void> | void;
+      embeddedLabel?: string;
+      emptyTitle?: string;
+      emptyDescription?: string;
     emptyHint?: string;
     showUploadAction?: boolean;
-  }) => {
-    fileUploadZoneState.props = { entityType, entityId, uploadOnly };
+    }) => {
+    fileUploadZoneState.props = {
+      entityType,
+      entityId,
+      uploadOnly,
+      customUpload: customUpload ?? null,
+    };
     return (
       <div data-testid="file-upload-zone">
         <div>{embeddedLabel ?? "file-upload-zone"}</div>
@@ -98,7 +111,7 @@ function renderSection() {
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
         }}
-        onUploaded={vi.fn()}
+        onUploadedMaterial={vi.fn()}
       />
     </QueryClientProvider>,
   );
@@ -107,6 +120,7 @@ function renderSection() {
 describe("BuyerTeaserSection", () => {
   beforeEach(() => {
     mockUseMarketingMaterials.mockReset();
+    uploadMarketingMaterialMutateAsync.mockReset();
     fileUploadZoneState.props = null;
     toastSuccessSpy.mockClear();
     toastErrorSpy.mockClear();
@@ -187,6 +201,7 @@ describe("BuyerTeaserSection", () => {
       entityType: "MARKETING_MATERIAL",
       entityId: undefined,
       uploadOnly: true,
+      customUpload: expect.any(Function),
     });
     expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
   });
@@ -321,7 +336,94 @@ describe("BuyerTeaserSection", () => {
       entityType: "MARKETING_MATERIAL",
       entityId: undefined,
       uploadOnly: true,
+      customUpload: expect.any(Function),
     });
     expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
+  });
+
+  it("uploads teaser files through the uploaded marketing material endpoint", async () => {
+    const onUploadedMaterial = vi.fn();
+    uploadMarketingMaterialMutateAsync.mockResolvedValue({
+      id: "tm-1",
+      transaction_id: "txn-1",
+      doc_type: "TM",
+      title: "buyer teaser",
+      project_code: null,
+      status: "READY",
+      error_message: null,
+      source_mode: "UPLOADED",
+      attachment_id: "att-1",
+      parameters: null,
+      file_path: null,
+      file_name: "buyer-teaser.pdf",
+      file_size_bytes: 1024,
+      quality_score: null,
+      quality_status: "SKIPPED",
+      quality_issues: null,
+      slide_count: null,
+      pipeline_metrics: null,
+      distribution_eligible: true,
+      distributed_to: ["Test Buyer"],
+      distributed_at: "2026-03-20T00:00:00Z",
+      created_by_email: "advisor@test.com",
+      created_at: "2026-03-10T00:00:00Z",
+      updated_at: "2026-03-20T00:00:00Z",
+    });
+    mockUseMarketingMaterials.mockReturnValue({ data: [] });
+
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BuyerTeaserSection
+          txnId="txn-1"
+          canWrite
+          buyer={{
+            id: "buyer-1",
+            transaction_id: "txn-1",
+            company_name: "Test Buyer",
+            contact_name: "Hong",
+            contact_email: null,
+            contact_phone: null,
+            buyer_type: "STRATEGIC",
+            status: "CONTACTED",
+            tier: "TIER_1",
+            deal_role: "SOLE_BUYER",
+            is_short_listed: false,
+            corp_code: null,
+            ioi_value: null,
+            ioi_date: null,
+            loi_value: null,
+            loi_date: null,
+            final_offer_value: null,
+            rejection_reason: null,
+            notes: null,
+            extra_data: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          }}
+          onUploadedMaterial={onUploadedMaterial}
+        />
+      </QueryClientProvider>,
+    );
+
+    const file = new File(["pdf-content"], "buyer-teaser.pdf", {
+      type: "application/pdf",
+    });
+    await fileUploadZoneState.props?.customUpload?.([file]);
+
+    expect(uploadMarketingMaterialMutateAsync).toHaveBeenCalledWith({
+      file,
+      docType: "TM",
+      title: "buyer-teaser",
+      distributedTo: ["Test Buyer"],
+      distributedAt: expect.any(String),
+    });
+    expect(onUploadedMaterial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "tm-1",
+        attachment_id: "att-1",
+      }),
+      file,
+    );
   });
 });

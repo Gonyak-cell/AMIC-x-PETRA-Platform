@@ -70,6 +70,15 @@ export interface MarketingMaterialCreate {
   distributed_at?: string;
 }
 
+export interface UploadedMarketingMaterialInput {
+  file: File;
+  docType: MarketingDocType;
+  title: string;
+  projectCode?: string;
+  distributedTo?: string[];
+  distributedAt?: string;
+}
+
 export interface DistributionUpdate {
   distributed_to: string[];
   distributed_at?: string;

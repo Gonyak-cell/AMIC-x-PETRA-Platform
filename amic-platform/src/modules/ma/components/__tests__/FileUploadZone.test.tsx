@@ -190,4 +190,41 @@ describe("FileUploadZone", () => {
       );
     });
   });
+
+  it("uses customUpload in upload-only mode instead of the generic attachment mutation", async () => {
+    const customUpload = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <FileUploadZone
+        txnId="txn-1"
+        entityType="MARKETING_MATERIAL"
+        embedded
+        uploadOnly
+        customUpload={customUpload}
+        emptyVariant="dashed"
+        emptyTitle="?깅줉??Teaser ?놁쓬"
+      />,
+    );
+
+    const dropZone = screen
+      .getByText("?깅줉??Teaser ?놁쓬")
+      .closest('[role="button"]') as HTMLElement;
+    const file = new File(["pdf-content"], "buyer-teaser.pdf", {
+      type: "application/pdf",
+    });
+    const dataTransfer = {
+      files: [file],
+      types: ["Files"],
+      dropEffect: "none",
+    };
+
+    fireEvent.dragEnter(dropZone, { dataTransfer });
+    fireEvent.dragOver(dropZone, { dataTransfer });
+    fireEvent.drop(dropZone, { dataTransfer });
+
+    await waitFor(() => {
+      expect(customUpload).toHaveBeenCalledWith([file]);
+    });
+    expect(uploadMutateAsync).not.toHaveBeenCalled();
+  });
 });

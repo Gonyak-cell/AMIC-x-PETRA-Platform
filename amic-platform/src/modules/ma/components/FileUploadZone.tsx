@@ -9,6 +9,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -23,6 +24,7 @@ import {
   type AttachmentUploadHandler,
   openAttachmentFilePicker,
   uploadAttachmentFiles,
+  validateAttachmentFile,
 } from "@/modules/ma/components/attachmentUploadUtils";
 import type { AttachmentEntityType } from "@/modules/ma/types/attachment";
 import {
@@ -51,6 +53,7 @@ interface FileUploadZoneProps {
   showUploadAction?: boolean;
   registerOpenPicker?: (openPicker: (() => void) | null) => void;
   onUploaded?: AttachmentUploadHandler;
+  customUpload?: (files: File[]) => Promise<void> | void;
   suppressListErrorToast?: boolean;
   listErrorMessage?: string;
   uploadOnly?: boolean;
@@ -116,6 +119,7 @@ export default function FileUploadZone({
   showUploadAction = true,
   registerOpenPicker,
   onUploaded,
+  customUpload,
   suppressListErrorToast = false,
   listErrorMessage = "기존 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다.",
   uploadOnly = false,
@@ -163,7 +167,25 @@ export default function FileUploadZone({
         return;
       }
 
+      const validFiles: File[] = [];
       for (const file of files) {
+        const error = validateAttachmentFile(file);
+        if (error) {
+          toast.error(error);
+          continue;
+        }
+        validFiles.push(file);
+      }
+      if (validFiles.length === 0) {
+        return;
+      }
+
+      if (customUpload) {
+        await customUpload(validFiles);
+        return;
+      }
+
+      for (const file of validFiles) {
         let resolvedEntityId = entityId;
 
         if (resolveEntityId) {
@@ -183,7 +205,14 @@ export default function FileUploadZone({
         });
       }
     },
-    [entityId, entityType, onUploaded, resolveEntityId, uploadMutation],
+    [
+      customUpload,
+      entityId,
+      entityType,
+      onUploaded,
+      resolveEntityId,
+      uploadMutation,
+    ],
   );
 
   const handleDrop = useCallback(

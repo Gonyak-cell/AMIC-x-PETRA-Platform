@@ -162,6 +162,11 @@ async def upload_attachment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid entity_type.")
     if entity_id is not None:
         _validate_entity_id(entity_id)
+    if entity_type == AttachmentEntityType.MARKETING_MATERIAL.value and entity_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="MARKETING_MATERIAL attachments must be bound to a marketing material record.",
+        )
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,

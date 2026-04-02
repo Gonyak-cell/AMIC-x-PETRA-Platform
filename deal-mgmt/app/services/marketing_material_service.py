@@ -8,15 +8,20 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+import aiofiles
+from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.exceptions import DocumentNotFoundError
+from app.models.attachment import Attachment
 from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 from app.models.marketing_material import MarketingMaterial
 from app.schemas.marketing_material import DistributionUpdate, MarketingMaterialCreate
 from app.services.text_extraction_service import TextExtractionService
 from app.services.vdr_routing_service import get_routing_override_map
+from app.services.vdr_service import check_vdr_write_permission
 from app.services.workstream_router_service import (
     COMMON_WORKSTREAM,
     FDD_WORKSTREAM,
@@ -25,9 +30,327 @@ from app.services.workstream_router_service import (
     is_source_allowed_for_any_workstream,
     route_vdr_sources,
 )
+from app.tasks.attachment_tasks import (
+    PROCESSING_FAILED,
+    PROCESSING_PENDING,
+    PROCESSING_SKIPPED,
+    process_attachment_task,
+)
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "memorandum"
+ATTACHMENT_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
+MAX_ATTACHMENT_FILE_SIZE = 50 * 1024 * 1024
+ATTACHMENT_CHUNK_SIZE = 65_536
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    ".docx",
+    ".doc",
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".pptx",
+    ".ppt",
+    ".hwp",
+    ".hwpx",
+    ".txt",
+    ".csv",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".ogg",
+    ".aac",
+    ".wma",
+}
+_ATTACHMENT_MAGIC_SIGNATURES: list[tuple[bytes, set[str]]] = [
+    (b"%PDF", {".pdf"}),
+    (b"PK\x03\x04", {".docx", ".xlsx", ".pptx", ".zip", ".hwpx"}),
+    (b"\x89PNG", {".png"}),
+    (b"\xff\xd8\xff", {".jpg", ".jpeg"}),
+    (b"HWP Document File", {".hwp"}),
+    (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", {".doc", ".xls", ".ppt"}),
+    (b"ID3", {".mp3"}),
+    (b"\xff\xfb", {".mp3"}),
+    (b"fLaC", {".flac"}),
+    (b"RIFF", {".wav"}),
+    (b"OggS", {".ogg"}),
+    (b"\x30\x26\xb2\x75", {".wma"}),
+]
 logger = logging.getLogger(__name__)
+
+
+def _validate_uploaded_file_signature(content: bytes, ext: str) -> None:
+    if not content:
+        return
+
+    if ext == ".m4a" and len(content) >= 8 and content[4:8] == b"ftyp":
+        return
+
+    for signature, valid_exts in _ATTACHMENT_MAGIC_SIGNATURES:
+        if content[: len(signature)] == signature:
+            if ext not in valid_exts:
+                raise HTTPException(status_code=400, detail="Uploaded file content does not match its extension.")
+            return
+
+    if ext in {".txt", ".csv"}:
+        if b"\x00" in content:
+            raise HTTPException(status_code=400, detail="Uploaded file content does not match its extension.")
+        return
+
+    if ext != ".aac":
+        raise HTTPException(status_code=400, detail="Uploaded file content does not match its extension.")
+
+
+def _log_marketing_upload_integrity_error(
+    exc: IntegrityError,
+    *,
+    stage: str,
+    transaction_id: uuid.UUID,
+    entity_type: str,
+    entity_id: str | None,
+    marketing_material_id: uuid.UUID | None,
+) -> None:
+    orig = getattr(exc, "orig", None)
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    diag = getattr(orig, "diag", None)
+    constraint_name = getattr(diag, "constraint_name", None)
+    logger.exception(
+        "Uploaded marketing material integrity error: stage=%s txn=%s entity_type=%s entity_id=%s marketing_material_id=%s sqlstate=%s constraint=%s",
+        stage,
+        transaction_id,
+        entity_type,
+        entity_id,
+        marketing_material_id,
+        sqlstate,
+        constraint_name,
+    )
+
+
+def _apply_uploaded_material_fields(
+    mat: MarketingMaterial,
+    attachment: Attachment,
+    *,
+    doc_type: MarketingDocType,
+    title: str,
+    project_code: str | None,
+    parameters: dict | None,
+    distributed_to: list[str] | None,
+    distributed_at: str | None,
+    created_by_email: str | None,
+) -> None:
+    mat.doc_type = doc_type
+    mat.title = title
+    mat.project_code = project_code
+    mat.status = MarketingDocStatus.READY
+    mat.source_mode = MarketingMaterialSourceMode.UPLOADED.value
+    mat.attachment_id = attachment.id
+    mat.parameters = parameters
+    mat.file_path = attachment.file_path
+    mat.file_name = attachment.file_name
+    mat.file_size_bytes = attachment.file_size_bytes
+    mat.quality_status = "SKIPPED"
+    mat.created_by_email = created_by_email or attachment.uploaded_by_email
+
+    if attachment.entity_id != str(mat.id):
+        attachment.entity_id = str(mat.id)
+
+    if distributed_to is not None:
+        mat.distributed_to = distributed_to
+        mat.distributed_at = distributed_at or (
+            datetime.now(UTC).isoformat() if distributed_to else None
+        )
+    elif distributed_at is not None:
+        mat.distributed_at = distributed_at
+
+
+async def _enqueue_uploaded_attachment_processing(
+    db: AsyncSession,
+    *,
+    attachment: Attachment,
+    transaction_id: uuid.UUID,
+    marketing_material_id: uuid.UUID,
+) -> None:
+    if attachment.processing_status != PROCESSING_PENDING:
+        return
+
+    try:
+        process_attachment_task.delay(str(attachment.id))
+    except Exception as exc:
+        logger.exception(
+            "Uploaded marketing material attachment enqueue failed: txn=%s marketing_material_id=%s attachment_id=%s",
+            transaction_id,
+            marketing_material_id,
+            attachment.id,
+        )
+        attachment.processing_status = PROCESSING_FAILED
+        attachment.processing_error = f"Automatic post-processing could not be queued: {exc}"
+        await db.commit()
+        await db.refresh(attachment)
+
+
+async def create_uploaded_marketing_material_from_file(
+    db: AsyncSession,
+    transaction_id: uuid.UUID,
+    *,
+    file: UploadFile,
+    doc_type: MarketingDocType,
+    title: str,
+    project_code: str | None = None,
+    distributed_to: list[str] | None = None,
+    distributed_at: str | None = None,
+    created_by_email: str | None = None,
+    uploader_role: str | None = None,
+    lead_advisor_email: str | None = None,
+    deal_captain_email: str | None = None,
+) -> MarketingMaterial:
+    upload_stage = "material_flush"
+    dest_path: Path | None = None
+    attachment: Attachment | None = None
+    material: MarketingMaterial | None = None
+    safe_filename = Path(file.filename or "marketing-material").name
+
+    try:
+        ext = Path(safe_filename).suffix.lower()
+        if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Unsupported file type.")
+        if len(Path(safe_filename).suffixes) > 1:
+            raise HTTPException(status_code=400, detail="Multiple file extensions are not allowed.")
+
+        material = MarketingMaterial(
+            transaction_id=transaction_id,
+            doc_type=doc_type,
+            title=title,
+            project_code=project_code,
+            status=MarketingDocStatus.DRAFT,
+            source_mode=MarketingMaterialSourceMode.UPLOADED.value,
+            quality_status="SKIPPED",
+            created_by_email=created_by_email,
+        )
+        db.add(material)
+        await db.flush()
+
+        upload_stage = "attachment_file_write"
+        header = await file.read(32)
+        _validate_uploaded_file_signature(header, ext)
+        save_dir = ATTACHMENT_UPLOAD_DIR / str(transaction_id) / "MARKETING_MATERIAL"
+        await asyncio.to_thread(save_dir.mkdir, parents=True, exist_ok=True)
+
+        file_id = uuid.uuid4()
+        dest_path = save_dir / f"{file_id}_{safe_filename}"
+        total_size = len(header)
+        size_exceeded = False
+
+        async with aiofiles.open(dest_path, "wb") as dest:
+            await dest.write(header)
+            while True:
+                chunk = await file.read(ATTACHMENT_CHUNK_SIZE)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > MAX_ATTACHMENT_FILE_SIZE:
+                    size_exceeded = True
+                    break
+                await dest.write(chunk)
+
+        if size_exceeded:
+            await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+            raise HTTPException(status_code=413, detail="File size exceeds the 50MB limit.")
+
+        has_vdr_access = check_vdr_write_permission(
+            uploader_role,
+            created_by_email,
+            lead_advisor_email,
+            deal_captain_email,
+        )
+        processing_status = PROCESSING_PENDING if has_vdr_access else PROCESSING_SKIPPED
+        processing_error = (
+            None
+            if has_vdr_access
+            else "VDR sync was skipped because the uploader lacks write access."
+        )
+
+        upload_stage = "attachment_db_flush"
+        attachment = Attachment(
+            transaction_id=transaction_id,
+            entity_type="MARKETING_MATERIAL",
+            entity_id=str(material.id),
+            file_path=str(dest_path),
+            file_name=safe_filename,
+            file_size_bytes=total_size,
+            mime_type=file.content_type or "application/octet-stream",
+            uploaded_by_email=created_by_email,
+            processing_status=processing_status,
+            processing_error=processing_error,
+        )
+        db.add(attachment)
+        await db.flush()
+
+        upload_stage = "material_finalize"
+        _apply_uploaded_material_fields(
+            material,
+            attachment,
+            doc_type=doc_type,
+            title=title,
+            project_code=project_code,
+            parameters=None,
+            distributed_to=distributed_to,
+            distributed_at=distributed_at,
+            created_by_email=created_by_email,
+        )
+
+        upload_stage = "commit"
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        if dest_path is not None:
+            await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+        raise
+    except IntegrityError as exc:
+        await db.rollback()
+        if dest_path is not None:
+            await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+        _log_marketing_upload_integrity_error(
+            exc,
+            stage=upload_stage,
+            transaction_id=transaction_id,
+            entity_type="MARKETING_MATERIAL",
+            entity_id=str(material.id) if material is not None else None,
+            marketing_material_id=material.id if material is not None else None,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Uploaded marketing material failed during {upload_stage}.",
+        ) from exc
+    except Exception as exc:
+        await db.rollback()
+        if dest_path is not None:
+            await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+        logger.exception(
+            "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
+            upload_stage,
+            transaction_id,
+            material.id if material is not None else None,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Uploaded marketing material failed during {upload_stage}.",
+        ) from exc
+
+    assert material is not None
+    assert attachment is not None
+
+    await db.refresh(material)
+    await db.refresh(attachment)
+    await _enqueue_uploaded_attachment_processing(
+        db,
+        attachment=attachment,
+        transaction_id=transaction_id,
+        marketing_material_id=material.id,
+    )
+    await db.refresh(material)
+    return material
 
 
 async def _run_quality_gate(
@@ -286,8 +609,6 @@ async def _create_uploaded_marketing_material(
     *,
     created_by_email: str | None = None,
 ) -> MarketingMaterial:
-    from app.models.attachment import Attachment
-
     attachment = await db.get(Attachment, body.attachment_id)
     if not attachment or attachment.transaction_id != transaction_id:
         raise DocumentNotFoundError("업로드한 마케팅 자료 첨부파일을 찾을 수 없습니다.")
@@ -310,34 +631,21 @@ async def _create_uploaded_marketing_material(
             project_code=body.project_code,
             status=MarketingDocStatus.READY,
             source_mode=MarketingMaterialSourceMode.UPLOADED.value,
-            attachment_id=attachment.id,
-            parameters=body.parameters,
-            file_path=attachment.file_path,
-            file_name=attachment.file_name,
-            file_size_bytes=attachment.file_size_bytes,
-            quality_status="SKIPPED",
-            created_by_email=created_by_email or attachment.uploaded_by_email,
         )
         db.add(mat)
-    else:
-        mat.doc_type = body.doc_type
-        mat.title = body.title
-        mat.project_code = body.project_code
-        mat.status = MarketingDocStatus.READY
-        mat.source_mode = MarketingMaterialSourceMode.UPLOADED.value
-        mat.attachment_id = attachment.id
-        mat.parameters = body.parameters
-        mat.file_path = attachment.file_path
-        mat.file_name = attachment.file_name
-        mat.file_size_bytes = attachment.file_size_bytes
-        mat.quality_status = "SKIPPED"
-        mat.created_by_email = created_by_email or attachment.uploaded_by_email
+        await db.flush()
 
-    if body.distributed_to is not None:
-        mat.distributed_to = body.distributed_to
-        mat.distributed_at = body.distributed_at or (datetime.now(UTC).isoformat() if body.distributed_to else None)
-    elif body.distributed_at is not None:
-        mat.distributed_at = body.distributed_at
+    _apply_uploaded_material_fields(
+        mat,
+        attachment,
+        doc_type=body.doc_type,
+        title=body.title,
+        project_code=body.project_code,
+        parameters=body.parameters,
+        distributed_to=body.distributed_to,
+        distributed_at=body.distributed_at,
+        created_by_email=created_by_email,
+    )
 
     await db.commit()
     await db.refresh(mat)

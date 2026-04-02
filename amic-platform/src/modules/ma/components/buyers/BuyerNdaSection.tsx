@@ -26,17 +26,17 @@ import {
   canStartExtractionFromUpload,
   useAttachmentExtractionFlow,
 } from "@/modules/ma/hooks/useAttachmentExtractionFlow";
-import { useCreateMarketingMaterial } from "@/modules/ma/hooks/useMarketingMaterials";
 import {
   useCreateNda,
   useDeleteNda,
   useNdas,
   useUpdateNda,
 } from "@/modules/ma/hooks/useNdas";
-import type { Attachment } from "@/modules/ma/types/attachment";
+import type { Attachment, AttachmentListResponse } from "@/modules/ma/types/attachment";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { NDACreate, NdaStatus } from "@/modules/ma/types/nda";
 import type { NdaMarkup } from "@/modules/ma/types/nda_markup";
+import type { MarketingMaterial } from "@/modules/ma/types/marketing_material";
 
 interface BuyerNdaSectionProps {
   txnId: string;
@@ -61,11 +61,6 @@ function buildUploadedVersionLabel(fileName: string) {
   return stem || "업로드본";
 }
 
-function buildUploadedMarketingMaterialTitle(fileName: string, fallback: string) {
-  const stem = fileName.trim().replace(/\.[^.]+$/, "").trim();
-  return stem || fallback;
-}
-
 export default function BuyerNdaSection({
   txnId,
   buyer,
@@ -77,7 +72,6 @@ export default function BuyerNdaSection({
     partyType: "BUYER",
   });
   const createNda = useCreateNda(txnId);
-  const createMarketingMaterial = useCreateMarketingMaterial(txnId);
   const updateNda = useUpdateNda(txnId);
   const deleteNda = useDeleteNda(txnId);
   const { activeReview, closeReview, startExtractionFromUpload } =
@@ -294,39 +288,80 @@ export default function BuyerNdaSection({
     startExtractionFromUpload,
   ]);
 
-  const handleTeaserUploaded = useCallback(
-    async (attachment: Attachment, file: File) => {
-      try {
-        const material = await createMarketingMaterial.mutateAsync({
-          doc_type: "TM",
-          title: buildUploadedMarketingMaterialTitle(
-            file.name,
-            `${buyer.company_name} Teaser`,
-          ),
-          attachment_id: attachment.id,
-          distributed_to: [buyer.company_name],
-          distributed_at: new Date().toISOString(),
-        });
+  const handleTeaserUploadedMaterial = useCallback(
+    async (material: MarketingMaterial, file: File) => {
+      if (!material.attachment_id) {
+        return;
+      }
 
-        if (!canStartExtractionFromUpload(attachment, file)) {
+      const resolveAttachment = async () => {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const { data } = await maApi.get<AttachmentListResponse>(
+            `/transactions/${txnId}/attachments`,
+            {
+              params: {
+                entity_type: "MARKETING_MATERIAL",
+                entity_id: material.id,
+              },
+            },
+          );
+
+          const attachment = data.items.find(
+            (item) => item.id === material.attachment_id,
+          );
+          if (attachment) {
+            return attachment;
+          }
+
+          await new Promise((resolve) => window.setTimeout(resolve, 800));
+        }
+
+        return null;
+      };
+
+      try {
+        const attachment = await resolveAttachment();
+        if (!attachment) {
           return;
         }
 
-        await startExtractionFromUpload({
-          attachment,
-          file,
-          docCategoryHint: "TEASER_IM",
-          reviewContext: {
-            source: "marketing-material",
-            marketingDocType: "TM",
-            marketingMaterialId: material.id,
-          },
-        });
+        if (canStartExtractionFromUpload(attachment, file)) {
+          await startExtractionFromUpload({
+            attachment,
+            file,
+            docCategoryHint: "TEASER_IM",
+            targetModel: "marketing_material",
+            targetId: material.id,
+            reviewContext: {
+              source: "marketing-material",
+              marketingDocType: "TM",
+              marketingMaterialId: material.id,
+            },
+          });
+          return;
+        }
+
+        if (attachment.processing_status === "FAILED") {
+          toast.warning(
+            attachment.processing_error ??
+              "Teaser 업로드는 완료되었지만 후속 OCR/VDR 처리는 실패했습니다.",
+          );
+          return;
+        }
+
+        if (attachment.processing_status === "SKIPPED") {
+          toast.info(
+            attachment.processing_error ??
+              "Teaser 업로드는 완료되었지만 후속 OCR/VDR 처리는 생략되었습니다.",
+          );
+        }
       } catch {
-        // The upload/material hooks already show their own error toasts.
+        toast.warning(
+          "Teaser 업로드는 완료되었지만 후속 OCR 상태를 확인하지 못했습니다.",
+        );
       }
     },
-    [buyer.company_name, createMarketingMaterial, startExtractionFromUpload],
+    [startExtractionFromUpload, txnId],
   );
 
   return (
@@ -568,7 +603,7 @@ export default function BuyerNdaSection({
         txnId={txnId}
         buyer={buyer}
         canWrite={canWrite}
-        onUploaded={handleTeaserUploaded}
+        onUploadedMaterial={handleTeaserUploadedMaterial}
       />
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="NDA 추가">

@@ -7,8 +7,10 @@ import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import { Badge, Button, Card, DataTable } from "@/components/ui";
 import FileUploadZone from "@/modules/ma/components/FileUploadZone";
-import { useMarketingMaterials } from "@/modules/ma/hooks/useMarketingMaterials";
-import type { Attachment } from "@/modules/ma/types/attachment";
+import {
+  useMarketingMaterials,
+  useUploadMarketingMaterial,
+} from "@/modules/ma/hooks/useMarketingMaterials";
 import type { BuyerCandidate } from "@/modules/ma/types/buyer";
 import type { MarketingMaterial } from "@/modules/ma/types/marketing_material";
 import {
@@ -23,17 +25,26 @@ interface BuyerTeaserSectionProps {
   txnId: string;
   buyer: BuyerCandidate;
   canWrite: boolean;
-  onUploaded: (attachment: Attachment, file: File) => Promise<void> | void;
+  onUploadedMaterial: (
+    material: MarketingMaterial,
+    file: File,
+  ) => Promise<void> | void;
+}
+
+function buildUploadedMarketingMaterialTitle(fileName: string, fallback: string) {
+  const stem = fileName.trim().replace(/\.[^.]+$/, "").trim();
+  return stem || fallback;
 }
 
 export default function BuyerTeaserSection({
   txnId,
   buyer,
   canWrite,
-  onUploaded,
+  onUploadedMaterial,
 }: BuyerTeaserSectionProps) {
   const queryClient = useQueryClient();
   const { data: marketingMaterials } = useMarketingMaterials(txnId);
+  const uploadMarketingMaterial = useUploadMarketingMaterial(txnId);
   const [pendingMaterialId, setPendingMaterialId] = useState<string | null>(null);
 
   const teaserMaterials = useMemo(
@@ -111,6 +122,22 @@ export default function BuyerTeaserSection({
       );
     } finally {
       setPendingMaterialId(null);
+    }
+  }
+
+  async function handleTeaserUpload(files: File[]) {
+    for (const file of files) {
+      const material = await uploadMarketingMaterial.mutateAsync({
+        file,
+        docType: "TM",
+        title: buildUploadedMarketingMaterialTitle(
+          file.name,
+          `${buyer.company_name} Teaser`,
+        ),
+        distributedTo: [buyer.company_name],
+        distributedAt: new Date().toISOString(),
+      });
+      await onUploadedMaterial(material, file);
     }
   }
 
@@ -254,6 +281,7 @@ export default function BuyerTeaserSection({
         uploadOnly
         embedded
         readOnly={!canWrite}
+        customUpload={handleTeaserUpload}
         emptyVariant="dashed"
         embeddedLabel={hasTeasers ? "Teaser 업로드" : ""}
         uploadLabel="Teaser 업로드"
@@ -270,7 +298,6 @@ export default function BuyerTeaserSection({
         }
         embeddedSeparator={hasTeasers}
         showUploadAction={hasTeasers}
-        onUploaded={onUploaded}
       />
     </Card>
   );
