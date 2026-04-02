@@ -70,9 +70,7 @@ def upgrade() -> None:
     existing_attachment_ids = {
         attachment_id
         for attachment_id in bind.execute(
-            sa.select(marketing_materials.c.attachment_id).where(
-                marketing_materials.c.attachment_id.is_not(None)
-            )
+            sa.select(marketing_materials.c.attachment_id).where(marketing_materials.c.attachment_id.is_not(None))
         ).scalars()
     }
 

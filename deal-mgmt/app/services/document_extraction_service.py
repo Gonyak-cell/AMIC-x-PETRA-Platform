@@ -360,11 +360,7 @@ async def _auto_apply_nda_signed_at(
     extraction: DocumentExtraction,
     extracted: dict,
 ) -> None:
-    if (
-        not extraction.auto_apply_signed_at
-        or extraction.target_model != "nda"
-        or extraction.target_id is None
-    ):
+    if not extraction.auto_apply_signed_at or extraction.target_model != "nda" or extraction.target_id is None:
         return
 
     signed_at = extracted.get("signed_at")
@@ -376,8 +372,7 @@ async def _auto_apply_nda_signed_at(
     nda = await db.get(NDA, extraction.target_id)
     if nda is None or nda.transaction_id != extraction.transaction_id:
         logger.warning(
-            "NDA signed_at auto-apply skipped for missing/mismatched target "
-            "(extraction=%s, target_id=%s)",
+            "NDA signed_at auto-apply skipped for missing/mismatched target (extraction=%s, target_id=%s)",
             extraction.id,
             extraction.target_id,
         )
