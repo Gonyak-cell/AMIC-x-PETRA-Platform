@@ -395,8 +395,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libreoffice poppler-utils
+          timeout 5m sudo apt-get update
+          timeout 8m sudo apt-get install -y --no-install-recommends libreoffice poppler-utils
       - name: Install deal-mgmt + visual diff deps
         working-directory: deal-mgmt
         run: |
@@ -431,8 +431,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libreoffice poppler-utils
+          timeout 5m sudo apt-get update
+          timeout 8m sudo apt-get install -y --no-install-recommends libreoffice poppler-utils
       - name: Install IM + visual diff deps
         working-directory: im
         run: |
