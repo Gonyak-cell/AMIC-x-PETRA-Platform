@@ -246,6 +246,55 @@ async def test_upload_tm_creates_material_and_bound_attachment(
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_allows_multi_dot_filename(
+    client,
+    _txn,
+):
+    txn_id = _txn["id"]
+    pdf_bytes = b"%PDF-1.4\nuploaded teaser\n"
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Uploaded teaser memo",
+        },
+        files={"file": ("uploaded.tm.v1.pdf", pdf_bytes, "application/pdf")},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["doc_type"] == "TM"
+    assert data["file_name"] == "uploaded.tm.v1.pdf"
+
+
+@pytest.mark.asyncio
+async def test_upload_tm_rejects_disallowed_final_extension_in_multi_dot_filename(
+    client,
+    _txn,
+):
+    txn_id = _txn["id"]
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Uploaded teaser memo",
+        },
+        files={
+            "file": (
+                "uploaded.tm.v1.pdf.exe",
+                b"MZ fake executable content",
+                "application/octet-stream",
+            )
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "Unsupported file type" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_upload_tm_rolls_back_when_material_finalize_fails(
     client,
     _txn,

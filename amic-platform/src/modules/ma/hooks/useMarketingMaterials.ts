@@ -1,12 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+import { extractApiError } from "@/api/errors";
 import { maApi } from "@/api/maClient";
 import type {
+  DistributionUpdate,
+  MarketingDocType,
   MarketingMaterial,
   MarketingMaterialCreate,
-  DistributionUpdate,
   MarketingMaterialSourceRouting,
-  MarketingDocType,
   UploadedMarketingMaterialInput,
 } from "@/modules/ma/types/marketing_material";
 
@@ -16,8 +18,44 @@ const QK = (txnId: string) => [
   txnId,
   "marketing-materials",
 ];
+
 const sourceRoutingPreviewQK = (txnId: string, docType: MarketingDocType) =>
   [...QK(txnId), "source-routing-preview", docType] as const;
+
+function getMarketingMaterialLabel(docType: MarketingDocType) {
+  switch (docType) {
+    case "TM":
+      return "Teaser Memo";
+    case "DM":
+      return "Discussion Memo";
+    case "IM":
+    default:
+      return "Information Memo";
+  }
+}
+
+function getUploadedMarketingMaterialLabel(docType: MarketingDocType) {
+  switch (docType) {
+    case "TM":
+      return "Teaser";
+    case "DM":
+      return "DM";
+    case "IM":
+    default:
+      return "IM";
+  }
+}
+
+export function buildMarketingMaterialUploadErrorMessage(
+  err: unknown,
+  docType: MarketingDocType,
+) {
+  const label = getUploadedMarketingMaterialLabel(docType);
+  return extractApiError(
+    err,
+    `${label} 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.`,
+  );
+}
 
 export function useMarketingMaterials(txnId: string, active = true) {
   return useQuery<MarketingMaterial[]>({
@@ -29,10 +67,9 @@ export function useMarketingMaterials(txnId: string, active = true) {
       return data;
     },
     enabled: !!txnId && active,
-    // GENERATING 상태 자료가 있으면 5초마다 폴링
     refetchInterval: (query) => {
       const items = query.state.data ?? [];
-      const hasGenerating = items.some((m) => m.status === "GENERATING");
+      const hasGenerating = items.some((item) => item.status === "GENERATING");
       return hasGenerating ? 5000 : false;
     },
   });
@@ -61,6 +98,7 @@ export function useMarketingMaterialSourceRoutingPreview(
 
 export function useCreateMarketingMaterial(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async (body: MarketingMaterialCreate) => {
       const { data } = await maApi.post(
@@ -74,24 +112,23 @@ export function useCreateMarketingMaterial(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
       });
-      const label =
-        data.doc_type === "TM"
-          ? "Teaser Memo"
-          : data.doc_type === "DM"
-            ? "Discussion Memo"
-            : "Information Memo";
+
+      const label = getMarketingMaterialLabel(data.doc_type);
+
       if (data.source_mode === "UPLOADED" || variables.attachment_id) {
         toast.success(`${label} 업로드가 등록되었습니다.`);
         return;
       }
+
       if (data.status === "FAILED") {
         toast.error(
-          data.error_message ?? `${label} 생성 요청을 시작하지 못했습니다.`,
+          data.error_message ?? `${label} 생성 요청이 시작되지 못했습니다.`,
         );
         return;
       }
+
       toast.success(
-        `${label} 생성을 시작했습니다. 완료 후 다운로드 가능합니다.`,
+        `${label} 생성이 시작되었습니다. 완료 후 다운로드 가능합니다.`,
       );
     },
     onError: () => {
@@ -102,6 +139,7 @@ export function useCreateMarketingMaterial(txnId: string) {
 
 export function useUploadMarketingMaterial(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async ({
       file,
@@ -115,12 +153,15 @@ export function useUploadMarketingMaterial(txnId: string) {
       formData.append("file", file);
       formData.append("doc_type", docType);
       formData.append("title", title);
+
       if (projectCode) {
         formData.append("project_code", projectCode);
       }
+
       for (const recipient of distributedTo ?? []) {
         formData.append("distributed_to", recipient);
       }
+
       if (distributedAt) {
         formData.append("distributed_at", distributedAt);
       }
@@ -136,22 +177,21 @@ export function useUploadMarketingMaterial(txnId: string) {
       qc.invalidateQueries({
         queryKey: ["ma", "transactions", txnId, "short-list", "overview"],
       });
-      const label =
-        data.doc_type === "TM"
-          ? "Teaser"
-          : data.doc_type === "DM"
-            ? "DM"
-            : "IM";
+
+      const label = getUploadedMarketingMaterialLabel(data.doc_type);
       toast.success(`${label} 업로드가 등록되었습니다.`);
     },
-    onError: () => {
-      toast.error("Teaser 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    onError: (err, variables) => {
+      toast.error(
+        buildMarketingMaterialUploadErrorMessage(err, variables.docType),
+      );
     },
   });
 }
 
 export function useRegenerateMarketingMaterial(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async (matId: string) => {
       const { data } = await maApi.post(
@@ -171,6 +211,7 @@ export function useRegenerateMarketingMaterial(txnId: string) {
 
 export function useUpdateDistribution(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async ({
       matId,
@@ -197,6 +238,7 @@ export function useUpdateDistribution(txnId: string) {
 
 export function useDeleteMarketingMaterial(txnId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: async (matId: string) => {
       await maApi.delete(`/transactions/${txnId}/marketing-materials/${matId}`);
@@ -211,9 +253,6 @@ export function useDeleteMarketingMaterial(txnId: string) {
   });
 }
 
-/** PPTX 다운로드 URL 반환 (FileResponse는 링크 직접 열기)
- * Vite 개발 프록시: /api/ma → http://localhost:8003
- */
 export function getDownloadUrl(txnId: string, matId: string): string {
   return `/api/ma/transactions/${txnId}/marketing-materials/${matId}/download`;
 }

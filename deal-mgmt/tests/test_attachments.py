@@ -195,6 +195,47 @@ async def test_upload_file_too_large(client: AsyncClient, transaction_id: str):
     assert resp.status_code == 413
 
 
+async def test_upload_allows_multi_dot_filename(client: AsyncClient, transaction_id: str):
+    resp = await _upload(
+        client,
+        transaction_id,
+        filename="buyer-teaser.2026.04.02.pptx",
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["file_name"] == "buyer-teaser.2026.04.02.pptx"
+
+
+async def test_upload_rejects_disallowed_final_extension_in_multi_dot_filename(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    resp = await _upload(
+        client,
+        transaction_id,
+        filename="buyer-teaser.v1.pdf.exe",
+        content=b"MZ fake executable content",
+    )
+
+    assert resp.status_code == 400
+    assert "Unsupported file type" in resp.json()["detail"]
+
+
+async def test_upload_rejects_mismatched_content_signature(
+    client: AsyncClient,
+    transaction_id: str,
+):
+    resp = await _upload(
+        client,
+        transaction_id,
+        filename="buyer-teaser.pdf",
+        content=b"PK\x03\x04 fake pptx content",
+    )
+
+    assert resp.status_code == 400
+    assert "일치하지 않습니다" in resp.json()["detail"]
+
+
 async def test_list_all(client: AsyncClient, transaction_id: str):
     await _upload(client, transaction_id, entity_type="NDA")
     await _upload(client, transaction_id, entity_type="BID", filename="bid.docx")

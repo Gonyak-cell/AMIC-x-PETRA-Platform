@@ -213,8 +213,6 @@ async def create_uploaded_marketing_material_from_file(
         ext = Path(safe_filename).suffix.lower()
         if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
             raise HTTPException(status_code=400, detail="Unsupported file type.")
-        if len(Path(safe_filename).suffixes) > 1:
-            raise HTTPException(status_code=400, detail="Multiple file extensions are not allowed.")
 
         material = MarketingMaterial(
             transaction_id=transaction_id,
