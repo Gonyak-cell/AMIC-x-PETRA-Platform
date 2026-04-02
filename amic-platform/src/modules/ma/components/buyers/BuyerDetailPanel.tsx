@@ -34,7 +34,7 @@ export type BuyerDetailTabId =
   | "comments";
 
 const TABS: TabItem[] = [
-  { id: "nda", label: "NDA" },
+  { id: "nda", label: "NDA/Teaser" },
   { id: "summary", label: "요약" },
   { id: "meetings", label: "미팅" },
   { id: "materials", label: "자료" },

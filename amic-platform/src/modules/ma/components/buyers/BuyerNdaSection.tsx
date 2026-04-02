@@ -162,8 +162,9 @@ export default function BuyerNdaSection({
 
   const handleNdaUploaded = useCallback(
     async (attachment: Attachment, file: File) => {
+      let targetNdaId = attachment.entity_id ?? undefined;
       try {
-        const targetNdaId = attachment.entity_id ?? (await ensureBuyerNdaId());
+        targetNdaId = targetNdaId ?? (await ensureBuyerNdaId());
         const formData = new FormData();
         formData.append("attachment_id", attachment.id);
         formData.append("version_label", buildUploadedVersionLabel(file.name));
@@ -194,6 +195,9 @@ export default function BuyerNdaSection({
             attachment,
             file,
             docCategoryHint: "NDA",
+            targetModel: "nda",
+            targetId: targetNdaId,
+            autoApplySignedAt: true,
             reviewContext: {
               source: "buyer-nda",
               buyerCandidateId: buyer.id,
@@ -241,6 +245,9 @@ export default function BuyerNdaSection({
             attachment: latestAttachment,
             file: pendingUpload.file,
             docCategoryHint: "NDA",
+            targetModel: "nda",
+            targetId: latestAttachment.entity_id ?? undefined,
+            autoApplySignedAt: true,
             reviewContext: {
               source: "buyer-nda",
               buyerCandidateId: buyer.id,

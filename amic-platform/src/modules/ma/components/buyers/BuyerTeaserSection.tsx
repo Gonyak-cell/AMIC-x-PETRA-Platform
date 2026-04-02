@@ -251,9 +251,7 @@ export default function BuyerTeaserSection({
       <FileUploadZone
         txnId={txnId}
         entityType="MARKETING_MATERIAL"
-        entityId="TM"
-        suppressListErrorToast
-        listErrorMessage="기존 Teaser 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다."
+        uploadOnly
         embedded
         readOnly={!canWrite}
         emptyVariant="dashed"

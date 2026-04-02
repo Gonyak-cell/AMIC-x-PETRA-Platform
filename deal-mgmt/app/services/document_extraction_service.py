@@ -104,6 +104,10 @@ async def create_extraction(
     transaction_id: uuid.UUID,
     vdr_document_id: uuid.UUID,
     doc_category_hint: DocExtractionCategory | None = None,
+    *,
+    target_model: str | None = None,
+    target_id: uuid.UUID | None = None,
+    auto_apply_signed_at: bool = False,
 ) -> DocumentExtraction:
     """추출 작업 레코드를 생성한다 (PENDING 상태).
 
@@ -113,6 +117,9 @@ async def create_extraction(
         transaction_id=transaction_id,
         vdr_document_id=vdr_document_id,
         status=ExtractionStatus.PENDING,
+        target_model=target_model,
+        target_id=target_id,
+        auto_apply_signed_at=auto_apply_signed_at,
     )
     if doc_category_hint:
         extraction.doc_category = doc_category_hint
@@ -348,6 +355,51 @@ async def _set_failed(
     await db.commit()
 
 
+async def _auto_apply_nda_signed_at(
+    db: AsyncSession,
+    extraction: DocumentExtraction,
+    extracted: dict,
+) -> None:
+    if (
+        not extraction.auto_apply_signed_at
+        or extraction.target_model != "nda"
+        or extraction.target_id is None
+    ):
+        return
+
+    signed_at = extracted.get("signed_at")
+    if not signed_at:
+        return
+
+    from app.models.nda import NDA
+
+    nda = await db.get(NDA, extraction.target_id)
+    if nda is None or nda.transaction_id != extraction.transaction_id:
+        logger.warning(
+            "NDA signed_at auto-apply skipped for missing/mismatched target "
+            "(extraction=%s, target_id=%s)",
+            extraction.id,
+            extraction.target_id,
+        )
+        return
+
+    existing_signed_at = getattr(nda, "signed_at", None)
+    if existing_signed_at:
+        if str(existing_signed_at) != str(signed_at):
+            logger.info(
+                "NDA signed_at auto-apply mismatch kept existing value "
+                "(extraction=%s, nda_id=%s, existing=%s, extracted=%s)",
+                extraction.id,
+                nda.id,
+                existing_signed_at,
+                signed_at,
+            )
+        return
+
+    _safe_set_field(nda, "signed_at", signed_at)
+    await db.flush()
+
+
 async def _run_pipeline_core(
     db: AsyncSession,
     extraction_id: uuid.UUID,
@@ -516,6 +568,7 @@ async def _run_pipeline_core(
     extraction.extracted_data = extracted
     if not extracted:
         extraction.error_message = "문서에서 구조화 데이터를 추출하지 못했습니다"
+    await _auto_apply_nda_signed_at(db, extraction, extracted)
     extraction.status = ExtractionStatus.COMPLETED
     extraction.llm_cost_usd = llm.total_cost_usd
     await db.commit()
@@ -549,8 +602,6 @@ async def retry_extraction(
     extraction.doc_category = None
     extraction.classification_confidence = None
     extraction.extracted_data = None
-    extraction.target_model = None
-    extraction.target_id = None
     extraction.llm_cost_usd = 0.0
     await db.flush()
     await db.refresh(extraction)

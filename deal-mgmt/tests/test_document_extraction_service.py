@@ -220,6 +220,33 @@ class TestExtractionCrud:
         ext = await create_extraction(async_session, txn.id, vdr_doc.id, DocExtractionCategory.NDA)
         assert ext.doc_category == DocExtractionCategory.NDA
 
+    async def test_create_with_target_metadata(self, async_session: AsyncSession) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+        nda = NDA(
+            transaction_id=txn.id,
+            party_type=NdaPartyType.BUYER,
+            buyer_candidate_id=buyer.id,
+            nda_type=NdaType.MUTUAL,
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(
+            async_session,
+            txn.id,
+            vdr_doc.id,
+            DocExtractionCategory.NDA,
+            target_model="nda",
+            target_id=nda.id,
+            auto_apply_signed_at=True,
+        )
+
+        assert ext.target_model == "nda"
+        assert ext.target_id == nda.id
+        assert ext.auto_apply_signed_at is True
+
     async def test_get_extraction(self, async_session: AsyncSession) -> None:
         txn = await _make_txn(async_session)
         vdr_doc = await _make_vdr_doc(async_session, txn)
@@ -1356,6 +1383,117 @@ class TestPipeline:
         assert ext.doc_category == DocExtractionCategory.NDA
         assert ext.extracted_data is not None
         assert ext.extracted_data["counterparty_name"] == "테스트사"
+
+    async def test_pipeline_auto_applies_nda_signed_at_when_empty(
+        self,
+        async_session: AsyncSession,
+    ) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+        nda = NDA(
+            transaction_id=txn.id,
+            party_type=NdaPartyType.BUYER,
+            buyer_candidate_id=buyer.id,
+            nda_type=NdaType.MUTUAL,
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(
+            async_session,
+            txn.id,
+            vdr_doc.id,
+            DocExtractionCategory.NDA,
+            target_model="nda",
+            target_id=nda.id,
+            auto_apply_signed_at=True,
+        )
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "NDA signed on 2026-03-31"
+
+        llm = _mock_llm_client('{"signed_at": "2026-03-31"}')
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        await async_session.refresh(nda)
+        assert ext.status == ExtractionStatus.COMPLETED
+        assert str(nda.signed_at) == "2026-03-31"
+
+    async def test_pipeline_keeps_existing_nda_signed_at_on_mismatch(
+        self,
+        async_session: AsyncSession,
+    ) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+        nda = NDA(
+            transaction_id=txn.id,
+            party_type=NdaPartyType.BUYER,
+            buyer_candidate_id=buyer.id,
+            nda_type=NdaType.MUTUAL,
+            signed_at="2026-03-30",
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(
+            async_session,
+            txn.id,
+            vdr_doc.id,
+            DocExtractionCategory.NDA,
+            target_model="nda",
+            target_id=nda.id,
+            auto_apply_signed_at=True,
+        )
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "NDA signed on 2026-03-31"
+
+        llm = _mock_llm_client('{"signed_at": "2026-03-31"}')
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(nda)
+        assert str(nda.signed_at) == "2026-03-30"
 
     async def test_pipeline_registry_docs_runs_extraction(self, async_session: AsyncSession) -> None:
         """REGISTRY_DOCS 분류도 추출 단계까지 진행한다."""

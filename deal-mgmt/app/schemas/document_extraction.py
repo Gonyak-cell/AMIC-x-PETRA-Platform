@@ -19,6 +19,19 @@ class ExtractionCreateRequest(BaseModel):
 
     vdr_document_id: uuid.UUID
     doc_category_hint: DocExtractionCategory | None = None
+    target_model: (
+        Literal[
+            "nda",
+            "bid",
+            "contract",
+            "transaction",
+            "engagement",
+            "marketing_material",
+        ]
+        | None
+    ) = None
+    target_id: uuid.UUID | None = None
+    auto_apply_signed_at: bool = False
 
 
 class BatchExtractionRequest(BaseModel):
@@ -65,6 +78,7 @@ class ExtractionOut(BaseModel):
     extracted_data: dict | None = None
     target_model: str | None = None
     target_id: uuid.UUID | None = None
+    auto_apply_signed_at: bool = False
     llm_cost_usd: float = 0.0
     reviewed_by_email: str | None = None
     reviewed_at: str | None = None

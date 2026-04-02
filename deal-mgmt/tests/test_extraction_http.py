@@ -121,6 +121,9 @@ async def test_create_extraction_does_not_block_on_slow_celery_dispatch(
         json={
             "vdr_document_id": vdr_document_id,
             "doc_category_hint": "NDA",
+            "target_model": "nda",
+            "target_id": str(uuid.uuid4()),
+            "auto_apply_signed_at": True,
         },
     )
     elapsed = time.perf_counter() - started

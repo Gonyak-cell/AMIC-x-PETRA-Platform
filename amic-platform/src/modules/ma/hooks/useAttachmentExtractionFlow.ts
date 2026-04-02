@@ -16,6 +16,9 @@ interface StartExtractionFromUploadParams {
   file: File;
   docCategoryHint: DocExtractionCategory;
   reviewContext: ExtractionReviewContext;
+  targetModel?: "nda" | "marketing_material";
+  targetId?: string;
+  autoApplySignedAt?: boolean;
 }
 
 interface StartExtractionToastOptions {
@@ -48,6 +51,16 @@ export function canStartExtractionFromUpload(
   );
 }
 
+const POLLABLE_EXTRACTION_STATUSES = new Set([
+  "PENDING",
+  "CLASSIFYING",
+  "EXTRACTING",
+]);
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 export function useAttachmentExtractionFlow(txnId: string) {
   const queryClient = useQueryClient();
   const [activeReview, setActiveReview] = useState<ActiveExtractionReview | null>(
@@ -65,6 +78,9 @@ export function useAttachmentExtractionFlow(txnId: string) {
         file,
         docCategoryHint,
         reviewContext,
+        targetModel,
+        targetId,
+        autoApplySignedAt,
       }: StartExtractionFromUploadParams,
       options: StartExtractionToastOptions = {},
     ) => {
@@ -87,11 +103,62 @@ export function useAttachmentExtractionFlow(txnId: string) {
           {
             vdr_document_id: vdrDocumentId,
             doc_category_hint: docCategoryHint,
+            target_model: targetModel,
+            target_id: targetId,
+            auto_apply_signed_at: autoApplySignedAt,
           },
         );
         await queryClient.invalidateQueries({
           queryKey: ["ma", "transactions", txnId, "extractions"],
         });
+        if (targetModel === "nda" && targetId && autoApplySignedAt) {
+          void (async () => {
+            try {
+              let latest = extraction;
+              while (POLLABLE_EXTRACTION_STATUSES.has(latest.status)) {
+                await delay(1500);
+                const { data } = await maApi.get<DocumentExtraction>(
+                  `/transactions/${txnId}/extractions/${extraction.id}`,
+                );
+                latest = data;
+              }
+
+              if (
+                latest.status === "COMPLETED" ||
+                latest.status === "CONFIRMED"
+              ) {
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: ["ma", "transactions", txnId, "extractions"],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["ma", "transactions", txnId, "ndas"],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["ma", "transactions", txnId, "buyers"],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "ma",
+                      "transactions",
+                      txnId,
+                      "short-list",
+                      "overview",
+                    ],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["ma", "transactions", txnId, "workspace-summary"],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["ma", "transactions", txnId, "buyers", "summary"],
+                  }),
+                ]);
+              }
+            } catch {
+              // Keep the review UX working even if follow-up polling fails.
+            }
+          })();
+        }
         if (options.successToast !== null) {
           toast.success(options.successToast ?? "AI 분석을 시작했습니다.");
         }

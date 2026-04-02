@@ -227,7 +227,7 @@ async def test_create_uploaded_tm_registers_attachment_without_queue(
     attachment = Attachment(
         transaction_id=uuid.UUID(txn_id),
         entity_type="MARKETING_MATERIAL",
-        entity_id="TM",
+        entity_id=None,
         file_path=str(file_path),
         file_name="uploaded-tm.pdf",
         file_size_bytes=len(pdf_bytes),

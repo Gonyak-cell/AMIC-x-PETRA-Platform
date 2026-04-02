@@ -53,6 +53,7 @@ interface FileUploadZoneProps {
   onUploaded?: AttachmentUploadHandler;
   suppressListErrorToast?: boolean;
   listErrorMessage?: string;
+  uploadOnly?: boolean;
 }
 
 function hasDraggedFiles(dataTransfer?: DataTransfer | null) {
@@ -117,16 +118,23 @@ export default function FileUploadZone({
   onUploaded,
   suppressListErrorToast = false,
   listErrorMessage = "기존 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다.",
+  uploadOnly = false,
 }: FileUploadZoneProps) {
   const [expanded, setExpanded] = useState(!compact);
   const [isEmptyDropActive, setIsEmptyDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emptyDragDepthRef = useRef(0);
 
-  const { data, isError: isListError } = useAttachments(txnId, entityType, entityId, {
-    refetchWhileProcessing: true,
-    suppressGlobalErrorToast: suppressListErrorToast,
-  });
+  const { data, isError: isListError } = useAttachments(
+    txnId,
+    entityType,
+    entityId,
+    {
+      enabled: !uploadOnly,
+      refetchWhileProcessing: !uploadOnly,
+      suppressGlobalErrorToast: suppressListErrorToast,
+    },
+  );
   const uploadMutation = useUploadAttachment(txnId);
   const deleteMutation = useDeleteAttachment(txnId);
   const retryProcessingMutation = useRetryAttachmentProcessing(txnId);
@@ -301,7 +309,7 @@ export default function FileUploadZone({
     />
   );
 
-  const listErrorBanner = isListError ? (
+  const listErrorBanner = !uploadOnly && isListError ? (
     <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
       {listErrorMessage}
     </div>

@@ -97,6 +97,43 @@ describe("FileUploadZone", () => {
     );
   });
 
+  it("skips attachment list loading in upload-only mode", () => {
+    mockUseAttachments.mockReturnValue({
+      data: { items: [] },
+      isError: true,
+    });
+
+    render(
+      <FileUploadZone
+        txnId="txn-1"
+        entityType="MARKETING_MATERIAL"
+        embedded
+        uploadOnly
+        emptyVariant="dashed"
+        emptyTitle="등록된 Teaser 없음"
+        listErrorMessage="기존 Teaser 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다."
+      />,
+    );
+
+    expect(
+      screen.queryByText(
+        "기존 Teaser 첨부 목록을 불러오지 못했습니다. 업로드는 계속 가능합니다.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /등록된 Teaser 없음/ }),
+    ).toBeInTheDocument();
+    expect(mockUseAttachments).toHaveBeenCalledWith(
+      "txn-1",
+      "MARKETING_MATERIAL",
+      undefined,
+      expect.objectContaining({
+        enabled: false,
+        refetchWhileProcessing: false,
+      }),
+    );
+  });
+
   it("uploads a dropped file from the empty dashed state and sets dropEffect", async () => {
     const onUploaded = vi.fn();
     const resolveEntityId = vi.fn().mockResolvedValue("nda-1");

@@ -149,6 +149,7 @@ export interface DocumentExtraction {
   extracted_data: Record<string, unknown> | null;
   target_model: TargetModel | null;
   target_id: string | null;
+  auto_apply_signed_at: boolean;
   llm_cost_usd: number;
   reviewed_by_email: string | null;
   reviewed_at: string | null;
@@ -166,6 +167,9 @@ export interface ExtractionListResponse {
 export interface ExtractionCreateRequest {
   vdr_document_id: string;
   doc_category_hint?: DocExtractionCategory;
+  target_model?: TargetModel;
+  target_id?: string;
+  auto_apply_signed_at?: boolean;
 }
 
 export interface BatchExtractionRequest {

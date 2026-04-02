@@ -15,6 +15,13 @@ import { createTestQueryClient } from "@/test/test-utils";
 import BuyerTeaserSection from "../BuyerTeaserSection";
 
 const mockUseMarketingMaterials = vi.fn();
+const fileUploadZoneState = vi.hoisted(() => ({
+  props: null as {
+    entityType?: string;
+    entityId?: string;
+    uploadOnly?: boolean;
+  } | null,
+}));
 
 vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
   useMarketingMaterials: () => mockUseMarketingMaterials(),
@@ -22,26 +29,35 @@ vi.mock("@/modules/ma/hooks/useMarketingMaterials", () => ({
 
 vi.mock("@/modules/ma/components/FileUploadZone", () => ({
   default: ({
+    entityType,
+    entityId,
+    uploadOnly,
     embeddedLabel,
     emptyTitle,
     emptyDescription,
     emptyHint,
     showUploadAction,
   }: {
+    entityType?: string;
+    entityId?: string;
+    uploadOnly?: boolean;
     embeddedLabel?: string;
     emptyTitle?: string;
     emptyDescription?: string;
     emptyHint?: string;
     showUploadAction?: boolean;
-  }) => (
-    <div data-testid="file-upload-zone">
-      <div>{embeddedLabel ?? "file-upload-zone"}</div>
-      {emptyTitle ? <div>{emptyTitle}</div> : null}
-      {emptyDescription ? <div>{emptyDescription}</div> : null}
-      {emptyHint ? <div>{emptyHint}</div> : null}
-      <div>{String(showUploadAction ?? true)}</div>
-    </div>
-  ),
+  }) => {
+    fileUploadZoneState.props = { entityType, entityId, uploadOnly };
+    return (
+      <div data-testid="file-upload-zone">
+        <div>{embeddedLabel ?? "file-upload-zone"}</div>
+        {emptyTitle ? <div>{emptyTitle}</div> : null}
+        {emptyDescription ? <div>{emptyDescription}</div> : null}
+        {emptyHint ? <div>{emptyHint}</div> : null}
+        <div>{String(showUploadAction ?? true)}</div>
+      </div>
+    );
+  },
 }));
 
 const toastSuccessSpy = vi
@@ -91,6 +107,7 @@ function renderSection() {
 describe("BuyerTeaserSection", () => {
   beforeEach(() => {
     mockUseMarketingMaterials.mockReset();
+    fileUploadZoneState.props = null;
     toastSuccessSpy.mockClear();
     toastErrorSpy.mockClear();
     vi.spyOn(maApi, "put").mockReset();
@@ -166,6 +183,11 @@ describe("BuyerTeaserSection", () => {
     expect(screen.getAllByText("v2").length).toBeGreaterThan(0);
     expect(screen.getByText("2026-03-20")).toBeInTheDocument();
     expect(screen.getByText("Teaser 업로드")).toBeInTheDocument();
+    expect(fileUploadZoneState.props).toEqual({
+      entityType: "MARKETING_MATERIAL",
+      entityId: undefined,
+      uploadOnly: true,
+    });
     expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
   });
 
@@ -295,6 +317,11 @@ describe("BuyerTeaserSection", () => {
     expect(
       within(screen.getByTestId("file-upload-zone")).getByText("false"),
     ).toBeInTheDocument();
+    expect(fileUploadZoneState.props).toEqual({
+      entityType: "MARKETING_MATERIAL",
+      entityId: undefined,
+      uploadOnly: true,
+    });
     expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
   });
 });

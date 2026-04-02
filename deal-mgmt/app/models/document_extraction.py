@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, Enum, Float, ForeignKey, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, Enum, Float, ForeignKey, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -53,6 +53,11 @@ class DocumentExtraction(Base, TimestampMixin):
         String(50), nullable=True
     )  # "nda", "bid", "contract", "transaction"
     target_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    auto_apply_signed_at: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
 
     # ── 비용 추적 ────────────────────────────────────────
     llm_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)

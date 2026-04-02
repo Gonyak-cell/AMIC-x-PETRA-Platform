@@ -101,6 +101,9 @@ async def create_extraction(
         txn_id,
         body.vdr_document_id,
         body.doc_category_hint,
+        target_model=body.target_model,
+        target_id=body.target_id,
+        auto_apply_signed_at=body.auto_apply_signed_at,
     )
     await db.commit()
     await db.refresh(extraction)
