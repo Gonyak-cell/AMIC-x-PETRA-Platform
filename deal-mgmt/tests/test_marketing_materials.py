@@ -239,9 +239,7 @@ async def test_upload_tm_creates_material_and_bound_attachment(
     material = material_result.scalar_one()
     assert material.attachment_id is not None
 
-    attachment_result = await async_session.execute(
-        select(Attachment).where(Attachment.id == material.attachment_id)
-    )
+    attachment_result = await async_session.execute(select(Attachment).where(Attachment.id == material.attachment_id))
     attachment = attachment_result.scalar_one()
     assert attachment.entity_type == "MARKETING_MATERIAL"
     assert attachment.entity_id == str(material.id)

@@ -158,9 +158,7 @@ def _apply_uploaded_material_fields(
 
     if distributed_to is not None:
         mat.distributed_to = distributed_to
-        mat.distributed_at = distributed_at or (
-            datetime.now(UTC).isoformat() if distributed_to else None
-        )
+        mat.distributed_at = distributed_at or (datetime.now(UTC).isoformat() if distributed_to else None)
     elif distributed_at is not None:
         mat.distributed_at = distributed_at
 
@@ -265,11 +263,7 @@ async def create_uploaded_marketing_material_from_file(
             deal_captain_email,
         )
         processing_status = PROCESSING_PENDING if has_vdr_access else PROCESSING_SKIPPED
-        processing_error = (
-            None
-            if has_vdr_access
-            else "VDR sync was skipped because the uploader lacks write access."
-        )
+        processing_error = None if has_vdr_access else "VDR sync was skipped because the uploader lacks write access."
 
         upload_stage = "attachment_db_flush"
         attachment = Attachment(
