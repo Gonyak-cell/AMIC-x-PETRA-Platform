@@ -421,6 +421,11 @@ async def test_upload_tm_retries_after_backend_attachment_schema_repair(
             repaired=True,
         )
 
+    monkeypatch.setattr(
+        marketing_material_service.settings,
+        "DATABASE_URL",
+        "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
     monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_single_schema_failure)
     monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
 
@@ -473,6 +478,11 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
             repaired=False,
         )
 
+    monkeypatch.setattr(
+        marketing_material_service.settings,
+        "DATABASE_URL",
+        "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
     monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_persistent_schema_failure)
     monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
 
