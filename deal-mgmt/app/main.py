@@ -65,18 +65,23 @@ async def _bootstrap_attachment_processing_schema_for_startup(
     database_url: str | None = None,
     engine_override=None,
 ):
-    from app.core.local_dev_schema_guard import repair_attachment_processing_schema_if_needed
+    from app.core.local_dev_schema_guard import repair_attachment_upload_schema_if_needed
 
     effective_database_url = database_url or settings.DATABASE_URL
-    repair_result = await repair_attachment_processing_schema_if_needed(
+    repair_result = await repair_attachment_upload_schema_if_needed(
         database_url=effective_database_url,
         engine_override=engine_override,
         logger=logger,
     )
     if repair_result.repaired:
         logger.warning(
-            "Backend attachment processing schema was repaired during app startup: %s",
-            ", ".join(repair_result.missing_columns),
+            "Backend uploaded marketing material schema was repaired during app startup: %s",
+            ", ".join(repair_result.qualified_missing_columns),
+        )
+    elif repair_result.repair_attempted and repair_result.issues:
+        logger.warning(
+            "Uploaded marketing material schema is still missing after startup repair: %s",
+            ", ".join(repair_result.qualified_missing_columns),
         )
     return repair_result
 
@@ -386,4 +391,38 @@ async def health_check():
         logger.error("Health check DB 연결 실패: %s", exc)
         result["status"] = "degraded"
         result["db"] = "error"
+
+    try:
+        from app.core.database import async_session_factory
+        from app.core.local_dev_schema_guard import probe_attachment_upload_schema
+
+        schema_engine = getattr(async_session_factory, "kw", {}).get("bind")
+        schema_result = await probe_attachment_upload_schema(
+            engine_override=schema_engine,
+            logger=logger,
+        )
+        result["attachment_upload_schema_ok"] = schema_result.ok
+        result["attachment_upload_schema"] = {
+            "ok": schema_result.ok,
+            "issues": [
+                {
+                    "table": issue.table,
+                    "column": issue.column,
+                    "reason": issue.reason,
+                    "repairable": issue.repairable,
+                }
+                for issue in schema_result.issues
+            ],
+        }
+        if not schema_result.ok:
+            result["status"] = "degraded"
+    except Exception as exc:
+        logger.error("Health check attachment upload schema probe failed: %s", exc)
+        result["status"] = "degraded"
+        result["attachment_upload_schema_ok"] = False
+        result["attachment_upload_schema"] = {
+            "ok": False,
+            "error": str(exc),
+            "issues": [],
+        }
     return result

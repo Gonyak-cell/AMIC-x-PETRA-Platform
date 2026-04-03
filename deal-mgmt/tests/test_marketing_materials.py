@@ -386,6 +386,7 @@ async def test_upload_tm_reports_stale_local_sqlite_schema_with_restart_hint(
     assert "attachment_db_flush" in detail
     assert "Local SQLite dev database is stale" in detail
     assert "run_dev_server.py" in detail
+    assert resp.headers["x-request-id"] in detail
 
 
 @pytest.mark.asyncio
@@ -394,31 +395,43 @@ async def test_upload_tm_retries_after_backend_attachment_schema_repair(
     _txn,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import sqlite3
+    from sqlalchemy.exc import ProgrammingError
 
-    from sqlalchemy.exc import OperationalError
-
-    from app.core.local_dev_schema_guard import AttachmentProcessingSchemaRepairResult
+    from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
     from app.services import marketing_material_service
 
     original_flush = marketing_material_service.AsyncSession.flush
     flush_calls = 0
 
+    class _FakeOrigError(Exception):
+        sqlstate = "42703"
+
+        def __str__(self):
+            return 'column "vdr_document_id" of relation "attachments" does not exist'
+
     async def _flush_with_single_schema_failure(self, *args, **kwargs):
         nonlocal flush_calls
         flush_calls += 1
         if flush_calls == 2:
-            raise OperationalError(
+            raise ProgrammingError(
                 "INSERT INTO attachments (...) VALUES (...)",
                 {},
-                sqlite3.OperationalError("table attachments has no column named processing_status"),
+                _FakeOrigError(),
             )
         return await original_flush(self, *args, **kwargs)
 
     async def _repair_schema(**kwargs):
-        return AttachmentProcessingSchemaRepairResult(
-            missing_columns=("processing_error", "processing_status"),
+        return AttachmentUploadSchemaRepairResult(
+            issues=(
+                AttachmentUploadSchemaIssue(
+                    table="attachments",
+                    column="vdr_document_id",
+                    reason="missing_column",
+                    repairable=True,
+                ),
+            ),
             repaired=True,
+            repair_attempted=True,
         )
 
     monkeypatch.setattr(
@@ -427,7 +440,7 @@ async def test_upload_tm_retries_after_backend_attachment_schema_repair(
         "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
     )
     monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_single_schema_failure)
-    monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_upload_schema_if_needed", _repair_schema)
 
     txn_id = _txn["id"]
     resp = await client.post(
@@ -451,31 +464,43 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
     _txn,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import sqlite3
+    from sqlalchemy.exc import ProgrammingError
 
-    from sqlalchemy.exc import OperationalError
-
-    from app.core.local_dev_schema_guard import AttachmentProcessingSchemaRepairResult
+    from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
     from app.services import marketing_material_service
 
     original_flush = marketing_material_service.AsyncSession.flush
     flush_calls = 0
 
+    class _FakeOrigError(Exception):
+        sqlstate = "42703"
+
+        def __str__(self):
+            return 'column "vdr_document_id" of relation "attachments" does not exist'
+
     async def _flush_with_persistent_schema_failure(self, *args, **kwargs):
         nonlocal flush_calls
         flush_calls += 1
         if flush_calls == 2:
-            raise OperationalError(
+            raise ProgrammingError(
                 "INSERT INTO attachments (...) VALUES (...)",
                 {},
-                sqlite3.OperationalError("table attachments has no column named processing_status"),
+                _FakeOrigError(),
             )
         return await original_flush(self, *args, **kwargs)
 
     async def _repair_schema(**kwargs):
-        return AttachmentProcessingSchemaRepairResult(
-            missing_columns=("processing_error", "processing_status"),
+        return AttachmentUploadSchemaRepairResult(
+            issues=(
+                AttachmentUploadSchemaIssue(
+                    table="attachments",
+                    column="vdr_document_id",
+                    reason="missing_column",
+                    repairable=True,
+                ),
+            ),
             repaired=False,
+            repair_attempted=True,
         )
 
     monkeypatch.setattr(
@@ -484,7 +509,7 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
         "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
     )
     monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_persistent_schema_failure)
-    monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_upload_schema_if_needed", _repair_schema)
 
     txn_id = _txn["id"]
     resp = await client.post(
@@ -500,6 +525,8 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
     detail = resp.json()["detail"]
     assert "attachment_db_flush" in detail
     assert "alembic upgrade head" in detail
+    assert "attachments.vdr_document_id" in detail
+    assert resp.headers["x-request-id"] in detail
 
 
 @pytest.mark.asyncio

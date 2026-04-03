@@ -17,12 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import settings
 from app.core.exceptions import DocumentNotFoundError
 from app.core.local_dev_schema_guard import (
-    build_backend_attachment_processing_schema_required_detail,
-    build_local_sqlite_rebuild_required_detail,
-    is_attachment_processing_schema_error,
-    is_local_sqlite_attachment_processing_schema_error,
-    repair_attachment_processing_schema_if_needed,
+    AttachmentUploadSchemaIssue,
+    build_backend_attachment_upload_schema_required_detail,
+    build_local_sqlite_upload_schema_rebuild_required_detail,
+    classify_attachment_upload_schema_error,
+    is_file_based_sqlite_database_url,
+    is_local_sqlite_attachment_upload_schema_error,
+    repair_attachment_upload_schema_if_needed,
 )
+from app.core.log_context import get_request_id
 from app.models.attachment import Attachment
 from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 from app.models.marketing_material import MarketingMaterial
@@ -124,8 +127,10 @@ def _log_marketing_upload_integrity_error(
     sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
     diag = getattr(orig, "diag", None)
     constraint_name = getattr(diag, "constraint_name", None)
+    request_id = get_request_id()
     logger.exception(
-        "Uploaded marketing material integrity error: stage=%s txn=%s entity_type=%s entity_id=%s marketing_material_id=%s sqlstate=%s constraint=%s",
+        "Uploaded marketing material integrity error: request_id=%s stage=%s txn=%s entity_type=%s entity_id=%s marketing_material_id=%s sqlstate=%s constraint=%s",
+        request_id,
         stage,
         transaction_id,
         entity_type,
@@ -133,6 +138,59 @@ def _log_marketing_upload_integrity_error(
         marketing_material_id,
         sqlstate,
         constraint_name,
+    )
+
+
+def _build_upload_schema_failure_detail(
+    *,
+    stage: str,
+    issue: AttachmentUploadSchemaIssue,
+    database_url: str | None,
+) -> str:
+    request_id = get_request_id()
+    if is_file_based_sqlite_database_url(database_url):
+        return build_local_sqlite_upload_schema_rebuild_required_detail(
+            stage=stage,
+            issue=issue,
+            request_id=request_id,
+        )
+    return build_backend_attachment_upload_schema_required_detail(
+        stage=stage,
+        issue=issue,
+        request_id=request_id,
+    )
+
+
+def _log_marketing_upload_db_error(
+    exc: OperationalError | ProgrammingError,
+    *,
+    stage: str,
+    transaction_id: uuid.UUID,
+    marketing_material_id: uuid.UUID | None,
+    schema_issue: AttachmentUploadSchemaIssue | None,
+) -> None:
+    request_id = get_request_id()
+    orig = getattr(exc, "orig", None)
+    diag = getattr(orig, "diag", None)
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    table_name = getattr(diag, "table_name", None) or (schema_issue.table if schema_issue is not None else None)
+    column_name = getattr(diag, "column_name", None) or (schema_issue.column if schema_issue is not None else None)
+    constraint_name = getattr(diag, "constraint_name", None)
+    statement = getattr(exc, "statement", None)
+    logger.exception(
+        "Uploaded marketing material database error: request_id=%s stage=%s txn=%s marketing_material_id=%s exc_class=%s orig_class=%s sqlstate=%s table=%s column=%s constraint=%s schema_reason=%s statement=%s",
+        request_id,
+        stage,
+        transaction_id,
+        marketing_material_id,
+        exc.__class__.__name__,
+        orig.__class__.__name__ if orig is not None else None,
+        sqlstate,
+        table_name,
+        column_name,
+        constraint_name,
+        schema_issue.reason if schema_issue is not None else None,
+        statement,
     )
 
 
@@ -316,49 +374,61 @@ async def create_uploaded_marketing_material_from_file(
             except (OperationalError, ProgrammingError) as exc:
                 await db.rollback()
                 db.expunge_all()
-                if upload_stage == "attachment_db_flush" and is_local_sqlite_attachment_processing_schema_error(
+                schema_issue = classify_attachment_upload_schema_error(exc)
+                _log_marketing_upload_db_error(
                     exc,
-                    database_url=settings.DATABASE_URL,
-                ):
-                    logger.warning(
-                        "Detected stale local SQLite attachment schema during uploaded marketing material flush: stage=%s txn=%s marketing_material_id=%s",
-                        upload_stage,
-                        transaction_id,
-                        material.id if material is not None else None,
-                    )
-                    raise HTTPException(
-                        status_code=500,
-                        detail=build_local_sqlite_rebuild_required_detail(stage=upload_stage),
-                    ) from exc
-
-                if (
-                    upload_stage == "attachment_db_flush"
-                    and not attempted_attachment_schema_repair
-                    and is_attachment_processing_schema_error(exc)
-                ):
-                    repair_result = await repair_attachment_processing_schema_if_needed(
-                        database_url=settings.DATABASE_URL,
-                        logger=logger,
-                    )
-                    if repair_result.repaired:
-                        attempted_attachment_schema_repair = True
-                        logger.warning(
-                            "Retried uploaded marketing material flush after repairing attachment processing schema: txn=%s missing_columns=%s",
-                            transaction_id,
-                            ", ".join(repair_result.missing_columns),
-                        )
-                        continue
-                    raise HTTPException(
-                        status_code=500,
-                        detail=build_backend_attachment_processing_schema_required_detail(stage=upload_stage),
-                    ) from exc
-
-                logger.exception(
-                    "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
-                    upload_stage,
-                    transaction_id,
-                    material.id if material is not None else None,
+                    stage=upload_stage,
+                    transaction_id=transaction_id,
+                    marketing_material_id=material.id if material is not None else None,
+                    schema_issue=schema_issue,
                 )
+
+                if schema_issue is not None:
+                    if is_local_sqlite_attachment_upload_schema_error(
+                        exc,
+                        database_url=settings.DATABASE_URL,
+                    ):
+                        logger.warning(
+                            "Detected stale local SQLite uploaded marketing material schema: request_id=%s stage=%s txn=%s marketing_material_id=%s missing=%s",
+                            get_request_id(),
+                            upload_stage,
+                            transaction_id,
+                            material.id if material is not None else None,
+                            schema_issue.qualified_column,
+                        )
+                        raise HTTPException(
+                            status_code=500,
+                            detail=_build_upload_schema_failure_detail(
+                                stage=upload_stage,
+                                issue=schema_issue,
+                                database_url=settings.DATABASE_URL,
+                            ),
+                        ) from exc
+
+                    if not attempted_attachment_schema_repair and schema_issue.repairable:
+                        repair_result = await repair_attachment_upload_schema_if_needed(
+                            database_url=settings.DATABASE_URL,
+                            logger=logger,
+                        )
+                        if repair_result.repaired:
+                            attempted_attachment_schema_repair = True
+                            logger.warning(
+                                "Retried uploaded marketing material flush after repairing uploaded schema: request_id=%s txn=%s missing_columns=%s",
+                                get_request_id(),
+                                transaction_id,
+                                ", ".join(repair_result.qualified_missing_columns),
+                            )
+                            continue
+
+                    raise HTTPException(
+                        status_code=500,
+                        detail=_build_upload_schema_failure_detail(
+                            stage=upload_stage,
+                            issue=schema_issue,
+                            database_url=settings.DATABASE_URL,
+                        ),
+                    ) from exc
+
                 raise HTTPException(
                     status_code=500,
                     detail=f"Uploaded marketing material failed during {upload_stage}.",
@@ -388,17 +458,23 @@ async def create_uploaded_marketing_material_from_file(
         await db.rollback()
         if dest_path is not None:
             await asyncio.to_thread(dest_path.unlink, missing_ok=True)
-        if upload_stage == "attachment_db_flush" and is_attachment_processing_schema_error(exc):
+        schema_issue = classify_attachment_upload_schema_error(exc)
+        _log_marketing_upload_db_error(
+            exc,
+            stage=upload_stage,
+            transaction_id=transaction_id,
+            marketing_material_id=material.id if material is not None else None,
+            schema_issue=schema_issue,
+        )
+        if schema_issue is not None:
             raise HTTPException(
                 status_code=500,
-                detail=build_backend_attachment_processing_schema_required_detail(stage=upload_stage),
+                detail=_build_upload_schema_failure_detail(
+                    stage=upload_stage,
+                    issue=schema_issue,
+                    database_url=settings.DATABASE_URL,
+                ),
             ) from exc
-        logger.exception(
-            "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
-            upload_stage,
-            transaction_id,
-            material.id if material is not None else None,
-        )
         raise HTTPException(
             status_code=500,
             detail=f"Uploaded marketing material failed during {upload_stage}.",
@@ -408,7 +484,8 @@ async def create_uploaded_marketing_material_from_file(
         if dest_path is not None:
             await asyncio.to_thread(dest_path.unlink, missing_ok=True)
         logger.exception(
-            "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
+            "Uploaded marketing material failed: request_id=%s stage=%s txn=%s marketing_material_id=%s",
+            get_request_id(),
             upload_stage,
             transaction_id,
             material.id if material is not None else None,

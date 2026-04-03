@@ -2,11 +2,14 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.local_dev_schema_guard import (
+    classify_attachment_upload_schema_error,
     guard_local_sqlite_database_url,
-    repair_attachment_processing_schema_if_needed,
+    probe_attachment_upload_schema,
+    repair_attachment_upload_schema_if_needed,
 )
 from app.main import (
     _bootstrap_attachment_processing_schema_for_startup,
@@ -95,6 +98,9 @@ def test_get_local_dev_rebuild_reason_detects_stale_attachment_columns(tmp_path)
 
     assert reason is not None
     assert "attachments" in reason
+    assert "description" in reason
+    assert "uploaded_by_email" in reason
+    assert "vdr_document_id" in reason
     assert "processing_status" in reason
     assert "processing_error" in reason
 
@@ -172,6 +178,9 @@ def test_guard_local_sqlite_database_url_leaves_current_schema_untouched(tmp_pat
             file_name TEXT NOT NULL,
             file_size_bytes INTEGER NOT NULL,
             mime_type TEXT NOT NULL,
+            description TEXT,
+            uploaded_by_email TEXT,
+            vdr_document_id TEXT,
             processing_status TEXT NOT NULL,
             processing_error TEXT
         );
@@ -226,7 +235,13 @@ async def test_bootstrap_local_sqlite_schema_for_startup_recreates_stale_db(tmp_
     finally:
         conn.close()
 
-    assert {"processing_status", "processing_error"} <= attachments_columns
+    assert {
+        "description",
+        "uploaded_by_email",
+        "vdr_document_id",
+        "processing_status",
+        "processing_error",
+    } <= attachments_columns
     assert {"source_mode", "attachment_id"} <= marketing_columns
 
 
@@ -244,8 +259,14 @@ async def test_repair_attachment_processing_schema_if_needed_adds_missing_column
             file_path TEXT NOT NULL,
             file_name TEXT NOT NULL,
             file_size_bytes INTEGER NOT NULL,
-            mime_type TEXT NOT NULL,
-            vdr_document_id TEXT
+            mime_type TEXT NOT NULL
+        );
+        CREATE TABLE marketing_materials (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            doc_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL
         );
         INSERT INTO attachments (
             id,
@@ -255,8 +276,7 @@ async def test_repair_attachment_processing_schema_if_needed_adds_missing_column
             file_path,
             file_name,
             file_size_bytes,
-            mime_type,
-            vdr_document_id
+            mime_type
         ) VALUES (
             'att-1',
             'txn-1',
@@ -265,8 +285,20 @@ async def test_repair_attachment_processing_schema_if_needed_adds_missing_column
             '/tmp/uploaded.pdf',
             'uploaded.pdf',
             123,
-            'application/pdf',
-            NULL
+            'application/pdf'
+        );
+        INSERT INTO marketing_materials (
+            id,
+            transaction_id,
+            doc_type,
+            title,
+            status
+        ) VALUES (
+            'mat-1',
+            'txn-1',
+            'TM',
+            'Uploaded teaser',
+            'READY'
         );
         """,
     )
@@ -274,7 +306,7 @@ async def test_repair_attachment_processing_schema_if_needed_adds_missing_column
     database_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
     engine = create_async_engine(database_url, echo=False)
     try:
-        result = await repair_attachment_processing_schema_if_needed(
+        result = await repair_attachment_upload_schema_if_needed(
             database_url=database_url,
             engine_override=engine,
         )
@@ -282,15 +314,37 @@ async def test_repair_attachment_processing_schema_if_needed_adds_missing_column
         await engine.dispose()
 
     assert result.repaired is True
-    assert result.missing_columns == ("processing_error", "processing_status")
+    assert result.qualified_missing_columns == (
+        "attachments.description",
+        "attachments.processing_error",
+        "attachments.processing_status",
+        "attachments.uploaded_by_email",
+        "attachments.vdr_document_id",
+        "marketing_materials.attachment_id",
+        "marketing_materials.source_mode",
+    )
 
     conn = sqlite3.connect(db_path)
     try:
-        rows = conn.execute("SELECT processing_status, processing_error FROM attachments WHERE id = 'att-1'").fetchall()
+        attachment_rows = conn.execute(
+            """
+            SELECT description, uploaded_by_email, vdr_document_id, processing_status, processing_error
+            FROM attachments
+            WHERE id = 'att-1'
+            """
+        ).fetchall()
+        marketing_rows = conn.execute(
+            """
+            SELECT source_mode, attachment_id
+            FROM marketing_materials
+            WHERE id = 'mat-1'
+            """
+        ).fetchall()
     finally:
         conn.close()
 
-    assert rows == [("SKIPPED", None)]
+    assert attachment_rows == [(None, None, None, "SKIPPED", None)]
+    assert marketing_rows == [("GENERATED", None)]
 
 
 @pytest.mark.asyncio
@@ -307,8 +361,14 @@ async def test_bootstrap_attachment_processing_schema_for_startup_repairs_missin
             file_path TEXT NOT NULL,
             file_name TEXT NOT NULL,
             file_size_bytes INTEGER NOT NULL,
-            mime_type TEXT NOT NULL,
-            vdr_document_id TEXT
+            mime_type TEXT NOT NULL
+        );
+        CREATE TABLE marketing_materials (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            doc_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL
         );
         """,
     )
@@ -328,10 +388,127 @@ async def test_bootstrap_attachment_processing_schema_for_startup_repairs_missin
     conn = sqlite3.connect(db_path)
     try:
         attachments_columns = {row[1] for row in conn.execute("PRAGMA table_info(attachments)").fetchall()}
+        marketing_columns = {row[1] for row in conn.execute("PRAGMA table_info(marketing_materials)").fetchall()}
     finally:
         conn.close()
 
-    assert {"processing_status", "processing_error"} <= attachments_columns
+    assert {
+        "description",
+        "uploaded_by_email",
+        "vdr_document_id",
+        "processing_status",
+        "processing_error",
+    } <= attachments_columns
+    assert {"source_mode", "attachment_id"} <= marketing_columns
+
+
+def test_classify_attachment_upload_schema_error_detects_postgres_vdr_document_id():
+    class _FakeOrigError(Exception):
+        sqlstate = "42703"
+
+        def __str__(self):
+            return 'column "vdr_document_id" of relation "attachments" does not exist'
+
+    exc = ProgrammingError(
+        "INSERT INTO attachments (...) VALUES (...)",
+        {},
+        _FakeOrigError(),
+    )
+
+    issue = classify_attachment_upload_schema_error(exc)
+
+    assert issue is not None
+    assert issue.table == "attachments"
+    assert issue.column == "vdr_document_id"
+    assert issue.repairable is True
+
+
+def test_classify_attachment_upload_schema_error_detects_postgres_processing_status():
+    class _FakeOrigError(Exception):
+        sqlstate = "42703"
+
+        def __str__(self):
+            return "column attachments.processing_status does not exist"
+
+    exc = ProgrammingError(
+        "INSERT INTO attachments (...) VALUES (...)",
+        {},
+        _FakeOrigError(),
+    )
+
+    issue = classify_attachment_upload_schema_error(exc)
+
+    assert issue is not None
+    assert issue.table == "attachments"
+    assert issue.column == "processing_status"
+    assert issue.repairable is True
+
+
+def test_classify_attachment_upload_schema_error_detects_sqlite_missing_column():
+    exc = OperationalError(
+        "INSERT INTO attachments (...) VALUES (...)",
+        {},
+        sqlite3.OperationalError("table attachments has no column named processing_status"),
+    )
+
+    issue = classify_attachment_upload_schema_error(exc)
+
+    assert issue is not None
+    assert issue.table == "attachments"
+    assert issue.column == "processing_status"
+
+
+def test_classify_attachment_upload_schema_error_ignores_non_schema_db_errors():
+    class _FakeOrigError(Exception):
+        sqlstate = "23505"
+
+        def __str__(self):
+            return "duplicate key value violates unique constraint"
+
+    exc = ProgrammingError(
+        "INSERT INTO attachments (...) VALUES (...)",
+        {},
+        _FakeOrigError(),
+    )
+
+    assert classify_attachment_upload_schema_error(exc) is None
+
+
+@pytest.mark.asyncio
+async def test_probe_attachment_upload_schema_reports_missing_columns(tmp_path):
+    db_path = tmp_path / "probe-stale.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL
+        );
+        CREATE TABLE marketing_materials (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            doc_type TEXT NOT NULL,
+            title TEXT NOT NULL
+        );
+        """,
+    )
+
+    database_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+    engine = create_async_engine(database_url, echo=False)
+    try:
+        result = await probe_attachment_upload_schema(engine_override=engine)
+    finally:
+        await engine.dispose()
+
+    assert result.ok is False
+    assert "attachments.vdr_document_id" in result.qualified_missing_columns
+    assert "marketing_materials.source_mode" in result.qualified_missing_columns
 
 
 def test_resolve_reload_enabled_defaults_false_on_windows():
