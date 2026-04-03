@@ -17,8 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import settings
 from app.core.exceptions import DocumentNotFoundError
 from app.core.local_dev_schema_guard import (
+    build_backend_attachment_processing_schema_required_detail,
     build_local_sqlite_rebuild_required_detail,
+    is_attachment_processing_schema_error,
     is_local_sqlite_attachment_processing_schema_error,
+    repair_attachment_processing_schema_if_needed,
 )
 from app.models.attachment import Attachment
 from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
@@ -213,24 +216,12 @@ async def create_uploaded_marketing_material_from_file(
     attachment: Attachment | None = None
     material: MarketingMaterial | None = None
     safe_filename = Path(file.filename or "marketing-material").name
+    attempted_attachment_schema_repair = False
 
     try:
         ext = Path(safe_filename).suffix.lower()
         if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
             raise HTTPException(status_code=400, detail="Unsupported file type.")
-
-        material = MarketingMaterial(
-            transaction_id=transaction_id,
-            doc_type=doc_type,
-            title=title,
-            project_code=project_code,
-            status=MarketingDocStatus.DRAFT,
-            source_mode=MarketingMaterialSourceMode.UPLOADED.value,
-            quality_status="SKIPPED",
-            created_by_email=created_by_email,
-        )
-        db.add(material)
-        await db.flush()
 
         upload_stage = "attachment_file_write"
         header = await file.read(32)
@@ -268,37 +259,110 @@ async def create_uploaded_marketing_material_from_file(
         processing_status = PROCESSING_PENDING if has_vdr_access else PROCESSING_SKIPPED
         processing_error = None if has_vdr_access else "VDR sync was skipped because the uploader lacks write access."
 
-        upload_stage = "attachment_db_flush"
-        attachment = Attachment(
-            transaction_id=transaction_id,
-            entity_type="MARKETING_MATERIAL",
-            entity_id=str(material.id),
-            file_path=str(dest_path),
-            file_name=safe_filename,
-            file_size_bytes=total_size,
-            mime_type=file.content_type or "application/octet-stream",
-            uploaded_by_email=created_by_email,
-            processing_status=processing_status,
-            processing_error=processing_error,
-        )
-        db.add(attachment)
-        await db.flush()
+        async def _persist_uploaded_marketing_material_once() -> tuple[MarketingMaterial, Attachment]:
+            nonlocal upload_stage
 
-        upload_stage = "material_finalize"
-        _apply_uploaded_material_fields(
-            material,
-            attachment,
-            doc_type=doc_type,
-            title=title,
-            project_code=project_code,
-            parameters=None,
-            distributed_to=distributed_to,
-            distributed_at=distributed_at,
-            created_by_email=created_by_email,
-        )
+            next_material = MarketingMaterial(
+                transaction_id=transaction_id,
+                doc_type=doc_type,
+                title=title,
+                project_code=project_code,
+                status=MarketingDocStatus.DRAFT,
+                source_mode=MarketingMaterialSourceMode.UPLOADED.value,
+                quality_status="SKIPPED",
+                created_by_email=created_by_email,
+            )
+            db.add(next_material)
+            await db.flush()
 
-        upload_stage = "commit"
-        await db.commit()
+            upload_stage = "attachment_db_flush"
+            next_attachment = Attachment(
+                transaction_id=transaction_id,
+                entity_type="MARKETING_MATERIAL",
+                entity_id=str(next_material.id),
+                file_path=str(dest_path),
+                file_name=safe_filename,
+                file_size_bytes=total_size,
+                mime_type=file.content_type or "application/octet-stream",
+                uploaded_by_email=created_by_email,
+                processing_status=processing_status,
+                processing_error=processing_error,
+            )
+            db.add(next_attachment)
+            await db.flush()
+
+            upload_stage = "material_finalize"
+            _apply_uploaded_material_fields(
+                next_material,
+                next_attachment,
+                doc_type=doc_type,
+                title=title,
+                project_code=project_code,
+                parameters=None,
+                distributed_to=distributed_to,
+                distributed_at=distributed_at,
+                created_by_email=created_by_email,
+            )
+
+            upload_stage = "commit"
+            await db.commit()
+            return next_material, next_attachment
+
+        while True:
+            upload_stage = "material_flush"
+            try:
+                material, attachment = await _persist_uploaded_marketing_material_once()
+                break
+            except (OperationalError, ProgrammingError) as exc:
+                await db.rollback()
+                db.expunge_all()
+                if upload_stage == "attachment_db_flush" and is_local_sqlite_attachment_processing_schema_error(
+                    exc,
+                    database_url=settings.DATABASE_URL,
+                ):
+                    logger.warning(
+                        "Detected stale local SQLite attachment schema during uploaded marketing material flush: stage=%s txn=%s marketing_material_id=%s",
+                        upload_stage,
+                        transaction_id,
+                        material.id if material is not None else None,
+                    )
+                    raise HTTPException(
+                        status_code=500,
+                        detail=build_local_sqlite_rebuild_required_detail(stage=upload_stage),
+                    ) from exc
+
+                if (
+                    upload_stage == "attachment_db_flush"
+                    and not attempted_attachment_schema_repair
+                    and is_attachment_processing_schema_error(exc)
+                ):
+                    repair_result = await repair_attachment_processing_schema_if_needed(
+                        database_url=settings.DATABASE_URL,
+                        logger=logger,
+                    )
+                    if repair_result.repaired:
+                        attempted_attachment_schema_repair = True
+                        logger.warning(
+                            "Retried uploaded marketing material flush after repairing attachment processing schema: txn=%s missing_columns=%s",
+                            transaction_id,
+                            ", ".join(repair_result.missing_columns),
+                        )
+                        continue
+                    raise HTTPException(
+                        status_code=500,
+                        detail=build_backend_attachment_processing_schema_required_detail(stage=upload_stage),
+                    ) from exc
+
+                logger.exception(
+                    "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
+                    upload_stage,
+                    transaction_id,
+                    material.id if material is not None else None,
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Uploaded marketing material failed during {upload_stage}.",
+                ) from exc
     except HTTPException:
         await db.rollback()
         if dest_path is not None:
@@ -324,19 +388,10 @@ async def create_uploaded_marketing_material_from_file(
         await db.rollback()
         if dest_path is not None:
             await asyncio.to_thread(dest_path.unlink, missing_ok=True)
-        if upload_stage == "attachment_db_flush" and is_local_sqlite_attachment_processing_schema_error(
-            exc,
-            database_url=settings.DATABASE_URL,
-        ):
-            logger.warning(
-                "Detected stale local SQLite attachment schema during uploaded marketing material flush: stage=%s txn=%s marketing_material_id=%s",
-                upload_stage,
-                transaction_id,
-                material.id if material is not None else None,
-            )
+        if upload_stage == "attachment_db_flush" and is_attachment_processing_schema_error(exc):
             raise HTTPException(
                 status_code=500,
-                detail=build_local_sqlite_rebuild_required_detail(stage=upload_stage),
+                detail=build_backend_attachment_processing_schema_required_detail(stage=upload_stage),
             ) from exc
         logger.exception(
             "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",

@@ -17,42 +17,66 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "attachments",
-        sa.Column(
-            "processing_status",
-            sa.String(length=20),
-            nullable=False,
-            server_default="PENDING",
-        ),
-    )
-    op.add_column("attachments", sa.Column("processing_error", sa.Text(), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    attachment_columns = {column["name"] for column in inspector.get_columns("attachments")}
+    if "processing_status" not in attachment_columns:
+        op.add_column(
+            "attachments",
+            sa.Column(
+                "processing_status",
+                sa.String(length=20),
+                nullable=False,
+                server_default="PENDING",
+            ),
+        )
+    if "processing_error" not in attachment_columns:
+        op.add_column("attachments", sa.Column("processing_error", sa.Text(), nullable=True))
+
+    update_where_clause = ""
+    if "processing_status" in attachment_columns:
+        update_where_clause = """
+        WHERE processing_status IS NULL
+           OR TRIM(processing_status) = ''
+           OR UPPER(TRIM(processing_status)) NOT IN ('PENDING', 'RUNNING', 'SYNCED', 'FAILED', 'SKIPPED')
+        """
 
     op.execute(
-        """
+        f"""
         UPDATE attachments
         SET processing_status = CASE
             WHEN vdr_document_id IS NOT NULL THEN 'SYNCED'
-            ELSE 'SKIPPED'
+            WHEN entity_type = 'MARKETING_MATERIAL' THEN 'SKIPPED'
+            ELSE 'PENDING'
         END
+        {update_where_clause}
         """
     )
 
-    op.add_column("nda_markups", sa.Column("attachment_id", sa.Uuid(), nullable=True))
-    op.create_foreign_key(
-        "fk_nda_markups_attachment_id_attachments",
-        "nda_markups",
-        "attachments",
-        ["attachment_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_index(
-        "ix_nda_markups_attachment_id",
-        "nda_markups",
-        ["attachment_id"],
-        unique=False,
-    )
+    nda_markup_columns = {column["name"] for column in inspector.get_columns("nda_markups")}
+    if "attachment_id" not in nda_markup_columns:
+        op.add_column("nda_markups", sa.Column("attachment_id", sa.Uuid(), nullable=True))
+
+    existing_foreign_keys = {fk["name"] for fk in inspector.get_foreign_keys("nda_markups")}
+    if "fk_nda_markups_attachment_id_attachments" not in existing_foreign_keys:
+        op.create_foreign_key(
+            "fk_nda_markups_attachment_id_attachments",
+            "nda_markups",
+            "attachments",
+            ["attachment_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
+
+    existing_indexes = {index["name"] for index in inspector.get_indexes("nda_markups")}
+    if "ix_nda_markups_attachment_id" not in existing_indexes:
+        op.create_index(
+            "ix_nda_markups_attachment_id",
+            "nda_markups",
+            ["attachment_id"],
+            unique=False,
+        )
 
 
 def downgrade() -> None:

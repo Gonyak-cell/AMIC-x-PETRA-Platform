@@ -384,8 +384,9 @@ jobs:
 
             if [ -n "$MIGRATE_FAILURES" ]; then
               echo ""
-              echo "WARNING: Migration failures in:$MIGRATE_FAILURES"
-              echo "Continuing with health checks (migrations may need manual intervention)..."
+              echo "CRITICAL: Migration failures in:$MIGRATE_FAILURES"
+              echo "Aborting deployment. Fix the migrations, then re-run this deployment."
+              exit 1
             fi
 
             # ── 5.5. SI Company Data Seed ──

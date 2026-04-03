@@ -4,8 +4,14 @@ from pathlib import Path
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.core.local_dev_schema_guard import guard_local_sqlite_database_url
-from app.main import _bootstrap_local_sqlite_schema_for_startup
+from app.core.local_dev_schema_guard import (
+    guard_local_sqlite_database_url,
+    repair_attachment_processing_schema_if_needed,
+)
+from app.main import (
+    _bootstrap_attachment_processing_schema_for_startup,
+    _bootstrap_local_sqlite_schema_for_startup,
+)
 from scripts.run_dev_server import (
     _get_local_dev_rebuild_reason,
     _rebuild_local_dev_database_if_needed,
@@ -222,6 +228,110 @@ async def test_bootstrap_local_sqlite_schema_for_startup_recreates_stale_db(tmp_
 
     assert {"processing_status", "processing_error"} <= attachments_columns
     assert {"source_mode", "attachment_id"} <= marketing_columns
+
+
+@pytest.mark.asyncio
+async def test_repair_attachment_processing_schema_if_needed_adds_missing_columns_for_nonlocal_db(tmp_path):
+    db_path = tmp_path / "nonlocal-stale.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            vdr_document_id TEXT
+        );
+        INSERT INTO attachments (
+            id,
+            transaction_id,
+            entity_type,
+            entity_id,
+            file_path,
+            file_name,
+            file_size_bytes,
+            mime_type,
+            vdr_document_id
+        ) VALUES (
+            'att-1',
+            'txn-1',
+            'MARKETING_MATERIAL',
+            'mat-1',
+            '/tmp/uploaded.pdf',
+            'uploaded.pdf',
+            123,
+            'application/pdf',
+            NULL
+        );
+        """,
+    )
+
+    database_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+    engine = create_async_engine(database_url, echo=False)
+    try:
+        result = await repair_attachment_processing_schema_if_needed(
+            database_url=database_url,
+            engine_override=engine,
+        )
+    finally:
+        await engine.dispose()
+
+    assert result.repaired is True
+    assert result.missing_columns == ("processing_error", "processing_status")
+
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute("SELECT processing_status, processing_error FROM attachments WHERE id = 'att-1'").fetchall()
+    finally:
+        conn.close()
+
+    assert rows == [("SKIPPED", None)]
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_attachment_processing_schema_for_startup_repairs_missing_columns(tmp_path):
+    db_path = tmp_path / "startup-nonlocal.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            vdr_document_id TEXT
+        );
+        """,
+    )
+
+    database_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+    engine = create_async_engine(database_url, echo=False)
+    try:
+        result = await _bootstrap_attachment_processing_schema_for_startup(
+            database_url=database_url,
+            engine_override=engine,
+        )
+    finally:
+        await engine.dispose()
+
+    assert result.repaired is True
+
+    conn = sqlite3.connect(db_path)
+    try:
+        attachments_columns = {row[1] for row in conn.execute("PRAGMA table_info(attachments)").fetchall()}
+    finally:
+        conn.close()
+
+    assert {"processing_status", "processing_error"} <= attachments_columns
 
 
 def test_resolve_reload_enabled_defaults_false_on_windows():

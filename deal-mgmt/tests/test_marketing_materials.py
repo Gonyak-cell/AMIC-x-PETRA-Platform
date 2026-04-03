@@ -389,6 +389,110 @@ async def test_upload_tm_reports_stale_local_sqlite_schema_with_restart_hint(
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_retries_after_backend_attachment_schema_repair(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import sqlite3
+
+    from sqlalchemy.exc import OperationalError
+
+    from app.core.local_dev_schema_guard import AttachmentProcessingSchemaRepairResult
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    async def _flush_with_single_schema_failure(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise OperationalError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                sqlite3.OperationalError("table attachments has no column named processing_status"),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    async def _repair_schema(**kwargs):
+        return AttachmentProcessingSchemaRepairResult(
+            missing_columns=("processing_error", "processing_status"),
+            repaired=True,
+        )
+
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_single_schema_failure)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Recovered teaser memo",
+        },
+        files={"file": ("recovered-tm.pdf", b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Recovered teaser memo"
+    assert data["source_mode"] == "UPLOADED"
+
+
+@pytest.mark.asyncio
+async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_repair_fails(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import sqlite3
+
+    from sqlalchemy.exc import OperationalError
+
+    from app.core.local_dev_schema_guard import AttachmentProcessingSchemaRepairResult
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    async def _flush_with_persistent_schema_failure(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise OperationalError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                sqlite3.OperationalError("table attachments has no column named processing_status"),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    async def _repair_schema(**kwargs):
+        return AttachmentProcessingSchemaRepairResult(
+            missing_columns=("processing_error", "processing_status"),
+            repaired=False,
+        )
+
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_persistent_schema_failure)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_processing_schema_if_needed", _repair_schema)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Broken teaser memo",
+        },
+        files={"file": ("broken-tm.pdf", b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    detail = resp.json()["detail"]
+    assert "attachment_db_flush" in detail
+    assert "alembic upgrade head" in detail
+
+
+@pytest.mark.asyncio
 async def test_create_uploaded_tm_registers_attachment_without_queue(
     client,
     _txn,

@@ -60,6 +60,27 @@ async def _bootstrap_local_sqlite_schema_for_startup(
     return guard_result
 
 
+async def _bootstrap_attachment_processing_schema_for_startup(
+    *,
+    database_url: str | None = None,
+    engine_override=None,
+):
+    from app.core.local_dev_schema_guard import repair_attachment_processing_schema_if_needed
+
+    effective_database_url = database_url or settings.DATABASE_URL
+    repair_result = await repair_attachment_processing_schema_if_needed(
+        database_url=effective_database_url,
+        engine_override=engine_override,
+        logger=logger,
+    )
+    if repair_result.repaired:
+        logger.warning(
+            "Backend attachment processing schema was repaired during app startup: %s",
+            ", ".join(repair_result.missing_columns),
+        )
+    return repair_result
+
+
 async def _cleanup_stale_extractions() -> None:
     """서버 시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 extraction을 FAILED로 전환."""
     try:
@@ -94,6 +115,7 @@ _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await _bootstrap_local_sqlite_schema_for_startup()
+    await _bootstrap_attachment_processing_schema_for_startup()
 
     # JWT secret validation is handled at import time in core/config.py
     # (raises RuntimeError if ENV=production and using dev secret)
