@@ -1,16 +1,6 @@
-"""인증 가드 통합 테스트 — JWT 오버라이드 없이 실제 검증.
-
-conftest.py의 get_jwt_claims override를 이 모듈에서만 제거하여
-실제 JWT 검증 로직을 테스트한다. 이 테스트가 통과하면
-코드 수정 후 인증 관련 회귀 오류가 방지된다.
-"""
+"""Authentication guard integration tests using real JWT validation."""
 
 import os
-
-os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key")
-os.environ.setdefault("SECRET_KEY", "test-secret-key")
-
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -19,6 +9,10 @@ from jose import jwt
 from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
+
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key")
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
 
@@ -46,13 +40,15 @@ async def _override_get_db():
 
 @pytest.fixture(autouse=True)
 async def setup_database():
-    """테스트마다 DB 생성/삭제 + 인증 오버라이드 일시 제거/복원."""
-    # 기존 오버라이드 백업
+    """Create an isolated test DB and temporarily remove JWT override."""
+    import app.core.database as database_module
+
     original_db = app.dependency_overrides.get(get_db)
     original_auth = app.dependency_overrides.pop(get_jwt_claims, None)
+    original_session_factory = database_module.async_session_factory
 
-    # 이 모듈 전용 DB 오버라이드 적용
     app.dependency_overrides[get_db] = _override_get_db
+    database_module.async_session_factory = _test_session_factory
 
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -60,7 +56,7 @@ async def setup_database():
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-    # 오버라이드 복원 (다른 테스트 파일에 영향 방지)
+    database_module.async_session_factory = original_session_factory
     if original_auth is not None:
         app.dependency_overrides[get_jwt_claims] = original_auth
     if original_db is not None:
@@ -71,16 +67,16 @@ async def setup_database():
 
 @pytest.fixture
 async def unauthenticated_client():
-    """인증 오버라이드가 없는 클라이언트 — 실제 JWT 검증."""
+    """Client with real JWT validation enabled."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-    ) as ac:
-        yield ac
+    ) as client:
+        yield client
 
 
 def _make_token(*, expired: bool = False, valid: bool = True) -> str:
-    """테스트용 JWT 토큰 생성."""
+    """Create a test JWT token."""
     if not valid:
         return "invalid.jwt.token"
     payload = {
@@ -93,7 +89,7 @@ def _make_token(*, expired: bool = False, valid: bool = True) -> str:
 
 
 class TestAuthGuard:
-    """인증이 필요한 엔드포인트가 토큰 없이 401을 반환하는지 검증."""
+    """Verify protected endpoints reject missing or invalid auth."""
 
     @pytest.mark.asyncio
     async def test_transactions_requires_auth(self, unauthenticated_client):
@@ -139,7 +135,6 @@ class TestAuthGuard:
 
     @pytest.mark.asyncio
     async def test_valid_jwt_header_auth(self, unauthenticated_client):
-        """유효한 JWT로 인증이 통과해야 한다."""
         resp = await unauthenticated_client.get(
             "/api/v1/transactions",
             headers={"Authorization": f"Bearer {_make_token()}"},
@@ -148,7 +143,6 @@ class TestAuthGuard:
 
     @pytest.mark.asyncio
     async def test_valid_jwt_cookie_auth(self, unauthenticated_client):
-        """쿠키를 통한 JWT 인증도 작동해야 한다."""
         resp = await unauthenticated_client.get(
             "/api/v1/transactions",
             cookies={"access_token": _make_token()},
