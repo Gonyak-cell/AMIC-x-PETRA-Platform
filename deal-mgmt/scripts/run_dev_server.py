@@ -41,71 +41,21 @@ os.environ.setdefault("JWT_SECRET", "deal-mgmt-local-dev-jwt-secret")
 os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{default_db_path.as_posix()}")
 os.environ.setdefault("LOG_DIR", str(REPO_ROOT / "logs"))
 
-from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
+from app.core.local_dev_schema_guard import (
+    configure_sqlite_type_compilers_for_local_dev,
+    get_local_dev_rebuild_reason as _shared_get_local_dev_rebuild_reason,
+    rebuild_local_dev_database_if_needed as _shared_rebuild_local_dev_database_if_needed,
+)
 
-SQLiteTypeCompiler.visit_JSONB = lambda self, type_, **kw: "JSON"
-SQLiteTypeCompiler.visit_UUID = lambda self, type_, **kw: "CHAR(36)"
-
-
-def _get_sqlite_tables(conn: sqlite3.Connection) -> set[str]:
-    return {
-        row[0]
-        for row in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'",
-        ).fetchall()
-    }
-
-
-def _get_sqlite_columns(conn: sqlite3.Connection, table_name: str) -> dict[str, tuple]:
-    return {row[1]: row for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+configure_sqlite_type_compilers_for_local_dev()
 
 
 def _get_local_dev_rebuild_reason(db_path: Path) -> str | None:
-    if not db_path.exists():
-        return None
-
-    conn = sqlite3.connect(db_path)
-    try:
-        tables = _get_sqlite_tables(conn)
-        if "marketing_materials" in tables:
-            marketing_columns = set(_get_sqlite_columns(conn, "marketing_materials"))
-            missing_marketing_columns = sorted(
-                REQUIRED_MARKETING_MATERIAL_COLUMNS - marketing_columns,
-            )
-            if missing_marketing_columns:
-                return f"marketing_materials is missing required columns: {', '.join(missing_marketing_columns)}"
-
-        if "attachments" in tables:
-            attachment_columns = set(_get_sqlite_columns(conn, "attachments"))
-            missing_attachment_columns = sorted(
-                REQUIRED_ATTACHMENT_COLUMNS - attachment_columns,
-            )
-            if missing_attachment_columns:
-                return f"attachments is missing required columns: {', '.join(missing_attachment_columns)}"
-
-        if "ndas" in tables:
-            nda_columns = _get_sqlite_columns(conn, "ndas")
-            buyer_candidate = nda_columns.get("buyer_candidate_id")
-            buyer_candidate_not_null = bool(buyer_candidate and buyer_candidate[3])
-            if "party_type" not in nda_columns or buyer_candidate_not_null:
-                return "ndas table uses a legacy schema that cannot be repaired safely"
-    finally:
-        conn.close()
-
-    return None
+    return _shared_get_local_dev_rebuild_reason(db_path)
 
 
 def _rebuild_local_dev_database_if_needed(db_path: Path) -> None:
-    rebuild_reason = _get_local_dev_rebuild_reason(db_path)
-    if not rebuild_reason:
-        return
-
-    logger.warning(
-        "Rebuilding stale local SQLite dev database %s: %s",
-        db_path,
-        rebuild_reason,
-    )
-    db_path.unlink(missing_ok=True)
+    _shared_rebuild_local_dev_database_if_needed(db_path, logger=logger)
 
 
 def _repair_legacy_nda_schema(db_path: Path) -> None:

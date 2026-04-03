@@ -1,6 +1,11 @@
 import sqlite3
 from pathlib import Path
 
+import pytest
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from app.core.local_dev_schema_guard import guard_local_sqlite_database_url
+from app.main import _bootstrap_local_sqlite_schema_for_startup
 from scripts.run_dev_server import (
     _get_local_dev_rebuild_reason,
     _rebuild_local_dev_database_if_needed,
@@ -127,6 +132,96 @@ def test_rebuild_local_dev_database_if_needed_deletes_stale_db(tmp_path):
     _rebuild_local_dev_database_if_needed(db_path)
 
     assert not db_path.exists()
+
+
+def test_guard_local_sqlite_database_url_ignores_non_sqlite(tmp_path):
+    result = guard_local_sqlite_database_url(
+        "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+        allowed_roots=[tmp_path],
+    )
+
+    assert result.database_path is None
+    assert result.rebuilt is False
+
+
+def test_guard_local_sqlite_database_url_leaves_current_schema_untouched(tmp_path):
+    db_path = tmp_path / "current-local.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE marketing_materials (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            doc_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            source_mode TEXT NOT NULL,
+            attachment_id TEXT
+        );
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            processing_status TEXT NOT NULL,
+            processing_error TEXT
+        );
+        """,
+    )
+
+    result = guard_local_sqlite_database_url(
+        f"sqlite+aiosqlite:///{db_path.as_posix()}",
+        allowed_roots=[tmp_path],
+    )
+
+    assert result.database_path == db_path.resolve()
+    assert result.rebuilt is False
+    assert db_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_local_sqlite_schema_for_startup_recreates_stale_db(tmp_path):
+    db_path = tmp_path / "stale-startup.db"
+    _write_db(
+        db_path,
+        """
+        CREATE TABLE attachments (
+            id TEXT PRIMARY KEY,
+            transaction_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL
+        );
+        """,
+    )
+
+    database_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+    engine = create_async_engine(database_url, echo=False)
+    try:
+        result = await _bootstrap_local_sqlite_schema_for_startup(
+            database_url=database_url,
+            engine_override=engine,
+            allowed_roots=[tmp_path],
+        )
+    finally:
+        await engine.dispose()
+
+    assert result.rebuilt is True
+
+    conn = sqlite3.connect(db_path)
+    try:
+        attachments_columns = {row[1] for row in conn.execute("PRAGMA table_info(attachments)").fetchall()}
+        marketing_columns = {row[1] for row in conn.execute("PRAGMA table_info(marketing_materials)").fetchall()}
+    finally:
+        conn.close()
+
+    assert {"processing_status", "processing_error"} <= attachments_columns
+    assert {"source_mode", "attachment_id"} <= marketing_columns
 
 
 def test_resolve_reload_enabled_defaults_false_on_windows():

@@ -19,6 +19,47 @@ logger = logging.getLogger(__name__)
 _STALE_THRESHOLD_MINUTES = 10
 
 
+async def _bootstrap_local_sqlite_schema_for_startup(
+    *,
+    database_url: str | None = None,
+    engine_override=None,
+    metadata=None,
+    allowed_roots=None,
+):
+    from app.core.database import engine as default_engine
+    from app.core.local_dev_schema_guard import (
+        LOCAL_DEV_ENTRYPOINT_HINT,
+        configure_sqlite_type_compilers_for_local_dev,
+        guard_local_sqlite_database_url,
+    )
+    from app.models import Base
+
+    effective_database_url = database_url or settings.DATABASE_URL
+    guard_result = guard_local_sqlite_database_url(
+        effective_database_url,
+        allowed_roots=allowed_roots,
+        logger=logger,
+    )
+    if guard_result.database_path is None:
+        return guard_result
+
+    configure_sqlite_type_compilers_for_local_dev()
+
+    active_engine = engine_override or default_engine
+    active_metadata = metadata or Base.metadata
+    async with active_engine.begin() as conn:
+        await conn.run_sync(active_metadata.create_all)
+
+    if guard_result.rebuilt:
+        logger.warning(
+            "Local SQLite dev database was rebuilt during app startup: %s. %s",
+            guard_result.database_path,
+            LOCAL_DEV_ENTRYPOINT_HINT,
+        )
+
+    return guard_result
+
+
 async def _cleanup_stale_extractions() -> None:
     """서버 시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 extraction을 FAILED로 전환."""
     try:
@@ -52,6 +93,8 @@ _migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await _bootstrap_local_sqlite_schema_for_startup()
+
     # JWT secret validation is handled at import time in core/config.py
     # (raises RuntimeError if ENV=production and using dev secret)
 

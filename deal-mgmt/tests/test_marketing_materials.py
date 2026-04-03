@@ -341,6 +341,54 @@ async def test_upload_tm_rolls_back_when_material_finalize_fails(
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_reports_stale_local_sqlite_schema_with_restart_hint(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    import sqlite3
+
+    from sqlalchemy.exc import OperationalError
+
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    async def _flush_with_stale_attachment_schema(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise OperationalError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                sqlite3.OperationalError("table attachments has no column named processing_status"),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    stale_db_url = f"sqlite+aiosqlite:///{(tmp_path / 'deal_mgmt_dev.db').as_posix()}"
+    monkeypatch.setattr(marketing_material_service.settings, "DATABASE_URL", stale_db_url)
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_stale_attachment_schema)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Uploaded teaser memo",
+        },
+        files={"file": ("uploaded-tm.pdf", b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    detail = resp.json()["detail"]
+    assert "attachment_db_flush" in detail
+    assert "Local SQLite dev database is stale" in detail
+    assert "run_dev_server.py" in detail
+
+
+@pytest.mark.asyncio
 async def test_create_uploaded_tm_registers_attachment_without_queue(
     client,
     _txn,

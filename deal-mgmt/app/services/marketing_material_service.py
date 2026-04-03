@@ -11,10 +11,15 @@ from pathlib import Path
 import aiofiles
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import settings
 from app.core.exceptions import DocumentNotFoundError
+from app.core.local_dev_schema_guard import (
+    build_local_sqlite_rebuild_required_detail,
+    is_local_sqlite_attachment_processing_schema_error,
+)
 from app.models.attachment import Attachment
 from app.models.enums import MarketingDocStatus, MarketingDocType, MarketingMaterialSourceMode
 from app.models.marketing_material import MarketingMaterial
@@ -310,6 +315,34 @@ async def create_uploaded_marketing_material_from_file(
             entity_type="MARKETING_MATERIAL",
             entity_id=str(material.id) if material is not None else None,
             marketing_material_id=material.id if material is not None else None,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Uploaded marketing material failed during {upload_stage}.",
+        ) from exc
+    except (OperationalError, ProgrammingError) as exc:
+        await db.rollback()
+        if dest_path is not None:
+            await asyncio.to_thread(dest_path.unlink, missing_ok=True)
+        if upload_stage == "attachment_db_flush" and is_local_sqlite_attachment_processing_schema_error(
+            exc,
+            database_url=settings.DATABASE_URL,
+        ):
+            logger.warning(
+                "Detected stale local SQLite attachment schema during uploaded marketing material flush: stage=%s txn=%s marketing_material_id=%s",
+                upload_stage,
+                transaction_id,
+                material.id if material is not None else None,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=build_local_sqlite_rebuild_required_detail(stage=upload_stage),
+            ) from exc
+        logger.exception(
+            "Uploaded marketing material failed: stage=%s txn=%s marketing_material_id=%s",
+            upload_stage,
+            transaction_id,
+            material.id if material is not None else None,
         )
         raise HTTPException(
             status_code=500,
