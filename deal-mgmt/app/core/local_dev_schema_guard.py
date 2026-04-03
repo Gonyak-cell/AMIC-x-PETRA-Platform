@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -108,10 +108,7 @@ def get_local_dev_rebuild_reason(db_path: Path) -> str | None:
             marketing_columns = set(_get_sqlite_columns(conn, "marketing_materials"))
             missing_marketing_columns = sorted(REQUIRED_MARKETING_MATERIAL_COLUMNS - marketing_columns)
             if missing_marketing_columns:
-                return (
-                    "marketing_materials is missing required columns: "
-                    f"{', '.join(missing_marketing_columns)}"
-                )
+                return f"marketing_materials is missing required columns: {', '.join(missing_marketing_columns)}"
 
         if "attachments" in tables:
             attachment_columns = set(_get_sqlite_columns(conn, "attachments"))
@@ -185,14 +182,9 @@ def is_local_sqlite_attachment_processing_schema_error(
         parts.append(str(orig).lower())
     message = " ".join(parts)
 
-    has_missing_column = (
-        "has no column named" in message
-        or "no such column" in message
-        or "does not exist" in message
-    )
-    targets_attachment_processing_columns = (
-        "attachments" in message
-        and ("processing_status" in message or "processing_error" in message)
+    has_missing_column = "has no column named" in message or "no such column" in message or "does not exist" in message
+    targets_attachment_processing_columns = "attachments" in message and (
+        "processing_status" in message or "processing_error" in message
     )
     return has_missing_column and targets_attachment_processing_columns
 

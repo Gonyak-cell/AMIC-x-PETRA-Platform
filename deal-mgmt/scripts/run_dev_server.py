@@ -7,6 +7,16 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from app.core.local_dev_schema_guard import (
+    configure_sqlite_type_compilers_for_local_dev,
+)
+from app.core.local_dev_schema_guard import (
+    get_local_dev_rebuild_reason as _shared_get_local_dev_rebuild_reason,
+)
+from app.core.local_dev_schema_guard import (
+    rebuild_local_dev_database_if_needed as _shared_rebuild_local_dev_database_if_needed,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = PROJECT_ROOT.parent
 logger = logging.getLogger(__name__)
@@ -40,12 +50,6 @@ os.environ.setdefault("SECRET_KEY", "deal-mgmt-local-dev-secret")
 os.environ.setdefault("JWT_SECRET", "deal-mgmt-local-dev-jwt-secret")
 os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{default_db_path.as_posix()}")
 os.environ.setdefault("LOG_DIR", str(REPO_ROOT / "logs"))
-
-from app.core.local_dev_schema_guard import (
-    configure_sqlite_type_compilers_for_local_dev,
-    get_local_dev_rebuild_reason as _shared_get_local_dev_rebuild_reason,
-    rebuild_local_dev_database_if_needed as _shared_rebuild_local_dev_database_if_needed,
-)
 
 configure_sqlite_type_compilers_for_local_dev()
 
