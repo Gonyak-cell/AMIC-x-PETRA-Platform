@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import re
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
@@ -52,6 +55,17 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "generated" / "memo
 ATTACHMENT_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "attachments"
 MAX_ATTACHMENT_FILE_SIZE = 50 * 1024 * 1024
 ATTACHMENT_CHUNK_SIZE = 65_536
+ATTACHMENT_FILE_NAME_MAX_LEN = 300
+LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN = 255
+ATTACHMENT_FILE_PATH_MAX_LEN = 500
+ATTACHMENT_STORAGE_PATH_SAFE_MAX_LEN = 240 if os.name == "nt" else ATTACHMENT_FILE_PATH_MAX_LEN
+ATTACHMENT_MIME_TYPE_MAX_LEN = 100
+ATTACHMENT_UPLOADER_EMAIL_MAX_LEN = 255
+VALUE_TOO_LONG_SQLSTATES = frozenset({"22001"})
+VALUE_TOO_LONG_PATTERN = re.compile(
+    r"value too long for type character varying\((?P<limit>\d+)\)",
+    re.IGNORECASE,
+)
 ALLOWED_ATTACHMENT_EXTENSIONS = {
     ".docx",
     ".doc",
@@ -90,6 +104,14 @@ _ATTACHMENT_MAGIC_SIGNATURES: list[tuple[bytes, set[str]]] = [
     (b"\x30\x26\xb2\x75", {".wma"}),
 ]
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class AttachmentUploadValueIssue:
+    field: str
+    reason: str
+    max_length: int | None = None
+    actual_length: int | None = None
 
 
 def _validate_uploaded_file_signature(content: bytes, ext: str) -> None:
@@ -161,13 +183,150 @@ def _build_upload_schema_failure_detail(
     )
 
 
+def _truncate_filename_preserving_extension(filename: str, max_length: int) -> str:
+    normalized = filename.strip() or "marketing-material"
+    if len(normalized) <= max_length:
+        return normalized
+
+    suffix = Path(normalized).suffix
+    if suffix and len(suffix) < max_length:
+        stem = normalized[: -len(suffix)]
+        trimmed_stem = stem[: max_length - len(suffix)].rstrip(" ._")
+        if not trimmed_stem:
+            trimmed_stem = "file"[: max_length - len(suffix)] or "f"
+        return f"{trimmed_stem}{suffix}"
+
+    return normalized[:max_length].rstrip(" ._") or normalized[:max_length]
+
+
+def _fit_uploaded_attachment_filename(
+    filename: str,
+    *,
+    save_dir: Path,
+    file_id: uuid.UUID,
+) -> str:
+    max_path_length = min(ATTACHMENT_FILE_PATH_MAX_LEN, ATTACHMENT_STORAGE_PATH_SAFE_MAX_LEN)
+    candidate = _truncate_filename_preserving_extension(
+        filename,
+        LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN,
+    )
+
+    while len(str(save_dir / f"{file_id}_{candidate}")) > max_path_length:
+        overflow = len(str(save_dir / f"{file_id}_{candidate}")) - max_path_length
+        next_length = max(1, len(candidate) - overflow)
+        next_candidate = _truncate_filename_preserving_extension(candidate, next_length)
+        if next_candidate == candidate:
+            break
+        candidate = next_candidate
+
+    candidate = _truncate_filename_preserving_extension(candidate, ATTACHMENT_FILE_NAME_MAX_LEN)
+    if len(str(save_dir / f"{file_id}_{candidate}")) > max_path_length:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file name is too long for secure storage. Shorten the file name and retry.",
+        )
+    return candidate
+
+
+def _normalize_uploaded_attachment_mime_type(mime_type: str | None) -> str:
+    normalized = (mime_type or "application/octet-stream").strip() or "application/octet-stream"
+    if len(normalized) <= ATTACHMENT_MIME_TYPE_MAX_LEN:
+        return normalized
+    return "application/octet-stream"
+
+
+def _normalize_uploaded_attachment_email(email: str | None) -> str | None:
+    if email is None:
+        return None
+    normalized = email.strip()
+    if not normalized:
+        return None
+    return normalized[:ATTACHMENT_UPLOADER_EMAIL_MAX_LEN]
+
+
+def _classify_attachment_upload_value_error(
+    exc: Exception,
+    *,
+    file_name: str,
+    file_path: str | None,
+    mime_type: str,
+    uploaded_by_email: str | None,
+) -> AttachmentUploadValueIssue | None:
+    if not isinstance(exc, DataError):
+        return None
+
+    orig = getattr(exc, "orig", None)
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    message = " ".join(
+        part for part in (str(exc), str(orig) if orig is not None else None, getattr(exc, "statement", None)) if part
+    ).lower()
+    if (
+        sqlstate not in VALUE_TOO_LONG_SQLSTATES
+        and "value too long for type character varying" not in message
+        and "string data right truncation" not in message
+    ):
+        return None
+
+    limit_match = VALUE_TOO_LONG_PATTERN.search(message)
+    limit = int(limit_match.group("limit")) if limit_match else None
+
+    candidates: list[tuple[str, int | None]] = [
+        ("file_name", len(file_name)),
+        ("file_path", len(file_path) if file_path is not None else None),
+        ("mime_type", len(mime_type)),
+        ("uploaded_by_email", len(uploaded_by_email) if uploaded_by_email is not None else None),
+    ]
+    for field_name, actual_length in candidates:
+        if actual_length is None:
+            continue
+        if limit is None or actual_length > limit:
+            return AttachmentUploadValueIssue(
+                field=field_name,
+                reason="value_too_long",
+                max_length=limit,
+                actual_length=actual_length,
+            )
+    return AttachmentUploadValueIssue(field="attachment_metadata", reason="value_too_long", max_length=limit)
+
+
+def _build_upload_value_failure_detail(
+    *,
+    stage: str,
+    issue: AttachmentUploadValueIssue,
+) -> str:
+    request_id = get_request_id()
+    subject = {
+        "file_name": "Uploaded file name",
+        "file_path": "Stored attachment path",
+        "mime_type": "Uploaded file content type",
+        "uploaded_by_email": "Uploader email",
+    }.get(issue.field, "Uploaded attachment metadata")
+    action = (
+        "Shorten the file name and retry."
+        if issue.field in {"file_name", "file_path"}
+        else "Retry the upload. If it keeps failing, contact support."
+    )
+    limit_detail = f" Backend limit is {issue.max_length} characters." if issue.max_length is not None else ""
+    actual_detail = f" Received {issue.actual_length} characters." if issue.actual_length is not None else ""
+    request_detail = f" If you need support, provide request ID {request_id}." if request_id else ""
+    return (
+        f"Uploaded marketing material failed during {stage}. "
+        f"{subject} exceeded backend length limits."
+        f"{limit_detail}"
+        f"{actual_detail} "
+        f"{action}"
+        f"{request_detail}"
+    ).strip()
+
+
 def _log_marketing_upload_db_error(
-    exc: OperationalError | ProgrammingError,
+    exc: OperationalError | ProgrammingError | DataError,
     *,
     stage: str,
     transaction_id: uuid.UUID,
     marketing_material_id: uuid.UUID | None,
     schema_issue: AttachmentUploadSchemaIssue | None,
+    value_issue: AttachmentUploadValueIssue | None = None,
 ) -> None:
     request_id = get_request_id()
     orig = getattr(exc, "orig", None)
@@ -178,7 +337,7 @@ def _log_marketing_upload_db_error(
     constraint_name = getattr(diag, "constraint_name", None)
     statement = getattr(exc, "statement", None)
     logger.exception(
-        "Uploaded marketing material database error: request_id=%s stage=%s txn=%s marketing_material_id=%s exc_class=%s orig_class=%s sqlstate=%s table=%s column=%s constraint=%s schema_reason=%s statement=%s",
+        "Uploaded marketing material database error: request_id=%s stage=%s txn=%s marketing_material_id=%s exc_class=%s orig_class=%s sqlstate=%s table=%s column=%s constraint=%s schema_reason=%s value_reason=%s value_field=%s value_limit=%s value_length=%s statement=%s",
         request_id,
         stage,
         transaction_id,
@@ -190,6 +349,10 @@ def _log_marketing_upload_db_error(
         column_name,
         constraint_name,
         schema_issue.reason if schema_issue is not None else None,
+        value_issue.reason if value_issue is not None else None,
+        value_issue.field if value_issue is not None else None,
+        value_issue.max_length if value_issue is not None else None,
+        value_issue.actual_length if value_issue is not None else None,
         statement,
     )
 
@@ -274,6 +437,8 @@ async def create_uploaded_marketing_material_from_file(
     attachment: Attachment | None = None
     material: MarketingMaterial | None = None
     safe_filename = Path(file.filename or "marketing-material").name
+    mime_type = "application/octet-stream"
+    created_by_email = _normalize_uploaded_attachment_email(created_by_email)
     attempted_attachment_schema_repair = False
 
     try:
@@ -281,13 +446,30 @@ async def create_uploaded_marketing_material_from_file(
         if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
             raise HTTPException(status_code=400, detail="Unsupported file type.")
 
-        upload_stage = "attachment_file_write"
+        upload_stage = "attachment_metadata_validate"
         header = await file.read(32)
         _validate_uploaded_file_signature(header, ext)
         save_dir = ATTACHMENT_UPLOAD_DIR / str(transaction_id) / "MARKETING_MATERIAL"
         await asyncio.to_thread(save_dir.mkdir, parents=True, exist_ok=True)
 
         file_id = uuid.uuid4()
+        normalized_filename = _fit_uploaded_attachment_filename(
+            safe_filename,
+            save_dir=save_dir,
+            file_id=file_id,
+        )
+        if normalized_filename != safe_filename:
+            logger.warning(
+                "Normalized uploaded marketing material filename for backend compatibility: request_id=%s txn=%s original=%s normalized=%s",
+                get_request_id(),
+                transaction_id,
+                safe_filename,
+                normalized_filename,
+            )
+            safe_filename = normalized_filename
+        mime_type = _normalize_uploaded_attachment_mime_type(file.content_type)
+
+        upload_stage = "attachment_file_write"
         dest_path = save_dir / f"{file_id}_{safe_filename}"
         total_size = len(header)
         size_exceeded = False
@@ -341,7 +523,7 @@ async def create_uploaded_marketing_material_from_file(
                 file_path=str(dest_path),
                 file_name=safe_filename,
                 file_size_bytes=total_size,
-                mime_type=file.content_type or "application/octet-stream",
+                mime_type=mime_type,
                 uploaded_by_email=created_by_email,
                 processing_status=processing_status,
                 processing_error=processing_error,
@@ -371,16 +553,24 @@ async def create_uploaded_marketing_material_from_file(
             try:
                 material, attachment = await _persist_uploaded_marketing_material_once()
                 break
-            except (OperationalError, ProgrammingError) as exc:
+            except (OperationalError, ProgrammingError, DataError) as exc:
                 await db.rollback()
                 db.expunge_all()
                 schema_issue = classify_attachment_upload_schema_error(exc)
+                value_issue = _classify_attachment_upload_value_error(
+                    exc,
+                    file_name=safe_filename,
+                    file_path=str(dest_path) if dest_path is not None else None,
+                    mime_type=mime_type,
+                    uploaded_by_email=created_by_email,
+                )
                 _log_marketing_upload_db_error(
                     exc,
                     stage=upload_stage,
                     transaction_id=transaction_id,
                     marketing_material_id=material.id if material is not None else None,
                     schema_issue=schema_issue,
+                    value_issue=value_issue,
                 )
 
                 if schema_issue is not None:
@@ -429,6 +619,15 @@ async def create_uploaded_marketing_material_from_file(
                         ),
                     ) from exc
 
+                if value_issue is not None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=_build_upload_value_failure_detail(
+                            stage=upload_stage,
+                            issue=value_issue,
+                        ),
+                    ) from exc
+
                 raise HTTPException(
                     status_code=500,
                     detail=f"Uploaded marketing material failed during {upload_stage}.",
@@ -454,17 +653,25 @@ async def create_uploaded_marketing_material_from_file(
             status_code=500,
             detail=f"Uploaded marketing material failed during {upload_stage}.",
         ) from exc
-    except (OperationalError, ProgrammingError) as exc:
+    except (OperationalError, ProgrammingError, DataError) as exc:
         await db.rollback()
         if dest_path is not None:
             await asyncio.to_thread(dest_path.unlink, missing_ok=True)
         schema_issue = classify_attachment_upload_schema_error(exc)
+        value_issue = _classify_attachment_upload_value_error(
+            exc,
+            file_name=safe_filename,
+            file_path=str(dest_path) if dest_path is not None else None,
+            mime_type=mime_type,
+            uploaded_by_email=created_by_email,
+        )
         _log_marketing_upload_db_error(
             exc,
             stage=upload_stage,
             transaction_id=transaction_id,
             marketing_material_id=material.id if material is not None else None,
             schema_issue=schema_issue,
+            value_issue=value_issue,
         )
         if schema_issue is not None:
             raise HTTPException(
@@ -473,6 +680,14 @@ async def create_uploaded_marketing_material_from_file(
                     stage=upload_stage,
                     issue=schema_issue,
                     database_url=settings.DATABASE_URL,
+                ),
+            ) from exc
+        if value_issue is not None:
+            raise HTTPException(
+                status_code=500,
+                detail=_build_upload_value_failure_detail(
+                    stage=upload_stage,
+                    issue=value_issue,
                 ),
             ) from exc
         raise HTTPException(

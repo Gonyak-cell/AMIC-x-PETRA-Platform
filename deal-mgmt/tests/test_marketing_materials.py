@@ -269,6 +269,45 @@ async def test_upload_tm_allows_multi_dot_filename(
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_truncates_overlong_filename_for_legacy_backend_limits(
+    client,
+    _txn,
+    async_session,
+):
+    import uuid
+
+    from sqlalchemy import select
+
+    from app.models.attachment import Attachment
+    from app.services import marketing_material_service
+
+    txn_id = _txn["id"]
+    pdf_bytes = b"%PDF-1.4\nuploaded teaser\n"
+    original_name = f"{'a' * 280}.pdf"
+
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Uploaded teaser memo",
+        },
+        files={"file": (original_name, pdf_bytes, "application/pdf")},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["file_name"].endswith(".pdf")
+    assert len(data["file_name"]) <= marketing_material_service.LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN
+    assert data["file_name"] != original_name
+
+    attachment_result = await async_session.execute(
+        select(Attachment).where(Attachment.id == uuid.UUID(data["attachment_id"]))
+    )
+    attachment = attachment_result.scalar_one()
+    assert attachment.file_name == data["file_name"]
+
+
+@pytest.mark.asyncio
 async def test_upload_tm_rejects_disallowed_final_extension_in_multi_dot_filename(
     client,
     _txn,
@@ -526,6 +565,57 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
     assert "attachment_db_flush" in detail
     assert "alembic upgrade head" in detail
     assert "attachments.vdr_document_id" in detail
+    assert resp.headers["x-request-id"] in detail
+
+
+@pytest.mark.asyncio
+async def test_upload_tm_reports_backend_length_limit_hint_for_attachment_value_overflow(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy.exc import DataError
+
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    class _FakeOrigError(Exception):
+        sqlstate = "22001"
+
+        def __str__(self):
+            return "value too long for type character varying(60)"
+
+    async def _flush_with_legacy_length_overflow(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise DataError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                _FakeOrigError(),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_legacy_length_overflow)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Broken teaser memo",
+        },
+        files={"file": ((f"{'b' * 100}.pdf"), b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    detail = resp.json()["detail"]
+    assert "attachment_db_flush" in detail
+    assert "Uploaded file name exceeded backend length limits." in detail
+    assert "Backend limit is 60 characters." in detail
+    assert "Shorten the file name and retry." in detail
     assert resp.headers["x-request-id"] in detail
 
 
