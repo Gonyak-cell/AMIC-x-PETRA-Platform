@@ -282,7 +282,9 @@ jobs:
               echo "$CHANGED" | grep -q "fdd/"             && SERVICES="$SERVICES fdd-api" && MIGRATE_FDD=true
               echo "$CHANGED" | grep -q "kiis/"            && SERVICES="$SERVICES kiis-api" && MIGRATE_KIIS=true
               echo "$CHANGED" | grep -qE "^im/"            && SERVICES="$SERVICES im-api im-celery-worker im-celery-beat" && MIGRATE_IM=true
-              echo "$CHANGED" | grep -q "deal-mgmt/"       && SERVICES="$SERVICES deal-mgmt-api deal-mgmt-celery-worker" && MIGRATE_MA=true
+              # deal-mgmt test/docs-only changes should not trigger an MA redeploy.
+              echo "$CHANGED" | grep -qE "^deal-mgmt/(app|data|generated|migrations|scripts|templates)/|^deal-mgmt/(alembic[.]ini|Dockerfile|pyproject[.]toml|uv[.]lock)$" \
+                && SERVICES="$SERVICES deal-mgmt-api deal-mgmt-celery-worker" && MIGRATE_MA=true
             fi
 
             # Deduplicate
