@@ -94,37 +94,7 @@ jobs:
           }
 
           emit_failure_summary() {
-            python - <<'PY'
-            from pathlib import Path
-            import re
-
-            log_path = Path("pytest-deal-mgmt.log")
-            if not log_path.exists():
-                print("::error title=deal-mgmt unit tests::pytest failed before the log file was created.")
-                raise SystemExit(0)
-
-            text = log_path.read_text(encoding="utf-8", errors="ignore")
-            patterns = [
-                r"^FAILED\s+.+$",
-                r"^ERROR\s+.+$",
-                r"^FAIL Required test coverage.+$",
-            ]
-            matches: list[str] = []
-            for pattern in patterns:
-                matches.extend(re.findall(pattern, text, flags=re.MULTILINE))
-
-            deduped: list[str] = []
-            for line in matches:
-                if line not in deduped:
-                    deduped.append(line)
-
-            summary = " | ".join(deduped[:12]).strip()
-            if not summary:
-                summary = "pytest exited non-zero without a parsed FAILED/ERROR line. Inspect pytest-deal-mgmt.log artifact."
-
-            summary = summary[:1800]
-            print(f"::error title=deal-mgmt unit tests::{summary}")
-            PY
+            python -c "from pathlib import Path; import re; log_path = Path('pytest-deal-mgmt.log'); text = log_path.read_text(encoding='utf-8', errors='ignore') if log_path.exists() else ''; patterns = [r'^FAILED\\s+.+$', r'^ERROR\\s+.+$', r'^FAIL Required test coverage.+$']; matches = []; [matches.extend(re.findall(pattern, text, flags=re.MULTILINE)) for pattern in patterns]; deduped = []; [deduped.append(line) for line in matches if line not in deduped]; summary = (' | '.join(deduped[:12]).strip() or 'pytest exited non-zero without a parsed FAILED/ERROR line. Inspect pytest-deal-mgmt.log artifact.'); print(f'::error title=deal-mgmt unit tests::{summary[:1800]}')"
           }
 
           if ! run_pytest; then
