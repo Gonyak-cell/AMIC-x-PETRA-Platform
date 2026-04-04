@@ -59,6 +59,7 @@ ATTACHMENT_FILE_NAME_MAX_LEN = 300
 LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN = 255
 ATTACHMENT_FILE_PATH_MAX_LEN = 500
 ATTACHMENT_STORAGE_PATH_SAFE_MAX_LEN = 240 if os.name == "nt" else ATTACHMENT_FILE_PATH_MAX_LEN
+ATTACHMENT_STORAGE_BASENAME_MAX_BYTES = 255
 ATTACHMENT_MIME_TYPE_MAX_LEN = 100
 ATTACHMENT_UPLOADER_EMAIL_MAX_LEN = 255
 VALUE_TOO_LONG_SQLSTATES = frozenset({"22001"})
@@ -211,6 +212,12 @@ def _fit_uploaded_attachment_filename(
         LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN,
     )
 
+    while len(f"{file_id}_{candidate}".encode()) > ATTACHMENT_STORAGE_BASENAME_MAX_BYTES:
+        next_candidate = _truncate_filename_preserving_extension(candidate, len(candidate) - 1)
+        if next_candidate == candidate:
+            break
+        candidate = next_candidate
+
     while len(str(save_dir / f"{file_id}_{candidate}")) > max_path_length:
         overflow = len(str(save_dir / f"{file_id}_{candidate}")) - max_path_length
         next_length = max(1, len(candidate) - overflow)
@@ -220,7 +227,10 @@ def _fit_uploaded_attachment_filename(
         candidate = next_candidate
 
     candidate = _truncate_filename_preserving_extension(candidate, ATTACHMENT_FILE_NAME_MAX_LEN)
-    if len(str(save_dir / f"{file_id}_{candidate}")) > max_path_length:
+    if (
+        len(f"{file_id}_{candidate}".encode()) > ATTACHMENT_STORAGE_BASENAME_MAX_BYTES
+        or len(str(save_dir / f"{file_id}_{candidate}")) > max_path_length
+    ):
         raise HTTPException(
             status_code=400,
             detail="Uploaded file name is too long for secure storage. Shorten the file name and retry.",

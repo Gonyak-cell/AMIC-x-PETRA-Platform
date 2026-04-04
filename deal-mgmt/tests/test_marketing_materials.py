@@ -275,6 +275,7 @@ async def test_upload_tm_truncates_overlong_filename_for_legacy_backend_limits(
     async_session,
 ):
     import uuid
+    from pathlib import Path
 
     from sqlalchemy import select
 
@@ -299,6 +300,9 @@ async def test_upload_tm_truncates_overlong_filename_for_legacy_backend_limits(
     assert data["file_name"].endswith(".pdf")
     assert len(data["file_name"]) <= marketing_material_service.LEGACY_COMPAT_ATTACHMENT_FILE_NAME_MAX_LEN
     assert data["file_name"] != original_name
+    assert (
+        len(Path(data["file_path"]).name.encode()) <= marketing_material_service.ATTACHMENT_STORAGE_BASENAME_MAX_BYTES
+    )
 
     attachment_result = await async_session.execute(
         select(Attachment).where(Attachment.id == uuid.UUID(data["attachment_id"]))
