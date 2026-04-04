@@ -620,6 +620,61 @@ async def test_upload_tm_reports_backend_length_limit_hint_for_attachment_value_
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_reports_backend_length_limit_hint_for_asyncpg_dbapi_overflow(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy.exc import DBAPIError
+
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    _FakeAsyncpgDbapiError = type(
+        "Error",
+        (Exception,),
+        {
+            "sqlstate": "22001",
+            "__str__": lambda self: "value too long for type character varying(60)",
+        },
+    )
+
+    async def _flush_with_asyncpg_length_overflow(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise DBAPIError.instance(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                _FakeAsyncpgDbapiError(),
+                Exception,
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_asyncpg_length_overflow)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Broken teaser memo",
+        },
+        files={"file": ((f"{'c' * 100}.pdf"), b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    detail = resp.json()["detail"]
+    assert "attachment_db_flush" in detail
+    assert "Uploaded file name exceeded backend length limits." in detail
+    assert "Backend limit is 60 characters." in detail
+    assert "Shorten the file name and retry." in detail
+    assert resp.headers["x-request-id"] in detail
+
+
+@pytest.mark.asyncio
 async def test_create_uploaded_tm_registers_attachment_without_queue(
     client,
     _txn,

@@ -14,7 +14,7 @@ from pathlib import Path
 import aiofiles
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
-from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
@@ -252,7 +252,7 @@ def _classify_attachment_upload_value_error(
     mime_type: str,
     uploaded_by_email: str | None,
 ) -> AttachmentUploadValueIssue | None:
-    if not isinstance(exc, DataError):
+    if not isinstance(exc, DBAPIError):
         return None
 
     orig = getattr(exc, "orig", None)
@@ -320,7 +320,7 @@ def _build_upload_value_failure_detail(
 
 
 def _log_marketing_upload_db_error(
-    exc: OperationalError | ProgrammingError | DataError,
+    exc: DBAPIError,
     *,
     stage: str,
     transaction_id: uuid.UUID,
@@ -553,7 +553,7 @@ async def create_uploaded_marketing_material_from_file(
             try:
                 material, attachment = await _persist_uploaded_marketing_material_once()
                 break
-            except (OperationalError, ProgrammingError, DataError) as exc:
+            except DBAPIError as exc:
                 await db.rollback()
                 db.expunge_all()
                 schema_issue = classify_attachment_upload_schema_error(exc)
@@ -653,7 +653,7 @@ async def create_uploaded_marketing_material_from_file(
             status_code=500,
             detail=f"Uploaded marketing material failed during {upload_stage}.",
         ) from exc
-    except (OperationalError, ProgrammingError, DataError) as exc:
+    except DBAPIError as exc:
         await db.rollback()
         if dest_path is not None:
             await asyncio.to_thread(dest_path.unlink, missing_ok=True)
