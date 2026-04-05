@@ -20,23 +20,29 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-def upgrade() -> None:
-    op.add_column(
-        "document_extractions",
-        sa.Column(
-            "auto_apply_signed_at",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.false(),
-        ),
-    )
-    op.alter_column(
-        "document_extractions",
-        "auto_apply_signed_at",
-        server_default=None,
-    )
+def _document_extractions_has_column(bind, column_name: str) -> bool:
+    inspector = sa.inspect(bind)
+    return any(column["name"] == column_name for column in inspector.get_columns("document_extractions"))
 
+
+def upgrade() -> None:
     bind = op.get_bind()
+    if not _document_extractions_has_column(bind, "auto_apply_signed_at"):
+        op.add_column(
+            "document_extractions",
+            sa.Column(
+                "auto_apply_signed_at",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.false(),
+            ),
+        )
+        op.alter_column(
+            "document_extractions",
+            "auto_apply_signed_at",
+            server_default=None,
+        )
+
     metadata = sa.MetaData()
     attachments = sa.Table(
         "attachments",

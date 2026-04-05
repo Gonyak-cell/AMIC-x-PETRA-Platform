@@ -27,6 +27,21 @@ def _load_revision_095_module():
     return module
 
 
+def _load_revision_093_module():
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / "migrations"
+        / "versions"
+        / "093_backfill_tm_materials_and_extraction_flags.py"
+    )
+    spec = importlib.util.spec_from_file_location("revision_093_tm_backfill", module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 class _FakeBeginContext:
     def __init__(self, conn):
         self._conn = conn
@@ -237,3 +252,56 @@ def test_revision_095_upgrade_rejects_unexpected_entity_id_type(monkeypatch: pyt
 
     with pytest.raises(RuntimeError, match=r"Unexpected attachments\.entity_id database type"):
         revision.upgrade()
+
+
+def test_revision_093_upgrade_skips_existing_auto_apply_signed_at(monkeypatch: pytest.MonkeyPatch):
+    revision = _load_revision_093_module()
+    add_column_calls: list[tuple[str, str]] = []
+    alter_column_calls: list[tuple[str, str]] = []
+    executed_sql: list[str] = []
+
+    class _FakeScalarResult:
+        def __iter__(self):
+            return iter(())
+
+        def scalars(self):
+            return iter(())
+
+    class _FakeMappingsResult:
+        def mappings(self):
+            return iter(())
+
+    class _FakeBind:
+        def execute(self, clause):
+            text_clause = str(clause)
+            executed_sql.append(text_clause)
+            if "SELECT marketing_materials.attachment_id" in text_clause:
+                return _FakeScalarResult()
+            return _FakeMappingsResult()
+
+    class _FakeInspector:
+        def get_columns(self, table_name):
+            if table_name == "document_extractions":
+                return [{"name": "auto_apply_signed_at"}]
+            raise AssertionError(f"Unexpected table lookup: {table_name}")
+
+    monkeypatch.setattr(revision.op, "get_bind", lambda: _FakeBind())
+    monkeypatch.setattr(revision.sa, "inspect", lambda bind: _FakeInspector())
+    monkeypatch.setattr(
+        revision.op,
+        "add_column",
+        lambda table_name, column: add_column_calls.append((table_name, column.name)),
+    )
+    monkeypatch.setattr(
+        revision.op,
+        "alter_column",
+        lambda table_name, column_name, **kwargs: alter_column_calls.append((table_name, column_name)),
+    )
+
+    revision.upgrade()
+
+    assert add_column_calls == []
+    assert alter_column_calls == []
+    assert len(executed_sql) == 2
+    assert "SELECT marketing_materials.attachment_id" in executed_sql[0]
+    assert "SELECT attachments.id, attachments.transaction_id" in executed_sql[1]
