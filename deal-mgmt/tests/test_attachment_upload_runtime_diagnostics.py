@@ -231,14 +231,20 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
     }
     diagnostics_queue = [before, after]
     stamp_calls: list[tuple[object, str]] = []
+    to_thread_calls: list[tuple[object, tuple[object, ...]]] = []
 
     async def _fake_build_attachment_upload_runtime_diagnostics(**kwargs):
         return diagnostics_queue.pop(0)
+
+    async def _fake_to_thread(func, *args):
+        to_thread_calls.append((func, args))
+        return func(*args)
 
     monkeypatch.setattr(
         "app.core.attachment_upload_runtime_diagnostics.build_attachment_upload_runtime_diagnostics",
         _fake_build_attachment_upload_runtime_diagnostics,
     )
+    monkeypatch.setattr("app.core.attachment_upload_runtime_diagnostics.asyncio.to_thread", _fake_to_thread)
     monkeypatch.setattr("app.core.attachment_upload_runtime_diagnostics._build_alembic_config", lambda: "fake-config")
     monkeypatch.setattr(
         "app.core.attachment_upload_runtime_diagnostics.command.stamp",
@@ -252,6 +258,7 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
     assert result.reconciled is True
     assert result.attempted is True
     assert stamp_calls == [("fake-config", "095")]
+    assert len(to_thread_calls) == 1
     assert result.safe_stamp_candidate is True
     assert result.target_head == "095"
     assert result.after == after

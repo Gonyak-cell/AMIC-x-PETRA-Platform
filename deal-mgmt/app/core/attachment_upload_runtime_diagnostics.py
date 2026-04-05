@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
@@ -299,7 +300,7 @@ async def reconcile_attachment_upload_migration_state(
         )
 
     try:
-        command.stamp(_build_alembic_config(), target_head)
+        await asyncio.to_thread(command.stamp, _build_alembic_config(), target_head)
     except Exception as exc:
         return AttachmentUploadMigrationReconcileResult(
             reconciled=False,
