@@ -28,7 +28,11 @@ def _is_safe_stamp_candidate(diagnostics: dict[str, object]) -> bool:
     migration = diagnostics.get("migration")
     entity_id_type = diagnostics.get("attachment_entity_id_type")
     attachment_schema = diagnostics.get("attachment_upload_schema")
-    if not isinstance(migration, dict) or not isinstance(entity_id_type, dict) or not isinstance(attachment_schema, dict):
+    if (
+        not isinstance(migration, dict)
+        or not isinstance(entity_id_type, dict)
+        or not isinstance(attachment_schema, dict)
+    ):
         return False
 
     return (
