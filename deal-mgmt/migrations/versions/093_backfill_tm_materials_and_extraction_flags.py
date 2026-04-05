@@ -14,6 +14,11 @@ from pathlib import Path
 import sqlalchemy as sa
 from alembic import op
 
+LEGACY_TM_TITLE_MAX_LEN = 300
+LEGACY_TM_FILE_NAME_MAX_LEN = 300
+LEGACY_TM_FILE_PATH_MAX_LEN = 500
+LEGACY_TM_EMAIL_MAX_LEN = 255
+
 revision: str = "093"
 down_revision: str | Sequence[str] | None = "092"
 branch_labels: str | Sequence[str] | None = None
@@ -23,6 +28,15 @@ depends_on: str | Sequence[str] | None = None
 def _document_extractions_has_column(bind, column_name: str) -> bool:
     inspector = sa.inspect(bind)
     return any(column["name"] == column_name for column in inspector.get_columns("document_extractions"))
+
+
+def _normalize_legacy_text(value: object | None, max_len: int) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    return normalized[:max_len]
 
 
 def upgrade() -> None:
@@ -44,6 +58,11 @@ def upgrade() -> None:
         )
 
     metadata = sa.MetaData()
+    transactions = sa.Table(
+        "transactions",
+        metadata,
+        sa.Column("id", sa.Uuid()),
+    )
     attachments = sa.Table(
         "attachments",
         metadata,
@@ -79,6 +98,7 @@ def upgrade() -> None:
             sa.select(marketing_materials.c.attachment_id).where(marketing_materials.c.attachment_id.is_not(None))
         ).scalars()
     }
+    valid_transaction_ids = {transaction_id for transaction_id in bind.execute(sa.select(transactions.c.id)).scalars()}
 
     legacy_tm_attachments = bind.execute(
         sa.select(
@@ -99,23 +119,26 @@ def upgrade() -> None:
         attachment_id = attachment["id"]
         if attachment_id in existing_attachment_ids:
             continue
+        transaction_id = attachment["transaction_id"]
+        if transaction_id is None or transaction_id not in valid_transaction_ids:
+            continue
 
-        file_name = str(attachment["file_name"] or "uploaded-tm")
-        title = Path(file_name).stem or file_name
+        file_name = _normalize_legacy_text(attachment["file_name"], LEGACY_TM_FILE_NAME_MAX_LEN) or "uploaded-tm"
+        title = _normalize_legacy_text(Path(file_name).stem or file_name, LEGACY_TM_TITLE_MAX_LEN) or "uploaded-tm"
         rows_to_insert.append(
             {
                 "id": uuid.uuid4(),
-                "transaction_id": attachment["transaction_id"],
+                "transaction_id": transaction_id,
                 "doc_type": "TM",
                 "title": title,
                 "status": "READY",
                 "source_mode": "UPLOADED",
                 "attachment_id": attachment_id,
-                "file_path": attachment["file_path"],
+                "file_path": _normalize_legacy_text(attachment["file_path"], LEGACY_TM_FILE_PATH_MAX_LEN),
                 "file_name": file_name,
                 "file_size_bytes": attachment["file_size_bytes"],
                 "quality_status": "SKIPPED",
-                "created_by_email": attachment["uploaded_by_email"],
+                "created_by_email": _normalize_legacy_text(attachment["uploaded_by_email"], LEGACY_TM_EMAIL_MAX_LEN),
             }
         )
 

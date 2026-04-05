@@ -54,11 +54,13 @@ def upgrade() -> None:
         op.execute(sa.text("ALTER TABLE attachments ALTER COLUMN entity_id TYPE VARCHAR(50) USING entity_id::text"))
         return
 
-    if normalized_type == "character varying(50)":
+    if normalized_type in {"character varying(50)", "character varying", "text"}:
+        if normalized_type != "character varying(50)":
+            op.execute(sa.text("ALTER TABLE attachments ALTER COLUMN entity_id TYPE VARCHAR(50) USING entity_id::text"))
         return
 
     raise RuntimeError(
-        f"Unexpected attachments.entity_id database type {entity_id_type!r}. Expected uuid or character varying(50)."
+        f"Unexpected attachments.entity_id database type {entity_id_type!r}. Expected uuid or a string-compatible type."
     )
 
 

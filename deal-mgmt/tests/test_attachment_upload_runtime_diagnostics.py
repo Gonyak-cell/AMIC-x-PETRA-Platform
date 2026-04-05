@@ -232,6 +232,31 @@ def test_revision_095_upgrade_noops_for_varchar_entity_id(monkeypatch: pytest.Mo
     assert executed_sql == []
 
 
+def test_revision_095_upgrade_normalizes_text_entity_id(monkeypatch: pytest.MonkeyPatch):
+    revision = _load_revision_095_module()
+    executed_sql: list[str] = []
+
+    class _FakeResult:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class _FakeBind:
+        dialect = SimpleNamespace(name="postgresql")
+
+        def execute(self, clause):
+            return _FakeResult("text")
+
+    monkeypatch.setattr(revision.op, "get_bind", lambda: _FakeBind())
+    monkeypatch.setattr(revision.op, "execute", lambda clause: executed_sql.append(str(clause)))
+
+    revision.upgrade()
+
+    assert executed_sql == ["ALTER TABLE attachments ALTER COLUMN entity_id TYPE VARCHAR(50) USING entity_id::text"]
+
+
 def test_revision_095_upgrade_rejects_unexpected_entity_id_type(monkeypatch: pytest.MonkeyPatch):
     revision = _load_revision_095_module()
 
@@ -246,7 +271,7 @@ def test_revision_095_upgrade_rejects_unexpected_entity_id_type(monkeypatch: pyt
         dialect = SimpleNamespace(name="postgresql")
 
         def execute(self, clause):
-            return _FakeResult("text")
+            return _FakeResult("jsonb")
 
     monkeypatch.setattr(revision.op, "get_bind", lambda: _FakeBind())
 
@@ -268,6 +293,9 @@ def test_revision_093_upgrade_skips_existing_auto_apply_signed_at(monkeypatch: p
             return iter(())
 
     class _FakeMappingsResult:
+        def scalars(self):
+            return iter(())
+
         def mappings(self):
             return iter(())
 
@@ -302,6 +330,7 @@ def test_revision_093_upgrade_skips_existing_auto_apply_signed_at(monkeypatch: p
 
     assert add_column_calls == []
     assert alter_column_calls == []
-    assert len(executed_sql) == 2
+    assert len(executed_sql) == 3
     assert "SELECT marketing_materials.attachment_id" in executed_sql[0]
-    assert "SELECT attachments.id, attachments.transaction_id" in executed_sql[1]
+    assert "SELECT transactions.id" in executed_sql[1]
+    assert "SELECT attachments.id, attachments.transaction_id" in executed_sql[2]

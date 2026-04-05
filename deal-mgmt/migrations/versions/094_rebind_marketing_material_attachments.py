@@ -14,15 +14,34 @@ from pathlib import Path
 import sqlalchemy as sa
 from alembic import op
 
+LEGACY_TM_TITLE_MAX_LEN = 300
+LEGACY_TM_FILE_NAME_MAX_LEN = 300
+LEGACY_TM_FILE_PATH_MAX_LEN = 500
+LEGACY_TM_EMAIL_MAX_LEN = 255
+
 revision: str = "094"
 down_revision: str | Sequence[str] | None = "093"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _normalize_legacy_text(value: object | None, max_len: int) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    return normalized[:max_len]
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
+    transactions = sa.Table(
+        "transactions",
+        metadata,
+        sa.Column("id", sa.Uuid()),
+    )
     attachments = sa.Table(
         "attachments",
         metadata,
@@ -52,6 +71,7 @@ def upgrade() -> None:
         sa.Column("created_by_email", sa.String()),
     )
 
+    valid_transaction_ids = {transaction_id for transaction_id in bind.execute(sa.select(transactions.c.id)).scalars()}
     candidate_rows = list(
         bind.execute(
             sa.select(
@@ -83,9 +103,7 @@ def upgrade() -> None:
             )
         ).mappings()
     )
-    existing_material_by_attachment = {
-        row["attachment_id"]: row["id"] for row in existing_material_rows
-    }
+    existing_material_by_attachment = {row["attachment_id"]: row["id"] for row in existing_material_rows}
 
     rows_to_insert: list[dict[str, object | None]] = []
     attachment_rebinds: list[tuple[uuid.UUID, str]] = []
@@ -96,24 +114,27 @@ def upgrade() -> None:
         if linked_material_id is not None:
             attachment_rebinds.append((attachment_id, str(linked_material_id)))
             continue
+        transaction_id = attachment["transaction_id"]
+        if transaction_id is None or transaction_id not in valid_transaction_ids:
+            continue
 
-        file_name = str(attachment["file_name"] or "uploaded-tm")
-        title = Path(file_name).stem or file_name
+        file_name = _normalize_legacy_text(attachment["file_name"], LEGACY_TM_FILE_NAME_MAX_LEN) or "uploaded-tm"
+        title = _normalize_legacy_text(Path(file_name).stem or file_name, LEGACY_TM_TITLE_MAX_LEN) or "uploaded-tm"
         new_material_id = uuid.uuid4()
         rows_to_insert.append(
             {
                 "id": new_material_id,
-                "transaction_id": attachment["transaction_id"],
+                "transaction_id": transaction_id,
                 "doc_type": "TM",
                 "title": title,
                 "status": "READY",
                 "source_mode": "UPLOADED",
                 "attachment_id": attachment_id,
-                "file_path": attachment["file_path"],
+                "file_path": _normalize_legacy_text(attachment["file_path"], LEGACY_TM_FILE_PATH_MAX_LEN),
                 "file_name": file_name,
                 "file_size_bytes": attachment["file_size_bytes"],
                 "quality_status": "SKIPPED",
-                "created_by_email": attachment["uploaded_by_email"],
+                "created_by_email": _normalize_legacy_text(attachment["uploaded_by_email"], LEGACY_TM_EMAIL_MAX_LEN),
             }
         )
         attachment_rebinds.append((attachment_id, str(new_material_id)))
@@ -122,11 +143,7 @@ def upgrade() -> None:
         bind.execute(sa.insert(marketing_materials), rows_to_insert)
 
     for attachment_id, material_id in attachment_rebinds:
-        bind.execute(
-            sa.update(attachments)
-            .where(attachments.c.id == attachment_id)
-            .values(entity_id=material_id)
-        )
+        bind.execute(sa.update(attachments).where(attachments.c.id == attachment_id).values(entity_id=material_id))
 
 
 def downgrade() -> None:
