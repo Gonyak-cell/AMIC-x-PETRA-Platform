@@ -86,6 +86,32 @@ async def _bootstrap_attachment_processing_schema_for_startup(
     return repair_result
 
 
+async def _bootstrap_attachment_upload_migration_state_for_startup(
+    *,
+    database_url: str | None = None,
+    engine_override=None,
+):
+    from app.core.attachment_upload_runtime_diagnostics import reconcile_attachment_upload_migration_state
+
+    effective_database_url = database_url or settings.DATABASE_URL
+    reconcile_result = await reconcile_attachment_upload_migration_state(
+        database_url=effective_database_url,
+        engine_override=engine_override,
+        logger=logger,
+    )
+    if reconcile_result.reconciled:
+        logger.warning(
+            "Attachment upload migration state was safely reconciled during app startup to head %s",
+            reconcile_result.target_head,
+        )
+    elif reconcile_result.attempted:
+        logger.warning(
+            "Attachment upload migration state reconcile attempt failed during app startup: %s",
+            reconcile_result.error or "post-stamp diagnostics still reported drift",
+        )
+    return reconcile_result
+
+
 async def _cleanup_stale_extractions() -> None:
     """서버 시작 시 CLASSIFYING/EXTRACTING 상태로 방치된 extraction을 FAILED로 전환."""
     try:
@@ -117,6 +143,7 @@ async def _cleanup_stale_extractions() -> None:
 async def lifespan(app: FastAPI):
     await _bootstrap_local_sqlite_schema_for_startup()
     await _bootstrap_attachment_processing_schema_for_startup()
+    await _bootstrap_attachment_upload_migration_state_for_startup()
 
     # JWT secret validation is handled at import time in core/config.py
     # (raises RuntimeError if ENV=production and using dev secret)

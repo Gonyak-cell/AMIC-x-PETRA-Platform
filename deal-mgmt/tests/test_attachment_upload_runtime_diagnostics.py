@@ -11,6 +11,7 @@ from app.core.attachment_upload_runtime_diagnostics import (
     AttachmentUploadMigrationState,
     build_attachment_upload_runtime_diagnostics,
     probe_attachment_upload_migration_state,
+    reconcile_attachment_upload_migration_state,
 )
 from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
 
@@ -35,16 +36,6 @@ def _load_revision_093_module():
         / "093_backfill_tm_materials_and_extraction_flags.py"
     )
     spec = importlib.util.spec_from_file_location("revision_093_tm_backfill", module_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def _load_reconcile_script_module():
-    module_path = Path(__file__).resolve().parents[1] / "scripts" / "reconcile_attachment_upload_migration_state.py"
-    spec = importlib.util.spec_from_file_location("reconcile_attachment_upload_migration_state", module_path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -196,7 +187,6 @@ async def test_build_attachment_upload_runtime_diagnostics_includes_entity_id_ty
 async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candidate(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    module = _load_reconcile_script_module()
     before = {
         "overall_ok": False,
         "migration": {
@@ -246,29 +236,31 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
         return diagnostics_queue.pop(0)
 
     monkeypatch.setattr(
-        module,
-        "build_attachment_upload_runtime_diagnostics",
+        "app.core.attachment_upload_runtime_diagnostics.build_attachment_upload_runtime_diagnostics",
         _fake_build_attachment_upload_runtime_diagnostics,
     )
-    monkeypatch.setattr(module, "_build_alembic_config", lambda: "fake-config")
-    monkeypatch.setattr(module.command, "stamp", lambda config, head: stamp_calls.append((config, head)))
+    monkeypatch.setattr("app.core.attachment_upload_runtime_diagnostics._build_alembic_config", lambda: "fake-config")
+    monkeypatch.setattr(
+        "app.core.attachment_upload_runtime_diagnostics.command.stamp",
+        lambda config, head: stamp_calls.append((config, head)),
+    )
 
-    exit_code, payload = await module.reconcile_attachment_upload_migration_state(
+    result = await reconcile_attachment_upload_migration_state(
         database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
     )
 
-    assert exit_code == 0
+    assert result.reconciled is True
+    assert result.attempted is True
     assert stamp_calls == [("fake-config", "095")]
-    assert payload["safe_stamp_candidate"] is True
-    assert payload["target_head"] == "095"
-    assert payload["after"] == after
+    assert result.safe_stamp_candidate is True
+    assert result.target_head == "095"
+    assert result.after == after
 
 
 @pytest.mark.asyncio
 async def test_reconcile_attachment_upload_migration_state_refuses_non_092_candidate(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    module = _load_reconcile_script_module()
     before = {
         "overall_ok": False,
         "migration": {
@@ -296,22 +288,23 @@ async def test_reconcile_attachment_upload_migration_state_refuses_non_092_candi
         return before
 
     monkeypatch.setattr(
-        module,
-        "build_attachment_upload_runtime_diagnostics",
+        "app.core.attachment_upload_runtime_diagnostics.build_attachment_upload_runtime_diagnostics",
         _fake_build_attachment_upload_runtime_diagnostics,
     )
-    monkeypatch.setattr(module.command, "stamp", lambda config, head: stamp_calls.append((config, head)))
+    monkeypatch.setattr(
+        "app.core.attachment_upload_runtime_diagnostics.command.stamp",
+        lambda config, head: stamp_calls.append((config, head)),
+    )
 
-    exit_code, payload = await module.reconcile_attachment_upload_migration_state(
+    result = await reconcile_attachment_upload_migration_state(
         database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
     )
 
-    assert exit_code == 1
+    assert result.reconciled is False
+    assert result.attempted is False
     assert stamp_calls == []
-    assert payload == {
-        "before": before,
-        "safe_stamp_candidate": False,
-    }
+    assert result.safe_stamp_candidate is False
+    assert result.before == before
 
 
 def test_revision_095_upgrades_uuid_entity_id_to_varchar(monkeypatch: pytest.MonkeyPatch):

@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import ANY
 
 import pytest
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -15,6 +16,7 @@ from app.core.local_dev_schema_guard import (
 )
 from app.main import (
     _bootstrap_attachment_processing_schema_for_startup,
+    _bootstrap_attachment_upload_migration_state_for_startup,
     _bootstrap_local_sqlite_schema_for_startup,
 )
 from scripts.run_dev_server import (
@@ -402,6 +404,42 @@ async def test_bootstrap_attachment_processing_schema_for_startup_repairs_missin
         "processing_error",
     } <= attachments_columns
     assert {"source_mode", "attachment_id"} <= marketing_columns
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_attachment_upload_migration_state_for_startup_reconciles_safe_drift(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    reconcile_calls: list[dict[str, object]] = []
+
+    async def _fake_reconcile_attachment_upload_migration_state(**kwargs):
+        reconcile_calls.append(kwargs)
+        return SimpleNamespace(
+            reconciled=True,
+            attempted=True,
+            safe_stamp_candidate=True,
+            target_head="095",
+            error=None,
+        )
+
+    monkeypatch.setattr(
+        "app.core.attachment_upload_runtime_diagnostics.reconcile_attachment_upload_migration_state",
+        _fake_reconcile_attachment_upload_migration_state,
+    )
+
+    result = await _bootstrap_attachment_upload_migration_state_for_startup(
+        database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+        engine_override=SimpleNamespace(),
+    )
+
+    assert result.reconciled is True
+    assert reconcile_calls == [
+        {
+            "database_url": "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+            "engine_override": SimpleNamespace(),
+            "logger": ANY,
+        }
+    ]
 
 
 def test_classify_attachment_upload_schema_error_detects_postgres_vdr_document_id():

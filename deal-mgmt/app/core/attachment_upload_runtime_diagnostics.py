@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from alembic import command
 from alembic.config import Config as AlembicConfig
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
@@ -32,6 +33,17 @@ class AttachmentEntityIdTypeState:
     expected_type: str = EXPECTED_ATTACHMENT_ENTITY_ID_TYPE
     actual_type: str | None = None
     managed: bool = True
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class AttachmentUploadMigrationReconcileResult:
+    reconciled: bool
+    attempted: bool
+    safe_stamp_candidate: bool
+    target_head: str | None = None
+    before: dict[str, object] | None = None
+    after: dict[str, object] | None = None
     error: str | None = None
 
 
@@ -96,6 +108,37 @@ def _resolve_database_url(database_url: str | None, engine_override) -> str | No
         return database_url
     engine_url = getattr(engine_override, "url", None)
     return str(engine_url) if engine_url is not None else None
+
+
+def _resolve_target_head(diagnostics: dict[str, object]) -> str | None:
+    migration = diagnostics.get("migration")
+    if not isinstance(migration, dict):
+        return None
+    expected_heads = migration.get("expected_heads")
+    if not isinstance(expected_heads, list) or len(expected_heads) != 1:
+        return None
+    head = expected_heads[0]
+    return head if isinstance(head, str) and head else None
+
+
+def _is_safe_attachment_upload_migration_reconcile_candidate(diagnostics: dict[str, object]) -> bool:
+    migration = diagnostics.get("migration")
+    entity_id_type = diagnostics.get("attachment_entity_id_type")
+    attachment_schema = diagnostics.get("attachment_upload_schema")
+    if (
+        not isinstance(migration, dict)
+        or not isinstance(entity_id_type, dict)
+        or not isinstance(attachment_schema, dict)
+    ):
+        return False
+
+    return (
+        migration.get("managed") is True
+        and migration.get("current_heads") == ["092"]
+        and bool(_resolve_target_head(diagnostics))
+        and entity_id_type.get("ok") is True
+        and attachment_schema.get("ok") is True
+    )
 
 
 async def probe_attachment_upload_migration_state(
@@ -223,3 +266,60 @@ async def build_attachment_upload_runtime_diagnostics(
             "issues": [serialize_attachment_upload_schema_issue(issue) for issue in schema_result.issues],
         },
     }
+
+
+async def reconcile_attachment_upload_migration_state(
+    *,
+    database_url: str | None = None,
+    engine_override=None,
+    logger: logging.Logger | None = None,
+) -> AttachmentUploadMigrationReconcileResult:
+    diagnostics = await build_attachment_upload_runtime_diagnostics(
+        database_url=database_url,
+        engine_override=engine_override,
+        logger=logger,
+    )
+    safe_stamp_candidate = _is_safe_attachment_upload_migration_reconcile_candidate(diagnostics)
+    if not safe_stamp_candidate:
+        return AttachmentUploadMigrationReconcileResult(
+            reconciled=False,
+            attempted=False,
+            safe_stamp_candidate=False,
+            before=diagnostics,
+        )
+
+    target_head = _resolve_target_head(diagnostics)
+    if target_head is None:
+        return AttachmentUploadMigrationReconcileResult(
+            reconciled=False,
+            attempted=False,
+            safe_stamp_candidate=True,
+            before=diagnostics,
+            error="Unable to resolve a single expected Alembic head",
+        )
+
+    try:
+        command.stamp(_build_alembic_config(), target_head)
+    except Exception as exc:
+        return AttachmentUploadMigrationReconcileResult(
+            reconciled=False,
+            attempted=True,
+            safe_stamp_candidate=True,
+            target_head=target_head,
+            before=diagnostics,
+            error=str(exc),
+        )
+
+    after = await build_attachment_upload_runtime_diagnostics(
+        database_url=database_url,
+        engine_override=engine_override,
+        logger=logger,
+    )
+    return AttachmentUploadMigrationReconcileResult(
+        reconciled=after.get("overall_ok") is True,
+        attempted=True,
+        safe_stamp_candidate=True,
+        target_head=target_head,
+        before=diagnostics,
+        after=after,
+    )
