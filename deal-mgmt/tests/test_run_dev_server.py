@@ -1,11 +1,13 @@
 import sqlite3
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.local_dev_schema_guard import (
+    AttachmentUploadSchemaIssue,
     classify_attachment_upload_schema_error,
     guard_local_sqlite_database_url,
     probe_attachment_upload_schema,
@@ -444,6 +446,30 @@ def test_classify_attachment_upload_schema_error_detects_postgres_processing_sta
     assert issue.repairable is True
 
 
+def test_classify_attachment_upload_schema_error_detects_postgres_entity_id_type_mismatch():
+    class _FakeOrigError(Exception):
+        sqlstate = "42804"
+
+        def __str__(self):
+            return 'column "entity_id" is of type uuid but expression is of type character varying'
+
+    exc = ProgrammingError(
+        "INSERT INTO attachments (...) VALUES (...)",
+        {},
+        _FakeOrigError(),
+    )
+
+    issue = classify_attachment_upload_schema_error(exc)
+
+    assert issue is not None
+    assert issue.table == "attachments"
+    assert issue.column == "entity_id"
+    assert issue.reason == "incompatible_type"
+    assert issue.repairable is True
+    assert issue.expected_type == "VARCHAR(50)"
+    assert issue.actual_type == "UUID"
+
+
 def test_classify_attachment_upload_schema_error_detects_sqlite_missing_column():
     exc = OperationalError(
         "INSERT INTO attachments (...) VALUES (...)",
@@ -472,6 +498,61 @@ def test_classify_attachment_upload_schema_error_ignores_non_schema_db_errors():
     )
 
     assert classify_attachment_upload_schema_error(exc) is None
+
+
+@pytest.mark.asyncio
+async def test_repair_attachment_upload_schema_if_needed_repairs_entity_id_type_mismatch():
+    executed_sql: list[str] = []
+
+    class _FakeConn:
+        def __init__(self):
+            self.dialect = SimpleNamespace(name="postgresql")
+            self._run_sync_calls = 0
+
+        async def run_sync(self, fn):
+            self._run_sync_calls += 1
+            if self._run_sync_calls == 1:
+                return (
+                    AttachmentUploadSchemaIssue(
+                        table="attachments",
+                        column="entity_id",
+                        reason="incompatible_type",
+                        repairable=True,
+                        expected_type="VARCHAR(50)",
+                        actual_type="UUID",
+                    ),
+                )
+            return ()
+
+        async def execute(self, clause):
+            executed_sql.append(str(clause))
+
+    class _FakeBeginContext:
+        def __init__(self, conn):
+            self._conn = conn
+
+        async def __aenter__(self):
+            return self._conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class _FakeEngine:
+        def __init__(self, conn):
+            self._conn = conn
+
+        def begin(self):
+            return _FakeBeginContext(self._conn)
+
+    result = await repair_attachment_upload_schema_if_needed(
+        database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+        engine_override=_FakeEngine(_FakeConn()),
+    )
+
+    assert result.repaired is True
+    assert result.repair_attempted is True
+    assert result.qualified_schema_elements == ("attachments.entity_id",)
+    assert executed_sql[0] == "ALTER TABLE attachments ALTER COLUMN entity_id TYPE VARCHAR(50) USING entity_id::text"
 
 
 @pytest.mark.asyncio

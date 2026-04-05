@@ -347,7 +347,7 @@ def _log_marketing_upload_db_error(
     constraint_name = getattr(diag, "constraint_name", None)
     statement = getattr(exc, "statement", None)
     logger.exception(
-        "Uploaded marketing material database error: request_id=%s stage=%s txn=%s marketing_material_id=%s exc_class=%s orig_class=%s sqlstate=%s table=%s column=%s constraint=%s schema_reason=%s value_reason=%s value_field=%s value_limit=%s value_length=%s statement=%s",
+        "Uploaded marketing material database error: request_id=%s stage=%s txn=%s marketing_material_id=%s exc_class=%s orig_class=%s sqlstate=%s table=%s column=%s constraint=%s schema_reason=%s schema_expected_type=%s schema_actual_type=%s value_reason=%s value_field=%s value_limit=%s value_length=%s statement=%s",
         request_id,
         stage,
         transaction_id,
@@ -359,6 +359,8 @@ def _log_marketing_upload_db_error(
         column_name,
         constraint_name,
         schema_issue.reason if schema_issue is not None else None,
+        schema_issue.expected_type if schema_issue is not None else None,
+        schema_issue.actual_type if schema_issue is not None else None,
         value_issue.reason if value_issue is not None else None,
         value_issue.field if value_issue is not None else None,
         value_issue.max_length if value_issue is not None else None,
@@ -613,10 +615,10 @@ async def create_uploaded_marketing_material_from_file(
                         if repair_result.repaired:
                             attempted_attachment_schema_repair = True
                             logger.warning(
-                                "Retried uploaded marketing material flush after repairing uploaded schema: request_id=%s txn=%s missing_columns=%s",
+                                "Retried uploaded marketing material flush after repairing uploaded schema: request_id=%s txn=%s schema_elements=%s",
                                 get_request_id(),
                                 transaction_id,
-                                ", ".join(repair_result.qualified_missing_columns),
+                                ", ".join(repair_result.qualified_schema_elements),
                             )
                             continue
 

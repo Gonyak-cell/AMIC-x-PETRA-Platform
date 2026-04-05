@@ -573,6 +573,152 @@ async def test_upload_tm_reports_backend_migration_hint_when_attachment_schema_r
 
 
 @pytest.mark.asyncio
+async def test_upload_tm_retries_after_backend_attachment_entity_id_type_repair(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy.exc import ProgrammingError
+
+    from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    class _FakeOrigError(Exception):
+        sqlstate = "42804"
+
+        def __str__(self):
+            return 'column "entity_id" is of type uuid but expression is of type character varying'
+
+    async def _flush_with_entity_id_type_failure(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise ProgrammingError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                _FakeOrigError(),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    async def _repair_schema(**kwargs):
+        return AttachmentUploadSchemaRepairResult(
+            issues=(
+                AttachmentUploadSchemaIssue(
+                    table="attachments",
+                    column="entity_id",
+                    reason="incompatible_type",
+                    repairable=True,
+                    expected_type="VARCHAR(50)",
+                    actual_type="UUID",
+                ),
+            ),
+            repaired=True,
+            repair_attempted=True,
+        )
+
+    monkeypatch.setattr(
+        marketing_material_service.settings,
+        "DATABASE_URL",
+        "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_entity_id_type_failure)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_upload_schema_if_needed", _repair_schema)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Recovered teaser memo",
+        },
+        files={"file": ("recovered-tm.pdf", b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Recovered teaser memo"
+    assert data["source_mode"] == "UPLOADED"
+
+
+@pytest.mark.asyncio
+async def test_upload_tm_reports_backend_entity_id_type_migration_hint_when_repair_fails(
+    client,
+    _txn,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy.exc import ProgrammingError
+
+    from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
+    from app.services import marketing_material_service
+
+    original_flush = marketing_material_service.AsyncSession.flush
+    flush_calls = 0
+
+    class _FakeOrigError(Exception):
+        sqlstate = "42804"
+
+        def __str__(self):
+            return 'column "entity_id" is of type uuid but expression is of type character varying'
+
+    async def _flush_with_entity_id_type_failure(self, *args, **kwargs):
+        nonlocal flush_calls
+        flush_calls += 1
+        if flush_calls == 2:
+            raise ProgrammingError(
+                "INSERT INTO attachments (...) VALUES (...)",
+                {},
+                _FakeOrigError(),
+            )
+        return await original_flush(self, *args, **kwargs)
+
+    async def _repair_schema(**kwargs):
+        return AttachmentUploadSchemaRepairResult(
+            issues=(
+                AttachmentUploadSchemaIssue(
+                    table="attachments",
+                    column="entity_id",
+                    reason="incompatible_type",
+                    repairable=True,
+                    expected_type="VARCHAR(50)",
+                    actual_type="UUID",
+                ),
+            ),
+            repaired=False,
+            repair_attempted=True,
+        )
+
+    monkeypatch.setattr(
+        marketing_material_service.settings,
+        "DATABASE_URL",
+        "postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
+    monkeypatch.setattr(marketing_material_service.AsyncSession, "flush", _flush_with_entity_id_type_failure)
+    monkeypatch.setattr(marketing_material_service, "repair_attachment_upload_schema_if_needed", _repair_schema)
+
+    txn_id = _txn["id"]
+    resp = await client.post(
+        f"/api/v1/transactions/{txn_id}/marketing-materials/uploaded",
+        data={
+            "doc_type": "TM",
+            "title": "Broken teaser memo",
+        },
+        files={"file": ("broken-tm.pdf", b"%PDF-1.4\nuploaded teaser\n", "application/pdf")},
+    )
+
+    assert resp.status_code == 500
+    detail = resp.json()["detail"]
+    assert "attachment_db_flush" in detail
+    assert "alembic upgrade head" in detail
+    assert "attachments.entity_id" in detail
+    assert "incompatible database type" in detail
+    assert "Expected VARCHAR(50)." in detail
+    assert resp.headers["x-request-id"] in detail
+
+
+@pytest.mark.asyncio
 async def test_upload_tm_reports_backend_length_limit_hint_for_attachment_value_overflow(
     client,
     _txn,

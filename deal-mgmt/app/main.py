@@ -76,12 +76,12 @@ async def _bootstrap_attachment_processing_schema_for_startup(
     if repair_result.repaired:
         logger.warning(
             "Backend uploaded marketing material schema was repaired during app startup: %s",
-            ", ".join(repair_result.qualified_missing_columns),
+            ", ".join(repair_result.qualified_schema_elements),
         )
     elif repair_result.repair_attempted and repair_result.issues:
         logger.warning(
-            "Uploaded marketing material schema is still missing after startup repair: %s",
-            ", ".join(repair_result.qualified_missing_columns),
+            "Uploaded marketing material schema issues remain after startup repair: %s",
+            ", ".join(repair_result.qualified_schema_elements),
         )
     return repair_result
 
@@ -111,10 +111,6 @@ async def _cleanup_stale_extractions() -> None:
                 logger.info("stale extraction %d건 FAILED 처리 완료", result.rowcount)
     except Exception:
         logger.exception("stale extraction 정리 실패")
-
-
-# 마이그레이션 상태 추적 — health check에서 참조
-_migration_ok: bool = True  # deploy.yml에서 마이그레이션 관리
 
 
 @asynccontextmanager
@@ -368,7 +364,7 @@ app.include_router(news_feed.router, prefix="/api/v1")
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    result = {"status": "ok", "service": "deal-mgmt", "migration_ok": _migration_ok}
+    result = {"status": "ok", "service": "deal-mgmt", "migration_ok": True}
     try:
         from app.ralph.parsers.pdf_parser import get_pdf_ocr_status
 
@@ -393,10 +389,31 @@ async def health_check():
         result["db"] = "error"
 
     try:
+        from app.core.attachment_upload_runtime_diagnostics import (
+            probe_attachment_upload_migration_state,
+            serialize_attachment_upload_schema_issue,
+        )
         from app.core.database import async_session_factory
         from app.core.local_dev_schema_guard import probe_attachment_upload_schema
 
         schema_engine = getattr(async_session_factory, "kw", {}).get("bind")
+        migration_state = await probe_attachment_upload_migration_state(
+            database_url=settings.DATABASE_URL,
+            engine_override=schema_engine,
+            logger=logger,
+        )
+        result["migration_ok"] = migration_state.ok
+        result["migration"] = {
+            "ok": migration_state.ok,
+            "managed": migration_state.managed,
+            "expected_heads": list(migration_state.expected_heads),
+            "current_heads": list(migration_state.current_heads),
+        }
+        if migration_state.error is not None:
+            result["migration"]["error"] = migration_state.error
+        if not migration_state.ok:
+            result["status"] = "degraded"
+
         schema_result = await probe_attachment_upload_schema(
             engine_override=schema_engine,
             logger=logger,
@@ -404,21 +421,22 @@ async def health_check():
         result["attachment_upload_schema_ok"] = schema_result.ok
         result["attachment_upload_schema"] = {
             "ok": schema_result.ok,
-            "issues": [
-                {
-                    "table": issue.table,
-                    "column": issue.column,
-                    "reason": issue.reason,
-                    "repairable": issue.repairable,
-                }
-                for issue in schema_result.issues
-            ],
+            "issues": [serialize_attachment_upload_schema_issue(issue) for issue in schema_result.issues],
         }
         if not schema_result.ok:
             result["status"] = "degraded"
+            result["migration_ok"] = False
     except Exception as exc:
-        logger.error("Health check attachment upload schema probe failed: %s", exc)
+        logger.error("Health check attachment upload diagnostics failed: %s", exc)
         result["status"] = "degraded"
+        result["migration_ok"] = False
+        result["migration"] = {
+            "ok": False,
+            "managed": not settings.DATABASE_URL.startswith("sqlite"),
+            "expected_heads": [],
+            "current_heads": [],
+            "error": str(exc),
+        }
         result["attachment_upload_schema_ok"] = False
         result["attachment_upload_schema"] = {
             "ok": False,

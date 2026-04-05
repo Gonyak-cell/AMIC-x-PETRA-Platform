@@ -418,12 +418,17 @@ jobs:
                 echo "  $LABEL: OK"
                 return 0
               fi
-              # Do NOT stamp head — stamping without running migrations causes
+              # Do NOT stamp head. Stamping without running migrations causes
               # column-not-found errors at runtime (see KIIS dashboard 500 incident).
               # Migration failures must be fixed manually.
-              echo "  CRITICAL: $LABEL migration failed — manual intervention required"
+              echo "  CRITICAL: $LABEL migration failed -- manual intervention required"
               echo "  $LABEL: check migration files and DB state, then run: alembic upgrade head"
               return 1
+            }
+
+            run_ma_attachment_upload_diagnostic() {
+              echo "  Running MA attachment upload diagnostic..."
+              $COMPOSE exec -T deal-mgmt-api python -m scripts.diagnose_attachment_upload_schema --fail-on-drift
             }
 
             MIGRATE_FAILURES=""
@@ -445,6 +450,16 @@ jobs:
               echo "CRITICAL: Migration failures in:$MIGRATE_FAILURES"
               echo "Aborting deployment. Fix the migrations, then re-run this deployment."
               exit 1
+            fi
+
+            echo "=== [5.1/8] MA Attachment Upload Schema Validation ==="
+            if [ "$MIGRATE_MA" = true ]; then
+              if ! run_ma_attachment_upload_diagnostic; then
+                echo "::error title=MA attachment upload schema drift::MA attachment upload schema validation failed. Review the diagnostic JSON above."
+                exit 1
+              fi
+            else
+              echo "  MA not changed -- skipping attachment upload schema validation."
             fi
 
             # ── 5.5. SI Company Data Seed ──
@@ -577,6 +592,7 @@ jobs:
                 RESPONSE=$($COMPOSE exec -T "$SVC" python3 -c "import urllib.request as u,sys;r=u.urlopen('http://localhost:8000/health',timeout=10);print(r.read().decode())" 2>/dev/null || echo '{}')
                 STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
                 MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
+                SCHEMA_OK=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('attachment_upload_schema_ok','N/A'))" 2>/dev/null || echo "N/A")
                 DB=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('db','N/A'))" 2>/dev/null || echo "N/A")
                 SVC_NAME=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('service','unknown'))" 2>/dev/null || echo "unknown")
                 # Determine expected service name for image-swap detection
@@ -588,14 +604,21 @@ jobs:
                 # PASS: correct service identity + responding + migration OK
                 # WARN: db=error (service running but DB unreachable)
                 # FAIL: wrong service name (image swap) / not responding / migration failed
-                if [ "$STATUS" != "unknown" ] && [ "$SVC_NAME" = "$EXPECTED_SVC" ] && [ "$MIGR" != "False" ]; then
+                HEALTHY_BACKEND=false
+                if [ "$STATUS" != "unknown" ] && [ "$SVC_NAME" = "$EXPECTED_SVC" ] && [ "$MIGR" = "True" ]; then
+                  if [ "$LABEL" != "ma" ] || [ "$SCHEMA_OK" = "True" ]; then
+                    HEALTHY_BACKEND=true
+                  fi
+                fi
+
+                if [ "$HEALTHY_BACKEND" = true ]; then
                   if [ "$DB" = "error" ]; then
-                    echo "    $LABEL: OK (status=$STATUS, db=$DB ⚠, migration=$MIGR, service=$SVC_NAME)"
+                    echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME, schema=$SCHEMA_OK)"
                   else
-                    echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
+                    echo "    $LABEL: OK (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME, schema=$SCHEMA_OK)"
                   fi
                 else
-                  echo "    $LABEL: FAILED (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME)"
+                  echo "    $LABEL: FAILED (status=$STATUS, db=$DB, migration=$MIGR, service=$SVC_NAME, schema=$SCHEMA_OK)"
                   echo "    DEBUG[$LABEL]: raw='$RESPONSE'"
                   $COMPOSE logs "$SVC" --tail=10 2>/dev/null | head -15 || true
                   HEALTH_OK=false
@@ -623,7 +646,11 @@ jobs:
 
             if [ "$HEALTH_OK" = false ]; then
               echo ""
-              echo "!!! HEALTH CHECK FAILED after 3 attempts — Rolling back to $PREV_COMMIT !!!"
+              if has_service "deal-mgmt-api"; then
+                echo "=== MA Attachment Upload Diagnostic (before rollback) ==="
+                $COMPOSE exec -T deal-mgmt-api python -m scripts.diagnose_attachment_upload_schema 2>&1 || true
+              fi
+              echo "!!! HEALTH CHECK FAILED after 3 attempts -- Rolling back to $PREV_COMMIT !!!"
               git checkout "$BRANCH"
               git reset --hard "$PREV_COMMIT"
               $COMPOSE build $SERVICES
@@ -642,10 +669,12 @@ jobs:
                 LABEL=$(echo "$svc_ep" | cut -d: -f2)
                 RESPONSE=$($COMPOSE exec -T "$SVC" python3 -c "import urllib.request as u,sys;r=u.urlopen('http://localhost:8000/health',timeout=10);print(r.read().decode())" 2>/dev/null || echo '{}')
                 STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
-                if [ "$STATUS" = "ok" ]; then
+                MIGR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('migration_ok','N/A'))" 2>/dev/null || echo "N/A")
+                SCHEMA_OK=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('attachment_upload_schema_ok','N/A'))" 2>/dev/null || echo "N/A")
+                if [ "$STATUS" = "ok" ] && [ "$MIGR" = "True" ] && { [ "$LABEL" != "ma" ] || [ "$SCHEMA_OK" = "True" ]; }; then
                   echo "    $LABEL: STABLE"
                 else
-                  echo "    $LABEL: CRASHED (status=$STATUS)"
+                  echo "    $LABEL: CRASHED (status=$STATUS, migration=$MIGR, schema=$SCHEMA_OK)"
                   STABLE=false
                 fi
               done
