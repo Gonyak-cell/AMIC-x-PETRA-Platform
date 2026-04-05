@@ -42,6 +42,16 @@ def _load_revision_093_module():
     return module
 
 
+def _load_reconcile_script_module():
+    module_path = Path(__file__).resolve().parents[1] / "scripts" / "reconcile_attachment_upload_migration_state.py"
+    spec = importlib.util.spec_from_file_location("reconcile_attachment_upload_migration_state", module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 class _FakeBeginContext:
     def __init__(self, conn):
         self._conn = conn
@@ -179,6 +189,128 @@ async def test_build_attachment_upload_runtime_diagnostics_includes_entity_id_ty
                 "actual_type": "UUID",
             }
         ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    module = _load_reconcile_script_module()
+    before = {
+        "overall_ok": False,
+        "migration": {
+            "ok": False,
+            "managed": True,
+            "expected_heads": ["095"],
+            "current_heads": ["092"],
+            "error": None,
+        },
+        "attachment_entity_id_type": {
+            "ok": True,
+            "managed": True,
+            "expected_type": "character varying(50)",
+            "actual_type": "character varying(50)",
+            "error": None,
+        },
+        "attachment_upload_schema": {
+            "ok": True,
+            "issues": [],
+        },
+    }
+    after = {
+        "overall_ok": True,
+        "migration": {
+            "ok": True,
+            "managed": True,
+            "expected_heads": ["095"],
+            "current_heads": ["095"],
+            "error": None,
+        },
+        "attachment_entity_id_type": {
+            "ok": True,
+            "managed": True,
+            "expected_type": "character varying(50)",
+            "actual_type": "character varying(50)",
+            "error": None,
+        },
+        "attachment_upload_schema": {
+            "ok": True,
+            "issues": [],
+        },
+    }
+    diagnostics_queue = [before, after]
+    stamp_calls: list[tuple[object, str]] = []
+
+    async def _fake_build_attachment_upload_runtime_diagnostics(**kwargs):
+        return diagnostics_queue.pop(0)
+
+    monkeypatch.setattr(
+        module,
+        "build_attachment_upload_runtime_diagnostics",
+        _fake_build_attachment_upload_runtime_diagnostics,
+    )
+    monkeypatch.setattr(module, "_build_alembic_config", lambda: "fake-config")
+    monkeypatch.setattr(module.command, "stamp", lambda config, head: stamp_calls.append((config, head)))
+
+    exit_code, payload = await module.reconcile_attachment_upload_migration_state(
+        database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
+
+    assert exit_code == 0
+    assert stamp_calls == [("fake-config", "095")]
+    assert payload["safe_stamp_candidate"] is True
+    assert payload["target_head"] == "095"
+    assert payload["after"] == after
+
+
+@pytest.mark.asyncio
+async def test_reconcile_attachment_upload_migration_state_refuses_non_092_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    module = _load_reconcile_script_module()
+    before = {
+        "overall_ok": False,
+        "migration": {
+            "ok": False,
+            "managed": True,
+            "expected_heads": ["095"],
+            "current_heads": ["091"],
+            "error": None,
+        },
+        "attachment_entity_id_type": {
+            "ok": True,
+            "managed": True,
+            "expected_type": "character varying(50)",
+            "actual_type": "character varying(50)",
+            "error": None,
+        },
+        "attachment_upload_schema": {
+            "ok": True,
+            "issues": [],
+        },
+    }
+    stamp_calls: list[tuple[object, str]] = []
+
+    async def _fake_build_attachment_upload_runtime_diagnostics(**kwargs):
+        return before
+
+    monkeypatch.setattr(
+        module,
+        "build_attachment_upload_runtime_diagnostics",
+        _fake_build_attachment_upload_runtime_diagnostics,
+    )
+    monkeypatch.setattr(module.command, "stamp", lambda config, head: stamp_calls.append((config, head)))
+
+    exit_code, payload = await module.reconcile_attachment_upload_migration_state(
+        database_url="postgresql+asyncpg://user:pass@localhost:5432/deal_mgmt",
+    )
+
+    assert exit_code == 1
+    assert stamp_calls == []
+    assert payload == {
+        "before": before,
+        "safe_stamp_candidate": False,
     }
 
 

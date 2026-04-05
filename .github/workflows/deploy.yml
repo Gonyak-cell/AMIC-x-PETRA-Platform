@@ -418,9 +418,20 @@ jobs:
                 echo "  $LABEL: OK"
                 return 0
               fi
-              # Do NOT stamp head. Stamping without running migrations causes
-              # column-not-found errors at runtime (see KIIS dashboard 500 incident).
-              # Migration failures must be fixed manually.
+              if [ "$LABEL" = "MA" ]; then
+                echo "  MA migration failed; checking whether runtime upload schema is already healthy and only Alembic head reconciliation is needed..."
+                if reconcile_ma_attachment_upload_migration_state; then
+                  echo "  MA: recovered by safe Alembic head reconciliation."
+                  echo "  MA: current revision after reconcile:"
+                  $COMPOSE exec -T "$SVC" alembic current 2>&1 || true
+                  return 0
+                fi
+                echo "  MA: reconcile attempt did not qualify as safe or did not restore the expected head."
+                run_ma_attachment_upload_diagnostic || true
+              fi
+              # Do not blindly stamp head. The only exception is the MA-specific
+              # reconcile path above, which revalidates runtime schema health and
+              # only repairs the known 092->head metadata drift case.
               echo "  CRITICAL: $LABEL migration failed -- manual intervention required"
               echo "  $LABEL: check migration files and DB state, then run: alembic upgrade head"
               return 1
@@ -429,6 +440,11 @@ jobs:
             run_ma_attachment_upload_diagnostic() {
               echo "  Running MA attachment upload diagnostic..."
               $COMPOSE exec -T deal-mgmt-api python -m scripts.diagnose_attachment_upload_schema --fail-on-drift
+            }
+
+            reconcile_ma_attachment_upload_migration_state() {
+              echo "  Attempting MA attachment upload migration-state reconciliation..."
+              $COMPOSE exec -T deal-mgmt-api python -m scripts.reconcile_attachment_upload_migration_state
             }
 
             MIGRATE_FAILURES=""
