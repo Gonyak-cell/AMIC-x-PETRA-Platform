@@ -37,9 +37,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         if: github.event_name == 'push'
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: ${{ github.event_name == 'push' && github.event.before || github.base_ref }}
+          ref: ${{ github.sha }}
           filters: |
             deal-mgmt:
               - 'deal-mgmt/**'
