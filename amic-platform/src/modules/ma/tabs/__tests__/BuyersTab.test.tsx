@@ -781,6 +781,118 @@ describe("BuyersTab", () => {
     expect(screen.getByText(/2026-03-20/)).toBeInTheDocument();
   });
 
+  it("uses current teaser distribution instead of stale overview teaser history in short list", async () => {
+    const tbBuyer = {
+      ...mockBuyer,
+      id: "buyer-tb",
+      company_name: "TB인베스트먼트",
+      tier: "TIER_1" as const,
+      status: "NDA_SIGNED" as const,
+      is_short_listed: true,
+    };
+    const atuBuyer = {
+      ...mockBuyer,
+      id: "buyer-atu",
+      company_name: "ATU파트너스",
+      tier: "TIER_1" as const,
+      status: "NDA_SIGNED" as const,
+      is_short_listed: true,
+    };
+
+    server.use(
+      http.get("*/api/ma/transactions/:txnId/buyers", () => {
+        return HttpResponse.json({
+          items: [tbBuyer, atuBuyer],
+          total: 2,
+        });
+      }),
+      http.get("*/api/ma/transactions/:txnId/marketing-materials", () => {
+        return HttpResponse.json([
+          {
+            id: "tm-current",
+            transaction_id: "txn-1",
+            doc_type: "TM",
+            title: "NEXT - TM - 260319",
+            project_code: "TM-001",
+            status: "READY",
+            error_message: null,
+            source_mode: "UPLOADED",
+            attachment_id: "att-current",
+            parameters: null,
+            file_path: null,
+            file_name: "NEXT - TM - 260319.pdf",
+            file_size_bytes: 1024,
+            quality_score: null,
+            quality_status: null,
+            quality_issues: null,
+            slide_count: null,
+            pipeline_metrics: null,
+            distribution_eligible: true,
+            distributed_to: [atuBuyer.company_name],
+            distributed_at: "2026-04-05T09:00:00Z",
+            created_by_email: "advisor@test.com",
+            created_at: "2026-04-05T09:00:00Z",
+            updated_at: "2026-04-05T09:00:00Z",
+          },
+        ]);
+      }),
+      http.get("*/api/ma/transactions/:txnId/short-list/overview", () => {
+        return HttpResponse.json([
+          {
+            buyer_id: tbBuyer.id,
+            stages: {
+              IDENTIFIED: "2026-03-24",
+              TEASER_SENT: "2026-04-04",
+              NDA_SIGNED: "2026-03-31",
+              IM_DISTRIBUTED: null,
+              QNA_COMPLETED: null,
+              MGMT_PRESENTATION: null,
+              LOI_RECEIVED: null,
+              DD_IN_PROGRESS: null,
+            },
+          },
+          {
+            buyer_id: atuBuyer.id,
+            stages: {
+              IDENTIFIED: "2026-03-24",
+              TEASER_SENT: "2026-04-01",
+              NDA_SIGNED: "2026-04-01",
+              IM_DISTRIBUTED: null,
+              QNA_COMPLETED: null,
+              MGMT_PRESENTATION: null,
+              LOI_RECEIVED: null,
+              DD_IN_PROGRESS: null,
+            },
+          },
+        ]);
+      }),
+    );
+
+    renderTab();
+
+    const shortListTab = await screen.findByRole("tab", { name: /Short List/i });
+    await waitFor(() => {
+      expect(shortListTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const grid = await screen.findByTestId("marketing-grid");
+    const tbRow = within(grid).getByText(tbBuyer.company_name).closest("tr");
+    const atuRow = within(grid).getByText(atuBuyer.company_name).closest("tr");
+
+    expect(tbRow).not.toBeNull();
+    expect(atuRow).not.toBeNull();
+
+    expect(
+      within(tbRow as HTMLElement).getByTestId("grid-cell-TEASER_SENT"),
+    ).not.toHaveTextContent("04-04");
+    expect(
+      within(atuRow as HTMLElement).getByTestId("grid-cell-TEASER_SENT"),
+    ).toHaveTextContent("04-05");
+    expect(
+      within(atuRow as HTMLElement).getByTestId("grid-cell-TEASER_SENT"),
+    ).not.toHaveTextContent("04-01");
+  });
+
   it("shows NDA 체결 in the long-list column when a signed NDA exists even without tiering", async () => {
     const unsignedTierBuyer = {
       ...mockBuyer,

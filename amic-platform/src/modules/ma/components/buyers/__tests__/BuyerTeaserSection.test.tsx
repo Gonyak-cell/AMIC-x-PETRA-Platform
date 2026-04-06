@@ -191,6 +191,11 @@ describe("BuyerTeaserSection", () => {
       await screen.findByRole("heading", { name: "Teaser" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Test Buyer 대상 Teaser 송부 관리")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "아래 버전 목록은 거래에 등록된 전역 Teaser 버전이며, 송부 상태는 현재 선택된 매수자 기준으로 표시됩니다.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("송부됨 v2")).toBeInTheDocument();
     expect(screen.getByText("2 version(s)")).toBeInTheDocument();
     expect(screen.getByText("v1")).toBeInTheDocument();
@@ -204,6 +209,50 @@ describe("BuyerTeaserSection", () => {
       customUpload: expect.any(Function),
     });
     expect(screen.queryByText(/\\u[a-f0-9]{4}/i)).not.toBeInTheDocument();
+  });
+
+  it("shows global teaser versions even when the current buyer is still unsent", async () => {
+    mockUseMarketingMaterials.mockReturnValue({
+      data: [
+        {
+          id: "tm-1",
+          transaction_id: "txn-1",
+          doc_type: "TM",
+          title: "Shared teaser",
+          project_code: "T-001",
+          status: "READY",
+          error_message: null,
+          source_mode: "UPLOADED",
+          attachment_id: "att-1",
+          parameters: null,
+          file_path: null,
+          file_name: "shared-teaser.pdf",
+          file_size_bytes: 1024,
+          quality_score: null,
+          quality_status: null,
+          quality_issues: null,
+          slide_count: null,
+          pipeline_metrics: null,
+          distribution_eligible: true,
+          distributed_to: ["Other Buyer"],
+          distributed_at: "2026-03-20T00:00:00Z",
+          created_by_email: "advisor@test.com",
+          created_at: "2026-03-10T00:00:00Z",
+          updated_at: "2026-03-20T00:00:00Z",
+        },
+      ],
+    });
+
+    renderSection();
+
+    expect(
+      await screen.findByRole("heading", { name: "Teaser" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Test Buyer 대상 Teaser 송부 관리")).toBeInTheDocument();
+    expect(screen.getByText("1 version(s)")).toBeInTheDocument();
+    expect(screen.getAllByText("미송부")).toHaveLength(2);
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    expect(screen.getByText("Shared teaser")).toBeInTheDocument();
   });
 
   it("moves teaser distribution to the selected version", async () => {

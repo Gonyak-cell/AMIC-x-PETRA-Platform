@@ -738,9 +738,7 @@ export default function BuyersTab({
         if (!stages.IDENTIFIED) {
           stages.IDENTIFIED = getBuyerIdentifiedDate(buyer);
         }
-        if (!stages.TEASER_SENT && teaser?.sentAt) {
-          stages.TEASER_SENT = teaser.sentAt;
-        }
+        stages.TEASER_SENT = teaser?.sentAt ?? null;
         if (!stages.NDA_SIGNED) {
           stages.NDA_SIGNED =
             signedDate ??

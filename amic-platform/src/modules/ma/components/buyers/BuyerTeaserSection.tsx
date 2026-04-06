@@ -151,7 +151,7 @@ export default function BuyerTeaserSection({
                 {buyer.company_name} 대상 Teaser 송부 관리
               </p>
               <p className="mt-1 text-xs text-text-secondary">
-                거래에 등록된 TM 버전 중 현재 매수자에게 송부된 버전을 한 개 기준으로 관리합니다.
+                아래 버전 목록은 거래에 등록된 전역 Teaser 버전이며, 송부 상태는 현재 선택된 매수자 기준으로 표시됩니다.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
