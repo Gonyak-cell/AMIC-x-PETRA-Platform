@@ -9,11 +9,14 @@ import pytest
 from app.core.attachment_upload_runtime_diagnostics import (
     AttachmentEntityIdTypeState,
     AttachmentUploadMigrationState,
+    _load_expected_heads,
     build_attachment_upload_runtime_diagnostics,
     probe_attachment_upload_migration_state,
     reconcile_attachment_upload_migration_state,
 )
 from app.core.local_dev_schema_guard import AttachmentUploadSchemaIssue, AttachmentUploadSchemaRepairResult
+
+CURRENT_ATTACHMENT_UPLOAD_HEADS = _load_expected_heads()
 
 
 def _load_revision_095_module():
@@ -73,7 +76,7 @@ async def test_probe_attachment_upload_migration_state_treats_sqlite_as_unmanage
     assert result.ok is True
     assert result.managed is False
     assert result.current_heads == ()
-    assert result.expected_heads == ("095",)
+    assert result.expected_heads == CURRENT_ATTACHMENT_UPLOAD_HEADS
 
 
 @pytest.mark.asyncio
@@ -108,7 +111,7 @@ async def test_build_attachment_upload_runtime_diagnostics_includes_entity_id_ty
     async def _probe_migration(**kwargs):
         return AttachmentUploadMigrationState(
             ok=False,
-            expected_heads=("095",),
+            expected_heads=CURRENT_ATTACHMENT_UPLOAD_HEADS,
             current_heads=("094",),
             managed=True,
         )
@@ -157,7 +160,7 @@ async def test_build_attachment_upload_runtime_diagnostics_includes_entity_id_ty
     assert diagnostics["migration"] == {
         "ok": False,
         "managed": True,
-        "expected_heads": ["095"],
+        "expected_heads": list(CURRENT_ATTACHMENT_UPLOAD_HEADS),
         "current_heads": ["094"],
         "error": None,
     }
@@ -192,7 +195,7 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
         "migration": {
             "ok": False,
             "managed": True,
-            "expected_heads": ["095"],
+            "expected_heads": list(CURRENT_ATTACHMENT_UPLOAD_HEADS),
             "current_heads": ["092"],
             "error": None,
         },
@@ -213,8 +216,8 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
         "migration": {
             "ok": True,
             "managed": True,
-            "expected_heads": ["095"],
-            "current_heads": ["095"],
+            "expected_heads": list(CURRENT_ATTACHMENT_UPLOAD_HEADS),
+            "current_heads": list(CURRENT_ATTACHMENT_UPLOAD_HEADS),
             "error": None,
         },
         "attachment_entity_id_type": {
@@ -257,10 +260,10 @@ async def test_reconcile_attachment_upload_migration_state_stamps_safe_092_candi
 
     assert result.reconciled is True
     assert result.attempted is True
-    assert stamp_calls == [("fake-config", "095")]
+    assert stamp_calls == [("fake-config", CURRENT_ATTACHMENT_UPLOAD_HEADS[0])]
     assert len(to_thread_calls) == 1
     assert result.safe_stamp_candidate is True
-    assert result.target_head == "095"
+    assert result.target_head == CURRENT_ATTACHMENT_UPLOAD_HEADS[0]
     assert result.after == after
 
 
@@ -273,7 +276,7 @@ async def test_reconcile_attachment_upload_migration_state_refuses_non_092_candi
         "migration": {
             "ok": False,
             "managed": True,
-            "expected_heads": ["095"],
+            "expected_heads": list(CURRENT_ATTACHMENT_UPLOAD_HEADS),
             "current_heads": ["091"],
             "error": None,
         },
