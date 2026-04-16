@@ -40,6 +40,9 @@ RUN apt-get update \
         curl \
         libxml2 \
         libxslt1.1 \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        tesseract-ocr-kor \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

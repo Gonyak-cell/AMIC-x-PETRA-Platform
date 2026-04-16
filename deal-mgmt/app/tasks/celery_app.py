@@ -5,6 +5,16 @@ from celery.schedules import crontab
 
 from app.core.config import settings
 
+CELERY_TASK_MODULES = (
+    "app.tasks.attachment_tasks",
+    "app.tasks.cleanup_tasks",
+    "app.tasks.extraction_tasks",
+    "app.tasks.fm_tasks",
+    "app.tasks.marketing_tasks",
+    "app.tasks.news_tasks",
+    "app.tasks.ralph_tasks",
+)
+
 celery_app = Celery(
     "deal_mgmt",
     broker=settings.REDIS_URL,
@@ -21,6 +31,7 @@ celery_app.conf.update(
     task_soft_time_limit=settings.CELERY_TASK_SOFT_TIME_LIMIT,
     task_hard_time_limit=settings.CELERY_TASK_HARD_TIME_LIMIT,
     result_expires=86400,
+    imports=CELERY_TASK_MODULES,
 )
 
 celery_app.conf.beat_schedule = {
@@ -37,5 +48,3 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute=0),
     },
 }
-
-celery_app.autodiscover_tasks(["app.tasks"])
