@@ -10,6 +10,7 @@ from app.ralph.parsers.base import ParsedFile, ParsedTable
 
 logger = logging.getLogger(__name__)
 _PDF_MIN_MEANINGFUL_TEXT_CHARS = 40
+_OCR_RENDER_SCALE = 1.0
 
 
 def get_pdf_ocr_status() -> dict[str, bool | str | None]:
@@ -215,12 +216,14 @@ def _parse_with_ocr_fallback(
         chunks: list[dict] = []
         ocr_languages = "kor+eng"
         collected_chars = 0
-        for page_num, page in enumerate(doc, 1):
-            if ocr_page_limit is not None and page_num > ocr_page_limit:
-                break
+        for page_num in _select_ocr_page_numbers(len(doc), ocr_page_limit):
             if ocr_char_limit is not None and collected_chars >= ocr_char_limit:
                 break
-            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            page = doc[page_num - 1]
+            pix = page.get_pixmap(
+                matrix=fitz.Matrix(_OCR_RENDER_SCALE, _OCR_RENDER_SCALE),
+                alpha=False,
+            )
             image = Image.open(io.BytesIO(pix.tobytes("png")))
             text = (pytesseract.image_to_string(image, lang=ocr_languages) or "").strip()
             if not text:
@@ -293,3 +296,22 @@ def _pdf_candidate_score(parsed: ParsedFile) -> int:
     normalized_text = re.sub(r"\s+", " ", normalized_text).strip()
     table_bonus = 200 * len(parsed.tables or [])
     return len(normalized_text) + table_bonus
+
+
+def _select_ocr_page_numbers(total_pages: int, page_limit: int | None) -> list[int]:
+    if total_pages <= 0:
+        return []
+    if page_limit is None or page_limit >= total_pages:
+        return list(range(1, total_pages + 1))
+    if page_limit <= 2:
+        return list(range(1, page_limit + 1))
+
+    head_count = max(1, page_limit - 2)
+    tail_count = page_limit - head_count
+    pages: list[int] = list(range(1, min(head_count, total_pages) + 1))
+
+    for page_num in range(max(1, total_pages - tail_count + 1), total_pages + 1):
+        if page_num not in pages:
+            pages.append(page_num)
+
+    return pages[:page_limit]

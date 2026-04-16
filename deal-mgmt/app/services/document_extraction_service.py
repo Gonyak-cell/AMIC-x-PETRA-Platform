@@ -82,9 +82,22 @@ _FAST_RULES_FALLBACK_CATEGORIES: frozenset[DocExtractionCategory] = frozenset(
     }
 )
 _PARSE_OCR_CHAR_LIMIT_CAP = 40_000
+_PARSE_OCR_LIMITS_BY_CATEGORY: dict[DocExtractionCategory, tuple[int, int]] = {
+    DocExtractionCategory.CORPORATE_DOCS: (4, 12_000),
+    DocExtractionCategory.REGISTRY_DOCS: (4, 12_000),
+    DocExtractionCategory.BIZ_REG_DOCS: (4, 12_000),
+    DocExtractionCategory.TAX_FILING: (6, 14_000),
+    DocExtractionCategory.NDA: (6, 12_000),
+    DocExtractionCategory.ENGAGEMENT_CONTRACT: (6, 12_000),
+    DocExtractionCategory.LOI_MOU: (6, 12_000),
+    DocExtractionCategory.SPA_BTA: (8, 16_000),
+    DocExtractionCategory.TEASER_IM: (6, 14_000),
+}
 
 
 def _ocr_limits_for_parse(category: DocExtractionCategory) -> tuple[int | None, int | None]:
+    if category in _PARSE_OCR_LIMITS_BY_CATEGORY:
+        return _PARSE_OCR_LIMITS_BY_CATEGORY[category]
     char_limit = min(_CATEGORY_TEXT_LIMITS.get(category.value, _MAX_TEXT_CHARS), _PARSE_OCR_CHAR_LIMIT_CAP)
     page_limit = min(16, max(4, (char_limit + 2499) // 2500))
     return page_limit, char_limit
