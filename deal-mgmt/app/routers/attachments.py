@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.attachment import Attachment
@@ -29,6 +31,7 @@ from app.tasks.attachment_tasks import (
     PROCESSING_RUNNING,
     PROCESSING_SKIPPED,
     PROCESSING_SYNCED,
+    _process_attachment_once,
     process_attachment_task,
 )
 
@@ -59,6 +62,7 @@ ALLOWED_EXTENSIONS = {
     ".ogg",
     ".aac",
     ".wma",
+    ".flac",
 }
 VALID_ENTITY_TYPES = {e.value for e in AttachmentEntityType}
 _ENTITY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,50}$")
@@ -86,6 +90,35 @@ VALID_PROCESSING_STATUSES = {
     PROCESSING_FAILED,
     PROCESSING_SKIPPED,
 }
+_PROCESSING_PERMISSION_ERROR = "VDR sync was skipped because the uploader lacks write access."
+_INLINE_PROCESSING_ENV_NAMES = {"local", "dev", "development"}
+
+
+def _can_sync_attachment_to_vdr(claims: JWTClaims, txn: object) -> bool:
+    return check_vdr_write_permission(
+        claims.role,
+        claims.email,
+        getattr(txn, "lead_advisor_email", None),
+        getattr(txn, "deal_captain_email", None),
+    )
+
+
+def _run_attachment_processing_inline() -> bool:
+    env = os.getenv("ENV", "").strip().lower()
+    return env in _INLINE_PROCESSING_ENV_NAMES or bool(settings.DEBUG)
+
+
+def _schedule_attachment_processing(background_tasks: BackgroundTasks, attachment_id: uuid.UUID) -> str | None:
+    if _run_attachment_processing_inline():
+        background_tasks.add_task(_process_attachment_once, attachment_id)
+        return None
+
+    try:
+        process_attachment_task.delay(str(attachment_id))
+        return None
+    except Exception as exc:
+        logger.exception("Attachment processing enqueue failed: attachment=%s", attachment_id)
+        return f"Automatic post-processing could not be queued: {exc}"
 
 
 @router.get("", response_model=AttachmentListResponse)
@@ -147,6 +180,7 @@ async def list_attachments(
 @router.post("", response_model=AttachmentOut, status_code=201)
 async def upload_attachment(
     txn_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     entity_type: str = Form(...),
     entity_id: str | None = Form(None),
@@ -214,14 +248,9 @@ async def upload_attachment(
                 detail="File size exceeds the 50MB limit.",
             )
 
-        has_vdr_access = check_vdr_write_permission(
-            claims.role,
-            claims.email,
-            txn.lead_advisor_email,
-            txn.deal_captain_email,
-        )
+        has_vdr_access = _can_sync_attachment_to_vdr(claims, txn)
         processing_status = PROCESSING_PENDING if has_vdr_access else PROCESSING_SKIPPED
-        processing_error = None if has_vdr_access else "VDR sync was skipped because the uploader lacks write access."
+        processing_error = None if has_vdr_access else _PROCESSING_PERMISSION_ERROR
 
         upload_stage = "db_flush"
         attachment = Attachment(
@@ -293,16 +322,10 @@ async def upload_attachment(
         )
 
     if attachment.processing_status == PROCESSING_PENDING:
-        try:
-            process_attachment_task.delay(str(attachment.id))
-        except Exception as exc:
-            logger.exception(
-                "Attachment processing enqueue failed: txn=%s attachment=%s",
-                txn_id,
-                attachment.id,
-            )
+        enqueue_error = _schedule_attachment_processing(background_tasks, attachment.id)
+        if enqueue_error is not None:
             attachment.processing_status = PROCESSING_FAILED
-            attachment.processing_error = f"Automatic post-processing could not be queued: {exc}"
+            attachment.processing_error = enqueue_error
             await db.commit()
             try:
                 await db.refresh(attachment)
@@ -319,18 +342,20 @@ async def upload_attachment(
 async def retry_attachment_processing(
     txn_id: uuid.UUID,
     attachment_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> AttachmentOut:
+    txn = await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
     attachment = await _get_attachment_or_404(db, txn_id, attachment_id)
 
-    if attachment.processing_status == PROCESSING_SKIPPED:
+    if attachment.processing_status == PROCESSING_SKIPPED and not _can_sync_attachment_to_vdr(claims, txn):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Attachment processing was skipped and cannot be retried automatically.",
+            detail="Attachment processing was skipped because the current user cannot write to VDR.",
         )
-    if attachment.processing_status == "RUNNING":
+    if attachment.processing_status == "RUNNING" and attachment.vdr_document_id is not None:
         return _serialize_attachment_out(
             attachment, vdr_sync=(await _load_vdr_sync_map(db, [attachment])).get(attachment.id)
         )
@@ -344,15 +369,27 @@ async def retry_attachment_processing(
     await db.commit()
     await db.refresh(attachment)
 
-    try:
-        process_attachment_task.delay(str(attachment.id))
-    except Exception as exc:
-        logger.exception("Attachment retry enqueue failed: txn=%s attachment=%s", txn_id, attachment.id)
+    enqueue_error = _schedule_attachment_processing(background_tasks, attachment.id)
+    if enqueue_error is not None:
         attachment.processing_status = PROCESSING_FAILED
-        attachment.processing_error = f"Automatic post-processing could not be queued: {exc}"
+        attachment.processing_error = enqueue_error
         await db.commit()
         await db.refresh(attachment)
 
+    vdr_sync_map = await _load_vdr_sync_map(db, [attachment])
+    return _serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id))
+
+
+@router.get("/{attachment_id}", response_model=AttachmentOut)
+async def get_attachment(
+    txn_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(get_jwt_claims),
+) -> AttachmentOut:
+    await transaction_service.get_transaction(db, txn_id)
+    await check_client_deal_access(db, txn_id, claims)
+    attachment = await _get_attachment_or_404(db, txn_id, attachment_id)
     vdr_sync_map = await _load_vdr_sync_map(db, [attachment])
     return _serialize_attachment_out(attachment, vdr_sync=vdr_sync_map.get(attachment.id))
 

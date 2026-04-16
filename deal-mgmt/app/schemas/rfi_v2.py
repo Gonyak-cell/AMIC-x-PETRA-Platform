@@ -165,10 +165,13 @@ class RFIDashboardSummary(BaseModel):
 
 
 class RFIExcelImportResult(BaseModel):
+    mode: str = "platform_export"
     items_updated: int
+    items_created: int = 0
     threads_created: int
     files_matched: int
     files_unmatched: int
+    warnings: list[str] = []
     errors: list[dict[str, str | int]]
     conflicts: list[dict[str, str | int]]
 

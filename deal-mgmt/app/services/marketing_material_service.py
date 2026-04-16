@@ -48,6 +48,7 @@ from app.tasks.attachment_tasks import (
     PROCESSING_FAILED,
     PROCESSING_PENDING,
     PROCESSING_SKIPPED,
+    _process_attachment_once,
     process_attachment_task,
 )
 
@@ -412,6 +413,11 @@ async def _enqueue_uploaded_attachment_processing(
     marketing_material_id: uuid.UUID,
 ) -> None:
     if attachment.processing_status != PROCESSING_PENDING:
+        return
+
+    env = os.getenv("ENV", "").strip().lower()
+    if env in {"local", "dev", "development"} or bool(settings.DEBUG) or not settings.AUTH_ENABLED:
+        await _process_attachment_once(attachment.id)
         return
 
     try:

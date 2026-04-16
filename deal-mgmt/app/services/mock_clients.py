@@ -82,6 +82,29 @@ class MockFDDClient:
             "status": "mock_triggered",
         }
 
+    async def upload_file(
+        self,
+        deal_id: uuid.UUID,
+        filename: str,
+        content: bytes,
+        content_type: str,
+    ) -> dict:
+        return {
+            "id": str(uuid.uuid4()),
+            "deal_id": str(deal_id),
+            "original_filename": filename,
+            "file_size_bytes": len(content),
+            "content_type": content_type,
+            "status": "PENDING",
+        }
+
+    async def ingest_upload(self, deal_id: uuid.UUID, upload_id: uuid.UUID) -> dict:
+        return {
+            "id": str(upload_id),
+            "deal_id": str(deal_id),
+            "status": "INGESTED",
+        }
+
 
 class MockIMClient:
     """IM Mock — 정적 더미 응답 반환."""

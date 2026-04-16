@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +45,16 @@ def _forbid_client_role(claims: JWTClaims) -> None:
         raise HTTPException(status_code=403, detail="Clients cannot use this integration endpoint.")
 
 
+def _linked_fdd_deal_id(txn) -> uuid.UUID:
+    raw_deal_id = (txn.fdd_deal_id or "").strip()
+    if not raw_deal_id:
+        raise HTTPException(status_code=409, detail="FDD deal is not linked for this transaction.")
+    try:
+        return uuid.UUID(raw_deal_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Stored FDD deal id is invalid.") from exc
+
+
 @router.post("/fdd/link", response_model=IntegrationResult)
 async def link_fdd(
     txn_id: uuid.UUID,
@@ -73,6 +83,52 @@ async def link_fdd(
     except Exception as exc:
         logger.warning("FDD link failed for txn %s: %s", txn_id, exc)
         raise HTTPException(status_code=502, detail="FDD service link failed.") from exc
+
+
+@router.post("/fdd/uploads", response_model=IntegrationResult)
+async def upload_fdd_file(
+    txn_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+    fdd: FDDClientProtocol = Depends(get_fdd_client),
+):
+    _forbid_client_role(claims)
+    txn = await transaction_service.get_transaction(db, txn_id)
+    deal_id = _linked_fdd_deal_id(txn)
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty files cannot be uploaded to FDD.")
+    try:
+        result = await fdd.upload_file(
+            deal_id,
+            file.filename or "upload.xlsx",
+            content,
+            file.content_type or "application/octet-stream",
+        )
+        return IntegrationResult(service="FDD", status="uploaded", data=result)
+    except Exception as exc:
+        logger.warning("FDD upload failed for txn %s: %s", txn_id, exc)
+        raise HTTPException(status_code=502, detail="FDD upload failed.") from exc
+
+
+@router.post("/fdd/uploads/{upload_id}/ingest", response_model=IntegrationResult)
+async def ingest_fdd_upload(
+    txn_id: uuid.UUID,
+    upload_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    claims: JWTClaims = Depends(require_write_access()),
+    fdd: FDDClientProtocol = Depends(get_fdd_client),
+):
+    _forbid_client_role(claims)
+    txn = await transaction_service.get_transaction(db, txn_id)
+    deal_id = _linked_fdd_deal_id(txn)
+    try:
+        result = await fdd.ingest_upload(deal_id, upload_id)
+        return IntegrationResult(service="FDD", status="ingested", data=result)
+    except Exception as exc:
+        logger.warning("FDD upload ingest failed for txn %s upload %s: %s", txn_id, upload_id, exc)
+        raise HTTPException(status_code=502, detail="FDD upload ingest failed.") from exc
 
 
 @router.post("/fdd/evidence-sync", response_model=IntegrationResult)

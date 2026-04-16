@@ -33,7 +33,6 @@ def _validate_transaction_text(value: str | None) -> str | None:
     return value
 
 
-# ── Response ────────────────────────────────────────────
 class TransactionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,7 +54,6 @@ class TransactionOut(BaseModel):
     lead_advisor_email: str
     deal_captain_email: str | None = None
     target_close_date: str | None = None
-    # Deal Terms
     sale_process: str | None = None
     control_transfer: str | None = None
     target_stake: Decimal | None = None
@@ -66,7 +64,6 @@ class TransactionOut(BaseModel):
     target_buyer_types: list[str] | None = None
     exclusivity: bool | None = None
     exclusivity_deadline: str | None = None
-
     fdd_deal_id: str | None = None
     im_document_id: str | None = None
     notes: str | None = None
@@ -76,13 +73,17 @@ class TransactionOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer("estimated_deal_value", "target_stake", "new_share_ratio", "old_share_ratio")
+    @field_serializer(
+        "estimated_deal_value",
+        "target_stake",
+        "new_share_ratio",
+        "old_share_ratio",
+    )
     @classmethod
     def _serialize_decimal(cls, v: Decimal | None) -> str | None:
         return str(v) if v is not None else None
 
 
-# ── Create ──────────────────────────────────────────────
 class TransactionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     deal_type: DealType
@@ -95,12 +96,17 @@ class TransactionCreate(BaseModel):
     deal_structure: DealStructure | None = None
     investment_type: str | None = Field(None, max_length=50)
     industry: str | None = Field(None, max_length=100)
-    lead_advisor_email: str = Field(..., max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
+    lead_advisor_email: str = Field(
+        ...,
+        max_length=255,
+        pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$",
+    )
     deal_captain_email: str | None = Field(
-        None, max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+        None,
+        max_length=255,
+        pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$",
     )
     target_close_date: str | None = Field(None, max_length=10)
-    # Deal Terms
     sale_process: str | None = Field(None, max_length=30)
     control_transfer: str | None = Field(None, max_length=20)
     target_stake: Decimal | None = Field(None, ge=0, le=100)
@@ -119,7 +125,31 @@ class TransactionCreate(BaseModel):
         return _validate_transaction_text(value) or value
 
 
-# ── Update ──────────────────────────────────────────────
+class CorporateInfoUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    company_name: str | None = Field(None, max_length=200)
+    representative_name: str | None = Field(None, max_length=200)
+    business_registration_number: str | None = Field(None, max_length=30)
+    corporate_registration_number: str | None = Field(None, max_length=30)
+    head_office_address: str | None = Field(None, max_length=500)
+    business_type: str | None = Field(None, max_length=200)
+    business_item: str | None = Field(None, max_length=200)
+
+    @field_validator(
+        "company_name",
+        "representative_name",
+        "business_registration_number",
+        "corporate_registration_number",
+        "head_office_address",
+        "business_type",
+        "business_item",
+    )
+    @classmethod
+    def validate_corporate_info_text(cls, value: str | None) -> str | None:
+        return _validate_transaction_text(value)
+
+
 class TransactionUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     deal_type: DealType | None = None
@@ -133,13 +163,16 @@ class TransactionUpdate(BaseModel):
     investment_type: str | None = Field(None, max_length=50)
     industry: str | None = Field(None, max_length=100)
     lead_advisor_email: str | None = Field(
-        None, max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+        None,
+        max_length=255,
+        pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$",
     )
     deal_captain_email: str | None = Field(
-        None, max_length=255, pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+        None,
+        max_length=255,
+        pattern=r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$",
     )
     target_close_date: str | None = Field(None, max_length=10)
-    # Deal Terms
     sale_process: str | None = Field(None, max_length=30)
     control_transfer: str | None = Field(None, max_length=20)
     target_stake: Decimal | None = Field(None, ge=0, le=100)
@@ -153,6 +186,7 @@ class TransactionUpdate(BaseModel):
     notes: str | None = None
     fdd_deal_id: str | None = None
     im_document_id: str | None = None
+    corporate_info: CorporateInfoUpdate | None = None
 
     @field_validator("name", "target_company_name", "client_name")
     @classmethod
@@ -160,7 +194,6 @@ class TransactionUpdate(BaseModel):
         return _validate_transaction_text(value)
 
 
-# ── List ────────────────────────────────────────────────
 class TransactionListResponse(BaseModel):
     items: list[TransactionOut]
     total: int

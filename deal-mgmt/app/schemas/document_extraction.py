@@ -75,6 +75,8 @@ class ExtractionOut(BaseModel):
     classification_confidence: float | None = None
     status: ExtractionStatus
     error_message: str | None = None
+    extraction_source: Literal["LLM", "RULES_FALLBACK"] = "LLM"
+    processing_note: str | None = None
     extracted_data: dict | None = None
     target_model: str | None = None
     target_id: uuid.UUID | None = None

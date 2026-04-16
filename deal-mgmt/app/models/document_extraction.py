@@ -44,6 +44,8 @@ class DocumentExtraction(Base, TimestampMixin):
         default=ExtractionStatus.PENDING,
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extraction_source: Mapped[str] = mapped_column(String(30), nullable=False, default="LLM")
+    processing_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── 추출 결과 (JSON) ────────────────────────────────
     extracted_data: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)

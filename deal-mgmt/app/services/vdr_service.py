@@ -45,7 +45,7 @@ _DEFAULT_FOLDERS: list[tuple[VdrFolderCategory, str, bool]] = [
 
 # ── VDR 권한 ─────────────────────────────────────────────────
 
-_VDR_WRITE_ROLES = frozenset({"ADMIN"})
+_VDR_WRITE_ROLES = frozenset({"ADMIN", "MANAGER", "ANALYST"})
 
 
 def check_vdr_write_permission(
@@ -55,9 +55,15 @@ def check_vdr_write_permission(
     deal_captain_email: str | None,
 ) -> bool:
     """VDR 쓰기 권한을 확인한다. ADMIN 또는 lead_advisor/deal_captain이면 True."""
-    if role in _VDR_WRITE_ROLES:
+    if (role or "").upper() in _VDR_WRITE_ROLES:
         return True
-    return bool(email and email in (lead_advisor_email, deal_captain_email))
+    normalized_email = (email or "").strip().lower()
+    allowed_emails = {
+        (lead_advisor_email or "").strip().lower(),
+        (deal_captain_email or "").strip().lower(),
+    }
+    allowed_emails.discard("")
+    return bool(normalized_email and normalized_email in allowed_emails)
 
 
 # ── 폴더 CRUD ────────────────────────────────────────────────

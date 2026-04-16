@@ -7,6 +7,12 @@ import sqlite3
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = PROJECT_ROOT.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from app.core.local_dev_schema_guard import (
     configure_sqlite_type_compilers_for_local_dev,
 )
@@ -17,12 +23,7 @@ from app.core.local_dev_schema_guard import (
     rebuild_local_dev_database_if_needed as _shared_rebuild_local_dev_database_if_needed,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-REPO_ROOT = PROJECT_ROOT.parent
 logger = logging.getLogger(__name__)
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def _configure_dev_stdio() -> None:

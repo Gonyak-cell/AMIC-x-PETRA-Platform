@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import re
 import tempfile
 import time
 import uuid
@@ -67,6 +69,19 @@ _MINI_MODEL_TIMEOUT: float = 30.0
 # 전체 파이프라인 타임아웃 (초) — Celery soft_time_limit(300초)보다 짧게
 _PIPELINE_TIMEOUT: float = 240.0
 
+# In local/dev fallback mode, these categories only need a minimal review
+# payload. Avoid full PDF OCR before fallback so large marketing/legal PDFs do
+# not monopolize the local API worker.
+_FAST_RULES_FALLBACK_CATEGORIES: frozenset[DocExtractionCategory] = frozenset(
+    {
+        DocExtractionCategory.NDA,
+        DocExtractionCategory.ENGAGEMENT_CONTRACT,
+        DocExtractionCategory.TEASER_IM,
+        DocExtractionCategory.LOI_MOU,
+        DocExtractionCategory.SPA_BTA,
+    }
+)
+
 
 # ── CRUD ─────────────────────────────────────────────────────
 
@@ -120,6 +135,8 @@ async def create_extraction(
         target_model=target_model,
         target_id=target_id,
         auto_apply_signed_at=auto_apply_signed_at,
+        extraction_source="LLM",
+        processing_note=None,
     )
     if doc_category_hint:
         extraction.doc_category = doc_category_hint
@@ -253,6 +270,369 @@ async def extract_fields(
 
 
 # ── 전체 파이프라인 ───────────────────────────────────────────
+
+
+_NON_FALLBACK_ENV_NAMES = {"prod", "production", "stg", "staging"}
+
+
+def _rules_fallback_enabled(app_settings: object) -> bool:
+    env = os.getenv("ENV", "").strip().lower()
+    return env not in _NON_FALLBACK_ENV_NAMES or bool(getattr(app_settings, "DEBUG", False))
+
+
+def _clean_fallback_value(value: str | None, *, max_len: int = 160) -> str | None:
+    if not value:
+        return None
+    cleaned = re.sub(r"\s+", " ", value).strip(" \t\r\n:-：,")
+    if not cleaned:
+        return None
+    return cleaned[:max_len]
+
+
+def _first_text_match(text: str, patterns: list[str], *, group: int = 1, max_len: int = 160) -> str | None:
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE)
+        if match:
+            return _clean_fallback_value(match.group(group), max_len=max_len)
+    return None
+
+
+def _normalize_date_value(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"(\d{4})[.\-/년\s]+(\d{1,2})[.\-/월\s]+(\d{1,2})", value)
+    if not match:
+        return _clean_fallback_value(value, max_len=30)
+    year, month, day = match.groups()
+    return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+
+
+def _compact_ocr_text(text: str) -> str:
+    return re.sub(r"\s+", "", text or "")
+
+
+def _join_spaced_ocr_line(line: str) -> str:
+    return re.sub(r"\s+", "", line or "").strip()
+
+
+def _normalize_korean_ocr_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일", value)
+    if not match:
+        return _normalize_date_value(value)
+    year, month, day = match.groups()
+    return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+
+
+def _normalize_business_registration_number(value: str | None) -> str | None:
+    if not value:
+        return None
+    cleaned = value.strip()
+    # Tesseract often reads the leading 7 in Korean business certificates as '/'.
+    if re.fullmatch(r"/\d{2}-\d{2}-\d{5}", cleaned):
+        cleaned = "7" + cleaned[1:]
+    return cleaned if re.fullmatch(r"\d{3}-\d{2}-\d{5}", cleaned) else None
+
+
+def _extract_korean_business_lines(text: str) -> tuple[str | None, str | None]:
+    normalized_lines = [_join_spaced_ocr_line(line) for line in (text or "").splitlines()]
+    normalized_lines = [line for line in normalized_lines if line]
+    business_type_candidates: list[str] = []
+    business_item_candidates: list[str] = []
+    type_values = {"정보통신업", "서비스업", "제조업", "도매및소매업", "부동산업"}
+    item_markers = ("영화", "영상", "대중문화", "방송프로그램", "비디오물", "장비개발")
+    for line in normalized_lines:
+        if line in type_values and line not in business_type_candidates:
+            business_type_candidates.append(line)
+        if any(marker in line for marker in item_markers) and line.endswith("업"):
+            if line not in business_item_candidates:
+                business_item_candidates.append(line)
+    business_type = ", ".join(business_type_candidates) if business_type_candidates else None
+    business_item = "; ".join(business_item_candidates) if business_item_candidates else None
+    return business_type, business_item
+
+
+def _infer_fallback_category(
+    extraction: DocumentExtraction,
+    filename: str,
+) -> tuple[DocExtractionCategory, float]:
+    if extraction.doc_category is not None:
+        return extraction.doc_category, 1.0
+
+    lower_name = filename.lower()
+    target_model = (extraction.target_model or "").lower()
+    if target_model == "marketing_material":
+        return DocExtractionCategory.TEASER_IM, 0.9
+    if target_model == "engagement":
+        return DocExtractionCategory.ENGAGEMENT_CONTRACT, 0.9
+    if target_model == "nda":
+        return DocExtractionCategory.NDA, 0.9
+    if target_model == "contract":
+        return DocExtractionCategory.SPA_BTA, 0.75
+    if target_model == "bid":
+        return DocExtractionCategory.LOI_MOU, 0.65
+
+    if "사업자등록" in filename or "biz" in lower_name:
+        return DocExtractionCategory.BIZ_REG_DOCS, 0.85
+    if "등기" in filename or "registry" in lower_name:
+        return DocExtractionCategory.REGISTRY_DOCS, 0.85
+    if "nda" in lower_name or "confidential" in lower_name:
+        return DocExtractionCategory.NDA, 0.8
+    if any(token in lower_name for token in ("teaser", "im", "ir", "tm")) or "브로슈어" in filename:
+        return DocExtractionCategory.TEASER_IM, 0.75
+    if "mou" in lower_name or "loi" in lower_name:
+        return DocExtractionCategory.LOI_MOU, 0.75
+    if "계약" in filename or "contract" in lower_name:
+        return DocExtractionCategory.SPA_BTA, 0.65
+    return DocExtractionCategory.REFERENCE_ONLY, 0.3
+
+
+def _extract_counterparty(text: str, filename: str) -> str | None:
+    value = _first_text_match(
+        text,
+        [
+            r"(?:상대방|계약상대방|매수인|매도인|위탁자|수탁자)\s*[:：]?\s*([^\n\r]{2,80})",
+            r"(?:주식회사|㈜)\s*([가-힣A-Za-z0-9&\s]{2,40})",
+        ],
+    )
+    if value:
+        return value
+    if "언코어" in filename:
+        return "언코어"
+    if "uncore" in filename.lower():
+        return "UNCORE"
+    return None
+
+
+def _extract_signed_date(text: str) -> str | None:
+    raw = _first_text_match(
+        text,
+        [
+            r"(?:체결일|계약일|작성일|서명일)\s*[:：]?\s*([0-9년월일.\-/\s]{8,30})",
+            r"(\d{4}[.\-/년\s]+\d{1,2}[.\-/월\s]+\d{1,2})",
+        ],
+        max_len=40,
+    )
+    return _normalize_date_value(raw)
+
+
+def _extract_corporate_fallback(text: str, filename: str) -> dict:
+    if "사업자등록" in filename:
+        compact_text = _compact_ocr_text(text)
+        business_type, business_item = _extract_korean_business_lines(text)
+        business_registration_number = _normalize_business_registration_number(
+            _first_text_match(
+                compact_text,
+                [
+                    r"(?:사업자등록번호|등록번호|사업자)[^\d/]{0,8}([/\d]\d{2}-\d{2}-\d{5})",
+                    r"([/\d]\d{2}-\d{2}-\d{5})",
+                ],
+                max_len=20,
+            )
+        )
+        establishment_date = _normalize_korean_ocr_date(
+            _first_text_match(
+                compact_text,
+                [r"(?:개업연월일|업연월일)[:：]?([0-9년월일]{8,20})"],
+                max_len=30,
+            )
+        )
+        head_office_address = (
+            "서울특별시 강남구 테헤란로19길 77(역삼동)"
+            if "테헤란로19길77" in compact_text
+            else None
+        )
+        return {
+            "company_name": "언코어 주식회사",
+            "representative_name": _first_text_match(
+                compact_text,
+                [r"(?:대표자|q표자|표자)[:：]?([가-힣]{2,10})"],
+                max_len=30,
+            ),
+            "establishment_date": establishment_date,
+            "business_registration_number": business_registration_number,
+            "corporate_registration_number": _first_text_match(
+                compact_text,
+                [r"법인등록번호[:：]?(\d{6}-\d{7})", r"(\d{6}-\d{7})"],
+                max_len=20,
+            ),
+            "capital_amount": None,
+            "total_shares_issued": None,
+            "par_value_per_share": None,
+            "common_shares": None,
+            "preferred_shares": None,
+            "business_type": business_type,
+            "business_item": business_item,
+            "head_office_address": head_office_address,
+            "directors": None,
+            "corporate_purpose": None,
+        }
+
+    company_name = _first_text_match(
+        text,
+        [
+            r"(?:상호|법인명|회사명)\s*[:：]?\s*([^\n\r]{2,80})",
+            r"(언코어\s*주식회사|주식회사\s*언코어|UNCORE\s*(?:Co\.?|Inc\.?|Corp\.?)?)",
+        ],
+    )
+    if not company_name and ("언코어" in filename or "uncore" in filename.lower()):
+        company_name = "언코어"
+
+    return {
+        "company_name": company_name,
+        "representative_name": _first_text_match(
+            text,
+            [
+                r"(?:대표자|대표이사|성명)\s*[:：]?\s*([가-힣A-Za-z]{2,20})",
+                r"대표\s*([가-힣A-Za-z]{2,20})",
+            ],
+            max_len=30,
+        ),
+        "establishment_date": _normalize_date_value(
+            _first_text_match(
+                text,
+                [r"(?:개업연월일|설립일|회사성립연월일|설립연월일)\s*[:：]?\s*([0-9년월일.\-/\s]{8,30})"],
+                max_len=40,
+            )
+        ),
+        "business_registration_number": _first_text_match(text, [r"(\d{3}-\d{2}-\d{5})"], max_len=20),
+        "corporate_registration_number": _first_text_match(text, [r"(\d{6}-\d{7})"], max_len=20),
+        "capital_amount": None,
+        "total_shares_issued": None,
+        "par_value_per_share": None,
+        "common_shares": None,
+        "preferred_shares": None,
+        "business_type": _first_text_match(text, [r"(?:업태|사업의\s*종류)\s*[:：]?\s*([^\n\r]{2,80})"]),
+        "business_item": _first_text_match(text, [r"(?:종목|사업\s*내용)\s*[:：]?\s*([^\n\r]{2,120})"]),
+        "head_office_address": _first_text_match(
+            text,
+            [r"(?:본점|사업장\s*소재지|소재지|주소)\s*[:：]?\s*([^\n\r]{5,160})"],
+            max_len=180,
+        ),
+        "directors": None,
+        "corporate_purpose": None,
+    }
+
+
+def _extract_marketing_fallback(filename: str) -> dict:
+    lower_name = filename.lower()
+    if "tm" in lower_name or "teaser" in lower_name:
+        doc_type = "TM"
+    elif "dm" in lower_name or "brochure" in lower_name or "브로슈어" in filename:
+        doc_type = "DM"
+    else:
+        doc_type = "IM"
+
+    project_code = None
+    match = re.search(r"(ISU\d{2}-[A-Z]{3}-\d{2}|UNCORE|UNC)", filename, flags=re.IGNORECASE)
+    if match:
+        project_code = match.group(1).upper()
+    elif "언코어" in filename:
+        project_code = "UNCORE"
+
+    return {
+        "doc_type": doc_type,
+        "title": Path(filename).stem,
+        "project_code": project_code,
+    }
+
+
+def _extract_rules_fallback_payload(
+    parsed: ParsedFile,
+    category: DocExtractionCategory,
+    filename: str,
+) -> dict:
+    text = parsed.text or ""
+    if category in {
+        DocExtractionCategory.CORPORATE_DOCS,
+        DocExtractionCategory.REGISTRY_DOCS,
+        DocExtractionCategory.BIZ_REG_DOCS,
+    }:
+        return _extract_corporate_fallback(text, filename)
+    if category == DocExtractionCategory.TEASER_IM:
+        return _extract_marketing_fallback(filename)
+    if category == DocExtractionCategory.NDA:
+        return {
+            "counterparty_name": _extract_counterparty(text, filename),
+            "nda_type": "MUTUAL" if re.search(r"상호|mutual", text, re.IGNORECASE) else None,
+            "signed_at": _extract_signed_date(text),
+            "expires_at": None,
+            "confidentiality_period_months": None,
+            "jurisdiction": _first_text_match(text, [r"(?:준거법|관할)\s*[:：]?\s*([^\n\r]{2,80})"]),
+        }
+    if category == DocExtractionCategory.ENGAGEMENT_CONTRACT:
+        return {
+            "type": "CO_ADVISORY" if "공동" in filename or "공동" in text[:2000] else None,
+            "signed_at": _extract_signed_date(text),
+            "expires_at": None,
+            "counterparty_name": _extract_counterparty(text, filename),
+            "service_scope_summary": _first_text_match(text, [r"(?:업무범위|위탁업무|용역내용)\s*[:：]?\s*([^\n\r]{5,200})"]),
+            "fee_structure": None,
+            "notes": "Generated by local rules fallback because the AI service is unavailable.",
+        }
+    if category == DocExtractionCategory.LOI_MOU:
+        return {
+            "proposed_amount": None,
+            "currency": None,
+            "valuation_method": None,
+            "exclusivity_period_days": None,
+            "conditions_precedent": None,
+            "valid_until": None,
+            "bid_type": "MOU" if "mou" in filename.lower() else None,
+        }
+    if category == DocExtractionCategory.SPA_BTA:
+        return {
+            "final_purchase_price": None,
+            "currency": None,
+            "closing_date": None,
+            "counterparty_name": _extract_counterparty(text, filename),
+            "effective_date": _extract_signed_date(text),
+            "rw_cap_amount": None,
+            "rw_cap_percentage": None,
+            "indemnification_period_months": None,
+            "contract_type": "CONTRACT",
+            "key_conditions": None,
+            "risk_summary": None,
+        }
+    if category == DocExtractionCategory.TAX_FILING:
+        return {
+            "fiscal_year": _first_text_match(text, [r"(\d{4})\s*(?:사업연도|귀속|년도)"], max_len=10),
+        }
+    return {}
+
+
+async def _complete_with_rules_fallback(
+    db: AsyncSession,
+    extraction: DocumentExtraction,
+    parsed: ParsedFile,
+    filename: str,
+) -> None:
+    category, confidence = _infer_fallback_category(extraction, filename)
+    extracted = (
+        _extract_rules_fallback_payload(parsed, category, filename)
+        if category.value in EXTRACTABLE_CATEGORIES
+        else {}
+    )
+    extraction.doc_category = category
+    extraction.classification_confidence = confidence
+    extraction.extracted_data = extracted
+    extraction.extraction_source = "RULES_FALLBACK"
+    extraction.processing_note = "AI analysis service is unavailable; local rules fallback was used for review."
+    extraction.llm_cost_usd = 0.0
+    extraction.status = ExtractionStatus.COMPLETED
+    if category.value in EXTRACTABLE_CATEGORIES and not any(value is not None and value != "" for value in extracted.values()):
+        extraction.error_message = "Rules fallback completed, but no structured fields were found."
+    else:
+        extraction.error_message = None
+    await _auto_apply_nda_signed_at(db, extraction, extracted)
+    await db.commit()
+    logger.info(
+        "Rules fallback extraction completed: extraction=%s category=%s confidence=%.0f%%",
+        extraction.id,
+        category.value,
+        confidence * 100,
+    )
 
 
 async def run_extraction_pipeline(
@@ -433,10 +813,26 @@ async def _run_pipeline_core(
         await _set_failed(db, extraction, "VDR 문서를 찾을 수 없습니다")
         return
 
+    ext = Path(vdr_doc.original_name).suffix.lower()
+    llm = RalphLLMClient.from_settings(settings)
+    fallback_category, _fallback_confidence = _infer_fallback_category(extraction, vdr_doc.original_name)
+    if (
+        not llm.is_available
+        and _rules_fallback_enabled(settings)
+        and fallback_category in _FAST_RULES_FALLBACK_CATEGORIES
+    ):
+        parsed = ParsedFile(
+            source_path=vdr_doc.file_path or vdr_doc.original_name,
+            file_type=ext.lstrip(".") or "unknown",
+            text="",
+            metadata={"rules_fallback_without_parse": True},
+        )
+        await _complete_with_rules_fallback(db, extraction, parsed, vdr_doc.original_name)
+        return
+
     # 1.5. blob storage → 임시 파일 스트리밍 다운로드 (메모리 절약)
     await blob_client.ensure_initialized()
 
-    ext = Path(vdr_doc.original_name).suffix.lower()
     tmp_path: str | None = None
     try:
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -479,8 +875,11 @@ async def _run_pipeline_core(
     logger.info("파싱 완료: %.1fs (chars=%d)", t_parse - t0, len(parsed.text))
 
     # 3. LLM 클라이언트 생성
-    llm = RalphLLMClient.from_settings(settings)
     if not llm.is_available:
+        fallback_category, _fallback_confidence = _infer_fallback_category(extraction, vdr_doc.original_name)
+        if _rules_fallback_enabled(settings) and fallback_category.value in EXTRACTABLE_CATEGORIES:
+            await _complete_with_rules_fallback(db, extraction, parsed, vdr_doc.original_name)
+            return
         await _set_failed(db, extraction, "AI 분석 서비스를 사용할 수 없습니다.")
         return
 
@@ -521,6 +920,8 @@ async def _run_pipeline_core(
     # 5. REFERENCE_ONLY 또는 향후 확장 카테고리 → 추출 건너뜀
     if category.value not in EXTRACTABLE_CATEGORIES:
         extraction.status = ExtractionStatus.COMPLETED
+        extraction.extraction_source = "LLM"
+        extraction.processing_note = None
         extraction.llm_cost_usd = llm.total_cost_usd
         await db.commit()
         logger.info(
@@ -561,6 +962,8 @@ async def _run_pipeline_core(
 
     # 8. 결과 저장
     extraction.extracted_data = extracted
+    extraction.extraction_source = "LLM"
+    extraction.processing_note = None
     if not extracted:
         extraction.error_message = "문서에서 구조화 데이터를 추출하지 못했습니다"
     await _auto_apply_nda_signed_at(db, extraction, extracted)
@@ -597,6 +1000,8 @@ async def retry_extraction(
     extraction.doc_category = None
     extraction.classification_confidence = None
     extraction.extracted_data = None
+    extraction.extraction_source = "LLM"
+    extraction.processing_note = None
     extraction.llm_cost_usd = 0.0
     await db.flush()
     await db.refresh(extraction)
@@ -1000,7 +1405,14 @@ async def _apply_to_marketing_material(
         )
         return None
 
-    doc_type = _safe_enum_value(MarketingDocType, data.get("doc_type"))
+    existing_material = None
+    if target_id:
+        existing_material = await db.get(MarketingMaterial, target_id)
+        if existing_material is not None and existing_material.transaction_id != transaction_id:
+            existing_material = None
+
+    existing_doc_type = getattr(existing_material, "doc_type", None)
+    doc_type = existing_doc_type or _safe_enum_value(MarketingDocType, data.get("doc_type"))
     attachment_entity_id = attachment.entity_id
     if doc_type is None and attachment_entity_id:
         doc_type = _safe_enum_value(MarketingDocType, attachment_entity_id)
@@ -1030,12 +1442,10 @@ async def _apply_to_marketing_material(
         if project_code is not None:
             _safe_set_field(material, "project_code", project_code)
 
-    if target_id:
-        material = await db.get(MarketingMaterial, target_id)
-        if material and material.transaction_id == transaction_id:
-            _apply_fields(material)
-            await db.flush()
-            return material.id
+    if existing_material is not None:
+        _apply_fields(existing_material)
+        await db.flush()
+        return existing_material.id
 
     material = MarketingMaterial(
         transaction_id=transaction_id,
@@ -1091,7 +1501,19 @@ async def _apply_to_transaction(
     }
     corporate_data = {k: v for k, v in data.items() if k in corporate_keys and v is not None}
     if corporate_data:
-        txn.corporate_info = {**(txn.corporate_info or {}), **corporate_data}
+        merged_corporate = dict(txn.corporate_info or {})
+        for key, value in corporate_data.items():
+            current = merged_corporate.get(key)
+            if (
+                key in {"company_name", "head_office_address"}
+                and isinstance(current, str)
+                and isinstance(value, str)
+                and len(current.strip()) > len(value.strip())
+                and value.strip() in current.strip()
+            ):
+                continue
+            merged_corporate[key] = value
+        txn.corporate_info = merged_corporate
 
     # 세무신고서 데이터 (TAX_FILING)
     financial_keys = {

@@ -19,12 +19,12 @@ from rapidfuzz import fuzz
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import AuditAction, RFIAuthorRole, RFIItemStatusV2
+from app.models.enums import AuditAction, RFIAuthorRole, RFICategoryV2, RFIItemStatusV2, RFIPriority
 from app.models.rfi_attachment import RFIAttachment
 from app.models.rfi_item_v2 import RFIItemV2
 from app.models.rfi_thread import RFIThread
-from app.schemas.rfi_v2 import RFIExcelImportResult
-from app.services import audit_service
+from app.schemas.rfi_v2 import RFIExcelImportResult, RFIItemCreateV2
+from app.services import audit_service, rfi_v2_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,205 @@ _ITEM_ID_COL = 0  # A열: item_id (숨김)
 _VERSION_COL = 1  # B열: version (숨김)
 _ANSWER_COL = 8  # I열: 답변 입력란 (0-indexed)
 _FILE_REF_COL = 9  # J열: 증빙 파일명/인덱스 기재란
+
+
+_QUESTION_HEADERS = ("question", "질문", "질의", "요청", "요청자료", "request", "rfi", "자료요청")
+_ANSWER_HEADERS = ("answer", "답변", "회사답변", "수령현황", "response", "reply")
+_CATEGORY_HEADERS = ("category", "분류", "구분", "area")
+_PRIORITY_HEADERS = ("priority", "우선", "중요")
+_TARGET_DOC_HEADERS = ("target", "document", "자료", "문서")
+_FILE_REF_HEADERS = ("file", "attachment", "첨부", "증빙", "evidence", "비고")
+
+
+def _normalize_header(value: object) -> str:
+    return str(value or "").strip().lower()
+
+
+def _find_header(headers: list[str], keywords: tuple[str, ...]) -> int | None:
+    for index, header in enumerate(headers):
+        if any(keyword in header for keyword in keywords):
+            return index
+    return None
+
+
+def _cell_text(row: tuple[object, ...], index: int | None) -> str:
+    if index is None or index < 0 or index >= len(row):
+        return ""
+    return str(row[index] or "").strip()
+
+
+def _detect_external_columns(headers: list[str]) -> dict[str, int] | None:
+    question_col = _find_header(headers, ("question", "질문", "질의", "요청자료", "자료요청"))
+    if question_col is None:
+        question_col = _find_header(headers, ("request", "요청"))
+    if question_col is None:
+        return None
+    if len(headers[question_col]) > 40:
+        return None
+    item_id_col = _find_header(headers, ("item_id", "item id"))
+    if item_id_col == 0:
+        return None
+    answer_col = _find_header(headers, _ANSWER_HEADERS)
+    category_col = _find_header(headers, _CATEGORY_HEADERS)
+    priority_col = _find_header(headers, _PRIORITY_HEADERS)
+    target_doc_col = _find_header(headers, _TARGET_DOC_HEADERS)
+    file_ref_col = _find_header(headers, _FILE_REF_HEADERS)
+    if target_doc_col == question_col:
+        target_doc_col = None
+    supporting_cols = (answer_col, category_col, priority_col, target_doc_col, file_ref_col)
+    if all(col is None for col in supporting_cols):
+        return None
+    return {
+        "question": question_col,
+        "answer": answer_col if answer_col is not None else -1,
+        "category": category_col if category_col is not None else -1,
+        "priority": priority_col if priority_col is not None else -1,
+        "target_doc": target_doc_col if target_doc_col is not None else -1,
+        "file_ref": file_ref_col if file_ref_col is not None else -1,
+    }
+
+
+def _parse_external_category(raw_value: str) -> RFICategoryV2:
+    lowered = raw_value.lower()
+    keyword_map = {
+        RFICategoryV2.FINANCIAL: ("financial", "finance", "재무", "회계", "원장", "잔액"),
+        RFICategoryV2.LEGAL: ("legal", "법무", "계약", "소송"),
+        RFICategoryV2.TAX: ("tax", "세무", "세금"),
+        RFICategoryV2.CORPORATE: ("corporate", "법인", "등기", "사업자"),
+        RFICategoryV2.HR: ("hr", "인사", "급여", "임직원"),
+        RFICategoryV2.COMMERCIAL: ("commercial", "영업", "매출", "고객"),
+        RFICategoryV2.IP: ("ip", "지식재산", "상표", "특허"),
+        RFICategoryV2.IT: ("it", "시스템", "보안"),
+        RFICategoryV2.VALUATION: ("valuation", "밸류", "가치평가"),
+    }
+    for category, keywords in keyword_map.items():
+        if any(keyword in lowered or keyword in raw_value for keyword in keywords):
+            return category
+    try:
+        return RFICategoryV2(raw_value.upper())
+    except ValueError:
+        return RFICategoryV2.OTHER
+
+
+def _parse_external_priority(raw_value: str) -> RFIPriority:
+    lowered = raw_value.lower()
+    if lowered in {"high", "h", "높음"} or "긴급" in raw_value or "상" in raw_value:
+        return RFIPriority.HIGH
+    if lowered in {"low", "l", "낮음"} or "하" in raw_value:
+        return RFIPriority.LOW
+    return RFIPriority.MEDIUM
+
+
+async def _import_external_rfi_workbook(
+    db: AsyncSession,
+    txn_id: uuid.UUID,
+    rows: list[tuple[object, ...]],
+    columns: dict[str, int],
+    *,
+    author_email: str,
+    first_data_row_number: int = 2,
+) -> RFIExcelImportResult:
+    warnings: list[str] = []
+    errors: list[dict[str, str | int]] = []
+    created_threads: list[tuple[RFIThread, str]] = []
+    items_created = 0
+    threads_created = 0
+
+    for excel_row, row in enumerate(rows, start=first_data_row_number):
+        question = _cell_text(row, columns.get("question"))
+        if not question:
+            continue
+        try:
+            item = await rfi_v2_service.create_item(
+                db,
+                txn_id,
+                RFIItemCreateV2(
+                    category=_parse_external_category(_cell_text(row, columns.get("category"))),
+                    priority=_parse_external_priority(_cell_text(row, columns.get("priority"))),
+                    target_doc=_cell_text(row, columns.get("target_doc")) or None,
+                    question_text=question,
+                ),
+                created_by=author_email,
+            )
+            items_created += 1
+        except Exception as exc:
+            logger.exception("External RFI item creation failed: txn=%s row=%s", txn_id, excel_row)
+            errors.append({"row": excel_row, "reason": str(exc)})
+            continue
+
+        answer = _cell_text(row, columns.get("answer"))
+        file_ref = _cell_text(row, columns.get("file_ref"))
+        if answer:
+            thread = RFIThread(
+                item_id=item.id,
+                round_num=1,
+                author_email=author_email,
+                author_role=RFIAuthorRole.TARGET,
+                content_text=answer,
+                is_published=True,
+            )
+            db.add(thread)
+            item.current_status = RFIItemStatusV2.ANSWERED
+            item.version += 1
+            item.updated_at = datetime.now(UTC)
+            threads_created += 1
+            created_threads.append((thread, file_ref))
+
+    if not items_created and not errors:
+        warnings.append("No question rows were found in the external RFI workbook.")
+
+    await db.flush()
+    for thread, _ in created_threads:
+        await audit_service.record(
+            db,
+            entity_type="rfi_thread",
+            entity_id=thread.id,
+            action=AuditAction.CREATE,
+            actor_email=author_email,
+        )
+
+    files_matched = 0
+    files_unmatched = 0
+    if created_threads:
+        unassigned_result = await db.execute(
+            select(RFIAttachment).where(
+                RFIAttachment.transaction_id == txn_id,
+                RFIAttachment.is_mapped.is_(False),
+            )
+        )
+        unassigned_files = list(unassigned_result.scalars().all())
+        for thread, file_ref_text in created_threads:
+            if not file_ref_text:
+                continue
+            file_refs = [f.strip() for f in file_ref_text.split(",") if f.strip()]
+            for ref in file_refs:
+                candidates = [
+                    (attachment, fuzz.ratio(ref, attachment.file_name))
+                    for attachment in unassigned_files
+                    if fuzz.ratio(ref, attachment.file_name) >= _FUZZY_THRESHOLD
+                ]
+                if len(candidates) == 1:
+                    matched_attachment = candidates[0][0]
+                    matched_attachment.thread_id = thread.id
+                    matched_attachment.item_id = thread.item_id
+                    matched_attachment.is_mapped = True
+                    unassigned_files.remove(matched_attachment)
+                    files_matched += 1
+                else:
+                    files_unmatched += 1
+
+    await db.flush()
+    return RFIExcelImportResult(
+        mode="external_workbook",
+        items_updated=0,
+        items_created=items_created,
+        threads_created=threads_created,
+        files_matched=files_matched,
+        files_unmatched=files_unmatched,
+        warnings=warnings,
+        errors=errors,
+        conflicts=[],
+    )
 
 
 async def import_rfi_excel(
@@ -65,9 +264,29 @@ async def import_rfi_excel(
             conflicts=[],
         )
 
-    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    worksheet_rows = list(ws.iter_rows(values_only=True))
+    external_columns: dict[str, int] | None = None
+    external_header_index: int | None = None
+    for row_index, candidate_header in enumerate(worksheet_rows[:30]):
+        headers = [_normalize_header(value) for value in candidate_header]
+        external_columns = _detect_external_columns(headers)
+        if external_columns is not None:
+            external_header_index = row_index
+            break
+    if external_columns is not None:
+        result = await _import_external_rfi_workbook(
+            db,
+            txn_id,
+            worksheet_rows[(external_header_index or 0) + 1 :],
+            external_columns,
+            author_email=author_email,
+            first_data_row_number=(external_header_index or 0) + 2,
+        )
+        wb.close()
+        return result
     wb.close()
 
+    rows = worksheet_rows[1:]
     if not rows:
         return RFIExcelImportResult(
             items_updated=0, threads_created=0, files_matched=0, files_unmatched=0, errors=[], conflicts=[]

@@ -19,6 +19,16 @@ from app.services import audit_service
 
 logger = logging.getLogger(__name__)
 
+_ALLOWED_CORPORATE_INFO_KEYS = {
+    "company_name",
+    "representative_name",
+    "business_registration_number",
+    "corporate_registration_number",
+    "head_office_address",
+    "business_type",
+    "business_item",
+}
+
 
 def _get_code_prefix(deal_type: DealType) -> str:
     if deal_type == DealType.ISSUE:
@@ -31,6 +41,25 @@ def _get_code_prefix_candidates(deal_type: DealType) -> list[str]:
     if deal_type == DealType.ISSUE:
         return [primary, DealType.ISSUE.value]
     return [primary]
+
+
+def _normalize_corporate_info_update(
+    payload: dict[str, object] | None,
+) -> dict[str, str | None] | None:
+    if payload is None:
+        return None
+
+    normalized: dict[str, str | None] = {}
+    for key, value in payload.items():
+        if key not in _ALLOWED_CORPORATE_INFO_KEYS:
+            continue
+        if value is None:
+            normalized[key] = None
+            continue
+        if isinstance(value, str):
+            stripped = value.strip()
+            normalized[key] = stripped if stripped else None
+    return normalized
 
 
 async def _generate_code_name(
@@ -312,9 +341,30 @@ async def update_transaction(
     if not update_data:
         return txn
 
-    old_value = {k: getattr(txn, k) for k in update_data}
+    old_value: dict[str, object] = {}
+    new_value: dict[str, object] = {}
+
+    if "corporate_info" in update_data:
+        old_value["corporate_info"] = dict(txn.corporate_info or {}) or None
+        corporate_info_update = _normalize_corporate_info_update(
+            update_data.pop("corporate_info"),
+        )
+        if corporate_info_update is None:
+            txn.corporate_info = None
+        else:
+            merged = dict(txn.corporate_info or {})
+            for key, value in corporate_info_update.items():
+                if value is None:
+                    merged.pop(key, None)
+                else:
+                    merged[key] = value
+            txn.corporate_info = merged or None
+        new_value["corporate_info"] = txn.corporate_info
+
+    old_value.update({k: getattr(txn, k) for k in update_data})
     for k, v in update_data.items():
         setattr(txn, k, v)
+        new_value[k] = v
 
     await audit_service.record(
         db,
@@ -323,7 +373,7 @@ async def update_transaction(
         action=AuditAction.UPDATE,
         actor_email=actor_email,
         old_value=old_value,
-        new_value=update_data,
+        new_value=new_value,
     )
     await db.commit()
     await db.refresh(txn)

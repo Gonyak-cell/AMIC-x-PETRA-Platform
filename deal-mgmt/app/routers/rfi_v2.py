@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -295,12 +296,19 @@ _ALLOWED_EXTENSIONS = {
     ".hwpx",
 }
 _MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50MB
+_SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9가-힣._ ()\[\]-]+")
+
+
+def _sanitize_upload_filename(filename: str | None) -> str:
+    base_name = os.path.basename(filename or "attachment")
+    safe_name = _SAFE_FILENAME_PATTERN.sub("_", base_name).strip(" .")
+    return safe_name or "attachment"
 
 
 @router.post("/attachments", response_model=list[RFIAttachmentOut], status_code=status.HTTP_201_CREATED)
 async def upload_attachments(
     txn_id: uuid.UUID,
-    files: list[UploadFile],
+    files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ) -> list[RFIAttachmentOut]:
@@ -309,27 +317,34 @@ async def upload_attachments(
     await check_client_deal_access(db, txn_id, claims)
 
     # Step 1: 모든 파일 사전 검증 (확장자 + 크기) — 부분 업로드 방지
-    file_contents: list[tuple[str, bytes]] = []
+    file_contents: list[tuple[str, bytes, str]] = []
     for f in files:
-        ext = os.path.splitext(f.filename or "")[1].lower()
+        filename = _sanitize_upload_filename(f.filename)
+        ext = os.path.splitext(filename)[1].lower()
         if ext not in _ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"허용되지 않는 파일 형식입니다: {ext}",
             )
         content = await f.read()
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Empty files cannot be uploaded: {filename}",
+            )
         if len(content) > _MAX_FILE_SIZE_BYTES:
             raise HTTPException(
                 status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 detail=f"파일 크기가 제한(50MB)을 초과합니다: {f.filename}",
             )
-        file_contents.append((f.filename or "unknown", content))
+        file_contents.append((filename, content, f.content_type or "application/octet-stream"))
 
     # Step 2: 검증 통과 후 Blob 업로드 + DB 메타 생성
     results: list[RFIAttachmentOut] = []
-    for filename, content in file_contents:
+    await blob_client.ensure_initialized()
+    for filename, content, content_type in file_contents:
         blob_path = f"rfi/{txn_id}/{uuid.uuid4()}/{filename}"
-        file_url = await blob_client.upload(blob_path, content)
+        file_url = await blob_client.upload_blob(blob_path, content, content_type)
 
         attachment = await rfi_attachment_service.create_attachment(
             db,
@@ -392,7 +407,7 @@ async def download_attachment(
 
     attachment = await rfi_attachment_service.get_attachment(db, txn_id, file_id)
 
-    data = await blob_client.download(attachment.file_url)
+    data = await blob_client.download_blob(attachment.file_url)
     encoded_name = quote(attachment.file_name)
     return StreamingResponse(
         iter([data]),

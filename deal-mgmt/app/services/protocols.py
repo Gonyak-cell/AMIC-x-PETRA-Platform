@@ -32,6 +32,16 @@ class FDDClientProtocol(Protocol):
 
     async def trigger_analysis(self, deal_id: uuid.UUID, analysis_type: str) -> dict: ...
 
+    async def upload_file(
+        self,
+        deal_id: uuid.UUID,
+        filename: str,
+        content: bytes,
+        content_type: str,
+    ) -> dict: ...
+
+    async def ingest_upload(self, deal_id: uuid.UUID, upload_id: uuid.UUID) -> dict: ...
+
 
 @runtime_checkable
 class IMClientProtocol(Protocol):

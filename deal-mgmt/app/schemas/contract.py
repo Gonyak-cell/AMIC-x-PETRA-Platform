@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import ContractStatus, ContractType, SignatureStatus
 
@@ -29,6 +29,24 @@ class ContractOut(BaseModel):
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("ai_risk_flags", mode="before")
+    @classmethod
+    def normalize_ai_risk_flags(cls, value):
+        if value is None or isinstance(value, list):
+            return value
+        if isinstance(value, dict):
+            clauses = value.get("clauses")
+            if isinstance(clauses, list):
+                return clauses
+            return [
+                {
+                    "clause": str(value.get("clause") or value.get("contract_type") or "Contract"),
+                    "risk_level": str(value.get("risk_level") or "INFO"),
+                    "description": str(value.get("description") or value),
+                }
+            ]
+        return None
 
 
 class ContractCreate(BaseModel):

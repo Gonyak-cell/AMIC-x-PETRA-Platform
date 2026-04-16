@@ -50,7 +50,7 @@ async def _update_attachment_state(
         await db.commit()
 
 
-async def _process_attachment_once(attachment_id: uuid.UUID) -> None:
+async def _process_attachment_once(attachment_id: uuid.UUID, *, raise_on_error: bool = False) -> None:
     from app.core.database import async_session_factory
     from app.models.attachment import Attachment
     from app.services.attachment_vdr_bridge import sync_attachment_to_vdr
@@ -68,16 +68,34 @@ async def _process_attachment_once(attachment_id: uuid.UUID) -> None:
         attachment.processing_status = PROCESSING_RUNNING
         attachment.processing_error = None
         await db.commit()
-        await db.refresh(attachment)
+        try:
+            await db.refresh(attachment)
+        except Exception:
+            logger.warning(
+                "Attachment refresh failed before processing; continuing with committed instance: %s",
+                attachment_id,
+                exc_info=True,
+            )
 
-        result = await sync_attachment_to_vdr(
-            db,
-            attachment.transaction_id,
-            attachment,
-            Path(attachment.file_path),
-        )
-        if result is None or attachment.vdr_document_id is None:
-            raise RuntimeError("Attachment VDR sync did not produce a linked document.")
+        try:
+            result = await sync_attachment_to_vdr(
+                db,
+                attachment.transaction_id,
+                attachment,
+                Path(attachment.file_path),
+            )
+            if result is None or attachment.vdr_document_id is None:
+                raise RuntimeError("Attachment VDR sync did not produce a linked document.")
+        except Exception as exc:
+            attachment = await db.get(Attachment, attachment_id)
+            if attachment is not None:
+                attachment.processing_status = PROCESSING_FAILED
+                attachment.processing_error = str(exc)
+                await db.commit()
+            if raise_on_error:
+                raise
+            logger.exception("Attachment processing failed: %s", attachment_id)
+            return
 
         attachment = await db.get(Attachment, attachment_id)
         if attachment is None:
@@ -99,7 +117,7 @@ def process_attachment_task(self, attachment_id: str) -> None:
     parsed_attachment_id = uuid.UUID(attachment_id)
 
     try:
-        _run_async(_process_attachment_once(parsed_attachment_id))
+        _run_async(_process_attachment_once(parsed_attachment_id, raise_on_error=True))
     except SoftTimeLimitExceeded as exc:
         logger.warning("Attachment processing soft time limit exceeded: %s", attachment_id)
         _run_async(

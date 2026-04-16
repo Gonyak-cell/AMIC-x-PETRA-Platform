@@ -54,9 +54,17 @@ async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: Backg
 
 async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) -> None:
     """FastAPI BackgroundTasks용 동기 폴백."""
+    # The extraction pipeline performs CPU-heavy synchronous parsing/OCR before
+    # it reaches the LLM/fallback branch. Run it on a worker thread so local
+    # BackgroundTasks do not block the FastAPI event loop and make health/UI
+    # requests appear hung during large PDF processing.
+    await asyncio.to_thread(_run_extraction_pipeline_in_thread, extraction_id, session_factory)
+
+
+def _run_extraction_pipeline_in_thread(extraction_id: uuid.UUID, session_factory: object) -> None:
     from app.services.document_extraction_service import run_extraction_pipeline
 
-    await run_extraction_pipeline(extraction_id, session_factory)
+    asyncio.run(run_extraction_pipeline(extraction_id, session_factory))
 
 
 async def _dispatch_celery_best_effort(extraction_id: uuid.UUID) -> None:
