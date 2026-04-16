@@ -1037,9 +1037,7 @@ async def _run_pipeline_core(
 
     if category.value in EXTRACTABLE_CATEGORIES:
         fallback_extracted = _extract_rules_fallback_payload(parsed, category, vdr_doc.original_name)
-        if not _has_meaningful_extraction_data(extracted) and _has_meaningful_extraction_data(
-            fallback_extracted
-        ):
+        if not _has_meaningful_extraction_data(extracted) and _has_meaningful_extraction_data(fallback_extracted):
             extracted = fallback_extracted
             extraction_source = "RULES_FALLBACK"
             processing_note = (
