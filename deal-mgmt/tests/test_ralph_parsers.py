@@ -66,9 +66,13 @@ class TestPdfParser:
             },
         )
 
-        monkeypatch.setattr(pdf_parser, "_parse_with_fitz", lambda _: empty)
-        monkeypatch.setattr(pdf_parser, "_parse_with_pdfplumber", lambda _: empty)
-        monkeypatch.setattr(pdf_parser, "_parse_with_ocr_fallback", lambda _path, base_candidate=None: ocr)
+        monkeypatch.setattr(pdf_parser, "_parse_with_fitz", lambda _path, **_kwargs: empty)
+        monkeypatch.setattr(pdf_parser, "_parse_with_pdfplumber", lambda _path, **_kwargs: empty)
+        monkeypatch.setattr(
+            pdf_parser,
+            "_parse_with_ocr_fallback",
+            lambda _path, base_candidate=None, **_kwargs: ocr,
+        )
 
         parsed = pdf_parser.parse_pdf("/tmp/scanned.pdf")
 
