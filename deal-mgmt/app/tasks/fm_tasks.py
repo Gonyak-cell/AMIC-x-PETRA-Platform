@@ -15,6 +15,7 @@ from app.tasks.persistent_async import run_on_shared_celery_loop
 
 logger = logging.getLogger(__name__)
 
+
 def _run_async(coro: Any) -> Any:
     """Celery 워커에서 코루틴을 안전하게 실행한다."""
     return run_on_shared_celery_loop(coro)
