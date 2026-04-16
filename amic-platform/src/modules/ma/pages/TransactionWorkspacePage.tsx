@@ -225,7 +225,6 @@ export default function TransactionWorkspacePage() {
     if (defaultTab && defaultTab !== "overview") {
       navigate(`/ma/transactions/${id}/${defaultTab}`, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txn?.phase, id, isCompanyInfoSetup, navigate, isClient, splat, viewedPhase]);
 
   // 마일스톤 문서 존재 여부 조회

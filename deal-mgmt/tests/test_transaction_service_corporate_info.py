@@ -76,9 +76,7 @@ async def test_update_transaction_keeps_existing_ocr_only_fields(
     )
 
     assert updated.corporate_info["capital_amount"] == 500000000
-    assert updated.corporate_info["directors"] == [
-        {"name": "홍길동", "position": "대표이사"}
-    ]
+    assert updated.corporate_info["directors"] == [{"name": "홍길동", "position": "대표이사"}]
     assert updated.corporate_info["representative_name"] == "신규 대표"
 
 

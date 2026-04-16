@@ -24,28 +24,18 @@ HEADER_SYNONYMS: dict[str, str] = {
     "발생일": "entry_date",
     "잔액": "balance",
     # --- Korean TB/GL common ---
-    "계정코드": "account_code",
-    "계정과목코드": "account_code",
     "코드": "account_code",
-    "계정명": "account_name",
-    "계정과목": "account_name",
     "계정과목명": "account_name",
     "차변": "debit",
-    "차변금액": "debit",
     "대변": "credit",
-    "대변금액": "credit",
-    "잔액": "balance",
     "기말잔액": "balance",
     "기초잔액": "opening_balance",
     # --- GL specific ---
-    "전표번호": "entry_id",
     "분개번호": "entry_id",
     "전표일자": "entry_date",
     "기표일자": "entry_date",
     "일자": "entry_date",
     "적요": "description",
-    "거래처": "counterparty",
-    "거래처명": "counterparty",
     "라인번호": "line_id",
     "라인": "line_id",
     # --- AR/AP ---
@@ -70,8 +60,6 @@ HEADER_SYNONYMS: dict[str, str] = {
     "리스료": "amount",
     # --- Common ---
     "통화": "currency",
-    "금액": "amount",
-    "비고": "remarks",
     # --- English pass-through (lowercased) ---
     "account_code": "account_code",
     "account code": "account_code",

@@ -14,8 +14,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
 from app.core.config import settings
+from app.core.database import get_db
 from app.core.rate_limiter import InMemoryRateLimiter
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.attachment import Attachment

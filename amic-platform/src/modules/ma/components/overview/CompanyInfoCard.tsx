@@ -530,7 +530,10 @@ export default function CompanyInfoCard({ txn, canWrite = true }: Props) {
     }
   }, [canWrite, setupMode]);
 
-  const extractions = extractionQuery.data?.items ?? [];
+  const extractions = useMemo(
+    () => extractionQuery.data?.items ?? [],
+    [extractionQuery.data?.items],
+  );
   const latestRegistryExtraction = useMemo(
     () => pickLatestExtraction(extractions, REGISTRY_CATEGORIES),
     [extractions],
