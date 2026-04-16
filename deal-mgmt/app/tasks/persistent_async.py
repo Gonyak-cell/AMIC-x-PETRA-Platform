@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import atexit
 import asyncio
+import atexit
 import threading
 from collections.abc import Awaitable
 from typing import Generic, TypeVar
