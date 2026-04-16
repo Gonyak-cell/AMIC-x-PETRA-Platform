@@ -2,6 +2,27 @@
 
 # Korean → canonical English field name mapping
 HEADER_SYNONYMS: dict[str, str] = {
+    # --- Korean ERP exports used in local Uncore verification ---
+    "계정": "account_code",
+    "계정코드": "account_code",
+    "계정과목코드": "account_code",
+    "계정명": "account_name",
+    "계정과목": "account_name",
+    "회계일": "entry_date",
+    "전표번호": "entry_id",
+    "비고": "description",
+    "내역": "description",
+    "차변금액(자국)": "debit",
+    "대변금액(자국)": "credit",
+    "차변금액": "debit",
+    "대변금액": "credit",
+    "거래처명": "counterparty",
+    "거래처": "counterparty",
+    "순번": "line_id",
+    "기말금액": "balance",
+    "금액": "amount",
+    "발생일": "entry_date",
+    "잔액": "balance",
     # --- Korean TB/GL common ---
     "계정코드": "account_code",
     "계정과목코드": "account_code",

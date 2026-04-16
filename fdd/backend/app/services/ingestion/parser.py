@@ -16,7 +16,7 @@ from app.core.log_decorators import log_error_with_input
 from app.core.logging import get_logger
 from app.models.journal_entry import JournalEntry
 from app.models.upload import UploadFile, UploadType
-from app.services.ingestion.type_detector import normalize_header
+from app.services.ingestion.type_detector import find_header_row
 
 logger = get_logger(__name__)
 
@@ -122,12 +122,7 @@ def ingest_file(
     sheet = wb.active
 
     # Read and normalize headers
-    raw_headers: list[str] = []
-    for row in sheet.iter_rows(min_row=1, max_row=1, values_only=True):
-        raw_headers = [str(cell) if cell is not None else "" for cell in row]
-        break
-
-    normalized = [normalize_header(h) for h in raw_headers]
+    header_row_idx, raw_headers, normalized = find_header_row(sheet)
 
     # Build column index map: canonical_name -> column_index (first occurrence wins)
     col_map: dict[str, int] = {}
@@ -175,7 +170,7 @@ def ingest_file(
     rows_skipped = 0
     batch: list[JournalEntry] = []
 
-    for row in sheet.iter_rows(min_row=2, values_only=True):
+    for row in sheet.iter_rows(min_row=header_row_idx + 1, values_only=True):
         total_rows += 1
 
         # Skip completely empty rows
@@ -203,7 +198,7 @@ def ingest_file(
             upload_file_id=upload.id,
             deal_id=upload.deal_id,
             source_type=effective_type.value,
-            row_number=total_rows + 1,  # 1-based, accounting for header row
+            row_number=header_row_idx + total_rows,
             account_code=safe_str(get_val("account_code")),
             account_name=safe_str(get_val("account_name")),
             entry_date=entry_date,

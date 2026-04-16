@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 
 from app.models.upload import UploadType, UploadValidationError, ValidationSeverity
 from app.services.ingestion.header_map import REQUIRED_FIELDS
-from app.services.ingestion.type_detector import normalize_header
+from app.services.ingestion.type_detector import find_header_row
 
 MONEY_FIELDS = {"debit", "credit", "balance", "amount"}
 DATE_FIELDS = {"entry_date", "due_date", "maturity_date", "lease_start"}
@@ -35,10 +35,7 @@ def validate_upload(
     sheet = wb.active
 
     # 1. Read and normalize headers
-    raw_headers: list[str] = []
-    for row in sheet.iter_rows(min_row=1, max_row=1, values_only=True):
-        raw_headers = [str(cell) if cell is not None else "" for cell in row]
-        break
+    header_row_idx, raw_headers, normalized = find_header_row(sheet)
 
     if not raw_headers:
         errors.append(
@@ -53,7 +50,6 @@ def validate_upload(
         wb.close()
         return errors
 
-    normalized = [normalize_header(h) for h in raw_headers]
     header_set = {h for h in normalized if h is not None}
 
     # 2. Check required fields
@@ -110,7 +106,11 @@ def validate_upload(
     warned_date_cols: set[int] = set()
 
     row_num = 1
-    for row in sheet.iter_rows(min_row=2, max_row=2 + sample_rows, values_only=True):
+    for row in sheet.iter_rows(
+        min_row=header_row_idx + 1,
+        max_row=header_row_idx + sample_rows,
+        values_only=True,
+    ):
         row_num += 1
 
         # Money field type check

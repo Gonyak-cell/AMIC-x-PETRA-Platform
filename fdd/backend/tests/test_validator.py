@@ -45,6 +45,52 @@ class TestValidateGL:
         error_codes = [e.error_code for e in blocking]
         assert "VAL-003" in error_codes
 
+    def test_valid_gl_with_preamble_rows(self, tmp_path):
+        from openpyxl import Workbook
+
+        path = tmp_path / "uncore_gl.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.append([None, None, None, None])
+        ws.append(["summary", None, 1000, 0])
+        ws.append([None, None, None, None])
+        ws.append(
+            [
+                "회계연월",
+                "회계일",
+                "구분",
+                "계정",
+                "계정명",
+                "전표번호",
+                "비고",
+                "차변금액(자국)",
+                "대변금액(자국)",
+                "거래처명",
+                "순번",
+            ]
+        )
+        ws.append(
+            [
+                "2025-01",
+                "2025-01-31",
+                "자산",
+                "1110104",
+                "보통예금",
+                "GL-001",
+                "입금",
+                1000,
+                0,
+                "거래처",
+                1,
+            ]
+        )
+        wb.save(path)
+
+        errors = validate_upload(str(path), UploadType.GL)
+        blocking = [e for e in errors if e.severity == ValidationSeverity.ERROR]
+
+        assert blocking == []
+
 
 class TestValidateAR:
     def test_valid_ar_no_blocking_errors(self, sample_ar_file):
