@@ -6,25 +6,18 @@ settings.CF_CRAWL_ENABLED=True일 때만 실제 수집 수행.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
 import logging
 from typing import Any
 
 from app.tasks.celery_app import celery_app
+from app.tasks.persistent_async import run_on_shared_celery_loop
 
 logger = logging.getLogger(__name__)
 
 
 def _run_async(coro: Any) -> Any:
     """Celery 워커에서 코루틴을 안전하게 실행한다."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    else:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+    return run_on_shared_celery_loop(coro)
 
 
 async def _collect_cf_news() -> dict[str, dict[str, int]]:

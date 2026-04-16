@@ -6,28 +6,18 @@ async 함수의 로직은 변경하지 않고 _run_async()로 안전하게 실�
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
 import logging
 import uuid
 from typing import Any
 
 from app.tasks.celery_app import celery_app
+from app.tasks.persistent_async import run_on_shared_celery_loop
 
 logger = logging.getLogger(__name__)
 
-# 싱글턴 ThreadPoolExecutor — Celery 워커 수명 동안 재사용
-_FALLBACK_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-
-
 def _run_async(coro: Any) -> Any:
     """Celery 워커에서 코루틴을 안전하게 실행한다."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    else:
-        return _FALLBACK_POOL.submit(asyncio.run, coro).result()
+    return run_on_shared_celery_loop(coro)
 
 
 def _rollback_fm_to_failed(fm_id: str, transaction_id: str, error_msg: str) -> None:

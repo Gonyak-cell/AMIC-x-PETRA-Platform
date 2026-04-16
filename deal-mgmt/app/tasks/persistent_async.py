@@ -68,3 +68,10 @@ class PersistentAsyncRunner(Generic[_T]):
             loop.call_soon_threadsafe(loop.stop)
         if thread is not None and thread.is_alive():
             thread.join(timeout=5)
+
+
+_SHARED_CELERY_ASYNC_RUNNER = PersistentAsyncRunner("deal-mgmt-celery-async")
+
+
+def run_on_shared_celery_loop(coro: Awaitable[_T]) -> _T:
+    return _SHARED_CELERY_ASYNC_RUNNER.run(coro)

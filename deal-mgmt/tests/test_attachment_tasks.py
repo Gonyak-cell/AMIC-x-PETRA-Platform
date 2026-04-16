@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from app.tasks.persistent_async import PersistentAsyncRunner
+from app.tasks.persistent_async import PersistentAsyncRunner, run_on_shared_celery_loop
 
 
 async def _capture_loop_id() -> int:
@@ -37,3 +37,10 @@ def test_persistent_async_runner_surfaces_coroutine_errors() -> None:
             raise AssertionError("Expected RuntimeError from coroutine")
     finally:
         runner.shutdown()
+
+
+def test_shared_celery_async_runner_reuses_the_same_event_loop() -> None:
+    first = run_on_shared_celery_loop(_capture_loop_id())
+    second = run_on_shared_celery_loop(_capture_loop_id())
+
+    assert first == second

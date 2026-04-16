@@ -9,7 +9,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
 
 from app.tasks.celery_app import celery_app
-from app.tasks.persistent_async import PersistentAsyncRunner
+from app.tasks.persistent_async import run_on_shared_celery_loop
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,10 @@ PROCESSING_SYNCED = "SYNCED"
 PROCESSING_FAILED = "FAILED"
 PROCESSING_SKIPPED = "SKIPPED"
 STALE_PENDING_MINUTES = 10
-_ATTACHMENT_ASYNC_RUNNER = PersistentAsyncRunner("deal-mgmt-attachment-async")
 
 
 def _run_async(coro):
-    return _ATTACHMENT_ASYNC_RUNNER.run(coro)
+    return run_on_shared_celery_loop(coro)
 
 
 async def _update_attachment_state(
