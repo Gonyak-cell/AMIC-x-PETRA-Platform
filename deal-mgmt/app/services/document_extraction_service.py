@@ -263,10 +263,20 @@ async def extract_fields(
         raw = await llm_client.call(system_prompt, user_msg)
 
     try:
-        return json.loads(_extract_json(raw))
+        extracted = json.loads(_extract_json(raw))
     except (json.JSONDecodeError, ValueError):
         logger.warning("추출 결과 JSON 파싱 실패 (category=%s): %s", category, raw[:200])
         return {}
+
+    if not isinstance(extracted, dict):
+        logger.warning(
+            "추출 결과가 JSON 객체가 아니므로 무시합니다 (category=%s, type=%s)",
+            category,
+            type(extracted).__name__,
+        )
+        return {}
+
+    return extracted
 
 
 # ── 전체 파이프라인 ───────────────────────────────────────────

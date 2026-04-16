@@ -458,6 +458,14 @@ class TestExtractFields:
         result = await extract_fields(parsed, DocExtractionCategory.NDA, llm)
         assert result == {}
 
+    async def test_extract_non_object_json_returns_empty(self) -> None:
+        parsed = ParsedFile(source_path="/tmp/test.pdf", file_type="pdf")
+        parsed.text = "NDA 문서 " * 100
+        llm = _mock_llm_client('["unexpected", "array"]')
+
+        result = await extract_fields(parsed, DocExtractionCategory.NDA, llm)
+        assert result == {}
+
 
 # ── confirm_extraction + _apply_to_nda ───────────────────────
 
