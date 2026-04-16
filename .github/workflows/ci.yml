@@ -29,6 +29,7 @@ jobs:
       pull-requests: read
     outputs:
       deal-mgmt: ${{ steps.filter.outputs.deal-mgmt }}
+      deal-mgmt-visual: ${{ steps.filter.outputs.deal-mgmt-visual }}
       kiis: ${{ steps.filter.outputs.kiis }}
       fdd: ${{ steps.filter.outputs.fdd }}
       im: ${{ steps.filter.outputs.im }}
@@ -47,6 +48,11 @@ jobs:
           filters: |
             deal-mgmt:
               - 'deal-mgmt/**'
+            deal-mgmt-visual:
+              - 'deal-mgmt/app/pptx/**'
+              - 'deal-mgmt/templates/**'
+              - 'deal-mgmt/tests/fixtures/golden_samples/**'
+              - 'deal-mgmt/tests/visual_diff/**'
             kiis:
               - 'kiis/**'
             fdd:
@@ -418,7 +424,7 @@ jobs:
   visual-diff-deal-mgmt:
     name: Visual Diff (deal-mgmt)
     needs: detect-changes
-    if: needs.detect-changes.outputs.deal-mgmt == 'true'
+    if: needs.detect-changes.outputs.deal-mgmt-visual == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true
