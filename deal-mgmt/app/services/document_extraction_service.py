@@ -630,6 +630,45 @@ def _extract_rules_fallback_payload(
     return {}
 
 
+def _has_meaningful_extraction_value(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (int, float, bool)):
+        return True
+    if isinstance(value, dict):
+        return any(_has_meaningful_extraction_value(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_has_meaningful_extraction_value(item) for item in value)
+    return True
+
+
+def _has_meaningful_extraction_data(data: dict | None) -> bool:
+    return bool(data) and any(_has_meaningful_extraction_value(value) for value in data.values())
+
+
+def _merge_missing_extracted_fields(
+    extracted: dict,
+    fallback: dict,
+) -> tuple[dict, bool]:
+    merged = dict(extracted)
+    updated = False
+
+    for key, fallback_value in fallback.items():
+        if not _has_meaningful_extraction_value(fallback_value):
+            continue
+
+        current_value = merged.get(key)
+        if _has_meaningful_extraction_value(current_value):
+            continue
+
+        merged[key] = fallback_value
+        updated = True
+
+    return merged, updated
+
+
 async def _complete_with_rules_fallback(
     db: AsyncSession,
     extraction: DocumentExtraction,
@@ -647,9 +686,7 @@ async def _complete_with_rules_fallback(
     extraction.processing_note = "AI analysis service is unavailable; local rules fallback was used for review."
     extraction.llm_cost_usd = 0.0
     extraction.status = ExtractionStatus.COMPLETED
-    if category.value in EXTRACTABLE_CATEGORIES and not any(
-        value is not None and value != "" for value in extracted.values()
-    ):
+    if category.value in EXTRACTABLE_CATEGORIES and not _has_meaningful_extraction_data(extracted):
         extraction.error_message = "Rules fallback completed, but no structured fields were found."
     else:
         extraction.error_message = None
@@ -995,10 +1032,30 @@ async def _run_pipeline_core(
     )
 
     # 8. 결과 저장
+    extraction_source = "LLM"
+    processing_note: str | None = None
+
+    if category.value in EXTRACTABLE_CATEGORIES:
+        fallback_extracted = _extract_rules_fallback_payload(parsed, category, vdr_doc.original_name)
+        if not _has_meaningful_extraction_data(extracted) and _has_meaningful_extraction_data(
+            fallback_extracted
+        ):
+            extracted = fallback_extracted
+            extraction_source = "RULES_FALLBACK"
+            processing_note = (
+                "AI response did not include structured fields; local rules fallback populated review fields."
+            )
+        elif _has_meaningful_extraction_data(extracted):
+            extracted, supplemented = _merge_missing_extracted_fields(extracted, fallback_extracted)
+            if supplemented:
+                processing_note = "Some empty fields were supplemented by local rules fallback."
+
     extraction.extracted_data = extracted
-    extraction.extraction_source = "LLM"
-    extraction.processing_note = None
-    if not extracted:
+    extraction.extraction_source = extraction_source
+    extraction.processing_note = processing_note
+    if _has_meaningful_extraction_data(extracted):
+        extraction.error_message = None
+    if not _has_meaningful_extraction_data(extracted):
         extraction.error_message = "문서에서 구조화 데이터를 추출하지 못했습니다"
     await _auto_apply_nda_signed_at(db, extraction, extracted)
     extraction.status = ExtractionStatus.COMPLETED

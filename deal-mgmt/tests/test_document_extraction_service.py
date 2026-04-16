@@ -1448,6 +1448,139 @@ class TestPipeline:
         assert ext.status == ExtractionStatus.COMPLETED
         assert str(nda.signed_at) == "2026-03-31"
 
+    async def test_pipeline_nda_empty_llm_uses_rules_fallback(
+        self,
+        async_session: AsyncSession,
+    ) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+        nda = NDA(
+            transaction_id=txn.id,
+            party_type=NdaPartyType.BUYER,
+            buyer_candidate_id=buyer.id,
+            nda_type=NdaType.MUTUAL,
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(
+            async_session,
+            txn.id,
+            vdr_doc.id,
+            DocExtractionCategory.NDA,
+            target_model="nda",
+            target_id=nda.id,
+            auto_apply_signed_at=True,
+        )
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "This mutual NDA was signed on 2026-03-31."
+
+        llm = _mock_llm_client(
+            '{"counterparty_name": null, "nda_type": null, "signed_at": null, '
+            '"expires_at": null, "confidentiality_period_months": null, "jurisdiction": null}'
+        )
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        await async_session.refresh(nda)
+        assert ext.status == ExtractionStatus.COMPLETED
+        assert ext.extraction_source == "RULES_FALLBACK"
+        assert ext.processing_note == (
+            "AI response did not include structured fields; local rules fallback populated review fields."
+        )
+        assert ext.error_message is None
+        assert ext.extracted_data is not None
+        assert ext.extracted_data["nda_type"] == "MUTUAL"
+        assert ext.extracted_data["signed_at"] == "2026-03-31"
+        assert str(nda.signed_at) == "2026-03-31"
+
+    async def test_pipeline_nda_merges_rules_fallback_into_partial_llm_result(
+        self,
+        async_session: AsyncSession,
+    ) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        buyer = await _make_buyer(async_session, txn)
+        nda = NDA(
+            transaction_id=txn.id,
+            party_type=NdaPartyType.BUYER,
+            buyer_candidate_id=buyer.id,
+            nda_type=NdaType.MUTUAL,
+        )
+        async_session.add(nda)
+        await async_session.flush()
+
+        ext = await create_extraction(
+            async_session,
+            txn.id,
+            vdr_doc.id,
+            DocExtractionCategory.NDA,
+            target_model="nda",
+            target_id=nda.id,
+            auto_apply_signed_at=True,
+        )
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "This mutual NDA was signed on 2026-03-31."
+
+        llm = _mock_llm_client(
+            '{"counterparty_name": "Acme Capital", "nda_type": null, "signed_at": null, '
+            '"expires_at": null, "confidentiality_period_months": null, "jurisdiction": null}'
+        )
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ),
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        await async_session.refresh(nda)
+        assert ext.status == ExtractionStatus.COMPLETED
+        assert ext.extraction_source == "LLM"
+        assert ext.processing_note == "Some empty fields were supplemented by local rules fallback."
+        assert ext.error_message is None
+        assert ext.extracted_data is not None
+        assert ext.extracted_data["counterparty_name"] == "Acme Capital"
+        assert ext.extracted_data["nda_type"] == "MUTUAL"
+        assert ext.extracted_data["signed_at"] == "2026-03-31"
+        assert str(nda.signed_at) == "2026-03-31"
+
     async def test_pipeline_keeps_existing_nda_signed_at_on_mismatch(
         self,
         async_session: AsyncSession,
