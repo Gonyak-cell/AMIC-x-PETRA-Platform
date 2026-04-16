@@ -862,7 +862,7 @@ async def _run_pipeline_core(
 
         # 2. 파일 파싱
         try:
-            parsed = parse_file(tmp_path)
+            parsed = await asyncio.to_thread(parse_file, tmp_path)
         except Exception as exc:
             logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
             await _set_failed(db, extraction, "문서 파싱에 실패했습니다.")

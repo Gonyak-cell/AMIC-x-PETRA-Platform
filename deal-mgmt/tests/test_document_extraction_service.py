@@ -1653,6 +1653,51 @@ class TestPipeline:
         assert ext.status == ExtractionStatus.FAILED
         assert "파싱" in (ext.error_message or "")
 
+    async def test_pipeline_runs_parse_file_in_worker_thread(
+        self,
+        async_session: AsyncSession,
+    ) -> None:
+        txn = await _make_txn(async_session)
+        vdr_doc = await _make_vdr_doc(async_session, txn)
+        ext = await create_extraction(async_session, txn.id, vdr_doc.id, DocExtractionCategory.NDA)
+        await async_session.commit()
+
+        mock_parsed = ParsedFile(source_path="/tmp/nda.pdf", file_type="pdf")
+        mock_parsed.text = "NDA confidential agreement " * 100
+        llm = _mock_llm_client('{"counterparty_name": "Test Buyer"}')
+
+        async def fake_to_thread(func: object, *args: object, **kwargs: object) -> object:
+            return func(*args, **kwargs)  # type: ignore[misc]
+
+        with (
+            patch(
+                "app.services.document_extraction_service.blob_client",
+                ensure_initialized=AsyncMock(),
+                download_blob_to_file=AsyncMock(),
+            ),
+            patch(
+                "app.services.document_extraction_service.parse_file",
+                return_value=mock_parsed,
+            ) as mock_parse,
+            patch(
+                "app.services.document_extraction_service.asyncio.to_thread",
+                new=AsyncMock(side_effect=fake_to_thread),
+            ) as mock_to_thread,
+            patch(
+                "app.services.document_extraction_service.RalphLLMClient.from_settings",
+                return_value=llm,
+            ),
+        ):
+            from app.services.document_extraction_service import _run_pipeline_core
+
+            await _run_pipeline_core(async_session, ext.id, MagicMock(), 0.0)
+
+        await async_session.refresh(ext)
+        assert ext.status == ExtractionStatus.COMPLETED
+        mock_parse.assert_called_once()
+        mock_to_thread.assert_awaited_once()
+        assert mock_to_thread.await_args.args[0] is mock_parse
+
     async def test_pipeline_llm_unavailable(self, async_session: AsyncSession) -> None:
         """LLM 클라이언트 사용 불가 → FAILED."""
         txn = await _make_txn(async_session)
