@@ -1,14 +1,16 @@
-"""문서 AI 추출 라우터 — VDR 문서 분류/추출/확정 엔드포인트."""
+"""Document extraction routes for VDR documents."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import JWTClaims, check_client_deal_access, get_jwt_claims, require_write_access
 from app.models.enums import ExtractionStatus
@@ -24,6 +26,7 @@ from app.services import transaction_service
 
 logger = logging.getLogger(__name__)
 _pending_celery_dispatch_tasks: set[asyncio.Task[None]] = set()
+_INLINE_EXTRACTION_ENV_NAMES = {"local", "dev", "development", "test"}
 
 router = APIRouter(
     prefix="/transactions/{txn_id}/extractions",
@@ -31,33 +34,26 @@ router = APIRouter(
 )
 
 
-# ── 헬퍼 ─────────────────────────────────────────────────────
+def _run_extraction_processing_inline() -> bool:
+    env = os.getenv("ENV", "").strip().lower()
+    return env in _INLINE_EXTRACTION_ENV_NAMES or bool(settings.DEBUG) or not settings.AUTH_ENABLED
 
 
 async def _dispatch_extraction(extraction_id: uuid.UUID, background_tasks: BackgroundTasks) -> None:
-    """BackgroundTasks로 확실히 실행하고, Celery도 시도한다.
-
-    Celery 워커가 태스크를 인식 못하면 메시지가 버려지므로,
-    BackgroundTasks를 항상 등록하여 실행을 보장한다.
-    파이프라인의 멱등성 가드가 중복 실행을 방지한다.
-    """
+    """Use inline fallback only in local/dev flows; production relies on Celery."""
     from app.core.database import async_session_factory
 
-    # 항상 BackgroundTasks 등록 (실행 보장)
-    background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
+    if _run_extraction_processing_inline():
+        background_tasks.add_task(_run_sync_fallback, extraction_id, async_session_factory)
+        return
 
-    # Celery broker 연결 대기로 요청 응답이 막히지 않도록 request path 밖에서 시도한다.
     dispatch_task = asyncio.create_task(_dispatch_celery_best_effort(extraction_id))
     _pending_celery_dispatch_tasks.add(dispatch_task)
     dispatch_task.add_done_callback(_pending_celery_dispatch_tasks.discard)
 
 
 async def _run_sync_fallback(extraction_id: uuid.UUID, session_factory: object) -> None:
-    """FastAPI BackgroundTasks용 동기 폴백."""
-    # The extraction pipeline performs CPU-heavy synchronous parsing/OCR before
-    # it reaches the LLM/fallback branch. Run it on a worker thread so local
-    # BackgroundTasks do not block the FastAPI event loop and make health/UI
-    # requests appear hung during large PDF processing.
+    """Run the extraction pipeline in a worker thread for local fallback."""
     await asyncio.to_thread(_run_extraction_pipeline_in_thread, extraction_id, session_factory)
 
 
@@ -68,17 +64,14 @@ def _run_extraction_pipeline_in_thread(extraction_id: uuid.UUID, session_factory
 
 
 async def _dispatch_celery_best_effort(extraction_id: uuid.UUID) -> None:
-    """Celery dispatch를 응답 경로 밖에서 best-effort로 시도한다."""
+    """Queue extraction work without blocking the request path."""
     try:
         from app.tasks.extraction_tasks import run_extraction_task
 
         await asyncio.to_thread(run_extraction_task.delay, str(extraction_id))
-        logger.info("Celery 디스패치 성공 (응답 비차단): %s", extraction_id)
+        logger.info("Celery dispatch succeeded for extraction %s", extraction_id)
     except Exception as exc:
-        logger.debug("Celery 디스패치 실패 (sync fallback으로 처리): %s", exc)
-
-
-# ── 엔드포인트 ───────────────────────────────────────────────
+        logger.debug("Celery dispatch failed for extraction %s: %s", extraction_id, exc)
 
 
 @router.post(
@@ -93,7 +86,7 @@ async def create_extraction(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    """단일 VDR 문서 AI 추출을 시작한다."""
+    """Start AI extraction for a single VDR document."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
@@ -101,7 +94,7 @@ async def create_extraction(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="이 문서에 대한 AI 분석이 이미 존재합니다",
+            detail="An AI extraction already exists for this document.",
         )
 
     extraction = await svc.create_extraction(
@@ -133,16 +126,15 @@ async def batch_extract(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    """여러 VDR 문서를 일괄 AI 추출한다 (최대 10건)."""
+    """Start AI extraction for multiple VDR documents."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    # 이미 활성 추출이 있는 문서를 IN 쿼리 1회로 일괄 확인
     from sqlalchemy import select
 
     from app.models.document_extraction import DocumentExtraction
 
-    _active_statuses = (
+    active_statuses = (
         ExtractionStatus.PENDING,
         ExtractionStatus.CLASSIFYING,
         ExtractionStatus.EXTRACTING,
@@ -151,7 +143,7 @@ async def batch_extract(
     )
     existing_q = select(DocumentExtraction.vdr_document_id).where(
         DocumentExtraction.vdr_document_id.in_(body.vdr_document_ids),
-        DocumentExtraction.status.in_(_active_statuses),
+        DocumentExtraction.status.in_(active_statuses),
     )
     existing_ids = set((await db.execute(existing_q)).scalars().all())
 
@@ -164,13 +156,14 @@ async def batch_extract(
         extractions.append(ext)
 
     if skipped:
-        logger.info("배치 추출 중복 스킵: %d건 (%s)", len(skipped), skipped)
+        logger.info("Skipped %d duplicate extraction requests: %s", len(skipped), skipped)
 
     if not extractions:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"요청한 {len(skipped)}건 모두 이미 AI 분석이 존재합니다",
+            detail=f"All {len(skipped)} requested documents already have AI extraction records.",
         )
+
     await db.commit()
 
     for ext in extractions:
@@ -189,7 +182,7 @@ async def list_extractions(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    """거래의 모든 추출 작업 목록을 조회한다 (폴링용)."""
+    """List extraction jobs for a transaction."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
@@ -210,7 +203,7 @@ async def get_extraction(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(get_jwt_claims),
 ):
-    """단일 추출 작업 상세를 조회한다."""
+    """Get one extraction job."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
@@ -218,7 +211,7 @@ async def get_extraction(
     if not extraction or extraction.transaction_id != txn_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="추출 작업을 찾을 수 없습니다",
+            detail="Extraction job not found.",
         )
     return ExtractionOut.model_validate(extraction)
 
@@ -235,7 +228,7 @@ async def retry_extraction(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    """FAILED 상태의 추출을 재시도한다."""
+    """Retry a failed extraction."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
@@ -243,23 +236,23 @@ async def retry_extraction(
     if not extraction or extraction.transaction_id != txn_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="추출 작업을 찾을 수 없습니다",
+            detail="Extraction job not found.",
         )
 
     try:
         extraction = await svc.retry_extraction(db, extraction_id)
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+            detail=str(exc),
+        ) from exc
 
     await db.commit()
     await db.refresh(extraction)
 
     await _dispatch_extraction(extraction.id, background_tasks)
 
-    logger.info("추출 재시도: extraction=%s, user=%s", extraction_id, claims.email)
+    logger.info("Retry extraction requested: extraction=%s user=%s", extraction_id, claims.email)
     return ExtractionOut.model_validate(extraction)
 
 
@@ -274,19 +267,17 @@ async def confirm_extraction(
     db: AsyncSession = Depends(get_db),
     claims: JWTClaims = Depends(require_write_access()),
 ):
-    """추출 결과를 검토/수정 후 확정하여 DB에 매핑한다."""
+    """Confirm extracted data and map it into the target model."""
     await transaction_service.get_transaction(db, txn_id)
     await check_client_deal_access(db, txn_id, claims)
 
-    # 추출 레코드 존재 확인
     extraction = await svc.get_extraction(db, extraction_id)
     if not extraction or extraction.transaction_id != txn_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="추출 작업을 찾을 수 없습니다",
+            detail="Extraction job not found.",
         )
 
-    # 재확정 감사: 이전 상태 스냅샷
     prev_target_model = extraction.target_model
     prev_target_id = extraction.target_id
     is_reconfirm = extraction.status == ExtractionStatus.CONFIRMED
@@ -303,7 +294,7 @@ async def confirm_extraction(
         )
         if is_reconfirm:
             logger.info(
-                "추출 재확정: extraction=%s, user=%s, prev_target=%s/%s → new_target=%s/%s, data_keys=%s",
+                "Extraction reconfirmed: extraction=%s user=%s prev_target=%s/%s new_target=%s/%s data_keys=%s",
                 extraction_id,
                 claims.email,
                 prev_target_model,
@@ -314,7 +305,7 @@ async def confirm_extraction(
             )
         else:
             logger.info(
-                "추출 확정: extraction=%s, user=%s, target_model=%s, target_id=%s, data_keys=%s",
+                "Extraction confirmed: extraction=%s user=%s target_model=%s target_id=%s data_keys=%s",
                 extraction_id,
                 claims.email,
                 body.target_model,
@@ -322,14 +313,14 @@ async def confirm_extraction(
                 list(body.confirmed_data.keys()),
             )
         return ExtractionOut.model_validate(updated)
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
-    except Exception:
-        logger.exception("추출 확정 중 예기치 않은 오류 (extraction=%s)", extraction_id)
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected extraction confirm error (extraction=%s)", extraction_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="데이터 적용 중 오류가 발생했습니다. 입력 값을 확인해주세요.",
-        )
+            detail="An error occurred while applying the extracted data. Please review the input values.",
+        ) from exc

@@ -1,10 +1,11 @@
-"""Document Extraction HTTP API 테스트 — 엔드포인트 수준 검증."""
+"""HTTP tests for document extraction routes."""
 
 import asyncio
 import time
 import uuid
 
 import pytest
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import VdrDocumentStatus, VdrFolderCategory
@@ -18,11 +19,11 @@ async def _create_txn(client) -> str:
     resp = await client.post(
         "/api/v1/transactions",
         json={
-            "name": "추출 테스트 거래",
+            "name": "Extraction Test Transaction",
             "deal_type": "SE",
             "side": "SELL",
-            "target_company_name": "기업",
-            "client_name": "고객",
+            "target_company_name": "Target",
+            "client_name": "Client",
             "lead_advisor_email": "advisor@example.com",
         },
     )
@@ -34,7 +35,7 @@ async def _create_vdr_doc(async_session: AsyncSession, txn_id: str) -> str:
     txn_uuid = uuid.UUID(txn_id)
     folder = VdrFolder(
         transaction_id=txn_uuid,
-        name="테스트 폴더",
+        name="Test Folder",
         category=VdrFolderCategory.LEGAL,
         is_required=False,
     )
@@ -56,7 +57,6 @@ async def _create_vdr_doc(async_session: AsyncSession, txn_id: str) -> str:
     return str(document.id)
 
 
-# ── List extractions ─────────────────────────────────────
 async def test_list_extractions_empty(client):
     txn_id = await _create_txn(client)
     resp = await client.get(f"/api/v1/transactions/{txn_id}/extractions")
@@ -66,7 +66,6 @@ async def test_list_extractions_empty(client):
     assert data["total"] == 0
 
 
-# ── Get extraction — 존재하지 않는 추출 ──────────────────
 async def test_get_extraction_nonexistent(client):
     txn_id = await _create_txn(client)
     fake_id = str(uuid.uuid4())
@@ -74,21 +73,18 @@ async def test_get_extraction_nonexistent(client):
     assert resp.status_code == 404
 
 
-# ── 잘못된 거래 ID ───────────────────────────────────────
 async def test_extraction_invalid_txn(client):
     fake_txn = str(uuid.uuid4())
     resp = await client.get(f"/api/v1/transactions/{fake_txn}/extractions")
     assert resp.status_code == 404
 
 
-# ── Batch extraction — 빈 리스트 ─────────────────────────
 async def test_batch_extraction_empty_list(client):
     txn_id = await _create_txn(client)
     resp = await client.post(
         f"/api/v1/transactions/{txn_id}/extractions/batch",
         json={"vdr_document_ids": []},
     )
-    # 빈 리스트는 400 또는 422
     assert resp.status_code in (400, 422)
 
 
@@ -97,16 +93,14 @@ async def test_create_extraction_does_not_block_on_slow_celery_dispatch(
     async_session: AsyncSession,
     monkeypatch,
 ):
+    from app.routers import document_extraction as router
+
     txn_id = await _create_txn(client)
     vdr_document_id = await _create_vdr_doc(async_session, txn_id)
 
-    async def noop_sync_fallback(*args, **kwargs):
-        return None
-
-    monkeypatch.setattr(
-        "app.routers.document_extraction._run_sync_fallback",
-        noop_sync_fallback,
-    )
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setattr(router.settings, "DEBUG", False)
+    monkeypatch.setattr(router.settings, "AUTH_ENABLED", True)
 
     from app.tasks.extraction_tasks import run_extraction_task
 
@@ -132,3 +126,48 @@ async def test_create_extraction_does_not_block_on_slow_celery_dispatch(
     assert elapsed < 0.5
 
     await asyncio.sleep(0.7)
+
+
+async def test_dispatch_extraction_uses_inline_fallback_in_local_env(monkeypatch):
+    from app.routers import document_extraction as router
+
+    monkeypatch.setenv("ENV", "local")
+    monkeypatch.setattr(router.settings, "DEBUG", False)
+    monkeypatch.setattr(router.settings, "AUTH_ENABLED", True)
+
+    dispatched = False
+
+    async def fake_dispatch(*args, **kwargs):
+        nonlocal dispatched
+        dispatched = True
+
+    monkeypatch.setattr(router, "_dispatch_celery_best_effort", fake_dispatch)
+
+    background_tasks = BackgroundTasks()
+    await router._dispatch_extraction(uuid.uuid4(), background_tasks)
+
+    assert len(background_tasks.tasks) == 1
+    assert dispatched is False
+
+
+async def test_dispatch_extraction_uses_celery_only_in_production(monkeypatch):
+    from app.routers import document_extraction as router
+
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setattr(router.settings, "DEBUG", False)
+    monkeypatch.setattr(router.settings, "AUTH_ENABLED", True)
+
+    dispatched: list[uuid.UUID] = []
+
+    async def fake_dispatch(extraction_id):
+        dispatched.append(extraction_id)
+
+    monkeypatch.setattr(router, "_dispatch_celery_best_effort", fake_dispatch)
+
+    background_tasks = BackgroundTasks()
+    extraction_id = uuid.uuid4()
+    await router._dispatch_extraction(extraction_id, background_tasks)
+    await asyncio.sleep(0)
+
+    assert background_tasks.tasks == []
+    assert dispatched == [extraction_id]
