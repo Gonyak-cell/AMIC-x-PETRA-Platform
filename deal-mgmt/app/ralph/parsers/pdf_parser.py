@@ -46,7 +46,12 @@ def get_pdf_ocr_status() -> dict[str, bool | str | None]:
     }
 
 
-def parse_pdf(file_path: str) -> ParsedFile:
+def parse_pdf(
+    file_path: str,
+    *,
+    ocr_page_limit: int | None = None,
+    ocr_char_limit: int | None = None,
+) -> ParsedFile:
     """PDF 파일을 파싱한다. PyMuPDF 우선, fallback으로 pdfplumber."""
     best_candidate: ParsedFile | None = None
     try:
@@ -69,7 +74,12 @@ def parse_pdf(file_path: str) -> ParsedFile:
     except Exception as exc:
         logger.warning("PDF parse failed via pdfplumber %s: %s", file_path, exc)
 
-    ocr_candidate = _parse_with_ocr_fallback(file_path, base_candidate=best_candidate)
+    ocr_candidate = _parse_with_ocr_fallback(
+        file_path,
+        base_candidate=best_candidate,
+        ocr_page_limit=ocr_page_limit,
+        ocr_char_limit=ocr_char_limit,
+    )
     if ocr_candidate is not None and _parsed_pdf_has_meaningful_text(ocr_candidate):
         return ocr_candidate
     if best_candidate is not None:
@@ -106,20 +116,20 @@ def _parse_with_fitz(file_path: str) -> ParsedFile:
                     }
                 )
 
-            # 표 추출 시도 (PyMuPDF 1.23+)
-            try:
-                page_tables = page.find_tables()
-                for t in page_tables:
-                    data = t.extract()
-                    if data:
-                        tables.append(
-                            ParsedTable(
-                                headers=data[0] if data else [],
-                                rows=data[1:] if len(data) > 1 else [],
+                # 표 추출 시도 (PyMuPDF 1.23+)
+                try:
+                    page_tables = page.find_tables()
+                    for t in page_tables:
+                        data = t.extract()
+                        if data:
+                            tables.append(
+                                ParsedTable(
+                                    headers=data[0] if data else [],
+                                    rows=data[1:] if len(data) > 1 else [],
+                                )
                             )
-                        )
-            except Exception:
-                pass  # 표 추출 미지원 버전
+                except Exception:
+                    pass  # 표 추출 미지원 버전
 
         return ParsedFile(
             source_path=file_path,
@@ -155,15 +165,15 @@ def _parse_with_pdfplumber(file_path: str) -> ParsedFile:
                     }
                 )
 
-            for t in page.extract_tables():
-                if t:
-                    str_rows = [[str(c) if c else "" for c in row] for row in t]
-                    tables.append(
-                        ParsedTable(
-                            headers=str_rows[0] if str_rows else [],
-                            rows=str_rows[1:] if len(str_rows) > 1 else [],
+                for t in page.extract_tables():
+                    if t:
+                        str_rows = [[str(c) if c else "" for c in row] for row in t]
+                        tables.append(
+                            ParsedTable(
+                                headers=str_rows[0] if str_rows else [],
+                                rows=str_rows[1:] if len(str_rows) > 1 else [],
+                            )
                         )
-                    )
 
     return ParsedFile(
         source_path=file_path,
@@ -174,7 +184,13 @@ def _parse_with_pdfplumber(file_path: str) -> ParsedFile:
     )
 
 
-def _parse_with_ocr_fallback(file_path: str, *, base_candidate: ParsedFile | None = None) -> ParsedFile | None:
+def _parse_with_ocr_fallback(
+    file_path: str,
+    *,
+    base_candidate: ParsedFile | None = None,
+    ocr_page_limit: int | None = None,
+    ocr_char_limit: int | None = None,
+) -> ParsedFile | None:
     if base_candidate is not None and _parsed_pdf_has_meaningful_text(base_candidate):
         return base_candidate
 
@@ -198,7 +214,12 @@ def _parse_with_ocr_fallback(file_path: str, *, base_candidate: ParsedFile | Non
         all_text: list[str] = []
         chunks: list[dict] = []
         ocr_languages = "kor+eng"
+        collected_chars = 0
         for page_num, page in enumerate(doc, 1):
+            if ocr_page_limit is not None and page_num > ocr_page_limit:
+                break
+            if ocr_char_limit is not None and collected_chars >= ocr_char_limit:
+                break
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
             image = Image.open(io.BytesIO(pix.tobytes("png")))
             text = (pytesseract.image_to_string(image, lang=ocr_languages) or "").strip()
@@ -217,6 +238,7 @@ def _parse_with_ocr_fallback(file_path: str, *, base_candidate: ParsedFile | Non
                     "ocr_used": True,
                 }
             )
+            collected_chars += len(text)
 
         if not all_text:
             return base_candidate

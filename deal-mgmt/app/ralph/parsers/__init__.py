@@ -9,7 +9,12 @@ from app.ralph.parsers.base import ParsedFile, ParsedTable
 SUPPORTED_EXTENSIONS = {".xlsx", ".xls", ".pdf", ".docx", ".hwp", ".hwpx"}
 
 
-def parse_file(file_path: str) -> ParsedFile:
+def parse_file(
+    file_path: str,
+    *,
+    ocr_page_limit: int | None = None,
+    ocr_char_limit: int | None = None,
+) -> ParsedFile:
     """확장자에 따라 적절한 파서를 선택하여 파일을 파싱한다."""
     ext = Path(file_path).suffix.lower()
 
@@ -20,7 +25,11 @@ def parse_file(file_path: str) -> ParsedFile:
     elif ext == ".pdf":
         from app.ralph.parsers.pdf_parser import parse_pdf
 
-        return parse_pdf(file_path)
+        return parse_pdf(
+            file_path,
+            ocr_page_limit=ocr_page_limit,
+            ocr_char_limit=ocr_char_limit,
+        )
     elif ext == ".docx":
         from app.ralph.parsers.docx_parser import parse_docx
 

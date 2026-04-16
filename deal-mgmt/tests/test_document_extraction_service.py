@@ -1697,6 +1697,8 @@ class TestPipeline:
         mock_parse.assert_called_once()
         mock_to_thread.assert_awaited_once()
         assert mock_to_thread.await_args.args[0] is mock_parse
+        assert mock_to_thread.await_args.kwargs["ocr_page_limit"] == 8
+        assert mock_to_thread.await_args.kwargs["ocr_char_limit"] == 20_000
 
     async def test_pipeline_llm_unavailable(self, async_session: AsyncSession) -> None:
         """LLM 클라이언트 사용 불가 → FAILED."""

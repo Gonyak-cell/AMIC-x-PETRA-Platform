@@ -81,6 +81,13 @@ _FAST_RULES_FALLBACK_CATEGORIES: frozenset[DocExtractionCategory] = frozenset(
         DocExtractionCategory.SPA_BTA,
     }
 )
+_PARSE_OCR_CHAR_LIMIT_CAP = 40_000
+
+
+def _ocr_limits_for_parse(category: DocExtractionCategory) -> tuple[int | None, int | None]:
+    char_limit = min(_CATEGORY_TEXT_LIMITS.get(category.value, _MAX_TEXT_CHARS), _PARSE_OCR_CHAR_LIMIT_CAP)
+    page_limit = min(16, max(4, (char_limit + 2499) // 2500))
+    return page_limit, char_limit
 
 
 # ── CRUD ─────────────────────────────────────────────────────
@@ -861,8 +868,14 @@ async def _run_pipeline_core(
             return
 
         # 2. 파일 파싱
+        parse_page_limit, parse_char_limit = _ocr_limits_for_parse(fallback_category)
         try:
-            parsed = await asyncio.to_thread(parse_file, tmp_path)
+            parsed = await asyncio.to_thread(
+                parse_file,
+                tmp_path,
+                ocr_page_limit=parse_page_limit,
+                ocr_char_limit=parse_char_limit,
+            )
         except Exception as exc:
             logger.error("파일 파싱 실패 (extraction=%s): %s", extraction_id, exc)
             await _set_failed(db, extraction, "문서 파싱에 실패했습니다.")
