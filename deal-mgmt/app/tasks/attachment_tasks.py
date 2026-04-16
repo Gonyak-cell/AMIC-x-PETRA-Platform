@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -11,6 +10,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
 
 from app.tasks.celery_app import celery_app
+from app.tasks.persistent_async import PersistentAsyncRunner
 
 logger = logging.getLogger(__name__)
 
@@ -20,16 +20,11 @@ PROCESSING_SYNCED = "SYNCED"
 PROCESSING_FAILED = "FAILED"
 PROCESSING_SKIPPED = "SKIPPED"
 STALE_PENDING_MINUTES = 10
+_ATTACHMENT_ASYNC_RUNNER = PersistentAsyncRunner("deal-mgmt-attachment-async")
 
 
 def _run_async(coro):
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    else:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+    return _ATTACHMENT_ASYNC_RUNNER.run(coro)
 
 
 async def _update_attachment_state(
