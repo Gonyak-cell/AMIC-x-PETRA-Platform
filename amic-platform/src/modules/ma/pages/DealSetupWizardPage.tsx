@@ -189,7 +189,8 @@ function ManualTab() {
         estimated_deal_value: form.estimated_deal_value?.trim() || undefined,
       },
       {
-      onSuccess: (txn) => navigate(`/ma/transactions/${txn.id}`),
+      onSuccess: (txn) =>
+        navigate(`/ma/transactions/${txn.id}?setup=company-info`),
       },
     );
   };
@@ -470,7 +471,9 @@ function AITab() {
     };
     confirmSetup.mutate(body, {
       onSuccess: (result) =>
-        navigate(`/ma/transactions/${result.transaction_id}`),
+        navigate(
+          `/ma/transactions/${result.transaction_id}?setup=company-info`,
+        ),
       onError: (err) =>
         toast.error(
           extractApiError(err, "거래 생성에 실패했습니다. 다시 시도해 주세요."),

@@ -45,11 +45,16 @@ export function canStartExtractionFromUpload(
   file: File,
 ) {
   return (
-    attachment.processing_status === "SYNCED" &&
     isPdfUpload(attachment, file) &&
-    Boolean(attachment.vdr_sync?.vdr_document_id)
+    (attachment.processing_status === "SYNCED" ||
+      attachment.processing_status === "PENDING" ||
+      attachment.processing_status === "RUNNING")
   );
 }
+
+const SYNC_POLLABLE_ATTACHMENT_STATUSES = new Set(["PENDING", "RUNNING"]);
+const ATTACHMENT_SYNC_POLL_INTERVAL_MS = 1500;
+const ATTACHMENT_SYNC_TIMEOUT_MS = 2 * 60 * 1000;
 
 const POLLABLE_EXTRACTION_STATUSES = new Set([
   "PENDING",
@@ -59,6 +64,39 @@ const POLLABLE_EXTRACTION_STATUSES = new Set([
 
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForAttachmentSync(
+  txnId: string,
+  initialAttachment: Attachment,
+): Promise<Attachment> {
+  let latest = initialAttachment;
+  if (!latest.processing_status && latest.vdr_sync?.vdr_document_id) {
+    return latest;
+  }
+  const startedAt = Date.now();
+
+  while (SYNC_POLLABLE_ATTACHMENT_STATUSES.has(latest.processing_status)) {
+    if (Date.now() - startedAt > ATTACHMENT_SYNC_TIMEOUT_MS) {
+      throw new Error("Attachment VDR sync timed out. Please retry processing.");
+    }
+    await delay(ATTACHMENT_SYNC_POLL_INTERVAL_MS);
+    const { data } = await maApi.get<Attachment>(
+      `/transactions/${txnId}/attachments/${initialAttachment.id}`,
+    );
+    latest = data;
+  }
+
+  if (latest.processing_status !== "SYNCED") {
+    throw new Error(
+      latest.processing_error ||
+        `Attachment VDR sync ended with ${latest.processing_status}.`,
+    );
+  }
+  if (!latest.vdr_sync?.vdr_document_id) {
+    throw new Error("Attachment synced, but no VDR document id was returned.");
+  }
+  return latest;
 }
 
 export function useAttachmentExtractionFlow(txnId: string) {
@@ -89,8 +127,8 @@ export function useAttachmentExtractionFlow(txnId: string) {
         return null;
       }
 
-      const vdrDocumentId = attachment.vdr_sync?.vdr_document_id;
-      if (!vdrDocumentId) {
+      let vdrDocumentId = attachment.vdr_sync?.vdr_document_id;
+      if (!vdrDocumentId && attachment.processing_status === "SYNCED") {
         toast.info(
           "VDR 동기화가 완료된 파일만 OCR 자동 등록을 시작할 수 있습니다.",
         );
@@ -98,6 +136,13 @@ export function useAttachmentExtractionFlow(txnId: string) {
       }
 
       try {
+        const syncedAttachment = await waitForAttachmentSync(txnId, attachment);
+        vdrDocumentId = syncedAttachment.vdr_sync?.vdr_document_id;
+        if (!vdrDocumentId) {
+          throw new Error(
+            "Attachment synced, but no VDR document id was returned.",
+          );
+        }
         const { data: extraction } = await maApi.post<DocumentExtraction>(
           `/transactions/${txnId}/extractions`,
           {

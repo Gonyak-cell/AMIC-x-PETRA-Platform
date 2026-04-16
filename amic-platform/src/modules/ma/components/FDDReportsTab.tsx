@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Plus,
   Download,
@@ -13,6 +15,8 @@ import {
   useFinalizeReportVersion,
 } from "@/modules/fdd/hooks/useReportVersions";
 import type { ReportVersion } from "@/modules/fdd/types/report-version";
+import { extractApiError } from "@/api/errors";
+import { maApi } from "@/api/maClient";
 
 interface FDDReportsTabProps {
   txnId: string;
@@ -31,6 +35,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function FDDReportsTab({ txnId }: FDDReportsTabProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: txn, isLoading: txnLoading } = useTransaction(txnId);
   const fddDealId = txn?.fdd_deal_id ?? "";
   const {
@@ -38,6 +43,51 @@ export default function FDDReportsTab({ txnId }: FDDReportsTabProps) {
     isLoading: versionsLoading,
   } = useReportVersions(fddDealId);
   const finalizeMut = useFinalizeReportVersion(fddDealId);
+  const linkFddMut = useMutation({
+    mutationFn: async () => {
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/integrations/fdd/link`,
+        {
+          target_name: txn?.target_company_name ?? txn?.name ?? "Untitled",
+          industry: null,
+        },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ma", "transactions", txnId] });
+      toast.success("FDD deal linked.");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to link FDD deal."));
+    },
+  });
+  const uploadFddMut = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await maApi.post(
+        `/transactions/${txnId}/integrations/fdd/uploads`,
+        formData,
+        { timeout: 300_000 },
+      );
+      const uploadId = data?.data?.id;
+      if (uploadId) {
+        await maApi.post(
+          `/transactions/${txnId}/integrations/fdd/uploads/${uploadId}/ingest`,
+          {},
+          { timeout: 300_000 },
+        );
+      }
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("FDD file uploaded.");
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, "Failed to upload FDD file."));
+    },
+  });
 
   const isLoading = txnLoading || (!!fddDealId && versionsLoading);
 
@@ -71,11 +121,8 @@ export default function FDDReportsTab({ txnId }: FDDReportsTabProps) {
           </div>
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                `/docs/new?type=fdd&txn_id=${txnId}&target_company=${encodeURIComponent(txn?.target_company_name ?? "")}`
-              )
-            }
+            onClick={() => linkFddMut.mutate()}
+            disabled={linkFddMut.isPending}
             className="mt-1 flex items-center gap-1.5 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:bg-accent-primary/90"
           >
             <Plus className="h-4 w-4" />
@@ -118,6 +165,30 @@ export default function FDDReportsTab({ txnId }: FDDReportsTabProps) {
             새 보고서
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-white px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-text-primary">Financial source upload</p>
+          <p className="text-xs text-text-secondary">Upload GL, trial balance, or balance detail Excel files.</p>
+        </div>
+        <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:border-accent-primary hover:text-accent-primary">
+          <Plus className="h-3.5 w-3.5" />
+          {uploadFddMut.isPending ? "Uploading..." : "Upload Excel"}
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            disabled={uploadFddMut.isPending}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (file) {
+                uploadFddMut.mutate(file);
+              }
+            }}
+          />
+        </label>
       </div>
 
       {/* KPI */}

@@ -17,6 +17,23 @@ import {
 
 /** ?뭭 ?꾩슂 ?뚯씠?? Context Provider (Sprint 11). */
 
+function getInitialAuthState(): AuthState {
+  if (DEV_LOCAL_AUTH_ENABLED) {
+    const user = getLocalAuthSession();
+    return {
+      user,
+      isAuthenticated: Boolean(user),
+      isLoading: false,
+    };
+  }
+
+  return {
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+  };
+}
+
 function clearSidebarStorage(): void {
   try {
     Object.keys(sessionStorage)
@@ -29,11 +46,7 @@ function clearSidebarStorage(): void {
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-  });
+  const [state, setState] = useState<AuthState>(getInitialAuthState);
 
   const setAuthState = useCallback((next: AuthState) => {
     setState(next);

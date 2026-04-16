@@ -9,8 +9,9 @@ import {
 import { mockUser } from "@/test/mocks/data";
 import DealSetupWizardPage from "../DealSetupWizardPage";
 
-const { mutateMock } = vi.hoisted(() => ({
+const { mutateMock, navigateMock } = vi.hoisted(() => ({
   mutateMock: vi.fn(),
+  navigateMock: vi.fn(),
 }));
 
 vi.mock("@/modules/ma/hooks/useTransactions", () => ({
@@ -20,9 +21,20 @@ vi.mock("@/modules/ma/hooks/useTransactions", () => ({
   }),
 }));
 
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 describe("DealSetupWizardPage", () => {
   beforeEach(() => {
     mutateMock.mockReset();
+    navigateMock.mockReset();
   });
 
   it("keeps project typing responsive and submits a normalized payload", async () => {
@@ -134,5 +146,40 @@ describe("DealSetupWizardPage", () => {
     await user.click(submitButton!);
 
     expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the guided company-info setup after create success", async () => {
+    const user = userEvent.setup();
+    mutateMock.mockImplementation((_body, options) => {
+      options?.onSuccess?.({ id: "txn-guided" });
+    });
+
+    const { container } = renderWithProviders(<DealSetupWizardPage />);
+
+    const projectInput = screen.getByPlaceholderText(/Edward/i);
+    const emailInput = screen.getByPlaceholderText("advisor@company.com");
+
+    await waitFor(() => {
+      expect(emailInput).toHaveValue(mockUser.email);
+    });
+
+    await user.type(projectInput, "guided");
+
+    const textboxes = screen.getAllByRole("textbox");
+    await user.type(textboxes[1], "Target Co");
+    await user.type(textboxes[2], "Client Co");
+
+    const submitButton = container.querySelector(
+      'form#create-txn button[type="submit"]',
+    );
+    expect(submitButton).not.toBeNull();
+
+    await user.click(submitButton!);
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith(
+        "/ma/transactions/txn-guided?setup=company-info",
+      );
+    });
   });
 });

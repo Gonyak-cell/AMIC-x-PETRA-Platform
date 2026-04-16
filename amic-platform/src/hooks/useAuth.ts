@@ -6,7 +6,6 @@ import {
   DEV_LOCAL_AUTH_ENABLED,
   loginWithDevCredentials,
   clearLocalAuthSession,
-  getLocalAuthSession,
   setLocalAuthSession,
 } from "@/lib/devAuth";
 import type {
@@ -92,9 +91,7 @@ export function useAuth() {
   return {
     user,
     isAuthenticated,
-    isLoading: DEV_LOCAL_AUTH_ENABLED
-      ? isLoading && !getLocalAuthSession()
-      : isLoading,
+    isLoading,
     login,
     logout,
     hasPermission,

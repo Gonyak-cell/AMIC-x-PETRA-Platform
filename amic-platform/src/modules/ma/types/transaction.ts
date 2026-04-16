@@ -46,6 +46,16 @@ export type ValuationBasis = "ENTERPRISE_VALUE" | "PRE_MONEY_EQUITY";
 export type CrossBorder = "DOMESTIC" | "OUTBOUND" | "INBOUND";
 export type TargetBuyerType = "STRATEGIC" | "FINANCIAL_SPONSOR";
 
+export interface CorporateInfoUpdate {
+  company_name?: string | null;
+  representative_name?: string | null;
+  business_registration_number?: string | null;
+  corporate_registration_number?: string | null;
+  head_office_address?: string | null;
+  business_type?: string | null;
+  business_item?: string | null;
+}
+
 export interface Transaction {
   id: string;
   code_name: string;
@@ -143,6 +153,7 @@ export interface TransactionUpdate {
   exclusivity?: boolean | null;
   exclusivity_deadline?: string | null;
   notes?: string;
+  corporate_info?: CorporateInfoUpdate | null;
 }
 
 export interface TransactionListParams {

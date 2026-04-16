@@ -159,6 +159,7 @@ export default function TransactionWorkspacePage() {
 
   // 파이프라인에서 클릭한 단계 (URL search param 기반, 리마운트 안전)
   const [searchParams, setSearchParams] = useSearchParams();
+  const isCompanyInfoSetup = searchParams.get("setup") === "company-info";
   const viewedPhase: TransactionPhase | null = (() => {
     const raw = searchParams.get("viewPhase");
     return raw && VALID_PHASES.includes(raw as TransactionPhase)
@@ -213,6 +214,7 @@ export default function TransactionWorkspacePage() {
   // 초기 로드 시: URL에 탭 미지정 + ENGAGEMENT 아닌 단계 → 기본 탭으로 리다이렉트 (세션 내 txn당 1회)
   useEffect(() => {
     if (!txn?.phase) return;
+    if (isCompanyInfoSetup) return;
     if (_redirectedTxnIds.has(id)) return;
     _redirectedTxnIds.add(id);
     // CLIENT는 첫 접속 시 Overview에 머무르되, 이후 phase 기본 탭으로 이동 가능
@@ -224,7 +226,7 @@ export default function TransactionWorkspacePage() {
       navigate(`/ma/transactions/${id}/${defaultTab}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txn?.phase, id, navigate, isClient]);
+  }, [txn?.phase, id, isCompanyInfoSetup, navigate, isClient, splat, viewedPhase]);
 
   // 마일스톤 문서 존재 여부 조회
   const { data: milestoneAttachments } = useAttachments(id, "MILESTONE");

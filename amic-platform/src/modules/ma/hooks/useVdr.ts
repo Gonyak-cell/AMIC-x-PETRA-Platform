@@ -27,6 +27,8 @@ const allDocQK = (txnId: string) => [...vdrBaseQK(txnId), "all-documents"] as co
 const summaryQK = (txnId: string) => [...vdrBaseQK(txnId), "summary"] as const;
 const routingQueueQK = (txnId: string, status: VdrRoutingQueueStatus) =>
   [...vdrBaseQK(txnId), "routing-queue", status] as const;
+const VDR_UPLOAD_BATCH_SIZE = 20;
+const VDR_UPLOAD_TIMEOUT_MS = 10 * 60 * 1000;
 
 function invalidateRoutingQueue(qc: ReturnType<typeof useQueryClient>, txnId: string) {
   qc.invalidateQueries({ queryKey: [...vdrBaseQK(txnId), "routing-queue"] });
@@ -53,14 +55,37 @@ export async function uploadFilesToVdr(
   files: File[],
   options?: { folderId?: string },
 ): Promise<DirectUploadBatchResult> {
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  if (options?.folderId) {
-    formData.append("folder_id", options.folderId);
+  const batches: File[][] = [];
+  for (let index = 0; index < files.length; index += VDR_UPLOAD_BATCH_SIZE) {
+    batches.push(files.slice(index, index + VDR_UPLOAD_BATCH_SIZE));
   }
 
-  const { data } = await maApi.post(`/transactions/${txnId}/vdr/uploads`, formData);
-  return data as DirectUploadBatchResult;
+  const aggregate: DirectUploadBatchResult = {
+    results: [],
+    pending_review_count: 0,
+    total_uploaded: 0,
+    failed_files: [],
+  };
+
+  for (const batch of batches) {
+    const formData = new FormData();
+    batch.forEach((file) => formData.append("files", file));
+    if (options?.folderId) {
+      formData.append("folder_id", options.folderId);
+    }
+
+    const { data } = await maApi.post<DirectUploadBatchResult>(
+      `/transactions/${txnId}/vdr/uploads`,
+      formData,
+      { timeout: VDR_UPLOAD_TIMEOUT_MS },
+    );
+    aggregate.results.push(...data.results);
+    aggregate.failed_files.push(...data.failed_files);
+    aggregate.pending_review_count += data.pending_review_count;
+    aggregate.total_uploaded += data.total_uploaded;
+  }
+
+  return aggregate;
 }
 
 function getUploadErrorMessage(err: unknown, fallback: string): string {

@@ -91,9 +91,10 @@ export const ATTACHMENT_CONSTRAINTS = {
     ".ogg",
     ".aac",
     ".wma",
+    ".flac",
   ]),
   ACCEPT_EXTENSIONS:
-    ".docx,.doc,.pdf,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt,.csv,.zip,.png,.jpg,.jpeg,.mp3,.wav,.m4a,.ogg,.aac,.wma",
+    ".docx,.doc,.pdf,.xlsx,.xls,.pptx,.ppt,.hwp,.hwpx,.txt,.csv,.zip,.png,.jpg,.jpeg,.mp3,.wav,.m4a,.ogg,.aac,.wma,.flac",
 };
 
 /** MIME 타입 → 라벨 매핑. */
@@ -119,4 +120,5 @@ export const ATTACHMENT_MIME_LABELS: Record<string, string> = {
   "audio/ogg": "OGG",
   "audio/aac": "AAC",
   "audio/x-ms-wma": "WMA",
+  "audio/flac": "FLAC",
 };

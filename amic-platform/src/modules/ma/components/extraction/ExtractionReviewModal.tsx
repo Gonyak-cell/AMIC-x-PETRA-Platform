@@ -39,6 +39,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   reviewContext?: ExtractionReviewContext | null;
+  onConfirmed?: (extraction: DocumentExtraction) => void;
 }
 
 interface TargetOption {
@@ -175,6 +176,7 @@ export default function ExtractionReviewModal({
   open,
   onClose,
   reviewContext,
+  onConfirmed,
 }: Props) {
   const confirm = useConfirmExtraction(txnId);
   const extractionId = open ? extraction?.id ?? "" : "";
@@ -440,7 +442,12 @@ export default function ExtractionReviewModal({
     };
     confirm.mutate(
       { extractionId: currentExtraction.id, body },
-      { onSuccess: () => onClose() },
+      {
+        onSuccess: (confirmedExtraction) => {
+          onConfirmed?.(confirmedExtraction);
+          onClose();
+        },
+      },
     );
   };
 
@@ -513,6 +520,11 @@ export default function ExtractionReviewModal({
               editedData,
             )}
           </Badge>
+          {currentExtraction.extraction_source === "RULES_FALLBACK" && (
+            <Badge variant="info" pill>
+              Rules fallback
+            </Badge>
+          )}
           {currentExtraction.llm_cost_usd > 0 && (
             <span className="text-xs text-text-secondary">
               비용: ${currentExtraction.llm_cost_usd.toFixed(3)}
@@ -523,6 +535,11 @@ export default function ExtractionReviewModal({
         {currentExtraction.error_message && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-negative">
             {currentExtraction.error_message}
+          </div>
+        )}
+        {currentExtraction.processing_note && (
+          <div className="rounded-md bg-sky-50 p-3 text-sm text-info">
+            {currentExtraction.processing_note}
           </div>
         )}
 

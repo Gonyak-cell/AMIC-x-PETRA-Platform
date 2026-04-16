@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, Upload } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,10 +16,18 @@ import {
   useVdrFolders,
   useVdrSummary,
 } from "@/modules/ma/hooks/useVdr";
-import { getVdrUploadEntryState } from "@/modules/ma/hooks/useVdrUploadNavigation";
+import {
+  getVdrUploadEntryState,
+  type VdrCompanyInfoDocHint,
+} from "@/modules/ma/hooks/useVdrUploadNavigation";
+import {
+  IN_PROGRESS_STATUSES,
+  type DocumentExtraction,
+} from "@/modules/ma/types/document_extraction";
 import type { DirectUploadBatchResult } from "@/modules/ma/types/vdr";
 
 import ExtractionList from "../extraction/ExtractionList";
+import ExtractionReviewModal from "../extraction/ExtractionReviewModal";
 import DirectUploadResultModal from "./DirectUploadResultModal";
 import DirectUploadZone from "./DirectUploadZone";
 import { VdrAccessDashboard } from "./VdrAccessDashboard";
@@ -79,6 +87,16 @@ function InlineRetryCard({
   );
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isGuidedCompanyInfoDocHint(
+  value: string | null,
+): value is VdrCompanyInfoDocHint {
+  return value === "REGISTRY_DOCS" || value === "BIZ_REG_DOCS";
+}
+
 export default function VdrTab({
   txnId,
   readOnly = false,
@@ -96,6 +114,10 @@ export default function VdrTab({
   const [showDirectUpload, setShowDirectUpload] = useState(false);
   const [directUploadResult, setDirectUploadResult] =
     useState<DirectUploadBatchResult | null>(null);
+  const [guidedReviewExtraction, setGuidedReviewExtraction] =
+    useState<DocumentExtraction | null>(null);
+  const [isStartingGuidedExtraction, setIsStartingGuidedExtraction] =
+    useState(false);
   const canManageDocuments = !readOnly;
   const canShowReviewTabs = showReviewTabs && !readOnly;
   const canUseExtractionTools = showExtractionTools && !readOnly;
@@ -116,10 +138,19 @@ export default function VdrTab({
   const deleteFolder = useDeleteVdrFolder(txnId);
 
   const autoInitRef = useRef(false);
+  const uploadEntryRefState = useRef(getVdrUploadEntryState(location.state));
   const [isRepairing, setIsRepairing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const uploadEntry = getVdrUploadEntryState(location.state);
+  const uploadEntryFromLocation = getVdrUploadEntryState(location.state);
+  if (uploadEntryFromLocation?.returnTo) {
+    uploadEntryRefState.current = uploadEntryFromLocation;
+  }
+  const uploadEntry = uploadEntryFromLocation ?? uploadEntryRefState.current;
   const wantsUploadEntry = searchParams.get("upload") === "1";
+  const rawDocHint = searchParams.get("docHint");
+  const docHint = isGuidedCompanyInfoDocHint(rawDocHint)
+    ? rawDocHint
+    : null;
   const canReturnToOrigin = Boolean(uploadEntry?.returnTo);
 
   const hasWorkspaceData = summary != null || foldersQuery.data != null;
@@ -239,18 +270,111 @@ export default function VdrTab({
   }, [showDirectUpload, wantsUploadEntry]);
 
   const clearUploadQuery = useCallback(() => {
-    if (!searchParams.has("upload")) return;
+    if (!searchParams.has("upload") && !searchParams.has("docHint")) return;
     const next = new URLSearchParams(searchParams);
     next.delete("upload");
+    next.delete("docHint");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const waitForExtractionToSettle = useCallback(
+    async (extractionId: string) => {
+      while (true) {
+        const { data } = await maApi.get<DocumentExtraction>(
+          `/transactions/${txnId}/extractions/${extractionId}`,
+        );
+        qc.setQueryData(
+          ["ma", "transactions", txnId, "extractions", extractionId],
+          data,
+        );
+        if (!IN_PROGRESS_STATUSES.includes(data.status)) {
+          return data;
+        }
+        await delay(1500);
+      }
+    },
+    [qc, txnId],
+  );
+
+  const startGuidedExtractionReview = useCallback(
+    async (result: DirectUploadBatchResult, guidedDocHint: VdrCompanyInfoDocHint) => {
+      const uploadedDocuments = result.results.map((item) => item.document);
+      if (uploadedDocuments.length === 0) {
+        setDirectUploadResult(result);
+        return;
+      }
+
+      setIsStartingGuidedExtraction(true);
+      try {
+        const createdExtractions = await Promise.all(
+          uploadedDocuments.map(async (document) => {
+            const { data } = await maApi.post<DocumentExtraction>(
+              `/transactions/${txnId}/extractions`,
+              {
+                vdr_document_id: document.id,
+                doc_category_hint: guidedDocHint,
+              },
+            );
+            qc.setQueryData(
+              ["ma", "transactions", txnId, "extractions", data.id],
+              data,
+            );
+            return data;
+          }),
+        );
+
+        await qc.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "extractions"],
+        });
+
+        const settledExtraction = await waitForExtractionToSettle(
+          createdExtractions[0].id,
+        );
+
+        await qc.invalidateQueries({
+          queryKey: ["ma", "transactions", txnId, "extractions"],
+        });
+
+        if (
+          settledExtraction.status === "COMPLETED" ||
+          settledExtraction.status === "CONFIRMED"
+        ) {
+          setGuidedReviewExtraction(settledExtraction);
+          if (createdExtractions.length > 1) {
+            toast.info(
+              "첫 번째 OCR 검토를 열었습니다. 나머지 문서는 Extraction Results에서 확인할 수 있습니다.",
+            );
+          }
+          return;
+        }
+
+        toast.error(
+          settledExtraction.error_message ??
+            "OCR 처리에 실패했습니다. 문서를 다시 확인해주세요.",
+        );
+        setDirectUploadResult(result);
+      } catch (err: unknown) {
+        toast.error(
+          extractApiError(err, "OCR 자동 시작에 실패했습니다. 다시 시도해주세요."),
+        );
+        setDirectUploadResult(result);
+      } finally {
+        setIsStartingGuidedExtraction(false);
+      }
+    },
+    [qc, txnId, waitForExtractionToSettle],
+  );
+
   const handleDirectUploadComplete = useCallback(
     (result: DirectUploadBatchResult) => {
-      setDirectUploadResult(result);
       clearUploadQuery();
+      if (docHint) {
+        void startGuidedExtractionReview(result, docHint);
+        return;
+      }
+      setDirectUploadResult(result);
     },
-    [clearUploadQuery],
+    [clearUploadQuery, docHint, startGuidedExtractionReview],
   );
 
   const handleCreateFolder = useCallback(
@@ -414,6 +538,15 @@ export default function VdrTab({
             )}
           </div>
 
+          {isStartingGuidedExtraction && (
+            <Card padding="md" className="border border-sky-200 bg-sky-50">
+              <div className="flex items-center gap-3 text-sm text-sky-900">
+                <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
+                업로드한 문서의 OCR을 시작하고 검토 화면을 준비하고 있습니다.
+              </div>
+            </Card>
+          )}
+
           {foldersQuery.data != null ? (
             <Card padding="none" className="overflow-hidden">
               <VdrExplorer
@@ -467,6 +600,18 @@ export default function VdrTab({
           onClose={() => setDirectUploadResult(null)}
           txnId={txnId}
           result={directUploadResult}
+        />
+      )}
+      {guidedReviewExtraction && (
+        <ExtractionReviewModal
+          txnId={txnId}
+          extraction={guidedReviewExtraction}
+          open={guidedReviewExtraction !== null}
+          onClose={() => setGuidedReviewExtraction(null)}
+          onConfirmed={() => {
+            setGuidedReviewExtraction(null);
+            handleReturnToOrigin();
+          }}
         />
       )}
     </div>

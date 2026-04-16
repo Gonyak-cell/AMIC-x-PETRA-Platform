@@ -112,12 +112,12 @@ export function isRailToolVisible(
 export const PHASE_VISIBLE_TABS: Record<TransactionPhase, readonly string[]> = {
   ENGAGEMENT: ["engagement", "rfi"],
   PREPARATION: ["marketing-materials", "models"],
-  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "marketing-logs"],
-  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids"],
+  MARKETING: [...ALWAYS_VISIBLE_TABS, "buyers", "ndas", "marketing-logs"],
+  BIDDING: [...ALWAYS_VISIBLE_TABS, "bids", "ndas"],
   MOU_SIGNED: [...ALWAYS_VISIBLE_TABS, "contracts"], // deprecated -- 호환성 유지
-  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi"],
-  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "negotiation-logs"],
-  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing"],
+  MAIN_DUE_DILIGENCE: [...ALWAYS_VISIBLE_TABS, "dd-checklist", "rfi", "ndas"],
+  NEGOTIATION: [...ALWAYS_VISIBLE_TABS, "contracts", "ndas", "negotiation-logs"],
+  CLOSING: [...ALWAYS_VISIBLE_TABS, "closing", "ndas"],
   POST_CLOSING: [...ALWAYS_VISIBLE_TABS],
 };
 

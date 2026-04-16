@@ -22,6 +22,8 @@ export type ExtractionStatus =
   | "FAILED"
   | "CONFIRMED";
 
+export type ExtractionSource = "LLM" | "RULES_FALLBACK";
+
 export const CATEGORY_LABELS: Record<DocExtractionCategory, string> = {
   NDA: "NDA (비밀유지계약)",
   ENGAGEMENT_CONTRACT: "수임계약",
@@ -146,6 +148,8 @@ export interface DocumentExtraction {
   classification_confidence: number | null;
   status: ExtractionStatus;
   error_message: string | null;
+  extraction_source: ExtractionSource;
+  processing_note: string | null;
   extracted_data: Record<string, unknown> | null;
   target_model: TargetModel | null;
   target_id: string | null;

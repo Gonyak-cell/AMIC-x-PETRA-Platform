@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+export type VdrCompanyInfoDocHint = "REGISTRY_DOCS" | "BIZ_REG_DOCS";
+
 export interface VdrUploadEntryState {
   returnTo: string;
   returnLabel?: string;
@@ -41,7 +43,10 @@ export function useOpenVdrUpload(txnId: string) {
   const location = useLocation();
 
   return useCallback(
-    (options?: { returnLabel?: string }) => {
+    (options?: {
+      returnLabel?: string;
+      docHint?: VdrCompanyInfoDocHint;
+    }) => {
       const currentParams = new URLSearchParams(location.search);
       const nextParams = new URLSearchParams();
       const viewedPhase = currentParams.get("viewPhase");
@@ -50,6 +55,9 @@ export function useOpenVdrUpload(txnId: string) {
         nextParams.set("viewPhase", viewedPhase);
       }
       nextParams.set("upload", "1");
+      if (options?.docHint) {
+        nextParams.set("docHint", options.docHint);
+      }
 
       const nextUrl = `/ma/transactions/${txnId}/vdr?${nextParams.toString()}`;
       const returnTo = `${location.pathname}${location.search}${location.hash}`;

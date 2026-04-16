@@ -115,6 +115,7 @@ export default defineConfig(({ mode }) => {
         : null,
     ].filter(Boolean),
     resolve: {
+      preserveSymlinks: true,
       alias: {
         "@": path.resolve(projectRoot, "./src"),
       },
@@ -162,6 +163,8 @@ export default defineConfig(({ mode }) => {
           target: MA_API_PROXY_TARGET,
           changeOrigin: true,
           secure: false,
+          timeout: 600_000,
+          proxyTimeout: 600_000,
           rewrite: (path) =>
             RAW_MA_API_PROXY_TARGET
               ? path.replace(/^\/api\/ma/, "/api/v1")
