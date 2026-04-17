@@ -1,11 +1,20 @@
 import { renderHook, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthContext, type AuthContextValue } from "@/components/auth/AuthContext";
+import { MemoryRouter } from "react-router-dom";
+import { http, HttpResponse } from "msw";
+import {
+  AuthContext,
+  type AuthContextValue,
+} from "@/components/auth/AuthContext";
 import { useAuth } from "../useAuth";
 import { mockUser, mockViewerUser } from "@/test/mocks/data";
+import { server } from "@/test/mocks/server";
 
-function createAuthWrapper(overrides: Partial<AuthContextValue> = {}) {
+function createAuthWrapper(
+  overrides: Partial<AuthContextValue> = {},
+  initialPath = "/ma/transactions",
+) {
   const value: AuthContextValue = {
     user: mockUser,
     isAuthenticated: true,
@@ -21,9 +30,11 @@ function createAuthWrapper(overrides: Partial<AuthContextValue> = {}) {
   return {
     value,
     wrapper: ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-      </QueryClientProvider>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <QueryClientProvider client={queryClient}>
+          <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+        </QueryClientProvider>
+      </MemoryRouter>
     ),
   };
 }
@@ -51,6 +62,12 @@ describe("useAuth", () => {
   it("logout resets auth state", async () => {
     const { wrapper, value } = createAuthWrapper();
     const { result } = renderHook(() => useAuth(), { wrapper });
+
+    server.use(
+      http.post("*/api/ma/auth/logout", () =>
+        HttpResponse.json({ message: "logged out" }),
+      ),
+    );
 
     await act(async () => {
       await result.current.logout();

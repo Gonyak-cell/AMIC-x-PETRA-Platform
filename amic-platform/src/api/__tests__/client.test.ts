@@ -6,7 +6,12 @@
  */
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/mocks/server";
-import { createApiClient } from "@/api/client";
+import {
+  createApiClient,
+  getAuthApiForPath,
+  resolveAuthApiBasePath,
+  shouldSkipAuthBootstrapPath,
+} from "@/api/client";
 import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 
 const testClient = createApiClient("/api/fdd");
@@ -115,10 +120,7 @@ describe("API Client — 500 Server Error", () => {
   it("403 에러는 retry 없이 전파한다", async () => {
     server.use(
       http.get("*/api/fdd/test-endpoint", () => {
-        return HttpResponse.json(
-          { detail: "Forbidden" },
-          { status: 403 },
-        );
+        return HttpResponse.json({ detail: "Forbidden" }, { status: 403 });
       }),
     );
 
@@ -141,5 +143,32 @@ describe("API Client — 기본 설정", () => {
     expect(String(testClient.defaults.headers["Content-Type"])).toContain(
       "application/json",
     );
+  });
+});
+
+describe("API Client route-aware auth selection", () => {
+  it("resolves MA auth for MA and shared routes", () => {
+    expect(resolveAuthApiBasePath("/ma/transactions")).toBe("/api/ma");
+    expect(resolveAuthApiBasePath("/login")).toBe("/api/ma");
+    expect(resolveAuthApiBasePath("/")).toBe("/api/ma");
+  });
+
+  it("resolves dedicated module auth bases", () => {
+    expect(resolveAuthApiBasePath("/fdd/deals")).toBe("/api/fdd");
+    expect(resolveAuthApiBasePath("/kiis/dashboard")).toBe("/api/kiis");
+    expect(resolveAuthApiBasePath("/im/documents")).toBe("/api/im");
+  });
+
+  it("skips auth bootstrap only on anonymous-friendly routes", () => {
+    expect(shouldSkipAuthBootstrapPath("/login")).toBe(true);
+    expect(shouldSkipAuthBootstrapPath("/invite/accept")).toBe(true);
+    expect(shouldSkipAuthBootstrapPath("/ma/transactions")).toBe(false);
+  });
+
+  it("returns auth clients with route-matched base URLs", () => {
+    expect(getAuthApiForPath("/ma/transactions").defaults.baseURL).toBe(
+      "/api/ma",
+    );
+    expect(getAuthApiForPath("/fdd/deals").defaults.baseURL).toBe("/api/fdd");
   });
 });

@@ -1,18 +1,15 @@
 import { useContext, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { AuthContext } from "@/components/auth/AuthContext";
-import { authApi } from "@/api/client";
+import { getAuthApiForPath } from "@/api/client";
 import {
   DEV_LOCAL_AUTH_ENABLED,
   loginWithDevCredentials,
   clearLocalAuthSession,
   setLocalAuthSession,
 } from "@/lib/devAuth";
-import type {
-  LoginRequest,
-  AuthUser,
-  Permission,
-} from "@/types/auth";
+import type { LoginRequest, AuthUser, Permission } from "@/types/auth";
 import { ROLE_PERMISSIONS } from "@/types/auth";
 
 // ?뭭 auth?쒓굅?? Main hook ?뭭
@@ -23,8 +20,10 @@ export function useAuth() {
     throw new Error("useAuth must be used within <AuthProvider>");
   }
 
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading, setAuthState } = ctx;
+  const authApi = getAuthApiForPath(location.pathname);
 
   const login = useCallback(
     async (credentials: LoginRequest) => {
@@ -38,10 +37,7 @@ export function useAuth() {
         return;
       }
 
-      await authApi.post<{ message: string }>(
-        "/auth/login",
-        credentials,
-      );
+      await authApi.post<{ message: string }>("/auth/login", credentials);
       // ?좏겙? 荑좏궎濡??먮룞 ?ㅼ젙??
 
       try {
@@ -52,7 +48,7 @@ export function useAuth() {
         throw err;
       }
     },
-    [setAuthState],
+    [authApi, setAuthState],
   );
 
   const logout = useCallback(async () => {
@@ -63,12 +59,15 @@ export function useAuth() {
       queryClient.clear();
       // ?ъ씠?쒕컮 硫붾돱 ?곹깭 珥덇린??(濡쒓렇?꾩썐 ???섏쐞 硫붾돱 ?묓옒)
       Object.keys(sessionStorage)
-        .filter(k => k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"))
-        .forEach(k => sessionStorage.removeItem(k));
+        .filter(
+          (k) =>
+            k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"),
+        )
+        .forEach((k) => sessionStorage.removeItem(k));
       clearLocalAuthSession();
       setAuthState({ user: null, isAuthenticated: false, isLoading: false });
     }
-  }, [setAuthState, queryClient]);
+  }, [authApi, setAuthState, queryClient]);
 
   const hasPermission = useCallback(
     (permission: Permission): boolean => {
@@ -80,13 +79,10 @@ export function useAuth() {
 
   const isClient = user?.role === "CLIENT";
 
-  const canWrite = useCallback(
-    (): boolean => {
-      if (!user) return false;
-      return user.role !== "CLIENT";
-    },
-    [user],
-  );
+  const canWrite = useCallback((): boolean => {
+    if (!user) return false;
+    return user.role !== "CLIENT";
+  }, [user]);
 
   return {
     user,

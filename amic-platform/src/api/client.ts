@@ -9,24 +9,25 @@ declare module "axios" {
 
 const DEV_LOCAL_AUTH_ENABLED =
   (import.meta.env.VITE_DEV_LOCAL_AUTH ?? "").trim() === "true";
+export const FDD_API_BASE_URL = "/api/fdd";
+export const KIIS_API_BASE_URL = "/api/kiis";
+export const IM_API_BASE_URL = "/api/im";
+export const MA_API_BASE_URL = "/api/ma";
 const FDD_REFRESH_URL =
   (import.meta.env.VITE_AUTH_REFRESH_URL ?? "").trim() ||
-  "/api/fdd/auth/refresh";
+  `${FDD_API_BASE_URL}/auth/refresh`;
 const MA_REFRESH_URL =
   (import.meta.env.VITE_MA_AUTH_REFRESH_URL ?? "").trim() ||
-  "/api/ma/auth/refresh";
+  `${MA_API_BASE_URL}/auth/refresh`;
 
 const refreshPromises = new Map<string, Promise<boolean>>();
+const apiClients = new Map<string, AxiosInstance>();
 
 export async function refreshAuth(refreshUrl: string): Promise<boolean> {
   try {
     if (!refreshPromises.has(refreshUrl)) {
       const refreshPromise = axios
-        .post<{ message: string }>(
-          refreshUrl,
-          {},
-          { withCredentials: true },
-        )
+        .post<{ message: string }>(refreshUrl, {}, { withCredentials: true })
         .then(() => true)
         .finally(() => {
           refreshPromises.delete(refreshUrl);
@@ -40,10 +41,16 @@ export async function refreshAuth(refreshUrl: string): Promise<boolean> {
 }
 
 function resolveRefreshUrl(baseURL: string): string {
-  if (DEV_LOCAL_AUTH_ENABLED && baseURL === "/api/ma") {
+  if (DEV_LOCAL_AUTH_ENABLED && baseURL === MA_API_BASE_URL) {
     return MA_REFRESH_URL;
   }
-  return FDD_REFRESH_URL;
+  if (baseURL === MA_API_BASE_URL) {
+    return MA_REFRESH_URL;
+  }
+  if (baseURL === FDD_API_BASE_URL) {
+    return FDD_REFRESH_URL;
+  }
+  return `${baseURL}/auth/refresh`;
 }
 
 function applyAuthInterceptors(
@@ -106,9 +113,48 @@ export function createApiClient(baseURL: string): AxiosInstance {
   return applyAuthInterceptors(instance, resolveRefreshUrl(baseURL));
 }
 
-export const authApi = createApiClient(
-  DEV_LOCAL_AUTH_ENABLED ? "/api/ma" : "/api/fdd",
+export function resolveAuthApiBasePath(pathname?: string): string {
+  if (DEV_LOCAL_AUTH_ENABLED) {
+    return MA_API_BASE_URL;
+  }
+
+  const normalizedPath = (pathname ?? "/").trim().toLowerCase();
+
+  if (normalizedPath.startsWith("/fdd")) {
+    return FDD_API_BASE_URL;
+  }
+  if (normalizedPath.startsWith("/kiis")) {
+    return KIIS_API_BASE_URL;
+  }
+  if (normalizedPath.startsWith("/im")) {
+    return IM_API_BASE_URL;
+  }
+  return MA_API_BASE_URL;
+}
+
+export function shouldSkipAuthBootstrapPath(pathname?: string): boolean {
+  const normalizedPath = (pathname ?? "/").trim().toLowerCase();
+  return normalizedPath === "/login" || normalizedPath === "/invite/accept";
+}
+
+export function getAuthApiForBase(baseURL: string): AxiosInstance {
+  const existing = apiClients.get(baseURL);
+  if (existing) {
+    return existing;
+  }
+
+  const next = createApiClient(baseURL);
+  apiClients.set(baseURL, next);
+  return next;
+}
+
+export function getAuthApiForPath(pathname?: string): AxiosInstance {
+  return getAuthApiForBase(resolveAuthApiBasePath(pathname));
+}
+
+export const authApi = getAuthApiForPath(
+  typeof window !== "undefined" ? window.location.pathname : "/",
 );
 
-const api = createApiClient("/api/fdd");
+const api = getAuthApiForBase(FDD_API_BASE_URL);
 export default api;

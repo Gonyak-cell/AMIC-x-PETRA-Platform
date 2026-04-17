@@ -1,11 +1,7 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { authApi } from "@/api/client";
+import { useLocation } from "react-router-dom";
+import { getAuthApiForPath, shouldSkipAuthBootstrapPath } from "@/api/client";
 import { AUTH_LOGOUT_EVENT } from "@/lib/auth-events";
 import type { AuthUser, AuthState } from "@/types/auth";
 import { AuthContext } from "./AuthContext";
@@ -37,16 +33,22 @@ function getInitialAuthState(): AuthState {
 function clearSidebarStorage(): void {
   try {
     Object.keys(sessionStorage)
-      .filter(k => k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"))
-      .forEach(k => sessionStorage.removeItem(k));
+      .filter(
+        (k) =>
+          k.startsWith("sidebar-module-") || k.startsWith("sidebar-section-"),
+      )
+      .forEach((k) => sessionStorage.removeItem(k));
   } catch {
     // sessionStorage unavailable
   }
 }
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>(getInitialAuthState);
+  const authApi = getAuthApiForPath(location.pathname);
+  const skipBootstrap = shouldSkipAuthBootstrapPath(location.pathname);
 
   const setAuthState = useCallback((next: AuthState) => {
     setState(next);
@@ -76,6 +78,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (skipBootstrap) {
+      setState((current) =>
+        current.isLoading ? { ...current, isLoading: false } : current,
+      );
+      return;
+    }
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -98,7 +107,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       controller.abort();
     };
-  }, []);
+  }, [authApi, skipBootstrap]);
 
   return (
     <AuthContext.Provider value={{ ...state, setAuthState }}>
